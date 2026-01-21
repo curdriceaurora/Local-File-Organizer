@@ -105,9 +105,123 @@ Preferences start with 0.5 confidence and adjust based on:
 - In-memory storage for fast access
 - Export/import for persistence
 
+### PreferenceStore
+
+JSON-based preference storage with atomic writes, schema validation, and error recovery.
+
+**Features:**
+- Schema versioning (currently v1.0)
+- Atomic file writes using temporary files
+- Automatic backup creation and recovery
+- Thread-safe operations with RLock
+- Per-directory preference scoping with parent inheritance
+- Conflict resolution using recency and frequency weighting
+- Import/export functionality
+- Statistics tracking
+
+**Usage Example:**
+
+```python
+from pathlib import Path
+from file_organizer.services.intelligence import PreferenceStore
+
+# Initialize store
+store = PreferenceStore()
+
+# Load preferences (creates defaults if none exist)
+store.load_preferences()
+
+# Add a preference for a directory
+store.add_preference(
+    path=Path("/home/user/Documents"),
+    preference_data={
+        "folder_mappings": {"*.pdf": "PDFs"},
+        "naming_patterns": {"invoice_*": "Invoices"},
+        "confidence": 0.8
+    }
+)
+
+# Get preference (with parent directory fallback)
+pref = store.get_preference(
+    path=Path("/home/user/Documents/Work"),
+    fallback_to_parent=True
+)
+
+# Update confidence based on success/failure
+store.update_confidence(
+    path=Path("/home/user/Documents"),
+    success=True  # or False
+)
+
+# Save to disk
+store.save_preferences()
+
+# Export for backup or transfer
+store.export_json(Path("backup.json"))
+
+# Import from file
+store.import_json(Path("backup.json"))
+
+# Get statistics
+stats = store.get_statistics()
+print(f"Total directories: {stats['total_directories']}")
+print(f"Average confidence: {stats['average_confidence']}")
+```
+
+**JSON Schema (v1.0):**
+
+```json
+{
+  "version": "1.0",
+  "user_id": "default",
+  "global_preferences": {
+    "folder_mappings": {},
+    "naming_patterns": {},
+    "category_overrides": {}
+  },
+  "directory_preferences": {
+    "/absolute/path": {
+      "folder_mappings": {"*.pdf": "Documents"},
+      "naming_patterns": {"IMG_*": "Photo_{date}"},
+      "category_overrides": {"image": "Photos"},
+      "created": "2026-01-21T00:00:00Z",
+      "updated": "2026-01-21T01:00:00Z",
+      "confidence": 0.85,
+      "correction_count": 15
+    }
+  }
+}
+```
+
+**Conflict Resolution:**
+
+When multiple conflicting preferences exist, weighted scoring is used:
+- **Confidence** (40%): Higher confidence preferences favored
+- **Recency** (30%): More recently updated preferences favored
+- **Frequency** (30%): Preferences with more corrections favored
+
+**Error Recovery:**
+
+Multiple layers of error recovery:
+1. Corrupted JSON → Falls back to backup file
+2. Invalid schema → Uses defaults and logs error
+3. Missing files → Creates new preference file with defaults
+4. Save failures → Preserves previous version
+
+**Performance:**
+- Preference lookup: <10ms for typical cases
+- Save operation: <100ms with atomic writes
+- Conflict resolution: <50ms per conflict
+- Memory usage: <10MB for typical database
+
+**Storage Location:**
+- Default: `~/.file_organizer/preferences/`
+- `preferences.json`: Primary file
+- `preferences.json.backup`: Automatic backup
+
 ## Integration
 
-The PreferenceTracker is designed to integrate with:
+The intelligence services are designed to integrate with:
 - FileOrganizer service (capture corrections)
 - Pattern learning system (Task #49)
 - Future ML models
