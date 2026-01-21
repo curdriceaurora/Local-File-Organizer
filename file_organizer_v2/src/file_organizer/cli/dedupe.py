@@ -33,6 +33,7 @@ class DedupeConfig:
         strategy: str = "manual",
         safe_mode: bool = True,
         recursive: bool = True,
+        batch: bool = False,
         min_size: int = 0,
         max_size: Optional[int] = None,
         include_patterns: Optional[List[str]] = None,
@@ -47,6 +48,7 @@ class DedupeConfig:
             strategy: Duplicate removal strategy ('manual', 'oldest', 'newest', 'largest', 'smallest')
             safe_mode: If True, create backups before deletion
             recursive: If True, scan subdirectories
+            batch: If True, apply strategy automatically without per-group confirmation
             min_size: Minimum file size to consider (bytes)
             max_size: Maximum file size to consider (bytes, None for unlimited)
             include_patterns: File patterns to include (e.g., ['*.jpg', '*.png'])
@@ -58,6 +60,7 @@ class DedupeConfig:
         self.strategy = strategy
         self.safe_mode = safe_mode
         self.recursive = recursive
+        self.batch = batch
         self.min_size = min_size
         self.max_size = max_size
         self.include_patterns = include_patterns or []
@@ -187,12 +190,13 @@ def select_files_to_keep(
     return files
 
 
-def get_user_selection(files: List[Dict], strategy: str) -> List[int]:
+def get_user_selection(files: List[Dict], strategy: str, batch: bool = False) -> List[int]:
     """Get user selection for files to remove.
 
     Args:
         files: List of duplicate file metadata
         strategy: Selection strategy
+        batch: If True, skip confirmation for automatic strategies
 
     Returns:
         List of indices of files to remove
@@ -222,22 +226,27 @@ def get_user_selection(files: List[Dict], strategy: str) -> List[int]:
             except (ValueError, KeyboardInterrupt):
                 console.print("[red]Invalid input. Please enter numbers or 'a'/'s'.[/red]")
     else:
-        # For automatic strategies, confirm the selection
-        console.print("\n[bold]Proceed with this selection?[/bold]")
-        console.print("[dim](y)es / (n)o / (s)kip this group:[/dim]")
+        # For automatic strategies
+        if batch:
+            # Batch mode: automatically remove without confirmation
+            return [i for i, f in enumerate(files) if not f.get('keep', False)]
+        else:
+            # Confirm the selection
+            console.print("\n[bold]Proceed with this selection?[/bold]")
+            console.print("[dim](y)es / (n)o / (s)kip this group:[/dim]")
 
-        while True:
-            choice = console.input("[cyan]Choice:[/cyan] ").strip().lower()
+            while True:
+                choice = console.input("[cyan]Choice:[/cyan] ").strip().lower()
 
-            if choice in ['y', 'yes']:
-                # Remove files not marked to keep
-                return [i for i, f in enumerate(files) if not f.get('keep', False)]
-            elif choice in ['n', 'no']:
-                return []  # Keep all
-            elif choice in ['s', 'skip']:
-                return []  # Skip
-            else:
-                console.print("[red]Please enter 'y', 'n', or 's'.[/red]")
+                if choice in ['y', 'yes']:
+                    # Remove files not marked to keep
+                    return [i for i, f in enumerate(files) if not f.get('keep', False)]
+                elif choice in ['n', 'no']:
+                    return []  # Keep all
+                elif choice in ['s', 'skip']:
+                    return []  # Skip
+                else:
+                    console.print("[red]Please enter 'y', 'n', or 's'.[/red]")
 
 
 def display_summary(
@@ -343,6 +352,12 @@ Examples:
     )
 
     parser.add_argument(
+        "--batch",
+        action="store_true",
+        help="Batch mode: automatically apply strategy without confirmation for each group"
+    )
+
+    parser.add_argument(
         "--no-safe-mode",
         action="store_true",
         help="Disable automatic backups before deletion (not recommended)"
@@ -416,6 +431,7 @@ Examples:
         strategy=parsed_args.strategy,
         safe_mode=not parsed_args.no_safe_mode,
         recursive=not parsed_args.no_recursive,
+        batch=parsed_args.batch,
         min_size=parsed_args.min_size,
         max_size=parsed_args.max_size,
         include_patterns=parsed_args.include or [],
@@ -431,16 +447,19 @@ Examples:
     console.print()
 
     # Display configuration
-    console.print(Panel(
+    config_text = (
         f"[bold]Directory:[/bold] {config.directory}\n"
         f"[bold]Algorithm:[/bold] {config.algorithm.upper()}\n"
         f"[bold]Strategy:[/bold] {config.strategy}\n"
         f"[bold]Recursive:[/bold] {'Yes' if config.recursive else 'No'}\n"
         f"[bold]Safe Mode:[/bold] {'Enabled' if config.safe_mode else 'Disabled'}\n"
-        f"[bold]Mode:[/bold] {'DRY RUN' if config.dry_run else 'LIVE'}",
-        title="Configuration",
-        expand=False
-    ))
+        f"[bold]Mode:[/bold] {'DRY RUN' if config.dry_run else 'LIVE'}"
+    )
+
+    if config.batch and config.strategy != "manual":
+        config_text += f"\n[bold]Batch Mode:[/bold] Enabled (auto-apply strategy)"
+
+    console.print(Panel(config_text, title="Configuration", expand=False))
 
     if config.dry_run:
         console.print("[yellow]⚠ DRY RUN MODE: No files will be deleted[/yellow]\n")
@@ -525,7 +544,7 @@ Examples:
             display_duplicate_group(group_id, file_hash, files, total_groups)
 
             # Get user confirmation/selection
-            remove_indices = get_user_selection(files, config.strategy)
+            remove_indices = get_user_selection(files, config.strategy, config.batch)
 
             if remove_indices:
                 # Process each file to remove
