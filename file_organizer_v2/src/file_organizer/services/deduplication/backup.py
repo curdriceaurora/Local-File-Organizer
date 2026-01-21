@@ -78,7 +78,7 @@ class BackupManager:
         # Generate unique backup filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         backup_filename = f"{file_path.stem}_{timestamp}{file_path.suffix}"
-        backup_path = self.backup_dir / backup_filename
+        backup_path = (self.backup_dir / backup_filename).resolve()
 
         # Copy file to backup directory
         try:
