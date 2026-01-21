@@ -5,7 +5,7 @@ github_issue: 2
 github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/2
 status: open
 created: 2026-01-20T23:30:00Z
-updated: 2026-01-20T23:30:00Z
+updated: 2026-01-21T05:41:56Z
 labels: [enhancement, epic, phase-3]
 ---
 
@@ -85,3 +85,38 @@ Additional file types
 ## Related
 - GitHub Issue: #2
 - Related PRD: file-organizer-v2
+
+## Tasks Created
+
+### Audio File Support (3 tasks)
+- [ ] #42 - Integrate Distil-Whisper for audio transcription (parallel: true)
+- [ ] #43 - Implement audio metadata extraction (parallel: true)
+- [ ] #44 - Build audio content-based organization (parallel: false)
+
+### Advanced Video Processing (3 tasks)
+- [ ] #45 - Implement multi-frame video analysis (parallel: true)
+- [ ] #34 - Add video transcription from audio track (parallel: false)
+- [ ] #36 - Enhance video metadata extraction (parallel: true)
+
+### PARA Methodology (3 tasks)
+- [ ] #38 - Design PARA categorization system (parallel: true)
+- [ ] #40 - Implement PARA folder generation (parallel: false)
+- [ ] #35 - Add PARA smart suggestions (parallel: false)
+
+### Johnny Decimal System (2 tasks)
+- [ ] #37 - Implement Johnny Decimal numbering system (parallel: true)
+- [ ] #39 - Integrate Johnny Decimal with existing structures (parallel: false)
+
+### Enhanced Ebook Support & Format Expansion (3 tasks)
+- [ ] #41 - Enhance EPUB processing (parallel: true)
+- [ ] #30 - Add CAD file support (parallel: true)
+- [ ] #31 - Add archive and scientific format support (parallel: true)
+
+### Testing & Documentation (2 tasks)
+- [ ] #32 - Write comprehensive tests for Phase 3 features (parallel: false)
+- [ ] #33 - Update documentation and create user guides (parallel: false)
+
+**Total tasks:** 16
+**Parallel tasks:** 9
+**Sequential tasks:** 7
+**Estimated total effort:** 280 hours (~7 weeks with 1 developer, ~3-4 weeks with 3-4 parallel developers)

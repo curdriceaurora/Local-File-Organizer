@@ -1,11 +1,11 @@
 ---
 name: phase-2-enhanced-ux
 title: Phase 2 - Enhanced User Experience
-github_issue: 1
-github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/1
+github_issue: 11
+github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/11
 status: open
 created: 2026-01-20T23:30:00Z
-updated: 2026-01-20T23:30:00Z
+updated: 2026-01-21T05:35:36Z
 labels: [enhancement, epic, phase-2]
 ---
 
@@ -80,5 +80,42 @@ Pre-built binaries for easy installation
 - Phase 1 complete ✅
 
 ## Related
-- GitHub Issue: #1
+- GitHub Issue: #11
 - Related PRD: file-organizer-v2
+
+## Tasks Created
+
+### Foundation & Configuration (2 tasks)
+- [ ] #18 - Set up development environment and dependencies (parallel: false)
+- [ ] #22 - Design and implement configuration system (parallel: false)
+
+### Copilot Mode & Model Switching (3 tasks)
+- [ ] #26 - Implement copilot mode - chat interface (parallel: true)
+- [ ] #29 - Implement copilot mode - rule management and preview (parallel: true)
+- [ ] #17 - Implement CLI model switching with auto-download (parallel: true)
+
+### Interactive TUI (4 tasks)
+- [ ] #21 - Set up Textual TUI framework and basic structure (parallel: true)
+- [ ] #24 - Implement TUI file browser and navigation (parallel: true)
+- [ ] #27 - Implement TUI file preview and selection (parallel: true)
+- [ ] #15 - Add TUI live organization preview (parallel: false)
+
+### CLI Improvements (2 tasks)
+- [ ] #19 - Migrate to Typer CLI framework (parallel: true)
+- [ ] #25 - Add CLI auto-completion and interactive prompts (parallel: false)
+
+### Cross-Platform Executables (5 tasks)
+- [ ] #28 - Set up PyInstaller build pipeline (parallel: true)
+- [ ] #14 - Create macOS executables (Intel + Apple Silicon) (parallel: true)
+- [ ] #16 - Create Windows executable with installer (parallel: true)
+- [ ] #20 - Create Linux AppImage (parallel: true)
+- [ ] #23 - Implement auto-update mechanism (parallel: false)
+
+### Testing & Documentation (2 tasks)
+- [ ] #12 - Write comprehensive tests for Phase 2 features (parallel: false)
+- [ ] #13 - Update documentation and create user guide (parallel: false)
+
+**Total tasks:** 18
+**Parallel tasks:** 12
+**Sequential tasks:** 6
+**Estimated total effort:** 256 hours (~6-7 weeks with 1 developer, ~2-3 weeks with 3-4 parallel developers)
