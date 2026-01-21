@@ -46,6 +46,12 @@ from file_organizer.services.intelligence.naming_analyzer import (
 from file_organizer.services.intelligence.folder_learner import FolderPreferenceLearner
 from file_organizer.services.intelligence.feedback_processor import FeedbackProcessor
 from file_organizer.services.intelligence.pattern_learner import PatternLearner
+from file_organizer.services.intelligence.profile_manager import Profile, ProfileManager
+from file_organizer.services.intelligence.profile_exporter import ProfileExporter
+from file_organizer.services.intelligence.profile_importer import ProfileImporter, ValidationResult
+from file_organizer.services.intelligence.profile_migrator import ProfileMigrator
+from file_organizer.services.intelligence.profile_merger import ProfileMerger, MergeStrategy
+from file_organizer.services.intelligence.template_manager import TemplateManager
 
 __all__ = [
     "PreferenceTracker",
@@ -77,4 +83,13 @@ __all__ = [
     "FolderPreferenceLearner",
     "FeedbackProcessor",
     "PatternLearner",
+    "Profile",
+    "ProfileManager",
+    "ProfileExporter",
+    "ProfileImporter",
+    "ValidationResult",
+    "ProfileMigrator",
+    "ProfileMerger",
+    "MergeStrategy",
+    "TemplateManager",
 ]
