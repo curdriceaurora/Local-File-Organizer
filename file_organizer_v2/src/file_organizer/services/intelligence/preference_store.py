@@ -10,7 +10,7 @@ Schema Version: 1.0
 import json
 import shutil
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
@@ -40,12 +40,13 @@ class DirectoryPreference:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'DirectoryPreference':
         """Create from dictionary"""
+        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
         return cls(
             folder_mappings=data.get('folder_mappings', {}),
             naming_patterns=data.get('naming_patterns', {}),
             category_overrides=data.get('category_overrides', {}),
-            created=data.get('created', datetime.utcnow().isoformat() + 'Z'),
-            updated=data.get('updated', datetime.utcnow().isoformat() + 'Z'),
+            created=data.get('created', now),
+            updated=data.get('updated', now),
             confidence=data.get('confidence', 0.0),
             correction_count=data.get('correction_count', 0)
         )
@@ -93,7 +94,7 @@ class PreferenceStore:
 
     def _get_current_timestamp(self) -> str:
         """Get current UTC timestamp in ISO format"""
-        return datetime.utcnow().isoformat() + 'Z'
+        return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
     def _create_empty_preferences(self) -> Dict[str, Any]:
         """Create empty preference structure"""
@@ -268,17 +269,20 @@ class PreferenceStore:
                 if not self._loaded:
                     self.load_preferences()
 
-                # Create backup of existing file
-                if self.preference_file.exists():
-                    shutil.copy2(self.preference_file, self.backup_file)
-
                 # Write to temporary file first (atomic write)
                 temp_file = self.storage_path / f"{self.DEFAULT_FILENAME}.tmp"
                 with open(temp_file, 'w', encoding='utf-8') as f:
                     json.dump(self._preferences, f, indent=2, ensure_ascii=False)
 
+                # Create backup of existing file before overwriting
+                if self.preference_file.exists():
+                    shutil.copy2(self.preference_file, self.backup_file)
+
                 # Atomic rename
                 temp_file.replace(self.preference_file)
+
+                # Also create backup after successful write (for recovery)
+                shutil.copy2(self.preference_file, self.backup_file)
 
                 return True
 
@@ -432,8 +436,10 @@ class PreferenceStore:
         # Recency score (more recent = higher score)
         updated = pref.get("updated", "2000-01-01T00:00:00Z")
         try:
+            # Parse ISO format and make timezone aware for comparison
             updated_dt = datetime.fromisoformat(updated.replace('Z', '+00:00'))
-            now = datetime.utcnow()
+            # Make now timezone aware as well
+            now = datetime.now(timezone.utc)
             days_old = (now - updated_dt).days
             recency_score = 1.0 / (1.0 + days_old / 30.0)  # Decay over 30 days
         except (ValueError, AttributeError):
@@ -511,7 +517,7 @@ class PreferenceStore:
 
                 # Create backup before importing
                 if self.preference_file.exists():
-                    backup_timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                    backup_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
                     backup_path = self.storage_path / f"{self.DEFAULT_FILENAME}.{backup_timestamp}.backup"
                     shutil.copy2(self.preference_file, backup_path)
 

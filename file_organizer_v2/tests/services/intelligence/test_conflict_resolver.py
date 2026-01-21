@@ -378,7 +378,8 @@ class TestConflictResolver:
 
     def test_needs_user_input_custom_threshold(self, resolver):
         """Test needs_user_input with custom threshold."""
-        prefs = [
+        # Very similar preferences (high ambiguity)
+        similar_prefs = [
             {
                 "updated": "2026-01-01T00:00:00Z",
                 "correction_count": 10,
@@ -391,11 +392,25 @@ class TestConflictResolver:
             }
         ]
 
-        # With low threshold, should need user input
-        assert resolver.needs_user_input(prefs, ambiguity_threshold=0.3)
+        # Very different preferences (low ambiguity)
+        different_prefs = [
+            {
+                "updated": "2026-01-01T00:00:00Z",
+                "correction_count": 2,
+                "confidence": 0.5
+            },
+            {
+                "updated": "2026-01-20T00:00:00Z",
+                "correction_count": 50,
+                "confidence": 0.95
+            }
+        ]
 
-        # With high threshold, should not need user input
-        assert not resolver.needs_user_input(prefs, ambiguity_threshold=0.9)
+        # With low threshold, similar prefs need user input
+        assert resolver.needs_user_input(similar_prefs, ambiguity_threshold=0.3)
+
+        # With high threshold, different prefs don't need user input
+        assert not resolver.needs_user_input(different_prefs, ambiguity_threshold=0.9)
 
     def test_parse_timestamp_valid(self, resolver):
         """Test parsing valid ISO 8601 timestamps."""
