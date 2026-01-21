@@ -1,6 +1,6 @@
 ---
-allowed-tools: Bash(bash ccpm/scripts/pm/prd-status.sh)
+allowed-tools: Bash(bash .claude/scripts/pm/prd-status.sh)
 ---
 
 Output:
-!bash ccpm/scripts/pm/prd-status.sh
+!bash .claude/scripts/pm/prd-status.sh

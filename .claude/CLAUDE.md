@@ -8,7 +8,7 @@ This is an AI-powered local file management system with privacy-first architectu
 
 ```
 Local-File-Organizer/
-├── .claude/              # CCPM project management
+├── .claude/                 # CCPM project management
 │   ├── commands/         # PM commands
 │   ├── prds/             # Product requirements
 │   ├── epics/            # Epic planning workspace

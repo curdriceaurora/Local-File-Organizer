@@ -1,6 +1,6 @@
 ---
-allowed-tools: Bash(bash ccpm/scripts/pm/init.sh)
+allowed-tools: Bash(bash .claude/scripts/pm/init.sh)
 ---
 
 Output:
-!bash ccpm/scripts/pm/init.sh
+!bash .claude/scripts/pm/init.sh

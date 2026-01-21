@@ -165,9 +165,9 @@ The main PRD is already created at `.claude/prds/file-organizer-v2.md`
 - SOTA research analysis
 
 ### CCPM Documentation
-- [Main README](https://github.com/automazeio/ccpm/blob/main/README.md)
-- [Commands Reference](https://github.com/automazeio/ccpm/blob/main/COMMANDS.md)
-- [Agents Documentation](https://github.com/automazeio/ccpm/blob/main/AGENTS.md)
+- [Main README](https://github.com/automazeio/.claude/blob/main/README.md)
+- [Commands Reference](https://github.com/automazeio/.claude/blob/main/COMMANDS.md)
+- [Agents Documentation](https://github.com/automazeio/.claude/blob/main/AGENTS.md)
 
 ## Support
 

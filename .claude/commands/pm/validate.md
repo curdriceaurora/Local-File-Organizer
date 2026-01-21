@@ -1,6 +1,6 @@
 ---
-allowed-tools: Bash(bash ccpm/scripts/pm/validate.sh)
+allowed-tools: Bash(bash .claude/scripts/pm/validate.sh)
 ---
 
 Output:
-!bash ccpm/scripts/pm/validate.sh
+!bash .claude/scripts/pm/validate.sh

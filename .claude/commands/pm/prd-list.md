@@ -1,6 +1,6 @@
 ---
-allowed-tools: Bash(bash ccpm/scripts/pm/prd-list.sh)
+allowed-tools: Bash(bash .claude/scripts/pm/prd-list.sh)
 ---
 
 Output:
-!bash ccpm/scripts/pm/prd-list.sh
+!bash .claude/scripts/pm/prd-list.sh
