@@ -1,214 +1,465 @@
-# Local File Organizer: AI File Management Run Entirely on Your Device, Privacy Assured
+# File Organizer v2.0 🚀
 
-Tired of digital clutter? Overwhelmed by disorganized files scattered across your computer? Let AI do the heavy lifting! The Local File Organizer is your personal organizing assistant, using cutting-edge AI to bring order to your file chaos - all while respecting your privacy.
+> **Status**: Alpha - Active Development (Week 2 Complete!)
+>
+> AI-powered local file management with state-of-the-art models. Privacy-first, runs 100% on your device.
 
-## How It Works 💡
+## What's New in v2.0
 
-Before:
+### Core Improvements
+- ✅ **Better AI Models**: Qwen2.5 3B (+15-20% accuracy over Llama3.2)
+- ✅ **Enhanced Vision**: Qwen2.5-VL 7B (+15% DocVQA, 125K context)
+- ✅ **Modern Framework**: Ollama for better performance and ease of use
+- ✅ **Model Abstraction**: Clean architecture with pluggable models
+- ✅ **Image Support**: Full image processing with vision AI (Week 2 ✅)
+- ✅ **Video Support**: Basic video processing (Week 2 ✅)
+- 🚧 **Audio Support**: Coming in Phase 3 (Distil-Whisper)
+- 🚧 **Modern UI**: Textual TUI coming in Phase 2
 
-```
-/home/user/messy_documents/
-├── IMG_20230515_140322.jpg
-├── IMG_20230516_083045.jpg
-├── IMG_20230517_192130.jpg
-├── budget_2023.xlsx
-├── meeting_notes_05152023.txt
-├── project_proposal_draft.docx
-├── random_thoughts.txt
-├── recipe_chocolate_cake.pdf
-├── scan0001.pdf
-├── vacation_itinerary.docx
-└── work_presentation.pptx
+### Architecture
+- Event-driven microservices (Phase 5)
+- Multiple interfaces: CLI, TUI, Web, GUI
+- PARA + Johnny Decimal methodology (Phase 3)
+- Deduplication support (Phase 4)
+- User preference learning (Phase 4)
 
-0 directories, 11 files
-```
+## 🚀 Quick Start (End-to-End Demo)
 
-After:
+**Try the demo with sample files in under 1 minute:**
 
-```
-/home/user/organized_documents/
-├── Financial
-│   └── 2023_Budget_Spreadsheet.xlsx
-├── Food_and_Recipes
-│   └── Chocolate_Cake_Recipe.pdf
-├── Meetings_and_Notes
-│   └── Team_Meeting_Notes_May_15_2023.txt
-├── Personal
-│   └── Random_Thoughts_and_Ideas.txt
-├── Photos
-│   ├── Cityscape_Sunset_May_17_2023.jpg
-│   ├── Morning_Coffee_Shop_May_16_2023.jpg
-│   └── Office_Team_Lunch_May_15_2023.jpg
-├── Travel
-│   └── Summer_Vacation_Itinerary_2023.docx
-└── Work
-    ├── Project_X_Proposal_Draft.docx
-    ├── Quarterly_Sales_Report.pdf
-    └── Marketing_Strategy_Presentation.pptx
-
-7 directories, 11 files
-```
-
-## Updates 🚀
-
-**[2024/09] v0.0.2**:
-* Featured by [Nexa Gallery](https://nexaai.com/gallery) and [Nexa SDK Cookbook](https://github.com/NexaAI/nexa-sdk/tree/main/examples)!
-* Dry Run Mode: check sorting results before committing changes
-* Silent Mode: save all logs to a txt file for quieter operation
-* Added file support:  `.md`, .`excel`, `.ppt`, and `.csv` 
-* Three sorting options: by content, by date, and by type
-* The default text model is now [Llama3.2 3B](https://nexaai.com/meta/Llama3.2-3B-Instruct/gguf-q3_K_M/file)
-* Improved CLI interaction experience
-* Added real-time progress bar for file analysis
-
-Please update the project by deleting the original project folder and reinstalling the requirements. Refer to the installation guide from Step 4.
-
-
-## Roadmap 📅
-
-- [ ] Copilot Mode: chat with AI to tell AI how you want to sort the file (ie. read and rename all the PDFs)
-- [ ] Change models with CLI 
-- [ ] ebook format support
-- [ ] audio file support
-- [ ] video file support
-- [ ] Implement best practices like Johnny Decimal
-- [ ] Check file duplication
-- [ ] Dockerfile for easier installation
-- [ ] People from [Nexa](https://github.com/NexaAI/nexa-sdk) is helping me to make executables for macOS, Linux and Windows
-
-## What It Does 🔍
-
-This intelligent file organizer harnesses the power of advanced AI models, including language models (LMs) and vision-language models (VLMs), to automate the process of organizing files by:
-
-
-* Scanning a specified input directory for files.
-* Content Understanding: 
-  - **Textual Analysis**: Uses the [Llama3.2 3B](https://nexaai.com/meta/Llama3.2-3B-Instruct/gguf-q3_K_M/file) to analyze and summarize text-based content, generating relevant descriptions and filenames.
-  - **Visual Content Analysis**: Uses the [LLaVA-v1.6](https://nexaai.com/liuhaotian/llava-v1.6-vicuna-7b/gguf-q4_0/file) , based on Vicuna-7B, to interpret visual files such as images, providing context-aware categorization and descriptions.
-
-* Understanding the content of your files (text, images, and more) to generate relevant descriptions, folder names, and filenames.
-* Organizing the files into a new directory structure based on the generated metadata.
-
-The best part? All AI processing happens 100% on your local device using the [Nexa SDK](https://github.com/NexaAI/nexa-sdk). No internet connection required, no data leaves your computer, and no AI API is needed - keeping your files completely private and secure.
-
-
-## Supported File Types 📁
-
-- **Images:** `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`
-- **Text Files:** `.txt`, `.docx`, `.md`
-- **Spreadsheets:** `.xlsx`, `.csv`
-- **Presentations:** `.ppt`, `.pptx`
-- **PDFs:** `.pdf`
-
-## Prerequisites 💻
-
-- **Operating System:** Compatible with Windows, macOS, and Linux.
-- **Python Version:** Python 3.12
-- **Conda:** Anaconda or Miniconda installed.
-- **Git:** For cloning the repository (or you can download the code as a ZIP file).
-
-## Installation 🛠
-
-> For SDK installation and model-related issues, please post on [here](https://github.com/NexaAI/nexa-sdk/issues).
-
-### 1. Install Python
-
-Before installing the Local File Organizer, make sure you have Python installed on your system. We recommend using Python 3.12 or later.
-
-You can download Python from [the official website]((https://www.python.org/downloads/)).
-
-Follow the installation instructions for your operating system.
-
-### 2. Clone the Repository
-
-Clone this repository to your local machine using Git:
-
-```zsh
-git clone https://github.com/QiuYannnn/Local-File-Organizer.git
-```
-
-Or download the repository as a ZIP file and extract it to your desired location.
-
-### 3. Set Up the Python Environment
-
-Create a new Conda environment named `local_file_organizer` with Python 3.12:
-
-```zsh
-conda create --name local_file_organizer python=3.12
-```
-
-Activate the environment:
-
-```zsh
-conda activate local_file_organizer
-```
-
-### 4. Install Nexa SDK ️
-
-#### CPU Installation
-To install the CPU version of Nexa SDK, run:
 ```bash
-pip install nexaai --prefer-binary --index-url https://nexaai.github.io/nexa-sdk/whl/cpu --extra-index-url https://pypi.org/simple --no-cache-dir
+
+# 1. Demo with sample files (safe - dry run to preview)
+python3 demo.py --sample --dry-run
+
+# 2. Actually organize the samples
+python3 demo.py --sample
+
+# 3. Check the results
+ls -R demo_organized/
+
 ```
 
-#### GPU Installation (Metal - macOS)
-For the GPU version supporting Metal (macOS), run:
+**Organize your own files:**
+
 ```bash
-CMAKE_ARGS="-DGGML_METAL=ON -DSD_METAL=ON" pip install nexaai --prefer-binary --index-url https://nexaai.github.io/nexa-sdk/whl/metal --extra-index-url https://pypi.org/simple --no-cache-dir
+
+# Dry run first (recommended)
+python3 demo.py --input ~/Downloads --output ~/Organized --dry-run
+
+# Actually organize
+python3 demo.py --input ~/Downloads --output ~/Organized
+
 ```
-For detailed installation instructions of Nexa SDK for **CUDA** and **AMD GPU** support, please refer to the [Installation section](https://github.com/NexaAI/nexa-sdk?tab=readme-ov-file#installation) in the main README.
 
+See [DEMO_COMPLETE.md](DEMO_COMPLETE.md) for full text processing documentation.
+See [WEEK2_IMAGE_PROCESSING.md](WEEK2_IMAGE_PROCESSING.md) for image/video processing.
 
-### 5. Install Dependencies 
+---
 
-1. Ensure you are in the project directory:
-   ```zsh
-   cd path/to/Local-File-Organizer
-   ```
-   Replace `path/to/Local-File-Organizer` with the actual path where you cloned or extracted the project.
+## Prerequisites
 
-2. Install the required dependencies:
-   ```zsh
-   pip install -r requirements.txt
+1. **Python 3.12+**
+
+   ```bash
+
+   python --version  # Should be 3.12 or higher
+
    ```
 
-**Note:** If you encounter issues with any packages, install them individually:
+2. **Ollama** (for AI models)
 
-```zsh
-pip install nexa Pillow pytesseract PyMuPDF python-docx
+   ```bash
+
+   # macOS/Linux
+   curl -fsSL https://ollama.com/install.sh | sh
+
+   # Or visit https://ollama.com for other platforms
+
+   ```
+
+### Installation
+
+1. **Install the package**
+
+   ```bash
+
+   cd file_organizer_v2
+   pip install -e .
+
+   ```
+
+2. **Pull AI models** (first time only)
+
+   ```bash
+
+   # Text model (~2 GB) - required
+   ollama pull qwen2.5:3b-instruct-q4_K_M
+
+   # Vision model (~6 GB) - required for images/videos
+   ollama pull qwen2.5vl:7b-q4_K_M
+
+   ```
+
+3. **Verify installation**
+
+   ```bash
+
+   python -c "from file_organizer.models import TextModel; print('✓ Installation successful!')"
+
+   ```
+
+## Development Setup
+
+### For Contributors
+
+1. **Clone and setup**
+
+   ```bash
+
+   git clone <repo-url>
+   cd file_organizer_v2
+   pip install -e ".[dev]"
+
+   ```
+
+2. **Install pre-commit hooks**
+
+   ```bash
+
+   pre-commit install
+
+   ```
+
+3. **Run tests**
+
+   ```bash
+
+   pytest
+
+   ```
+
+4. **Type checking**
+
+   ```bash
+
+   mypy src/file_organizer
+
+   ```
+
+5. **Linting**
+
+   ```bash
+
+   ruff check src/
+
+   ```
+
+## Usage
+
+### Python API (Current Phase 1)
+
+```python
+
+from file_organizer.models import TextModel, VisionModel
+from file_organizer.models.base import ModelConfig, ModelType
+
+# Initialize text model
+text_config = TextModel.get_default_config()
+text_model = TextModel(text_config)
+
+with text_model:
+    # Generate summary
+    summary = text_model.generate(
+        "Summarize this text: The quick brown fox jumps over the lazy dog."
+    )
+    print(summary)
+
+# Initialize vision model
+vision_config = VisionModel.get_default_config()
+vision_model = VisionModel(vision_config)
+
+with vision_model:
+    # Analyze image
+    description = vision_model.analyze_image(
+        "path/to/image.jpg",
+        task="describe"
+    )
+    print(description)
+
 ```
 
-With the environment activated and dependencies installed, run the script using:
+### CLI (Phase 2+)
 
-### 6. Running the Script🎉
-```zsh
-python main.py
+**Basic Organization:**
+
+```bash
+
+# Quick organization
+file-organizer organize /path/to/files --mode content
+
+# Preview changes
+file-organizer preview /path/to/files
+
+# Interactive TUI
+file-organizer tui
+
 ```
 
-## Notes
+**Phase 4 Features (Available Now):**
 
-- **SDK Models:**
-  - The script uses `NexaVLMInference` and `NexaTextInference` models [usage](https://docs.nexaai.com/sdk/python-interface/gguf).
-  - Ensure you have access to these models and they are correctly set up.
-  - You may need to download model files or configure paths.
+```bash
 
+# Deduplication
+python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest --dry-run
 
-- **Dependencies:**
-  - **pytesseract:** Requires Tesseract OCR installed on your system.
-    - **macOS:** `brew install tesseract`
-    - **Ubuntu/Linux:** `sudo apt-get install tesseract-ocr`
-    - **Windows:** Download from [Tesseract OCR Windows Installer](https://github.com/UB-Mannheim/tesseract/wiki)
-  - **PyMuPDF (fitz):** Used for reading PDFs.
+# Analytics Dashboard
+python -m file_organizer.cli.analytics ~/Documents --export report.json
 
-- **Processing Time:**
-  - Processing may take time depending on the number and size of files.
-  - The script uses multiprocessing to improve performance.
+# Profile Management
+python -m file_organizer.cli.profile export --output my-profile.json
+python -m file_organizer.cli.profile import --input shared-profile.json
 
-- **Customizing Prompts:**
-  - You can adjust prompts in `data_processing.py` to change how metadata is generated.
+# Undo/Redo Operations
+python -m file_organizer.cli.undo_redo --list
+python -m file_organizer.cli.undo_redo --undo
+
+# Auto-tagging
+python -m file_organizer.cli.autotag ~/Documents --model qwen2.5:3b
+
+```
+
+See [Phase 4 Documentation](docs/phase4/) for complete CLI reference.
+
+## Project Structure
+
+```
+
+file_organizer_v2/
+├── src/
+│   └── file_organizer/
+│       ├── core/              # Core business logic
+│       ├── models/            # AI model interfaces ✅
+│       │   ├── base.py       # Base model abstraction
+│       │   ├── text_model.py # Text generation
+│       │   ├── vision_model.py # Image/video analysis
+│       │   └── audio_model.py # Audio transcription (Phase 3)
+│       ├── services/          # Microservices (Phase 5)
+│       ├── interfaces/        # CLI, TUI, Web (Phase 2+)
+│       ├── methodologies/     # PARA, Johnny Decimal (Phase 3)
+│       ├── utils/             # Utilities
+│       └── config/            # Configuration
+├── tests/                     # Test suite
+├── docs/                      # Documentation
+├── scripts/                   # Utility scripts
+├── pyproject.toml            # Project configuration
+└── README.md                 # This file
+
+```
+
+## Development Roadmap
+
+### ✅ Phase 1: Foundation (Weeks 1-2) - COMPLETE!
+- [x] Project structure and dependencies
+- [x] Model abstraction layer
+- [x] Ollama integration
+- [x] Text model (Qwen2.5 3B)
+- [x] Vision model (Qwen2.5-VL 7B)
+- [x] Text processing service (Week 1)
+- [x] Vision processing service (Week 2)
+- [x] Image and video support (Week 2)
+- [x] End-to-end demo
+- [ ] Benchmarking vs v1 (optional)
+
+### 🚧 Phase 2: Enhanced UX (Weeks 4-6)
+- [ ] Typer CLI framework
+- [ ] Rich output formatting
+- [ ] Textual TUI interface
+- [ ] Better error handling
+
+### 📅 Phase 3: Feature Expansion (Weeks 7-10)
+- [ ] Audio support (Distil-Whisper)
+- [ ] Video support
+- [ ] Ebook formats
+- [ ] PARA + Johnny Decimal methodology
+
+### ✅ Phase 4: Intelligence (Weeks 11-13) - COMPLETE!
+- [x] Hash-based deduplication (#46)
+- [x] Perceptual image deduplication (#47)
+- [x] Semantic document deduplication (#48)
+- [x] Pattern learning system (#49)
+- [x] User preference tracking (#50)
+- [x] Profile management (#51)
+- [x] Smart suggestions (#52)
+- [x] Operation history tracking (#53)
+- [x] Auto-tagging (#54)
+- [x] Undo/redo functionality (#55)
+- [x] Analytics dashboard (#56)
+
+**New Features:**
+- **Deduplication**: Hash, perceptual, and semantic duplicate detection
+- **Intelligence**: Learns from your organization patterns and preferences
+- **History & Undo**: Full operation history with undo/redo support
+- **Smart Features**: Auto-suggestions, auto-tagging, profile management
+- **Analytics**: Comprehensive storage and quality metrics
+
+See [Phase 4 Documentation](docs/phase4/) for detailed guides.
+
+### 📅 Phase 5: Architecture (Weeks 14-17)
+- [ ] Event-driven microservices
+- [ ] Redis Streams
+- [ ] Real-time file watching
+
+### 📅 Phase 6: Web Interface (Weeks 18-21)
+- [ ] FastAPI backend
+- [ ] HTMX frontend
+- [ ] WebSocket updates
+- [ ] Multi-user support
+
+## Testing
+
+### Run Tests
+
+```bash
+
+# All tests
+pytest
+
+# Unit tests only
+pytest -m unit
+
+# Integration tests
+pytest -m integration
+
+# With coverage
+pytest --cov=file_organizer --cov-report=html
+
+```
+
+### Manual Testing
+
+```bash
+
+# Test text model
+python scripts/test_text_model.py
+
+# Test vision model
+python scripts/test_vision_model.py
+
+# Benchmark performance
+python scripts/benchmark.py
+
+```
+
+## Configuration
+
+### Environment Variables
+
+```bash
+
+# Ollama settings
+OLLAMA_HOST=http://localhost:11434
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=~/.local/share/file-organizer/logs/app.log
+
+# Model settings
+TEXT_MODEL=qwen2.5:3b-instruct-q4_K_M
+VISION_MODEL=qwen2.5-vl:7b-q4_K_M
+
+```
+
+### Configuration File
+`~/.config/file-organizer/config.yaml` (Coming in Phase 2)
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+
+### Development Workflow
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`pytest`)
+5. Run type checking (`mypy src/`)
+6. Run linting (`ruff check src/`)
+7. Commit your changes (`git commit -m 'Add amazing feature'`)
+8. Push to the branch (`git push origin feature/amazing-feature`)
+9. Open a Pull Request
+
+## Hardware Requirements
+
+### Minimum (Basic functionality)
+- CPU: 4 cores
+- RAM: 8 GB
+- Storage: 20 GB
+
+### Recommended (Optimal performance)
+- CPU: 8+ cores
+- RAM: 16 GB
+- Storage: 50 GB SSD
+- GPU: 8GB VRAM or Apple Silicon M1+
+
+## Troubleshooting
+
+### Ollama Connection Issues
+
+```bash
+
+# Check if Ollama is running
+ollama list
+
+# Start Ollama service
+ollama serve
+
+# Check Ollama version
+ollama --version
+
+```
+
+### Model Not Found
+
+```bash
+
+# List installed models
+ollama list
+
+# Pull missing model
+ollama pull qwen2.5:3b-instruct-q4_K_M
+
+```
+
+### Import Errors
+
+```bash
+
+# Reinstall in development mode
+pip install -e ".[dev]"
+
+# Verify Python version
+python --version  # Must be 3.12+
+
+```
 
 ## License
 
-This project is dual-licensed under the MIT License and Apache 2.0 License. You may choose which license you prefer to use for this project.
+Dual-licensed under MIT OR Apache-2.0. Choose whichever works best for you.
 
-- See the [MIT License](LICENSE-MIT) for more details.
+## Links
+
+- **v1 Documentation**: See parent directory
+- **SOTA Research**: [SOTA_2026_RESEARCH.md](../SOTA_2026_RESEARCH.md)
+- **Rebuild Plan**: [REBUILD_PLAN.md](../REBUILD_PLAN.md)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/file-organizer/issues)
+
+## Support
+
+- 📖 [Documentation](docs/)
+- 💬 [Discussions](https://github.com/yourusername/file-organizer/discussions)
+- 🐛 [Bug Reports](https://github.com/yourusername/file-organizer/issues/new?template=bug_report.md)
+- ✨ [Feature Requests](https://github.com/yourusername/file-organizer/issues/new?template=feature_request.md)
+
+---
+
+**Status**: Alpha | **Version**: 2.0.0-alpha.1 | **Last Updated**: 2026-01-20
