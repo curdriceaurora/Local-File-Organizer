@@ -1,0 +1,21 @@
+2024 Annual Budget Summary
+
+Revenue:
+- Product Sales: $1,250,000
+- Service Contracts: $450,000
+- Consulting: $180,000
+Total Revenue: $1,880,000
+
+Expenses:
+- Salaries: $980,000
+- Infrastructure: $230,000
+- Marketing: $145,000
+- R&D: $195,000
+Total Expenses: $1,550,000
+
+Net Profit: $330,000 (17.6% margin)
+
+Key Investments:
+- Cloud infrastructure upgrade: $85,000
+- New product development: $120,000
+- Team expansion: $200,000

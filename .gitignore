@@ -12,6 +12,7 @@ __pycache__/
 # Virtual environment folders
 env/
 venv/
+.venv/
 
 # Ignore log files and temporary files
 *.log
@@ -21,3 +22,35 @@ venv/
 # Ignore example output files
 organized_folder/
 operation_log.txt
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE/Editor directories
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Type checking and linting
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# Test and sample files
+sample_files/
+demo_images/
+organized_output/
+output/
+
+# Logs
+logs/
+*.log.*

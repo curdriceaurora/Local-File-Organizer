@@ -1,0 +1,201 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "file-organizer"
+version = "2.0.0-alpha.1"
+description = "AI-powered local file management with state-of-the-art models"
+authors = [
+    {name = "Local File Organizer Team", email = "noreply@example.com"}
+]
+readme = "README.md"
+license = {text = "MIT OR Apache-2.0"}
+requires-python = ">=3.12"
+keywords = ["file-management", "ai", "organization", "local-llm", "privacy"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Desktop Environment :: File Managers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    # Core AI inference
+    "ollama>=0.1.0",
+
+    # File processing
+    "Pillow>=10.0.0",
+    "PyMuPDF>=1.23.0",
+    "python-docx>=1.0.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+    "python-pptx>=0.6.0",
+    "ebooklib>=0.18",  # New: ebook support
+
+    # NLP
+    "nltk>=3.8.0",
+
+    # CLI and UI
+    "typer[all]>=0.12.0",
+    "rich>=13.0.0",
+    "textual>=0.48.0",
+
+    # API and async
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "websockets>=12.0",
+    "httpx>=0.26.0",
+
+    # Database
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.13.0",
+
+    # Task queue
+    "celery>=5.3.0",
+    "redis>=5.0.0",
+
+    # Audio processing
+    "faster-whisper>=0.10.0",  # Will add when implementing audio
+
+    # Deduplication
+    "imagededup>=0.3.0",
+
+    # Utilities
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "python-dotenv>=1.0.0",
+    "click>=8.1.0",
+    "aiofiles>=23.0.0",
+    "watchfiles>=0.21.0",  # File system watching
+
+    # Logging
+    "loguru>=0.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "mypy>=1.8.0",
+    "ruff>=0.1.0",
+    "black>=23.12.0",
+    "isort>=5.13.0",
+    "pre-commit>=3.6.0",
+]
+
+gui = [
+    "PyQt6>=6.6.0",
+]
+
+web = [
+    "jinja2>=3.1.0",
+    "htmx>=0.1.0",
+]
+
+all = [
+    "file-organizer[dev,gui,web]",
+]
+
+[project.scripts]
+file-organizer = "file_organizer.cli:app"
+fo = "file_organizer.cli:app"  # Short alias
+
+[project.urls]
+Homepage = "https://github.com/yourusername/file-organizer-v2"
+Documentation = "https://file-organizer.readthedocs.io"
+Repository = "https://github.com/yourusername/file-organizer-v2"
+Issues = "https://github.com/yourusername/file-organizer-v2/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+file_organizer = ["py.typed", "config/*.yaml"]
+
+# Ruff configuration (linting and formatting)
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+# MyPy configuration (type checking)
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+follow_imports = "normal"
+ignore_missing_imports = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--cov=file_organizer",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
