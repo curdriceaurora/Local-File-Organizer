@@ -11,6 +11,17 @@ from file_organizer.models.suggestion_types import (
     ConfidenceFactors,
     ConfidenceLevel,
 )
+from file_organizer.models.analytics import (
+    FileInfo,
+    StorageStats,
+    FileDistribution,
+    DuplicateStats,
+    QualityMetrics,
+    TimeSavings,
+    MetricsSnapshot,
+    TrendData,
+    AnalyticsDashboard,
+)
 
 __all__ = [
     "BaseModel",
@@ -25,4 +36,13 @@ __all__ = [
     "SuggestionBatch",
     "ConfidenceFactors",
     "ConfidenceLevel",
+    "FileInfo",
+    "StorageStats",
+    "FileDistribution",
+    "DuplicateStats",
+    "QualityMetrics",
+    "TimeSavings",
+    "MetricsSnapshot",
+    "TrendData",
+    "AnalyticsDashboard",
 ]
