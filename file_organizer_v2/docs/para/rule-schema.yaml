@@ -1,0 +1,621 @@
+# PARA Rule System Schema Definition
+# Version: 1.0.0
+# This schema defines the structure for PARA categorization rules
+
+schema_version: "1.0"
+description: "Schema for defining PARA categorization rules"
+
+# ============================================================================
+# RULE DEFINITION STRUCTURE
+# ============================================================================
+
+rule_structure:
+  type: object
+  required:
+    - name
+    - description
+    - priority
+    - conditions
+    - actions
+  properties:
+    name:
+      type: string
+      description: "Unique identifier for the rule"
+      pattern: "^[a-z0-9_]+$"
+      minLength: 3
+      maxLength: 50
+      example: "deadline_based_project"
+    
+    description:
+      type: string
+      description: "Human-readable explanation of what the rule does"
+      minLength: 10
+      maxLength: 500
+      example: "Categorizes files with deadline indicators as projects"
+    
+    priority:
+      type: integer
+      description: "Priority for conflict resolution (higher = more important)"
+      minimum: 0
+      maximum: 1000
+      default: 50
+      examples:
+        - 100  # High priority for specific user rules
+        - 50   # Normal priority for standard rules
+        - 10   # Low priority for fallback rules
+    
+    enabled:
+      type: boolean
+      description: "Whether this rule is active"
+      default: true
+    
+    conditions:
+      type: array
+      description: "List of conditions that must be met for rule to match"
+      minItems: 1
+      maxItems: 20
+      items:
+        $ref: "#/condition_structure"
+    
+    actions:
+      type: array
+      description: "Actions to execute when conditions are met"
+      minItems: 1
+      maxItems: 10
+      items:
+        $ref: "#/action_structure"
+    
+    metadata:
+      type: object
+      description: "Optional metadata about the rule"
+      properties:
+        author:
+          type: string
+          description: "Rule creator"
+        created:
+          type: string
+          format: date-time
+          description: "When rule was created"
+        tags:
+          type: array
+          items:
+            type: string
+          description: "Tags for organizing rules"
+        version:
+          type: string
+          description: "Rule version"
+
+# ============================================================================
+# CONDITION STRUCTURE
+# ============================================================================
+
+condition_structure:
+  type: object
+  required:
+    - type
+  properties:
+    type:
+      type: string
+      enum:
+        - content_keyword
+        - filename_pattern
+        - path_contains
+        - file_extension
+        - temporal
+        - file_size
+        - metadata
+        - ai_analysis
+        - modification_frequency
+        - composite
+      description: "Type of condition to evaluate"
+    
+    operator:
+      type: string
+      enum:
+        - and
+        - or
+        - not
+      description: "Logical operator for combining conditions (for composite type)"
+    
+    values:
+      type: array
+      items:
+        type: string
+      description: "Values to match against (keywords, patterns, etc.)"
+      examples:
+        - ["deadline", "due date", "deliverable"]
+        - ["*.pdf", "*.docx"]
+        - ["clients/", "projects/"]
+    
+    threshold:
+      type: number
+      minimum: 0.0
+      maximum: 1.0
+      description: "Numeric threshold for quantitative conditions"
+      example: 0.75
+    
+    min_matches:
+      type: integer
+      minimum: 1
+      description: "Minimum number of values that must match"
+      example: 2
+    
+    max_matches:
+      type: integer
+      minimum: 1
+      description: "Maximum number of values that can match"
+    
+    subconditions:
+      type: array
+      description: "Nested conditions for composite logic"
+      items:
+        $ref: "#/condition_structure"
+    
+    metadata:
+      type: object
+      description: "Additional configuration specific to condition type"
+      properties:
+        case_sensitive:
+          type: boolean
+          default: false
+        whole_word:
+          type: boolean
+          default: false
+        regex:
+          type: boolean
+          default: false
+
+# ============================================================================
+# ACTION STRUCTURE
+# ============================================================================
+
+action_structure:
+  type: object
+  required:
+    - type
+  properties:
+    type:
+      type: string
+      enum:
+        - categorize
+        - suggest
+        - flag_review
+        - add_tag
+        - set_confidence
+      description: "Type of action to execute"
+    
+    category:
+      type: string
+      enum:
+        - project
+        - area
+        - resource
+        - archive
+      description: "PARA category to assign (required for categorize/suggest)"
+    
+    confidence:
+      type: number
+      minimum: 0.0
+      maximum: 1.0
+      description: "Confidence score for this categorization"
+      example: 0.85
+    
+    tags:
+      type: array
+      items:
+        type: string
+      description: "Tags to add to the file"
+      examples:
+        - ["urgent", "work"]
+        - ["finance", "quarterly"]
+    
+    reason:
+      type: string
+      description: "Human-readable reason for this action"
+      maxLength: 200
+      example: "Contains deadline indicators and project-related keywords"
+    
+    metadata:
+      type: object
+      description: "Additional action-specific configuration"
+
+# ============================================================================
+# CONDITION TYPE SPECIFICATIONS
+# ============================================================================
+
+condition_types:
+  content_keyword:
+    description: "Match keywords in file content"
+    required_fields:
+      - values
+    optional_fields:
+      - min_matches
+      - metadata.case_sensitive
+      - metadata.whole_word
+    example:
+      type: "content_keyword"
+      values: ["deadline", "milestone", "deliverable"]
+      min_matches: 1
+      metadata:
+        case_sensitive: false
+        whole_word: true
+  
+  filename_pattern:
+    description: "Match filename using glob or regex patterns"
+    required_fields:
+      - values
+    optional_fields:
+      - metadata.regex
+    example:
+      type: "filename_pattern"
+      values: ["*-final.pdf", "*-proposal-*"]
+      metadata:
+        regex: false
+  
+  path_contains:
+    description: "Check if file path contains specific strings"
+    required_fields:
+      - values
+    optional_fields:
+      - metadata.case_sensitive
+    example:
+      type: "path_contains"
+      values: ["clients/", "projects/active/"]
+      metadata:
+        case_sensitive: false
+  
+  file_extension:
+    description: "Match file extension"
+    required_fields:
+      - values
+    example:
+      type: "file_extension"
+      values: [".pdf", ".docx", ".md"]
+  
+  temporal:
+    description: "Time-based conditions on file age or modification"
+    required_fields:
+      - metadata
+    metadata_fields:
+      age_min_days:
+        type: integer
+        description: "Minimum file age in days"
+      age_max_days:
+        type: integer
+        description: "Maximum file age in days"
+      modified_within_days:
+        type: integer
+        description: "Modified within this many days"
+      modified_before_days:
+        type: integer
+        description: "Not modified in this many days"
+    example:
+      type: "temporal"
+      metadata:
+        age_max_days: 90
+        modified_within_days: 7
+  
+  file_size:
+    description: "File size conditions"
+    required_fields:
+      - metadata
+    metadata_fields:
+      min_bytes:
+        type: integer
+      max_bytes:
+        type: integer
+      min_mb:
+        type: number
+      max_mb:
+        type: number
+    example:
+      type: "file_size"
+      metadata:
+        min_mb: 0.1
+        max_mb: 100
+  
+  metadata:
+    description: "Check file metadata attributes"
+    required_fields:
+      - metadata.attribute
+      - metadata.operator
+      - metadata.value
+    metadata_fields:
+      attribute:
+        type: string
+        enum: ["author", "created_by", "tags", "custom_field"]
+      operator:
+        type: string
+        enum: ["equals", "contains", "starts_with", "ends_with", "exists"]
+      value:
+        type: string
+    example:
+      type: "metadata"
+      metadata:
+        attribute: "tags"
+        operator: "contains"
+        value: "urgent"
+  
+  ai_analysis:
+    description: "Use AI to understand file content and purpose"
+    required_fields:
+      - threshold
+    optional_fields:
+      - metadata.model
+      - metadata.prompt_template
+    example:
+      type: "ai_analysis"
+      threshold: 0.7
+      metadata:
+        model: "qwen2.5:3b"
+        prompt_template: "custom_categorization_prompt"
+  
+  modification_frequency:
+    description: "How often the file is modified"
+    required_fields:
+      - metadata
+    metadata_fields:
+      min_updates_per_week:
+        type: number
+      max_updates_per_week:
+        type: number
+      min_updates_per_month:
+        type: number
+      max_updates_per_month:
+        type: number
+    example:
+      type: "modification_frequency"
+      metadata:
+        min_updates_per_month: 4
+  
+  composite:
+    description: "Combine multiple conditions with logical operators"
+    required_fields:
+      - operator
+      - subconditions
+    example:
+      type: "composite"
+      operator: "and"
+      subconditions:
+        - type: "content_keyword"
+          values: ["project"]
+        - type: "temporal"
+          metadata:
+            age_max_days: 180
+
+# ============================================================================
+# ACTION TYPE SPECIFICATIONS
+# ============================================================================
+
+action_types:
+  categorize:
+    description: "Automatically assign file to a PARA category"
+    required_fields:
+      - category
+      - confidence
+    optional_fields:
+      - reason
+      - tags
+    example:
+      type: "categorize"
+      category: "project"
+      confidence: 0.85
+      reason: "Contains deadline indicators"
+      tags: ["auto-categorized"]
+  
+  suggest:
+    description: "Suggest a category without auto-assigning"
+    required_fields:
+      - category
+      - confidence
+    optional_fields:
+      - reason
+    example:
+      type: "suggest"
+      category: "area"
+      confidence: 0.70
+      reason: "Appears to be ongoing maintenance document"
+  
+  flag_review:
+    description: "Mark file for manual review"
+    optional_fields:
+      - reason
+      - tags
+    example:
+      type: "flag_review"
+      reason: "Conflicting signals - manual review needed"
+      tags: ["needs-review", "ambiguous"]
+  
+  add_tag:
+    description: "Add metadata tags to file"
+    required_fields:
+      - tags
+    example:
+      type: "add_tag"
+      tags: ["finance", "quarterly", "important"]
+  
+  set_confidence:
+    description: "Override confidence score"
+    required_fields:
+      - confidence
+    example:
+      type: "set_confidence"
+      confidence: 0.95
+
+# ============================================================================
+# COMPLETE RULE EXAMPLES
+# ============================================================================
+
+examples:
+  simple_rule:
+    name: "pdf_resources"
+    description: "Categorize PDF documents as resources"
+    priority: 40
+    enabled: true
+    conditions:
+      - type: "file_extension"
+        values: [".pdf"]
+      - type: "path_contains"
+        values: ["reference/", "documentation/"]
+    actions:
+      - type: "categorize"
+        category: "resource"
+        confidence: 0.80
+        reason: "PDF in reference directory"
+  
+  complex_rule:
+    name: "active_client_project"
+    description: "Identify active client project documents"
+    priority: 100
+    enabled: true
+    conditions:
+      - type: "composite"
+        operator: "and"
+        subconditions:
+          - type: "path_contains"
+            values: ["clients/"]
+          - type: "composite"
+            operator: "or"
+            subconditions:
+              - type: "content_keyword"
+                values: ["deadline", "deliverable", "milestone"]
+                min_matches: 1
+              - type: "filename_pattern"
+                values: ["*proposal*", "*contract*", "*agreement*"]
+          - type: "temporal"
+            metadata:
+              age_max_days: 180
+              modified_within_days: 30
+    actions:
+      - type: "categorize"
+        category: "project"
+        confidence: 0.90
+        reason: "Active client project with deadline"
+      - type: "add_tag"
+        tags: ["client", "active"]
+  
+  ai_fallback_rule:
+    name: "ai_categorization_fallback"
+    description: "Use AI when heuristics are inconclusive"
+    priority: 10
+    enabled: true
+    conditions:
+      - type: "ai_analysis"
+        threshold: 0.65
+    actions:
+      - type: "suggest"
+        confidence: 0.70
+        reason: "AI-based categorization suggestion"
+  
+  archive_detection:
+    name: "old_completed_documents"
+    description: "Identify documents for archiving"
+    priority: 50
+    enabled: true
+    conditions:
+      - type: "composite"
+        operator: "or"
+        subconditions:
+          - type: "content_keyword"
+            values: ["final", "completed", "archived", "closed"]
+            min_matches: 1
+          - type: "composite"
+            operator: "and"
+            subconditions:
+              - type: "temporal"
+                metadata:
+                  age_min_days: 180
+                  modified_before_days: 90
+              - type: "filename_pattern"
+                values: ["*final*", "*v[0-9].[0-9]", "*-archived-*"]
+    actions:
+      - type: "suggest"
+        category: "archive"
+        confidence: 0.75
+        reason: "Old document with completion indicators"
+
+# ============================================================================
+# VALIDATION RULES
+# ============================================================================
+
+validation:
+  rules:
+    - id: "V001"
+      rule: "Rule name must be unique within ruleset"
+      severity: "error"
+    
+    - id: "V002"
+      rule: "At least one condition required"
+      severity: "error"
+    
+    - id: "V003"
+      rule: "At least one action required"
+      severity: "error"
+    
+    - id: "V004"
+      rule: "Categorize/suggest actions must specify category and confidence"
+      severity: "error"
+    
+    - id: "V005"
+      rule: "Composite conditions must have subconditions"
+      severity: "error"
+    
+    - id: "V006"
+      rule: "Confidence must be between 0.0 and 1.0"
+      severity: "error"
+    
+    - id: "V007"
+      rule: "Priority should be between 0 and 1000"
+      severity: "warning"
+    
+    - id: "V008"
+      rule: "Avoid circular dependencies in composite conditions"
+      severity: "error"
+    
+    - id: "V009"
+      rule: "AI analysis conditions should have fallback rules"
+      severity: "warning"
+    
+    - id: "V010"
+      rule: "Rules with low priority should not override high confidence"
+      severity: "warning"
+
+# ============================================================================
+# BEST PRACTICES
+# ============================================================================
+
+best_practices:
+  naming:
+    - "Use snake_case for rule names"
+    - "Names should be descriptive and concise"
+    - "Avoid generic names like 'rule1' or 'test'"
+  
+  priority:
+    - "User-specific rules: 80-100"
+    - "Standard rules: 40-60"
+    - "Fallback rules: 1-20"
+    - "Higher priority for more specific rules"
+  
+  conditions:
+    - "Start with cheap conditions (filename, path)"
+    - "Put expensive conditions last (AI, content analysis)"
+    - "Use min_matches to require multiple signals"
+    - "Combine complementary condition types"
+  
+  actions:
+    - "Use 'categorize' only with high confidence (>0.80)"
+    - "Use 'suggest' for medium confidence (0.65-0.80)"
+    - "Use 'flag_review' for low confidence (<0.65)"
+    - "Always provide reasons for categorization"
+  
+  performance:
+    - "Limit conditions to 10 per rule for performance"
+    - "Cache AI results to avoid repeated analysis"
+    - "Use temporal conditions to filter before content analysis"
+    - "Group similar rules to share condition evaluation"
+  
+  maintenance:
+    - "Add metadata (author, created, tags) for tracking"
+    - "Version your rules for change management"
+    - "Document custom condition logic"
+    - "Test rules against sample files before deployment"
