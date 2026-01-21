@@ -153,8 +153,9 @@ with vision_model:
     print(description)
 ```
 
-### CLI (Coming in Phase 2)
+### CLI (Phase 2+)
 
+**Basic Organization:**
 ```bash
 # Quick organization
 file-organizer organize /path/to/files --mode content
@@ -165,6 +166,28 @@ file-organizer preview /path/to/files
 # Interactive TUI
 file-organizer tui
 ```
+
+**Phase 4 Features (Available Now):**
+```bash
+# Deduplication
+python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest --dry-run
+
+# Analytics Dashboard
+python -m file_organizer.cli.analytics ~/Documents --export report.json
+
+# Profile Management
+python -m file_organizer.cli.profile export my-profile.json
+python -m file_organizer.cli.profile import shared-profile.json
+
+# Undo/Redo Operations
+python -m file_organizer.cli.undo_redo --list
+python -m file_organizer.cli.undo_redo --undo
+
+# Auto-tagging
+python -m file_organizer.cli.autotag ~/Documents --model qwen2.5:3b
+```
+
+See [Phase 4 Documentation](docs/phase4/) for complete CLI reference.
 
 ## Project Structure
 
@@ -216,10 +239,27 @@ file_organizer_v2/
 - [ ] Ebook formats
 - [ ] PARA + Johnny Decimal methodology
 
-### 📅 Phase 4: Intelligence (Weeks 11-13)
-- [ ] Deduplication (hash + perceptual)
-- [ ] User preference learning
-- [ ] Undo/redo functionality
+### ✅ Phase 4: Intelligence (Weeks 11-13) - COMPLETE!
+- [x] Hash-based deduplication (#46)
+- [x] Perceptual image deduplication (#47)
+- [x] Semantic document deduplication (#48)
+- [x] Pattern learning system (#49)
+- [x] User preference tracking (#50)
+- [x] Profile management (#51)
+- [x] Smart suggestions (#52)
+- [x] Operation history tracking (#53)
+- [x] Auto-tagging (#54)
+- [x] Undo/redo functionality (#55)
+- [x] Analytics dashboard (#56)
+
+**New Features:**
+- **Deduplication**: Hash, perceptual, and semantic duplicate detection
+- **Intelligence**: Learns from your organization patterns and preferences
+- **History & Undo**: Full operation history with undo/redo support
+- **Smart Features**: Auto-suggestions, auto-tagging, profile management
+- **Analytics**: Comprehensive storage and quality metrics
+
+See [Phase 4 Documentation](docs/phase4/) for detailed guides.
 
 ### 📅 Phase 5: Architecture (Weeks 14-17)
 - [ ] Event-driven microservices
