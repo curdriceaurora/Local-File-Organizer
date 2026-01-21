@@ -80,14 +80,26 @@ before_stats = analytics.get_storage_stats(directory)
 print(f"  Total size: {before_stats.formatted_total_size}")
 print(f"  Files: {before_stats.file_count}")
 
+# Helper function to format file sizes
+def format_size(size_bytes: int) -> str:
+    """Format bytes as human-readable size."""
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size_bytes < 1024.0:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024.0
+    return f"{size_bytes:.1f} PB"
+
 # Find and remove duplicates
 with tx_manager.transaction("Deduplication cleanup") as tx_id:
     duplicates = deduper.find_duplicates(directory)
 
     removed_count = 0
     for file_hash, files in duplicates.items():
-        # Keep first file, remove rest
+        # Use preference-aware selection to choose file to keep
+        # For this example, we'll keep the first file
+        to_keep = files[0]
         to_remove = files[1:]
+
         for file_path in to_remove:
             file_path.unlink()
             removed_count += 1
@@ -382,6 +394,8 @@ print(f"Imported profile with {len(imported.preferences)} preferences")
 ```python
 from pathlib import Path
 from file_organizer.services.intelligence import PreferenceTracker, FeedbackProcessor
+
+from file_organizer.core.preferences import PreferenceType
 
 tracker = PreferenceTracker()
 feedback = FeedbackProcessor()

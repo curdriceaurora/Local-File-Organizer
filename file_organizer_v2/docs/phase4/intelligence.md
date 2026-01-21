@@ -53,13 +53,13 @@ if preference:
 
 ```bash
 # Export your learned preferences
-python -m file_organizer.cli.profile export my-preferences.json
+python -m file_organizer.cli.profile export --output my-preferences.json
 
 # Share profile with team
-python -m file_organizer.cli.profile import shared-preferences.json
+python -m file_organizer.cli.profile import --input shared-preferences.json
 
-# Switch between profiles
-python -m file_organizer.cli.profile switch work-profile
+# Activate a different profile
+python -m file_organizer.cli.profile activate work-profile
 ```
 
 ## Preference Tracking

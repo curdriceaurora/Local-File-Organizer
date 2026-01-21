@@ -24,8 +24,28 @@ from ..utils.chart_generator import ChartGenerator
 console = Console()
 
 
-def display_storage_stats(stats, chart_gen: ChartGenerator) -> None:
-    """Display storage statistics with charts."""
+def _format_bytes(size_bytes: int) -> str:
+    """Format bytes as human-readable size."""
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size_bytes < 1024.0:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024.0
+    return f"{size_bytes:.1f} PB"
+
+
+def _format_duration(seconds: float) -> str:
+    """Format seconds as human-readable duration."""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    minutes = seconds / 60
+    if minutes < 60:
+        return f"{minutes:.1f}m"
+    hours = minutes / 60
+    return f"{hours:.1f}h"
+
+
+def display_storage_stats(stats, chart_gen: Optional[ChartGenerator]) -> None:
+    """Display storage statistics with optional charts."""
     console.print("\n[bold cyan]STORAGE STATISTICS[/bold cyan]")
     console.print("=" * 70)
 
@@ -43,7 +63,7 @@ def display_storage_stats(stats, chart_gen: ChartGenerator) -> None:
     console.print(table)
 
     # Show file type distribution
-    if stats.size_by_type:
+    if stats.size_by_type and chart_gen:
         console.print("\n[bold]File Type Distribution (by size)[/bold]")
         # Convert bytes to percentages
         total_size = sum(stats.size_by_type.values())
@@ -65,7 +85,8 @@ def display_storage_stats(stats, chart_gen: ChartGenerator) -> None:
         file_table.add_column("Path", style="cyan")
 
         for file_info in stats.largest_files[:10]:
-            size_str = stats._format_size(file_info.size)
+            # Format size using public method
+            size_str = _format_bytes(file_info.size)
             file_table.add_row(
                 size_str, file_info.type, str(file_info.path.name)
             )
@@ -173,13 +194,13 @@ def display_time_savings(savings) -> None:
     table.add_row("Total Operations", str(savings.total_operations))
     table.add_row("Automated Operations", str(savings.automated_operations))
     table.add_row("Automation Rate", f"{savings.automation_percentage:.1f}%")
-    table.add_row("Manual Time", savings._format_duration(savings.manual_time_seconds))
-    table.add_row("Automated Time", savings._format_duration(savings.automated_time_seconds))
+    table.add_row("Manual Time", _format_duration(savings.manual_time_seconds))
+    table.add_row("Automated Time", _format_duration(savings.automated_time_seconds))
 
     console.print(table)
 
 
-def display_file_distribution(distribution, chart_gen: ChartGenerator) -> None:
+def display_file_distribution(distribution, chart_gen: Optional[ChartGenerator]) -> None:
     """Display file distribution charts."""
     console.print("\n[bold cyan]FILE DISTRIBUTION[/bold cyan]")
     console.print("=" * 70)
@@ -187,7 +208,7 @@ def display_file_distribution(distribution, chart_gen: ChartGenerator) -> None:
     console.print(f"\n[bold]Total Files:[/bold] {distribution.total_files}")
 
     # By type
-    if distribution.by_type:
+    if distribution.by_type and chart_gen:
         # Show top 10 types
         top_types = dict(
             sorted(distribution.by_type.items(), key=lambda x: x[1], reverse=True)[:10]
@@ -312,7 +333,10 @@ Examples:
         # Initialize services
         console.print("[dim]Initializing analytics service...[/dim]")
         analytics_service = AnalyticsService()
-        chart_gen = ChartGenerator(use_unicode=not parsed_args.no_charts)
+
+        # Determine chart generation based on --no-charts flag
+        generate_charts = not parsed_args.no_charts
+        chart_gen = ChartGenerator(use_unicode=True) if generate_charts else None
 
         # Generate dashboard
         console.print("[dim]Analyzing directory...[/dim]")

@@ -39,6 +39,7 @@ def undo_command(
     else:
         logging.basicConfig(level=logging.INFO)
 
+    manager = None
     try:
         manager = UndoManager()
 
@@ -55,7 +56,7 @@ def undo_command(
                         print(f"  Source: {op.source_path}")
                         if op.destination_path:
                             print(f"  Destination: {op.destination_path}")
-                        print(f"\n✓ This operation can be safely undone")
+                        print("\n✓ This operation can be safely undone")
                     else:
                         print(f"Operation {operation_id} not found")
                         return 1
@@ -115,7 +116,7 @@ def undo_command(
         print(f"✗ Error: {e}")
         return 1
     finally:
-        if 'manager' in locals():
+        if manager is not None:
             manager.close()
 
 
@@ -140,6 +141,7 @@ def redo_command(
     else:
         logging.basicConfig(level=logging.INFO)
 
+    manager = None
     try:
         manager = UndoManager()
 
@@ -156,7 +158,7 @@ def redo_command(
                         print(f"  Source: {op.source_path}")
                         if op.destination_path:
                             print(f"  Destination: {op.destination_path}")
-                        print(f"\n✓ This operation can be safely redone")
+                        print("\n✓ This operation can be safely redone")
                     else:
                         print(f"Operation {operation_id} not found in redo stack")
                         return 1
@@ -200,7 +202,7 @@ def redo_command(
         print(f"✗ Error: {e}")
         return 1
     finally:
-        if 'manager' in locals():
+        if manager is not None:
             manager.close()
 
 

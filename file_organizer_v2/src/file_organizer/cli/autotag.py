@@ -299,7 +299,7 @@ def handle_analyze(service: AutoTaggingService, args):
     # Keywords
     if args.keywords:
         keywords = service.content_analyzer.extract_keywords(file_path, top_n=15)
-        print(f"\nTop Keywords:")
+        print("\nTop Keywords:")
         for keyword, score in keywords:
             print(f"  {keyword:20s} {score:.3f}")
 

@@ -73,7 +73,7 @@ def list_profiles():
 
     except Exception as e:
         click.echo(f"Error listing profiles: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @profile_command.command(name='create')
@@ -90,7 +90,7 @@ def create_profile(name: str, description: str, activate: bool):
 
         if profile is None:
             click.echo(f"Failed to create profile '{name}'", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
         click.echo(f"✓ Created profile: {name}")
 
@@ -99,11 +99,11 @@ def create_profile(name: str, description: str, activate: bool):
             if manager.activate_profile(name):
                 click.echo(f"✓ Activated profile: {name}")
             else:
-                click.echo(f"✗ Failed to activate profile", err=True)
+                click.echo("✗ Failed to activate profile", err=True)
 
     except Exception as e:
         click.echo(f"Error creating profile: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @profile_command.command(name='activate')
@@ -117,16 +117,16 @@ def activate_profile(name: str):
             click.echo(f"✓ Activated profile: {name}")
         else:
             click.echo(f"✗ Failed to activate profile '{name}'", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
     except Exception as e:
         click.echo(f"Error activating profile: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @profile_command.command(name='delete')
 @click.argument('name')
-@click.option('--force', '-f', is_flag=True, help='Force delete even if active')
+@click.option('--force', '-', is_flag=True, help='Force delete even if active')
 def delete_profile(name: str, force: bool):
     """Delete a profile."""
     try:
@@ -142,11 +142,11 @@ def delete_profile(name: str, force: bool):
             click.echo(f"✓ Deleted profile: {name}")
         else:
             click.echo(f"✗ Failed to delete profile '{name}'", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
     except Exception as e:
         click.echo(f"Error deleting profile: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @profile_command.command(name='current')
@@ -158,7 +158,7 @@ def show_current():
 
         if profile is None:
             click.echo("No active profile found.", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
         click.echo(f"\nActive Profile: {profile.profile_name}")
         click.echo("=" * 80)
@@ -173,7 +173,7 @@ def show_current():
         patterns = len(profile.learned_patterns)
         confidence = len(profile.confidence_data)
 
-        click.echo(f"\nStatistics:")
+        click.echo("\nStatistics:")
         click.echo(f"  Global preferences: {global_prefs}")
         click.echo(f"  Directory-specific: {dir_prefs}")
         click.echo(f"  Learned patterns: {patterns}")
@@ -182,7 +182,7 @@ def show_current():
 
     except Exception as e:
         click.echo(f"Error showing current profile: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 # ============================================================================
@@ -211,12 +211,12 @@ def export_profile(name: str, output: str, selective: tuple):
         if success:
             click.echo(f"✓ Exported profile '{name}' to: {output_path}")
         else:
-            click.echo(f"✗ Failed to export profile", err=True)
-            raise click.Abort()
+            click.echo("✗ Failed to export profile", err=True)
+            raise click.Abort() from e
 
     except Exception as e:
         click.echo(f"Error exporting profile: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @profile_command.command(name='import')
@@ -236,7 +236,7 @@ def import_profile(file: str, new_name: Optional[str], preview: bool):
             preview_data = importer.preview_import(file_path)
             if preview_data is None:
                 click.echo("✗ Failed to preview import", err=True)
-                raise click.Abort()
+                raise click.Abort() from e
 
             click.echo("\nImport Preview:")
             click.echo("=" * 80)
@@ -246,7 +246,7 @@ def import_profile(file: str, new_name: Optional[str], preview: bool):
             click.echo(f"Export Type: {preview_data['export_type']}")
 
             if 'preferences_count' in preview_data:
-                click.echo(f"\nPreferences:")
+                click.echo("\nPreferences:")
                 for key, count in preview_data['preferences_count'].items():
                     click.echo(f"  {key}: {count}")
 
@@ -255,7 +255,7 @@ def import_profile(file: str, new_name: Optional[str], preview: bool):
 
             # Show validation
             validation = preview_data['validation']
-            click.echo(f"\nValidation:")
+            click.echo("\nValidation:")
             click.echo(f"  Valid: {validation['valid']}")
             if validation['errors']:
                 click.echo(f"  Errors: {', '.join(validation['errors'])}")
@@ -263,7 +263,7 @@ def import_profile(file: str, new_name: Optional[str], preview: bool):
                 click.echo(f"  Warnings: {', '.join(validation['warnings'])}")
 
             if 'conflicts' in preview_data:
-                click.echo(f"\n⚠ Conflicts detected:")
+                click.echo("\n⚠ Conflicts detected:")
                 click.echo(f"  {preview_data['conflicts']['message']}")
 
             click.echo("=" * 80 + "\n")
@@ -274,13 +274,13 @@ def import_profile(file: str, new_name: Optional[str], preview: bool):
 
         if profile is None:
             click.echo("✗ Failed to import profile", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
         click.echo(f"✓ Imported profile: {profile.profile_name}")
 
     except Exception as e:
         click.echo(f"Error importing profile: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 # ============================================================================
@@ -305,7 +305,7 @@ def merge_profiles(profiles: tuple, output: str, strategy: str, show_conflicts: 
 
         if len(profile_list) < 2:
             click.echo("Error: Need at least 2 profiles to merge", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
         # Show conflicts if requested
         if show_conflicts:
@@ -330,14 +330,14 @@ def merge_profiles(profiles: tuple, output: str, strategy: str, show_conflicts: 
 
         if merged is None:
             click.echo("✗ Failed to merge profiles", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
         click.echo(f"✓ Merged {len(profile_list)} profiles into: {output}")
         click.echo(f"  Strategy used: {strategy}")
 
     except Exception as e:
         click.echo(f"Error merging profiles: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 # ============================================================================
@@ -372,7 +372,7 @@ def list_templates():
 
     except Exception as e:
         click.echo(f"Error listing templates: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @template_commands.command(name='preview')
@@ -387,13 +387,13 @@ def preview_template(name: str):
 
         if preview is None:
             click.echo(f"✗ Template '{name}' not found", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
         click.echo(f"\nTemplate Preview: {preview['name']}")
         click.echo("=" * 80)
         click.echo(f"Description: {preview['description']}")
 
-        click.echo(f"\nPreferences Summary:")
+        click.echo("\nPreferences Summary:")
         summary = preview['preferences_summary']
         click.echo(f"  Naming patterns: {', '.join(summary['naming_patterns'])}")
         click.echo(f"  Folder mappings: {', '.join(summary['folder_mappings'])}")
@@ -401,7 +401,7 @@ def preview_template(name: str):
 
         click.echo(f"\nLearned patterns: {', '.join(preview['learned_patterns'])}")
 
-        click.echo(f"\nConfidence levels:")
+        click.echo("\nConfidence levels:")
         for key, value in preview['confidence_levels'].items():
             click.echo(f"  {key}: {value}")
 
@@ -409,7 +409,7 @@ def preview_template(name: str):
 
     except Exception as e:
         click.echo(f"Error previewing template: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @template_commands.command(name='apply')
@@ -425,8 +425,8 @@ def apply_template(template_name: str, profile_name: str, activate: bool):
         profile = template_manager.create_profile_from_template(template_name, profile_name)
 
         if profile is None:
-            click.echo(f"✗ Failed to create profile from template", err=True)
-            raise click.Abort()
+            click.echo("✗ Failed to create profile from template", err=True)
+            raise click.Abort() from e
 
         click.echo(f"✓ Created profile '{profile_name}' from template '{template_name}'")
 
@@ -434,11 +434,11 @@ def apply_template(template_name: str, profile_name: str, activate: bool):
             if manager.activate_profile(profile_name):
                 click.echo(f"✓ Activated profile: {profile_name}")
             else:
-                click.echo(f"✗ Failed to activate profile", err=True)
+                click.echo("✗ Failed to activate profile", err=True)
 
     except Exception as e:
         click.echo(f"Error applying template: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 # ============================================================================
@@ -462,12 +462,12 @@ def migrate_profile(name: str, to_version: str, no_backup: bool):
         if success:
             click.echo(f"✓ Migrated profile '{name}' to version {to_version}")
         else:
-            click.echo(f"✗ Failed to migrate profile", err=True)
-            raise click.Abort()
+            click.echo("✗ Failed to migrate profile", err=True)
+            raise click.Abort() from e
 
     except Exception as e:
         click.echo(f"Error migrating profile: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @profile_command.command(name='validate')
@@ -482,11 +482,11 @@ def validate_profile(name: str):
             click.echo(f"✓ Profile '{name}' is valid")
         else:
             click.echo(f"✗ Profile '{name}' validation failed", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
     except Exception as e:
         click.echo(f"Error validating profile: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 # Export all commands

@@ -162,7 +162,7 @@ class BackupManager:
         removed_backups = []
 
         # Find and remove old backups
-        for backup_key, metadata in list(manifest.items()):
+        for backup_key, _metadata in list(manifest.items()):
             backup_time = datetime.fromisoformat(metadata["backup_time"])
 
             if backup_time < cutoff_date:
@@ -209,7 +209,7 @@ class BackupManager:
         manifest = self._load_manifest()
 
         backups = []
-        for backup_key, metadata in manifest.items():
+        for backup_key, _metadata in manifest.items():
             backup_info = metadata.copy()
             backup_info["exists"] = Path(backup_key).exists()
             backups.append(backup_info)
@@ -232,7 +232,7 @@ class BackupManager:
         total_size = 0
         existing_backups = 0
 
-        for backup_key, metadata in manifest.items():
+        for backup_key, _metadata in manifest.items():
             backup_path = Path(backup_key)
             if backup_path.exists():
                 existing_backups += 1
@@ -257,7 +257,7 @@ class BackupManager:
         manifest = self._load_manifest()
         issues = []
 
-        for backup_key, metadata in manifest.items():
+        for backup_key, _metadata in manifest.items():
             backup_path = Path(backup_key)
 
             # Check if backup file exists
@@ -299,4 +299,4 @@ class BackupManager:
             with open(self.manifest_path, 'w', encoding='utf-8') as f:
                 json.dump(manifest, f, indent=2, ensure_ascii=False)
         except IOError as e:
-            raise IOError(f"Failed to save manifest: {e}")
+            raise IOError(f"Failed to save manifest: {e}") from e

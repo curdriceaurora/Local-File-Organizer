@@ -6,7 +6,7 @@ interface for duplicate detection workflows.
 """
 
 from pathlib import Path
-from typing import List, Optional, Callable
+from typing import , Optional, Callable
 from dataclasses import dataclass
 
 from .hasher import FileHasher, HashAlgorithm
@@ -22,8 +22,8 @@ class ScanOptions:
     follow_symlinks: bool = False
     min_file_size: int = 0  # Minimum file size to consider (bytes)
     max_file_size: Optional[int] = None  # Maximum file size (None = no limit)
-    file_patterns: Optional[List[str]] = None  # Glob patterns to include
-    exclude_patterns: Optional[List[str]] = None  # Glob patterns to exclude
+    file_patterns: Optional[list[str]] = None  # Glob patterns to include
+    exclude_patterns: Optional[list[str]] = None  # Glob patterns to exclude
     progress_callback: Optional[Callable[[int, int], None]] = None  # (current, total)
 
 
@@ -101,7 +101,7 @@ class DuplicateDetector:
         self,
         directory: Path,
         options: ScanOptions
-    ) -> List[Path]:
+    ) -> list[Path]:
         """
         Find all files in directory matching the criteria.
         
@@ -157,9 +157,9 @@ class DuplicateDetector:
     
     def _group_by_size(
         self,
-        files: List[Path],
+        files: list[Path],
         options: ScanOptions
-    ) -> dict[int, List[Path]]:
+    ) -> dict[int, list[Path]]:
         """
         Group files by size.
         
@@ -167,13 +167,13 @@ class DuplicateDetector:
         so we skip hashing them.
         
         Args:
-            files: List of files to group
+            files: list of files to group
             options: Scan options (unused but kept for consistency)
             
         Returns:
             Dictionary mapping file sizes to lists of files
         """
-        size_groups: dict[int, List[Path]] = {}
+        size_groups: dict[int, list[Path]] = {}
         
         for file_path in files:
             try:
@@ -191,7 +191,7 @@ class DuplicateDetector:
     
     def _process_files(
         self,
-        size_groups: dict[int, List[Path]],
+        size_groups: dict[int, list[Path]],
         options: ScanOptions
     ) -> None:
         """
@@ -200,7 +200,7 @@ class DuplicateDetector:
         Only hashes files that have potential duplicates (2+ files with same size).
         
         Args:
-            size_groups: Dictionary of size to file lists
+            size_groups: dictionary of size to file lists
             options: Scan options including algorithm and progress callback
         """
         # Count total files to hash (only those with potential duplicates)
@@ -252,7 +252,7 @@ class DuplicateDetector:
         file_path: Path,
         search_directory: Path,
         algorithm: HashAlgorithm = "sha256"
-    ) -> List[FileMetadata]:
+    ) -> list[FileMetadata]:
         """
         Find all duplicates of a specific file in a directory.
         

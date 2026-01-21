@@ -28,6 +28,7 @@
 **Try the demo with sample files in under 1 minute:**
 
 ```bash
+
 # 1. Demo with sample files (safe - dry run to preview)
 python3 demo.py --sample --dry-run
 
@@ -36,16 +37,19 @@ python3 demo.py --sample
 
 # 3. Check the results
 ls -R demo_organized/
+
 ```
 
 **Organize your own files:**
 
 ```bash
+
 # Dry run first (recommended)
 python3 demo.py --input ~/Downloads --output ~/Organized --dry-run
 
 # Actually organize
 python3 demo.py --input ~/Downloads --output ~/Organized
+
 ```
 
 See [DEMO_COMPLETE.md](DEMO_COMPLETE.md) for full text processing documentation.
@@ -56,38 +60,53 @@ See [WEEK2_IMAGE_PROCESSING.md](WEEK2_IMAGE_PROCESSING.md) for image/video proce
 ## Prerequisites
 
 1. **Python 3.12+**
+
    ```bash
+
    python --version  # Should be 3.12 or higher
+
    ```
 
 2. **Ollama** (for AI models)
+
    ```bash
+
    # macOS/Linux
    curl -fsSL https://ollama.com/install.sh | sh
 
    # Or visit https://ollama.com for other platforms
+
    ```
 
 ### Installation
 
 1. **Install the package**
+
    ```bash
+
    cd file_organizer_v2
    pip install -e .
+
    ```
 
 2. **Pull AI models** (first time only)
+
    ```bash
+
    # Text model (~2 GB) - required
    ollama pull qwen2.5:3b-instruct-q4_K_M
 
    # Vision model (~6 GB) - required for images/videos
    ollama pull qwen2.5vl:7b-q4_K_M
+
    ```
 
 3. **Verify installation**
+
    ```bash
+
    python -c "from file_organizer.models import TextModel; print('✓ Installation successful!')"
+
    ```
 
 ## Development Setup
@@ -95,30 +114,45 @@ See [WEEK2_IMAGE_PROCESSING.md](WEEK2_IMAGE_PROCESSING.md) for image/video proce
 ### For Contributors
 
 1. **Clone and setup**
+
    ```bash
+
    git clone <repo-url>
    cd file_organizer_v2
    pip install -e ".[dev]"
+
    ```
 
 2. **Install pre-commit hooks**
+
    ```bash
+
    pre-commit install
+
    ```
 
 3. **Run tests**
+
    ```bash
+
    pytest
+
    ```
 
 4. **Type checking**
+
    ```bash
+
    mypy src/file_organizer
+
    ```
 
 5. **Linting**
+
    ```bash
+
    ruff check src/
+
    ```
 
 ## Usage
@@ -126,6 +160,7 @@ See [WEEK2_IMAGE_PROCESSING.md](WEEK2_IMAGE_PROCESSING.md) for image/video proce
 ### Python API (Current Phase 1)
 
 ```python
+
 from file_organizer.models import TextModel, VisionModel
 from file_organizer.models.base import ModelConfig, ModelType
 
@@ -151,12 +186,15 @@ with vision_model:
         task="describe"
     )
     print(description)
+
 ```
 
 ### CLI (Phase 2+)
 
 **Basic Organization:**
+
 ```bash
+
 # Quick organization
 file-organizer organize /path/to/files --mode content
 
@@ -165,10 +203,13 @@ file-organizer preview /path/to/files
 
 # Interactive TUI
 file-organizer tui
+
 ```
 
 **Phase 4 Features (Available Now):**
+
 ```bash
+
 # Deduplication
 python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest --dry-run
 
@@ -176,8 +217,8 @@ python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest --dry-run
 python -m file_organizer.cli.analytics ~/Documents --export report.json
 
 # Profile Management
-python -m file_organizer.cli.profile export my-profile.json
-python -m file_organizer.cli.profile import shared-profile.json
+python -m file_organizer.cli.profile export --output my-profile.json
+python -m file_organizer.cli.profile import --input shared-profile.json
 
 # Undo/Redo Operations
 python -m file_organizer.cli.undo_redo --list
@@ -185,6 +226,7 @@ python -m file_organizer.cli.undo_redo --undo
 
 # Auto-tagging
 python -m file_organizer.cli.autotag ~/Documents --model qwen2.5:3b
+
 ```
 
 See [Phase 4 Documentation](docs/phase4/) for complete CLI reference.
@@ -192,6 +234,7 @@ See [Phase 4 Documentation](docs/phase4/) for complete CLI reference.
 ## Project Structure
 
 ```
+
 file_organizer_v2/
 ├── src/
 │   └── file_organizer/
@@ -211,6 +254,7 @@ file_organizer_v2/
 ├── scripts/                   # Utility scripts
 ├── pyproject.toml            # Project configuration
 └── README.md                 # This file
+
 ```
 
 ## Development Roadmap
@@ -275,7 +319,9 @@ See [Phase 4 Documentation](docs/phase4/) for detailed guides.
 ## Testing
 
 ### Run Tests
+
 ```bash
+
 # All tests
 pytest
 
@@ -287,10 +333,13 @@ pytest -m integration
 
 # With coverage
 pytest --cov=file_organizer --cov-report=html
+
 ```
 
 ### Manual Testing
+
 ```bash
+
 # Test text model
 python scripts/test_text_model.py
 
@@ -299,12 +348,15 @@ python scripts/test_vision_model.py
 
 # Benchmark performance
 python scripts/benchmark.py
+
 ```
 
 ## Configuration
 
 ### Environment Variables
+
 ```bash
+
 # Ollama settings
 OLLAMA_HOST=http://localhost:11434
 
@@ -315,6 +367,7 @@ LOG_FILE=~/.local/share/file-organizer/logs/app.log
 # Model settings
 TEXT_MODEL=qwen2.5:3b-instruct-q4_K_M
 VISION_MODEL=qwen2.5-vl:7b-q4_K_M
+
 ```
 
 ### Configuration File
@@ -351,7 +404,9 @@ We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for
 ## Troubleshooting
 
 ### Ollama Connection Issues
+
 ```bash
+
 # Check if Ollama is running
 ollama list
 
@@ -360,24 +415,31 @@ ollama serve
 
 # Check Ollama version
 ollama --version
+
 ```
 
 ### Model Not Found
+
 ```bash
+
 # List installed models
 ollama list
 
 # Pull missing model
 ollama pull qwen2.5:3b-instruct-q4_K_M
+
 ```
 
 ### Import Errors
+
 ```bash
+
 # Reinstall in development mode
 pip install -e ".[dev]"
 
 # Verify Python version
 python --version  # Must be 3.12+
+
 ```
 
 ## License

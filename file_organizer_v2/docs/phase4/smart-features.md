@@ -28,6 +28,7 @@ The system combines:
 ### Using Smart Suggestions
 
 ```python
+
 from file_organizer.services.smart_suggestions import SmartSuggestionEngine
 from pathlib import Path
 
@@ -55,11 +56,13 @@ for cat in suggestions.categories:
 print("\nTag suggestions:")
 for tag in suggestions.tags:
     print(f"  {tag.name} (relevance: {tag.relevance:.0%})")
+
 ```
 
 ### Confidence Thresholds
 
 ```python
+
 # Only show high-confidence suggestions
 suggestions = engine.get_suggestions(
     file_path,
@@ -72,11 +75,13 @@ suggestions = engine.get_suggestions(
     min_confidence=0.5,
     max_suggestions=10
 )
+
 ```
 
 ### Accepting Suggestions
 
 ```python
+
 # User accepts a suggestion
 accepted_suggestion = suggestions.destinations[0]
 
@@ -88,6 +93,7 @@ engine.track_acceptance(
 )
 
 # This improves future suggestions
+
 ```
 
 ### Suggestion Types
@@ -100,6 +106,7 @@ Based on:
 - Learned folder mappings
 
 ```python
+
 destinations = suggestions.destinations
 # Returns list of (path, confidence, reason) tuples
 
@@ -107,6 +114,7 @@ destinations = suggestions.destinations
 # Path: ~/Documents/Work/Reports
 # Confidence: 0.85
 # Reason: "Similar PDF files are stored here (15 files)"
+
 ```
 
 **Naming Suggestions**
@@ -117,12 +125,14 @@ Based on:
 - File type conventions
 
 ```python
+
 names = suggestions.names
 
 # Example suggestions:
 # - "Report_2024_Q1_Financial.pdf" (0.90)
 # - "Financial_Report_Jan_2024.pdf" (0.82)
 # - "Q1_2024_Report.pdf" (0.75)
+
 ```
 
 **Category Suggestions**
@@ -133,12 +143,14 @@ Based on:
 - Keywords and entities
 
 ```python
+
 categories = suggestions.categories
 
 # Example categories:
 # - "Work" (0.88)
 # - "Financial" (0.75)
 # - "Reports" (0.70)
+
 ```
 
 **Tag Suggestions**
@@ -149,6 +161,7 @@ Based on:
 - Related file tags
 
 ```python
+
 tags = suggestions.tags
 
 # Example tags:
@@ -156,6 +169,7 @@ tags = suggestions.tags
 # - "quarterly" (0.88)
 # - "2024" (0.85)
 # - "pdf" (0.80)
+
 ```
 
 ## Auto-Tagging
@@ -167,6 +181,7 @@ Auto-Tagging automatically generates and applies tags to files based on their co
 ### Basic Usage
 
 ```bash
+
 # Get tag suggestions for a file
 python -m file_organizer.cli.autotag suggest document.pdf
 
@@ -175,11 +190,13 @@ python -m file_organizer.cli.autotag apply document.pdf financial quarterly repo
 
 # Batch tag entire directory
 python -m file_organizer.cli.autotag batch ~/Documents --recursive
+
 ```
 
 ### Python API
 
 ```python
+
 from file_organizer.services.auto_tagging import AutoTaggingService
 from pathlib import Path
 
@@ -208,6 +225,7 @@ tagger.apply_tags(
 # Get file tags
 tags = tagger.get_tags(file_path)
 print(f"File tags: {', '.join(tags)}")
+
 ```
 
 ### Tag Sources
@@ -215,7 +233,9 @@ print(f"File tags: {', '.join(tags)}")
 Tags can come from multiple sources:
 
 **Content Analysis**
+
 ```python
+
 # Extract tags from file content
 content_tags = tagger.analyze_content(file_path)
 
@@ -224,10 +244,13 @@ content_tags = tagger.analyze_content(file_path)
 # - Named entity recognition
 # - Topic modeling
 # - Frequency analysis
+
 ```
 
 **Similar Files**
+
 ```python
+
 # Tags from similar files in library
 similar_tags = tagger.get_similar_file_tags(file_path)
 
@@ -236,10 +259,13 @@ similar_tags = tagger.get_similar_file_tags(file_path)
 # - Name patterns
 # - Location
 # - Type
+
 ```
 
 **User History**
+
 ```python
+
 # Tags based on user's tagging patterns
 historical_tags = tagger.get_historical_tags(
     file_type=".pdf",
@@ -250,10 +276,13 @@ historical_tags = tagger.get_historical_tags(
 # - Previously applied tags
 # - Tag frequencies
 # - Tag co-occurrences
+
 ```
 
 **AI Analysis**
+
 ```python
+
 # AI-powered tag generation
 ai_tags = tagger.generate_ai_tags(
     file_path,
@@ -264,31 +293,41 @@ ai_tags = tagger.generate_ai_tags(
 # - Semantic understanding
 # - Context awareness
 # - Domain knowledge
+
 ```
 
 ### Tag Management
 
 **View Popular Tags**
+
 ```bash
+
 # Show most popular tags
 python -m file_organizer.cli.autotag popular --limit 20
+
 ```
 
 ```python
+
 # Get popular tags programmatically
 popular = tagger.get_popular_tags(limit=20)
 
 for tag, count in popular:
     print(f"{tag}: used {count} times")
+
 ```
 
 **View Recent Tags**
+
 ```bash
+
 # Show recently used tags
 python -m file_organizer.cli.autotag recent --days 30
+
 ```
 
 ```python
+
 # Get recent tags
 from datetime import datetime, timedelta
 
@@ -296,10 +335,13 @@ recent = tagger.get_recent_tags(
     since=datetime.now() - timedelta(days=30),
     limit=20
 )
+
 ```
 
 **Tag Statistics**
+
 ```python
+
 # Get tag statistics
 stats = tagger.get_statistics()
 
@@ -307,12 +349,15 @@ print(f"Total tags: {stats['total_tags']}")
 print(f"Total files tagged: {stats['files_tagged']}")
 print(f"Average tags per file: {stats['avg_tags_per_file']:.1f}")
 print(f"Most used tag: {stats['most_used_tag']}")
+
 ```
 
 ### Advanced Features
 
 **Keyword Extraction**
+
 ```python
+
 # Extract keywords from file
 keywords = tagger.extract_keywords(
     file_path,
@@ -322,10 +367,13 @@ keywords = tagger.extract_keywords(
 
 for keyword, score in keywords:
     print(f"{keyword}: {score:.2f}")
+
 ```
 
 **Entity Extraction**
+
 ```python
+
 # Extract named entities
 entities = tagger.extract_entities(file_path)
 
@@ -333,19 +381,25 @@ print("Organizations:", entities['organizations'])
 print("People:", entities['people'])
 print("Locations:", entities['locations'])
 print("Dates:", entities['dates'])
+
 ```
 
 **Topic Modeling**
+
 ```python
+
 # Identify document topics
 topics = tagger.identify_topics(file_path)
 
 for topic, relevance in topics:
     print(f"{topic}: {relevance:.0%} relevant")
+
 ```
 
 **Tag Relationships**
+
 ```python
+
 # Find related tags
 related = tagger.get_related_tags("financial")
 
@@ -353,20 +407,25 @@ related = tagger.get_related_tags("financial")
 # - "quarterly" (0.85 correlation)
 # - "report" (0.80 correlation)
 # - "budget" (0.75 correlation)
+
 ```
 
 ### Batch Operations
 
 **Batch Tagging**
+
 ```bash
+
 # Tag entire directory
 python -m file_organizer.cli.autotag batch ~/Documents \
     --recursive \
     --min-confidence 60 \
     --pattern "*.pdf"
+
 ```
 
 ```python
+
 # Batch tag programmatically
 results = tagger.batch_tag_directory(
     directory=Path("~/Documents"),
@@ -378,10 +437,13 @@ results = tagger.batch_tag_directory(
 
 print(f"Processed {results.files_processed} files")
 print(f"Suggested {results.total_suggestions} tags")
+
 ```
 
 **Tag Cleanup**
+
 ```python
+
 # Remove unused tags
 removed = tagger.cleanup_unused_tags(days=90)
 print(f"Removed {removed} unused tags")
@@ -395,12 +457,15 @@ print(f"Merged {merged} tag pairs")
 # Normalize tag names
 normalized = tagger.normalize_tags()
 # Fixes: capitalization, plurals, synonyms
+
 ```
 
 ### Learning from Feedback
 
 **Track Tag Usage**
+
 ```python
+
 # System learns which tags are useful
 tagger.track_tag_usage(
     file_path=file_path,
@@ -409,18 +474,23 @@ tagger.track_tag_usage(
 )
 
 # This improves future suggestions
+
 ```
 
 **Import/Export Tags**
+
 ```bash
+
 # Export tags
 python -m file_organizer.cli.autotag export tags.json
 
 # Import tags
 python -m file_organizer.cli.autotag import tags.json --merge
+
 ```
 
 ```python
+
 # Export programmatically
 tag_data = tagger.export_tags()
 
@@ -431,6 +501,7 @@ with open("tags.json", "w") as f:
 with open("tags.json") as f:
     tag_data = json.load(f)
 tagger.import_tags(tag_data, merge=True)
+
 ```
 
 ## Integration Examples
@@ -438,6 +509,7 @@ tagger.import_tags(tag_data, merge=True)
 ### With File Organization
 
 ```python
+
 from file_organizer.core import FileOrganizer
 from file_organizer.services.smart_suggestions import SmartSuggestionEngine
 from file_organizer.services.auto_tagging import AutoTaggingService
@@ -460,11 +532,13 @@ organizer.move_file(file_path, best_dest.path)
 # Auto-tag the file
 tag_suggestions = tagger.suggest_tags(file_path)
 tagger.apply_tags(file_path, [tag for tag, _ in tag_suggestions[:5]])
+
 ```
 
 ### With Intelligence System
 
 ```python
+
 from file_organizer.services.intelligence import PreferenceTracker
 
 # Smart suggestions use learned preferences
@@ -478,11 +552,13 @@ suggestions = engine.get_suggestions(file_path)
 engine.track_acceptance(file_path, suggestions.destinations[0], True)
 
 # Next time, similar files get better suggestions
+
 ```
 
 ### With Search
 
 ```python
+
 # Find files by tags
 tagged_files = tagger.search_by_tags(
     tags=["financial", "quarterly"],
@@ -493,12 +569,15 @@ print(f"Found {len(tagged_files)} files")
 
 # Find files by tag pattern
 reports = tagger.search_by_tag_pattern("*report*")
+
 ```
 
 ## CLI Reference
 
 ### Smart Suggestions (Future)
+
 ```bash
+
 # Get suggestions for a file
 file-organizer suggest ~/Downloads/file.pdf
 
@@ -507,11 +586,13 @@ file-organizer apply-suggestion --id 42
 
 # Batch suggestions
 file-organizer suggest-batch ~/Downloads
+
 ```
 
 ### Auto-Tagging
 
 ```bash
+
 # Suggest tags
 python -m file_organizer.cli.autotag suggest document.pdf \
     --top-n 10 \
@@ -536,6 +617,7 @@ python -m file_organizer.cli.autotag batch ~/Documents \
     --recursive \
     --pattern "*.pdf" \
     --min-confidence 60
+
 ```
 
 ## Best Practices
@@ -543,6 +625,7 @@ python -m file_organizer.cli.autotag batch ~/Documents \
 ### 1. Set Appropriate Confidence Thresholds
 
 ```python
+
 # High stakes: use high threshold
 suggestions = engine.get_suggestions(
     file_path,
@@ -554,42 +637,51 @@ suggestions = engine.get_suggestions(
     file_path,
     min_confidence=0.5  # Show more options
 )
+
 ```
 
 ### 2. Provide Feedback
 
 ```python
+
 # Always track accepted/rejected suggestions
 engine.track_acceptance(file_path, suggestion, accepted=True)
 
 # This improves the system
+
 ```
 
 ### 3. Regular Tag Cleanup
 
 ```bash
+
 # Monthly cleanup
 python -m file_organizer.cli.autotag cleanup --days 90
+
 ```
 
 ### 4. Use Batch Operations for Large Libraries
 
 ```bash
+
 # Initial tagging of existing library
 python -m file_organizer.cli.autotag batch ~/Documents \
     --recursive \
     --min-confidence 70 \
     --auto-apply
+
 ```
 
 ### 5. Combine with Intelligence System
 
 ```python
+
 # Let suggestions learn from preferences
 engine = SmartSuggestionEngine(
     preference_tracker=tracker,
     learn_from_feedback=True
 )
+
 ```
 
 ## Troubleshooting
@@ -605,10 +697,12 @@ engine = SmartSuggestionEngine(
 - Verify AI model is running
 
 ```python
+
 # Debug suggestions
 debug_info = engine.get_suggestion_debug_info(file_path)
 print(f"Factors considered: {debug_info.factors}")
 print(f"Confidence sources: {debug_info.sources}")
+
 ```
 
 ### Tags Not Appearing
@@ -622,8 +716,10 @@ print(f"Confidence sources: {debug_info.sources}")
 - Check AI model availability
 
 ```bash
+
 # Test with verbose output
 python -m file_organizer.cli.autotag suggest file.pdf --verbose
+
 ```
 
 ### Poor Tag Quality
@@ -637,6 +733,7 @@ python -m file_organizer.cli.autotag suggest file.pdf --verbose
 - Review and merge similar tags
 
 ```python
+
 # Focus on content analysis
 tags = tagger.suggest_tags(
     file_path,
@@ -644,6 +741,7 @@ tags = tagger.suggest_tags(
     use_filename=False,
     min_confidence=60.0
 )
+
 ```
 
 ## Performance Tips
@@ -651,29 +749,35 @@ tags = tagger.suggest_tags(
 ### 1. Cache Suggestions
 
 ```python
+
 # Cache expensive suggestions
 engine = SmartSuggestionEngine(
     cache_suggestions=True,
     cache_ttl=3600  # 1 hour
 )
+
 ```
 
 ### 2. Batch Processing
 
 ```python
+
 # Process multiple files efficiently
 files = [Path(f) for f in file_list]
 results = tagger.batch_suggest_tags(files)
+
 ```
 
 ### 3. Async Operations
 
 ```python
+
 # Use async for better performance
 async def process_files(files):
     tasks = [tagger.suggest_tags_async(f) for f in files]
     results = await asyncio.gather(*tasks)
     return results
+
 ```
 
 ## API Reference
@@ -681,6 +785,7 @@ async def process_files(files):
 ### SmartSuggestionEngine
 
 ```python
+
 class SmartSuggestionEngine:
     def get_suggestions(
         self,
@@ -697,11 +802,13 @@ class SmartSuggestionEngine:
         accepted: bool,
     ):
         """Track whether suggestion was accepted."""
+
 ```
 
 ### AutoTaggingService
 
 ```python
+
 class AutoTaggingService:
     def suggest_tags(
         self,
@@ -721,6 +828,7 @@ class AutoTaggingService:
 
     def get_tags(self, file_path: Path) -> List[str]:
         """Get tags for a file."""
+
 ```
 
 ## Related Documentation

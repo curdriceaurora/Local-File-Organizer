@@ -9,8 +9,6 @@ import sys
 from pathlib import Path
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
 from file_organizer.services.deduplication.viewer import ComparisonViewer
 from rich.console import Console
 

@@ -5,7 +5,7 @@ select the highest quality image from a group of similar/duplicate images.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import IntEnum
 import logging
@@ -80,7 +80,7 @@ class ImageQualityAnalyzer:
         'has_transparency': 0.05 # Transparency can be important
     }
 
-    def __init__(self, weights: Optional[Dict[str, float]] = None):
+    def __init__(self, weights: Optional[dict[str, float]] = None):
         """Initialize quality analyzer.
 
         Args:
@@ -306,11 +306,11 @@ class ImageQualityAnalyzer:
         else:
             return 1
 
-    def get_best_quality(self, images: List[Path]) -> Optional[Path]:
+    def get_best_quality(self, images: list[Path]) -> Optional[Path]:
         """Select the best quality image from a list.
 
         Args:
-            images: List of image paths to compare
+            images: list of image paths to compare
 
         Returns:
             Path to the highest quality image, or None if list is empty
@@ -385,11 +385,11 @@ class ImageQualityAnalyzer:
 
         return False
 
-    def get_ranked_images(self, images: List[Path]) -> List[Tuple[Path, float, QualityMetrics]]:
+    def get_ranked_images(self, images: list[Path]) -> list[tuple[Path, float, QualityMetrics]]:
         """Get images ranked by quality with full details.
 
         Args:
-            images: List of image paths to rank
+            images: list of image paths to rank
 
         Returns:
             List of tuples (path, score, metrics) sorted by quality (best first)

@@ -7,7 +7,7 @@ Integrates with smart suggestions infrastructure.
 
 import logging
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 import hashlib
@@ -25,7 +25,7 @@ class TagSuggestion:
     confidence: float  # 0-100
     source: str  # content, behavior, hybrid
     reasoning: str
-    metadata: Dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
     def to_dict(self) -> Dict:
         """Convert to dictionary."""
@@ -38,7 +38,7 @@ class TagSuggestion:
         }
 
     @staticmethod
-    def from_dict(data: Dict) -> 'TagSuggestion':
+    def from_dict(data: dict) -> 'TagSuggestion':
         """Create from dictionary."""
         return TagSuggestion(
             tag=data['tag'],
@@ -53,19 +53,19 @@ class TagSuggestion:
 class TagRecommendation:
     """Complete tag recommendation for a file."""
     file_path: Path
-    suggestions: List[TagSuggestion]
-    existing_tags: List[str] = field(default_factory=list)
+    suggestions: list[TagSuggestion]
+    existing_tags: list[str] = field(default_factory=list)
     confidence_threshold: float = 40.0
     timestamp: datetime = field(default_factory=datetime.now)
 
-    def get_high_confidence_tags(self) -> List[str]:
+    def get_high_confidence_tags(self) -> list[str]:
         """Get tags with confidence >= 70%."""
         return [
             s.tag for s in self.suggestions
             if s.confidence >= 70
         ]
 
-    def get_medium_confidence_tags(self) -> List[str]:
+    def get_medium_confidence_tags(self) -> list[str]:
         """Get tags with confidence 40-70%."""
         return [
             s.tag for s in self.suggestions
@@ -125,7 +125,7 @@ class TagRecommender:
     def recommend_tags(
         self,
         file_path: Path,
-        existing_tags: Optional[List[str]] = None,
+        existing_tags: Optional[list[str]] = None,
         top_n: int = 10
     ) -> TagRecommendation:
         """
@@ -229,14 +229,14 @@ class TagRecommender:
 
     def batch_recommend(
         self,
-        files: List[Path],
+        files: list[Path],
         top_n: int = 10
-    ) -> Dict[Path, TagRecommendation]:
+    ) -> dict[Path, TagRecommendation]:
         """
         Generate recommendations for multiple files.
 
         Args:
-            files: List of file paths
+            files: list of file paths
             top_n: Maximum suggestions per file
 
         Returns:
@@ -293,7 +293,7 @@ class TagRecommender:
         self,
         tag: str,
         file_path: Path,
-        existing_tags: Optional[List[str]] = None
+        existing_tags: Optional[list[str]] = None
     ) -> str:
         """
         Generate detailed explanation for why a tag was suggested.
@@ -352,7 +352,7 @@ class TagRecommender:
     def _get_content_suggestions(
         self,
         file_path: Path
-    ) -> List[Tuple[str, float]]:
+    ) -> list[tuple[str, float]]:
         """Get suggestions from content analysis."""
         try:
             # Get keywords with scores
@@ -380,8 +380,8 @@ class TagRecommender:
     def _get_behavior_suggestions(
         self,
         file_path: Path,
-        existing_tags: List[str]
-    ) -> List[Tuple[str, float]]:
+        existing_tags: list[str]
+    ) -> list[tuple[str, float]]:
         """Get suggestions from learned behavior."""
         try:
             file_ext = file_path.suffix.lower()
@@ -403,8 +403,8 @@ class TagRecommender:
 
     def _get_related_suggestions(
         self,
-        existing_tags: List[str]
-    ) -> List[Tuple[str, float]]:
+        existing_tags: list[str]
+    ) -> list[tuple[str, float]]:
         """Get suggestions based on tag relationships."""
         related_tags = {}
 
@@ -449,8 +449,8 @@ class TagRecommender:
 
     def _rank_suggestions(
         self,
-        suggestions: List[TagSuggestion]
-    ) -> List[TagSuggestion]:
+        suggestions: list[TagSuggestion]
+    ) -> list[TagSuggestion]:
         """Rank suggestions by confidence and source."""
         # Source priority: hybrid > behavior > content
         source_priority = {

@@ -16,6 +16,7 @@ The History & Undo/Redo system provides:
 ### Basic Undo/Redo
 
 ```bash
+
 # View recent operations
 python -m file_organizer.cli.undo_redo --list
 
@@ -27,11 +28,13 @@ python -m file_organizer.cli.undo_redo --redo
 
 # Preview what would be undone (dry-run)
 python -m file_organizer.cli.undo_redo --undo --dry-run
+
 ```
 
 ### Python API
 
 ```python
+
 from file_organizer.history import HistoryTracker, UndoManager
 from pathlib import Path
 
@@ -54,6 +57,7 @@ undo_manager.undo_last_operation()
 
 # Or redo it
 undo_manager.redo_last_operation()
+
 ```
 
 ## Operation History
@@ -80,6 +84,7 @@ The system tracks all file operations:
 ### Using History Tracker
 
 ```python
+
 from file_organizer.history import HistoryTracker, OperationType
 from pathlib import Path
 from datetime import datetime
@@ -102,11 +107,13 @@ operation = tracker.track_operation(
 )
 
 print(f"Tracked operation {operation.id}")
+
 ```
 
 ### Querying History
 
 ```python
+
 from datetime import datetime, timedelta
 
 # Get recent operations
@@ -129,11 +136,13 @@ print(f"Total moves: {len(moves)}")
 # Get operations by path
 docs = tracker.get_operations_by_path(Path("~/Documents"))
 print(f"Operations in Documents: {len(docs)}")
+
 ```
 
 ### History Statistics
 
 ```python
+
 # Get operation statistics
 stats = tracker.get_statistics()
 
@@ -147,6 +156,7 @@ for status, count in stats['by_status'].items():
     print(f"  {status}: {count}")
 
 print(f"\nSuccess rate: {stats['success_rate']:.1%}")
+
 ```
 
 ## Transactions
@@ -164,6 +174,7 @@ Transactions group related operations together so they can be undone/redone as a
 ### Creating Transactions
 
 ```python
+
 from file_organizer.history import TransactionManager
 
 # Create transaction manager
@@ -192,11 +203,13 @@ except Exception as e:
     # Rollback on error
     tx_manager.rollback_transaction(tx_id)
     print(f"Transaction {tx_id} rolled back: {e}")
+
 ```
 
 ### Context Manager for Transactions
 
 ```python
+
 # Using context manager (recommended)
 with tx_manager.transaction("Batch rename photos") as tx_id:
     for photo in photos:
@@ -208,11 +221,13 @@ with tx_manager.transaction("Batch rename photos") as tx_id:
             transaction_id=tx_id
         )
     # Automatically commits on success, rolls back on exception
+
 ```
 
 ### Querying Transactions
 
 ```python
+
 # Get all transactions
 transactions = tx_manager.get_transactions()
 
@@ -228,6 +243,7 @@ tx = tx_manager.get_transaction(tx_id)
 operations = tracker.get_operations(transaction_id=tx_id)
 
 print(f"Transaction has {len(operations)} operations")
+
 ```
 
 ## Undo/Redo Operations
@@ -235,6 +251,7 @@ print(f"Transaction has {len(operations)} operations")
 ### Basic Undo/Redo
 
 ```python
+
 from file_organizer.undo import UndoManager
 
 manager = UndoManager()
@@ -252,11 +269,13 @@ success = manager.redo_last_operation()
 
 if success:
     print("Operation redone successfully")
+
 ```
 
 ### Undo Specific Operation
 
 ```python
+
 # Undo specific operation by ID
 operation_id = 42
 can_undo, reason = manager.can_undo(operation_id)
@@ -266,11 +285,13 @@ if can_undo:
     print(f"Operation {operation_id} undone")
 else:
     print(f"Cannot undo: {reason}")
+
 ```
 
 ### Undo Entire Transaction
 
 ```python
+
 # Undo all operations in a transaction
 transaction_id = "tx_20240121_123456"
 success = manager.undo_transaction(transaction_id)
@@ -278,11 +299,13 @@ success = manager.undo_transaction(transaction_id)
 if success:
     print(f"Transaction {transaction_id} undone")
     # All operations in the transaction are reversed
+
 ```
 
 ### Checking Undo/Redo Availability
 
 ```python
+
 # Check if operation can be undone
 can_undo, reason = manager.can_undo(operation_id)
 
@@ -299,11 +322,13 @@ can_redo, reason = manager.can_redo(operation_id)
 
 if not can_redo:
     print(f"Cannot redo: {reason}")
+
 ```
 
 ### Undo/Redo Stack
 
 ```python
+
 # Get undo stack (operations that can be undone)
 undo_stack = manager.get_undo_stack()
 
@@ -317,6 +342,7 @@ redo_stack = manager.get_redo_stack()
 print(f"\nCan redo {len(redo_stack)} operations:")
 for op in redo_stack[:5]:
     print(f"  {op.id}: {op.operation_type.value} - {op.source_path.name}")
+
 ```
 
 ## CLI Commands
@@ -324,6 +350,7 @@ for op in redo_stack[:5]:
 ### List Operations
 
 ```bash
+
 # List recent operations
 python -m file_organizer.cli.undo_redo --list
 
@@ -338,11 +365,13 @@ python -m file_organizer.cli.undo_redo --list --type move
 
 # Filter by date
 python -m file_organizer.cli.undo_redo --list --since "2024-01-20"
+
 ```
 
 ### Undo Operations
 
 ```bash
+
 # Undo last operation
 python -m file_organizer.cli.undo_redo --undo
 
@@ -357,11 +386,13 @@ python -m file_organizer.cli.undo_redo --undo --dry-run
 
 # Verbose output
 python -m file_organizer.cli.undo_redo --undo --verbose
+
 ```
 
 ### Redo Operations
 
 ```bash
+
 # Redo last undone operation
 python -m file_organizer.cli.undo_redo --redo
 
@@ -370,11 +401,13 @@ python -m file_organizer.cli.undo_redo --redo --operation-id 42
 
 # Preview redo
 python -m file_organizer.cli.undo_redo --redo --dry-run
+
 ```
 
 ### View Transaction Details
 
 ```bash
+
 # Show transaction details
 python -m file_organizer.cli.undo_redo --show-transaction tx_123
 
@@ -383,11 +416,13 @@ python -m file_organizer.cli.undo_redo --list-transactions
 
 # Show transaction statistics
 python -m file_organizer.cli.undo_redo --transaction-stats
+
 ```
 
 ### Export/Import History
 
 ```bash
+
 # Export history to JSON
 python -m file_organizer.cli.undo_redo --export history.json
 
@@ -400,11 +435,13 @@ python -m file_organizer.cli.undo_redo --import history.json
 
 # Import with merge
 python -m file_organizer.cli.undo_redo --import history.json --merge
+
 ```
 
 ### Cleanup
 
 ```bash
+
 # Clean old history (older than 90 days)
 python -m file_organizer.cli.undo_redo --cleanup --days 90
 
@@ -413,6 +450,7 @@ python -m file_organizer.cli.undo_redo --cleanup-transaction tx_123
 
 # Vacuum database (reclaim space)
 python -m file_organizer.cli.undo_redo --vacuum
+
 ```
 
 ## History Viewer
@@ -420,6 +458,7 @@ python -m file_organizer.cli.undo_redo --vacuum
 ### Interactive Viewer
 
 ```python
+
 from file_organizer.undo import HistoryViewer
 
 viewer = HistoryViewer()
@@ -433,11 +472,13 @@ viewer.show_interactive(limit=20)
 # - View operation details
 # - Undo/redo operations
 # - View transaction details
+
 ```
 
 ### Visual History
 
 ```python
+
 # Show timeline view
 viewer.show_timeline(
     start_date=datetime(2024, 1, 1),
@@ -450,6 +491,7 @@ viewer.show_operation_tree(transaction_id="tx_123")
 
 # Show statistics dashboard
 viewer.show_statistics()
+
 ```
 
 ## Safety Features
@@ -459,6 +501,7 @@ viewer.show_statistics()
 Operations that delete or overwrite files create backups:
 
 ```python
+
 # Backups stored in:
 # ~/.file_organizer/backups/{date}/{operation_id}/
 
@@ -470,6 +513,7 @@ backups/
 │   │   └── metadata.json
 │   └── op_43/
 │       └── document.txt
+
 ```
 
 ### Dry Run Mode
@@ -477,12 +521,14 @@ backups/
 Preview undo/redo without actually executing:
 
 ```python
+
 # Dry run for safety
 manager = UndoManager(dry_run=True)
 
 # This will only simulate the undo
 success = manager.undo_operation(operation_id)
 print("Preview: operation would be undone")
+
 ```
 
 ### Validation
@@ -494,6 +540,7 @@ Before undo/redo, the system validates:
 - No conflicts with existing files
 
 ```python
+
 # Validate before undo
 validation = manager.validate_undo(operation_id)
 
@@ -502,6 +549,7 @@ if not validation.is_valid:
     print("Issues found:")
     for issue in validation.issues:
         print(f"  - {issue}")
+
 ```
 
 ## Database Storage
@@ -511,6 +559,7 @@ if not validation.is_valid:
 Operations are stored in SQLite database:
 
 ```sql
+
 -- operations table
 CREATE TABLE operations (
     id INTEGER PRIMARY KEY,
@@ -535,6 +584,7 @@ CREATE TABLE transactions (
     completed_at DATETIME,
     operation_count INTEGER DEFAULT 0
 );
+
 ```
 
 ### Database Location
@@ -544,6 +594,7 @@ Default: `~/.file_organizer/history/operations.db`
 ### Maintenance
 
 ```python
+
 from file_organizer.history import HistoryDatabase
 
 db = HistoryDatabase()
@@ -564,6 +615,7 @@ db.archive_old_records(
     cutoff_date=datetime.now() - timedelta(days=365),
     archive_path="archive.db"
 )
+
 ```
 
 ## Integration Examples
@@ -571,6 +623,7 @@ db.archive_old_records(
 ### With File Organizer
 
 ```python
+
 from file_organizer.core import FileOrganizer
 from file_organizer.history import HistoryTracker
 
@@ -592,11 +645,13 @@ print(f"Tracked {len(results.operations)} operations")
 tx_id = results.transaction_id
 undo_manager = UndoManager()
 undo_manager.undo_transaction(tx_id)
+
 ```
 
 ### With Deduplication
 
 ```python
+
 from file_organizer.services.deduplication import HashDeduplicator
 from file_organizer.history import TransactionManager
 
@@ -620,6 +675,7 @@ with tx_manager.transaction("Deduplication cleanup") as tx_id:
 
 # Can undo entire deduplication if needed
 undo_manager.undo_transaction(tx_id)
+
 ```
 
 ## Best Practices
@@ -627,41 +683,51 @@ undo_manager.undo_transaction(tx_id)
 ### 1. Always Use Dry Run First
 
 ```bash
+
 # Preview before actual undo
 python -m file_organizer.cli.undo_redo --undo --dry-run
+
 ```
 
 ### 2. Use Transactions for Batch Operations
 
 ```python
+
 # Group related operations
 with tx_manager.transaction("Batch operation") as tx_id:
     for item in items:
         # Track each operation
         pass
+
 ```
 
 ### 3. Regular Backups
 
 ```bash
+
 # Export history weekly
 python -m file_organizer.cli.undo_redo --export weekly-backup.json
+
 ```
 
 ### 4. Clean Old History
 
 ```bash
+
 # Keep database size manageable
 python -m file_organizer.cli.undo_redo --cleanup --days 90
+
 ```
 
 ### 5. Validate Before Undo
 
 ```python
+
 # Check if undo is possible
 can_undo, reason = manager.can_undo(operation_id)
 if can_undo:
     manager.undo_operation(operation_id)
+
 ```
 
 ## Troubleshooting
@@ -677,12 +743,15 @@ if can_undo:
 4. Disk space issues
 
 **Solutions**:
+
 ```python
+
 # Check validation details
 validation = manager.validate_undo(operation_id)
 print(f"Issues: {validation.issues}")
 
 # Manual intervention may be needed
+
 ```
 
 ### Database Corruption
@@ -690,7 +759,9 @@ print(f"Issues: {validation.issues}")
 **Problem**: Database errors or corruption
 
 **Solutions**:
+
 ```bash
+
 # 1. Try to repair
 python -m file_organizer.cli.undo_redo --repair-db
 
@@ -701,6 +772,7 @@ python -m file_organizer.cli.undo_redo --restore-backup backup.db
 python -m file_organizer.cli.undo_redo --export export.json
 # (fix database)
 python -m file_organizer.cli.undo_redo --import export.json
+
 ```
 
 ### Large Database Size
@@ -708,7 +780,9 @@ python -m file_organizer.cli.undo_redo --import export.json
 **Problem**: Database grows too large
 
 **Solutions**:
+
 ```bash
+
 # Clean old records
 python -m file_organizer.cli.undo_redo --cleanup --days 90
 
@@ -717,6 +791,7 @@ python -m file_organizer.cli.undo_redo --vacuum
 
 # Archive old records
 python -m file_organizer.cli.undo_redo --archive --days 365
+
 ```
 
 ### Redo Stack Cleared
@@ -733,25 +808,31 @@ python -m file_organizer.cli.undo_redo --archive --days 365
 ### 1. Batch Operations
 
 ```python
+
 # Use transactions for better performance
 with tx_manager.transaction() as tx_id:
     for op in operations:
         tracker.track_operation(..., transaction_id=tx_id)
+
 ```
 
 ### 2. Optimize Queries
 
 ```python
+
 # Use indexes for common queries
 db.create_index("idx_timestamp", "timestamp")
 db.create_index("idx_transaction", "transaction_id")
+
 ```
 
 ### 3. Regular Maintenance
 
 ```bash
+
 # Optimize database monthly
 python -m file_organizer.cli.undo_redo --optimize
+
 ```
 
 ## API Reference
@@ -759,6 +840,7 @@ python -m file_organizer.cli.undo_redo --optimize
 ### HistoryTracker
 
 ```python
+
 class HistoryTracker:
     def track_operation(
         self,
@@ -780,11 +862,13 @@ class HistoryTracker:
         end: datetime,
     ) -> List[Operation]:
         """Get operations in date range."""
+
 ```
 
 ### UndoManager
 
 ```python
+
 class UndoManager:
     def undo_last_operation(self) -> bool:
         """Undo the last operation."""
@@ -800,11 +884,13 @@ class UndoManager:
 
     def can_undo(self, operation_id: int) -> Tuple[bool, str]:
         """Check if operation can be undone."""
+
 ```
 
 ### TransactionManager
 
 ```python
+
 class TransactionManager:
     def begin_transaction(self, description: str = "") -> str:
         """Start a new transaction."""
@@ -818,6 +904,7 @@ class TransactionManager:
     @contextmanager
     def transaction(self, description: str = "") -> str:
         """Context manager for transactions."""
+
 ```
 
 ## Related Documentation

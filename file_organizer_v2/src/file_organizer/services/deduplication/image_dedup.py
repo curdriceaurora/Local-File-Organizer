@@ -10,7 +10,6 @@ import logging
 from pathlib import Path
 from typing import Callable, Dict, List, Literal, Optional, Set, Tuple
 
-import numpy as np
 from imagededup.methods import AHash, DHash, PHash
 from PIL import Image
 
@@ -151,7 +150,7 @@ class ImageDeduplicator:
 
             return distance
         except ValueError as e:
-            raise ValueError(f"Invalid hash format: {e}")
+            raise ValueError(f"Invalid hash format: {e}") from e
 
     def compute_similarity(self, img1: Path, img2: Path) -> Optional[float]:
         """

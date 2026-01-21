@@ -11,7 +11,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 import json
-import os
 
 from .database import DatabaseManager
 from .models import Operation, OperationType, OperationStatus, Transaction, TransactionStatus
@@ -275,7 +274,12 @@ class OperationHistory:
         query += " ORDER BY timestamp DESC"
 
         if limit:
-            query += f" LIMIT {limit}"
+            # Validate and use parameter placeholder for LIMIT
+            limit_value = int(limit)
+            if limit_value < 0:
+                raise ValueError("limit must be non-negative")
+            query += " LIMIT ?"
+            params.append(limit_value)
 
         rows = self.db.fetch_all(query, tuple(params) if params else None)
         return [Operation.from_row(row) for row in rows]

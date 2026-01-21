@@ -5,7 +5,7 @@ Generates reports on duplicate detection and storage savings.
 """
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 import json
 import csv
 import logging
@@ -20,12 +20,12 @@ class StorageReporter:
         """Initialize the storage reporter."""
         pass
 
-    def calculate_reclamation(self, duplicate_groups: List[Dict]) -> Dict:
+    def calculate_reclamation(self, duplicate_groups: list[Dict]) -> Dict:
         """
         Calculate storage reclamation metrics.
 
         Args:
-            duplicate_groups: List of duplicate groups
+            duplicate_groups: list of duplicate groups
 
         Returns:
             Dictionary with reclamation metrics
@@ -51,7 +51,7 @@ class StorageReporter:
 
     def generate_report(
         self,
-        duplicate_results: Dict,
+        duplicate_results: dict,
         output_format: str = 'text'
     ) -> str:
         """
@@ -97,14 +97,14 @@ class StorageReporter:
 
     def export_to_csv(
         self,
-        duplicate_groups: List[Dict],
+        duplicate_groups: list[Dict],
         output_path: Path
     ) -> None:
         """
         Export duplicate groups to CSV.
 
         Args:
-            duplicate_groups: List of duplicate groups
+            duplicate_groups: list of duplicate groups
             output_path: Output CSV file path
         """
         try:
@@ -140,7 +140,7 @@ class StorageReporter:
 
     def export_to_json(
         self,
-        duplicate_results: Dict,
+        duplicate_results: dict,
         output_path: Path
     ) -> None:
         """

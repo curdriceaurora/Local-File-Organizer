@@ -201,7 +201,7 @@ class TagLearningEngine:
 
         # Co-occurrence patterns
         for tag1, cooccur_tags in self.tag_cooccurrence.items():
-            for tag2, count in cooccur_tags.most_common(5):
+            for tag2, _count in cooccur_tags.most_common(5):
                 if count < 2:  # Need at least 2 co-occurrences
                     continue
 
@@ -240,14 +240,14 @@ class TagLearningEngine:
 
         # Predict based on file type
         if file_ext in self.file_type_tags:
-            for tag, count in self.file_type_tags[file_ext].most_common(10):
+            for tag, _count in self.file_type_tags[file_ext].most_common(10):
                 usage = self.tag_usage[tag]
                 confidence = self._calculate_tag_confidence(usage)
                 predictions[tag] = max(predictions.get(tag, 0), confidence)
 
         # Predict based on directory
         if directory in self.directory_tags:
-            for tag, count in self.directory_tags[directory].most_common(10):
+            for tag, _count in self.directory_tags[directory].most_common(10):
                 usage = self.tag_usage[tag]
                 confidence = self._calculate_tag_confidence(usage)
                 # Give directory predictions slightly higher weight
@@ -378,14 +378,14 @@ class TagLearningEngine:
 
         # Suggest based on file type
         if file_type and file_type in self.file_type_tags:
-            for tag, count in self.file_type_tags[file_type].most_common(15):
+            for tag, _count in self.file_type_tags[file_type].most_common(15):
                 usage = self.tag_usage[tag]
                 confidence = self._calculate_tag_confidence(usage)
                 suggestions[tag] = confidence
 
         # Suggest based on directory
         if directory and directory in self.directory_tags:
-            for tag, count in self.directory_tags[directory].most_common(15):
+            for tag, _count in self.directory_tags[directory].most_common(15):
                 usage = self.tag_usage[tag]
                 confidence = self._calculate_tag_confidence(usage)
                 suggestions[tag] = max(suggestions.get(tag, 0), confidence * 1.1)
@@ -394,7 +394,7 @@ class TagLearningEngine:
         if existing_tags:
             for existing_tag in existing_tags:
                 if existing_tag in self.tag_cooccurrence:
-                    for tag, count in self.tag_cooccurrence[existing_tag].most_common(5):
+                    for tag, _count in self.tag_cooccurrence[existing_tag].most_common(5):
                         usage = self.tag_usage[tag]
                         confidence = self._calculate_tag_confidence(usage) * 1.2
                         suggestions[tag] = max(suggestions.get(tag, 0), confidence)

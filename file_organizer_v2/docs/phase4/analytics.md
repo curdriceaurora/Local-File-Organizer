@@ -482,32 +482,26 @@ pattern_section = report.pattern_analysis
 # - Suggestions
 ```
 
-### Scheduled Reports
+### Scheduled Reports (Planned Feature)
+
+> **Note**: This feature is not yet implemented. It is planned for a future release.
+
+The scheduled reports feature will enable automatic generation and delivery of analytics reports. This will require:
+- `ReportScheduler` class implementation
+- Background job scheduling system
+- Email delivery integration
+- Report format exporters (HTML, PDF)
+
+For now, you can generate reports manually using `StorageAnalyzer`, `MetricsCalculator`, and `AnalyticsService`:
 
 ```python
-# Schedule periodic reports
-from file_organizer.services.analytics import ReportScheduler
+# Current manual report generation
+from file_organizer.services.analytics import AnalyticsService
+from pathlib import Path
 
-scheduler = ReportScheduler()
-
-# Weekly report
-scheduler.schedule_report(
-    directory=Path("~/Documents"),
-    frequency="weekly",
-    day="monday",
-    time="09:00",
-    format="html",
-    email_to="user@example.com"
-)
-
-# Monthly report
-scheduler.schedule_report(
-    directory=Path("~/Documents"),
-    frequency="monthly",
-    day=1,
-    format="pdf",
-    output_path="~/Reports/monthly_analytics.pdf"
-)
+analytics = AnalyticsService()
+stats = analytics.get_storage_stats(Path("~/Documents"))
+# Process and save stats manually
 ```
 
 ## CLI Reference

@@ -125,7 +125,7 @@ class DocumentEmbedder:
         """
         if not self.is_fitted:
             raise RuntimeError(
-                "Vectorizer not fitted. Call fit_transform() first."
+                "Vectorizer not fitted. Call fit_transform() from e first."
             )
 
         # Check cache

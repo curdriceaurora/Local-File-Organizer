@@ -350,15 +350,17 @@ Get operations in date range.
 **Returns:**
 - List of Operation objects
 
-### TransactionManager
+### OperationHistory
 
 Manage operation transactions.
 
 ```python
-from file_organizer.history import TransactionManager
+from file_organizer.history import OperationHistory
+
+history = OperationHistory()
 ```
 
-#### `begin_transaction(description: str = "") -> str`
+#### `start_transaction(description: str = "") -> str`
 
 Start a new transaction.
 

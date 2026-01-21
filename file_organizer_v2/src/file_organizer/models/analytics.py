@@ -5,7 +5,7 @@ Data classes for analytics dashboard, storage stats, and quality metrics.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from datetime import datetime
 from pathlib import Path
 
@@ -28,9 +28,9 @@ class StorageStats:
     saved_size: int
     file_count: int
     directory_count: int
-    largest_files: List[FileInfo] = field(default_factory=list)
-    size_by_type: Dict[str, int] = field(default_factory=dict)
-    size_by_category: Dict[str, int] = field(default_factory=dict)
+    largest_files: list[FileInfo] = field(default_factory=list)
+    size_by_type: dict[str, int] = field(default_factory=dict)
+    size_by_category: dict[str, int] = field(default_factory=dict)
 
     @property
     def formatted_total_size(self) -> str:
@@ -62,9 +62,9 @@ class StorageStats:
 @dataclass
 class FileDistribution:
     """File distribution statistics."""
-    by_type: Dict[str, int] = field(default_factory=dict)
-    by_category: Dict[str, int] = field(default_factory=dict)
-    by_size_range: Dict[str, int] = field(default_factory=dict)
+    by_type: dict[str, int] = field(default_factory=dict)
+    by_category: dict[str, int] = field(default_factory=dict)
+    by_size_range: dict[str, int] = field(default_factory=dict)
     total_files: int = 0
 
     def get_type_percentage(self, file_type: str) -> float:
@@ -81,7 +81,7 @@ class DuplicateStats:
     duplicate_groups: int
     space_wasted: int
     space_recoverable: int
-    by_type: Dict[str, int] = field(default_factory=dict)
+    by_type: dict[str, int] = field(default_factory=dict)
     largest_duplicate_group: Optional[Dict] = None
 
     @property
@@ -176,8 +176,8 @@ class MetricsSnapshot:
 class TrendData:
     """Trend data over time."""
     metric_name: str
-    values: List[float] = field(default_factory=list)
-    timestamps: List[datetime] = field(default_factory=list)
+    values: list[float] = field(default_factory=list)
+    timestamps: list[datetime] = field(default_factory=list)
 
     def add_data_point(self, value: float, timestamp: datetime) -> None:
         """Add a data point to the trend."""
@@ -212,7 +212,7 @@ class AnalyticsDashboard:
     duplicate_stats: DuplicateStats
     quality_metrics: QualityMetrics
     time_savings: TimeSavings
-    trends: Dict[str, TrendData] = field(default_factory=dict)
+    trends: dict[str, TrendData] = field(default_factory=dict)
     generated_at: datetime = field(default_factory=datetime.utcnow)
 
     def to_dict(self) -> Dict:

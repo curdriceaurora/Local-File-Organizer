@@ -223,7 +223,10 @@ def get_user_selection(files: List[Dict], strategy: str, batch: bool = False) ->
                         return [i for i in range(len(files)) if i not in keep_indices]
                     else:
                         console.print("[red]Invalid selection. Please try again.[/red]")
-            except (ValueError, KeyboardInterrupt):
+            except KeyboardInterrupt:
+                # Re-raise KeyboardInterrupt to allow clean exit
+                raise
+            except ValueError:
                 console.print("[red]Invalid input. Please enter numbers or 'a'/'s'.[/red]")
     else:
         # For automatic strategies
@@ -457,7 +460,7 @@ Examples:
     )
 
     if config.batch and config.strategy != "manual":
-        config_text += f"\n[bold]Batch Mode:[/bold] Enabled (auto-apply strategy)"
+        config_text += "\n[bold]Batch Mode:[/bold] Enabled (auto-apply strategy)"
 
     console.print(Panel(config_text, title="Configuration", expand=False))
 
@@ -505,7 +508,8 @@ Examples:
             progress_callback=progress_callback if has_tqdm else None,
         )
 
-        index = detector.scan_directory(config.directory, scan_options)
+        # Scan directory (return value not needed, detector updates internal index)
+        detector.scan_directory(config.directory, scan_options)
 
         if progress_bar:
             progress_bar.close()

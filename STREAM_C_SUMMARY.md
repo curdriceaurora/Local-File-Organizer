@@ -27,13 +27,16 @@
 - ✅ Memory efficient with shared preference storage
 
 #### Key Methods
+
 ```python
+
 def set_preference(path, pref, override_parent=False)
 def get_preference_with_inheritance(path) -> Optional[dict]
 def list_directory_preferences() -> List[Tuple[Path, dict]]
 def remove_preference(path) -> bool
 def clear_all()
 def get_statistics() -> dict
+
 ```
 
 #### Technical Highlights
@@ -64,13 +67,16 @@ def get_statistics() -> dict
 - Confidence: 25%
 
 #### Key Methods
+
 ```python
+
 def resolve(conflicting_preferences) -> dict
 def weight_by_recency(preferences) -> List[float]
 def weight_by_frequency(preferences) -> List[float]
 def score_confidence(preference) -> float
 def get_ambiguity_score(conflicting_preferences) -> float
 def needs_user_input(conflicting_preferences, threshold=0.7) -> bool
+
 ```
 
 #### Technical Highlights
@@ -124,7 +130,9 @@ def needs_user_input(conflicting_preferences, threshold=0.7) -> bool
 
 ### Module Exports
 Updated `file_organizer_v2/src/file_organizer/services/intelligence/__init__.py`:
+
 ```python
+
 from .directory_prefs import DirectoryPrefs
 from .conflict_resolver import ConflictResolver
 
@@ -133,6 +141,7 @@ __all__ = [
     "DirectoryPrefs",
     "ConflictResolver",
 ]
+
 ```
 
 ### Dependencies
@@ -197,18 +206,24 @@ __all__ = [
 All interface contracts from `50-analysis.md` have been implemented:
 
 ### DirectoryPrefs Interface ✅
+
 ```python
+
 def get_preference_with_inheritance(path: Path) -> Optional[dict]
 def set_preference(path: Path, pref: dict, override_parent: bool) -> None
 def list_directory_preferences() -> List[Tuple[Path, dict]]
+
 ```
 
 ### ConflictResolver Interface ✅
+
 ```python
+
 def resolve(conflicting_preferences: List[dict]) -> dict
 def weight_by_recency(preferences: List[dict]) -> List[float]
 def weight_by_frequency(preferences: List[dict]) -> List[float]
 def score_confidence(preference: dict) -> float
+
 ```
 
 ---

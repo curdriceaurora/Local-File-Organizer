@@ -170,14 +170,15 @@ class DatabaseManager:
             with db.transaction() as conn:
                 conn.execute("INSERT INTO operations ...")
         """
-        conn = self.get_connection()
-        try:
-            yield conn
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            logger.error(f"Transaction failed: {e}")
-            raise
+        with self._lock:
+            conn = self.get_connection()
+            try:
+                yield conn
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.error(f"Transaction failed: {e}")
+                raise
 
     def execute_query(self, query: str, params: Optional[Tuple] = None) -> sqlite3.Cursor:
         """
@@ -190,11 +191,12 @@ class DatabaseManager:
         Returns:
             Query cursor
         """
-        conn = self.get_connection()
-        if params is None:
-            return conn.execute(query)
-        else:
-            return conn.execute(query, params)
+        with self._lock:
+            conn = self.get_connection()
+            if params is None:
+                return conn.execute(query)
+            else:
+                return conn.execute(query, params)
 
     def execute_many(self, query: str, params_list: List[Tuple]) -> None:
         """
