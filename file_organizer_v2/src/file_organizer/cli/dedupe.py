@@ -448,54 +448,58 @@ Examples:
         console.print("[red]⚠ WARNING: Safe mode disabled - no backups will be created![/red]\n")
 
     try:
-        # Import deduplication services (these should be implemented by Stream A)
-        # For now, we'll create a mock implementation that shows the UI flow
+        # Import deduplication services
+        from file_organizer.services.deduplication.detector import DuplicateDetector, ScanOptions
+        from file_organizer.services.deduplication.backup import BackupManager
 
-        # Note: In the final implementation, this would import from:
-        # from file_organizer.services.deduplication import DuplicateDetector
+        # Initialize services
+        detector = DuplicateDetector()
+        backup_manager = BackupManager(config.directory) if config.safe_mode else None
 
         console.print("[bold]Step 1: Scanning for files...[/bold]")
 
-        # Mock: This would call detector.scan_directory(config.directory)
-        # For demonstration, create mock data
-        mock_duplicates = {
-            "abc123def456": [
-                {
-                    'path': directory / "photo1.jpg",
-                    'size': 2048576,
-                    'mtime': 1640000000.0,
-                },
-                {
-                    'path': directory / "copy_photo1.jpg",
-                    'size': 2048576,
-                    'mtime': 1640100000.0,
-                },
-            ],
-            "789ghi012jkl": [
-                {
-                    'path': directory / "document.pdf",
-                    'size': 524288,
-                    'mtime': 1640200000.0,
-                },
-                {
-                    'path': directory / "backup" / "document.pdf",
-                    'size': 524288,
-                    'mtime': 1640300000.0,
-                },
-                {
-                    'path': directory / "old" / "document.pdf",
-                    'size': 524288,
-                    'mtime': 1639900000.0,
-                },
-            ],
-        }
+        # Setup progress tracking
+        try:
+            from tqdm import tqdm
+            has_tqdm = True
+        except ImportError:
+            has_tqdm = False
+            console.print("[dim]Install tqdm for progress bars: pip install tqdm[/dim]")
 
-        total_groups = len(mock_duplicates)
-        total_duplicates = sum(len(files) for files in mock_duplicates.values())
+        # Progress callback
+        progress_bar = None
+        def progress_callback(current: int, total: int):
+            nonlocal progress_bar
+            if has_tqdm:
+                if progress_bar is None:
+                    progress_bar = tqdm(total=total, desc="Hashing files", unit="files")
+                progress_bar.update(1)
 
-        if total_groups == 0:
+        # Scan directory
+        scan_options = ScanOptions(
+            algorithm=config.algorithm,
+            recursive=config.recursive,
+            min_file_size=config.min_size,
+            max_file_size=config.max_size,
+            file_patterns=config.include_patterns if config.include_patterns else None,
+            exclude_patterns=config.exclude_patterns if config.exclude_patterns else None,
+            progress_callback=progress_callback if has_tqdm else None,
+        )
+
+        index = detector.scan_directory(config.directory, scan_options)
+
+        if progress_bar:
+            progress_bar.close()
+
+        # Get duplicate groups
+        duplicate_groups = detector.get_duplicate_groups()
+
+        if not duplicate_groups:
             console.print("\n[green]✓ No duplicate files found![/green]")
             return 0
+
+        total_groups = len(duplicate_groups)
+        total_duplicates = sum(group.count for group in duplicate_groups.values())
 
         console.print(f"\n[green]✓ Found {total_groups} duplicate group(s) with {total_duplicates} files total[/green]\n")
 
@@ -503,7 +507,17 @@ Examples:
         total_removed = 0
         space_saved = 0
 
-        for group_id, (file_hash, files) in enumerate(mock_duplicates.items(), 1):
+        for group_id, (file_hash, group) in enumerate(duplicate_groups.items(), 1):
+            # Convert to dictionary format for display
+            files = [
+                {
+                    'path': file_meta.path,
+                    'size': file_meta.size,
+                    'mtime': file_meta.modified_time.timestamp(),
+                }
+                for file_meta in group.files
+            ]
+
             # Apply selection strategy
             files = select_files_to_keep(files, config.strategy)
 
@@ -514,15 +528,28 @@ Examples:
             remove_indices = get_user_selection(files, config.strategy)
 
             if remove_indices:
-                # Calculate space savings
+                # Process each file to remove
                 for idx in remove_indices:
-                    space_saved += files[idx]['size']
-                    total_removed += 1
+                    file_to_remove = files[idx]['path']
 
-                # In real implementation, this would:
-                # 1. Create backups if safe_mode is enabled
-                # 2. Delete the files (unless dry_run)
-                # 3. Log the operations
+                    try:
+                        # Create backup if safe mode is enabled
+                        if config.safe_mode and backup_manager and not config.dry_run:
+                            backup_path = backup_manager.create_backup(file_to_remove)
+                            logger.debug(f"Created backup: {backup_path}")
+
+                        # Delete the file (unless dry run)
+                        if not config.dry_run:
+                            file_to_remove.unlink()
+                            logger.info(f"Removed: {file_to_remove}")
+
+                        # Update counters
+                        space_saved += files[idx]['size']
+                        total_removed += 1
+
+                    except Exception as e:
+                        console.print(f"[red]Error removing {file_to_remove}: {e}[/red]")
+                        logger.exception(f"Failed to remove {file_to_remove}")
 
                 if not config.dry_run:
                     console.print(f"\n[green]✓ Removed {len(remove_indices)} file(s)[/green]")
