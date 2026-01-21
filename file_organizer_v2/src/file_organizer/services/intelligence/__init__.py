@@ -17,6 +17,11 @@ from file_organizer.services.intelligence.preference_tracker import (
     track_file_rename,
     track_category_change,
 )
+from file_organizer.services.intelligence.preference_store import (
+    PreferenceStore,
+    DirectoryPreference,
+    SchemaVersion,
+)
 from file_organizer.services.intelligence.directory_prefs import DirectoryPrefs
 from file_organizer.services.intelligence.conflict_resolver import ConflictResolver
 
@@ -31,6 +36,9 @@ __all__ = [
     "track_file_move",
     "track_file_rename",
     "track_category_change",
+    "PreferenceStore",
+    "DirectoryPreference",
+    "SchemaVersion",
     "DirectoryPrefs",
     "ConflictResolver",
 ]
