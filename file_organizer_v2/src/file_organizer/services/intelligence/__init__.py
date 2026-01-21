@@ -43,6 +43,9 @@ from file_organizer.services.intelligence.naming_analyzer import (
     NamingAnalyzer,
     NameStructure,
 )
+from file_organizer.services.intelligence.folder_learner import FolderPreferenceLearner
+from file_organizer.services.intelligence.feedback_processor import FeedbackProcessor
+from file_organizer.services.intelligence.pattern_learner import PatternLearner
 
 __all__ = [
     "PreferenceTracker",
@@ -71,4 +74,7 @@ __all__ = [
     "PatternElement",
     "NamingAnalyzer",
     "NameStructure",
+    "FolderPreferenceLearner",
+    "FeedbackProcessor",
+    "PatternLearner",
 ]
