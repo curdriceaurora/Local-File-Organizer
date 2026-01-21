@@ -54,3 +54,10 @@ output/
 # Logs
 logs/
 *.log.*
+
+# CCPM (Claude Code PM) - Keep structure, ignore generated content
+.claude/epics/*/updates/
+.claude/epics/*/progress/
+.claude/epics/*/*.tmp
+.claude/settings.json
+.claude/settings.local.json
