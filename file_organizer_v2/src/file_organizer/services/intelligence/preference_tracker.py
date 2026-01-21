@@ -313,7 +313,31 @@ class PreferenceTracker:
             The best matching preference or None
         """
         with self._lock:
-            # Generate pattern key for this file
+            # For folder mapping preferences, match by extension and correction type
+            # Not by current parent directory, since we want to learn where to move files
+            if preference_type == PreferenceType.FOLDER_MAPPING:
+                extension = file_path.suffix.lower() if file_path.suffix else "no_ext"
+
+                # Find all folder mapping preferences for this extension
+                matching_prefs = []
+                for storage_key, prefs_list in self._preferences.items():
+                    if not storage_key.startswith("folder_mapping:"):
+                        continue
+                    for pref in prefs_list:
+                        if pref.preference_type == PreferenceType.FOLDER_MAPPING:
+                            # Check if this preference matches the extension
+                            if pref.context.get("source_extension") == extension:
+                                matching_prefs.append(pref)
+
+                if not matching_prefs:
+                    return None
+
+                # Return the preference with highest confidence
+                best_pref = max(matching_prefs, key=lambda p: p.metadata.confidence)
+                best_pref.metadata.last_used = datetime.now(timezone.utc)
+                return best_pref
+
+            # For other preference types, use exact pattern matching
             pattern_parts = [
                 preference_type.value,
                 file_path.suffix.lower() if file_path.suffix else "no_ext",
