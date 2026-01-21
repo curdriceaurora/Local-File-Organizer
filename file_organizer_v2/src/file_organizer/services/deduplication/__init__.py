@@ -22,6 +22,11 @@ from .image_utils import (
     validate_image_file,
 )
 from .index import DuplicateIndex
+from .extractor import DocumentExtractor
+from .embedder import DocumentEmbedder
+from .semantic import SemanticAnalyzer
+from .document_dedup import DocumentDeduplicator
+from .reporter import StorageReporter
 
 __all__ = [
     # Hash-based deduplication
@@ -40,4 +45,10 @@ __all__ = [
     "get_best_quality_image",
     "get_image_info_string",
     "format_file_size",
+    # Document deduplication
+    "DocumentExtractor",
+    "DocumentEmbedder",
+    "SemanticAnalyzer",
+    "DocumentDeduplicator",
+    "StorageReporter",
 ]
