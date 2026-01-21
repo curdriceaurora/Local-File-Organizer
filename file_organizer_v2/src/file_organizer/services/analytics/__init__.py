@@ -7,8 +7,10 @@ and system efficiency.
 
 from .storage_analyzer import StorageAnalyzer
 from .metrics_calculator import MetricsCalculator
+from .analytics_service import AnalyticsService
 
 __all__ = [
     'StorageAnalyzer',
     'MetricsCalculator',
+    'AnalyticsService',
 ]
