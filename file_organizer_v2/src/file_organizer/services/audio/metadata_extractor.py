@@ -117,11 +117,11 @@ class AudioMetadataExtractor:
             from mutagen.flac import FLAC
             from mutagen.oggvorbis import OggVorbis
 
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "mutagen is required for audio metadata extraction. "
                 "Install it with: pip install mutagen"
-            )
+            ) from e
 
         # Load file
         audio = MutagenFile(str(audio_path))
@@ -276,11 +276,11 @@ class AudioMetadataExtractor:
         """Fallback extraction using tinytag library."""
         try:
             from tinytag import TinyTag
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "tinytag is required as fallback for audio metadata extraction. "
                 "Install it with: pip install tinytag"
-            )
+            ) from e
 
         tag = TinyTag.get(str(audio_path))
 
