@@ -165,11 +165,11 @@ class AudioTranscriber:
             logger.info("Model loaded successfully")
             return self._model
 
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "faster-whisper is required for audio transcription. "
                 "Install it with: pip install faster-whisper"
-            )
+            ) from e
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
             raise
