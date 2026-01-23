@@ -7,9 +7,12 @@ Uses temporal, content, structural, and AI-based heuristics.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional, Union
 import logging
+import re
+import time
 
 from ..categories import PARACategory
 
@@ -73,11 +76,8 @@ class TemporalHeuristic(Heuristic):
     - Creation vs modification gap → categorization hints
     """
 
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: Optional[dict] = None) -> HeuristicResult:
         """Evaluate based on temporal patterns."""
-        import time
-        from datetime import datetime, timedelta
-
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
         if not file_path.exists():
@@ -172,7 +172,6 @@ class ContentHeuristic(Heuristic):
         filename = file_path.name.lower()
 
         # Check for date patterns (PROJECT indicator)
-        import re
         date_patterns = [
             r'\d{4}-\d{2}-\d{2}',  # 2024-01-15
             r'\d{2}/\d{2}/\d{4}',  # 01/15/2024
