@@ -198,8 +198,19 @@ class PARAConfig:
             logger.info(f"Loaded configuration from {config_path}")
             return config
 
-        except Exception as e:
-            logger.error(f"Failed to load config from {config_path}: {e}")
+        except (yaml.YAMLError, ValueError) as e:
+            # YAML parsing or validation errors
+            logger.error(f"Invalid configuration format in {config_path}: {e}")
+            logger.info("Using default configuration")
+            return cls()
+        except (PermissionError, OSError) as e:
+            # File access errors
+            logger.error(f"Cannot read configuration file {config_path}: {e}")
+            logger.info("Using default configuration")
+            return cls()
+        except (KeyError, TypeError) as e:
+            # Missing or wrong type configuration keys
+            logger.error(f"Invalid configuration structure in {config_path}: {e}")
             logger.info("Using default configuration")
             return cls()
 
