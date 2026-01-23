@@ -11,6 +11,7 @@ Configuration management for PARA methodology including:
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
+import copy
 import logging
 import yaml
 
@@ -322,4 +323,5 @@ def load_config(config_path: Optional[Path] = None) -> PARAConfig:
         return PARAConfig.load_from_yaml(config_path)
     else:
         logger.info("Using default PARA configuration")
-        return DEFAULT_CONFIG
+        # Return a deep copy to prevent callers from mutating the singleton
+        return copy.deepcopy(DEFAULT_CONFIG)
