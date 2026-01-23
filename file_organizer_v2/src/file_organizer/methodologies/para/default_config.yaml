@@ -1,0 +1,112 @@
+# PARA Methodology Configuration
+
+# Heuristic Weights (must sum to ~1.0)
+heuristic_weights:
+  temporal: 0.25      # Time-based patterns
+  content: 0.35       # Filename and content keywords
+  structural: 0.30    # Directory hierarchy
+  ai: 0.10           # AI-powered semantic analysis
+
+# Auto-Categorization Thresholds (0.0 - 1.0)
+category_thresholds:
+  project: 0.75      # Clear project indicators needed
+  area: 0.75         # Regular patterns must be evident
+  resource: 0.80     # Higher bar for reference material
+  archive: 0.90      # Very high threshold to avoid premature archiving
+
+# Keyword Patterns for Content Detection
+keyword_patterns:
+  project:
+    - project
+    - deadline
+    - due
+    - sprint
+    - milestone
+    - deliverable
+    - proposal
+    - presentation
+    - report
+    - draft
+    - final
+    - v1
+    - v2
+    - wip
+    - todo
+
+  area:
+    - area
+    - ongoing
+    - recurring
+    - weekly
+    - monthly
+    - routine
+    - maintenance
+    - health
+    - finance
+    - learning
+    - notes
+    - journal
+    - tracking
+
+  resource:
+    - reference
+    - template
+    - guide
+    - tutorial
+    - documentation
+    - handbook
+    - manual
+    - example
+    - sample
+    - resource
+    - library
+    - cheatsheet
+    - howto
+
+  archive:
+    - archive
+    - old
+    - backup
+    - deprecated
+    - obsolete
+    - legacy
+    - completed
+    - finished
+    - done
+    - past
+    - historical
+    - 2020
+    - 2021
+    - 2022
+
+# Temporal Thresholds (in days)
+temporal_thresholds:
+  project_max_age: 30           # Projects are actively worked on (< 30 days old)
+  area_min_age: 30              # Areas have moderate activity (30-180 days)
+  area_max_age: 180
+  resource_min_age: 60          # Resources are stable references (60+ days)
+  archive_min_age: 180          # Archives are old (180+ days)
+  archive_min_inactive: 90      # Not accessed for 90+ days
+
+# Feature Flags
+enable_temporal_heuristic: true
+enable_content_heuristic: true
+enable_structural_heuristic: true
+enable_ai_heuristic: false      # Requires Ollama or external AI service
+
+# Behavior Settings
+manual_review_threshold: 0.60    # Below this confidence, flag for manual review
+auto_categorize: true            # Automatically categorize high-confidence files
+preserve_user_overrides: true    # Remember and respect user corrections
+
+# Directory Structure
+# default_root: null              # Set to a path to define PARA root directory
+project_dir: "Projects"           # Where project files are organized
+area_dir: "Areas"                # Where area files are organized
+resource_dir: "Resources"         # Where resource files are stored
+archive_dir: "Archive"           # Where archived files are moved
+
+# Advanced Settings (optional)
+# min_confidence_diff: 0.15       # Minimum difference between top two categories
+# learning_enabled: false         # Enable machine learning from user corrections
+# backup_on_move: true           # Create backup before moving files
