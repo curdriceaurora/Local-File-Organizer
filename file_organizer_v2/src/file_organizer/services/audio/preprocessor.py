@@ -182,11 +182,11 @@ class AudioPreprocessor:
             logger.info(f"Conversion complete using pydub: {output_path}")
             return output_path
 
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "Neither ffmpeg nor pydub is available for audio conversion. "
                 "Install one of them: apt-get install ffmpeg or pip install pydub"
-            )
+            ) from e
 
     def normalize_audio(
         self,
