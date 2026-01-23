@@ -5,7 +5,7 @@ Common utility functions for audio file processing and analysis.
 """
 
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 import logging
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ def split_audio(
     audio_path: Union[str, Path],
     chunk_length_ms: int = 60000,  # 1 minute
     output_dir: Optional[Union[str, Path]] = None,
-) -> List[Path]:
+) -> list[Path]:
     """
     Split audio file into chunks.
 
@@ -165,7 +165,7 @@ def convert_audio_format(
         return audio_path
 
 
-def validate_audio_file(audio_path: Union[str, Path]) -> Tuple[bool, Optional[str]]:
+def validate_audio_file(audio_path: Union[str, Path]) -> tuple[bool, Optional[str]]:
     """
     Validate if file is a readable audio file.
 
@@ -206,7 +206,7 @@ def detect_silence_segments(
     audio_path: Union[str, Path],
     silence_thresh: int = -40,  # dB
     min_silence_len: int = 1000,  # ms
-) -> List[Tuple[int, int]]:
+) -> list[tuple[int, int]]:
     """
     Detect silence segments in audio file.
 
@@ -277,7 +277,7 @@ def trim_audio(
 
 
 def merge_audio_files(
-    audio_paths: List[Union[str, Path]],
+    audio_paths: list[Union[str, Path]],
     output_path: Union[str, Path],
     crossfade_ms: int = 0,
 ) -> Path:
