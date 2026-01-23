@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 from datetime import datetime
 
 
@@ -69,12 +69,12 @@ class RuleCondition:
     """
     type: ConditionType
     operator: Optional[LogicalOperator] = None
-    values: Optional[List[str]] = None
+    values: Optional[list[str]] = None
     threshold: Optional[float] = None
     min_matches: Optional[int] = None
     max_matches: Optional[int] = None
-    subconditions: Optional[List['RuleCondition']] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    subconditions: Optional[list['RuleCondition']] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         """Validate condition configuration."""
@@ -100,9 +100,9 @@ class RuleAction:
     type: ActionType
     category: Optional[str] = None
     confidence: Optional[float] = None
-    tags: Optional[List[str]] = None
+    tags: Optional[list[str]] = None
     reason: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         """Validate action configuration."""
@@ -132,10 +132,10 @@ class Rule:
     name: str
     description: str
     priority: int
-    conditions: List[RuleCondition]
-    actions: List[RuleAction]
+    conditions: list[RuleCondition]
+    actions: list[RuleAction]
     enabled: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         """Validate rule configuration."""
@@ -162,10 +162,10 @@ class EvaluationContext:
     """
     file_path: Path
     content: Optional[str] = None
-    file_stat: Optional[Dict[str, Any]] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    ai_analysis: Optional[Dict[str, Any]] = None
-    user_preferences: Optional[Dict[str, Any]] = None
+    file_stat: Optional[dict[str, Any]] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    ai_analysis: Optional[dict[str, Any]] = None
+    user_preferences: Optional[dict[str, Any]] = None
 
     @property
     def file_extension(self) -> str:
@@ -206,8 +206,8 @@ class RuleMatchResult:
     matched: bool
     confidence: Optional[float] = None
     category: Optional[str] = None
-    reasons: List[str] = field(default_factory=list)
-    condition_results: Dict[str, bool] = field(default_factory=dict)
+    reasons: list[str] = field(default_factory=list)
+    condition_results: dict[str, bool] = field(default_factory=dict)
     execution_time_ms: float = 0.0
 
 
@@ -220,7 +220,7 @@ class RuleParser(ABC):
     """
 
     @abstractmethod
-    def parse_file(self, file_path: Path) -> List[Rule]:
+    def parse_file(self, file_path: Path) -> list[Rule]:
         """
         Parse rules from a file.
         
@@ -237,7 +237,7 @@ class RuleParser(ABC):
         pass
 
     @abstractmethod
-    def parse_string(self, content: str) -> List[Rule]:
+    def parse_string(self, content: str) -> list[Rule]:
         """
         Parse rules from a string.
         
@@ -297,7 +297,7 @@ class ConditionEvaluator(ABC):
     @abstractmethod
     def evaluate_composite(
         self,
-        conditions: List[RuleCondition],
+        conditions: list[RuleCondition],
         operator: LogicalOperator,
         context: EvaluationContext
     ) -> bool:
@@ -347,7 +347,7 @@ class ActionExecutor(ABC):
         self,
         action: RuleAction,
         context: EvaluationContext
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute a single action.
         
@@ -390,7 +390,7 @@ class ConflictResolver(ABC):
     @abstractmethod
     def resolve(
         self,
-        matches: List[RuleMatchResult],
+        matches: list[RuleMatchResult],
         strategy: ConflictResolutionStrategy,
         context: EvaluationContext
     ) -> RuleMatchResult:
@@ -410,7 +410,7 @@ class ConflictResolver(ABC):
     @abstractmethod
     def should_flag_for_review(
         self,
-        matches: List[RuleMatchResult],
+        matches: list[RuleMatchResult],
         threshold: float
     ) -> bool:
         """
@@ -437,9 +437,9 @@ class CategoryScorer(ABC):
     @abstractmethod
     def calculate_category_scores(
         self,
-        matches: List[RuleMatchResult],
+        matches: list[RuleMatchResult],
         context: EvaluationContext
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Calculate confidence scores for all categories.
         
@@ -455,7 +455,7 @@ class CategoryScorer(ABC):
     @abstractmethod
     def get_best_category(
         self,
-        scores: Dict[str, float],
+        scores: dict[str, float],
         threshold: float
     ) -> Optional[str]:
         """
@@ -473,8 +473,8 @@ class CategoryScorer(ABC):
     @abstractmethod
     def calculate_overall_confidence(
         self,
-        matches: List[RuleMatchResult],
-        heuristic_scores: Optional[Dict[str, float]] = None
+        matches: list[RuleMatchResult],
+        heuristic_scores: Optional[dict[str, float]] = None
     ) -> float:
         """
         Calculate an overall confidence score for the categorization.
@@ -520,7 +520,7 @@ class RuleEngine:
         self.executor = executor
         self.resolver = resolver
         self.scorer = scorer
-        self.rules: List[Rule] = []
+        self.rules: list[Rule] = []
 
     def load_rules(self, rule_file: Path) -> int:
         """
@@ -603,7 +603,7 @@ class RuleEngine:
     def get_category_scores(
         self,
         context: EvaluationContext
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Get confidence scores for all categories.
         
