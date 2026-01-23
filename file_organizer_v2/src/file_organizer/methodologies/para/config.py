@@ -27,6 +27,27 @@ class HeuristicWeights:
     structural: float = 0.30
     ai: float = 0.10
 
+    def __post_init__(self) -> None:
+        """Validate that weights sum to ~1.0 and are in valid range."""
+        # Validate individual weights are in [0, 1]
+        weights = [self.temporal, self.content, self.structural, self.ai]
+        for i, (name, weight) in enumerate(zip(
+            ['temporal', 'content', 'structural', 'ai'], weights
+        )):
+            if not (0.0 <= weight <= 1.0):
+                raise ValueError(
+                    f"{name} weight must be in [0.0, 1.0], got {weight}"
+                )
+
+        # Validate weights sum to ~1.0 (allow small floating point error)
+        total = sum(weights)
+        if not (0.99 <= total <= 1.01):
+            raise ValueError(
+                f"Heuristic weights must sum to 1.0, got {total:.4f}. "
+                f"Current: temporal={self.temporal}, content={self.content}, "
+                f"structural={self.structural}, ai={self.ai}"
+            )
+
 
 @dataclass
 class CategoryThresholds:
@@ -35,6 +56,20 @@ class CategoryThresholds:
     area: float = 0.75
     resource: float = 0.80
     archive: float = 0.90
+
+    def __post_init__(self) -> None:
+        """Validate that all thresholds are in [0.0, 1.0]."""
+        thresholds = {
+            'project': self.project,
+            'area': self.area,
+            'resource': self.resource,
+            'archive': self.archive
+        }
+        for name, threshold in thresholds.items():
+            if not (0.0 <= threshold <= 1.0):
+                raise ValueError(
+                    f"{name} threshold must be in [0.0, 1.0], got {threshold}"
+                )
 
 
 @dataclass
