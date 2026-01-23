@@ -78,10 +78,26 @@ class RuleCondition:
 
     def __post_init__(self):
         """Validate condition configuration."""
-        if self.type == ConditionType.COMPOSITE and not self.subconditions:
-            raise ValueError("Composite conditions must have subconditions")
-        if self.type != ConditionType.COMPOSITE and not self.values and self.threshold is None:
-            raise ValueError(f"Condition type {self.type} requires values or threshold")
+        # Composite conditions must have subconditions
+        if self.type == ConditionType.COMPOSITE:
+            if not self.subconditions:
+                raise ValueError(
+                    "Composite conditions must have subconditions. "
+                    "Provide a list of RuleCondition objects in 'subconditions' field."
+                )
+            if not self.operator:
+                raise ValueError(
+                    "Composite conditions must have a logical operator (AND, OR, NOT)"
+                )
+
+        # Most non-composite conditions need values or threshold
+        # Exceptions: TEMPORAL, METADATA, FILE_SIZE may use metadata instead
+        elif self.type not in (ConditionType.TEMPORAL, ConditionType.METADATA, ConditionType.FILE_SIZE):
+            if not self.values and self.threshold is None:
+                raise ValueError(
+                    f"Condition type {self.type.value} requires either 'values' or 'threshold'. "
+                    f"Provide a list of values to match or a numeric threshold."
+                )
 
 
 @dataclass

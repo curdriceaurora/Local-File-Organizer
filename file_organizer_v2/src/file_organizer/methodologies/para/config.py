@@ -175,6 +175,19 @@ class PARAConfig:
                 **data.get('temporal_thresholds', {})
             )
 
+            # Parse default_root path with validation
+            default_root = None
+            if 'default_root' in data:
+                try:
+                    default_root = Path(data['default_root'])
+                    # Validate that path string is reasonable (not empty, not just whitespace)
+                    if not str(data['default_root']).strip():
+                        logger.warning("default_root is empty, ignoring")
+                        default_root = None
+                except (TypeError, ValueError) as e:
+                    logger.warning(f"Invalid default_root path '{data.get('default_root')}': {e}")
+                    default_root = None
+
             # Create config
             config = cls(
                 heuristic_weights=heuristic_weights,
@@ -188,7 +201,7 @@ class PARAConfig:
                 manual_review_threshold=data.get('manual_review_threshold', 0.60),
                 auto_categorize=data.get('auto_categorize', True),
                 preserve_user_overrides=data.get('preserve_user_overrides', True),
-                default_root=Path(data['default_root']) if 'default_root' in data else None,
+                default_root=default_root,
                 project_dir=data.get('project_dir', 'Projects'),
                 area_dir=data.get('area_dir', 'Areas'),
                 resource_dir=data.get('resource_dir', 'Resources'),

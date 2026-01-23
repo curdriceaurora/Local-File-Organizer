@@ -191,7 +191,7 @@ class AudioTranscriber:
 
         Raises:
             FileNotFoundError: If audio file doesn't exist
-            ValueError: If audio file format is unsupported
+            Exception: If transcription fails (e.g., unsupported format, corrupted file)
         """
         audio_path = Path(audio_path)
         if not audio_path.exists():
