@@ -7,9 +7,8 @@ Uses temporal, content, structural, and AI-based heuristics.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 import logging
 
 from ..categories import PARACategory
@@ -23,17 +22,17 @@ class CategoryScore:
     category: PARACategory
     score: float  # 0.0 to 1.0
     confidence: float  # 0.0 to 1.0
-    signals: List[str] = field(default_factory=list)  # What triggered this score
+    signals: list[str] = field(default_factory=list)  # What triggered this score
 
 
 @dataclass
 class HeuristicResult:
     """Result from a heuristic evaluation."""
-    scores: Dict[PARACategory, CategoryScore]
+    scores: dict[PARACategory, CategoryScore]
     overall_confidence: float
     recommended_category: Optional[PARACategory] = None
     needs_manual_review: bool = False
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class Heuristic(ABC):
@@ -361,7 +360,7 @@ class HeuristicEngine:
             enable_structural: Enable structural heuristic
             enable_ai: Enable AI heuristic
         """
-        self.heuristics: List[Heuristic] = []
+        self.heuristics: list[Heuristic] = []
 
         if enable_temporal:
             self.heuristics.append(TemporalHeuristic(weight=0.25))
