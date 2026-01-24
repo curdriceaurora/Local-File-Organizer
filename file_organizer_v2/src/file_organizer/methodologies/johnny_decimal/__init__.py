@@ -15,6 +15,10 @@ Components:
 - categories: Core data models and definitions
 - numbering: Number generation and validation logic
 - system: Main system orchestration
+- scanner: Directory scanning for migration
+- transformer: Folder structure transformation
+- validator: Migration plan validation
+- migrator: Complete migration orchestration
 
 Based on the Johnny Decimal system by Johnny Noble (johnnydecimal.com).
 
@@ -42,6 +46,30 @@ from .system import (
     JohnnyDecimalSystem,
 )
 
+from .scanner import (
+    FolderScanner,
+    FolderInfo,
+    ScanResult,
+)
+
+from .transformer import (
+    FolderTransformer,
+    TransformationRule,
+    TransformationPlan,
+)
+
+from .validator import (
+    MigrationValidator,
+    ValidationIssue,
+    ValidationResult,
+)
+
+from .migrator import (
+    JohnnyDecimalMigrator,
+    MigrationResult,
+    RollbackInfo,
+)
+
 __all__ = [
     # Data models
     "JohnnyDecimalNumber",
@@ -53,6 +81,19 @@ __all__ = [
     # Core classes
     "JohnnyDecimalGenerator",
     "JohnnyDecimalSystem",
+    # Migration classes
+    "FolderScanner",
+    "FolderInfo",
+    "ScanResult",
+    "FolderTransformer",
+    "TransformationRule",
+    "TransformationPlan",
+    "MigrationValidator",
+    "ValidationIssue",
+    "ValidationResult",
+    "JohnnyDecimalMigrator",
+    "MigrationResult",
+    "RollbackInfo",
     # Exceptions
     "NumberConflictError",
     "InvalidNumberError",
