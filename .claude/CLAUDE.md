@@ -58,7 +58,10 @@ An AI-powered local file management system with privacy-first architecture. Orga
 - Create worktrees for parallel work: `../worktree-name`
 - Commit code changes with descriptive messages
 - Push to feature/sprint branches
-- Create pull requests when features complete
+- **Create pull requests at TASK/EPIC level** (NOT sprint level)
+  - PR as soon as task is complete (< 1,000 LOC per PR)
+  - Don't wait for sprint end to create PRs
+  - See `.claude/rules/pr-strategy.md` for details
 
 **CCPM Framework Maintenance** (REQUIRED):
 - Create and update daily logs in `.claude/epics/sprint-*/daily-logs/`
@@ -212,6 +215,30 @@ status: backlog|in-progress|completed
 - Pass all linting (ruff)
 - Pass all formatting (black, isort)
 - No unused imports or variables
+
+**Bug Prevention Patterns** (Required - from Day 1 fixes):
+1. **File Locking**: All concurrent file access must use fcntl locks
+   - Shared locks (LOCK_SH) for reads
+   - Exclusive locks (LOCK_EX) for writes
+   - Always release locks in finally blocks
+
+2. **Parameter Validation**: All constructor parameters must be validated
+   - Type checking for all parameters
+   - Range validation with MIN/MAX constants
+   - Clear error messages with actual vs expected values
+
+3. **Feature Accuracy**: Only advertise implemented features
+   - Test all "supported" formats with real files
+   - Document limitations clearly
+   - Update docs immediately when support added/removed
+
+**Code Review Checklist**:
+- [ ] File writes use appropriate locking (if concurrent access possible)
+- [ ] All numeric parameters have validation (type + range)
+- [ ] All "supported" features have integration tests
+- [ ] Documentation matches actual implementation
+- [ ] No TODOs claiming future support without issues
+- [ ] Error messages are clear and actionable
 
 **CCPM Quality** (Enforced):
 - Daily logs must contain real data, not estimates
