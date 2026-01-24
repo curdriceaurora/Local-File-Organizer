@@ -44,7 +44,7 @@ class VisionModel(BaseModel):
             )
 
         super().__init__(config)
-        self.client: Optional[ollama.Client] = None
+        self.client: ollama.Client | None = None
 
     def initialize(self) -> None:
         """Initialize the Ollama client and pull model if needed."""
@@ -80,8 +80,8 @@ class VisionModel(BaseModel):
     def generate(
         self,
         prompt: str,
-        image_path: Optional[Union[str, Path]] = None,
-        image_data: Optional[bytes] = None,
+        image_path: str | Path | None = None,
+        image_data: bytes | None = None,
         **kwargs: Any,
     ) -> str:
         """Generate description for an image using vision-language model.
@@ -151,7 +151,7 @@ class VisionModel(BaseModel):
 
     def analyze_image(
         self,
-        image_path: Union[str, Path],
+        image_path: str | Path,
         task: str = "describe",
         **kwargs: Any,
     ) -> str:
@@ -196,8 +196,8 @@ class VisionModel(BaseModel):
 
     def analyze_video_frame(
         self,
-        frame_path: Union[str, Path],
-        prompt: Optional[str] = None,
+        frame_path: str | Path,
+        prompt: str | None = None,
         **kwargs: Any,
     ) -> str:
         """Analyze a single video frame.
@@ -248,7 +248,7 @@ class VisionModel(BaseModel):
             context_window=4096,
         )
 
-    def test_connection(self) -> Dict[str, Any]:
+    def test_connection(self) -> dict[str, Any]:
         """Test model connection and get info.
 
         Returns:

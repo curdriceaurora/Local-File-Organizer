@@ -4,7 +4,7 @@ import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Union
+from typing import ClassVar, Optional, Union
 
 from file_organizer.models import TextModel, VisionModel
 from file_organizer.models.base import ModelConfig
@@ -24,8 +24,8 @@ class OrganizationResult:
     skipped_files: int = 0
     failed_files: int = 0
     processing_time: float = 0.0
-    organized_structure: Dict[str, List[str]] = field(default_factory=dict)
-    errors: List[tuple[str, str]] = field(default_factory=list)  # (file, error)
+    organized_structure: dict[str, list[str]] = field(default_factory=dict)
+    errors: list[tuple[str, str]] = field(default_factory=list)  # (file, error)
 
 
 class FileOrganizer:
@@ -40,16 +40,16 @@ class FileOrganizer:
     """
 
     # Supported file extensions
-    TEXT_EXTENSIONS = {'.txt', '.md', '.docx', '.doc', '.pdf', '.csv',
-                       '.xlsx', '.xls', '.ppt', '.pptx', '.epub'}
-    IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff'}
-    VIDEO_EXTENSIONS = {'.mp4', '.avi', '.mkv', '.mov', '.wmv'}
-    AUDIO_EXTENSIONS = {'.mp3', '.wav', '.flac', '.m4a', '.ogg'}
+    TEXT_EXTENSIONS: ClassVar[set[str]] = {'.txt', '.md', '.docx', '.doc', '.pdf', '.csv',
+                                            '.xlsx', '.xls', '.ppt', '.pptx', '.epub'}
+    IMAGE_EXTENSIONS: ClassVar[set[str]] = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff'}
+    VIDEO_EXTENSIONS: ClassVar[set[str]] = {'.mp4', '.avi', '.mkv', '.mov', '.wmv'}
+    AUDIO_EXTENSIONS: ClassVar[set[str]] = {'.mp3', '.wav', '.flac', '.m4a', '.ogg'}
 
     def __init__(
         self,
-        text_model_config: Optional[ModelConfig] = None,
-        vision_model_config: Optional[ModelConfig] = None,
+        text_model_config: ModelConfig | None = None,
+        vision_model_config: ModelConfig | None = None,
         dry_run: bool = True,
         use_hardlinks: bool = True,
     ):
@@ -66,15 +66,15 @@ class FileOrganizer:
         self.dry_run = dry_run
         self.use_hardlinks = use_hardlinks
         self.console = Console()
-        self.text_processor: Optional[TextProcessor] = None
-        self.vision_processor: Optional[VisionProcessor] = None
+        self.text_processor: TextProcessor | None = None
+        self.vision_processor: VisionProcessor | None = None
 
         logger.info(f"FileOrganizer initialized (dry_run={dry_run})")
 
     def organize(
         self,
-        input_path: Union[str, Path],
-        output_path: Union[str, Path],
+        input_path: str | Path,
+        output_path: str | Path,
         skip_existing: bool = True,
     ) -> OrganizationResult:
         """Organize files from input directory to output directory.
@@ -182,7 +182,7 @@ class FileOrganizer:
 
         return result
 
-    def _collect_files(self, path: Path) -> List[Path]:
+    def _collect_files(self, path: Path) -> list[Path]:
         """Collect all files from path.
 
         Args:
@@ -205,11 +205,11 @@ class FileOrganizer:
 
     def _show_file_breakdown(
         self,
-        text_files: List[Path],
-        image_files: List[Path],
-        video_files: List[Path],
-        audio_files: List[Path],
-        other_files: List[Path],
+        text_files: list[Path],
+        image_files: list[Path],
+        video_files: list[Path],
+        audio_files: list[Path],
+        other_files: list[Path],
     ) -> None:
         """Show breakdown of file types."""
         table = Table(title="File Type Breakdown", show_header=True)
@@ -225,7 +225,7 @@ class FileOrganizer:
 
         self.console.print(table)
 
-    def _process_text_files(self, files: List[Path]) -> List[ProcessedFile]:
+    def _process_text_files(self, files: list[Path]) -> list[ProcessedFile]:
         """Process text files with AI.
 
         Args:
@@ -274,7 +274,7 @@ class FileOrganizer:
 
         return processed
 
-    def _process_image_files(self, files: List[Path]) -> List[ProcessedImage]:
+    def _process_image_files(self, files: list[Path]) -> list[ProcessedImage]:
         """Process image files with AI.
 
         Args:
@@ -325,10 +325,10 @@ class FileOrganizer:
 
     def _organize_files(
         self,
-        processed: List[Union[ProcessedFile, ProcessedImage]],
+        processed: list[ProcessedFile | ProcessedImage],
         output_path: Path,
         skip_existing: bool,
-    ) -> Dict[str, List[str]]:
+    ) -> dict[str, list[str]]:
         """Actually organize files into output directory.
 
         Args:
@@ -386,9 +386,9 @@ class FileOrganizer:
 
     def _simulate_organization(
         self,
-        processed: List[Union[ProcessedFile, ProcessedImage]],
+        processed: list[ProcessedFile | ProcessedImage],
         output_path: Path,
-    ) -> Dict[str, List[str]]:
+    ) -> dict[str, list[str]]:
         """Simulate organization without actually moving files.
 
         Args:
@@ -414,9 +414,9 @@ class FileOrganizer:
 
     def _show_skipped_files(
         self,
-        image_files: List[Path],
-        video_files: List[Path],
-        audio_files: List[Path],
+        image_files: list[Path],
+        video_files: list[Path],
+        audio_files: list[Path],
     ) -> None:
         """Show information about skipped files."""
         self.console.print("\n[bold yellow]Skipped Files:[/bold yellow]")

@@ -47,7 +47,7 @@ def create_sample_images(output_dir: Path) -> None:
     # Try to use a font, fallback to default if not available
     try:
         font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 60)
-    except:
+    except (OSError, IOError):
         font = ImageFont.load_default()
     draw.text((150, 150), "Hello World!", fill=(0, 0, 0), font=font)
     img3.save(output_dir / "text_hello_world.jpg")

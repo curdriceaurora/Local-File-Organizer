@@ -24,9 +24,9 @@ class ProcessedFile:
     description: str
     folder_name: str
     filename: str
-    original_content: Optional[str] = None
+    original_content: str | None = None
     processing_time: float = 0.0
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class TextProcessor:
@@ -41,8 +41,8 @@ class TextProcessor:
 
     def __init__(
         self,
-        text_model: Optional[TextModel] = None,
-        config: Optional[ModelConfig] = None,
+        text_model: TextModel | None = None,
+        config: ModelConfig | None = None,
     ):
         """Initialize text processor.
 
@@ -71,7 +71,7 @@ class TextProcessor:
 
     def process_file(
         self,
-        file_path: Union[str, Path],
+        file_path: str | Path,
         generate_description: bool = True,
         generate_folder: bool = True,
         generate_filename: bool = True,

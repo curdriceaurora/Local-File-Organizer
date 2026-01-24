@@ -59,11 +59,11 @@ dependencies = [
     "celery>=5.3.0",
     "redis>=5.0.0",
 
-    # Audio processing
-    "faster-whisper>=0.10.0",  # Will add when implementing audio
-
     # Deduplication
     "imagededup>=0.3.0",
+
+    # Configuration
+    "pyyaml>=6.0.0",  # YAML config parsing
 
     # Utilities
     "pydantic>=2.5.0",
@@ -99,8 +99,22 @@ web = [
     "htmx>=0.1.0",
 ]
 
+audio = [
+    "faster-whisper>=1.0.0",
+    "torch>=2.1.0",  # GPU acceleration for audio transcription
+    "mutagen>=1.47.0",  # Audio metadata extraction
+    "tinytag>=1.10.0",  # Lightweight audio metadata fallback
+    "pydub>=0.25.0",  # Audio manipulation
+    "ffmpeg-python>=0.2.0",  # Audio/video preprocessing
+]
+
+video = [
+    "opencv-python>=4.8.0",  # Video frame processing
+    "scenedetect[opencv]>=0.6.0",  # Scene detection algorithms
+]
+
 all = [
-    "file-organizer[dev,gui,web]",
+    "file-organizer[dev,gui,web,audio,video]",
 ]
 
 [project.scripts]
