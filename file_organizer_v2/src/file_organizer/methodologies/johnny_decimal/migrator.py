@@ -177,15 +177,17 @@ class JohnnyDecimalMigrator:
         # Execute transformations
         for rule in plan.rules:
             try:
+                # Compute target path for both dry run and real execution
+                target_path = rule.source_path.parent / rule.target_name
+
                 if dry_run:
                     # Dry run - just log what would happen
                     logger.info(
                         f"[DRY RUN] Would rename: {rule.source_path.name} → {rule.target_name}"
                     )
-                    transformed_paths.append(rule.source_path)
+                    transformed_paths.append(target_path)
                 else:
                     # Check if target already exists
-                    target_path = rule.source_path.parent / rule.target_name
 
                     if target_path.exists() and target_path != rule.source_path:
                         logger.warning(f"Target already exists: {target_path}")

@@ -225,9 +225,15 @@ class FolderScanner:
             patterns.append("PARA methodology detected")
 
         # Check for date-based organization
+        # Look for 4-digit years in reasonable range (1900-2099)
+        def has_year_pattern(name: str) -> bool:
+            import re
+            year_match = re.search(r'\b(19\d{2}|20\d{2})\b', name)
+            return year_match is not None
+
         date_patterns = [
             all(f.name.isdigit() and len(f.name) == 4 for f in folder_tree[:3]),
-            any("2020" in f.name or "2021" in f.name or "2022" in f.name for f in folder_tree),
+            any(has_year_pattern(f.name) for f in folder_tree),
         ]
 
         if any(date_patterns):
