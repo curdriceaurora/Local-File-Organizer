@@ -5,10 +5,8 @@ Coordinates hash computation, index building, and provides high-level
 interface for duplicate detection workflows.
 """
 
-from __future__ import annotations
-
-import logging
-from collections.abc import Callable
+from pathlib import Path
+from typing import List, Optional, Callable
 from dataclasses import dataclass
 from pathlib import Path
 

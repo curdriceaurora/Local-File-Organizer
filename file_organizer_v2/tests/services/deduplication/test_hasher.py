@@ -4,12 +4,8 @@ Tests for FileHasher class.
 Tests hash computation, chunk_size validation, and batch processing.
 """
 
-from __future__ import annotations
-
-from pathlib import Path
-
 import pytest
-
+from pathlib import Path
 from file_organizer.services.deduplication.hasher import FileHasher
 
 

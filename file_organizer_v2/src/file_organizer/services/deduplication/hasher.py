@@ -27,9 +27,9 @@ class FileHasher:
 
     # Default chunk size: 64KB (optimal for most systems)
     DEFAULT_CHUNK_SIZE = 65536
-    # Minimum chunk size: 1KB
+    # Minimum chunk size: 1KB (smaller would be inefficient)
     MIN_CHUNK_SIZE = 1024
-    # Maximum chunk size: 10MB
+    # Maximum chunk size: 10MB (larger could cause memory issues)
     MAX_CHUNK_SIZE = 10 * 1024 * 1024
 
     def __init__(self, chunk_size: int = DEFAULT_CHUNK_SIZE):
@@ -39,21 +39,28 @@ class FileHasher:
         Args:
             chunk_size: Size of chunks to read at a time (in bytes).
                        Default is 64KB for optimal performance.
-                       Must be between MIN_CHUNK_SIZE (1KB) and MAX_CHUNK_SIZE (10MB).
+                       Must be between 1KB and 10MB.
 
         Raises:
-            ValueError: If chunk_size is not a valid integer in the allowed range.
+            ValueError: If chunk_size is invalid
         """
-        if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):
-            raise ValueError(f"chunk_size must be an integer, got {type(chunk_size).__name__}")
+        if not isinstance(chunk_size, int):
+            raise ValueError(
+                f"chunk_size must be an integer, got {type(chunk_size).__name__}"
+            )
+
         if chunk_size < self.MIN_CHUNK_SIZE:
             raise ValueError(
-                f"chunk_size must be at least {self.MIN_CHUNK_SIZE} bytes (1KB), got {chunk_size}"
+                f"chunk_size must be at least {self.MIN_CHUNK_SIZE} bytes (1KB), "
+                f"got {chunk_size}"
             )
+
         if chunk_size > self.MAX_CHUNK_SIZE:
             raise ValueError(
-                f"chunk_size must not exceed {self.MAX_CHUNK_SIZE} bytes (10MB), got {chunk_size}"
+                f"chunk_size must not exceed {self.MAX_CHUNK_SIZE} bytes (10MB), "
+                f"got {chunk_size}"
             )
+
         self.chunk_size = chunk_size
 
     def compute_hash(self, file_path: Path, algorithm: HashAlgorithm = "sha256") -> str:
