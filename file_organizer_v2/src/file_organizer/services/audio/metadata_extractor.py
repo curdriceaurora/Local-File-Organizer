@@ -111,11 +111,6 @@ class AudioMetadataExtractor:
         """Extract metadata using mutagen library."""
         try:
             from mutagen import File as MutagenFile
-            from mutagen.flac import FLAC
-            from mutagen.id3 import ID3
-            from mutagen.mp4 import MP4
-            from mutagen.oggvorbis import OggVorbis
-
         except ImportError as e:
             raise ImportError(
                 "mutagen is required for audio metadata extraction. "

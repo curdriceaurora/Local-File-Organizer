@@ -185,7 +185,7 @@ class AudioPreprocessor:
             raise ImportError(
                 "Neither ffmpeg nor pydub is available for audio conversion. "
                 "Install one of them: apt-get install ffmpeg or pip install pydub"
-            )
+            ) from None
 
     def normalize_audio(
         self,

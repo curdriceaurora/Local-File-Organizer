@@ -16,10 +16,10 @@ from typing import Any
 class PARACategory(str, Enum):
     """
     PARA methodology categories.
-    
+
     The PARA system organizes information into four categories based on
     actionability and time-sensitivity:
-    
+
     - PROJECT: Time-bound efforts with specific goals and deadlines
     - AREA: Ongoing responsibilities requiring maintenance over time
     - RESOURCE: Reference materials and knowledge for future use
@@ -51,7 +51,7 @@ class PARACategory(str, Enum):
 class CategoryDefinition:
     """
     Complete definition of a PARA category including its criteria and patterns.
-    
+
     This class encapsulates all the information needed to identify and
     categorize files according to the PARA methodology.
     """
@@ -89,7 +89,7 @@ class CategoryDefinition:
 class CategorizationResult:
     """
     Result of PARA categorization for a file.
-    
+
     Contains the determined category, confidence score, reasoning,
     and alternative possibilities.
     """
@@ -290,13 +290,13 @@ CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
 def get_category_definition(category: PARACategory) -> CategoryDefinition:
     """
     Get the standard definition for a PARA category.
-    
+
     Args:
         category: The PARA category
-        
+
     Returns:
         The category definition
-        
+
     Raises:
         KeyError: If category is not defined
     """
@@ -306,7 +306,7 @@ def get_category_definition(category: PARACategory) -> CategoryDefinition:
 def get_all_category_definitions() -> dict[PARACategory, CategoryDefinition]:
     """
     Get all standard PARA category definitions.
-    
+
     Returns:
         Dictionary mapping categories to their definitions
     """
