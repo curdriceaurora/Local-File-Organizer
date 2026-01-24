@@ -166,7 +166,6 @@ class MigrationValidator:
 
         # Check for name conflicts within each parent
         for parent, rules_list in by_parent.items():
-            target_names = [rule.target_name for _, rule in rules_list]
             seen = set()
 
             for idx, rule in rules_list:

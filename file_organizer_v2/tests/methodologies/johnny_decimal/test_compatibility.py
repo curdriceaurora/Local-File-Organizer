@@ -165,7 +165,7 @@ class TestPARAJohnnyDecimalBridge:
         assert PARACategory.ARCHIVE in paths
 
         # Verify paths exist
-        for category, path in paths.items():
+        for _, path in paths.items():
             assert path.exists()
             assert path.is_dir()
 
@@ -253,7 +253,7 @@ class TestHybridOrganizer:
         assert "jd_category_projects" in paths
 
         # Verify paths exist
-        for key, path in paths.items():
+        for _, path in paths.items():
             assert path.exists()
 
     def test_categorize_item(self, hybrid_organizer):
