@@ -2,40 +2,47 @@
 
 Standard patterns for GitHub CLI operations across all commands.
 
-## CRITICAL: Repository Protection
+## Project Context - Personal Fork
 
-**Before ANY GitHub operation that creates/modifies issues or PRs:**
+**This is a personal fork/standalone project:**
 
 ```bash
-# Check if remote origin is the CCPM template repository
-remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-if [[ "$remote_url" == *"automazeio/ccpm"* ]] || [[ "$remote_url" == *"automazeio/ccpm.git"* ]]; then
-  echo "❌ ERROR: You're trying to sync with the CCPM template repository!"
-  echo ""
-  echo "This repository (automazeio/ccpm) is a template for others to use."
-  echo "You should NOT create issues or PRs here."
-  echo ""
-  echo "To fix this:"
-  echo "1. Fork this repository to your own GitHub account"
-  echo "2. Update your remote origin:"
-  echo "   git remote set-url origin https://github.com/YOUR_USERNAME/YOUR_REPO.git"
-  echo ""
-  echo "Or if this is a new project:"
-  echo "1. Create a new repository on GitHub"
-  echo "2. Update your remote origin:"
-  echo "   git remote set-url origin https://github.com/YOUR_USERNAME/YOUR_REPO.git"
-  echo ""
-  echo "Current remote: $remote_url"
-  exit 1
-fi
+# Git remotes (already configured):
+origin   = https://github.com/curdriceaurora/Local-File-Organizer.git   # YOUR FORK (all work here)
+upstream = https://github.com/QiuYannnn/Local-File-Organizer.git        # Original repo (read-only)
 ```
 
-This check MUST be performed in ALL commands that:
-- Create issues (`gh issue create`)
-- Edit issues (`gh issue edit`)
-- Comment on issues (`gh issue comment`)
-- Create PRs (`gh pr create`)
-- Any other operation that modifies the GitHub repository
+**CRITICAL RULES**:
+1. ✅ **All PRs go to YOUR FORK**: `curdriceaurora/Local-File-Organizer`
+2. ✅ **All issues go to YOUR FORK**: `curdriceaurora/Local-File-Organizer`
+3. ✅ **All commits push to origin**: Your fork
+4. ❌ **NEVER push to upstream**: Original repo is read-only reference
+5. ✅ **PRs are within your fork**: feature branch → main (same repo)
+
+## Repository Constants
+
+```bash
+# Use these constants in all GitHub operations:
+OWNER="curdriceaurora"
+REPO="Local-File-Organizer"
+FULL_REPO="curdriceaurora/Local-File-Organizer"
+
+# Always specify repo explicitly:
+gh issue create --repo "$FULL_REPO" ...
+gh pr create --repo "$FULL_REPO" --base main --head feature-branch ...
+```
+
+## No Upstream Operations
+
+**DO NOT**:
+- Create PRs to upstream (QiuYannnn/Local-File-Organizer)
+- Push branches to upstream
+- Create issues on upstream
+- This is a standalone personal project
+
+**Upstream is only for**:
+- Reading original repo for reference (if needed)
+- Pulling updates (optional, only if user requests)
 
 ## Authentication
 
@@ -49,28 +56,47 @@ gh {command} || echo "❌ GitHub CLI failed. Run: gh auth login"
 
 ### Get Issue Details
 ```bash
-gh issue view {number} --json state,title,labels,body
+# Always specify your fork
+FULL_REPO="curdriceaurora/Local-File-Organizer"
+gh issue view {number} --repo "$FULL_REPO" --json state,title,labels,body
 ```
 
 ### Create Issue
 ```bash
-# Always specify repo to avoid defaulting to wrong repository
-remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-REPO=$(echo "$remote_url" | sed 's|.*github.com[:/]||' | sed 's|\.git$||')
-[ -z "$REPO" ] && REPO="user/repo"
-gh issue create --repo "$REPO" --title "{title}" --body-file {file} --label "{labels}"
+# Always specify your fork explicitly
+FULL_REPO="curdriceaurora/Local-File-Organizer"
+gh issue create --repo "$FULL_REPO" \
+  --title "{title}" \
+  --body-file {file} \
+  --label "{labels}"
 ```
 
 ### Update Issue
 ```bash
-# ALWAYS check remote origin first!
-gh issue edit {number} --add-label "{label}" --add-assignee @me
+# Update issue in your fork
+FULL_REPO="curdriceaurora/Local-File-Organizer"
+gh issue edit {number} --repo "$FULL_REPO" \
+  --add-label "{label}" \
+  --add-assignee @me
 ```
 
 ### Add Comment
 ```bash
-# ALWAYS check remote origin first!
-gh issue comment {number} --body-file {file}
+# Add comment in your fork
+FULL_REPO="curdriceaurora/Local-File-Organizer"
+gh issue comment {number} --repo "$FULL_REPO" \
+  --body-file {file}
+```
+
+### Create Pull Request
+```bash
+# PR within your fork: feature branch → main
+FULL_REPO="curdriceaurora/Local-File-Organizer"
+gh pr create --repo "$FULL_REPO" \
+  --base main \
+  --head feature-branch-name \
+  --title "[Type] Brief description" \
+  --body-file pr-body.md
 ```
 
 ## Error Handling

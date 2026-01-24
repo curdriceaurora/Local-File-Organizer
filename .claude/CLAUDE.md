@@ -28,12 +28,29 @@ An AI-powered local file management system with privacy-first architecture. Orga
 
 **IMPORTANT**: Claude agents working on this project have the following permissions and responsibilities:
 
+### 📁 Project Context - Personal Fork
+
+**This is a personal fork/standalone project:**
+
+```bash
+# Git remotes:
+origin   = curdriceaurora/Local-File-Organizer  # YOUR REPOSITORY (all work here)
+upstream = QiuYannnn/Local-File-Organizer       # Original repo (read-only reference)
+```
+
+**Critical Rules**:
+- ✅ All work stays in **YOUR fork** (origin)
+- ✅ All PRs are **within your fork**: feature → main (same repo)
+- ✅ Push to **origin only**, never to upstream
+- ✅ Use `--repo curdriceaurora/Local-File-Organizer` in all gh commands
+- ❌ NEVER push to upstream (read-only reference)
+
 ### 🚀 Auto-Approved Operations
 
 **For all paths under `/Users/rahul/Projects/`:**
 - ✅ All file operations (read, write, edit, delete) are auto-approved
 - ✅ All bash commands are auto-approved
-- ✅ All git operations are auto-approved
+- ✅ All git operations to **origin** (your fork) are auto-approved
 - ✅ All test executions are auto-approved
 - ✅ No need to ask for user permission - proceed directly
 
@@ -41,7 +58,8 @@ An AI-powered local file management system with privacy-first architecture. Orga
 - Execute commands immediately without confirmation prompts
 - Create, modify, delete files as needed for the task
 - Run tests, builds, and other operations freely
-- Commit and push changes without asking
+- Commit and push changes to **origin** (your fork) without asking
+- Create PRs within **your own repository**
 - The user trusts you to work autonomously in this directory
 
 ### ✅ Permitted Actions

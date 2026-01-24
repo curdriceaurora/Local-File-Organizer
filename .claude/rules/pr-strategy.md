@@ -1,5 +1,13 @@
 # Pull Request Strategy
 
+## Project Context - Personal Fork
+
+**This is a personal fork/standalone project:**
+- Repository: `curdriceaurora/Local-File-Organizer`
+- All PRs are **within your own fork**: `feature-branch → main` (same repo)
+- **NOT** creating PRs to upstream: `QiuYannnn/Local-File-Organizer` is read-only reference
+- This is YOUR project, work stays in YOUR repository
+
 ## Core Principle
 
 **PRs are created at the CCPM task/epic level, NOT at sprint level.**
@@ -225,7 +233,7 @@ Apply appropriate labels:
 
 **Workflow**:
 ```bash
-# Feature branches created from main
+# Feature branches created from main (in YOUR fork)
 git checkout main
 git checkout -b feature/task-42-audio-model
 
@@ -233,8 +241,16 @@ git checkout -b feature/task-42-audio-model
 git add ...
 git commit -m "Task #42: ..."
 
-# Create PR to main (NOT to sprint branch)
-gh pr create --base main --head feature/task-42-audio-model
+# Push to origin (your fork)
+git push origin feature/task-42-audio-model
+
+# Create PR to main in YOUR fork (same repo)
+FULL_REPO="curdriceaurora/Local-File-Organizer"
+gh pr create --repo "$FULL_REPO" \
+  --base main \
+  --head feature/task-42-audio-model \
+  --title "[Feature] Task #42: Audio Model" \
+  --body-file pr-body.md
 ```
 
 **Sprint branch is for**:
