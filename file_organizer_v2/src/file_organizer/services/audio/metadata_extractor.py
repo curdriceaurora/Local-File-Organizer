@@ -228,14 +228,26 @@ class AudioMetadataExtractor:
                     # Convert to appropriate type
                     if isinstance(value, (list, tuple)):
                         value = value[0] if value else None
+
+                    # MP4 tags can have tuple values like (1, 10) for track numbers
+                    if isinstance(value, tuple) and field in ("track_number", "disc_number"):
+                        # Extract first element from tuple (current track/disc)
+                        value = value[0] if value else None
+
                     if value is not None:
                         value_str = str(value)
-                        if field == "year" and value_str.isdigit():
-                            tags[field] = int(value_str[:4])
+
+                        if field == "year":
+                            # Handle "YYYY-MM-DD" or "YYYY" formats
+                            year_str = value_str[:4]
+                            if year_str.isdigit():
+                                tags[field] = int(year_str)
                         elif field in ("track_number", "disc_number"):
-                            # Handle "1/10" format
+                            # Handle "1/10" format from Vorbis/ID3 tags
                             if "/" in value_str:
-                                tags[field] = int(value_str.split("/")[0])
+                                track_part = value_str.split("/")[0].strip()
+                                if track_part.isdigit():
+                                    tags[field] = int(track_part)
                             elif value_str.isdigit():
                                 tags[field] = int(value_str)
                         else:
@@ -258,7 +270,7 @@ class AudioMetadataExtractor:
             artwork_count = len(audio.tags.pictures)
         elif hasattr(audio, 'pictures'):  # OGG
             artwork_count = len(audio.pictures)
-        elif "APIC" in audio.tags:  # MP3 ID3
+        elif any(k.startswith("APIC") for k in audio.tags.keys()):  # MP3 ID3 (APIC:Cover, APIC:, etc)
             apic_frames = [k for k in audio.tags.keys() if k.startswith("APIC")]
             artwork_count = len(apic_frames)
         elif "covr" in audio.tags:  # MP4
@@ -278,6 +290,35 @@ class AudioMetadataExtractor:
 
         tag = TinyTag.get(str(audio_path))
 
+        # Parse year safely (can be "YYYY-MM-DD" or "YYYY")
+        year = None
+        if tag.year:
+            year_str = str(tag.year)[:4]  # Take first 4 chars
+            if year_str.isdigit():
+                year = int(year_str)
+
+        # Parse track number safely (can be "1/10" or "1")
+        track_number = None
+        if tag.track:
+            track_str = str(tag.track)
+            if "/" in track_str:
+                track_part = track_str.split("/")[0].strip()
+                if track_part.isdigit():
+                    track_number = int(track_part)
+            elif track_str.isdigit():
+                track_number = int(track_str)
+
+        # Parse disc number safely (can be "1/2" or "1")
+        disc_number = None
+        if tag.disc:
+            disc_str = str(tag.disc)
+            if "/" in disc_str:
+                disc_part = disc_str.split("/")[0].strip()
+                if disc_part.isdigit():
+                    disc_number = int(disc_part)
+            elif disc_str.isdigit():
+                disc_number = int(disc_str)
+
         metadata = AudioMetadata(
             file_path=audio_path,
             file_size=audio_path.stat().st_size,
@@ -291,9 +332,9 @@ class AudioMetadataExtractor:
             album=tag.album,
             album_artist=tag.albumartist,
             genre=tag.genre,
-            year=int(tag.year) if tag.year else None,
-            track_number=int(tag.track) if tag.track else None,
-            disc_number=int(tag.disc) if tag.disc else None,
+            year=year,
+            track_number=track_number,
+            disc_number=disc_number,
             comment=tag.comment,
         )
 

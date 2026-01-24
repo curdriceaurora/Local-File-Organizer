@@ -25,6 +25,17 @@ class CategoryScore:
     confidence: float  # 0.0 to 1.0
     signals: list[str] = field(default_factory=list)  # What triggered this score
 
+    def __post_init__(self):
+        """Validate score and confidence are in valid range [0.0, 1.0]."""
+        if not (0.0 <= self.score <= 1.0):
+            raise ValueError(
+                f"Score must be in range [0.0, 1.0], got {self.score} for {self.category.value}"
+            )
+        if not (0.0 <= self.confidence <= 1.0):
+            raise ValueError(
+                f"Confidence must be in range [0.0, 1.0], got {self.confidence} for {self.category.value}"
+            )
+
 
 @dataclass
 class HeuristicResult:
