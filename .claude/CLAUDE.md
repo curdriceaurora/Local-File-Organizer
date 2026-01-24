@@ -589,6 +589,27 @@ pip install -e ".[dev]"
 - isort>=5.13.0              # Import sorting
 ```
 
+### Optional Dependencies
+
+```bash
+# Install specific feature sets
+pip install -e ".[archive]"      # Archive format support (7z, RAR)
+pip install -e ".[scientific]"   # Scientific formats (HDF5, NetCDF, MATLAB)
+pip install -e ".[audio]"        # Audio transcription
+pip install -e ".[video]"        # Advanced video processing
+pip install -e ".[dedup]"        # Image deduplication
+pip install -e ".[all]"          # All optional features
+
+# Archive dependencies
+- py7zr>=0.20.0              # 7Z archive support
+- rarfile>=4.1               # RAR archive support (requires unrar tool)
+
+# Scientific dependencies
+- h5py>=3.10.0               # HDF5 file format
+- netCDF4>=1.6.5             # NetCDF file format
+- scipy>=1.11.0              # MATLAB .mat files (included in base)
+```
+
 ---
 
 ## AI Model Configuration
@@ -1231,7 +1252,48 @@ alembic current
 | M4A | `.m4a` | AudioModel | 📅 Phase 3 |
 | OGG | `.ogg` | AudioModel | 📅 Phase 3 |
 
-**Total**: 25 file types supported (20 active, 5 planned)
+### Archive Formats (4 types)
+
+| Format | Extension | Reader Function | Status |
+|--------|-----------|----------------|--------|
+| ZIP | `.zip` | `read_zip_file()` | ✅ |
+| 7-Zip | `.7z` | `read_7z_file()` | ✅ |
+| TAR | `.tar`, `.tar.gz`, `.tgz`, `.tar.bz2`, `.tbz2`, `.tar.xz` | `read_tar_file()` | ✅ |
+| RAR | `.rar` | `read_rar_file()` | ✅ |
+
+**Features**:
+- List archive contents without extraction
+- Calculate compression ratios
+- Extract metadata (file counts, sizes, dates)
+- Detect encryption
+- Memory-efficient (no extraction to disk)
+
+**Dependencies**:
+- ZIP, TAR: Built-in Python support
+- 7Z: Requires `py7zr` (optional)
+- RAR: Requires `rarfile` and `unrar` tool (optional)
+
+### Scientific Formats (3 types)
+
+| Format | Extension | Reader Function | Status |
+|--------|-----------|----------------|--------|
+| HDF5 | `.hdf5`, `.h5`, `.hdf` | `read_hdf5_file()` | ✅ |
+| NetCDF | `.nc`, `.nc4`, `.netcdf` | `read_netcdf_file()` | ✅ |
+| MATLAB | `.mat` | `read_mat_file()` | ✅ |
+
+**Features**:
+- Extract dataset structure and metadata
+- List variables, dimensions, and attributes
+- Display data types and shapes
+- Show global attributes
+- No data loading (metadata only for efficiency)
+
+**Dependencies**:
+- HDF5: Requires `h5py` (optional)
+- NetCDF: Requires `netCDF4` (optional)
+- MATLAB: Requires `scipy` (included in base dependencies)
+
+**Total**: 37 file types supported (32 active, 5 planned)
 
 ---
 
