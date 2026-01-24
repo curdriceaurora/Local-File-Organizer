@@ -15,6 +15,7 @@ import re
 import time
 
 from ..categories import PARACategory
+from ..config import PARAConfig, TemporalThresholds
 
 logger = logging.getLogger(__name__)
 
@@ -70,11 +71,22 @@ class TemporalHeuristic(Heuristic):
     Temporal heuristic using file timestamps and patterns.
 
     Signals:
-    - Recent activity (last 30 days) → PROJECT
+    - Recent activity (configurable threshold) → PROJECT
     - Regular access pattern → AREA
     - Old, untouched files → ARCHIVE
     - Creation vs modification gap → categorization hints
     """
+
+    def __init__(self, weight: float = 1.0, temporal_thresholds: TemporalThresholds | None = None):
+        """
+        Initialize temporal heuristic.
+
+        Args:
+            weight: Weight of this heuristic in final scoring (0.0 to 1.0)
+            temporal_thresholds: Temporal thresholds configuration (None = defaults)
+        """
+        super().__init__(weight)
+        self.thresholds = temporal_thresholds or TemporalThresholds()
 
     def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """Evaluate based on temporal patterns."""
@@ -86,28 +98,37 @@ class TemporalHeuristic(Heuristic):
         stat = file_path.stat()
         now = time.time()
 
+        # Get creation time (platform-specific)
+        # On Unix: st_ctime is change time, not creation time
+        # On macOS/BSD: st_birthtime is actual creation time
+        # On Windows: st_ctime is creation time
+        try:
+            creation_time = stat.st_birthtime  # macOS/BSD
+        except AttributeError:
+            creation_time = stat.st_ctime  # Windows fallback
+
         # Calculate time differences
         days_since_modified = (now - stat.st_mtime) / 86400
         days_since_accessed = (now - stat.st_atime) / 86400
-        days_since_created = (now - stat.st_ctime) / 86400
+        days_since_created = (now - creation_time) / 86400
 
-        # PROJECT signals: recent activity (< 30 days)
-        if days_since_modified < 30:
+        # PROJECT signals: recent activity
+        if days_since_modified < self.thresholds.project_max_age:
             scores[PARACategory.PROJECT].score += 0.4
             scores[PARACategory.PROJECT].signals.append("recently_modified")
 
         # AREA signals: regular but not too recent
-        if 30 <= days_since_modified <= 180:
+        if self.thresholds.area_min_age <= days_since_modified <= self.thresholds.area_max_age:
             scores[PARACategory.AREA].score += 0.3
             scores[PARACategory.AREA].signals.append("moderate_age")
 
         # RESOURCE signals: stable, not frequently modified
-        if days_since_modified > 60 and abs(days_since_created - days_since_modified) > 30:
+        if days_since_modified > self.thresholds.resource_min_age and abs(days_since_created - days_since_modified) > self.thresholds.project_max_age:
             scores[PARACategory.RESOURCE].score += 0.3
             scores[PARACategory.RESOURCE].signals.append("stable_reference")
 
         # ARCHIVE signals: old and untouched
-        if days_since_modified > 180 and days_since_accessed > 90:
+        if days_since_modified > self.thresholds.archive_min_age and days_since_accessed > self.thresholds.archive_min_inactive:
             scores[PARACategory.ARCHIVE].score += 0.5
             scores[PARACategory.ARCHIVE].signals.append("old_untouched")
 
@@ -142,28 +163,39 @@ class ContentHeuristic(Heuristic):
     - "Old", "backup", "archive" → ARCHIVE
     """
 
-    # Keyword patterns for each category
-    PROJECT_KEYWORDS: ClassVar[list[str]] = [
+    # Default keyword patterns (used as fallback)
+    DEFAULT_PROJECT_KEYWORDS: ClassVar[list[str]] = [
         "project", "deadline", "due", "sprint", "milestone", "deliverable",
         "proposal", "presentation", "report", "draft", "final", "v1", "v2"
     ]
 
-    AREA_KEYWORDS: ClassVar[list[str]] = [
+    DEFAULT_AREA_KEYWORDS: ClassVar[list[str]] = [
         "area", "ongoing", "recurring", "weekly", "monthly", "routine",
         "maintenance", "health", "finance", "learning", "notes"
     ]
 
-    RESOURCE_KEYWORDS: ClassVar[list[str]] = [
+    DEFAULT_RESOURCE_KEYWORDS: ClassVar[list[str]] = [
         "reference", "template", "guide", "tutorial", "documentation",
         "handbook", "manual", "example", "sample", "resource", "library"
     ]
 
-    ARCHIVE_KEYWORDS: ClassVar[list[str]] = [
+    DEFAULT_ARCHIVE_KEYWORDS: ClassVar[list[str]] = [
         "archive", "old", "backup", "deprecated", "obsolete", "legacy",
         "completed", "finished", "done", "past", "historical"
     ]
 
-    def evaluate(self, file_path: Path, metadata: Dict | None = None) -> HeuristicResult:
+    def __init__(self, weight: float = 1.0, config: PARAConfig | None = None):
+        """
+        Initialize content heuristic.
+
+        Args:
+            weight: Weight of this heuristic in final scoring (0.0 to 1.0)
+            config: PARA configuration for keyword patterns (None = defaults)
+        """
+        super().__init__(weight)
+        self.config = config or PARAConfig()
+
+    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """Evaluate based on content patterns."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -184,23 +216,27 @@ class ContentHeuristic(Heuristic):
                 scores[PARACategory.PROJECT].signals.append("date_pattern")
                 break
 
-        # Keyword matching
-        for keyword in self.PROJECT_KEYWORDS:
+        # Keyword matching using config or defaults
+        project_keywords = self.config.get_category_keywords(PARACategory.PROJECT)
+        for keyword in project_keywords:
             if keyword in full_path:
                 scores[PARACategory.PROJECT].score += 0.2
                 scores[PARACategory.PROJECT].signals.append(f"keyword:{keyword}")
 
-        for keyword in self.AREA_KEYWORDS:
+        area_keywords = self.config.get_category_keywords(PARACategory.AREA)
+        for keyword in area_keywords:
             if keyword in full_path:
                 scores[PARACategory.AREA].score += 0.2
                 scores[PARACategory.AREA].signals.append(f"keyword:{keyword}")
 
-        for keyword in self.RESOURCE_KEYWORDS:
+        resource_keywords = self.config.get_category_keywords(PARACategory.RESOURCE)
+        for keyword in resource_keywords:
             if keyword in full_path:
                 scores[PARACategory.RESOURCE].score += 0.2
                 scores[PARACategory.RESOURCE].signals.append(f"keyword:{keyword}")
 
-        for keyword in self.ARCHIVE_KEYWORDS:
+        archive_keywords = self.config.get_category_keywords(PARACategory.ARCHIVE)
+        for keyword in archive_keywords:
             if keyword in full_path:
                 scores[PARACategory.ARCHIVE].score += 0.3
                 scores[PARACategory.ARCHIVE].signals.append(f"keyword:{keyword}")
@@ -302,25 +338,16 @@ class AIHeuristic(Heuristic):
     Can use local LLMs via Ollama for semantic understanding.
     """
 
-    def evaluate(self, file_path: Path, metadata: Dict | None = None) -> HeuristicResult:
-        """Evaluate using AI (placeholder for future implementation)."""
-        scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
+    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
+        """Evaluate using AI (not yet implemented).
 
-        # TODO: Implement AI-based evaluation using Ollama
-        # This would involve:
-        # 1. Extract file content or metadata
-        # 2. Generate semantic embedding
-        # 3. Compare with PARA category embeddings
-        # 4. Return similarity scores
-
-        logger.info("AI heuristic not yet implemented")
-
-        return HeuristicResult(
-            scores=scores,
-            overall_confidence=0.0,
-            recommended_category=None,
-            needs_manual_review=True,
-            metadata={"ai_analysis": "not_implemented"}
+        Raises:
+            NotImplementedError: AI heuristic is not yet implemented
+        """
+        raise NotImplementedError(
+            "AI heuristic is not yet implemented. "
+            "This will use local LLMs via Ollama for semantic understanding. "
+            "Set enable_ai_heuristic=False in PARAConfig to disable this heuristic."
         )
 
 
@@ -335,16 +362,9 @@ class HeuristicEngine:
     4. Confidence = (top_score - second_score) / top_score
     """
 
-    # Auto-categorization thresholds
-    THRESHOLDS: ClassVar[dict[PARACategory, float]] = {
-        PARACategory.PROJECT: 0.75,
-        PARACategory.AREA: 0.75,
-        PARACategory.RESOURCE: 0.80,
-        PARACategory.ARCHIVE: 0.90,  # High bar for auto-archiving
-    }
-
     def __init__(
         self,
+        config: PARAConfig | None = None,
         enable_temporal: bool = True,
         enable_content: bool = True,
         enable_structural: bool = True,
@@ -354,24 +374,40 @@ class HeuristicEngine:
         Initialize heuristic engine.
 
         Args:
+            config: PARA configuration (None = defaults)
             enable_temporal: Enable temporal heuristic
             enable_content: Enable content heuristic
             enable_structural: Enable structural heuristic
             enable_ai: Enable AI heuristic
         """
+        self.config = config or PARAConfig()
         self.heuristics: list[Heuristic] = []
 
         if enable_temporal:
-            self.heuristics.append(TemporalHeuristic(weight=0.25))
+            self.heuristics.append(
+                TemporalHeuristic(
+                    weight=self.config.heuristic_weights.temporal,
+                    temporal_thresholds=self.config.temporal_thresholds
+                )
+            )
 
         if enable_content:
-            self.heuristics.append(ContentHeuristic(weight=0.35))
+            self.heuristics.append(
+                ContentHeuristic(
+                    weight=self.config.heuristic_weights.content,
+                    config=self.config
+                )
+            )
 
         if enable_structural:
-            self.heuristics.append(StructuralHeuristic(weight=0.30))
+            self.heuristics.append(
+                StructuralHeuristic(weight=self.config.heuristic_weights.structural)
+            )
 
         if enable_ai:
-            self.heuristics.append(AIHeuristic(weight=0.10))
+            self.heuristics.append(
+                AIHeuristic(weight=self.config.heuristic_weights.ai)
+            )
 
     def evaluate(self, file_path: Path, metadata: Dict | None = None) -> HeuristicResult:
         """
@@ -432,12 +468,13 @@ class HeuristicEngine:
         # Determine recommendation based on thresholds
         recommended = None
         for category in scores_list:
-            if category.score >= self.THRESHOLDS[category.category]:
+            threshold = self.config.get_category_threshold(category.category)
+            if category.score >= threshold:
                 recommended = category.category
                 break
 
         # Check if manual review needed
-        needs_review = confidence < 0.60 or recommended is None
+        needs_review = confidence < self.config.manual_review_threshold or recommended is None
 
         return HeuristicResult(
             scores=combined_scores,

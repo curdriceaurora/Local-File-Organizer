@@ -77,18 +77,20 @@ class TranscriptionResult:
 
 @dataclass
 class TranscriptionOptions:
-    """Options for transcription."""
+    """Options for transcription.
+
+    Note:
+        Only options supported by faster-whisper are included. Additional options
+        like suppress_numerals and progress_callback may be added in future versions.
+    """
 
     language: Optional[str] = None  # Force language (None = auto-detect)
-    detect_language: bool = True  # Enable language detection
     word_timestamps: bool = True  # Generate word-level timestamps
     vad_filter: bool = True  # Voice activity detection
     beam_size: int = 5  # Beam search size
     best_of: int = 5  # Number of candidates
     temperature: float = 0.0  # Sampling temperature
-    suppress_numerals: bool = False  # Keep numbers as digits
     initial_prompt: Optional[str] = None  # Context hint
-    progress_callback: Optional[Callable[[int, int], None]] = None  # Progress updates
 
 
 class AudioTranscriber:

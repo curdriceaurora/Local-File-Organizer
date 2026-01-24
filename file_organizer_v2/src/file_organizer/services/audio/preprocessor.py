@@ -299,28 +299,46 @@ class AudioPreprocessor:
 
         Args:
             audio_path: Input audio file path
-            output_path: Output file path (None = temp file)
+            output_path: Output file path (None = creates temp file in system temp dir)
             convert_to_wav: Whether to convert to WAV
             normalize: Whether to normalize audio levels
             remove_silence: Whether to remove silence
 
         Returns:
             Path to preprocessed audio file
+
+        Note:
+            When output_path is None, a temporary file is created. Caller is responsible
+            for cleanup. Consider using tempfile.TemporaryDirectory() context manager
+            when calling this method.
         """
+        import shutil
+
         audio_path = Path(audio_path)
         current_file = audio_path
 
         logger.info(f"Starting preprocessing pipeline for: {audio_path}")
 
+        # Determine target output path
+        if output_path is not None:
+            target_path = Path(output_path)
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            target_path = None
+
         # Step 1: Convert to WAV if needed
         if convert_to_wav and audio_path.suffix.lower() != ".wav":
-            current_file = self.convert_to_wav(current_file, output_path)
+            current_file = self.convert_to_wav(current_file, target_path)
+        elif target_path is not None:
+            # If not converting but output_path specified, copy to target
+            shutil.copy2(current_file, target_path)
+            current_file = target_path
 
-        # Step 2: Normalize
+        # Step 2: Normalize (operates on current_file)
         if normalize:
             current_file = self.normalize_audio(current_file)
 
-        # Step 3: Remove silence
+        # Step 3: Remove silence (operates on current_file)
         if remove_silence:
             current_file = self.remove_silence(current_file)
 
