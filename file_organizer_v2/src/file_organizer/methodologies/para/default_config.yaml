@@ -75,9 +75,6 @@ keyword_patterns:
     - done
     - past
     - historical
-    - 2020
-    - 2021
-    - 2022
 
 # Temporal Thresholds (in days)
 temporal_thresholds:
