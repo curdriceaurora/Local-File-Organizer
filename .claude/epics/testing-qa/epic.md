@@ -1,11 +1,11 @@
 ---
 name: testing-qa
 title: Testing & Quality Assurance
-github_issue: 6
-github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/6
+github_issue: 171
+github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/171
 status: open
 created: 2026-01-20T23:30:00Z
-updated: 2026-01-24T04:18:42Z
+updated: 2026-01-24T08:26:15Z
 labels: [enhancement, epic, testing]
 progress: 0%
 ---
@@ -77,7 +77,7 @@ Ensure docs are accurate
 - black 23+
 
 ## Related
-- GitHub Issue: #6
+- GitHub Issue: #171
 - Related PRD: file-organizer-v2
 
 ---
@@ -88,45 +88,45 @@ Ensure docs are accurate
 **Total Estimated Effort**: 236-286 hours
 
 ### Phase 1: Core Foundation (Tasks 001-009)
-- [ ] 001 - Setup Test Infrastructure (M, 8-12h, parallel)
-- [ ] 002 - Test AI Model Abstractions (S, 4-6h, sequential after 001)
-- [ ] 003 - Test Text Model Implementation (M, 8-10h, sequential after 002)
-- [ ] 004 - Test Vision Model Implementation (M, 10-12h, parallel with 003)
-- [ ] 005 - Test File Readers Utilities (L, 12-16h, parallel)
-- [ ] 006 - Test Text Processing Utilities (M, 6-8h, parallel)
-- [ ] 007 - Test Text Processor Service (L, 10-12h, sequential after 003, 005)
-- [ ] 008 - Test Vision Processor Service (L, 12-14h, parallel with 007)
-- [ ] 009 - Test Core File Organizer (XL, 16-20h, sequential after 007, 008)
+- [ ] **#148** - Setup Test Infrastructure (M, 8-12h, parallel)
+- [ ] **#149** - Test AI Model Abstractions (S, 4-6h, sequential after 001)
+- [ ] **#150** - Test Text Model Implementation (M, 8-10h, sequential after 002)
+- [ ] **#151** - Test Vision Model Implementation (M, 10-12h, parallel with 003)
+- [ ] **#152** - Test File Readers Utilities (L, 12-16h, parallel)
+- [ ] **#153** - Test Text Processing Utilities (M, 6-8h, parallel)
+- [ ] **#154** - Test Text Processor Service (L, 10-12h, sequential after 003, 005)
+- [ ] **#155** - Test Vision Processor Service (L, 12-14h, parallel with 007)
+- [ ] **#156** - Test Core File Organizer (XL, 16-20h, sequential after 007, 008)
 
 **Phase 1 Subtotal**: 86-110 hours
 
 ### Phase 2: Pattern Analysis & Intelligence (Tasks 010-012)
-- [ ] 010 - Test Pattern Analyzer Service (L, 12-14h, parallel)
-- [ ] 011 - Test Misplacement Detector Service (L, 14-16h, sequential after 010)
-- [ ] 012 - Test Suggestion Feedback Service (M, 8-10h, parallel)
+- [ ] **#157** - Test Pattern Analyzer Service (L, 12-14h, parallel)
+- [ ] **#158** - Test Misplacement Detector Service (L, 14-16h, sequential after 010)
+- [ ] **#159** - Test Suggestion Feedback Service (M, 8-10h, parallel)
 
 **Phase 2 Subtotal**: 34-40 hours
 
 ### Phase 3: Deduplication Services (Tasks 013-016)
-- [ ] 013 - Test Deduplication Core Services (L, 14-16h, parallel)
-- [ ] 014 - Test Image Deduplication (L, 12-14h, sequential after 013)
-- [ ] 015 - Test Document Deduplication (XL, 16-20h, parallel with 014)
-- [ ] 016 - Test Quality Assessment & Backup (M, 10-12h, parallel with 014, 015)
+- [ ] **#160** - Test Deduplication Core Services (L, 14-16h, parallel)
+- [ ] **#161** - Test Image Deduplication (L, 12-14h, sequential after 013)
+- [ ] **#162** - Test Document Deduplication (XL, 16-20h, parallel with 014)
+- [ ] **#163** - Test Quality Assessment & Backup (M, 10-12h, parallel with 014, 015)
 
 **Phase 3 Subtotal**: 52-62 hours
 
 ### Phase 4: Intelligence Services (Tasks 017-019)
-- [ ] 017 - Test Preference Tracking & Learning (XL, 16-18h, parallel)
-- [ ] 018 - Test Feedback Processing (M, 8-10h, sequential after 017)
-- [ ] 019 - Test Profile Management (L, 12-14h, parallel)
+- [ ] **#164** - Test Preference Tracking & Learning (XL, 16-18h, parallel)
+- [ ] **#165** - Test Feedback Processing (M, 8-10h, sequential after 017)
+- [ ] **#166** - Test Profile Management (L, 12-14h, parallel)
 
 **Phase 4 Subtotal**: 36-42 hours
 
 ### Phase 5: Integration & CI/CD (Tasks 020-023)
-- [ ] 020 - Test CLI Commands (L, 12-14h, parallel after 009, 013)
-- [ ] 021 - Integration Test Suite (XL, 20-24h, sequential after 009, 013, 017)
-- [ ] 022 - Setup CI/CD Pipeline (M, 6-8h, sequential after 021)
-- [ ] 023 - Code Quality & Documentation (M, 6-8h, parallel with/after 022)
+- [ ] **#167** - Test CLI Commands (L, 12-14h, parallel after 009, 013)
+- [ ] **#168** - Integration Test Suite (XL, 20-24h, sequential after 009, 013, 017)
+- [ ] **#169** - Setup CI/CD Pipeline (M, 6-8h, sequential after 021)
+- [ ] **#170** - Code Quality & Documentation (M, 6-8h, parallel with/after 022)
 
 **Phase 5 Subtotal**: 44-54 hours
 
