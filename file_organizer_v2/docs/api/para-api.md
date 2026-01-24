@@ -73,11 +73,12 @@ Enum representing PARA categories.
 ```python
 from file_organizer.methodologies.para import PARACategory
 
-class PARACategory(Enum):
-    PROJECTS = "projects"
-    AREAS = "areas"
-    RESOURCES = "resources"
-    ARCHIVE = "archive"
+class PARACategory(str, Enum):
+    PROJECT = "project"   # Time-bound efforts with goals
+    AREA = "area"         # Ongoing responsibilities
+    RESOURCE = "resource" # Reference materials
+    ARCHIVE = "archive"   # Inactive items
+    UNKNOWN = "unknown"   # Uncategorized/fallback
 ```
 
 ### PARAResult

@@ -19,18 +19,13 @@ Phase 3 significantly expands File Organizer's file format support with speciali
 
 **Usage**:
 ```python
-from file_organizer.utils.file_readers import read_epub_file
+from file_organizer.utils.file_readers import read_ebook_file
 
-# Extract enhanced metadata
-content, metadata = read_epub_file("book.epub")
+# Extract text content from EPUB
+text = read_ebook_file("book.epub")  # Returns string content
 
-# Metadata includes:
-# - title, author, publisher
-# - chapter_count
-# - series_name, series_position
-# - cover_image_path
-# - isbn, language
-# - publication_date
+# Optional: Limit extracted text
+text = read_ebook_file("book.epub", max_chars=5000)
 ```
 
 **Organization**:
@@ -131,14 +126,19 @@ result = organizer.organize(
 ```python
 from file_organizer.utils.file_readers import read_cad_file
 
-# Read DXF file
-info = read_cad_file("design.dxf")
+# Read DXF file - returns formatted string with metadata
+output = read_cad_file("design.dxf")
 
-# Returns:
-# - layer_count: Number of layers
-# - entity_count: Total entities
-# - drawing_units: Units used
-# - metadata: Title, author, created date
+# Example output:
+# === DXF Document Metadata ===
+# Title: Assembly Design
+# Layers: 12
+# Entities: 1,543
+# Drawing Units: Millimeters
+# === Layer Information ===
+# Layer 'Dimensions': 145 entities
+# Layer 'Centerlines': 89 entities
+# ...
 ```
 
 **Organization**:
@@ -283,17 +283,22 @@ file_formats:
 **Python API**:
 ```python
 from file_organizer import FileOrganizer
-from file_organizer.config import FormatConfig
+from file_organizer.models.base import ModelConfig
 
-format_config = FormatConfig(
-    epub_enhanced=True,
-    archive_support=True,
-    analyze_archive_contents=True,
-    cad_support=True,
-    scientific_support=False  # Not yet available
+# Configure AI models for processing
+text_config = ModelConfig(
+    name="qwen2.5:3b-instruct-q4_K_M",
+    temperature=0.5
+)
+vision_config = ModelConfig(
+    name="qwen2.5vl:7b-q4_K_M",
+    temperature=0.3
 )
 
-organizer = FileOrganizer(format_config=format_config)
+organizer = FileOrganizer(
+    text_model_config=text_config,
+    vision_model_config=vision_config
+)
 ```
 
 ### Format-Specific Options

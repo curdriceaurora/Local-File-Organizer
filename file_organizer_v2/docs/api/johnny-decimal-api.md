@@ -59,18 +59,20 @@ config = JohnnyDecimalConfig(
 
 ### JohnnyDecimalNumber
 
-Represents a Johnny Decimal number (XX.YY format).
+Represents a Johnny Decimal number (XX.YY.ZZZ format - 3-level hierarchy).
 
 ```python
 @dataclass
 class JohnnyDecimalNumber:
-    category: int  # 00-99
-    id: int  # 00-99
-    area: Optional[int] = None  # Computed from category
+    area: int  # 00-99 (e.g., 10, 20, 30)
+    category: Optional[int] = None  # 00-99 (e.g., 11, 12, 13)
+    item_id: Optional[int] = None  # 000-999 (e.g., 001, 002, 003)
+    name: str = ""
+    description: str = ""
 
     @property
     def full_number(self) -> str:
-        """Returns formatted number (e.g., '11.04')"""
+        """Returns formatted number (e.g., '11.04.012')"""
 
     @property
     def is_valid(self) -> bool:
@@ -79,9 +81,17 @@ class JohnnyDecimalNumber:
 
 **Example**:
 ```python
-number = JohnnyDecimalNumber(category=11, id=4)
-print(number.full_number)  # "11.04"
-print(number.area)  # 1 (derived from category 11)
+# Full 3-level number
+number = JohnnyDecimalNumber(area=11, category=4, item_id=12)
+print(number.full_number)  # "11.04.012"
+
+# Category level (2 levels)
+category = JohnnyDecimalNumber(area=11, category=4)
+print(category.full_number)  # "11.04"
+
+# Area level only
+area = JohnnyDecimalNumber(area=10)
+print(area.full_number)  # "10"
 ```
 
 ### AssignmentResult
@@ -338,10 +348,12 @@ Defines an area (10-19, 20-29, etc.).
 from file_organizer.methodologies.johnny_decimal import AreaDefinition
 
 area = AreaDefinition(
-    area_range: Tuple[int, int],
+    area_range_start: int,
+    area_range_end: int,
     name: str,
-    description: Optional[str] = None,
-    keywords: List[str] = []
+    description: str,
+    keywords: List[str] = [],
+    examples: List[str] = []
 )
 ```
 
@@ -349,7 +361,8 @@ area = AreaDefinition(
 ```python
 # Define Administration area
 admin_area = AreaDefinition(
-    area_range=(10, 19),
+    area_range_start=10,
+    area_range_end=19,
     name="Administration",
     description="Company administration and operations",
     keywords=["admin", "company", "operations"]
