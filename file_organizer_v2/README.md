@@ -13,7 +13,7 @@
 - ✅ **Model Abstraction**: Clean architecture with pluggable models
 - ✅ **Image Support**: Full image processing with vision AI (Week 2 ✅)
 - ✅ **Video Support**: Basic video processing (Week 2 ✅)
-- 🚧 **Audio Support**: Coming in Phase 3 (Distil-Whisper)
+- 🚧 **Audio Support**: In Progress - Phase 3 (faster-whisper)
 - 🚧 **Modern UI**: Textual TUI coming in Phase 2
 
 ### Architecture
@@ -75,6 +75,20 @@ See [WEEK2_IMAGE_PROCESSING.md](WEEK2_IMAGE_PROCESSING.md) for image/video proce
    curl -fsSL https://ollama.com/install.sh | sh
 
    # Or visit https://ollama.com for other platforms
+
+   ```
+
+3. **FFmpeg** (for audio/video processing - Phase 3)
+
+   ```bash
+
+   # macOS
+   brew install ffmpeg
+
+   # Ubuntu/Debian
+   sudo apt-get install ffmpeg
+
+   # Or visit https://ffmpeg.org for other platforms
 
    ```
 
@@ -278,7 +292,7 @@ file_organizer_v2/
 - [ ] Better error handling
 
 ### 📅 Phase 3: Feature Expansion (Weeks 7-10)
-- [ ] Audio support (Distil-Whisper)
+- [ ] Audio support (faster-whisper)
 - [ ] Video support
 - [ ] Ebook formats
 - [ ] PARA + Johnny Decimal methodology
