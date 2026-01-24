@@ -207,7 +207,7 @@ Total: 18-22 hours wall time
 mkdir -p tests/services/audio
 mkdir -p tests/services/video
 mkdir -p tests/methodologies
-mkdir -p tests/fixtures/{audio,video,para,johnny,cad,archives,epub}
+mkdir -p tests/fixtures/{audio_samples,video_samples,para_methods,johnny_decimal,cad_files,archives,epub_books}
 
 # Update test dependencies
 # Add pytest-asyncio, pytest-mock, faker, hypothesis

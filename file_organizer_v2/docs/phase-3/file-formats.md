@@ -56,15 +56,19 @@ text = read_ebook_file("book.epub", max_chars=5000)
 ```python
 from file_organizer.utils.file_readers import read_archive_file
 
-# Analyze archive contents
-info = read_archive_file("project.zip")
+# Read archive contents - use format-specific functions
+from file_organizer.utils.file_readers import read_zip_file, read_tar_file
 
-# Returns:
-# - file_list: List of files in archive
-# - total_size: Uncompressed size
-# - compressed_size: Archive size
-# - compression_ratio: Compression efficiency
-# - content_types: Detected file types
+# For ZIP files
+content = read_zip_file("project.zip")  # Returns formatted string
+
+# For TAR files
+content = read_tar_file("backup.tar.gz")  # Returns formatted string
+
+# Content includes:
+# - List of files in archive
+# - File sizes and structure
+# - Metadata about the archive
 ```
 
 **Organization Strategy**:
@@ -561,18 +565,32 @@ info = read_hdf5_file("data.h5")
 
 ### Format Detection
 
+<!-- Utility functions for format detection are planned for future release.
+For now, use direct format-specific readers from file_organizer.utils.file_readers.
 ```python
 from file_organizer.utils import (
     detect_file_type,
     validate_file_format,
     get_format_info
 )
+```
+-->
 
-# Detect type
-file_type = detect_file_type("unknown.bin")
+**Note**: Format detection utilities are planned for a future release. Currently, use format-specific readers directly:
 
-# Validate
-is_valid = validate_file_format("document.pdf")
+```python
+from pathlib import Path
+
+# Use file extension to determine reader
+file_path = Path("document.pdf")
+ext = file_path.suffix.lower()
+
+if ext == '.pdf':
+    from file_organizer.utils.file_readers import read_pdf_file
+    content = read_pdf_file(file_path)
+elif ext == '.epub':
+    from file_organizer.utils.file_readers import read_ebook_file
+    content = read_ebook_file(file_path)
 
 # Get detailed info
 info = get_format_info("design.dxf")
