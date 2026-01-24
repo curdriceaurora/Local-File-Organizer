@@ -13,7 +13,14 @@ import json
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
+
+# fcntl is Unix-only, not available on Windows
+try:
+    import fcntl
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
 
 
 class BackupManager:
@@ -84,7 +91,7 @@ class BackupManager:
         try:
             shutil.copy2(file_path, backup_path)
         except Exception as e:
-            raise IOError(f"Failed to create backup: {e}")
+            raise OSError(f"Failed to create backup: {e}")
 
         # Update manifest
         manifest = self._load_manifest()
@@ -140,11 +147,11 @@ class BackupManager:
         try:
             shutil.copy2(backup_path, target_path)
         except Exception as e:
-            raise IOError(f"Failed to restore backup: {e}")
+            raise OSError(f"Failed to restore backup: {e}")
 
         return target_path
 
-    def cleanup_old_backups(self, max_age_days: int = 30) -> List[Path]:
+    def cleanup_old_backups(self, max_age_days: int = 30) -> list[Path]:
         """
         Remove backups older than the specified age.
 
@@ -185,7 +192,7 @@ class BackupManager:
 
         return removed_backups
 
-    def get_backup_info(self, backup_path: Path) -> Optional[Dict]:
+    def get_backup_info(self, backup_path: Path) -> Optional[dict]:
         """
         Get metadata for a specific backup.
 
@@ -199,7 +206,7 @@ class BackupManager:
         backup_key = str(Path(backup_path).resolve())
         return manifest.get(backup_key)
 
-    def list_backups(self) -> List[Dict]:
+    def list_backups(self) -> list[dict]:
         """
         List all backups with their metadata.
 
@@ -219,7 +226,7 @@ class BackupManager:
 
         return backups
 
-    def get_statistics(self) -> Dict:
+    def get_statistics(self) -> dict:
         """
         Get statistics about the backup system.
 
@@ -247,7 +254,7 @@ class BackupManager:
             "backup_directory": str(self.backup_dir),
         }
 
-    def verify_backups(self) -> List[str]:
+    def verify_backups(self) -> list[str]:
         """
         Verify integrity of all backups.
 
@@ -271,9 +278,9 @@ class BackupManager:
 
         return issues
 
-    def _load_manifest(self) -> Dict:
+    def _load_manifest(self) -> dict:
         """
-        Load the backup manifest from disk.
+        Load the backup manifest from disk with file locking.
 
         Returns:
             Dictionary containing manifest data
@@ -283,20 +290,44 @@ class BackupManager:
 
         try:
             with open(self.manifest_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
+                # Acquire shared lock for reading (Unix only)
+                if HAS_FCNTL:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                try:
+                    data = json.load(f)
+                finally:
+                    # Release lock (Unix only)
+                    if HAS_FCNTL:
+                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                return data
+        except (json.JSONDecodeError, OSError):
             # If manifest is corrupted, start fresh
             return {}
 
-    def _save_manifest(self, manifest: Dict) -> None:
+    def _save_manifest(self, manifest: dict) -> None:
         """
-        Save the backup manifest to disk.
+        Save the backup manifest to disk with file locking.
 
         Args:
             manifest: Dictionary containing manifest data
         """
         try:
-            with open(self.manifest_path, 'w', encoding='utf-8') as f:
-                json.dump(manifest, f, indent=2, ensure_ascii=False)
-        except IOError as e:
-            raise IOError(f"Failed to save manifest: {e}") from e
+            # Open in read+ mode to avoid truncating before lock
+            mode = 'r+' if self.manifest_path.exists() else 'w'
+            with open(self.manifest_path, mode, encoding='utf-8') as f:
+                # Acquire exclusive lock for writing (Unix only)
+                if HAS_FCNTL:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    # Truncate file after acquiring lock
+                    if mode == 'r+':
+                        f.seek(0)
+                        f.truncate()
+                    json.dump(manifest, f, indent=2, ensure_ascii=False)
+                    f.flush()
+                finally:
+                    # Release lock (Unix only)
+                    if HAS_FCNTL:
+                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except OSError as e:
+            raise OSError(f"Failed to save manifest: {e}") from e

@@ -285,7 +285,7 @@ def read_file(file_path: str | Path, **kwargs) -> str | None:
 
     readers = {
         ('.txt', '.md'): read_text_file,
-        ('.docx', '.doc'): read_docx_file,
+        ('.docx',): read_docx_file,  # Note: .doc (old binary format) is NOT supported
         ('.pdf',): read_pdf_file,
         ('.csv', '.xlsx', '.xls'): read_spreadsheet_file,
         ('.ppt', '.pptx'): read_presentation_file,
