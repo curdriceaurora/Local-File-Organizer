@@ -4,11 +4,12 @@ PARA Integration Tests
 Tests complete workflows and integration with file organizer system.
 """
 
-
 import pytest
-
+from pathlib import Path
+from datetime import datetime, timedelta
 from file_organizer.methodologies.para.categories import (
     PARACategory,
+    CategorizationResult,
 )
 from file_organizer.methodologies.para.detection.heuristics import (
     HeuristicEngine,
@@ -101,8 +102,8 @@ class TestPARAWorkflow:
         archive_file.touch()
 
         # Make it old
-        import os
         import time
+        import os
         old_time = time.time() - (200 * 86400)
         os.utime(archive_file, (old_time, old_time))
 
@@ -164,7 +165,7 @@ class TestPARAMigrationScenarios:
         }
 
         results = {}
-        for filename, _expected_category in files.items():
+        for filename, expected_category in files.items():
             file_path = tmp_path / filename
             file_path.touch()
 
@@ -475,7 +476,7 @@ class TestPARAPerformance:
         for i in range(100):
             file_path = tmp_path / f"file-{i}.txt"
             file_path.touch()
-            engine.evaluate(file_path)
+            result = engine.evaluate(file_path)
 
         # Force garbage collection
         gc.collect()
