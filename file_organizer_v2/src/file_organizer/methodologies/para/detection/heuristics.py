@@ -83,11 +83,38 @@ class TemporalHeuristic(Heuristic):
     - Regular access pattern → AREA
     - Old, untouched files → ARCHIVE
     - Creation vs modification gap → categorization hints
+    - Old year patterns in path (e.g., "2020") → ARCHIVE
     """
+
+    @staticmethod
+    def _contains_old_year(path_str: str, current_year: int, threshold_years: int = 3) -> bool:
+        """
+        Check if path contains old year patterns (folders named like "2020").
+
+        Args:
+            path_str: Path string to check
+            current_year: Current year
+            threshold_years: Years before current year to consider "old"
+
+        Returns:
+            True if path contains year older than threshold
+        """
+        import re
+        # Match standalone 4-digit years (word boundaries)
+        year_pattern = r'\b(19\d{2}|20\d{2})\b'
+        matches = re.findall(year_pattern, path_str)
+
+        for year_str in matches:
+            year = int(year_str)
+            # Consider years from threshold_years ago and older as archive indicators
+            if year <= current_year - threshold_years:
+                return True
+        return False
 
     def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """Evaluate based on temporal patterns."""
         import time
+        from datetime import datetime
 
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -96,11 +123,17 @@ class TemporalHeuristic(Heuristic):
 
         stat = file_path.stat()
         now = time.time()
+        current_year = datetime.now().year
 
         # Calculate time differences
         days_since_modified = (now - stat.st_mtime) / 86400
         days_since_accessed = (now - stat.st_atime) / 86400
         days_since_created = (now - stat.st_ctime) / 86400
+
+        # Check for old year patterns in path (e.g., "/Projects/2020/...")
+        if self._contains_old_year(str(file_path), current_year):
+            scores[PARACategory.ARCHIVE].score += 0.4
+            scores[PARACategory.ARCHIVE].signals.append("old_year_in_path")
 
         # PROJECT signals: recent activity (< 30 days)
         if days_since_modified < 30:

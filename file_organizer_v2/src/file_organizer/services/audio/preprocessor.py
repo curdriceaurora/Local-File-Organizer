@@ -142,8 +142,10 @@ class AudioPreprocessor:
             logger.info(f"Conversion complete: {output_path}")
             return output_path
 
-        except FileNotFoundError:
-            # Fallback to pydub if ffmpeg not available
+        except FileNotFoundError as e:
+            # Fallback to pydub if ffmpeg executable not found
+            # (input file existence already validated above)
+            logger.debug(f"ffmpeg not found ({e}), falling back to pydub")
             return self._convert_with_pydub(
                 audio_path, output_path, sample_rate, channels
             )
@@ -181,7 +183,8 @@ class AudioPreprocessor:
             logger.info(f"Conversion complete using pydub: {output_path}")
             return output_path
 
-        except ImportError:
+        except ImportError as e:
+            logger.error(f"pydub not available: {e}")
             raise ImportError(
                 "Neither ffmpeg nor pydub is available for audio conversion. "
                 "Install one of them: apt-get install ffmpeg or pip install pydub"

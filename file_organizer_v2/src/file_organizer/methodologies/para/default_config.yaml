@@ -75,9 +75,9 @@ keyword_patterns:
     - done
     - past
     - historical
-    - 2020
-    - 2021
-    - 2022
+    # Note: Old year detection (e.g., folders named "2020", "2021") is handled
+    # programmatically in the heuristics engine to avoid hardcoding year values
+    # that become outdated. See TemporalHeuristic for dynamic year matching.
 
 # Temporal Thresholds (in days)
 temporal_thresholds:
