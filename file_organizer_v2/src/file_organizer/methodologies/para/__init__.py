@@ -10,6 +10,7 @@ Components:
 - detection: Heuristic-based detection algorithms
 - rules: Rule engine for custom categorization logic
 - folder_generator: PARA folder structure generation
+- folder_mapper: Category-based folder mapping and organization
 - migration_manager: Migration from flat structures to PARA
 
 Author: File Organizer v2.0
@@ -24,6 +25,11 @@ from .categories import (
     get_category_definition,
 )
 from .folder_generator import FolderCreationResult, PARAFolderGenerator
+from .folder_mapper import (
+    CategoryFolderMapper,
+    MappingResult,
+    MappingStrategy,
+)
 from .migration_manager import (
     MigrationFile,
     MigrationPlan,
@@ -39,6 +45,9 @@ __all__ = [
     "get_all_category_definitions",
     "PARAFolderGenerator",
     "FolderCreationResult",
+    "CategoryFolderMapper",
+    "MappingResult",
+    "MappingStrategy",
     "PARAMigrationManager",
     "MigrationPlan",
     "MigrationReport",
