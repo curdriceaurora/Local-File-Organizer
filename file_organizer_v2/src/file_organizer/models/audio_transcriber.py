@@ -21,12 +21,22 @@ class ModelSize(Enum):
 
 
 class ComputeType(Enum):
-    """Compute types for inference."""
+    """Compute types for inference.
+
+    Supported types: float16, int8, float32, int8_float32, int8_float16,
+    int8_bfloat16, int16, bfloat16, default, auto.
+    """
 
     FLOAT16 = "float16"
     INT8 = "int8"
-    INT4 = "int4"
     FLOAT32 = "float32"
+    INT8_FLOAT32 = "int8_float32"
+    INT8_FLOAT16 = "int8_float16"
+    INT8_BFLOAT16 = "int8_bfloat16"
+    INT16 = "int16"
+    BFLOAT16 = "bfloat16"
+    DEFAULT = "default"
+    AUTO = "auto"
 
 
 @dataclass
@@ -133,6 +143,14 @@ class AudioTranscriber:
             raise ValueError(
                 f"Invalid model size: {self.model_size}. "
                 f"Must be one of: {', '.join(valid_sizes)}"
+            )
+
+        # Validate compute type
+        valid_compute_types = [c.value for c in ComputeType]
+        if self.compute_type not in valid_compute_types:
+            raise ValueError(
+                f"Invalid compute type: {self.compute_type}. "
+                f"Must be one of: {', '.join(valid_compute_types)}"
             )
 
         # Auto-detect device
@@ -346,12 +364,16 @@ class AudioTranscriber:
                         for w in seg.words
                     ]
 
+                # Convert log probability to probability (0-1 scale)
+                import math
+                confidence = math.exp(seg.avg_logprob) if seg.avg_logprob else 0.0
+
                 transcription_segments.append(
                     TranscriptionSegment(
                         start=seg.start,
                         end=seg.end,
                         text=segment_text,
-                        confidence=seg.avg_logprob,  # Approximate confidence
+                        confidence=confidence,
                         words=words,
                     )
                 )
@@ -380,17 +402,7 @@ class AudioTranscriber:
 
         except Exception as e:
             logger.error(f"Transcription failed: {e}")
-            return TranscriptionResult(
-                text="",
-                language="unknown",
-                language_confidence=0.0,
-                segments=[],
-                duration=0.0,
-                processing_time=time.time() - start_time,
-                model_size=self.model_size,
-                device=self.device,
-                error=str(e),
-            )
+            raise RuntimeError(f"Transcription failed: {e}") from e
 
     @staticmethod
     def get_supported_formats() -> List[str]:
