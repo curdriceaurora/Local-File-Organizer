@@ -122,6 +122,10 @@ class TestPreferenceCRUD:
             context=context
         )
 
+        # Verify ID was returned
+        assert pref_id is not None
+        assert pref_id > 0
+
         # Retrieve and verify context
         pref = db_manager.get_preference("naming_pattern", "report_*.pdf")
         assert pref is not None
@@ -264,6 +268,10 @@ class TestCorrectionTracking:
             destination_path="/new_name.txt",
             metadata=metadata
         )
+
+        # Verify ID was returned
+        assert corr_id is not None
+        assert corr_id > 0
 
         corrections = db_manager.get_corrections(limit=1)
         assert len(corrections) == 1

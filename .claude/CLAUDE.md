@@ -30,7 +30,7 @@ An AI-powered local file management system with privacy-first architecture. Orga
 
 ### 🚀 Auto-Approved Operations
 
-**For all paths under `/Users/rahul/Projects/`:**
+**For all paths under the project workspace (`~/Projects/` or equivalent):**
 - ✅ All file operations (read, write, edit, delete) are auto-approved
 - ✅ All bash commands are auto-approved
 - ✅ All git operations are auto-approved
