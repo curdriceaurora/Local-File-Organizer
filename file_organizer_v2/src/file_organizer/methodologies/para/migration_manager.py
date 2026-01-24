@@ -6,13 +6,13 @@ Supports dry-run, rollback, and detailed reporting.
 """
 
 import logging
+import os
 import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
-from .categories import PARACategory, CategorizationResult
+from .categories import PARACategory
 from .config import PARAConfig
 from .detection.heuristics import HeuristicEngine
 from .folder_generator import PARAFolderGenerator
@@ -61,8 +61,8 @@ class PARAMigrationManager:
 
     def __init__(
         self,
-        config: Optional[PARAConfig] = None,
-        heuristic_engine: Optional[HeuristicEngine] = None
+        config: PARAConfig | None = None,
+        heuristic_engine: HeuristicEngine | None = None
     ):
         """
         Initialize migration manager.
@@ -72,7 +72,16 @@ class PARAMigrationManager:
             heuristic_engine: Engine for categorizing files
         """
         self.config = config or PARAConfig()
-        self.heuristic_engine = heuristic_engine or HeuristicEngine(self.config)
+        if heuristic_engine is None:
+            # Create heuristic engine from config settings
+            self.heuristic_engine = HeuristicEngine(
+                enable_temporal=self.config.enable_temporal_heuristic,
+                enable_content=self.config.enable_content_heuristic,
+                enable_structural=self.config.enable_structural_heuristic,
+                enable_ai=self.config.enable_ai_heuristic,
+            )
+        else:
+            self.heuristic_engine = heuristic_engine
         self.folder_generator = PARAFolderGenerator(self.config)
 
     def analyze_source(
@@ -80,7 +89,7 @@ class PARAMigrationManager:
         source_path: Path,
         target_root: Path,
         recursive: bool = True,
-        file_extensions: Optional[list[str]] = None
+        file_extensions: list[str] | None = None
     ) -> MigrationPlan:
         """
         Analyze source directory and create migration plan.
@@ -117,9 +126,12 @@ class PARAMigrationManager:
 
             # Categorize file
             try:
-                result = self.heuristic_engine.categorize(file_path)
-                category = result.category
-                confidence = result.confidence
+                result = self.heuristic_engine.evaluate(file_path)
+                category = result.recommended_category
+                if category is None:
+                    # Default to Resource if no clear category
+                    category = PARACategory.RESOURCE
+                confidence = result.overall_confidence
 
                 # Determine target path
                 category_path = self.folder_generator.get_category_path(
@@ -130,12 +142,17 @@ class PARAMigrationManager:
                 target_path = category_path / relative_path.name
 
                 # Create migration entry
+                # Extract reasoning from category scores
+                reasoning = []
+                if category in result.scores:
+                    reasoning = result.scores[category].signals
+
                 migration_file = MigrationFile(
                     source_path=file_path,
                     target_category=category,
                     target_path=target_path,
                     confidence=confidence,
-                    reasoning=result.reasoning if hasattr(result, 'reasoning') else []
+                    reasoning=reasoning
                 )
                 files_to_migrate.append(migration_file)
 
@@ -185,7 +202,7 @@ class PARAMigrationManager:
         skipped: list[Path] = []
 
         # Create backup if requested
-        backup_id: Optional[str] = None
+        backup_id: str | None = None
         if create_backup and not dry_run:
             backup_id = self._create_backup(plan)
             logger.info(f"Backup created: {backup_id}")
@@ -203,18 +220,23 @@ class PARAMigrationManager:
                     # Ensure target directory exists
                     migration_file.target_path.parent.mkdir(parents=True, exist_ok=True)
 
+                    # Preserve timestamps if requested (before moving)
+                    if preserve_timestamps:
+                        # Get stat info before moving
+                        source_stat = migration_file.source_path.stat()
+
                     # Move file
                     shutil.move(
                         str(migration_file.source_path),
                         str(migration_file.target_path)
                     )
 
-                    # Preserve timestamps if requested
+                    # Apply preserved timestamps after moving
                     if preserve_timestamps:
-                        stat = migration_file.source_path.stat()
-                        shutil.copystat(
-                            str(migration_file.source_path),
-                            str(migration_file.target_path)
+                        # Restore timestamps on target
+                        os.utime(
+                            migration_file.target_path,
+                            (source_stat.st_atime, source_stat.st_mtime)
                         )
 
                     migrated.append(migration_file.target_path)

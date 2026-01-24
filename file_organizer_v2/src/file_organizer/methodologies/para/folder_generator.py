@@ -8,7 +8,6 @@ with support for custom templates and nested organizations.
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from .categories import PARACategory
 from .config import PARAConfig
@@ -33,7 +32,7 @@ class PARAFolderGenerator:
     with support for custom naming and nested subfolders.
     """
 
-    def __init__(self, config: Optional[PARAConfig] = None):
+    def __init__(self, config: PARAConfig | None = None):
         """
         Initialize the PARA folder generator.
 
@@ -172,8 +171,8 @@ class PARAFolderGenerator:
     def create_category_folder(
         self,
         category: PARACategory,
-        subfolder: Optional[str] = None,
-        root_path: Optional[Path] = None
+        subfolder: str | None = None,
+        root_path: Path | None = None
     ) -> Path:
         """
         Create a specific category folder.
@@ -245,7 +244,7 @@ class PARAFolderGenerator:
     def get_category_path(
         self,
         category: PARACategory,
-        root_path: Optional[Path] = None
+        root_path: Path | None = None
     ) -> Path:
         """
         Get the path for a PARA category.
