@@ -4,8 +4,9 @@ Tests for Johnny Decimal categories module.
 Tests data models, validation, and category definitions.
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from file_organizer.methodologies.johnny_decimal.categories import (
     AreaDefinition,

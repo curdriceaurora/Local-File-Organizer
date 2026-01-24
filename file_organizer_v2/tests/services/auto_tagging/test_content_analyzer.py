@@ -1,9 +1,10 @@
 """Tests for ContentTagAnalyzer."""
 
-import pytest
-from pathlib import Path
-import tempfile
 import shutil
+import tempfile
+from pathlib import Path
+
+import pytest
 
 from file_organizer.services.auto_tagging.content_analyzer import ContentTagAnalyzer
 

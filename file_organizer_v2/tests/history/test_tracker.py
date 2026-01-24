@@ -2,12 +2,14 @@
 Tests for operation tracker.
 """
 
-import pytest
 import tempfile
-from pathlib import Path
 from datetime import datetime, timedelta
+from pathlib import Path
+
+import pytest
+
+from file_organizer.history.models import OperationStatus, OperationType
 from file_organizer.history.tracker import OperationHistory
-from file_organizer.history.models import OperationType, OperationStatus
 
 
 class TestOperationHistory:
@@ -65,7 +67,7 @@ class TestOperationHistory:
 
     def test_log_operation_with_file_hash(self, history, temp_file):
         """Test that file hash is calculated for existing files."""
-        operation_id = history.log_operation(
+        history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=temp_file
         )
@@ -78,7 +80,7 @@ class TestOperationHistory:
 
     def test_log_operation_with_metadata(self, history, temp_file):
         """Test that file metadata is collected."""
-        operation_id = history.log_operation(
+        history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=temp_file
         )
@@ -277,7 +279,7 @@ class TestOperationHistory:
 
     def test_log_failed_operation(self, history):
         """Test logging a failed operation."""
-        operation_id = history.log_operation(
+        history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=Path('/test/source'),
             status=OperationStatus.FAILED,

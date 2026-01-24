@@ -1,17 +1,18 @@
 """Tests for TagRecommender."""
 
-import pytest
-from pathlib import Path
-import tempfile
 import shutil
+import tempfile
+from pathlib import Path
 
-from file_organizer.services.auto_tagging.tag_recommender import (
-    TagRecommender,
-    TagSuggestion,
-    TagRecommendation
-)
+import pytest
+
 from file_organizer.services.auto_tagging.content_analyzer import ContentTagAnalyzer
 from file_organizer.services.auto_tagging.tag_learning import TagLearningEngine
+from file_organizer.services.auto_tagging.tag_recommender import (
+    TagRecommendation,
+    TagRecommender,
+    TagSuggestion,
+)
 
 
 @pytest.fixture

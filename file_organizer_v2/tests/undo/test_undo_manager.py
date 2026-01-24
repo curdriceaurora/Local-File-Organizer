@@ -4,17 +4,16 @@ Unit tests for UndoManager.
 Tests high-level undo/redo management functionality.
 """
 
-import unittest
-import tempfile
 import shutil
+import tempfile
+import unittest
 from pathlib import Path
-from datetime import datetime
 
+from file_organizer.history.models import OperationStatus, OperationType
 from file_organizer.history.tracker import OperationHistory
-from file_organizer.history.models import OperationType, OperationStatus
+from file_organizer.undo.rollback import RollbackExecutor
 from file_organizer.undo.undo_manager import UndoManager
 from file_organizer.undo.validator import OperationValidator
-from file_organizer.undo.rollback import RollbackExecutor
 
 
 class TestUndoManager(unittest.TestCase):
@@ -50,7 +49,7 @@ class TestUndoManager(unittest.TestCase):
         """Test undoing the last operation."""
         # Log a move operation
         shutil.move(str(self.source_file), str(self.dest_file))
-        op_id = self.history.log_operation(
+        self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
             destination_path=self.dest_file
@@ -128,7 +127,7 @@ class TestUndoManager(unittest.TestCase):
         """Test redoing the last rolled back operation."""
         # Log and undo operation
         shutil.move(str(self.source_file), str(self.dest_file))
-        op_id = self.history.log_operation(
+        self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
             destination_path=self.dest_file

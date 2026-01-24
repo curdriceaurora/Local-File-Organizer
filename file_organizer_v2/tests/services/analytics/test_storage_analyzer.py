@@ -1,11 +1,12 @@
 """Tests for StorageAnalyzer."""
 
-import pytest
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
+import pytest
+
+from file_organizer.models.analytics import FileDistribution, StorageStats
 from file_organizer.services.analytics import StorageAnalyzer
-from file_organizer.models.analytics import StorageStats, FileDistribution
 
 
 @pytest.fixture

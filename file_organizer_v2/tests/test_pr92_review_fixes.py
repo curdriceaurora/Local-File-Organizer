@@ -208,7 +208,7 @@ class TestAudioMetadataTagParsing:
             AudioMetadataExtractor,
         )
 
-        extractor = AudioMetadataExtractor()
+        AudioMetadataExtractor()
 
         # Simulate the year parsing logic
         year_str = "2023-05-15"[:4]  # Take first 4 chars

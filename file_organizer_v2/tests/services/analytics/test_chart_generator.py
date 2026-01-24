@@ -1,6 +1,5 @@
 """Tests for ChartGenerator."""
 
-import pytest
 from file_organizer.utils.chart_generator import ChartGenerator
 
 

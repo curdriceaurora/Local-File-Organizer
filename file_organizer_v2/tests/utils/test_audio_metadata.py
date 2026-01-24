@@ -1,7 +1,7 @@
 """Tests for audio metadata extraction - Phase 3."""
 
+
 import pytest
-from pathlib import Path
 
 # Phase 3 placeholder tests for audio metadata
 
@@ -21,8 +21,8 @@ class TestAudioMetadataPlaceholder:
     def test_extract_mp3_metadata(self, tmp_path):
         """Test extracting metadata from MP3 file."""
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         audio_file = tmp_path / "test.mp3"
@@ -54,8 +54,8 @@ class TestAudioMetadataPlaceholder:
     def test_extract_music_tags(self, tmp_path):
         """Test extracting music tags (artist, album, etc.)."""
         from file_organizer.services.audio.metadata_extractor import (
-            AudioMetadataExtractor,
             AudioMetadata,
+            AudioMetadataExtractor,
         )
 
         audio_file = tmp_path / "song.mp3"

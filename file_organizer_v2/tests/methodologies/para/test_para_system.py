@@ -4,23 +4,22 @@ Tests for PARA methodology system.
 Tests PARA categorization, rules engine, and heuristics.
 """
 
-import pytest
 from pathlib import Path
-from datetime import datetime, timedelta
+
+import pytest
+
 from file_organizer.methodologies.para.categories import (
-    PARACategory,
-    CategoryDefinition,
     CategorizationResult,
-    get_category_definition,
+    CategoryDefinition,
+    PARACategory,
     get_all_category_definitions,
+    get_category_definition,
 )
 from file_organizer.methodologies.para.detection.heuristics import (
-    TemporalHeuristic,
     ContentHeuristic,
-    StructuralHeuristic,
     HeuristicEngine,
-    CategoryScore,
-    HeuristicResult,
+    StructuralHeuristic,
+    TemporalHeuristic,
 )
 
 

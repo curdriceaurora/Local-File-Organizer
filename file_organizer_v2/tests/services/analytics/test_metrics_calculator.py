@@ -1,8 +1,9 @@
 """Tests for MetricsCalculator."""
 
-import pytest
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+import pytest
 
 from file_organizer.services.analytics import MetricsCalculator
 

@@ -4,13 +4,14 @@ Tests for ProfileMerger and TemplateManager
 Tests profile merging, conflict resolution, and template operations.
 """
 
-import pytest
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
 
+import pytest
+
 from file_organizer.services.intelligence.profile_manager import ProfileManager
-from file_organizer.services.intelligence.profile_merger import ProfileMerger, MergeStrategy
+from file_organizer.services.intelligence.profile_merger import ProfileMerger
 from file_organizer.services.intelligence.template_manager import TemplateManager
 
 

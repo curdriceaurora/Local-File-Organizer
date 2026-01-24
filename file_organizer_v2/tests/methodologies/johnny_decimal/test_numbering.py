@@ -4,20 +4,20 @@ Tests for Johnny Decimal numbering module.
 Tests number generation, validation, and conflict resolution.
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from file_organizer.methodologies.johnny_decimal.categories import (
     AreaDefinition,
     CategoryDefinition,
     JohnnyDecimalNumber,
     NumberingScheme,
-    get_default_scheme,
 )
 from file_organizer.methodologies.johnny_decimal.numbering import (
+    InvalidNumberError,
     JohnnyDecimalGenerator,
     NumberConflictError,
-    InvalidNumberError,
 )
 
 

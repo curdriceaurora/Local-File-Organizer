@@ -2,13 +2,14 @@
 Tests for history cleanup functionality.
 """
 
-import pytest
 import tempfile
 from pathlib import Path
-from datetime import datetime, timedelta
-from file_organizer.history.tracker import OperationHistory
+
+import pytest
+
 from file_organizer.history.cleanup import HistoryCleanup, HistoryCleanupConfig
-from file_organizer.history.models import OperationType, OperationStatus
+from file_organizer.history.models import OperationStatus, OperationType
+from file_organizer.history.tracker import OperationHistory
 
 
 class TestHistoryCleanup:
@@ -112,7 +113,7 @@ class TestHistoryCleanup:
                 Path(f'/test/very/long/path/with/many/segments/file{i}')
             )
 
-        initial_count = history.db.get_operation_count()
+        history.db.get_operation_count()
 
         # Cleanup if over size
         if cleanup.should_cleanup():
@@ -155,7 +156,7 @@ class TestHistoryCleanup:
     def test_cleanup_orphaned_transactions(self, history, cleanup):
         """Test cleaning up orphaned transactions."""
         # Start a transaction but don't add any operations
-        txn_id = history.start_transaction()
+        history.start_transaction()
 
         # Add operations without transaction
         history.log_operation(OperationType.MOVE, Path('/test/path'))

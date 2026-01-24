@@ -1,7 +1,7 @@
 """Tests for video processing service - Phase 3."""
 
+
 import pytest
-from pathlib import Path
 
 # Phase 3 placeholder tests for video processing
 
@@ -44,8 +44,8 @@ class TestVideoProcessingPlaceholder:
     def test_scene_detection(self, tmp_path):
         """Test scene detection in video."""
         from file_organizer.services.video.scene_detector import (
-            SceneDetector,
             SceneDetectionResult,
+            SceneDetector,
         )
 
         video_file = tmp_path / "test.mp4"

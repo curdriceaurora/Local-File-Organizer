@@ -4,21 +4,18 @@ Johnny Decimal Integration Tests
 Tests complete workflows, edge cases, and integration scenarios.
 """
 
-import pytest
 import json
 from pathlib import Path
-from file_organizer.methodologies.johnny_decimal.system import (
-    JohnnyDecimalSystem,
-)
+
+import pytest
+
 from file_organizer.methodologies.johnny_decimal.categories import (
-    JohnnyDecimalNumber,
     AreaDefinition,
     CategoryDefinition,
-    NumberingScheme,
+    JohnnyDecimalNumber,
 )
-from file_organizer.methodologies.johnny_decimal.numbering import (
-    InvalidNumberError,
-    NumberConflictError,
+from file_organizer.methodologies.johnny_decimal.system import (
+    JohnnyDecimalSystem,
 )
 
 
@@ -484,7 +481,7 @@ class TestJohnnyDecimalMigrationScenarios:
         # Create flat structure with many files
         categories = ["budget", "invoice", "report", "meeting", "proposal"]
 
-        for i, category in enumerate(categories):
+        for _i, category in enumerate(categories):
             for j in range(3):
                 file_path = tmp_path / f"{category}-{j+1}.txt"
                 file_path.touch()

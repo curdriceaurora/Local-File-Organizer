@@ -1,10 +1,11 @@
 """Integration tests for auto-tagging system."""
 
-import pytest
-from pathlib import Path
-import tempfile
 import shutil
+import tempfile
 import time
+from pathlib import Path
+
+import pytest
 
 from file_organizer.services.auto_tagging import AutoTaggingService
 
@@ -65,7 +66,7 @@ class TestAutoTaggingIntegration:
         # 1. Get initial suggestions
         initial_rec = service.suggest_tags(py_file, top_n=5)
         assert len(initial_rec.suggestions) > 0
-        initial_tags = [s.tag for s in initial_rec.suggestions]
+        [s.tag for s in initial_rec.suggestions]
 
         # 2. User applies some tags
         applied_tags = ['python', 'code', 'dataprocessing']
@@ -172,7 +173,7 @@ class TestAutoTaggingIntegration:
         doc_file = sample_files['document']
 
         # Get initial suggestions
-        initial_rec = service.suggest_tags(doc_file)
+        service.suggest_tags(doc_file)
 
         # Simulate user feedback
         feedback = [
@@ -254,7 +255,7 @@ class TestAutoTaggingIntegration:
         py_file = sample_files['python']
 
         # Train to get behavior-based suggestions
-        for i in range(3):
+        for _i in range(3):
             service.record_tag_usage(py_file, ['python', 'code'])
 
         recommendation = service.suggest_tags(py_file)
