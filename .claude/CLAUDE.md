@@ -147,6 +147,26 @@ status: backlog|in-progress|completed
 ---
 ```
 
+**Code Quality Validation** (CRITICAL - ALWAYS):
+```bash
+# Before EVERY commit, run validation script
+bash .claude/scripts/pre-commit-validation.sh
+
+# Aggressively check for patterns that reviewers flag:
+# 1. Dict-style dataclass access → Use hasattr()
+# 2. Wrong return types → Read implementation first
+# 3. Non-existent imports → Verify module exists
+# 4. Wrong constructor params → Check class definition
+# 5. Build artifacts → Add to .gitignore
+# 6. Broken links → Verify files exist
+# 7. Untested examples → Test before documenting
+
+# See detailed patterns: .claude/rules/code-quality-validation.md
+# Quick reference: .claude/rules/quick-validation-checklist.md
+```
+
+**Goal**: AI reviewers should find NOTHING to complain about. Catch all issues BEFORE committing.
+
 ### 🚫 Prohibited Actions
 
 **Code**:
@@ -223,6 +243,11 @@ status: backlog|in-progress|completed
 
 ### 📚 Reference Documentation
 
+**CRITICAL - Read Before Every Commit**:
+- `.claude/rules/code-quality-validation.md` - Comprehensive validation patterns (MUST READ)
+- `.claude/rules/quick-validation-checklist.md` - Quick reference before commits
+- `.claude/scripts/pre-commit-validation.sh` - Automated validation script
+
 **Must Read Before Starting**:
 - `.claude/rules/worktree-operations.md` - Git worktree workflow
 - `.claude/rules/github-operations.md` - GitHub integration rules
@@ -238,13 +263,14 @@ status: backlog|in-progress|completed
 - `.claude/SPRINT_VISUAL_ROADMAP.md` - Visual timeline
 
 **Always Follow**:
-1. Check rules before performing operations
-2. Use templates for consistency
-3. Update CCPM daily, not weekly
-4. Sync GitHub continuously
-5. Commit often with clear messages
-6. Test before pushing
-7. Document as you code
+1. **Validate before EVERY commit** - Run `.claude/scripts/pre-commit-validation.sh`
+2. **Read implementation BEFORE documenting** - Verify APIs match actual code
+3. Check rules before performing operations
+4. Use templates for consistency
+5. Update CCPM daily, not weekly
+6. Sync GitHub continuously
+7. Test before pushing
+8. Document as you code
 
 ---
 
