@@ -6,6 +6,7 @@ Uses temporal, content, structural, and AI-based heuristics.
 """
 
 import logging
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -162,6 +163,25 @@ class ContentHeuristic(Heuristic):
         "completed", "finished", "done", "past", "historical"
     ]
 
+    @staticmethod
+    def _matches_keyword(keyword: str, text: str) -> bool:
+        """
+        Check if keyword matches in text using word boundaries.
+
+        Prevents false positives like "project" matching "projection".
+        Uses regex word boundaries (\\b) for accurate matching.
+
+        Args:
+            keyword: The keyword to search for
+            text: The text to search in (already lowercased)
+
+        Returns:
+            True if keyword matches as a complete word
+        """
+        # Escape special regex characters and add word boundaries
+        pattern = r'\b' + re.escape(keyword) + r'\b'
+        return bool(re.search(pattern, text, re.IGNORECASE))
+
     def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """Evaluate based on content patterns."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
@@ -184,24 +204,24 @@ class ContentHeuristic(Heuristic):
                 scores[PARACategory.PROJECT].signals.append("date_pattern")
                 break
 
-        # Keyword matching
+        # Keyword matching with word boundaries
         for keyword in self.PROJECT_KEYWORDS:
-            if keyword in full_path:
+            if self._matches_keyword(keyword, full_path):
                 scores[PARACategory.PROJECT].score += 0.2
                 scores[PARACategory.PROJECT].signals.append(f"keyword:{keyword}")
 
         for keyword in self.AREA_KEYWORDS:
-            if keyword in full_path:
+            if self._matches_keyword(keyword, full_path):
                 scores[PARACategory.AREA].score += 0.2
                 scores[PARACategory.AREA].signals.append(f"keyword:{keyword}")
 
         for keyword in self.RESOURCE_KEYWORDS:
-            if keyword in full_path:
+            if self._matches_keyword(keyword, full_path):
                 scores[PARACategory.RESOURCE].score += 0.2
                 scores[PARACategory.RESOURCE].signals.append(f"keyword:{keyword}")
 
         for keyword in self.ARCHIVE_KEYWORDS:
-            if keyword in full_path:
+            if self._matches_keyword(keyword, full_path):
                 scores[PARACategory.ARCHIVE].score += 0.3
                 scores[PARACategory.ARCHIVE].signals.append(f"keyword:{keyword}")
 
@@ -416,12 +436,16 @@ class HeuristicEngine:
                 combined_scores[category].signals.extend(score.signals)
 
         # Calculate overall confidence
+        # Formula: confidence = (top_score - second_score) / top_score
+        # This measures how much better the top category is than the second
         scores_list = sorted(combined_scores.values(), key=lambda x: x.score, reverse=True)
         top_score = scores_list[0].score
         second_score = scores_list[1].score if len(scores_list) > 1 else 0.0
 
         if top_score > 0:
-            confidence = (top_score + (top_score - second_score)) / 2.0
+            # Use documented formula with clamping
+            confidence = (top_score - second_score) / top_score
+            confidence = max(0.0, min(1.0, confidence))  # Clamp to [0.0, 1.0]
         else:
             confidence = 0.0
 
