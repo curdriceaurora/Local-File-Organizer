@@ -5,7 +5,9 @@
 ## 🚨 Critical Patterns (P0)
 
 ### 1. Dataclass Field Access
+
 ```python
+
 # ❌ WRONG
 if "field" in obj:
     value = obj["field"]
@@ -13,48 +15,66 @@ if "field" in obj:
 # ✅ CORRECT
 if hasattr(obj, "field") and obj.field is not None:
     value = obj.field
+
 ```
 
 ### 2. Verify Return Types
+
 ```python
+
 # ❌ WRONG: Assuming without checking
 result1, result2 = function()
 
 # ✅ CORRECT: Read implementation first, then document
+
 # 1. Read: file_organizer/utils/file_readers.py
+
 # 2. Check return type annotation
+
 # 3. Use correct return handling
 result = function()  # Returns single value, not tuple
+
 ```
 
 ### 3. Check Imports Exist
+
 ```bash
+
 # Before using any import:
 find file_organizer_v2/src -name "*.py" -path "*path/to/module*"
 
 # Test import works:
 python3 -c "from file_organizer.module import Class; print('✅')"
+
 ```
 
 ### 4. Verify Constructor Parameters
+
 ```python
+
 # ❌ WRONG: Using parameters that don't exist
 config = Config(param_that_doesnt_exist=True)
 
 # ✅ CORRECT: Read class definition first
+
 # 1. Find class: rg "^class Config" file_organizer_v2/
+
 # 2. Read __init__ or @dataclass fields
+
 # 3. Use correct parameters
+
 ```
 
 ## 🔧 Before Every Commit
 
 ```bash
+
 # Run automated validation
 bash .claude/scripts/pre-commit-validation.sh
 
 # If passes, commit safely:
 git commit -m "message"
+
 ```
 
 ## 📝 Documentation Checklist
@@ -83,6 +103,7 @@ git commit -m "message"
 ## 🎯 Pattern Quick Checks
 
 ```bash
+
 # Check for dict-style dataclass access
 git diff --cached | grep 'if.*".*".*in.*metadata'
 
@@ -93,12 +114,15 @@ git diff --cached | grep 'metadata\["'
 git diff --cached --name-only | grep -E '\.(coverage|bak|pyc)$'
 
 # If any match: FIX BEFORE COMMITTING
+
 ```
 
 ## 💡 Quick Fixes
 
 ### Fix: Dict-style dataclass access
+
 ```python
+
 # Find this pattern:
 if "field" in metadata:
     x = metadata["field"]
@@ -106,27 +130,37 @@ if "field" in metadata:
 # Replace with:
 if hasattr(metadata, "field") and metadata.field is not None:
     x = metadata.field
+
 ```
 
 ### Fix: Wrong return type
+
 ```python
+
 # Find the implementation:
 rg -A 5 "def function_name" file_organizer_v2/src/
 
 # Read the return type annotation
+
 # Update your code to match
+
 ```
 
 ### Fix: Non-existent import
+
 ```bash
+
 # Find correct module:
 find file_organizer_v2/src -name "*.py" | grep -i "keyword"
 
 # Update import path to match actual location
+
 ```
 
 ### Fix: Build artifacts
+
 ```bash
+
 # Add to .gitignore:
 echo ".coverage" >> .gitignore
 echo "*.bak" >> .gitignore
@@ -134,6 +168,7 @@ echo "coverage.xml" >> .gitignore
 
 # Unstage from commit:
 git reset HEAD .coverage *.bak
+
 ```
 
 ## 📊 Validation Priority

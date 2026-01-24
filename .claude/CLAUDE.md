@@ -148,6 +148,7 @@ status: backlog|in-progress|completed
 ```
 
 **Code Quality Validation** (CRITICAL - ALWAYS):
+
 ```bash
 # Before EVERY commit, run validation script
 bash .claude/scripts/pre-commit-validation.sh

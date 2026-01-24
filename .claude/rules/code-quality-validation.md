@@ -13,7 +13,9 @@ Claude's purpose is to catch issues BEFORE they reach code review, not after. Ag
 Before EVERY commit, execute these validation steps:
 
 ### 1. Branch Verification
+
 ```bash
+
 # Verify you're on the correct branch
 CURRENT_BRANCH=$(git branch --show-current)
 EXPECTED_BRANCH="feature/issue-XXX-description"
@@ -24,10 +26,13 @@ if [[ "$CURRENT_BRANCH" != "$EXPECTED_BRANCH" ]]; then
   echo "Expected: $EXPECTED_BRANCH"
   exit 1
 fi
+
 ```
 
 ### 2. Run Affected Tests
+
 ```bash
+
 # Get modified files
 MODIFIED_FILES=$(git diff --name-only HEAD)
 
@@ -41,26 +46,33 @@ for file in $MODIFIED_FILES; do
     fi
   fi
 done
+
 ```
 
 ### 3. Static Analysis
+
 ```bash
+
 # Run linting on changed files
 git diff --name-only HEAD | grep '\.py$' | xargs ruff check --fix
 
 # Run type checking
 git diff --name-only HEAD | grep '\.py$' | xargs mypy --strict
+
 ```
 
 ### 4. Pattern Validation
 Run pattern checks (see sections below)
 
 ### 5. Commit Only If All Pass
+
 ```bash
+
 # Only if all checks pass:
 git add <files>
 git commit -m "message"
 git push
+
 ```
 
 ## API Documentation Patterns
@@ -70,7 +82,9 @@ git push
 **Problem**: Treating dataclasses as dictionaries
 
 **Wrong**:
+
 ```python
+
 # ❌ Dictionary-style access
 if "duration" in metadata:
     duration = metadata["duration"]
@@ -78,10 +92,13 @@ if "duration" in metadata:
 # ❌ Always-true condition
 if "title" in metadata or metadata is not None:
     title = metadata["title"]
+
 ```
 
 **Correct**:
+
 ```python
+
 # ✅ Proper dataclass access
 if hasattr(metadata, "duration") and metadata.duration is not None:
     duration = metadata.duration
@@ -89,13 +106,17 @@ if hasattr(metadata, "duration") and metadata.duration is not None:
 # ✅ Proper None check
 if metadata is not None and hasattr(metadata, "title") and metadata.title is not None:
     title = metadata.title
+
 ```
 
 **Validation**:
+
 ```bash
+
 # Check for dict-style access on known dataclasses
 rg -n 'if\s+"[^"]+"\s+in\s+(metadata|result|config)' file_organizer_v2/
 rg -n '\["[^"]+"\]' file_organizer_v2/ | grep -E '(metadata|result|config)'
+
 ```
 
 ### Pattern 2: Return Type Verification
@@ -103,34 +124,48 @@ rg -n '\["[^"]+"\]' file_organizer_v2/ | grep -E '(metadata|result|config)'
 **Problem**: Documenting wrong return types without checking implementation
 
 **Wrong**:
+
 ```python
+
 # ❌ Documentation assumes tuple without verification
 content, metadata = read_epub_file("book.epub")
+
 ```
 
 **Correct**:
+
 ```python
+
 # ✅ FIRST: Read the actual implementation
+
 # file_organizer/utils/file_readers.py:
+
 # def read_ebook_file(file_path: Path) -> str:
+
 #     """Returns single string of extracted text."""
 
 # ✅ THEN: Document correctly
 text = read_ebook_file("book.epub")
+
 ```
 
 **Validation Process**:
+
 ```bash
+
 # 1. Find the actual function
 rg -n "def read_epub_file" file_organizer_v2/
 
 # 2. Read the implementation
+
 # Use Read tool to view the file
 
 # 3. Check return type annotation
+
 # Verify return type matches documentation
 
 # 4. Update documentation to match
+
 ```
 
 ### Pattern 3: Constructor Signature Verification
@@ -138,22 +173,32 @@ rg -n "def read_epub_file" file_organizer_v2/
 **Problem**: Using wrong parameter names or missing required parameters
 
 **Wrong**:
+
 ```python
+
 # ❌ Wrong parameter names
 config = PARAConfig(
     auto_categorize=True,
     auto_archive=True,
     archive_after_days=90  # Parameter doesn't exist!
 )
+
 ```
 
 **Correct**:
+
 ```python
+
 # ✅ FIRST: Read actual class definition
+
 # file_organizer/methodologies/para/config.py:
+
 # @dataclass
+
 # class PARAConfig:
+
 #     auto_categorize: bool = True
+
 #     temporal_thresholds: Optional[TemporalThresholds] = None
 
 # ✅ THEN: Use correct parameters
@@ -166,16 +211,20 @@ config = PARAConfig(
     auto_categorize=True,
     temporal_thresholds=temporal
 )
+
 ```
 
 **Validation**:
+
 ```bash
+
 # Find class definition
 rg -A 20 "^class PARAConfig" file_organizer_v2/
 
 # Or use ast-grep for precise structure
 ast-grep --pattern 'class PARAConfig:
     $$$' --lang python file_organizer_v2/
+
 ```
 
 ### Pattern 4: Module Import Verification
@@ -183,27 +232,37 @@ ast-grep --pattern 'class PARAConfig:
 **Problem**: Importing from non-existent modules
 
 **Wrong**:
+
 ```python
+
 # ❌ Module doesn't exist
 from file_organizer.methodologies.para import PARARule
+
 ```
 
 **Correct**:
+
 ```python
+
 # ✅ FIRST: Verify module exists
+
 # ls file_organizer_v2/src/file_organizer/methodologies/para/
 
 # ✅ THEN: Import from correct location
 from file_organizer.methodologies.para.rules import Rule
+
 ```
 
 **Validation**:
+
 ```bash
+
 # Check if module exists
 find file_organizer_v2/src -name "*.py" -path "*para*" -type f
 
 # Verify import path
 python3 -c "from file_organizer.methodologies.para.rules import Rule; print('✅ Import works')"
+
 ```
 
 ### Pattern 5: CLI Command Verification
@@ -211,33 +270,45 @@ python3 -c "from file_organizer.methodologies.para.rules import Rule; print('✅
 **Problem**: Documenting commands that don't exist
 
 **Wrong**:
+
 ```bash
+
 # ❌ Command doesn't exist
 file-organizer db migrate
 file-organizer snapshot create
+
 ```
 
 **Correct**:
+
 ```python
+
 # ✅ FIRST: Check pyproject.toml for actual commands
+
 # [project.scripts]
+
 # file-organizer = "file_organizer.cli.main:app"
 
 # ✅ THEN: Check CLI entrypoint for available commands
+
 # Read file_organizer/cli/main.py or cli/__init__.py
 
 # ✅ ONLY document commands that exist
 file-organizer organize --input ~/Downloads
 file-organizer dedupe --scan-dir ~/Documents
+
 ```
 
 **Validation**:
+
 ```bash
+
 # Check available commands
 file-organizer --help
 
 # Or inspect CLI code
 rg -n "@app.command" file_organizer_v2/src/file_organizer/cli/
+
 ```
 
 ## Documentation Patterns
@@ -247,22 +318,31 @@ rg -n "@app.command" file_organizer_v2/src/file_organizer/cli/
 **Problem**: Linking to files that don't exist
 
 **Wrong**:
+
 ```markdown
 See [FAQ](faq.md) for more information.
+
 ```
 
 **Correct**:
+
 ```bash
+
 # ✅ FIRST: Check if file exists
 ls file_organizer_v2/docs/phase-3/faq.md
 
 # ✅ IF missing: Remove link or create file
+
 # OPTION A: Remove reference
+
 # OPTION B: Create the file
+
 ```
 
 **Validation**:
+
 ```bash
+
 # Find all markdown links
 rg -n '\[.*\]\([^h][^t][^t][^p].*\)' file_organizer_v2/docs/
 
@@ -272,6 +352,7 @@ for link in $(rg -o '\]\(([^h][^t][^t][^p][^\)]+)\)' -r '$1' file_organizer_v2/d
     echo "❌ Broken link: $link"
   fi
 done
+
 ```
 
 ### Pattern 7: Code Example Testing
@@ -279,15 +360,20 @@ done
 **Problem**: Code examples that don't work
 
 **Validation**:
+
 ```python
+
 # Extract code examples and test them
+
 # Create temporary test file
 cat > /tmp/test_example.py << 'EOF'
+
 # Paste example code here
 EOF
 
 # Run it
 python3 /tmp/test_example.py
+
 ```
 
 ## Test Patterns
@@ -297,26 +383,35 @@ python3 /tmp/test_example.py
 **Problem**: Wrong fixture directory names in tests
 
 **Wrong**:
+
 ```python
+
 # ❌ Wrong fixture path
 fixture_path = Path("tests/fixtures/audio")
 fixture_path = Path("tests/fixtures/johnny")
+
 ```
 
 **Correct**:
+
 ```bash
+
 # ✅ FIRST: Check actual fixture directories
 ls file_organizer_v2/tests/fixtures/
 
 # ✅ THEN: Use correct names
 fixture_path = Path("tests/fixtures/audio_samples")
 fixture_path = Path("tests/fixtures/johnny_decimal")
+
 ```
 
 **Validation**:
+
 ```bash
+
 # List actual fixture directories
 find file_organizer_v2/tests/fixtures -type d -maxdepth 1
+
 ```
 
 ### Pattern 9: Test API Compatibility
@@ -330,7 +425,9 @@ find file_organizer_v2/tests/fixtures -type d -maxdepth 1
 4. Run test to verify
 
 ```python
+
 # Example validation
+
 # 1. Read implementation
 from file_organizer.services.video.scene_detector import SceneDetector
 
@@ -341,6 +438,7 @@ print(f"Return type: {type(result)}")
 
 # 3. Write test with correct assertions
 assert isinstance(result, SceneDetectionResult)
+
 ```
 
 ## Repository Patterns
@@ -350,7 +448,9 @@ assert isinstance(result, SceneDetectionResult)
 **Problem**: Committing build artifacts and backups
 
 **Validation**:
+
 ```bash
+
 # Check for common artifacts
 git status | grep -E '\.(coverage|bak|pyc|pyo)$'
 
@@ -359,72 +459,29 @@ echo ".coverage" >> .gitignore
 echo "*.bak" >> .gitignore
 echo "coverage.xml" >> .gitignore
 echo "htmlcov/" >> .gitignore
+
 ```
 
 ## Automated Validation Script
 
-Create this script and run before every commit:
+The canonical validation script is located at `.claude/scripts/pre-commit-validation.sh`.
+
+**Run before every commit**:
 
 ```bash
-#!/bin/bash
-# .claude/scripts/pre-commit-validation.sh
-
-echo "🔍 Pre-Commit Validation"
-echo "======================="
-
-# 1. Branch check
-BRANCH=$(git branch --show-current)
-echo "✓ Branch: $BRANCH"
-
-# 2. Modified files
-MODIFIED=$(git diff --name-only --cached)
-echo "✓ Modified files:"
-echo "$MODIFIED" | sed 's/^/  /'
-
-# 3. Run tests on modified Python files
-echo ""
-echo "🧪 Running tests..."
-for file in $MODIFIED; do
-  if [[ $file == file_organizer_v2/src/*.py ]]; then
-    TEST_FILE=$(echo "$file" | sed 's|src/file_organizer|tests|' | sed 's|\.py$|_test.py|')
-    if [[ -f "$TEST_FILE" ]]; then
-      pytest "$TEST_FILE" --tb=short -v || exit 1
-    fi
-  fi
-done
-
-# 4. Linting
-echo ""
-echo "🔧 Linting..."
-echo "$MODIFIED" | grep '\.py$' | xargs ruff check || exit 1
-
-# 5. Type checking
-echo ""
-echo "📋 Type checking..."
-echo "$MODIFIED" | grep '\.py$' | xargs mypy --strict || exit 1
-
-# 6. Pattern checks
-echo ""
-echo "🎯 Pattern validation..."
-
-# Check for dict-style dataclass access
-if git diff --cached | grep -q 'if.*".*".*in.*metadata\|if.*".*".*in.*result'; then
-  echo "❌ Found dict-style access on dataclass"
-  echo "Use: hasattr(obj, 'field') and obj.field is not None"
-  exit 1
-fi
-
-# Check for build artifacts
-if git diff --cached --name-only | grep -qE '\.(coverage|bak|pyc)$'; then
-  echo "❌ Found build artifacts in commit"
-  echo "Add to .gitignore and unstage"
-  exit 1
-fi
-
-echo ""
-echo "✅ All validations passed!"
-echo "Safe to commit."
+bash .claude/scripts/pre-commit-validation.sh
 ```
+
+**What it validates**:
+- ✅ Branch verification
+- ✅ Build artifact detection (`.coverage`, `*.bak`, `*.pyc`)
+- ✅ Pattern validation for dict-style dataclass access
+- ✅ Linting with ruff
+- ✅ Type checking with mypy
+- ✅ Running tests for modified modules
+- ✅ Broken link detection in markdown files
+
+See the full script for implementation details.
 
 ## Usage in Workflow
 
@@ -435,12 +492,15 @@ echo "Safe to commit."
 4. Use correct import paths
 
 ### Before Committing
+
 ```bash
+
 # Run validation script
 bash .claude/scripts/pre-commit-validation.sh
 
 # If passes, commit
 git commit -m "message"
+
 ```
 
 ### When Reviewing Own Code

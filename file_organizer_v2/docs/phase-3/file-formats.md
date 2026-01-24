@@ -591,9 +591,7 @@ if ext == '.pdf':
 elif ext == '.epub':
     from file_organizer.utils.file_readers import read_ebook_file
     content = read_ebook_file(file_path)
-
-# Get detailed info
-info = get_format_info("design.dxf")
+# Add more formats as needed
 ```
 
 ## Related Documentation

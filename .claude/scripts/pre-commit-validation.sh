@@ -28,15 +28,15 @@ echo "✓ Staged files:"
 echo "$MODIFIED" | sed 's/^/  /'
 echo ""
 
-# 3. Check for build artifacts
+# 3. Check for build artifacts (only for added/modified files, not deletions)
 echo "🗑️  Checking for build artifacts..."
-BUILD_ARTIFACTS=$(echo "$MODIFIED" | grep -E '\.(coverage|bak|pyc|pyo)$' || true)
+BUILD_ARTIFACTS=$(git diff --cached --name-status | grep -E '^[AM]' | awk '{print $2}' | grep -E '\.(coverage|bak|pyc|pyo)$' || true)
 if [[ -n "$BUILD_ARTIFACTS" ]]; then
   echo "❌ Found build artifacts in commit:"
   echo "$BUILD_ARTIFACTS" | sed 's/^/  /'
   echo ""
   echo "Add to .gitignore and unstage these files:"
-  echo "$BUILD_ARTIFACTS" | while read file; do
+  echo "$BUILD_ARTIFACTS" | while read -r file; do
     echo "  git reset HEAD $file"
   done
   exit 1
@@ -72,14 +72,14 @@ if [[ -n "$PY_FILES" ]]; then
   echo "✓ No dict-style dataclass access found"
   echo ""
 
-  # 5. Run linting on Python files
+  # 5. Run linting on Python files (without --fix to avoid untracked changes)
   echo "🔧 Linting Python files..."
   if command -v ruff &> /dev/null; then
-    echo "$PY_FILES" | xargs ruff check --fix || {
+    if ! echo "$PY_FILES" | xargs ruff check; then
       echo "❌ Linting failed"
-      echo "Fix errors above and re-stage files"
+      echo "Fix errors above, then re-stage files"
       exit 1
-    }
+    fi
     echo "✓ Linting passed"
   else
     echo "⚠️  ruff not found, skipping linting"
@@ -89,10 +89,12 @@ if [[ -n "$PY_FILES" ]]; then
   # 6. Type checking
   echo "📋 Type checking Python files..."
   if command -v mypy &> /dev/null; then
-    echo "$PY_FILES" | xargs mypy --config-file=file_organizer_v2/pyproject.toml 2>&1 | head -20 || {
+    MYPY_OUTPUT=$(echo "$PY_FILES" | xargs mypy --config-file=file_organizer_v2/pyproject.toml 2>&1 | head -20 || true)
+    if [[ -n "$MYPY_OUTPUT" ]]; then
+      echo "$MYPY_OUTPUT"
       echo "⚠️  Type checking found issues (non-blocking)"
       echo "Review mypy output above"
-    }
+    fi
     echo "✓ Type checking completed"
   else
     echo "⚠️  mypy not found, skipping type checking"
@@ -106,10 +108,21 @@ if [[ -n "$MD_FILES" ]]; then
   echo "🔗 Checking for broken links in markdown..."
 
   for md_file in $MD_FILES; do
-    # Extract relative links (not URLs)
-    LINKS=$(grep -o '\]\([^)]*\)' "$md_file" | grep -v '^](' | grep -v 'http' | sed 's/^](//' || true)
+    # Remove code blocks first, then extract links
+    # Match ]( followed by anything except http, excluding anchor links
+    LINKS=$(sed '/```/,/```/d' "$md_file" | grep -oE '\]\([^)]+\)' | grep -v 'http' | sed 's/^\](//' | sed 's/)$//' || true)
 
     for link in $LINKS; do
+      # Skip anchor links (start with #)
+      if [[ "$link" == \#* ]]; then
+        continue
+      fi
+
+      # Skip empty links
+      if [[ -z "$link" ]]; then
+        continue
+      fi
+
       # Get directory of markdown file
       MD_DIR=$(dirname "$md_file")
       LINK_PATH="$MD_DIR/$link"
@@ -133,14 +146,16 @@ if [[ -n "$PY_FILES" ]]; then
 
   TEST_FAILED=0
   for file in $PY_FILES; do
-    # Only test files in src/
-    if [[ $file == file_organizer_v2/src/file_organizer/*.py ]]; then
+    # Only test files in src/ (match any depth with glob)
+    if [[ $file == file_organizer_v2/src/file_organizer/* ]] && [[ $file == *.py ]]; then
       # Convert src path to test path
-      TEST_FILE=$(echo "$file" | sed 's|src/file_organizer|tests|' | sed 's|\.py$|_test.py|')
+      TEST_FILE=${file/src\/file_organizer/tests}
+      TEST_FILE=${TEST_FILE/.py/_test.py}
 
       if [[ -f "$TEST_FILE" ]]; then
         echo "  Testing $TEST_FILE..."
-        if ! pytest "$TEST_FILE" --tb=line -q 2>&1 | head -20; then
+        # Capture pytest output and exit code separately
+        if ! pytest "$TEST_FILE" --tb=line -q; then
           echo "❌ Tests failed for $file"
           TEST_FAILED=1
         fi
@@ -152,7 +167,7 @@ if [[ -n "$PY_FILES" ]]; then
 
         if [[ -f "$ALT_TEST" ]]; then
           echo "  Testing $ALT_TEST..."
-          if ! pytest "$ALT_TEST" --tb=line -q 2>&1 | head -20; then
+          if ! pytest "$ALT_TEST" --tb=line -q; then
             echo "❌ Tests failed for $file"
             TEST_FAILED=1
           fi
