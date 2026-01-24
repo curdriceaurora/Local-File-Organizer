@@ -22,6 +22,7 @@ class TestAudioMetadataPlaceholder:
         """Test extracting metadata from MP3 file."""
         from file_organizer.services.audio.metadata_extractor import (
             AudioMetadataExtractor,
+            AudioMetadata,
         )
 
         audio_file = tmp_path / "test.mp3"
@@ -30,8 +31,9 @@ class TestAudioMetadataPlaceholder:
         extractor = AudioMetadataExtractor()
         metadata = extractor.extract(audio_file)
 
-        assert "duration" in metadata
-        assert "format" in metadata
+        assert isinstance(metadata, AudioMetadata)
+        assert hasattr(metadata, "duration") and metadata.duration is not None
+        assert hasattr(metadata, "format") and metadata.format is not None
 
     @pytest.mark.skip(reason="Phase 3 - Audio metadata not yet implemented")
     def test_extract_wav_metadata(self, tmp_path):
@@ -53,6 +55,7 @@ class TestAudioMetadataPlaceholder:
         """Test extracting music tags (artist, album, etc.)."""
         from file_organizer.services.audio.metadata_extractor import (
             AudioMetadataExtractor,
+            AudioMetadata,
         )
 
         audio_file = tmp_path / "song.mp3"
@@ -62,4 +65,5 @@ class TestAudioMetadataPlaceholder:
         metadata = extractor.extract(audio_file)
 
         # Should extract ID3 tags
-        assert "title" in metadata or metadata is not None
+        assert isinstance(metadata, AudioMetadata)
+        assert metadata is not None and hasattr(metadata, "title")

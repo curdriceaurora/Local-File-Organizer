@@ -43,15 +43,19 @@ class TestVideoProcessingPlaceholder:
     @pytest.mark.skip(reason="Phase 3 - Scene detection not yet implemented")
     def test_scene_detection(self, tmp_path):
         """Test scene detection in video."""
-        from file_organizer.services.video.scene_detector import SceneDetector
+        from file_organizer.services.video.scene_detector import (
+            SceneDetector,
+            SceneDetectionResult,
+        )
 
         video_file = tmp_path / "test.mp4"
         video_file.write_bytes(b"fake video")
 
         detector = SceneDetector()
-        scenes = detector.detect_scenes(video_file)
+        result = detector.detect_scenes(video_file)
 
-        assert isinstance(scenes, list)
+        assert isinstance(result, SceneDetectionResult)
+        assert hasattr(result, "scenes") and isinstance(result.scenes, list)
 
     @pytest.mark.skip(reason="Phase 3 - Frame extraction not yet implemented")
     def test_frame_extraction(self, tmp_path):
