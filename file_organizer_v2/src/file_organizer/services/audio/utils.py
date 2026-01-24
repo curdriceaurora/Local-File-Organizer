@@ -293,6 +293,9 @@ def merge_audio_files(
     """
     output_path = Path(output_path)
 
+    # Ensure output directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
     try:
         from pydub import AudioSegment
 

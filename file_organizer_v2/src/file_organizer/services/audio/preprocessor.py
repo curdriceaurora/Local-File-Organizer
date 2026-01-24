@@ -309,11 +309,26 @@ class AudioPreprocessor:
         audio_path = Path(audio_path)
         current_file = audio_path
 
+        # Warn if output_path provided but won't be used for final output
+        if output_path and not convert_to_wav:
+            logger.warning(
+                "output_path provided but convert_to_wav=False. "
+                "Output path only applies during format conversion. "
+                "Other operations may create temporary files."
+            )
+
         logger.info(f"Starting preprocessing pipeline for: {audio_path}")
 
         # Step 1: Convert to WAV if needed
         if convert_to_wav and audio_path.suffix.lower() != ".wav":
             current_file = self.convert_to_wav(current_file, output_path)
+        elif output_path and not convert_to_wav:
+            # If output_path specified but no conversion, copy to output_path first
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            import shutil
+            shutil.copy2(current_file, output_path)
+            current_file = output_path
 
         # Step 2: Normalize
         if normalize:
