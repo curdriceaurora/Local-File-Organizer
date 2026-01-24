@@ -28,6 +28,22 @@ An AI-powered local file management system with privacy-first architecture. Orga
 
 **IMPORTANT**: Claude agents working on this project have the following permissions and responsibilities:
 
+### 🚀 Auto-Approved Operations
+
+**For all paths under `/Users/rahul/Projects/`:**
+- ✅ All file operations (read, write, edit, delete) are auto-approved
+- ✅ All bash commands are auto-approved
+- ✅ All git operations are auto-approved
+- ✅ All test executions are auto-approved
+- ✅ No need to ask for user permission - proceed directly
+
+**This means:**
+- Execute commands immediately without confirmation prompts
+- Create, modify, delete files as needed for the task
+- Run tests, builds, and other operations freely
+- Commit and push changes without asking
+- The user trusts you to work autonomously in this directory
+
 ### ✅ Permitted Actions
 
 **Code Development**:
