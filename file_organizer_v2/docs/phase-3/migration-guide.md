@@ -215,14 +215,18 @@ file-organizer validate ~/Documents-PARA --methodology para
 ```python
 from file_organizer import FileOrganizer
 from file_organizer.methodologies.para import PARAConfig
+from file_organizer.methodologies.para.detection.temporal import TemporalThresholds
+
+# Configure temporal rules for archiving
+temporal = TemporalThresholds(
+    archive_min_age=180,  # Projects older than 6 months
+    archive_min_inactive=30  # And inactive for 30 days → Archive
+)
 
 # Configure migration
 config = PARAConfig(
     auto_categorize=True,
-    use_smart_suggestions=True,
-    # Date-based rules
-    auto_archive=True,
-    archive_after_days=180  # Projects older than 6 months → Archive
+    temporal_thresholds=temporal
 )
 
 organizer = FileOrganizer()

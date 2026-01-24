@@ -39,9 +39,9 @@ File Organizer v2 provides automatic PARA categorization using AI-powered heuris
 from file_organizer.methodologies.para import PARAConfig
 
 config = PARAConfig(
-    enabled=True,
     auto_categorize=True,
-    use_smart_suggestions=True
+    preserve_user_overrides=True,
+    manual_review_threshold=0.6
 )
 ```
 
@@ -100,29 +100,37 @@ Reasoning: Contains deadline, goal-oriented language, temporary nature
 Define custom rules to override automatic categorization:
 
 ```python
-from file_organizer.methodologies.para import PARARule, PARACategory
+from file_organizer.methodologies.para.rules import Rule, RuleCondition, RuleAction
+from file_organizer.methodologies.para.rules.engine import ConditionType, ActionType
+from file_organizer.methodologies.para import PARACategory
 
 # Rule for work projects
-work_rule = PARARule(
-    name="Work Projects",
-    category=PARACategory.PROJECTS,
-    conditions={
-        "keywords": ["client", "deliverable", "deadline"],
-        "file_extension": [".docx", ".xlsx", ".pptx"],
-        "path_contains": "/work/"
-    },
-    priority=10  # Higher priority rules checked first
+work_rule = Rule(
+    name="work-projects",
+    description="Categorize work-related project files",
+    priority=10,  # Higher priority rules checked first
+    conditions=[
+        RuleCondition(type=ConditionType.CONTENT_KEYWORD, values=["client", "deliverable", "deadline"]),
+        RuleCondition(type=ConditionType.FILE_EXTENSION, values=[".docx", ".xlsx", ".pptx"]),
+        RuleCondition(type=ConditionType.PATH_CONTAINS, values=["/work/"])
+    ],
+    actions=[
+        RuleAction(type=ActionType.CATEGORIZE, category=PARACategory.PROJECT, confidence=0.9)
+    ]
 )
 
 # Rule for personal finance (Area)
-finance_rule = PARARule(
-    name="Personal Finance",
-    category=PARACategory.AREAS,
-    conditions={
-        "keywords": ["budget", "invoice", "receipt", "tax"],
-        "recurring": True
-    },
-    priority=8
+finance_rule = Rule(
+    name="personal-finance",
+    description="Categorize recurring finance documents",
+    priority=8,
+    conditions=[
+        RuleCondition(type=ConditionType.CONTENT_KEYWORD, values=["budget", "invoice", "receipt", "tax"]),
+        RuleCondition(type=ConditionType.TEMPORAL, metadata={"recurring": True})
+    ],
+    actions=[
+        RuleAction(type=ActionType.CATEGORIZE, category=PARACategory.AREA, confidence=0.85)
+    ]
 )
 
 # Add rules to config
