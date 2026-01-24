@@ -736,7 +736,16 @@ def read_file(file_path: str | Path, **kwargs) -> str | None:
         FileReadError: If file cannot be read
     """
     file_path = Path(file_path)
+
+    # Check for compound extensions (e.g., .tar.gz)
+    name_lower = file_path.name.lower()
     ext = file_path.suffix.lower()
+
+    # Handle compound extensions for archives
+    if name_lower.endswith('.tar.gz') or name_lower.endswith('.tar.bz2') or name_lower.endswith('.tar.xz'):
+        compound_ext = '.' + '.'.join(file_path.name.split('.')[-2:]).lower()
+    else:
+        compound_ext = ext
 
     readers = {
         # Document formats
@@ -759,13 +768,15 @@ def read_file(file_path: str | Path, **kwargs) -> str | None:
         ('.dxf', '.dwg', '.step', '.stp', '.iges', '.igs'): read_cad_file,
     }
 
-    for extensions, reader in readers.items():
-        if ext in extensions:
-            try:
-                return reader(file_path, **kwargs)
-            except Exception as e:
-                logger.error(f"Error reading {file_path.name}: {e}")
-                raise
+    # Try compound extension first, then fall back to simple extension
+    for check_ext in [compound_ext, ext]:
+        for extensions, reader in readers.items():
+            if check_ext in extensions:
+                try:
+                    return reader(file_path, **kwargs)
+                except Exception as e:
+                    logger.error(f"Error reading {file_path.name}: {e}")
+                    raise
 
     logger.warning(f"Unsupported file type: {ext}")
     return None
