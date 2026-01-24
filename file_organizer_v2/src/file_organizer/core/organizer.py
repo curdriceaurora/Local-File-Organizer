@@ -46,6 +46,7 @@ class FileOrganizer:
     IMAGE_EXTENSIONS: ClassVar[set[str]] = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff'}
     VIDEO_EXTENSIONS: ClassVar[set[str]] = {'.mp4', '.avi', '.mkv', '.mov', '.wmv'}
     AUDIO_EXTENSIONS: ClassVar[set[str]] = {'.mp3', '.wav', '.flac', '.m4a', '.ogg'}
+    CAD_EXTENSIONS: ClassVar[set[str]] = {'.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'}
 
     def __init__(
         self,
@@ -113,16 +114,17 @@ class FileOrganizer:
         image_files = [f for f in files if f.suffix.lower() in self.IMAGE_EXTENSIONS]
         video_files = [f for f in files if f.suffix.lower() in self.VIDEO_EXTENSIONS]
         audio_files = [f for f in files if f.suffix.lower() in self.AUDIO_EXTENSIONS]
-        other_files = [f for f in files if f not in text_files + image_files + video_files + audio_files]
+        cad_files = [f for f in files if f.suffix.lower() in self.CAD_EXTENSIONS]
+        other_files = [f for f in files if f not in text_files + image_files + video_files + audio_files + cad_files]
 
         # Show file type breakdown
-        self._show_file_breakdown(text_files, image_files, video_files, audio_files, other_files)
+        self._show_file_breakdown(text_files, image_files, video_files, audio_files, cad_files, other_files)
 
         # Initialize models
         self.console.print("\n[bold blue]Initializing AI models...[/bold blue]")
 
-        # Initialize text processor for text files
-        if text_files:
+        # Initialize text processor for text and CAD files
+        if text_files or cad_files:
             self.text_processor = TextProcessor(config=self.text_model_config)
             self.text_processor.initialize()
             self.console.print("[green]✓[/green] Text model ready")
@@ -139,6 +141,12 @@ class FileOrganizer:
             self.console.print(f"\n[bold blue]Processing {len(text_files)} text files...[/bold blue]")
             processed_text = self._process_text_files(text_files)
             all_processed.extend(processed_text)
+
+        # Process CAD files (treat as text files - extract metadata)
+        if cad_files:
+            self.console.print(f"\n[bold blue]Processing {len(cad_files)} CAD files...[/bold blue]")
+            processed_cad = self._process_text_files(cad_files)
+            all_processed.extend(processed_cad)
 
         # Process image files
         if image_files:
@@ -210,6 +218,7 @@ class FileOrganizer:
         image_files: list[Path],
         video_files: list[Path],
         audio_files: list[Path],
+        cad_files: list[Path],
         other_files: list[Path],
     ) -> None:
         """Show breakdown of file types."""
@@ -221,6 +230,7 @@ class FileOrganizer:
         table.add_row("Text files", str(len(text_files)), "✓ Will process")
         table.add_row("Images", str(len(image_files)), "✓ Will process")
         table.add_row("Videos", str(len(video_files)), "✓ Will process")
+        table.add_row("CAD files", str(len(cad_files)), "✓ Will process")
         table.add_row("Audio", str(len(audio_files)), "⊘ Skip (needs audio model)")
         table.add_row("Other", str(len(other_files)), "⊘ Skip (unsupported)")
 
