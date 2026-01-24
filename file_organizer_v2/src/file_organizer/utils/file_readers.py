@@ -39,6 +39,47 @@ try:
 except ImportError:
     EBOOKLIB_AVAILABLE = False
 
+try:
+    import ezdxf
+    EZDXF_AVAILABLE = True
+except ImportError:
+    EZDXF_AVAILABLE = False
+
+# Archive format support (built-in)
+import zipfile
+import tarfile
+
+try:
+    import py7zr
+    PY7ZR_AVAILABLE = True
+except ImportError:
+    PY7ZR_AVAILABLE = False
+
+try:
+    import rarfile
+    RARFILE_AVAILABLE = True
+except ImportError:
+    RARFILE_AVAILABLE = False
+
+# Scientific format support
+try:
+    import h5py
+    H5PY_AVAILABLE = True
+except ImportError:
+    H5PY_AVAILABLE = False
+
+try:
+    import netCDF4
+    NETCDF4_AVAILABLE = True
+except ImportError:
+    NETCDF4_AVAILABLE = False
+
+try:
+    from scipy.io import loadmat
+    SCIPY_AVAILABLE = True
+except ImportError:
+    SCIPY_AVAILABLE = False
+
 from loguru import logger
 
 
@@ -264,6 +305,421 @@ def read_ebook_file(file_path: str | Path, max_chars: int = 10000) -> str:
         raise FileReadError(f"Failed to read ebook file {file_path}: {e}") from e
 
 
+def read_zip_file(file_path: str | Path, max_files: int = 50) -> str:
+    """Read contents and metadata from a ZIP archive.
+
+    Args:
+        file_path: Path to ZIP file
+        max_files: Maximum number of files to list
+
+    Returns:
+        String with archive metadata and file listing
+
+    Raises:
+        FileReadError: If file cannot be read
+    """
+    file_path = Path(file_path)
+    try:
+        with zipfile.ZipFile(file_path, 'r') as zf:
+            info_list = zf.infolist()[:max_files]
+
+            # Calculate statistics
+            total_files = len(zf.infolist())
+            total_compressed = sum(info.compress_size for info in zf.infolist())
+            total_uncompressed = sum(info.file_size for info in zf.infolist())
+            compression_ratio = (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
+
+            # Check for encryption
+            encrypted = any(info.flag_bits & 0x1 for info in zf.infolist())
+
+            # Build metadata string
+            lines = [
+                f"ZIP Archive: {file_path.name}",
+                f"Total files: {total_files}",
+                f"Compressed size: {total_compressed / 1024:.2f} KB",
+                f"Uncompressed size: {total_uncompressed / 1024:.2f} KB",
+                f"Compression ratio: {compression_ratio:.1f}%",
+                f"Encrypted: {'Yes' if encrypted else 'No'}",
+                "\nFiles (first {}):" .format(min(max_files, total_files)),
+            ]
+
+            # List files
+            for info in info_list:
+                size_kb = info.file_size / 1024
+                compressed_kb = info.compress_size / 1024
+                lines.append(
+                    f"  - {info.filename} ({size_kb:.2f} KB → {compressed_kb:.2f} KB)"
+                )
+
+            if total_files > max_files:
+                lines.append(f"  ... and {total_files - max_files} more files")
+
+            text = '\n'.join(lines)
+            logger.debug(f"Extracted metadata from ZIP archive {file_path.name} ({total_files} files)")
+            return text
+
+    except Exception as e:
+        raise FileReadError(f"Failed to read ZIP file {file_path}: {e}") from e
+
+
+def read_7z_file(file_path: str | Path, max_files: int = 50) -> str:
+    """Read contents and metadata from a 7Z archive.
+
+    Args:
+        file_path: Path to 7Z file
+        max_files: Maximum number of files to list
+
+    Returns:
+        String with archive metadata and file listing
+
+    Raises:
+        FileReadError: If file cannot be read
+        ImportError: If py7zr is not installed
+    """
+    if not PY7ZR_AVAILABLE:
+        raise ImportError("py7zr is not installed. Install with: pip install py7zr")
+
+    file_path = Path(file_path)
+    try:
+        with py7zr.SevenZipFile(file_path, 'r') as archive:
+            all_files = archive.list()
+
+            # Calculate statistics
+            total_files = len(all_files)
+            total_compressed = sum(f.compressed for f in all_files)
+            total_uncompressed = sum(f.uncompressed for f in all_files)
+            compression_ratio = (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
+
+            # Check for encryption
+            encrypted = archive.password_protected if hasattr(archive, 'password_protected') else False
+
+            # Build metadata string
+            lines = [
+                f"7Z Archive: {file_path.name}",
+                f"Total files: {total_files}",
+                f"Compressed size: {total_compressed / 1024:.2f} KB",
+                f"Uncompressed size: {total_uncompressed / 1024:.2f} KB",
+                f"Compression ratio: {compression_ratio:.1f}%",
+                f"Encrypted: {'Yes' if encrypted else 'No'}",
+                "\nFiles (first {}):" .format(min(max_files, total_files)),
+            ]
+
+            # List files
+            for idx, file_info in enumerate(all_files[:max_files]):
+                size_kb = file_info.uncompressed / 1024
+                compressed_kb = file_info.compressed / 1024
+                lines.append(
+                    f"  - {file_info.filename} ({size_kb:.2f} KB → {compressed_kb:.2f} KB)"
+                )
+
+            if total_files > max_files:
+                lines.append(f"  ... and {total_files - max_files} more files")
+
+            text = '\n'.join(lines)
+            logger.debug(f"Extracted metadata from 7Z archive {file_path.name} ({total_files} files)")
+            return text
+
+    except Exception as e:
+        raise FileReadError(f"Failed to read 7Z file {file_path}: {e}") from e
+
+
+def read_tar_file(file_path: str | Path, max_files: int = 50) -> str:
+    """Read contents and metadata from a TAR/GZ/BZ2 archive.
+
+    Args:
+        file_path: Path to TAR file (.tar, .tar.gz, .tgz, .tar.bz2)
+        max_files: Maximum number of files to list
+
+    Returns:
+        String with archive metadata and file listing
+
+    Raises:
+        FileReadError: If file cannot be read
+    """
+    file_path = Path(file_path)
+    try:
+        with tarfile.open(file_path, 'r:*') as tf:
+            members = tf.getmembers()
+
+            # Calculate statistics
+            total_files = len([m for m in members if m.isfile()])
+            total_dirs = len([m for m in members if m.isdir()])
+            total_size = sum(m.size for m in members if m.isfile())
+
+            # Determine compression type
+            compression_type = "None"
+            if file_path.suffix in ('.gz', '.tgz'):
+                compression_type = "GZ"
+            elif file_path.suffix in ('.bz2', '.tbz2'):
+                compression_type = "BZ2"
+            elif file_path.suffix == '.xz':
+                compression_type = "XZ"
+
+            # Build metadata string
+            lines = [
+                f"TAR Archive: {file_path.name}",
+                f"Compression: {compression_type}",
+                f"Total files: {total_files}",
+                f"Total directories: {total_dirs}",
+                f"Total size: {total_size / 1024:.2f} KB",
+                f"\nFiles (first {min(max_files, total_files)}):",
+            ]
+
+            # List files (skip directories)
+            file_members = [m for m in members if m.isfile()][:max_files]
+            for member in file_members:
+                size_kb = member.size / 1024
+                lines.append(f"  - {member.name} ({size_kb:.2f} KB)")
+
+            if total_files > max_files:
+                lines.append(f"  ... and {total_files - max_files} more files")
+
+            text = '\n'.join(lines)
+            logger.debug(f"Extracted metadata from TAR archive {file_path.name} ({total_files} files)")
+            return text
+
+    except Exception as e:
+        raise FileReadError(f"Failed to read TAR file {file_path}: {e}") from e
+
+
+def read_rar_file(file_path: str | Path, max_files: int = 50) -> str:
+    """Read contents and metadata from a RAR archive.
+
+    Args:
+        file_path: Path to RAR file
+        max_files: Maximum number of files to list
+
+    Returns:
+        String with archive metadata and file listing
+
+    Raises:
+        FileReadError: If file cannot be read
+        ImportError: If rarfile is not installed
+    """
+    if not RARFILE_AVAILABLE:
+        raise ImportError(
+            "rarfile is not installed. Install with: pip install rarfile\n"
+            "Note: RAR support also requires unrar command-line tool to be installed."
+        )
+
+    file_path = Path(file_path)
+    try:
+        with rarfile.RarFile(file_path, 'r') as rf:
+            info_list = rf.infolist()
+
+            # Calculate statistics
+            total_files = len(info_list)
+            total_compressed = sum(info.compress_size for info in info_list)
+            total_uncompressed = sum(info.file_size for info in info_list)
+            compression_ratio = (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
+
+            # Check for encryption
+            encrypted = rf.needs_password()
+
+            # Build metadata string
+            lines = [
+                f"RAR Archive: {file_path.name}",
+                f"Total files: {total_files}",
+                f"Compressed size: {total_compressed / 1024:.2f} KB",
+                f"Uncompressed size: {total_uncompressed / 1024:.2f} KB",
+                f"Compression ratio: {compression_ratio:.1f}%",
+                f"Encrypted: {'Yes' if encrypted else 'No'}",
+                "\nFiles (first {}):" .format(min(max_files, total_files)),
+            ]
+
+            # List files
+            for info in info_list[:max_files]:
+                size_kb = info.file_size / 1024
+                compressed_kb = info.compress_size / 1024
+                lines.append(
+                    f"  - {info.filename} ({size_kb:.2f} KB → {compressed_kb:.2f} KB)"
+                )
+
+            if total_files > max_files:
+                lines.append(f"  ... and {total_files - max_files} more files")
+
+            text = '\n'.join(lines)
+            logger.debug(f"Extracted metadata from RAR archive {file_path.name} ({total_files} files)")
+            return text
+
+    except Exception as e:
+        raise FileReadError(f"Failed to read RAR file {file_path}: {e}") from e
+
+
+def read_hdf5_file(file_path: str | Path, max_datasets: int = 20) -> str:
+    """Read metadata and structure from an HDF5 file.
+
+    Args:
+        file_path: Path to HDF5 file
+        max_datasets: Maximum number of datasets to list
+
+    Returns:
+        String with HDF5 structure and metadata
+
+    Raises:
+        FileReadError: If file cannot be read
+        ImportError: If h5py is not installed
+    """
+    if not H5PY_AVAILABLE:
+        raise ImportError("h5py is not installed. Install with: pip install h5py")
+
+    file_path = Path(file_path)
+    try:
+        with h5py.File(file_path, 'r') as hf:
+            lines = [
+                f"HDF5 File: {file_path.name}",
+                f"Total groups: {len(list(hf.keys()))}",
+                "\nStructure:",
+            ]
+
+            dataset_count = 0
+
+            def visit_item(name: str, obj: h5py.Dataset | h5py.Group) -> None:
+                nonlocal dataset_count
+                if dataset_count >= max_datasets:
+                    return
+
+                if isinstance(obj, h5py.Dataset):
+                    shape_str = 'x'.join(map(str, obj.shape))
+                    size_kb = obj.nbytes / 1024
+                    lines.append(
+                        f"  Dataset: {name} [{obj.dtype}] {shape_str} ({size_kb:.2f} KB)"
+                    )
+
+                    # List attributes
+                    if obj.attrs:
+                        for attr_name, attr_value in list(obj.attrs.items())[:3]:
+                            lines.append(f"    - {attr_name}: {attr_value}")
+
+                    dataset_count += 1
+                elif isinstance(obj, h5py.Group):
+                    lines.append(f"  Group: {name}/")
+
+            hf.visititems(visit_item)
+
+            if dataset_count >= max_datasets:
+                lines.append(f"  ... (showing first {max_datasets} datasets)")
+
+            text = '\n'.join(lines)
+            logger.debug(f"Extracted metadata from HDF5 file {file_path.name}")
+            return text
+
+    except Exception as e:
+        raise FileReadError(f"Failed to read HDF5 file {file_path}: {e}") from e
+
+
+def read_netcdf_file(file_path: str | Path) -> str:
+    """Read metadata and structure from a NetCDF file.
+
+    Args:
+        file_path: Path to NetCDF file
+
+    Returns:
+        String with NetCDF structure and metadata
+
+    Raises:
+        FileReadError: If file cannot be read
+        ImportError: If netCDF4 is not installed
+    """
+    if not NETCDF4_AVAILABLE:
+        raise ImportError("netCDF4 is not installed. Install with: pip install netCDF4")
+
+    file_path = Path(file_path)
+    try:
+        with netCDF4.Dataset(file_path, 'r') as nc:
+            lines = [
+                f"NetCDF File: {file_path.name}",
+                f"Format: {nc.data_model}",
+                "\nDimensions:",
+            ]
+
+            # List dimensions
+            for dim_name, dim in nc.dimensions.items():
+                size = len(dim) if not dim.isunlimited() else "unlimited"
+                lines.append(f"  - {dim_name}: {size}")
+
+            lines.append("\nVariables:")
+
+            # List variables (first 20)
+            for idx, (var_name, var) in enumerate(list(nc.variables.items())[:20]):
+                shape_str = 'x'.join(str(var.shape[i]) for i in range(len(var.shape)))
+                lines.append(f"  - {var_name} ({var.dtype}): {shape_str}")
+
+                # Show some attributes
+                if hasattr(var, 'units'):
+                    lines.append(f"      units: {var.units}")
+                if hasattr(var, 'long_name'):
+                    lines.append(f"      long_name: {var.long_name}")
+
+            if len(nc.variables) > 20:
+                lines.append(f"  ... and {len(nc.variables) - 20} more variables")
+
+            # Global attributes
+            if nc.ncattrs():
+                lines.append("\nGlobal Attributes:")
+                for attr_name in list(nc.ncattrs())[:10]:
+                    attr_value = nc.getncattr(attr_name)
+                    lines.append(f"  - {attr_name}: {attr_value}")
+
+            text = '\n'.join(lines)
+            logger.debug(f"Extracted metadata from NetCDF file {file_path.name}")
+            return text
+
+    except Exception as e:
+        raise FileReadError(f"Failed to read NetCDF file {file_path}: {e}") from e
+
+
+def read_mat_file(file_path: str | Path) -> str:
+    """Read metadata and structure from a MATLAB .mat file.
+
+    Args:
+        file_path: Path to MAT file
+
+    Returns:
+        String with MAT file structure and metadata
+
+    Raises:
+        FileReadError: If file cannot be read
+        ImportError: If scipy is not installed
+    """
+    if not SCIPY_AVAILABLE:
+        raise ImportError("scipy is not installed. Install with: pip install scipy")
+
+    file_path = Path(file_path)
+    try:
+        # Load mat file
+        mat_contents = loadmat(file_path, struct_as_record=False, squeeze_me=True)
+
+        lines = [
+            f"MATLAB File: {file_path.name}",
+            "\nVariables:",
+        ]
+
+        # Filter out metadata variables
+        var_names = [k for k in mat_contents.keys() if not k.startswith('__')]
+
+        for var_name in var_names[:30]:  # Limit to first 30 variables
+            var = mat_contents[var_name]
+
+            # Get type and shape info
+            var_type = type(var).__name__
+            if hasattr(var, 'shape'):
+                shape_str = 'x'.join(map(str, var.shape))
+                lines.append(f"  - {var_name} ({var_type}): {shape_str}")
+            else:
+                lines.append(f"  - {var_name} ({var_type})")
+
+        if len(var_names) > 30:
+            lines.append(f"  ... and {len(var_names) - 30} more variables")
+
+        text = '\n'.join(lines)
+        logger.debug(f"Extracted metadata from MAT file {file_path.name}")
+        return text
+
+    except Exception as e:
+        raise FileReadError(f"Failed to read MAT file {file_path}: {e}") from e
+
+
 def read_file(file_path: str | Path, **kwargs) -> str | None:
     """Read content from any supported file type.
 
@@ -283,12 +739,22 @@ def read_file(file_path: str | Path, **kwargs) -> str | None:
     ext = file_path.suffix.lower()
 
     readers = {
+        # Document formats
         ('.txt', '.md'): read_text_file,
         ('.docx',): read_docx_file,  # Note: .doc (old binary format) is NOT supported
         ('.pdf',): read_pdf_file,
         ('.csv', '.xlsx', '.xls'): read_spreadsheet_file,
         ('.ppt', '.pptx'): read_presentation_file,
         ('.epub',): read_ebook_file,
+        # Archive formats
+        ('.zip',): read_zip_file,
+        ('.7z',): read_7z_file,
+        ('.tar', '.tar.gz', '.tgz', '.tar.bz2', '.tbz2', '.tar.xz'): read_tar_file,
+        ('.rar',): read_rar_file,
+        # Scientific formats
+        ('.hdf5', '.h5', '.hdf'): read_hdf5_file,
+        ('.nc', '.nc4', '.netcdf'): read_netcdf_file,
+        ('.mat',): read_mat_file,
     }
 
     for extensions, reader in readers.items():
