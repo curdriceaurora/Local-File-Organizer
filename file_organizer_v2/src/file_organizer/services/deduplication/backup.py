@@ -9,11 +9,18 @@ This module provides safe backup management for file operations, including:
 - Cleaning up old backups
 """
 
-import fcntl
 import json
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional
+
+# fcntl is Unix-only, not available on Windows
+try:
+    import fcntl
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
 
 
 class BackupManager:
@@ -84,7 +91,7 @@ class BackupManager:
         try:
             shutil.copy2(file_path, backup_path)
         except Exception as e:
-            raise OSError(f"Failed to create backup: {e}") from e
+            raise OSError(f"Failed to create backup: {e}")
 
         # Update manifest
         manifest = self._load_manifest()
@@ -140,7 +147,7 @@ class BackupManager:
         try:
             shutil.copy2(backup_path, target_path)
         except Exception as e:
-            raise OSError(f"Failed to restore backup: {e}") from e
+            raise OSError(f"Failed to restore backup: {e}")
 
         return target_path
 
@@ -185,7 +192,7 @@ class BackupManager:
 
         return removed_backups
 
-    def get_backup_info(self, backup_path: Path) -> dict | None:
+    def get_backup_info(self, backup_path: Path) -> Optional[dict]:
         """
         Get metadata for a specific backup.
 
@@ -284,15 +291,17 @@ class BackupManager:
         lock_path = self.manifest_path.with_suffix(".lock")
         try:
             with open(self.manifest_path, 'r', encoding='utf-8') as f:
-                # Acquire shared lock for reading
-                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                # Acquire shared lock for reading (Unix only)
+                if HAS_FCNTL:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_SH)
                 try:
                     data = json.load(f)
                 finally:
-                    # Release lock
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    # Release lock (Unix only)
+                    if HAS_FCNTL:
+                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
                 return data
-        except (json.JSONDecodeError, IOError):
+        except (json.JSONDecodeError, OSError):
             # If manifest is corrupted, start fresh
             return {}
 
@@ -306,13 +315,22 @@ class BackupManager:
         lock_path = self.manifest_path.with_suffix(".lock")
         tmp_path = self.manifest_path.with_suffix(".tmp")
         try:
-            with open(self.manifest_path, 'w', encoding='utf-8') as f:
-                # Acquire exclusive lock for writing
-                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            # Open in read+ mode to avoid truncating before lock
+            mode = 'r+' if self.manifest_path.exists() else 'w'
+            with open(self.manifest_path, mode, encoding='utf-8') as f:
+                # Acquire exclusive lock for writing (Unix only)
+                if HAS_FCNTL:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
                 try:
+                    # Truncate file after acquiring lock
+                    if mode == 'r+':
+                        f.seek(0)
+                        f.truncate()
                     json.dump(manifest, f, indent=2, ensure_ascii=False)
+                    f.flush()
                 finally:
-                    # Release lock
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-        except IOError as e:
-            raise IOError(f"Failed to save manifest: {e}") from e
+                    # Release lock (Unix only)
+                    if HAS_FCNTL:
+                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except OSError as e:
+            raise OSError(f"Failed to save manifest: {e}") from e
