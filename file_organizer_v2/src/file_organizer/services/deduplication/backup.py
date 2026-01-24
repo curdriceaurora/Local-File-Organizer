@@ -9,8 +9,7 @@ This module provides safe backup management for file operations, including:
 - Cleaning up old backups
 """
 
-from __future__ import annotations
-
+import fcntl
 import json
 import shutil
 from datetime import datetime, timedelta
@@ -276,9 +275,6 @@ class BackupManager:
         """
         Load the backup manifest from disk with file locking.
 
-        Uses a lock file to prevent race conditions when multiple
-        processes read the manifest simultaneously.
-
         Returns:
             Dictionary containing manifest data
         """
@@ -287,10 +283,16 @@ class BackupManager:
 
         lock_path = self.manifest_path.with_suffix(".lock")
         try:
-            with _FileLock(lock_path):
-                with open(self.manifest_path, encoding="utf-8") as f:
-                    return json.load(f)
-        except (json.JSONDecodeError, OSError):
+            with open(self.manifest_path, 'r', encoding='utf-8') as f:
+                # Acquire shared lock for reading
+                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                try:
+                    data = json.load(f)
+                finally:
+                    # Release lock
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                return data
+        except (json.JSONDecodeError, IOError):
             # If manifest is corrupted, start fresh
             return {}
 
@@ -298,61 +300,19 @@ class BackupManager:
         """
         Save the backup manifest to disk with file locking.
 
-        Writes to a temporary file first, then atomically renames it
-        to prevent corruption from interrupted writes.
-
         Args:
             manifest: Dictionary containing manifest data
         """
         lock_path = self.manifest_path.with_suffix(".lock")
         tmp_path = self.manifest_path.with_suffix(".tmp")
         try:
-            with _FileLock(lock_path):
-                # Write to temp file first for atomic replacement
-                with open(tmp_path, "w", encoding="utf-8") as f:
+            with open(self.manifest_path, 'w', encoding='utf-8') as f:
+                # Acquire exclusive lock for writing
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
                     json.dump(manifest, f, indent=2, ensure_ascii=False)
-                # Atomic rename
-                tmp_path.replace(self.manifest_path)
-        except OSError as e:
-            tmp_path.unlink(missing_ok=True)
-            raise OSError(f"Failed to save manifest: {e}") from e
-
-
-class _FileLock:
-    """Simple cross-platform file lock using a lock file.
-
-    Creates an exclusive lock file that is held for the duration of the
-    context manager.  Uses ``O_CREAT | O_EXCL`` for atomic creation on
-    all platforms.
-
-    Args:
-        lock_path: Path for the lock file.
-        timeout: Maximum seconds to wait for the lock.
-    """
-
-    def __init__(self, lock_path: Path, timeout: float = 10.0) -> None:
-        self._lock_path = Path(lock_path)
-        self._timeout = timeout
-
-    def __enter__(self) -> _FileLock:
-        import os
-        import time
-
-        deadline = time.monotonic() + self._timeout
-        while True:
-            try:
-                fd = os.open(
-                    str(self._lock_path),
-                    os.O_CREAT | os.O_EXCL | os.O_WRONLY,
-                )
-                os.close(fd)
-                return self
-            except FileExistsError:
-                if time.monotonic() >= deadline:
-                    # Stale lock — force remove and retry once
-                    self._lock_path.unlink(missing_ok=True)
-                    continue
-                time.sleep(0.05)
-
-    def __exit__(self, *args: object) -> None:
-        self._lock_path.unlink(missing_ok=True)
+                finally:
+                    # Release lock
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except IOError as e:
+            raise IOError(f"Failed to save manifest: {e}") from e
