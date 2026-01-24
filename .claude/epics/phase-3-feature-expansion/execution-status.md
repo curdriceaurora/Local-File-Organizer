@@ -1,6 +1,6 @@
 ---
 started: 2026-01-24T06:54:24Z
-updated: 2026-01-24T07:18:15Z
+updated: 2026-01-24T11:44:14Z
 worktree: removed (merged to main)
 branch: epic/phase-3-feature-expansion (merged)
 ---
@@ -36,10 +36,10 @@ Note: 3 of 4 agents worked directly on main branch instead of worktree due to co
 - #120: Build audio content-based organization
 - #121: Implement PARA folder generation
 
-## Postponed (3 video tasks)
-- #80: Add video transcription from audio track
-- #82: Enhance video metadata extraction
-- #122: Implement multi-frame video analysis
+## Closed as Duplicate (3 video tasks)
+- ~~#80: Add video transcription from audio track~~ - Closed 2026-01-24
+- ~~#82: Enhance video metadata extraction~~ - Closed 2026-01-24
+- ~~#122: Implement multi-frame video analysis~~ - Closed 2026-01-24 (never created on GitHub)
 
 ## Summary of Work Completed
 
