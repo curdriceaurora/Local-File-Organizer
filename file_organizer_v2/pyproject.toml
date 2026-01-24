@@ -125,8 +125,12 @@ scientific = [
     "scipy>=1.11.0",  # MATLAB .mat file support
 ]
 
+cad = [
+    "ezdxf>=1.1.0",  # DXF/DWG CAD file format support
+]
+
 all = [
-    "file-organizer[dev,gui,web,audio,video,dedup,archive,scientific]",
+    "file-organizer[dev,gui,web,audio,video,dedup,archive,scientific,cad]",
 ]
 
 [project.scripts]

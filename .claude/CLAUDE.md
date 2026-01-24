@@ -1293,7 +1293,37 @@ alembic current
 - NetCDF: Requires `netCDF4` (optional)
 - MATLAB: Requires `scipy` (included in base dependencies)
 
-**Total**: 37 file types supported (32 active, 5 planned)
+### CAD Formats (6 types)
+
+| Format | Extension | Reader Function | Status |
+|--------|-----------|----------------|--------|
+| DXF | `.dxf` | `read_dxf_file()` | ✅ |
+| DWG | `.dwg` | `read_dwg_file()` | ✅ |
+| STEP | `.step`, `.stp` | `read_step_file()` | ✅ |
+| IGES | `.iges`, `.igs` | `read_iges_file()` | ✅ |
+
+**Features**:
+- Extract CAD file metadata (title, author, creation date)
+- List layers and their properties (DXF/DWG)
+- Count entities and analyze drawing structure
+- Extract block definitions and references (DXF/DWG)
+- Parse header information (STEP/IGES)
+- Display file schema and version information
+- Memory-efficient metadata extraction (no full model loading)
+
+**Dependencies**:
+- DXF: Requires `ezdxf` (optional but recommended)
+- DWG: Requires `ezdxf` (limited support) or ODA File Converter
+- STEP: Built-in Python support (text parsing)
+- IGES: Built-in Python support (text parsing)
+
+**Notes**:
+- DWG is a proprietary format with limited open-source support
+- For full DWG support, consider using ODA File Converter to convert to DXF
+- STEP and IGES files are parsed for header metadata only
+- DXF files provide the most comprehensive metadata extraction
+
+**Total**: 43 file types supported (38 active, 5 planned)
 
 ---
 
