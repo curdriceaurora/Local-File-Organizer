@@ -9,10 +9,10 @@ import sqlite3
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Any
 from contextlib import contextmanager
-from threading import Lock
-from datetime import datetime
+from threading import RLock
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,7 @@ class PreferenceDatabaseManager:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._connection: Optional[sqlite3.Connection] = None
-        self._lock = Lock()
+        self._lock = RLock()
         self._initialized = False
 
         logger.info(f"Preference database manager initialized: {self.db_path}")
@@ -270,7 +270,7 @@ class PreferenceDatabaseManager:
         confidence: float = 0.5,
         frequency: int = 1,
         source: str = "user_correction",
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[dict[str, Any]] = None
     ) -> int:
         """
         Add or update a preference.
@@ -288,7 +288,7 @@ class PreferenceDatabaseManager:
             Preference ID
         """
         conn = self.get_connection()
-        now = datetime.now(datetime.UTC).isoformat().replace('+00:00', 'Z')
+        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
         context_json = json.dumps(context) if context else None
 
         with self._lock:
@@ -303,17 +303,24 @@ class PreferenceDatabaseManager:
                         value = excluded.value,
                         confidence = excluded.confidence,
                         frequency = frequency + 1,
+                        source = excluded.source,
+                        context = excluded.context,
                         updated_at = excluded.updated_at,
                         last_used_at = excluded.updated_at
+                    RETURNING id
                     """,
                     (preference_type, key, value, confidence, frequency, now, now, source, context_json)
                 )
-                return cursor.lastrowid
+                row = cursor.fetchone()
+                pref_id = row[0] if row else None
+                if pref_id is None:
+                    raise RuntimeError("Failed to retrieve preference ID after insert/update")
+                return pref_id
             except Exception as e:
                 logger.error(f"Failed to add preference: {e}")
                 raise
 
-    def get_preference(self, preference_type: str, key: str) -> Optional[Dict[str, Any]]:
+    def get_preference(self, preference_type: str, key: str) -> Optional[dict[str, Any]]:
         """
         Get a preference by type and key.
 
@@ -343,7 +350,7 @@ class PreferenceDatabaseManager:
                 return result
             return None
 
-    def get_preferences_by_type(self, preference_type: str) -> List[Dict[str, Any]]:
+    def get_preferences_by_type(self, preference_type: str) -> list[dict[str, Any]]:
         """
         Get all preferences of a specific type.
 
@@ -388,7 +395,7 @@ class PreferenceDatabaseManager:
             confidence: New confidence score (0.0-1.0)
         """
         conn = self.get_connection()
-        now = datetime.now(datetime.UTC).isoformat().replace('+00:00', 'Z')
+        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
         with self._lock:
             conn.execute(
@@ -408,7 +415,7 @@ class PreferenceDatabaseManager:
             preference_id: Preference ID
         """
         conn = self.get_connection()
-        now = datetime.now(datetime.UTC).isoformat().replace('+00:00', 'Z')
+        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
         with self._lock:
             conn.execute(
@@ -448,7 +455,7 @@ class PreferenceDatabaseManager:
         category_new: Optional[str] = None,
         confidence_before: Optional[float] = None,
         confidence_after: Optional[float] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[dict[str, Any]] = None
     ) -> int:
         """
         Add a user correction to the database.
@@ -467,7 +474,7 @@ class PreferenceDatabaseManager:
             Correction ID
         """
         conn = self.get_connection()
-        now = datetime.now(datetime.UTC).isoformat().replace('+00:00', 'Z')
+        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
         metadata_json = json.dumps(metadata) if metadata else None
 
         with self._lock:
@@ -489,7 +496,7 @@ class PreferenceDatabaseManager:
         self,
         correction_type: Optional[str] = None,
         limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get corrections from the database.
 
@@ -535,7 +542,7 @@ class PreferenceDatabaseManager:
 
     # Statistics
 
-    def get_preference_stats(self) -> Dict[str, Any]:
+    def get_preference_stats(self) -> dict[str, Any]:
         """
         Get statistics about stored preferences.
 
