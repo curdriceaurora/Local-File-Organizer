@@ -341,8 +341,8 @@ file-organizer watch ~/Downloads \
 ### Learn More
 
 - [Full Johnny Decimal Guide](../johnny-decimal.md)
-- [Custom Schemes Guide](johnny-decimal-schemes.md)
-- [Advanced Numbering](johnny-decimal-advanced.md)
+- [Johnny Decimal API Reference](../../api/johnny-decimal-api.md)
+- [Migration Guide](../migration-guide.md)
 
 ## Quick Reference
 

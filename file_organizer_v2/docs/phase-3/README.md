@@ -310,7 +310,6 @@ Test results:
 ### Getting Help
 
 - [Troubleshooting Guide](troubleshooting.md)
-- [FAQ](faq.md)
 - [GitHub Issues](https://github.com/your-org/file-organizer-v2/issues)
 
 ## Migration Guide
@@ -383,6 +382,6 @@ File Organizer v2 is released under the MIT License.
 
 ---
 
-**Questions?** Check out our [FAQ](faq.md) or [open an issue](https://github.com/your-org/file-organizer-v2/issues).
+**Questions?** [Open an issue](https://github.com/your-org/file-organizer-v2/issues) or check the [Troubleshooting Guide](troubleshooting.md).
 
 **Ready to start?** Try the [PARA Quick Start](tutorials/para-setup.md)!

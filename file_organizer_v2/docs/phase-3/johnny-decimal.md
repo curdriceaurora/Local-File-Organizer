@@ -684,14 +684,14 @@ watcher.start()
 ## Related Features
 
 - [PARA Methodology](para-methodology.md) - Combine with Johnny Decimal
-- [Smart Organization](../api/organization-api.md) - Automatic categorization
-- [File Organization Patterns](tutorials/organization-patterns.md)
+- [Johnny Decimal API](../api/johnny-decimal-api.md) - Complete API reference
+- [File Formats](file-formats.md) - Supported file types
 
 ## Further Reading
 
 - [Johnny Decimal Official Site](https://johnnydecimal.com/)
 - [Implementation Examples](tutorials/johnny-decimal-setup.md)
-- [Scheme Templates](../configuration/johnny-decimal-schemes.md)
+- [Migration Guide](migration-guide.md) - Migrate existing files
 
 ---
 

@@ -168,8 +168,8 @@ file-organizer watch ~/Downloads \
 ### Learn More
 
 - [Full PARA Guide](../para-methodology.md)
-- [Custom Rules Examples](para-rules-examples.md)
-- [Integration with Other Tools](para-integrations.md)
+- [PARA API Reference](../../api/para-api.md)
+- [Migration Guide](../migration-guide.md)
 
 ## Troubleshooting
 

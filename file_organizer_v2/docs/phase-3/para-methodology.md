@@ -523,8 +523,8 @@ sync.sync_structure(
 ## Related Features
 
 - [Johnny Decimal System](johnny-decimal.md) - Combine with PARA for deeper organization
-- [Smart Suggestions](../api/smart-suggestions-api.md) - AI-powered categorization
-- [File Organization API](../api/organization-api.md) - Programmatic access
+- [PARA API Reference](../api/para-api.md) - Complete API documentation
+- [File Formats](file-formats.md) - Supported file types
 
 ## Further Reading
 
