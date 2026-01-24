@@ -5,12 +5,11 @@ Multi-factor heuristic detection system for automatic PARA categorization.
 Uses temporal, content, structural, and AI-based heuristics.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-import logging
+from typing import Any
 
 from ..categories import PARACategory
 
@@ -23,17 +22,17 @@ class CategoryScore:
     category: PARACategory
     score: float  # 0.0 to 1.0
     confidence: float  # 0.0 to 1.0
-    signals: List[str] = field(default_factory=list)  # What triggered this score
+    signals: list[str] = field(default_factory=list)  # What triggered this score
 
 
 @dataclass
 class HeuristicResult:
     """Result from a heuristic evaluation."""
-    scores: Dict[PARACategory, CategoryScore]
+    scores: dict[PARACategory, CategoryScore]
     overall_confidence: float
-    recommended_category: Optional[PARACategory] = None
+    recommended_category: PARACategory | None = None
     needs_manual_review: bool = False
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class Heuristic(ABC):
@@ -49,7 +48,7 @@ class Heuristic(ABC):
         self.weight = weight
 
     @abstractmethod
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """
         Evaluate file and return category scores.
 
@@ -74,10 +73,9 @@ class TemporalHeuristic(Heuristic):
     - Creation vs modification gap → categorization hints
     """
 
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """Evaluate based on temporal patterns."""
         import time
-        from datetime import datetime, timedelta
 
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -164,7 +162,7 @@ class ContentHeuristic(Heuristic):
         "completed", "finished", "done", "past", "historical"
     ]
 
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """Evaluate based on content patterns."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -242,7 +240,7 @@ class StructuralHeuristic(Heuristic):
     - Archive folders → ARCHIVE
     """
 
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """Evaluate based on file structure."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -304,7 +302,7 @@ class AIHeuristic(Heuristic):
     Can use local LLMs via Ollama for semantic understanding.
     """
 
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """Evaluate using AI (placeholder for future implementation)."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -361,7 +359,7 @@ class HeuristicEngine:
             enable_structural: Enable structural heuristic
             enable_ai: Enable AI heuristic
         """
-        self.heuristics: List[Heuristic] = []
+        self.heuristics: list[Heuristic] = []
 
         if enable_temporal:
             self.heuristics.append(TemporalHeuristic(weight=0.25))
@@ -375,7 +373,7 @@ class HeuristicEngine:
         if enable_ai:
             self.heuristics.append(AIHeuristic(weight=0.10))
 
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """
         Evaluate file using all enabled heuristics.
 

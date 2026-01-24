@@ -5,12 +5,11 @@ Provides audio format conversion, normalization, and preprocessing
 capabilities to prepare audio files for transcription and analysis.
 """
 
+import logging
+import tempfile
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Union
-import logging
-import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ class AudioPreprocessor:
     - Silence removal
     """
 
-    def __init__(self, config: Optional[AudioConfig] = None):
+    def __init__(self, config: AudioConfig | None = None):
         """
         Initialize the audio preprocessor.
 
@@ -78,10 +77,10 @@ class AudioPreprocessor:
 
     def convert_to_wav(
         self,
-        audio_path: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
-        sample_rate: Optional[int] = None,
-        channels: Optional[int] = None,
+        audio_path: str | Path,
+        output_path: str | Path | None = None,
+        sample_rate: int | None = None,
+        channels: int | None = None,
     ) -> Path:
         """
         Convert audio file to WAV format optimized for transcription.
@@ -190,8 +189,8 @@ class AudioPreprocessor:
 
     def normalize_audio(
         self,
-        audio_path: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
+        audio_path: str | Path,
+        output_path: str | Path | None = None,
         target_db: float = -20.0,
     ) -> Path:
         """
@@ -231,8 +230,8 @@ class AudioPreprocessor:
 
     def remove_silence(
         self,
-        audio_path: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
+        audio_path: str | Path,
+        output_path: str | Path | None = None,
         silence_thresh: int = -40,  # dB
         min_silence_len: int = 1000,  # ms
     ) -> Path:
@@ -288,8 +287,8 @@ class AudioPreprocessor:
 
     def preprocess(
         self,
-        audio_path: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
+        audio_path: str | Path,
+        output_path: str | Path | None = None,
         convert_to_wav: bool = True,
         normalize: bool = True,
         remove_silence: bool = False,
@@ -328,7 +327,7 @@ class AudioPreprocessor:
         return current_file
 
     @staticmethod
-    def get_audio_info(audio_path: Union[str, Path]) -> dict:
+    def get_audio_info(audio_path: str | Path) -> dict:
         """
         Get audio file information.
 
@@ -358,7 +357,7 @@ class AudioPreprocessor:
             return {"error": "pydub not available"}
 
     @staticmethod
-    def is_supported_format(audio_path: Union[str, Path]) -> bool:
+    def is_supported_format(audio_path: str | Path) -> bool:
         """Check if audio format is supported."""
         audio_path = Path(audio_path)
         suffix = audio_path.suffix.lower()[1:]  # Remove the dot

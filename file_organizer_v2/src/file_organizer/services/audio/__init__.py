@@ -8,14 +8,14 @@ This module provides audio file processing capabilities including:
 - Audio utility functions
 """
 
-from .transcriber import AudioTranscriber, TranscriptionResult, TranscriptionOptions
-from .metadata_extractor import AudioMetadataExtractor, AudioMetadata
-from .preprocessor import AudioPreprocessor, AudioFormat
+from .metadata_extractor import AudioMetadata, AudioMetadataExtractor
+from .preprocessor import AudioFormat, AudioPreprocessor
+from .transcriber import AudioTranscriber, TranscriptionOptions, TranscriptionResult
 from .utils import (
+    convert_audio_format,
     get_audio_duration,
     normalize_audio,
     split_audio,
-    convert_audio_format,
     validate_audio_file,
 )
 

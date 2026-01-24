@@ -4,14 +4,13 @@ Audio Utility Functions
 Common utility functions for audio file processing and analysis.
 """
 
-from pathlib import Path
-from typing import Optional, Union
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-def get_audio_duration(audio_path: Union[str, Path]) -> float:
+def get_audio_duration(audio_path: str | Path) -> float:
     """
     Get audio file duration in seconds.
 
@@ -43,8 +42,8 @@ def get_audio_duration(audio_path: Union[str, Path]) -> float:
 
 
 def normalize_audio(
-    audio_path: Union[str, Path],
-    output_path: Optional[Union[str, Path]] = None,
+    audio_path: str | Path,
+    output_path: str | Path | None = None,
     target_db: float = -20.0
 ) -> Path:
     """
@@ -81,9 +80,9 @@ def normalize_audio(
 
 
 def split_audio(
-    audio_path: Union[str, Path],
+    audio_path: str | Path,
     chunk_length_ms: int = 60000,  # 1 minute
-    output_dir: Optional[Union[str, Path]] = None,
+    output_dir: str | Path | None = None,
 ) -> list[Path]:
     """
     Split audio file into chunks.
@@ -124,9 +123,9 @@ def split_audio(
 
 
 def convert_audio_format(
-    audio_path: Union[str, Path],
+    audio_path: str | Path,
     output_format: str,
-    output_path: Optional[Union[str, Path]] = None,
+    output_path: str | Path | None = None,
     bitrate: str = "128k",
 ) -> Path:
     """
@@ -165,7 +164,7 @@ def convert_audio_format(
         return audio_path
 
 
-def validate_audio_file(audio_path: Union[str, Path]) -> tuple[bool, Optional[str]]:
+def validate_audio_file(audio_path: str | Path) -> tuple[bool, str | None]:
     """
     Validate if file is a readable audio file.
 
@@ -203,7 +202,7 @@ def validate_audio_file(audio_path: Union[str, Path]) -> tuple[bool, Optional[st
 
 
 def detect_silence_segments(
-    audio_path: Union[str, Path],
+    audio_path: str | Path,
     silence_thresh: int = -40,  # dB
     min_silence_len: int = 1000,  # ms
 ) -> list[tuple[int, int]]:
@@ -238,10 +237,10 @@ def detect_silence_segments(
 
 
 def trim_audio(
-    audio_path: Union[str, Path],
+    audio_path: str | Path,
     start_ms: int = 0,
-    end_ms: Optional[int] = None,
-    output_path: Optional[Union[str, Path]] = None,
+    end_ms: int | None = None,
+    output_path: str | Path | None = None,
 ) -> Path:
     """
     Trim audio file to specified time range.
@@ -277,8 +276,8 @@ def trim_audio(
 
 
 def merge_audio_files(
-    audio_paths: list[Union[str, Path]],
-    output_path: Union[str, Path],
+    audio_paths: list[str | Path],
+    output_path: str | Path,
     crossfade_ms: int = 0,
 ) -> Path:
     """
@@ -316,7 +315,7 @@ def merge_audio_files(
         raise
 
 
-def calculate_audio_checksum(audio_path: Union[str, Path], algorithm: str = "sha256") -> str:
+def calculate_audio_checksum(audio_path: str | Path, algorithm: str = "sha256") -> str:
     """
     Calculate checksum of audio file.
 
@@ -339,7 +338,7 @@ def calculate_audio_checksum(audio_path: Union[str, Path], algorithm: str = "sha
     return hash_func.hexdigest()
 
 
-def get_audio_peak_amplitude(audio_path: Union[str, Path]) -> float:
+def get_audio_peak_amplitude(audio_path: str | Path) -> float:
     """
     Get peak amplitude of audio file.
 
@@ -360,7 +359,7 @@ def get_audio_peak_amplitude(audio_path: Union[str, Path]) -> float:
         return 0.0
 
 
-def is_audio_file(file_path: Union[str, Path]) -> bool:
+def is_audio_file(file_path: str | Path) -> bool:
     """
     Check if file is an audio file based on extension.
 

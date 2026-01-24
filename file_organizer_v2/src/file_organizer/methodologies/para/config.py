@@ -8,10 +8,10 @@ Configuration management for PARA methodology including:
 - Custom patterns and keywords
 """
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
-import logging
+
 import yaml
 
 from .categories import PARACategory
@@ -40,19 +40,19 @@ class CategoryThresholds:
 @dataclass
 class KeywordPatterns:
     """Custom keyword patterns for each category."""
-    project: List[str] = field(default_factory=lambda: [
+    project: list[str] = field(default_factory=lambda: [
         "project", "deadline", "due", "sprint", "milestone",
         "deliverable", "proposal", "presentation"
     ])
-    area: List[str] = field(default_factory=lambda: [
+    area: list[str] = field(default_factory=lambda: [
         "area", "ongoing", "recurring", "weekly", "monthly",
         "routine", "maintenance"
     ])
-    resource: List[str] = field(default_factory=lambda: [
+    resource: list[str] = field(default_factory=lambda: [
         "reference", "template", "guide", "tutorial",
         "documentation", "handbook", "manual"
     ])
-    archive: List[str] = field(default_factory=lambda: [
+    archive: list[str] = field(default_factory=lambda: [
         "archive", "old", "backup", "deprecated",
         "obsolete", "legacy", "completed"
     ])
@@ -90,7 +90,7 @@ class PARAConfig:
     preserve_user_overrides: bool = True  # Remember user corrections
 
     # Directory settings
-    default_root: Optional[Path] = None
+    default_root: Path | None = None
     project_dir: str = "Projects"
     area_dir: str = "Areas"
     resource_dir: str = "Resources"
@@ -112,7 +112,7 @@ class PARAConfig:
             return cls()
 
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path) as f:
                 data = yaml.safe_load(f)
 
             if not data:
@@ -235,7 +235,7 @@ class PARAConfig:
         }
         return thresholds_map.get(category, 0.75)
 
-    def get_category_keywords(self, category: PARACategory) -> List[str]:
+    def get_category_keywords(self, category: PARACategory) -> list[str]:
         """Get keywords for a specific category."""
         keywords_map = {
             PARACategory.PROJECT: self.keyword_patterns.project,
@@ -260,7 +260,7 @@ class PARAConfig:
 DEFAULT_CONFIG = PARAConfig()
 
 
-def load_config(config_path: Optional[Path] = None) -> PARAConfig:
+def load_config(config_path: Path | None = None) -> PARAConfig:
     """
     Load PARA configuration.
 

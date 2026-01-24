@@ -8,10 +8,9 @@ Extracts comprehensive metadata from audio files including:
 - Embedded artwork
 """
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Optional, Union, List
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -29,25 +28,25 @@ class AudioMetadata:
     bitrate: int  # bits per second
     sample_rate: int  # Hz
     channels: int
-    bits_per_sample: Optional[int] = None
+    bits_per_sample: int | None = None
 
     # ID3 / Vorbis tags
-    title: Optional[str] = None
-    artist: Optional[str] = None
-    album: Optional[str] = None
-    album_artist: Optional[str] = None
-    genre: Optional[str] = None
-    year: Optional[int] = None
-    track_number: Optional[int] = None
-    disc_number: Optional[int] = None
-    comment: Optional[str] = None
+    title: str | None = None
+    artist: str | None = None
+    album: str | None = None
+    album_artist: str | None = None
+    genre: str | None = None
+    year: int | None = None
+    track_number: int | None = None
+    disc_number: int | None = None
+    comment: str | None = None
 
     # Technical metadata
-    codec: Optional[str] = None
-    encoder: Optional[str] = None
+    codec: str | None = None
+    encoder: str | None = None
 
     # Additional tags
-    extra_tags: Dict[str, str] = field(default_factory=dict)
+    extra_tags: dict[str, str] = field(default_factory=dict)
 
     # Artwork
     has_artwork: bool = False
@@ -78,7 +77,7 @@ class AudioMetadataExtractor:
         """
         self.use_fallback = use_fallback
 
-    def extract(self, audio_path: Union[str, Path]) -> AudioMetadata:
+    def extract(self, audio_path: str | Path) -> AudioMetadata:
         """
         Extract metadata from audio file.
 
@@ -112,9 +111,9 @@ class AudioMetadataExtractor:
         """Extract metadata using mutagen library."""
         try:
             from mutagen import File as MutagenFile
+            from mutagen.flac import FLAC
             from mutagen.id3 import ID3
             from mutagen.mp4 import MP4
-            from mutagen.flac import FLAC
             from mutagen.oggvorbis import OggVorbis
 
         except ImportError as e:
@@ -308,8 +307,8 @@ class AudioMetadataExtractor:
 
     def extract_batch(
         self,
-        audio_paths: List[Union[str, Path]]
-    ) -> List[AudioMetadata]:
+        audio_paths: list[str | Path]
+    ) -> list[AudioMetadata]:
         """
         Extract metadata from multiple audio files.
 

@@ -10,7 +10,7 @@ Based on Tiago Forte's PARA methodology from "Building a Second Brain".
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class PARACategory(str, Enum):
@@ -25,16 +25,16 @@ class PARACategory(str, Enum):
     - RESOURCE: Reference materials and knowledge for future use
     - ARCHIVE: Inactive items from the other three categories
     """
-    
+
     PROJECT = "project"
     AREA = "area"
     RESOURCE = "resource"
     ARCHIVE = "archive"
-    
+
     def __str__(self) -> str:
         """Return the category name in title case."""
         return self.value.title()
-    
+
     @property
     def description(self) -> str:
         """Return a brief description of the category."""
@@ -55,29 +55,29 @@ class CategoryDefinition:
     This class encapsulates all the information needed to identify and
     categorize files according to the PARA methodology.
     """
-    
+
     name: PARACategory
     description: str
-    criteria: List[str]
-    examples: List[str]
-    keywords: List[str]
-    patterns: List[str]
+    criteria: list[str]
+    examples: list[str]
+    keywords: list[str]
+    patterns: list[str]
     confidence_threshold: float = 0.75
     auto_categorize: bool = True
-    
+
     def __post_init__(self) -> None:
         """Validate the category definition."""
         if not 0.0 <= self.confidence_threshold <= 1.0:
             raise ValueError("confidence_threshold must be between 0.0 and 1.0")
-        
+
         if not self.criteria:
             raise ValueError("criteria list cannot be empty")
-    
+
     def matches_keyword(self, text: str) -> bool:
         """Check if text contains any of the category keywords."""
         text_lower = text.lower()
         return any(keyword.lower() in text_lower for keyword in self.keywords)
-    
+
     def matches_pattern(self, filename: str) -> bool:
         """Check if filename matches any of the category patterns."""
         from fnmatch import fnmatch
@@ -93,38 +93,38 @@ class CategorizationResult:
     Contains the determined category, confidence score, reasoning,
     and alternative possibilities.
     """
-    
+
     file_path: Path
     category: PARACategory
     confidence: float
-    reasons: List[str]
-    alternative_categories: Dict[PARACategory, float] = field(default_factory=dict)
-    applied_rules: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    
+    reasons: list[str]
+    alternative_categories: dict[PARACategory, float] = field(default_factory=dict)
+    applied_rules: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
     def __post_init__(self) -> None:
         """Validate the categorization result."""
         if not 0.0 <= self.confidence <= 1.0:
             raise ValueError("confidence must be between 0.0 and 1.0")
-        
+
         if not self.reasons:
             raise ValueError("reasons list cannot be empty")
-        
+
         # Ensure file_path is a Path object
         if not isinstance(self.file_path, Path):
             self.file_path = Path(self.file_path)
-    
+
     @property
     def is_confident(self) -> bool:
         """Check if categorization confidence exceeds the default threshold."""
         return self.confidence >= 0.75
-    
+
     @property
     def requires_review(self) -> bool:
         """Check if categorization requires manual review."""
         return self.confidence < 0.60
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert the result to a dictionary."""
         return {
             "file_path": str(self.file_path),
@@ -132,7 +132,7 @@ class CategorizationResult:
             "confidence": self.confidence,
             "reasons": self.reasons,
             "alternative_categories": {
-                cat.value: score 
+                cat.value: score
                 for cat, score in self.alternative_categories.items()
             },
             "applied_rules": self.applied_rules,
@@ -143,7 +143,7 @@ class CategorizationResult:
 
 
 # Standard category definitions following PARA methodology
-CATEGORY_DEFINITIONS: Dict[PARACategory, CategoryDefinition] = {
+CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
     PARACategory.PROJECT: CategoryDefinition(
         name=PARACategory.PROJECT,
         description=(
@@ -178,7 +178,7 @@ CATEGORY_DEFINITIONS: Dict[PARACategory, CategoryDefinition] = {
         confidence_threshold=0.75,
         auto_categorize=True
     ),
-    
+
     PARACategory.AREA: CategoryDefinition(
         name=PARACategory.AREA,
         description=(
@@ -213,7 +213,7 @@ CATEGORY_DEFINITIONS: Dict[PARACategory, CategoryDefinition] = {
         confidence_threshold=0.75,
         auto_categorize=True
     ),
-    
+
     PARACategory.RESOURCE: CategoryDefinition(
         name=PARACategory.RESOURCE,
         description=(
@@ -248,7 +248,7 @@ CATEGORY_DEFINITIONS: Dict[PARACategory, CategoryDefinition] = {
         confidence_threshold=0.80,
         auto_categorize=True
     ),
-    
+
     PARACategory.ARCHIVE: CategoryDefinition(
         name=PARACategory.ARCHIVE,
         description=(
@@ -303,7 +303,7 @@ def get_category_definition(category: PARACategory) -> CategoryDefinition:
     return CATEGORY_DEFINITIONS[category]
 
 
-def get_all_category_definitions() -> Dict[PARACategory, CategoryDefinition]:
+def get_all_category_definitions() -> dict[PARACategory, CategoryDefinition]:
     """
     Get all standard PARA category definitions.
     

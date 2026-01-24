@@ -1,10 +1,11 @@
 """Core audio transcription engine using faster-whisper."""
 
 import time
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any
 
 from faster_whisper import WhisperModel
 from loguru import logger
@@ -37,8 +38,8 @@ class TranscriptionSegment:
     end: float  # End time in seconds
     text: str  # Transcribed text
     confidence: float  # Confidence score (0-1)
-    speaker: Optional[str] = None  # Speaker label (if diarization enabled)
-    words: Optional[List[Dict[str, Any]]] = None  # Word-level timestamps
+    speaker: str | None = None  # Speaker label (if diarization enabled)
+    words: list[dict[str, Any]] | None = None  # Word-level timestamps
 
 
 @dataclass
@@ -57,19 +58,19 @@ class TranscriptionResult:
     text: str  # Full transcribed text
     language: str  # Detected language code
     language_confidence: float  # Language detection confidence
-    segments: List[TranscriptionSegment]  # All segments
+    segments: list[TranscriptionSegment]  # All segments
     duration: float  # Audio duration in seconds
     processing_time: float  # Time taken to transcribe
     model_size: str  # Model used for transcription
     device: str  # Device used (cpu, cuda, mps)
-    error: Optional[str] = None  # Error message if any
+    error: str | None = None  # Error message if any
 
 
 @dataclass
 class TranscriptionOptions:
     """Options for transcription."""
 
-    language: Optional[str] = None  # Force language (None = auto-detect)
+    language: str | None = None  # Force language (None = auto-detect)
     detect_language: bool = True  # Enable language detection
     word_timestamps: bool = True  # Generate word-level timestamps
     vad_filter: bool = True  # Voice activity detection
@@ -77,8 +78,8 @@ class TranscriptionOptions:
     best_of: int = 5  # Number of candidates
     temperature: float = 0.0  # Sampling temperature
     suppress_numerals: bool = False  # Keep numbers as digits
-    initial_prompt: Optional[str] = None  # Context hint
-    progress_callback: Optional[Callable[[int, int], None]] = None  # Progress updates
+    initial_prompt: str | None = None  # Context hint
+    progress_callback: Callable[[int, int], None] | None = None  # Progress updates
 
 
 class AudioTranscriber:
@@ -98,14 +99,14 @@ class AudioTranscriber:
         >>> print(f"Language: {result.language} ({result.language_confidence:.2%})")
     """
 
-    _model_cache: Dict[str, WhisperModel] = {}  # Class-level model cache
+    _model_cache: dict[str, WhisperModel] = {}  # Class-level model cache
 
     def __init__(
         self,
-        model_size: Union[ModelSize, str] = ModelSize.BASE,
+        model_size: ModelSize | str = ModelSize.BASE,
         device: str = "auto",
-        compute_type: Union[ComputeType, str] = ComputeType.FLOAT16,
-        cache_dir: Optional[Path] = None,
+        compute_type: ComputeType | str = ComputeType.FLOAT16,
+        cache_dir: Path | None = None,
         num_workers: int = 1,
     ):
         """Initialize the audio transcriber.
@@ -141,7 +142,7 @@ class AudioTranscriber:
         self.num_workers = num_workers
 
         # Model will be lazily loaded
-        self.model: Optional[WhisperModel] = None
+        self.model: WhisperModel | None = None
         self._model_loaded = False
 
         logger.info(
@@ -225,7 +226,7 @@ class AudioTranscriber:
             logger.error(f"Failed to load Whisper model: {e}")
             raise RuntimeError(f"Model loading failed: {e}") from e
 
-    def detect_language(self, audio_path: Union[str, Path]) -> LanguageDetection:
+    def detect_language(self, audio_path: str | Path) -> LanguageDetection:
         """Detect the language of the audio file.
 
         Args:
@@ -286,7 +287,7 @@ class AudioTranscriber:
             raise RuntimeError(f"Language detection failed: {e}") from e
 
     def transcribe(
-        self, audio_path: Union[str, Path], options: Optional[TranscriptionOptions] = None
+        self, audio_path: str | Path, options: TranscriptionOptions | None = None
     ) -> TranscriptionResult:
         """Transcribe an audio file to text.
 
@@ -393,7 +394,7 @@ class AudioTranscriber:
             )
 
     @staticmethod
-    def get_supported_formats() -> List[str]:
+    def get_supported_formats() -> list[str]:
         """Get list of supported audio formats.
 
         Returns:

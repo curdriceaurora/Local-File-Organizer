@@ -5,11 +5,11 @@ Provides audio transcription capabilities using Faster-Whisper models.
 Supports multiple model sizes, languages, and advanced transcription options.
 """
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class ComputeType(str, Enum):
 @dataclass
 class TranscriptionOptions:
     """Options for audio transcription."""
-    language: Optional[str] = None  # Auto-detect if None
+    language: str | None = None  # Auto-detect if None
     word_timestamps: bool = False
     beam_size: int = 5
     best_of: int = 5
@@ -44,9 +44,9 @@ class TranscriptionOptions:
     log_prob_threshold: float = -1.0
     no_speech_threshold: float = 0.6
     condition_on_previous_text: bool = True
-    initial_prompt: Optional[str] = None
+    initial_prompt: str | None = None
     vad_filter: bool = True  # Voice Activity Detection
-    vad_parameters: Optional[Dict[str, Any]] = None
+    vad_parameters: dict[str, Any] | None = None
 
 
 @dataclass
@@ -65,7 +65,7 @@ class Segment:
     start: float
     end: float
     text: str
-    words: List[WordTiming] = field(default_factory=list)
+    words: list[WordTiming] = field(default_factory=list)
     avg_logprob: float = 0.0
     no_speech_prob: float = 0.0
 
@@ -74,7 +74,7 @@ class Segment:
 class TranscriptionResult:
     """Complete transcription result."""
     text: str
-    segments: List[Segment]
+    segments: list[Segment]
     language: str
     language_confidence: float
     duration: float  # seconds
@@ -105,7 +105,7 @@ class AudioTranscriber:
         model_size: ModelSize = ModelSize.BASE,
         device: str = "auto",
         compute_type: ComputeType = ComputeType.FLOAT16,
-        cache_dir: Optional[Path] = None,
+        cache_dir: Path | None = None,
         num_workers: int = 1,
     ):
         """
@@ -176,8 +176,8 @@ class AudioTranscriber:
 
     def transcribe(
         self,
-        audio_path: Union[str, Path],
-        options: Optional[TranscriptionOptions] = None,
+        audio_path: str | Path,
+        options: TranscriptionOptions | None = None,
     ) -> TranscriptionResult:
         """
         Transcribe an audio file.
@@ -289,9 +289,9 @@ class AudioTranscriber:
 
     def transcribe_batch(
         self,
-        audio_paths: List[Union[str, Path]],
-        options: Optional[TranscriptionOptions] = None,
-    ) -> List[TranscriptionResult]:
+        audio_paths: list[str | Path],
+        options: TranscriptionOptions | None = None,
+    ) -> list[TranscriptionResult]:
         """
         Transcribe multiple audio files.
 

@@ -14,11 +14,11 @@ License: MIT
 """
 
 from .categories import (
-    PARACategory,
-    CategoryDefinition,
     CategorizationResult,
-    get_category_definition,
+    CategoryDefinition,
+    PARACategory,
     get_all_category_definitions,
+    get_category_definition,
 )
 
 __all__ = [

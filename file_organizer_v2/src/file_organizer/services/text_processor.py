@@ -2,18 +2,17 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
+
+from loguru import logger
 
 from file_organizer.models import TextModel
 from file_organizer.models.base import ModelConfig
-from file_organizer.utils.file_readers import read_file, FileReadError
+from file_organizer.utils.file_readers import FileReadError, read_file
 from file_organizer.utils.text_processing import (
     clean_text,
-    sanitize_filename,
-    truncate_text,
     ensure_nltk_data,
+    truncate_text,
 )
-from loguru import logger
 
 
 @dataclass
@@ -24,9 +23,9 @@ class ProcessedFile:
     description: str
     folder_name: str
     filename: str
-    original_content: Optional[str] = None
+    original_content: str | None = None
     processing_time: float = 0.0
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class TextProcessor:
@@ -41,8 +40,8 @@ class TextProcessor:
 
     def __init__(
         self,
-        text_model: Optional[TextModel] = None,
-        config: Optional[ModelConfig] = None,
+        text_model: TextModel | None = None,
+        config: ModelConfig | None = None,
     ):
         """Initialize text processor.
 
@@ -71,7 +70,7 @@ class TextProcessor:
 
     def process_file(
         self,
-        file_path: Union[str, Path],
+        file_path: str | Path,
         generate_description: bool = True,
         generate_folder: bool = True,
         generate_filename: bool = True,

@@ -1,13 +1,12 @@
 """Text processing utilities."""
 
 import re
-from typing import Set, List
 
 try:
     import nltk
-    from nltk.tokenize import word_tokenize
     from nltk.corpus import stopwords
     from nltk.stem import WordNetLemmatizer
+    from nltk.tokenize import word_tokenize
     NLTK_AVAILABLE = True
 except ImportError:
     NLTK_AVAILABLE = False
@@ -51,7 +50,7 @@ def ensure_nltk_data() -> None:
     logger.debug("NLTK data verified and ready")
 
 
-def get_unwanted_words() -> Set[str]:
+def get_unwanted_words() -> set[str]:
     """Get set of unwanted words to filter out.
 
     Returns:
@@ -76,16 +75,14 @@ def get_unwanted_words() -> Set[str]:
 
         # Conjunctions
         'but', 'if', 'or', 'because', 'about', 'into', 'through', 'during',
-        'before', 'after', 'above', 'below',
-
-        # Quantifiers
+        'before', 'after', 'above', # Quantifiers
         'any', 'each', 'few', 'more', 'most', 'other', 'some', 'such',
 
         # Negations
         'no', 'nor', 'not',
 
         # Other common words
-        'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't',
+        'own', 'same', 'so', 'than', 'too', 'very', 's', 't',
         'can', 'will', 'just', 'don', 'should', 'now', 'new',
 
         # Action verbs to avoid in filenames
@@ -215,7 +212,7 @@ def sanitize_filename(
     return sanitized.lower() if sanitized else 'untitled'
 
 
-def extract_keywords(text: str, top_n: int = 5) -> List[str]:
+def extract_keywords(text: str, top_n: int = 5) -> list[str]:
     """Extract top keywords from text.
 
     Args:

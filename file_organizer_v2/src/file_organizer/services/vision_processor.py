@@ -1,13 +1,13 @@
 """Vision file processing service."""
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
+
+from loguru import logger
 
 from file_organizer.models import VisionModel
 from file_organizer.models.base import ModelConfig
-from loguru import logger
-import re
 
 
 @dataclass
@@ -19,9 +19,9 @@ class ProcessedImage:
     folder_name: str
     filename: str
     has_text: bool = False
-    extracted_text: Optional[str] = None
+    extracted_text: str | None = None
     processing_time: float = 0.0
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class VisionProcessor:
@@ -37,8 +37,8 @@ class VisionProcessor:
 
     def __init__(
         self,
-        vision_model: Optional[VisionModel] = None,
-        config: Optional[ModelConfig] = None,
+        vision_model: VisionModel | None = None,
+        config: ModelConfig | None = None,
     ):
         """Initialize vision processor.
 
@@ -64,7 +64,7 @@ class VisionProcessor:
 
     def process_file(
         self,
-        file_path: Union[str, Path],
+        file_path: str | Path,
         generate_description: bool = True,
         generate_folder: bool = True,
         generate_filename: bool = True,
@@ -220,7 +220,7 @@ Provide a clear, descriptive paragraph (100-150 words)."""
             logger.error(f"Failed to generate description: {e}")
             return f"Image from {image_path.name}"
 
-    def _extract_text(self, image_path: Path) -> Optional[str]:
+    def _extract_text(self, image_path: Path) -> str | None:
         """Extract text from image using OCR.
 
         Args:

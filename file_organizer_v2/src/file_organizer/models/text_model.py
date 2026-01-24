@@ -1,6 +1,6 @@
 """Text model implementation using Ollama."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 try:
     import ollama
@@ -8,8 +8,9 @@ try:
 except ImportError:
     OLLAMA_AVAILABLE = False
 
-from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from loguru import logger
+
+from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 
 
 class TextModel(BaseModel):
@@ -41,7 +42,7 @@ class TextModel(BaseModel):
             raise ValueError(f"Expected TEXT model type, got {config.model_type}")
 
         super().__init__(config)
-        self.client: Optional[ollama.Client] = None
+        self.client: ollama.Client | None = None
 
     def initialize(self) -> None:
         """Initialize the Ollama client and pull model if needed."""
@@ -187,7 +188,7 @@ class TextModel(BaseModel):
             context_window=4096,
         )
 
-    def test_connection(self) -> Dict[str, Any]:
+    def test_connection(self) -> dict[str, Any]:
         """Test model connection and get info.
 
         Returns:

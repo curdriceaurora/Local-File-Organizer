@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class ModelType(Enum):
@@ -42,11 +42,11 @@ class ModelConfig:
     framework: str = "ollama"  # ollama, llama_cpp, mlx
 
     # Model paths
-    model_path: Optional[str] = None
-    local_path: Optional[str] = None
+    model_path: str | None = None
+    local_path: str | None = None
 
     # Additional parameters
-    extra_params: Dict[str, Any] = None
+    extra_params: dict[str, Any] = None
 
     def __post_init__(self) -> None:
         """Initialize extra params if None."""
@@ -64,7 +64,7 @@ class BaseModel(ABC):
             config: Model configuration
         """
         self.config = config
-        self.model: Optional[Any] = None
+        self.model: Any | None = None
         self._initialized = False
 
     @abstractmethod

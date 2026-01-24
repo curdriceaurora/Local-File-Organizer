@@ -6,13 +6,13 @@ into PARA categories (Projects, Areas, Resources, Archive).
 """
 
 from .heuristics import (
-    HeuristicEngine,
-    TemporalHeuristic,
-    ContentHeuristic,
-    StructuralHeuristic,
     AIHeuristic,
-    HeuristicResult,
     CategoryScore,
+    ContentHeuristic,
+    HeuristicEngine,
+    HeuristicResult,
+    StructuralHeuristic,
+    TemporalHeuristic,
 )
 
 __all__ = [

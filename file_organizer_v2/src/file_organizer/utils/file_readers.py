@@ -1,7 +1,6 @@
 """File reading utilities for various file types."""
 
 from pathlib import Path
-from typing import Optional, Union
 
 try:
     from PIL import Image
@@ -48,7 +47,7 @@ class FileReadError(Exception):
     pass
 
 
-def read_text_file(file_path: Union[str, Path], max_chars: int = 5000) -> str:
+def read_text_file(file_path: str | Path, max_chars: int = 5000) -> str:
     """Read text content from a plain text file.
 
     Args:
@@ -63,7 +62,7 @@ def read_text_file(file_path: Union[str, Path], max_chars: int = 5000) -> str:
     """
     file_path = Path(file_path)
     try:
-        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(file_path, encoding='utf-8', errors='ignore') as f:
             text = f.read(max_chars)
         logger.debug(f"Read {len(text)} characters from {file_path.name}")
         return text
@@ -71,7 +70,7 @@ def read_text_file(file_path: Union[str, Path], max_chars: int = 5000) -> str:
         raise FileReadError(f"Failed to read text file {file_path}: {e}") from e
 
 
-def read_docx_file(file_path: Union[str, Path]) -> str:
+def read_docx_file(file_path: str | Path) -> str:
     """Read text content from a .docx file.
 
     Args:
@@ -98,7 +97,7 @@ def read_docx_file(file_path: Union[str, Path]) -> str:
         raise FileReadError(f"Failed to read DOCX file {file_path}: {e}") from e
 
 
-def read_pdf_file(file_path: Union[str, Path], max_pages: int = 5) -> str:
+def read_pdf_file(file_path: str | Path, max_pages: int = 5) -> str:
     """Read text content from a PDF file.
 
     Args:
@@ -136,7 +135,7 @@ def read_pdf_file(file_path: Union[str, Path], max_pages: int = 5) -> str:
         raise FileReadError(f"Failed to read PDF file {file_path}: {e}") from e
 
 
-def read_spreadsheet_file(file_path: Union[str, Path], max_rows: int = 100) -> str:
+def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
     """Read content from Excel or CSV file.
 
     Args:
@@ -174,7 +173,7 @@ def read_spreadsheet_file(file_path: Union[str, Path], max_rows: int = 100) -> s
         raise FileReadError(f"Failed to read spreadsheet file {file_path}: {e}") from e
 
 
-def read_presentation_file(file_path: Union[str, Path]) -> str:
+def read_presentation_file(file_path: str | Path) -> str:
     """Read text content from PowerPoint file.
 
     Args:
@@ -213,7 +212,7 @@ def read_presentation_file(file_path: Union[str, Path]) -> str:
         raise FileReadError(f"Failed to read presentation file {file_path}: {e}") from e
 
 
-def read_ebook_file(file_path: Union[str, Path], max_chars: int = 10000) -> str:
+def read_ebook_file(file_path: str | Path, max_chars: int = 10000) -> str:
     """Read text content from ebook file (EPUB only for now).
 
     Args:
@@ -265,7 +264,7 @@ def read_ebook_file(file_path: Union[str, Path], max_chars: int = 10000) -> str:
         raise FileReadError(f"Failed to read ebook file {file_path}: {e}") from e
 
 
-def read_file(file_path: Union[str, Path], **kwargs) -> Optional[str]:
+def read_file(file_path: str | Path, **kwargs) -> str | None:
     """Read content from any supported file type.
 
     Auto-detects file type and uses appropriate reader.
