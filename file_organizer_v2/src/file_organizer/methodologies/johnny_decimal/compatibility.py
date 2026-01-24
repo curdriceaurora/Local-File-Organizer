@@ -236,6 +236,10 @@ class CompatibilityAnalyzer:
         Returns:
             True if both PARA and JD patterns detected
         """
+        # Validate path exists
+        if not root_path.exists() or not root_path.is_dir():
+            return False
+
         has_para = any(self.detect_para_structure(root_path).values())
 
         # Check for JD numbers
@@ -404,8 +408,7 @@ class HybridOrganizer:
         return JohnnyDecimalNumber(
             area=base_area,
             category=1,
-            id_number=None,
-            level=NumberLevel.CATEGORY,
+            item_id=None,
         )
 
     def get_item_path(

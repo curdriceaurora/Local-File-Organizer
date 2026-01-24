@@ -137,7 +137,7 @@ class FolderTransformer:
 
         # Create JD number
         jd_number = JohnnyDecimalNumber(
-            area=area_number, category=None, id_number=None, level=NumberLevel.AREA
+            area=area_number, category=None, item_id=None
         )
 
         # Create target name
@@ -185,8 +185,7 @@ class FolderTransformer:
             jd_number = JohnnyDecimalNumber(
                 area=parent_number.area,
                 category=category_number,
-                id_number=None,
-                level=NumberLevel.CATEGORY,
+                item_id=None,
             )
 
             if self.preserve_original_names:
@@ -238,8 +237,7 @@ class FolderTransformer:
             jd_number = JohnnyDecimalNumber(
                 area=parent_number.area,
                 category=parent_number.category,
-                id_number=id_number,
-                level=NumberLevel.ID,
+                item_id=id_number,
             )
 
             if self.preserve_original_names:
@@ -292,7 +290,8 @@ class FolderTransformer:
 
         # Default: assign sequentially starting from 10
         base_area = 10
-        return base_area + index
+        # Ensure area number is within valid range (10-99)
+        return min(base_area + index, 99)
 
     def _suggest_category_number(self, folder: FolderInfo, area: int, index: int) -> int:
         """
@@ -322,7 +321,8 @@ class FolderTransformer:
                     return category.category_number
 
         # Default: assign sequentially starting from 01
-        return index + 1
+        # Ensure category number is within valid range (1-99)
+        return min(index + 1, 99)
 
     def generate_preview(self, plan: TransformationPlan) -> str:
         """

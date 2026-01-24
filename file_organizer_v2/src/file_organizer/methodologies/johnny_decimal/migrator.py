@@ -43,7 +43,7 @@ class RollbackInfo:
 
     migration_id: str
     timestamp: datetime
-    original_structure: Dict[str, str]  # path -> original_name
+    original_structure: Dict[str, tuple[str, str]]  # original_path -> (target_path, original_name)
     backup_path: Optional[Path]
 
 
@@ -192,10 +192,11 @@ class JohnnyDecimalMigrator:
                         skipped_paths.append(rule.source_path)
                         continue
 
-                    # Store original name for rollback
+                    # Store original and target paths for rollback
                     if rollback_info:
                         rollback_info.original_structure[str(rule.source_path)] = (
-                            rule.source_path.name
+                            str(target_path),
+                            rule.source_path.name,
                         )
 
                     # Execute rename
@@ -269,9 +270,9 @@ class JohnnyDecimalMigrator:
 
         try:
             # Restore original names
-            for path_str, original_name in rollback_info.original_structure.items():
-                current_path = Path(path_str).parent / Path(path_str).name
-                original_path = Path(path_str).parent / original_name
+            for original_path_str, (target_path_str, original_name) in rollback_info.original_structure.items():
+                current_path = Path(target_path_str)
+                original_path = Path(original_path_str)
 
                 if current_path.exists():
                     current_path.rename(original_path)

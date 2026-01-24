@@ -5,11 +5,12 @@ Adapter pattern implementation for bridging Johnny Decimal with other
 organizational methodologies and file management systems.
 """
 
+import hashlib
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Protocol
+from typing import Any, Dict, List, Optional, Protocol
 
 from .categories import JohnnyDecimalNumber, NumberLevel
 from .compatibility import PARACategory, PARAJohnnyDecimalBridge
@@ -25,7 +26,7 @@ class OrganizationItem:
     name: str
     path: Path
     category: str
-    metadata: Dict[str, any]
+    metadata: Dict[str, Any]
 
 
 class OrganizationMethodology(Protocol):
@@ -301,8 +302,9 @@ class FileSystemAdapter(MethodologyAdapter):
             if 10 <= num <= 99:
                 return num
 
-        # Default: hash-based assignment
-        return 10 + (hash(name.lower()) % 90)
+        # Default: hash-based assignment (using deterministic MD5)
+        hash_value = int(hashlib.md5(name.lower().encode()).hexdigest(), 16)
+        return 10 + (hash_value % 90)
 
     def _suggest_category_from_name(self, name: str) -> int:
         """Suggest category number from folder name."""
@@ -315,8 +317,9 @@ class FileSystemAdapter(MethodologyAdapter):
                 if 1 <= num <= 99:
                     return num
 
-        # Default: hash-based
-        return 1 + (hash(name.lower()) % 99)
+        # Default: hash-based (using deterministic MD5)
+        hash_value = int(hashlib.md5(name.lower().encode()).hexdigest(), 16)
+        return 1 + (hash_value % 99)
 
     def _suggest_id_from_index(self, index: int) -> int:
         """Suggest ID number from index."""

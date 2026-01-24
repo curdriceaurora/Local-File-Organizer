@@ -269,7 +269,7 @@ class TestHybridOrganizer:
     def test_get_item_path_area(self, hybrid_organizer, tmp_path):
         """Test path generation for area level."""
         jd_number = JohnnyDecimalNumber(
-            area=10, category=None, id_number=None, level=NumberLevel.AREA
+            area=10, category=None, item_id=None
         )
 
         path = hybrid_organizer.get_item_path(
@@ -282,7 +282,7 @@ class TestHybridOrganizer:
     def test_get_item_path_category(self, hybrid_organizer, tmp_path):
         """Test path generation for category level."""
         jd_number = JohnnyDecimalNumber(
-            area=10, category=1, id_number=None, level=NumberLevel.CATEGORY
+            area=10, category=1, item_id=None
         )
 
         path = hybrid_organizer.get_item_path(
@@ -295,7 +295,7 @@ class TestHybridOrganizer:
     def test_get_item_path_id(self, hybrid_organizer, tmp_path):
         """Test path generation for ID level."""
         jd_number = JohnnyDecimalNumber(
-            area=10, category=1, id_number=1, level=NumberLevel.ID
+            area=10, category=1, item_id=1
         )
 
         path = hybrid_organizer.get_item_path(
@@ -378,7 +378,7 @@ class TestPARAAdapter:
     def test_adapt_from_jd_projects(self, para_adapter):
         """Test adapting JD to PARA Projects."""
         jd_number = JohnnyDecimalNumber(
-            area=15, category=1, id_number=None, level=NumberLevel.CATEGORY
+            area=15, category=1, item_id=None
         )
 
         item = para_adapter.adapt_from_jd(jd_number, "Website")
@@ -389,7 +389,7 @@ class TestPARAAdapter:
     def test_adapt_from_jd_invalid_area(self, para_adapter):
         """Test adapting JD number outside PARA range."""
         jd_number = JohnnyDecimalNumber(
-            area=50, category=1, id_number=None, level=NumberLevel.CATEGORY
+            area=50, category=1, item_id=None
         )
 
         with pytest.raises(ValueError, match="not in PARA range"):

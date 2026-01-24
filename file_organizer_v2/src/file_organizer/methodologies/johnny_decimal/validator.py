@@ -182,15 +182,15 @@ class MigrationValidator:
                     )
                 seen.add(rule.target_name)
 
-            # Check if target would conflict with existing folders
-            target_path = parent / rule.target_name
-            if target_path.exists() and target_path != rule.source_path:
-                result.add_issue(
-                    ValidationIssue(
-                        severity="warning",
-                        rule_index=idx,
-                        message=f"Target path already exists: {target_path}",
-                        suggestion="May need to merge or rename existing folder",
+                # Check if target would conflict with existing folders
+                target_path = parent / rule.target_name
+                if target_path.exists() and target_path != rule.source_path:
+                    result.add_issue(
+                        ValidationIssue(
+                            severity="warning",
+                            rule_index=idx,
+                            message=f"Target path already exists: {target_path}",
+                            suggestion="May need to merge or rename existing folder",
                     )
                 )
 

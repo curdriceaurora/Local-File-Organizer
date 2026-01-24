@@ -70,20 +70,21 @@ class JohnnyDecimalConfig:
                 "name": self.scheme.name,
                 "areas": [
                     {
-                        "area_number": area.area_number,
-                        "title": area.title,
+                        "area_range_start": area.area_range_start,
+                        "area_range_end": area.area_range_end,
+                        "name": area.name,
                         "description": area.description,
                     }
-                    for area in (self.scheme.areas or [])
+                    for area in self.scheme.areas.values()
                 ],
                 "categories": [
                     {
-                        "area_number": cat.area_number,
-                        "category_number": cat.category_number,
-                        "title": cat.title,
+                        "area": cat.area,
+                        "category": cat.category,
+                        "name": cat.name,
                         "description": cat.description,
                     }
-                    for cat in (self.scheme.categories or [])
+                    for cat in self.scheme.categories.values()
                 ],
             },
             "migration": {
@@ -116,26 +117,33 @@ class JohnnyDecimalConfig:
         scheme_data = data.get("scheme", {})
         areas = [
             AreaDefinition(
-                area_number=area["area_number"],
-                title=area["title"],
+                area_range_start=area["area_range_start"],
+                area_range_end=area["area_range_end"],
+                name=area["name"],
                 description=area.get("description", ""),
             )
             for area in scheme_data.get("areas", [])
         ]
         categories = [
             CategoryDefinition(
-                area_number=cat["area_number"],
-                category_number=cat["category_number"],
-                title=cat["title"],
+                area=cat["area"],
+                category=cat["category"],
+                name=cat["name"],
                 description=cat.get("description", ""),
             )
             for cat in scheme_data.get("categories", [])
         ]
+        # Create empty scheme and populate it
         scheme = NumberingScheme(
             name=scheme_data.get("name", "default"),
-            areas=areas if areas else None,
-            categories=categories if categories else None,
+            description="",
         )
+        # Add areas using the scheme's add_area method
+        for area_def in areas:
+            scheme.add_area(area_def)
+        # Add categories using the scheme's add_category method
+        for cat_def in categories:
+            scheme.add_category(cat_def)
 
         # Parse migration config
         migration_data = data.get("migration", {})
@@ -250,7 +258,10 @@ class ConfigBuilder:
         """
         self._areas.append(
             AreaDefinition(
-                area_number=area_number, title=title, description=description
+                area_range_start=area_number,
+                area_range_end=area_number,
+                name=title,
+                description=description
             )
         )
         return self
@@ -272,9 +283,9 @@ class ConfigBuilder:
         """
         self._categories.append(
             CategoryDefinition(
-                area_number=area_number,
-                category_number=category_number,
-                title=title,
+                area=area_number,
+                category=category_number,
+                name=title,
                 description=description,
             )
         )
@@ -355,11 +366,19 @@ class ConfigBuilder:
         Returns:
             JohnnyDecimalConfig instance
         """
+        # Create empty scheme and populate it
         scheme = NumberingScheme(
             name=self._scheme_name,
-            areas=self._areas if self._areas else None,
-            categories=self._categories if self._categories else None,
+            description="",
         )
+
+        # Add areas using the scheme's add_area method
+        for area_def in self._areas:
+            scheme.add_area(area_def)
+
+        # Add categories using the scheme's add_category method
+        for cat_def in self._categories:
+            scheme.add_category(cat_def)
 
         return JohnnyDecimalConfig(
             scheme=scheme,
