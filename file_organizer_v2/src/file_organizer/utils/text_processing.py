@@ -44,14 +44,14 @@ def ensure_nltk_data() -> None:
                 logger.debug(f"NLTK dataset {dataset} downloaded successfully")
             except Exception as e:
                 logger.warning(f"Failed to download NLTK {dataset}: {e}")
-        except Exception:
-            # Dataset exists but failed to load, ignore
-            pass
+        except Exception as e:
+            # Dataset exists but failed to load
+            logger.debug(f"NLTK dataset check failed for {dataset}: {e}")
 
     logger.debug("NLTK data verified and ready")
 
 
-def get_unwanted_words() -> Set[str]:
+def get_unwanted_words() -> set[str]:
     """Get set of unwanted words to filter out.
 
     Returns:
@@ -215,7 +215,7 @@ def sanitize_filename(
     return sanitized.lower() if sanitized else 'untitled'
 
 
-def extract_keywords(text: str, top_n: int = 5) -> List[str]:
+def extract_keywords(text: str, top_n: int = 5) -> list[str]:
     """Extract top keywords from text.
 
     Args:

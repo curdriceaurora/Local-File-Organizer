@@ -76,19 +76,19 @@ class CategoryThresholds:
 @dataclass
 class KeywordPatterns:
     """Custom keyword patterns for each category."""
-    project: List[str] = field(default_factory=lambda: [
+    project: list[str] = field(default_factory=lambda: [
         "project", "deadline", "due", "sprint", "milestone",
         "deliverable", "proposal", "presentation"
     ])
-    area: List[str] = field(default_factory=lambda: [
+    area: list[str] = field(default_factory=lambda: [
         "area", "ongoing", "recurring", "weekly", "monthly",
         "routine", "maintenance"
     ])
-    resource: List[str] = field(default_factory=lambda: [
+    resource: list[str] = field(default_factory=lambda: [
         "reference", "template", "guide", "tutorial",
         "documentation", "handbook", "manual"
     ])
-    archive: List[str] = field(default_factory=lambda: [
+    archive: list[str] = field(default_factory=lambda: [
         "archive", "old", "backup", "deprecated",
         "obsolete", "legacy", "completed"
     ])
@@ -103,6 +103,22 @@ class TemporalThresholds:
     resource_min_age: int = 60  # Resources are stable (60+ days)
     archive_min_age: int = 180  # Archives are 180+ days old
     archive_min_inactive: int = 90  # Not accessed for 90+ days
+
+    def __post_init__(self) -> None:
+        """Validate that all temporal thresholds are non-negative."""
+        thresholds = {
+            'project_max_age': self.project_max_age,
+            'area_min_age': self.area_min_age,
+            'area_max_age': self.area_max_age,
+            'resource_min_age': self.resource_min_age,
+            'archive_min_age': self.archive_min_age,
+            'archive_min_inactive': self.archive_min_inactive
+        }
+        for name, value in thresholds.items():
+            if value < 0:
+                raise ValueError(
+                    f"{name} must be non-negative, got {value}"
+                )
 
 
 @dataclass
@@ -126,11 +142,18 @@ class PARAConfig:
     preserve_user_overrides: bool = True  # Remember user corrections
 
     # Directory settings
-    default_root: Optional[Path] = None
+    default_root: Path | None = None
     project_dir: str = "Projects"
     area_dir: str = "Areas"
     resource_dir: str = "Resources"
     archive_dir: str = "Archive"
+
+    def __post_init__(self) -> None:
+        """Validate PARAConfig settings."""
+        if not (0.0 <= self.manual_review_threshold <= 1.0):
+            raise ValueError(
+                f"manual_review_threshold must be in [0.0, 1.0], got {self.manual_review_threshold}"
+            )
 
     @classmethod
     def load_from_yaml(cls, config_path: Path) -> "PARAConfig":
@@ -148,7 +171,7 @@ class PARAConfig:
             return cls()
 
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path) as f:
                 data = yaml.safe_load(f)
 
             if not data:
@@ -295,7 +318,7 @@ class PARAConfig:
         }
         return thresholds_map.get(category, 0.75)
 
-    def get_category_keywords(self, category: PARACategory) -> List[str]:
+    def get_category_keywords(self, category: PARACategory) -> list[str]:
         """Get keywords for a specific category."""
         keywords_map = {
             PARACategory.PROJECT: self.keyword_patterns.project,
@@ -320,7 +343,7 @@ class PARAConfig:
 DEFAULT_CONFIG = PARAConfig()
 
 
-def load_config(config_path: Optional[Path] = None) -> PARAConfig:
+def load_config(config_path: Path | None = None) -> PARAConfig:
     """
     Load PARA configuration.
 

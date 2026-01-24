@@ -68,12 +68,12 @@ class RuleCondition:
         metadata: Additional configuration for the condition
     """
     type: ConditionType
-    operator: Optional[LogicalOperator] = None
-    values: Optional[list[str]] = None
-    threshold: Optional[float] = None
-    min_matches: Optional[int] = None
-    max_matches: Optional[int] = None
-    subconditions: Optional[list['RuleCondition']] = None
+    operator: LogicalOperator | None = None
+    values: list[str] | None = None
+    threshold: float | None = None
+    min_matches: int | None = None
+    max_matches: int | None = None
+    subconditions: list['RuleCondition'] | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -114,10 +114,10 @@ class RuleAction:
         metadata: Additional action configuration
     """
     type: ActionType
-    category: Optional[str] = None
-    confidence: Optional[float] = None
-    tags: Optional[list[str]] = None
-    reason: Optional[str] = None
+    category: str | None = None
+    confidence: float | None = None
+    tags: list[str] | None = None
+    reason: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -177,11 +177,11 @@ class EvaluationContext:
         user_preferences: User-specific preferences
     """
     file_path: Path
-    content: Optional[str] = None
-    file_stat: Optional[dict[str, Any]] = None
+    content: str | None = None
+    file_stat: dict[str, Any] | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-    ai_analysis: Optional[dict[str, Any]] = None
-    user_preferences: Optional[dict[str, Any]] = None
+    ai_analysis: dict[str, Any] | None = None
+    user_preferences: dict[str, Any] | None = None
 
     @property
     def file_extension(self) -> str:
@@ -194,7 +194,7 @@ class EvaluationContext:
         return self.file_path.name
 
     @property
-    def file_age_days(self) -> Optional[int]:
+    def file_age_days(self) -> int | None:
         """Calculate file age in days."""
         if not self.file_stat or 'created' not in self.file_stat:
             return None
@@ -220,8 +220,8 @@ class RuleMatchResult:
     """
     rule: Rule
     matched: bool
-    confidence: Optional[float] = None
-    category: Optional[str] = None
+    confidence: float | None = None
+    category: str | None = None
     reasons: list[str] = field(default_factory=list)
     condition_results: dict[str, bool] = field(default_factory=dict)
     execution_time_ms: float = 0.0
@@ -473,7 +473,7 @@ class CategoryScorer(ABC):
         self,
         scores: dict[str, float],
         threshold: float
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Get the best category based on scores.
         
@@ -490,7 +490,7 @@ class CategoryScorer(ABC):
     def calculate_overall_confidence(
         self,
         matches: list[RuleMatchResult],
-        heuristic_scores: Optional[dict[str, float]] = None
+        heuristic_scores: dict[str, float] | None = None
     ) -> float:
         """
         Calculate an overall confidence score for the categorization.
@@ -565,7 +565,7 @@ class RuleEngine:
         self,
         context: EvaluationContext,
         strategy: ConflictResolutionStrategy = ConflictResolutionStrategy.HIGHEST_CONFIDENCE
-    ) -> Optional[RuleMatchResult]:
+    ) -> RuleMatchResult | None:
         """
         Evaluate all rules against a file and return the best match.
         

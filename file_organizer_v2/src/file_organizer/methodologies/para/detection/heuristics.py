@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, ClassVar, Optional, Union
 import logging
 import re
 import time
@@ -33,7 +33,7 @@ class HeuristicResult:
     """Result from a heuristic evaluation."""
     scores: dict[PARACategory, CategoryScore]
     overall_confidence: float
-    recommended_category: Optional[PARACategory] = None
+    recommended_category: PARACategory | None = None
     needs_manual_review: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -51,7 +51,7 @@ class Heuristic(ABC):
         self.weight = weight
 
     @abstractmethod
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: Dict | None = None) -> HeuristicResult:
         """
         Evaluate file and return category scores.
 
@@ -76,7 +76,7 @@ class TemporalHeuristic(Heuristic):
     - Creation vs modification gap → categorization hints
     """
 
-    def evaluate(self, file_path: Path, metadata: Optional[dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """Evaluate based on temporal patterns."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -143,27 +143,27 @@ class ContentHeuristic(Heuristic):
     """
 
     # Keyword patterns for each category
-    PROJECT_KEYWORDS = [
+    PROJECT_KEYWORDS: ClassVar[list[str]] = [
         "project", "deadline", "due", "sprint", "milestone", "deliverable",
         "proposal", "presentation", "report", "draft", "final", "v1", "v2"
     ]
 
-    AREA_KEYWORDS = [
+    AREA_KEYWORDS: ClassVar[list[str]] = [
         "area", "ongoing", "recurring", "weekly", "monthly", "routine",
         "maintenance", "health", "finance", "learning", "notes"
     ]
 
-    RESOURCE_KEYWORDS = [
+    RESOURCE_KEYWORDS: ClassVar[list[str]] = [
         "reference", "template", "guide", "tutorial", "documentation",
         "handbook", "manual", "example", "sample", "resource", "library"
     ]
 
-    ARCHIVE_KEYWORDS = [
+    ARCHIVE_KEYWORDS: ClassVar[list[str]] = [
         "archive", "old", "backup", "deprecated", "obsolete", "legacy",
         "completed", "finished", "done", "past", "historical"
     ]
 
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: Dict | None = None) -> HeuristicResult:
         """Evaluate based on content patterns."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -240,7 +240,7 @@ class StructuralHeuristic(Heuristic):
     - Archive folders → ARCHIVE
     """
 
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: Dict | None = None) -> HeuristicResult:
         """Evaluate based on file structure."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -302,7 +302,7 @@ class AIHeuristic(Heuristic):
     Can use local LLMs via Ollama for semantic understanding.
     """
 
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: Dict | None = None) -> HeuristicResult:
         """Evaluate using AI (placeholder for future implementation)."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -336,7 +336,7 @@ class HeuristicEngine:
     """
 
     # Auto-categorization thresholds
-    THRESHOLDS = {
+    THRESHOLDS: ClassVar[dict[PARACategory, float]] = {
         PARACategory.PROJECT: 0.75,
         PARACategory.AREA: 0.75,
         PARACategory.RESOURCE: 0.80,
@@ -373,7 +373,7 @@ class HeuristicEngine:
         if enable_ai:
             self.heuristics.append(AIHeuristic(weight=0.10))
 
-    def evaluate(self, file_path: Path, metadata: Optional[Dict] = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: Dict | None = None) -> HeuristicResult:
         """
         Evaluate file using all enabled heuristics.
 

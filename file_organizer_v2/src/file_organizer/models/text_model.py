@@ -41,7 +41,7 @@ class TextModel(BaseModel):
             raise ValueError(f"Expected TEXT model type, got {config.model_type}")
 
         super().__init__(config)
-        self.client: Optional[ollama.Client] = None
+        self.client: ollama.Client | None = None
 
     def initialize(self) -> None:
         """Initialize the Ollama client and pull model if needed."""
@@ -187,7 +187,7 @@ class TextModel(BaseModel):
             context_window=4096,
         )
 
-    def test_connection(self) -> Dict[str, Any]:
+    def test_connection(self) -> dict[str, Any]:
         """Test model connection and get info.
 
         Returns:
