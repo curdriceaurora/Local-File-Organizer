@@ -11,7 +11,7 @@ import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 from .categories import NumberingScheme, get_default_scheme
 from .numbering import JohnnyDecimalGenerator

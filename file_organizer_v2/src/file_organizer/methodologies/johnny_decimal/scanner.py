@@ -8,7 +8,7 @@ Detects current organization patterns and suggests appropriate JD mappings.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from .categories import JohnnyDecimalNumber, NumberingScheme
 

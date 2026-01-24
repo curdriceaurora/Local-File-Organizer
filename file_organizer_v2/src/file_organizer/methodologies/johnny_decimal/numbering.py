@@ -7,7 +7,7 @@ including automatic number assignment, validation, and conflict detection.
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional, Tuple
 
 from .categories import (
     AreaDefinition,

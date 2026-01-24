@@ -8,7 +8,7 @@ Handles renaming, restructuring, and maintains file integrity.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 from .categories import JohnnyDecimalNumber, NumberingScheme, NumberLevel
 from .numbering import JohnnyDecimalGenerator

@@ -8,7 +8,6 @@ Checks for conflicts, invalid numbers, and potential issues.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Set
 
 from .numbering import JohnnyDecimalGenerator
 from .transformer import TransformationPlan, TransformationRule

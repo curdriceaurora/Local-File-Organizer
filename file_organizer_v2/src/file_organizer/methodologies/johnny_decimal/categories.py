@@ -15,7 +15,7 @@ Based on the Johnny Decimal system by Johnny Noble.
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional
 
 
 class NumberLevel(str, Enum):

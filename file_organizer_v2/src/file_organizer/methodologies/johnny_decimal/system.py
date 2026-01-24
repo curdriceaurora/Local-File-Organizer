@@ -8,7 +8,7 @@ file organization, including number assignment, validation, and management.
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from .categories import (
     AreaDefinition,
