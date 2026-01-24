@@ -114,8 +114,19 @@ dedup = [
     "imagededup>=0.3.0",  # Image similarity and duplicate detection
 ]
 
+archive = [
+    "py7zr>=0.20.0",  # 7Z archive support
+    "rarfile>=4.1",  # RAR archive support (requires unrar tool)
+]
+
+scientific = [
+    "h5py>=3.10.0",  # HDF5 file format support
+    "netCDF4>=1.6.5",  # NetCDF file format support
+    "scipy>=1.11.0",  # MATLAB .mat file support
+]
+
 all = [
-    "file-organizer[dev,gui,web,audio,video,dedup]",
+    "file-organizer[dev,gui,web,audio,video,dedup,archive,scientific]",
 ]
 
 [project.scripts]
