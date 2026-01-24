@@ -100,7 +100,7 @@ phase3:
 
 ### Database Migration
 
-**Upgrade Database Schema**:
+<!-- CLI commands not yet implemented in Phase 3
 ```bash
 # Automatic migration
 file-organizer db migrate
@@ -108,15 +108,14 @@ file-organizer db migrate
 # Check migration status
 file-organizer db status
 ```
+-->
 
-**Preserve History**:
-```bash
-# Export Phase 2 history
-file-organizer history export phase2-history.json
+**Note**: Database migration commands are planned for a future release. For now, the system will automatically handle schema updates on first run.
 
-# Import into Phase 3
-file-organizer history import phase2-history.json --merge
-```
+**Preserve History** (manual approach):
+- Phase 3 uses a new database schema
+- Manual backup: Copy `~/.file_organizer/history.db` to a safe location
+- History from Phase 2 can be queried separately if needed
 
 ---
 
@@ -564,17 +563,24 @@ cat migration-log.txt
 
 ### Before Migration
 
-**Create Restore Point**:
+**Create Restore Point** (manual approach):
+<!-- CLI snapshot commands not yet implemented
 ```bash
-# Snapshot before migration
 file-organizer snapshot create ~/Documents --name before-phase3
-
-# List snapshots
 file-organizer snapshot list
-
-# Restore if needed
 file-organizer snapshot restore before-phase3 ~/Documents
 ```
+-->
+
+```bash
+# Manual backup strategy
+cp -r ~/Documents ~/Documents-backup-$(date +%Y%m%d)
+
+# Or use system backup tools
+tar -czf documents-backup.tar.gz ~/Documents
+```
+
+**Note**: Built-in snapshot commands are planned for future release. Use manual backup strategies until then.
 
 ### After Migration
 

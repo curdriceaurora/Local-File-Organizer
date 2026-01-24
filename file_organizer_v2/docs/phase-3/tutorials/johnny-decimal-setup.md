@@ -14,18 +14,25 @@ Select a pre-defined scheme or create your own:
 
 ### Option A: Use Pre-defined Scheme
 
+<!-- JD CLI commands not yet implemented
 ```bash
-# List available schemes
 file-organizer jd list-schemes
-
-# Available schemes:
-# - business: For business/company organization
-# - personal: For personal file management
-# - research: For academic/research work
-# - creative: For creative projects
-
-# Select scheme
 file-organizer jd init ~/Documents --scheme business
+```
+-->
+
+**Note**: Johnny Decimal CLI commands are planned for future release. For now, use the Python API:
+
+```python
+from file_organizer.methodologies.johnny_decimal import JohnnyDecimalSystem
+from file_organizer.methodologies.johnny_decimal.numbering import NumberingScheme
+from pathlib import Path
+
+system = JohnnyDecimalSystem()
+# Pre-defined schemes: business, personal, research, creative
+scheme = NumberingScheme.load_predefined("business")
+system.set_scheme(scheme)
+system.initialize_from_directory(Path.home() / "Documents")
 ```
 
 ### Option B: Generate from Existing Structure
