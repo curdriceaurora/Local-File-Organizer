@@ -59,9 +59,6 @@ dependencies = [
     "celery>=5.3.0",
     "redis>=5.0.0",
 
-    # Deduplication
-    "imagededup>=0.3.0",
-
     # Configuration
     "pyyaml>=6.0.0",  # YAML config parsing
 
@@ -113,8 +110,12 @@ video = [
     "scenedetect[opencv]>=0.6.0",  # Scene detection algorithms
 ]
 
+dedup = [
+    "imagededup>=0.3.0",  # Image similarity and duplicate detection
+]
+
 all = [
-    "file-organizer[dev,gui,web,audio,video]",
+    "file-organizer[dev,gui,web,audio,video,dedup]",
 ]
 
 [project.scripts]

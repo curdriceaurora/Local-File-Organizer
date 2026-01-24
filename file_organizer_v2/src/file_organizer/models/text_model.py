@@ -1,6 +1,6 @@
 """Text model implementation using Ollama."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 try:
     import ollama
@@ -8,8 +8,9 @@ try:
 except ImportError:
     OLLAMA_AVAILABLE = False
 
-from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from loguru import logger
+
+from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 
 
 class TextModel(BaseModel):

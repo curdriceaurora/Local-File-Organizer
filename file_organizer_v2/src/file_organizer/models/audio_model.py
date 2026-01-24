@@ -2,8 +2,9 @@
 
 from typing import Any
 
-from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from loguru import logger
+
+from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 
 
 class AudioModel(BaseModel):

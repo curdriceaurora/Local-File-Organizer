@@ -2,18 +2,17 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
+
+from loguru import logger
 
 from file_organizer.models import TextModel
 from file_organizer.models.base import ModelConfig
-from file_organizer.utils.file_readers import read_file, FileReadError
+from file_organizer.utils.file_readers import FileReadError, read_file
 from file_organizer.utils.text_processing import (
     clean_text,
-    sanitize_filename,
-    truncate_text,
     ensure_nltk_data,
+    truncate_text,
 )
-from loguru import logger
 
 
 @dataclass

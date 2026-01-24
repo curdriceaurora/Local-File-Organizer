@@ -1,13 +1,12 @@
 """Text processing utilities."""
 
 import re
-from typing import Set, List
 
 try:
     import nltk
-    from nltk.tokenize import word_tokenize
     from nltk.corpus import stopwords
     from nltk.stem import WordNetLemmatizer
+    from nltk.tokenize import word_tokenize
     NLTK_AVAILABLE = True
 except ImportError:
     NLTK_AVAILABLE = False
@@ -76,16 +75,14 @@ def get_unwanted_words() -> set[str]:
 
         # Conjunctions
         'but', 'if', 'or', 'because', 'about', 'into', 'through', 'during',
-        'before', 'after', 'above', 'below',
-
-        # Quantifiers
+        'before', 'after', 'above', # Quantifiers
         'any', 'each', 'few', 'more', 'most', 'other', 'some', 'such',
 
         # Negations
         'no', 'nor', 'not',
 
         # Other common words
-        'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't',
+        'own', 'same', 'so', 'than', 'too', 'very', 's', 't',
         'can', 'will', 'just', 'don', 'should', 'now', 'new',
 
         # Action verbs to avoid in filenames

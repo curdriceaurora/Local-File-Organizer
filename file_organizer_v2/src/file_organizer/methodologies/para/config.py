@@ -8,11 +8,10 @@ Configuration management for PARA methodology including:
 - Custom patterns and keywords
 """
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
-import copy
-import logging
+
 import yaml
 
 from .categories import PARACategory
@@ -28,27 +27,6 @@ class HeuristicWeights:
     structural: float = 0.30
     ai: float = 0.10
 
-    def __post_init__(self) -> None:
-        """Validate that weights sum to ~1.0 and are in valid range."""
-        # Validate individual weights are in [0, 1]
-        weights = [self.temporal, self.content, self.structural, self.ai]
-        for i, (name, weight) in enumerate(zip(
-            ['temporal', 'content', 'structural', 'ai'], weights
-        )):
-            if not (0.0 <= weight <= 1.0):
-                raise ValueError(
-                    f"{name} weight must be in [0.0, 1.0], got {weight}"
-                )
-
-        # Validate weights sum to ~1.0 (allow small floating point error)
-        total = sum(weights)
-        if not (0.99 <= total <= 1.01):
-            raise ValueError(
-                f"Heuristic weights must sum to 1.0, got {total:.4f}. "
-                f"Current: temporal={self.temporal}, content={self.content}, "
-                f"structural={self.structural}, ai={self.ai}"
-            )
-
 
 @dataclass
 class CategoryThresholds:
@@ -57,20 +35,6 @@ class CategoryThresholds:
     area: float = 0.75
     resource: float = 0.80
     archive: float = 0.90
-
-    def __post_init__(self) -> None:
-        """Validate that all thresholds are in [0.0, 1.0]."""
-        thresholds = {
-            'project': self.project,
-            'area': self.area,
-            'resource': self.resource,
-            'archive': self.archive
-        }
-        for name, threshold in thresholds.items():
-            if not (0.0 <= threshold <= 1.0):
-                raise ValueError(
-                    f"{name} threshold must be in [0.0, 1.0], got {threshold}"
-                )
 
 
 @dataclass
@@ -104,22 +68,6 @@ class TemporalThresholds:
     archive_min_age: int = 180  # Archives are 180+ days old
     archive_min_inactive: int = 90  # Not accessed for 90+ days
 
-    def __post_init__(self) -> None:
-        """Validate that all temporal thresholds are non-negative."""
-        thresholds = {
-            'project_max_age': self.project_max_age,
-            'area_min_age': self.area_min_age,
-            'area_max_age': self.area_max_age,
-            'resource_min_age': self.resource_min_age,
-            'archive_min_age': self.archive_min_age,
-            'archive_min_inactive': self.archive_min_inactive
-        }
-        for name, value in thresholds.items():
-            if value < 0:
-                raise ValueError(
-                    f"{name} must be non-negative, got {value}"
-                )
-
 
 @dataclass
 class PARAConfig:
@@ -147,13 +95,6 @@ class PARAConfig:
     area_dir: str = "Areas"
     resource_dir: str = "Resources"
     archive_dir: str = "Archive"
-
-    def __post_init__(self) -> None:
-        """Validate PARAConfig settings."""
-        if not (0.0 <= self.manual_review_threshold <= 1.0):
-            raise ValueError(
-                f"manual_review_threshold must be in [0.0, 1.0], got {self.manual_review_threshold}"
-            )
 
     @classmethod
     def load_from_yaml(cls, config_path: Path) -> "PARAConfig":
@@ -198,20 +139,6 @@ class PARAConfig:
                 **data.get('temporal_thresholds', {})
             )
 
-            # Parse default_root path with validation
-            default_root = None
-            if 'default_root' in data:
-                root_value = data['default_root']
-                # Check for None or empty values before creating Path
-                if root_value is not None and str(root_value).strip():
-                    try:
-                        default_root = Path(root_value)
-                    except (TypeError, ValueError) as e:
-                        logger.warning(f"Invalid default_root path '{root_value}': {e}")
-                        default_root = None
-                elif root_value is not None:
-                    logger.warning("default_root is empty, ignoring")
-
             # Create config
             config = cls(
                 heuristic_weights=heuristic_weights,
@@ -225,7 +152,7 @@ class PARAConfig:
                 manual_review_threshold=data.get('manual_review_threshold', 0.60),
                 auto_categorize=data.get('auto_categorize', True),
                 preserve_user_overrides=data.get('preserve_user_overrides', True),
-                default_root=default_root,
+                default_root=Path(data['default_root']) if 'default_root' in data else None,
                 project_dir=data.get('project_dir', 'Projects'),
                 area_dir=data.get('area_dir', 'Areas'),
                 resource_dir=data.get('resource_dir', 'Resources'),
@@ -235,19 +162,8 @@ class PARAConfig:
             logger.info(f"Loaded configuration from {config_path}")
             return config
 
-        except (yaml.YAMLError, ValueError) as e:
-            # YAML parsing or validation errors
-            logger.error(f"Invalid configuration format in {config_path}: {e}")
-            logger.info("Using default configuration")
-            return cls()
-        except (PermissionError, OSError) as e:
-            # File access errors
-            logger.error(f"Cannot read configuration file {config_path}: {e}")
-            logger.info("Using default configuration")
-            return cls()
-        except (KeyError, TypeError) as e:
-            # Missing or wrong type configuration keys
-            logger.error(f"Invalid configuration structure in {config_path}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to load config from {config_path}: {e}")
             logger.info("Using default configuration")
             return cls()
 
@@ -371,5 +287,4 @@ def load_config(config_path: Path | None = None) -> PARAConfig:
         return PARAConfig.load_from_yaml(config_path)
     else:
         logger.info("Using default PARA configuration")
-        # Return fresh instance to prevent callers from mutating the default
-        return PARAConfig()
+        return DEFAULT_CONFIG

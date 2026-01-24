@@ -5,12 +5,11 @@ Provides audio format conversion, normalization, and preprocessing
 capabilities to prepare audio files for transcription and analysis.
 """
 
+import logging
+import tempfile
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Union
-import logging
-import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ class AudioPreprocessor:
     - Silence removal
     """
 
-    def __init__(self, config: Optional[AudioConfig] = None):
+    def __init__(self, config: AudioConfig | None = None):
         """
         Initialize the audio preprocessor.
 
@@ -78,10 +77,10 @@ class AudioPreprocessor:
 
     def convert_to_wav(
         self,
-        audio_path: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
-        sample_rate: Optional[int] = None,
-        channels: Optional[int] = None,
+        audio_path: str | Path,
+        output_path: str | Path | None = None,
+        sample_rate: int | None = None,
+        channels: int | None = None,
     ) -> Path:
         """
         Convert audio file to WAV format optimized for transcription.
@@ -143,8 +142,10 @@ class AudioPreprocessor:
             logger.info(f"Conversion complete: {output_path}")
             return output_path
 
-        except FileNotFoundError:
-            # Fallback to pydub if ffmpeg not available
+        except FileNotFoundError as e:
+            # Fallback to pydub if ffmpeg executable not found
+            # (input file existence already validated above)
+            logger.debug(f"ffmpeg not found ({e}), falling back to pydub")
             return self._convert_with_pydub(
                 audio_path, output_path, sample_rate, channels
             )
@@ -183,15 +184,16 @@ class AudioPreprocessor:
             return output_path
 
         except ImportError as e:
+            logger.error(f"pydub not available: {e}")
             raise ImportError(
                 "Neither ffmpeg nor pydub is available for audio conversion. "
                 "Install one of them: apt-get install ffmpeg or pip install pydub"
-            ) from e
+            ) from None
 
     def normalize_audio(
         self,
-        audio_path: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
+        audio_path: str | Path,
+        output_path: str | Path | None = None,
         target_db: float = -20.0,
     ) -> Path:
         """
@@ -231,8 +233,8 @@ class AudioPreprocessor:
 
     def remove_silence(
         self,
-        audio_path: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
+        audio_path: str | Path,
+        output_path: str | Path | None = None,
         silence_thresh: int = -40,  # dB
         min_silence_len: int = 1000,  # ms
     ) -> Path:
@@ -288,8 +290,8 @@ class AudioPreprocessor:
 
     def preprocess(
         self,
-        audio_path: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
+        audio_path: str | Path,
+        output_path: str | Path | None = None,
         convert_to_wav: bool = True,
         normalize: bool = True,
         remove_silence: bool = False,
@@ -299,46 +301,43 @@ class AudioPreprocessor:
 
         Args:
             audio_path: Input audio file path
-            output_path: Output file path (None = creates temp file in system temp dir)
+            output_path: Output file path (None = temp file)
             convert_to_wav: Whether to convert to WAV
             normalize: Whether to normalize audio levels
             remove_silence: Whether to remove silence
 
         Returns:
             Path to preprocessed audio file
-
-        Note:
-            When output_path is None, a temporary file is created. Caller is responsible
-            for cleanup. Consider using tempfile.TemporaryDirectory() context manager
-            when calling this method.
         """
-        import shutil
-
         audio_path = Path(audio_path)
         current_file = audio_path
 
-        logger.info(f"Starting preprocessing pipeline for: {audio_path}")
+        # Warn if output_path provided but won't be used for final output
+        if output_path and not convert_to_wav:
+            logger.warning(
+                "output_path provided but convert_to_wav=False. "
+                "Output path only applies during format conversion. "
+                "Other operations may create temporary files."
+            )
 
-        # Determine target output path
-        if output_path is not None:
-            target_path = Path(output_path)
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-        else:
-            target_path = None
+        logger.info(f"Starting preprocessing pipeline for: {audio_path}")
 
         # Step 1: Convert to WAV if needed
         if convert_to_wav and audio_path.suffix.lower() != ".wav":
-            current_file = self.convert_to_wav(current_file, target_path)
-        elif target_path is not None:
-            # If not converting but output_path specified, copy to target
-            shutil.copy2(current_file, target_path)
-            current_file = target_path
+            current_file = self.convert_to_wav(current_file, output_path)
+        elif output_path and not convert_to_wav:
+            # If output_path specified but no conversion, copy to output_path first
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            import shutil
+            shutil.copy2(current_file, output_path)
+            current_file = output_path
 
-        # Step 2: Normalize (operates on current_file)
+        # Step 2: Normalize
         if normalize:
             current_file = self.normalize_audio(current_file)
 
-        # Step 3: Remove silence (operates on current_file)
+        # Step 3: Remove silence
         if remove_silence:
             current_file = self.remove_silence(current_file)
 
@@ -346,7 +345,7 @@ class AudioPreprocessor:
         return current_file
 
     @staticmethod
-    def get_audio_info(audio_path: Union[str, Path]) -> dict:
+    def get_audio_info(audio_path: str | Path) -> dict:
         """
         Get audio file information.
 
@@ -376,7 +375,7 @@ class AudioPreprocessor:
             return {"error": "pydub not available"}
 
     @staticmethod
-    def is_supported_format(audio_path: Union[str, Path]) -> bool:
+    def is_supported_format(audio_path: str | Path) -> bool:
         """Check if audio format is supported."""
         audio_path = Path(audio_path)
         suffix = audio_path.suffix.lower()[1:]  # Remove the dot

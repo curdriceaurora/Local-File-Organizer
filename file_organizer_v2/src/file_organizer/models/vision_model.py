@@ -1,7 +1,7 @@
 """Vision model implementation using Ollama for multimodal tasks."""
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 try:
     import ollama
@@ -9,8 +9,9 @@ try:
 except ImportError:
     OLLAMA_AVAILABLE = False
 
-from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from loguru import logger
+
+from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 
 
 class VisionModel(BaseModel):

@@ -7,10 +7,10 @@ This is a design specification - actual implementation will be in subsequent tas
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Union
-from datetime import datetime
+from typing import Any
 
 
 class ConditionType(Enum):
@@ -56,7 +56,7 @@ class ConflictResolutionStrategy(Enum):
 class RuleCondition:
     """
     Represents a single condition in a rule.
-    
+
     Attributes:
         type: The type of condition to evaluate
         operator: Logical operator if combining multiple conditions
@@ -78,33 +78,17 @@ class RuleCondition:
 
     def __post_init__(self):
         """Validate condition configuration."""
-        # Composite conditions must have subconditions
-        if self.type == ConditionType.COMPOSITE:
-            if not self.subconditions:
-                raise ValueError(
-                    "Composite conditions must have subconditions. "
-                    "Provide a list of RuleCondition objects in 'subconditions' field."
-                )
-            if not self.operator:
-                raise ValueError(
-                    "Composite conditions must have a logical operator (AND, OR, NOT)"
-                )
-
-        # Most non-composite conditions need values or threshold
-        # Exceptions: TEMPORAL, METADATA, FILE_SIZE may use metadata instead
-        elif self.type not in (ConditionType.TEMPORAL, ConditionType.METADATA, ConditionType.FILE_SIZE):
-            if not self.values and self.threshold is None:
-                raise ValueError(
-                    f"Condition type {self.type.value} requires either 'values' or 'threshold'. "
-                    f"Provide a list of values to match or a numeric threshold."
-                )
+        if self.type == ConditionType.COMPOSITE and not self.subconditions:
+            raise ValueError("Composite conditions must have subconditions")
+        if self.type != ConditionType.COMPOSITE and not self.values and self.threshold is None:
+            raise ValueError(f"Condition type {self.type} requires values or threshold")
 
 
 @dataclass
 class RuleAction:
     """
     Represents an action to be taken when a rule matches.
-    
+
     Attributes:
         type: The type of action to execute
         category: PARA category to assign (for categorize/suggest actions)
@@ -135,7 +119,7 @@ class RuleAction:
 class Rule:
     """
     Represents a complete rule for PARA categorization.
-    
+
     Attributes:
         name: Unique identifier for the rule
         description: Human-readable description of what the rule does
@@ -167,7 +151,7 @@ class Rule:
 class EvaluationContext:
     """
     Context information for evaluating rules against a file.
-    
+
     Attributes:
         file_path: Path to the file being evaluated
         content: Text content of the file (if applicable)
@@ -208,7 +192,7 @@ class EvaluationContext:
 class RuleMatchResult:
     """
     Result of evaluating a rule against a file.
-    
+
     Attributes:
         rule: The rule that was evaluated
         matched: Whether the rule conditions were satisfied
@@ -230,7 +214,7 @@ class RuleMatchResult:
 class RuleParser(ABC):
     """
     Abstract interface for parsing rule definitions from various formats.
-    
+
     The parser converts external rule definitions (YAML, JSON, etc.) into
     internal Rule objects that can be evaluated by the engine.
     """
@@ -239,13 +223,13 @@ class RuleParser(ABC):
     def parse_file(self, file_path: Path) -> list[Rule]:
         """
         Parse rules from a file.
-        
+
         Args:
             file_path: Path to the rule definition file
-            
+
         Returns:
             List of parsed Rule objects
-            
+
         Raises:
             ValueError: If the file format is invalid
             FileNotFoundError: If the file doesn't exist
@@ -256,13 +240,13 @@ class RuleParser(ABC):
     def parse_string(self, content: str) -> list[Rule]:
         """
         Parse rules from a string.
-        
+
         Args:
             content: Rule definition as a string
-            
+
         Returns:
             List of parsed Rule objects
-            
+
         Raises:
             ValueError: If the content format is invalid
         """
@@ -272,13 +256,13 @@ class RuleParser(ABC):
     def validate_rule(self, rule: Rule) -> bool:
         """
         Validate that a rule is properly configured.
-        
+
         Args:
             rule: Rule to validate
-            
+
         Returns:
             True if valid, raises exception otherwise
-            
+
         Raises:
             ValueError: If the rule is invalid with detailed error message
         """
@@ -288,23 +272,23 @@ class RuleParser(ABC):
 class ConditionEvaluator(ABC):
     """
     Abstract interface for evaluating rule conditions.
-    
+
     The evaluator checks whether a file meets the conditions specified in a rule.
     """
 
     @abstractmethod
     def evaluate_condition(
-        self, 
-        condition: RuleCondition, 
+        self,
+        condition: RuleCondition,
         context: EvaluationContext
     ) -> bool:
         """
         Evaluate a single condition against a file.
-        
+
         Args:
             condition: The condition to evaluate
             context: Context information about the file
-            
+
         Returns:
             True if the condition is satisfied, False otherwise
         """
@@ -319,12 +303,12 @@ class ConditionEvaluator(ABC):
     ) -> bool:
         """
         Evaluate multiple conditions with a logical operator.
-        
+
         Args:
             conditions: List of conditions to evaluate
             operator: How to combine the results (AND, OR, NOT)
             context: Context information about the file
-            
+
         Returns:
             Combined result based on the operator
         """
@@ -338,13 +322,13 @@ class ConditionEvaluator(ABC):
     ) -> float:
         """
         Get a numeric score for how well a condition matches (0.0-1.0).
-        
+
         This is useful for confidence scoring and partial matching.
-        
+
         Args:
             condition: The condition to score
             context: Context information about the file
-            
+
         Returns:
             Score between 0.0 (no match) and 1.0 (perfect match)
         """
@@ -354,7 +338,7 @@ class ConditionEvaluator(ABC):
 class ActionExecutor(ABC):
     """
     Abstract interface for executing rule actions.
-    
+
     The executor performs the actions specified by matched rules.
     """
 
@@ -366,11 +350,11 @@ class ActionExecutor(ABC):
     ) -> dict[str, Any]:
         """
         Execute a single action.
-        
+
         Args:
             action: The action to execute
             context: Context information about the file
-            
+
         Returns:
             Result of the action execution with details
         """
@@ -384,11 +368,11 @@ class ActionExecutor(ABC):
     ) -> bool:
         """
         Check if an action can be executed in the current context.
-        
+
         Args:
             action: The action to check
             context: Context information
-            
+
         Returns:
             True if the action can be executed
         """
@@ -398,7 +382,7 @@ class ActionExecutor(ABC):
 class ConflictResolver(ABC):
     """
     Abstract interface for resolving conflicts when multiple rules match.
-    
+
     The resolver determines which category to assign when multiple rules
     suggest different categories.
     """
@@ -412,12 +396,12 @@ class ConflictResolver(ABC):
     ) -> RuleMatchResult:
         """
         Resolve conflicts between multiple matching rules.
-        
+
         Args:
             matches: List of rules that matched
             strategy: Strategy to use for resolution
             context: Context information about the file
-            
+
         Returns:
             The winning rule match result
         """
@@ -431,11 +415,11 @@ class ConflictResolver(ABC):
     ) -> bool:
         """
         Determine if the categorization should be flagged for manual review.
-        
+
         Args:
             matches: List of rules that matched
             threshold: Confidence threshold below which to flag
-            
+
         Returns:
             True if the result should be reviewed manually
         """
@@ -445,7 +429,7 @@ class ConflictResolver(ABC):
 class CategoryScorer(ABC):
     """
     Abstract interface for calculating confidence scores for categories.
-    
+
     The scorer combines multiple signals (heuristics, rules, AI) to produce
     a final confidence score for each category.
     """
@@ -458,11 +442,11 @@ class CategoryScorer(ABC):
     ) -> dict[str, float]:
         """
         Calculate confidence scores for all categories.
-        
+
         Args:
             matches: List of rules that matched
             context: Context information about the file
-            
+
         Returns:
             Dictionary mapping category names to confidence scores (0.0-1.0)
         """
@@ -476,11 +460,11 @@ class CategoryScorer(ABC):
     ) -> str | None:
         """
         Get the best category based on scores.
-        
+
         Args:
             scores: Category confidence scores
             threshold: Minimum confidence threshold
-            
+
         Returns:
             Best category name or None if no category meets threshold
         """
@@ -494,11 +478,11 @@ class CategoryScorer(ABC):
     ) -> float:
         """
         Calculate an overall confidence score for the categorization.
-        
+
         Args:
             matches: List of rules that matched
             heuristic_scores: Additional scores from heuristics
-            
+
         Returns:
             Overall confidence score (0.0-1.0)
         """
@@ -508,7 +492,7 @@ class CategoryScorer(ABC):
 class RuleEngine:
     """
     Main rule engine orchestrator.
-    
+
     Coordinates rule parsing, condition evaluation, action execution,
     and conflict resolution to categorize files using the PARA methodology.
     """
@@ -523,7 +507,7 @@ class RuleEngine:
     ):
         """
         Initialize the rule engine with its components.
-        
+
         Args:
             parser: Rule parser implementation
             evaluator: Condition evaluator implementation
@@ -541,10 +525,10 @@ class RuleEngine:
     def load_rules(self, rule_file: Path) -> int:
         """
         Load rules from a file.
-        
+
         Args:
             rule_file: Path to the rule definition file
-            
+
         Returns:
             Number of rules loaded
         """
@@ -554,7 +538,7 @@ class RuleEngine:
     def add_rule(self, rule: Rule) -> None:
         """
         Add a single rule to the engine.
-        
+
         Args:
             rule: Rule to add
         """
@@ -568,27 +552,27 @@ class RuleEngine:
     ) -> RuleMatchResult | None:
         """
         Evaluate all rules against a file and return the best match.
-        
+
         Args:
             context: Context information about the file
             strategy: Strategy for resolving conflicts
-            
+
         Returns:
             Best matching rule result or None if no rules match
         """
         matches = []
-        
+
         for rule in self.rules:
             if not rule.enabled:
                 continue
-                
+
             # Evaluate all conditions
             all_conditions_met = True
             for condition in rule.conditions:
                 if not self.evaluator.evaluate_condition(condition, context):
                     all_conditions_met = False
                     break
-            
+
             if all_conditions_met:
                 # Extract confidence and category from actions
                 confidence = None
@@ -598,7 +582,7 @@ class RuleEngine:
                         confidence = action.confidence
                         category = action.category
                         break
-                
+
                 match = RuleMatchResult(
                     rule=rule,
                     matched=True,
@@ -606,13 +590,13 @@ class RuleEngine:
                     category=category
                 )
                 matches.append(match)
-        
+
         if not matches:
             return None
-        
+
         if len(matches) == 1:
             return matches[0]
-        
+
         # Resolve conflicts
         return self.resolver.resolve(matches, strategy, context)
 
@@ -622,25 +606,25 @@ class RuleEngine:
     ) -> dict[str, float]:
         """
         Get confidence scores for all categories.
-        
+
         Args:
             context: Context information about the file
-            
+
         Returns:
             Dictionary mapping category names to confidence scores
         """
         matches = []
-        
+
         for rule in self.rules:
             if not rule.enabled:
                 continue
-                
+
             all_conditions_met = all(
                 self.evaluator.evaluate_condition(cond, context)
                 for cond in rule.conditions
             )
-            
+
             if all_conditions_met:
                 matches.append(RuleMatchResult(rule=rule, matched=True))
-        
+
         return self.scorer.calculate_category_scores(matches, context)

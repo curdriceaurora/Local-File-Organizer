@@ -1,13 +1,13 @@
 """Vision file processing service."""
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
+
+from loguru import logger
 
 from file_organizer.models import VisionModel
 from file_organizer.models.base import ModelConfig
-from loguru import logger
-import re
 
 
 @dataclass

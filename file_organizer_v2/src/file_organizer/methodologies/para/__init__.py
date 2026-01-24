@@ -6,20 +6,19 @@ PARA stands for Projects, Areas, Resources, and Archive.
 
 Components:
 - categories: Core PARA category definitions and data models
-- config: Configuration management for PARA categorization
-- detection: Heuristic-based detection algorithms
-- rules: Rule engine for custom categorization logic
+- models: Data structures for categorization results
+- interfaces: Abstract interfaces for rule engines and heuristics
 
 Author: File Organizer v2.0
 License: MIT
 """
 
 from .categories import (
-    PARACategory,
-    CategoryDefinition,
     CategorizationResult,
-    get_category_definition,
+    CategoryDefinition,
+    PARACategory,
     get_all_category_definitions,
+    get_category_definition,
 )
 
 __all__ = [

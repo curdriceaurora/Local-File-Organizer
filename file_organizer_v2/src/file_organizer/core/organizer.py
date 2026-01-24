@@ -6,13 +6,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import ClassVar, Optional, Union
 
-from file_organizer.models import TextModel, VisionModel
-from file_organizer.models.base import ModelConfig
-from file_organizer.services import TextProcessor, ProcessedFile, VisionProcessor, ProcessedImage
 from loguru import logger
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
+
+from file_organizer.models import TextModel, VisionModel
+from file_organizer.models.base import ModelConfig
+from file_organizer.services import ProcessedFile, ProcessedImage, TextProcessor, VisionProcessor
 
 
 @dataclass
@@ -154,12 +155,12 @@ class FileOrganizer:
         # Organize all files
         if all_processed:
             if not self.dry_run:
-                self.console.print(f"\n[bold blue]Organizing files...[/bold blue]")
+                self.console.print("\n[bold blue]Organizing files...[/bold blue]")
                 organized = self._organize_files(all_processed, output_path, skip_existing)
                 result.organized_structure = organized
                 result.processed_files = len(all_processed)
             else:
-                self.console.print(f"\n[bold yellow]DRY RUN - Simulating organization...[/bold yellow]")
+                self.console.print("\n[bold yellow]DRY RUN - Simulating organization...[/bold yellow]")
                 simulated = self._simulate_organization(all_processed, output_path)
                 result.organized_structure = simulated
                 result.processed_files = len(all_processed)
@@ -442,7 +443,7 @@ class FileOrganizer:
         self.console.print("=" * 70)
 
         # Statistics
-        self.console.print(f"\n[bold]Statistics:[/bold]")
+        self.console.print("\n[bold]Statistics:[/bold]")
         self.console.print(f"  Total files scanned: {result.total_files}")
         self.console.print(f"  [green]Processed: {result.processed_files}[/green]")
         self.console.print(f"  [yellow]Skipped: {result.skipped_files}[/yellow]")
@@ -451,7 +452,7 @@ class FileOrganizer:
 
         # Show structure
         if result.organized_structure:
-            self.console.print(f"\n[bold]Organized Structure:[/bold]")
+            self.console.print("\n[bold]Organized Structure:[/bold]")
             self.console.print(f"[cyan]{output_path}/[/cyan]")
 
             for folder, files in sorted(result.organized_structure.items()):

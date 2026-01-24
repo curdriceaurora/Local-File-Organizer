@@ -504,7 +504,6 @@ examples:
         threshold: 0.65
     actions:
       - type: "suggest"
-        category: "resource"
         confidence: 0.70
         reason: "AI-based categorization suggestion"
   

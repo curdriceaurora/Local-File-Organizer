@@ -1,7 +1,6 @@
 """File reading utilities for various file types."""
 
 from pathlib import Path
-from typing import Optional, Union
 
 try:
     from PIL import Image
