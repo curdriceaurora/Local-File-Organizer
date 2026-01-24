@@ -201,15 +201,16 @@ class PARAConfig:
             # Parse default_root path with validation
             default_root = None
             if 'default_root' in data:
-                try:
-                    default_root = Path(data['default_root'])
-                    # Validate that path string is reasonable (not empty, not just whitespace)
-                    if not str(data['default_root']).strip():
-                        logger.warning("default_root is empty, ignoring")
+                root_value = data['default_root']
+                # Check for None or empty values before creating Path
+                if root_value is not None and str(root_value).strip():
+                    try:
+                        default_root = Path(root_value)
+                    except (TypeError, ValueError) as e:
+                        logger.warning(f"Invalid default_root path '{root_value}': {e}")
                         default_root = None
-                except (TypeError, ValueError) as e:
-                    logger.warning(f"Invalid default_root path '{data.get('default_root')}': {e}")
-                    default_root = None
+                elif root_value is not None:
+                    logger.warning("default_root is empty, ignoring")
 
             # Create config
             config = cls(
@@ -370,5 +371,5 @@ def load_config(config_path: Path | None = None) -> PARAConfig:
         return PARAConfig.load_from_yaml(config_path)
     else:
         logger.info("Using default PARA configuration")
-        # Return a deep copy to prevent callers from mutating the singleton
-        return copy.deepcopy(DEFAULT_CONFIG)
+        # Return fresh instance to prevent callers from mutating the default
+        return PARAConfig()
