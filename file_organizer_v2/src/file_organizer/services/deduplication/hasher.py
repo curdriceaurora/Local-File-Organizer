@@ -15,22 +15,47 @@ HashAlgorithm = Literal["md5", "sha256"]
 class FileHasher:
     """
     Computes cryptographic hashes of files for duplicate detection.
-    
+
     Supports MD5 (faster) and SHA256 (more secure) algorithms.
     Uses chunked reading for memory efficiency with large files.
     """
-    
+
     # Default chunk size: 64KB (optimal for most systems)
     DEFAULT_CHUNK_SIZE = 65536
-    
+    # Minimum chunk size: 1KB (smaller would be inefficient)
+    MIN_CHUNK_SIZE = 1024
+    # Maximum chunk size: 10MB (larger could cause memory issues)
+    MAX_CHUNK_SIZE = 10 * 1024 * 1024
+
     def __init__(self, chunk_size: int = DEFAULT_CHUNK_SIZE):
         """
         Initialize the FileHasher.
-        
+
         Args:
             chunk_size: Size of chunks to read at a time (in bytes).
                        Default is 64KB for optimal performance.
+                       Must be between 1KB and 10MB.
+
+        Raises:
+            ValueError: If chunk_size is invalid
         """
+        if not isinstance(chunk_size, int):
+            raise ValueError(
+                f"chunk_size must be an integer, got {type(chunk_size).__name__}"
+            )
+
+        if chunk_size < self.MIN_CHUNK_SIZE:
+            raise ValueError(
+                f"chunk_size must be at least {self.MIN_CHUNK_SIZE} bytes (1KB), "
+                f"got {chunk_size}"
+            )
+
+        if chunk_size > self.MAX_CHUNK_SIZE:
+            raise ValueError(
+                f"chunk_size must not exceed {self.MAX_CHUNK_SIZE} bytes (10MB), "
+                f"got {chunk_size}"
+            )
+
         self.chunk_size = chunk_size
     
     def compute_hash(

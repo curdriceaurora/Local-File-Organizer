@@ -6,7 +6,7 @@ interface for duplicate detection workflows.
 """
 
 from pathlib import Path
-from typing import , Optional, Callable
+from typing import List, Optional, Callable
 from dataclasses import dataclass
 
 from .hasher import FileHasher, HashAlgorithm
