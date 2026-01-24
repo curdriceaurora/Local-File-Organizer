@@ -26,7 +26,7 @@ class OrganizationItem:
     name: str
     path: Path
     category: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 class OrganizationMethodology(Protocol):
@@ -335,7 +335,7 @@ class AdapterRegistry:
 
     def __init__(self):
         """Initialize adapter registry."""
-        self._adapters: List[MethodologyAdapter] = []
+        self._adapters: list[MethodologyAdapter] = []
 
     def register(self, adapter: MethodologyAdapter) -> None:
         """

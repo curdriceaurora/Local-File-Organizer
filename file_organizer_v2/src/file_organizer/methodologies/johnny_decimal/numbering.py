@@ -46,8 +46,8 @@ class JohnnyDecimalGenerator:
             scheme: The Johnny Decimal numbering scheme to use
         """
         self.scheme = scheme
-        self._used_numbers: Set[str] = set()
-        self._number_mappings: Dict[str, Path] = {}
+        self._used_numbers: set[str] = set()
+        self._number_mappings: dict[str, Path] = {}
 
     def register_existing_number(self, number: JohnnyDecimalNumber, file_path: Path) -> None:
         """
@@ -291,7 +291,7 @@ class JohnnyDecimalGenerator:
         content: str,
         filename: str = "",
         prefer_category: bool = True,
-    ) -> Tuple[JohnnyDecimalNumber, float, List[str]]:
+    ) -> Tuple[JohnnyDecimalNumber, float, list[str]]:
         """
         Suggest a Johnny Decimal number based on content analysis.
 
@@ -303,7 +303,7 @@ class JohnnyDecimalGenerator:
         Returns:
             Tuple of (suggested_number, confidence, reasons)
         """
-        reasons: List[str] = []
+        reasons: list[str] = []
         best_area: Optional[int] = None
         best_category: Optional[CategoryDefinition] = None
         max_matches = 0
@@ -381,7 +381,7 @@ class JohnnyDecimalGenerator:
 
         return number, confidence, reasons
 
-    def validate_number(self, number: JohnnyDecimalNumber) -> Tuple[bool, List[str]]:
+    def validate_number(self, number: JohnnyDecimalNumber) -> Tuple[bool, list[str]]:
         """
         Validate a Johnny Decimal number against the scheme.
 
@@ -391,7 +391,7 @@ class JohnnyDecimalGenerator:
         Returns:
             Tuple of (is_valid, error_messages)
         """
-        errors: List[str] = []
+        errors: list[str] = []
 
         # Check if area exists in scheme
         area_def = self.scheme.get_area(number.area)
@@ -420,7 +420,7 @@ class JohnnyDecimalGenerator:
 
     def find_conflicts(
         self, number: JohnnyDecimalNumber
-    ) -> List[Tuple[str, Path]]:
+    ) -> list[Tuple[str, Path]]:
         """
         Find all numbers that conflict with the given number.
 
@@ -428,9 +428,9 @@ class JohnnyDecimalGenerator:
             number: The number to check for conflicts
 
         Returns:
-            List of (conflicting_number, file_path) tuples
+            list of (conflicting_number, file_path) tuples
         """
-        conflicts: List[Tuple[str, Path]] = []
+        conflicts: list[Tuple[str, Path]] = []
         number_str = number.formatted_number
 
         # Check exact match
@@ -528,7 +528,7 @@ class JohnnyDecimalGenerator:
                 description=number.description,
             )
 
-    def get_usage_statistics(self) -> Dict[str, any]:
+    def get_usage_statistics(self) -> dict[str, any]:
         """
         Get statistics about number usage.
 

@@ -30,10 +30,10 @@ class ValidationResult:
     """Result of validating a transformation plan."""
 
     is_valid: bool
-    issues: List[ValidationIssue] = field(default_factory=list)
-    errors: List[ValidationIssue] = field(default_factory=list)
-    warnings: List[ValidationIssue] = field(default_factory=list)
-    info: List[ValidationIssue] = field(default_factory=list)
+    issues: list[ValidationIssue] = field(default_factory=list)
+    errors: list[ValidationIssue] = field(default_factory=list)
+    warnings: list[ValidationIssue] = field(default_factory=list)
+    info: list[ValidationIssue] = field(default_factory=list)
 
     def add_issue(self, issue: ValidationIssue) -> None:
         """Add an issue and categorize it."""
@@ -122,7 +122,7 @@ class MigrationValidator:
         self, plan: TransformationPlan, result: ValidationResult
     ) -> None:
         """Check for Johnny Decimal number conflicts."""
-        used_numbers: Set[str] = set()
+        used_numbers: set[str] = set()
 
         for idx, rule in enumerate(plan.rules):
             number_str = rule.jd_number.formatted_number
@@ -156,7 +156,7 @@ class MigrationValidator:
     ) -> None:
         """Check for target name conflicts in same directory."""
         # Group rules by parent directory
-        by_parent: dict[Path, List[tuple[int, TransformationRule]]] = {}
+        by_parent: dict[Path, list[tuple[int, TransformationRule]]] = {}
 
         for idx, rule in enumerate(plan.rules):
             parent = rule.source_path.parent

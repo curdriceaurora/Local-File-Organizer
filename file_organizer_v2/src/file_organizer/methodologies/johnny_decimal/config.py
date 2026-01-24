@@ -9,7 +9,6 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from .categories import NumberingScheme, AreaDefinition, CategoryDefinition
 
@@ -61,9 +60,9 @@ class JohnnyDecimalConfig:
     scheme: NumberingScheme
     migration: MigrationConfig = field(default_factory=MigrationConfig)
     compatibility: CompatibilityConfig = field(default_factory=CompatibilityConfig)
-    custom_mappings: Dict[str, int] = field(default_factory=dict)
+    custom_mappings: dict[str, int] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert configuration to dictionary."""
         return {
             "scheme": {
@@ -111,7 +110,7 @@ class JohnnyDecimalConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> "JohnnyDecimalConfig":
+    def from_dict(cls, data: dict) -> "JohnnyDecimalConfig":
         """Create configuration from dictionary."""
         # Parse scheme
         scheme_data = data.get("scheme", {})
@@ -238,11 +237,11 @@ class ConfigBuilder:
             scheme_name: Name for the numbering scheme
         """
         self._scheme_name = scheme_name
-        self._areas: List[AreaDefinition] = []
-        self._categories: List[CategoryDefinition] = []
+        self._areas: list[AreaDefinition] = []
+        self._categories: list[CategoryDefinition] = []
         self._migration = MigrationConfig()
         self._compatibility = CompatibilityConfig()
-        self._custom_mappings: Dict[str, int] = {}
+        self._custom_mappings: dict[str, int] = {}
 
     def add_area(self, area_number: int, title: str, description: str = "") -> "ConfigBuilder":
         """

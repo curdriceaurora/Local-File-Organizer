@@ -31,9 +31,9 @@ class MigrationResult:
     failed_count: int
     skipped_count: int
     duration_seconds: float
-    transformed_paths: List[Path] = field(default_factory=list)
-    failed_paths: List[tuple[Path, str]] = field(default_factory=list)
-    skipped_paths: List[Path] = field(default_factory=list)
+    transformed_paths: list[Path] = field(default_factory=list)
+    failed_paths: list[tuple[Path, str]] = field(default_factory=list)
+    skipped_paths: list[Path] = field(default_factory=list)
     backup_path: Optional[Path] = None
 
 
@@ -43,7 +43,7 @@ class RollbackInfo:
 
     migration_id: str
     timestamp: datetime
-    original_structure: Dict[str, tuple[str, str]]  # original_path -> (target_path, original_name)
+    original_structure: dict[str, tuple[str, str]]  # original_path -> (target_path, original_name)
     backup_path: Optional[Path]
 
 
@@ -74,7 +74,7 @@ class JohnnyDecimalMigrator:
             self.scheme, self.generator, preserve_original_names
         )
         self.validator = MigrationValidator(self.generator)
-        self._rollback_history: List[RollbackInfo] = []
+        self._rollback_history: list[RollbackInfo] = []
 
     def create_migration_plan(self, root_path: Path) -> tuple[TransformationPlan, ScanResult]:
         """
@@ -144,9 +144,9 @@ class JohnnyDecimalMigrator:
             f"{len(plan.rules)} transformations"
         )
 
-        transformed_paths: List[Path] = []
-        failed_paths: List[tuple[Path, str]] = []
-        skipped_paths: List[Path] = []
+        transformed_paths: list[Path] = []
+        failed_paths: list[tuple[Path, str]] = []
+        skipped_paths: list[Path] = []
         backup_path: Optional[Path] = None
         rollback_info: Optional[RollbackInfo] = None
 

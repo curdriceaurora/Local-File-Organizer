@@ -22,12 +22,12 @@ class FolderInfo:
     path: Path
     name: str
     depth: int
-    children: List["FolderInfo"] = field(default_factory=list)
+    children: list["FolderInfo"] = field(default_factory=list)
     file_count: int = 0
     total_size: int = 0  # bytes
     suggested_number: Optional[JohnnyDecimalNumber] = None
     confidence: float = 0.0
-    reasoning: List[str] = field(default_factory=list)
+    reasoning: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -39,9 +39,9 @@ class ScanResult:
     total_files: int
     total_size: int
     max_depth: int
-    folder_tree: List[FolderInfo]
-    detected_patterns: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
+    folder_tree: list[FolderInfo]
+    detected_patterns: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 class FolderScanner:
@@ -126,7 +126,7 @@ class FolderScanner:
 
         return result
 
-    def _scan_folder(self, path: Path, depth: int) -> List[FolderInfo]:
+    def _scan_folder(self, path: Path, depth: int) -> list[FolderInfo]:
         """
         Recursively scan a folder and its children.
 
@@ -135,13 +135,13 @@ class FolderScanner:
             depth: Current depth in hierarchy
 
         Returns:
-            List of FolderInfo objects for folders at this level
+            list of FolderInfo objects for folders at this level
         """
         if depth > self.max_depth:
             logger.warning(f"Max depth exceeded at {path}")
             return []
 
-        folders: List[FolderInfo] = []
+        folders: list[FolderInfo] = []
 
         try:
             items = sorted(path.iterdir())
@@ -205,7 +205,7 @@ class FolderScanner:
 
         return folder_info
 
-    def _detect_patterns(self, folder_tree: List[FolderInfo]) -> List[str]:
+    def _detect_patterns(self, folder_tree: list[FolderInfo]) -> list[str]:
         """
         Detect organizational patterns in the folder structure.
 
@@ -213,7 +213,7 @@ class FolderScanner:
             folder_tree: Scanned folder tree
 
         Returns:
-            List of detected pattern descriptions
+            list of detected pattern descriptions
         """
         patterns = []
 
@@ -290,7 +290,7 @@ class FolderScanner:
 
         return False
 
-    def _find_max_depth(self, folder_tree: List[FolderInfo]) -> int:
+    def _find_max_depth(self, folder_tree: list[FolderInfo]) -> int:
         """
         Find maximum depth in folder tree.
 
@@ -313,7 +313,7 @@ class FolderScanner:
 
         return max_depth
 
-    def _count_folders(self, folder_tree: List[FolderInfo]) -> int:
+    def _count_folders(self, folder_tree: list[FolderInfo]) -> int:
         """
         Count total number of folders in tree.
 
@@ -328,7 +328,7 @@ class FolderScanner:
             count += self._count_folders(folder.children)
         return count
 
-    def _generate_warnings(self, folder_tree: List[FolderInfo], max_depth: int) -> List[str]:
+    def _generate_warnings(self, folder_tree: list[FolderInfo], max_depth: int) -> list[str]:
         """
         Generate warnings about potential migration issues.
 
@@ -337,7 +337,7 @@ class FolderScanner:
             max_depth: Maximum depth found
 
         Returns:
-            List of warning messages
+            list of warning messages
         """
         warnings = []
 

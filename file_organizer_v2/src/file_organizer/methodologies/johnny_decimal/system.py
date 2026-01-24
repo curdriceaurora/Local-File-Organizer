@@ -147,9 +147,9 @@ class JohnnyDecimalSystem:
         Raises:
             NumberConflictError: If preferred number conflicts
         """
-        reasons: List[str] = []
-        conflicts: List[str] = []
-        alternative_numbers: Dict[str, float] = {}
+        reasons: list[str] = []
+        conflicts: list[str] = []
+        alternative_numbers: dict[str, float] = {}
         confidence = 0.5
 
         # Check if preferred number is available
@@ -345,7 +345,7 @@ class JohnnyDecimalSystem:
             self.generator._number_mappings[old_str] = file_path
             raise
 
-    def get_area_summary(self, area: int) -> Dict[str, any]:
+    def get_area_summary(self, area: int) -> dict[str, any]:
         """
         Get summary information about an area.
 
@@ -374,17 +374,17 @@ class JohnnyDecimalSystem:
             "numbers": sorted(used_numbers),
         }
 
-    def get_all_areas_summary(self) -> List[Dict[str, any]]:
+    def get_all_areas_summary(self) -> list[dict[str, any]]:
         """
         Get summary of all defined areas.
 
         Returns:
-            List of area summaries
+            list of area summaries
         """
         areas = self.scheme.get_available_areas()
         return [self.get_area_summary(area) for area in areas]
 
-    def get_usage_report(self) -> Dict[str, any]:
+    def get_usage_report(self) -> dict[str, any]:
         """
         Generate a comprehensive usage report.
 
