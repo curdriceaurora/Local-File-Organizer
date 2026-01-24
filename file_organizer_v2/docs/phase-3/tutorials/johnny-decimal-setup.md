@@ -207,15 +207,18 @@ from file_organizer.methodologies.johnny_decimal import (
 
 # Add new category
 marketing_area = AreaDefinition(
-    area_range=(40, 49),
-    name="Marketing"
+    area_range_start=40,
+    area_range_end=49,
+    name="Marketing",
+    description="Marketing and communications"
 )
 
 social_media = CategoryDefinition(
-    category_number=41,
+    area=40,
+    category=41,
     name="Social Media",
-    keywords=["social", "twitter", "facebook", "linkedin"],
-    parent_area=marketing_area
+    description="Social media campaigns and content",
+    keywords=["social", "twitter", "facebook", "linkedin"]
 )
 
 # Register with system

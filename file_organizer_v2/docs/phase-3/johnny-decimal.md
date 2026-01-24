@@ -62,9 +62,10 @@ Johnny Decimal uses a two-level hierarchy:
 1. **Initialize Johnny Decimal system**:
 ```python
 from file_organizer.methodologies.johnny_decimal import JohnnyDecimalSystem
+from pathlib import Path
 
 system = JohnnyDecimalSystem()
-system.initialize("~/Documents")
+system.initialize_from_directory(Path.home() / "Documents")
 ```
 
 2. **Organize your first file**:
