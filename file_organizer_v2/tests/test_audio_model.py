@@ -1,7 +1,7 @@
 """Tests for AudioModel class - Phase 3 placeholder."""
 
-
 import pytest
+from pathlib import Path
 
 # Note: AudioModel is a Phase 3 placeholder
 # Tests document expected behavior for when implemented

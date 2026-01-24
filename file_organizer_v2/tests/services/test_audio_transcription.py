@@ -1,7 +1,8 @@
 """Tests for audio transcription service - Phase 3."""
 
-
 import pytest
+from pathlib import Path
+from unittest.mock import Mock, patch
 
 # Phase 3 placeholder tests for audio transcription
 

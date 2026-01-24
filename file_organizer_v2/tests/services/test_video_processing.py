@@ -1,7 +1,7 @@
 """Tests for video processing service - Phase 3."""
 
-
 import pytest
+from pathlib import Path
 
 # Phase 3 placeholder tests for video processing
 
@@ -43,19 +43,15 @@ class TestVideoProcessingPlaceholder:
     @pytest.mark.skip(reason="Phase 3 - Scene detection not yet implemented")
     def test_scene_detection(self, tmp_path):
         """Test scene detection in video."""
-        from file_organizer.services.video.scene_detector import (
-            SceneDetectionResult,
-            SceneDetector,
-        )
+        from file_organizer.services.video.scene_detector import SceneDetector
 
         video_file = tmp_path / "test.mp4"
         video_file.write_bytes(b"fake video")
 
         detector = SceneDetector()
-        result = detector.detect_scenes(video_file)
+        scenes = detector.detect_scenes(video_file)
 
-        assert isinstance(result, SceneDetectionResult)
-        assert hasattr(result, "scenes") and isinstance(result.scenes, list)
+        assert isinstance(scenes, list)
 
     @pytest.mark.skip(reason="Phase 3 - Frame extraction not yet implemented")
     def test_frame_extraction(self, tmp_path):

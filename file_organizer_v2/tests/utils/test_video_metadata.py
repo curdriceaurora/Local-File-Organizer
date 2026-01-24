@@ -1,7 +1,7 @@
 """Tests for video metadata extraction - Phase 3."""
 
-
 import pytest
+from pathlib import Path
 
 # Phase 3 placeholder tests for video metadata
 
