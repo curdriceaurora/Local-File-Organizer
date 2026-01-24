@@ -9,6 +9,7 @@ This module provides safe backup management for file operations, including:
 - Cleaning up old backups
 """
 
+import fcntl
 import json
 import shutil
 from datetime import datetime, timedelta
@@ -273,7 +274,7 @@ class BackupManager:
 
     def _load_manifest(self) -> Dict:
         """
-        Load the backup manifest from disk.
+        Load the backup manifest from disk with file locking.
 
         Returns:
             Dictionary containing manifest data
@@ -283,20 +284,33 @@ class BackupManager:
 
         try:
             with open(self.manifest_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                # Acquire shared lock for reading
+                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                try:
+                    data = json.load(f)
+                finally:
+                    # Release lock
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                return data
         except (json.JSONDecodeError, IOError):
             # If manifest is corrupted, start fresh
             return {}
 
     def _save_manifest(self, manifest: Dict) -> None:
         """
-        Save the backup manifest to disk.
+        Save the backup manifest to disk with file locking.
 
         Args:
             manifest: Dictionary containing manifest data
         """
         try:
             with open(self.manifest_path, 'w', encoding='utf-8') as f:
-                json.dump(manifest, f, indent=2, ensure_ascii=False)
+                # Acquire exclusive lock for writing
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    json.dump(manifest, f, indent=2, ensure_ascii=False)
+                finally:
+                    # Release lock
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
         except IOError as e:
             raise IOError(f"Failed to save manifest: {e}") from e
