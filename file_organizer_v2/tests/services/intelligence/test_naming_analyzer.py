@@ -6,9 +6,10 @@ and semantic component extraction.
 """
 
 import pytest
+
 from file_organizer.services.intelligence.naming_analyzer import (
-    NamingAnalyzer,
     NameStructure,
+    NamingAnalyzer,
 )
 
 
@@ -286,7 +287,7 @@ class TestNamingAnalyzerIntegration:
         ]
 
         # Analyze all
-        structures = [analyzer.analyze_structure(f) for f in files]
+        [analyzer.analyze_structure(f) for f in files]
 
         # Reports should be similar to each other
         report_comparison = analyzer.compare_structures(files[0], files[1])

@@ -2,15 +2,12 @@
 Tests for preference database manager.
 """
 
-import pytest
 import tempfile
-import json
 from pathlib import Path
-from datetime import datetime
 
-from file_organizer.services.intelligence.preference_database import (
-    PreferenceDatabaseManager
-)
+import pytest
+
+from file_organizer.services.intelligence.preference_database import PreferenceDatabaseManager
 
 
 @pytest.fixture
@@ -279,7 +276,7 @@ class TestCorrectionTracking:
 
     def test_add_category_correction(self, db_manager):
         """Test adding category change correction."""
-        corr_id = db_manager.add_correction(
+        db_manager.add_correction(
             correction_type="category_change",
             source_path="/path/to/file.txt",
             category_old="Documents/General",

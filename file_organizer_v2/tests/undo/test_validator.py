@@ -4,15 +4,15 @@ Unit tests for OperationValidator.
 Tests validation logic for undo/redo operations.
 """
 
-import unittest
-import tempfile
 import shutil
-from pathlib import Path
+import tempfile
+import unittest
 from datetime import datetime
+from pathlib import Path
 
-from file_organizer.history.models import Operation, OperationType, OperationStatus
-from file_organizer.undo.validator import OperationValidator
+from file_organizer.history.models import Operation, OperationStatus, OperationType
 from file_organizer.undo.models import ConflictType
+from file_organizer.undo.validator import OperationValidator
 
 
 class TestOperationValidator(unittest.TestCase):

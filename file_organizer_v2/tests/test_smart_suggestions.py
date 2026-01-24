@@ -5,27 +5,19 @@ Comprehensive tests for pattern analyzer, suggestion engine,
 misplacement detector, and feedback system.
 """
 
-import pytest
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
-from datetime import datetime
 
+import pytest
+
+from file_organizer.models.suggestion_types import Suggestion, SuggestionType
+from file_organizer.services.misplacement_detector import MisplacementDetector
 from file_organizer.services.pattern_analyzer import (
-    PatternAnalyzer, NamingPattern, LocationPattern, ContentCluster
+    PatternAnalyzer,
 )
-from file_organizer.services.smart_suggestions import (
-    SuggestionEngine, ConfidenceScorer
-)
-from file_organizer.services.misplacement_detector import (
-    MisplacementDetector, MisplacedFile
-)
-from file_organizer.services.suggestion_feedback import (
-    SuggestionFeedback, FeedbackEntry
-)
-from file_organizer.models.suggestion_types import (
-    Suggestion, SuggestionType, ConfidenceFactors
-)
+from file_organizer.services.smart_suggestions import ConfidenceScorer, SuggestionEngine
+from file_organizer.services.suggestion_feedback import SuggestionFeedback
 
 
 class TestPatternAnalyzer:

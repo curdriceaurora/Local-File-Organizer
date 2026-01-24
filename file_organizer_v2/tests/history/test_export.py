@@ -2,15 +2,17 @@
 Tests for history export functionality.
 """
 
-import pytest
-import tempfile
-import json
 import csv
-from pathlib import Path
+import json
+import tempfile
 from datetime import datetime
-from file_organizer.history.tracker import OperationHistory
+from pathlib import Path
+
+import pytest
+
 from file_organizer.history.export import HistoryExporter
 from file_organizer.history.models import OperationType
+from file_organizer.history.tracker import OperationHistory
 
 
 class TestHistoryExporter:
@@ -67,7 +69,7 @@ class TestHistoryExporter:
         assert output_path.exists()
 
         # Verify JSON structure
-        with open(output_path, 'r') as f:
+        with open(output_path) as f:
             data = json.load(f)
 
         assert 'export_date' in data
@@ -92,10 +94,10 @@ class TestHistoryExporter:
         history.commit_transaction(txn_id)
 
         output_path = temp_output_dir / 'export.json'
-        stats = exporter.export_to_json(output_path, include_transactions=True)
+        exporter.export_to_json(output_path, include_transactions=True)
 
         # Verify transactions are included
-        with open(output_path, 'r') as f:
+        with open(output_path) as f:
             data = json.load(f)
 
         assert 'transactions' in data
@@ -114,7 +116,7 @@ class TestHistoryExporter:
 
         assert stats['operations_exported'] == 1
 
-        with open(output_path, 'r') as f:
+        with open(output_path) as f:
             data = json.load(f)
 
         assert all(op['operation_type'] == 'move' for op in data['operations'])
@@ -132,7 +134,7 @@ class TestHistoryExporter:
         assert output_path.exists()
 
         # Verify CSV structure
-        with open(output_path, 'r', newline='') as f:
+        with open(output_path, newline='') as f:
             reader = csv.DictReader(f)
             rows = list(reader)
 
@@ -153,7 +155,7 @@ class TestHistoryExporter:
 
         assert count == 1
 
-        with open(output_path, 'r', newline='') as f:
+        with open(output_path, newline='') as f:
             reader = csv.DictReader(f)
             rows = list(reader)
 
@@ -186,7 +188,7 @@ class TestHistoryExporter:
         assert output_path.exists()
 
         # Verify CSV structure
-        with open(output_path, 'r', newline='') as f:
+        with open(output_path, newline='') as f:
             reader = csv.DictReader(f)
             rows = list(reader)
 
@@ -209,7 +211,7 @@ class TestHistoryExporter:
         assert output_path.exists()
 
         # Verify statistics structure
-        with open(output_path, 'r') as f:
+        with open(output_path) as f:
             stats = json.load(f)
 
         assert 'total_operations' in stats

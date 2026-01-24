@@ -8,11 +8,11 @@ import pytest
 from file_organizer.utils.file_readers import (
     FileReadError,
     read_cad_file,
-    read_dxf_file,
     read_dwg_file,
+    read_dxf_file,
+    read_file,
     read_iges_file,
     read_step_file,
-    read_file,
 )
 
 

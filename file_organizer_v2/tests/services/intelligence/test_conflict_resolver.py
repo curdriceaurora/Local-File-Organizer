@@ -4,8 +4,10 @@ Unit tests for ConflictResolver class.
 Tests conflict resolution with multiple weighting strategies.
 """
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+
 from file_organizer.services.intelligence.conflict_resolver import ConflictResolver
 
 

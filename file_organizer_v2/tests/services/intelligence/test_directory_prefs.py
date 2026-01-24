@@ -4,8 +4,10 @@ Unit tests for DirectoryPrefs class.
 Tests directory-level preference management with hierarchical inheritance.
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from file_organizer.services.intelligence.directory_prefs import DirectoryPrefs
 
 

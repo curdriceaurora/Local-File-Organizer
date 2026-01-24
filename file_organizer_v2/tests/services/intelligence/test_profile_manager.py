@@ -4,15 +4,13 @@ Tests for ProfileManager
 Tests profile CRUD operations, activation, validation, and atomic operations.
 """
 
-import pytest
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
 
-from file_organizer.services.intelligence.profile_manager import (
-    Profile,
-    ProfileManager
-)
+import pytest
+
+from file_organizer.services.intelligence.profile_manager import Profile, ProfileManager
 
 
 @pytest.fixture

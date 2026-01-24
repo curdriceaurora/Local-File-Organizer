@@ -2,9 +2,11 @@
 Tests for database manager.
 """
 
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
+
 from file_organizer.history.database import DatabaseManager
 
 

@@ -51,6 +51,14 @@ demo_images/
 organized_output/
 output/
 
+# Test coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Backup files
+*.bak
+
 # Logs
 logs/
 *.log.*

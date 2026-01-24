@@ -5,12 +5,14 @@ Tests multi-factor confidence scoring, time decay, pattern boosting,
 and trend analysis functionality.
 """
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
-from datetime import datetime, timezone, timedelta
+
 from file_organizer.services.intelligence.confidence import (
     ConfidenceEngine,
-    UsageRecord,
     PatternUsageData,
+    UsageRecord,
 )
 
 
@@ -19,7 +21,7 @@ class TestUsageRecord:
 
     def test_create_usage_record(self):
         """Test creating a usage record."""
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         record = UsageRecord(
             timestamp=timestamp,
             success=True,
@@ -32,7 +34,7 @@ class TestUsageRecord:
 
     def test_usage_record_defaults(self):
         """Test usage record with default context."""
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         record = UsageRecord(timestamp=timestamp, success=False)
 
         assert record.timestamp == timestamp
@@ -57,7 +59,7 @@ class TestPatternUsageData:
     def test_add_usage(self):
         """Test adding usage records."""
         data = PatternUsageData(pattern_id="test_pattern")
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
 
         data.add_usage(timestamp, success=True)
 
@@ -70,7 +72,7 @@ class TestPatternUsageData:
     def test_add_multiple_usages(self):
         """Test adding multiple usage records."""
         data = PatternUsageData(pattern_id="test_pattern")
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         data.add_usage(now - timedelta(days=10), success=True)
         data.add_usage(now - timedelta(days=5), success=False)
@@ -113,7 +115,7 @@ class TestConfidenceEngine:
     def test_calculate_confidence_single_use(self):
         """Test confidence calculation with single use."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         engine.track_usage("pattern1", now, success=True)
         confidence = engine.calculate_confidence("pattern1")
@@ -124,7 +126,7 @@ class TestConfidenceEngine:
     def test_calculate_confidence_multiple_uses(self):
         """Test confidence calculation with multiple successful uses."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Add 20 successful uses
         for i in range(20):
@@ -138,7 +140,7 @@ class TestConfidenceEngine:
     def test_calculate_confidence_with_failures(self):
         """Test confidence calculation with mixed success/failure."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # 5 successes, 5 failures
         for i in range(10):
@@ -153,7 +155,7 @@ class TestConfidenceEngine:
     def test_frequency_score(self):
         """Test frequency score calculation."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Test different frequencies
         data_1_use = PatternUsageData(pattern_id="p1")
@@ -172,7 +174,7 @@ class TestConfidenceEngine:
     def test_recency_score(self):
         """Test recency score calculation."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Recent usage
         data_recent = PatternUsageData(pattern_id="p1")
@@ -191,7 +193,7 @@ class TestConfidenceEngine:
     def test_consistency_score(self):
         """Test consistency score calculation."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Consistent pattern (all successes)
         data_consistent = PatternUsageData(pattern_id="p1")
@@ -212,7 +214,7 @@ class TestConfidenceEngine:
     def test_decay_old_patterns(self):
         """Test time decay for old patterns."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         patterns = [
             {
@@ -240,7 +242,7 @@ class TestConfidenceEngine:
     def test_boost_recent_patterns(self):
         """Test confidence boost for recent patterns."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         patterns = [
             {
@@ -285,7 +287,7 @@ class TestConfidenceEngine:
     def test_get_confidence_trend(self):
         """Test confidence trend analysis."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Improving trend: more successes in recent period
         for i in range(20):
@@ -300,7 +302,7 @@ class TestConfidenceEngine:
     def test_get_confidence_trend_insufficient_data(self):
         """Test trend analysis with insufficient data."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         engine.track_usage("pattern1", now, success=True)
 
@@ -313,7 +315,7 @@ class TestConfidenceEngine:
     def test_track_usage(self):
         """Test tracking pattern usage."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         engine.track_usage("pattern1", now, success=True, context={'action': 'test'})
 
@@ -326,7 +328,7 @@ class TestConfidenceEngine:
     def test_get_usage_data(self):
         """Test retrieving usage data."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         engine.track_usage("pattern1", now, success=True)
 
@@ -341,7 +343,7 @@ class TestConfidenceEngine:
     def test_clear_usage_data(self):
         """Test clearing usage data."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         engine.track_usage("pattern1", now, success=True)
         engine.track_usage("pattern2", now, success=True)
@@ -366,7 +368,7 @@ class TestConfidenceEngine:
     def test_confidence_bounds(self):
         """Test that confidence scores are always in valid range."""
         engine = ConfidenceEngine()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Test various scenarios
         scenarios = [

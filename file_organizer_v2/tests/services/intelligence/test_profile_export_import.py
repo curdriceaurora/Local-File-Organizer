@@ -4,15 +4,16 @@ Tests for ProfileExporter and ProfileImporter
 Tests export/import functionality, validation, and selective operations.
 """
 
-import pytest
-import tempfile
-import shutil
 import json
+import shutil
+import tempfile
 from pathlib import Path
 
-from file_organizer.services.intelligence.profile_manager import ProfileManager
+import pytest
+
 from file_organizer.services.intelligence.profile_exporter import ProfileExporter
 from file_organizer.services.intelligence.profile_importer import ProfileImporter
+from file_organizer.services.intelligence.profile_manager import ProfileManager
 
 
 @pytest.fixture
@@ -44,7 +45,7 @@ def importer(profile_manager):
 @pytest.fixture
 def sample_profile(profile_manager):
     """Create a sample profile with data."""
-    profile = profile_manager.create_profile("sample", "Sample profile")
+    profile_manager.create_profile("sample", "Sample profile")
 
     # Add some data
     profile_manager.update_profile(

@@ -4,16 +4,16 @@ Unit tests for HistoryViewer.
 Tests history viewing and filtering functionality.
 """
 
-import unittest
-import tempfile
 import shutil
-from pathlib import Path
+import sys
+import tempfile
+import unittest
 from datetime import datetime, timedelta
 from io import StringIO
-import sys
+from pathlib import Path
 
+from file_organizer.history.models import OperationStatus, OperationType
 from file_organizer.history.tracker import OperationHistory
-from file_organizer.history.models import OperationType, OperationStatus
 from file_organizer.undo.viewer import HistoryViewer
 
 

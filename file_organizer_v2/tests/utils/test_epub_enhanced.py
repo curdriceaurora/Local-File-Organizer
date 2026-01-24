@@ -8,10 +8,11 @@ This module tests the EnhancedEPUBReader class which provides:
 - EPUB 2/3 support
 """
 
-import pytest
-from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
 import io
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
 
 try:
     from PIL import Image
@@ -28,14 +29,11 @@ except ImportError:
 
 from file_organizer.utils.epub_enhanced import (
     EnhancedEPUBReader,
-    EPUBMetadata,
     EPUBChapter,
-    EPUBContent,
-    EPUBProcessingError,
+    EPUBMetadata,
+    get_epub_metadata,
     read_epub_simple,
-    get_epub_metadata
 )
-
 
 # Skip all tests if ebooklib not available
 pytestmark = pytest.mark.skipif(

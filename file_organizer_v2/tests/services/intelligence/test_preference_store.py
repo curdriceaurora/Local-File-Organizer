@@ -14,17 +14,16 @@ Tests cover:
 """
 
 import json
-import pytest
 import tempfile
 import threading
 import time
 from pathlib import Path
-from datetime import datetime
+
+import pytest
 
 from file_organizer.services.intelligence.preference_store import (
-    PreferenceStore,
     DirectoryPreference,
-    SchemaVersion
+    PreferenceStore,
 )
 
 
@@ -106,7 +105,7 @@ class TestPreferenceStoreInit:
     def test_init_creates_directory(self, temp_storage):
         """Test that initialization creates storage directory"""
         nested_path = temp_storage / "nested" / "path"
-        store = PreferenceStore(storage_path=nested_path)
+        PreferenceStore(storage_path=nested_path)
         assert nested_path.exists()
 
     def test_init_default_state(self, store):
@@ -273,7 +272,7 @@ class TestLoadSave:
 
         # Create new store - should load from backup
         new_store = PreferenceStore(storage_path=temp_storage)
-        result = new_store.load_preferences()
+        new_store.load_preferences()
 
         # Should have recovered from backup
         pref = new_store.get_preference(test_path, fallback_to_parent=False)
@@ -513,7 +512,7 @@ class TestImportExport:
         assert export_path.exists()
 
         # Verify content
-        with open(export_path, 'r') as f:
+        with open(export_path) as f:
             data = json.load(f)
         assert data["version"] == "1.0"
         assert str(test_path.resolve()) in data["directory_preferences"]
@@ -636,7 +635,7 @@ class TestStatistics:
         prefs = store.list_directory_preferences()
 
         assert len(prefs) == 3
-        for path_str, pref in prefs:
+        for path_str, _pref in prefs:
             assert Path(path_str) in [p.resolve() for p in paths]
 
 
@@ -717,7 +716,7 @@ class TestThreadSafety:
 
         # File should still be valid
         new_store = PreferenceStore(storage_path=store.storage_path)
-        result = new_store.load_preferences()
+        new_store.load_preferences()
         assert new_store._loaded is True
 
 

@@ -5,9 +5,9 @@ Tests system orchestration, configuration, and integration.
 """
 
 import json
-import pytest
 from pathlib import Path
-from unittest.mock import MagicMock
+
+import pytest
 
 from file_organizer.methodologies.johnny_decimal.categories import (
     AreaDefinition,
@@ -16,7 +16,6 @@ from file_organizer.methodologies.johnny_decimal.categories import (
     NumberingScheme,
 )
 from file_organizer.methodologies.johnny_decimal.numbering import (
-    NumberConflictError,
     InvalidNumberError,
 )
 from file_organizer.methodologies.johnny_decimal.system import (

@@ -1,22 +1,22 @@
 """Tests for archive and scientific format readers."""
 
 import io
-import zipfile
 import tarfile
+import zipfile
 from pathlib import Path
 
 import pytest
 
 from file_organizer.utils.file_readers import (
     FileReadError,
-    read_zip_file,
     read_7z_file,
-    read_tar_file,
-    read_rar_file,
-    read_hdf5_file,
-    read_netcdf_file,
-    read_mat_file,
     read_file,
+    read_hdf5_file,
+    read_mat_file,
+    read_netcdf_file,
+    read_rar_file,
+    read_tar_file,
+    read_zip_file,
 )
 
 
@@ -112,8 +112,8 @@ def sample_netcdf_file(tmp_path: Path) -> Path:
 def sample_mat_file(tmp_path: Path) -> Path:
     """Create a sample MATLAB .mat file for testing."""
     try:
-        from scipy.io import savemat
         import numpy as np
+        from scipy.io import savemat
     except ImportError:
         pytest.skip("scipy not installed")
 

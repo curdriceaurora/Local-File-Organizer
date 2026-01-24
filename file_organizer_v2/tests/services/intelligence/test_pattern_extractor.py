@@ -5,11 +5,12 @@ Tests filename analysis, pattern extraction, delimiter detection,
 date format recognition, and pattern generation.
 """
 
+
 import pytest
-from pathlib import Path
+
 from file_organizer.services.intelligence.pattern_extractor import (
-    NamingPatternExtractor,
     NamingPattern,
+    NamingPatternExtractor,
     PatternElement,
 )
 

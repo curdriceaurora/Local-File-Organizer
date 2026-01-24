@@ -5,10 +5,11 @@ Tests pattern scoring, ranking, filtering, and statistical analysis.
 """
 
 import pytest
+
 from file_organizer.services.intelligence.scoring import (
     PatternScorer,
-    ScoredPattern,
     ScoreAnalyzer,
+    ScoredPattern,
 )
 
 

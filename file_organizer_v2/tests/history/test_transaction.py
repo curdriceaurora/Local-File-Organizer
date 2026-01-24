@@ -2,12 +2,14 @@
 Tests for transaction context manager.
 """
 
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
+
+from file_organizer.history.models import OperationStatus, OperationType
 from file_organizer.history.tracker import OperationHistory
 from file_organizer.history.transaction import OperationTransaction
-from file_organizer.history.models import OperationType, OperationStatus
 
 
 class TestOperationTransaction:
@@ -81,7 +83,7 @@ class TestOperationTransaction:
     def test_log_move(self, history):
         """Test log_move convenience method."""
         with OperationTransaction(history) as txn:
-            operation_id = txn.log_move(Path('/test/source'), Path('/test/dest'))
+            txn.log_move(Path('/test/source'), Path('/test/dest'))
 
         operations = history.get_operations()
         assert len(operations) == 1
@@ -92,7 +94,7 @@ class TestOperationTransaction:
     def test_log_rename(self, history):
         """Test log_rename convenience method."""
         with OperationTransaction(history) as txn:
-            operation_id = txn.log_rename(Path('/test/old'), Path('/test/new'))
+            txn.log_rename(Path('/test/old'), Path('/test/new'))
 
         operations = history.get_operations()
         assert len(operations) == 1
@@ -101,7 +103,7 @@ class TestOperationTransaction:
     def test_log_delete(self, history):
         """Test log_delete convenience method."""
         with OperationTransaction(history) as txn:
-            operation_id = txn.log_delete(Path('/test/file'))
+            txn.log_delete(Path('/test/file'))
 
         operations = history.get_operations()
         assert len(operations) == 1
@@ -111,7 +113,7 @@ class TestOperationTransaction:
     def test_log_copy(self, history):
         """Test log_copy convenience method."""
         with OperationTransaction(history) as txn:
-            operation_id = txn.log_copy(Path('/test/source'), Path('/test/dest'))
+            txn.log_copy(Path('/test/source'), Path('/test/dest'))
 
         operations = history.get_operations()
         assert len(operations) == 1
@@ -120,7 +122,7 @@ class TestOperationTransaction:
     def test_log_create(self, history):
         """Test log_create convenience method."""
         with OperationTransaction(history) as txn:
-            operation_id = txn.log_create(Path('/test/new_file'))
+            txn.log_create(Path('/test/new_file'))
 
         operations = history.get_operations()
         assert len(operations) == 1
@@ -129,7 +131,7 @@ class TestOperationTransaction:
     def test_log_failed_operation(self, history):
         """Test logging failed operation."""
         with OperationTransaction(history) as txn:
-            operation_id = txn.log_failed_operation(
+            txn.log_failed_operation(
                 operation_type=OperationType.MOVE,
                 source_path=Path('/test/source'),
                 error_message="Permission denied"

@@ -1,18 +1,18 @@
 """Tests for AnalyticsService."""
 
-import pytest
-from pathlib import Path
-from datetime import datetime
 import tempfile
-import os
+from datetime import datetime
+from pathlib import Path
 
-from file_organizer.services.analytics import AnalyticsService
+import pytest
+
 from file_organizer.models.analytics import (
     AnalyticsDashboard,
-    StorageStats,
-    QualityMetrics,
     DuplicateStats,
+    QualityMetrics,
+    StorageStats,
 )
+from file_organizer.services.analytics import AnalyticsService
 
 
 @pytest.fixture
