@@ -5,9 +5,11 @@ github_issue: 171
 github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/171
 status: open
 created: 2026-01-20T23:30:00Z
-updated: 2026-01-24T08:26:15Z
+updated: 2026-01-26T00:52:32Z
 labels: [enhancement, epic, testing]
 progress: 0%
+github: https://github.com/curdriceaurora/Local-File-Organizer/issues/171
+last_sync: 2026-01-26T00:52:32Z
 ---
 
 # Epic: Testing & Quality Assurance

@@ -5,8 +5,10 @@ github_issue: 3
 github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/3
 status: open
 created: 2026-01-20T23:30:00Z
-updated: 2026-01-21T05:55:58Z
+updated: 2026-01-26T00:52:32Z
 labels: [enhancement, epic, phase-4]
+github: https://github.com/curdriceaurora/Local-File-Organizer/issues/3
+last_sync: 2026-01-26T00:52:32Z
 ---
 
 # Epic: Intelligence & Learning (Phase 4)

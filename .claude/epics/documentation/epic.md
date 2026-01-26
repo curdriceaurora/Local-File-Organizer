@@ -5,8 +5,10 @@ github_issue: 7
 github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/7
 status: open
 created: 2026-01-20T23:30:00Z
-updated: 2026-01-20T23:30:00Z
+updated: 2026-01-26T00:52:32Z
 labels: [documentation, epic]
+github: https://github.com/curdriceaurora/Local-File-Organizer/issues/7
+last_sync: 2026-01-26T00:52:32Z
 ---
 
 # Epic: Documentation & User Guides
