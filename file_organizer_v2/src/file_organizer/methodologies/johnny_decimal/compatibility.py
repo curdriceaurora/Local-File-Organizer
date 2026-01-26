@@ -9,7 +9,7 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 from .categories import JohnnyDecimalNumber, NumberLevel
 from .config import JohnnyDecimalConfig, PARAIntegrationConfig
@@ -56,7 +56,7 @@ class PARAJohnnyDecimalBridge:
 
     def _create_mappings(self) -> None:
         """Create PARA to JD area mappings."""
-        self.mappings: Dict[PARACategory, PARAMapping] = {
+        self.mappings: dict[PARACategory, PARAMapping] = {
             PARACategory.PROJECTS: PARAMapping(
                 para_category=PARACategory.PROJECTS,
                 jd_area_start=self.config.projects_area,
@@ -146,7 +146,7 @@ class PARAJohnnyDecimalBridge:
         base_area = self.mappings[para_category].jd_area_start
         return f"{base_area:02d} {para_category.value.title()} / {base_area:02d}.01 {item_name}"
 
-    def create_para_structure(self, root_path: Path) -> Dict[PARACategory, Path]:
+    def create_para_structure(self, root_path: Path) -> dict[PARACategory, Path]:
         """
         Create PARA-compatible JD structure.
 
@@ -159,7 +159,7 @@ class PARAJohnnyDecimalBridge:
         Raises:
             OSError: If directory creation fails
         """
-        created_paths: Dict[PARACategory, Path] = {}
+        created_paths: dict[PARACategory, Path] = {}
 
         for category, mapping in self.mappings.items():
             # Create area folder
@@ -193,7 +193,7 @@ class CompatibilityAnalyzer:
         else:
             self.bridge = None
 
-    def detect_para_structure(self, root_path: Path) -> Dict[PARACategory, Optional[Path]]:
+    def detect_para_structure(self, root_path: Path) -> dict[PARACategory, Optional[Path]]:
         """
         Detect existing PARA structure.
 
@@ -203,7 +203,7 @@ class CompatibilityAnalyzer:
         Returns:
             Dictionary mapping PARA categories to their paths (None if not found)
         """
-        detected: Dict[PARACategory, Optional[Path]] = {
+        detected: dict[PARACategory, Optional[Path]] = {
             category: None for category in PARACategory
         }
 
@@ -236,6 +236,10 @@ class CompatibilityAnalyzer:
         Returns:
             True if both PARA and JD patterns detected
         """
+        # Validate path exists
+        if not root_path.exists() or not root_path.is_dir():
+            return False
+
         has_para = any(self.detect_para_structure(root_path).values())
 
         # Check for JD numbers
@@ -265,7 +269,7 @@ class CompatibilityAnalyzer:
 
     def suggest_migration_strategy(
         self, root_path: Path
-    ) -> Dict[str, any]:
+    ) -> dict[str, any]:
         """
         Suggest migration strategy for existing structure.
 
@@ -342,7 +346,7 @@ class HybridOrganizer:
         self.bridge = PARAJohnnyDecimalBridge(config.compatibility.para_integration)
         self.analyzer = CompatibilityAnalyzer(config)
 
-    def create_hybrid_structure(self, root_path: Path) -> Dict[str, Path]:
+    def create_hybrid_structure(self, root_path: Path) -> dict[str, Path]:
         """
         Create hybrid PARA + JD structure.
 
@@ -358,7 +362,7 @@ class HybridOrganizer:
         Raises:
             OSError: If directory creation fails
         """
-        created: Dict[str, Path] = {}
+        created: dict[str, Path] = {}
 
         # Create PARA top-level structure
         para_paths = self.bridge.create_para_structure(root_path)
@@ -404,8 +408,7 @@ class HybridOrganizer:
         return JohnnyDecimalNumber(
             area=base_area,
             category=1,
-            id_number=None,
-            level=NumberLevel.CATEGORY,
+            item_id=None,
         )
 
     def get_item_path(

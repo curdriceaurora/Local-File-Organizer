@@ -11,7 +11,7 @@ import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 from .categories import NumberingScheme, get_default_scheme
 from .numbering import JohnnyDecimalGenerator
@@ -31,9 +31,9 @@ class MigrationResult:
     failed_count: int
     skipped_count: int
     duration_seconds: float
-    transformed_paths: List[Path] = field(default_factory=list)
-    failed_paths: List[tuple[Path, str]] = field(default_factory=list)
-    skipped_paths: List[Path] = field(default_factory=list)
+    transformed_paths: list[Path] = field(default_factory=list)
+    failed_paths: list[tuple[Path, str]] = field(default_factory=list)
+    skipped_paths: list[Path] = field(default_factory=list)
     backup_path: Optional[Path] = None
 
 
@@ -43,7 +43,7 @@ class RollbackInfo:
 
     migration_id: str
     timestamp: datetime
-    original_structure: Dict[str, str]  # path -> original_name
+    original_structure: dict[str, tuple[str, str]]  # original_path -> (target_path, original_name)
     backup_path: Optional[Path]
 
 
@@ -74,7 +74,7 @@ class JohnnyDecimalMigrator:
             self.scheme, self.generator, preserve_original_names
         )
         self.validator = MigrationValidator(self.generator)
-        self._rollback_history: List[RollbackInfo] = []
+        self._rollback_history: list[RollbackInfo] = []
 
     def create_migration_plan(self, root_path: Path) -> tuple[TransformationPlan, ScanResult]:
         """
@@ -144,9 +144,9 @@ class JohnnyDecimalMigrator:
             f"{len(plan.rules)} transformations"
         )
 
-        transformed_paths: List[Path] = []
-        failed_paths: List[tuple[Path, str]] = []
-        skipped_paths: List[Path] = []
+        transformed_paths: list[Path] = []
+        failed_paths: list[tuple[Path, str]] = []
+        skipped_paths: list[Path] = []
         backup_path: Optional[Path] = None
         rollback_info: Optional[RollbackInfo] = None
 
@@ -177,25 +177,28 @@ class JohnnyDecimalMigrator:
         # Execute transformations
         for rule in plan.rules:
             try:
+                # Compute target path for both dry run and real execution
+                target_path = rule.source_path.parent / rule.target_name
+
                 if dry_run:
                     # Dry run - just log what would happen
                     logger.info(
                         f"[DRY RUN] Would rename: {rule.source_path.name} → {rule.target_name}"
                     )
-                    transformed_paths.append(rule.source_path)
+                    transformed_paths.append(target_path)
                 else:
                     # Check if target already exists
-                    target_path = rule.source_path.parent / rule.target_name
 
                     if target_path.exists() and target_path != rule.source_path:
                         logger.warning(f"Target already exists: {target_path}")
                         skipped_paths.append(rule.source_path)
                         continue
 
-                    # Store original name for rollback
+                    # Store original and target paths for rollback
                     if rollback_info:
                         rollback_info.original_structure[str(rule.source_path)] = (
-                            rule.source_path.name
+                            str(target_path),
+                            rule.source_path.name,
                         )
 
                     # Execute rename
@@ -269,9 +272,9 @@ class JohnnyDecimalMigrator:
 
         try:
             # Restore original names
-            for path_str, original_name in rollback_info.original_structure.items():
-                current_path = Path(path_str).parent / Path(path_str).name
-                original_path = Path(path_str).parent / original_name
+            for original_path_str, (target_path_str, original_name) in rollback_info.original_structure.items():
+                current_path = Path(target_path_str)
+                original_path = Path(original_path_str)
 
                 if current_path.exists():
                     current_path.rename(original_path)

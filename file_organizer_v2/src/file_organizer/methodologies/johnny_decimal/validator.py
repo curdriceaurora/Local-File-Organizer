@@ -8,7 +8,6 @@ Checks for conflicts, invalid numbers, and potential issues.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Set
 
 from .numbering import JohnnyDecimalGenerator
 from .transformer import TransformationPlan, TransformationRule
@@ -31,10 +30,10 @@ class ValidationResult:
     """Result of validating a transformation plan."""
 
     is_valid: bool
-    issues: List[ValidationIssue] = field(default_factory=list)
-    errors: List[ValidationIssue] = field(default_factory=list)
-    warnings: List[ValidationIssue] = field(default_factory=list)
-    info: List[ValidationIssue] = field(default_factory=list)
+    issues: list[ValidationIssue] = field(default_factory=list)
+    errors: list[ValidationIssue] = field(default_factory=list)
+    warnings: list[ValidationIssue] = field(default_factory=list)
+    info: list[ValidationIssue] = field(default_factory=list)
 
     def add_issue(self, issue: ValidationIssue) -> None:
         """Add an issue and categorize it."""
@@ -123,7 +122,7 @@ class MigrationValidator:
         self, plan: TransformationPlan, result: ValidationResult
     ) -> None:
         """Check for Johnny Decimal number conflicts."""
-        used_numbers: Set[str] = set()
+        used_numbers: set[str] = set()
 
         for idx, rule in enumerate(plan.rules):
             number_str = rule.jd_number.formatted_number
@@ -157,7 +156,7 @@ class MigrationValidator:
     ) -> None:
         """Check for target name conflicts in same directory."""
         # Group rules by parent directory
-        by_parent: dict[Path, List[tuple[int, TransformationRule]]] = {}
+        by_parent: dict[Path, list[tuple[int, TransformationRule]]] = {}
 
         for idx, rule in enumerate(plan.rules):
             parent = rule.source_path.parent
@@ -167,7 +166,6 @@ class MigrationValidator:
 
         # Check for name conflicts within each parent
         for parent, rules_list in by_parent.items():
-            target_names = [rule.target_name for _, rule in rules_list]
             seen = set()
 
             for idx, rule in rules_list:
@@ -182,15 +180,15 @@ class MigrationValidator:
                     )
                 seen.add(rule.target_name)
 
-            # Check if target would conflict with existing folders
-            target_path = parent / rule.target_name
-            if target_path.exists() and target_path != rule.source_path:
-                result.add_issue(
-                    ValidationIssue(
-                        severity="warning",
-                        rule_index=idx,
-                        message=f"Target path already exists: {target_path}",
-                        suggestion="May need to merge or rename existing folder",
+                # Check if target would conflict with existing folders
+                target_path = parent / rule.target_name
+                if target_path.exists() and target_path != rule.source_path:
+                    result.add_issue(
+                        ValidationIssue(
+                            severity="warning",
+                            rule_index=idx,
+                            message=f"Target path already exists: {target_path}",
+                            suggestion="May need to merge or rename existing folder",
                     )
                 )
 

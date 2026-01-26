@@ -8,7 +8,6 @@ Handles renaming, restructuring, and maintains file integrity.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from .categories import JohnnyDecimalNumber, NumberingScheme, NumberLevel
 from .numbering import JohnnyDecimalGenerator
@@ -26,7 +25,7 @@ class TransformationRule:
     jd_number: JohnnyDecimalNumber
     action: str  # "rename", "move", "restructure"
     confidence: float
-    reasoning: List[str] = field(default_factory=list)
+    reasoning: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -34,10 +33,10 @@ class TransformationPlan:
     """Complete plan for transforming a folder structure."""
 
     root_path: Path
-    rules: List[TransformationRule]
+    rules: list[TransformationRule]
     estimated_changes: int
-    conflicts: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
+    conflicts: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 class FolderTransformer:
@@ -68,7 +67,7 @@ class FolderTransformer:
 
     def create_transformation_plan(
         self,
-        folder_tree: List[FolderInfo],
+        folder_tree: list[FolderInfo],
         root_path: Path,
     ) -> TransformationPlan:
         """
@@ -83,9 +82,9 @@ class FolderTransformer:
         """
         logger.info(f"Creating transformation plan for {root_path}")
 
-        rules: List[TransformationRule] = []
-        conflicts: List[str] = []
-        warnings: List[str] = []
+        rules: list[TransformationRule] = []
+        conflicts: list[str] = []
+        warnings: list[str] = []
 
         # Transform top-level folders as Areas (10-99)
         for idx, folder in enumerate(folder_tree):
@@ -137,7 +136,7 @@ class FolderTransformer:
 
         # Create JD number
         jd_number = JohnnyDecimalNumber(
-            area=area_number, category=None, id_number=None, level=NumberLevel.AREA
+            area=area_number, category=None, item_id=None
         )
 
         # Create target name
@@ -162,9 +161,9 @@ class FolderTransformer:
 
     def _create_category_rules(
         self,
-        children: List[FolderInfo],
+        children: list[FolderInfo],
         parent_number: JohnnyDecimalNumber,
-    ) -> List[TransformationRule]:
+    ) -> list[TransformationRule]:
         """
         Create transformation rules for category-level folders.
 
@@ -173,7 +172,7 @@ class FolderTransformer:
             parent_number: Parent area number
 
         Returns:
-            List of transformation rules
+            list of transformation rules
         """
         rules = []
 
@@ -185,8 +184,7 @@ class FolderTransformer:
             jd_number = JohnnyDecimalNumber(
                 area=parent_number.area,
                 category=category_number,
-                id_number=None,
-                level=NumberLevel.CATEGORY,
+                item_id=None,
             )
 
             if self.preserve_original_names:
@@ -217,9 +215,9 @@ class FolderTransformer:
 
     def _create_id_rules(
         self,
-        children: List[FolderInfo],
+        children: list[FolderInfo],
         parent_number: JohnnyDecimalNumber,
-    ) -> List[TransformationRule]:
+    ) -> list[TransformationRule]:
         """
         Create transformation rules for ID-level folders.
 
@@ -228,7 +226,7 @@ class FolderTransformer:
             parent_number: Parent category number
 
         Returns:
-            List of transformation rules
+            list of transformation rules
         """
         rules = []
 
@@ -238,8 +236,7 @@ class FolderTransformer:
             jd_number = JohnnyDecimalNumber(
                 area=parent_number.area,
                 category=parent_number.category,
-                id_number=id_number,
-                level=NumberLevel.ID,
+                item_id=id_number,
             )
 
             if self.preserve_original_names:
@@ -286,13 +283,14 @@ class FolderTransformer:
 
         # Try to match with scheme areas
         if self.scheme.areas:
-            for area in self.scheme.areas:
-                if area.title.lower() in folder_name_lower or folder_name_lower in area.title.lower():
-                    return area.area_number
+            for area_num, area_def in self.scheme.areas.items():
+                if area_def.name.lower() in folder_name_lower or folder_name_lower in area_def.name.lower():
+                    return area_num
 
         # Default: assign sequentially starting from 10
         base_area = 10
-        return base_area + index
+        # Ensure area number is within valid range (10-99)
+        return min(base_area + index, 99)
 
     def _suggest_category_number(self, folder: FolderInfo, area: int, index: int) -> int:
         """
@@ -311,18 +309,19 @@ class FolderTransformer:
 
         # Try to match with scheme categories
         if self.scheme.categories:
-            for category in self.scheme.categories:
+            for category in self.scheme.categories.values():
                 if (
-                    category.area_number == area
+                    category.area == area
                     and (
-                        category.title.lower() in folder_name_lower
-                        or folder_name_lower in category.title.lower()
+                        category.name.lower() in folder_name_lower
+                        or folder_name_lower in category.name.lower()
                     )
                 ):
-                    return category.category_number
+                    return category.category
 
         # Default: assign sequentially starting from 01
-        return index + 1
+        # Ensure category number is within valid range (1-99)
+        return min(index + 1, 99)
 
     def generate_preview(self, plan: TransformationPlan) -> str:
         """
@@ -358,7 +357,7 @@ class FolderTransformer:
         lines.append("")
 
         # Group by area
-        area_rules: Dict[int, List[TransformationRule]] = {}
+        area_rules: dict[int, list[TransformationRule]] = {}
         for rule in plan.rules:
             area = rule.jd_number.area
             if area not in area_rules:
