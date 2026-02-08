@@ -10,6 +10,7 @@ from typing import Optional  # noqa: UP035 — required for Typer on Python 3.9
 import typer
 from rich.console import Console
 
+from file_organizer.cli.daemon import daemon_app
 from file_organizer.cli.dedupe_v2 import dedupe_app
 from file_organizer.cli.suggest import suggest_app
 
@@ -249,6 +250,7 @@ def model_cache() -> None:
 # Dedupe & Suggest sub-apps
 # ---------------------------------------------------------------------------
 
+app.add_typer(daemon_app, name="daemon")
 app.add_typer(dedupe_app, name="dedupe")
 app.add_typer(suggest_app, name="suggest")
 

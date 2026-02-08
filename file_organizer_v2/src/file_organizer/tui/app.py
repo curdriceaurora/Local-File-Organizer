@@ -55,7 +55,14 @@ class Sidebar(Static):
     """
 
     def compose(self) -> ComposeResult:
-        yield Static("[b]Navigation[/b]\n\n[1] Files\n[2] Organized\n[3] Settings")
+        yield Static(
+            "[b]Navigation[/b]\n\n"
+            "[1] Files\n"
+            "[2] Organized\n"
+            "[3] Analytics\n"
+            "[4] Methodology\n"
+            "[5] Settings"
+        )
 
 
 class PlaceholderView(Static):
@@ -86,7 +93,9 @@ class FileOrganizerApp(App[None]):
         ? - Toggle help
         1 - Switch to Files view
         2 - Switch to Organized view
-        3 - Switch to Settings view
+        3 - Switch to Analytics view
+        4 - Switch to Methodology view
+        5 - Switch to Settings view
         Tab - Cycle focus between panels
     """
 
@@ -105,7 +114,9 @@ class FileOrganizerApp(App[None]):
         Binding("question_mark", "toggle_help", "Help"),
         Binding("1", "switch_view('files')", "Files"),
         Binding("2", "switch_view('organized')", "Organized"),
-        Binding("3", "switch_view('settings')", "Settings"),
+        Binding("3", "switch_view('analytics')", "Analytics"),
+        Binding("4", "switch_view('methodology')", "Methodology"),
+        Binding("5", "switch_view('settings')", "Settings"),
         Binding("tab", "focus_next", "Next Panel"),
     ]
 
@@ -147,7 +158,7 @@ class FileOrganizerApp(App[None]):
     def action_toggle_help(self) -> None:
         """Toggle the help overlay."""
         self.query_one(StatusBar).set_status(
-            "Press q to quit, 1/2/3 to switch views, Tab to navigate"
+            "Press q to quit, 1-5 to switch views, Tab to navigate"
         )
 
     @staticmethod
@@ -155,7 +166,8 @@ class FileOrganizerApp(App[None]):
         """Create and return the widget for a named view.
 
         Args:
-            name: View identifier (files, organized, settings).
+            name: View identifier (files, organized, analytics,
+                methodology, settings).
 
         Returns:
             Widget to mount as ``#view`` in the main content area.
@@ -165,9 +177,25 @@ class FileOrganizerApp(App[None]):
 
             return FilePreviewView(id="view")
 
-        # Organized / Settings remain placeholders for now
+        if name == "organized":
+            from file_organizer.tui.organization_preview import (
+                OrganizationPreviewView,
+            )
+
+            return OrganizationPreviewView(id="view")
+
+        if name == "analytics":
+            from file_organizer.tui.analytics_view import AnalyticsView
+
+            return AnalyticsView(id="view")
+
+        if name == "methodology":
+            from file_organizer.tui.methodology_view import MethodologyView
+
+            return MethodologyView(id="view")
+
+        # Settings remains a placeholder for now
         titles = {
-            "organized": "[b]Organized[/b]\n\nView organized file results.",
             "settings": "[b]Settings[/b]\n\nConfigure models, paths, and preferences.",
         }
         return PlaceholderView(

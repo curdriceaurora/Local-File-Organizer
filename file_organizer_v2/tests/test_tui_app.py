@@ -1,10 +1,15 @@
 """Tests for TUI application."""
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
+from file_organizer.tui.analytics_view import AnalyticsView
 from file_organizer.tui.app import FileOrganizerApp, PlaceholderView, StatusBar
 from file_organizer.tui.file_preview import FilePreviewView
+from file_organizer.tui.methodology_view import MethodologyView
+from file_organizer.tui.organization_preview import OrganizationPreviewView
 
 
 @pytest.mark.asyncio
@@ -28,13 +33,14 @@ async def test_initial_view_is_files() -> None:
 
 @pytest.mark.asyncio
 async def test_switch_to_organized_view() -> None:
-    """Switching to organized view should mount a PlaceholderView."""
-    app = FileOrganizerApp()
-    async with app.run_test() as pilot:
-        await app.action_switch_view("organized")
-        await pilot.pause()
-        assert app._current_view == "organized"
-        assert app.query_one("#view", PlaceholderView) is not None
+    """Switching to organized view should mount OrganizationPreviewView."""
+    with patch.object(OrganizationPreviewView, "_load_preview"):
+        app = FileOrganizerApp()
+        async with app.run_test() as pilot:
+            await app.action_switch_view("organized")
+            await pilot.pause()
+            assert app._current_view == "organized"
+            assert app.query_one("#view", OrganizationPreviewView) is not None
 
 
 @pytest.mark.asyncio
@@ -63,12 +69,13 @@ async def test_switch_back_to_files_view() -> None:
 @pytest.mark.asyncio
 async def test_status_bar_updates_on_view_switch() -> None:
     """StatusBar should update its internal message when switching views."""
-    app = FileOrganizerApp()
-    async with app.run_test() as pilot:
-        await app.action_switch_view("organized")
-        await pilot.pause()
-        status = app.query_one(StatusBar)
-        assert "Organized" in status._message
+    with patch.object(OrganizationPreviewView, "_load_preview"):
+        app = FileOrganizerApp()
+        async with app.run_test() as pilot:
+            await app.action_switch_view("organized")
+            await pilot.pause()
+            status = app.query_one(StatusBar)
+            assert "Organized" in status._message
 
 
 @pytest.mark.asyncio
@@ -97,3 +104,38 @@ class TestStatusBarUnit:
         bar = StatusBar()
         bar.set_status("Processing")
         assert bar._message == "Processing"
+
+
+@pytest.mark.asyncio
+async def test_switch_to_analytics_view() -> None:
+    """Switching to analytics view should mount AnalyticsView."""
+    with patch.object(AnalyticsView, "_load_analytics"):
+        app = FileOrganizerApp()
+        async with app.run_test() as pilot:
+            await app.action_switch_view("analytics")
+            await pilot.pause()
+            assert app._current_view == "analytics"
+            assert app.query_one("#view", AnalyticsView) is not None
+
+
+@pytest.mark.asyncio
+async def test_switch_to_methodology_view() -> None:
+    """Switching to methodology view should mount MethodologyView."""
+    app = FileOrganizerApp()
+    async with app.run_test() as pilot:
+        await app.action_switch_view("methodology")
+        await pilot.pause()
+        assert app._current_view == "methodology"
+        assert app.query_one("#view", MethodologyView) is not None
+
+
+@pytest.mark.asyncio
+async def test_status_bar_updates_on_analytics_switch() -> None:
+    """StatusBar should show 'Analytics' when switching to analytics view."""
+    with patch.object(AnalyticsView, "_load_analytics"):
+        app = FileOrganizerApp()
+        async with app.run_test() as pilot:
+            await app.action_switch_view("analytics")
+            await pilot.pause()
+            status = app.query_one(StatusBar)
+            assert "Analytics" in status._message
