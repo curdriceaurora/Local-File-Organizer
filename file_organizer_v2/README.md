@@ -1,27 +1,23 @@
-# File Organizer v2.0 🚀
+# File Organizer v2.0
 
-> **Status**: Alpha - Active Development (Week 2 Complete!)
->
-> AI-powered local file management with state-of-the-art models. Privacy-first, runs 100% on your device.
+> AI-powered local file management. Privacy-first — runs 100% on your device.
 
-## What's New in v2.0
+**3,146 tests** | **184 modules** | **43 file types** | Python 3.9+
 
-### Core Improvements
-- ✅ **Better AI Models**: Qwen2.5 3B (+15-20% accuracy over Llama3.2)
-- ✅ **Enhanced Vision**: Qwen2.5-VL 7B (+15% DocVQA, 125K context)
-- ✅ **Modern Framework**: Ollama for better performance and ease of use
-- ✅ **Model Abstraction**: Clean architecture with pluggable models
-- ✅ **Image Support**: Full image processing with vision AI (Week 2 ✅)
-- ✅ **Video Support**: Basic video processing (Week 2 ✅)
-- 🚧 **Audio Support**: Coming in Phase 3 (Distil-Whisper)
-- 🚧 **Modern UI**: Textual TUI coming in Phase 2
+## Features
 
-### Architecture
-- Event-driven microservices (Phase 5)
-- Multiple interfaces: CLI, TUI, Web, GUI
-- PARA + Johnny Decimal methodology (Phase 3)
-- Deduplication support (Phase 4)
-- User preference learning (Phase 4)
+- **AI-Powered Organisation**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama
+- **Copilot Chat**: Natural-language assistant — "organise my Downloads", "find report.pdf", "undo"
+- **Organisation Rules**: Automated file sorting with conditions, preview, and YAML persistence
+- **Terminal UI**: 8-view Textual TUI (Files, Analytics, Audio, History, Copilot, and more)
+- **Full CLI**: 30+ commands across config, model, copilot, rules, update, undo/redo, analytics
+- **Auto-Update**: GitHub Releases checking with SHA256-verified downloads and rollback
+- **43 File Types**: Documents, images, video, audio, archives, scientific, and CAD formats
+- **Intelligence**: Pattern learning, preference tracking, smart suggestions, auto-tagging
+- **Deduplication**: Hash, perceptual image, and semantic document dedup
+- **Undo/Redo**: Full operation history with reversible actions
+- **PARA + Johnny Decimal**: Built-in organisational methodologies
+- **Cross-Platform**: macOS (DMG), Windows (installer), Linux (AppImage) executables
 
 ## 🚀 Quick Start (End-to-End Demo)
 
@@ -462,4 +458,12 @@ Dual-licensed under MIT OR Apache-2.0. Choose whichever works best for you.
 
 ---
 
-**Status**: Alpha | **Version**: 2.0.0-alpha.1 | **Last Updated**: 2026-01-20
+**Status**: Alpha | **Version**: 2.0.0-alpha.1 | **Last Updated**: 2026-02-08
+
+## Documentation
+
+- [User Guide](docs/USER_GUIDE.md)
+- [CLI Reference](docs/CLI_REFERENCE.md)
+- [Configuration Guide](docs/CONFIGURATION.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Changelog](CHANGELOG.md)

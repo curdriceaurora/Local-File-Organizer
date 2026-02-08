@@ -1,0 +1,54 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    name: Windows (x86_64)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: file_organizer_v2
+        run: |
+          pip install -e ".[dev]"
+          pip install pyinstaller
+
+      - name: Build executable
+        working-directory: file_organizer_v2
+        run: python scripts/build.py --clean
+
+      - name: Verify executable
+        working-directory: file_organizer_v2
+        shell: bash
+        run: |
+          exe=$(find dist -name "*.exe" -type f | head -1)
+          echo "Found: $exe"
+          echo "Size: $(du -h "$exe" | cut -f1)"
+          "$exe" --help || true
+
+      - name: Generate checksum
+        working-directory: file_organizer_v2
+        shell: bash
+        run: |
+          for f in dist/file-organizer-*.exe; do
+            sha256sum "$f" > "$f.sha256"
+          done
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: file-organizer-windows-x86_64
+          path: |
+            file_organizer_v2/dist/*.exe
+            file_organizer_v2/dist/*.sha256
+          retention-days: 30

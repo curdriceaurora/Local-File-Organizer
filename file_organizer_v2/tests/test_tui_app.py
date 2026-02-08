@@ -8,6 +8,7 @@ import pytest
 from file_organizer.tui.analytics_view import AnalyticsView
 from file_organizer.tui.app import FileOrganizerApp, PlaceholderView, StatusBar
 from file_organizer.tui.audio_view import AudioView
+from file_organizer.tui.copilot_view import CopilotView
 from file_organizer.tui.methodology_view import MethodologyView
 from file_organizer.tui.organization_preview import OrganizationPreviewView
 from file_organizer.tui.undo_history_view import UndoHistoryView

@@ -7,6 +7,8 @@ Provides version-aware fixtures and skip markers for multi-version testing.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -75,3 +77,71 @@ requires_py39 = pytest.mark.skipif(
     sys.version_info[:2] != (3, 9),
     reason="Only runs on Python 3.9",
 )
+
+
+# ---------------------------------------------------------------------------
+# Shared test fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_text_model() -> MagicMock:
+    """Create a mock TextModel that returns deterministic responses.
+
+    Returns:
+        A MagicMock mimicking the TextModel interface.
+    """
+    model = MagicMock()
+    model.generate.return_value = "Mock AI response for testing."
+    model.generate_streaming.return_value = iter(["Mock ", "response."])
+    model.is_initialized = True
+    model._initialized = True
+    model.config = MagicMock()
+    model.config.name = "mock-model:test"
+    return model
+
+
+@pytest.fixture
+def mock_ollama() -> MagicMock:
+    """Create a mock Ollama client.
+
+    Returns:
+        A MagicMock mimicking the ollama.Client interface.
+    """
+    client = MagicMock()
+    client.list.return_value = {
+        "models": [
+            {"name": "qwen2.5:3b-instruct-q4_K_M", "size": "1.9 GB"},
+            {"name": "qwen2.5vl:7b-q4_K_M", "size": "6.0 GB"},
+        ]
+    }
+    client.show.return_value = {"name": "test-model"}
+    client.generate.return_value = {"response": "Test output", "total_duration": 1_000_000_000}
+    return client
+
+
+@pytest.fixture
+def sample_config_dir(tmp_path: Path) -> Path:
+    """Create a temporary directory for configuration files.
+
+    Returns:
+        Path to the temp config directory.
+    """
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    return config_dir
+
+
+@pytest.fixture
+def sample_files_dir(tmp_path: Path) -> Path:
+    """Create a temporary directory with sample files for testing.
+
+    Returns:
+        Path to the temp directory containing sample files.
+    """
+    d = tmp_path / "samples"
+    d.mkdir()
+    (d / "document.txt").write_text("Sample document content for testing.")
+    (d / "notes.md").write_text("# Notes\n\n- Item 1\n- Item 2\n")
+    (d / "data.csv").write_text("col1,col2\nval1,val2\n")
+    return d

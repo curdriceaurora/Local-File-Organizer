@@ -63,7 +63,8 @@ class Sidebar(Static):
             "[4] Methodology\n"
             "[5] Audio\n"
             "[6] History\n"
-            "[7] Settings"
+            "[7] Settings\n"
+            "[8] Copilot"
         )
 
 
@@ -123,6 +124,7 @@ class FileOrganizerApp(App[None]):
         Binding("5", "switch_view('audio')", "Audio"),
         Binding("6", "switch_view('history')", "History"),
         Binding("7", "switch_view('settings')", "Settings"),
+        Binding("8", "switch_view('copilot')", "Copilot"),
         Binding("tab", "focus_next", "Next Panel"),
     ]
 
@@ -209,6 +211,11 @@ class FileOrganizerApp(App[None]):
             from file_organizer.tui.undo_history_view import UndoHistoryView
 
             return UndoHistoryView(id="view")
+
+        if name == "copilot":
+            from file_organizer.tui.copilot_view import CopilotView
+
+            return CopilotView(id="view")
 
         # Settings remains a placeholder for now
         titles = {

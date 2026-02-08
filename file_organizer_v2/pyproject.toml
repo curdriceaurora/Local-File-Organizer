@@ -135,8 +135,12 @@ cad = [
     "ezdxf>=1.1.0",  # DXF/DWG CAD file format support
 ]
 
+build = [
+    "pyinstaller>=6.0.0",  # Cross-platform executable packaging
+]
+
 all = [
-    "file-organizer[dev,gui,web,audio,video,dedup,archive,scientific,cad]",
+    "file-organizer[dev,gui,web,audio,video,dedup,archive,scientific,cad,build]",
 ]
 
 [project.scripts]
