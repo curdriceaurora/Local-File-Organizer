@@ -7,9 +7,10 @@ import pytest
 
 from file_organizer.tui.analytics_view import AnalyticsView
 from file_organizer.tui.app import FileOrganizerApp, PlaceholderView, StatusBar
-from file_organizer.tui.file_preview import FilePreviewView
+from file_organizer.tui.audio_view import AudioView
 from file_organizer.tui.methodology_view import MethodologyView
 from file_organizer.tui.organization_preview import OrganizationPreviewView
+from file_organizer.tui.undo_history_view import UndoHistoryView
 
 
 @pytest.mark.asyncio
@@ -139,3 +140,27 @@ async def test_status_bar_updates_on_analytics_switch() -> None:
             await pilot.pause()
             status = app.query_one(StatusBar)
             assert "Analytics" in status._message
+
+
+@pytest.mark.asyncio
+async def test_switch_to_audio_view() -> None:
+    """Switching to audio view should mount AudioView."""
+    with patch.object(AudioView, "_scan_audio_files"):
+        app = FileOrganizerApp()
+        async with app.run_test() as pilot:
+            await app.action_switch_view("audio")
+            await pilot.pause()
+            assert app._current_view == "audio"
+            assert app.query_one("#view", AudioView) is not None
+
+
+@pytest.mark.asyncio
+async def test_switch_to_history_view() -> None:
+    """Switching to history view should mount UndoHistoryView."""
+    with patch.object(UndoHistoryView, "_load_history"):
+        app = FileOrganizerApp()
+        async with app.run_test() as pilot:
+            await app.action_switch_view("history")
+            await pilot.pause()
+            assert app._current_view == "history"
+            assert app.query_one("#view", UndoHistoryView) is not None

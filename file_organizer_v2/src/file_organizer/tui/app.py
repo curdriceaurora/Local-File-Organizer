@@ -61,7 +61,9 @@ class Sidebar(Static):
             "[2] Organized\n"
             "[3] Analytics\n"
             "[4] Methodology\n"
-            "[5] Settings"
+            "[5] Audio\n"
+            "[6] History\n"
+            "[7] Settings"
         )
 
 
@@ -95,7 +97,9 @@ class FileOrganizerApp(App[None]):
         2 - Switch to Organized view
         3 - Switch to Analytics view
         4 - Switch to Methodology view
-        5 - Switch to Settings view
+        5 - Switch to Audio view
+        6 - Switch to History view
+        7 - Switch to Settings view
         Tab - Cycle focus between panels
     """
 
@@ -116,7 +120,9 @@ class FileOrganizerApp(App[None]):
         Binding("2", "switch_view('organized')", "Organized"),
         Binding("3", "switch_view('analytics')", "Analytics"),
         Binding("4", "switch_view('methodology')", "Methodology"),
-        Binding("5", "switch_view('settings')", "Settings"),
+        Binding("5", "switch_view('audio')", "Audio"),
+        Binding("6", "switch_view('history')", "History"),
+        Binding("7", "switch_view('settings')", "Settings"),
         Binding("tab", "focus_next", "Next Panel"),
     ]
 
@@ -158,7 +164,7 @@ class FileOrganizerApp(App[None]):
     def action_toggle_help(self) -> None:
         """Toggle the help overlay."""
         self.query_one(StatusBar).set_status(
-            "Press q to quit, 1-5 to switch views, Tab to navigate"
+            "Press q to quit, 1-7 to switch views, Tab to navigate"
         )
 
     @staticmethod
@@ -193,6 +199,16 @@ class FileOrganizerApp(App[None]):
             from file_organizer.tui.methodology_view import MethodologyView
 
             return MethodologyView(id="view")
+
+        if name == "audio":
+            from file_organizer.tui.audio_view import AudioView
+
+            return AudioView(id="view")
+
+        if name == "history":
+            from file_organizer.tui.undo_history_view import UndoHistoryView
+
+            return UndoHistoryView(id="view")
 
         # Settings remains a placeholder for now
         titles = {

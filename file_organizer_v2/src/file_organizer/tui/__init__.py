@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from file_organizer.tui.analytics_view import AnalyticsView
 from file_organizer.tui.app import FileOrganizerApp, run_tui
+from file_organizer.tui.audio_view import AudioView
 from file_organizer.tui.file_browser import (
     FileBrowserTree,
     FileBrowserView,
@@ -16,9 +17,11 @@ from file_organizer.tui.file_preview import (
 )
 from file_organizer.tui.methodology_view import MethodologyView
 from file_organizer.tui.organization_preview import OrganizationPreviewView
+from file_organizer.tui.undo_history_view import UndoHistoryView
 
 __all__ = [
     "AnalyticsView",
+    "AudioView",
     "FileOrganizerApp",
     "FileBrowserTree",
     "FileBrowserView",
@@ -29,5 +32,6 @@ __all__ = [
     "FilterInput",
     "MethodologyView",
     "OrganizationPreviewView",
+    "UndoHistoryView",
     "run_tui",
 ]
