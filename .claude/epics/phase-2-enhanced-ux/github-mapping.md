@@ -33,7 +33,7 @@ Epic: #11 - https://github.com/curdriceaurora/Local-File-Organizer/issues/11
 ### Testing & Documentation
 - #12: Write comprehensive tests for Phase 2 features - https://github.com/curdriceaurora/Local-File-Organizer/issues/12
 - #13: Update documentation and create user guide - https://github.com/curdriceaurora/Local-File-Organizer/issues/13
-- #36: Add real screenshots + demo GIF for Phase 2 docs - https://github.com/QiuYannnn/Local-File-Organizer/issues/86
+- #36: Add real screenshots + demo GIF for Phase 2 docs - https://github.com/curdriceaurora/Local-File-Organizer/issues/255
 
 ---
 
