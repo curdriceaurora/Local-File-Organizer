@@ -30,6 +30,14 @@ Epic: #11 - https://github.com/curdriceaurora/Local-File-Organizer/issues/11
 - #20: Create Linux AppImage - https://github.com/curdriceaurora/Local-File-Organizer/issues/20
 - #23: Implement auto-update mechanism - https://github.com/curdriceaurora/Local-File-Organizer/issues/23
 
+### Phase 3-5 Integration
+- #30: Integrate audio classification and organization in TUI - https://github.com/curdriceaurora/Local-File-Organizer/issues/256
+- #31: Add deduplication and intelligence CLI commands - https://github.com/curdriceaurora/Local-File-Organizer/issues/257
+- #32: Add daemon control and pipeline CLI commands - https://github.com/curdriceaurora/Local-File-Organizer/issues/258
+- #33: Integrate PARA and Johnny Decimal methodology selectors in TUI - https://github.com/curdriceaurora/Local-File-Organizer/issues/259
+- #34: Integrate undo/redo and operation history in TUI - https://github.com/curdriceaurora/Local-File-Organizer/issues/260
+- #35: Integrate analytics dashboard in TUI - https://github.com/curdriceaurora/Local-File-Organizer/issues/261
+
 ### Testing & Documentation
 - #12: Write comprehensive tests for Phase 2 features - https://github.com/curdriceaurora/Local-File-Organizer/issues/12
 - #13: Update documentation and create user guide - https://github.com/curdriceaurora/Local-File-Organizer/issues/13
@@ -37,4 +45,4 @@ Epic: #11 - https://github.com/curdriceaurora/Local-File-Organizer/issues/11
 
 ---
 
-Synced: 2026-01-21T05:36:00Z
+Synced: 2026-02-09T22:13:06Z
