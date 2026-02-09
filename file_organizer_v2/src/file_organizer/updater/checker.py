@@ -167,6 +167,8 @@ class UpdateChecker:
                 for entry in data:
                     if entry.get("draft"):
                         continue
+                    # When prereleases are allowed, return the first non-draft
+                    # release regardless of its prerelease flag.
                     return self._parse_release(entry)
                 return None
 

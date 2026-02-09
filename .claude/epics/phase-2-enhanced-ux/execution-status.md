@@ -8,6 +8,7 @@ branch: codex/phase2-ccpm-macos-rebased
 # Phase 2 CCPM Execution Status
 
 ## Critical Chain (Remaining Work)
+
 Order: #13
 
 | Task | Description | Hours |
@@ -17,6 +18,7 @@ Order: #13
 **Total chain:** 16 hours (≈2 working days)
 
 ## Buffers
+
 - **Project buffer:** 8 hours (≈1 working day, 50% of chain)
 - **Buffer thresholds:**
   - Green: <33% penetration
@@ -26,6 +28,7 @@ Order: #13
 **Current buffer penetration:** 0% (no chain work recorded since baseline)
 
 ## Dates (Assuming Start on Feb 9, 2026)
+
 - **Earliest finish (no buffer):** Feb 11, 2026
 - **Buffered finish:** Feb 13, 2026
 

@@ -77,7 +77,7 @@ python scripts/build.py --clean
 
 The installer is written to `file_organizer_v2/dist/` as:
 
-```
+```text
 file-organizer-<version>-windows-setup.exe
 ```
 
@@ -100,7 +100,7 @@ bash scripts/build_linux.sh
 
 Artifacts are written to `file_organizer_v2/dist/`:
 
-```
+```text
 file-organizer-<version>-linux-<arch>.AppImage
 file-organizer-<version>-linux-<arch>.tar.gz
 ```

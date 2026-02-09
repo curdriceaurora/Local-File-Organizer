@@ -79,7 +79,7 @@ profiles:
 |---------|---------|-------------|
 | `check_on_startup` | `true` | Check for updates on app launch (TUI). |
 | `interval_hours` | `24` | Minimum hours between update checks. |
-| `include_prereleases` | `false` | Allow pre-release versions. |
+| `include_prereleases` | `false` | Allow prerelease versions. |
 | `repo` | `curdriceaurora/Local-File-Organizer` | GitHub repo for updates. |
 
 ## Managing Profiles
