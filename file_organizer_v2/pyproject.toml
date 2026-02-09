@@ -218,6 +218,8 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "ci: marks tests intended for PR CI validation",
+    "regression: marks tests intended for full regression runs",
 ]
 
 # Coverage configuration
