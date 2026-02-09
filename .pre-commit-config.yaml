@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: pytest-ci-lint
+        name: pytest (ruff lint guard)
+        entry: pytest file_organizer_v2/tests/ci/test_ruff_lint.py -q --override-ini="addopts="
+        language: system
+        pass_filenames: false
