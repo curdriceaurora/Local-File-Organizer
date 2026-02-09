@@ -1,7 +1,7 @@
 ---
 started: 2026-02-09T03:41:48Z
 updated: 2026-02-09T17:16:14Z
-worktree: /Users/rahul/Projects/Local-File-Organizer
+worktree: .
 branch: main
 ---
 

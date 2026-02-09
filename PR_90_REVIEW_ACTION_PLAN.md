@@ -257,7 +257,7 @@ def mixed_type(val: int | str) -> bool:  # Instead of Union[int, str]
 
 3. **Auto-fix with ruff:**
    ```bash
-   cd /Users/rahul/Projects/Local-File-Organizer/file_organizer_v2
+   cd file_organizer_v2
    ruff check . --select UP035 --fix
    ```
 
@@ -342,7 +342,7 @@ ruff check . --select UP006 --fix
 
 **Comprehensive Auto-fix:**
 ```bash
-cd /Users/rahul/Projects/Local-File-Organizer/file_organizer_v2
+cd file_organizer_v2
 ruff check . --select UP006,UP007,UP045 --fix
 ```
 
@@ -602,7 +602,7 @@ ruff check . --select UP015 --fix
 
 4. **Run tests**
    ```bash
-   cd /Users/rahul/Projects/Local-File-Organizer/file_organizer_v2
+   cd file_organizer_v2
    pytest tests/ -v
    ```
 
@@ -630,7 +630,7 @@ ruff check . --select UP015 --fix
 
 2. **Run all type annotation auto-fixes (H2)**
    ```bash
-   cd /Users/rahul/Projects/Local-File-Organizer/file_organizer_v2
+   cd file_organizer_v2
    ruff check . --select UP006,UP007,UP045 --fix
    ```
 
@@ -745,7 +745,7 @@ ruff check . --select UP015 --fix
 
 1. **Run full test suite**
    ```bash
-   cd /Users/rahul/Projects/Local-File-Organizer/file_organizer_v2
+   cd file_organizer_v2
    pytest tests/ -v --cov=file_organizer --cov-report=term-missing
    ```
 
@@ -777,7 +777,7 @@ ruff check . --select UP015 --fix
 
 ### Auto-fix All Safe Issues (Recommended)
 ```bash
-cd /Users/rahul/Projects/Local-File-Organizer/file_organizer_v2
+cd file_organizer_v2
 
 # Fix all auto-fixable issues in one go
 ruff check . --select UP006,UP007,UP045,UP015,F401,W292,RUF022 --fix

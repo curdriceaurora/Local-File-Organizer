@@ -83,7 +83,7 @@ python scripts/build.py --one-dir
 ## CI Build Pipeline
 
 GitHub Actions builds are defined in:
-- `/Users/rahul/Projects/Local-File-Organizer/.github/workflows/build.yml`
+- `.github/workflows/build.yml`
 
 The CI pipeline installs dependencies, runs tests, and invokes:
 

@@ -239,7 +239,7 @@ START HERE
 
 ### Check Current Status
 ```bash
-cd /Users/rahul/Projects/Local-File-Organizer/file_organizer_v2
+cd file_organizer_v2
 ruff check . --statistics
 ```
 
@@ -360,7 +360,7 @@ All documents are in Markdown format and render beautifully on GitHub. Click on 
 ### Reading Locally
 Open in any Markdown viewer or text editor:
 ```bash
-cd /Users/rahul/Projects/Local-File-Organizer
+cd Local-File-Organizer
 open EXECUTIVE_SUMMARY.md  # macOS
 # or
 cat EXECUTIVE_SUMMARY.md | less  # Terminal

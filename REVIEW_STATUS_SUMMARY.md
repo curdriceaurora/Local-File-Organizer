@@ -142,7 +142,7 @@ Manual:        ░░░░░░░░░░░░░░░░░░░░   0%
 ### 2. Auto-fix High Priority (5 minutes)
 
 ```bash
-cd /Users/rahul/Projects/Local-File-Organizer/file_organizer_v2
+cd file_organizer_v2
 ruff check . --select UP006,UP007,UP045 --fix
 pytest tests/ -v
 ```

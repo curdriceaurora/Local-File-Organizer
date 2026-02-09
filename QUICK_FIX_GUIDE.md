@@ -64,7 +64,7 @@ except Exception as e:
 ### One Command to Fix Most Issues
 
 ```bash
-cd /Users/rahul/Projects/Local-File-Organizer/file_organizer_v2
+cd file_organizer_v2
 
 # Fix 110+ type annotation issues automatically
 ruff check . --select UP006,UP007,UP045 --fix
