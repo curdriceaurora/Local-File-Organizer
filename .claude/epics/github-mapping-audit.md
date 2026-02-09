@@ -1,11 +1,11 @@
 # GitHub Mapping Audit
 
-Generated: 2026-02-09 17:25 (local)
+Generated: 2026-02-09 17:54 (local)
 
 ## Summary
 - Total tasks scanned: 79
 - Missing GitHub links: 0
-- Title mismatches vs GitHub issue: 15
+- Title mismatches vs GitHub issue: 14
 - Local closed but GitHub open: 0
 - Duplicate GitHub issue titles detected: 40
 
@@ -23,9 +23,6 @@ Generated: 2026-02-09 17:25 (local)
 - `.claude/epics/phase-5-architecture/144.md`
   - Title: GitHub Actions Workflows
   - GitHub #145: GitHub Actions Workflows for CI/CD (closed)
-- `.claude/epics/phase-5-architecture/131.md`
-  - Title: Microservices Communication Layer
-  - GitHub #132: Task 131: Microservices Communication Layer (closed)
 - `.claude/epics/phase-5-architecture/140.md`
   - Title: Auto-scaling Configuration
   - GitHub #141: Auto-Scaling Configuration with Kubernetes (closed)
