@@ -9,10 +9,14 @@
 ;   - PyInstaller build output in dist/
 
 #define AppName "File Organizer"
-#define AppVersion "2.0.0-alpha.1"
+#ifndef AppVersion
+  #define AppVersion "2.0.0-alpha.1"
+#endif
 #define AppPublisher "File Organizer Team"
 #define AppURL "https://github.com/curdriceaurora/Local-File-Organizer"
-#define AppExeName "file-organizer.exe"
+#ifndef AppExeName
+  #define AppExeName "file-organizer.exe"
+#endif
 
 [Setup]
 AppId={{A7B3E2F1-4D5C-6E7F-8A9B-0C1D2E3F4A5B}

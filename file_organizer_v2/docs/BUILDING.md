@@ -64,6 +64,23 @@ bash scripts/build_macos.sh --universal \\
   --x86 /path/to/file-organizer-<version>-macos-x86_64
 ```
 
+## Windows Installer (Inno Setup)
+
+Install Inno Setup 6+ and ensure `ISCC.exe` is available (default install path:
+`C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe`).
+
+```powershell
+cd file_organizer_v2
+python scripts/build.py --clean
+.\scripts\build_windows.ps1
+```
+
+The installer is written to `file_organizer_v2/dist/` as:
+
+```
+file-organizer-<version>-windows-setup.exe
+```
+
 ## Generate Spec File Only
 
 If you want to regenerate the spec file without running a build:

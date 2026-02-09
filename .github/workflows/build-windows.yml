@@ -23,6 +23,9 @@ jobs:
           pip install -e ".[dev]"
           pip install pyinstaller
 
+      - name: Install Inno Setup
+        run: choco install innosetup -y
+
       - name: Build executable
         working-directory: file_organizer_v2
         run: python scripts/build.py --clean
@@ -43,6 +46,19 @@ jobs:
           for f in dist/file-organizer-*.exe; do
             sha256sum "$f" > "$f.sha256"
           done
+
+      - name: Build installer
+        working-directory: file_organizer_v2
+        shell: powershell
+        run: .\\scripts\\build_windows.ps1
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: file-organizer-windows-installer
+          path: |
+            file_organizer_v2/dist/*windows-setup.exe
+          retention-days: 30
 
       - name: Upload executable
         uses: actions/upload-artifact@v4
