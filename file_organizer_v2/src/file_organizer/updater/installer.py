@@ -6,6 +6,7 @@ replacement, and the download is verified via SHA256 before installation.
 from __future__ import annotations
 
 import hashlib
+import os
 import platform
 import shutil
 import stat
@@ -43,6 +44,8 @@ class UpdateInstaller:
 
     def __init__(self, install_dir: str | Path | None = None) -> None:
         self._install_dir = Path(install_dir) if install_dir else self._detect_install_dir()
+        appimage = os.environ.get("APPIMAGE")
+        self._appimage_path = Path(appimage) if appimage else None
 
     @property
     def install_dir(self) -> Path:
@@ -127,11 +130,8 @@ class UpdateInstaller:
         Returns:
             ``InstallResult`` with outcome details.
         """
-        target = self._install_dir / target_name
-        if platform.system() == "Windows":
-            target = target.with_suffix(".exe")
-
-        backup = target.with_suffix(".bak")
+        target = self._resolve_target(target_name)
+        backup = target.with_name(f"{target.name}.bak")
 
         try:
             # Step 1: Backup
@@ -179,11 +179,8 @@ class UpdateInstaller:
         Returns:
             True if rollback succeeded.
         """
-        target = self._install_dir / target_name
-        if platform.system() == "Windows":
-            target = target.with_suffix(".exe")
-
-        backup = target.with_suffix(".bak")
+        target = self._resolve_target(target_name)
+        backup = target.with_name(f"{target.name}.bak")
         if not backup.exists():
             logger.warning("No backup found at {}", backup)
             return False
@@ -222,6 +219,10 @@ class UpdateInstaller:
         elif machine in ("arm64", "aarch64"):
             arch_hints = ["arm64", "aarch64"]
 
+        if system == "darwin":
+            arch_hints.append("universal")
+
+        candidates: list[tuple[int, AssetInfo]] = []
         for asset in release.assets:
             name_lower = asset.name.lower()
             # Skip checksum files
@@ -229,11 +230,46 @@ class UpdateInstaller:
                 continue
             plat_match = any(h in name_lower for h in platform_hints)
             arch_match = not arch_hints or any(h in name_lower for h in arch_hints)
-            if plat_match and arch_match:
-                return asset
+            if not (plat_match and arch_match):
+                continue
 
-        logger.warning("No matching asset for {}/{}", system, machine)
-        return None
+            score = 0
+            if system == "darwin":
+                if "universal" in name_lower:
+                    score += 3
+                if name_lower.endswith(".dmg"):
+                    score -= 5
+                if name_lower.endswith((".zip", ".tar.gz", ".tgz")):
+                    score -= 3
+            elif system == "windows":
+                if name_lower.endswith(".exe"):
+                    score += 3
+                if "setup" in name_lower or "installer" in name_lower:
+                    score -= 4
+            else:
+                if name_lower.endswith(".appimage"):
+                    score += 5
+                elif name_lower.endswith((".tar.gz", ".tgz")):
+                    score += 2
+
+            candidates.append((score, asset))
+
+        if not candidates:
+            logger.warning("No matching asset for {}/{}", system, machine)
+            return None
+
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        return candidates[0][1]
+
+    def _resolve_target(self, target_name: str) -> Path:
+        """Resolve the target path to update based on platform context."""
+        if self._appimage_path is not None:
+            return self._appimage_path
+
+        target = self._install_dir / target_name
+        if platform.system() == "Windows":
+            target = target.with_suffix(".exe")
+        return target
 
     def find_checksum(self, release: ReleaseInfo, asset_name: str) -> str:
         """Find the SHA256 checksum for an asset from the release.

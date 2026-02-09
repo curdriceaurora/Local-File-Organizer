@@ -12,11 +12,34 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+export PROJECT_ROOT
 DIST_DIR="${PROJECT_ROOT}/dist"
 BUILD_DIR="${PROJECT_ROOT}/build"
 APP_NAME="file-organizer"
-VERSION="2.0.0-alpha.1"
-ARCH="x86_64"
+VERSION="$(python3 - <<'PY'
+import os
+import re
+from pathlib import Path
+
+root = Path(os.environ.get("PROJECT_ROOT", ".")) / "pyproject.toml"
+text = root.read_text(encoding="utf-8")
+match = re.search(r'(?m)^version\\s*=\\s*\"([^\"]+)\"', text)
+print(match.group(1) if match else "0.0.0")
+PY
+)"
+ARCH="$(uname -m | tr '[:upper:]' '[:lower:]')"
+APPIMAGE_ARCH=""
+
+if [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]]; then
+    ARCH="arm64"
+    APPIMAGE_ARCH="aarch64"
+elif [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
+    ARCH="x86_64"
+    APPIMAGE_ARCH="x86_64"
+else
+    APPIMAGE_ARCH="$ARCH"
+fi
+
 APPIMAGE_NAME="${APP_NAME}-${VERSION}-linux-${ARCH}"
 
 # ---------------------------------------------------------------------------
@@ -36,19 +59,30 @@ echo "    Found: ${EXECUTABLE}"
 # ---------------------------------------------------------------------------
 # Download appimagetool if needed
 # ---------------------------------------------------------------------------
-APPIMAGETOOL="${BUILD_DIR}/appimagetool"
+APPIMAGETOOL="${BUILD_DIR}/appimagetool-${APPIMAGE_ARCH}"
+TOOL_URL=""
+
+if [[ "${APPIMAGE_ARCH}" == "x86_64" ]]; then
+    TOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+elif [[ "${APPIMAGE_ARCH}" == "aarch64" ]]; then
+    TOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-aarch64.AppImage"
+fi
 
 if [[ ! -x "$APPIMAGETOOL" ]]; then
-    echo "==> Downloading appimagetool..."
-    mkdir -p "${BUILD_DIR}"
-    TOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
-    curl -fsSL -o "${APPIMAGETOOL}" "${TOOL_URL}" || {
-        echo "    WARNING: Could not download appimagetool. Will create tarball instead."
+    if [[ -z "${TOOL_URL}" ]]; then
+        echo "    WARNING: No appimagetool available for ${APPIMAGE_ARCH}. Will create tarball instead."
         APPIMAGETOOL=""
-    }
-    if [[ -n "$APPIMAGETOOL" ]]; then
-        chmod +x "${APPIMAGETOOL}"
-        echo "    Downloaded: ${APPIMAGETOOL}"
+    else
+        echo "==> Downloading appimagetool..."
+        mkdir -p "${BUILD_DIR}"
+        curl -fsSL -o "${APPIMAGETOOL}" "${TOOL_URL}" || {
+            echo "    WARNING: Could not download appimagetool. Will create tarball instead."
+            APPIMAGETOOL=""
+        }
+        if [[ -n "$APPIMAGETOOL" ]]; then
+            chmod +x "${APPIMAGETOOL}"
+            echo "    Downloaded: ${APPIMAGETOOL}"
+        fi
     fi
 fi
 
@@ -91,6 +125,7 @@ cat > "${APPDIR}/usr/share/icons/hicolor/256x256/apps/file-organizer.svg" << 'SV
 </svg>
 SVG
 cp "${APPDIR}/usr/share/icons/hicolor/256x256/apps/file-organizer.svg" "${APPDIR}/file-organizer.svg"
+cp "${APPDIR}/usr/share/icons/hicolor/256x256/apps/file-organizer.svg" "${APPDIR}/.DirIcon"
 
 # Create AppRun
 cat > "${APPDIR}/AppRun" << 'APPRUN'
@@ -112,7 +147,7 @@ if [[ -n "${APPIMAGETOOL:-}" && -x "${APPIMAGETOOL:-}" ]]; then
     APPIMAGE_PATH="${DIST_DIR}/${APPIMAGE_NAME}.AppImage"
     rm -f "${APPIMAGE_PATH}"
 
-    ARCH="${ARCH}" "${APPIMAGETOOL}" "${APPDIR}" "${APPIMAGE_PATH}" || {
+    ARCH="${APPIMAGE_ARCH}" "${APPIMAGETOOL}" "${APPDIR}" "${APPIMAGE_PATH}" || {
         echo "    WARNING: appimagetool failed. Creating tarball instead."
         APPIMAGE_PATH=""
     }

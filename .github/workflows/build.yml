@@ -50,6 +50,12 @@ jobs:
           pip install -e ".[dev]"
           pip install pyinstaller
 
+      - name: Install AppImage dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse libfuse2
+
       - name: Run tests
         working-directory: file_organizer_v2
         run: |
@@ -59,6 +65,12 @@ jobs:
         working-directory: file_organizer_v2
         run: |
           python scripts/build.py --clean
+
+      - name: Build AppImage
+        if: matrix.platform == 'linux'
+        working-directory: file_organizer_v2
+        run: |
+          bash scripts/build_linux.sh
 
       - name: Verify executable
         working-directory: file_organizer_v2

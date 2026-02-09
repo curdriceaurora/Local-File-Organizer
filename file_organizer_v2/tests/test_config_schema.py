@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from file_organizer.config.schema import AppConfig, ModelPreset
+from file_organizer.config.schema import AppConfig, ModelPreset, UpdateSettings
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +61,7 @@ class TestAppConfig:
         assert cfg.version == "1.0"
         assert cfg.default_methodology == "none"
         assert isinstance(cfg.models, ModelPreset)
+        assert isinstance(cfg.updates, UpdateSettings)
 
     def test_custom_profile(self) -> None:
         cfg = AppConfig(profile_name="work", default_methodology="para")
@@ -72,6 +73,12 @@ class TestAppConfig:
         cfg = AppConfig(models=models)
         assert cfg.models.text_model == "fast:1b"
         assert cfg.models.temperature == 0.3
+
+    def test_with_custom_updates(self) -> None:
+        updates = UpdateSettings(check_on_startup=False, interval_hours=48)
+        cfg = AppConfig(updates=updates)
+        assert cfg.updates.check_on_startup is False
+        assert cfg.updates.interval_hours == 48
 
     def test_optional_module_configs_default_none(self) -> None:
         cfg = AppConfig()
@@ -136,3 +143,17 @@ class TestSchemaEdgeCases:
         cfg2 = AppConfig()
         cfg1.models.temperature = 0.99
         assert cfg2.models.temperature == 0.5
+
+
+# ---------------------------------------------------------------------------
+# Update settings
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateSettings:
+    def test_defaults(self) -> None:
+        updates = UpdateSettings()
+        assert updates.check_on_startup is True
+        assert updates.interval_hours == 24
+        assert updates.include_prereleases is False
+        assert updates.repo == "curdriceaurora/Local-File-Organizer"

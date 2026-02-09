@@ -31,6 +31,23 @@ class ModelPreset:
 
 
 @dataclass
+class UpdateSettings:
+    """Auto-update preferences.
+
+    Args:
+        check_on_startup: Check for updates when the app launches.
+        interval_hours: Minimum hours between update checks.
+        include_prereleases: Include pre-release versions.
+        repo: GitHub repository used for update checks.
+    """
+
+    check_on_startup: bool = True
+    interval_hours: int = 24
+    include_prereleases: bool = False
+    repo: str = "curdriceaurora/Local-File-Organizer"
+
+
+@dataclass
 class AppConfig:
     """Top-level application configuration.
 
@@ -43,6 +60,7 @@ class AppConfig:
         version: Configuration schema version.
         default_methodology: Default organization methodology (none, para, jd).
         models: AI model preset configuration.
+        updates: Auto-update preferences.
         watcher: Watcher module config overrides.
         daemon: Daemon module config overrides.
         parallel: Parallel processing config overrides.
@@ -57,6 +75,7 @@ class AppConfig:
     version: str = "1.0"
     default_methodology: str = "none"
     models: ModelPreset = field(default_factory=ModelPreset)
+    updates: UpdateSettings = field(default_factory=UpdateSettings)
 
     # Module-specific config overrides stored as dicts.
     # Delegated to module config constructors by ConfigManager.

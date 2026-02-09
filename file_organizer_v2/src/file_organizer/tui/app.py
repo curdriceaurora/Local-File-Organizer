@@ -5,6 +5,8 @@ and placeholder views that will be replaced by downstream Phase 2 tasks.
 """
 from __future__ import annotations
 
+import threading
+
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
@@ -132,6 +134,11 @@ class FileOrganizerApp(App[None]):
         super().__init__()
         self._current_view = "files"
 
+    def on_mount(self) -> None:
+        """Kick off background update checks after mount."""
+        thread = threading.Thread(target=self._check_for_updates, daemon=True)
+        thread.start()
+
     def compose(self) -> ComposeResult:
         yield Header()
         with Horizontal():
@@ -162,6 +169,20 @@ class FileOrganizerApp(App[None]):
         await container.mount(new_view)
         status = self.query_one(StatusBar)
         status.set_status(f"View: {name.capitalize()}")
+
+    def _check_for_updates(self) -> None:
+        from file_organizer.updater.background import maybe_check_for_updates
+
+        status = maybe_check_for_updates()
+        if status is None or not status.available:
+            return
+        self.call_from_thread(self._notify_update, status.latest_version)
+
+    def _notify_update(self, latest_version: str) -> None:
+        status_bar = self.query_one(StatusBar)
+        status_bar.set_status(
+            f"Update available: {latest_version} (run file-organizer update install)"
+        )
 
     def action_toggle_help(self) -> None:
         """Toggle the help overlay."""

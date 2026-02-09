@@ -81,6 +81,30 @@ The installer is written to `file_organizer_v2/dist/` as:
 file-organizer-<version>-windows-setup.exe
 ```
 
+## Linux AppImage
+
+Install AppImage runtime dependencies (Ubuntu/Debian):
+
+```bash
+sudo apt-get update
+sudo apt-get install -y fuse libfuse2
+```
+
+Build the executable and AppImage:
+
+```bash
+cd file_organizer_v2
+python scripts/build.py --clean
+bash scripts/build_linux.sh
+```
+
+Artifacts are written to `file_organizer_v2/dist/`:
+
+```
+file-organizer-<version>-linux-<arch>.AppImage
+file-organizer-<version>-linux-<arch>.tar.gz
+```
+
 ## Generate Spec File Only
 
 If you want to regenerate the spec file without running a build:

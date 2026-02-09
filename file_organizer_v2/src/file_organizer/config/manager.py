@@ -12,7 +12,7 @@ from typing import Any
 
 import yaml
 
-from file_organizer.config.schema import AppConfig, ModelPreset
+from file_organizer.config.schema import AppConfig, ModelPreset, UpdateSettings
 from file_organizer.models.base import DeviceType, ModelConfig, ModelType
 
 logger = logging.getLogger(__name__)
@@ -339,6 +339,7 @@ class ConfigManager:
             "version": config.version,
             "default_methodology": config.default_methodology,
             "models": asdict(config.models),
+            "updates": asdict(config.updates),
         }
 
         # Only include module overrides that are set
@@ -364,11 +365,20 @@ class ConfigManager:
         else:
             models = ModelPreset()
 
+        updates_data = data.get("updates", {})
+        if isinstance(updates_data, dict):
+            valid_update_keys = {f.name for f in fields(UpdateSettings)}
+            updates_data = {k: v for k, v in updates_data.items() if k in valid_update_keys}
+            updates = UpdateSettings(**updates_data)
+        else:
+            updates = UpdateSettings()
+
         return AppConfig(
             profile_name=profile,
             version=data.get("version", "1.0"),
             default_methodology=data.get("default_methodology", "none"),
             models=models,
+            updates=updates,
             watcher=data.get("watcher"),
             daemon=data.get("daemon"),
             parallel=data.get("parallel"),

@@ -151,17 +151,35 @@ class UpdateChecker:
         Returns:
             Parsed ``ReleaseInfo`` or ``None``.
         """
-        url = f"{_GITHUB_API}/repos/{self._repo}/releases/latest"
         headers = {"Accept": "application/vnd.github+json"}
 
         with httpx.Client(timeout=_TIMEOUT) as client:
+            if self._include_prereleases:
+                url = f"{_GITHUB_API}/repos/{self._repo}/releases"
+                resp = client.get(url, headers=headers)
+                if resp.status_code == 404:
+                    logger.debug("No releases found for {}", self._repo)
+                    return None
+                resp.raise_for_status()
+                data = resp.json()
+                if not isinstance(data, list):
+                    return None
+                for entry in data:
+                    if entry.get("draft"):
+                        continue
+                    return self._parse_release(entry)
+                return None
+
+            url = f"{_GITHUB_API}/repos/{self._repo}/releases/latest"
             resp = client.get(url, headers=headers)
             if resp.status_code == 404:
                 logger.debug("No releases found for {}", self._repo)
                 return None
             resp.raise_for_status()
-            data: dict[str, Any] = resp.json()
+            data = resp.json()
 
+        if not isinstance(data, dict):
+            return None
         return self._parse_release(data)
 
     @staticmethod

@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from file_organizer.config.manager import ConfigManager
-from file_organizer.config.schema import AppConfig, ModelPreset
+from file_organizer.config.schema import AppConfig, ModelPreset, UpdateSettings
 from file_organizer.models.base import DeviceType, ModelType
 
 
@@ -25,6 +25,7 @@ class TestAppConfigDefaults:
         assert config.version == "1.0"
         assert config.default_methodology == "none"
         assert isinstance(config.models, ModelPreset)
+        assert isinstance(config.updates, UpdateSettings)
 
     def test_model_preset_defaults(self) -> None:
         preset = ModelPreset()
@@ -81,6 +82,7 @@ class TestConfigManagerLoadSave:
                 text_model="custom-model:latest",
                 temperature=0.8,
             ),
+            updates=UpdateSettings(check_on_startup=False, interval_hours=72),
         )
         mgr.save(original, profile="test")
         loaded = mgr.load(profile="test")
@@ -91,6 +93,8 @@ class TestConfigManagerLoadSave:
         assert loaded.models.temperature == 0.8
         # Unset fields keep defaults
         assert loaded.models.vision_model == "qwen2.5vl:7b-q4_K_M"
+        assert loaded.updates.check_on_startup is False
+        assert loaded.updates.interval_hours == 72
 
     def test_save_preserves_other_profiles(self, tmp_path: Path) -> None:
         mgr = ConfigManager(tmp_path)
@@ -192,3 +196,4 @@ class TestModuleOverridesSerialization:
         profile_data = raw["profiles"]["default"]
         assert "watcher" not in profile_data
         assert "daemon" not in profile_data
+        assert "updates" in profile_data

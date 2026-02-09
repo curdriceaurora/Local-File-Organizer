@@ -43,3 +43,12 @@ def test_building_doc_mentions_windows_installer() -> None:
     content = doc.read_text(encoding="utf-8")
     assert "Windows Installer" in content
     assert "build_windows.ps1" in content
+
+
+def test_build_linux_script_exists_and_mentions_appimage() -> None:
+    script = PROJECT_ROOT / "scripts" / "build_linux.sh"
+    assert script.exists()
+    content = script.read_text(encoding="utf-8")
+    assert "appimagetool" in content
+    assert "AppRun" in content
+    assert "AppImage" in content

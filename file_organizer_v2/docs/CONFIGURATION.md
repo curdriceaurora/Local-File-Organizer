@@ -19,6 +19,11 @@ profiles:
       max_tokens: 3000
       device: auto               # auto, cpu, cuda, mps, metal
       framework: ollama           # ollama, llama_cpp, mlx
+    updates:
+      check_on_startup: true
+      interval_hours: 24
+      include_prereleases: false
+      repo: "curdriceaurora/Local-File-Organizer"
 
   work:
     version: "1.0"
@@ -30,6 +35,11 @@ profiles:
       max_tokens: 3000
       device: auto
       framework: ollama
+    updates:
+      check_on_startup: false
+      interval_hours: 72
+      include_prereleases: false
+      repo: "curdriceaurora/Local-File-Organizer"
 ```
 
 ## Settings Reference
@@ -62,6 +72,15 @@ profiles:
 | `none` | AI-determined folder structure |
 | `para` | Projects, Areas, Resources, Archives |
 | `jd` | Johnny Decimal numbering system |
+
+### Updates
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `check_on_startup` | `true` | Check for updates on app launch (TUI). |
+| `interval_hours` | `24` | Minimum hours between update checks. |
+| `include_prereleases` | `false` | Allow pre-release versions. |
+| `repo` | `curdriceaurora/Local-File-Organizer` | GitHub repo for updates. |
 
 ## Managing Profiles
 
@@ -154,3 +173,4 @@ Example: `~/Documents/{ext}/{stem}` produces `~/Documents/pdf/report`.
 |----------|-------------|
 | `FILE_ORGANIZER_CONFIG` | Override config directory path |
 | `OLLAMA_HOST` | Ollama server address (default: localhost:11434) |
+| `FO_DISABLE_UPDATE_CHECK` | Disable automatic update checks (set to `1`) |

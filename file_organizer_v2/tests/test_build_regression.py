@@ -43,3 +43,14 @@ def test_windows_script_passes_version_to_iscc() -> None:
 def test_windows_installer_names_include_version() -> None:
     iss = (SCRIPTS_DIR / "build_windows.iss").read_text(encoding="utf-8")
     assert "OutputBaseFilename=file-organizer-{#AppVersion}-windows-setup" in iss
+
+
+def test_linux_script_uses_pyproject_version() -> None:
+    script = (SCRIPTS_DIR / "build_linux.sh").read_text(encoding="utf-8")
+    assert "pyproject.toml" in script
+    assert "version" in script
+
+
+def test_linux_appimage_naming_uses_version() -> None:
+    script = (SCRIPTS_DIR / "build_linux.sh").read_text(encoding="utf-8")
+    assert 'APPIMAGE_NAME="${APP_NAME}-${VERSION}-linux-${ARCH}"' in script

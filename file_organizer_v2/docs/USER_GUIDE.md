@@ -186,8 +186,13 @@ file-organizer history --stats         # Statistics
 file-organizer update check            # Check for updates
 file-organizer update install          # Download and install
 file-organizer update install --dry-run  # Preview update
+file-organizer update install --pre    # Include pre-releases
 file-organizer update rollback         # Revert to previous version
 ```
+
+Update checks run on startup (TUI) by default and are throttled by the
+configured interval. See the `updates` section in `docs/CONFIGURATION.md`
+to customize behavior or set `FO_DISABLE_UPDATE_CHECK=1` to disable.
 
 ## Supported File Types
 

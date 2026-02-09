@@ -6,6 +6,7 @@ and excluded modules used by the build script and spec file.
 from __future__ import annotations
 
 import platform
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -14,7 +15,23 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 APP_NAME = "file-organizer"
-APP_VERSION = "2.0.0-alpha.1"
+
+
+def _read_pyproject_version() -> str:
+    """Read the project version from pyproject.toml.
+
+    Falls back to "0.0.0" if the file or version field is missing.
+    """
+    project_root = Path(__file__).resolve().parent.parent
+    pyproject = project_root / "pyproject.toml"
+    if not pyproject.exists():
+        return "0.0.0"
+    text = pyproject.read_text(encoding="utf-8")
+    match = re.search(r'(?m)^version\\s*=\\s*"([^"]+)"', text)
+    return match.group(1) if match else "0.0.0"
+
+
+APP_VERSION = _read_pyproject_version()
 APP_DESCRIPTION = "AI-powered local file management"
 
 # ---------------------------------------------------------------------------

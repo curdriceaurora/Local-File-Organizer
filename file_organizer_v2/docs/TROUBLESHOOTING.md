@@ -83,6 +83,10 @@ file-organizer --verbose update install
 file-organizer update rollback
 ```
 
+**If using AppImage**:
+- Ensure the AppImage file is writable (e.g., stored in your home directory).
+- Re-run the update after moving the AppImage to a writable location.
+
 ### Rules Not Matching
 
 **Symptom**: Preview shows 0 matches

@@ -187,7 +187,7 @@ file-organizer update check [--repo OWNER/REPO] [--pre]
 ### update install
 
 ```bash
-file-organizer update install [--dry-run] [--repo OWNER/REPO]
+file-organizer update install [--dry-run] [--repo OWNER/REPO] [--pre]
 ```
 
 ### update rollback

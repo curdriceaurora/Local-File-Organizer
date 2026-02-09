@@ -29,3 +29,16 @@ def test_windows_workflow_builds_installer() -> None:
     assert "choco install innosetup" in content
     assert "build_windows.ps1" in content
     assert "windows-setup.exe" in content
+
+
+def test_linux_workflow_builds_appimage() -> None:
+    content = _read_workflow("build-linux.yml")
+    assert "build_linux.sh" in content
+    assert ".AppImage" in content
+    assert "Upload AppImage" in content
+
+
+def test_release_workflow_builds_appimage_on_linux() -> None:
+    content = _read_workflow("build.yml")
+    assert "Build AppImage" in content
+    assert "build_linux.sh" in content

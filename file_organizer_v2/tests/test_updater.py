@@ -153,12 +153,54 @@ class TestUpdateInstaller:
             assert asset is not None
             assert "macos" in asset.name
 
+    def test_select_asset_macos_prefers_binary_over_dmg(self) -> None:
+        installer = UpdateInstaller()
+        release = ReleaseInfo(
+            assets=[
+                AssetInfo(name="file-organizer-2.0.0-macos-arm64.dmg", url="u1"),
+                AssetInfo(name="file-organizer-2.0.0-macos-arm64", url="u2"),
+            ]
+        )
+        with patch("platform.system", return_value="Darwin"), \
+             patch("platform.machine", return_value="arm64"):
+            asset = installer.select_asset(release)
+            assert asset is not None
+            assert asset.name.endswith("macos-arm64")
+
     def test_select_asset_no_match(self) -> None:
         installer = UpdateInstaller()
         release = ReleaseInfo(assets=[AssetInfo(name="other-tool.tar.gz", url="u")])
         with patch("platform.system", return_value="Linux"), \
              patch("platform.machine", return_value="x86_64"):
             assert installer.select_asset(release) is None
+
+    def test_select_asset_linux_prefers_appimage(self) -> None:
+        installer = UpdateInstaller()
+        release = ReleaseInfo(
+            assets=[
+                AssetInfo(name="file-organizer-2.0.0-linux-x86_64.tar.gz", url="u1"),
+                AssetInfo(name="file-organizer-2.0.0-linux-x86_64.AppImage", url="u2"),
+            ]
+        )
+        with patch("platform.system", return_value="Linux"), \
+             patch("platform.machine", return_value="x86_64"):
+            asset = installer.select_asset(release)
+            assert asset is not None
+            assert asset.name.endswith(".AppImage")
+
+    def test_select_asset_windows_prefers_non_setup(self) -> None:
+        installer = UpdateInstaller()
+        release = ReleaseInfo(
+            assets=[
+                AssetInfo(name="file-organizer-2.0.0-windows-setup.exe", url="u1"),
+                AssetInfo(name="file-organizer-2.0.0-windows-x86_64.exe", url="u2"),
+            ]
+        )
+        with patch("platform.system", return_value="Windows"), \
+             patch("platform.machine", return_value="AMD64"):
+            asset = installer.select_asset(release)
+            assert asset is not None
+            assert "setup" not in asset.name.lower()
 
     def test_install_new_binary(self, tmp_path: Path) -> None:
         installer = UpdateInstaller(install_dir=tmp_path)
@@ -171,6 +213,20 @@ class TestUpdateInstaller:
         assert result.success is True
         assert (tmp_path / "file-organizer").exists()
         assert (tmp_path / "file-organizer").read_bytes() == b"new-content"
+
+    def test_install_uses_appimage_env(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        appimage = tmp_path / "file-organizer-2.0.0-linux-x86_64.AppImage"
+        appimage.write_bytes(b"old-content")
+        monkeypatch.setenv("APPIMAGE", str(appimage))
+        installer = UpdateInstaller()
+
+        downloaded = tmp_path / "new-appimage"
+        downloaded.write_bytes(b"new-content")
+
+        result = installer.install(downloaded, target_name="file-organizer")
+        assert result.success is True
+        assert appimage.read_bytes() == b"new-content"
+        assert (tmp_path / "file-organizer-2.0.0-linux-x86_64.AppImage.bak").exists()
 
     def test_install_creates_backup(self, tmp_path: Path) -> None:
         installer = UpdateInstaller(install_dir=tmp_path)

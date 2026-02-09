@@ -51,11 +51,16 @@ def update_install(
         "--repo",
         help="GitHub repository.",
     ),
+    include_prerelease: bool = typer.Option(
+        False,
+        "--pre",
+        help="Include pre-release versions.",
+    ),
 ) -> None:
     """Download and install the latest update."""
     from file_organizer.updater import UpdateManager
 
-    mgr = UpdateManager(repo=repo)
+    mgr = UpdateManager(repo=repo, include_prereleases=include_prerelease)
 
     with console.status("[bold]Checking for updates..."):
         status = mgr.update(dry_run=dry_run)

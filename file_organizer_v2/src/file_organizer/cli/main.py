@@ -150,6 +150,15 @@ def config_show(
     console.print(f"[bold]Vision model:[/bold] {cfg.models.vision_model}")
     console.print(f"[bold]Temperature:[/bold] {cfg.models.temperature}")
     console.print(f"[bold]Device:[/bold] {cfg.models.device}")
+    console.print(
+        f"[bold]Update checks:[/bold] "
+        f"{'enabled' if cfg.updates.check_on_startup else 'disabled'}"
+    )
+    console.print(f"[bold]Update interval (hrs):[/bold] {cfg.updates.interval_hours}")
+    console.print(f"[bold]Update repo:[/bold] {cfg.updates.repo}")
+    console.print(
+        f"[bold]Include prereleases:[/bold] {cfg.updates.include_prereleases}"
+    )
 
 
 @config_app.command(name="list")
