@@ -26,7 +26,7 @@ Find and remove duplicates interactively:
 
 ```bash
 
-python -m file_organizer.cli.dedupe /path/to/directory
+python -m file_organizer.cli.dedupe path/to/directory
 
 ```
 
@@ -43,7 +43,7 @@ See what would be removed without actually deleting files:
 
 ```bash
 
-python -m file_organizer.cli.dedupe /path/to/directory --dry-run
+python -m file_organizer.cli.dedupe path/to/directory --dry-run
 
 ```
 
@@ -55,7 +55,7 @@ Interactively choose which files to keep for each duplicate group:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Documents --strategy manual
+python -m file_organizer.cli.dedupe ./Documents --strategy manual
 
 ```
 
@@ -71,7 +71,7 @@ Automatically keep the file with the oldest modification time:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest
+python -m file_organizer.cli.dedupe ./Downloads --strategy oldest
 
 ```
 
@@ -80,7 +80,7 @@ Automatically keep the file with the newest modification time:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Downloads --strategy newest
+python -m file_organizer.cli.dedupe ./Downloads --strategy newest
 
 ```
 
@@ -89,7 +89,7 @@ Automatically keep the largest file in each group:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Videos --strategy largest
+python -m file_organizer.cli.dedupe ./Videos --strategy largest
 
 ```
 
@@ -98,7 +98,7 @@ Automatically keep the smallest file in each group:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Documents --strategy smallest
+python -m file_organizer.cli.dedupe ./Documents --strategy smallest
 
 ```
 
@@ -108,7 +108,7 @@ Apply automatic strategies without per-group confirmation:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest --batch
+python -m file_organizer.cli.dedupe ./Downloads --strategy oldest --batch
 
 ```
 
@@ -121,7 +121,7 @@ More secure, slightly slower:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Documents --algorithm sha256
+python -m file_organizer.cli.dedupe ./Documents --algorithm sha256
 
 ```
 
@@ -130,7 +130,7 @@ Faster but less secure (suitable for local deduplication):
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Documents --algorithm md5
+python -m file_organizer.cli.dedupe ./Documents --algorithm md5
 
 ```
 
@@ -141,7 +141,7 @@ Only scan the specified directory, not subdirectories:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Downloads --no-recursive
+python -m file_organizer.cli.dedupe ./Downloads --no-recursive
 
 ```
 
@@ -153,7 +153,7 @@ Only consider files larger than a certain size (in bytes):
 ```bash
 
 # Only scan files larger than 1MB
-python -m file_organizer.cli.dedupe ~/Downloads --min-size 1048576
+python -m file_organizer.cli.dedupe ./Downloads --min-size 1048576
 
 ```
 
@@ -163,7 +163,7 @@ Only consider files smaller than a certain size:
 ```bash
 
 # Only scan files smaller than 100MB
-python -m file_organizer.cli.dedupe ~/Downloads --max-size 104857600
+python -m file_organizer.cli.dedupe ./Downloads --max-size 104857600
 
 ```
 
@@ -172,7 +172,7 @@ python -m file_organizer.cli.dedupe ~/Downloads --max-size 104857600
 ```bash
 
 # Files between 1MB and 100MB
-python -m file_organizer.cli.dedupe ~/Downloads \
+python -m file_organizer.cli.dedupe ./Downloads \
     --min-size 1048576 \
     --max-size 104857600
 
@@ -186,7 +186,7 @@ Only process files matching specific patterns:
 ```bash
 
 # Only process image files
-python -m file_organizer.cli.dedupe ~/Pictures \
+python -m file_organizer.cli.dedupe ./Pictures \
     --include "*.jpg" \
     --include "*.png" \
     --include "*.gif"
@@ -199,7 +199,7 @@ Skip files matching specific patterns:
 ```bash
 
 # Skip temporary files
-python -m file_organizer.cli.dedupe ~/Documents \
+python -m file_organizer.cli.dedupe ./Documents \
     --exclude "*.tmp" \
     --exclude "*.cache"
 
@@ -213,7 +213,7 @@ By default, files are backed up before deletion:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Documents
+python -m file_organizer.cli.dedupe ./Documents
 
 ```
 
@@ -225,7 +225,7 @@ To skip backup creation (faster but dangerous):
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Documents --no-safe-mode
+python -m file_organizer.cli.dedupe ./Documents --no-safe-mode
 
 ```
 
@@ -239,7 +239,7 @@ Find and remove duplicate downloads, keeping the oldest copies:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Downloads \
+python -m file_organizer.cli.dedupe ./Downloads \
     --strategy oldest \
     --algorithm md5 \
     --dry-run
@@ -250,7 +250,7 @@ Review the results, then run without `--dry-run`:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Downloads \
+python -m file_organizer.cli.dedupe ./Downloads \
     --strategy oldest \
     --algorithm md5
 
@@ -262,7 +262,7 @@ Find duplicate videos/images larger than 10MB:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Media \
+python -m file_organizer.cli.dedupe ./Media \
     --min-size 10485760 \
     --include "*.mp4" \
     --include "*.avi" \
@@ -280,7 +280,7 @@ Manually review and select duplicates in documents:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Documents \
+python -m file_organizer.cli.dedupe ./Documents \
     --include "*.pdf" \
     --include "*.docx" \
     --include "*.txt" \
@@ -295,7 +295,7 @@ Quickly clean up a large directory with automatic strategy:
 
 ```bash
 
-python -m file_organizer.cli.dedupe /data/archive \
+python -m file_organizer.cli.dedupe data/archive \
     --algorithm md5 \
     --strategy newest \
     --batch \
@@ -342,7 +342,7 @@ Shows your selected options before scanning:
 ┏━━━━━━━━━━━━━━━━━━━━┓
 ┃   Configuration    ┃
 ┗━━━━━━━━━━━━━━━━━━━━┛
-Directory:  /path/to/scan
+Directory:  path/to/scan
 Algorithm:  SHA256
 Strategy:   oldest
 Recursive:  Yes
@@ -362,8 +362,8 @@ For each group of duplicates:
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 #  Path                          Size      Modified              Status
-1  /path/to/file1.jpg           2.0 MB    2024-01-15 10:30:45  ✓
-2  /path/to/copy_file1.jpg      2.0 MB    2024-01-20 14:22:13
+1  path/to/file1.jpg           2.0 MB    2024-01-15 10:30:45  ✓
+2  path/to/copy_file1.jpg      2.0 MB    2024-01-20 14:22:13
 
 Potential space savings: 2.0 MB
 
@@ -453,7 +453,7 @@ from file_organizer.cli.dedupe import dedupe_command
 
 # Run with specific arguments
 exit_code = dedupe_command([
-    "/path/to/directory",
+    "path/to/directory",
     "--strategy", "oldest",
     "--dry-run"
 ])

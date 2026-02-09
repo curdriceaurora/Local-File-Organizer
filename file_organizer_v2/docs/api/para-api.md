@@ -134,7 +134,7 @@ config = PARAConfig(
 **Loading from File**:
 ```python
 # Load from YAML
-config = PARAConfig.load("~/.config/file-organizer/para.json")
+config = PARAConfig.load("config/file-organizer/para.json")
 
 # Load from dict
 config_dict = {
@@ -148,7 +148,7 @@ config = PARAConfig(**config_dict)
 **Saving Configuration**:
 ```python
 # Save to file
-config.save("~/.config/file-organizer/para.json")
+config.save("config/file-organizer/para.json")
 
 # Export to dict
 config_dict = config.to_dict()
@@ -226,7 +226,7 @@ Categorize multiple files in batch.
 ```python
 from pathlib import Path
 
-files = list(Path("~/Downloads").glob("*"))
+files = list(Path("./Downloads").glob("*"))
 
 def progress(current, total):
     print(f"Processing {current}/{total}")
@@ -339,7 +339,7 @@ work_rule = PARARule(
     conditions={
         "keywords": ["client", "deliverable", "deadline"],
         "file_extension": [".docx", ".xlsx", ".pptx"],
-        "path_contains": "/work/"
+        "path_contains": "work/"
     },
     priority=10
 )
@@ -608,7 +608,7 @@ work_rule = PARARule(
     category=PARACategory.PROJECTS,
     conditions={
         "keywords": ["client", "deliverable"],
-        "path_contains": "/work/"
+        "path_contains": "work/"
     },
     priority=10
 )
@@ -641,7 +641,7 @@ config = PARAConfig()
 categorizer = PARACategorizer(config)
 
 # Get all files
-files = list(Path("~/Downloads").expanduser().glob("*"))
+files = list(Path("./Downloads").expanduser().glob("*"))
 
 # Batch categorize
 results = categorizer.batch_categorize(

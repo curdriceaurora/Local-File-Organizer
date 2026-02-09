@@ -17,7 +17,7 @@ Select a pre-defined scheme or create your own:
 <!-- JD CLI commands not yet implemented
 ```bash
 file-organizer jd list-schemes
-file-organizer jd init ~/Documents --scheme business
+file-organizer jd init ./Documents --scheme business
 ```
 -->
 
@@ -39,13 +39,13 @@ system.initialize_from_directory(Path.home() / "Documents")
 
 ```bash
 # Analyze existing folders
-file-organizer jd generate-scheme ~/Documents --output my-scheme.json
+file-organizer jd generate-scheme ./Documents --output my-scheme.json
 
 # Review generated scheme
 cat my-scheme.json
 
 # Apply scheme
-file-organizer jd init ~/Documents --scheme my-scheme.json
+file-organizer jd init ./Documents --scheme my-scheme.json
 ```
 
 ## Step 2: Initialize Your System (2 minutes)
@@ -54,7 +54,7 @@ Create the Johnny Decimal structure:
 
 ```bash
 # Initialize with chosen scheme
-file-organizer jd init ~/Documents-JD --scheme business
+file-organizer jd init ./Documents-JD --scheme business
 
 # Creates structure:
 # 10-19-Administration/
@@ -74,7 +74,7 @@ Let File Organizer automatically assign numbers:
 
 ```bash
 # Dry run first
-file-organizer jd batch-assign ~/Documents \
+file-organizer jd batch-assign ./Documents \
     --methodology johnny-decimal \
     --dry-run
 
@@ -93,9 +93,9 @@ file-organizer jd batch-assign ~/Documents \
 If results look good, execute:
 
 ```bash
-file-organizer jd batch-assign ~/Documents \
+file-organizer jd batch-assign ./Documents \
     --methodology johnny-decimal \
-    --output ~/Documents-JD
+    --output ./Documents-JD
 ```
 
 ## Step 4: Organize Files (3 minutes)
@@ -104,15 +104,15 @@ Move files to their numbered locations:
 
 ```bash
 # Move files with assigned numbers
-file-organizer organize ~/Documents \
+file-organizer organize ./Documents \
     --methodology johnny-decimal \
-    --output ~/Documents-JD \
+    --output ./Documents-JD \
     --include-numbers-in-names
 ```
 
 Result:
 ```
-~/Documents-JD/
+./Documents-JD/
 ├── 10-19-Administration/
 │   ├── 11-Company-documents/
 │   │   ├── 11.01-Business-registration.pdf
@@ -133,7 +133,7 @@ Document your numbering system:
 
 ```bash
 # Generate index automatically
-file-organizer jd generate-index ~/Documents-JD > "00.00 Index.md"
+file-organizer jd generate-index ./Documents-JD > "00.00 Index.md"
 ```
 
 Example index:
@@ -191,7 +191,7 @@ file-organizer jd list --category 11
 
 ```bash
 # View statistics
-file-organizer jd stats ~/Documents-JD
+file-organizer jd stats ./Documents-JD
 
 # Output:
 # Total items: 156
@@ -282,10 +282,10 @@ file-organizer jd split-category 11 --into 11,15
 **Solution**:
 ```bash
 # Find conflicts
-file-organizer jd check-conflicts ~/Documents-JD
+file-organizer jd check-conflicts ./Documents-JD
 
 # Auto-resolve
-file-organizer jd resolve-conflicts ~/Documents-JD --strategy increment
+file-organizer jd resolve-conflicts ./Documents-JD --strategy increment
 ```
 
 **Problem**: Wrong category assignment
@@ -321,9 +321,9 @@ Combine both systems:
 Setup:
 ```bash
 # Enable both methodologies
-file-organizer organize ~/Documents \
+file-organizer organize ./Documents \
     --methodology para,johnny-decimal \
-    --output ~/Documents-Organized
+    --output ./Documents-Organized
 ```
 
 ## What's Next?
@@ -332,9 +332,9 @@ file-organizer organize ~/Documents \
 
 ```bash
 # Auto-assign numbers to new files
-file-organizer watch ~/Downloads \
+file-organizer watch ./Downloads \
     --methodology johnny-decimal \
-    --output ~/Documents-JD \
+    --output ./Documents-JD \
     --daemon
 ```
 

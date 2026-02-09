@@ -24,7 +24,7 @@ config = PARAConfig(
 )
 
 # Save configuration
-config.save("~/.config/file-organizer/para.json")
+config.save("config/file-organizer/para.json")
 ```
 
 Or use CLI:
@@ -38,7 +38,7 @@ file-organizer config set para.auto_categorize true
 Preview how your files would be categorized:
 
 ```bash
-file-organizer analyze ~/Downloads --methodology para --dry-run
+file-organizer analyze ./Downloads --methodology para --dry-run
 ```
 
 Example output:
@@ -70,12 +70,12 @@ Start with a small test:
 
 ```bash
 # Create backup first
-cp -r ~/Downloads ~/Downloads-backup
+cp -r ./Downloads ./Downloads-backup
 
 # Organize into PARA structure
-file-organizer organize ~/Downloads \
+file-organizer organize ./Downloads \
     --methodology para \
-    --output ~/Documents-PARA \
+    --output ./Documents-PARA \
     --verbose
 ```
 
@@ -94,12 +94,12 @@ Processing files...
 Check your new PARA structure:
 
 ```bash
-tree ~/Documents-PARA -L 2
+tree ./Documents-PARA -L 2
 ```
 
 Output:
 ```
-~/Documents-PARA/
+./Documents-PARA/
 ├── 1-Projects/
 │   ├── Q1-Marketing/
 │   ├── Website-Redesign/
@@ -121,7 +121,7 @@ Output:
 Review low-confidence categorizations:
 
 ```bash
-file-organizer review ~/Documents-PARA --confidence-below 0.7
+file-organizer review ./Documents-PARA --confidence-below 0.7
 ```
 
 Adjust if needed:
@@ -145,7 +145,7 @@ work_rule = PARARule(
     category=PARACategory.PROJECTS,
     conditions={
         "keywords": ["client", "deliverable", "deadline"],
-        "path_contains": "/work/"
+        "path_contains": "work/"
     }
 )
 
@@ -159,9 +159,9 @@ Auto-organize new files:
 
 ```bash
 # Watch Downloads folder
-file-organizer watch ~/Downloads \
+file-organizer watch ./Downloads \
     --methodology para \
-    --output ~/Documents-PARA \
+    --output ./Documents-PARA \
     --daemon
 ```
 

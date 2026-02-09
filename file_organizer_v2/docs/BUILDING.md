@@ -60,14 +60,14 @@ You need both the arm64 and x86_64 executables. Once you have them:
 ```bash
 cd file_organizer_v2
 bash scripts/build_macos.sh --universal \\
-  --arm /path/to/file-organizer-<version>-macos-arm64 \\
-  --x86 /path/to/file-organizer-<version>-macos-x86_64
+  --arm path/to/file-organizer-<version>-macos-arm64 \\
+  --x86 path/to/file-organizer-<version>-macos-x86_64
 ```
 
 ## Windows Installer (Inno Setup)
 
-Install Inno Setup 6+ and ensure `ISCC.exe` is available (default install path:
-`C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe`).
+Install Inno Setup 6+ and ensure `ISCC.exe` is available (for example,
+`Program Files (x86)/Inno Setup 6/ISCC.exe`) and add it to your PATH.
 
 ```powershell
 cd file_organizer_v2

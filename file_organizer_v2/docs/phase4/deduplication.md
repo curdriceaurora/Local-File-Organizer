@@ -18,13 +18,13 @@ Perfect for finding exact duplicates:
 
 ```bash
 # Interactive mode with dry-run preview
-python -m file_organizer.cli.dedupe ~/Downloads --dry-run
+python -m file_organizer.cli.dedupe ./Downloads --dry-run
 
 # Automatically keep oldest files
-python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest
+python -m file_organizer.cli.dedupe ./Downloads --strategy oldest
 
 # Batch mode for automated cleanup
-python -m file_organizer.cli.dedupe ~/Downloads --strategy newest --batch
+python -m file_organizer.cli.dedupe ./Downloads --strategy newest --batch
 ```
 
 ### Perceptual Image Deduplication
@@ -39,7 +39,7 @@ from pathlib import Path
 deduper = ImageDeduplicator()
 
 # Find similar images
-directory = Path("~/Pictures")
+directory = Path("./Pictures")
 duplicates = deduper.find_duplicates(
     directory,
     similarity_threshold=0.90,  # 90% similarity
@@ -69,7 +69,7 @@ from pathlib import Path
 deduper = DocumentDeduplicator(model_name="qwen2.5:3b")
 
 # Find semantically similar documents
-directory = Path("~/Documents")
+directory = Path("./Documents")
 duplicates = deduper.find_similar_documents(
     directory,
     similarity_threshold=0.85,   # 85% semantic similarity
@@ -107,44 +107,44 @@ Hash-based deduplication calculates cryptographic hashes (MD5 or SHA256) of file
 
 ```bash
 # Scan directory for duplicates
-python -m file_organizer.cli.dedupe /path/to/directory
+python -m file_organizer.cli.dedupe path/to/directory
 
 # Use faster MD5 algorithm
-python -m file_organizer.cli.dedupe ~/Downloads --algorithm md5
+python -m file_organizer.cli.dedupe ./Downloads --algorithm md5
 
 # Non-recursive scan (current directory only)
-python -m file_organizer.cli.dedupe ~/Downloads --no-recursive
+python -m file_organizer.cli.dedupe ./Downloads --no-recursive
 ```
 
 #### Selection Strategies
 
 **Manual Selection (Default)**
 ```bash
-python -m file_organizer.cli.dedupe ~/Documents --strategy manual
+python -m file_organizer.cli.dedupe ./Documents --strategy manual
 ```
 Interactively choose which files to keep for each duplicate group.
 
 **Keep Oldest**
 ```bash
-python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest
+python -m file_organizer.cli.dedupe ./Downloads --strategy oldest
 ```
 Automatically keeps the file with the oldest modification time.
 
 **Keep Newest**
 ```bash
-python -m file_organizer.cli.dedupe ~/Downloads --strategy newest
+python -m file_organizer.cli.dedupe ./Downloads --strategy newest
 ```
 Automatically keeps the file with the newest modification time.
 
 **Keep Largest**
 ```bash
-python -m file_organizer.cli.dedupe ~/Videos --strategy largest
+python -m file_organizer.cli.dedupe ./Videos --strategy largest
 ```
 Keeps the largest file (useful for media files).
 
 **Keep Smallest**
 ```bash
-python -m file_organizer.cli.dedupe ~/Documents --strategy smallest
+python -m file_organizer.cli.dedupe ./Documents --strategy smallest
 ```
 Keeps the smallest file.
 
@@ -153,10 +153,10 @@ Keeps the smallest file.
 **Size Filters**
 ```bash
 # Only files larger than 1MB
-python -m file_organizer.cli.dedupe ~/Downloads --min-size 1048576
+python -m file_organizer.cli.dedupe ./Downloads --min-size 1048576
 
 # Files between 1MB and 100MB
-python -m file_organizer.cli.dedupe ~/Downloads \
+python -m file_organizer.cli.dedupe ./Downloads \
     --min-size 1048576 \
     --max-size 104857600
 ```
@@ -164,13 +164,13 @@ python -m file_organizer.cli.dedupe ~/Downloads \
 **Pattern Filters**
 ```bash
 # Only process image files
-python -m file_organizer.cli.dedupe ~/Pictures \
+python -m file_organizer.cli.dedupe ./Pictures \
     --include "*.jpg" \
     --include "*.png" \
     --include "*.gif"
 
 # Exclude temporary files
-python -m file_organizer.cli.dedupe ~/Documents \
+python -m file_organizer.cli.dedupe ./Documents \
     --exclude "*.tmp" \
     --exclude "*.cache"
 ```
@@ -179,19 +179,19 @@ python -m file_organizer.cli.dedupe ~/Documents \
 
 **Dry Run (Recommended First Step)**
 ```bash
-python -m file_organizer.cli.dedupe ~/Downloads --dry-run
+python -m file_organizer.cli.dedupe ./Downloads --dry-run
 ```
 Preview what would be removed without actually deleting files.
 
 **Safe Mode (Default)**
 ```bash
-python -m file_organizer.cli.dedupe ~/Downloads
+python -m file_organizer.cli.dedupe ./Downloads
 ```
 Creates backups in `.file_organizer_backups/` before deletion.
 
 **Disable Safe Mode (Not Recommended)**
 ```bash
-python -m file_organizer.cli.dedupe ~/Downloads --no-safe-mode
+python -m file_organizer.cli.dedupe ./Downloads --no-safe-mode
 ```
 ⚠️ **Warning:** Deleted files cannot be recovered without backups.
 
@@ -205,7 +205,7 @@ from pathlib import Path
 deduper = HashDeduplicator(algorithm="sha256")
 
 # Find duplicates
-directory = Path("~/Downloads")
+directory = Path("./Downloads")
 duplicates = deduper.find_duplicates(
     directory,
     recursive=True,
@@ -255,7 +255,7 @@ from pathlib import Path
 deduper = ImageDeduplicator()
 
 # Find similar images
-directory = Path("~/Pictures")
+directory = Path("./Pictures")
 duplicates = deduper.find_duplicates(
     directory,
     similarity_threshold=0.90,  # 90% similarity
@@ -354,7 +354,7 @@ deduper = DocumentDeduplicator(
 )
 
 # Find similar documents
-directory = Path("~/Documents")
+directory = Path("./Documents")
 duplicates = deduper.find_similar_documents(
     directory,
     similarity_threshold=0.85,   # 85% semantic similarity
@@ -419,7 +419,7 @@ duplicates = deduper.get_duplicates(threshold=0.85)
 
 ### 1. Always Start with Dry Run
 ```bash
-python -m file_organizer.cli.dedupe ~/Downloads --dry-run
+python -m file_organizer.cli.dedupe ./Downloads --dry-run
 ```
 
 ### 2. Use Appropriate Algorithm
@@ -446,7 +446,7 @@ Always review duplicate groups before deletion, especially with perceptual and s
 
 Enable safe mode or maintain separate backups:
 ```bash
-python -m file_organizer.cli.dedupe ~/Documents  # Safe mode enabled by default
+python -m file_organizer.cli.dedupe ./Documents  # Safe mode enabled by default
 ```
 
 ## Troubleshooting

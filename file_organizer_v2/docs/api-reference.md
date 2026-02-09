@@ -96,7 +96,7 @@ protocol.
 with EventPublisher() as publisher:
     publisher.publish_file_event(
         EventType.FILE_CREATED,
-        "/path/to/file.txt",
+        "path/to/file.txt",
         {"size": 1024},
     )
     publisher.publish_scan_event("scan-001", "started")
@@ -168,7 +168,7 @@ Topic-based pub/sub with wildcard matching. Supports context manager protocol.
 ```python
 with PubSubManager() as pubsub:
     pubsub.subscribe("file.*", on_file_event)
-    pubsub.publish("file.created", {"path": "/tmp/hello.txt"})
+    pubsub.publish("file.created", {"path": "tmp/hello.txt"})
 ```
 
 | Method                                           | Returns              | Description                      |
@@ -302,7 +302,7 @@ from file_organizer.watcher import FileMonitor
 Real-time directory monitor.
 
 ```python
-config = WatcherConfig(watch_directories=[Path("/tmp/watched")])
+config = WatcherConfig(watch_directories=[Path("tmp/watched")])
 monitor = FileMonitor(config)
 monitor.start()
 events = monitor.get_events(max_size=5)
@@ -415,7 +415,7 @@ from file_organizer.pipeline import PipelineOrchestrator, ProcessingResult
 Coordinates the full route-process-organize pipeline.
 
 ```python
-config = PipelineConfig(output_directory=Path("/tmp/organized"))
+config = PipelineConfig(output_directory=Path("tmp/organized"))
 pipeline = PipelineOrchestrator(config)
 result = pipeline.process_file(Path("document.pdf"))
 print(result.category, result.destination)
@@ -635,9 +635,9 @@ Long-running daemon combining file watching with auto-organization.
 
 ```python
 config = DaemonConfig(
-    watch_directories=[Path("/tmp/incoming")],
-    output_directory=Path("/tmp/organized"),
-    pid_file=Path("/tmp/daemon.pid"),
+    watch_directories=[Path("tmp/incoming")],
+    output_directory=Path("tmp/organized"),
+    pid_file=Path("tmp/daemon.pid"),
 )
 daemon = DaemonService(config)
 daemon.start_background()

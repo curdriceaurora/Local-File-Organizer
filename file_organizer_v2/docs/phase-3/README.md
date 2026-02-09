@@ -150,7 +150,7 @@ These features are planned and partially implemented. Tests serve as:
 
 ```bash
 # Organize with PARA
-file-organizer organize ~/Downloads --methodology para
+file-organizer organize ./Downloads --methodology para
 
 # Output:
 # ├── 1-Projects/
@@ -167,10 +167,10 @@ file-organizer organize ~/Downloads --methodology para
 
 ```bash
 # Initialize Johnny Decimal
-file-organizer jd init ~/Documents --scheme business
+file-organizer jd init ./Documents --scheme business
 
 # Assign numbers
-file-organizer jd batch-assign ~/Documents
+file-organizer jd batch-assign ./Documents
 
 # Result:
 # 11.01-Business-Registration.pdf
@@ -182,9 +182,9 @@ file-organizer jd batch-assign ~/Documents
 
 ```bash
 # Use both methodologies together
-file-organizer organize ~/Documents \
+file-organizer organize ./Documents \
     --methodology para,johnny-decimal \
-    --output ~/Documents-Organized
+    --output ./Documents-Organized
 
 # Creates:
 # 1-Projects/
@@ -222,8 +222,8 @@ jd_config = JohnnyDecimalConfig(
 
 # Organize with both methodologies
 result = organizer.organize(
-    input_path="~/Downloads",
-    output_path="~/Documents-Organized",
+    input_path="./Downloads",
+    output_path="./Documents-Organized",
     methodologies=["para", "johnny-decimal"],
     para_config=para_config,
     jd_config=jd_config
@@ -236,7 +236,7 @@ print(f"Organized {result.files_processed} files")
 
 ### Global Configuration
 
-Create `~/.config/file-organizer/config.yaml`:
+Create `config/file-organizer/config.yaml`:
 
 ```yaml
 phase3:

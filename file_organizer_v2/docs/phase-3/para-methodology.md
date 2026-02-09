@@ -47,7 +47,7 @@ config = PARAConfig(
 
 2. **Organize your first file**:
 ```bash
-file-organizer organize ~/Downloads/project-plan.pdf --methodology para
+file-organizer organize ./Downloads/project-plan.pdf --methodology para
 ```
 
 3. **View categorization results**:
@@ -112,7 +112,7 @@ work_rule = Rule(
     conditions=[
         RuleCondition(type=ConditionType.CONTENT_KEYWORD, values=["client", "deliverable", "deadline"]),
         RuleCondition(type=ConditionType.FILE_EXTENSION, values=[".docx", ".xlsx", ".pptx"]),
-        RuleCondition(type=ConditionType.PATH_CONTAINS, values=["/work/"])
+        RuleCondition(type=ConditionType.PATH_CONTAINS, values=["work/"])
     ],
     actions=[
         RuleAction(type=ActionType.CATEGORIZE, category=PARACategory.PROJECT, confidence=0.9)
@@ -193,7 +193,7 @@ engine.reject_suggestion(
 
 1. **Analyze existing structure**:
 ```bash
-file-organizer analyze ~/Documents --methodology para --dry-run
+file-organizer analyze ./Documents --methodology para --dry-run
 ```
 
 This scans your files and provides a migration preview.
@@ -210,13 +210,13 @@ Analysis Complete:
 
 3. **Execute migration**:
 ```bash
-file-organizer migrate ~/Documents --methodology para --target ~/Documents-PARA
+file-organizer migrate ./Documents --methodology para --target ./Documents-PARA
 ```
 
 4. **Verify results**:
 ```
 Migration Complete:
-~/Documents-PARA/
+./Documents-PARA/
 ├── 1-Projects/
 │   ├── Q1-Marketing-Campaign/
 │   └── Website-Redesign/
@@ -249,7 +249,7 @@ config.manual_review_threshold = 0.6  # Files with confidence < 60% flagged for 
 ### Recommended Structure
 
 ```
-~/Documents/
+./Documents/
 ├── 1-Projects/              # Active projects
 │   ├── Q1-Marketing/
 │   ├── Website-Redesign/
@@ -312,13 +312,13 @@ Within each category:
 file-organizer organize document.pdf --methodology para
 
 # Organize directory
-file-organizer organize ~/Downloads --methodology para --recursive
+file-organizer organize ./Downloads --methodology para --recursive
 
 # Preview without moving files
-file-organizer organize ~/Downloads --methodology para --dry-run
+file-organizer organize ./Downloads --methodology para --dry-run
 
 # Use custom rules
-file-organizer organize ~/Work --methodology para --rules-file ./para-rules.json
+file-organizer organize ./Work --methodology para --rules-file ./para-rules.json
 ```
 
 ### Python API
@@ -339,8 +339,8 @@ para_config = PARAConfig(
 
 # Organize files
 result = organizer.organize(
-    input_path="~/Downloads",
-    output_path="~/Documents-PARA",
+    input_path="./Downloads",
+    output_path="./Documents-PARA",
     methodology="para",
     config=para_config
 )
@@ -359,9 +359,9 @@ from pathlib import Path
 
 # Process multiple directories
 directories = [
-    Path("~/Documents"),
-    Path("~/Downloads"),
-    Path("~/Desktop")
+    Path("./Documents"),
+    Path("./Downloads"),
+    Path("./Desktop")
 ]
 
 for directory in directories:
@@ -514,8 +514,8 @@ from file_organizer.integrations import CloudSync
 
 sync = CloudSync(provider="dropbox")
 sync.sync_structure(
-    local_path="~/Documents-PARA",
-    remote_path="/PARA",
+    local_path="./Documents-PARA",
+    remote_path="PARA",
     methodology="para"
 )
 ```

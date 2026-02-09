@@ -25,8 +25,8 @@ tracker = PreferenceTracker()
 
 # System suggests moving PDF to Downloads
 # You move it to Documents/Work instead
-source = Path("~/Downloads/report.pdf")
-destination = Path("~/Documents/Work/report.pdf")
+source = Path("./Downloads/report.pdf")
+destination = Path("./Documents/Work/report.pdf")
 
 # Track your correction
 track_file_move(tracker, source, destination)
@@ -40,7 +40,7 @@ track_file_move(tracker, source, destination)
 from file_organizer.services.intelligence import PreferenceType
 
 # Get preference for similar file
-new_file = Path("~/Downloads/proposal.pdf")
+new_file = Path("./Downloads/proposal.pdf")
 preference = tracker.get_preference(new_file, PreferenceType.FOLDER_MAPPING)
 
 if preference:
@@ -198,7 +198,7 @@ from file_organizer.services.intelligence import FolderLearner
 learner = FolderLearner()
 
 # Analyze existing organization
-patterns = learner.analyze_folder_structure(Path("~/Documents"))
+patterns = learner.analyze_folder_structure(Path("./Documents"))
 
 print("Learned patterns:")
 for pattern in patterns:
@@ -480,7 +480,7 @@ store.load_preferences()
 
 # Add preference for specific directory
 store.add_preference(
-    path=Path("~/Documents/Work"),
+    path=Path("./Documents/Work"),
     preference_data={
         "folder_mappings": {"*.pdf": "PDFs"},
         "naming_patterns": {"report_*": "Report_{date}"},
@@ -490,8 +490,8 @@ store.add_preference(
 
 # Get preference (falls back to parent directories)
 pref = store.get_preference(
-    path=Path("~/Documents/Work/Projects"),
-    fallback_to_parent=True  # Uses ~/Documents/Work preferences
+    path=Path("./Documents/Work/Projects"),
+    fallback_to_parent=True  # Uses ./Documents/Work preferences
 )
 ```
 
@@ -527,7 +527,7 @@ store.add_global_preference(
 Override global preferences for specific paths:
 ```python
 store.add_preference(
-    path=Path("~/Documents/Work"),
+    path=Path("./Documents/Work"),
     preference_data={
         "folder_mappings": {
             "*.jpg": "Work/Screenshots"  # Overrides global
@@ -550,8 +550,8 @@ organizer = FileOrganizer(preference_tracker=tracker)
 
 # Organize files (learns from corrections)
 results = organizer.organize_directory(
-    source=Path("~/Downloads"),
-    destination=Path("~/Documents"),
+    source=Path("./Downloads"),
+    destination=Path("./Documents"),
     learn_preferences=True  # Enable learning
 )
 
@@ -571,7 +571,7 @@ tracker = PreferenceTracker()
 deduper = HashDeduplicator()
 
 # Find duplicates
-duplicates = deduper.find_duplicates(Path("~/Documents"))
+duplicates = deduper.find_duplicates(Path("./Documents"))
 
 # Track user's selection preferences
 for group in duplicates:

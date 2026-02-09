@@ -22,10 +22,10 @@ This guide helps you migrate to Phase 3 features from earlier versions or from m
 **Backup Your Data**:
 ```bash
 # Create complete backup
-cp -r ~/Documents ~/Documents-backup-$(date +%Y%m%d)
+cp -r ./Documents ./Documents-backup-$(date +%Y%m%d)
 
 # Or use tar
-tar -czf documents-backup-$(date +%Y%m%d).tar.gz ~/Documents
+tar -czf documents-backup-$(date +%Y%m%d).tar.gz ./Documents
 ```
 
 **Check Current Version**:
@@ -68,13 +68,13 @@ file-organizer config migrate --from-version 1.x
 
 # Manual migration
 # Copy old config and update
-cp ~/.config/file-organizer/config.yaml ~/.config/file-organizer/config-old.yaml
+cp config/file-organizer/config.yaml config/file-organizer/config-old.yaml
 file-organizer config create --defaults phase3
 ```
 
 **New Phase 3 Settings**:
 ```yaml
-# ~/.config/file-organizer/config.yaml
+# config/file-organizer/config.yaml
 
 phase3:
   # PARA Methodology
@@ -114,7 +114,7 @@ file-organizer db status
 
 **Preserve History** (manual approach):
 - Phase 3 uses a new database schema
-- Manual backup: Copy `~/.file_organizer/history.db` to a safe location
+- Manual backup: Copy `data/file-organizer/history.db` to a safe location
 - History from Phase 2 can be queried separately if needed
 
 ---
@@ -125,7 +125,7 @@ file-organizer db status
 
 **Before**:
 ```
-~/Documents/
+./Documents/
 ├── project1.pdf
 ├── work-report.docx
 ├── recipe.pdf
@@ -135,7 +135,7 @@ file-organizer db status
 
 **After PARA**:
 ```
-~/Documents-PARA/
+./Documents-PARA/
 ├── 1-Projects/
 │   └── Project1/
 │       └── project1.pdf
@@ -157,7 +157,7 @@ file-organizer db status
 1. **Analyze Current Structure**:
 ```bash
 # Preview PARA categorization
-file-organizer analyze ~/Documents --methodology para --dry-run
+file-organizer analyze ./Documents --methodology para --dry-run
 
 # Output:
 # Analyzed 156 files:
@@ -170,16 +170,16 @@ file-organizer analyze ~/Documents --methodology para --dry-run
 2. **Review Suggestions**:
 ```bash
 # Review low-confidence categorizations
-file-organizer analyze ~/Documents --methodology para --show-low-confidence
+file-organizer analyze ./Documents --methodology para --show-low-confidence
 
 # Export review list
-file-organizer analyze ~/Documents --methodology para --export-csv review.csv
+file-organizer analyze ./Documents --methodology para --export-csv review.csv
 ```
 
 3. **Execute Migration**:
 ```bash
 # Migrate to PARA structure
-file-organizer migrate ~/Documents ~/Documents-PARA --methodology para
+file-organizer migrate ./Documents ./Documents-PARA --methodology para
 
 # Progress output:
 # Processing [##########] 100% Complete
@@ -193,17 +193,17 @@ file-organizer migrate ~/Documents ~/Documents-PARA --methodology para
 4. **Verify Results**:
 ```bash
 # Check structure
-tree ~/Documents-PARA -L 2
+tree ./Documents-PARA -L 2
 
 # Validate organization
-file-organizer validate ~/Documents-PARA --methodology para
+file-organizer validate ./Documents-PARA --methodology para
 ```
 
 ### From Dated Folders
 
 **Before**:
 ```
-~/Documents/
+./Documents/
 ├── 2024-01-Project-Alpha/
 ├── 2024-02-Budget/
 ├── 2023-12-Old-Project/
@@ -230,8 +230,8 @@ config = PARAConfig(
 
 organizer = FileOrganizer()
 organizer.migrate(
-    input_path="~/Documents",
-    output_path="~/Documents-PARA",
+    input_path="./Documents",
+    output_path="./Documents-PARA",
     methodology="para",
     para_config=config
 )
@@ -241,7 +241,7 @@ organizer.migrate(
 
 **Before**:
 ```
-~/Documents/
+./Documents/
 ├── Work/
 │   ├── Current/
 │   └── Completed/
@@ -260,7 +260,7 @@ category_mapping = {
 }
 
 # Apply mapping
-file-organizer migrate ~/Documents ~/Documents-PARA \
+file-organizer migrate ./Documents ./Documents-PARA \
     --methodology para \
     --mapping-file category_mapping.json
 ```
@@ -273,7 +273,7 @@ file-organizer migrate ~/Documents ~/Documents-PARA \
 
 **Before**:
 ```
-~/Documents/
+./Documents/
 ├── invoice-jan.pdf
 ├── invoice-feb.pdf
 ├── contract-clientA.pdf
@@ -282,7 +282,7 @@ file-organizer migrate ~/Documents ~/Documents-PARA \
 
 **After Johnny Decimal**:
 ```
-~/Documents-JD/
+./Documents-JD/
 ├── 10-19-Administration/
 │   └── 12-Contracts/
 │       └── 12.01-contract-clientA.pdf
@@ -311,36 +311,36 @@ file-organizer jd list-schemes
 2. **Generate Scheme from Existing Structure**:
 ```bash
 # Analyze and suggest scheme
-file-organizer jd generate-scheme ~/Documents --output custom-scheme.json
+file-organizer jd generate-scheme ./Documents --output custom-scheme.json
 
 # Review and edit
 cat custom-scheme.json
 
 # Apply scheme
-file-organizer jd init ~/Documents-JD --scheme custom-scheme.json
+file-organizer jd init ./Documents-JD --scheme custom-scheme.json
 ```
 
 3. **Assign Numbers**:
 ```bash
 # Dry run first
-file-organizer jd batch-assign ~/Documents \
+file-organizer jd batch-assign ./Documents \
     --scheme custom-scheme.json \
     --dry-run
 
 # Review assignments
 # Then execute
-file-organizer jd batch-assign ~/Documents \
+file-organizer jd batch-assign ./Documents \
     --scheme custom-scheme.json \
-    --output ~/Documents-JD
+    --output ./Documents-JD
 ```
 
 4. **Create Index**:
 ```bash
 # Generate Johnny Decimal index
-file-organizer jd generate-index ~/Documents-JD > "00.00 Index.md"
+file-organizer jd generate-index ./Documents-JD > "00.00 Index.md"
 
 # Place in root directory
-mv "00.00 Index.md" ~/Documents-JD/
+mv "00.00 Index.md" ./Documents-JD/
 ```
 
 ### From Existing Numbering System
@@ -349,7 +349,7 @@ If you already use a numbering system (e.g., folders named "01", "02", etc.):
 
 **Before**:
 ```
-~/Documents/
+./Documents/
 ├── 01-Admin/
 ├── 02-Finance/
 ├── 03-Projects/
@@ -358,7 +358,7 @@ If you already use a numbering system (e.g., folders named "01", "02", etc.):
 **Migration**:
 ```bash
 # Import existing structure
-file-organizer jd import-structure ~/Documents --map-to-areas
+file-organizer jd import-structure ./Documents --map-to-areas
 
 # Maps:
 # 01-Admin → 10-19 Administration
@@ -366,14 +366,14 @@ file-organizer jd import-structure ~/Documents --map-to-areas
 # 03-Projects → 30-39 Projects
 
 # Then assign individual file numbers
-file-organizer jd batch-assign ~/Documents --preserve-folders
+file-organizer jd batch-assign ./Documents --preserve-folders
 ```
 
 ### From Topic Folders with Many Files
 
 **Before**:
 ```
-~/Documents/
+./Documents/
 └── Invoices/
     ├── invoice1.pdf
     ├── invoice2.pdf
@@ -383,10 +383,10 @@ file-organizer jd batch-assign ~/Documents --preserve-folders
 **Strategy**:
 ```bash
 # Use Johnny Decimal to organize large folders
-file-organizer jd organize ~/Documents/Invoices \
+file-organizer jd organize ./Documents/Invoices \
     --category 21 \
     --auto-assign \
-    --output ~/Documents-JD/20-29-Finance/21-Accounting/
+    --output ./Documents-JD/20-29-Finance/21-Accounting/
 
 # Result:
 # 21.01-invoice1.pdf
@@ -406,7 +406,7 @@ Combine both methodologies for maximum organization:
 
 **Result**:
 ```
-~/Documents-Organized/
+./Documents-Organized/
 ├── 1-Projects/
 │   └── 30-39-Active-Projects/
 │       ├── 31-Client-Work/
@@ -432,7 +432,7 @@ Combine both methodologies for maximum organization:
 **Migration Command**:
 ```bash
 # Apply both methodologies
-file-organizer migrate ~/Documents ~/Documents-Organized \
+file-organizer migrate ./Documents ./Documents-Organized \
     --methodology para,johnny-decimal \
     --para-config para-config.yaml \
     --jd-scheme business
@@ -456,8 +456,8 @@ jd_config = JohnnyDecimalConfig(
 
 organizer = FileOrganizer()
 organizer.migrate(
-    input_path="~/Documents",
-    output_path="~/Documents-Organized",
+    input_path="./Documents",
+    output_path="./Documents-Organized",
     methodologies=["para", "johnny-decimal"],
     para_config=para_config,
     jd_config=jd_config
@@ -484,7 +484,7 @@ file_formats:
 **Re-organize Existing Books**:
 ```bash
 # Re-analyze with enhanced features
-file-organizer re-organize ~/Books --format epub --use-enhanced
+file-organizer re-organize ./Books --format epub --use-enhanced
 ```
 
 ### Archive File Support
@@ -503,7 +503,7 @@ file_formats:
 **Re-process Archives**:
 ```bash
 # Re-analyze existing archives
-file-organizer re-organize ~/Downloads/*.zip --analyze-contents
+file-organizer re-organize ./Downloads/*.zip --analyze-contents
 ```
 
 ---
@@ -515,21 +515,21 @@ file-organizer re-organize ~/Downloads/*.zip --analyze-contents
 **File Timestamps**:
 ```bash
 # Preserve original timestamps during migration
-file-organizer migrate ~/Documents ~/Documents-PARA \
+file-organizer migrate ./Documents ./Documents-PARA \
     --preserve-timestamps
 ```
 
 **Extended Attributes** (macOS/Linux):
 ```bash
 # Preserve extended attributes (tags, comments)
-file-organizer migrate ~/Documents ~/Documents-PARA \
+file-organizer migrate ./Documents ./Documents-PARA \
     --preserve-xattrs
 ```
 
 **File Permissions**:
 ```bash
 # Preserve file permissions
-file-organizer migrate ~/Documents ~/Documents-PARA \
+file-organizer migrate ./Documents ./Documents-PARA \
     --preserve-permissions
 ```
 
@@ -538,18 +538,18 @@ file-organizer migrate ~/Documents ~/Documents-PARA \
 **Export Operation History**:
 ```bash
 # Export history before migration
-file-organizer history export ~/Documents-history.json
+file-organizer history export ./Documents-history.json
 
 # After migration, import history with new paths
-file-organizer history import ~/Documents-history.json \
-    --remap-paths ~/Documents:~/Documents-PARA
+file-organizer history import ./Documents-history.json \
+    --remap-paths ./Documents:./Documents-PARA
 ```
 
 ### Creating Migration Log
 
 ```bash
 # Log all migration operations
-file-organizer migrate ~/Documents ~/Documents-PARA \
+file-organizer migrate ./Documents ./Documents-PARA \
     --methodology para \
     --log-file migration-log.txt
 
@@ -566,18 +566,18 @@ cat migration-log.txt
 **Create Restore Point** (manual approach):
 <!-- CLI snapshot commands not yet implemented
 ```bash
-file-organizer snapshot create ~/Documents --name before-phase3
+file-organizer snapshot create ./Documents --name before-phase3
 file-organizer snapshot list
-file-organizer snapshot restore before-phase3 ~/Documents
+file-organizer snapshot restore before-phase3 ./Documents
 ```
 -->
 
 ```bash
 # Manual backup strategy
-cp -r ~/Documents ~/Documents-backup-$(date +%Y%m%d)
+cp -r ./Documents ./Documents-backup-$(date +%Y%m%d)
 
 # Or use system backup tools
-tar -czf documents-backup.tar.gz ~/Documents
+tar -czf documents-backup.tar.gz ./Documents
 ```
 
 **Note**: Built-in snapshot commands are planned for future release. Use manual backup strategies until then.
@@ -587,13 +587,13 @@ tar -czf documents-backup.tar.gz ~/Documents
 **Verify Before Deleting Original**:
 ```bash
 # Compare original and migrated
-file-organizer compare ~/Documents ~/Documents-PARA
+file-organizer compare ./Documents ./Documents-PARA
 
 # Check for missing files
-file-organizer verify ~/Documents-PARA --against ~/Documents
+file-organizer verify ./Documents-PARA --against ./Documents
 
 # Only delete original after verification
-rm -rf ~/Documents  # Use with caution!
+rm -rf ./Documents  # Use with caution!
 ```
 
 ### Incremental Migration
@@ -601,16 +601,16 @@ rm -rf ~/Documents  # Use with caution!
 **Migrate in Stages**:
 ```bash
 # Stage 1: Migrate projects only
-file-organizer migrate ~/Documents ~/Documents-PARA \
+file-organizer migrate ./Documents ./Documents-PARA \
     --filter "projects/*"
 
 # Stage 2: Verify and continue
-file-organizer migrate ~/Documents ~/Documents-PARA \
+file-organizer migrate ./Documents ./Documents-PARA \
     --filter "work/*" \
     --incremental
 
 # Stage 3: Complete migration
-file-organizer migrate ~/Documents ~/Documents-PARA \
+file-organizer migrate ./Documents ./Documents-PARA \
     --complete
 ```
 
@@ -623,13 +623,13 @@ file-organizer migrate ~/Documents ~/Documents-PARA \
 **Validate Structure**:
 ```bash
 # Validate PARA structure
-file-organizer validate ~/Documents-PARA --methodology para
+file-organizer validate ./Documents-PARA --methodology para
 
 # Validate Johnny Decimal numbers
-file-organizer jd validate ~/Documents-JD --check-conflicts
+file-organizer jd validate ./Documents-JD --check-conflicts
 
 # Validate file integrity
-file-organizer verify ~/Documents-PARA --check-hashes
+file-organizer verify ./Documents-PARA --check-hashes
 ```
 
 ### Setup Automation
@@ -637,9 +637,9 @@ file-organizer verify ~/Documents-PARA --check-hashes
 **Watch for New Files**:
 ```bash
 # Auto-organize new files
-file-organizer watch ~/Downloads \
+file-organizer watch ./Downloads \
     --methodology para,johnny-decimal \
-    --output ~/Documents-Organized \
+    --output ./Documents-Organized \
     --daemon
 ```
 
@@ -660,17 +660,17 @@ crontab -e
 **Update Shortcuts**:
 ```bash
 # Update shell aliases
-echo 'alias docs="cd ~/Documents-PARA"' >> ~/.bashrc
-echo 'alias work="cd ~/Documents-PARA/1-Projects"' >> ~/.bashrc
+echo 'alias docs="cd ./Documents-PARA"' >> ./.bashrc
+echo 'alias work="cd ./Documents-PARA/1-Projects"' >> ./.bashrc
 
 # Reload
-source ~/.bashrc
+source ./.bashrc
 ```
 
 **Update Backup Scripts**:
 ```bash
 # Update backup paths
-sed -i 's|~/Documents|~/Documents-PARA|g' backup-script.sh
+sed -i 's|./Documents|./Documents-PARA|g' backup-script.sh
 ```
 
 ---
@@ -682,10 +682,10 @@ sed -i 's|~/Documents|~/Documents-PARA|g' backup-script.sh
 **Check Logs**:
 ```bash
 # View migration log
-tail -f ~/.config/file-organizer/logs/migration.log
+tail -f config/file-organizer/logs/migration.log
 
 # Check for errors
-grep ERROR ~/.config/file-organizer/logs/migration.log
+grep ERROR config/file-organizer/logs/migration.log
 ```
 
 **Retry Failed Files**:
@@ -694,7 +694,7 @@ grep ERROR ~/.config/file-organizer/logs/migration.log
 file-organizer migration status --show-failures > failed-files.txt
 
 # Retry
-file-organizer migrate failed-files.txt ~/Documents-PARA --retry
+file-organizer migrate failed-files.txt ./Documents-PARA --retry
 ```
 
 ### Partial Migration
@@ -705,7 +705,7 @@ file-organizer migrate failed-files.txt ~/Documents-PARA --retry
 file-organizer migration status
 
 # Resume from checkpoint
-file-organizer migrate ~/Documents ~/Documents-PARA --resume
+file-organizer migrate ./Documents ./Documents-PARA --resume
 ```
 
 ### Conflicts During Migration
@@ -713,10 +713,10 @@ file-organizer migrate ~/Documents ~/Documents-PARA --resume
 **Resolve Naming Conflicts**:
 ```bash
 # Find conflicts
-file-organizer migration check-conflicts ~/Documents-PARA
+file-organizer migration check-conflicts ./Documents-PARA
 
 # Resolve
-file-organizer migration resolve-conflicts ~/Documents-PARA \
+file-organizer migration resolve-conflicts ./Documents-PARA \
     --strategy rename  # or skip, overwrite
 ```
 

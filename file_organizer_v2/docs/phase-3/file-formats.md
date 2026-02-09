@@ -263,7 +263,7 @@ if not is_valid:
 
 ### Enable/Disable Format Support
 
-**Global Configuration** (`~/.config/file-organizer/config.yaml`):
+**Global Configuration** (`config/file-organizer/config.yaml`):
 ```yaml
 file_formats:
   # Document formats
@@ -481,7 +481,7 @@ file-organizer test-all-formats
 
 2. **Update configuration**:
    ```yaml
-   # Add to ~/.config/file-organizer/config.yaml
+   # Add to config/file-organizer/config.yaml
    file_formats:
      epub_enhanced: true
      archive_support: true
@@ -490,7 +490,7 @@ file-organizer test-all-formats
 
 3. **Re-organize existing files**:
    ```bash
-   file-organizer re-organize ~/Documents --use-enhanced-formats
+   file-organizer re-organize ./Documents --use-enhanced-formats
    ```
 
 ### From Manual Organization
@@ -498,10 +498,10 @@ file-organizer test-all-formats
 If you've been organizing files manually:
 ```bash
 # Analyze what changed
-file-organizer analyze ~/Documents --show-improvements
+file-organizer analyze ./Documents --show-improvements
 
 # Apply Phase 3 organization
-file-organizer organize ~/Documents --methodology para --use-enhanced-formats
+file-organizer organize ./Documents --methodology para --use-enhanced-formats
 ```
 
 ## Troubleshooting

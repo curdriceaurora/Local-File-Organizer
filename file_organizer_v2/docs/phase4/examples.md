@@ -37,8 +37,8 @@ organizer = FileOrganizer(
 with tx_manager.transaction("Organize Downloads") as tx_id:
     # Organize files
     results = organizer.organize_directory(
-        source=Path("~/Downloads"),
-        destination=Path("~/Documents"),
+        source=Path("./Downloads"),
+        destination=Path("./Documents"),
         transaction_id=tx_id,
         learn_preferences=True
     )
@@ -72,7 +72,7 @@ deduper = HashDeduplicator(algorithm="sha256")
 analytics = AnalyticsService()
 tx_manager = TransactionManager()
 
-directory = Path("~/Documents")
+directory = Path("./Documents")
 
 # Analyze before
 print("Before cleanup:")
@@ -133,7 +133,7 @@ engine = SmartSuggestionEngine(preference_tracker=preference_tracker)
 tagger = AutoTaggingService()
 
 # Process files in Downloads
-downloads = Path("~/Downloads")
+downloads = Path("./Downloads")
 
 for file_path in downloads.glob("*"):
     if not file_path.is_file():
@@ -191,7 +191,7 @@ quality_analyzer = ImageQualityAnalyzer()
 
 # Find similar photos
 duplicates = deduper.find_duplicates(
-    directory=Path("~/Pictures"),
+    directory=Path("./Pictures"),
     similarity_threshold=0.90,
     algorithm="phash",
     recursive=True
@@ -240,7 +240,7 @@ deduper = DocumentDeduplicator(model_name="qwen2.5:3b")
 
 # Find similar documents
 similar_docs = deduper.find_similar_documents(
-    directory=Path("~/Documents"),
+    directory=Path("./Documents"),
     similarity_threshold=0.85,
     recursive=True,
     file_extensions=[".txt", ".md", ".pdf", ".docx"]
@@ -277,14 +277,14 @@ for i, group in enumerate(similar_docs, 1):
 
 # Downloads
 echo "Cleaning Downloads..."
-python -m file_organizer.cli.dedupe ~/Downloads \
+python -m file_organizer.cli.dedupe ./Downloads \
     --strategy newest \
     --algorithm md5 \
     --batch
 
 # Documents
 echo "Cleaning Documents..."
-python -m file_organizer.cli.dedupe ~/Documents \
+python -m file_organizer.cli.dedupe ./Documents \
     --strategy oldest \
     --include "*.pdf" \
     --include "*.docx" \
@@ -292,7 +292,7 @@ python -m file_organizer.cli.dedupe ~/Documents \
 
 # Pictures
 echo "Cleaning Pictures..."
-python -m file_organizer.cli.dedupe ~/Pictures \
+python -m file_organizer.cli.dedupe ./Pictures \
     --strategy largest \
     --include "*.jpg" \
     --include "*.png" \
@@ -318,10 +318,10 @@ tracker = PreferenceTracker()
 
 # Simulate user organizing files
 moves = [
-    (Path("~/Downloads/report.pdf"), Path("~/Documents/Work/Reports/report.pdf")),
-    (Path("~/Downloads/invoice.pdf"), Path("~/Documents/Work/Invoices/invoice.pdf")),
-    (Path("~/Downloads/photo.jpg"), Path("~/Pictures/2024/photo.jpg")),
-    (Path("~/Downloads/vacation.jpg"), Path("~/Pictures/2024/Vacation/vacation.jpg")),
+    (Path("./Downloads/report.pdf"), Path("./Documents/Work/Reports/report.pdf")),
+    (Path("./Downloads/invoice.pdf"), Path("./Documents/Work/Invoices/invoice.pdf")),
+    (Path("./Downloads/photo.jpg"), Path("./Pictures/2024/photo.jpg")),
+    (Path("./Downloads/vacation.jpg"), Path("./Pictures/2024/Vacation/vacation.jpg")),
 ]
 
 for source, dest in moves:
@@ -402,9 +402,9 @@ feedback = FeedbackProcessor()
 
 # System makes suggestions and learns from feedback
 files_to_organize = [
-    Path("~/Downloads/quarterly_report_Q1.pdf"),
-    Path("~/Downloads/meeting_notes_jan.txt"),
-    Path("~/Downloads/budget_2024.xlsx"),
+    Path("./Downloads/quarterly_report_Q1.pdf"),
+    Path("./Downloads/meeting_notes_jan.txt"),
+    Path("./Downloads/budget_2024.xlsx"),
 ]
 
 for file_path in files_to_organize:
@@ -475,8 +475,8 @@ organizer = FileOrganizer(history_tracker=tracker)
 # Organize
 with tx_manager.transaction("Organize Downloads") as tx_id:
     results = organizer.organize_directory(
-        source=Path("~/Downloads"),
-        destination=Path("~/Documents"),
+        source=Path("./Downloads"),
+        destination=Path("./Documents"),
         transaction_id=tx_id
     )
 
@@ -566,7 +566,7 @@ from file_organizer.services.auto_tagging import AutoTaggingService
 tagger = AutoTaggingService()
 
 # Batch tag all documents
-directory = Path("~/Documents")
+directory = Path("./Documents")
 
 for file_path in directory.rglob("*.pdf"):
     print(f"\nTagging: {file_path.name}")
@@ -607,7 +607,7 @@ engine = SmartSuggestionEngine(preference_tracker=tracker)
 tracker.load_from_file("preferences.json")
 
 # Process new files
-new_files = list(Path("~/Downloads").glob("*"))
+new_files = list(Path("./Downloads").glob("*"))
 
 for file_path in new_files:
     if not file_path.is_file():
@@ -645,7 +645,7 @@ from file_organizer.services.auto_tagging import AutoTaggingService
 
 tagger = AutoTaggingService()
 
-file_path = Path("~/Documents/project_proposal.pdf")
+file_path = Path("./Documents/project_proposal.pdf")
 
 print(f"Analyzing: {file_path.name}\n")
 
@@ -690,9 +690,9 @@ analytics = AnalyticsService()
 
 # Analyze multiple directories
 directories = [
-    Path("~/Documents"),
-    Path("~/Downloads"),
-    Path("~/Pictures"),
+    Path("./Documents"),
+    Path("./Downloads"),
+    Path("./Pictures"),
 ]
 
 total_size = 0
@@ -734,7 +734,7 @@ from datetime import datetime
 import json
 
 analytics = AnalyticsService()
-directory = Path("~/Documents")
+directory = Path("./Documents")
 
 # Get current quality
 quality = analytics.get_quality_metrics(directory)
@@ -790,17 +790,17 @@ for rec in quality.recommendations[:3]:
 
 YEAR=$(date +%Y)
 MONTH=$(date +%m)
-REPORT_DIR="~/Reports"
+REPORT_DIR="./Reports"
 mkdir -p "$REPORT_DIR"
 
 # Generate analytics report
-python -m file_organizer.cli.analytics ~/Documents \
+python -m file_organizer.cli.analytics ./Documents \
     --export "$REPORT_DIR/documents_${YEAR}_${MONTH}.html" \
     --trends --days 30
 
 # Generate for other directories
 for DIR in Downloads Pictures Music; do
-    python -m file_organizer.cli.analytics ~/$DIR \
+    python -m file_organizer.cli.analytics ./$DIR \
         --export "$REPORT_DIR/${DIR}_${YEAR}_${MONTH}.json"
 done
 
@@ -890,8 +890,8 @@ class SmartFileOrganizer:
 # Usage
 organizer = SmartFileOrganizer()
 tx_id = organizer.organize_smart(
-    Path("~/Downloads"),
-    Path("~/Documents")
+    Path("./Downloads"),
+    Path("./Documents")
 )
 
 # If needed, undo

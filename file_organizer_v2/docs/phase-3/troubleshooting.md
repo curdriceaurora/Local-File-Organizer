@@ -50,7 +50,7 @@ custom_rule = PARARule(
     category=PARACategory.PROJECTS,
     conditions={
         "keywords": ["deliverable", "client", "deadline"],
-        "path_contains": "/work/"
+        "path_contains": "work/"
     },
     priority=10
 )
@@ -86,7 +86,7 @@ engine.reject_suggestion(
 
 **Adjust Confidence Threshold**:
 ```yaml
-# ~/.config/file-organizer/config.yaml
+# config/file-organizer/config.yaml
 para:
   confidence_threshold: 0.8  # Higher = fewer files categorized, but faster
 ```
@@ -177,16 +177,16 @@ file-organizer archive-old --days 90 --category projects
 
 **Find Conflicts**:
 ```bash
-file-organizer jd check-conflicts ~/Documents
+file-organizer jd check-conflicts ./Documents
 ```
 
 **Auto-Resolve**:
 ```bash
 # Increment strategy (11.04 → 11.05)
-file-organizer jd resolve-conflicts ~/Documents --strategy increment
+file-organizer jd resolve-conflicts ./Documents --strategy increment
 
 # Skip strategy (move to next category)
-file-organizer jd resolve-conflicts ~/Documents --strategy skip
+file-organizer jd resolve-conflicts ./Documents --strategy skip
 ```
 
 **Import Existing**:
@@ -194,7 +194,7 @@ file-organizer jd resolve-conflicts ~/Documents --strategy skip
 from file_organizer.methodologies.johnny_decimal import JohnnyDecimalGenerator
 
 generator = JohnnyDecimalGenerator()
-generator.import_existing_structure("~/Documents")
+generator.import_existing_structure("./Documents")
 ```
 
 ### Category Full (99 Items)
@@ -526,7 +526,7 @@ model = TextModel(config)
 **Batch Processing**:
 ```bash
 # Process multiple files at once
-file-organizer organize ~/Downloads --batch-size 10
+file-organizer organize ./Downloads --batch-size 10
 ```
 
 **Disable Features**:
@@ -595,7 +595,7 @@ file-organizer history optimize
 
 **Compact Database**:
 ```bash
-sqlite3 ~/.config/file-organizer/history.db "VACUUM;"
+sqlite3 config/file-organizer/history.db "VACUUM;"
 ```
 
 ---
@@ -643,7 +643,7 @@ gh issue list
 **Check Config Location**:
 ```bash
 # Should be at:
-~/.config/file-organizer/config.yaml
+config/file-organizer/config.yaml
 
 # Or:
 file-organizer config path
@@ -657,7 +657,7 @@ python3 -c "import yaml; yaml.safe_load(open('config.yaml'))"
 
 **Fix Permissions**:
 ```bash
-chmod 644 ~/.config/file-organizer/config.yaml
+chmod 644 config/file-organizer/config.yaml
 ```
 
 ### CLI Commands Not Found
@@ -679,7 +679,7 @@ which file-organizer
 
 **Add to PATH**:
 ```bash
-# Add to ~/.bashrc or ~/.zshrc
+# Add to ./.bashrc or ./.zshrc
 export PATH="$PATH:$HOME/.local/bin"
 ```
 
@@ -692,10 +692,10 @@ export PATH="$PATH:$HOME/.local/bin"
 Check logs for detailed error information:
 ```bash
 # View logs
-tail -f ~/.config/file-organizer/logs/file-organizer.log
+tail -f config/file-organizer/logs/file-organizer.log
 
 # Enable debug logging
-file-organizer --debug organize ~/Downloads
+file-organizer --debug organize ./Downloads
 ```
 
 ### Diagnostic Information
@@ -737,7 +737,7 @@ When reporting bugs, include:
 **OS**: macOS 14.0
 
 **Steps to Reproduce**:
-1. Run `file-organizer organize ~/Downloads`
+1. Run `file-organizer organize ./Downloads`
 2. Select PARA methodology
 3. Error occurs
 

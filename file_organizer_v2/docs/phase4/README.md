@@ -37,7 +37,7 @@ Remove duplicate files with three powerful methods:
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest
+python -m file_organizer.cli.dedupe ./Downloads --strategy oldest
 
 ```
 
@@ -47,7 +47,7 @@ python -m file_organizer.cli.dedupe ~/Downloads --strategy oldest
 
 from file_organizer.services.deduplication import ImageDeduplicator
 deduper = ImageDeduplicator()
-duplicates = deduper.find_duplicates(Path("~/Pictures"), similarity_threshold=0.90)
+duplicates = deduper.find_duplicates(Path("./Pictures"), similarity_threshold=0.90)
 
 ```
 
@@ -57,7 +57,7 @@ duplicates = deduper.find_duplicates(Path("~/Pictures"), similarity_threshold=0.
 
 from file_organizer.services.deduplication import DocumentDeduplicator
 deduper = DocumentDeduplicator()
-similar = deduper.find_similar_documents(Path("~/Documents"), similarity_threshold=0.85)
+similar = deduper.find_similar_documents(Path("./Documents"), similarity_threshold=0.85)
 
 ```
 
@@ -85,7 +85,7 @@ Identifies your organization patterns
 
 from file_organizer.services.intelligence import PatternLearner
 learner = PatternLearner()
-patterns = learner.analyze_patterns(Path("~/Documents"))
+patterns = learner.analyze_patterns(Path("./Documents"))
 
 ```
 
@@ -167,7 +167,7 @@ Comprehensive insights and metrics:
 
 from file_organizer.services.analytics import AnalyticsService
 analytics = AnalyticsService()
-stats = analytics.get_storage_stats(Path("~/Documents"))
+stats = analytics.get_storage_stats(Path("./Documents"))
 
 ```
 
@@ -175,7 +175,7 @@ stats = analytics.get_storage_stats(Path("~/Documents"))
 
 ```python
 
-quality = analytics.get_quality_metrics(Path("~/Documents"))
+quality = analytics.get_quality_metrics(Path("./Documents"))
 print(f"Quality score: {quality.quality_score}/100")
 
 ```
@@ -184,7 +184,7 @@ print(f"Quality score: {quality.quality_score}/100")
 
 ```bash
 
-python -m file_organizer.cli.analytics ~/Documents --export report.html
+python -m file_organizer.cli.analytics ./Documents --export report.html
 
 ```
 
@@ -207,7 +207,7 @@ pip install -e .
 
 ```bash
 
-python -m file_organizer.cli.dedupe ~/Downloads --dry-run
+python -m file_organizer.cli.dedupe ./Downloads --dry-run
 
 ```
 
@@ -225,7 +225,7 @@ tracker = PreferenceTracker()
 
 ```bash
 
-python -m file_organizer.cli.analytics ~/Documents
+python -m file_organizer.cli.analytics ./Documents
 
 ```
 
@@ -391,12 +391,12 @@ organizer = FileOrganizer(
 # Organize with all features
 with tx_manager.transaction("Smart organize") as tx_id:
     # 1. Remove duplicates
-    duplicates = deduper.find_duplicates(Path("~/Downloads"))
+    duplicates = deduper.find_duplicates(Path("./Downloads"))
 
     # 2. Organize files (learning preferences)
     results = organizer.organize_directory(
-        source=Path("~/Downloads"),
-        destination=Path("~/Documents"),
+        source=Path("./Downloads"),
+        destination=Path("./Documents"),
         transaction_id=tx_id
     )
 

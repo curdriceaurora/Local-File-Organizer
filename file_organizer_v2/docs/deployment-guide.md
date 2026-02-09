@@ -14,7 +14,7 @@ Stage 1 (builder)   Stage 2 (runtime)
 python:3.11-slim     python:3.11-slim
   |                    |
   +-- build tools      +-- ffmpeg, libmagic, curl
-  +-- pip install .    +-- /opt/venv (from builder)
+  +-- pip install .    +-- opt/venv (from builder)
                        +-- non-root user "organizer"
                        +-- HEALTHCHECK on :8000/health
 ```
@@ -29,7 +29,7 @@ docker build -t file-organizer:latest .
 docker run -d \
   --name file-organizer \
   -p 8000:8000 \
-  -v organizer-data:/data \
+  -v organizer-data:data \
   -e REDIS_URL=redis://host.docker.internal:6379/0 \
   file-organizer:latest
 ```
@@ -37,7 +37,7 @@ docker run -d \
 The container:
 - Runs as non-root user `organizer` (UID/GID 1000).
 - Exposes port 8000 for the web API.
-- Declares `/data` as a persistent volume.
+- Declares `data` as a persistent volume.
 - Includes a health check that pings `http://localhost:8000/health` every 30s.
 
 ### Docker Compose (Production)
@@ -113,7 +113,7 @@ The development container exposes debugpy on port 5678. Configure your IDE:
   "pathMappings": [
     {
       "localRoot": "${workspaceFolder}/file_organizer_v2/src",
-      "remoteRoot": "/app/file_organizer_v2/src"
+      "remoteRoot": "app/file_organizer_v2/src"
     }
   ]
 }
@@ -123,7 +123,7 @@ The development container exposes debugpy on port 5678. Configure your IDE:
 
 | Variable                    | Default                   | Description                          |
 |-----------------------------|---------------------------|--------------------------------------|
-| `FILE_ORGANIZER_DATA_DIR`   | `/data`                   | Base directory for persistent data   |
+| `FILE_ORGANIZER_DATA_DIR`   | `data`                   | Base directory for persistent data   |
 | `FILE_ORGANIZER_LOG_LEVEL`  | `INFO`                    | Logging level (DEBUG/INFO/WARNING/ERROR) |
 | `FILE_ORGANIZER_DEBUG`      | `0`                       | Enable debug mode (set to `1`)       |
 | `REDIS_URL`                 | `redis://localhost:6379/0`| Redis connection URL                 |
@@ -139,7 +139,7 @@ they are set in the `environment` section of each service.
 services:
   file-organizer:
     environment:
-      - FILE_ORGANIZER_DATA_DIR=/data
+      - FILE_ORGANIZER_DATA_DIR=data
       - FILE_ORGANIZER_LOG_LEVEL=INFO
       - REDIS_URL=redis://redis:6379/0
 ```
@@ -172,8 +172,8 @@ FILE_ORGANIZER_DATA_DIR=./data
 
 | Volume           | Mount Point | Purpose                              |
 |------------------|-------------|--------------------------------------|
-| `organizer-data` | `/data`     | Persistent storage for organized files, database, and configuration |
-| `redis-data`     | `/data`     | Redis persistence (RDB/AOF)          |
+| `organizer-data` | `data`     | Persistent storage for organized files, database, and configuration |
+| `redis-data`     | `data`     | Redis persistence (RDB/AOF)          |
 
 Both volumes use the `local` driver by default. For cloud deployments, replace
 with your storage driver (e.g., EFS, GCE PD).
@@ -182,8 +182,8 @@ with your storage driver (e.g., EFS, GCE PD).
 
 | Bind Mount                       | Container Path                | Purpose              |
 |----------------------------------|-------------------------------|----------------------|
-| `./file_organizer_v2/src`        | `/app/file_organizer_v2/src`  | Live code reload     |
-| `./file_organizer_v2/tests`      | `/app/file_organizer_v2/tests`| Test files (test-runner only) |
+| `./file_organizer_v2/src`        | `app/file_organizer_v2/src`  | Live code reload     |
+| `./file_organizer_v2/tests`      | `app/file_organizer_v2/tests`| Test files (test-runner only) |
 
 ### Custom Watch Directories
 
@@ -191,9 +191,9 @@ To monitor host directories for file organization, bind-mount them:
 
 ```bash
 docker run -d \
-  -v /path/to/incoming:/data/incoming:ro \
-  -v organizer-data:/data/organized \
-  -e FILE_ORGANIZER_DATA_DIR=/data \
+  -v path/to/incoming:data/incoming:ro \
+  -v organizer-data:data/organized \
+  -e FILE_ORGANIZER_DATA_DIR=data \
   file-organizer:latest
 ```
 
@@ -235,7 +235,7 @@ redis:
   image: redis:7-alpine
   command: ["redis-server", "--appendonly", "yes"]
   volumes:
-    - redis-data:/data
+    - redis-data:data
 ```
 
 ### Redis Memory Limits

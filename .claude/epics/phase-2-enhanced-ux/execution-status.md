@@ -1,25 +1,25 @@
 ---
 started: 2026-02-09T03:41:48Z
-updated: 2026-02-09T19:15:16Z
+updated: 2026-02-09T20:43:21Z
 worktree: .
-branch: codex/phase2-ccpm-macos-rebased
+branch: codex/phase2-task13
 ---
 
 # Phase 2 CCPM Execution Status
 
 ## Critical Chain (Remaining Work)
 
-Order: #13
+Order: #36
 
 | Task | Description | Hours |
 | --- | --- | ---: |
-| #13 | Phase 2 documentation | 16 |
+| #36 | Phase 2 docs screenshots + demo GIF | 8 |
 
-**Total chain:** 16 hours (≈2 working days)
+**Total chain:** 8 hours (≈1 working day)
 
 ## Buffers
 
-- **Project buffer:** 8 hours (≈1 working day, 50% of chain)
+- **Project buffer:** 4 hours (≈0.5 working day, 50% of chain)
 - **Buffer thresholds:**
   - Green: <33% penetration
   - Yellow: 33–66% penetration
@@ -29,8 +29,8 @@ Order: #13
 
 ## Dates (Assuming Start on Feb 9, 2026)
 
-- **Earliest finish (no buffer):** Feb 11, 2026
-- **Buffered finish:** Feb 13, 2026
+- **Earliest finish (no buffer):** Feb 10, 2026
+- **Buffered finish:** Feb 11, 2026
 
 ## Key Blockers
-- Phase 2 test suite completion and documentation validation.
+- Need real TUI capture workflow (screenshots + demo GIF).

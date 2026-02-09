@@ -42,8 +42,8 @@ from pathlib import Path
 tracker = HistoryTracker()
 
 # Move a file
-source = Path("~/Downloads/file.pdf")
-destination = Path("~/Documents/file.pdf")
+source = Path("./Downloads/file.pdf")
+destination = Path("./Documents/file.pdf")
 
 operation = tracker.track_operation(
     operation_type="move",
@@ -95,8 +95,8 @@ tracker = HistoryTracker()
 # Track a move operation
 operation = tracker.track_operation(
     operation_type=OperationType.MOVE,
-    source_path=Path("~/Downloads/document.pdf"),
-    destination_path=Path("~/Documents/Work/document.pdf"),
+    source_path=Path("./Downloads/document.pdf"),
+    destination_path=Path("./Documents/Work/document.pdf"),
     file_hash="abc123...",
     metadata={
         "file_size": 1024000,
@@ -134,7 +134,7 @@ moves = tracker.get_operations_by_type(OperationType.MOVE)
 print(f"Total moves: {len(moves)}")
 
 # Get operations by path
-docs = tracker.get_operations_by_path(Path("~/Documents"))
+docs = tracker.get_operations_by_path(Path("./Documents"))
 print(f"Operations in Documents: {len(docs)}")
 
 ```
@@ -503,7 +503,7 @@ Operations that delete or overwrite files create backups:
 ```python
 
 # Backups stored in:
-# ~/.file_organizer/backups/{date}/{operation_id}/
+# data/file-organizer/backups/{date}/{operation_id}/
 
 # Backup structure:
 backups/
@@ -589,7 +589,7 @@ CREATE TABLE transactions (
 
 ### Database Location
 
-Default: `~/.file_organizer/history/operations.db`
+Default: `data/file-organizer/history/operations.db`
 
 ### Maintenance
 
@@ -633,8 +633,8 @@ organizer = FileOrganizer(history_tracker=tracker)
 
 # Organize with history
 results = organizer.organize_directory(
-    source=Path("~/Downloads"),
-    destination=Path("~/Documents"),
+    source=Path("./Downloads"),
+    destination=Path("./Documents"),
     track_history=True  # Enable history tracking
 )
 
@@ -660,7 +660,7 @@ deduper = HashDeduplicator()
 tx_manager = TransactionManager()
 
 with tx_manager.transaction("Deduplication cleanup") as tx_id:
-    duplicates = deduper.find_duplicates(Path("~/Documents"))
+    duplicates = deduper.find_duplicates(Path("./Documents"))
 
     for group in duplicates:
         # Keep first, delete rest

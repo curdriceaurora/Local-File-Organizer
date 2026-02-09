@@ -164,10 +164,10 @@ config = JohnnyDecimalConfig(scheme="creative")
 **Saving/Loading**:
 ```python
 # Save configuration
-config.save("~/.config/file-organizer/jd-config.json")
+config.save("config/file-organizer/jd-config.json")
 
 # Load configuration
-config = JohnnyDecimalConfig.load("~/.config/file-organizer/jd-config.json")
+config = JohnnyDecimalConfig.load("config/file-organizer/jd-config.json")
 ```
 
 ---
@@ -284,7 +284,7 @@ Assign numbers to multiple files.
 
 **Example**:
 ```python
-files = list(Path("~/Documents").glob("*.pdf"))
+files = list(Path("./Documents").glob("*.pdf"))
 
 def progress(current, total):
     print(f"Processing {current}/{total}")
@@ -670,7 +670,7 @@ Initialize Johnny Decimal structure in directory.
 
 **Example**:
 ```python
-system.initialize(Path("~/Documents"))
+system.initialize(Path("./Documents"))
 # Creates:
 # 10-19-Administration/
 # 20-29-Finance/
@@ -838,7 +838,7 @@ from file_organizer.methodologies.johnny_decimal import JohnnyDecimalGenerator
 generator = JohnnyDecimalGenerator()
 
 # Get files
-files = list(Path("~/Documents").glob("*.pdf"))
+files = list(Path("./Documents").glob("*.pdf"))
 
 # Batch assign
 results = generator.batch_assign(files)
@@ -863,7 +863,7 @@ generator = JohnnyDecimalGenerator()
 resolver = ConflictResolver(generator)
 
 # Find conflicts
-conflicts = resolver.find_all_conflicts(Path("~/Documents"))
+conflicts = resolver.find_all_conflicts(Path("./Documents"))
 
 if conflicts:
     print(f"Found {len(conflicts)} conflicts")
@@ -889,7 +889,7 @@ scheme = get_default_scheme("business")
 system = JohnnyDecimalSystem(scheme)
 
 # Initialize directory structure
-root = Path("~/Documents-JD").expanduser()
+root = Path("./Documents-JD").expanduser()
 system.initialize(root)
 
 # Prints:

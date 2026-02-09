@@ -240,7 +240,7 @@ if result.needs_manual_review:
 
 **Step 1: Analyze existing structure**
 ```bash
-file-organizer analyze ~/Documents --methodology johnny-decimal --generate-scheme
+file-organizer analyze ./Documents --methodology johnny-decimal --generate-scheme
 ```
 
 This scans your folders and suggests a Johnny Decimal scheme:
@@ -258,12 +258,12 @@ Suggested Scheme:
 
 **Step 2: Review and customize**
 ```bash
-file-organizer scheme edit ~/Documents/.jd-scheme.json
+file-organizer scheme edit ./Documents/.jd-scheme.json
 ```
 
 **Step 3: Execute migration**
 ```bash
-file-organizer migrate ~/Documents --methodology johnny-decimal --preserve-originals
+file-organizer migrate ./Documents --methodology johnny-decimal --preserve-originals
 ```
 
 ### Preserving Partial Numbering
@@ -272,7 +272,7 @@ If you already have some Johnny Decimal numbers:
 
 ```python
 # Import existing numbers
-generator.import_existing_structure("~/Documents")
+generator.import_existing_structure("./Documents")
 
 # Assign new numbers without conflicts
 result = generator.assign_number(
@@ -442,7 +442,7 @@ Save as `00.00 Johnny Decimal Index.md`
 
 ```bash
 # Initialize system
-file-organizer jd init ~/Documents
+file-organizer jd init ./Documents
 
 # Assign number to file
 file-organizer jd assign document.pdf --category 11
@@ -454,7 +454,7 @@ file-organizer jd next-available --category 11
 file-organizer jd validate 11.04
 
 # Generate scheme from existing structure
-file-organizer jd generate-scheme ~/Documents
+file-organizer jd generate-scheme ./Documents
 
 # Export scheme
 file-organizer jd export-scheme > my-scheme.json
@@ -463,17 +463,17 @@ file-organizer jd export-scheme > my-scheme.json
 file-organizer jd import-scheme my-scheme.json
 
 # Show usage statistics
-file-organizer jd stats ~/Documents
+file-organizer jd stats ./Documents
 ```
 
 ### Batch Operations
 
 ```bash
 # Assign numbers to all files in directory
-file-organizer jd batch-assign ~/Documents/11-company-docs/
+file-organizer jd batch-assign ./Documents/11-company-docs/
 
 # Renumber existing files
-file-organizer jd renumber ~/Documents --start-from 11.01
+file-organizer jd renumber ./Documents --start-from 11.01
 ```
 
 ## API Reference
@@ -538,10 +538,10 @@ system.clear_reservations()
 **Solution**:
 ```bash
 # Find all conflicts
-file-organizer jd check-conflicts ~/Documents
+file-organizer jd check-conflicts ./Documents
 
 # Auto-resolve conflicts
-file-organizer jd resolve-conflicts ~/Documents --strategy increment
+file-organizer jd resolve-conflicts ./Documents --strategy increment
 ```
 
 **Problem**: Incorrect auto-assignment
@@ -613,7 +613,7 @@ Combine Johnny Decimal with PARA:
 # Watch directory and auto-assign numbers
 from file_organizer.watchers import DirectoryWatcher
 
-watcher = DirectoryWatcher("~/Documents/Inbox")
+watcher = DirectoryWatcher("./Documents/Inbox")
 
 @watcher.on_new_file
 def assign_number(file_path):

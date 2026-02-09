@@ -50,7 +50,7 @@ Find duplicate files by hash.
 **Example:**
 ```python
 duplicates = deduper.find_duplicates(
-    Path("~/Documents"),
+    Path("./Documents"),
     recursive=True,
     min_size=1024,
     include_patterns=["*.pdf", "*.docx"]
@@ -86,7 +86,7 @@ Find visually similar images.
 ```python
 deduper = ImageDeduplicator()
 duplicates = deduper.find_duplicates(
-    Path("~/Pictures"),
+    Path("./Pictures"),
     similarity_threshold=0.95,
     algorithm="phash"
 )
@@ -125,7 +125,7 @@ Find semantically similar documents.
 ```python
 deduper = DocumentDeduplicator()
 similar = deduper.find_similar_documents(
-    Path("~/Documents"),
+    Path("./Documents"),
     similarity_threshold=0.90,
     file_extensions=[".txt", ".md", ".pdf"]
 )
@@ -214,7 +214,7 @@ from file_organizer.services.intelligence import PreferenceStore
 Initialize preference store.
 
 **Parameters:**
-- `storage_path` (Path): Custom storage location (default: ~/.file_organizer/preferences/)
+- `storage_path` (Path): Custom storage location (default: data/file-organizer/preferences/)
 
 #### `add_preference(path: Path, preference_data: Dict)`
 
@@ -228,7 +228,7 @@ Add preference for a directory.
 ```python
 store = PreferenceStore()
 store.add_preference(
-    path=Path("~/Documents/Work"),
+    path=Path("./Documents/Work"),
     preference_data={
         "folder_mappings": {"*.pdf": "PDFs"},
         "confidence": 0.85
@@ -301,7 +301,7 @@ from file_organizer.history import HistoryTracker
 Initialize history tracker.
 
 **Parameters:**
-- `db_path` (Path): Custom database path (default: ~/.file_organizer/history/operations.db)
+- `db_path` (Path): Custom database path (default: data/file-organizer/history/operations.db)
 
 #### `track_operation(operation_type: OperationType, source_path: Path, **kwargs) -> Operation`
 
@@ -323,8 +323,8 @@ Track a file operation.
 tracker = HistoryTracker()
 operation = tracker.track_operation(
     operation_type=OperationType.MOVE,
-    source_path=Path("~/Downloads/file.pdf"),
-    destination_path=Path("~/Documents/file.pdf"),
+    source_path=Path("./Downloads/file.pdf"),
+    destination_path=Path("./Documents/file.pdf"),
     transaction_id="tx_123"
 )
 ```
@@ -505,7 +505,7 @@ Get smart suggestions for a file.
 ```python
 engine = SmartSuggestionEngine()
 suggestions = engine.get_suggestions(
-    Path("~/Downloads/report.pdf"),
+    Path("./Downloads/report.pdf"),
     min_confidence=0.7,
     max_suggestions=5
 )
@@ -548,7 +548,7 @@ Suggest tags for a file.
 ```python
 tagger = AutoTaggingService()
 tags = tagger.suggest_tags(
-    Path("~/Documents/report.pdf"),
+    Path("./Documents/report.pdf"),
     top_n=10,
     min_confidence=60.0
 )
@@ -617,7 +617,7 @@ Analyze a directory.
 ```python
 analytics = AnalyticsService()
 results = analytics.analyze_directory(
-    Path("~/Documents"),
+    Path("./Documents"),
     include_subdirs=True
 )
 ```
@@ -644,7 +644,7 @@ Get quality metrics.
 
 **Example:**
 ```python
-quality = analytics.get_quality_metrics(Path("~/Documents"))
+quality = analytics.get_quality_metrics(Path("./Documents"))
 print(f"Quality score: {quality.quality_score}/100")
 ```
 

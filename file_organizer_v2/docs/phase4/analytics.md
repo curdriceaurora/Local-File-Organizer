@@ -17,14 +17,14 @@ The Analytics system provides detailed insights into your file organization:
 
 ```bash
 # Show analytics dashboard
-python -m file_organizer.cli.analytics ~/Documents
+python -m file_organizer.cli.analytics ./Documents
 
 # Export analytics report
-python -m file_organizer.cli.analytics ~/Documents --export report.json
+python -m file_organizer.cli.analytics ./Documents --export report.json
 
 # Specific analysis
-python -m file_organizer.cli.analytics ~/Documents --storage-only
-python -m file_organizer.cli.analytics ~/Documents --quality-only
+python -m file_organizer.cli.analytics ./Documents --storage-only
+python -m file_organizer.cli.analytics ./Documents --quality-only
 ```
 
 ### Python API
@@ -37,7 +37,7 @@ from pathlib import Path
 analytics = AnalyticsService()
 
 # Analyze directory
-results = analytics.analyze_directory(Path("~/Documents"))
+results = analytics.analyze_directory(Path("./Documents"))
 
 # View storage stats
 print(f"Total size: {results.storage.formatted_total_size}")
@@ -56,7 +56,7 @@ print(f"Naming: {results.quality.naming_score:.1%}")
 
 ```python
 # Get storage statistics
-storage = analytics.get_storage_stats(Path("~/Documents"))
+storage = analytics.get_storage_stats(Path("./Documents"))
 
 print(f"Total Size: {storage.formatted_total_size}")
 print(f"Files: {storage.file_count}")
@@ -120,7 +120,7 @@ for file_info in largest[:10]:
 ```python
 # Track storage growth over time
 growth = analytics.get_growth_stats(
-    directory=Path("~/Documents"),
+    directory=Path("./Documents"),
     period_days=30
 )
 
@@ -137,7 +137,7 @@ print(f"Size change: {growth.size_change}")
 The quality score (0-100) measures how well-organized your files are:
 
 ```python
-quality = analytics.get_quality_metrics(Path("~/Documents"))
+quality = analytics.get_quality_metrics(Path("./Documents"))
 
 print(f"Overall Quality: {quality.quality_score}/100")
 
@@ -251,7 +251,7 @@ for rec in recommendations:
 
 ```python
 # Analyze organization patterns
-patterns = analytics.analyze_patterns(Path("~/Documents"))
+patterns = analytics.analyze_patterns(Path("./Documents"))
 
 print(f"Discovered {len(patterns.patterns)} patterns:")
 
@@ -317,7 +317,7 @@ from datetime import datetime, timedelta
 
 # Get trends over time
 trends = analytics.get_trends(
-    directory=Path("~/Documents"),
+    directory=Path("./Documents"),
     start_date=datetime.now() - timedelta(days=90),
     end_date=datetime.now(),
     granularity="week"  # or "day", "month"
@@ -337,7 +337,7 @@ for point in trends.quality_over_time:
 ```python
 # Analyze file activity
 activity = analytics.get_activity_stats(
-    directory=Path("~/Documents"),
+    directory=Path("./Documents"),
     period_days=30
 )
 
@@ -357,7 +357,7 @@ for day, count in activity.most_active_days[:5]:
 ```python
 # Track file type growth
 type_trends = analytics.get_type_trends(
-    directory=Path("~/Documents"),
+    directory=Path("./Documents"),
     period_days=90
 )
 
@@ -425,7 +425,7 @@ chart_gen.export_report(
 ```python
 # Generate comprehensive report
 report = analytics.generate_report(
-    directory=Path("~/Documents"),
+    directory=Path("./Documents"),
     include_visualizations=True,
     format="html"  # or "pdf", "json", "markdown"
 )
@@ -500,7 +500,7 @@ from file_organizer.services.analytics import AnalyticsService
 from pathlib import Path
 
 analytics = AnalyticsService()
-stats = analytics.get_storage_stats(Path("~/Documents"))
+stats = analytics.get_storage_stats(Path("./Documents"))
 # Process and save stats manually
 ```
 
@@ -510,50 +510,50 @@ stats = analytics.get_storage_stats(Path("~/Documents"))
 
 ```bash
 # Show dashboard
-python -m file_organizer.cli.analytics ~/Documents
+python -m file_organizer.cli.analytics ./Documents
 
 # Storage analysis only
-python -m file_organizer.cli.analytics ~/Documents --storage
+python -m file_organizer.cli.analytics ./Documents --storage
 
 # Quality analysis only
-python -m file_organizer.cli.analytics ~/Documents --quality
+python -m file_organizer.cli.analytics ./Documents --quality
 
 # Pattern analysis only
-python -m file_organizer.cli.analytics ~/Documents --patterns
+python -m file_organizer.cli.analytics ./Documents --patterns
 
 # Trends analysis
-python -m file_organizer.cli.analytics ~/Documents --trends --days 90
+python -m file_organizer.cli.analytics ./Documents --trends --days 90
 ```
 
 ### Export Options
 
 ```bash
 # Export to JSON
-python -m file_organizer.cli.analytics ~/Documents --export report.json
+python -m file_organizer.cli.analytics ./Documents --export report.json
 
 # Export to HTML
-python -m file_organizer.cli.analytics ~/Documents --export report.html
+python -m file_organizer.cli.analytics ./Documents --export report.html
 
 # Export to PDF
-python -m file_organizer.cli.analytics ~/Documents --export report.pdf
+python -m file_organizer.cli.analytics ./Documents --export report.pdf
 
 # Export to Markdown
-python -m file_organizer.cli.analytics ~/Documents --export report.md
+python -m file_organizer.cli.analytics ./Documents --export report.md
 ```
 
 ### Filtering
 
 ```bash
 # Analyze specific file types
-python -m file_organizer.cli.analytics ~/Documents --types pdf,docx
+python -m file_organizer.cli.analytics ./Documents --types pdf,docx
 
 # Analyze date range
-python -m file_organizer.cli.analytics ~/Documents \
+python -m file_organizer.cli.analytics ./Documents \
     --since "2024-01-01" \
     --until "2024-12-31"
 
 # Exclude directories
-python -m file_organizer.cli.analytics ~/Documents \
+python -m file_organizer.cli.analytics ./Documents \
     --exclude ".git,node_modules,__pycache__"
 ```
 
@@ -562,12 +562,12 @@ python -m file_organizer.cli.analytics ~/Documents \
 ```bash
 # Compare two directories
 python -m file_organizer.cli.analytics compare \
-    ~/Documents/before \
-    ~/Documents/after
+    ./Documents/before \
+    ./Documents/after
 
 # Compare over time
 python -m file_organizer.cli.analytics compare \
-    ~/Documents \
+    ./Documents \
     --baseline "2024-01-01" \
     --current "2024-12-31"
 ```
@@ -628,7 +628,7 @@ dashboard = DashboardServer(
 dashboard.start(
     host="localhost",
     port=8080,
-    directory=Path("~/Documents"),
+    directory=Path("./Documents"),
     refresh_interval=60  # seconds
 )
 
@@ -641,7 +641,7 @@ dashboard.start(
 
 ```bash
 # Run analytics weekly
-python -m file_organizer.cli.analytics ~/Documents --export weekly_report.json
+python -m file_organizer.cli.analytics ./Documents --export weekly_report.json
 ```
 
 ### 2. Track Trends
@@ -717,13 +717,13 @@ analytics = AnalyticsService(cache_enabled=True)
 **Solutions**:
 ```bash
 # Refresh cache
-python -m file_organizer.cli.analytics ~/Documents --refresh-cache
+python -m file_organizer.cli.analytics ./Documents --refresh-cache
 
 # Verify file access
-python -m file_organizer.cli.analytics ~/Documents --verify
+python -m file_organizer.cli.analytics ./Documents --verify
 
 # Check exclusions
-python -m file_organizer.cli.analytics ~/Documents --show-excluded
+python -m file_organizer.cli.analytics ./Documents --show-excluded
 ```
 
 ## Performance Tips

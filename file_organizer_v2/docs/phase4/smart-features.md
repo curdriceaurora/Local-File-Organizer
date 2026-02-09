@@ -36,7 +36,7 @@ from pathlib import Path
 engine = SmartSuggestionEngine()
 
 # Get suggestions for a file
-file_path = Path("~/Downloads/report.pdf")
+file_path = Path("./Downloads/report.pdf")
 suggestions = engine.get_suggestions(file_path)
 
 # Review suggestions
@@ -111,7 +111,7 @@ destinations = suggestions.destinations
 # Returns list of (path, confidence, reason) tuples
 
 # Example output:
-# Path: ~/Documents/Work/Reports
+# Path: ./Documents/Work/Reports
 # Confidence: 0.85
 # Reason: "Similar PDF files are stored here (15 files)"
 
@@ -189,7 +189,7 @@ python -m file_organizer.cli.autotag suggest document.pdf
 python -m file_organizer.cli.autotag apply document.pdf financial quarterly report
 
 # Batch tag entire directory
-python -m file_organizer.cli.autotag batch ~/Documents --recursive
+python -m file_organizer.cli.autotag batch ./Documents --recursive
 
 ```
 
@@ -204,7 +204,7 @@ from pathlib import Path
 tagger = AutoTaggingService()
 
 # Suggest tags for a file
-file_path = Path("~/Documents/report.pdf")
+file_path = Path("./Documents/report.pdf")
 suggestions = tagger.suggest_tags(
     file_path,
     top_n=10,
@@ -417,7 +417,7 @@ related = tagger.get_related_tags("financial")
 ```bash
 
 # Tag entire directory
-python -m file_organizer.cli.autotag batch ~/Documents \
+python -m file_organizer.cli.autotag batch ./Documents \
     --recursive \
     --min-confidence 60 \
     --pattern "*.pdf"
@@ -428,7 +428,7 @@ python -m file_organizer.cli.autotag batch ~/Documents \
 
 # Batch tag programmatically
 results = tagger.batch_tag_directory(
-    directory=Path("~/Documents"),
+    directory=Path("./Documents"),
     recursive=True,
     file_pattern="*.pdf",
     min_confidence=60.0,
@@ -520,7 +520,7 @@ suggestions = SmartSuggestionEngine()
 tagger = AutoTaggingService()
 
 # Organize with smart suggestions
-file_path = Path("~/Downloads/document.pdf")
+file_path = Path("./Downloads/document.pdf")
 
 # Get suggestions
 dest_suggestions = suggestions.get_suggestions(file_path)
@@ -579,13 +579,13 @@ reports = tagger.search_by_tag_pattern("*report*")
 ```bash
 
 # Get suggestions for a file
-file-organizer suggest ~/Downloads/file.pdf
+file-organizer suggest ./Downloads/file.pdf
 
 # Apply suggestion
 file-organizer apply-suggestion --id 42
 
 # Batch suggestions
-file-organizer suggest-batch ~/Downloads
+file-organizer suggest-batch ./Downloads
 
 ```
 
@@ -613,7 +613,7 @@ python -m file_organizer.cli.autotag analyze document.pdf \
     --entities
 
 # Batch tagging
-python -m file_organizer.cli.autotag batch ~/Documents \
+python -m file_organizer.cli.autotag batch ./Documents \
     --recursive \
     --pattern "*.pdf" \
     --min-confidence 60
@@ -665,7 +665,7 @@ python -m file_organizer.cli.autotag cleanup --days 90
 ```bash
 
 # Initial tagging of existing library
-python -m file_organizer.cli.autotag batch ~/Documents \
+python -m file_organizer.cli.autotag batch ./Documents \
     --recursive \
     --min-confidence 70 \
     --auto-apply

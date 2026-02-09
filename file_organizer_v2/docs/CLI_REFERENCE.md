@@ -4,52 +4,62 @@
 
 ```
 file-organizer [OPTIONS] COMMAND
-fo [OPTIONS] COMMAND              # Short alias
+fo [OPTIONS] COMMAND
 ```
 
 | Option | Description |
-|--------|-------------|
-| `--verbose, -v` | Enable verbose output |
+| --- | --- |
+| `--verbose`, `-v` | Enable verbose output |
 | `--dry-run` | Preview changes without executing |
-| `--json` | Output results as JSON |
-| `--yes, -y` | Auto-confirm all prompts |
+| `--json` | Output results as JSON when supported |
+| `--yes`, `-y` | Auto-confirm all prompts |
 | `--no-interactive` | Disable interactive prompts |
 | `--help` | Show help |
 
-## Commands
+## Command Summary
 
-### organize
+| Command | Description |
+| --- | --- |
+| `organize` | Organize files using AI models |
+| `preview` | Dry-run preview of organization |
+| `tui` | Launch the Textual terminal UI |
+| `version` | Show version |
+| `config` | Manage configuration profiles |
+| `model` | Manage AI models |
+| `copilot` | Chat-based copilot |
+| `rules` | Manage organization rules |
+| `suggest` | Generate/apply suggestions |
+| `dedupe` | Duplicate detection and resolution |
+| `undo` / `redo` / `history` | Operation history |
+| `analytics` | Storage analytics dashboard |
+| `daemon` | Watcher + pipeline daemon |
+| `update` | Auto-update commands |
+| `profile` | Advanced profile management |
 
-Organize files in a directory using AI models.
+## organize
 
 ```bash
 file-organizer organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 ```
 
 | Option | Description |
-|--------|-------------|
+| --- | --- |
 | `--dry-run` | Preview without moving files |
-| `--verbose, -v` | Verbose output |
+| `--verbose`, `-v` | Verbose output |
 
-### preview
-
-Preview how files would be organized (dry-run shortcut).
+## preview
 
 ```bash
 file-organizer preview INPUT_DIR
 ```
 
-### tui
-
-Launch the interactive terminal UI.
+## tui
 
 ```bash
 file-organizer tui
 ```
 
-### version
-
-Show the application version.
+## version
 
 ```bash
 file-organizer version
@@ -109,8 +119,6 @@ file-organizer model cache
 file-organizer copilot chat [MESSAGE] [--dir PATH]
 ```
 
-Without `MESSAGE`, launches interactive REPL. With `MESSAGE`, responds once and exits.
-
 ### copilot status
 
 ```bash
@@ -159,9 +167,9 @@ file-organizer rules toggle NAME [--set NAME]
 
 ```bash
 file-organizer rules preview DIRECTORY [OPTIONS]
-  --set NAME                Rule set to evaluate
-  --recursive/--no-recursive  Recurse into subdirectories
-  --max-files INT           Maximum files to scan
+  --set NAME                   Rule set to evaluate
+  --recursive/--no-recursive   Recurse into subdirectories
+  --max-files INT              Maximum files to scan
 ```
 
 ### rules export
@@ -176,24 +184,69 @@ file-organizer rules export [--set NAME] [--output FILE]
 file-organizer rules import FILE [--set NAME]
 ```
 
-## Update Sub-commands
+## Suggest Sub-commands
 
-### update check
+### suggest files
 
 ```bash
-file-organizer update check [--repo OWNER/REPO] [--pre]
+file-organizer suggest files DIRECTORY [OPTIONS]
+  --min-confidence FLOAT   Minimum confidence threshold (0-100)
+  --max-results INT        Maximum suggestions
+  --json                   Output as JSON
+  --dry-run                Alias for preview mode
 ```
 
-### update install
+### suggest apply
 
 ```bash
-file-organizer update install [--dry-run] [--repo OWNER/REPO] [--pre]
+file-organizer suggest apply DIRECTORY [OPTIONS]
+  --min-confidence FLOAT   Minimum confidence for auto-apply
+  --dry-run                Preview without changes
+  --json                   Output as JSON
 ```
 
-### update rollback
+### suggest patterns
 
 ```bash
-file-organizer update rollback
+file-organizer suggest patterns DIRECTORY [--json]
+```
+
+## Dedupe Sub-commands
+
+### dedupe scan
+
+```bash
+file-organizer dedupe scan DIRECTORY [OPTIONS]
+  --algorithm ALGO       Hash algorithm (md5, sha256)
+  --recursive            Scan subdirectories
+  --min-size BYTES       Minimum file size in bytes
+  --max-size BYTES       Maximum file size in bytes
+  --include PATTERNS     Comma-separated include patterns
+  --exclude PATTERNS     Comma-separated exclude patterns
+  --json                 Output as JSON
+```
+
+### dedupe resolve
+
+```bash
+file-organizer dedupe resolve DIRECTORY [OPTIONS]
+  --strategy STRATEGY    manual, oldest, newest, largest, smallest
+  --algorithm ALGO       Hash algorithm
+  --recursive            Scan subdirectories
+  --dry-run              Preview without deleting
+  --min-size BYTES       Minimum file size in bytes
+  --max-size BYTES       Maximum file size in bytes
+  --include PATTERNS     Comma-separated include patterns
+  --exclude PATTERNS     Comma-separated exclude patterns
+```
+
+### dedupe report
+
+```bash
+file-organizer dedupe report DIRECTORY [OPTIONS]
+  --algorithm ALGO       Hash algorithm
+  --recursive            Scan subdirectories
+  --json                 Output as JSON
 ```
 
 ## Undo/Redo Commands
@@ -228,7 +281,7 @@ file-organizer history [OPTIONS]
   --verbose, -v         Verbose output
 ```
 
-### analytics
+## analytics
 
 ```bash
 file-organizer analytics [DIRECTORY] [--verbose]
@@ -236,11 +289,87 @@ file-organizer analytics [DIRECTORY] [--verbose]
 
 ## Daemon Sub-commands
 
-### daemon start/stop/status/logs
+### daemon start
 
 ```bash
-file-organizer daemon start
+file-organizer daemon start [OPTIONS]
+  --watch-dir PATH      Directory to watch
+  --output-dir PATH     Destination directory
+  --foreground          Run in foreground
+  --poll-interval FLOAT Seconds between polls
+  --dry-run             Preview without moving files
+```
+
+### daemon stop
+
+```bash
 file-organizer daemon stop
+```
+
+### daemon status
+
+```bash
 file-organizer daemon status
-file-organizer daemon logs
+```
+
+### daemon watch
+
+```bash
+file-organizer daemon watch DIRECTORY [--poll-interval FLOAT]
+```
+
+### daemon process
+
+```bash
+file-organizer daemon process INPUT_DIR OUTPUT_DIR [--dry-run]
+```
+
+## Update Sub-commands
+
+### update check
+
+```bash
+file-organizer update check [--repo OWNER/REPO] [--pre]
+```
+
+### update install
+
+```bash
+file-organizer update install [--dry-run] [--repo OWNER/REPO] [--pre]
+```
+
+### update rollback
+
+```bash
+file-organizer update rollback
+```
+
+## Profile Sub-commands
+
+```bash
+file-organizer profile COMMAND
+```
+
+| Command | Description |
+| --- | --- |
+| `list` | List profiles |
+| `create` | Create a profile |
+| `activate` | Activate a profile |
+| `delete` | Delete a profile |
+| `current` | Show current profile |
+| `export` | Export a profile to JSON |
+| `import` | Import a profile from JSON |
+| `merge` | Merge multiple profiles |
+| `template list` | List templates |
+| `template preview` | Preview a template |
+| `template apply` | Apply template to profile |
+| `migrate` | Migrate profile to new version |
+| `validate` | Validate profile configuration |
+
+## Auto-tagging (Legacy)
+
+Auto-tagging commands exist as a legacy argparse CLI. Run it directly:
+
+```bash
+python -m file_organizer.cli.autotag --help
 ```
