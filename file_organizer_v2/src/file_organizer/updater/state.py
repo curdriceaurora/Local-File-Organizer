@@ -1,9 +1,9 @@
 """Update state persistence for throttling background checks."""
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-import json
 from pathlib import Path
 
 from file_organizer.config.manager import DEFAULT_CONFIG_DIR
