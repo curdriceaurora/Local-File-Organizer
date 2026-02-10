@@ -12,7 +12,13 @@ from file_organizer.api.config import ApiSettings, load_settings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.middleware import setup_middleware
-from file_organizer.api.routers import health_router
+from file_organizer.api.routers import (
+    dedupe_router,
+    files_router,
+    health_router,
+    organize_router,
+    system_router,
+)
 
 _LOGGING_CONFIGURED = False
 
@@ -66,7 +72,11 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     setup_exception_handlers(app)
     app.dependency_overrides[get_settings] = lambda: settings
 
-    app.include_router(health_router)
+    app.include_router(health_router, prefix="/api/v1")
+    app.include_router(files_router, prefix="/api/v1")
+    app.include_router(organize_router, prefix="/api/v1")
+    app.include_router(dedupe_router, prefix="/api/v1")
+    app.include_router(system_router, prefix="/api/v1")
 
     @app.get("/")
     def root() -> dict[str, str]:

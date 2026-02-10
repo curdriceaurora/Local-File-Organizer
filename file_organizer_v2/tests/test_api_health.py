@@ -17,7 +17,7 @@ def test_health_endpoint_returns_status() -> None:
     app.dependency_overrides[get_settings] = lambda: settings
     client = TestClient(app)
 
-    response = client.get("/health")
+    response = client.get("/api/v1/health")
 
     assert response.status_code == 200
     payload = response.json()

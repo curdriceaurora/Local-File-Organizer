@@ -1,0 +1,223 @@
+"""File operation endpoints."""
+from __future__ import annotations
+
+import shutil
+from pathlib import Path
+
+from fastapi import APIRouter, Query
+
+from file_organizer.api.exceptions import ApiError
+from file_organizer.api.models import (
+    DeleteFileRequest,
+    DeleteFileResponse,
+    FileContentResponse,
+    FileInfo,
+    FileListResponse,
+    MoveFileRequest,
+    MoveFileResponse,
+)
+from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
+from file_organizer.core.organizer import FileOrganizer
+
+router = APIRouter(tags=["files"])
+
+_FILE_TYPE_GROUPS = {
+    "text": FileOrganizer.TEXT_EXTENSIONS,
+    "image": FileOrganizer.IMAGE_EXTENSIONS,
+    "video": FileOrganizer.VIDEO_EXTENSIONS,
+    "audio": FileOrganizer.AUDIO_EXTENSIONS,
+    "cad": FileOrganizer.CAD_EXTENSIONS,
+}
+
+
+def _parse_file_types(file_type: str | None) -> set[str] | None:
+    if not file_type:
+        return None
+    types: set[str] = set()
+    for part in file_type.split(","):
+        token = part.strip().lower()
+        if not token:
+            continue
+        if token in _FILE_TYPE_GROUPS:
+            types.update(_FILE_TYPE_GROUPS[token])
+        else:
+            ext = token if token.startswith(".") else f".{token}"
+            types.add(ext)
+    return types or None
+
+
+def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
+    files: list[Path] = []
+    if path.is_file():
+        if include_hidden or not is_hidden(path):
+            files.append(path)
+        return files
+
+    if recursive:
+        iterator = path.rglob("*")
+    else:
+        iterator = path.glob("*")
+
+    for entry in iterator:
+        if not entry.is_file():
+            continue
+        if not include_hidden and is_hidden(entry):
+            continue
+        files.append(entry)
+    return files
+
+
+@router.get("/files", response_model=FileListResponse)
+def list_files(
+    path: str = Query(..., description="Directory or file path"),
+    recursive: bool = Query(False),
+    include_hidden: bool = Query(False),
+    file_type: str | None = Query(None, description="Comma-separated extensions or groups"),
+    sort_by: str = Query("name", pattern="^(name|size|created|modified)$"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+) -> FileListResponse:
+    target = resolve_path(path)
+    if not target.exists():
+        raise ApiError(status_code=404, error="not_found", message="Path does not exist")
+
+    allowed_types = _parse_file_types(file_type)
+    files = _collect_files(target, recursive, include_hidden)
+    if allowed_types is not None:
+        files = [f for f in files if f.suffix.lower() in allowed_types]
+
+    reverse = sort_order == "desc"
+    if sort_by == "name":
+        files.sort(key=lambda p: p.name.lower(), reverse=reverse)
+    elif sort_by == "size":
+        files.sort(key=lambda p: p.stat().st_size, reverse=reverse)
+    elif sort_by == "created":
+        files.sort(key=lambda p: p.stat().st_ctime, reverse=reverse)
+    else:
+        files.sort(key=lambda p: p.stat().st_mtime, reverse=reverse)
+
+    total = len(files)
+    paged = files[skip: skip + limit]
+    items = [file_info_from_path(f) for f in paged]
+
+    return FileListResponse(items=items, total=total, skip=skip, limit=limit)
+
+
+@router.get("/files/info", response_model=FileInfo)
+def get_file_info(path: str = Query(...)) -> FileInfo:
+    target = resolve_path(path)
+    if not target.exists():
+        raise ApiError(status_code=404, error="not_found", message="File not found")
+    if not target.is_file():
+        raise ApiError(status_code=400, error="invalid_path", message="Path is not a file")
+    return file_info_from_path(target)
+
+
+@router.get("/files/content", response_model=FileContentResponse)
+def read_file_content(
+    path: str = Query(...),
+    max_bytes: int = Query(200_000, ge=1, le=5_000_000),
+    encoding: str = Query("utf-8"),
+) -> FileContentResponse:
+    target = resolve_path(path)
+    if not target.exists():
+        raise ApiError(status_code=404, error="not_found", message="File not found")
+    if not target.is_file():
+        raise ApiError(status_code=400, error="invalid_path", message="Path is not a file")
+
+    data = target.read_bytes()
+    truncated = False
+    if len(data) > max_bytes:
+        data = data[:max_bytes]
+        truncated = True
+
+    content = data.decode(encoding, errors="replace")
+    info = file_info_from_path(target)
+    return FileContentResponse(
+        path=info.path,
+        content=content,
+        encoding=encoding,
+        truncated=truncated,
+        size=info.size,
+        mime_type=info.mime_type,
+    )
+
+
+@router.post("/files/move", response_model=MoveFileResponse)
+def move_file(request: MoveFileRequest) -> MoveFileResponse:
+    source = resolve_path(request.source)
+    destination = resolve_path(request.destination)
+
+    if not source.exists():
+        raise ApiError(status_code=404, error="not_found", message="Source not found")
+
+    if destination.exists() and not request.overwrite:
+        raise ApiError(status_code=409, error="conflict", message="Destination exists")
+
+    if request.dry_run:
+        return MoveFileResponse(
+            source=str(source),
+            destination=str(destination),
+            moved=False,
+            dry_run=True,
+        )
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists() and request.overwrite:
+        if destination.is_dir():
+            shutil.rmtree(destination)
+        else:
+            destination.unlink()
+
+    shutil.move(str(source), str(destination))
+    return MoveFileResponse(
+        source=str(source),
+        destination=str(destination),
+        moved=True,
+        dry_run=False,
+    )
+
+
+def _trash_target(path: Path) -> Path:
+    trash_dir = Path.home() / ".config" / "file-organizer" / "trash"
+    trash_dir.mkdir(parents=True, exist_ok=True)
+    candidate = trash_dir / path.name
+    if not candidate.exists():
+        return candidate
+    stem = path.stem
+    suffix = path.suffix
+    counter = 1
+    while True:
+        candidate = trash_dir / f"{stem}-{counter}{suffix}"
+        if not candidate.exists():
+            return candidate
+        counter += 1
+
+
+@router.delete("/files", response_model=DeleteFileResponse)
+def delete_file(request: DeleteFileRequest) -> DeleteFileResponse:
+    target = resolve_path(request.path)
+    if not target.exists():
+        raise ApiError(status_code=404, error="not_found", message="File not found")
+
+    if request.dry_run:
+        return DeleteFileResponse(path=str(target), deleted=False, dry_run=True)
+
+    trashed_path: str | None = None
+    if request.permanent:
+        if target.is_dir():
+            shutil.rmtree(target)
+        else:
+            target.unlink()
+    else:
+        destination = _trash_target(target)
+        shutil.move(str(target), str(destination))
+        trashed_path = str(destination)
+
+    return DeleteFileResponse(
+        path=str(target),
+        deleted=True,
+        dry_run=False,
+        trashed_path=trashed_path,
+    )

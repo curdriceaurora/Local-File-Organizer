@@ -1,0 +1,177 @@
+"""Organization endpoints."""
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi import APIRouter, BackgroundTasks
+
+from file_organizer.api.exceptions import ApiError
+from file_organizer.api.jobs import create_job, get_job, update_job
+from file_organizer.api.models import (
+    JobStatusResponse,
+    OrganizationError,
+    OrganizationResultResponse,
+    OrganizeExecuteResponse,
+    OrganizeRequest,
+    ScanRequest,
+    ScanResponse,
+)
+from file_organizer.api.utils import resolve_path
+from file_organizer.core.organizer import FileOrganizer, OrganizationResult
+
+router = APIRouter(tags=["organize"])
+
+
+def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
+    files: list[Path] = []
+    if path.is_file():
+        if include_hidden or not path.name.startswith("."):
+            files.append(path)
+        return files
+
+    iterator = path.rglob("*") if recursive else path.glob("*")
+    for entry in iterator:
+        if not entry.is_file():
+            continue
+        if not include_hidden and entry.name.startswith("."):
+            continue
+        files.append(entry)
+    return files
+
+
+def _counts_by_type(files: list[Path]) -> dict[str, int]:
+    counts = {
+        "text": 0,
+        "image": 0,
+        "video": 0,
+        "audio": 0,
+        "cad": 0,
+        "other": 0,
+    }
+    for path in files:
+        ext = path.suffix.lower()
+        if ext in FileOrganizer.TEXT_EXTENSIONS:
+            counts["text"] += 1
+        elif ext in FileOrganizer.IMAGE_EXTENSIONS:
+            counts["image"] += 1
+        elif ext in FileOrganizer.VIDEO_EXTENSIONS:
+            counts["video"] += 1
+        elif ext in FileOrganizer.AUDIO_EXTENSIONS:
+            counts["audio"] += 1
+        elif ext in FileOrganizer.CAD_EXTENSIONS:
+            counts["cad"] += 1
+        else:
+            counts["other"] += 1
+    return counts
+
+
+def _result_to_response(result: OrganizationResult) -> OrganizationResultResponse:
+    return OrganizationResultResponse(
+        total_files=result.total_files,
+        processed_files=result.processed_files,
+        skipped_files=result.skipped_files,
+        failed_files=result.failed_files,
+        processing_time=result.processing_time,
+        organized_structure=result.organized_structure,
+        errors=[OrganizationError(file=err[0], error=err[1]) for err in result.errors],
+    )
+
+
+def _run_organize_job(job_id: str, request: OrganizeRequest) -> None:
+    update_job(job_id, status="running")
+    try:
+        organizer = FileOrganizer(
+            dry_run=request.dry_run,
+            use_hardlinks=request.use_hardlinks,
+        )
+        result = organizer.organize(
+            input_path=request.input_dir,
+            output_path=request.output_dir,
+            skip_existing=request.skip_existing,
+        )
+        response = _result_to_response(result).model_dump()
+        update_job(job_id, status="completed", result=response)
+    except Exception as exc:
+        update_job(job_id, status="failed", error=str(exc))
+
+
+@router.post("/organize/scan", response_model=ScanResponse)
+def scan_directory(request: ScanRequest) -> ScanResponse:
+    path = resolve_path(request.input_dir)
+    if not path.exists():
+        raise ApiError(status_code=404, error="not_found", message="Input path not found")
+
+    files = _scan_directory(path, request.recursive, request.include_hidden)
+    counts = _counts_by_type(files)
+    return ScanResponse(
+        input_dir=str(path),
+        total_files=len(files),
+        counts=counts,
+    )
+
+
+@router.post("/organize/preview", response_model=OrganizationResultResponse)
+def preview_organization(request: OrganizeRequest) -> OrganizationResultResponse:
+    path = resolve_path(request.input_dir)
+    output = resolve_path(request.output_dir)
+    if not path.exists():
+        raise ApiError(status_code=404, error="not_found", message="Input path not found")
+
+    organizer = FileOrganizer(dry_run=True, use_hardlinks=request.use_hardlinks)
+    result = organizer.organize(
+        input_path=path,
+        output_path=output,
+        skip_existing=request.skip_existing,
+    )
+    return _result_to_response(result)
+
+
+@router.post("/organize/execute", response_model=OrganizeExecuteResponse)
+def execute_organization(
+    request: OrganizeRequest,
+    background_tasks: BackgroundTasks,
+) -> OrganizeExecuteResponse:
+    path = resolve_path(request.input_dir)
+    output = resolve_path(request.output_dir)
+    if not path.exists():
+        raise ApiError(status_code=404, error="not_found", message="Input path not found")
+
+    if request.run_in_background:
+        job = create_job("organize")
+        background_tasks.add_task(_run_organize_job, job.job_id, request)
+        return OrganizeExecuteResponse(status="queued", job_id=job.job_id)
+
+    try:
+        organizer = FileOrganizer(
+            dry_run=request.dry_run,
+            use_hardlinks=request.use_hardlinks,
+        )
+        result = organizer.organize(
+            input_path=path,
+            output_path=output,
+            skip_existing=request.skip_existing,
+        )
+        return OrganizeExecuteResponse(
+            status="completed",
+            result=_result_to_response(result),
+        )
+    except Exception as exc:
+        return OrganizeExecuteResponse(status="failed", error=str(exc))
+
+
+@router.get("/organize/status/{job_id}", response_model=JobStatusResponse)
+def get_job_status(job_id: str) -> JobStatusResponse:
+    job = get_job(job_id)
+    if not job:
+        raise ApiError(status_code=404, error="not_found", message="Job not found")
+    result = (
+        OrganizationResultResponse(**job.result) if job.result is not None else None
+    )
+    return JobStatusResponse(
+        job_id=job.job_id,
+        status=job.status,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+        result=result,
+        error=job.error,
+    )

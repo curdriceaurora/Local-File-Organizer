@@ -1,10 +1,23 @@
 """Exception handlers for the API layer."""
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Any
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from loguru import logger
+
+
+@dataclass
+class ApiError(Exception):
+    """Structured API error for consistent responses."""
+
+    status_code: int
+    error: str
+    message: str
+    details: Any | None = None
 
 
 def setup_exception_handlers(app: FastAPI) -> None:
@@ -27,6 +40,20 @@ def setup_exception_handlers(app: FastAPI) -> None:
                 ],
             },
         )
+
+    @app.exception_handler(ApiError)
+    async def api_error_handler(
+        request: Request,
+        exc: ApiError,
+    ) -> JSONResponse:
+        logger.warning("API error on {}: {}", request.url.path, exc.error)
+        payload: dict[str, Any] = {
+            "error": exc.error,
+            "message": exc.message,
+        }
+        if exc.details is not None:
+            payload["details"] = exc.details
+        return JSONResponse(status_code=exc.status_code, content=payload)
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(
