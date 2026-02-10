@@ -90,14 +90,18 @@ class ConnectionManager:
 
     async def broadcast(self, message: dict[str, Any], channel: str = "global") -> None:
         async with self._lock:
-            targets = [
-                ws
-                for ws, subscriptions in self._subscriptions.items()
-                # "global" subscriptions receive all channel traffic.
-                if channel == "global"
-                or channel in subscriptions
-                or "global" in subscriptions
-            ]
+            if channel == "global":
+                targets = [
+                    ws
+                    for ws, subscriptions in self._subscriptions.items()
+                    if "global" in subscriptions
+                ]
+            else:
+                targets = [
+                    ws
+                    for ws, subscriptions in self._subscriptions.items()
+                    if channel in subscriptions
+                ]
         for websocket in targets:
             try:
                 await websocket.send_json(message)

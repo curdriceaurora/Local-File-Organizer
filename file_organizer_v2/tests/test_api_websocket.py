@@ -86,3 +86,22 @@ def test_websocket_accepts_valid_token() -> None:
     with client.websocket_connect("/api/v1/ws/test-client?token=secret") as websocket:
         message = _receive_json(websocket)
         assert message["type"] == "connection"
+
+
+def test_websocket_accepts_header_token() -> None:
+    client = _client(token="secret")
+    with client.websocket_connect(
+        "/api/v1/ws/test-client",
+        headers={"Authorization": "Bearer secret"},
+    ) as websocket:
+        message = _receive_json(websocket)
+        assert message["type"] == "connection"
+
+
+def test_websocket_rejects_non_object_messages() -> None:
+    client = _client()
+    with client.websocket_connect("/api/v1/ws/test-client") as websocket:
+        _receive_json(websocket)
+        websocket.send_json(["invalid"])
+        response = _receive_json(websocket)
+        assert response["type"] == "error"

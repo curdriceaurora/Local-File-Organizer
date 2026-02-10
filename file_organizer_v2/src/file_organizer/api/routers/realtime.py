@@ -24,6 +24,18 @@ def _token_valid(token: Optional[str], settings: ApiSettings) -> bool:
     return hmac.compare_digest(token, required)
 
 
+def _extract_token(websocket: WebSocket, token: Optional[str]) -> Optional[str]:
+    if token:
+        return token
+    auth_header = websocket.headers.get("authorization")
+    if not auth_header:
+        return None
+    parts = auth_header.split()
+    if len(parts) == 2 and parts[0].lower() == "bearer":
+        return parts[1]
+    return auth_header
+
+
 async def _heartbeat(websocket: WebSocket, interval: int, stop: asyncio.Event) -> None:
     while not stop.is_set():
         try:
@@ -37,6 +49,18 @@ async def _heartbeat(websocket: WebSocket, interval: int, stop: asyncio.Event) -
             break
 
 
+async def _send_error(websocket: WebSocket, message: str) -> None:
+    if websocket.client_state != WebSocketState.CONNECTED:
+        return
+    try:
+        await realtime_manager.send_personal_message(
+            {"type": "error", "message": message},
+            websocket,
+        )
+    except Exception:
+        pass
+
+
 @router.websocket("/ws/{client_id}")
 async def websocket_endpoint(
     websocket: WebSocket,
@@ -44,7 +68,8 @@ async def websocket_endpoint(
     token: Optional[str] = None,
     settings: ApiSettings = Depends(get_settings),
 ) -> None:
-    if not _token_valid(token, settings):
+    provided_token = _extract_token(websocket, token)
+    if not _token_valid(provided_token, settings):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
@@ -56,9 +81,17 @@ async def websocket_endpoint(
     try:
         while True:
             data = await websocket.receive_json()
+            if not isinstance(data, dict):
+                await _send_error(websocket, "Invalid message format; expected a JSON object")
+                continue
             message_type = data.get("type")
+            if not isinstance(message_type, str):
+                await _send_error(websocket, "Invalid or missing 'type' field in message")
+                continue
             if message_type == "ping":
                 await realtime_manager.send_personal_message({"type": "pong"}, websocket)
+            elif message_type == "pong":
+                pass
             elif message_type == "subscribe":
                 channel = data.get("channel")
                 if channel:
@@ -83,14 +116,7 @@ async def websocket_endpoint(
     except WebSocketDisconnect:
         pass
     except ValueError:
-        if websocket.client_state == WebSocketState.CONNECTED:
-            try:
-                await realtime_manager.send_personal_message(
-                    {"type": "error", "message": "Invalid JSON payload"},
-                    websocket,
-                )
-            except Exception:
-                pass
+        await _send_error(websocket, "Invalid JSON payload")
     finally:
         stop_event.set()
         heartbeat_task.cancel()
