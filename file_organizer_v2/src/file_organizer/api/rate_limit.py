@@ -80,12 +80,16 @@ class RedisRateLimiter:
     def check(self, key: str, limit: int, window_seconds: int) -> RateLimitResult:
         now = int(time.time())
         redis_key = self._key(key)
-        pipe = self._redis.pipeline()
-        pipe.incr(redis_key)
-        pipe.ttl(redis_key)
-        count, ttl = pipe.execute()
-        if ttl is None or ttl < 0:
-            self._redis.expire(redis_key, window_seconds)
+        script = """
+        local current = redis.call("INCR", KEYS[1])
+        if current == 1 then
+          redis.call("EXPIRE", KEYS[1], ARGV[1])
+        end
+        local ttl = redis.call("TTL", KEYS[1])
+        return {current, ttl}
+        """
+        count, ttl = self._redis.eval(script, 1, redis_key, window_seconds)
+        if ttl is None or int(ttl) < 0:
             ttl = window_seconds
         reset_at = now + int(ttl)
         allowed = int(count) <= limit

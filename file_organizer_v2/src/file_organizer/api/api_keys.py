@@ -46,6 +46,9 @@ def api_key_identifier(api_key: str, hashes: Iterable[str]) -> str | None:
     matched = match_api_key_hash(api_key, hashes)
     if not matched:
         return None
+    parts = api_key.split("_", 2)
+    if len(parts) == 3 and parts[1]:
+        return parts[1]
     return matched[-12:]
 
 

@@ -21,7 +21,7 @@ def _validate_path(value: str) -> str:
     return value
 
 
-def _sanitize_text(value: str, field_name: str, max_length: int) -> str:
+def _validate_text(value: str, field_name: str, max_length: int) -> str:
     if not value:
         raise ValueError(f"{field_name} must not be empty")
     if len(value) > max_length:
@@ -253,7 +253,7 @@ class UserCreateRequest(BaseModel):
     @field_validator("username")
     @classmethod
     def validate_username(cls, value: str) -> str:
-        value = _sanitize_text(value, "Username", 32)
+        value = _validate_text(value, "Username", 32)
         if not _USERNAME_PATTERN.match(value):
             raise ValueError(
                 "Username must be 3-32 characters and use letters, numbers, '.', '-', '_'"
@@ -265,7 +265,7 @@ class UserCreateRequest(BaseModel):
     def validate_full_name(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return value
-        return _sanitize_text(value, "Full name", 120)
+        return _validate_text(value, "Full name", 120)
 
 
 class UserResponse(BaseModel):

@@ -24,6 +24,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._settings = settings
         self._limiter = limiter
+        self._rule_prefixes = sorted(settings.rate_limit_rules.keys(), key=len, reverse=True)
 
     def _is_exempt(self, path: str) -> bool:
         for exempt in self._settings.rate_limit_exempt_paths:
@@ -36,7 +37,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _rule_for_path(self, path: str) -> Optional[dict[str, int]]:
         rules = self._settings.rate_limit_rules
-        for rule_path in sorted(rules.keys(), key=len, reverse=True):
+        for rule_path in self._rule_prefixes:
             if path.startswith(rule_path):
                 return rules[rule_path]
         return None
@@ -58,6 +59,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if api_key and self._settings.api_key_enabled:
             key_id = api_key_identifier(api_key, self._settings.api_key_hashes)
             if key_id:
+                request.state.api_key_identifier = key_id
                 return f"key:{key_id}"
 
         client_ip = request.client.host if request.client else "unknown"

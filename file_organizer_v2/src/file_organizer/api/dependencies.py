@@ -113,7 +113,9 @@ def get_current_user(
     if not token:
         api_key = request.headers.get(settings.api_key_header)
         if settings.api_key_enabled and api_key:
-            key_id = api_key_identifier(api_key, settings.api_key_hashes)
+            key_id = getattr(request.state, "api_key_identifier", None)
+            if not key_id:
+                key_id = api_key_identifier(api_key, settings.api_key_hashes)
             if key_id:
                 return ApiKeyIdentity(
                     id=f"api-key:{key_id}",
