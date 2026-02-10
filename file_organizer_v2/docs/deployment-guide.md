@@ -166,6 +166,71 @@ FILE_ORGANIZER_LOG_LEVEL=DEBUG
 FILE_ORGANIZER_DATA_DIR=./data
 ```
 
+## API Security
+
+### Required Production Settings
+
+- **Set a strong JWT secret**: `FO_API_AUTH_JWT_SECRET` must be set in non-development environments.
+- **Restrict CORS**: do not use `*` or localhost origins in production.
+- **Enable HTTPS**: HSTS headers are only sent over HTTPS.
+
+### API Key Support
+
+API keys provide integration access without JWTs. Use them for headless
+integrations where a full login flow is unnecessary, and treat keys like
+passwords (store hashes, rotate regularly). Generate a key locally:
+
+```bash
+python -m file_organizer.api.api_keys
+```
+
+This prints a plaintext key and its SHA-256 hash. Configure either raw keys or hashes:
+
+- `FO_API_API_KEYS` (comma-separated plaintext keys)
+- `FO_API_API_KEY_HASHES` (comma-separated SHA-256 hashes)
+
+Prefer `FO_API_API_KEY_HASHES` in production to avoid keeping plaintext keys
+in environment variables or shell history.
+
+For admin-level access with API keys, set `FO_API_API_KEY_ADMIN=true`.
+
+### Rate Limiting
+
+Rate limiting is enabled by default. Configure per-endpoint limits using JSON:
+
+```bash
+export FO_API_RATE_LIMIT_RULES='{\"/api/v1/auth/login\": {\"requests\": 10, \"window_seconds\": 300}}'
+```
+
+Responses include:
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`
+- `Retry-After` (on 429)
+
+Pitfalls:
+- In-memory rate limiting resets on restart. For multi-instance deployments,
+  set `FO_API_AUTH_REDIS_URL` or `FO_REDIS_URL` to share limits across nodes.
+- If the API runs behind a proxy, ensure `X-Forwarded-For` is set so limits are
+  applied per client instead of the proxy IP.
+
+### Security Headers
+
+Security headers are enabled by default and include:
+- `Content-Security-Policy`
+- `X-Frame-Options`
+- `X-Content-Type-Options`
+- `Referrer-Policy`
+- `Permissions-Policy`
+- `Strict-Transport-Security` (HTTPS only)
+
+Override CSP or disable headers:
+
+```bash
+export FO_API_SECURITY_CSP="default-src 'self'"
+export FO_API_SECURITY_HEADERS_ENABLED=false
+```
+
 ## Volume Mounts
 
 ### Production Volumes

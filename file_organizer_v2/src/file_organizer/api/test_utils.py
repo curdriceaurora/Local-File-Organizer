@@ -28,6 +28,7 @@ def build_test_settings(
         "auth_access_token_minutes": 5,
         "auth_refresh_token_days": 1,
         "auth_redis_url": None,
+        "rate_limit_enabled": False,
     }
     if auth_overrides:
         data.update(auth_overrides)

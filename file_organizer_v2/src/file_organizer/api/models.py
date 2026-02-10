@@ -1,10 +1,34 @@
 """Pydantic models for API requests and responses."""
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+_MAX_PATH_LENGTH = 4096
+_USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,31}$")
+
+
+def _validate_path(value: str) -> str:
+    if not value:
+        raise ValueError("Path must not be empty")
+    if len(value) > _MAX_PATH_LENGTH:
+        raise ValueError("Path exceeds maximum length")
+    if "\x00" in value:
+        raise ValueError("Path contains null bytes")
+    return value
+
+
+def _sanitize_text(value: str, field_name: str, max_length: int) -> str:
+    if not value:
+        raise ValueError(f"{field_name} must not be empty")
+    if len(value) > max_length:
+        raise ValueError(f"{field_name} exceeds maximum length")
+    if "\x00" in value:
+        raise ValueError(f"{field_name} contains invalid characters")
+    return value
 
 
 class FileInfo(BaseModel):
@@ -40,6 +64,11 @@ class MoveFileRequest(BaseModel):
     allow_directory_overwrite: bool = False
     dry_run: bool = False
 
+    @field_validator("source", "destination")
+    @classmethod
+    def validate_paths(cls, value: str) -> str:
+        return _validate_path(value)
+
 
 class MoveFileResponse(BaseModel):
     source: str
@@ -53,6 +82,11 @@ class DeleteFileRequest(BaseModel):
     permanent: bool = False
     dry_run: bool = False
 
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, value: str) -> str:
+        return _validate_path(value)
+
 
 class DeleteFileResponse(BaseModel):
     path: str
@@ -65,6 +99,11 @@ class ScanRequest(BaseModel):
     input_dir: str
     recursive: bool = True
     include_hidden: bool = False
+
+    @field_validator("input_dir")
+    @classmethod
+    def validate_input_dir(cls, value: str) -> str:
+        return _validate_path(value)
 
 
 class ScanResponse(BaseModel):
@@ -80,6 +119,11 @@ class OrganizeRequest(BaseModel):
     dry_run: bool = False
     use_hardlinks: bool = True
     run_in_background: bool = True
+
+    @field_validator("input_dir", "output_dir")
+    @classmethod
+    def validate_paths(cls, value: str) -> str:
+        return _validate_path(value)
 
 
 class OrganizationError(BaseModel):
@@ -121,6 +165,11 @@ class DedupeScanRequest(BaseModel):
     max_file_size: Optional[int] = None
     include_patterns: Optional[list[str]] = None
     exclude_patterns: Optional[list[str]] = None
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, value: str) -> str:
+        return _validate_path(value)
 
 
 class DedupeFileInfo(BaseModel):
@@ -166,6 +215,11 @@ class DedupeExecuteRequest(BaseModel):
     dry_run: bool = True
     trash: bool = True
 
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, value: str) -> str:
+        return _validate_path(value)
+
 
 class DedupeExecuteResponse(BaseModel):
     path: str
@@ -195,6 +249,23 @@ class UserCreateRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: Optional[str] = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str) -> str:
+        value = _sanitize_text(value, "Username", 32)
+        if not _USERNAME_PATTERN.match(value):
+            raise ValueError(
+                "Username must be 3-32 characters and use letters, numbers, '.', '-', '_'"
+            )
+        return value
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        return _sanitize_text(value, "Full name", 120)
 
 
 class UserResponse(BaseModel):

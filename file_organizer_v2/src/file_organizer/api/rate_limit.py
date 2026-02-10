@@ -1,0 +1,95 @@
+"""Rate limiting helpers for API requests."""
+from __future__ import annotations
+
+import time
+from dataclasses import dataclass
+from typing import Optional, Protocol
+
+from loguru import logger
+from redis import Redis
+
+
+@dataclass(frozen=True)
+class RateLimitResult:
+    allowed: bool
+    remaining: int
+    reset_at: int
+
+
+class RateLimiter(Protocol):
+    """Protocol for rate limit backends."""
+
+    def check(self, key: str, limit: int, window_seconds: int) -> RateLimitResult:
+        """Check rate limit for a key and return the remaining quota."""
+
+
+@dataclass
+class RateLimitState:
+    count: int
+    reset_at: int
+
+
+class InMemoryRateLimiter:
+    """Simple in-memory fixed-window rate limiter."""
+
+    def __init__(self) -> None:
+        self._state: dict[str, RateLimitState] = {}
+
+    def check(self, key: str, limit: int, window_seconds: int) -> RateLimitResult:
+        now = int(time.time())
+        state = self._state.get(key)
+        if state is None or state.reset_at <= now:
+            reset_at = now + window_seconds
+            self._state[key] = RateLimitState(count=1, reset_at=reset_at)
+            remaining = max(limit - 1, 0)
+            return RateLimitResult(allowed=True, remaining=remaining, reset_at=reset_at)
+
+        state.count += 1
+        allowed = state.count <= limit
+        remaining = max(limit - state.count, 0)
+        return RateLimitResult(allowed=allowed, remaining=remaining, reset_at=state.reset_at)
+
+
+class RedisRateLimiter:
+    """Redis-backed fixed-window rate limiter."""
+
+    def __init__(self, redis: Redis, prefix: str = "ratelimit:") -> None:
+        self._redis = redis
+        self._prefix = prefix
+
+    def _key(self, key: str) -> str:
+        return f"{self._prefix}{key}"
+
+    def _ttl(self, redis_key: str, window_seconds: int) -> int:
+        ttl = self._redis.ttl(redis_key)
+        if ttl is None or ttl < 0:
+            return window_seconds
+        return int(ttl)
+
+    def check(self, key: str, limit: int, window_seconds: int) -> RateLimitResult:
+        now = int(time.time())
+        redis_key = self._key(key)
+        pipe = self._redis.pipeline()
+        pipe.incr(redis_key)
+        pipe.ttl(redis_key)
+        count, ttl = pipe.execute()
+        if ttl is None or ttl < 0:
+            self._redis.expire(redis_key, window_seconds)
+            ttl = window_seconds
+        reset_at = now + int(ttl)
+        allowed = int(count) <= limit
+        remaining = max(limit - int(count), 0)
+        return RateLimitResult(allowed=allowed, remaining=remaining, reset_at=reset_at)
+
+
+def build_rate_limiter(redis_url: Optional[str]) -> RateLimiter:
+    """Create a rate limiter instance."""
+    if not redis_url:
+        return InMemoryRateLimiter()
+    try:
+        client = Redis.from_url(redis_url, decode_responses=True)
+        client.ping()
+        return RedisRateLimiter(client)
+    except Exception as exc:
+        logger.warning("Rate limiter Redis unavailable, using in-memory limiter: {}", exc)
+        return InMemoryRateLimiter()

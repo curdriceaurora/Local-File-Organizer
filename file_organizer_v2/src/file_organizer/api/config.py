@@ -10,6 +10,7 @@ import yaml
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from file_organizer.api.api_keys import hash_api_key
 from file_organizer.version import __version__
 
 _DEFAULT_CORS = [
@@ -54,6 +55,36 @@ class ApiSettings(BaseModel):
     auth_password_require_letter: bool = True
     auth_bootstrap_admin: bool = False
     auth_bootstrap_admin_local_only: bool = True
+    api_key_enabled: bool = True
+    api_key_admin: bool = False
+    api_key_header: str = "X-API-Key"
+    api_key_hashes: list[str] = Field(default_factory=list)
+    rate_limit_enabled: bool = True
+    rate_limit_default_requests: int = Field(default=1000, gt=0)
+    rate_limit_default_window_seconds: int = Field(default=60, gt=0)
+    rate_limit_exempt_paths: list[str] = Field(
+        default_factory=lambda: ["/", "/api/v1/health", "/docs", "/openapi.json", "/redoc"]
+    )
+    rate_limit_rules: dict[str, dict[str, int]] = Field(
+        default_factory=lambda: {
+            "/api/v1/auth/login": {"requests": 10, "window_seconds": 300},
+            "/api/v1/auth/register": {"requests": 10, "window_seconds": 3600},
+            "/api/v1/auth/refresh": {"requests": 30, "window_seconds": 300},
+            "/api/v1/organize/execute": {"requests": 10, "window_seconds": 3600},
+        }
+    )
+    security_headers_enabled: bool = True
+    security_csp: str = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' ws: wss:;"
+    )
+    security_hsts_seconds: int = Field(default=31536000, ge=0)
+    security_hsts_subdomains: bool = True
+    security_referrer_policy: str = "strict-origin-when-cross-origin"
 
 
 def _parse_list(value: str) -> list[str]:
@@ -226,6 +257,70 @@ def load_settings() -> ApiSettings:
         data["auth_bootstrap_admin_local_only"] = env[
             "FO_API_AUTH_BOOTSTRAP_LOCAL_ONLY"
         ].lower() in ("1", "true", "yes")
+    if "FO_API_API_KEY_ENABLED" in env:
+        data["api_key_enabled"] = env["FO_API_API_KEY_ENABLED"].lower() in ("1", "true", "yes")
+    if "FO_API_API_KEY_ADMIN" in env:
+        data["api_key_admin"] = env["FO_API_API_KEY_ADMIN"].lower() in ("1", "true", "yes")
+    if "FO_API_API_KEY_HEADER" in env:
+        data["api_key_header"] = env["FO_API_API_KEY_HEADER"]
+    if "FO_API_API_KEYS" in env:
+        raw_keys = _parse_list(env["FO_API_API_KEYS"])
+        data["api_key_hashes"] = [hash_api_key(key) for key in raw_keys]
+    if "FO_API_API_KEY_HASHES" in env:
+        data["api_key_hashes"] = _parse_list(env["FO_API_API_KEY_HASHES"])
+    if "FO_API_RATE_LIMIT_ENABLED" in env:
+        data["rate_limit_enabled"] = env["FO_API_RATE_LIMIT_ENABLED"].lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+    if "FO_API_RATE_LIMIT_DEFAULT_REQUESTS" in env:
+        try:
+            data["rate_limit_default_requests"] = int(env["FO_API_RATE_LIMIT_DEFAULT_REQUESTS"])
+        except ValueError:
+            logger.warning(
+                "Invalid FO_API_RATE_LIMIT_DEFAULT_REQUESTS value: {}",
+                env["FO_API_RATE_LIMIT_DEFAULT_REQUESTS"],
+            )
+    if "FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS" in env:
+        try:
+            data["rate_limit_default_window_seconds"] = int(
+                env["FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS"]
+            )
+        except ValueError:
+            logger.warning(
+                "Invalid FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS value: {}",
+                env["FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS"],
+            )
+    if "FO_API_RATE_LIMIT_EXEMPT_PATHS" in env:
+        data["rate_limit_exempt_paths"] = _parse_list(env["FO_API_RATE_LIMIT_EXEMPT_PATHS"])
+    if "FO_API_RATE_LIMIT_RULES" in env:
+        try:
+            parsed_rules = json.loads(env["FO_API_RATE_LIMIT_RULES"])
+            if isinstance(parsed_rules, dict):
+                data["rate_limit_rules"] = parsed_rules
+        except json.JSONDecodeError:
+            logger.warning("Invalid FO_API_RATE_LIMIT_RULES JSON value")
+    if "FO_API_SECURITY_HEADERS_ENABLED" in env:
+        data["security_headers_enabled"] = env[
+            "FO_API_SECURITY_HEADERS_ENABLED"
+        ].lower() in ("1", "true", "yes")
+    if "FO_API_SECURITY_CSP" in env:
+        data["security_csp"] = env["FO_API_SECURITY_CSP"]
+    if "FO_API_SECURITY_HSTS_SECONDS" in env:
+        try:
+            data["security_hsts_seconds"] = int(env["FO_API_SECURITY_HSTS_SECONDS"])
+        except ValueError:
+            logger.warning(
+                "Invalid FO_API_SECURITY_HSTS_SECONDS value: {}",
+                env["FO_API_SECURITY_HSTS_SECONDS"],
+            )
+    if "FO_API_SECURITY_HSTS_SUBDOMAINS" in env:
+        data["security_hsts_subdomains"] = env[
+            "FO_API_SECURITY_HSTS_SUBDOMAINS"
+        ].lower() in ("1", "true", "yes")
+    if "FO_API_SECURITY_REFERRER_POLICY" in env:
+        data["security_referrer_policy"] = env["FO_API_SECURITY_REFERRER_POLICY"]
 
     settings = ApiSettings(**data)
     if settings.auth_enabled and settings.auth_jwt_secret == "change-me":
@@ -238,4 +333,11 @@ def load_settings() -> ApiSettings:
             raise ValueError(
                 "FO_API_AUTH_JWT_SECRET must be set when auth is enabled outside development."
             )
+    if settings.api_key_enabled and not settings.api_key_hashes:
+        logger.warning("API key auth is enabled but no keys are configured.")
+    if settings.environment.lower() not in {"development", "test"}:
+        if "*" in settings.cors_origins:
+            raise ValueError("CORS origins must be explicit in production.")
+        if any("localhost" in origin or "127.0.0.1" in origin for origin in settings.cors_origins):
+            raise ValueError("Localhost CORS origins must be removed in production.")
     return settings

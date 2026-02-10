@@ -8,10 +8,11 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Optional, Union
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
+from file_organizer.api.api_keys import hash_api_key, verify_api_key
 from file_organizer.api.auth import decode_token, is_access_token
 from file_organizer.api.auth_db import create_session
 from file_organizer.api.auth_models import User
@@ -49,7 +50,20 @@ class AnonymousUser:
     last_login: Optional[datetime] = None
 
 
-UserLike = Union[User, AnonymousUser]
+@dataclass(frozen=True)
+class ApiKeyIdentity:
+    id: str
+    username: str
+    email: str = "api-key@example.com"
+    full_name: Optional[str] = None
+    is_active: bool = True
+    is_admin: bool = False
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    last_login: Optional[datetime] = None
+    auth_type: str = "api_key"
+
+
+UserLike = Union[User, AnonymousUser, ApiKeyIdentity]
 
 
 def get_db(settings: ApiSettings = Depends(get_settings)) -> Generator[Session, None, None]:
@@ -88,6 +102,7 @@ def get_login_rate_limiter(settings: ApiSettings = Depends(get_settings)) -> Log
 
 
 def get_current_user(
+    request: Request,
     token: Optional[str] = Depends(oauth2_scheme),
     settings: ApiSettings = Depends(get_settings),
     db: Session = Depends(get_db),
@@ -96,6 +111,15 @@ def get_current_user(
     if not settings.auth_enabled:
         return AnonymousUser()
     if not token:
+        api_key = request.headers.get(settings.api_key_header)
+        if settings.api_key_enabled and api_key:
+            if verify_api_key(api_key, settings.api_key_hashes):
+                key_id = hash_api_key(api_key)[:12]
+                return ApiKeyIdentity(
+                    id=f"api-key:{key_id}",
+                    username=f"api-key-{key_id}",
+                    is_admin=settings.api_key_admin,
+                )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing authentication credentials",
