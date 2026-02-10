@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
@@ -32,7 +33,7 @@ _FILE_TYPE_GROUPS = {
 }
 
 
-def _parse_file_types(file_type: str | None) -> set[str] | None:
+def _parse_file_types(file_type: Optional[str]) -> Optional[set[str]]:
     if not file_type:
         return None
     types: set[str] = set()
@@ -74,7 +75,7 @@ def list_files(
     path: str = Query(..., description="Directory or file path"),
     recursive: bool = Query(False),
     include_hidden: bool = Query(False),
-    file_type: str | None = Query(None, description="Comma-separated extensions or groups"),
+    file_type: Optional[str] = Query(None, description="Comma-separated extensions or groups"),
     sort_by: str = Query("name", pattern="^(name|size|created|modified)$"),
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     skip: int = Query(0, ge=0),
@@ -217,7 +218,7 @@ def delete_file(
     if request.dry_run:
         return DeleteFileResponse(path=str(target), deleted=False, dry_run=True)
 
-    trashed_path: str | None = None
+    trashed_path: Optional[str] = None
     if request.permanent:
         if target.is_dir():
             shutil.rmtree(target)

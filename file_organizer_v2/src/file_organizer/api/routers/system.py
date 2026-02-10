@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
@@ -92,7 +93,7 @@ def update_config(
 @router.get("/system/stats", response_model=StorageStatsResponse)
 def get_stats(
     path: str = Query(".", description="Directory to analyze"),
-    max_depth: int | None = Query(None, ge=1),
+    max_depth: Optional[int] = Query(None, ge=1),
     use_cache: bool = Query(True),
     settings: ApiSettings = Depends(get_settings),
 ) -> StorageStatsResponse:
