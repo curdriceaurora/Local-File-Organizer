@@ -178,16 +178,18 @@ FILE_ORGANIZER_DATA_DIR=./data
 
 API keys provide integration access without JWTs. Use them for headless
 integrations where a full login flow is unnecessary, and treat keys like
-passwords (store hashes, rotate regularly). Generate a key locally:
+passwords (store hashes, rotate regularly). Generate a key locally and
+save it to a file with restricted permissions:
 
 ```bash
-python -m file_organizer.api.api_keys
+python -m file_organizer.api.api_keys --output ./api_key.txt
 ```
 
-This prints a plaintext key and its SHA-256 hash. Configure either raw keys or hashes:
+The command writes the plaintext key to the output file and prints the bcrypt
+hash. Configure either raw keys or bcrypt hashes:
 
 - `FO_API_API_KEYS` (comma-separated plaintext keys)
-- `FO_API_API_KEY_HASHES` (comma-separated SHA-256 hashes)
+- `FO_API_API_KEY_HASHES` (comma-separated bcrypt hashes)
 
 Prefer `FO_API_API_KEY_HASHES` in production to avoid keeping plaintext keys
 in environment variables or shell history.

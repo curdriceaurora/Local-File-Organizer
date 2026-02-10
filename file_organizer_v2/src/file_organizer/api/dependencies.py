@@ -12,7 +12,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from file_organizer.api.api_keys import hash_api_key, verify_api_key
+from file_organizer.api.api_keys import api_key_identifier
 from file_organizer.api.auth import decode_token, is_access_token
 from file_organizer.api.auth_db import create_session
 from file_organizer.api.auth_models import User
@@ -113,8 +113,8 @@ def get_current_user(
     if not token:
         api_key = request.headers.get(settings.api_key_header)
         if settings.api_key_enabled and api_key:
-            if verify_api_key(api_key, settings.api_key_hashes):
-                key_id = hash_api_key(api_key)[:12]
+            key_id = api_key_identifier(api_key, settings.api_key_hashes)
+            if key_id:
                 return ApiKeyIdentity(
                     id=f"api-key:{key_id}",
                     username=f"api-key-{key_id}",

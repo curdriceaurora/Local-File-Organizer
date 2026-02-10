@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from file_organizer.api.api_keys import hash_api_key, verify_api_key
+from file_organizer.api.api_keys import api_key_identifier
 from file_organizer.api.auth import decode_token, is_access_token
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.rate_limit import RateLimiter, RateLimitResult, build_rate_limiter
@@ -49,8 +49,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         api_key = request.headers.get(self._settings.api_key_header)
         if api_key and self._settings.api_key_enabled:
-            if verify_api_key(api_key, self._settings.api_key_hashes):
-                return f"key:{hash_api_key(api_key)[:12]}"
+            key_id = api_key_identifier(api_key, self._settings.api_key_hashes)
+            if key_id:
+                return f"key:{key_id}"
 
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
