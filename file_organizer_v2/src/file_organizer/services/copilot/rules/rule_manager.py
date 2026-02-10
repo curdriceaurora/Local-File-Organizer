@@ -65,7 +65,7 @@ class RuleManager:
         try:
             raw = yaml.safe_load(path.read_text(encoding="utf-8"))
         except Exception:
-            logger.warning("Failed to parse rule set '%s'", name, exc_info=True)
+            logger.warning("Failed to parse rule set '{}'", name, exc_info=True)
             return RuleSet(name=name)
 
         if not isinstance(raw, dict):

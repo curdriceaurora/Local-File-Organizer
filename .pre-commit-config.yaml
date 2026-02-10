@@ -3,11 +3,11 @@ repos:
     hooks:
       - id: ruff-check
         name: ruff check
-        entry: ruff check file_organizer_v2/src
+        entry: ruff check file_organizer_v2/src file_organizer_v2/tests/ci
         language: system
         pass_filenames: false
       - id: pytest-ci-lint
-        name: pytest (ruff lint guard)
-        entry: pytest file_organizer_v2/tests/ci/test_ruff_lint.py -q --override-ini="addopts="
+        name: pytest (ci guardrails)
+        entry: pytest file_organizer_v2/tests/ci -q --override-ini="addopts="
         language: system
         pass_filenames: false

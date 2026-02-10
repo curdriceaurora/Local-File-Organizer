@@ -12,12 +12,12 @@ FO_ROOT = Path(__file__).resolve().parents[2]
 
 @pytest.mark.ci
 def test_ruff_full_lint() -> None:
-    """Run full Ruff linting to prevent regressions before commits."""
+    """Run Ruff linting across core sources and CI guardrails."""
     ruff = shutil.which("ruff")
     assert ruff is not None, "ruff is required to run lint guard tests"
 
     result = subprocess.run(
-        [ruff, "check", "src"],
+        [ruff, "check", "src", "tests/ci"],
         cwd=FO_ROOT,
         capture_output=True,
         text=True,
@@ -25,6 +25,6 @@ def test_ruff_full_lint() -> None:
     )
     if result.returncode != 0:
         raise AssertionError(
-            "ruff import ordering failed:\n"
+            "ruff linting failed:\n"
             f"{result.stdout}\n{result.stderr}"
         )

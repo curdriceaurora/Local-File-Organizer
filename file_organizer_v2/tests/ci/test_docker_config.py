@@ -6,8 +6,9 @@ and the docker_utils helper functions.
 
 from __future__ import annotations
 
+import importlib
 import re
-import textwrap
+import sys
 from pathlib import Path
 
 import pytest
@@ -17,15 +18,12 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 # Import the docker_utils module
-import sys
-
 sys.path.insert(0, str(PROJECT_ROOT / "file_organizer_v2" / "scripts"))
 
-from docker_utils import (
-    get_image_size_estimate,
-    parse_docker_compose,
-    validate_dockerfile,
-)
+docker_utils = importlib.import_module("docker_utils")
+get_image_size_estimate = docker_utils.get_image_size_estimate
+parse_docker_compose = docker_utils.parse_docker_compose
+validate_dockerfile = docker_utils.validate_dockerfile
 
 
 # =============================================================================
