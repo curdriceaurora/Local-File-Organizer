@@ -77,6 +77,8 @@ def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
 
     if STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+    else:
+        logger.warning("Static assets directory not found at {}", STATIC_DIR)
 
     setup_middleware(app, settings)
     setup_exception_handlers(app)

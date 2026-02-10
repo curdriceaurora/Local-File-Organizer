@@ -103,10 +103,6 @@ gui = [
     "PyQt6>=6.6.0",
 ]
 
-web = [
-    "htmx>=0.1.0",
-]
-
 audio = [
     "faster-whisper>=1.0.0",
     "torch>=2.1.0",  # GPU acceleration for audio transcription
@@ -145,7 +141,7 @@ build = [
 ]
 
 all = [
-    "file-organizer[dev,gui,web,audio,video,dedup,archive,scientific,cad,build]",
+    "file-organizer[dev,gui,audio,video,dedup,archive,scientific,cad,build]",
 ]
 
 [project.scripts]

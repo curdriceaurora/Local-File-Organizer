@@ -34,7 +34,7 @@
 
 body {
   margin: 0;
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   background: radial-gradient(circle at top, var(--bg-muted), var(--bg-primary));
   color: var(--text-primary);
 }
@@ -260,7 +260,7 @@ body {
 }
 
 .metric-value {
-  font-family: "Space Mono", monospace;
+  font-family: "SF Mono", "IBM Plex Mono", "Consolas", "Liberation Mono", monospace;
   color: var(--text-primary);
   font-weight: 700;
 }
@@ -407,7 +407,7 @@ body {
 }
 
 .action-meta {
-  font-family: "Space Mono", monospace;
+  font-family: "SF Mono", "IBM Plex Mono", "Consolas", "Liberation Mono", monospace;
   color: var(--text-primary);
 }
 

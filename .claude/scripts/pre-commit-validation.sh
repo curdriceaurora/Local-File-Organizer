@@ -45,11 +45,10 @@ echo "✓ No build artifacts found"
 echo ""
 
 # 4. Pattern checks on Python files
-PY_FILES=$(echo "$MODIFIED" | grep '\.py$' || true)
+PY_FILES=$(git diff --name-only --cached -- '*.py' || true)
 if [[ -n "$PY_FILES" ]]; then
   echo "🎯 Pattern validation on Python files..."
-
-  PY_DIFF=$(git diff --cached -- $PY_FILES)
+  PY_DIFF=$(git diff --cached -- '*.py')
 
   # Check for dict-style dataclass access
   DICT_ACCESS=$(echo "$PY_DIFF" | grep -n '+.*if.*".*".*in.*\(metadata\|result\|config\)' || true)

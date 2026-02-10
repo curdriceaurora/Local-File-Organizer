@@ -51,7 +51,7 @@ Start the FastAPI server and open the UI:
 uvicorn file_organizer.api.main:app --reload
 ```
 
-Then visit `http://localhost:8000/ui` for the HTMX interface.
+Then visit `http://localhost:8000/ui/` for the HTMX interface.
 
 ## Documentation
 

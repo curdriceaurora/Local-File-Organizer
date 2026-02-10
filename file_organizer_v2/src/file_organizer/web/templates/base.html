@@ -5,14 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark">
     <title>{{ page_title }} | {{ app_name }}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/static/css/styles.css">
     <script src="/static/js/htmx.min.js" defer></script>
 </head>
-<body class="min-h-screen" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="innerHTML">
+<body hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="innerHTML">
     <div class="page-shell">
         <header class="site-header">
             <nav class="nav-shell">
