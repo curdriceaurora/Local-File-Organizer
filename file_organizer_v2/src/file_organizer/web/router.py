@@ -38,6 +38,7 @@ _NAV_ITEMS = [
 
 _PAGE_SIZE = 48
 _THUMBNAIL_SIZE = (240, 160)
+_MAX_LIMIT = 500
 _MAX_NAV_DEPTH = 12
 _MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 _UPLOAD_CHUNK_SIZE = 1024 * 1024
@@ -46,6 +47,9 @@ _TEXT_SAMPLE_BYTES = 8192
 _TEXT_PREVIEW_CHARS = 4000
 _INVALID_FILENAME_CHARS = set('<>:"/\\|?*')
 _SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._()-]*$")
+_ALLOWED_VIEWS = {"grid", "list"}
+_ALLOWED_SORT_BY = {"name", "size", "created", "modified", "type"}
+_ALLOWED_SORT_ORDER = {"asc", "desc"}
 
 _FILE_TYPE_GROUPS = {
     "image": FileOrganizer.IMAGE_EXTENSIONS,
@@ -245,6 +249,22 @@ def _sanitize_upload_name(name: str) -> Optional[str]:
     return safe_name
 
 
+def _normalize_view(view: str) -> str:
+    return view if view in _ALLOWED_VIEWS else "grid"
+
+
+def _normalize_sort_by(sort_by: str) -> str:
+    return sort_by if sort_by in _ALLOWED_SORT_BY else "name"
+
+
+def _normalize_sort_order(sort_order: str) -> str:
+    return sort_order if sort_order in _ALLOWED_SORT_ORDER else "asc"
+
+
+def _clamp_limit(limit: int) -> int:
+    return max(1, min(limit, _MAX_LIMIT))
+
+
 def _list_tree_nodes(path: Path, include_hidden: bool) -> list[dict[str, Any]]:
     nodes: list[dict[str, Any]] = []
     try:
@@ -379,6 +399,7 @@ def _build_file_results_context(
     sort_order: str,
     limit: int,
 ) -> dict[str, Any]:
+    limit = _clamp_limit(limit)
     roots = _allowed_roots(settings)
     error_message: Optional[str] = None
     entries: list[dict[str, Any]] = []
@@ -472,13 +493,13 @@ def _render_image_thumbnail(path: Path) -> bytes:
 
 
 @router.get("/", response_class=HTMLResponse)
-async def home(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def home(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
     context = _base_context(request, settings, active="home", title="Home")
     return _templates.TemplateResponse("index.html", context)
 
 
 @router.get("/files", response_class=HTMLResponse)
-async def files_browser(
+def files_browser(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
     path: Optional[str] = Query(None),
@@ -508,7 +529,7 @@ async def files_browser(
 
 
 @router.get("/files/list", response_class=HTMLResponse)
-async def files_list(
+def files_list(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
     path: Optional[str] = Query(None),
@@ -534,7 +555,7 @@ async def files_list(
 
 
 @router.get("/files/tree", response_class=HTMLResponse)
-async def files_tree(
+def files_tree(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
     path: Optional[str] = Query(None),
@@ -594,7 +615,7 @@ async def files_tree(
 
 
 @router.get("/files/thumbnail")
-async def files_thumbnail(
+def files_thumbnail(
     settings: ApiSettings = Depends(get_settings),
     path: str = Query(...),
     kind: str = Query("file"),
@@ -625,7 +646,7 @@ async def files_thumbnail(
 
 
 @router.get("/files/raw")
-async def files_raw(settings: ApiSettings = Depends(get_settings), path: str = Query(...)) -> FileResponse:
+def files_raw(settings: ApiSettings = Depends(get_settings), path: str = Query(...)) -> FileResponse:
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists() or not target.is_file():
         raise ApiError(status_code=404, error="not_found", message="File not found")
@@ -633,7 +654,7 @@ async def files_raw(settings: ApiSettings = Depends(get_settings), path: str = Q
 
 
 @router.get("/files/preview", response_class=HTMLResponse)
-async def files_preview(
+def files_preview(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
     path: str = Query(...),
@@ -681,7 +702,7 @@ async def files_preview(
 
 
 @router.post("/files/upload", response_class=HTMLResponse)
-async def files_upload(
+def files_upload(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
     path: str = Form(""),
@@ -707,6 +728,11 @@ async def files_upload(
         if not files:
             raise ApiError(status_code=400, error="missing_files", message="No files selected")
 
+        view = _normalize_view(view)
+        sort_by = _normalize_sort_by(sort_by)
+        sort_order = _normalize_sort_order(sort_order)
+        limit = _clamp_limit(limit)
+
         saved = 0
         for upload in files:
             if not upload.filename:
@@ -714,24 +740,27 @@ async def files_upload(
             raw_name = Path(upload.filename).name.strip()
             if raw_name.startswith("."):
                 errors.append(f"Rejected {raw_name}: hidden files are not allowed.")
-                await upload.close()
+                if upload.file:
+                    upload.file.close()
                 continue
             safe_name = _sanitize_upload_name(upload.filename)
             if safe_name is None:
                 errors.append(f"Rejected {upload.filename}: invalid filename.")
-                await upload.close()
+                if upload.file:
+                    upload.file.close()
                 continue
             destination = target_dir / safe_name
             if destination.exists():
                 errors.append(f"Skipped {safe_name}: file already exists.")
-                await upload.close()
+                if upload.file:
+                    upload.file.close()
                 continue
 
             total_bytes = 0
             try:
                 with destination.open("wb") as handle:
                     while True:
-                        chunk = await upload.read(_UPLOAD_CHUNK_SIZE)
+                        chunk = upload.file.read(_UPLOAD_CHUNK_SIZE)
                         if not chunk:
                             break
                         total_bytes += len(chunk)
@@ -746,15 +775,18 @@ async def files_upload(
                 if destination.exists():
                     destination.unlink(missing_ok=True)
                 errors.append(exc.message)
-                await upload.close()
+                if upload.file:
+                    upload.file.close()
                 continue
             except OSError:
                 if destination.exists():
                     destination.unlink(missing_ok=True)
                 errors.append(f"Failed to save {safe_name}.")
-                await upload.close()
+                if upload.file:
+                    upload.file.close()
                 continue
-            await upload.close()
+            if upload.file:
+                upload.file.close()
             saved += 1
         if saved:
             info_message = f"Uploaded {saved} file(s)."
@@ -780,18 +812,18 @@ async def files_upload(
 
 
 @router.get("/organize", response_class=HTMLResponse)
-async def organize_dashboard(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def organize_dashboard(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
     context = _base_context(request, settings, active="organize", title="Organize")
     return _templates.TemplateResponse("organize/dashboard.html", context)
 
 
 @router.get("/settings", response_class=HTMLResponse)
-async def settings(request: Request, settings_obj: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def settings(request: Request, settings_obj: ApiSettings = Depends(get_settings)) -> HTMLResponse:
     context = _base_context(request, settings_obj, active="settings", title="Settings")
     return _templates.TemplateResponse("settings/index.html", context)
 
 
 @router.get("/profile", response_class=HTMLResponse)
-async def profile(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def profile(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
     context = _base_context(request, settings, active="profile", title="Profile")
     return _templates.TemplateResponse("profile/index.html", context)

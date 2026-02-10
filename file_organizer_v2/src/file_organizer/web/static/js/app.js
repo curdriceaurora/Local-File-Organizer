@@ -2,6 +2,7 @@
   const storageKey = "fo-theme";
   const root = document.documentElement;
   const toggle = document.querySelector("[data-theme-toggle]");
+  let lastFocusedElement = null;
 
   const setTheme = (theme) => {
     root.dataset.theme = theme;
@@ -45,7 +46,29 @@
     document.body.classList.remove("modal-open");
     const modal = document.querySelector("#preview-modal");
     if (modal) {
+      modal.setAttribute("aria-hidden", "true");
       modal.innerHTML = "";
+    }
+    if (lastFocusedElement) {
+      lastFocusedElement.focus();
+      lastFocusedElement = null;
+    }
+  };
+
+  const openModal = () => {
+    const modal = document.querySelector("#preview-modal");
+    if (!modal) return;
+    lastFocusedElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+    const focusTarget =
+      modal.querySelector("[data-modal-close]") ||
+      modal.querySelector(
+        "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"
+      );
+    if (focusTarget && focusTarget instanceof HTMLElement) {
+      focusTarget.focus();
     }
   };
 
@@ -57,7 +80,9 @@
       count.textContent = `${selected} selected`;
     }
     browser.querySelectorAll("[data-bulk-action]").forEach((button) => {
-      button.disabled = selected === 0;
+      const isDisabled = selected === 0;
+      button.disabled = isDisabled;
+      button.setAttribute("aria-disabled", isDisabled ? "true" : "false");
     });
   };
 
@@ -132,37 +157,40 @@
       });
     }
 
-    browser.addEventListener("change", (event) => {
-      if (event.target && event.target.matches("[data-file-select]")) {
-        updateSelection(browser);
-      }
-    });
+    if (!browser.dataset.bound) {
+      browser.dataset.bound = "true";
+      browser.addEventListener("change", (event) => {
+        if (event.target && event.target.matches("[data-file-select]")) {
+          updateSelection(browser);
+        }
+      });
 
-    browser.addEventListener("keydown", (event) => {
-      const activeCard = document.activeElement;
-      if (!activeCard || !activeCard.matches("[data-file-card]")) return;
+      browser.addEventListener("keydown", (event) => {
+        const activeCard = document.activeElement;
+        if (!activeCard || !activeCard.matches("[data-file-card]")) return;
 
-      const cards = Array.from(browser.querySelectorAll("[data-file-card]"));
-      const index = cards.indexOf(activeCard);
-      if (index === -1) return;
+        const cards = Array.from(browser.querySelectorAll("[data-file-card]"));
+        const index = cards.indexOf(activeCard);
+        if (index === -1) return;
 
-      let nextIndex = null;
-      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-        nextIndex = Math.min(cards.length - 1, index + 1);
-      } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-        nextIndex = Math.max(0, index - 1);
-      } else if (event.key === "Enter") {
-        const previewButton = activeCard.querySelector("[data-preview-trigger]");
-        const openButton = activeCard.querySelector("[data-open-trigger]");
-        if (previewButton) previewButton.click();
-        if (openButton) openButton.click();
-      }
+        let nextIndex = null;
+        if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+          nextIndex = Math.min(cards.length - 1, index + 1);
+        } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+          nextIndex = Math.max(0, index - 1);
+        } else if (event.key === "Enter") {
+          const previewButton = activeCard.querySelector("[data-preview-trigger]");
+          const openButton = activeCard.querySelector("[data-open-trigger]");
+          if (previewButton) previewButton.click();
+          if (openButton) openButton.click();
+        }
 
-      if (nextIndex !== null && cards[nextIndex]) {
-        cards[nextIndex].focus();
-        event.preventDefault();
-      }
-    });
+        if (nextIndex !== null && cards[nextIndex]) {
+          cards[nextIndex].focus();
+          event.preventDefault();
+        }
+      });
+    }
 
     updateSelection(browser);
   };
@@ -202,7 +230,7 @@
   document.body.addEventListener("htmx:afterSwap", (event) => {
     const target = event.target;
     if (target && target.id === "preview-modal") {
-      document.body.classList.add("modal-open");
+      openModal();
     }
     if (target && target.id === "file-results") {
       bindFileBrowser();
