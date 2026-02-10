@@ -62,6 +62,7 @@ class ApiSettings(BaseModel):
     rate_limit_enabled: bool = True
     rate_limit_default_requests: int = Field(default=1000, gt=0)
     rate_limit_default_window_seconds: int = Field(default=60, gt=0)
+    rate_limit_trust_proxy_headers: bool = False
     rate_limit_exempt_paths: list[str] = Field(
         default_factory=lambda: ["/", "/api/v1/health", "/docs", "/openapi.json", "/redoc"]
     )
@@ -292,6 +293,10 @@ def load_settings() -> ApiSettings:
                 "Invalid FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS value: {}",
                 env["FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS"],
             )
+    if "FO_API_RATE_LIMIT_TRUST_PROXY_HEADERS" in env:
+        data["rate_limit_trust_proxy_headers"] = env[
+            "FO_API_RATE_LIMIT_TRUST_PROXY_HEADERS"
+        ].lower() in ("1", "true", "yes")
     if "FO_API_RATE_LIMIT_EXEMPT_PATHS" in env:
         data["rate_limit_exempt_paths"] = _parse_list(env["FO_API_RATE_LIMIT_EXEMPT_PATHS"])
     if "FO_API_RATE_LIMIT_RULES" in env:
@@ -322,6 +327,7 @@ def load_settings() -> ApiSettings:
     if "FO_API_SECURITY_REFERRER_POLICY" in env:
         data["security_referrer_policy"] = env["FO_API_SECURITY_REFERRER_POLICY"]
 
+    api_key_enabled_explicit = "api_key_enabled" in data
     settings = ApiSettings(**data)
     if settings.auth_enabled and settings.auth_jwt_secret == "change-me":
         if settings.environment.lower() in {"development", "test"}:
@@ -333,7 +339,7 @@ def load_settings() -> ApiSettings:
             raise ValueError(
                 "FO_API_AUTH_JWT_SECRET must be set when auth is enabled outside development."
             )
-    if settings.api_key_enabled and not settings.api_key_hashes:
+    if settings.api_key_enabled and not settings.api_key_hashes and api_key_enabled_explicit:
         logger.warning("API key auth is enabled but no keys are configured.")
     if settings.environment.lower() not in {"development", "test"}:
         if "*" in settings.cors_origins:

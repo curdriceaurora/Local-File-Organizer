@@ -6,6 +6,7 @@ import secrets
 import sys
 from collections.abc import Iterable
 from pathlib import Path
+from typing import cast
 
 from passlib.context import CryptContext
 
@@ -21,7 +22,7 @@ def generate_api_key(prefix: str = "fo") -> str:
 
 def hash_api_key(api_key: str) -> str:
     """Hash an API key for storage."""
-    return _API_KEY_CONTEXT.hash(api_key)
+    return cast(str, _API_KEY_CONTEXT.hash(api_key))
 
 
 def match_api_key_hash(api_key: str, hashes: Iterable[str]) -> str | None:

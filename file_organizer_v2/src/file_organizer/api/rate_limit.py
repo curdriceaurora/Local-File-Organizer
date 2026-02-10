@@ -32,11 +32,28 @@ class RateLimitState:
 class InMemoryRateLimiter:
     """Simple in-memory fixed-window rate limiter."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        max_entries: int = 10000,
+        sweep_interval_seconds: int = 60,
+    ) -> None:
         self._state: dict[str, RateLimitState] = {}
+        self._last_sweep: int = 0
+        self._max_entries = max_entries
+        self._sweep_interval_seconds = sweep_interval_seconds
+
+    def _sweep(self, now: int) -> None:
+        expired = [key for key, state in self._state.items() if state.reset_at <= now]
+        for key in expired:
+            self._state.pop(key, None)
+        self._last_sweep = now
 
     def check(self, key: str, limit: int, window_seconds: int) -> RateLimitResult:
         now = int(time.time())
+        if now - self._last_sweep >= self._sweep_interval_seconds:
+            self._sweep(now)
+        elif len(self._state) >= self._max_entries:
+            self._sweep(now)
         state = self._state.get(key)
         if state is None or state.reset_at <= now:
             reset_at = now + window_seconds
@@ -59,12 +76,6 @@ class RedisRateLimiter:
 
     def _key(self, key: str) -> str:
         return f"{self._prefix}{key}"
-
-    def _ttl(self, redis_key: str, window_seconds: int) -> int:
-        ttl = self._redis.ttl(redis_key)
-        if ttl is None or ttl < 0:
-            return window_seconds
-        return int(ttl)
 
     def check(self, key: str, limit: int, window_seconds: int) -> RateLimitResult:
         now = int(time.time())

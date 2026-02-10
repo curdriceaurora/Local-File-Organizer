@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Awaitable, Callable
 from typing import Optional
 
 from fastapi import FastAPI, Request
@@ -25,7 +26,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._limiter = limiter
 
     def _is_exempt(self, path: str) -> bool:
-        return any(path == exempt for exempt in self._settings.rate_limit_exempt_paths)
+        for exempt in self._settings.rate_limit_exempt_paths:
+            normalized = exempt.rstrip("/") if exempt != "/" else exempt
+            if path == normalized:
+                return True
+            if normalized != "/" and path.startswith(f"{normalized}/"):
+                return True
+        return False
 
     def _rule_for_path(self, path: str) -> Optional[dict[str, int]]:
         rules = self._settings.rate_limit_rules
@@ -53,11 +60,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if key_id:
                 return f"key:{key_id}"
 
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            client_ip = forwarded.split(",")[0].strip()
-        else:
-            client_ip = request.client.host if request.client else "unknown"
+        client_ip = request.client.host if request.client else "unknown"
+        if self._settings.rate_limit_trust_proxy_headers:
+            forwarded = request.headers.get("X-Forwarded-For")
+            if forwarded:
+                client_ip = forwarded.split(",")[0].strip()
         return f"ip:{client_ip}"
 
     def _apply_headers(self, response: Response, result: RateLimitResult, limit: int) -> None:
@@ -65,7 +72,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         response.headers["X-RateLimit-Remaining"] = str(result.remaining)
         response.headers["X-RateLimit-Reset"] = str(result.reset_at)
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         if not self._settings.rate_limit_enabled or request.scope.get("type") != "http":
             return await call_next(request)
 
@@ -84,7 +95,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         result = self._limiter.check(key, limit, window)
         if not result.allowed:
             retry_after = max(result.reset_at - int(time.time()), 0)
-            response = JSONResponse(
+            response: Response = JSONResponse(
                 status_code=429,
                 content={"detail": "Rate limit exceeded. Try again later."},
             )
@@ -104,7 +115,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._settings = settings
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         response = await call_next(request)
         if not self._settings.security_headers_enabled:
             return response
@@ -137,5 +152,9 @@ def setup_middleware(app: FastAPI, settings: ApiSettings) -> None:
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
+    app.add_middleware(
+        RateLimitMiddleware,
+        settings=settings,
+        limiter=build_rate_limiter(settings.auth_redis_url),
+    )
     app.add_middleware(SecurityHeadersMiddleware, settings=settings)
-    app.add_middleware(RateLimitMiddleware, settings=settings, limiter=build_rate_limiter(settings.auth_redis_url))

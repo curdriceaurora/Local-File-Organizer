@@ -213,8 +213,13 @@ Responses include:
 Pitfalls:
 - In-memory rate limiting resets on restart. For multi-instance deployments,
   set `FO_API_AUTH_REDIS_URL` or `FO_REDIS_URL` to share limits across nodes.
-- If the API runs behind a proxy, ensure `X-Forwarded-For` is set so limits are
-  applied per client instead of the proxy IP.
+- If the API runs behind a proxy, enable trusted proxy headers and ensure
+  `X-Forwarded-For` is set so limits are applied per client instead of the
+  proxy IP:
+
+```bash
+export FO_API_RATE_LIMIT_TRUST_PROXY_HEADERS=true
+```
 
 ### Security Headers
 

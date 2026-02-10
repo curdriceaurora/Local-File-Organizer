@@ -52,6 +52,54 @@ def test_rate_limit_blocks_after_threshold(tmp_path: Path) -> None:
     assert blocked.status_code == 429
     assert blocked.headers.get("X-RateLimit-Remaining") == "0"
     assert "Retry-After" in blocked.headers
+    assert blocked.headers.get("X-Frame-Options") == "DENY"
+
+
+def test_rate_limit_exempts_docs_subpaths(tmp_path: Path) -> None:
+    settings = build_test_settings(
+        tmp_path,
+        auth_overrides={
+            "enable_docs": True,
+            "rate_limit_enabled": True,
+            "rate_limit_exempt_paths": ["/docs"],
+        },
+    )
+    app = create_app(settings)
+    client = TestClient(app)
+
+    response = client.get("/docs")
+    assert response.status_code != 429
+    response = client.get("/docs/oauth2-redirect")
+    assert response.status_code != 429
+
+
+def test_rate_limit_trust_proxy_headers(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    client, headers, _ = create_auth_client(
+        tmp_path,
+        [str(data_dir)],
+        auth_overrides={
+            "rate_limit_enabled": True,
+            "rate_limit_trust_proxy_headers": False,
+            "rate_limit_exempt_paths": [],
+            "rate_limit_rules": {"/api/v1/system/status": {"requests": 1, "window_seconds": 60}},
+        },
+    )
+
+    response = client.get(
+        "/api/v1/system/status",
+        params={"path": str(data_dir)},
+        headers={**headers, "X-Forwarded-For": "203.0.113.10"},
+    )
+    assert response.status_code == 200
+
+    blocked = client.get(
+        "/api/v1/system/status",
+        params={"path": str(data_dir)},
+        headers={**headers, "X-Forwarded-For": "203.0.113.11"},
+    )
+    assert blocked.status_code == 429
 
 
 def test_api_key_allows_access(tmp_path: Path) -> None:
