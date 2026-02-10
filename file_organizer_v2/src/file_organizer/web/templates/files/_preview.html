@@ -14,11 +14,11 @@
         <div class="modal-body">
             <div class="preview-media">
                 {% if preview_kind == "image" %}
-                    <img src="{{ download_url }}" alt="Preview for {{ info.name }}">
+                    <img src="{{ raw_url }}" alt="Preview for {{ info.name }}">
                 {% elif preview_kind == "pdf" %}
-                    <iframe src="{{ download_url }}" title="Preview for {{ info.name }}"></iframe>
+                    <iframe src="{{ raw_url }}" title="Preview for {{ info.name }}"></iframe>
                 {% elif preview_kind == "video" %}
-                    <video controls src="{{ download_url }}"></video>
+                    <video controls src="{{ raw_url }}"></video>
                 {% elif preview_kind == "text" %}
                     <pre class="preview-text">{{ preview_text or "Preview not available." }}</pre>
                 {% else %}

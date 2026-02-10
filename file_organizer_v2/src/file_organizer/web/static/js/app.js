@@ -63,10 +63,11 @@
     modal.setAttribute("aria-hidden", "false");
     document.body.classList.add("modal-open");
     const focusTarget =
-      modal.querySelector("[data-modal-close]") ||
+      modal.querySelector("button[data-modal-close]") ||
       modal.querySelector(
         "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"
-      );
+      ) ||
+      modal.querySelector("[data-modal-close]");
     if (focusTarget && focusTarget instanceof HTMLElement) {
       focusTarget.focus();
     }
@@ -199,6 +200,40 @@
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
+    if (target.matches("[data-tree-toggle]")) {
+      const controlsId = target.getAttribute("aria-controls");
+      const container = controlsId ? document.getElementById(controlsId) : null;
+      if (!container) return;
+      const isLoaded = target.dataset.loaded === "true";
+      const isExpanded = target.getAttribute("aria-expanded") === "true";
+      if (isLoaded) {
+        if (isExpanded) {
+          target.setAttribute("aria-expanded", "false");
+          container.classList.add("is-collapsed");
+        } else {
+          target.setAttribute("aria-expanded", "true");
+          container.classList.remove("is-collapsed");
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      } else {
+        target.setAttribute("aria-expanded", "true");
+        container.classList.remove("is-collapsed");
+      }
+      return;
+    }
+
+    if (target.matches("[data-tree-link]")) {
+      const tree = document.querySelector("#directory-tree");
+      const path = target.getAttribute("data-tree-path");
+      if (tree && path) {
+        tree.setAttribute("hx-get", `/ui/files/tree?active=${path}`);
+        if (window.htmx) {
+          window.htmx.trigger(tree, "refresh");
+        }
+      }
+    }
+
     if (target.matches("[data-modal-close]")) {
       closeModal();
       return;
@@ -231,6 +266,14 @@
     const target = event.target;
     if (target && target.id === "preview-modal") {
       openModal();
+    }
+    if (target && target.classList && target.classList.contains("tree-children")) {
+      const toggle = document.querySelector(`[aria-controls="${target.id}"]`);
+      if (toggle) {
+        toggle.dataset.loaded = "true";
+        toggle.setAttribute("aria-expanded", "true");
+        target.classList.remove("is-collapsed");
+      }
     }
     if (target && target.id === "file-results") {
       bindFileBrowser();

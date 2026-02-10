@@ -559,7 +559,7 @@ def files_tree(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
     path: Optional[str] = Query(None),
-    depth: int = Query(0, ge=0, le=6),
+    depth: int = Query(0, ge=0, le=_MAX_NAV_DEPTH),
     active: Optional[str] = Query(None),
 ) -> HTMLResponse:
     roots = _allowed_roots(settings)
@@ -625,16 +625,13 @@ def files_thumbnail(
         raise ApiError(status_code=404, error="not_found", message="File not found")
 
     if kind == "image":
-        try:
-            if target.stat().st_size > _MAX_THUMBNAIL_BYTES:
-                raise ApiError(
-                    status_code=400,
-                    error="thumbnail_too_large",
-                    message="Image too large for thumbnail preview.",
-                )
-            data = _render_image_thumbnail(target)
-        except (OSError, UnidentifiedImageError, Image.DecompressionBombError, ApiError):
+        if target.stat().st_size > _MAX_THUMBNAIL_BYTES:
             data = _render_placeholder_thumbnail("IMG", _THUMBNAIL_SIZE)
+        else:
+            try:
+                data = _render_image_thumbnail(target)
+            except (OSError, UnidentifiedImageError, Image.DecompressionBombError):
+                data = _render_placeholder_thumbnail("IMG", _THUMBNAIL_SIZE)
     elif kind == "pdf":
         data = _render_placeholder_thumbnail("PDF", _THUMBNAIL_SIZE)
     elif kind == "video":
@@ -646,11 +643,21 @@ def files_thumbnail(
 
 
 @router.get("/files/raw")
-def files_raw(settings: ApiSettings = Depends(get_settings), path: str = Query(...)) -> FileResponse:
+def files_raw(
+    settings: ApiSettings = Depends(get_settings),
+    path: str = Query(...),
+    download: bool = Query(False),
+) -> FileResponse:
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists() or not target.is_file():
         raise ApiError(status_code=404, error="not_found", message="File not found")
-    return FileResponse(target)
+    headers = None
+    if download:
+        headers = {
+            "Content-Disposition": f'attachment; filename="{target.name}"',
+            "X-Content-Type-Options": "nosniff",
+        }
+    return FileResponse(target, headers=headers)
 
 
 @router.get("/files/preview", response_class=HTMLResponse)
@@ -663,6 +670,7 @@ def files_preview(
     preview_kind = "file"
     preview_text: Optional[str] = None
     download_url = ""
+    raw_url = ""
     size_display = ""
     modified_display = ""
     info = None
@@ -673,7 +681,8 @@ def files_preview(
             raise ApiError(status_code=404, error="not_found", message="File not found")
         info = file_info_from_path(target)
         preview_kind = _detect_kind(target)
-        download_url = f"/ui/files/raw?path={quote(info.path)}"
+        raw_url = f"/ui/files/raw?path={quote(info.path)}"
+        download_url = f"/ui/files/raw?path={quote(info.path)}&download=1"
         size_display = _format_bytes(info.size)
         modified_display = _format_timestamp(info.modified)
         if preview_kind == "text" and _is_probably_text(target):
@@ -693,6 +702,7 @@ def files_preview(
             "info": info,
             "preview_kind": preview_kind,
             "preview_text": preview_text,
+            "raw_url": raw_url,
             "download_url": download_url,
             "size_display": size_display,
             "modified_display": modified_display,

@@ -13,6 +13,7 @@
             <button
                 class="tree-toggle"
                 type="button"
+                data-tree-toggle
                 {% if node.has_children %}
                     hx-get="/ui/files/tree?path={{ node.path_param }}&depth={{ depth + 1 }}&active={{ active_path_param }}"
                     hx-target="#tree-children-{{ node.id }}"
@@ -33,6 +34,8 @@
                 hx-get="/ui/files/list?path={{ node.path_param }}"
                 hx-target="#file-results"
                 hx-swap="innerHTML"
+                data-tree-link
+                data-tree-path="{{ node.path_param }}"
             >
                 {{ node.name }}
             </button>
