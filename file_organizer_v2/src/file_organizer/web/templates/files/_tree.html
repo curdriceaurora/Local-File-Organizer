@@ -1,0 +1,38 @@
+{% if error_message %}
+    <div class="tree-error">{{ error_message }}</div>
+{% endif %}
+
+<ul class="tree-list" data-depth="{{ depth }}">
+    {% for node in nodes %}
+        <li
+            class="tree-item {% if node.path == active_path %}is-active{% endif %}"
+            style="--tree-depth: {{ depth }}"
+            data-tree-item
+            data-tree-path="{{ node.path }}"
+        >
+            <button
+                class="tree-toggle"
+                type="button"
+                {% if node.has_children %}
+                    hx-get="/ui/files/tree?path={{ node.path_param }}&depth={{ depth + 1 }}&active={{ active_path|urlencode }}"
+                    hx-target="#tree-children-{{ node.id }}"
+                    hx-swap="innerHTML"
+                {% else %}
+                    disabled
+                {% endif %}
+            >
+                {% if node.has_children %}+{% else %}.{% endif %}
+            </button>
+            <button
+                class="tree-link"
+                type="button"
+                hx-get="/ui/files/list?path={{ node.path_param }}"
+                hx-target="#file-results"
+                hx-swap="innerHTML"
+            >
+                {{ node.name }}
+            </button>
+            <div id="tree-children-{{ node.id }}" class="tree-children"></div>
+        </li>
+    {% endfor %}
+</ul>

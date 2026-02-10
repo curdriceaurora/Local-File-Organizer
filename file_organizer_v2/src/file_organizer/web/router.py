@@ -1,16 +1,23 @@
 """Web UI routes and template rendering."""
 from __future__ import annotations
 
+import hashlib
+import io
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
+from PIL import Image, ImageDraw
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
+from file_organizer.api.exceptions import ApiError
+from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
+from file_organizer.core.organizer import FileOrganizer
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = BASE_DIR / "templates"
@@ -27,6 +34,18 @@ _NAV_ITEMS = [
     ("Settings", "/ui/settings"),
     ("Profile", "/ui/profile"),
 ]
+
+_PAGE_SIZE = 48
+_THUMBNAIL_SIZE = (240, 160)
+
+_FILE_TYPE_GROUPS = {
+    "image": FileOrganizer.IMAGE_EXTENSIONS,
+    "video": FileOrganizer.VIDEO_EXTENSIONS,
+    "audio": FileOrganizer.AUDIO_EXTENSIONS,
+    "text": FileOrganizer.TEXT_EXTENSIONS,
+    "cad": FileOrganizer.CAD_EXTENSIONS,
+    "pdf": {".pdf"},
+}
 
 
 def _base_context(
@@ -51,6 +70,332 @@ def _base_context(
     return context
 
 
+def _allowed_roots(settings: ApiSettings) -> list[Path]:
+    roots: list[Path] = []
+    for root in settings.allowed_paths or []:
+        try:
+            resolved = resolve_path(root, settings.allowed_paths)
+        except ApiError:
+            continue
+        if resolved not in roots:
+            roots.append(resolved)
+    return roots
+
+
+def _resolve_selected_path(path_value: str | None, settings: ApiSettings) -> Path | None:
+    if path_value:
+        return resolve_path(path_value, settings.allowed_paths)
+    roots = _allowed_roots(settings)
+    if roots:
+        return roots[0]
+    return None
+
+
+def _format_bytes(size_bytes: int) -> str:
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    units = ["KB", "MB", "GB", "TB"]
+    size = float(size_bytes)
+    for unit in units:
+        size /= 1024.0
+        if size < 1024.0:
+            return f"{size:.1f} {unit}"
+    return f"{size:.1f} PB"
+
+
+def _format_timestamp(timestamp: datetime) -> str:
+    return timestamp.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _parse_file_type_filter(file_type: str | None) -> set[str] | None:
+    if not file_type or file_type == "all":
+        return None
+    token = file_type.lower()
+    if token in _FILE_TYPE_GROUPS:
+        return set(_FILE_TYPE_GROUPS[token])
+    if token.startswith("."):
+        return {token}
+    return {f".{token}"}
+
+
+def _detect_kind(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in _FILE_TYPE_GROUPS["image"]:
+        return "image"
+    if suffix == ".pdf":
+        return "pdf"
+    if suffix in _FILE_TYPE_GROUPS["video"]:
+        return "video"
+    if suffix in _FILE_TYPE_GROUPS["audio"]:
+        return "audio"
+    if suffix in _FILE_TYPE_GROUPS["text"]:
+        return "text"
+    if suffix in _FILE_TYPE_GROUPS["cad"]:
+        return "cad"
+    return "file"
+
+
+def _path_id(path: Path) -> str:
+    digest = hashlib.sha1(str(path).encode("utf-8")).hexdigest()
+    return digest[:10]
+
+
+def _build_breadcrumbs(path: Path, roots: list[Path]) -> list[dict[str, str]]:
+    root_match: Path | None = None
+    for root in roots:
+        try:
+            path.relative_to(root)
+        except ValueError:
+            continue
+        if root_match is None or len(str(root)) > len(str(root_match)):
+            root_match = root
+    if root_match is None:
+        root_match = path
+    crumbs: list[dict[str, str]] = []
+    label = root_match.name or root_match.as_posix()
+    crumbs.append(
+        {
+            "label": label,
+            "path": str(root_match),
+            "path_param": quote(str(root_match)),
+        }
+    )
+    try:
+        parts = path.relative_to(root_match).parts
+    except ValueError:
+        parts = ()
+    current = root_match
+    for part in parts:
+        current = current / part
+        crumbs.append(
+            {
+                "label": part,
+                "path": str(current),
+                "path_param": quote(str(current)),
+            }
+        )
+    return crumbs
+
+
+def _has_children(path: Path) -> bool:
+    try:
+        for entry in path.iterdir():
+            if entry.is_dir() and not is_hidden(entry):
+                return True
+    except OSError:
+        return False
+    return False
+
+
+def _list_tree_nodes(path: Path, include_hidden: bool) -> list[dict[str, Any]]:
+    nodes: list[dict[str, Any]] = []
+    try:
+        entries = sorted(
+            [p for p in path.iterdir() if p.is_dir()],
+            key=lambda p: p.name.lower(),
+        )
+    except OSError:
+        return nodes
+    for entry in entries:
+        if not include_hidden and is_hidden(entry):
+            continue
+        nodes.append(
+            {
+                "id": _path_id(entry),
+                "name": entry.name,
+                "path": str(entry),
+                "path_param": quote(str(entry)),
+                "has_children": _has_children(entry),
+            }
+        )
+    return nodes
+
+
+def _collect_entries(
+    path: Path,
+    *,
+    query: str | None,
+    file_type: str | None,
+    sort_by: str,
+    sort_order: str,
+    include_hidden: bool,
+) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    try:
+        children = list(path.iterdir())
+    except OSError:
+        return entries
+
+    query_token = query.lower() if query else None
+    allowed_types = _parse_file_type_filter(file_type)
+
+    directories = [p for p in children if p.is_dir()]
+    files = [p for p in children if p.is_file()]
+
+    directories = [p for p in directories if include_hidden or not is_hidden(p)]
+    files = [p for p in files if include_hidden or not is_hidden(p)]
+
+    if query_token:
+        directories = [p for p in directories if query_token in p.name.lower()]
+        files = [p for p in files if query_token in p.name.lower()]
+
+    if allowed_types is not None:
+        files = [p for p in files if p.suffix.lower() in allowed_types]
+
+    directories.sort(key=lambda p: p.name.lower())
+
+    reverse = sort_order == "desc"
+    if sort_by == "name":
+        files.sort(key=lambda p: p.name.lower(), reverse=reverse)
+    elif sort_by == "size":
+        files.sort(key=lambda p: p.stat().st_size, reverse=reverse)
+    elif sort_by == "created":
+        files.sort(key=lambda p: p.stat().st_ctime, reverse=reverse)
+    elif sort_by == "type":
+        files.sort(key=lambda p: p.suffix.lower(), reverse=reverse)
+    else:
+        files.sort(key=lambda p: p.stat().st_mtime, reverse=reverse)
+
+    for entry in directories:
+        try:
+            stat = entry.stat()
+            modified = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
+        except OSError:
+            modified = datetime.now(timezone.utc)
+        entries.append(
+            {
+                "name": entry.name,
+                "path": str(entry),
+                "path_param": quote(str(entry)),
+                "is_dir": True,
+                "kind": "folder",
+                "size_display": "-",
+                "modified_display": _format_timestamp(modified),
+                "thumbnail_url": None,
+                "meta": "Folder",
+            }
+        )
+
+    for entry in files:
+        info = file_info_from_path(entry)
+        kind = _detect_kind(entry)
+        thumbnail_url = None
+        if kind in {"image", "pdf", "video"}:
+            thumbnail_url = f"/ui/files/thumbnail?path={quote(info.path)}&kind={kind}"
+        entries.append(
+            {
+                "name": info.name,
+                "path": info.path,
+                "path_param": quote(info.path),
+                "is_dir": False,
+                "kind": kind,
+                "size_display": _format_bytes(info.size),
+                "modified_display": _format_timestamp(info.modified),
+                "thumbnail_url": thumbnail_url,
+                "meta": f"{info.file_type or 'file'}",
+            }
+        )
+
+    return entries
+
+
+def _build_file_results_context(
+    request: Request,
+    settings: ApiSettings,
+    *,
+    path: str | None,
+    view: str,
+    query: str | None,
+    file_type: str | None,
+    sort_by: str,
+    sort_order: str,
+    limit: int,
+) -> dict[str, Any]:
+    roots = _allowed_roots(settings)
+    error_message: str | None = None
+    entries: list[dict[str, Any]] = []
+    current_path: Path | None = None
+
+    try:
+        current_path = _resolve_selected_path(path, settings)
+    except ApiError as exc:
+        error_message = exc.message
+
+    if current_path is None:
+        if error_message is None:
+            error_message = "No allowed paths configured. Add FO_API_ALLOWED_PATHS."
+    else:
+        entries = _collect_entries(
+            current_path,
+            query=query,
+            file_type=file_type,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            include_hidden=False,
+        )
+
+    total = len(entries)
+    limit = max(1, min(limit, total)) if total else limit
+    paged_entries = entries[:limit]
+    breadcrumbs: list[dict[str, str]] = []
+    if current_path is not None:
+        breadcrumbs = _build_breadcrumbs(current_path, roots)
+
+    view = view if view in {"grid", "list"} else "grid"
+    next_limit = min(limit + _PAGE_SIZE, total) if total else limit
+
+    return {
+        "current_path": str(current_path) if current_path else "",
+        "current_path_param": quote(str(current_path)) if current_path else "",
+        "breadcrumbs": breadcrumbs,
+        "entries": paged_entries,
+        "view": view,
+        "query": query or "",
+        "file_type": file_type or "all",
+        "sort_by": sort_by,
+        "sort_order": sort_order,
+        "limit": limit,
+        "next_limit": next_limit,
+        "has_more": next_limit > limit,
+        "error_message": error_message,
+        "roots": [str(root) for root in roots],
+        "page_size": _PAGE_SIZE,
+        "request": request,
+    }
+
+
+def _render_placeholder_thumbnail(label: str, size: tuple[int, int]) -> bytes:
+    background = Image.new("RGB", size, (235, 240, 245))
+    draw = ImageDraw.Draw(background)
+    text = label.upper()
+    bbox = draw.textbbox((0, 0), text)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    draw.text(
+        ((size[0] - text_width) / 2, (size[1] - text_height) / 2),
+        text,
+        fill=(80, 90, 110),
+    )
+    buffer = io.BytesIO()
+    background.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _render_image_thumbnail(path: Path) -> bytes:
+    with Image.open(path) as image_file:
+        image = image_file.convert("RGB")
+        image.thumbnail(_THUMBNAIL_SIZE)
+        canvas = Image.new("RGB", _THUMBNAIL_SIZE, (235, 240, 245))
+        offset = (
+            (_THUMBNAIL_SIZE[0] - image.width) // 2,
+            (_THUMBNAIL_SIZE[1] - image.height) // 2,
+        )
+        canvas.paste(image, offset)
+        buffer = io.BytesIO()
+        canvas.save(buffer, format="PNG")
+        return buffer.getvalue()
+
+
 @router.get("/", response_class=HTMLResponse)
 async def home(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
     context = _base_context(request, settings, active="home", title="Home")
@@ -58,9 +403,247 @@ async def home(request: Request, settings: ApiSettings = Depends(get_settings)) 
 
 
 @router.get("/files", response_class=HTMLResponse)
-async def files_browser(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+async def files_browser(
+    request: Request,
+    settings: ApiSettings = Depends(get_settings),
+    path: str | None = Query(None),
+    view: str = Query("grid", pattern="^(grid|list)$"),
+    q: str | None = Query(None),
+    file_type: str | None = Query(None, alias="type"),
+    sort_by: str = Query("name", pattern="^(name|size|created|modified|type)$"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
+    limit: int = Query(_PAGE_SIZE, ge=1, le=500),
+) -> HTMLResponse:
     context = _base_context(request, settings, active="files", title="Files")
+    results = _build_file_results_context(
+        request,
+        settings,
+        path=path,
+        view=view,
+        query=q,
+        file_type=file_type,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        limit=limit,
+    )
+    context.update(results)
+    context["active_path"] = results.get("current_path", "")
     return _templates.TemplateResponse("files/browser.html", context)
+
+
+@router.get("/files/list", response_class=HTMLResponse)
+async def files_list(
+    request: Request,
+    settings: ApiSettings = Depends(get_settings),
+    path: str | None = Query(None),
+    view: str = Query("grid", pattern="^(grid|list)$"),
+    q: str | None = Query(None),
+    file_type: str | None = Query(None, alias="type"),
+    sort_by: str = Query("name", pattern="^(name|size|created|modified|type)$"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
+    limit: int = Query(_PAGE_SIZE, ge=1, le=500),
+) -> HTMLResponse:
+    context = _build_file_results_context(
+        request,
+        settings,
+        path=path,
+        view=view,
+        query=q,
+        file_type=file_type,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        limit=limit,
+    )
+    return _templates.TemplateResponse("files/_results.html", context)
+
+
+@router.get("/files/tree", response_class=HTMLResponse)
+async def files_tree(
+    request: Request,
+    settings: ApiSettings = Depends(get_settings),
+    path: str | None = Query(None),
+    depth: int = Query(0, ge=0, le=6),
+    active: str | None = Query(None),
+) -> HTMLResponse:
+    roots = _allowed_roots(settings)
+    active_path = active or ""
+    nodes: list[dict[str, Any]] = []
+
+    if path:
+        try:
+            current = resolve_path(path, settings.allowed_paths)
+            nodes = _list_tree_nodes(current, include_hidden=False)
+        except ApiError as exc:
+            return _templates.TemplateResponse(
+                "files/_tree.html",
+                {
+                    "request": request,
+                    "nodes": [],
+                    "depth": depth,
+                    "active_path": active_path,
+                    "error_message": exc.message,
+                },
+            )
+    else:
+        for root in roots:
+            nodes.append(
+                {
+                    "id": _path_id(root),
+                    "name": root.name or root.as_posix(),
+                    "path": str(root),
+                    "path_param": quote(str(root)),
+                    "has_children": _has_children(root),
+                    "is_root": True,
+                }
+            )
+
+    error_message = None
+    if not nodes and not path:
+        error_message = "No allowed paths configured. Add FO_API_ALLOWED_PATHS."
+
+    return _templates.TemplateResponse(
+        "files/_tree.html",
+        {
+            "request": request,
+            "nodes": nodes,
+            "depth": depth,
+            "active_path": active_path,
+            "error_message": error_message,
+        },
+    )
+
+
+@router.get("/files/thumbnail")
+async def files_thumbnail(
+    settings: ApiSettings = Depends(get_settings),
+    path: str = Query(...),
+    kind: str = Query("file"),
+) -> Response:
+    target = resolve_path(path, settings.allowed_paths)
+    if not target.exists() or not target.is_file():
+        raise ApiError(status_code=404, error="not_found", message="File not found")
+
+    if kind == "image":
+        try:
+            data = _render_image_thumbnail(target)
+        except OSError:
+            data = _render_placeholder_thumbnail("IMG", _THUMBNAIL_SIZE)
+    elif kind == "pdf":
+        data = _render_placeholder_thumbnail("PDF", _THUMBNAIL_SIZE)
+    elif kind == "video":
+        data = _render_placeholder_thumbnail("VID", _THUMBNAIL_SIZE)
+    else:
+        data = _render_placeholder_thumbnail("FILE", _THUMBNAIL_SIZE)
+
+    return Response(content=data, media_type="image/png")
+
+
+@router.get("/files/raw")
+async def files_raw(settings: ApiSettings = Depends(get_settings), path: str = Query(...)) -> FileResponse:
+    target = resolve_path(path, settings.allowed_paths)
+    if not target.exists() or not target.is_file():
+        raise ApiError(status_code=404, error="not_found", message="File not found")
+    return FileResponse(target)
+
+
+@router.get("/files/preview", response_class=HTMLResponse)
+async def files_preview(
+    request: Request,
+    settings: ApiSettings = Depends(get_settings),
+    path: str = Query(...),
+) -> HTMLResponse:
+    error_message: str | None = None
+    preview_kind = "file"
+    preview_text: str | None = None
+    download_url = ""
+    size_display = ""
+    modified_display = ""
+    info = None
+
+    try:
+        target = resolve_path(path, settings.allowed_paths)
+        if not target.exists() or not target.is_file():
+            raise ApiError(status_code=404, error="not_found", message="File not found")
+        info = file_info_from_path(target)
+        preview_kind = _detect_kind(target)
+        download_url = f"/ui/files/raw?path={quote(info.path)}"
+        size_display = _format_bytes(info.size)
+        modified_display = _format_timestamp(info.modified)
+        if preview_kind == "text":
+            try:
+                preview_text = target.read_text(encoding="utf-8", errors="replace")[:4000]
+            except OSError:
+                preview_text = "Preview not available."
+    except ApiError as exc:
+        error_message = exc.message
+
+    return _templates.TemplateResponse(
+        "files/_preview.html",
+        {
+            "request": request,
+            "info": info,
+            "preview_kind": preview_kind,
+            "preview_text": preview_text,
+            "download_url": download_url,
+            "size_display": size_display,
+            "modified_display": modified_display,
+            "error_message": error_message,
+        },
+    )
+
+
+@router.post("/files/upload", response_class=HTMLResponse)
+async def files_upload(
+    request: Request,
+    settings: ApiSettings = Depends(get_settings),
+    path: str = Form(""),
+    view: str = Form("grid"),
+    q: str = Form(""),
+    file_type: str = Form("all"),
+    sort_by: str = Form("name"),
+    sort_order: str = Form("asc"),
+    limit: int = Form(_PAGE_SIZE),
+    files: list[UploadFile] = File(default=[]),
+) -> HTMLResponse:
+    info_message: str | None = None
+    error_message: str | None = None
+
+    try:
+        target_dir = _resolve_selected_path(path or None, settings)
+        if target_dir is None:
+            raise ApiError(status_code=403, error="path_not_allowed", message="No upload path")
+        if not target_dir.exists() or not target_dir.is_dir():
+            raise ApiError(status_code=400, error="invalid_path", message="Invalid upload path")
+
+        if not files:
+            raise ApiError(status_code=400, error="missing_files", message="No files selected")
+
+        saved = 0
+        for upload in files:
+            if not upload.filename:
+                continue
+            safe_name = Path(upload.filename).name
+            destination = target_dir / safe_name
+            destination.write_bytes(await upload.read())
+            saved += 1
+        info_message = f"Uploaded {saved} file(s)."
+    except ApiError as exc:
+        error_message = exc.message
+
+    context = _build_file_results_context(
+        request,
+        settings,
+        path=path or None,
+        view=view,
+        query=q or None,
+        file_type=file_type if file_type != "all" else None,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        limit=limit,
+    )
+    context["info_message"] = info_message
+    context["error_message"] = error_message or context.get("error_message")
+    return _templates.TemplateResponse("files/_results.html", context)
 
 
 @router.get("/organize", response_class=HTMLResponse)

@@ -1,0 +1,201 @@
+<section class="file-toolbar">
+    <div class="breadcrumb">
+        {% if breadcrumbs %}
+            {% for crumb in breadcrumbs %}
+                <button
+                    class="breadcrumb-link"
+                    type="button"
+                    hx-get="/ui/files/list?path={{ crumb.path_param }}"
+                    hx-target="#file-results"
+                    hx-swap="innerHTML"
+                >
+                    {{ crumb.label }}
+                </button>
+                {% if not loop.last %}
+                    <span class="breadcrumb-sep">/</span>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <span class="breadcrumb-empty">No path selected</span>
+        {% endif %}
+    </div>
+    <div class="toolbar-actions">
+        <form
+            id="file-filters"
+            class="file-filters"
+            hx-get="/ui/files/list"
+            hx-target="#file-results"
+            hx-swap="innerHTML"
+            hx-trigger="change, keyup delay:300ms from:#file-search"
+            hx-indicator="#file-loading"
+        >
+            <input type="hidden" name="path" value="{{ current_path }}">
+            <input type="hidden" name="view" value="{{ view }}" id="view-input">
+            <input
+                type="hidden"
+                name="limit"
+                value="{{ limit }}"
+                id="limit-input"
+                data-default-limit="{{ page_size }}"
+            >
+            <label class="search-field">
+                <span class="sr-only">Search</span>
+                <input
+                    id="file-search"
+                    type="search"
+                    name="q"
+                    placeholder="Search files or folders"
+                    value="{{ query }}"
+                >
+            </label>
+            <select name="type" aria-label="Filter by type">
+                <option value="all" {% if file_type == 'all' %}selected{% endif %}>All types</option>
+                <option value="image" {% if file_type == 'image' %}selected{% endif %}>Images</option>
+                <option value="pdf" {% if file_type == 'pdf' %}selected{% endif %}>PDFs</option>
+                <option value="video" {% if file_type == 'video' %}selected{% endif %}>Videos</option>
+                <option value="audio" {% if file_type == 'audio' %}selected{% endif %}>Audio</option>
+                <option value="text" {% if file_type == 'text' %}selected{% endif %}>Text</option>
+            </select>
+            <div class="sort-group">
+                <select name="sort_by" aria-label="Sort by">
+                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                    <option value="modified" {% if sort_by == 'modified' %}selected{% endif %}>Modified</option>
+                    <option value="created" {% if sort_by == 'created' %}selected{% endif %}>Created</option>
+                    <option value="size" {% if sort_by == 'size' %}selected{% endif %}>Size</option>
+                    <option value="type" {% if sort_by == 'type' %}selected{% endif %}>Type</option>
+                </select>
+                <select name="sort_order" aria-label="Sort order">
+                    <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                    <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                </select>
+            </div>
+        </form>
+        <div class="view-toggle" role="group" aria-label="View toggle">
+            <button
+                class="view-toggle-btn {% if view == 'grid' %}is-active{% endif %}"
+                type="button"
+                data-view-toggle="grid"
+            >Grid</button>
+            <button
+                class="view-toggle-btn {% if view == 'list' %}is-active{% endif %}"
+                type="button"
+                data-view-toggle="list"
+            >List</button>
+        </div>
+    </div>
+</section>
+
+<form
+    id="upload-form"
+    class="upload-form"
+    hx-post="/ui/files/upload"
+    hx-target="#file-results"
+    hx-swap="innerHTML"
+    hx-encoding="multipart/form-data"
+    hx-include="#file-filters"
+    hx-indicator="#file-loading"
+>
+    <input type="hidden" name="path" value="{{ current_path }}">
+    <input id="upload-input" class="upload-input" type="file" name="files" multiple>
+    <div class="upload-zone" data-upload-zone>
+        <div>
+            <p>Drag and drop files here</p>
+            <span>or click to browse your device</span>
+        </div>
+        <button class="btn-ghost" type="button" data-upload-trigger>Browse files</button>
+    </div>
+</form>
+
+{% if info_message %}
+    <div class="banner banner-info">{{ info_message }}</div>
+{% endif %}
+{% if error_message %}
+    <div class="banner banner-error">{{ error_message }}</div>
+{% endif %}
+
+<div class="bulk-toolbar">
+    <span class="bulk-count" data-selection-count>0 selected</span>
+    <div class="bulk-actions">
+        <button class="btn-ghost" type="button" data-bulk-action="move" disabled>Move</button>
+        <button class="btn-ghost" type="button" data-bulk-action="rename" disabled>Rename</button>
+        <button class="btn-ghost" type="button" data-bulk-action="delete" disabled>Delete</button>
+    </div>
+</div>
+
+<div id="file-entries" class="file-list file-list-{{ view }}" data-file-list>
+    {% if entries %}
+        {% for entry in entries %}
+            <article
+                class="file-card {% if entry.is_dir %}is-dir{% endif %}"
+                data-file-card
+                tabindex="0"
+                data-file-path="{{ entry.path }}"
+                data-file-kind="{{ entry.kind }}"
+            >
+                <label class="file-select">
+                    <input type="checkbox" data-file-select value="{{ entry.path }}">
+                </label>
+                <div class="file-thumb">
+                    {% if entry.thumbnail_url %}
+                        <img src="{{ entry.thumbnail_url }}" alt="Thumbnail for {{ entry.name }}">
+                    {% else %}
+                        <div class="file-thumb-fallback">{{ entry.meta|upper }}</div>
+                    {% endif %}
+                </div>
+                <div class="file-info">
+                    <div class="file-name">{{ entry.name }}</div>
+                    <div class="file-meta">{{ entry.meta }} - {{ entry.size_display }} - {{ entry.modified_display }}</div>
+                </div>
+                <div class="file-actions">
+                    {% if entry.is_dir %}
+                        <button
+                            class="btn-ghost"
+                            type="button"
+                            hx-get="/ui/files/list?path={{ entry.path_param }}"
+                            hx-target="#file-results"
+                            hx-swap="innerHTML"
+                            data-open-trigger
+                        >Open</button>
+                    {% else %}
+                        <button
+                            class="btn-ghost"
+                            type="button"
+                            hx-get="/ui/files/preview?path={{ entry.path_param }}"
+                            hx-target="#preview-modal"
+                            hx-swap="innerHTML"
+                            data-preview-trigger
+                        >Preview</button>
+                    {% endif %}
+                    <button class="file-menu" type="button" data-context-trigger>...</button>
+                    <div class="context-menu" data-context-menu>
+                        <button type="button" data-context-action="rename">Rename</button>
+                        <button type="button" data-context-action="move">Move</button>
+                        <button type="button" data-context-action="delete">Delete</button>
+                    </div>
+                </div>
+            </article>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>No files match this view.</p>
+            <span>Try selecting another folder or clearing filters.</span>
+        </div>
+    {% endif %}
+</div>
+
+{% if has_more %}
+    <button
+        class="btn-primary load-more"
+        type="button"
+        hx-get="/ui/files/list"
+        hx-target="#file-results"
+        hx-swap="innerHTML"
+        hx-include="#file-filters"
+        hx-indicator="#file-loading"
+        hx-vals='{"limit": "{{ next_limit }}"}'
+    >
+        Load more files
+    </button>
+{% endif %}
+
+<div id="file-loading" class="loading-state htmx-indicator">Loading files...</div>
