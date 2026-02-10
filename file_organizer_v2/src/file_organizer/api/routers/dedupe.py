@@ -3,8 +3,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from file_organizer.api.config import ApiSettings
+from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import (
     DedupeExecuteRequest,
@@ -71,8 +73,11 @@ def _preview(groups: list[DedupeGroup]) -> list[DedupePreviewGroup]:
 
 
 @router.post("/dedupe/scan", response_model=DedupeScanResponse)
-def scan_duplicates(request: DedupeScanRequest) -> DedupeScanResponse:
-    path = resolve_path(request.path)
+def scan_duplicates(
+    request: DedupeScanRequest,
+    settings: ApiSettings = Depends(get_settings),
+) -> DedupeScanResponse:
+    path = resolve_path(request.path, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
 
@@ -81,8 +86,11 @@ def scan_duplicates(request: DedupeScanRequest) -> DedupeScanResponse:
 
 
 @router.post("/dedupe/preview", response_model=DedupePreviewResponse)
-def preview_duplicates(request: DedupeScanRequest) -> DedupePreviewResponse:
-    path = resolve_path(request.path)
+def preview_duplicates(
+    request: DedupeScanRequest,
+    settings: ApiSettings = Depends(get_settings),
+) -> DedupePreviewResponse:
+    path = resolve_path(request.path, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
 
@@ -92,8 +100,11 @@ def preview_duplicates(request: DedupeScanRequest) -> DedupePreviewResponse:
 
 
 @router.post("/dedupe/execute", response_model=DedupeExecuteResponse)
-def execute_deduplication(request: DedupeExecuteRequest) -> DedupeExecuteResponse:
-    path = resolve_path(request.path)
+def execute_deduplication(
+    request: DedupeExecuteRequest,
+    settings: ApiSettings = Depends(get_settings),
+) -> DedupeExecuteResponse:
+    path = resolve_path(request.path, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
 
@@ -113,7 +124,7 @@ def execute_deduplication(request: DedupeExecuteRequest) -> DedupeExecuteRespons
     if not request.dry_run:
         for group in preview:
             for file_path in group.remove:
-                target = resolve_path(file_path)
+                target = resolve_path(file_path, settings.allowed_paths)
                 if not target.exists():
                     continue
                 if request.trash:

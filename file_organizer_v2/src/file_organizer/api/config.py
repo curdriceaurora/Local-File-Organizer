@@ -34,6 +34,7 @@ class ApiSettings(BaseModel):
     cors_allow_methods: list[str] = Field(default_factory=lambda: ["*"])
     cors_allow_headers: list[str] = Field(default_factory=lambda: ["*"])
     enable_docs: bool = True
+    allowed_paths: list[str] = Field(default_factory=lambda: [str(Path.home())])
 
 
 def _parse_list(value: str) -> list[str]:
@@ -110,5 +111,7 @@ def load_settings() -> ApiSettings:
         )
     if "FO_API_ENABLE_DOCS" in env:
         data["enable_docs"] = env["FO_API_ENABLE_DOCS"].lower() in ("1", "true", "yes")
+    if "FO_API_ALLOWED_PATHS" in env:
+        data["allowed_paths"] = _parse_list(env["FO_API_ALLOWED_PATHS"])
 
     return ApiSettings(**data)

@@ -13,8 +13,12 @@ from file_organizer.api.main import create_app
 pytestmark = pytest.mark.ci
 
 
-def _client() -> TestClient:
-    settings = ApiSettings(environment="test", enable_docs=False)
+def _client(allowed_paths: list[str] | None = None) -> TestClient:
+    settings = ApiSettings(
+        environment="test",
+        enable_docs=False,
+        allowed_paths=allowed_paths or [str(Path.home())],
+    )
     app = create_app(settings)
     app.dependency_overrides[get_settings] = lambda: settings
     return TestClient(app)
@@ -23,7 +27,7 @@ def _client() -> TestClient:
 def test_list_and_info_and_content(tmp_path: Path) -> None:
     sample = tmp_path / "sample.txt"
     sample.write_text("hello api")
-    client = _client()
+    client = _client([str(tmp_path)])
 
     resp = client.get("/api/v1/files", params={"path": str(tmp_path)})
     assert resp.status_code == 200
@@ -45,7 +49,7 @@ def test_move_and_delete(tmp_path: Path) -> None:
     source.write_text("move me")
     dest = tmp_path / "nested" / "dest.txt"
 
-    client = _client()
+    client = _client([str(tmp_path)])
     move_resp = client.post(
         "/api/v1/files/move",
         json={
@@ -69,3 +73,15 @@ def test_move_and_delete(tmp_path: Path) -> None:
     )
     assert delete_resp.status_code == 200
     assert not dest.exists()
+
+
+def test_path_not_allowed(tmp_path: Path) -> None:
+    allowed_root = tmp_path / "allowed"
+    allowed_root.mkdir()
+    outside = tmp_path.parent / "outside.txt"
+    outside.write_text("nope")
+
+    client = _client([str(allowed_root)])
+    resp = client.get("/api/v1/files/info", params={"path": str(outside)})
+    assert resp.status_code == 403
+    assert resp.json()["error"] == "path_not_allowed"

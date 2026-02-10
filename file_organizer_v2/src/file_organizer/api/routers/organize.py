@@ -3,8 +3,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends
 
+from file_organizer.api.config import ApiSettings
+from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.jobs import create_job, get_job, update_job
 from file_organizer.api.models import (
@@ -96,8 +98,11 @@ def _run_organize_job(job_id: str, request: OrganizeRequest) -> None:
 
 
 @router.post("/organize/scan", response_model=ScanResponse)
-def scan_directory(request: ScanRequest) -> ScanResponse:
-    path = resolve_path(request.input_dir)
+def scan_directory(
+    request: ScanRequest,
+    settings: ApiSettings = Depends(get_settings),
+) -> ScanResponse:
+    path = resolve_path(request.input_dir, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Input path not found")
 
@@ -111,9 +116,12 @@ def scan_directory(request: ScanRequest) -> ScanResponse:
 
 
 @router.post("/organize/preview", response_model=OrganizationResultResponse)
-def preview_organization(request: OrganizeRequest) -> OrganizationResultResponse:
-    path = resolve_path(request.input_dir)
-    output = resolve_path(request.output_dir)
+def preview_organization(
+    request: OrganizeRequest,
+    settings: ApiSettings = Depends(get_settings),
+) -> OrganizationResultResponse:
+    path = resolve_path(request.input_dir, settings.allowed_paths)
+    output = resolve_path(request.output_dir, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Input path not found")
 
@@ -130,15 +138,19 @@ def preview_organization(request: OrganizeRequest) -> OrganizationResultResponse
 def execute_organization(
     request: OrganizeRequest,
     background_tasks: BackgroundTasks,
+    settings: ApiSettings = Depends(get_settings),
 ) -> OrganizeExecuteResponse:
-    path = resolve_path(request.input_dir)
-    output = resolve_path(request.output_dir)
+    path = resolve_path(request.input_dir, settings.allowed_paths)
+    output = resolve_path(request.output_dir, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Input path not found")
 
+    safe_request = request.model_copy(
+        update={"input_dir": str(path), "output_dir": str(output)},
+    )
     if request.run_in_background:
         job = create_job("organize")
-        background_tasks.add_task(_run_organize_job, job.job_id, request)
+        background_tasks.add_task(_run_organize_job, job.job_id, safe_request)
         return OrganizeExecuteResponse(status="queued", job_id=job.job_id)
 
     try:
@@ -149,7 +161,7 @@ def execute_organization(
         result = organizer.organize(
             input_path=path,
             output_path=output,
-            skip_existing=request.skip_existing,
+            skip_existing=safe_request.skip_existing,
         )
         return OrganizeExecuteResponse(
             status="completed",

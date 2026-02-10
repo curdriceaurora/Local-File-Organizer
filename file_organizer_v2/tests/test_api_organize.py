@@ -30,8 +30,12 @@ class DummyOrganizer:
         )
 
 
-def _client() -> TestClient:
-    settings = ApiSettings(environment="test", enable_docs=False)
+def _client(allowed_paths: list[str] | None = None) -> TestClient:
+    settings = ApiSettings(
+        environment="test",
+        enable_docs=False,
+        allowed_paths=allowed_paths or [str(Path.home())],
+    )
     app = create_app(settings)
     app.dependency_overrides[get_settings] = lambda: settings
     return TestClient(app)
@@ -39,7 +43,7 @@ def _client() -> TestClient:
 
 def test_scan_endpoint(tmp_path: Path) -> None:
     (tmp_path / "sample.txt").write_text("hello")
-    client = _client()
+    client = _client([str(tmp_path)])
 
     resp = client.post(
         "/api/v1/organize/scan",
@@ -55,7 +59,7 @@ def test_preview_and_execute(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     import file_organizer.api.routers.organize as organize_router
 
     monkeypatch.setattr(organize_router, "FileOrganizer", DummyOrganizer)
-    client = _client()
+    client = _client([str(tmp_path)])
 
     request = {
         "input_dir": str(tmp_path),

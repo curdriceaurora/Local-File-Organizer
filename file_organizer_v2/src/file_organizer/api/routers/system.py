@@ -28,7 +28,7 @@ def system_status(
     settings: ApiSettings = Depends(get_settings),
     path: str = Query(".", description="Path for disk usage"),
 ) -> SystemStatusResponse:
-    target = resolve_path(path)
+    target = resolve_path(path, settings.allowed_paths)
     disk = shutil.disk_usage(target)
     return SystemStatusResponse(
         app=settings.app_name,
@@ -97,8 +97,9 @@ def get_stats(
     path: str = Query(".", description="Directory to analyze"),
     max_depth: int | None = Query(None, ge=1),
     use_cache: bool = Query(True),
+    settings: ApiSettings = Depends(get_settings),
 ) -> StorageStatsResponse:
-    target = resolve_path(path)
+    target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
 

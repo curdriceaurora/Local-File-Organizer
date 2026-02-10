@@ -4,8 +4,10 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
+from file_organizer.api.config import ApiSettings
+from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import (
     DeleteFileRequest,
@@ -77,8 +79,9 @@ def list_files(
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    settings: ApiSettings = Depends(get_settings),
 ) -> FileListResponse:
-    target = resolve_path(path)
+    target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="Path does not exist")
 
@@ -105,8 +108,11 @@ def list_files(
 
 
 @router.get("/files/info", response_model=FileInfo)
-def get_file_info(path: str = Query(...)) -> FileInfo:
-    target = resolve_path(path)
+def get_file_info(
+    path: str = Query(...),
+    settings: ApiSettings = Depends(get_settings),
+) -> FileInfo:
+    target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="File not found")
     if not target.is_file():
@@ -119,8 +125,9 @@ def read_file_content(
     path: str = Query(...),
     max_bytes: int = Query(200_000, ge=1, le=5_000_000),
     encoding: str = Query("utf-8"),
+    settings: ApiSettings = Depends(get_settings),
 ) -> FileContentResponse:
-    target = resolve_path(path)
+    target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="File not found")
     if not target.is_file():
@@ -145,9 +152,12 @@ def read_file_content(
 
 
 @router.post("/files/move", response_model=MoveFileResponse)
-def move_file(request: MoveFileRequest) -> MoveFileResponse:
-    source = resolve_path(request.source)
-    destination = resolve_path(request.destination)
+def move_file(
+    request: MoveFileRequest,
+    settings: ApiSettings = Depends(get_settings),
+) -> MoveFileResponse:
+    source = resolve_path(request.source, settings.allowed_paths)
+    destination = resolve_path(request.destination, settings.allowed_paths)
 
     if not source.exists():
         raise ApiError(status_code=404, error="not_found", message="Source not found")
@@ -196,8 +206,11 @@ def _trash_target(path: Path) -> Path:
 
 
 @router.delete("/files", response_model=DeleteFileResponse)
-def delete_file(request: DeleteFileRequest) -> DeleteFileResponse:
-    target = resolve_path(request.path)
+def delete_file(
+    request: DeleteFileRequest,
+    settings: ApiSettings = Depends(get_settings),
+) -> DeleteFileResponse:
+    target = resolve_path(request.path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="File not found")
 

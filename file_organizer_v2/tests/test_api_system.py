@@ -13,15 +13,19 @@ from file_organizer.api.main import create_app
 pytestmark = pytest.mark.ci
 
 
-def _client() -> TestClient:
-    settings = ApiSettings(environment="test", enable_docs=False)
+def _client(allowed_paths: list[str] | None = None) -> TestClient:
+    settings = ApiSettings(
+        environment="test",
+        enable_docs=False,
+        allowed_paths=allowed_paths or [str(Path.home())],
+    )
     app = create_app(settings)
     app.dependency_overrides[get_settings] = lambda: settings
     return TestClient(app)
 
 
 def test_system_status(tmp_path: Path) -> None:
-    client = _client()
+    client = _client([str(tmp_path)])
     resp = client.get("/api/v1/system/status", params={"path": str(tmp_path)})
     assert resp.status_code == 200
     payload = resp.json()
@@ -33,7 +37,7 @@ def test_system_config_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     config_dir = tmp_path / "config"
     monkeypatch.setenv("FO_CONFIG_DIR", str(config_dir))
 
-    client = _client()
+    client = _client([str(tmp_path)])
     resp = client.get("/api/v1/system/config")
     assert resp.status_code == 200
     assert resp.json()["profile"] == "default"
@@ -48,7 +52,7 @@ def test_system_config_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 
 def test_system_stats(tmp_path: Path) -> None:
     (tmp_path / "sample.txt").write_text("stats")
-    client = _client()
+    client = _client([str(tmp_path)])
     resp = client.get("/api/v1/system/stats", params={"path": str(tmp_path)})
     assert resp.status_code == 200
     assert resp.json()["file_count"] == 1

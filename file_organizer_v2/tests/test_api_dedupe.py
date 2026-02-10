@@ -13,8 +13,12 @@ from file_organizer.api.main import create_app
 pytestmark = pytest.mark.ci
 
 
-def _client() -> TestClient:
-    settings = ApiSettings(environment="test", enable_docs=False)
+def _client(allowed_paths: list[str] | None = None) -> TestClient:
+    settings = ApiSettings(
+        environment="test",
+        enable_docs=False,
+        allowed_paths=allowed_paths or [str(Path.home())],
+    )
     app = create_app(settings)
     app.dependency_overrides[get_settings] = lambda: settings
     return TestClient(app)
@@ -26,7 +30,7 @@ def test_dedupe_scan_and_preview(tmp_path: Path) -> None:
     file_a.write_text("duplicate")
     file_b.write_text("duplicate")
 
-    client = _client()
+    client = _client([str(tmp_path)])
     payload = {
         "path": str(tmp_path),
         "recursive": False,
@@ -48,7 +52,7 @@ def test_dedupe_execute_dry_run(tmp_path: Path) -> None:
     file_a.write_text("duplicate")
     file_b.write_text("duplicate")
 
-    client = _client()
+    client = _client([str(tmp_path)])
     payload = {
         "path": str(tmp_path),
         "recursive": False,
