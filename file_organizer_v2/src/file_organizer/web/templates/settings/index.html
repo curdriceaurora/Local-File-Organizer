@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="page-kicker">Settings</p>
+        <h1 class="page-title">Configuration hub</h1>
+        <p class="page-subtitle">Adjust profiles, storage locations, and automation safely.</p>
+    </div>
+</section>
+
+<section class="panel-grid two">
+    <article class="panel">
+        <h2>Profiles</h2>
+        <ul class="action-list">
+            <li><span>Default profile</span><span class="action-meta">Active</span></li>
+            <li><span>Photography</span><span class="action-meta">Draft</span></li>
+            <li><span>Work</span><span class="action-meta">Draft</span></li>
+        </ul>
+    </article>
+    <article class="panel">
+        <h2>Automation</h2>
+        <div class="empty-state">
+            <p>No schedules yet.</p>
+            <span>Use the CLI to configure recurring runs.</span>
+        </div>
+    </article>
+</section>
+{% endblock %}

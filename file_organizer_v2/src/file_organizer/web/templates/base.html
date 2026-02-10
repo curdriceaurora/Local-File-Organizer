@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>{{ page_title }} | {{ app_name }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/js/htmx.min.js" defer></script>
+</head>
+<body class="min-h-screen" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="innerHTML">
+    <div class="page-shell">
+        <header class="site-header">
+            <nav class="nav-shell">
+                <a class="brand" href="/ui/">
+                    <img src="/static/images/logo.png" alt="{{ app_name }} logo" class="brand-mark">
+                    <div class="brand-text">
+                        <span class="brand-title">{{ app_name }}</span>
+                        <span class="brand-subtitle">Local-first organization</span>
+                    </div>
+                </a>
+                <div class="nav-links">
+                    {% for label, href in nav_items %}
+                    <a class="nav-link {% if active == label|lower %}nav-link-active{% endif %}" href="{{ href }}">
+                        {{ label }}
+                    </a>
+                    {% endfor %}
+                </div>
+                <div class="nav-actions">
+                    <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
+                        <span class="theme-toggle-label">Theme</span>
+                        <span class="theme-toggle-chip">Light</span>
+                    </button>
+                </div>
+            </nav>
+        </header>
+
+        <main id="main" class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="site-footer">
+            <div class="footer-grid">
+                <div>
+                    <span class="footer-title">{{ app_name }}</span>
+                    <p class="footer-text">Focus on intentional organization. Built for speed, privacy, and clarity.</p>
+                </div>
+                <div>
+                    <span class="footer-title">Build</span>
+                    <p class="footer-text">Version {{ version }}</p>
+                    <p class="footer-text">(c) {{ year }}</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+    <script src="/static/js/app.js" defer></script>
+</body>
+</html>

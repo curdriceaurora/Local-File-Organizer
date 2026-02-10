@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="page-kicker">Organize</p>
+        <h1 class="page-title">Organization dashboard</h1>
+        <p class="page-subtitle">Track runs, queue new jobs, and audit recent actions.</p>
+    </div>
+    <a class="btn-primary" href="/ui/organize">New organize run</a>
+</section>
+
+<section class="panel-grid">
+    <article class="panel">
+        <h2>Active run</h2>
+        <div class="status-card">
+            <span class="status-dot"></span>
+            <div>
+                <p class="status-title">No active jobs</p>
+                <p class="status-body">Start a dry-run to preview organization results.</p>
+            </div>
+        </div>
+    </article>
+    <article class="panel">
+        <h2>Recent activity</h2>
+        <ul class="activity-list">
+            <li>Queued: Downloads -> Organized (dry-run)</li>
+            <li>Suggested: Rename 14 files</li>
+            <li>Completed: Photos archive clean-up</li>
+        </ul>
+    </article>
+    <article class="panel">
+        <h2>Next actions</h2>
+        <ul class="action-list">
+            <li><span>Connect watch folders</span><span class="action-meta">3 pending</span></li>
+            <li><span>Review rules</span><span class="action-meta">8 active</span></li>
+            <li><span>Schedule automation</span><span class="action-meta">Disabled</span></li>
+        </ul>
+    </article>
+</section>
+{% endblock %}

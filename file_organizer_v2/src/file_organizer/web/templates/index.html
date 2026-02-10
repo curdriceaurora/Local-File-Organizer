@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-tag">HTMX UI Preview</div>
+        <h1 class="hero-title">Organize your local world with deliberate automation.</h1>
+        <p class="hero-body">
+            Your files stay on your machine. The UI gives you a fast, tactile overview of what is happening
+            across scans, organization, and deduplication.
+        </p>
+        <div class="hero-actions">
+            <a class="btn-primary" href="/ui/files">Explore Files</a>
+            <a class="btn-ghost" href="/ui/organize">Run Organize</a>
+        </div>
+    </div>
+    <div class="hero-card">
+        <div class="hero-card-header">
+            <span class="hero-card-title">System Pulse</span>
+            <span class="hero-card-status">Stable</span>
+        </div>
+        <div class="hero-metrics">
+            <div class="metric">
+                <span class="metric-label">Active jobs</span>
+                <span class="metric-value">0</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Suggestions</span>
+                <span class="metric-value">12</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Rules</span>
+                <span class="metric-value">8</span>
+            </div>
+        </div>
+        <div class="hero-card-footer">
+            <span class="footer-hint">Connect to the API to see live data.</span>
+        </div>
+    </div>
+</section>
+
+<section class="panel-grid">
+    <article class="panel">
+        <h2>Files at a glance</h2>
+        <p>Browse, filter, and preview folders without leaving the dashboard.</p>
+        <a class="panel-link" href="/ui/files">Open browser</a>
+    </article>
+    <article class="panel">
+        <h2>Organize with intent</h2>
+        <p>Kick off organized runs with a clear timeline and live progress updates.</p>
+        <a class="panel-link" href="/ui/organize">View dashboard</a>
+    </article>
+    <article class="panel">
+        <h2>Adjust the system</h2>
+        <p>Configuration stays readable with focused settings and profile presets.</p>
+        <a class="panel-link" href="/ui/settings">Review settings</a>
+    </article>
+</section>
+{% endblock %}

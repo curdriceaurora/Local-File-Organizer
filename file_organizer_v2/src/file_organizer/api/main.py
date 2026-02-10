@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 from file_organizer.api.config import ApiSettings, load_settings
@@ -22,6 +24,8 @@ from file_organizer.api.routers import (
     realtime_router,
     system_router,
 )
+from file_organizer.web import STATIC_DIR
+from file_organizer.web import router as web_router
 
 _LOGGING_CONFIGURED = False
 
@@ -57,7 +61,7 @@ def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
     redoc_url = "/redoc" if settings.enable_docs else None
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI):
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         logger.info("Starting API in {} mode", settings.environment)
         yield
         logger.info("Shutting down API")
@@ -71,10 +75,14 @@ def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
         lifespan=lifespan,
     )
 
+    if STATIC_DIR.exists():
+        app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
     setup_middleware(app, settings)
     setup_exception_handlers(app)
     app.dependency_overrides[get_settings] = lambda: settings
 
+    app.include_router(web_router, prefix="/ui")
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(files_router, prefix="/api/v1")

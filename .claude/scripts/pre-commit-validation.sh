@@ -49,8 +49,10 @@ PY_FILES=$(echo "$MODIFIED" | grep '\.py$' || true)
 if [[ -n "$PY_FILES" ]]; then
   echo "🎯 Pattern validation on Python files..."
 
+  PY_DIFF=$(git diff --cached -- $PY_FILES)
+
   # Check for dict-style dataclass access
-  DICT_ACCESS=$(git diff --cached | grep -n '+.*if.*".*".*in.*\(metadata\|result\|config\)' || true)
+  DICT_ACCESS=$(echo "$PY_DIFF" | grep -n '+.*if.*".*".*in.*\(metadata\|result\|config\)' || true)
   if [[ -n "$DICT_ACCESS" ]]; then
     echo "❌ Found dict-style access on dataclass:"
     echo "$DICT_ACCESS"
@@ -60,7 +62,7 @@ if [[ -n "$PY_FILES" ]]; then
   fi
 
   # Check for bracket-style access on known dataclasses
-  BRACKET_ACCESS=$(git diff --cached | grep -n '+.*\(metadata\|result\|config\)\["' || true)
+  BRACKET_ACCESS=$(echo "$PY_DIFF" | grep -n '+.*\(metadata\|result\|config\)\["' || true)
   if [[ -n "$BRACKET_ACCESS" ]]; then
     echo "❌ Found bracket-style access on dataclass:"
     echo "$BRACKET_ACCESS"

@@ -3,14 +3,14 @@
 [![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-local%20report-blue)](../htmlcov/index.html)
 
-> AI-powered local file management. Privacy-first — runs 100% on your device.
+> AI-powered local file management. Privacy-first -- runs 100% on your device.
 
 **3,146 tests** | **184 modules** | **43 file types** | Python 3.9+
 
 ## Features
 
 - **AI-Powered Organisation**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama
-- **Copilot Chat**: Natural-language assistant — "organise ./Downloads", "find report.pdf", "undo"
+- **Copilot Chat**: Natural-language assistant -- "organise ./Downloads", "find report.pdf", "undo"
 - **Organisation Rules**: Automated sorting with conditions, preview, and YAML persistence
 - **Terminal UI**: 8-view Textual TUI (Files, Analytics, Audio, History, Copilot, and more)
 - **Full CLI**: Organize, rules, suggest, dedupe, daemon, analytics, update, profiles
@@ -42,6 +42,16 @@ file-organizer organize ./Downloads ./Organized --dry-run
 # Launch the TUI
 file-organizer tui
 ```
+
+## Web UI (Preview)
+
+Start the FastAPI server and open the UI:
+
+```bash
+uvicorn file_organizer.api.main:app --reload
+```
+
+Then visit `http://localhost:8000/ui` for the HTMX interface.
 
 ## Documentation
 

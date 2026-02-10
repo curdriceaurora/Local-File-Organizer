@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="page-kicker">Profile</p>
+        <h1 class="page-title">Local account</h1>
+        <p class="page-subtitle">Credentials are stored locally. Cloud sync is optional.</p>
+    </div>
+    <button class="btn-ghost" type="button">Manage tokens</button>
+</section>
+
+<section class="panel-grid two">
+    <article class="panel">
+        <h2>Identity</h2>
+        <div class="profile-card">
+            <div class="avatar">FO</div>
+            <div>
+                <p class="profile-name">Local Operator</p>
+                <p class="profile-meta">Connected on this device</p>
+            </div>
+        </div>
+    </article>
+    <article class="panel">
+        <h2>Security</h2>
+        <ul class="action-list">
+            <li><span>Auth status</span><span class="action-meta">Enabled</span></li>
+            <li><span>API keys</span><span class="action-meta">2 active</span></li>
+            <li><span>Sessions</span><span class="action-meta">1 device</span></li>
+        </ul>
+    </article>
+</section>
+{% endblock %}

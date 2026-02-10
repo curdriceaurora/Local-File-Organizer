@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="page-kicker">Files</p>
+        <h1 class="page-title">File browser preview</h1>
+        <p class="page-subtitle">A structured snapshot of your library. Hook into the API for real-time data.</p>
+    </div>
+    <div class="chip-stack">
+        <span class="chip">Local only</span>
+        <span class="chip">Read-first</span>
+    </div>
+</section>
+
+<section class="panel-grid two">
+    <article class="panel">
+        <h2>Recent folders</h2>
+        <div class="empty-state">
+            <p>No directories connected yet.</p>
+            <span>Connect a root folder to populate the browser.</span>
+        </div>
+    </article>
+    <article class="panel">
+        <h2>Preview pane</h2>
+        <div class="placeholder-grid">
+            <div class="placeholder"></div>
+            <div class="placeholder"></div>
+            <div class="placeholder"></div>
+        </div>
+    </article>
+</section>
+{% endblock %}

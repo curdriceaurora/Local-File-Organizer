@@ -52,6 +52,7 @@ dependencies = [
 
     # API and async
     "fastapi>=0.109.0",
+    "jinja2>=3.1.0",
     "uvicorn[standard]>=0.27.0",
     "websockets>=12.0",
     "httpx>=0.26.0",
@@ -103,7 +104,6 @@ gui = [
 ]
 
 web = [
-    "jinja2>=3.1.0",
     "htmx>=0.1.0",
 ]
 
@@ -162,7 +162,12 @@ Issues = "https://github.com/yourusername/file-organizer-v2/issues"
 where = ["src"]
 
 [tool.setuptools.package-data]
-file_organizer = ["py.typed", "config/*.yaml"]
+file_organizer = [
+    "py.typed",
+    "config/*.yaml",
+    "web/templates/**/*.html",
+    "web/static/**/*",
+]
 
 # Ruff configuration (linting and formatting)
 [tool.ruff]
