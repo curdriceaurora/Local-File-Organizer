@@ -35,7 +35,7 @@ class ApiSettings(BaseModel):
     cors_allow_headers: list[str] = Field(default_factory=lambda: ["*"])
     enable_docs: bool = True
     allowed_paths: list[str] = Field(default_factory=lambda: [str(Path.home())])
-    websocket_ping_interval: int = 30
+    websocket_ping_interval: int = Field(default=30, gt=0)
     websocket_token: Optional[str] = None
 
 

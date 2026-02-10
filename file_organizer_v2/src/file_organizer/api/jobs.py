@@ -59,7 +59,8 @@ def create_job(job_type: str) -> JobState:
         _JOB_STORE[job_id] = job
         _JOB_STORE.move_to_end(job_id)
         _prune_jobs(ts)
-    _notify_job_event(job, event_type="job.created")
+        payload = _build_job_payload(job, event_type="job.created")
+    _notify_job_event(payload)
     return job
 
 
@@ -85,7 +86,8 @@ def update_job(job_id: str, **updates: Any) -> Optional[JobState]:
         job.updated_at = _now()
         _JOB_STORE.move_to_end(job_id)
         _prune_jobs(job.updated_at)
-    _notify_job_event(job, event_type="job.updated")
+        payload = _build_job_payload(job, event_type="job.updated")
+    _notify_job_event(payload)
     return job
 
 
@@ -95,8 +97,8 @@ def job_count() -> int:
         return sum(1 for job in _JOB_STORE.values() if job.status in _ACTIVE_STATUSES)
 
 
-def _notify_job_event(job: JobState, event_type: str) -> None:
-    payload = {
+def _build_job_payload(job: JobState, event_type: str) -> dict[str, Any]:
+    return {
         "type": event_type,
         "job_id": job.job_id,
         "job_type": job.job_type,
@@ -106,5 +108,10 @@ def _notify_job_event(job: JobState, event_type: str) -> None:
         "error": job.error,
         "result": job.result,
     }
+
+
+def _notify_job_event(payload: dict[str, Any]) -> None:
     realtime_manager.enqueue_event(payload, channel="jobs")
-    realtime_manager.enqueue_event(payload, channel=f"job:{job.job_id}")
+    job_id = payload.get("job_id")
+    if job_id:
+        realtime_manager.enqueue_event(payload, channel=f"job:{job_id}")

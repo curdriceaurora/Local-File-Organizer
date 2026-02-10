@@ -49,6 +49,40 @@ class ConnectionManager:
             self._connections.discard(websocket)
             self._subscriptions.pop(websocket, None)
 
+    def reset(self) -> None:
+        task = self._queue_task
+        loop = self._loop
+        self._queue_task = None
+        if task is not None:
+            task.cancel()
+            if loop is not None and loop.is_running():
+                try:
+                    future = asyncio.run_coroutine_threadsafe(
+                        self._await_task(task),
+                        loop,
+                    )
+                    future.result(timeout=2)
+                except Exception:
+                    logger.exception("Failed to await websocket queue task shutdown")
+        if self._queue is not None:
+            while not self._queue.empty():
+                try:
+                    self._queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+        self._connections.clear()
+        self._subscriptions.clear()
+        self._loop = None
+        self._queue = None
+
+    async def _await_task(self, task: asyncio.Task[None]) -> None:
+        try:
+            await task
+        except asyncio.CancelledError:
+            return
+        except Exception:
+            logger.exception("WebSocket queue task failed during reset")
+
     async def send_personal_message(self, message: dict[str, Any], websocket: WebSocket) -> None:
         if websocket.client_state != WebSocketState.CONNECTED:
             return
@@ -59,6 +93,7 @@ class ConnectionManager:
             targets = [
                 ws
                 for ws, subscriptions in self._subscriptions.items()
+                # "global" subscriptions receive all channel traffic.
                 if channel == "global"
                 or channel in subscriptions
                 or "global" in subscriptions
@@ -102,8 +137,11 @@ class ConnectionManager:
         if self._queue is None:
             return
         while True:
-            event = await self._queue.get()
-            await self.broadcast(event.payload, channel=event.channel)
+            try:
+                event = await self._queue.get()
+                await self.broadcast(event.payload, channel=event.channel)
+            except Exception:
+                logger.exception("WebSocket queue consumer error")
 
 
 realtime_manager = ConnectionManager()

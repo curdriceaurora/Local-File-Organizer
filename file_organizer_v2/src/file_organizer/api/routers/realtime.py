@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 from typing import Optional
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
+from starlette.websockets import WebSocketState
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
@@ -17,12 +19,18 @@ def _token_valid(token: Optional[str], settings: ApiSettings) -> bool:
     required = settings.websocket_token
     if not required:
         return True
-    return token == required
+    if token is None:
+        return False
+    return hmac.compare_digest(token, required)
 
 
 async def _heartbeat(websocket: WebSocket, interval: int, stop: asyncio.Event) -> None:
     while not stop.is_set():
-        await asyncio.sleep(interval)
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=interval)
+            break
+        except asyncio.TimeoutError:
+            pass
         try:
             await websocket.send_json({"type": "ping"})
         except Exception:
@@ -75,10 +83,14 @@ async def websocket_endpoint(
     except WebSocketDisconnect:
         pass
     except ValueError:
-        await realtime_manager.send_personal_message(
-            {"type": "error", "message": "Invalid JSON payload"},
-            websocket,
-        )
+        if websocket.client_state == WebSocketState.CONNECTED:
+            try:
+                await realtime_manager.send_personal_message(
+                    {"type": "error", "message": "Invalid JSON payload"},
+                    websocket,
+                )
+            except Exception:
+                pass
     finally:
         stop_event.set()
         heartbeat_task.cancel()

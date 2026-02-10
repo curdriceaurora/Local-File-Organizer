@@ -12,6 +12,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from file_organizer.api.realtime import realtime_manager
+
 # ---------------------------------------------------------------------------
 # Version-aware fixtures
 # ---------------------------------------------------------------------------
@@ -82,6 +84,14 @@ requires_py39 = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 # Shared test fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def reset_realtime_state() -> None:
+    """Reset realtime manager state between tests."""
+    realtime_manager.reset()
+    yield
+    realtime_manager.reset()
 
 
 @pytest.fixture

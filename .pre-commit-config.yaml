@@ -16,6 +16,11 @@ repos:
         entry: bash -c "cd file_organizer_v2 && ruff check ."
         language: system
         pass_filenames: false
+      - id: pytest-websocket
+        name: pytest (websocket)
+        entry: bash -c "cd file_organizer_v2 && pytest tests/test_api_websocket.py -q --override-ini=\"addopts=\""
+        language: system
+        pass_filenames: false
       - id: pytest-ci-lint
         name: pytest (ci guardrails)
         entry: pytest file_organizer_v2/tests/ci -q --override-ini="addopts="

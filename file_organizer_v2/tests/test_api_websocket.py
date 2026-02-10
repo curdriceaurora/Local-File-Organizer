@@ -1,8 +1,10 @@
 """API tests for WebSocket endpoints."""
 from __future__ import annotations
 
-from typing import Optional
+import json
+from typing import Any, Optional
 
+import anyio
 import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
@@ -12,6 +14,7 @@ from file_organizer.api.main import create_app
 from file_organizer.api.realtime import realtime_manager
 
 pytestmark = pytest.mark.ci
+_RECEIVE_TIMEOUT = 1.0
 
 
 def _client(token: Optional[str] = None) -> TestClient:
@@ -25,23 +28,34 @@ def _client(token: Optional[str] = None) -> TestClient:
     return TestClient(app)
 
 
+def _receive_json(websocket: Any, timeout: float = _RECEIVE_TIMEOUT) -> dict[str, Any]:
+    async def _receive() -> dict[str, Any]:
+        with anyio.fail_after(timeout):
+            message = await websocket._send_rx.receive()
+        websocket._raise_on_close(message)
+        text = message["text"]
+        return json.loads(text)
+
+    return websocket.portal.call(_receive)
+
+
 def test_websocket_connect_and_ping() -> None:
     client = _client()
     with client.websocket_connect("/api/v1/ws/test-client") as websocket:
-        message = websocket.receive_json()
+        message = _receive_json(websocket)
         assert message["type"] == "connection"
         assert message["status"] == "connected"
         websocket.send_json({"type": "ping"})
-        response = websocket.receive_json()
+        response = _receive_json(websocket)
         assert response["type"] == "pong"
 
 
 def test_websocket_subscribe_and_broadcast() -> None:
     client = _client()
     with client.websocket_connect("/api/v1/ws/test-client") as websocket:
-        websocket.receive_json()
+        _receive_json(websocket)
         websocket.send_json({"type": "subscribe", "channel": "jobs"})
-        ack = websocket.receive_json()
+        ack = _receive_json(websocket)
         assert ack["type"] == "subscribed"
         assert ack["channel"] == "jobs"
 
@@ -52,7 +66,7 @@ def test_websocket_subscribe_and_broadcast() -> None:
         assert enqueued is True
         event = None
         for _ in range(5):
-            message = websocket.receive_json()
+            message = _receive_json(websocket)
             if message.get("type") == "job.updated":
                 event = message
                 break
@@ -70,5 +84,5 @@ def test_websocket_requires_token() -> None:
 def test_websocket_accepts_valid_token() -> None:
     client = _client(token="secret")
     with client.websocket_connect("/api/v1/ws/test-client?token=secret") as websocket:
-        message = websocket.receive_json()
+        message = _receive_json(websocket)
         assert message["type"] == "connection"
