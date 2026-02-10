@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 from loguru import logger
@@ -35,6 +35,8 @@ class ApiSettings(BaseModel):
     cors_allow_headers: list[str] = Field(default_factory=lambda: ["*"])
     enable_docs: bool = True
     allowed_paths: list[str] = Field(default_factory=lambda: [str(Path.home())])
+    websocket_ping_interval: int = 30
+    websocket_token: Optional[str] = None
 
 
 def _parse_list(value: str) -> list[str]:
@@ -113,5 +115,15 @@ def load_settings() -> ApiSettings:
         data["enable_docs"] = env["FO_API_ENABLE_DOCS"].lower() in ("1", "true", "yes")
     if "FO_API_ALLOWED_PATHS" in env:
         data["allowed_paths"] = _parse_list(env["FO_API_ALLOWED_PATHS"])
+    if "FO_API_WS_PING_INTERVAL" in env:
+        try:
+            data["websocket_ping_interval"] = int(env["FO_API_WS_PING_INTERVAL"])
+        except ValueError:
+            logger.warning(
+                "Invalid FO_API_WS_PING_INTERVAL value: {}",
+                env["FO_API_WS_PING_INTERVAL"],
+            )
+    if "FO_API_WEBSOCKET_TOKEN" in env:
+        data["websocket_token"] = env["FO_API_WEBSOCKET_TOKEN"]
 
     return ApiSettings(**data)

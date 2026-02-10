@@ -18,6 +18,7 @@ from file_organizer.api.routers import (
     files_router,
     health_router,
     organize_router,
+    realtime_router,
     system_router,
 )
 
@@ -77,6 +78,7 @@ def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
     app.include_router(files_router, prefix="/api/v1")
     app.include_router(organize_router, prefix="/api/v1")
     app.include_router(dedupe_router, prefix="/api/v1")
+    app.include_router(realtime_router, prefix="/api/v1")
     app.include_router(system_router, prefix="/api/v1")
 
     @app.get("/")
