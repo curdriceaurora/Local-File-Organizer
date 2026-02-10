@@ -1,7 +1,6 @@
 """Tests for the suggest Typer sub-app."""
 from __future__ import annotations
 
-from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from unittest.mock import MagicMock, patch

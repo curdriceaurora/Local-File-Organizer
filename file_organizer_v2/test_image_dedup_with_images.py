@@ -139,7 +139,7 @@ def test_with_real_images():
         duplicates = deduper.find_duplicates(tmpdir, recursive=False)
         print(f"    ✓ Found {len(duplicates)} duplicate groups")
 
-        for hash_key, images in duplicates.items():
+        for _, images in duplicates.items():
             print(f"    ✓ Group with {len(images)} images:")
             for img in images:
                 print(f"      - {img.name}")

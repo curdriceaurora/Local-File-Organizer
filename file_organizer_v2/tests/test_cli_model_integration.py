@@ -4,9 +4,6 @@ Exercises model list/pull/cache with mocked Ollama responses.
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
-import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app

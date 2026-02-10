@@ -219,8 +219,6 @@ def example_batch_processing():
         print()
         return
 
-    reader = EnhancedEPUBReader()
-
     # Find all EPUB files
     epub_files = list(epub_dir.glob("*.epub"))
 
@@ -247,17 +245,6 @@ def example_batch_processing():
 
 def main():
     """Run all examples."""
-    examples = [
-        ("Basic Text Extraction", example_basic_text_extraction),
-        ("Metadata Only", example_metadata_only),
-        ("Full Processing", example_full_processing),
-        ("Cover Extraction", example_with_cover_extraction),
-        ("Limited Chapters", example_limited_chapters),
-        ("Series Detection", example_series_detection),
-        ("ISBN Cleaning", example_isbn_cleaning),
-        ("Batch Processing", example_batch_processing),
-    ]
-
     print("\n" + "=" * 60)
     print("Enhanced EPUB Processing Examples")
     print("=" * 60)

@@ -3,11 +3,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from file_organizer.models.model_manager import ModelManager
 from file_organizer.models.registry import AVAILABLE_MODELS, ModelInfo
-
 
 # ---------------------------------------------------------------------------
 # Registry

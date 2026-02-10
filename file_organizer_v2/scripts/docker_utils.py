@@ -70,15 +70,6 @@ def validate_dockerfile(path: str | Path) -> list[str]:
     if not has_user:
         issues.append("WARNING: No USER instruction found; container will run as root")
 
-    # Check for COPY or ADD with --chown
-    copy_add_lines = [
-        line
-        for line in lines
-        if line.strip().upper().startswith(("COPY ", "ADD "))
-        and not line.strip().startswith("#")
-    ]
-    # Not an error, just informational
-
     # Check for apt-get update without cleanup
     has_apt_update = any("apt-get update" in line for line in lines)
     has_apt_cleanup = any("rm -rf /var/lib/apt/lists" in line for line in lines)
@@ -234,13 +225,12 @@ def get_image_size_estimate(dockerfile_path: str | Path) -> int:
         if "apt-get install" in line:
             # Count packages (words after install that don't start with -)
             # Look for continuation lines too
-            packages = re.findall(r"(?:install|\\)\s+(?:-\S+\s+)*(\S+)", line)
             # Rough count: non-flag arguments after install
             pkg_matches = re.findall(r"\b([a-z][a-z0-9._+-]+)\b", line)
             # Filter out common non-package words
             non_packages = {
                 "apt", "get", "install", "update", "rm", "rf", "var",
-                "lib", "apt", "lists", "no", "recommends", "yes",
+                "lib", "lists", "no", "recommends", "yes",
                 "and", "the", "run", "dev",
             }
             actual_packages = [p for p in pkg_matches if p not in non_packages and len(p) > 2]

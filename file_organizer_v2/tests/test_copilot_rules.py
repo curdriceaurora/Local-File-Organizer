@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from file_organizer.services.copilot.rules.models import (
     ActionType,
     ConditionType,
@@ -13,9 +11,8 @@ from file_organizer.services.copilot.rules.models import (
     RuleCondition,
     RuleSet,
 )
-from file_organizer.services.copilot.rules.preview import PreviewEngine, PreviewResult
+from file_organizer.services.copilot.rules.preview import PreviewEngine
 from file_organizer.services.copilot.rules.rule_manager import RuleManager
-
 
 # ---------------------------------------------------------------------------
 # Model tests

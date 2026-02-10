@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from file_organizer.services.copilot.conversation import ConversationManager
 from file_organizer.services.copilot.engine import CopilotEngine
@@ -18,7 +16,6 @@ from file_organizer.services.copilot.models import (
     IntentType,
     MessageRole,
 )
-
 
 # ---------------------------------------------------------------------------
 # IntentParser

@@ -6,12 +6,10 @@ without requiring a running Ollama instance.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.core.organizer import FileOrganizer, OrganizationResult
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -104,7 +102,7 @@ class TestDryRunOrganize:
 
     def test_dry_run_does_not_move_files(self, sample_dir: Path) -> None:
         """In dry-run mode, source files should remain untouched."""
-        organizer = FileOrganizer(dry_run=True)
+        FileOrganizer(dry_run=True)
 
         # Files should still exist after dry-run (only regular files)
         original_files = [f for f in sample_dir.iterdir() if f.is_file()]

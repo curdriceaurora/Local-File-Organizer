@@ -15,7 +15,7 @@ from file_organizer.services.deduplication.viewer import ComparisonViewer
 def demo_single_comparison():
     """Demo showing comparison of a few duplicate images."""
     console = Console()
-    viewer = ComparisonViewer(console=console)
+    ComparisonViewer(console=console)
 
     console.print("\n[bold cyan]Demo: Single Group Comparison[/bold cyan]\n")
     console.print("This would display a group of duplicate images for review.")
@@ -42,7 +42,7 @@ def demo_single_comparison():
 def demo_batch_review():
     """Demo showing batch review of multiple duplicate groups."""
     console = Console()
-    viewer = ComparisonViewer(console=console)
+    ComparisonViewer(console=console)
 
     console.print("\n[bold cyan]Demo: Batch Review[/bold cyan]\n")
     console.print("This would review multiple groups of duplicates in sequence.")
@@ -70,7 +70,7 @@ def demo_batch_review():
 def demo_metadata_display():
     """Demo showing single image metadata display."""
     console = Console()
-    viewer = ComparisonViewer(console=console)
+    ComparisonViewer(console=console)
 
     console.print("\n[bold cyan]Demo: Metadata Display[/bold cyan]\n")
     console.print("This would display detailed metadata for a single image.")
@@ -91,7 +91,7 @@ def demo_metadata_display():
 def demo_interactive_select():
     """Demo showing interactive multi-select interface."""
     console = Console()
-    viewer = ComparisonViewer(console=console)
+    ComparisonViewer(console=console)
 
     console.print("\n[bold cyan]Demo: Interactive Selection[/bold cyan]\n")
     console.print("This would let you select multiple images to keep from a list.")

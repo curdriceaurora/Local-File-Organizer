@@ -63,7 +63,7 @@ def example_basic_usage():
 
     # Display results
     if duplicates:
-        for idx, (hash_key, images) in enumerate(duplicates.items(), 1):
+        for idx, (_, images) in enumerate(duplicates.items(), 1):
             print(f"Group {idx} ({len(images)} images):")
             for img_path in images:
                 print(f"  - {get_image_info_string(img_path)}")

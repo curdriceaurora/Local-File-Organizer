@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: ruff-check
         name: ruff check
-        entry: ruff check file_organizer_v2/src file_organizer_v2/tests/ci
+        entry: ruff check file_organizer_v2
         language: system
         pass_filenames: false
       - id: pytest-ci-lint

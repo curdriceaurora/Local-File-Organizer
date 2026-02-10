@@ -6,7 +6,6 @@ Addresses 95 review issues systematically.
 
 import re
 from pathlib import Path
-from typing import List
 
 # Base directory
 BASE_DIR = Path(__file__).parent / "file_organizer_v2"
@@ -18,7 +17,7 @@ def add_blank_lines_around_code_blocks(content: str) -> str:
     result = []
     prev_blank = True
 
-    for i, line in enumerate(lines):
+    for _i, line in enumerate(lines):
         is_fence = line.strip().startswith('```')
 
         if is_fence:
@@ -38,7 +37,9 @@ def add_blank_lines_around_code_blocks(content: str) -> str:
         final.append(line)
         if line.strip().startswith('```') and i > 0:
             # Check if this is closing fence (previous fence was opening)
-            count_before = sum(1 for l in result[:i] if l.strip().startswith('```'))
+            count_before = sum(
+                1 for fence_line in result[:i] if fence_line.strip().startswith('```')
+            )
             if count_before % 2 == 0:  # This is closing fence
                 if i < len(result) - 1 and result[i + 1].strip() != '':
                     final.append('')
@@ -134,7 +135,7 @@ def fix_unused_variables(content: str) -> str:
     return content
 
 
-def fix_file(file_path: Path, fixes: List[str]) -> bool:
+def fix_file(file_path: Path, fixes: list[str]) -> bool:
     """Apply specified fixes to a file."""
     if not file_path.exists():
         print(f"  ⚠️  Not found: {file_path}")
@@ -186,7 +187,11 @@ def main():
         "../STREAM_C_SUMMARY.md",
     ]
     for doc_file in doc_files:
-        path = BASE_DIR / doc_file if not doc_file.startswith('..') else BASE_DIR.parent / doc_file.lstrip('../')
+        path = (
+            BASE_DIR / doc_file
+            if not doc_file.startswith("..")
+            else BASE_DIR.parent / doc_file.removeprefix("../")
+        )
         if fix_file(path, ['md031']):
             fixed_count += 1
 
