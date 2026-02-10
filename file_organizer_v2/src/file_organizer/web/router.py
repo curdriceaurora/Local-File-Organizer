@@ -45,7 +45,7 @@ _MAX_THUMBNAIL_BYTES = 15 * 1024 * 1024
 _TEXT_SAMPLE_BYTES = 8192
 _TEXT_PREVIEW_CHARS = 4000
 _INVALID_FILENAME_CHARS = set('<>:"/\\|?*')
-_SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._()\\-]*$")
+_SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._()-]*$")
 
 _FILE_TYPE_GROUPS = {
     "image": FileOrganizer.IMAGE_EXTENSIONS,
