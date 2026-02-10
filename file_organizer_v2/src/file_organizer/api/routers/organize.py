@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, BackgroundTasks, Depends
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.jobs import create_job, get_job, update_job
 from file_organizer.api.models import (
@@ -21,7 +21,7 @@ from file_organizer.api.models import (
 from file_organizer.api.utils import is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer, OrganizationResult
 
-router = APIRouter(tags=["organize"])
+router = APIRouter(tags=["organize"], dependencies=[Depends(get_current_active_user)])
 
 
 def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:

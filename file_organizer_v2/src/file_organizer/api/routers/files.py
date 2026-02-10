@@ -9,7 +9,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, Query
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import (
     DeleteFileRequest,
@@ -23,7 +23,7 @@ from file_organizer.api.models import (
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer
 
-router = APIRouter(tags=["files"])
+router = APIRouter(tags=["files"], dependencies=[Depends(get_current_active_user)])
 
 _FILE_TYPE_GROUPS = {
     "text": FileOrganizer.TEXT_EXTENSIONS,

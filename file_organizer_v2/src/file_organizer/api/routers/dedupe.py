@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import (
     DedupeExecuteRequest,
@@ -23,7 +23,7 @@ from file_organizer.api.utils import resolve_path
 from file_organizer.services.deduplication import DuplicateDetector
 from file_organizer.services.deduplication.detector import ScanOptions
 
-router = APIRouter(tags=["dedupe"])
+router = APIRouter(tags=["dedupe"], dependencies=[Depends(get_current_active_user)])
 
 
 def _scan_duplicates(path: Path, request: DedupeScanRequest) -> tuple[list[DedupeGroup], dict[str, int]]:

@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class FileInfo(BaseModel):
@@ -188,6 +188,40 @@ class ConfigResponse(BaseModel):
     profile: str
     config: dict[str, Any]
     profiles: list[str] = Field(default_factory=list)
+
+
+class UserCreateRequest(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    full_name: Optional[str] = None
+
+
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    email: EmailStr
+    full_name: Optional[str] = None
+    is_active: bool
+    is_admin: bool
+    created_at: datetime
+    last_login: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class TokenRefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class TokenRevokeRequest(BaseModel):
+    refresh_token: str
 
 
 class ModelPresetUpdate(BaseModel):

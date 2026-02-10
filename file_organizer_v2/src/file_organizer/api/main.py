@@ -14,6 +14,7 @@ from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.middleware import setup_middleware
 from file_organizer.api.routers import (
+    auth_router,
     dedupe_router,
     files_router,
     health_router,
@@ -75,6 +76,7 @@ def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
     app.dependency_overrides[get_settings] = lambda: settings
 
     app.include_router(health_router, prefix="/api/v1")
+    app.include_router(auth_router, prefix="/api/v1")
     app.include_router(files_router, prefix="/api/v1")
     app.include_router(organize_router, prefix="/api/v1")
     app.include_router(dedupe_router, prefix="/api/v1")

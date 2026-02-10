@@ -6,16 +6,57 @@ import hmac
 from typing import Optional
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
+from sqlalchemy.orm import Session
 from starlette.websockets import WebSocketState
 
+from file_organizer.api.auth import TokenError, decode_token, is_access_token
+from file_organizer.api.auth_models import User
+from file_organizer.api.auth_store import TokenStore
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_db, get_settings, get_token_store
 from file_organizer.api.realtime import realtime_manager
 
 router = APIRouter(tags=["realtime"])
 
 
-def _token_valid(token: Optional[str], settings: ApiSettings) -> bool:
+def _jwt_valid(
+    token: str,
+    settings: ApiSettings,
+    db: Session,
+    token_store: TokenStore,
+) -> bool:
+    try:
+        payload = decode_token(token, settings)
+    except TokenError:
+        return False
+    if not is_access_token(payload):
+        return False
+    jti = payload.get("jti")
+    if isinstance(jti, str) and token_store.is_access_revoked(jti):
+        return False
+    user_id = payload.get("user_id")
+    if not isinstance(user_id, str):
+        return False
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None or not user.is_active:
+        return False
+    return True
+
+
+def _token_valid(
+    token: Optional[str],
+    settings: ApiSettings,
+    db: Session,
+    token_store: TokenStore,
+) -> bool:
+    if settings.auth_enabled:
+        if token and _jwt_valid(token, settings, db, token_store):
+            return True
+        required = settings.websocket_token
+        if required and token is not None and hmac.compare_digest(token, required):
+            return True
+        return False
+
     required = settings.websocket_token
     if not required:
         return True
@@ -67,9 +108,11 @@ async def websocket_endpoint(
     client_id: str,
     token: Optional[str] = None,
     settings: ApiSettings = Depends(get_settings),
+    db: Session = Depends(get_db),
+    token_store: TokenStore = Depends(get_token_store),
 ) -> None:
     provided_token = _extract_token(websocket, token)
-    if not _token_valid(provided_token, settings):
+    if not _token_valid(provided_token, settings, db, token_store):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 

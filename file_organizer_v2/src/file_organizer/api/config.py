@@ -37,6 +37,15 @@ class ApiSettings(BaseModel):
     allowed_paths: list[str] = Field(default_factory=lambda: [str(Path.home())])
     websocket_ping_interval: int = Field(default=30, gt=0)
     websocket_token: Optional[str] = None
+    auth_enabled: bool = True
+    auth_db_path: str = Field(
+        default_factory=lambda: str(Path.home() / ".config" / "file-organizer" / "auth.db")
+    )
+    auth_jwt_secret: str = "change-me"
+    auth_jwt_algorithm: str = "HS256"
+    auth_access_token_minutes: int = Field(default=30, gt=0)
+    auth_refresh_token_days: int = Field(default=7, gt=0)
+    auth_redis_url: Optional[str] = None
 
 
 def _parse_list(value: str) -> list[str]:
@@ -132,5 +141,33 @@ def load_settings() -> ApiSettings:
             )
     if "FO_API_WEBSOCKET_TOKEN" in env:
         data["websocket_token"] = env["FO_API_WEBSOCKET_TOKEN"]
+    if "FO_API_AUTH_ENABLED" in env:
+        data["auth_enabled"] = env["FO_API_AUTH_ENABLED"].lower() in ("1", "true", "yes")
+    if "FO_API_AUTH_DB_PATH" in env:
+        data["auth_db_path"] = env["FO_API_AUTH_DB_PATH"]
+    if "FO_API_AUTH_JWT_SECRET" in env:
+        data["auth_jwt_secret"] = env["FO_API_AUTH_JWT_SECRET"]
+    if "FO_API_AUTH_JWT_ALGORITHM" in env:
+        data["auth_jwt_algorithm"] = env["FO_API_AUTH_JWT_ALGORITHM"]
+    if "FO_API_AUTH_ACCESS_MINUTES" in env:
+        try:
+            data["auth_access_token_minutes"] = int(env["FO_API_AUTH_ACCESS_MINUTES"])
+        except ValueError:
+            logger.warning(
+                "Invalid FO_API_AUTH_ACCESS_MINUTES value: {}",
+                env["FO_API_AUTH_ACCESS_MINUTES"],
+            )
+    if "FO_API_AUTH_REFRESH_DAYS" in env:
+        try:
+            data["auth_refresh_token_days"] = int(env["FO_API_AUTH_REFRESH_DAYS"])
+        except ValueError:
+            logger.warning(
+                "Invalid FO_API_AUTH_REFRESH_DAYS value: {}",
+                env["FO_API_AUTH_REFRESH_DAYS"],
+            )
+    if "FO_API_AUTH_REDIS_URL" in env:
+        data["auth_redis_url"] = env["FO_API_AUTH_REDIS_URL"]
+    elif "FO_REDIS_URL" in env:
+        data["auth_redis_url"] = env["FO_REDIS_URL"]
 
     return ApiSettings(**data)

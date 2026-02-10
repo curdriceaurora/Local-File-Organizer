@@ -8,7 +8,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_config_manager, get_settings
+from file_organizer.api.dependencies import (
+    get_config_manager,
+    get_current_active_user,
+    get_settings,
+    require_admin_user,
+)
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.jobs import job_count
 from file_organizer.api.models import (
@@ -21,7 +26,7 @@ from file_organizer.api.utils import file_info_from_path, resolve_path
 from file_organizer.config.manager import ConfigManager
 from file_organizer.services.analytics.storage_analyzer import StorageAnalyzer
 
-router = APIRouter(tags=["system"])
+router = APIRouter(tags=["system"], dependencies=[Depends(get_current_active_user)])
 
 
 @router.get("/system/status", response_model=SystemStatusResponse)
@@ -60,6 +65,7 @@ def get_config(
 def update_config(
     request: ConfigUpdateRequest,
     manager: ConfigManager = Depends(get_config_manager),
+    _admin: object = Depends(require_admin_user),
 ) -> ConfigResponse:
     config = manager.load(request.profile)
 
