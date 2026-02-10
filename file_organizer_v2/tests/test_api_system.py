@@ -2,25 +2,24 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 import pytest
 from fastapi.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
 from file_organizer.api.main import create_app
 
 pytestmark = pytest.mark.ci
 
 
-def _client(allowed_paths: list[str] | None = None) -> TestClient:
+def _client(allowed_paths: Optional[list[str]] = None) -> TestClient:
     settings = ApiSettings(
         environment="test",
         enable_docs=False,
-        allowed_paths=allowed_paths or [str(Path.home())],
+        allowed_paths=allowed_paths or [],
     )
     app = create_app(settings)
-    app.dependency_overrides[get_settings] = lambda: settings
     return TestClient(app)
 
 

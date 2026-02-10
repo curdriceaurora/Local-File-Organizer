@@ -37,6 +37,7 @@ class MoveFileRequest(BaseModel):
     source: str
     destination: str
     overwrite: bool = False
+    allow_directory_overwrite: bool = False
     dry_run: bool = False
 
 

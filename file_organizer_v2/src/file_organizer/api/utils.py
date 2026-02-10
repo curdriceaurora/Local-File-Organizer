@@ -5,18 +5,25 @@ import mimetypes
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import FileInfo
 
 
-def resolve_path(path_value: str, allowed_paths: list[str] | None = None) -> Path:
+def resolve_path(path_value: str, allowed_paths: Optional[list[str]] = None) -> Path:
     """Expand and normalize a filesystem path."""
     resolved = Path(path_value).expanduser()
+    # lgtm [py/path-injection] - path is validated against allowed roots below.
     resolved_str = os.path.realpath(resolved)
-    if allowed_paths is None:
-        return Path(resolved_str)
+    if not allowed_paths:
+        raise ApiError(
+            status_code=403,
+            error="path_not_allowed",
+            message="No allowed paths configured for this API instance.",
+        )
 
+    # lgtm [py/path-injection] - allowed roots are configuration-controlled.
     roots = [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]
     if not roots:
         raise ApiError(
@@ -46,9 +53,21 @@ def is_hidden(path: Path) -> bool:
 def file_info_from_path(path: Path) -> FileInfo:
     try:
         stat = path.stat()
-    except (OSError, PermissionError) as exc:
+    except OSError as exc:
+        if isinstance(exc, FileNotFoundError):
+            raise ApiError(
+                status_code=404,
+                error="file_not_found",
+                message=f"File not found: {path}",
+            ) from exc
+        if isinstance(exc, PermissionError):
+            raise ApiError(
+                status_code=403,
+                error="file_access_error",
+                message=f"Permission denied for {path}",
+            ) from exc
         raise ApiError(
-            status_code=403,
+            status_code=500,
             error="file_access_error",
             message=f"Unable to access file metadata for {path}",
         ) from exc

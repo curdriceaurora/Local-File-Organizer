@@ -4,6 +4,7 @@ from __future__ import annotations
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI
 from loguru import logger
@@ -30,7 +31,7 @@ def configure_logging(settings: ApiSettings) -> None:
         return
 
     log_dir = Path.home() / ".config" / "file-organizer" / "logs"
-    log_file: Path | None = None
+    log_file: Optional[Path] = None
     try:
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "api.log"
@@ -45,7 +46,7 @@ def configure_logging(settings: ApiSettings) -> None:
     _LOGGING_CONFIGURED = True
 
 
-def create_app(settings: ApiSettings | None = None) -> FastAPI:
+def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
     """Create the FastAPI application."""
     settings = settings or load_settings()
     configure_logging(settings)

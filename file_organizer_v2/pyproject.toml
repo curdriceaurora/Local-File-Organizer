@@ -180,9 +180,15 @@ ignore = [
 
 [tool.ruff.per-file-ignores]
 "__init__.py" = ["F401"]
+"src/file_organizer/api/exceptions.py" = ["UP045"]
+"src/file_organizer/api/jobs.py" = ["UP045"]
+"src/file_organizer/api/main.py" = ["UP045"]
 "src/file_organizer/api/models.py" = ["UP045"]
 "src/file_organizer/api/routers/files.py" = ["UP045"]
 "src/file_organizer/api/routers/system.py" = ["UP045"]
+"src/file_organizer/api/utils.py" = ["UP045"]
+"tests/test_api_files.py" = ["UP045"]
+"tests/test_api_system.py" = ["UP045"]
 
 # MyPy configuration (type checking)
 [tool.mypy]

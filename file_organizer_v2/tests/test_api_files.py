@@ -2,25 +2,24 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 import pytest
 from fastapi.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
 from file_organizer.api.main import create_app
 
 pytestmark = pytest.mark.ci
 
 
-def _client(allowed_paths: list[str] | None = None) -> TestClient:
+def _client(allowed_paths: Optional[list[str]] = None) -> TestClient:
     settings = ApiSettings(
         environment="test",
         enable_docs=False,
-        allowed_paths=allowed_paths or [str(Path.home())],
+        allowed_paths=allowed_paths or [],
     )
     app = create_app(settings)
-    app.dependency_overrides[get_settings] = lambda: settings
     return TestClient(app)
 
 
@@ -87,3 +86,54 @@ def test_path_not_allowed(tmp_path: Path) -> None:
     resp = client.get("/api/v1/files/info", params={"path": str(outside)})
     assert resp.status_code == 403
     assert resp.json()["error"] == "path_not_allowed"
+
+
+def test_error_responses(tmp_path: Path) -> None:
+    client = _client([str(tmp_path)])
+
+    missing = tmp_path / "missing.txt"
+    resp = client.get("/api/v1/files", params={"path": str(missing)})
+    assert resp.status_code == 404
+
+    resp = client.get("/api/v1/files/info", params={"path": str(tmp_path)})
+    assert resp.status_code == 400
+
+    source = tmp_path / "source.txt"
+    source.write_text("data")
+    dest = tmp_path / "dest.txt"
+    dest.write_text("exists")
+    move_resp = client.post(
+        "/api/v1/files/move",
+        json={
+            "source": str(source),
+            "destination": str(dest),
+            "overwrite": False,
+            "dry_run": False,
+        },
+    )
+    assert move_resp.status_code == 409
+
+    dir_dest = tmp_path / "dir-dest"
+    dir_dest.mkdir()
+    overwrite_resp = client.post(
+        "/api/v1/files/move",
+        json={
+            "source": str(source),
+            "destination": str(dir_dest),
+            "overwrite": True,
+            "allow_directory_overwrite": False,
+            "dry_run": False,
+        },
+    )
+    assert overwrite_resp.status_code == 400
+
+    delete_resp = client.request(
+        "DELETE",
+        "/api/v1/files",
+        json={
+            "path": str(missing),
+            "permanent": True,
+            "dry_run": False,
+        },
+    )
+    assert delete_resp.status_code == 404

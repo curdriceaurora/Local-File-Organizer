@@ -100,6 +100,8 @@ def get_stats(
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
+    if not target.is_dir():
+        raise ApiError(status_code=400, error="invalid_path", message="Path is not a directory")
 
     analyzer = StorageAnalyzer()
     stats = analyzer.analyze_directory(target, max_depth=max_depth, use_cache=use_cache)

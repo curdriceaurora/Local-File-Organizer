@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -17,7 +17,11 @@ class ApiError(Exception):
     status_code: int
     error: str
     message: str
-    details: Any | None = None
+    details: Optional[Any] = None
+
+    def __post_init__(self) -> None:
+        summary = f"{self.status_code} {self.error}: {self.message}"
+        super().__init__(summary)
 
 
 def setup_exception_handlers(app: FastAPI) -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 from typing import Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query
 
@@ -176,6 +177,12 @@ def move_file(
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists() and request.overwrite:
+        if destination.is_dir() and not request.allow_directory_overwrite:
+            raise ApiError(
+                status_code=400,
+                error="invalid_request",
+                message="Directory overwrite requires allow_directory_overwrite=true.",
+            )
         if destination.is_dir():
             shutil.rmtree(destination)
         else:
@@ -198,12 +205,11 @@ def _trash_target(path: Path) -> Path:
         return candidate
     stem = path.stem
     suffix = path.suffix
-    counter = 1
-    while True:
+    for counter in range(1, 1001):
         candidate = trash_dir / f"{stem}-{counter}{suffix}"
         if not candidate.exists():
             return candidate
-        counter += 1
+    return trash_dir / f"{stem}-{uuid4().hex}{suffix}"
 
 
 @router.delete("/files", response_model=DeleteFileResponse)

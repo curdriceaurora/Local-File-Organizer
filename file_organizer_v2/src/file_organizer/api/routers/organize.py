@@ -80,6 +80,7 @@ def _result_to_response(result: OrganizationResult) -> OrganizationResultRespons
 
 
 def _run_organize_job(job_id: str, request: OrganizeRequest) -> None:
+    """Run a background organization job with validated paths."""
     update_job(job_id, status="running")
     try:
         organizer = FileOrganizer(
