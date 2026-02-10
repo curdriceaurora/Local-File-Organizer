@@ -1,9 +1,9 @@
 <div class="modal-backdrop" data-modal-close></div>
-<div class="modal-panel" role="dialog" aria-modal="true">
+<div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
     <div class="modal-header">
         <div>
             <p class="modal-kicker">Preview</p>
-            <h2 class="modal-title">{{ info.name if info else "File preview" }}</h2>
+            <h2 class="modal-title" id="preview-modal-title">{{ info.name if info else "File preview" }}</h2>
         </div>
         <button class="modal-close" type="button" data-modal-close>Close</button>
     </div>

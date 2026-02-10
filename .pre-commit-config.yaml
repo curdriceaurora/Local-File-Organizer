@@ -26,6 +26,11 @@ repos:
         entry: pytest file_organizer_v2/tests/ci -q --override-ini="addopts="
         language: system
         pass_filenames: false
+      - id: pytest-web-ui
+        name: pytest (web ui)
+        entry: bash -c "cd file_organizer_v2 && pytest tests/test_web_ui.py -q --override-ini=\"addopts=\""
+        language: system
+        pass_filenames: false
       - id: pytest-not-regression
         name: pytest (not regression)
         entry: bash -c "cd file_organizer_v2 && pytest tests/ -m \"not regression\" --override-ini=\"addopts=\""

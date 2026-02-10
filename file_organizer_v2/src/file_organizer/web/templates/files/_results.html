@@ -116,9 +116,30 @@
 <div class="bulk-toolbar">
     <span class="bulk-count" data-selection-count>0 selected</span>
     <div class="bulk-actions">
-        <button class="btn-ghost" type="button" data-bulk-action="move" disabled>Move</button>
-        <button class="btn-ghost" type="button" data-bulk-action="rename" disabled>Rename</button>
-        <button class="btn-ghost" type="button" data-bulk-action="delete" disabled>Delete</button>
+        <button
+            class="btn-ghost"
+            type="button"
+            data-bulk-action="move"
+            disabled
+            aria-disabled="true"
+            title="Bulk move is not yet implemented"
+        >Move</button>
+        <button
+            class="btn-ghost"
+            type="button"
+            data-bulk-action="rename"
+            disabled
+            aria-disabled="true"
+            title="Bulk rename is not yet implemented"
+        >Rename</button>
+        <button
+            class="btn-ghost"
+            type="button"
+            data-bulk-action="delete"
+            disabled
+            aria-disabled="true"
+            title="Bulk delete is not yet implemented"
+        >Delete</button>
     </div>
 </div>
 
@@ -166,11 +187,11 @@
                             data-preview-trigger
                         >Preview</button>
                     {% endif %}
-                    <button class="file-menu" type="button" data-context-trigger>...</button>
+                    <button class="file-menu" type="button" data-context-trigger aria-label="File actions">...</button>
                     <div class="context-menu" data-context-menu>
-                        <button type="button" data-context-action="rename">Rename</button>
-                        <button type="button" data-context-action="move">Move</button>
-                        <button type="button" data-context-action="delete">Delete</button>
+                        <button type="button" data-context-action="rename" disabled title="Rename is not implemented yet">Rename</button>
+                        <button type="button" data-context-action="move" disabled title="Move is not implemented yet">Move</button>
+                        <button type="button" data-context-action="delete" disabled title="Delete is not implemented yet">Delete</button>
                     </div>
                 </div>
             </article>

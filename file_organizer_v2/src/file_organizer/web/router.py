@@ -3,15 +3,16 @@ from __future__ import annotations
 
 import hashlib
 import io
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, UnidentifiedImageError
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
@@ -37,6 +38,14 @@ _NAV_ITEMS = [
 
 _PAGE_SIZE = 48
 _THUMBNAIL_SIZE = (240, 160)
+_MAX_NAV_DEPTH = 12
+_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+_UPLOAD_CHUNK_SIZE = 1024 * 1024
+_MAX_THUMBNAIL_BYTES = 15 * 1024 * 1024
+_TEXT_SAMPLE_BYTES = 8192
+_TEXT_PREVIEW_CHARS = 4000
+_INVALID_FILENAME_CHARS = set('<>:"/\\|?*')
+_SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._()\\-]*$")
 
 _FILE_TYPE_GROUPS = {
     "image": FileOrganizer.IMAGE_EXTENSIONS,
@@ -141,16 +150,7 @@ def _path_id(path: Path) -> str:
 
 
 def _build_breadcrumbs(path: Path, roots: list[Path]) -> list[dict[str, str]]:
-    root_match: Path | None = None
-    for root in roots:
-        try:
-            path.relative_to(root)
-        except ValueError:
-            continue
-        if root_match is None or len(str(root)) > len(str(root_match)):
-            root_match = root
-    if root_match is None:
-        root_match = path
+    root_match = _select_root_for_path(path, roots)
     crumbs: list[dict[str, str]] = []
     label = root_match.name or root_match.as_posix()
     crumbs.append(
@@ -187,6 +187,64 @@ def _has_children(path: Path) -> bool:
     return False
 
 
+def _select_root_for_path(path: Path, roots: list[Path]) -> Path:
+    root_match: Optional[Path] = None
+    for root in roots:
+        try:
+            path.relative_to(root)
+        except ValueError:
+            continue
+        if root_match is None or len(str(root)) > len(str(root_match)):
+            root_match = root
+    return root_match or path
+
+
+def _validate_depth(path: Path, roots: list[Path]) -> None:
+    root_match = _select_root_for_path(path, roots)
+    try:
+        depth = len(path.relative_to(root_match).parts)
+    except ValueError:
+        depth = 0
+    if depth > _MAX_NAV_DEPTH:
+        raise ApiError(
+            status_code=400,
+            error="path_too_deep",
+            message="Selected path is too deep for the file browser.",
+        )
+
+
+def _is_probably_text(path: Path) -> bool:
+    try:
+        with path.open("rb") as handle:
+            sample = handle.read(_TEXT_SAMPLE_BYTES)
+    except OSError:
+        return False
+    if not sample:
+        return True
+    if b"\x00" in sample:
+        return False
+    try:
+        sample.decode("utf-8")
+    except UnicodeDecodeError:
+        return False
+    return True
+
+
+def _sanitize_upload_name(name: str) -> Optional[str]:
+    safe_name = Path(name).name.strip()
+    if not safe_name or safe_name in {".", ".."}:
+        return None
+    if safe_name.startswith("."):
+        return None
+    if len(safe_name) > 255:
+        return None
+    if any(char in _INVALID_FILENAME_CHARS for char in safe_name):
+        return None
+    if not _SAFE_FILENAME_RE.match(safe_name):
+        return None
+    return safe_name
+
+
 def _list_tree_nodes(path: Path, include_hidden: bool) -> list[dict[str, Any]]:
     nodes: list[dict[str, Any]] = []
     try:
@@ -219,12 +277,13 @@ def _collect_entries(
     sort_by: str,
     sort_order: str,
     include_hidden: bool,
-) -> list[dict[str, Any]]:
+    limit: int,
+) -> tuple[list[dict[str, Any]], int]:
     entries: list[dict[str, Any]] = []
     try:
         children = list(path.iterdir())
     except OSError:
-        return entries
+        return entries, 0
 
     query_token = query.lower() if query else None
     allowed_types = _parse_file_type_filter(file_type)
@@ -256,7 +315,16 @@ def _collect_entries(
     else:
         files.sort(key=lambda p: p.stat().st_mtime, reverse=reverse)
 
-    for entry in directories:
+    total = len(directories) + len(files)
+    if limit <= 0:
+        return entries, total
+
+    dir_limit = min(limit, len(directories))
+    selected_dirs = directories[:dir_limit]
+    remaining = max(limit - dir_limit, 0)
+    selected_files = files[:remaining] if remaining else []
+
+    for entry in selected_dirs:
         try:
             stat = entry.stat()
             modified = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
@@ -276,7 +344,7 @@ def _collect_entries(
             }
         )
 
-    for entry in files:
+    for entry in selected_files:
         info = file_info_from_path(entry)
         kind = _detect_kind(entry)
         thumbnail_url = None
@@ -296,7 +364,7 @@ def _collect_entries(
             }
         )
 
-    return entries
+    return entries, total
 
 
 def _build_file_results_context(
@@ -314,6 +382,7 @@ def _build_file_results_context(
     roots = _allowed_roots(settings)
     error_message: Optional[str] = None
     entries: list[dict[str, Any]] = []
+    total = 0
     current_path: Optional[Path] = None
 
     try:
@@ -325,18 +394,24 @@ def _build_file_results_context(
         if error_message is None:
             error_message = "No allowed paths configured. Add FO_API_ALLOWED_PATHS."
     else:
-        entries = _collect_entries(
-            current_path,
-            query=query,
-            file_type=file_type,
-            sort_by=sort_by,
-            sort_order=sort_order,
-            include_hidden=False,
-        )
+        try:
+            _validate_depth(current_path, roots)
+            entries, total = _collect_entries(
+                current_path,
+                query=query,
+                file_type=file_type,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                include_hidden=False,
+                limit=limit,
+            )
+        except ApiError as exc:
+            error_message = exc.message
+            entries = []
+            total = 0
 
-    total = len(entries)
     limit = max(1, min(limit, total)) if total else limit
-    paged_entries = entries[:limit]
+    paged_entries = entries
     breadcrumbs: list[dict[str, str]] = []
     if current_path is not None:
         breadcrumbs = _build_breadcrumbs(current_path, roots)
@@ -428,6 +503,7 @@ async def files_browser(
     )
     context.update(results)
     context["active_path"] = results.get("current_path", "")
+    context["active_path_param"] = results.get("current_path_param", "")
     return _templates.TemplateResponse("files/browser.html", context)
 
 
@@ -466,12 +542,14 @@ async def files_tree(
     active: Optional[str] = Query(None),
 ) -> HTMLResponse:
     roots = _allowed_roots(settings)
-    active_path = active or ""
+    active_path = unquote(active) if active else ""
+    active_path_param = quote(active_path) if active_path else ""
     nodes: list[dict[str, Any]] = []
 
     if path:
         try:
             current = resolve_path(path, settings.allowed_paths)
+            _validate_depth(current, roots)
             nodes = _list_tree_nodes(current, include_hidden=False)
         except ApiError as exc:
             return _templates.TemplateResponse(
@@ -481,6 +559,7 @@ async def files_tree(
                     "nodes": [],
                     "depth": depth,
                     "active_path": active_path,
+                    "active_path_param": active_path_param,
                     "error_message": exc.message,
                 },
             )
@@ -508,6 +587,7 @@ async def files_tree(
             "nodes": nodes,
             "depth": depth,
             "active_path": active_path,
+            "active_path_param": active_path_param,
             "error_message": error_message,
         },
     )
@@ -525,8 +605,14 @@ async def files_thumbnail(
 
     if kind == "image":
         try:
+            if target.stat().st_size > _MAX_THUMBNAIL_BYTES:
+                raise ApiError(
+                    status_code=400,
+                    error="thumbnail_too_large",
+                    message="Image too large for thumbnail preview.",
+                )
             data = _render_image_thumbnail(target)
-        except OSError:
+        except (OSError, UnidentifiedImageError, Image.DecompressionBombError, ApiError):
             data = _render_placeholder_thumbnail("IMG", _THUMBNAIL_SIZE)
     elif kind == "pdf":
         data = _render_placeholder_thumbnail("PDF", _THUMBNAIL_SIZE)
@@ -569,11 +655,13 @@ async def files_preview(
         download_url = f"/ui/files/raw?path={quote(info.path)}"
         size_display = _format_bytes(info.size)
         modified_display = _format_timestamp(info.modified)
-        if preview_kind == "text":
+        if preview_kind == "text" and _is_probably_text(target):
             try:
-                preview_text = target.read_text(encoding="utf-8", errors="replace")[:4000]
+                preview_text = target.read_text(encoding="utf-8", errors="replace")[:_TEXT_PREVIEW_CHARS]
             except OSError:
                 preview_text = "Preview not available."
+        elif preview_kind == "text":
+            preview_kind = "file"
     except ApiError as exc:
         error_message = exc.message
 
@@ -607,6 +695,7 @@ async def files_upload(
 ) -> HTMLResponse:
     info_message: Optional[str] = None
     error_message: Optional[str] = None
+    errors: list[str] = []
 
     try:
         target_dir = _resolve_selected_path(path or None, settings)
@@ -622,11 +711,55 @@ async def files_upload(
         for upload in files:
             if not upload.filename:
                 continue
-            safe_name = Path(upload.filename).name
+            raw_name = Path(upload.filename).name.strip()
+            if raw_name.startswith("."):
+                errors.append(f"Rejected {raw_name}: hidden files are not allowed.")
+                await upload.close()
+                continue
+            safe_name = _sanitize_upload_name(upload.filename)
+            if safe_name is None:
+                errors.append(f"Rejected {upload.filename}: invalid filename.")
+                await upload.close()
+                continue
             destination = target_dir / safe_name
-            destination.write_bytes(await upload.read())
+            if destination.exists():
+                errors.append(f"Skipped {safe_name}: file already exists.")
+                await upload.close()
+                continue
+
+            total_bytes = 0
+            try:
+                with destination.open("wb") as handle:
+                    while True:
+                        chunk = await upload.read(_UPLOAD_CHUNK_SIZE)
+                        if not chunk:
+                            break
+                        total_bytes += len(chunk)
+                        if total_bytes > _MAX_UPLOAD_BYTES:
+                            raise ApiError(
+                                status_code=400,
+                                error="file_too_large",
+                                message=f"{safe_name} exceeds upload size limit.",
+                            )
+                        handle.write(chunk)
+            except ApiError as exc:
+                if destination.exists():
+                    destination.unlink(missing_ok=True)
+                errors.append(exc.message)
+                await upload.close()
+                continue
+            except OSError:
+                if destination.exists():
+                    destination.unlink(missing_ok=True)
+                errors.append(f"Failed to save {safe_name}.")
+                await upload.close()
+                continue
+            await upload.close()
             saved += 1
-        info_message = f"Uploaded {saved} file(s)."
+        if saved:
+            info_message = f"Uploaded {saved} file(s)."
+        if errors:
+            error_message = " ".join(errors)
     except ApiError as exc:
         error_message = exc.message
 

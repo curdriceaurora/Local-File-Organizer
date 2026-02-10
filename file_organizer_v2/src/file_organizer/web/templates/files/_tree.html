@@ -14,14 +14,18 @@
                 class="tree-toggle"
                 type="button"
                 {% if node.has_children %}
-                    hx-get="/ui/files/tree?path={{ node.path_param }}&depth={{ depth + 1 }}&active={{ active_path|urlencode }}"
+                    hx-get="/ui/files/tree?path={{ node.path_param }}&depth={{ depth + 1 }}&active={{ active_path_param }}"
                     hx-target="#tree-children-{{ node.id }}"
                     hx-swap="innerHTML"
+                    aria-label="Toggle {{ node.name }}"
+                    aria-expanded="false"
+                    aria-controls="tree-children-{{ node.id }}"
                 {% else %}
                     disabled
+                    aria-label="{{ node.name }} has no subfolders"
                 {% endif %}
             >
-                {% if node.has_children %}+{% else %}.{% endif %}
+                <span aria-hidden="true">{% if node.has_children %}+{% else %}.{% endif %}</span>
             </button>
             <button
                 class="tree-link"

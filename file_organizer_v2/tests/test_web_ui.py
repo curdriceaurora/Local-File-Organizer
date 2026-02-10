@@ -63,6 +63,10 @@ def test_file_browser_endpoints(tmp_path: Path) -> None:
     assert listing.status_code == 200
     assert "note.txt" in listing.text
 
+    page = client.get("/ui/files", params={"path": str(root)})
+    assert page.status_code == 200
+    assert "data-file-browser" in page.text
+
     thumb = client.get(
         "/ui/files/thumbnail",
         params={"path": str(root / "preview.png"), "kind": "image"},
@@ -80,3 +84,18 @@ def test_file_browser_endpoints(tmp_path: Path) -> None:
     )
     assert upload.status_code == 200
     assert (root / "upload.txt").exists()
+
+
+def test_upload_rejects_hidden_files(tmp_path: Path) -> None:
+    root = tmp_path / "library"
+    root.mkdir()
+
+    client = _build_client(tmp_path, allowed_root=root)
+    response = client.post(
+        "/ui/files/upload",
+        data={"path": str(root)},
+        files={"files": (".secret", b"data")},
+    )
+    assert response.status_code == 200
+    assert "hidden files are not allowed" in response.text.lower()
+    assert not (root / ".secret").exists()

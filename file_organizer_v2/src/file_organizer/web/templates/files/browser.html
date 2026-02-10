@@ -22,7 +22,7 @@
         <div
             id="directory-tree"
             class="directory-tree"
-            hx-get="/ui/files/tree?active={{ active_path|urlencode }}"
+            hx-get="/ui/files/tree?active={{ active_path_param }}"
             hx-trigger="load"
             hx-target="#directory-tree"
             hx-swap="innerHTML"
