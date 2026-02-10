@@ -1,0 +1,66 @@
+"""FastAPI application entrypoint."""
+from __future__ import annotations
+
+import sys
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI
+from loguru import logger
+
+from file_organizer.api.config import ApiSettings, load_settings
+from file_organizer.api.exceptions import setup_exception_handlers
+from file_organizer.api.middleware import setup_middleware
+from file_organizer.api.routers import health_router
+
+
+def configure_logging(settings: ApiSettings) -> None:
+    """Configure structured logging to console and file."""
+    log_dir = Path.home() / ".config" / "file-organizer" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "api.log"
+
+    logger.remove()
+    logger.add(sys.stdout, level=settings.log_level, enqueue=True)
+    logger.add(log_file, level=settings.log_level, rotation="10 MB", retention="14 days")
+
+
+def create_app(settings: ApiSettings | None = None) -> FastAPI:
+    """Create the FastAPI application."""
+    settings = settings or load_settings()
+    configure_logging(settings)
+
+    docs_url = "/docs" if settings.enable_docs else None
+    redoc_url = "/redoc" if settings.enable_docs else None
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        logger.info("Starting API in %s mode", settings.environment)
+        yield
+        logger.info("Shutting down API")
+
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.version,
+        description="REST API for AI-powered file organization",
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        lifespan=lifespan,
+    )
+
+    setup_middleware(app, settings)
+    setup_exception_handlers(app)
+
+    app.include_router(health_router)
+
+    @app.get("/")
+    def root() -> dict[str, str]:
+        return {
+            "name": settings.app_name,
+            "version": settings.version,
+        }
+
+    return app
+
+
+app = create_app()
