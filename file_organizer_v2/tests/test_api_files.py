@@ -78,7 +78,9 @@ def test_move_and_delete(tmp_path: Path) -> None:
 def test_path_not_allowed(tmp_path: Path) -> None:
     allowed_root = tmp_path / "allowed"
     allowed_root.mkdir()
-    outside = tmp_path.parent / "outside.txt"
+    disallowed_root = tmp_path / "disallowed"
+    disallowed_root.mkdir()
+    outside = disallowed_root / "outside.txt"
     outside.write_text("nope")
 
     client = _client([str(allowed_root)])

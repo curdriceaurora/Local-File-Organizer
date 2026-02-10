@@ -18,7 +18,7 @@ from file_organizer.api.models import (
     ScanRequest,
     ScanResponse,
 )
-from file_organizer.api.utils import resolve_path
+from file_organizer.api.utils import is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer, OrganizationResult
 
 router = APIRouter(tags=["organize"])
@@ -27,7 +27,7 @@ router = APIRouter(tags=["organize"])
 def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
     files: list[Path] = []
     if path.is_file():
-        if include_hidden or not path.name.startswith("."):
+        if include_hidden or not is_hidden(path):
             files.append(path)
         return files
 
@@ -35,7 +35,7 @@ def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[P
     for entry in iterator:
         if not entry.is_file():
             continue
-        if not include_hidden and entry.name.startswith("."):
+        if not include_hidden and is_hidden(entry):
             continue
         files.append(entry)
     return files

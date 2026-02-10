@@ -1,6 +1,7 @@
 """Deduplication endpoints."""
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from fastapi import APIRouter, Depends
@@ -80,6 +81,8 @@ def scan_duplicates(
     path = resolve_path(request.path, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
+    if not path.is_dir():
+        raise ApiError(status_code=400, error="invalid_path", message="Path is not a directory")
 
     groups, stats = _scan_duplicates(path, request)
     return DedupeScanResponse(path=str(path), duplicates=groups, stats=stats)
@@ -93,6 +96,8 @@ def preview_duplicates(
     path = resolve_path(request.path, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
+    if not path.is_dir():
+        raise ApiError(status_code=400, error="invalid_path", message="Path is not a directory")
 
     groups, stats = _scan_duplicates(path, request)
     preview = _preview(groups)
@@ -107,6 +112,8 @@ def execute_deduplication(
     path = resolve_path(request.path, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
+    if not path.is_dir():
+        raise ApiError(status_code=400, error="invalid_path", message="Path is not a directory")
 
     scan_request = DedupeScanRequest(
         path=request.path,
@@ -135,7 +142,7 @@ def execute_deduplication(
                     while destination.exists():
                         destination = trash_dir / f"{target.stem}-{counter}{target.suffix}"
                         counter += 1
-                    target.rename(destination)
+                    shutil.move(str(target), str(destination))
                     removed.append(str(destination))
                 else:
                     target.unlink()

@@ -133,11 +133,11 @@ def read_file_content(
     if not target.is_file():
         raise ApiError(status_code=400, error="invalid_path", message="Path is not a file")
 
-    data = target.read_bytes()
-    truncated = False
-    if len(data) > max_bytes:
+    with target.open("rb") as handle:
+        data = handle.read(max_bytes + 1)
+    truncated = len(data) > max_bytes
+    if truncated:
         data = data[:max_bytes]
-        truncated = True
 
     content = data.decode(encoding, errors="replace")
     info = file_info_from_path(target)

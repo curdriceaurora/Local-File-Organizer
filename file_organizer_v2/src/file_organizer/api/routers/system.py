@@ -31,6 +31,8 @@ def system_status(
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
+    if not target.is_dir():
+        raise ApiError(status_code=400, error="invalid_path", message="Path is not a directory")
     disk = shutil.disk_usage(target)
     return SystemStatusResponse(
         app=settings.app_name,
