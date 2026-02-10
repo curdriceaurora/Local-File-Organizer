@@ -6,8 +6,23 @@ repos:
         entry: ruff check file_organizer_v2
         language: system
         pass_filenames: false
+      - id: ruff-check-src
+        name: ruff check (src)
+        entry: ruff check file_organizer_v2/src/
+        language: system
+        pass_filenames: false
+      - id: ruff-check-full
+        name: ruff check (full)
+        entry: bash -c "cd file_organizer_v2 && ruff check ."
+        language: system
+        pass_filenames: false
       - id: pytest-ci-lint
         name: pytest (ci guardrails)
         entry: pytest file_organizer_v2/tests/ci -q --override-ini="addopts="
+        language: system
+        pass_filenames: false
+      - id: pytest-not-regression
+        name: pytest (not regression)
+        entry: bash -c "cd file_organizer_v2 && pytest tests/ -m \"not regression\" --override-ini=\"addopts=\""
         language: system
         pass_filenames: false
