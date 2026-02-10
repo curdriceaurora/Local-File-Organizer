@@ -545,6 +545,10 @@ body {
   margin-left: 12px;
 }
 
+.tree-children.is-collapsed {
+  display: none;
+}
+
 .tree-error {
   padding: 0.75rem;
   border-radius: 0.75rem;
