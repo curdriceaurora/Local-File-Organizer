@@ -14,7 +14,8 @@ from file_organizer.api.models import FileInfo
 def resolve_path(path_value: str, allowed_paths: Optional[list[str]] = None) -> Path:
     """Expand and normalize a filesystem path."""
     # Path is validated against allowed roots below.
-    resolved = Path(path_value).expanduser()  # lgtm[py/path-injection]
+    # codeql[py/path-injection]
+    resolved = Path(path_value).expanduser()
     resolved_str = os.path.realpath(resolved)
     if not allowed_paths:
         raise ApiError(
@@ -24,9 +25,8 @@ def resolve_path(path_value: str, allowed_paths: Optional[list[str]] = None) -> 
         )
 
     # Allowed roots are configuration-controlled.
-    roots = [
-        os.path.realpath(Path(root).expanduser()) for root in allowed_paths
-    ]  # lgtm[py/path-injection]
+    # codeql[py/path-injection]
+    roots = [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]
     if not roots:
         raise ApiError(
             status_code=403,
