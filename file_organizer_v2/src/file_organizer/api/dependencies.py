@@ -5,6 +5,7 @@ import os
 from collections.abc import Generator
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -53,7 +54,7 @@ def get_db(settings: ApiSettings = Depends(get_settings)) -> Generator[Session, 
 
 
 @lru_cache
-def _token_store_cached(redis_url: str | None) -> TokenStore:
+def _token_store_cached(redis_url: Optional[str]) -> TokenStore:
     return build_token_store(redis_url)
 
 
@@ -62,7 +63,7 @@ def get_token_store(settings: ApiSettings = Depends(get_settings)) -> TokenStore
 
 
 def get_current_user(
-    token: str | None = Depends(oauth2_scheme),
+    token: Optional[str] = Depends(oauth2_scheme),
     settings: ApiSettings = Depends(get_settings),
     db: Session = Depends(get_db),
     token_store: TokenStore = Depends(get_token_store),
