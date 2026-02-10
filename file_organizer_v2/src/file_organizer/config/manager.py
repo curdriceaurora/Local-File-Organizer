@@ -107,7 +107,7 @@ class ConfigManager:
             existing = {}
 
         profiles = existing.setdefault("profiles", {})
-        profiles[profile] = self._config_to_dict(config)
+        profiles[profile] = self.config_to_dict(config)
 
         config_path.write_text(
             yaml.dump(existing, default_flow_style=False, sort_keys=False),
@@ -331,6 +331,10 @@ class ConfigManager:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def config_to_dict(self, config: AppConfig) -> dict[str, Any]:
+        """Serialize an AppConfig to a plain dict for API and YAML output."""
+        return self._config_to_dict(config)
 
     @staticmethod
     def _config_to_dict(config: AppConfig) -> dict[str, Any]:

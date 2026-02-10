@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import mimetypes
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from file_organizer.api.exceptions import ApiError
@@ -38,14 +38,21 @@ def is_hidden(path: Path) -> bool:
 
 
 def file_info_from_path(path: Path) -> FileInfo:
-    stat = path.stat()
+    try:
+        stat = path.stat()
+    except (OSError, PermissionError) as exc:
+        raise ApiError(
+            status_code=403,
+            error="file_access_error",
+            message=f"Unable to access file metadata for {path}",
+        ) from exc
     mime_type, _ = mimetypes.guess_type(path.as_posix())
     return FileInfo(
         path=str(path),
         name=path.name,
         size=stat.st_size,
-        created=datetime.fromtimestamp(stat.st_ctime),
-        modified=datetime.fromtimestamp(stat.st_mtime),
+        created=datetime.fromtimestamp(stat.st_ctime, tz=timezone.utc),
+        modified=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
         file_type=path.suffix.lower() or "",
         mime_type=mime_type,
     )

@@ -29,6 +29,8 @@ def system_status(
     path: str = Query(".", description="Path for disk usage"),
 ) -> SystemStatusResponse:
     target = resolve_path(path, settings.allowed_paths)
+    if not target.exists():
+        raise ApiError(status_code=404, error="not_found", message="Path not found")
     disk = shutil.disk_usage(target)
     return SystemStatusResponse(
         app=settings.app_name,
@@ -47,7 +49,7 @@ def get_config(
     manager: ConfigManager = Depends(get_config_manager),
 ) -> ConfigResponse:
     config = manager.load(profile)
-    payload = manager._config_to_dict(config)
+    payload = manager.config_to_dict(config)
     return ConfigResponse(profile=profile, config=payload, profiles=manager.list_profiles())
 
 
@@ -69,22 +71,15 @@ def update_config(
         for field, value in request.updates.model_dump(exclude_none=True).items():
             setattr(config.updates, field, value)
 
-    for name in (
-        "watcher",
-        "daemon",
-        "parallel",
-        "pipeline",
-        "events",
-        "deploy",
-        "para",
-        "johnny_decimal",
-    ):
-        value = getattr(request, name)
-        if value is not None:
+    excluded_fields = {"profile", "default_methodology", "models", "updates"}
+    for name, value in request.model_dump(exclude_none=True).items():
+        if name in excluded_fields:
+            continue
+        if hasattr(config, name):
             setattr(config, name, value)
 
     manager.save(config, request.profile)
-    payload = manager._config_to_dict(config)
+    payload = manager.config_to_dict(config)
     return ConfigResponse(
         profile=request.profile,
         config=payload,
