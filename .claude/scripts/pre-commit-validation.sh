@@ -89,6 +89,19 @@ if [[ -n "$PY_FILES" ]]; then
       exit 1
     fi
     echo "✓ Full ruff check passed"
+    echo ""
+    echo "🔧 Running type annotation lint on src/..."
+    PY_SRC_FILES=$(echo "$PY_FILES" | grep '^file_organizer_v2/src/' || true)
+    if [[ -n "$PY_SRC_FILES" ]]; then
+      if ! echo "$PY_SRC_FILES" | xargs ruff check --select ANN; then
+        echo "❌ Type annotation lint failed"
+        echo "Add missing type annotations in src/ files"
+        exit 1
+      fi
+      echo "✓ Type annotation lint passed"
+    else
+      echo "✓ No src/ Python files staged for type annotation lint"
+    fi
   else
     echo "⚠️  ruff not found, skipping linting"
   fi
@@ -193,6 +206,22 @@ if [[ -n "$PY_FILES" ]]; then
 
   echo "✓ All tests passed"
   echo ""
+
+  # 8b. Run focused security tests when related modules change
+  echo "🔐 Checking if security-focused tests are needed..."
+  SECURITY_FILES_REGEX="file_organizer_v2/src/file_organizer/api/(middleware|rate_limit|api_keys|config)\\.py|file_organizer_v2/tests/test_api_security\\.py"
+  if echo "$MODIFIED" | grep -Eq "$SECURITY_FILES_REGEX"; then
+    echo "🧪 Running API security tests..."
+    if ! pytest file_organizer_v2/tests/test_api_security.py -q --override-ini="addopts="; then
+      echo "❌ API security tests failed"
+      exit 1
+    fi
+    echo "✓ API security tests passed"
+    echo ""
+  else
+    echo "✓ No security-related changes detected"
+    echo ""
+  fi
 
   echo "🧪 Running CI-focused test suite..."
   if ! pytest file_organizer_v2/tests/ci -q --override-ini="addopts="; then
