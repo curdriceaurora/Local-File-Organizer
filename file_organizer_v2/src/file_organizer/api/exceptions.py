@@ -15,13 +15,16 @@ def setup_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: RequestValidationError,
     ) -> JSONResponse:
-        logger.warning("Validation error on %s: %s", request.url.path, exc)
+        logger.warning("Validation error on {}: {}", request.url.path, exc)
         return JSONResponse(
             status_code=422,
             content={
                 "error": "validation_error",
                 "message": "Invalid request payload.",
-                "details": exc.errors(),
+                "details": [
+                    {"loc": err.get("loc"), "msg": err.get("msg")}
+                    for err in exc.errors()
+                ],
             },
         )
 
@@ -30,7 +33,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: Exception,
     ) -> JSONResponse:
-        logger.exception("Unhandled error on %s", request.url.path)
+        logger.exception("Unhandled error on {}", request.url.path)
         return JSONResponse(
             status_code=500,
             content={

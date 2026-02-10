@@ -13,8 +13,10 @@ from pydantic import BaseModel, Field
 from file_organizer.version import __version__
 
 _DEFAULT_CORS = [
-    "http://localhost",
-    "http://127.0.0.1:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 
@@ -46,6 +48,7 @@ def _parse_list(value: str) -> list[str]:
                 return [str(item) for item in parsed]
         except json.JSONDecodeError:
             logger.warning("Failed to parse JSON list from env")
+            value = value.strip("[]")
     return [v.strip() for v in value.split(",") if v.strip()]
 
 
@@ -54,7 +57,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     try:
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     except Exception as exc:
-        logger.warning("Failed to read API config %s: %s", path, exc)
+        logger.warning("Failed to read API config {}: {}", path, exc)
         return {}
     if not isinstance(payload, dict):
         return {}
@@ -75,7 +78,7 @@ def load_settings() -> ApiSettings:
             payload = _load_yaml(path)
             data.update(payload.get("api", payload))
         else:
-            logger.warning("API config path does not exist: %s", path)
+            logger.warning("API config path does not exist: {}", path)
 
     env = os.environ
     if "FO_API_APP_NAME" in env:
@@ -90,7 +93,7 @@ def load_settings() -> ApiSettings:
         try:
             data["port"] = int(env["FO_API_PORT"])
         except ValueError:
-            logger.warning("Invalid FO_API_PORT value: %s", env["FO_API_PORT"])
+            logger.warning("Invalid FO_API_PORT value: {}", env["FO_API_PORT"])
     if "FO_API_LOG_LEVEL" in env:
         data["log_level"] = env["FO_API_LOG_LEVEL"]
     if "FO_API_CORS_ORIGINS" in env:

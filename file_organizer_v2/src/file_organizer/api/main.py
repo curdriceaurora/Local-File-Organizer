@@ -9,20 +9,34 @@ from fastapi import FastAPI
 from loguru import logger
 
 from file_organizer.api.config import ApiSettings, load_settings
+from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.middleware import setup_middleware
 from file_organizer.api.routers import health_router
 
+_LOGGING_CONFIGURED = False
+
 
 def configure_logging(settings: ApiSettings) -> None:
     """Configure structured logging to console and file."""
+    global _LOGGING_CONFIGURED
+    if _LOGGING_CONFIGURED:
+        return
+
     log_dir = Path.home() / ".config" / "file-organizer" / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_file = log_dir / "api.log"
+    log_file: Path | None = None
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "api.log"
+    except OSError as exc:
+        print(f"Warning: failed to create log directory {log_dir}: {exc}", file=sys.stderr)
 
     logger.remove()
     logger.add(sys.stdout, level=settings.log_level, enqueue=True)
-    logger.add(log_file, level=settings.log_level, rotation="10 MB", retention="14 days")
+    if log_file is not None:
+        logger.add(log_file, level=settings.log_level, rotation="10 MB", retention="14 days")
+
+    _LOGGING_CONFIGURED = True
 
 
 def create_app(settings: ApiSettings | None = None) -> FastAPI:
@@ -35,7 +49,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        logger.info("Starting API in %s mode", settings.environment)
+        logger.info("Starting API in {} mode", settings.environment)
         yield
         logger.info("Shutting down API")
 
@@ -50,6 +64,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
 
     setup_middleware(app, settings)
     setup_exception_handlers(app)
+    app.dependency_overrides[get_settings] = lambda: settings
 
     app.include_router(health_router)
 
