@@ -117,7 +117,14 @@ def load_settings() -> ApiSettings:
         data["allowed_paths"] = _parse_list(env["FO_API_ALLOWED_PATHS"])
     if "FO_API_WS_PING_INTERVAL" in env:
         try:
-            data["websocket_ping_interval"] = int(env["FO_API_WS_PING_INTERVAL"])
+            interval = int(env["FO_API_WS_PING_INTERVAL"])
+            if interval > 0:
+                data["websocket_ping_interval"] = interval
+            else:
+                logger.warning(
+                    "Invalid FO_API_WS_PING_INTERVAL value (must be > 0): {}",
+                    env["FO_API_WS_PING_INTERVAL"],
+                )
         except ValueError:
             logger.warning(
                 "Invalid FO_API_WS_PING_INTERVAL value: {}",

@@ -94,20 +94,30 @@ async def websocket_endpoint(
                 pass
             elif message_type == "subscribe":
                 channel = data.get("channel")
-                if channel:
-                    await realtime_manager.subscribe(websocket, channel)
-                    await realtime_manager.send_personal_message(
-                        {"type": "subscribed", "channel": channel},
+                if not isinstance(channel, str) or not channel.strip():
+                    await _send_error(
                         websocket,
+                        "Invalid or missing 'channel' field for subscribe; expected a non-empty string",
                     )
+                    continue
+                await realtime_manager.subscribe(websocket, channel)
+                await realtime_manager.send_personal_message(
+                    {"type": "subscribed", "channel": channel},
+                    websocket,
+                )
             elif message_type == "unsubscribe":
                 channel = data.get("channel")
-                if channel:
-                    await realtime_manager.unsubscribe(websocket, channel)
-                    await realtime_manager.send_personal_message(
-                        {"type": "unsubscribed", "channel": channel},
+                if not isinstance(channel, str) or not channel.strip():
+                    await _send_error(
                         websocket,
+                        "Invalid or missing 'channel' field for unsubscribe; expected a non-empty string",
                     )
+                    continue
+                await realtime_manager.unsubscribe(websocket, channel)
+                await realtime_manager.send_personal_message(
+                    {"type": "unsubscribed", "channel": channel},
+                    websocket,
+                )
             else:
                 await realtime_manager.send_personal_message(
                     {"type": "error", "message": "Unknown message type"},
@@ -120,4 +130,8 @@ async def websocket_endpoint(
     finally:
         stop_event.set()
         heartbeat_task.cancel()
+        try:
+            await heartbeat_task
+        except asyncio.CancelledError:
+            pass
         await realtime_manager.disconnect(websocket)

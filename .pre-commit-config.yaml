@@ -17,7 +17,7 @@ repos:
         language: system
         pass_filenames: false
       - id: pytest-websocket
-        name: pytest (websocket)
+        name: pytest (websocket validations)
         entry: bash -c "cd file_organizer_v2 && pytest tests/test_api_websocket.py -q --override-ini=\"addopts=\""
         language: system
         pass_filenames: false

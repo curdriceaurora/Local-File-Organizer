@@ -22,30 +22,39 @@ class ConnectionManager:
     def __init__(self) -> None:
         self._connections: set[WebSocket] = set()
         self._subscriptions: dict[WebSocket, set[str]] = {}
-        self._lock = asyncio.Lock()
+        self._lock: Optional[asyncio.Lock] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._queue: Optional[asyncio.Queue[BroadcastEvent]] = None
         self._queue_task: Optional[asyncio.Task[None]] = None
 
+    def _ensure_lock(self) -> asyncio.Lock:
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
+
     async def connect(self, websocket: WebSocket, client_id: str) -> None:
         await websocket.accept()
-        if self._loop is None or self._loop.is_closed():
-            self._loop = asyncio.get_running_loop()
+        current_loop = asyncio.get_running_loop()
+        if self._loop is None or self._loop.is_closed() or self._loop is not current_loop:
+            self._loop = current_loop
             self._queue = None
             self._queue_task = None
+            self._lock = asyncio.Lock()
+        elif self._lock is None:
+            self._lock = asyncio.Lock()
         if self._queue is None or (self._queue_task is not None and self._queue_task.done()):
             self._queue = asyncio.Queue()
             self._queue_task = asyncio.create_task(self._queue_consumer())
-        async with self._lock:
+        async with self._ensure_lock():
             self._connections.add(websocket)
-            self._subscriptions[websocket] = {"global"}
+            self._subscriptions[websocket] = set()
         await self.send_personal_message(
             {"type": "connection", "status": "connected", "client_id": client_id},
             websocket,
         )
 
     async def disconnect(self, websocket: WebSocket) -> None:
-        async with self._lock:
+        async with self._ensure_lock():
             self._connections.discard(websocket)
             self._subscriptions.pop(websocket, None)
 
@@ -72,6 +81,7 @@ class ConnectionManager:
                     break
         self._connections.clear()
         self._subscriptions.clear()
+        self._lock = None
         self._loop = None
         self._queue = None
 
@@ -89,13 +99,9 @@ class ConnectionManager:
         await websocket.send_json(message)
 
     async def broadcast(self, message: dict[str, Any], channel: str = "global") -> None:
-        async with self._lock:
+        async with self._ensure_lock():
             if channel == "global":
-                targets = [
-                    ws
-                    for ws, subscriptions in self._subscriptions.items()
-                    if "global" in subscriptions
-                ]
+                targets = list(self._connections)
             else:
                 targets = [
                     ws
@@ -110,12 +116,12 @@ class ConnectionManager:
                 await self.disconnect(websocket)
 
     async def subscribe(self, websocket: WebSocket, channel: str) -> None:
-        async with self._lock:
+        async with self._ensure_lock():
             if websocket in self._subscriptions:
                 self._subscriptions[websocket].add(channel)
 
     async def unsubscribe(self, websocket: WebSocket, channel: str) -> None:
-        async with self._lock:
+        async with self._ensure_lock():
             if websocket in self._subscriptions:
                 self._subscriptions[websocket].discard(channel)
 
