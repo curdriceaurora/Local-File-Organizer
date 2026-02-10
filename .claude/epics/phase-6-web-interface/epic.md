@@ -5,10 +5,10 @@ github_issue: 5
 github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/5
 status: open
 created: 2026-01-20T23:30:00Z
-updated: 2026-02-10T14:59:17-05:00
+updated: 2026-02-10T15:05:17-05:00
 labels: [enhancement, epic, phase-6]
 github: https://github.com/curdriceaurora/Local-File-Organizer/issues/5
-last_sync: 2026-02-10T14:59:17-05:00
+last_sync: 2026-02-10T15:05:17-05:00
 ---
 
 # Epic: Web Interface & Plugin Ecosystem (Phase 6)
@@ -121,7 +121,7 @@ Third-party integrations
 
 ### Phase 2: Frontend & UI (Tasks #234-238)
 - [x] #234 - Build HTMX Web UI Foundation (L, 16-20h, parallel: true, depends: #230)
-- [x] #235 - Implement File Browser with Thumbnails (L, 18-22h, parallel: false, depends: #230, #234)
+- [ ] #235 - Implement File Browser with Thumbnails (L, 18-22h, parallel: false, depends: #230, #234)
 - [ ] #236 - Create Organization Dashboard (L, 16-20h, parallel: true, depends: #230, #231, #234)
 - [ ] #237 - Build Settings & Configuration UI (M, 12-14h, parallel: true, depends: #230, #234)
 - [ ] #238 - Add User Profile & Multi-User UI (M, 14-16h, parallel: true, depends: #232, #234)
