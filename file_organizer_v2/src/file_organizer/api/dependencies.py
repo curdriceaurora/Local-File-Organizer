@@ -5,7 +5,7 @@ import os
 from collections.abc import Generator
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Union
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -44,6 +44,9 @@ class AnonymousUser:
     is_admin: bool = True
 
 
+UserLike = Union[User, AnonymousUser]
+
+
 def get_db(settings: ApiSettings = Depends(get_settings)) -> Generator[Session, None, None]:
     """Yield a database session for auth data."""
     session = create_session(settings.auth_db_path)
@@ -67,7 +70,7 @@ def get_current_user(
     settings: ApiSettings = Depends(get_settings),
     db: Session = Depends(get_db),
     token_store: TokenStore = Depends(get_token_store),
-) -> User | AnonymousUser:
+) -> UserLike:
     if not settings.auth_enabled:
         return AnonymousUser()
     if not token:
@@ -119,9 +122,9 @@ def get_current_user(
 
 
 def get_current_active_user(
-    user: User | AnonymousUser = Depends(get_current_user),
+    user: UserLike = Depends(get_current_user),
     settings: ApiSettings = Depends(get_settings),
-) -> User | AnonymousUser:
+) -> UserLike:
     if not settings.auth_enabled:
         return user
     if not user.is_active:
@@ -130,9 +133,9 @@ def get_current_active_user(
 
 
 def require_admin_user(
-    user: User | AnonymousUser = Depends(get_current_active_user),
+    user: UserLike = Depends(get_current_active_user),
     settings: ApiSettings = Depends(get_settings),
-) -> User | AnonymousUser:
+) -> UserLike:
     if not settings.auth_enabled:
         return user
     if not user.is_admin:
