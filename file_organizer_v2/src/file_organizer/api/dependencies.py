@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import os
 from collections.abc import Generator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Optional, Union
 
@@ -14,6 +15,7 @@ from sqlalchemy.orm import Session
 from file_organizer.api.auth import decode_token, is_access_token
 from file_organizer.api.auth_db import create_session
 from file_organizer.api.auth_models import User
+from file_organizer.api.auth_rate_limit import LoginRateLimiter, build_login_rate_limiter
 from file_organizer.api.auth_store import TokenStore, build_token_store
 from file_organizer.api.config import ApiSettings, load_settings
 from file_organizer.config.manager import ConfigManager
@@ -39,9 +41,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=F
 class AnonymousUser:
     id: str = "anonymous"
     username: str = "anonymous"
-    email: str = ""
+    email: str = "anonymous@example.com"
+    full_name: Optional[str] = None
     is_active: bool = True
     is_admin: bool = True
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    last_login: Optional[datetime] = None
 
 
 UserLike = Union[User, AnonymousUser]
@@ -63,6 +68,23 @@ def _token_store_cached(redis_url: Optional[str]) -> TokenStore:
 
 def get_token_store(settings: ApiSettings = Depends(get_settings)) -> TokenStore:
     return _token_store_cached(settings.auth_redis_url)
+
+
+@lru_cache
+def _login_rate_limiter_cached(
+    redis_url: Optional[str],
+    max_attempts: int,
+    window_seconds: int,
+) -> LoginRateLimiter:
+    return build_login_rate_limiter(redis_url, max_attempts, window_seconds)
+
+
+def get_login_rate_limiter(settings: ApiSettings = Depends(get_settings)) -> LoginRateLimiter:
+    return _login_rate_limiter_cached(
+        settings.auth_redis_url,
+        settings.auth_login_max_attempts,
+        settings.auth_login_window_seconds,
+    )
 
 
 def get_current_user(

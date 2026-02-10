@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -14,14 +14,17 @@ from file_organizer.api.auth import (
     decode_token,
     hash_password,
     is_refresh_token,
+    validate_password,
     verify_password,
 )
 from file_organizer.api.auth_models import User
+from file_organizer.api.auth_rate_limit import LoginRateLimiter
 from file_organizer.api.auth_store import TokenStore
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import (
     get_current_active_user,
     get_db,
+    get_login_rate_limiter,
     get_settings,
     get_token_store,
     oauth2_scheme,
@@ -36,6 +39,20 @@ from file_organizer.api.models import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+_LOCALHOSTS = {"127.0.0.1", "::1", "localhost"}
+
+
+def _rate_limit_key(request: Request, username: str) -> str:
+    client_host = request.client.host if request.client else "unknown"
+    user_key = username.strip().lower() if username else "unknown"
+    return f"{client_host}:{user_key}"
+
+
+def _is_local_request(request: Request) -> bool:
+    if request.client is None:
+        return False
+    return request.client.host in _LOCALHOSTS
+
 
 def _access_ttl_seconds(settings: ApiSettings, payload: dict) -> int:
     exp = payload.get("exp")
@@ -49,8 +66,14 @@ def _access_ttl_seconds(settings: ApiSettings, payload: dict) -> int:
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register_user(
     request: UserCreateRequest,
+    http_request: Request,
     db: Session = Depends(get_db),
+    settings: ApiSettings = Depends(get_settings),
 ) -> UserResponse:
+    valid, reason = validate_password(request.password, settings)
+    if not valid:
+        raise HTTPException(status_code=400, detail=reason)
+
     existing_user = db.query(User).filter(User.username == request.username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already taken")
@@ -60,12 +83,16 @@ def register_user(
         raise HTTPException(status_code=400, detail="Email already registered")
 
     is_first_user = db.query(User).count() == 0
+    is_admin = False
+    if is_first_user and settings.auth_bootstrap_admin:
+        if not settings.auth_bootstrap_admin_local_only or _is_local_request(http_request):
+            is_admin = True
     user = User(
         username=request.username,
         email=request.email,
         hashed_password=hash_password(request.password),
         full_name=request.full_name,
-        is_admin=is_first_user,
+        is_admin=is_admin,
     )
     db.add(user)
     db.commit()
@@ -75,13 +102,28 @@ def register_user(
 
 @router.post("/login", response_model=TokenResponse)
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
     token_store: TokenStore = Depends(get_token_store),
     settings: ApiSettings = Depends(get_settings),
+    rate_limiter: LoginRateLimiter = Depends(get_login_rate_limiter),
 ) -> TokenResponse:
+    rate_limit_key = _rate_limit_key(request, form_data.username)
+    if settings.auth_login_rate_limit_enabled:
+        blocked, retry_after = rate_limiter.is_blocked(rate_limit_key)
+        if blocked:
+            headers = {"Retry-After": str(retry_after)} if retry_after else None
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many login attempts. Try again later.",
+                headers=headers,
+            )
+
     user = db.query(User).filter(User.username == form_data.username).first()
     if user is None or not verify_password(form_data.password, user.hashed_password):
+        if settings.auth_login_rate_limit_enabled:
+            rate_limiter.record_failure(rate_limit_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -89,7 +131,12 @@ def login(
         )
 
     if not user.is_active:
+        if settings.auth_login_rate_limit_enabled:
+            rate_limiter.record_failure(rate_limit_key)
         raise HTTPException(status_code=400, detail="Inactive user")
+
+    if settings.auth_login_rate_limit_enabled:
+        rate_limiter.reset(rate_limit_key)
 
     user.last_login = datetime.now(timezone.utc)
     db.commit()

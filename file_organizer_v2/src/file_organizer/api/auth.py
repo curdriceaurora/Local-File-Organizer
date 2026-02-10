@@ -39,6 +39,20 @@ def hash_password(password: str) -> str:
     return _PWD_CONTEXT.hash(password)
 
 
+def validate_password(password: str, settings: ApiSettings) -> tuple[bool, str]:
+    """Validate password strength based on API settings."""
+    if len(password) < settings.auth_password_min_length:
+        return (
+            False,
+            f"Password must be at least {settings.auth_password_min_length} characters long",
+        )
+    if settings.auth_password_require_letter and not any(ch.isalpha() for ch in password):
+        return False, "Password must include at least one letter"
+    if settings.auth_password_require_number and not any(ch.isdigit() for ch in password):
+        return False, "Password must include at least one number"
+    return True, ""
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 

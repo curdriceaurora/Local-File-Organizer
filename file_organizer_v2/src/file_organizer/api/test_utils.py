@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -15,19 +15,23 @@ def build_test_settings(
     tmp_path: Path,
     allowed_paths: Optional[list[str]] = None,
     websocket_token: Optional[str] = None,
+    auth_overrides: Optional[dict[str, Any]] = None,
 ) -> ApiSettings:
-    return ApiSettings(
-        environment="test",
-        enable_docs=False,
-        allowed_paths=allowed_paths or [],
-        websocket_token=websocket_token,
-        auth_enabled=True,
-        auth_db_path=str(tmp_path / "auth.db"),
-        auth_jwt_secret="test-secret",
-        auth_access_token_minutes=5,
-        auth_refresh_token_days=1,
-        auth_redis_url=None,
-    )
+    data: dict[str, Any] = {
+        "environment": "test",
+        "enable_docs": False,
+        "allowed_paths": allowed_paths or [],
+        "websocket_token": websocket_token,
+        "auth_enabled": True,
+        "auth_db_path": str(tmp_path / "auth.db"),
+        "auth_jwt_secret": "test-secret",
+        "auth_access_token_minutes": 5,
+        "auth_refresh_token_days": 1,
+        "auth_redis_url": None,
+    }
+    if auth_overrides:
+        data.update(auth_overrides)
+    return ApiSettings(**data)
 
 
 def create_auth_client(
@@ -35,8 +39,13 @@ def create_auth_client(
     allowed_paths: Optional[list[str]] = None,
     websocket_token: Optional[str] = None,
     admin: bool = False,
+    auth_overrides: Optional[dict[str, Any]] = None,
 ) -> tuple[TestClient, dict[str, str], dict[str, str]]:
-    settings = build_test_settings(tmp_path, allowed_paths, websocket_token)
+    overrides = dict(auth_overrides or {})
+    if admin:
+        overrides.setdefault("auth_bootstrap_admin", True)
+        overrides.setdefault("auth_bootstrap_admin_local_only", False)
+    settings = build_test_settings(tmp_path, allowed_paths, websocket_token, overrides)
     app = create_app(settings)
     client = TestClient(app)
 
@@ -56,8 +65,6 @@ def create_auth_client(
         username = f"admin-{uuid4().hex[:6]}"
         _register(username, f"{username}@example.com")
     else:
-        admin_name = f"admin-{uuid4().hex[:6]}"
-        _register(admin_name, f"{admin_name}@example.com")
         username = f"user-{uuid4().hex[:6]}"
         _register(username, f"{username}@example.com")
 

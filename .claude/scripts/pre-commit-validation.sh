@@ -81,6 +81,14 @@ if [[ -n "$PY_FILES" ]]; then
       exit 1
     fi
     echo "✓ Linting passed"
+    echo ""
+    echo "🔧 Running full ruff check..."
+    if ! ruff check file_organizer_v2; then
+      echo "❌ Full ruff check failed"
+      echo "Fix errors above, then re-stage files"
+      exit 1
+    fi
+    echo "✓ Full ruff check passed"
   else
     echo "⚠️  ruff not found, skipping linting"
   fi
@@ -184,6 +192,18 @@ if [[ -n "$PY_FILES" ]]; then
   fi
 
   echo "✓ All tests passed"
+  echo ""
+
+  echo "🧪 Running CI-focused test suite..."
+  if ! pytest file_organizer_v2/tests/ci -q --override-ini="addopts="; then
+    echo "❌ CI-focused tests failed"
+    exit 1
+  fi
+  if ! pytest file_organizer_v2/tests -m "not regression" --override-ini="addopts="; then
+    echo "❌ Non-regression test suite failed"
+    exit 1
+  fi
+  echo "✓ CI-focused tests passed"
   echo ""
 fi
 
