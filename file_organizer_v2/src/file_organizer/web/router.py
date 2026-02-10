@@ -5,7 +5,7 @@ import hashlib
 import io
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
@@ -54,7 +54,7 @@ def _base_context(
     *,
     active: str,
     title: str,
-    extras: dict[str, Any] | None = None,
+    extras: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     context: dict[str, Any] = {
         "request": request,
@@ -82,7 +82,7 @@ def _allowed_roots(settings: ApiSettings) -> list[Path]:
     return roots
 
 
-def _resolve_selected_path(path_value: str | None, settings: ApiSettings) -> Path | None:
+def _resolve_selected_path(path_value: Optional[str], settings: ApiSettings) -> Optional[Path]:
     if path_value:
         return resolve_path(path_value, settings.allowed_paths)
     roots = _allowed_roots(settings)
@@ -107,7 +107,7 @@ def _format_timestamp(timestamp: datetime) -> str:
     return timestamp.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 
-def _parse_file_type_filter(file_type: str | None) -> set[str] | None:
+def _parse_file_type_filter(file_type: Optional[str]) -> Optional[set[str]]:
     if not file_type or file_type == "all":
         return None
     token = file_type.lower()
@@ -214,8 +214,8 @@ def _list_tree_nodes(path: Path, include_hidden: bool) -> list[dict[str, Any]]:
 def _collect_entries(
     path: Path,
     *,
-    query: str | None,
-    file_type: str | None,
+    query: Optional[str],
+    file_type: Optional[str],
     sort_by: str,
     sort_order: str,
     include_hidden: bool,
@@ -303,18 +303,18 @@ def _build_file_results_context(
     request: Request,
     settings: ApiSettings,
     *,
-    path: str | None,
+    path: Optional[str],
     view: str,
-    query: str | None,
-    file_type: str | None,
+    query: Optional[str],
+    file_type: Optional[str],
     sort_by: str,
     sort_order: str,
     limit: int,
 ) -> dict[str, Any]:
     roots = _allowed_roots(settings)
-    error_message: str | None = None
+    error_message: Optional[str] = None
     entries: list[dict[str, Any]] = []
-    current_path: Path | None = None
+    current_path: Optional[Path] = None
 
     try:
         current_path = _resolve_selected_path(path, settings)
@@ -406,10 +406,10 @@ async def home(request: Request, settings: ApiSettings = Depends(get_settings)) 
 async def files_browser(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
-    path: str | None = Query(None),
+    path: Optional[str] = Query(None),
     view: str = Query("grid", pattern="^(grid|list)$"),
-    q: str | None = Query(None),
-    file_type: str | None = Query(None, alias="type"),
+    q: Optional[str] = Query(None),
+    file_type: Optional[str] = Query(None, alias="type"),
     sort_by: str = Query("name", pattern="^(name|size|created|modified|type)$"),
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     limit: int = Query(_PAGE_SIZE, ge=1, le=500),
@@ -435,10 +435,10 @@ async def files_browser(
 async def files_list(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
-    path: str | None = Query(None),
+    path: Optional[str] = Query(None),
     view: str = Query("grid", pattern="^(grid|list)$"),
-    q: str | None = Query(None),
-    file_type: str | None = Query(None, alias="type"),
+    q: Optional[str] = Query(None),
+    file_type: Optional[str] = Query(None, alias="type"),
     sort_by: str = Query("name", pattern="^(name|size|created|modified|type)$"),
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     limit: int = Query(_PAGE_SIZE, ge=1, le=500),
@@ -461,9 +461,9 @@ async def files_list(
 async def files_tree(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
-    path: str | None = Query(None),
+    path: Optional[str] = Query(None),
     depth: int = Query(0, ge=0, le=6),
-    active: str | None = Query(None),
+    active: Optional[str] = Query(None),
 ) -> HTMLResponse:
     roots = _allowed_roots(settings)
     active_path = active or ""
@@ -552,9 +552,9 @@ async def files_preview(
     settings: ApiSettings = Depends(get_settings),
     path: str = Query(...),
 ) -> HTMLResponse:
-    error_message: str | None = None
+    error_message: Optional[str] = None
     preview_kind = "file"
-    preview_text: str | None = None
+    preview_text: Optional[str] = None
     download_url = ""
     size_display = ""
     modified_display = ""
@@ -605,8 +605,8 @@ async def files_upload(
     limit: int = Form(_PAGE_SIZE),
     files: list[UploadFile] = File(default=[]),
 ) -> HTMLResponse:
-    info_message: str | None = None
-    error_message: str | None = None
+    info_message: Optional[str] = None
+    error_message: Optional[str] = None
 
     try:
         target_dir = _resolve_selected_path(path or None, settings)
