@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -14,7 +14,7 @@ class FileInfo(BaseModel):
     created: datetime
     modified: datetime
     file_type: str
-    mime_type: str | None = None
+    mime_type: Optional[str] = None
 
 
 class FileListResponse(BaseModel):
@@ -30,7 +30,7 @@ class FileContentResponse(BaseModel):
     encoding: str
     truncated: bool
     size: int
-    mime_type: str | None = None
+    mime_type: Optional[str] = None
 
 
 class MoveFileRequest(BaseModel):
@@ -57,7 +57,7 @@ class DeleteFileResponse(BaseModel):
     path: str
     deleted: bool
     dry_run: bool
-    trashed_path: str | None = None
+    trashed_path: Optional[str] = None
 
 
 class ScanRequest(BaseModel):
@@ -98,9 +98,9 @@ class OrganizationResultResponse(BaseModel):
 
 class OrganizeExecuteResponse(BaseModel):
     status: Literal["queued", "completed", "failed"]
-    job_id: str | None = None
-    result: OrganizationResultResponse | None = None
-    error: str | None = None
+    job_id: Optional[str] = None
+    result: Optional[OrganizationResultResponse] = None
+    error: Optional[str] = None
 
 
 class JobStatusResponse(BaseModel):
@@ -108,8 +108,8 @@ class JobStatusResponse(BaseModel):
     status: Literal["queued", "running", "completed", "failed"]
     created_at: datetime
     updated_at: datetime
-    result: OrganizationResultResponse | None = None
-    error: str | None = None
+    result: Optional[OrganizationResultResponse] = None
+    error: Optional[str] = None
 
 
 class DedupeScanRequest(BaseModel):
@@ -117,9 +117,9 @@ class DedupeScanRequest(BaseModel):
     recursive: bool = True
     algorithm: Literal["md5", "sha256"] = "sha256"
     min_file_size: int = 0
-    max_file_size: int | None = None
-    include_patterns: list[str] | None = None
-    exclude_patterns: list[str] | None = None
+    max_file_size: Optional[int] = None
+    include_patterns: Optional[list[str]] = None
+    exclude_patterns: Optional[list[str]] = None
 
 
 class DedupeFileInfo(BaseModel):
@@ -159,9 +159,9 @@ class DedupeExecuteRequest(BaseModel):
     recursive: bool = True
     algorithm: Literal["md5", "sha256"] = "sha256"
     min_file_size: int = 0
-    max_file_size: int | None = None
-    include_patterns: list[str] | None = None
-    exclude_patterns: list[str] | None = None
+    max_file_size: Optional[int] = None
+    include_patterns: Optional[list[str]] = None
+    exclude_patterns: Optional[list[str]] = None
     dry_run: bool = True
     trash: bool = True
 
@@ -190,34 +190,34 @@ class ConfigResponse(BaseModel):
 
 
 class ModelPresetUpdate(BaseModel):
-    text_model: str | None = None
-    vision_model: str | None = None
-    temperature: float | None = None
-    max_tokens: int | None = None
-    device: str | None = None
-    framework: str | None = None
+    text_model: Optional[str] = None
+    vision_model: Optional[str] = None
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    device: Optional[str] = None
+    framework: Optional[str] = None
 
 
 class UpdateSettingsUpdate(BaseModel):
-    check_on_startup: bool | None = None
-    interval_hours: int | None = None
-    include_prereleases: bool | None = None
-    repo: str | None = None
+    check_on_startup: Optional[bool] = None
+    interval_hours: Optional[int] = None
+    include_prereleases: Optional[bool] = None
+    repo: Optional[str] = None
 
 
 class ConfigUpdateRequest(BaseModel):
     profile: str = "default"
-    default_methodology: str | None = None
-    models: ModelPresetUpdate | None = None
-    updates: UpdateSettingsUpdate | None = None
-    watcher: dict[str, Any] | None = None
-    daemon: dict[str, Any] | None = None
-    parallel: dict[str, Any] | None = None
-    pipeline: dict[str, Any] | None = None
-    events: dict[str, Any] | None = None
-    deploy: dict[str, Any] | None = None
-    para: dict[str, Any] | None = None
-    johnny_decimal: dict[str, Any] | None = None
+    default_methodology: Optional[str] = None
+    models: Optional[ModelPresetUpdate] = None
+    updates: Optional[UpdateSettingsUpdate] = None
+    watcher: Optional[dict[str, Any]] = None
+    daemon: Optional[dict[str, Any]] = None
+    parallel: Optional[dict[str, Any]] = None
+    pipeline: Optional[dict[str, Any]] = None
+    events: Optional[dict[str, Any]] = None
+    deploy: Optional[dict[str, Any]] = None
+    para: Optional[dict[str, Any]] = None
+    johnny_decimal: Optional[dict[str, Any]] = None
 
 
 class StorageStatsResponse(BaseModel):
@@ -233,4 +233,4 @@ class StorageStatsResponse(BaseModel):
 class ApiErrorResponse(BaseModel):
     error: str
     message: str
-    details: Any | None = None
+    details: Optional[Any] = None

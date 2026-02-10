@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import mimetypes
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,25 +12,30 @@ from file_organizer.api.models import FileInfo
 
 def resolve_path(path_value: str, allowed_paths: list[str] | None = None) -> Path:
     """Expand and normalize a filesystem path."""
-    resolved = Path(path_value).expanduser().resolve(strict=False)
+    resolved = Path(path_value).expanduser()
+    resolved_str = os.path.realpath(resolved)
     if allowed_paths is None:
-        return resolved
+        return Path(resolved_str)
 
-    roots = [Path(root).expanduser().resolve(strict=False) for root in allowed_paths]
+    roots = [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]
     if not roots:
         raise ApiError(
             status_code=403,
             error="path_not_allowed",
             message="No allowed paths configured for this API instance.",
         )
-    if not any(resolved == root or root in resolved.parents for root in roots):
+    try:
+        allowed = any(os.path.commonpath([resolved_str, root]) == root for root in roots)
+    except ValueError:
+        allowed = False
+    if not allowed:
         raise ApiError(
             status_code=403,
             error="path_not_allowed",
             message="Path is outside allowed roots.",
         )
 
-    return resolved
+    return Path(resolved_str)
 
 
 def is_hidden(path: Path) -> bool:
