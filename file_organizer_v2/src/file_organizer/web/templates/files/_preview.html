@@ -16,7 +16,12 @@
                 {% if preview_kind == "image" %}
                     <img src="{{ raw_url }}" alt="Preview for {{ info.name }}">
                 {% elif preview_kind == "pdf" %}
-                    <iframe src="{{ raw_url }}" title="Preview for {{ info.name }}"></iframe>
+                    <iframe
+                        src="{{ raw_url }}"
+                        title="Preview for {{ info.name }}"
+                        sandbox="allow-same-origin"
+                        referrerpolicy="no-referrer"
+                    ></iframe>
                 {% elif preview_kind == "video" %}
                     <video controls src="{{ raw_url }}"></video>
                 {% elif preview_kind == "text" %}

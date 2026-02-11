@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,6 +51,7 @@ _SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._()-]*$")
 _ALLOWED_VIEWS = {"grid", "list"}
 _ALLOWED_SORT_BY = {"name", "size", "created", "modified", "type"}
 _ALLOWED_SORT_ORDER = {"asc", "desc"}
+_FILENAME_FALLBACK_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
 _FILE_TYPE_GROUPS = {
     "image": FileOrganizer.IMAGE_EXTENSIONS,
@@ -265,6 +267,15 @@ def _clamp_limit(limit: int) -> int:
     return max(1, min(limit, _MAX_LIMIT))
 
 
+def _build_content_disposition(filename: str) -> str:
+    safe_name = filename.replace("\r", "").replace("\n", "").replace('"', "_")
+    fallback = _FILENAME_FALLBACK_RE.sub("_", safe_name).strip("._")
+    if not fallback:
+        fallback = "download"
+    encoded = quote(filename)
+    return f'attachment; filename="{fallback}"; filename*=UTF-8\'\'{encoded}'
+
+
 def _list_tree_nodes(path: Path, include_hidden: bool) -> list[dict[str, Any]]:
     nodes: list[dict[str, Any]] = []
     try:
@@ -323,17 +334,34 @@ def _collect_entries(
 
     directories.sort(key=lambda p: p.name.lower())
 
+    file_stats: dict[Path, Optional[os.stat_result]] = {}
+    if sort_by in {"size", "created", "modified"}:
+        for entry in files:
+            try:
+                file_stats[entry] = entry.stat()
+            except OSError:
+                file_stats[entry] = None
+
     reverse = sort_order == "desc"
     if sort_by == "name":
         files.sort(key=lambda p: p.name.lower(), reverse=reverse)
     elif sort_by == "size":
-        files.sort(key=lambda p: p.stat().st_size, reverse=reverse)
+        files.sort(
+            key=lambda p: (file_stats.get(p).st_size if file_stats.get(p) is not None else 0),
+            reverse=reverse,
+        )
     elif sort_by == "created":
-        files.sort(key=lambda p: p.stat().st_ctime, reverse=reverse)
+        files.sort(
+            key=lambda p: (file_stats.get(p).st_ctime if file_stats.get(p) is not None else 0),
+            reverse=reverse,
+        )
     elif sort_by == "type":
         files.sort(key=lambda p: p.suffix.lower(), reverse=reverse)
     else:
-        files.sort(key=lambda p: p.stat().st_mtime, reverse=reverse)
+        files.sort(
+            key=lambda p: (file_stats.get(p).st_mtime if file_stats.get(p) is not None else 0),
+            reverse=reverse,
+        )
 
     total = len(directories) + len(files)
     if limit <= 0:
@@ -625,13 +653,18 @@ def files_thumbnail(
         raise ApiError(status_code=404, error="not_found", message="File not found")
 
     if kind == "image":
-        if target.stat().st_size > _MAX_THUMBNAIL_BYTES:
+        try:
+            stat = target.stat()
+        except OSError:
             data = _render_placeholder_thumbnail("IMG", _THUMBNAIL_SIZE)
         else:
-            try:
-                data = _render_image_thumbnail(target)
-            except (OSError, UnidentifiedImageError, Image.DecompressionBombError):
+            if stat.st_size > _MAX_THUMBNAIL_BYTES:
                 data = _render_placeholder_thumbnail("IMG", _THUMBNAIL_SIZE)
+            else:
+                try:
+                    data = _render_image_thumbnail(target)
+                except (OSError, UnidentifiedImageError, Image.DecompressionBombError):
+                    data = _render_placeholder_thumbnail("IMG", _THUMBNAIL_SIZE)
     elif kind == "pdf":
         data = _render_placeholder_thumbnail("PDF", _THUMBNAIL_SIZE)
     elif kind == "video":
@@ -651,12 +684,9 @@ def files_raw(
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists() or not target.is_file():
         raise ApiError(status_code=404, error="not_found", message="File not found")
-    headers = None
+    headers = {"X-Content-Type-Options": "nosniff"}
     if download:
-        headers = {
-            "Content-Disposition": f'attachment; filename="{target.name}"',
-            "X-Content-Type-Options": "nosniff",
-        }
+        headers["Content-Disposition"] = _build_content_disposition(target.name)
     return FileResponse(target, headers=headers)
 
 

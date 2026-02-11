@@ -158,7 +158,12 @@
                 </label>
                 <div class="file-thumb">
                     {% if entry.thumbnail_url %}
-                        <img src="{{ entry.thumbnail_url }}" alt="Thumbnail for {{ entry.name }}">
+                        <img
+                            src="{{ entry.thumbnail_url }}"
+                            alt="Thumbnail for {{ entry.name }}"
+                            loading="lazy"
+                            decoding="async"
+                        >
                     {% else %}
                         <div class="file-thumb-fallback">{{ entry.meta|upper }}</div>
                     {% endif %}
