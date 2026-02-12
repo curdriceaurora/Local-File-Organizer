@@ -355,6 +355,10 @@
     if (target && target.id === "organize-progress") {
       bindOrganizeDashboard();
     }
+    if (target && target.id === "main") {
+      bindFileBrowser();
+      bindOrganizeDashboard();
+    }
   });
 
   document.body.addEventListener("htmx:beforeSwap", (event) => {

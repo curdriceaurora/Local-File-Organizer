@@ -38,7 +38,7 @@
     </div>
 
     <div class="job-action-row">
-        {% if not job.is_terminal %}
+        {% if job.can_cancel %}
         <form
             class="inline-form"
             hx-post="/ui/organize/jobs/{{ job.job_id }}/cancel"

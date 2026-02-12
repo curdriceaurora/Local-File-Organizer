@@ -63,10 +63,10 @@ _TRUE_VALUES = {"1", "true", "yes", "on"}
 _ORGANIZE_DEFAULT_DELAY_MIN = 0
 _ORGANIZE_MAX_DELAY_MIN = 7 * 24 * 60
 _ORGANIZE_EVENT_POLL_SECONDS = 1
-_ORGANIZE_EVENT_MAX_TICKS = 180
 _ORGANIZE_HISTORY_LIMIT = 50
 _ORGANIZE_PLAN_LIMIT = 200
 _ORGANIZE_JOB_TYPE = "organize_web"
+_ORGANIZE_METADATA_PRUNE_LIMIT = 1000
 _ORGANIZE_METHODOLOGIES = {
     "johnny_decimal": "Johnny Decimal",
     "para": "PARA",
@@ -697,21 +697,27 @@ def _delete_organize_plan(plan_id: str) -> None:
         _ORGANIZE_PLAN_STORE.pop(plan_id, None)
 
 
+def _prune_job_metadata() -> None:
+    tracked_ids = {
+        job.job_id
+        for job in list_jobs(limit=_ORGANIZE_METADATA_PRUNE_LIMIT)
+    }
+    with _JOB_METADATA_LOCK:
+        stale_ids = [job_id for job_id in _JOB_METADATA if job_id not in tracked_ids]
+        for job_id in stale_ids:
+            _JOB_METADATA.pop(job_id, None)
+
+
 def _set_job_metadata(job_id: str, data: dict[str, Any]) -> None:
+    _prune_job_metadata()
     with _JOB_METADATA_LOCK:
         _JOB_METADATA[job_id] = data
 
 
 def _get_job_metadata(job_id: str) -> dict[str, Any]:
+    _prune_job_metadata()
     with _JOB_METADATA_LOCK:
         return dict(_JOB_METADATA.get(job_id, {}))
-
-
-def _update_job_metadata(job_id: str, **updates: Any) -> None:
-    with _JOB_METADATA_LOCK:
-        current = _JOB_METADATA.get(job_id, {})
-        current.update(updates)
-        _JOB_METADATA[job_id] = current
 
 
 def _status_progress(status: str) -> int:
@@ -731,6 +737,9 @@ def _build_job_view(job_id: str) -> Optional[dict[str, Any]]:
 
     metadata = _get_job_metadata(job_id)
     result = job.result or {}
+    schedule_delay_minutes = int(metadata.get("schedule_delay_minutes", 0) or 0)
+    scheduled_for = str(metadata.get("scheduled_for", ""))
+    is_scheduled = job.status == "queued" and bool(scheduled_for) and schedule_delay_minutes > 0
     processed_files = int(result.get("processed_files", 0) or 0)
     total_files = int(result.get("total_files", 0) or 0)
     failed_files = int(result.get("failed_files", 0) or 0)
@@ -762,8 +771,9 @@ def _build_job_view(job_id: str) -> Optional[dict[str, Any]]:
         "input_dir": metadata.get("input_dir", ""),
         "output_dir": metadata.get("output_dir", ""),
         "dry_run": bool(metadata.get("dry_run", False)),
-        "schedule_delay_minutes": int(metadata.get("schedule_delay_minutes", 0) or 0),
-        "scheduled_for": metadata.get("scheduled_for", ""),
+        "schedule_delay_minutes": schedule_delay_minutes,
+        "scheduled_for": scheduled_for,
+        "can_cancel": is_scheduled,
         "can_rollback": job.status == "completed" and not bool(metadata.get("dry_run", False)),
         "is_terminal": job.status in {"completed", "failed"},
     }
@@ -826,12 +836,6 @@ def _run_organize_job(job_id: str, organize_request: OrganizeRequest) -> None:
         )
         response = _result_to_response(result).model_dump()
         update_job(job_id, status="completed", result=response, error=None)
-        _update_job_metadata(
-            job_id,
-            total_files=response.get("total_files", 0),
-            processed_files=response.get("processed_files", 0),
-            failed_files=response.get("failed_files", 0),
-        )
     except Exception as exc:
         update_job(job_id, status="failed", error=str(exc))
 
@@ -1275,6 +1279,12 @@ def organize_scan(
         normalized_methodology = _normalize_methodology(methodology)
         recursive_enabled = _as_bool(recursive)
         include_hidden_enabled = _as_bool(include_hidden)
+        if include_hidden_enabled:
+            raise ApiError(
+                status_code=400,
+                error="include_hidden_not_supported",
+                message="Including hidden files is not supported in this dashboard flow yet.",
+            )
         skip_existing_enabled = _as_bool(skip_existing)
         use_hardlinks_enabled = _as_bool(use_hardlinks)
 
@@ -1458,7 +1468,7 @@ async def organize_job_events(job_id: str) -> StreamingResponse:
 
     async def _event_generator() -> Any:
         last_payload = ""
-        for _ in range(_ORGANIZE_EVENT_MAX_TICKS):
+        while True:
             job = _build_job_view(job_id)
             if job is None:
                 payload = {"job_id": job_id, "status": "missing"}
@@ -1470,6 +1480,8 @@ async def organize_job_events(job_id: str) -> StreamingResponse:
             if data != last_payload:
                 yield f"event: status\ndata: {data}\n\n"
                 last_payload = data
+            else:
+                yield ": keep-alive\n\n"
             if job["is_terminal"]:
                 yield f"event: complete\ndata: {data}\n\n"
                 break

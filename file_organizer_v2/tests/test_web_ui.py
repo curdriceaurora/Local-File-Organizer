@@ -257,6 +257,28 @@ def test_organize_scan_blocks_outside_allowed_root(monkeypatch, tmp_path: Path) 
     assert "outside allowed roots" in scan.text.lower()
 
 
+def test_organize_scan_rejects_include_hidden(monkeypatch, tmp_path: Path) -> None:
+    web_router = importlib.import_module("file_organizer.web.router")
+
+    monkeypatch.setattr(web_router, "FileOrganizer", DummyOrganizer)
+    root = tmp_path / "allowed"
+    root.mkdir()
+    (root / ".secret.txt").write_text("hidden", encoding="utf-8")
+
+    client = _build_client(tmp_path, allowed_root=root)
+    scan = client.post(
+        "/ui/organize/scan",
+        data={
+            "input_dir": str(root),
+            "output_dir": str(root / "organized"),
+            "methodology": "content_based",
+            "include_hidden": "1",
+        },
+    )
+    assert scan.status_code == 200
+    assert "not supported" in scan.text.lower()
+
+
 def test_organize_schedule_and_cancel(monkeypatch, tmp_path: Path) -> None:
     web_router = importlib.import_module("file_organizer.web.router")
 
@@ -288,8 +310,67 @@ def test_organize_schedule_and_cancel(monkeypatch, tmp_path: Path) -> None:
     )
     assert execute.status_code == 200
     assert "scheduled to start" in execute.text.lower()
+    assert "Cancel scheduled job" in execute.text
     job_id = _extract_attr(execute.text, "data-job-id")
 
     cancel = client.post(f"/ui/organize/jobs/{job_id}/cancel")
     assert cancel.status_code == 200
     assert "cancelled" in cancel.text.lower()
+
+
+def test_organize_events_emit_keepalive_until_complete(monkeypatch, tmp_path: Path) -> None:
+    web_router = importlib.import_module("file_organizer.web.router")
+
+    class FakeJob:
+        def __init__(self, job_id: str) -> None:
+            self.job_id = job_id
+
+    calls = {"count": 0}
+
+    def fake_build_job_view(job_id: str) -> dict[str, object]:
+        calls["count"] += 1
+        if calls["count"] < 4:
+            return {"job_id": job_id, "status": "running", "is_terminal": False}
+        return {"job_id": job_id, "status": "completed", "is_terminal": True}
+
+    monkeypatch.setattr(web_router, "_build_job_view", fake_build_job_view)
+    monkeypatch.setattr(
+        web_router,
+        "list_jobs",
+        lambda *, job_type=None, statuses=None, limit=100: [FakeJob("job-1")],
+    )
+
+    client = _build_client(tmp_path)
+    payload = ""
+    with client.stream("GET", "/ui/organize/jobs/job-1/events") as response:
+        assert response.status_code == 200
+        for chunk in response.iter_text():
+            payload += chunk
+            if "event: complete" in payload:
+                break
+
+    assert "event: status" in payload
+    assert ": keep-alive" in payload
+    assert "event: complete" in payload
+
+
+def test_job_metadata_prunes_stale_entries(monkeypatch, tmp_path: Path) -> None:
+    web_router = importlib.import_module("file_organizer.web.router")
+
+    class FakeJob:
+        def __init__(self, job_id: str) -> None:
+            self.job_id = job_id
+
+    monkeypatch.setattr(
+        web_router,
+        "list_jobs",
+        lambda *, job_type=None, statuses=None, limit=100: [FakeJob("keep")],
+    )
+
+    web_router._JOB_METADATA.clear()
+    web_router._set_job_metadata("stale", {"value": 1})
+    web_router._set_job_metadata("keep", {"value": 2})
+
+    assert "keep" in web_router._JOB_METADATA
+    assert "stale" not in web_router._JOB_METADATA
+    web_router._JOB_METADATA.clear()
