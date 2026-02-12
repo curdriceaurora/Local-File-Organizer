@@ -162,9 +162,9 @@ def test_upload_rejects_hidden_files(tmp_path: Path) -> None:
 
 
 def test_organize_dashboard_end_to_end(monkeypatch, tmp_path: Path) -> None:
-    web_router = importlib.import_module("file_organizer.web.router")
+    organize_mod = importlib.import_module("file_organizer.web.organize_routes")
 
-    monkeypatch.setattr(web_router, "FileOrganizer", DummyOrganizer)
+    monkeypatch.setattr(organize_mod, "FileOrganizer", DummyOrganizer)
     root = tmp_path / "workspace"
     root.mkdir()
     (root / "note.txt").write_text("hello", encoding="utf-8")
@@ -236,9 +236,9 @@ def test_organize_dashboard_end_to_end(monkeypatch, tmp_path: Path) -> None:
 
 
 def test_organize_scan_blocks_outside_allowed_root(monkeypatch, tmp_path: Path) -> None:
-    web_router = importlib.import_module("file_organizer.web.router")
+    organize_mod = importlib.import_module("file_organizer.web.organize_routes")
 
-    monkeypatch.setattr(web_router, "FileOrganizer", DummyOrganizer)
+    monkeypatch.setattr(organize_mod, "FileOrganizer", DummyOrganizer)
     root = tmp_path / "allowed"
     root.mkdir()
     outside = tmp_path / "outside"
@@ -258,9 +258,9 @@ def test_organize_scan_blocks_outside_allowed_root(monkeypatch, tmp_path: Path) 
 
 
 def test_organize_scan_rejects_include_hidden(monkeypatch, tmp_path: Path) -> None:
-    web_router = importlib.import_module("file_organizer.web.router")
+    organize_mod = importlib.import_module("file_organizer.web.organize_routes")
 
-    monkeypatch.setattr(web_router, "FileOrganizer", DummyOrganizer)
+    monkeypatch.setattr(organize_mod, "FileOrganizer", DummyOrganizer)
     root = tmp_path / "allowed"
     root.mkdir()
     (root / ".secret.txt").write_text("hidden", encoding="utf-8")
@@ -280,9 +280,9 @@ def test_organize_scan_rejects_include_hidden(monkeypatch, tmp_path: Path) -> No
 
 
 def test_organize_schedule_and_cancel(monkeypatch, tmp_path: Path) -> None:
-    web_router = importlib.import_module("file_organizer.web.router")
+    organize_mod = importlib.import_module("file_organizer.web.organize_routes")
 
-    monkeypatch.setattr(web_router, "FileOrganizer", DummyOrganizer)
+    monkeypatch.setattr(organize_mod, "FileOrganizer", DummyOrganizer)
     root = tmp_path / "workspace"
     root.mkdir()
     (root / "note.txt").write_text("hello", encoding="utf-8")
@@ -319,7 +319,7 @@ def test_organize_schedule_and_cancel(monkeypatch, tmp_path: Path) -> None:
 
 
 def test_organize_events_emit_keepalive_until_complete(monkeypatch, tmp_path: Path) -> None:
-    web_router = importlib.import_module("file_organizer.web.router")
+    organize_mod = importlib.import_module("file_organizer.web.organize_routes")
 
     class FakeJob:
         def __init__(self, job_id: str) -> None:
@@ -333,10 +333,10 @@ def test_organize_events_emit_keepalive_until_complete(monkeypatch, tmp_path: Pa
             return {"job_id": job_id, "status": "running", "is_terminal": False}
         return {"job_id": job_id, "status": "completed", "is_terminal": True}
 
-    monkeypatch.setattr(web_router, "_build_job_view", fake_build_job_view)
-    monkeypatch.setattr(web_router, "_ORGANIZE_EVENT_POLL_SECONDS", 0.001)
+    monkeypatch.setattr(organize_mod, "_build_job_view", fake_build_job_view)
+    monkeypatch.setattr(organize_mod, "ORGANIZE_EVENT_POLL_SECONDS", 0.001)
     monkeypatch.setattr(
-        web_router,
+        organize_mod,
         "list_jobs",
         lambda *, job_type=None, statuses=None, limit=100: [FakeJob("job-1")],
     )
@@ -356,20 +356,20 @@ def test_organize_events_emit_keepalive_until_complete(monkeypatch, tmp_path: Pa
 
 
 def test_job_metadata_prunes_stale_entries(monkeypatch, tmp_path: Path) -> None:
-    web_router = importlib.import_module("file_organizer.web.router")
+    organize_mod = importlib.import_module("file_organizer.web.organize_routes")
 
     class FakeJob:
         def __init__(self, job_id: str) -> None:
             self.job_id = job_id
 
-    monkeypatch.setattr(web_router, "get_job", lambda job_id: FakeJob(job_id) if job_id == "keep" else None)
-    monkeypatch.setattr(web_router, "_JOB_METADATA_PRUNE_INTERVAL_SECONDS", 0.0)
+    monkeypatch.setattr(organize_mod, "get_job", lambda job_id: FakeJob(job_id) if job_id == "keep" else None)
+    monkeypatch.setattr(organize_mod, "JOB_METADATA_PRUNE_INTERVAL_SECONDS", 0.0)
 
-    web_router._JOB_METADATA.clear()
-    web_router._LAST_JOB_METADATA_PRUNE_MONOTONIC = 0.0
-    web_router._set_job_metadata("stale", {"value": 1})
-    web_router._set_job_metadata("keep", {"value": 2})
+    organize_mod._JOB_METADATA.clear()
+    organize_mod._LAST_JOB_METADATA_PRUNE_MONOTONIC = 0.0
+    organize_mod._set_job_metadata("stale", {"value": 1})
+    organize_mod._set_job_metadata("keep", {"value": 2})
 
-    assert "keep" in web_router._JOB_METADATA
-    assert "stale" not in web_router._JOB_METADATA
-    web_router._JOB_METADATA.clear()
+    assert "keep" in organize_mod._JOB_METADATA
+    assert "stale" not in organize_mod._JOB_METADATA
+    organize_mod._JOB_METADATA.clear()
