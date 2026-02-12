@@ -5,37 +5,124 @@
     <div>
         <p class="page-kicker">Organize</p>
         <h1 class="page-title">Organization dashboard</h1>
-        <p class="page-subtitle">Track runs, queue new jobs, and audit recent actions.</p>
+        <p class="page-subtitle">Scan folders, review plans, execute jobs, and export run reports.</p>
     </div>
-    <a class="btn-primary" href="/ui/organize">New organize run</a>
+    <div class="chip-stack">
+        <span class="chip">Dry-run first</span>
+        <span class="chip">SSE updates</span>
+    </div>
 </section>
 
-<section class="panel-grid">
+<section class="panel organize-control-panel">
+    <h2>1) Scan and generate plan</h2>
+    <form
+        class="organize-form"
+        hx-post="/ui/organize/scan"
+        hx-target="#organize-plan"
+        hx-swap="innerHTML"
+    >
+        <label for="organize-input-dir">Input directory</label>
+        <input id="organize-input-dir" name="input_dir" type="text" value="{{ default_input_dir }}" required>
+
+        <label for="organize-output-dir">Output directory</label>
+        <input id="organize-output-dir" name="output_dir" type="text" value="{{ default_output_dir }}" required>
+
+        <label for="organize-methodology">Methodology</label>
+        <select id="organize-methodology" name="methodology">
+            {% for key, label in methodology_options.items() %}
+            <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <div class="organize-toggle-grid">
+            <label class="toggle-option">
+                <input name="recursive" type="checkbox" value="1" checked>
+                <span>Recursive scan</span>
+            </label>
+            <label class="toggle-option">
+                <input name="include_hidden" type="checkbox" value="1">
+                <span>Include hidden files</span>
+            </label>
+            <label class="toggle-option">
+                <input name="skip_existing" type="checkbox" value="1" checked>
+                <span>Skip existing files</span>
+            </label>
+            <label class="toggle-option">
+                <input name="use_hardlinks" type="checkbox" value="1" checked>
+                <span>Use hardlinks when possible</span>
+            </label>
+        </div>
+
+        <div class="organize-actions">
+            <button class="btn-primary" type="submit">Generate plan</button>
+        </div>
+    </form>
+    {% if allowed_roots %}
+    <p class="organize-hint">Allowed roots: {{ allowed_roots | join(', ') }}</p>
+    {% else %}
+    <p class="organize-hint">No allowed roots configured. Set <code>FO_API_ALLOWED_PATHS</code>.</p>
+    {% endif %}
+</section>
+
+<section class="panel-grid two organize-panels">
     <article class="panel">
-        <h2>Active run</h2>
-        <div class="status-card">
-            <span class="status-dot"></span>
-            <div>
-                <p class="status-title">No active jobs</p>
-                <p class="status-body">Start a dry-run to preview organization results.</p>
-            </div>
+        <h2>2) Review plan</h2>
+        <div id="organize-plan">
+            {% include "organize/_plan.html" %}
         </div>
     </article>
+
     <article class="panel">
-        <h2>Recent activity</h2>
-        <ul class="activity-list">
-            <li>Queued: Downloads -> Organized (dry-run)</li>
-            <li>Suggested: Rename 14 files</li>
-            <li>Completed: Photos archive clean-up</li>
-        </ul>
+        <h2>3) Progress and control</h2>
+        <div id="organize-progress">
+            {% include "organize/_job_status.html" %}
+        </div>
     </article>
+</section>
+
+<section class="panel-grid two organize-panels">
     <article class="panel">
-        <h2>Next actions</h2>
-        <ul class="action-list">
-            <li><span>Connect watch folders</span><span class="action-meta">3 pending</span></li>
-            <li><span>Review rules</span><span class="action-meta">8 active</span></li>
-            <li><span>Schedule automation</span><span class="action-meta">Disabled</span></li>
-        </ul>
+        <div class="section-headline">
+            <h2>History and logs</h2>
+            <form
+                class="history-filters"
+                hx-get="/ui/organize/history"
+                hx-target="#organize-history"
+                hx-swap="innerHTML"
+            >
+                <select name="status_filter" aria-label="Filter history by status">
+                    <option value="all">All statuses</option>
+                    <option value="queued">Queued</option>
+                    <option value="running">Running</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Failed</option>
+                </select>
+                <input name="limit" type="number" min="1" max="200" value="50">
+                <button class="btn-ghost" type="submit">Apply</button>
+            </form>
+        </div>
+        <div
+            id="organize-history"
+            hx-get="/ui/organize/history"
+            hx-trigger="load, refreshHistory from:body, every 45s"
+            hx-target="#organize-history"
+            hx-swap="innerHTML"
+        >
+            <div class="loading-state">Loading history...</div>
+        </div>
+    </article>
+
+    <article class="panel">
+        <h2>Statistics</h2>
+        <div
+            id="organize-stats"
+            hx-get="/ui/organize/stats"
+            hx-trigger="load, refreshStats from:body, every 45s"
+            hx-target="#organize-stats"
+            hx-swap="innerHTML"
+        >
+            <div class="loading-state">Loading statistics...</div>
+        </div>
     </article>
 </section>
 {% endblock %}

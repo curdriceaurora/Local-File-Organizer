@@ -1,0 +1,36 @@
+{% if rows %}
+<div class="history-table-wrap">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Job</th>
+                <th>Status</th>
+                <th>Method</th>
+                <th>Processed</th>
+                <th>Updated</th>
+                <th>Report</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td><code>{{ row.job_id[:12] }}</code></td>
+                <td>{{ row.status }}</td>
+                <td>{{ row.methodology_label }}</td>
+                <td>{{ row.processed_files }} / {{ row.total_files }}</td>
+                <td>{{ row.updated_at }}</td>
+                <td>
+                    <a href="/ui/organize/report/{{ row.job_id }}?format=json">JSON</a>
+                    <span>|</span>
+                    <a href="/ui/organize/report/{{ row.job_id }}?format=csv">CSV</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    No organization jobs recorded yet.
+</div>
+{% endif %}

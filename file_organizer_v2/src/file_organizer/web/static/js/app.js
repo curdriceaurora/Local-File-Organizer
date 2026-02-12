@@ -55,6 +55,80 @@
     }
   };
 
+  let organizeEventSource = null;
+  let organizeJobId = null;
+
+  const closeOrganizeStream = () => {
+    if (organizeEventSource) {
+      organizeEventSource.close();
+      organizeEventSource = null;
+    }
+    organizeJobId = null;
+  };
+
+  const dispatchOrganizeRefresh = () => {
+    document.body.dispatchEvent(new Event("refreshHistory"));
+    document.body.dispatchEvent(new Event("refreshStats"));
+  };
+
+  const refreshOrganizeProgress = async (statusUrl) => {
+    const target = document.querySelector("#organize-progress");
+    if (!target || !statusUrl) return;
+    try {
+      const response = await fetch(statusUrl, {
+        headers: {
+          "HX-Request": "true",
+        },
+      });
+      if (!response.ok) return;
+      target.innerHTML = await response.text();
+      bindOrganizeDashboard();
+    } catch (error) {
+      // Ignore transient polling/network failures.
+    }
+  };
+
+  const bindOrganizeDashboard = () => {
+    const node = document.querySelector("[data-organize-job]");
+    if (!node) {
+      closeOrganizeStream();
+      return;
+    }
+
+    const jobId = node.getAttribute("data-job-id");
+    const status = node.getAttribute("data-job-status");
+    const streamUrl = node.getAttribute("data-stream-url");
+    const statusUrl = node.getAttribute("data-status-url");
+    const terminal = status === "completed" || status === "failed";
+
+    if (!jobId || !streamUrl || !statusUrl || terminal) {
+      closeOrganizeStream();
+      if (terminal) {
+        dispatchOrganizeRefresh();
+      }
+      return;
+    }
+
+    if (organizeEventSource && organizeJobId === jobId) {
+      return;
+    }
+
+    closeOrganizeStream();
+    organizeJobId = jobId;
+    organizeEventSource = new EventSource(streamUrl);
+    organizeEventSource.addEventListener("status", () => {
+      void refreshOrganizeProgress(statusUrl);
+    });
+    organizeEventSource.addEventListener("complete", () => {
+      void refreshOrganizeProgress(statusUrl);
+      dispatchOrganizeRefresh();
+      closeOrganizeStream();
+    });
+    organizeEventSource.onerror = () => {
+      closeOrganizeStream();
+    };
+  };
+
   const openModal = () => {
     const modal = document.querySelector("#preview-modal");
     if (!modal) return;
@@ -278,6 +352,9 @@
     if (target && target.id === "file-results") {
       bindFileBrowser();
     }
+    if (target && target.id === "organize-progress") {
+      bindOrganizeDashboard();
+    }
   });
 
   document.body.addEventListener("htmx:beforeSwap", (event) => {
@@ -288,4 +365,5 @@
   });
 
   bindFileBrowser();
+  bindOrganizeDashboard();
 })();

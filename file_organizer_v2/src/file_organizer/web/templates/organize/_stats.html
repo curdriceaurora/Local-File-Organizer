@@ -1,0 +1,29 @@
+<div class="stats-card-grid">
+    <article class="stat-card">
+        <h3>Total jobs</h3>
+        <p class="stat-value">{{ stats.total_jobs }}</p>
+    </article>
+    <article class="stat-card">
+        <h3>Active jobs</h3>
+        <p class="stat-value">{{ stats.active_jobs }}</p>
+    </article>
+    <article class="stat-card">
+        <h3>Files organized</h3>
+        <p class="stat-value">{{ stats.total_files }}</p>
+    </article>
+    <article class="stat-card">
+        <h3>Success rate</h3>
+        <p class="stat-value">{{ '%.1f' | format(stats.success_rate) }}%</p>
+    </article>
+</div>
+
+{% if stats.methodology_counts %}
+<div class="stats-methodology">
+    <h3>Method usage</h3>
+    <ul class="activity-list">
+        {% for label, count in stats.methodology_counts.items() %}
+        <li><span>{{ label }}</span><span class="action-meta">{{ count }}</span></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}

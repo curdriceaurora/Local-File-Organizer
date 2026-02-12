@@ -1,0 +1,125 @@
+{% if info_message %}
+<div class="banner banner-info">{{ info_message }}</div>
+{% endif %}
+{% if error_message %}
+<div class="banner banner-error">{{ error_message }}</div>
+{% endif %}
+
+{% if plan %}
+{% set preview = plan.preview or {} %}
+<div class="plan-summary-grid" data-plan-id="{{ plan.plan_id }}">
+    <article>
+        <h3>Plan summary</h3>
+        <p><strong>Method:</strong> {{ methodology_options.get(plan.methodology, 'Content-Based') }}</p>
+        <p><strong>Input:</strong> {{ plan.input_dir }}</p>
+        <p><strong>Output:</strong> {{ plan.output_dir }}</p>
+    </article>
+    <article>
+        <h3>Scan stats</h3>
+        <p><strong>Total scanned:</strong> {{ plan.scan_total_files }}</p>
+        <p><strong>Text / Image / Video:</strong> {{ plan.scan_counts.text }} / {{ plan.scan_counts.image }} / {{ plan.scan_counts.video }}</p>
+        <p><strong>Audio / CAD / Other:</strong> {{ plan.scan_counts.audio }} / {{ plan.scan_counts.cad }} / {{ plan.scan_counts.other }}</p>
+    </article>
+    <article>
+        <h3>Preview result</h3>
+        <p><strong>Total files:</strong> {{ preview.total_files }}</p>
+        <p><strong>Processed:</strong> {{ preview.processed_files }}</p>
+        <p><strong>Skipped:</strong> {{ preview.skipped_files }}</p>
+        <p><strong>Failed:</strong> {{ preview.failed_files }}</p>
+    </article>
+</div>
+
+{% if plan.movements %}
+<div class="plan-movements">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Current</th>
+                <th>Destination</th>
+                <th>Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for movement in plan.movements[:120] %}
+            <tr>
+                <td>{{ movement.file_name }}</td>
+                <td>{{ movement.source }}</td>
+                <td>{{ movement.destination }}</td>
+                <td>{{ movement.reason }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if plan.movements|length > 120 %}
+    <p class="organize-hint">Showing first 120 movements ({{ plan.movements|length }} total).</p>
+    {% endif %}
+</div>
+{% else %}
+<div class="empty-state">
+    No file movements were generated from this scan.
+</div>
+{% endif %}
+
+<div class="plan-action-stack">
+    <form
+        class="inline-form"
+        hx-post="/ui/organize/execute"
+        hx-target="#organize-progress"
+        hx-swap="innerHTML"
+    >
+        <input name="plan_id" type="hidden" value="{{ plan.plan_id }}">
+        <input name="dry_run" type="hidden" value="0">
+        <input name="schedule_delay_minutes" type="hidden" value="0">
+        <button class="btn-primary" type="submit">Approve and execute</button>
+    </form>
+
+    <form
+        class="inline-form"
+        hx-post="/ui/organize/execute"
+        hx-target="#organize-progress"
+        hx-swap="innerHTML"
+    >
+        <input name="plan_id" type="hidden" value="{{ plan.plan_id }}">
+        <input name="dry_run" type="hidden" value="1">
+        <input name="schedule_delay_minutes" type="hidden" value="0">
+        <button class="btn-ghost" type="submit">Dry run</button>
+    </form>
+
+    <form
+        class="inline-form schedule-form"
+        hx-post="/ui/organize/execute"
+        hx-target="#organize-progress"
+        hx-swap="innerHTML"
+    >
+        <input name="plan_id" type="hidden" value="{{ plan.plan_id }}">
+        <input name="dry_run" type="hidden" value="0">
+        <label for="schedule-delay-{{ plan.plan_id }}">Schedule delay (minutes)</label>
+        <input
+            id="schedule-delay-{{ plan.plan_id }}"
+            name="schedule_delay_minutes"
+            type="number"
+            min="1"
+            max="10080"
+            value="15"
+        >
+        <button class="btn-ghost" type="submit">Schedule job</button>
+    </form>
+
+    <form
+        class="inline-form"
+        hx-post="/ui/organize/plan/clear"
+        hx-target="#organize-plan"
+        hx-swap="innerHTML"
+    >
+        <input name="plan_id" type="hidden" value="{{ plan.plan_id }}">
+        <button class="btn-ghost" type="submit">Reject plan</button>
+    </form>
+
+    <p class="organize-hint">To modify this plan, change scan inputs above and generate a new plan.</p>
+</div>
+{% else %}
+<div class="empty-state">
+    Generate a scan plan to review file movements and queue an organization job.
+</div>
+{% endif %}

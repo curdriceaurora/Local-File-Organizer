@@ -91,6 +91,25 @@ def update_job(job_id: str, **updates: Any) -> Optional[JobState]:
     return job
 
 
+def list_jobs(
+    *,
+    job_type: Optional[str] = None,
+    statuses: Optional[set[JobStateStatus]] = None,
+    limit: int = 100,
+) -> list[JobState]:
+    """List tracked jobs, newest first."""
+    safe_limit = max(1, min(limit, _MAX_JOBS))
+    with _JOB_STORE_LOCK:
+        _prune_jobs(_now())
+        jobs = list(_JOB_STORE.values())
+    if job_type is not None:
+        jobs = [job for job in jobs if job.job_type == job_type]
+    if statuses is not None:
+        jobs = [job for job in jobs if job.status in statuses]
+    jobs.sort(key=lambda job: job.updated_at, reverse=True)
+    return jobs[:safe_limit]
+
+
 def job_count() -> int:
     with _JOB_STORE_LOCK:
         _prune_jobs(_now())

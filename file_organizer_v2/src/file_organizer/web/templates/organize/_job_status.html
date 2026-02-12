@@ -1,0 +1,86 @@
+{% if info_message %}
+<div class="banner banner-info">{{ info_message }}</div>
+{% endif %}
+{% if error_message %}
+<div class="banner banner-error">{{ error_message }}</div>
+{% endif %}
+{% if rollback_message %}
+<div class="banner banner-info">{{ rollback_message }}</div>
+{% endif %}
+
+{% if job %}
+<div
+    class="job-status"
+    data-organize-job
+    data-job-id="{{ job.job_id }}"
+    data-job-status="{{ job.status }}"
+    data-stream-url="/ui/organize/jobs/{{ job.job_id }}/events"
+    data-status-url="/ui/organize/jobs/{{ job.job_id }}/status"
+>
+    <div class="job-status-header">
+        <p><strong>Job:</strong> <code>{{ job.job_id }}</code></p>
+        <p><strong>Status:</strong> {{ job.status }}</p>
+    </div>
+
+    <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ job.progress_percent }}">
+        <div class="progress-fill" style="width: {{ job.progress_percent }}%">{{ job.progress_percent }}%</div>
+    </div>
+
+    <div class="job-metrics">
+        <p><strong>Method:</strong> {{ job.methodology_label }}</p>
+        <p><strong>Dry run:</strong> {{ job.dry_run }}</p>
+        <p><strong>Processed:</strong> {{ job.processed_files }} / {{ job.total_files }}</p>
+        <p><strong>Failed:</strong> {{ job.failed_files }} | <strong>Skipped:</strong> {{ job.skipped_files }}</p>
+        <p><strong>Updated:</strong> {{ job.updated_at }}</p>
+        {% if job.scheduled_for %}
+        <p><strong>Scheduled for:</strong> {{ job.scheduled_for }}</p>
+        {% endif %}
+    </div>
+
+    <div class="job-action-row">
+        {% if not job.is_terminal %}
+        <form
+            class="inline-form"
+            hx-post="/ui/organize/jobs/{{ job.job_id }}/cancel"
+            hx-target="#organize-progress"
+            hx-swap="innerHTML"
+        >
+            <button class="btn-ghost" type="submit">Cancel scheduled job</button>
+        </form>
+        {% endif %}
+
+        {% if job.can_rollback %}
+        <form
+            class="inline-form"
+            hx-post="/ui/organize/jobs/{{ job.job_id }}/rollback"
+            hx-target="#organize-progress"
+            hx-swap="innerHTML"
+        >
+            <button class="btn-ghost" type="submit">Rollback latest operation</button>
+        </form>
+        {% endif %}
+
+        <a class="btn-ghost" href="/ui/organize/report/{{ job.job_id }}?format=json">Export JSON</a>
+        <a class="btn-ghost" href="/ui/organize/report/{{ job.job_id }}?format=csv">Export CSV</a>
+    </div>
+
+    {% if job.error %}
+    <div class="banner banner-error">{{ job.error }}</div>
+    {% endif %}
+
+    {% if job.result and job.result.errors %}
+    <div class="job-errors">
+        <h3>Errors</h3>
+        <ul>
+            {% for item in job.result.errors[:20] %}
+            <li>{{ item.file }}: {{ item.error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="empty-state">
+    No active organization job. Generate a plan and execute it to start tracking progress.
+</div>
+{% endif %}
