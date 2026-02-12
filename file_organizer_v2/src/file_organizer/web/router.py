@@ -11,6 +11,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock, Timer
+from time import monotonic
 from typing import Any, Optional
 from urllib.parse import quote, unquote
 from uuid import uuid4
@@ -18,6 +19,7 @@ from uuid import uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
+from loguru import logger
 from PIL import Image, ImageDraw, UnidentifiedImageError
 
 from file_organizer.api.config import ApiSettings
@@ -66,7 +68,8 @@ _ORGANIZE_EVENT_POLL_SECONDS = 1
 _ORGANIZE_HISTORY_LIMIT = 50
 _ORGANIZE_PLAN_LIMIT = 200
 _ORGANIZE_JOB_TYPE = "organize_web"
-_ORGANIZE_METADATA_PRUNE_LIMIT = 1000
+_JOB_METADATA_PRUNE_THRESHOLD = 256
+_JOB_METADATA_PRUNE_INTERVAL_SECONDS = 60.0
 _ORGANIZE_METHODOLOGIES = {
     "johnny_decimal": "Johnny Decimal",
     "para": "PARA",
@@ -89,6 +92,7 @@ _SCHEDULED_TIMERS: dict[str, Timer] = {}
 _SCHEDULED_TIMERS_LOCK = Lock()
 _JOB_METADATA: dict[str, dict[str, Any]] = {}
 _JOB_METADATA_LOCK = Lock()
+_LAST_JOB_METADATA_PRUNE_MONOTONIC = 0.0
 
 
 def _base_context(
@@ -697,25 +701,32 @@ def _delete_organize_plan(plan_id: str) -> None:
         _ORGANIZE_PLAN_STORE.pop(plan_id, None)
 
 
-def _prune_job_metadata() -> None:
-    tracked_ids = {
-        job.job_id
-        for job in list_jobs(limit=_ORGANIZE_METADATA_PRUNE_LIMIT)
-    }
+def _prune_job_metadata(*, force: bool = False) -> None:
+    global _LAST_JOB_METADATA_PRUNE_MONOTONIC
+    now = monotonic()
     with _JOB_METADATA_LOCK:
-        stale_ids = [job_id for job_id in _JOB_METADATA if job_id not in tracked_ids]
+        current_size = len(_JOB_METADATA)
+        last_prune = _LAST_JOB_METADATA_PRUNE_MONOTONIC
+        should_prune = force or current_size >= _JOB_METADATA_PRUNE_THRESHOLD
+        if not should_prune and (now - last_prune) < _JOB_METADATA_PRUNE_INTERVAL_SECONDS:
+            return
+        tracked_ids = list(_JOB_METADATA.keys())
+        _LAST_JOB_METADATA_PRUNE_MONOTONIC = now
+    stale_ids = [job_id for job_id in tracked_ids if get_job(job_id) is None]
+    if not stale_ids:
+        return
+    with _JOB_METADATA_LOCK:
         for job_id in stale_ids:
             _JOB_METADATA.pop(job_id, None)
 
 
 def _set_job_metadata(job_id: str, data: dict[str, Any]) -> None:
-    _prune_job_metadata()
     with _JOB_METADATA_LOCK:
         _JOB_METADATA[job_id] = data
+    _prune_job_metadata()
 
 
 def _get_job_metadata(job_id: str) -> dict[str, Any]:
-    _prune_job_metadata()
     with _JOB_METADATA_LOCK:
         return dict(_JOB_METADATA.get(job_id, {}))
 
@@ -1320,8 +1331,9 @@ def organize_scan(
         info_message = "Plan generated. Review movements and execute when ready."
     except ApiError as exc:
         error_message = exc.message
-    except Exception as exc:
-        error_message = f"Failed to generate plan: {exc}"
+    except Exception:
+        logger.exception("Failed to generate organize plan")
+        error_message = "Failed to generate plan."
 
     return _templates.TemplateResponse(
         "organize/_plan.html",
@@ -1421,8 +1433,9 @@ def organize_execute(
             raise ApiError(status_code=500, error="job_error", message="Failed to queue job.")
     except ApiError as exc:
         error_message = exc.message
-    except Exception as exc:
-        error_message = f"Failed to queue job: {exc}"
+    except Exception:
+        logger.exception("Failed to queue organize job")
+        error_message = "Failed to queue job."
 
     response = _templates.TemplateResponse(
         "organize/_job_status.html",
@@ -1543,8 +1556,9 @@ def organize_job_rollback(request: Request, job_id: str) -> HTMLResponse:
                 if success
                 else "No rollback candidates were available."
             )
-        except Exception as exc:
-            error_message = f"Rollback failed: {exc}"
+        except Exception:
+            logger.exception("Rollback execution failed for job {}", job_id)
+            error_message = "Rollback failed."
 
     refreshed_job = _build_job_view(job_id)
     response = _templates.TemplateResponse(

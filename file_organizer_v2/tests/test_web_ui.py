@@ -334,6 +334,7 @@ def test_organize_events_emit_keepalive_until_complete(monkeypatch, tmp_path: Pa
         return {"job_id": job_id, "status": "completed", "is_terminal": True}
 
     monkeypatch.setattr(web_router, "_build_job_view", fake_build_job_view)
+    monkeypatch.setattr(web_router, "_ORGANIZE_EVENT_POLL_SECONDS", 0.001)
     monkeypatch.setattr(
         web_router,
         "list_jobs",
@@ -361,13 +362,11 @@ def test_job_metadata_prunes_stale_entries(monkeypatch, tmp_path: Path) -> None:
         def __init__(self, job_id: str) -> None:
             self.job_id = job_id
 
-    monkeypatch.setattr(
-        web_router,
-        "list_jobs",
-        lambda *, job_type=None, statuses=None, limit=100: [FakeJob("keep")],
-    )
+    monkeypatch.setattr(web_router, "get_job", lambda job_id: FakeJob(job_id) if job_id == "keep" else None)
+    monkeypatch.setattr(web_router, "_JOB_METADATA_PRUNE_INTERVAL_SECONDS", 0.0)
 
     web_router._JOB_METADATA.clear()
+    web_router._LAST_JOB_METADATA_PRUNE_MONOTONIC = 0.0
     web_router._set_job_metadata("stale", {"value": 1})
     web_router._set_job_metadata("keep", {"value": 2})
 
