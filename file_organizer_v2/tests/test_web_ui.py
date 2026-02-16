@@ -3,16 +3,20 @@ from __future__ import annotations
 
 import base64
 import importlib
+import json
 import re
 import time
+import zipfile
 from pathlib import Path
 from typing import Optional
 
+import pytest
 from fastapi.testclient import TestClient
 
 from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings
 from file_organizer.core.organizer import OrganizationResult
+from file_organizer.plugins.marketplace import compute_sha256
 
 _PNG_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8"
@@ -29,6 +33,51 @@ def _build_client(tmp_path: Path, allowed_root: Optional[Path] = None) -> TestCl
     )
     app = create_app(settings)
     return TestClient(app)
+
+
+def _write_marketplace_repo(repo_dir: Path) -> None:
+    repo_dir.mkdir(parents=True, exist_ok=True)
+    archive_path = repo_dir / "ui-plugin-1.0.0.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr(
+            "plugin.py",
+            "\n".join(
+                [
+                    "from file_organizer.plugins import Plugin, PluginMetadata",
+                    "",
+                    "class UiPlugin(Plugin):",
+                    "    def get_metadata(self):",
+                    "        return PluginMetadata(name='ui-plugin', version='1.0.0', author='tests', description='ui')",
+                    "    def on_load(self): pass",
+                    "    def on_enable(self): pass",
+                    "    def on_disable(self): pass",
+                    "    def on_unload(self): pass",
+                ]
+            ),
+        )
+    payload = {
+        "plugins": [
+            {
+                "name": "ui-plugin",
+                "version": "1.0.0",
+                "author": "tests",
+                "description": "UI marketplace plugin",
+                "download_url": archive_path.name,
+                "checksum_sha256": compute_sha256(archive_path),
+                "size_bytes": archive_path.stat().st_size,
+                "dependencies": [],
+                "tags": ["ui"],
+                "category": "utility",
+                "license": "MIT",
+                "min_organizer_version": "2.0.0",
+                "max_organizer_version": None,
+                "downloads": 1,
+                "rating": 4.0,
+                "reviews_count": 1,
+            }
+        ]
+    }
+    (repo_dir / "index.json").write_text(json.dumps(payload), encoding="utf-8")
 
 
 class DummyOrganizer:
@@ -92,9 +141,31 @@ def test_ui_routes_render(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert "hx-boost" in response.text
 
-    for path in ("/ui/files", "/ui/organize", "/ui/settings", "/ui/profile"):
+    for path in ("/ui/files", "/ui/organize", "/ui/marketplace", "/ui/settings", "/ui/profile"):
         page = client.get(path)
         assert page.status_code == 200
+
+
+def test_marketplace_ui_browse_and_install(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_dir = tmp_path / "repo"
+    _write_marketplace_repo(repo_dir)
+    monkeypatch.setenv("FO_MARKETPLACE_HOME", str(tmp_path / "marketplace-home"))
+    monkeypatch.setenv("FO_MARKETPLACE_REPO_URL", str(repo_dir))
+
+    client = _build_client(tmp_path)
+    page = client.get("/ui/marketplace")
+    assert page.status_code == 200
+    assert "ui-plugin" in page.text
+
+    install = client.post(
+        "/ui/marketplace/plugins/ui-plugin/install",
+        data={"q": "", "category": "", "tag_csv": ""},
+    )
+    assert install.status_code == 200
+    assert "Installed ui-plugin" in install.text
 
 
 def test_ui_static_assets(tmp_path: Path) -> None:

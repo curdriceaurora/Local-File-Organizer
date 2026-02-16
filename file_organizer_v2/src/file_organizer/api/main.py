@@ -21,6 +21,7 @@ from file_organizer.api.routers import (
     files_router,
     health_router,
     integrations_router,
+    marketplace_router,
     organize_router,
     realtime_router,
     system_router,
@@ -101,6 +102,7 @@ def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
     app.include_router(realtime_router, prefix="/api/v1")
     app.include_router(system_router, prefix="/api/v1")
     app.include_router(integrations_router, prefix="/api/v1")
+    app.include_router(marketplace_router, prefix="/api/v1")
     app.include_router(plugin_api_router, prefix="/api/v1")
 
     @app.get("/")

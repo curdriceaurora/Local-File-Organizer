@@ -23,6 +23,14 @@ from file_organizer.plugins.errors import (
 )
 from file_organizer.plugins.hooks import HookExecutionResult, HookRegistry
 from file_organizer.plugins.lifecycle import PluginLifecycleManager, PluginState
+from file_organizer.plugins.marketplace import (
+    MarketplaceError,
+    MarketplaceService,
+    PluginInstaller,
+    PluginPackage,
+    PluginRepository,
+    PluginReview,
+)
 from file_organizer.plugins.registry import PluginRecord, PluginRegistry
 from file_organizer.plugins.sdk import (
     PluginClient,
@@ -55,18 +63,24 @@ __all__ = [
     "PluginLifecycleError",
     "PluginLifecycleManager",
     "PluginLoadError",
+    "PluginInstaller",
     "PluginMetadata",
+    "PluginPackage",
     "PluginNotFoundError",
     "PluginNotLoadedError",
     "PluginPermissionError",
     "PluginRecord",
     "PluginRegistry",
+    "PluginRepository",
+    "PluginReview",
     "PluginSandbox",
     "PluginSecurityPolicy",
     "PluginState",
     "PluginTestCase",
     "WebhookDeliveryResult",
     "WebhookRegistration",
+    "MarketplaceError",
+    "MarketplaceService",
     "command",
     "get_command_metadata",
     "get_hook_metadata",

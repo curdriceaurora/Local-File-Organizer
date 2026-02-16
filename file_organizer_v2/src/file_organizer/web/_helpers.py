@@ -27,6 +27,7 @@ NAV_ITEMS = [
     ("Home", "/ui/"),
     ("Files", "/ui/files"),
     ("Organize", "/ui/organize"),
+    ("Marketplace", "/ui/marketplace"),
     ("Settings", "/ui/settings"),
     ("Profile", "/ui/profile"),
 ]

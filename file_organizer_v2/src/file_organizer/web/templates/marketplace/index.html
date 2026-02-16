@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="page-kicker">Marketplace</p>
+        <h1 class="page-title">Plugin marketplace</h1>
+        <p class="page-subtitle">
+            Discover, install, and review community plugins.
+        </p>
+    </div>
+    <div class="chip-stack">
+        <span class="chip">{{ total_plugins }} available</span>
+        <span class="chip">{{ installed_names | length }} installed</span>
+    </div>
+</section>
+
+{% if message %}
+<section class="panel">
+    <p class="organize-hint">{{ message }}</p>
+</section>
+{% endif %}
+
+{% if error_message %}
+<section class="panel">
+    <p class="organize-hint">{{ error_message }}</p>
+</section>
+{% endif %}
+
+<section class="panel">
+    <form method="get" action="/ui/marketplace" class="settings-toolbar">
+        <div class="form-group">
+            <label for="marketplace-search">Search</label>
+            <input
+                id="marketplace-search"
+                type="text"
+                name="q"
+                value="{{ query }}"
+                placeholder="name, author, or description"
+            >
+        </div>
+        <div class="form-group">
+            <label for="marketplace-category">Category</label>
+            <input
+                id="marketplace-category"
+                type="text"
+                name="category"
+                value="{{ category }}"
+                placeholder="e.g. workflow, ai, metadata"
+            >
+        </div>
+        <div class="form-group">
+            <label for="marketplace-tags">Tags (comma separated)</label>
+            <input
+                id="marketplace-tags"
+                type="text"
+                name="tag"
+                value="{{ tags | join(',') }}"
+                placeholder="notes, productivity"
+            >
+        </div>
+        <div class="settings-actions">
+            <button class="btn-primary" type="submit">Search</button>
+        </div>
+    </form>
+</section>
+
+<section class="panel">
+    {% if plugins %}
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th>Plugin</th>
+                <th>Version</th>
+                <th>Author</th>
+                <th>Category</th>
+                <th>Rating</th>
+                <th>Downloads</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plugin in plugins %}
+            <tr>
+                <td>
+                    <strong>{{ plugin.name }}</strong><br>
+                    <small>{{ plugin.description }}</small>
+                </td>
+                <td>{{ plugin.version }}</td>
+                <td>{{ plugin.author }}</td>
+                <td>{{ plugin.category }}</td>
+                <td>{{ '%.1f' | format(plugin.rating) }}</td>
+                <td>{{ plugin.downloads }}</td>
+                <td>
+                    {% if plugin.name in installed_names %}
+                    <form method="post" action="/ui/marketplace/plugins/{{ plugin.name }}/update">
+                        <input type="hidden" name="q" value="{{ query }}">
+                        <input type="hidden" name="category" value="{{ category }}">
+                        <input type="hidden" name="tag_csv" value="{{ tags | join(',') }}">
+                        <button class="btn-ghost" type="submit">Update</button>
+                    </form>
+                    <form method="post" action="/ui/marketplace/plugins/{{ plugin.name }}/uninstall">
+                        <input type="hidden" name="q" value="{{ query }}">
+                        <input type="hidden" name="category" value="{{ category }}">
+                        <input type="hidden" name="tag_csv" value="{{ tags | join(',') }}">
+                        <button class="btn-ghost" type="submit">Uninstall</button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="/ui/marketplace/plugins/{{ plugin.name }}/install">
+                        <input type="hidden" name="q" value="{{ query }}">
+                        <input type="hidden" name="category" value="{{ category }}">
+                        <input type="hidden" name="tag_csv" value="{{ tags | join(',') }}">
+                        <button class="btn-primary" type="submit">Install</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="organize-hint">No plugins match the current filters.</p>
+    {% endif %}
+</section>
+{% endblock %}
+

@@ -70,3 +70,7 @@ This allows the app to choose reliability mode per hook path.
 Task #241 builds on this with plugin-facing HTTP APIs, SDK utilities, and examples documented under:
 
 - `docs/phase-6/plugin-development/README.md`
+
+Task #240 adds distribution/install mechanics documented under:
+
+- `docs/phase-6/marketplace.md`
