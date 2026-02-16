@@ -90,45 +90,45 @@ Ensure docs are accurate
 **Total Estimated Effort**: 236-286 hours
 
 ### Phase 1: Core Foundation (Tasks 001-009)
-- [ ] **#148** - Setup Test Infrastructure (M, 8-12h, parallel)
-- [ ] **#149** - Test AI Model Abstractions (S, 4-6h, sequential after 001)
-- [ ] **#150** - Test Text Model Implementation (M, 8-10h, sequential after 002)
-- [ ] **#151** - Test Vision Model Implementation (M, 10-12h, parallel with 003)
-- [ ] **#152** - Test File Readers Utilities (L, 12-16h, parallel)
-- [ ] **#153** - Test Text Processing Utilities (M, 6-8h, parallel)
-- [ ] **#154** - Test Text Processor Service (L, 10-12h, sequential after 003, 005)
-- [ ] **#155** - Test Vision Processor Service (L, 12-14h, parallel with 007)
-- [x] **#156** - Test Core File Organizer (XL, 16-20h, sequential after 007, 008)
+- [ ] **#192** - Setup Test Infrastructure (M, 8-12h, parallel)
+- [ ] **#193** - Test AI Model Abstractions (S, 4-6h, sequential after 001)
+- [ ] **#194** - Test Text Model Implementation (M, 8-10h, sequential after 002)
+- [ ] **#195** - Test Vision Model Implementation (M, 10-12h, parallel with 003)
+- [ ] **#196** - Test File Readers Utilities (L, 12-16h, parallel)
+- [ ] **#197** - Test Text Processing Utilities (M, 6-8h, parallel)
+- [ ] **#198** - Test Text Processor Service (L, 10-12h, sequential after 003, 005)
+- [ ] **#199** - Test Vision Processor Service (L, 12-14h, parallel with 007)
+- [x] **#200** - Test Core File Organizer (XL, 16-20h, sequential after 007, 008)
 
 **Phase 1 Subtotal**: 86-110 hours
 
 ### Phase 2: Pattern Analysis & Intelligence (Tasks 010-012)
-- [x] **#157** - Test Pattern Analyzer Service (L, 12-14h, parallel)
-- [x] **#158** - Test Misplacement Detector Service (L, 14-16h, sequential after 010)
-- [x] **#159** - Test Suggestion Feedback Service (M, 8-10h, parallel)
+- [x] **#201** - Test Pattern Analyzer Service (L, 12-14h, parallel)
+- [x] **#202** - Test Misplacement Detector Service (L, 14-16h, sequential after 010)
+- [x] **#203** - Test Suggestion Feedback Service (M, 8-10h, parallel)
 
 **Phase 2 Subtotal**: 34-40 hours
 
 ### Phase 3: Deduplication Services (Tasks 013-016)
-- [x] **#160** - Test Deduplication Core Services (L, 14-16h, parallel)
-- [x] **#161** - Test Image Deduplication (L, 12-14h, sequential after 013)
-- [x] **#162** - Test Document Deduplication (XL, 16-20h, parallel with 014)
-- [x] **#163** - Test Quality Assessment & Backup (M, 10-12h, parallel with 014, 015)
+- [x] **#204** - Test Deduplication Core Services (L, 14-16h, parallel)
+- [x] **#205** - Test Image Deduplication (L, 12-14h, sequential after 013)
+- [x] **#206** - Test Document Deduplication (XL, 16-20h, parallel with 014)
+- [x] **#207** - Test Quality Assessment & Backup (M, 10-12h, parallel with 014, 015)
 
 **Phase 3 Subtotal**: 52-62 hours
 
 ### Phase 4: Intelligence Services (Tasks 017-019)
-- [x] **#164** - Test Preference Tracking & Learning (XL, 16-18h, parallel)
-- [x] **#165** - Test Feedback Processing (M, 8-10h, sequential after 017)
-- [x] **#166** - Test Profile Management (L, 12-14h, parallel)
+- [x] **#208** - Test Preference Tracking & Learning (XL, 16-18h, parallel)
+- [x] **#209** - Test Feedback Processing (M, 8-10h, sequential after 017)
+- [x] **#210** - Test Profile Management (L, 12-14h, parallel)
 
 **Phase 4 Subtotal**: 36-42 hours
 
 ### Phase 5: Integration & CI/CD (Tasks 020-023)
-- [x] **#167** - Test CLI Commands (L, 12-14h, parallel after 009, 013)
-- [x] **#168** - Integration Test Suite (XL, 20-24h, sequential after 009, 013, 017)
-- [x] **#169** - Setup CI/CD Pipeline (M, 6-8h, sequential after 021)
-- [x] **#170** - Code Quality & Documentation (M, 6-8h, parallel with/after 022)
+- [x] **#211** - Test CLI Commands (L, 12-14h, parallel after 009, 013)
+- [x] **#212** - Integration Test Suite (XL, 20-24h, sequential after 009, 013, 017)
+- [x] **#213** - Setup CI/CD Pipeline (M, 6-8h, sequential after 021)
+- [x] **#214** - Code Quality & Documentation (M, 6-8h, parallel with/after 022)
 
 **Phase 5 Subtotal**: 44-54 hours
 
