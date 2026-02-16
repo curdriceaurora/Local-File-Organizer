@@ -6,7 +6,8 @@ import shutil
 import time
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import ParseResult, urljoin, urlparse
+from urllib.parse import ParseResult, unquote, urljoin, urlparse
+from urllib.request import url2pathname
 
 import httpx
 
@@ -15,22 +16,10 @@ from file_organizer.plugins.marketplace.errors import (
     MarketplaceSchemaError,
 )
 from file_organizer.plugins.marketplace.models import PluginPackage
+from file_organizer.plugins.marketplace.validators import version_sort_key
 
 _DEFAULT_TIMEOUT_SECONDS = 10.0
 _DEFAULT_CACHE_TTL_SECONDS = 300
-
-
-def _version_sort_key(version: str) -> tuple[tuple[int, str], ...]:
-    """Generate stable sort key for semantic-ish versions."""
-    parts = version.replace("-", ".").split(".")
-    key: list[tuple[int, str]] = []
-    for part in parts:
-        token = part.strip()
-        if token.isdigit():
-            key.append((0, f"{int(token):08d}"))
-        else:
-            key.append((1, token.lower()))
-    return tuple(key)
 
 
 def _to_file_url(path: Path) -> str:
@@ -43,7 +32,7 @@ def _url_to_local_path(url: str) -> Path:
         raise MarketplaceRepositoryError(f"Expected file URL, got: {url}")
     if parsed.netloc and parsed.netloc not in ("", "localhost"):
         raise MarketplaceRepositoryError(f"Unsupported file URL host: {parsed.netloc}")
-    return Path(parsed.path).resolve()
+    return Path(url2pathname(unquote(parsed.path))).resolve()
 
 
 class PluginRepository:
@@ -87,6 +76,10 @@ class PluginRepository:
         """Clear cached repository metadata."""
         self._cache = None
         self._cache_expires_at = 0.0
+
+    def is_cache_fresh(self) -> bool:
+        """Return true when repository metadata cache can be reused."""
+        return self._cache is not None and time.time() < self._cache_expires_at
 
     def list_plugins(self, *, page: int = 1, per_page: int = 20) -> list[PluginPackage]:
         """Return paginated plugin package list."""
@@ -146,7 +139,7 @@ class PluginRepository:
                 f"Plugin '{name}' version '{version}' was not found in repository."
             )
 
-        matches.sort(key=lambda item: _version_sort_key(item.version), reverse=True)
+        matches.sort(key=lambda item: version_sort_key(item.version), reverse=True)
         return matches[0]
 
     def download_plugin(self, package: PluginPackage, destination_dir: Path) -> Path:
@@ -205,6 +198,10 @@ class PluginRepository:
         parsed = urlparse(package_url)
         if parsed.scheme in {"http", "https", "file"}:
             return package_url
+        if parsed.netloc:
+            raise MarketplaceRepositoryError(
+                "download_url must not include a network location without an explicit scheme."
+            )
 
         if self._base_file_root is not None:
             path = (self._base_file_root / package_url).resolve()
@@ -241,7 +238,7 @@ class PluginRepository:
             if not isinstance(item, dict):
                 raise MarketplaceSchemaError("Each plugin metadata entry must be a JSON object.")
             packages.append(PluginPackage.from_dict(item))
-        packages.sort(key=lambda item: (item.name.lower(), _version_sort_key(item.version)))
+        packages.sort(key=lambda item: (item.name.lower(), version_sort_key(item.version)))
 
         self._cache = packages
         self._cache_expires_at = now + float(self.cache_ttl_seconds)
@@ -279,4 +276,3 @@ class PluginRepository:
         if not isinstance(payload, dict):
             raise MarketplaceSchemaError("Repository index root must be a JSON object.")
         return payload
-

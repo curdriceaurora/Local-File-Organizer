@@ -9,7 +9,12 @@ import pytest
 
 from file_organizer.plugins.marketplace import (
     MarketplaceInstallError,
+    MarketplaceRepositoryError,
+    MarketplaceSchemaError,
+    MarketplaceService,
     PluginInstaller,
+    PluginMetadataStore,
+    PluginPackage,
     PluginRepository,
     PluginReview,
     ReviewManager,
@@ -152,6 +157,175 @@ def test_installer_rejects_zip_slip_archive(tmp_path: Path) -> None:
     assert not (tmp_path / "outside.txt").exists()
 
 
+def test_installer_detects_circular_dependencies(tmp_path: Path) -> None:
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    alpha = _write_plugin_archive(repo_dir, name="alpha", version="1.0.0", dependency="beta")
+    beta = _write_plugin_archive(repo_dir, name="beta", version="1.0.0", dependency="alpha")
+    _write_index(repo_dir, [alpha, beta])
+
+    repository = PluginRepository(str(repo_dir))
+    installer = PluginInstaller(tmp_path / "plugins", repository)
+    with pytest.raises(MarketplaceInstallError, match="Circular plugin dependency"):
+        installer.install("alpha")
+
+
+def test_installer_uninstall_rejects_invalid_plugin_name(tmp_path: Path) -> None:
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    alpha = _write_plugin_archive(repo_dir, name="alpha", version="1.0.0")
+    _write_index(repo_dir, [alpha])
+
+    repository = PluginRepository(str(repo_dir))
+    installer = PluginInstaller(tmp_path / "plugins", repository)
+    installer.install("alpha")
+
+    with pytest.raises(MarketplaceInstallError, match="Invalid plugin name"):
+        installer.uninstall("../alpha")
+
+
+def test_repository_file_url_handles_percent_encoded_paths(tmp_path: Path) -> None:
+    repo_dir = tmp_path / "repo with spaces"
+    repo_dir.mkdir()
+    alpha = _write_plugin_archive(repo_dir, name="alpha", version="1.0.0")
+    _write_index(repo_dir, [alpha])
+
+    repository = PluginRepository(repo_dir.as_uri())
+    package = repository.get_plugin("alpha")
+    downloaded = repository.download_plugin(package, tmp_path / "downloads")
+    assert downloaded.exists()
+
+
+def test_repository_rejects_scheme_relative_download_url(tmp_path: Path) -> None:
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    alpha = _write_plugin_archive(repo_dir, name="alpha", version="1.0.0")
+    alpha["download_url"] = "//attacker.example/alpha-1.0.0.zip"
+    _write_index(repo_dir, [alpha])
+
+    repository = PluginRepository(str(repo_dir))
+    package = repository.get_plugin("alpha")
+    with pytest.raises(MarketplaceRepositoryError, match="network location"):
+        repository.download_plugin(package, tmp_path / "downloads")
+
+
+def test_metadata_store_uses_version_sorting(tmp_path: Path) -> None:
+    store = PluginMetadataStore(tmp_path / "metadata.json")
+    package_v2 = PluginPackage.from_dict(
+        {
+            "name": "alpha",
+            "version": "1.2.0",
+            "author": "tests",
+            "description": "alpha",
+            "download_url": "alpha-1.2.0.zip",
+            "checksum_sha256": "0" * 64,
+            "size_bytes": 10,
+            "dependencies": [],
+            "tags": [],
+            "category": "utility",
+            "license": "MIT",
+            "min_organizer_version": "2.0.0",
+            "max_organizer_version": None,
+            "downloads": 0,
+            "rating": 0.0,
+            "reviews_count": 0,
+        }
+    )
+    package_v10 = PluginPackage.from_dict(
+        {
+            "name": "alpha",
+            "version": "1.10.0",
+            "author": "tests",
+            "description": "alpha",
+            "download_url": "alpha-1.10.0.zip",
+            "checksum_sha256": "1" * 64,
+            "size_bytes": 10,
+            "dependencies": [],
+            "tags": [],
+            "category": "utility",
+            "license": "MIT",
+            "min_organizer_version": "2.0.0",
+            "max_organizer_version": None,
+            "downloads": 0,
+            "rating": 0.0,
+            "reviews_count": 0,
+        }
+    )
+    store.sync([package_v2, package_v10])
+    newest = store.get_plugin("alpha")
+    assert newest is not None
+    assert newest.version == "1.10.0"
+
+
+def test_service_list_plugins_avoids_redundant_metadata_writes(tmp_path: Path) -> None:
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    alpha = _write_plugin_archive(repo_dir, name="alpha", version="1.0.0")
+    _write_index(repo_dir, [alpha])
+
+    service = MarketplaceService(
+        home_dir=tmp_path / "marketplace-home",
+        repo_url=str(repo_dir),
+    )
+    first_page, first_total = service.list_plugins()
+    assert first_total == 1
+    assert first_page[0].name == "alpha"
+
+    metadata_path = service.home_dir / "metadata.json"
+    before_mtime = metadata_path.stat().st_mtime_ns
+    second_page, second_total = service.list_plugins()
+    assert second_total == 1
+    assert second_page[0].name == "alpha"
+    after_mtime = metadata_path.stat().st_mtime_ns
+    assert after_mtime == before_mtime
+
+
+def test_plugin_package_rejects_unsafe_name_and_version() -> None:
+    with pytest.raises(MarketplaceSchemaError, match="Invalid plugin name"):
+        PluginPackage.from_dict(
+            {
+                "name": "../alpha",
+                "version": "1.0.0",
+                "author": "tests",
+                "description": "alpha",
+                "download_url": "alpha.zip",
+                "checksum_sha256": "0" * 64,
+                "size_bytes": 10,
+                "dependencies": [],
+                "tags": [],
+                "category": "utility",
+                "license": "MIT",
+                "min_organizer_version": "2.0.0",
+                "max_organizer_version": None,
+                "downloads": 0,
+                "rating": 0.0,
+                "reviews_count": 0,
+            }
+        )
+
+    with pytest.raises(MarketplaceSchemaError, match="Invalid plugin version"):
+        PluginPackage.from_dict(
+            {
+                "name": "alpha",
+                "version": "../1.0.0",
+                "author": "tests",
+                "description": "alpha",
+                "download_url": "alpha.zip",
+                "checksum_sha256": "0" * 64,
+                "size_bytes": 10,
+                "dependencies": [],
+                "tags": [],
+                "category": "utility",
+                "license": "MIT",
+                "min_organizer_version": "2.0.0",
+                "max_organizer_version": None,
+                "downloads": 0,
+                "rating": 0.0,
+                "reviews_count": 0,
+            }
+        )
+
+
 def test_reviews_add_update_delete_and_average(tmp_path: Path) -> None:
     manager = ReviewManager(tmp_path / "reviews.json")
     manager.add_review(
@@ -193,4 +367,3 @@ def test_reviews_add_update_delete_and_average(tmp_path: Path) -> None:
     remaining = manager.get_reviews("alpha", limit=10)
     assert len(remaining) == 1
     assert remaining[0].user_id == "u2"
-

@@ -224,6 +224,21 @@ if [[ -n "$PY_FILES" ]]; then
     echo ""
   fi
 
+  echo "🧪 Checking if marketplace security tests are needed..."
+  MARKETPLACE_FILES_REGEX="file_organizer_v2/src/file_organizer/plugins/marketplace/|file_organizer_v2/tests/plugins/test_marketplace_core\\.py"
+  if echo "$MODIFIED" | grep -Eq "$MARKETPLACE_FILES_REGEX"; then
+    echo "🧪 Running marketplace safety and integrity tests..."
+    if ! pytest file_organizer_v2/tests/plugins/test_marketplace_core.py -q --override-ini="addopts="; then
+      echo "❌ Marketplace tests failed"
+      exit 1
+    fi
+    echo "✓ Marketplace tests passed"
+    echo ""
+  else
+    echo "✓ No marketplace-related changes detected"
+    echo ""
+  fi
+
   echo "🧪 Running CI-focused test suite..."
   if ! pytest file_organizer_v2/tests/ci -q --override-ini="addopts="; then
     echo "❌ CI-focused tests failed"

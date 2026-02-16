@@ -56,6 +56,25 @@ class MarketplaceService:
         self.metadata_store.sync(packages)
         return packages
 
+    def _read_or_refresh_metadata(self) -> list[PluginPackage]:
+        metadata_path = self.home_dir / "metadata.json"
+        try:
+            is_missing_or_empty = (not metadata_path.exists()) or metadata_path.stat().st_size == 0
+        except OSError:
+            is_missing_or_empty = True
+        if is_missing_or_empty:
+            return self.refresh_metadata()
+
+        if self.repository.is_cache_fresh():
+            return self.metadata_store.list_all()
+
+        latest_packages = self.repository.all_plugins()
+        cached_packages = self.metadata_store.list_all()
+        if latest_packages != cached_packages:
+            self.metadata_store.sync(latest_packages)
+            return latest_packages
+        return cached_packages
+
     def list_plugins(
         self,
         *,
@@ -66,7 +85,7 @@ class MarketplaceService:
         category: Optional[str] = None,
     ) -> tuple[list[PluginPackage], int]:
         """List/search repository plugins and return total count for pagination."""
-        packages = self.refresh_metadata()
+        packages = self._read_or_refresh_metadata()
 
         if query.strip() or (tags and len(tags) > 0) or (category and category.strip()):
             filtered = self.metadata_store.search(
@@ -118,4 +137,3 @@ class MarketplaceService:
     def get_average_rating(self, plugin_name: str) -> float:
         """Get average user rating for a plugin."""
         return self.review_manager.get_average_rating(plugin_name)
-

@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any, Optional
 
 from file_organizer.plugins.marketplace.errors import MarketplaceSchemaError
+from file_organizer.plugins.marketplace.validators import (
+    normalize_plugin_name,
+    normalize_plugin_version,
+)
 
 
 def utc_now_iso() -> str:
@@ -81,8 +85,14 @@ class PluginPackage:
             joined = ", ".join(sorted(missing))
             raise MarketplaceSchemaError(f"Plugin metadata missing required fields: {joined}")
 
-        name = str(payload["name"]).strip()
-        version = str(payload["version"]).strip()
+        try:
+            name = normalize_plugin_name(str(payload["name"]))
+        except ValueError as exc:
+            raise MarketplaceSchemaError(str(exc)) from exc
+        try:
+            version = normalize_plugin_version(str(payload["version"]))
+        except ValueError as exc:
+            raise MarketplaceSchemaError(str(exc)) from exc
         author = str(payload["author"]).strip()
         description = str(payload["description"]).strip()
         download_url = str(payload["download_url"]).strip()
@@ -185,8 +195,14 @@ class InstalledPlugin:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> InstalledPlugin:
-        name = str(payload.get("name", "")).strip()
-        version = str(payload.get("version", "")).strip()
+        try:
+            name = normalize_plugin_name(str(payload.get("name", "")))
+        except ValueError as exc:
+            raise MarketplaceSchemaError(str(exc)) from exc
+        try:
+            version = normalize_plugin_version(str(payload.get("version", "")))
+        except ValueError as exc:
+            raise MarketplaceSchemaError(str(exc)) from exc
         source_url = str(payload.get("source_url", "")).strip()
         installed_at = str(payload.get("installed_at", "")).strip() or utc_now_iso()
         if not name or not version or not source_url:
@@ -258,4 +274,3 @@ class PluginReview:
             "updated_at": self.updated_at,
             "helpful_count": self.helpful_count,
         }
-

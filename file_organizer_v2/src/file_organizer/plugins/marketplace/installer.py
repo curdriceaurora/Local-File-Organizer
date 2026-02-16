@@ -13,6 +13,7 @@ from typing import Optional
 from file_organizer.plugins.marketplace.errors import MarketplaceInstallError
 from file_organizer.plugins.marketplace.models import InstalledPlugin
 from file_organizer.plugins.marketplace.repository import PluginRepository
+from file_organizer.plugins.marketplace.validators import normalize_plugin_name
 from file_organizer.version import __version__
 
 _MAX_EXTRACTED_BYTES = 100 * 1024 * 1024  # 100 MB safety guard
@@ -46,58 +47,84 @@ class PluginInstaller:
 
     def install(self, name: str, *, version: Optional[str] = None) -> InstalledPlugin:
         """Install a plugin package and its dependencies."""
-        installed = self._load_installed()
-        package = self.repository.get_plugin(name, version=version)
-        self._validate_version_compatibility(package.min_organizer_version, package.max_organizer_version)
+        return self._install_recursive(name, version=version, install_stack=[])
 
-        for dependency in package.dependencies:
-            dep_name = dependency.strip()
-            if not dep_name:
-                continue
-            if dep_name in installed:
-                continue
-            self.install(dep_name)
+    def _install_recursive(
+        self,
+        name: str,
+        *,
+        version: Optional[str],
+        install_stack: list[str],
+    ) -> InstalledPlugin:
+        try:
+            normalized_name = normalize_plugin_name(name)
+        except ValueError as exc:
+            raise MarketplaceInstallError(str(exc)) from exc
+        if normalized_name in install_stack:
+            cycle = " -> ".join([*install_stack, normalized_name])
+            raise MarketplaceInstallError(
+                f"Circular plugin dependency detected: {cycle}."
+            )
+        install_stack.append(normalized_name)
+
+        try:
             installed = self._load_installed()
+            package = self.repository.get_plugin(normalized_name, version=version)
+            self._validate_version_compatibility(
+                package.min_organizer_version,
+                package.max_organizer_version,
+            )
 
-        with tempfile.TemporaryDirectory(prefix="fo-marketplace-") as temp_dir_raw:
-            temp_dir = Path(temp_dir_raw)
-            archive_path = self.repository.download_plugin(package, temp_dir)
-            if not self.repository.verify_checksum(archive_path, package.checksum_sha256):
-                raise MarketplaceInstallError(
-                    f"Checksum verification failed for plugin '{package.name}'."
-                )
+            for dependency in package.dependencies:
+                dep_name = dependency.strip()
+                if not dep_name:
+                    continue
+                if dep_name in installed:
+                    continue
+                self._install_recursive(dep_name, version=None, install_stack=install_stack)
+                installed = self._load_installed()
 
-            extracted_dir = temp_dir / "extract"
-            extracted_dir.mkdir(parents=True, exist_ok=True)
-            self._extract_plugin_archive(archive_path, extracted_dir)
-            source_dir = self._locate_plugin_root(extracted_dir)
+            with tempfile.TemporaryDirectory(prefix="fo-marketplace-") as temp_dir_raw:
+                temp_dir = Path(temp_dir_raw)
+                archive_path = self.repository.download_plugin(package, temp_dir)
+                if not self.repository.verify_checksum(archive_path, package.checksum_sha256):
+                    raise MarketplaceInstallError(
+                        f"Checksum verification failed for plugin '{package.name}'."
+                    )
 
-            destination = self.plugin_dir / package.name
-            self.plugin_dir.mkdir(parents=True, exist_ok=True)
-            if destination.exists():
-                shutil.rmtree(destination)
-            shutil.copytree(source_dir, destination)
+                extracted_dir = temp_dir / "extract"
+                extracted_dir.mkdir(parents=True, exist_ok=True)
+                self._extract_plugin_archive(archive_path, extracted_dir)
+                source_dir = self._locate_plugin_root(extracted_dir)
 
-        installed_plugin = InstalledPlugin(
-            name=package.name,
-            version=package.version,
-            source_url=self.repository.repo_url,
-        )
-        installed[package.name] = installed_plugin
-        self._save_installed(installed)
-        return installed_plugin
+                destination = self._resolve_plugin_path(package.name)
+                self.plugin_dir.mkdir(parents=True, exist_ok=True)
+                if destination.exists():
+                    shutil.rmtree(destination)
+                shutil.copytree(source_dir, destination)
+
+            installed_plugin = InstalledPlugin(
+                name=package.name,
+                version=package.version,
+                source_url=self.repository.repo_url,
+            )
+            installed[package.name] = installed_plugin
+            self._save_installed(installed)
+            return installed_plugin
+        finally:
+            install_stack.pop()
 
     def uninstall(self, name: str) -> None:
         """Uninstall plugin and remove installed metadata."""
+        normalized_name = self._normalize_plugin_name(name)
+        destination = self._resolve_plugin_path(normalized_name)
         installed = self._load_installed()
-        if name not in installed:
-            raise MarketplaceInstallError(f"Plugin '{name}' is not installed.")
-
-        destination = self.plugin_dir / name
+        if normalized_name not in installed:
+            raise MarketplaceInstallError(f"Plugin '{normalized_name}' is not installed.")
         if destination.exists():
             shutil.rmtree(destination)
 
-        installed.pop(name, None)
+        installed.pop(normalized_name, None)
         self._save_installed(installed)
 
     def update(self, name: str) -> Optional[InstalledPlugin]:
@@ -223,3 +250,20 @@ class PluginInstaller:
             if leftover.exists():
                 leftover.unlink(missing_ok=True)
 
+    def _resolve_plugin_path(self, name: str) -> Path:
+        normalized = self._normalize_plugin_name(name)
+        plugin_root = self.plugin_dir.resolve()
+        destination = (plugin_root / normalized).resolve()
+        try:
+            destination.relative_to(plugin_root)
+        except ValueError as exc:
+            raise MarketplaceInstallError(
+                f"Resolved plugin path escapes plugin directory for '{normalized}'."
+            ) from exc
+        return destination
+
+    def _normalize_plugin_name(self, name: str) -> str:
+        try:
+            return normalize_plugin_name(name)
+        except ValueError as exc:
+            raise MarketplaceInstallError(str(exc)) from exc

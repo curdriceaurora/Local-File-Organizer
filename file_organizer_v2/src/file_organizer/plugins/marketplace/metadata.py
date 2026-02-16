@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 from file_organizer.plugins.marketplace.errors import MarketplaceRepositoryError
 from file_organizer.plugins.marketplace.models import PluginPackage
+from file_organizer.plugins.marketplace.validators import version_sort_key
 
 
 class PluginMetadataStore:
@@ -34,7 +35,7 @@ class PluginMetadataStore:
             if not isinstance(item, dict):
                 continue
             packages.append(PluginPackage.from_dict(item))
-        packages.sort(key=lambda package: (package.name.lower(), package.version))
+        packages.sort(key=lambda package: (package.name.lower(), version_sort_key(package.version)))
         return packages
 
     def get_plugin(self, name: str) -> Optional[PluginPackage]:
@@ -46,7 +47,7 @@ class PluginMetadataStore:
         matches = [package for package in self.list_all() if package.name.lower() == candidate]
         if not matches:
             return None
-        matches.sort(key=lambda package: package.version, reverse=True)
+        matches.sort(key=lambda package: version_sort_key(package.version), reverse=True)
         return matches[0]
 
     def search(
@@ -105,4 +106,3 @@ class PluginMetadataStore:
             leftover = Path(tmp_path)
             if leftover.exists():
                 leftover.unlink(missing_ok=True)
-
