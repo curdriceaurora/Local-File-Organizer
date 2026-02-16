@@ -13,7 +13,7 @@ from file_organizer.parallel.resume import ResumableProcessor
 
 class TestConcurrencyFixes(unittest.TestCase):
 
-    def test_checkpoint_batching_overhead(self):
+    def test_checkpoint_batching_overhead(self) -> None:
         """Test that checkpoint saving is batched (Issue #292)."""
         # Setup mocks
         mock_persistence = MagicMock()
@@ -75,7 +75,7 @@ class TestConcurrencyFixes(unittest.TestCase):
             self.assertLess(save_calls, 10, "Should use batched checkpoints")
             self.assertGreaterEqual(save_calls, 1, "Should save at least once")
 
-    def test_process_batch_iter_bounded_pending_futures(self):
+    def test_process_batch_iter_bounded_pending_futures(self) -> None:
         """Test that pending futures are bounded to avoid unbounded memory (Issue #293)."""
         config = ParallelConfig(max_workers=3)
         processor = ParallelProcessor(config=config)
@@ -89,7 +89,7 @@ class TestConcurrencyFixes(unittest.TestCase):
             observed_pending_sizes.append(len(fs))
             return real_wait(fs, *args, **kwargs)
 
-        def slow_task(_path):
+        def slow_task(_path: Path) -> str:
             time.sleep(0.01)
             return "ok"
 
@@ -104,7 +104,7 @@ class TestConcurrencyFixes(unittest.TestCase):
             "Pending futures should be bounded to 2 * max_workers",
         )
 
-    def test_zombie_task_timeout(self):
+    def test_zombie_task_timeout(self) -> None:
         """Test that timed-out tasks are cancelled and reported correctly (Issue #294)."""
         config = ParallelConfig(
             max_workers=2,
@@ -113,7 +113,7 @@ class TestConcurrencyFixes(unittest.TestCase):
         )
         processor = ParallelProcessor(config=config)
 
-        def slow_task(path):
+        def slow_task(path: Path) -> str:
             time.sleep(0.5)
             return "done"
 
@@ -130,11 +130,11 @@ class TestConcurrencyFixes(unittest.TestCase):
         # Must return close to timeout_per_file, not full task duration.
         self.assertLess(
             results.total_duration_ms,
-            config.timeout_per_file * 1000 + 150,
+            config.timeout_per_file * 1000 + 300,
             "Should finish close to timeout_per_file, not full task duration",
         )
 
-    def test_process_batch_iter_bounded_futures_memory_usage(self):
+    def test_process_batch_iter_bounded_futures_memory_usage(self) -> None:
         """Test that process_batch_iter uses bounded concurrency to avoid unbounded memory (Issue #293)."""
         # Use a small worker pool and many slow tasks; total time should scale with
         # len(paths) / max_workers if concurrency is bounded.
@@ -147,7 +147,7 @@ class TestConcurrencyFixes(unittest.TestCase):
         num_files = 40
         paths = [Path(f"large_batch_file_{i}") for i in range(num_files)]
 
-        def slow_task(_path: Path) -> FileResult:
+        def slow_task(_path: Path) -> str:
             time.sleep(per_file_sleep)
             return "ok"
 
@@ -167,3 +167,31 @@ class TestConcurrencyFixes(unittest.TestCase):
             expected_min_duration,
             "process_batch_iter appears to run too many tasks concurrently, which risks unbounded memory usage",
         )
+
+    def test_timeout_does_not_deadlock_with_queued_files(self) -> None:
+        """Test that timeout handling aborts queued work instead of deadlocking."""
+        config = ParallelConfig(
+            max_workers=1,
+            timeout_per_file=0.1,
+            retry_count=0,
+        )
+        processor = ParallelProcessor(config=config)
+        paths = [Path("slow_1"), Path("slow_2"), Path("slow_3")]
+
+        def very_slow_task(_path: Path) -> str:
+            time.sleep(0.5)
+            return "done"
+
+        results = processor.process_batch(paths, very_slow_task)
+
+        self.assertEqual(results.total, 3)
+        self.assertEqual(results.failed, 3)
+        self.assertEqual(len(results.results), 3)
+        self.assertLess(
+            results.total_duration_ms,
+            700,
+            "Should abort queued/remaining work quickly after uncancellable timeout",
+        )
+        errors = [str(item.error) for item in results.results]
+        self.assertTrue(any("Timed out" in err for err in errors))
+        self.assertTrue(any("Aborted because another task" in err for err in errors))

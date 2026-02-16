@@ -198,6 +198,7 @@ class ParallelProcessor:
         # Keep at most 2 * max_workers pending futures to cap memory growth.
         # Timeout is measured from task start (future.running()), not submission time.
         limit = max_workers * 2
+        submit_round = min(limit, self._config.chunk_size)
         pending: set[Future[FileResult]] = set()
         # Track scheduling metadata for timeout handling.
         future_paths: dict[Future[FileResult], Path] = {}
@@ -225,10 +226,26 @@ class ParallelProcessor:
                     iterator_exhausted = True
                     return False
 
+            def submit_round_of_work() -> None:
+                """Submit up to chunk_size new tasks while respecting pending limit."""
+                submitted = 0
+                while len(pending) < limit and submitted < submit_round:
+                    if not submit_next():
+                        break
+                    submitted += 1
+
+            def finalize_result(file_result: FileResult) -> FileResult:
+                """Update progress counters/callback and return result for yielding."""
+                nonlocal completed_count
+                completed_count += 1
+                if self._config.progress_callback:
+                    self._config.progress_callback(
+                        completed_count, total, file_result
+                    )
+                return file_result
+
             # Initial fill
-            while len(pending) < limit:
-                if not submit_next():
-                    break
+            submit_round_of_work()
 
             while pending:
                 # Wait for completion or timeout check
@@ -250,14 +267,8 @@ class ParallelProcessor:
                             path=path, success=False, error=str(exc)
                         )
 
-                    completed_count += 1
-                    if self._config.progress_callback:
-                        self._config.progress_callback(
-                            completed_count, total, file_result
-                        )
-
-                    yield file_result
-                    submit_next()
+                    yield finalize_result(file_result)
+                    submit_round_of_work()
 
                 # 2. Check for timed-out tasks
                 now = time.monotonic()
@@ -290,15 +301,41 @@ class ParallelProcessor:
                             success=False,
                             error=f"Timed out after {timeout}s",
                         )
+                        yield finalize_result(file_result)
 
-                        completed_count += 1
-                        if self._config.progress_callback:
-                            self._config.progress_callback(
-                                completed_count, total, file_result
+                        if not cancelled:
+                            # The task is already running and cannot be cancelled.
+                            # Fail fast: mark all remaining queued/unscheduled files
+                            # as aborted so callers do not deadlock waiting for work
+                            # that cannot begin while worker slots remain occupied.
+                            abort_error = (
+                                "Aborted because another task exceeded timeout "
+                                "and could not be cancelled"
                             )
+                            for other in list(pending):
+                                pending.remove(other)
+                                other_path = future_paths.pop(other)
+                                future_started.pop(other, None)
+                                other.cancel()
+                                yield finalize_result(
+                                    FileResult(
+                                        path=other_path,
+                                        success=False,
+                                        error=abort_error,
+                                    )
+                                )
 
-                        yield file_result
-                        submit_next()
+                            for remaining_path in iterator:
+                                yield finalize_result(
+                                    FileResult(
+                                        path=remaining_path,
+                                        success=False,
+                                        error=abort_error,
+                                    )
+                                )
+                            return
+
+                        submit_round_of_work()
         finally:
             if owns_executor:
                 exec_instance.shutdown(
