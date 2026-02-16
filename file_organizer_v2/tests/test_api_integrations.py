@@ -138,3 +138,27 @@ def test_unknown_integration_returns_404(tmp_path: Path) -> None:
         headers=headers,
     )
     assert settings.status_code == 404
+    assert settings.json()["error"] == "not_found"
+
+
+def test_vscode_settings_normalize_bare_command_output_path(tmp_path: Path) -> None:
+    client, headers, allowed_root, _ = _client(tmp_path)
+    workspace = allowed_root / "workspace"
+    workspace.mkdir()
+    source = workspace / "main.py"
+    source.write_text("print('ok')\n", encoding="utf-8")
+
+    update = client.post(
+        "/api/v1/integrations/vscode/settings",
+        json={"settings": {"workspace_path": str(workspace), "command_output_path": "commands.jsonl"}},
+        headers=headers,
+    )
+    assert update.status_code == 200
+
+    send = client.post(
+        "/api/v1/integrations/vscode/send",
+        json={"path": str(source), "metadata": {"origin": "api-test"}},
+        headers=headers,
+    )
+    assert send.status_code == 200
+    assert (allowed_root / "commands.jsonl").exists()

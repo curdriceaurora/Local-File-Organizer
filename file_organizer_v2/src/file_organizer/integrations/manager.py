@@ -98,9 +98,10 @@ class IntegrationManager:
 
     def update_settings(self, name: str, settings: dict[str, Any]) -> bool:
         """Merge settings into integration config and reset connection state."""
-        integration = self.get(name)
-        if integration is None:
-            return False
-        integration.config.merge_settings(settings)
-        integration.connected = False
-        return True
+        with self._lock:
+            integration = self._integrations.get(name)
+            if integration is None:
+                return False
+            integration.config.merge_settings(settings)
+            integration.connected = False
+            return True

@@ -5,10 +5,11 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_current_active_user, get_settings
+from file_organizer.api.exceptions import ApiError
 from file_organizer.api.integration_models import (
     BrowserConfigResponse,
     BrowserTokenIssueRequest,
@@ -129,13 +130,24 @@ def _validate_setting_paths(
         if not isinstance(value, str) or not value.strip():
             continue
         raw_path = os.path.expanduser(value)
-        candidate = os.path.dirname(raw_path) if key == "command_output_path" else raw_path
-        validated_root = resolve_path(candidate, settings.allowed_paths)
         if key == "command_output_path":
+            directory = os.path.dirname(raw_path)
+            if directory:
+                candidate = directory
+            else:
+                # Bare filenames should resolve to a deterministic base directory.
+                candidate = settings.allowed_paths[0] if settings.allowed_paths else str(Path.home())
+            validated_root = resolve_path(candidate, settings.allowed_paths)
             normalized[key] = os.path.join(str(validated_root), os.path.basename(raw_path))
         else:
+            validated_root = resolve_path(raw_path, settings.allowed_paths)
             normalized[key] = str(validated_root)
     return normalized
+
+
+def _require_integration(manager: IntegrationManager, integration_name: str) -> None:
+    if manager.get(integration_name) is None:
+        raise ApiError(status_code=404, error="not_found", message="Integration not found")
 
 
 @router.get("/integrations", response_model=IntegrationStatusListResponse)
@@ -164,13 +176,11 @@ async def update_integration_settings(
     manager: IntegrationManager = Depends(get_integration_manager),
     settings: ApiSettings = Depends(get_settings),
 ) -> IntegrationConnectResponse:
-    integration = manager.get(integration_name)
-    if integration is None:
-        raise HTTPException(status_code=404, detail="Integration not found")
+    _require_integration(manager, integration_name)
 
     normalized_settings = _validate_setting_paths(request.settings, settings)
     manager.update_settings(integration_name, normalized_settings)
-    return IntegrationConnectResponse(integration=integration_name, connected=integration.connected)
+    return IntegrationConnectResponse(integration=integration_name, connected=False)
 
 
 @router.post("/integrations/{integration_name}/connect", response_model=IntegrationConnectResponse)
@@ -178,9 +188,8 @@ async def connect_integration(
     integration_name: str,
     manager: IntegrationManager = Depends(get_integration_manager),
 ) -> IntegrationConnectResponse:
+    _require_integration(manager, integration_name)
     connected = await manager.connect(integration_name)
-    if manager.get(integration_name) is None:
-        raise HTTPException(status_code=404, detail="Integration not found")
     return IntegrationConnectResponse(integration=integration_name, connected=connected)
 
 
@@ -189,10 +198,8 @@ async def disconnect_integration(
     integration_name: str,
     manager: IntegrationManager = Depends(get_integration_manager),
 ) -> IntegrationConnectResponse:
-    exists = manager.get(integration_name) is not None
+    _require_integration(manager, integration_name)
     disconnected = await manager.disconnect(integration_name)
-    if not exists:
-        raise HTTPException(status_code=404, detail="Integration not found")
     return IntegrationConnectResponse(integration=integration_name, connected=not disconnected)
 
 
@@ -203,8 +210,7 @@ async def send_file_to_integration(
     manager: IntegrationManager = Depends(get_integration_manager),
     settings: ApiSettings = Depends(get_settings),
 ) -> IntegrationFileSendResponse:
-    if manager.get(integration_name) is None:
-        raise HTTPException(status_code=404, detail="Integration not found")
+    _require_integration(manager, integration_name)
 
     safe_path = resolve_path(request.path, settings.allowed_paths)
     sent = await manager.send_file(integration_name, str(safe_path), metadata=request.metadata)

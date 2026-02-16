@@ -45,6 +45,7 @@ class BrowserExtensionManager:
             expires_at=now + timedelta(seconds=self._token_ttl_seconds),
         )
         with self._lock:
+            self._prune_expired_locked(now)
             self._tokens[token] = record
         return record
 
@@ -52,10 +53,14 @@ class BrowserExtensionManager:
         """Validate token existence and expiry state."""
         now = datetime.now(timezone.utc)
         with self._lock:
+            self._prune_expired_locked(now)
             record = self._tokens.get(token)
             if record is None:
                 return False
-            if record.expires_at <= now:
-                self._tokens.pop(token, None)
-                return False
             return True
+
+    def _prune_expired_locked(self, now: datetime) -> None:
+        """Remove expired tokens while holding the manager lock."""
+        expired = [token for token, record in self._tokens.items() if record.expires_at <= now]
+        for token in expired:
+            self._tokens.pop(token, None)

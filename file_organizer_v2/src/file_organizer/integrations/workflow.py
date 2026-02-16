@@ -49,7 +49,8 @@ class WorkflowIntegration(Integration):
             return False
 
         payload = metadata or {}
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        now = datetime.now(timezone.utc)
+        stamp = now.strftime("%Y%m%dT%H%M%SZ")
         stem = source.stem
 
         alfred = {
@@ -66,7 +67,7 @@ class WorkflowIntegration(Integration):
             "name": f"Open {source.name}",
             "path": str(source.resolve(strict=False)),
             "metadata": payload,
-            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
         output_dir = self._output_dir()

@@ -1,11 +1,12 @@
 """Obsidian vault integration adapter."""
 from __future__ import annotations
 
-import json
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 from file_organizer.integrations.base import (
     Integration,
@@ -90,14 +91,25 @@ class ObsidianIntegration(Integration):
     ) -> str:
         payload = metadata or {}
         now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        frontmatter: dict[str, Any] = {
+            "source": source.as_posix(),
+            "exported_at": now,
+            "attachment": destination.as_posix(),
+        }
+        if payload:
+            frontmatter["metadata"] = payload
+
+        yaml_frontmatter = yaml.safe_dump(
+            frontmatter,
+            allow_unicode=True,
+            default_flow_style=False,
+            sort_keys=False,
+        ).strip()
+
         lines = [
             "---",
-            f'"source": "{source.as_posix()}"',
-            f'"exported_at": "{now}"',
-            f'"attachment": "{destination.as_posix()}"',
+            yaml_frontmatter,
         ]
-        if payload:
-            lines.append('"metadata": ' + json.dumps(payload, sort_keys=True))
         lines.extend(
             [
                 "---",
