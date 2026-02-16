@@ -1,0 +1,43 @@
+{% if shared_folders %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Folder</th>
+            <th>Permission</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for folder in shared_folders %}
+        <tr>
+            <td><code>{{ folder.path }}</code></td>
+            <td>{{ folder.permission }}</td>
+            <td>
+                <form method="post" action="/ui/profile/shared/remove" hx-post="/ui/profile/shared/remove" hx-target="#profile-shared">
+                    <input type="hidden" name="folder_id" value="{{ folder.id }}">
+                    <button class="btn-ghost btn-sm" type="submit">Remove</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No shared folders configured.</p>
+{% endif %}
+
+<form method="post" action="/ui/profile/shared/add" hx-post="/ui/profile/shared/add" hx-target="#profile-shared">
+    <div class="form-group">
+        <label for="shared-path">Folder path</label>
+        <input id="shared-path" name="folder_path" type="text" required>
+    </div>
+    <div class="form-group">
+        <label for="shared-permission">Permission</label>
+        <select id="shared-permission" name="permission">
+            <option value="view">view</option>
+            <option value="edit">edit</option>
+            <option value="admin">admin</option>
+        </select>
+    </div>
+    <button class="btn-primary" type="submit">Add shared folder</button>
+</form>

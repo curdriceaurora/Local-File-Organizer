@@ -14,6 +14,7 @@
 
 import type {
   ClientOptions,
+  ConfigUpdateRequest,
   ConfigResponse,
   DedupeScanResponse,
   DedupeExecuteResponse,
@@ -29,6 +30,7 @@ import type {
   OrganizationResultResponse,
   OrganizeExecuteResponse,
   ScanResponse,
+  StorageStatsResponse,
   SystemStatusResponse,
   TokenResponse,
   UserCreateRequest,
@@ -206,6 +208,12 @@ export class FileOrganizerClient {
     return this.request<UserResponse>("GET", this.url("/auth/me"));
   }
 
+  async logout(refreshToken: string): Promise<void> {
+    await this.request<void>("POST", this.url("/auth/logout"), {
+      body: { refresh_token: refreshToken },
+    });
+  }
+
   // -- health ---------------------------------------------------------------
 
   async health(): Promise<HealthResponse> {
@@ -359,6 +367,26 @@ export class FileOrganizerClient {
   async getConfig(profile: string = "default"): Promise<ConfigResponse> {
     return this.request<ConfigResponse>("GET", this.url("/system/config"), {
       params: { profile },
+    });
+  }
+
+  async updateConfig(payload: ConfigUpdateRequest): Promise<ConfigResponse> {
+    return this.request<ConfigResponse>("PATCH", this.url("/system/config"), {
+      body: payload,
+    });
+  }
+
+  async systemStats(options: {
+    path?: string;
+    maxDepth?: number;
+    useCache?: boolean;
+  } = {}): Promise<StorageStatsResponse> {
+    return this.request<StorageStatsResponse>("GET", this.url("/system/stats"), {
+      params: {
+        path: options.path ?? ".",
+        max_depth: options.maxDepth,
+        use_cache: options.useCache ?? true,
+      },
     });
   }
 

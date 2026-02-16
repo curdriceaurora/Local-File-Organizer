@@ -9,6 +9,45 @@
     </div>
 </section>
 
+<section class="panel">
+    <div class="settings-toolbar">
+        <div class="form-group">
+            <label for="settings-search">Search settings</label>
+            <input
+                id="settings-search"
+                type="text"
+                placeholder="Search (e.g. timezone, model, cache)"
+                hx-get="/ui/settings/search"
+                hx-trigger="keyup changed delay:250ms"
+                hx-target="#settings-search-results"
+                name="q"
+            >
+        </div>
+        <div class="settings-actions">
+            <form
+                hx-post="/ui/settings/import"
+                hx-target="#settings-panel"
+                hx-swap="innerHTML"
+                enctype="multipart/form-data"
+            >
+                <input type="hidden" name="section" value="general">
+                <input type="file" name="settings_file" accept=".json" required>
+                <button class="btn-ghost" type="submit">Import</button>
+            </form>
+            <a class="btn-ghost" href="/ui/settings/export">Export</a>
+            <form
+                hx-post="/ui/settings/reset"
+                hx-target="#settings-panel"
+                hx-swap="innerHTML"
+            >
+                <input type="hidden" name="section" value="general">
+                <button class="btn-ghost" type="submit">Reset defaults</button>
+            </form>
+        </div>
+    </div>
+    <div id="settings-search-results" class="settings-search-results"></div>
+</section>
+
 <div class="settings-layout">
     <nav class="settings-tabs" role="tablist">
         <button

@@ -1,0 +1,50 @@
+{% if team_members %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for member in team_members %}
+        <tr>
+            <td>{{ member.email }}</td>
+            <td>{{ member.role }}</td>
+            <td>{{ member.status }}</td>
+            <td>
+                <form method="post" action="/ui/profile/team/role" hx-post="/ui/profile/team/role" hx-target="#profile-team">
+                    <input type="hidden" name="member_id" value="{{ member.id }}">
+                    <select name="role">
+                        <option value="viewer" {% if member.role == "viewer" %}selected{% endif %}>viewer</option>
+                        <option value="editor" {% if member.role == "editor" %}selected{% endif %}>editor</option>
+                        <option value="admin" {% if member.role == "admin" %}selected{% endif %}>admin</option>
+                    </select>
+                    <button class="btn-ghost btn-sm" type="submit">Update</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No team members invited yet.</p>
+{% endif %}
+
+<form method="post" action="/ui/profile/team/invite" hx-post="/ui/profile/team/invite" hx-target="#profile-team">
+    <div class="form-group">
+        <label for="team-email">Invite by email</label>
+        <input id="team-email" name="email" type="email" required>
+    </div>
+    <div class="form-group">
+        <label for="team-role">Role</label>
+        <select id="team-role" name="role">
+            <option value="viewer">viewer</option>
+            <option value="editor">editor</option>
+            <option value="admin">admin</option>
+        </select>
+    </div>
+    <button class="btn-primary" type="submit">Invite member</button>
+</form>

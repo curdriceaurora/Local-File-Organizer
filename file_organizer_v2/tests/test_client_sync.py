@@ -318,3 +318,43 @@ def test_system_status(tmp_path: Path) -> None:
     assert result.disk_total > 0
     assert result.disk_free > 0
     client.close()
+
+
+def test_system_stats(tmp_path: Path) -> None:
+    root = tmp_path / "workspace"
+    root.mkdir()
+    (root / "a.txt").write_text("hello", encoding="utf-8")
+
+    client, _ = _make_auth_client(tmp_path, allowed_root=root)
+    stats = client.system_stats(path=str(root), use_cache=False)
+    assert stats.file_count >= 1
+    assert stats.total_size >= 0
+    client.close()
+
+
+def test_update_config_as_admin(tmp_path: Path) -> None:
+    root = tmp_path / "workspace"
+    root.mkdir()
+
+    client, _ = _make_auth_client(tmp_path, allowed_root=root)
+    updated = client.update_config(
+        {
+            "profile": "default",
+            "default_methodology": "content_based",
+            "updates": {"check_on_startup": True},
+        }
+    )
+    assert updated.profile == "default"
+    assert "default_methodology" in updated.config
+    client.close()
+
+
+def test_logout_revokes_tokens(tmp_path: Path) -> None:
+    client, _ = _make_client(tmp_path, auth_enabled=True, bootstrap_admin=True)
+    username = f"user-{uuid4().hex[:8]}"
+    client.register(username, f"{username}@test.com", "password123")
+    tokens = client.login(username, "password123")
+    client.logout(tokens.refresh_token)
+    with pytest.raises(AuthenticationError):
+        client.me()
+    client.close()

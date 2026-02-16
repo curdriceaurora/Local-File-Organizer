@@ -27,6 +27,18 @@
                     {% endfor %}
                 </div>
                 <div class="nav-actions">
+                    {% if workspace_options %}
+                    <form class="workspace-switcher" method="post" action="/ui/profile/workspaces/switch">
+                        <label for="workspace-switch" class="sr-only">Workspace</label>
+                        <select id="workspace-switch" name="workspace_id" onchange="this.form.submit()">
+                            {% for workspace in workspace_options %}
+                            <option value="{{ workspace.id }}" {% if active_workspace_id == workspace.id %}selected{% endif %}>
+                                {{ workspace.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    {% endif %}
                     <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
                         <span class="theme-toggle-label">Theme</span>
                         <span class="theme-toggle-chip">Light</span>

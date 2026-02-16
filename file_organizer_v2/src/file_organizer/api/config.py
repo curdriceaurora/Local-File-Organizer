@@ -55,6 +55,14 @@ class ApiSettings(BaseModel):
     auth_password_require_letter: bool = True
     auth_bootstrap_admin: bool = False
     auth_bootstrap_admin_local_only: bool = True
+    database_url: Optional[str] = None
+    database_pool_size: int = Field(default=10, gt=0)
+    database_max_overflow: int = Field(default=20, ge=0)
+    database_pool_pre_ping: bool = True
+    database_pool_recycle_seconds: int = Field(default=1800, gt=0)
+    database_echo: bool = False
+    cache_redis_url: Optional[str] = None
+    cache_default_ttl_seconds: int = Field(default=900, gt=0)
     api_key_enabled: bool = True
     api_key_admin: bool = False
     api_key_header: str = "X-API-Key"
@@ -258,6 +266,49 @@ def load_settings() -> ApiSettings:
         data["auth_bootstrap_admin_local_only"] = env[
             "FO_API_AUTH_BOOTSTRAP_LOCAL_ONLY"
         ].lower() in ("1", "true", "yes")
+    if "FO_API_DATABASE_URL" in env:
+        data["database_url"] = env["FO_API_DATABASE_URL"]
+    if "FO_API_DB_POOL_SIZE" in env:
+        try:
+            data["database_pool_size"] = int(env["FO_API_DB_POOL_SIZE"])
+        except ValueError:
+            logger.warning("Invalid FO_API_DB_POOL_SIZE value: {}", env["FO_API_DB_POOL_SIZE"])
+    if "FO_API_DB_MAX_OVERFLOW" in env:
+        try:
+            data["database_max_overflow"] = int(env["FO_API_DB_MAX_OVERFLOW"])
+        except ValueError:
+            logger.warning(
+                "Invalid FO_API_DB_MAX_OVERFLOW value: {}",
+                env["FO_API_DB_MAX_OVERFLOW"],
+            )
+    if "FO_API_DB_POOL_PRE_PING" in env:
+        data["database_pool_pre_ping"] = env["FO_API_DB_POOL_PRE_PING"].lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+    if "FO_API_DB_POOL_RECYCLE_SECONDS" in env:
+        try:
+            data["database_pool_recycle_seconds"] = int(env["FO_API_DB_POOL_RECYCLE_SECONDS"])
+        except ValueError:
+            logger.warning(
+                "Invalid FO_API_DB_POOL_RECYCLE_SECONDS value: {}",
+                env["FO_API_DB_POOL_RECYCLE_SECONDS"],
+            )
+    if "FO_API_DB_ECHO" in env:
+        data["database_echo"] = env["FO_API_DB_ECHO"].lower() in ("1", "true", "yes")
+    if "FO_API_CACHE_REDIS_URL" in env:
+        data["cache_redis_url"] = env["FO_API_CACHE_REDIS_URL"]
+    elif "FO_REDIS_URL" in env:
+        data["cache_redis_url"] = env["FO_REDIS_URL"]
+    if "FO_API_CACHE_TTL_SECONDS" in env:
+        try:
+            data["cache_default_ttl_seconds"] = int(env["FO_API_CACHE_TTL_SECONDS"])
+        except ValueError:
+            logger.warning(
+                "Invalid FO_API_CACHE_TTL_SECONDS value: {}",
+                env["FO_API_CACHE_TTL_SECONDS"],
+            )
     if "FO_API_API_KEY_ENABLED" in env:
         data["api_key_enabled"] = env["FO_API_API_KEY_ENABLED"].lower() in ("1", "true", "yes")
     if "FO_API_API_KEY_ADMIN" in env:

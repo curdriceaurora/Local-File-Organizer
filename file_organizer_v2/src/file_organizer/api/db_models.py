@@ -5,12 +5,14 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
     DateTime,
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 
@@ -72,6 +74,25 @@ class OrganizationJob(Base):
         return f"<OrganizationJob {self.id} status={self.status}>"
 
 
+class UserSession(Base):
+    """Persistent user session metadata."""
+
+    __tablename__ = "user_sessions"
+
+    id = Column(String, primary_key=True, default=_new_id)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String, nullable=False, unique=True, index=True)
+    refresh_token_hash = Column(String, nullable=True, unique=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    user_agent = Column(String, nullable=True)
+    ip_address = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+    def __repr__(self) -> str:
+        return f"<UserSession {self.id} user={self.user_id}>"
+
+
 class SettingsStore(Base):
     """Key/value settings scoped per user (or global when user_id is NULL)."""
 
@@ -108,3 +129,29 @@ class PluginInstallation(Base):
 
     def __repr__(self) -> str:
         return f"<PluginInstallation {self.plugin_name!r} v={self.version}>"
+
+
+class FileMetadata(Base):
+    """Persistent file metadata captured for a workspace."""
+
+    __tablename__ = "file_metadata"
+
+    id = Column(String, primary_key=True, default=_new_id)
+    workspace_id = Column(String, ForeignKey("workspaces.id"), nullable=False, index=True)
+    path = Column(String, nullable=False)
+    relative_path = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    size_bytes = Column(BigInteger, default=0)
+    mime_type = Column(String, nullable=True)
+    checksum_sha256 = Column(String, nullable=True, index=True)
+    last_modified = Column(DateTime(timezone=True), nullable=True)
+    extra_json = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "relative_path", name="uq_file_metadata_workspace_path"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<FileMetadata {self.relative_path!r} workspace={self.workspace_id}>"

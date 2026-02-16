@@ -1,0 +1,47 @@
+{% if workspaces %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Path</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for workspace in workspaces %}
+        <tr>
+            <td>{{ workspace.name }}</td>
+            <td><code>{{ workspace.root_path }}</code></td>
+            <td>
+                {% if active_workspace_id == workspace.id %}
+                <span class="action-meta">Active</span>
+                {% else %}
+                <form method="post" action="/ui/profile/workspaces/switch" hx-post="/ui/profile/workspaces/switch" hx-target="#profile-workspaces">
+                    <input type="hidden" name="workspace_id" value="{{ workspace.id }}">
+                    <button class="btn-ghost btn-sm" type="submit">Switch</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No workspaces yet.</p>
+{% endif %}
+
+<form method="post" action="/ui/profile/workspaces/create" hx-post="/ui/profile/workspaces/create" hx-target="#profile-workspaces">
+    <div class="form-group">
+        <label for="workspace-name">Workspace name</label>
+        <input id="workspace-name" name="name" type="text" required>
+    </div>
+    <div class="form-group">
+        <label for="workspace-root">Root path</label>
+        <input id="workspace-root" name="root_path" type="text" required>
+    </div>
+    <div class="form-group">
+        <label for="workspace-description">Description</label>
+        <input id="workspace-description" name="description" type="text">
+    </div>
+    <button class="btn-primary" type="submit">Create workspace</button>
+</form>

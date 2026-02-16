@@ -38,6 +38,7 @@ from file_organizer.client.models import (
     OrganizationResultResponse,
     OrganizeExecuteResponse,
     ScanResponse,
+    StorageStatsResponse,
     SystemStatusResponse,
     TokenResponse,
     UserResponse,
@@ -186,6 +187,18 @@ class AsyncFileOrganizerClient:
         response = await self._client.get(self._url("/auth/me"))
         self._raise_for_status(response)
         return UserResponse.model_validate(response.json())
+
+    async def logout(self, refresh_token: str) -> None:
+        """Revoke the current access/refresh token pair.
+
+        Args:
+            refresh_token: Refresh token associated with the current login.
+        """
+        response = await self._client.post(
+            self._url("/auth/logout"),
+            json={"refresh_token": refresh_token},
+        )
+        self._raise_for_status(response)
 
     # -- health --------------------------------------------------------------
 
@@ -485,6 +498,40 @@ class AsyncFileOrganizerClient:
         )
         self._raise_for_status(response)
         return ConfigResponse.model_validate(response.json())
+
+    async def update_config(self, payload: dict[str, Any]) -> ConfigResponse:
+        """Patch application configuration.
+
+        Args:
+            payload: Partial config update payload accepted by ``/system/config``.
+
+        Returns:
+            ConfigResponse with the updated configuration.
+        """
+        response = await self._client.patch(self._url("/system/config"), json=payload)
+        self._raise_for_status(response)
+        return ConfigResponse.model_validate(response.json())
+
+    async def system_stats(
+        self,
+        *,
+        path: str = ".",
+        max_depth: Optional[int] = None,
+        use_cache: bool = True,
+    ) -> StorageStatsResponse:
+        """Get storage analytics statistics for a directory.
+
+        Args:
+            path: Directory path to analyze.
+            max_depth: Optional directory depth limit.
+            use_cache: Whether server-side cache should be used.
+        """
+        params: dict[str, Any] = {"path": path, "use_cache": use_cache}
+        if max_depth is not None:
+            params["max_depth"] = max_depth
+        response = await self._client.get(self._url("/system/stats"), params=params)
+        self._raise_for_status(response)
+        return StorageStatsResponse.model_validate(response.json())
 
     # -- dedupe --------------------------------------------------------------
 

@@ -1,0 +1,21 @@
+{% if notifications %}
+<ul class="action-list">
+    {% for item in notifications %}
+    <li>
+        <span>{{ item.message }}</span>
+        <span class="action-meta">
+            {% if item.read %}
+            read
+            {% else %}
+            <form method="post" action="/ui/profile/notifications/mark-read" hx-post="/ui/profile/notifications/mark-read" hx-target="#profile-notifications">
+                <input type="hidden" name="notification_id" value="{{ item.id }}">
+                <button class="btn-ghost btn-sm" type="submit">Mark read</button>
+            </form>
+            {% endif %}
+        </span>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No notifications.</p>
+{% endif %}

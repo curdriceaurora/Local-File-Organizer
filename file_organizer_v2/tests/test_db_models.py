@@ -14,9 +14,11 @@ from sqlalchemy.pool import StaticPool
 import file_organizer.api.db_models  # noqa: F401
 from file_organizer.api.auth_models import Base, User
 from file_organizer.api.db_models import (
+    FileMetadata,
     OrganizationJob,
     PluginInstallation,
     SettingsStore,
+    UserSession,
     Workspace,
 )
 
@@ -73,6 +75,8 @@ class TestTableCreation:
             "organization_jobs",
             "settings_store",
             "plugin_installations",
+            "user_sessions",
+            "file_metadata",
         }
         assert expected.issubset(tables)
 
@@ -358,6 +362,95 @@ class TestPluginInstallationModel:
         db_session.add(p)
         db_session.flush()
         assert p.installed_by == user.id
+
+
+# ------------------------------------------------------------------
+# UserSession model
+# ------------------------------------------------------------------
+
+
+class TestUserSessionModel:
+    """Tests for the UserSession model."""
+
+    def test_create_user_session(self, db_session: Session, user: User) -> None:
+        session_row = UserSession(
+            user_id=user.id,
+            token_hash="tok-hash",
+            refresh_token_hash="ref-hash",
+            expires_at=datetime.now(timezone.utc),
+        )
+        db_session.add(session_row)
+        db_session.flush()
+
+        assert session_row.id is not None
+        assert session_row.user_id == user.id
+        assert session_row.revoked_at is None
+
+    def test_session_unique_token_hash(self, db_session: Session, user: User) -> None:
+        one = UserSession(user_id=user.id, token_hash="same", expires_at=datetime.now(timezone.utc))
+        db_session.add(one)
+        db_session.flush()
+
+        two = UserSession(user_id=user.id, token_hash="same", expires_at=datetime.now(timezone.utc))
+        db_session.add(two)
+        with pytest.raises(IntegrityError):
+            db_session.flush()
+
+
+# ------------------------------------------------------------------
+# FileMetadata model
+# ------------------------------------------------------------------
+
+
+class TestFileMetadataModel:
+    """Tests for the FileMetadata model."""
+
+    def test_create_file_metadata(self, db_session: Session, user: User) -> None:
+        workspace = Workspace(name="ws-meta", owner_id=user.id, root_path="/tmp/ws-meta")
+        db_session.add(workspace)
+        db_session.flush()
+
+        row = FileMetadata(
+            workspace_id=workspace.id,
+            path="/tmp/ws-meta/docs/file.txt",
+            relative_path="docs/file.txt",
+            name="file.txt",
+            size_bytes=123,
+            mime_type="text/plain",
+        )
+        db_session.add(row)
+        db_session.flush()
+
+        assert row.id is not None
+        assert row.workspace_id == workspace.id
+        assert row.relative_path == "docs/file.txt"
+        assert row.size_bytes == 123
+
+    def test_file_metadata_unique_workspace_path(self, db_session: Session, user: User) -> None:
+        workspace = Workspace(name="ws-meta-uq", owner_id=user.id, root_path="/tmp/ws-meta-uq")
+        db_session.add(workspace)
+        db_session.flush()
+
+        one = FileMetadata(
+            workspace_id=workspace.id,
+            path="/tmp/ws-meta-uq/file.txt",
+            relative_path="file.txt",
+            name="file.txt",
+            size_bytes=10,
+        )
+        db_session.add(one)
+        db_session.flush()
+
+        two = FileMetadata(
+            workspace_id=workspace.id,
+            path="/tmp/ws-meta-uq/file.txt",
+            relative_path="file.txt",
+            name="file.txt",
+            size_bytes=11,
+        )
+        db_session.add(two)
+        with pytest.raises(IntegrityError):
+            db_session.flush()
 
     def test_plugin_repr(self, db_session: Session) -> None:
         p = PluginInstallation(plugin_name="repr-plug", version="2.0")

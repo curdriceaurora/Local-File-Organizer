@@ -334,3 +334,46 @@ async def test_system_status(tmp_path: Path) -> None:
     assert result.disk_total > 0
     assert result.disk_free > 0
     await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_system_stats(tmp_path: Path) -> None:
+    root = tmp_path / "workspace"
+    root.mkdir()
+    (root / "a.txt").write_text("hello", encoding="utf-8")
+
+    client, _ = await _make_auth_async_client(tmp_path, allowed_root=root)
+    stats = await client.system_stats(path=str(root), use_cache=False)
+    assert stats.file_count >= 1
+    assert stats.total_size >= 0
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_update_config_as_admin(tmp_path: Path) -> None:
+    root = tmp_path / "workspace"
+    root.mkdir()
+
+    client, _ = await _make_auth_async_client(tmp_path, allowed_root=root)
+    updated = await client.update_config(
+        {
+            "profile": "default",
+            "default_methodology": "content_based",
+            "updates": {"check_on_startup": True},
+        }
+    )
+    assert updated.profile == "default"
+    assert "default_methodology" in updated.config
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_logout_revokes_tokens(tmp_path: Path) -> None:
+    client, _ = _make_async_client(tmp_path, auth_enabled=True, bootstrap_admin=True)
+    username = f"user-{uuid4().hex[:8]}"
+    await client.register(username, f"{username}@test.com", "password123")
+    tokens = await client.login(username, "password123")
+    await client.logout(tokens.refresh_token)
+    with pytest.raises(AuthenticationError):
+        await client.me()
+    await client.aclose()

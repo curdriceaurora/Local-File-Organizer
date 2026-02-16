@@ -25,6 +25,18 @@
             <p class="form-hint">Select the color theme for the application interface.</p>
         </div>
 
+        <div class="form-group">
+            <label for="settings-custom-theme">Custom theme name</label>
+            <input
+                id="settings-custom-theme"
+                name="custom_theme_name"
+                type="text"
+                value="{{ ws.custom_theme_name }}"
+                placeholder="My Theme"
+            >
+            <p class="form-hint">Used when theme is set to <code>custom</code>.</p>
+        </div>
+
         <div class="settings-actions">
             <button class="btn-primary" type="submit">Save appearance settings</button>
         </div>

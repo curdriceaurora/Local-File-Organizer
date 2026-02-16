@@ -5,6 +5,7 @@ from file_organizer.client.exceptions import (
     ClientError,
     NotFoundError,
     ServerError,
+    ValidationError,
 )
 from file_organizer.client.sync_client import FileOrganizerClient
 
@@ -15,4 +16,5 @@ __all__ = [
     "AuthenticationError",
     "NotFoundError",
     "ServerError",
+    "ValidationError",
 ]

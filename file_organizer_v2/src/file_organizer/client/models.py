@@ -158,6 +158,18 @@ class ConfigResponse(BaseModel):
     profiles: list[str]
 
 
+class StorageStatsResponse(BaseModel):
+    """Response from the system/stats endpoint."""
+
+    total_size: int
+    organized_size: int
+    saved_size: int
+    file_count: int
+    directory_count: int
+    size_by_type: dict[str, int]
+    largest_files: list[FileInfo]
+
+
 class DedupeScanResponse(BaseModel):
     """Response from the dedupe/scan endpoint."""
 

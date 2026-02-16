@@ -337,3 +337,100 @@ class TestSettingsValidation:
         response = client.get("/ui/settings/general")
         assert response.status_code == 200
         assert "General settings" in response.text
+
+
+class TestSettingsUtilities:
+    """Tests for search/import/export/reset and validation helpers."""
+
+    @pytest.mark.usefixtures("_patch_settings_file")
+    def test_settings_search_returns_matching_sections(self, tmp_path: Path) -> None:
+        client = _build_client(tmp_path)
+        response = client.get("/ui/settings/search", params={"q": "timezone"})
+        assert response.status_code == 200
+        assert "General" in response.text
+
+    @pytest.mark.usefixtures("_patch_settings_file")
+    def test_settings_export_download(self, tmp_path: Path) -> None:
+        client = _build_client(tmp_path)
+        response = client.get("/ui/settings/export")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("application/json")
+        assert "Content-Disposition" in response.headers
+
+    @pytest.mark.usefixtures("_patch_settings_file")
+    def test_settings_import(self, tmp_path: Path, _patch_settings_file: Path) -> None:
+        client = _build_client(tmp_path)
+        payload = {
+            "language": "fr",
+            "timezone": "Europe/London",
+            "default_input_dir": "/import/input",
+            "default_output_dir": "/import/output",
+        }
+        response = client.post(
+            "/ui/settings/import",
+            data={"section": "general"},
+            files={"settings_file": ("settings.json", json.dumps(payload), "application/json")},
+        )
+        assert response.status_code == 200
+        assert "Settings imported successfully" in response.text
+        stored = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
+        assert stored["language"] == "fr"
+        assert stored["timezone"] == "Europe/London"
+
+    @pytest.mark.usefixtures("_patch_settings_file")
+    def test_settings_reset(self, tmp_path: Path, _patch_settings_file: Path) -> None:
+        client = _build_client(tmp_path)
+        client.post(
+            "/ui/settings/general",
+            data={"default_input_dir": "/custom", "default_output_dir": "/custom-out"},
+        )
+        response = client.post("/ui/settings/reset", data={"section": "general"})
+        assert response.status_code == 200
+        assert "Settings reset to defaults" in response.text
+        data = json.loads(_patch_settings_file.read_text(encoding="utf-8"))
+        assert data["default_input_dir"] == ""
+        assert data["default_output_dir"] == ""
+
+    @pytest.mark.usefixtures("_patch_settings_file")
+    def test_rules_validation_endpoint(self, tmp_path: Path) -> None:
+        client = _build_client(tmp_path)
+        ok = client.post(
+            "/ui/settings/organization/validate",
+            data={"organization_rules": "docs/* -> Documents"},
+        )
+        assert ok.status_code == 200
+        assert "Rules look valid" in ok.text
+
+        bad = client.post(
+            "/ui/settings/organization/validate",
+            data={"organization_rules": "invalid rule line"},
+        )
+        assert bad.status_code == 200
+        assert "invalid" in bad.text.lower()
+
+    @pytest.mark.usefixtures("_patch_settings_file")
+    def test_model_connection_failure_returns_error(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        class BrokenClient:
+            def __enter__(self) -> BrokenClient:
+                return self
+
+            def __exit__(self, *_args: object) -> None:
+                return None
+
+            def get(self, _url: str) -> None:
+                raise RuntimeError("connection failed")
+
+        settings_mod = importlib.import_module("file_organizer.web.settings_routes")
+        monkeypatch.setattr(settings_mod.httpx, "Client", lambda timeout: BrokenClient())
+
+        client = _build_client(tmp_path)
+        response = client.post(
+            "/ui/settings/models/test",
+            data={"ollama_url": "http://localhost:11434"},
+        )
+        assert response.status_code == 200
+        assert "connection failed" in response.text

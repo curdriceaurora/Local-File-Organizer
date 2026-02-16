@@ -1,0 +1,40 @@
+{% if success %}
+<p class="success-text">{{ success }}</p>
+{% endif %}
+{% if error %}
+<p class="error-text">{{ error }}</p>
+{% endif %}
+
+<form
+    method="post"
+    action="/ui/profile/account-settings/password"
+    hx-post="/ui/profile/account-settings/password"
+    hx-target="#profile-account-settings"
+>
+    <div class="form-group">
+        <label for="current-password">Current password</label>
+        <input id="current-password" name="current_password" type="password" required>
+    </div>
+    <div class="form-group">
+        <label for="new-password">New password</label>
+        <input id="new-password" name="new_password" type="password" required>
+    </div>
+    <div class="form-group">
+        <label for="confirm-password">Confirm password</label>
+        <input id="confirm-password" name="confirm_password" type="password" required>
+    </div>
+    <button class="btn-primary" type="submit">Change password</button>
+</form>
+
+<form
+    method="post"
+    action="/ui/profile/account-settings/2fa"
+    hx-post="/ui/profile/account-settings/2fa"
+    hx-target="#profile-account-settings"
+>
+    <label class="toggle-option">
+        <input type="checkbox" name="enabled" value="1" {% if two_factor_enabled %}checked{% endif %}>
+        <span>Enable two-factor authentication (2FA)</span>
+    </label>
+    <button class="btn-ghost" type="submit">Save security settings</button>
+</form>

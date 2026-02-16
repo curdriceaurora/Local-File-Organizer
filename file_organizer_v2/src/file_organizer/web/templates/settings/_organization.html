@@ -26,6 +26,12 @@
         </div>
 
         <div class="form-group">
+            <label for="settings-rules">Organization rules</label>
+            <textarea id="settings-rules" name="organization_rules" rows="6">{{ ws.organization_rules }}</textarea>
+            <p class="form-hint">Use one rule per line: <code>pattern -&gt; destination</code></p>
+        </div>
+
+        <div class="form-group">
             <label class="toggle-option">
                 <input name="auto_organize" type="checkbox" value="1" {% if ws.auto_organize %}checked{% endif %}>
                 <span>Auto-organize new files</span>
@@ -33,8 +39,40 @@
             <p class="form-hint">Automatically organize files when they appear in the input directory.</p>
         </div>
 
+        <div class="form-group">
+            <label class="toggle-option">
+                <input
+                    name="notifications_enabled"
+                    type="checkbox"
+                    value="1"
+                    {% if ws.notifications_enabled %}checked{% endif %}
+                >
+                <span>Enable notifications</span>
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label for="settings-filter-glob">File filter</label>
+            <input
+                id="settings-filter-glob"
+                name="file_filter_glob"
+                type="text"
+                value="{{ ws.file_filter_glob }}"
+                placeholder="*"
+            >
+            <p class="form-hint">Glob pattern used as default file filter.</p>
+        </div>
+
         <div class="settings-actions">
             <button class="btn-primary" type="submit">Save organization settings</button>
+            <button
+                class="btn-ghost"
+                type="button"
+                hx-post="/ui/settings/organization/validate"
+                hx-include="[name='organization_rules']"
+                hx-target="#settings-panel"
+                hx-swap="innerHTML"
+            >Validate rules</button>
         </div>
     </form>
 </div>

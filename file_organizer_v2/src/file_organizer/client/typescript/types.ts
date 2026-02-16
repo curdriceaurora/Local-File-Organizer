@@ -172,6 +172,31 @@ export interface ConfigResponse {
   profiles: string[];
 }
 
+export interface ConfigUpdateRequest {
+  profile?: string;
+  default_methodology?: string;
+  models?: Record<string, unknown>;
+  updates?: Record<string, unknown>;
+  watcher?: Record<string, unknown>;
+  daemon?: Record<string, unknown>;
+  parallel?: Record<string, unknown>;
+  pipeline?: Record<string, unknown>;
+  events?: Record<string, unknown>;
+  deploy?: Record<string, unknown>;
+  para?: Record<string, unknown>;
+  johnny_decimal?: Record<string, unknown>;
+}
+
+export interface StorageStatsResponse {
+  total_size: number;
+  organized_size: number;
+  saved_size: number;
+  file_count: number;
+  directory_count: number;
+  size_by_type: Record<string, number>;
+  largest_files: FileInfo[];
+}
+
 // -- Dedupe -----------------------------------------------------------------
 
 export interface DedupeFileInfo {

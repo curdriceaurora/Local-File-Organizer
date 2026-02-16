@@ -16,6 +16,28 @@
         hx-swap="innerHTML"
     >
         <div class="form-group">
+            <label for="settings-language">Language</label>
+            <select id="settings-language" name="language">
+                {% for language in language_options %}
+                <option value="{{ language }}" {% if ws.language == language %}selected{% endif %}>
+                    {{ language }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="settings-timezone">Timezone</label>
+            <select id="settings-timezone" name="timezone">
+                {% for tz in timezone_options %}
+                <option value="{{ tz }}" {% if ws.timezone == tz %}selected{% endif %}>
+                    {{ tz }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
             <label for="settings-input-dir">Default input directory</label>
             <input
                 id="settings-input-dir"

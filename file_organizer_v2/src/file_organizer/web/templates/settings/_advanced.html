@@ -41,8 +41,28 @@
             <p class="form-hint">Enable verbose debug output and diagnostics.</p>
         </div>
 
+        <div class="form-group">
+            <label for="settings-performance-mode">Performance mode</label>
+            <select id="settings-performance-mode" name="performance_mode">
+                {% for mode in performance_modes %}
+                <option value="{{ mode }}" {% if ws.performance_mode == mode %}selected{% endif %}>
+                    {{ mode|replace('_', ' ')|title }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
         <div class="settings-actions">
             <button class="btn-primary" type="submit">Save advanced settings</button>
+            <a class="btn-ghost" href="/ui/settings/export">Export</a>
+            <button
+                class="btn-ghost"
+                type="button"
+                hx-post="/ui/settings/reset"
+                hx-vals='{"section":"advanced"}'
+                hx-target="#settings-panel"
+                hx-swap="innerHTML"
+            >Reset defaults</button>
         </div>
     </form>
 </div>

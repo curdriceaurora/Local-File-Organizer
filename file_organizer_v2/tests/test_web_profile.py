@@ -1,6 +1,7 @@
 """Tests for the web profile UI routes."""
 from __future__ import annotations
 
+import html
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -375,3 +376,184 @@ class TestApiKeys:
         )
         assert revoke.status_code == 200
         assert "No active API keys" in revoke.text
+
+
+class TestPasswordResetFlow:
+    """Tests for forgot/reset password routes."""
+
+    def test_forgot_password_form_renders(self, tmp_path: Path) -> None:
+        client = _build_client(tmp_path)
+        response = client.get("/ui/profile/forgot-password")
+        assert response.status_code == 200
+        assert "Forgot Password" in response.text
+
+    def test_forgot_and_reset_password_success(self, tmp_path: Path) -> None:
+        settings = _build_settings(tmp_path)
+        _seed_user(settings)
+        app = create_app(settings)
+        client = TestClient(app)
+
+        forgot = client.post("/ui/profile/forgot-password", data={"email": "alice@example.com"})
+        assert forgot.status_code == 200
+        assert "Local dev token" in forgot.text
+
+        import re
+
+        token_match = re.search(r"<code>([^<]+)</code>", forgot.text)
+        assert token_match is not None
+        token = token_match.group(1)
+
+        reset = client.post(
+            "/ui/profile/reset-password",
+            data={
+                "token": token,
+                "new_password": "newpassword1",
+                "confirm_password": "newpassword1",
+            },
+        )
+        assert reset.status_code == 200
+        assert "Password reset complete" in reset.text
+
+        login = client.post(
+            "/ui/profile/login",
+            data={"username": "alice", "password": "newpassword1"},
+            follow_redirects=False,
+        )
+        assert login.status_code == 303
+
+
+class TestWorkspaceAndTeamUi:
+    """Tests for workspace/team/sharing partials."""
+
+    def test_workspace_create_and_switch(self, tmp_path: Path) -> None:
+        settings = _build_settings(tmp_path)
+        _seed_user(settings)
+        app = create_app(settings)
+        client = TestClient(app)
+        _login(client)
+
+        create_one = client.post(
+            "/ui/profile/workspaces/create",
+            data={"name": "Alpha", "root_path": "/tmp/alpha", "description": "A"},
+        )
+        assert create_one.status_code == 200
+        assert "Alpha" in create_one.text
+
+        create_two = client.post(
+            "/ui/profile/workspaces/create",
+            data={"name": "Beta", "root_path": "/tmp/beta", "description": "B"},
+        )
+        assert create_two.status_code == 200
+        assert "Beta" in create_two.text
+
+        import re
+
+        ids = re.findall(r'name="workspace_id" value="([^"]+)"', create_two.text)
+        assert ids
+        switch = client.post("/ui/profile/workspaces/switch", data={"workspace_id": ids[-1]})
+        assert switch.status_code == 200
+        assert "Active" in switch.text
+
+    def test_team_invite_and_role_update(self, tmp_path: Path) -> None:
+        settings = _build_settings(tmp_path)
+        _seed_user(settings)
+        app = create_app(settings)
+        client = TestClient(app)
+        _login(client)
+
+        invite = client.post(
+            "/ui/profile/team/invite",
+            data={"email": "teammate@example.com", "role": "viewer"},
+        )
+        assert invite.status_code == 200
+        assert "teammate@example.com" in invite.text
+
+        import re
+
+        member_match = re.search(r'name="member_id" value="([^"]+)"', invite.text)
+        assert member_match is not None
+        member_id = member_match.group(1)
+
+        update = client.post(
+            "/ui/profile/team/role",
+            data={"member_id": member_id, "role": "admin"},
+        )
+        assert update.status_code == 200
+        assert "admin" in update.text
+
+    def test_shared_folder_add_and_remove(self, tmp_path: Path) -> None:
+        settings = _build_settings(tmp_path)
+        _seed_user(settings)
+        app = create_app(settings)
+        client = TestClient(app)
+        _login(client)
+
+        add = client.post(
+            "/ui/profile/shared/add",
+            data={"folder_path": "/tmp/shared", "permission": "edit"},
+        )
+        assert add.status_code == 200
+        assert "/tmp/shared" in add.text
+
+        import re
+
+        folder_match = re.search(r'name="folder_id" value="([^"]+)"', add.text)
+        assert folder_match is not None
+        folder_id = folder_match.group(1)
+
+        remove = client.post("/ui/profile/shared/remove", data={"folder_id": folder_id})
+        assert remove.status_code == 200
+        assert "/tmp/shared" not in remove.text
+
+
+class TestAccountSettingsAndFeeds:
+    """Tests for account settings, activity log, and notifications."""
+
+    def test_change_password_and_toggle_2fa(self, tmp_path: Path) -> None:
+        settings = _build_settings(tmp_path)
+        _seed_user(settings)
+        app = create_app(settings)
+        client = TestClient(app)
+        _login(client)
+
+        change = client.post(
+            "/ui/profile/account-settings/password",
+            data={
+                "current_password": "password1",
+                "new_password": "password2",
+                "confirm_password": "password2",
+            },
+        )
+        assert change.status_code == 200
+        assert "Password updated" in change.text
+
+        toggle = client.post("/ui/profile/account-settings/2fa", data={"enabled": "1"})
+        assert toggle.status_code == 200
+        assert "Two-factor preference updated" in toggle.text
+
+        relogin = client.post(
+            "/ui/profile/login",
+            data={"username": "alice", "password": "password2"},
+            follow_redirects=False,
+        )
+        assert relogin.status_code == 303
+
+    def test_activity_and_notifications_render(self, tmp_path: Path) -> None:
+        settings = _build_settings(tmp_path)
+        _seed_user(settings)
+        app = create_app(settings)
+        client = TestClient(app)
+        _login(client)
+
+        client.post(
+            "/ui/profile/workspaces/create",
+            data={"name": "Work", "root_path": "/tmp/work", "description": ""},
+        )
+
+        activity = client.get("/ui/profile/activity")
+        assert activity.status_code == 200
+        assert "Created workspace" in activity.text
+
+        notifications = client.get("/ui/profile/notifications")
+        assert notifications.status_code == 200
+        assert "Workspace 'Work' was created" in html.unescape(notifications.text)

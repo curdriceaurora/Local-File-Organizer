@@ -1,0 +1,12 @@
+{% if activity_log %}
+<ul class="action-list">
+    {% for item in activity_log %}
+    <li>
+        <span>{{ item.message }}</span>
+        <span class="action-meta">{{ item.timestamp }}</span>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No activity yet.</p>
+{% endif %}

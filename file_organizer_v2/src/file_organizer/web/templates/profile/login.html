@@ -5,8 +5,8 @@
     {% endif %}
     <form method="post" action="/ui/profile/login">
         <div class="form-group">
-            <label for="login-username">Username</label>
-            <input id="login-username" name="username" type="text" required autocomplete="username">
+            <label for="login-username">Email or Username</label>
+            <input id="login-username" name="username" type="text" required autocomplete="username email">
         </div>
         <div class="form-group">
             <label for="login-password">Password</label>
@@ -17,5 +17,9 @@
     <p class="auth-switch">
         Don't have an account?
         <a href="/ui/profile/register" hx-get="/ui/profile/register" hx-target="#auth-panel">Register</a>
+    </p>
+    <p class="auth-switch">
+        Forgot your password?
+        <a href="/ui/profile/forgot-password" hx-get="/ui/profile/forgot-password" hx-target="#auth-panel">Reset</a>
     </p>
 </div>

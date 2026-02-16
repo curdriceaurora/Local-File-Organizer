@@ -28,6 +28,61 @@
         </div>
     </article>
 </section>
+
+<section class="panel-grid two">
+    <article class="panel">
+        <h2>Workspaces</h2>
+        <div id="profile-workspaces" hx-get="/ui/profile/workspaces" hx-trigger="load" hx-target="#profile-workspaces">
+            <div class="loading-state">Loading...</div>
+        </div>
+    </article>
+    <article class="panel">
+        <h2>Team & Permissions</h2>
+        <div id="profile-team" hx-get="/ui/profile/team" hx-trigger="load" hx-target="#profile-team">
+            <div class="loading-state">Loading...</div>
+        </div>
+    </article>
+</section>
+
+<section class="panel-grid two">
+    <article class="panel">
+        <h2>Shared Folders</h2>
+        <div id="profile-shared" hx-get="/ui/profile/shared" hx-trigger="load" hx-target="#profile-shared">
+            <div class="loading-state">Loading...</div>
+        </div>
+    </article>
+    <article class="panel">
+        <h2>Account Settings</h2>
+        <div
+            id="profile-account-settings"
+            hx-get="/ui/profile/account-settings"
+            hx-trigger="load"
+            hx-target="#profile-account-settings"
+        >
+            <div class="loading-state">Loading...</div>
+        </div>
+    </article>
+</section>
+
+<section class="panel-grid two">
+    <article class="panel">
+        <h2>Activity Log</h2>
+        <div id="profile-activity" hx-get="/ui/profile/activity" hx-trigger="load" hx-target="#profile-activity">
+            <div class="loading-state">Loading...</div>
+        </div>
+    </article>
+    <article class="panel">
+        <h2>Notifications</h2>
+        <div
+            id="profile-notifications"
+            hx-get="/ui/profile/notifications"
+            hx-trigger="load"
+            hx-target="#profile-notifications"
+        >
+            <div class="loading-state">Loading...</div>
+        </div>
+    </article>
+</section>
 {% elif auth_enabled %}
 <section class="panel-grid two">
     <article class="panel" id="auth-panel" hx-get="/ui/profile/login" hx-trigger="load" hx-target="#auth-panel">

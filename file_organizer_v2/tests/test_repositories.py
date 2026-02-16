@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import create_engine
@@ -12,7 +13,10 @@ from sqlalchemy.pool import StaticPool
 # Side-effect import to register all tables on Base.metadata
 import file_organizer.api.db_models  # noqa: F401
 from file_organizer.api.auth_models import Base, User
+from file_organizer.api.cache import InMemoryCache
+from file_organizer.api.repositories.file_metadata_repo import FileMetadataRepository
 from file_organizer.api.repositories.job_repo import JobRepository
+from file_organizer.api.repositories.session_repo import SessionRepository
 from file_organizer.api.repositories.settings_repo import SettingsRepository
 from file_organizer.api.repositories.workspace_repo import WorkspaceRepository
 
@@ -399,4 +403,192 @@ class TestInitDb:
         assert "organization_jobs" in tables
         assert "settings_store" in tables
         assert "plugin_installations" in tables
+        assert "user_sessions" in tables
+        assert "file_metadata" in tables
         assert "users" in tables
+
+
+# ------------------------------------------------------------------
+# SessionRepository
+# ------------------------------------------------------------------
+
+
+class TestSessionRepository:
+    """Tests for SessionRepository lifecycle behavior."""
+
+    def test_create_and_get_active(self, db_session: Session, user: User) -> None:
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        created = SessionRepository.create(
+            db_session,
+            user_id=user.id,
+            token_hash="tok-1",
+            refresh_token_hash="ref-1",
+            expires_at=expires_at,
+            user_agent="pytest",
+            ip_address="127.0.0.1",
+        )
+        found = SessionRepository.get_active_by_token_hash(db_session, "tok-1")
+        assert found is not None
+        assert found.id == created.id
+        assert found.user_id == user.id
+
+    def test_get_active_excludes_expired_or_revoked(self, db_session: Session, user: User) -> None:
+        expired = datetime.now(timezone.utc) - timedelta(minutes=1)
+        expired_row = SessionRepository.create(
+            db_session,
+            user_id=user.id,
+            token_hash="tok-expired",
+            expires_at=expired,
+        )
+        SessionRepository.revoke(db_session, expired_row.id)
+
+        assert SessionRepository.get_active_by_token_hash(db_session, "tok-expired") is None
+
+    def test_list_active_for_user(self, db_session: Session, user: User) -> None:
+        now = datetime.now(timezone.utc)
+        SessionRepository.create(
+            db_session,
+            user_id=user.id,
+            token_hash="tok-a",
+            expires_at=now + timedelta(hours=1),
+        )
+        SessionRepository.create(
+            db_session,
+            user_id=user.id,
+            token_hash="tok-b",
+            expires_at=now + timedelta(hours=2),
+        )
+        active = SessionRepository.list_active_for_user(db_session, user.id, now=now)
+        assert len(active) == 2
+
+    def test_revoke(self, db_session: Session, user: User) -> None:
+        row = SessionRepository.create(
+            db_session,
+            user_id=user.id,
+            token_hash="tok-revoke",
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        assert SessionRepository.revoke(db_session, row.id) is True
+        assert SessionRepository.revoke(db_session, "missing") is False
+
+    def test_prune_expired(self, db_session: Session, user: User) -> None:
+        now = datetime.now(timezone.utc)
+        SessionRepository.create(
+            db_session,
+            user_id=user.id,
+            token_hash="tok-old",
+            expires_at=now - timedelta(minutes=1),
+        )
+        SessionRepository.create(
+            db_session,
+            user_id=user.id,
+            token_hash="tok-new",
+            expires_at=now + timedelta(minutes=30),
+        )
+        pruned = SessionRepository.prune_expired(db_session, now=now)
+        assert pruned == 1
+        assert SessionRepository.get_active_by_token_hash(db_session, "tok-new", now=now) is not None
+
+
+# ------------------------------------------------------------------
+# FileMetadataRepository
+# ------------------------------------------------------------------
+
+
+class TestFileMetadataRepository:
+    """Tests for file metadata persistence and caching behavior."""
+
+    def test_upsert_and_get(self, db_session: Session, user: User) -> None:
+        ws = WorkspaceRepository.create(
+            db_session,
+            name="meta-ws",
+            owner_id=user.id,
+            root_path="/tmp/meta-ws",
+        )
+        cache = InMemoryCache()
+        row = FileMetadataRepository.upsert(
+            db_session,
+            workspace_id=ws.id,
+            path="/tmp/meta-ws/docs/a.txt",
+            relative_path="docs/a.txt",
+            name="a.txt",
+            size_bytes=5,
+            mime_type="text/plain",
+            cache=cache,
+            cache_ttl_seconds=30,
+        )
+        found = FileMetadataRepository.get_by_relative_path(
+            db_session,
+            workspace_id=ws.id,
+            relative_path="docs/a.txt",
+            cache=cache,
+        )
+        assert found is not None
+        assert found.id == row.id
+        assert found.mime_type == "text/plain"
+
+    def test_upsert_updates_existing_row(self, db_session: Session, user: User) -> None:
+        ws = WorkspaceRepository.create(
+            db_session,
+            name="meta-ws-2",
+            owner_id=user.id,
+            root_path="/tmp/meta-ws-2",
+        )
+        first = FileMetadataRepository.upsert(
+            db_session,
+            workspace_id=ws.id,
+            path="/tmp/meta-ws-2/a.txt",
+            relative_path="a.txt",
+            name="a.txt",
+            size_bytes=10,
+        )
+        second = FileMetadataRepository.upsert(
+            db_session,
+            workspace_id=ws.id,
+            path="/tmp/meta-ws-2/a.txt",
+            relative_path="a.txt",
+            name="a.txt",
+            size_bytes=22,
+            checksum_sha256="abc",
+        )
+        assert first.id == second.id
+        assert second.size_bytes == 22
+        assert second.checksum_sha256 == "abc"
+
+    def test_list_and_delete(self, db_session: Session, user: User) -> None:
+        ws = WorkspaceRepository.create(
+            db_session,
+            name="meta-ws-3",
+            owner_id=user.id,
+            root_path="/tmp/meta-ws-3",
+        )
+        FileMetadataRepository.upsert(
+            db_session,
+            workspace_id=ws.id,
+            path="/tmp/meta-ws-3/a.txt",
+            relative_path="a.txt",
+            name="a.txt",
+            size_bytes=1,
+        )
+        FileMetadataRepository.upsert(
+            db_session,
+            workspace_id=ws.id,
+            path="/tmp/meta-ws-3/b.txt",
+            relative_path="b.txt",
+            name="b.txt",
+            size_bytes=2,
+        )
+
+        listed = FileMetadataRepository.list_for_workspace(db_session, workspace_id=ws.id)
+        assert len(listed) == 2
+
+        assert FileMetadataRepository.delete_by_relative_path(
+            db_session,
+            workspace_id=ws.id,
+            relative_path="a.txt",
+        ) is True
+        assert FileMetadataRepository.delete_by_relative_path(
+            db_session,
+            workspace_id=ws.id,
+            relative_path="missing.txt",
+        ) is False
