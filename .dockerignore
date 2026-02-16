@@ -70,8 +70,6 @@ docker-compose*
 # Development files
 technical-debt/
 archive/
-phase3-audio/
-phase4-intelligence/
 *.bak
 *.log
 

@@ -133,7 +133,7 @@ updated: 2026-01-23T14:30:45Z  # Real datetime, not placeholder
 ```markdown
 # Use relative paths - NEVER absolute paths with usernames
 ✅ src/file_organizer/models/audio_model.py
-✅ ../phase3-audio/src/file_organizer/
+✅ file_organizer_v2/src/file_organizer/
 ❌ /Users/username/Projects/file_organizer_v2/src/...
 ```
 
