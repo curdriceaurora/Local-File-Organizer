@@ -66,3 +66,44 @@ jobs:
         with:
           file: file_organizer_v2/coverage.xml
           fail_ci_if_error: false
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Run component tests
+        run: npm test -- --coverage --ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Run E2E tests
+        run: npm run test:e2e -- --forbidOnly
+      - name: Upload coverage reports
+        if: matrix.node-version == '20.x'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: frontend
+          fail_ci_if_error: false
+      - name: Upload E2E test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.node-version }}
+          path: playwright-report/
+          retention-days: 30
+      - name: Upload coverage to artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.node-version }}
+          path: coverage/
+          retention-days: 7

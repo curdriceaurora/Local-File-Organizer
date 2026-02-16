@@ -69,3 +69,22 @@ logs/
 .claude/epics/*/*.tmp
 .claude/settings.json
 .claude/settings.local.json
+
+# Test results and coverage
+test-results/
+coverage/
+.nyc_output/
+*.lcov
+
+# Jest
+.jest-cache/
+__snapshots__/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Node modules (if not already there)
+node_modules/
