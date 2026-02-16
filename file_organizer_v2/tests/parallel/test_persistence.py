@@ -341,11 +341,56 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
         self.assertTrue(job_path.exists())
         self.assertFalse(job_path.with_suffix(".tmp").exists())
 
-    def test_save_job_failure_keeps_existing_file(self) -> None:
-        """Test failed temp write does not corrupt existing job file."""
-        job = JobState(id="atomic-job-2", status=JobStatus.PENDING, total_files=10)
-        self.persistence.save_job(job)
+    def test_temp_file_cleaned_up_after_successful_write(self) -> None:
+        """Test temporary files are cleaned up after successful writes."""
+        job = JobState(id="atomic-job-2", status=JobStatus.RUNNING, total_files=5)
+        temp_path = self.jobs_dir / "atomic-job-2.tmp"
         job_path = self.jobs_dir / "atomic-job-2.json"
+
+        # Save the job
+        self.persistence.save_job(job)
+
+        # Verify the final file exists and temp file does not
+        self.assertTrue(job_path.exists())
+        self.assertFalse(temp_path.exists())
+
+        # Verify we can read back the data correctly
+        loaded = self.persistence.load_job("atomic-job-2")
+        assert loaded is not None
+        self.assertEqual(loaded.id, "atomic-job-2")
+        self.assertEqual(loaded.status, JobStatus.RUNNING)
+
+    def test_temp_file_cleaned_up_after_write_failure(self) -> None:
+        """Test temporary files are cleaned up after failed writes."""
+        job = JobState(id="atomic-job-3", status=JobStatus.PENDING, total_files=10)
+        job_path = self.jobs_dir / "atomic-job-3.json"
+        temp_path = job_path.with_suffix(".tmp")
+
+        original_write_text = Path.write_text
+
+        def failing_temp_write(
+            path_self: Path, data: str, encoding: str = "utf-8"
+        ) -> int:
+            if path_self.suffix == ".tmp":
+                raise OSError("simulated write failure")
+            return original_write_text(path_self, data, encoding=encoding)
+
+        with patch.object(
+            Path, "write_text", autospec=True, side_effect=failing_temp_write
+        ):
+            with self.assertRaises(OSError):
+                self.persistence.save_job(job)
+
+        # Verify temp file was cleaned up even though write failed
+        self.assertFalse(temp_path.exists())
+        # And the job file was never created
+        self.assertFalse(job_path.exists())
+
+    def test_partial_write_does_not_corrupt_existing_file(self) -> None:
+        """Test partial writes don't corrupt existing job files."""
+        job = JobState(id="atomic-job-4", status=JobStatus.PENDING, total_files=10)
+        self.persistence.save_job(job)
+        job_path = self.jobs_dir / "atomic-job-4.json"
         original_contents = job_path.read_text(encoding="utf-8")
 
         original_write_text = Path.write_text
@@ -358,7 +403,7 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
             return original_write_text(path_self, data, encoding=encoding)
 
         updated_job = JobState(
-            id="atomic-job-2",
+            id="atomic-job-4",
             status=JobStatus.COMPLETED,
             total_files=10,
             completed_files=10,
