@@ -342,21 +342,36 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
         self.assertFalse(job_path.with_suffix(".tmp").exists())
 
     def test_temp_file_cleaned_up_after_successful_write(self) -> None:
-        """Test temporary files are cleaned up after successful writes."""
+        """Test temporary files are created during writes and cleaned up after."""
         job = JobState(id="atomic-job-2", status=JobStatus.RUNNING, total_files=5)
         temp_path = self.jobs_dir / "atomic-job-2.tmp"
         job_path = self.jobs_dir / "atomic-job-2.json"
 
-        # Save the job
-        self.persistence.save_job(job)
+        original_write_text = Path.write_text
+        temp_file_was_created = False
 
+        def track_temp_write(
+            path_self: Path, data: str, encoding: str = "utf-8"
+        ) -> int:
+            nonlocal temp_file_was_created
+            if path_self.suffix == ".tmp":
+                temp_file_was_created = True
+            return original_write_text(path_self, data, encoding=encoding)
+
+        with patch.object(
+            Path, "write_text", autospec=True, side_effect=track_temp_write
+        ):
+            self.persistence.save_job(job)
+
+        # Verify temp file was created during save
+        self.assertTrue(temp_file_was_created)
         # Verify the final file exists and temp file does not
         self.assertTrue(job_path.exists())
         self.assertFalse(temp_path.exists())
 
         # Verify we can read back the data correctly
         loaded = self.persistence.load_job("atomic-job-2")
-        assert loaded is not None
+        self.assertIsNotNone(loaded)
         self.assertEqual(loaded.id, "atomic-job-2")
         self.assertEqual(loaded.status, JobStatus.RUNNING)
 
