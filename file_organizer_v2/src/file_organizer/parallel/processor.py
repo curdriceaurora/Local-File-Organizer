@@ -199,6 +199,9 @@ class ParallelProcessor:
         # Timeout is measured from task start (future.running()), not submission time.
         limit = max_workers * 2
         submit_round = min(limit, self._config.chunk_size)
+        timeout = self._config.timeout_per_file
+        # Poll more frequently for short timeouts to reduce timeout-detection drift.
+        poll_interval = min(0.05, max(0.005, timeout / 10.0))
         pending: set[Future[FileResult]] = set()
         # Track scheduling metadata for timeout handling.
         future_paths: dict[Future[FileResult], Path] = {}
@@ -250,8 +253,12 @@ class ParallelProcessor:
             while pending:
                 # Wait for completion or timeout check
                 # We use a short timeout to periodically check for stale tasks
-                # Using 0.05s ensures responsive timeout detection
-                done, _ = wait(pending, timeout=0.05, return_when=FIRST_COMPLETED)
+                # Interval scales with timeout_per_file to keep detection accurate.
+                done, _ = wait(
+                    pending,
+                    timeout=poll_interval,
+                    return_when=FIRST_COMPLETED,
+                )
 
                 # 1. Process completed tasks
                 for future in done:
@@ -272,12 +279,12 @@ class ParallelProcessor:
 
                 # 2. Check for timed-out tasks
                 now = time.monotonic()
-                timeout = self._config.timeout_per_file
-
                 # Mark tasks as started when the executor reports they are running.
                 for future in pending:
                     if future_started[future] is None and future.running():
-                        future_started[future] = now
+                        # Compensate for polling interval so timeout accounting
+                        # does not drift late by up to one poll tick.
+                        future_started[future] = now - poll_interval
 
                 # Check running tasks (those in pending but not in done)
                 # We iterate a copy because we might modify pending

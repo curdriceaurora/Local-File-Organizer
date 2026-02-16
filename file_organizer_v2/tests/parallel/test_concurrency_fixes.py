@@ -195,3 +195,38 @@ class TestConcurrencyFixes(unittest.TestCase):
         errors = [str(item.error) for item in results.results]
         self.assertTrue(any("Timed out" in err for err in errors))
         self.assertTrue(any("Aborted because another task" in err for err in errors))
+
+    def test_timeout_poll_interval_scales_with_timeout(self) -> None:
+        """Test polling interval scales with timeout to reduce timeout drift."""
+        config = ParallelConfig(
+            max_workers=1,
+            timeout_per_file=0.1,
+            retry_count=0,
+        )
+        processor = ParallelProcessor(config=config)
+        paths = [Path("poll_interval_file")]
+        observed_timeouts: list[float] = []
+
+        from concurrent.futures import wait as real_wait
+
+        def tracked_wait(fs, *args, **kwargs):
+            timeout = kwargs.get("timeout")
+            if isinstance(timeout, (int, float)):
+                observed_timeouts.append(float(timeout))
+            return real_wait(fs, *args, **kwargs)
+
+        def short_task(_path: Path) -> str:
+            time.sleep(0.02)
+            return "ok"
+
+        with patch("file_organizer.parallel.processor.wait", side_effect=tracked_wait):
+            results = list(processor.process_batch_iter(paths, short_task))
+
+        self.assertEqual(len(results), 1)
+        self.assertTrue(results[0].success)
+        self.assertTrue(observed_timeouts)
+        self.assertLessEqual(
+            max(observed_timeouts),
+            0.011,
+            "Expected timeout polling interval to scale down for short timeouts",
+        )
