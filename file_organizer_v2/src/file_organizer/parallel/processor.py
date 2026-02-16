@@ -116,31 +116,29 @@ class ParallelProcessor:
         max_workers = self._config.max_workers or os.cpu_count() or 1
         executor_cls = self._get_executor_class()
 
-        # Create executor once for the whole batch + retries
-        with executor_cls(max_workers=max_workers) as executor:
-            for attempt in range(1 + self._config.retry_count):
-                if not remaining:
-                    break
+        for attempt in range(1 + self._config.retry_count):
+            if not remaining:
+                break
 
-                attempt_results = self._run_batch(
-                    executor_cls=executor_cls,
-                    max_workers=max_workers,
-                    files=remaining,
-                    process_fn=process_fn,
-                    executor=executor,
-                )
+            attempt_results = self._run_batch(
+                executor_cls=executor_cls,
+                max_workers=max_workers,
+                files=remaining,
+                process_fn=process_fn,
+                executor=None,
+            )
 
-                succeeded = [r for r in attempt_results if r.success]
-                failed = [r for r in attempt_results if not r.success]
+            succeeded = [r for r in attempt_results if r.success]
+            failed = [r for r in attempt_results if not r.success]
 
-                results.extend(succeeded)
+            results.extend(succeeded)
 
-                # On last attempt, include failures in results
-                if attempt == self._config.retry_count:
-                    results.extend(failed)
-                else:
-                    # Retry only the failures
-                    remaining = [r.path for r in failed]
+            # On last attempt, include failures in results
+            if attempt == self._config.retry_count:
+                results.extend(failed)
+            else:
+                # Retry only the failures
+                remaining = [r.path for r in failed]
 
         batch_elapsed_ms = (time.perf_counter() - batch_start) * 1000
         succeeded_count = sum(1 for r in results if r.success)
@@ -160,7 +158,7 @@ class ParallelProcessor:
         self,
         files: list[Path],
         process_fn: Callable[[Path], Any],
-        executor: Any | None = None,
+        executor: ThreadPoolExecutor | ProcessPoolExecutor | None = None,
     ) -> Iterator[FileResult]:
         """
         Process a batch of files, yielding results as they complete.
@@ -185,32 +183,28 @@ class ParallelProcessor:
             return
 
         max_workers = self._config.max_workers or os.cpu_count() or 1
-        
-        # If executor is provided, we don't own it (no-op context manager).
-        # If not provided, we create one and own it (standard context manager).
-        if executor is None:
+        owns_executor = executor is None
+        if owns_executor:
             executor_cls = self._get_executor_class()
-            executor_ctx = executor_cls(max_workers=max_workers)
+            exec_instance = executor_cls(max_workers=max_workers)
         else:
-            # Simple context manager that does nothing on exit
-            class NoOpContext_Executor:
-                def __enter__(self): return executor
-                def __exit__(self, *args): pass
-            executor_ctx = NoOpContext_Executor()
+            exec_instance = executor
 
         completed_count = 0
         total = len(files)
 
         # Use a bounded set of futures to control memory usage (backpressure)
-        # Limit to 2x workers to keep pipeline full but not overflow memory
-        limit = max_workers * 2
+        # Limit to max_workers so timeout tracks actual run time, not queue delay.
+        limit = max_workers
         pending: set[Future[FileResult]] = set()
-        # Track start time for timeout handling: Future -> (Path, start_time)
-        future_metadata: dict[Future[FileResult], tuple[Path, float]] = {}
+        # Track scheduling metadata for timeout handling.
+        future_paths: dict[Future[FileResult], Path] = {}
+        future_started: dict[Future[FileResult], float | None] = {}
+        force_nonblocking_shutdown = False
 
         iterator = iter(files)
 
-        with executor_ctx as exec_instance:
+        try:
 
             def submit_next() -> bool:
                 """Submit next file if available."""
@@ -218,7 +212,8 @@ class ParallelProcessor:
                     path = next(iterator)
                     future = exec_instance.submit(_execute_with_timing, path, process_fn)
                     pending.add(future)
-                    future_metadata[future] = (path, time.monotonic())
+                    future_paths[future] = path
+                    future_started[future] = None
                     return True
                 except StopIteration:
                     return False
@@ -237,7 +232,8 @@ class ParallelProcessor:
                 # 1. Process completed tasks
                 for future in done:
                     pending.remove(future)
-                    path, _ = future_metadata.pop(future)
+                    path = future_paths.pop(future)
+                    future_started.pop(future, None)
 
                     try:
                         file_result = future.result()
@@ -260,15 +256,29 @@ class ParallelProcessor:
                 now = time.monotonic()
                 timeout = self._config.timeout_per_file
 
+                # Mark tasks as started when the executor reports they are running.
+                for future in pending:
+                    if future_started[future] is None and future.running():
+                        future_started[future] = now
+
                 # Check running tasks (those in pending but not in done)
                 # We iterate a copy because we might modify pending
                 for future in list(pending):
-                    path, start_time = future_metadata[future]
+                    start_time = future_started[future]
+                    if start_time is None:
+                        continue
+                    path = future_paths[future]
                     if (now - start_time) > timeout:
                         # Task timed out
-                        future.cancel()  # Attempt to cancel (fixes zombie tasks if not started)
+                        cancelled = future.cancel()
+                        if not cancelled and not owns_executor:
+                            # Caller owns the executor. Keep tracking this running task.
+                            continue
+
+                        force_nonblocking_shutdown = True
                         pending.remove(future)
-                        del future_metadata[future]
+                        del future_paths[future]
+                        del future_started[future]
 
                         file_result = FileResult(
                             path=path,
@@ -284,6 +294,12 @@ class ParallelProcessor:
 
                         yield file_result
                         submit_next()
+        finally:
+            if owns_executor:
+                exec_instance.shutdown(
+                    wait=not force_nonblocking_shutdown,
+                    cancel_futures=force_nonblocking_shutdown,
+                )
 
     def _get_executor_class(
         self,
@@ -304,7 +320,7 @@ class ParallelProcessor:
         max_workers: int,
         files: list[Path],
         process_fn: Callable[[Path], Any],
-        executor: Any | None = None,
+        executor: ThreadPoolExecutor | ProcessPoolExecutor | None = None,
     ) -> list[FileResult]:
         """
         Submit files to the executor and collect all results.

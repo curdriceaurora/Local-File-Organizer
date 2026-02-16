@@ -7,7 +7,7 @@ The following bugs were identified during a code review and verified with reprod
 **Location:** `src/file_organizer/parallel/priority_queue.py`
 
 **Description:**
-The `PriorityQueue` implementation has a logic flaw in how it handles reordering or re-enqueuing items. It uses a `_removed` set to track invalid IDs, but immediately discards the ID from `_removed` after adding a new entry. If a stale entry for that ID is still deeper in the heaps, it is now considered "valid" again.
+The `PriorityQueue` implementation has a logic flaw in how it handles reordering or re-enqueuing items. It uses a `_removed` set to track invalid IDs, but immediately discards the ID from `_removed` after adding a new entry. If a stale entry for that ID is still deeper in the heap, it is now considered "valid" again.
 
 **Reproduction:**
 ```python

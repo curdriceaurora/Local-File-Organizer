@@ -77,7 +77,6 @@ class TestConcurrencyFixes(unittest.TestCase):
 
     def test_zombie_task_timeout(self):
         """Test that timed-out tasks are cancelled and reported correctly (Issue #294)."""
-        # We need to simulate a task that hangs.
         config = ParallelConfig(
             max_workers=2,
             timeout_per_file=0.1,  # Short timeout
@@ -99,20 +98,9 @@ class TestConcurrencyFixes(unittest.TestCase):
         self.assertFalse(res.success)
         self.assertIn("Timed out", str(res.error))
 
-        # Verify it didn't take 0.5s + overhead (it should be close to 0.1s + overhead)
-        # But time.sleep blocks the thread.
-        # Oh right, ThreadPoolExecutor threads can't be killed.
-        # Wait, if I use ThreadPoolExecutor (default), a sleeping thread blocks Python GIL release?
-        # No, time.sleep releases GIL.
-        # But `wait` timeout works.
-        # The main thread wakes up after 0.1s check.
-        # It sees timeout, cancels (no-op for running thread), and yields failure.
-        # The test should finish in ~0.1s (plus polling interval), not 0.5s.
-        # processor.process_batch waits for ALL results?
-        # process_batch calls _run_batch which iterates the iterator.
-        # The iterator yields failure immediately after detection.
-        # So _run_batch collects failure and returns.
-        # The background thread continues to sleep for 0.4s. That's fine.
-        # The test validates prompt return.
-
-        self.assertLess(results.total_duration_ms, 700, "Should finish faster than task duration")
+        # Must return close to timeout_per_file, not full task duration.
+        self.assertLess(
+            results.total_duration_ms,
+            config.timeout_per_file * 1000 + 150,
+            "Should finish close to timeout_per_file, not full task duration",
+        )

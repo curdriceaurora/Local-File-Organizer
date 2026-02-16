@@ -256,11 +256,6 @@ class ResumableProcessor:
                     last_save_time = now
                     files_since_save = 0
 
-            # flush remaining updates
-            self._persistence.save_job(job)
-            if checkpoint:
-                self._checkpoint_mgr.save_checkpoint(checkpoint)
-
         except Exception as exc:
             logger.error("Job %s failed with error: %s", job.id, exc)
             job.status = JobStatus.FAILED

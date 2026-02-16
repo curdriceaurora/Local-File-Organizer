@@ -177,12 +177,11 @@ class CheckpointManager:
             completed_file: The file that has been processed.
         """
         resolved = completed_file
-        # Remove from pending (using list filtering is O(N), but pending list shrinks)
-        # For very large lists, using a set for pending would be better, but
-        # that requires changing the model. For now we stick to list to match existing API.
-        checkpoint.pending_paths = [
-            p for p in checkpoint.pending_paths if p != resolved
-        ]
+        # Keep list model compatibility but avoid rebuilding the full list.
+        try:
+            checkpoint.pending_paths.remove(resolved)
+        except ValueError:
+            pass
 
         if resolved not in checkpoint.completed_paths:
             checkpoint.completed_paths.append(resolved)
@@ -265,5 +264,4 @@ class CheckpointManager:
             return True
 
         return current_hash != stored_hash
-
 
