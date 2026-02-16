@@ -1,0 +1,21 @@
+<div class="auth-form">
+    <h2>Login</h2>
+    {% if error %}
+    <p class="error-text">{{ error }}</p>
+    {% endif %}
+    <form method="post" action="/ui/profile/login">
+        <div class="form-group">
+            <label for="login-username">Username</label>
+            <input id="login-username" name="username" type="text" required autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label for="login-password">Password</label>
+            <input id="login-password" name="password" type="password" required autocomplete="current-password">
+        </div>
+        <button class="btn-primary" type="submit">Log in</button>
+    </form>
+    <p class="auth-switch">
+        Don't have an account?
+        <a href="/ui/profile/register" hx-get="/ui/profile/register" hx-target="#auth-panel">Register</a>
+    </p>
+</div>

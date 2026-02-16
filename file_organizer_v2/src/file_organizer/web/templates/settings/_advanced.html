@@ -1,0 +1,48 @@
+{% if success_message %}
+<div class="banner banner-info">{{ success_message }}</div>
+{% endif %}
+{% if error_message %}
+<div class="banner banner-error">{{ error_message }}</div>
+{% endif %}
+
+<div class="settings-section" data-section="advanced">
+    <h2>Advanced settings</h2>
+    <p class="settings-description">Configure logging, caching, and debug options.</p>
+
+    <form
+        class="settings-form"
+        hx-post="/ui/settings/advanced"
+        hx-target="#settings-panel"
+        hx-swap="innerHTML"
+    >
+        <div class="form-group">
+            <label for="settings-log-level">Log level</label>
+            <select id="settings-log-level" name="log_level">
+                {% for opt in log_level_options %}
+                <option value="{{ opt }}" {% if ws.log_level == opt %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+            </select>
+            <p class="form-hint">Minimum log level for application output.</p>
+        </div>
+
+        <div class="form-group">
+            <label class="toggle-option">
+                <input name="cache_enabled" type="checkbox" value="1" {% if ws.cache_enabled %}checked{% endif %}>
+                <span>Enable cache</span>
+            </label>
+            <p class="form-hint">Cache model results for faster repeated operations.</p>
+        </div>
+
+        <div class="form-group">
+            <label class="toggle-option">
+                <input name="debug_mode" type="checkbox" value="1" {% if ws.debug_mode %}checked{% endif %}>
+                <span>Debug mode</span>
+            </label>
+            <p class="form-hint">Enable verbose debug output and diagnostics.</p>
+        </div>
+
+        <div class="settings-actions">
+            <button class="btn-primary" type="submit">Save advanced settings</button>
+        </div>
+    </form>
+</div>

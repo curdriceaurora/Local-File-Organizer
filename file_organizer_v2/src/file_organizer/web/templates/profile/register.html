@@ -1,0 +1,29 @@
+<div class="auth-form">
+    <h2>Register</h2>
+    {% if error %}
+    <p class="error-text">{{ error }}</p>
+    {% endif %}
+    <form method="post" action="/ui/profile/register">
+        <div class="form-group">
+            <label for="reg-username">Username</label>
+            <input id="reg-username" name="username" type="text" required autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label for="reg-email">Email</label>
+            <input id="reg-email" name="email" type="email" required autocomplete="email">
+        </div>
+        <div class="form-group">
+            <label for="reg-fullname">Full name</label>
+            <input id="reg-fullname" name="full_name" type="text" autocomplete="name">
+        </div>
+        <div class="form-group">
+            <label for="reg-password">Password</label>
+            <input id="reg-password" name="password" type="password" required autocomplete="new-password">
+        </div>
+        <button class="btn-primary" type="submit">Create account</button>
+    </form>
+    <p class="auth-switch">
+        Already have an account?
+        <a href="/ui/profile/login" hx-get="/ui/profile/login" hx-target="#auth-panel">Log in</a>
+    </p>
+</div>

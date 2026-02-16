@@ -24,7 +24,6 @@ from file_organizer.web._helpers import (
     THUMBNAIL_SIZE,
     UPLOAD_CHUNK_SIZE,
     allowed_roots,
-    as_bool,
     build_content_disposition,
     clamp_limit,
     detect_kind,

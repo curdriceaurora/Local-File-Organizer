@@ -1,0 +1,21 @@
+{% if success %}
+<p class="success-text">{{ success }}</p>
+{% endif %}
+{% if error %}
+<p class="error-text">{{ error }}</p>
+{% endif %}
+<form method="post" action="/ui/profile/edit" hx-post="/ui/profile/edit" hx-target="#profile-edit">
+    <div class="form-group">
+        <label for="edit-username">Username</label>
+        <input id="edit-username" type="text" value="{{ user.username }}" disabled>
+    </div>
+    <div class="form-group">
+        <label for="edit-fullname">Full name</label>
+        <input id="edit-fullname" name="full_name" type="text" value="{{ user.full_name or '' }}">
+    </div>
+    <div class="form-group">
+        <label for="edit-email">Email</label>
+        <input id="edit-email" name="email" type="email" value="{{ user.email }}" required>
+    </div>
+    <button class="btn-primary" type="submit">Save changes</button>
+</form>

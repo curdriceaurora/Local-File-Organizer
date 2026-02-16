@@ -1,0 +1,46 @@
+{% if new_key %}
+<div class="alert alert-info">
+    <p><strong>New API key created.</strong> Copy it now -- it will not be shown again.</p>
+    <code class="api-key-display">{{ new_key }}</code>
+</div>
+{% endif %}
+
+{% if api_keys %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Label</th>
+            <th>Prefix</th>
+            <th>Created</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key in api_keys %}
+        <tr>
+            <td>{{ key.label }}</td>
+            <td><code>{{ key.key_prefix }}...</code></td>
+            <td>{{ key.created_at.strftime('%Y-%m-%d') if key.created_at else 'N/A' }}</td>
+            <td>
+                <form method="post" action="/ui/profile/api-keys/revoke"
+                      hx-post="/ui/profile/api-keys/revoke" hx-target="#api-keys">
+                    <input type="hidden" name="key_id" value="{{ key.id }}">
+                    <button class="btn-ghost btn-sm" type="submit">Revoke</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No active API keys.</p>
+{% endif %}
+
+<form method="post" action="/ui/profile/api-keys/generate"
+      hx-post="/ui/profile/api-keys/generate" hx-target="#api-keys" class="api-key-form">
+    <div class="form-group form-inline">
+        <label for="key-label">Label</label>
+        <input id="key-label" name="label" type="text" value="default" placeholder="Key label">
+    </div>
+    <button class="btn-primary" type="submit">Generate new key</button>
+</form>

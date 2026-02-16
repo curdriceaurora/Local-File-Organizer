@@ -1,0 +1,40 @@
+{% if success_message %}
+<div class="banner banner-info">{{ success_message }}</div>
+{% endif %}
+{% if error_message %}
+<div class="banner banner-error">{{ error_message }}</div>
+{% endif %}
+
+<div class="settings-section" data-section="organization">
+    <h2>Organization settings</h2>
+    <p class="settings-description">Configure default methodology and organization rules.</p>
+
+    <form
+        class="settings-form"
+        hx-post="/ui/settings/organization"
+        hx-target="#settings-panel"
+        hx-swap="innerHTML"
+    >
+        <div class="form-group">
+            <label for="settings-methodology">Default methodology</label>
+            <select id="settings-methodology" name="default_methodology">
+                {% for key, label in methodology_options.items() %}
+                <option value="{{ key }}" {% if ws.default_methodology == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <p class="form-hint">The default file organization methodology used for new jobs.</p>
+        </div>
+
+        <div class="form-group">
+            <label class="toggle-option">
+                <input name="auto_organize" type="checkbox" value="1" {% if ws.auto_organize %}checked{% endif %}>
+                <span>Auto-organize new files</span>
+            </label>
+            <p class="form-hint">Automatically organize files when they appear in the input directory.</p>
+        </div>
+
+        <div class="settings-actions">
+            <button class="btn-primary" type="submit">Save organization settings</button>
+        </div>
+    </form>
+</div>

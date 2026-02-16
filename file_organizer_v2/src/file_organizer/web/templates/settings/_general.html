@@ -1,0 +1,46 @@
+{% if success_message %}
+<div class="banner banner-info">{{ success_message }}</div>
+{% endif %}
+{% if error_message %}
+<div class="banner banner-error">{{ error_message }}</div>
+{% endif %}
+
+<div class="settings-section" data-section="general">
+    <h2>General settings</h2>
+    <p class="settings-description">Configure default directories and general preferences.</p>
+
+    <form
+        class="settings-form"
+        hx-post="/ui/settings/general"
+        hx-target="#settings-panel"
+        hx-swap="innerHTML"
+    >
+        <div class="form-group">
+            <label for="settings-input-dir">Default input directory</label>
+            <input
+                id="settings-input-dir"
+                name="default_input_dir"
+                type="text"
+                value="{{ ws.default_input_dir }}"
+                placeholder="e.g. ~/Downloads"
+            >
+            <p class="form-hint">The default source directory for file organization.</p>
+        </div>
+
+        <div class="form-group">
+            <label for="settings-output-dir">Default output directory</label>
+            <input
+                id="settings-output-dir"
+                name="default_output_dir"
+                type="text"
+                value="{{ ws.default_output_dir }}"
+                placeholder="e.g. ~/Organized"
+            >
+            <p class="form-hint">The default destination directory for organized files.</p>
+        </div>
+
+        <div class="settings-actions">
+            <button class="btn-primary" type="submit">Save general settings</button>
+        </div>
+    </form>
+</div>

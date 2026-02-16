@@ -1,0 +1,46 @@
+{% if success_message %}
+<div class="banner banner-info">{{ success_message }}</div>
+{% endif %}
+{% if error_message %}
+<div class="banner banner-error">{{ error_message }}</div>
+{% endif %}
+
+<div class="settings-section" data-section="models">
+    <h2>Model settings</h2>
+    <p class="settings-description">Configure AI models used for text and vision processing.</p>
+
+    <form
+        class="settings-form"
+        hx-post="/ui/settings/models"
+        hx-target="#settings-panel"
+        hx-swap="innerHTML"
+    >
+        <div class="form-group">
+            <label for="settings-text-model">Text model</label>
+            <input
+                id="settings-text-model"
+                name="text_model"
+                type="text"
+                value="{{ ws.text_model }}"
+                placeholder="qwen2.5:3b-instruct-q4_K_M"
+            >
+            <p class="form-hint">Ollama model identifier for text analysis and generation.</p>
+        </div>
+
+        <div class="form-group">
+            <label for="settings-vision-model">Vision model</label>
+            <input
+                id="settings-vision-model"
+                name="vision_model"
+                type="text"
+                value="{{ ws.vision_model }}"
+                placeholder="qwen2.5vl:7b-q4_K_M"
+            >
+            <p class="form-hint">Ollama model identifier for image and video analysis.</p>
+        </div>
+
+        <div class="settings-actions">
+            <button class="btn-primary" type="submit">Save model settings</button>
+        </div>
+    </form>
+</div>

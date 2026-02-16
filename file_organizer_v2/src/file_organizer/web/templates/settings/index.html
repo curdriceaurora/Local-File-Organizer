@@ -4,26 +4,61 @@
 <section class="page-header">
     <div>
         <p class="page-kicker">Settings</p>
-        <h1 class="page-title">Configuration hub</h1>
-        <p class="page-subtitle">Adjust profiles, storage locations, and automation safely.</p>
+        <h1 class="page-title">Configuration</h1>
+        <p class="page-subtitle">Manage application settings across categories.</p>
     </div>
 </section>
 
-<section class="panel-grid two">
-    <article class="panel">
-        <h2>Profiles</h2>
-        <ul class="action-list">
-            <li><span>Default profile</span><span class="action-meta">Active</span></li>
-            <li><span>Photography</span><span class="action-meta">Draft</span></li>
-            <li><span>Work</span><span class="action-meta">Draft</span></li>
-        </ul>
-    </article>
-    <article class="panel">
-        <h2>Automation</h2>
-        <div class="empty-state">
-            <p>No schedules yet.</p>
-            <span>Use the CLI to configure recurring runs.</span>
-        </div>
-    </article>
-</section>
+<div class="settings-layout">
+    <nav class="settings-tabs" role="tablist">
+        <button
+            class="settings-tab settings-tab-active"
+            role="tab"
+            aria-selected="true"
+            hx-get="/ui/settings/general"
+            hx-target="#settings-panel"
+            hx-swap="innerHTML"
+            onclick="document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('settings-tab-active'));this.classList.add('settings-tab-active')"
+        >General</button>
+        <button
+            class="settings-tab"
+            role="tab"
+            aria-selected="false"
+            hx-get="/ui/settings/models"
+            hx-target="#settings-panel"
+            hx-swap="innerHTML"
+            onclick="document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('settings-tab-active'));this.classList.add('settings-tab-active')"
+        >Models</button>
+        <button
+            class="settings-tab"
+            role="tab"
+            aria-selected="false"
+            hx-get="/ui/settings/organization"
+            hx-target="#settings-panel"
+            hx-swap="innerHTML"
+            onclick="document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('settings-tab-active'));this.classList.add('settings-tab-active')"
+        >Organization</button>
+        <button
+            class="settings-tab"
+            role="tab"
+            aria-selected="false"
+            hx-get="/ui/settings/appearance"
+            hx-target="#settings-panel"
+            hx-swap="innerHTML"
+            onclick="document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('settings-tab-active'));this.classList.add('settings-tab-active')"
+        >Appearance</button>
+        <button
+            class="settings-tab"
+            role="tab"
+            aria-selected="false"
+            hx-get="/ui/settings/advanced"
+            hx-target="#settings-panel"
+            hx-swap="innerHTML"
+            onclick="document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('settings-tab-active'));this.classList.add('settings-tab-active')"
+        >Advanced</button>
+    </nav>
+    <div id="settings-panel" hx-get="/ui/settings/general" hx-trigger="load" hx-target="#settings-panel" hx-swap="innerHTML">
+        <div class="loading-state">Loading settings...</div>
+    </div>
+</div>
 {% endblock %}

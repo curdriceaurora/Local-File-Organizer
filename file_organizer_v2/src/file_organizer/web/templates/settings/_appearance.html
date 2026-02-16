@@ -1,0 +1,32 @@
+{% if success_message %}
+<div class="banner banner-info">{{ success_message }}</div>
+{% endif %}
+{% if error_message %}
+<div class="banner banner-error">{{ error_message }}</div>
+{% endif %}
+
+<div class="settings-section" data-section="appearance">
+    <h2>Appearance settings</h2>
+    <p class="settings-description">Customize the look and feel of the web interface.</p>
+
+    <form
+        class="settings-form"
+        hx-post="/ui/settings/appearance"
+        hx-target="#settings-panel"
+        hx-swap="innerHTML"
+    >
+        <div class="form-group">
+            <label for="settings-theme">Theme</label>
+            <select id="settings-theme" name="theme">
+                {% for opt in theme_options %}
+                <option value="{{ opt }}" {% if ws.theme == opt %}selected{% endif %}>{{ opt|capitalize }}</option>
+                {% endfor %}
+            </select>
+            <p class="form-hint">Select the color theme for the application interface.</p>
+        </div>
+
+        <div class="settings-actions">
+            <button class="btn-primary" type="submit">Save appearance settings</button>
+        </div>
+    </form>
+</div>

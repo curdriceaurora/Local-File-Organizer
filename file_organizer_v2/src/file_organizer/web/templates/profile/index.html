@@ -1,33 +1,42 @@
 {% extends "base.html" %}
-
 {% block content %}
 <section class="page-header">
     <div>
         <p class="page-kicker">Profile</p>
-        <h1 class="page-title">Local account</h1>
-        <p class="page-subtitle">Credentials are stored locally. Cloud sync is optional.</p>
+        <h1 class="page-title">{% if user %}{{ user.full_name or user.username }}{% else %}Sign in{% endif %}</h1>
+        <p class="page-subtitle">{% if user %}Manage your account and API keys.{% else %}Log in to manage your profile.{% endif %}</p>
     </div>
-    <button class="btn-ghost" type="button">Manage tokens</button>
+    {% if user %}
+    <form method="post" action="/ui/profile/logout">
+        <button class="btn-ghost" type="submit">Log out</button>
+    </form>
+    {% endif %}
 </section>
 
+{% if user %}
 <section class="panel-grid two">
     <article class="panel">
-        <h2>Identity</h2>
-        <div class="profile-card">
-            <div class="avatar">FO</div>
-            <div>
-                <p class="profile-name">Local Operator</p>
-                <p class="profile-meta">Connected on this device</p>
-            </div>
+        <h2>Profile</h2>
+        <div id="profile-edit" hx-get="/ui/profile/edit" hx-trigger="load" hx-target="#profile-edit">
+            <div class="loading-state">Loading...</div>
         </div>
     </article>
     <article class="panel">
-        <h2>Security</h2>
-        <ul class="action-list">
-            <li><span>Auth status</span><span class="action-meta">Enabled</span></li>
-            <li><span>API keys</span><span class="action-meta">2 active</span></li>
-            <li><span>Sessions</span><span class="action-meta">1 device</span></li>
-        </ul>
+        <h2>API Keys</h2>
+        <div id="api-keys" hx-get="/ui/profile/api-keys" hx-trigger="load" hx-target="#api-keys">
+            <div class="loading-state">Loading...</div>
+        </div>
     </article>
 </section>
+{% elif auth_enabled %}
+<section class="panel-grid two">
+    <article class="panel" id="auth-panel" hx-get="/ui/profile/login" hx-trigger="load" hx-target="#auth-panel">
+        <div class="loading-state">Loading...</div>
+    </article>
+</section>
+{% else %}
+<section class="panel">
+    <p>Authentication is disabled. Enable it in settings to manage your profile.</p>
+</section>
+{% endif %}
 {% endblock %}
