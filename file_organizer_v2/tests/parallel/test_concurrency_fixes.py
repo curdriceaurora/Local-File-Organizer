@@ -68,12 +68,41 @@ class TestConcurrencyFixes(unittest.TestCase):
             # only the final save should trigger (plus maybe one if timing is weird).
             # Total calls should be small (create + final + maybe 1 batch).
             # Definitely < 10.
-            # Without batching, it would be 20 calls inside the loop + create + final = 22 calls.
+            # Without batching, it would be 20 calls inside the loop + create = 21 calls.
             # With batching, it's create + final = 2 calls (if fast).
 
             save_calls = mock_checkpoint_mgr.save_checkpoint.call_count
             self.assertLess(save_calls, 10, "Should use batched checkpoints")
             self.assertGreaterEqual(save_calls, 1, "Should save at least once")
+
+    def test_process_batch_iter_bounded_pending_futures(self):
+        """Test that pending futures are bounded to avoid unbounded memory (Issue #293)."""
+        config = ParallelConfig(max_workers=3)
+        processor = ParallelProcessor(config=config)
+        paths = [Path(f"batch_file_{i}") for i in range(50)]
+
+        observed_pending_sizes: list[int] = []
+
+        from concurrent.futures import wait as real_wait
+
+        def tracked_wait(fs, *args, **kwargs):
+            observed_pending_sizes.append(len(fs))
+            return real_wait(fs, *args, **kwargs)
+
+        def slow_task(_path):
+            time.sleep(0.01)
+            return "ok"
+
+        with patch("file_organizer.parallel.processor.wait", side_effect=tracked_wait):
+            results = list(processor.process_batch_iter(paths, slow_task))
+
+        self.assertEqual(len(results), len(paths))
+        self.assertTrue(observed_pending_sizes)
+        self.assertLessEqual(
+            max(observed_pending_sizes),
+            config.max_workers * 2,
+            "Pending futures should be bounded to 2 * max_workers",
+        )
 
     def test_zombie_task_timeout(self):
         """Test that timed-out tasks are cancelled and reported correctly (Issue #294)."""

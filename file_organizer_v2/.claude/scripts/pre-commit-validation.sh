@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Pre-commit validation script
 # Runs linting and tests to ensure code quality before commit.
 

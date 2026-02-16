@@ -11,6 +11,7 @@ import json
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from file_organizer.parallel.models import JobState, JobStatus, JobSummary
 from file_organizer.parallel.persistence import JobPersistence
@@ -300,6 +301,81 @@ class TestJobExists(unittest.TestCase):
     def test_not_exists_for_unsaved_job(self) -> None:
         """Test that job_exists returns False for unknown job."""
         self.assertFalse(self.persistence.job_exists("phantom"))
+
+
+class TestJobPersistenceAtomicWrites(unittest.TestCase):
+    """Test atomic write behavior for job persistence."""
+
+    def setUp(self) -> None:
+        """Set up temp directory and persistence."""
+        import tempfile
+
+        self._tmpdir = tempfile.mkdtemp()
+        self.jobs_dir = Path(self._tmpdir) / "jobs"
+        self.persistence = JobPersistence(jobs_dir=self.jobs_dir)
+
+    def tearDown(self) -> None:
+        """Clean up temp directory."""
+        import shutil
+
+        shutil.rmtree(self._tmpdir, ignore_errors=True)
+
+    def test_save_job_uses_temp_file_then_replace(self) -> None:
+        """Test save_job writes temp file before replacing target."""
+        job = JobState(id="atomic-job-1", status=JobStatus.RUNNING, total_files=5)
+        job_path = self.jobs_dir / "atomic-job-1.json"
+
+        original_replace = Path.replace
+        saw_temp_file_before_replace = False
+
+        def wrapped_replace(path_self: Path, target: Path) -> Path:
+            nonlocal saw_temp_file_before_replace
+            if path_self.suffix == ".tmp":
+                saw_temp_file_before_replace = path_self.exists()
+            return original_replace(path_self, target)
+
+        with patch.object(Path, "replace", autospec=True, side_effect=wrapped_replace):
+            self.persistence.save_job(job)
+
+        self.assertTrue(saw_temp_file_before_replace)
+        self.assertTrue(job_path.exists())
+        self.assertFalse(job_path.with_suffix(".tmp").exists())
+
+    def test_save_job_failure_keeps_existing_file(self) -> None:
+        """Test failed temp write does not corrupt existing job file."""
+        job = JobState(id="atomic-job-2", status=JobStatus.PENDING, total_files=10)
+        self.persistence.save_job(job)
+        job_path = self.jobs_dir / "atomic-job-2.json"
+        original_contents = job_path.read_text(encoding="utf-8")
+
+        original_write_text = Path.write_text
+
+        def failing_temp_write(
+            path_self: Path, data: str, encoding: str = "utf-8"
+        ) -> int:
+            if path_self.suffix == ".tmp":
+                raise OSError("simulated write failure")
+            return original_write_text(path_self, data, encoding=encoding)
+
+        updated_job = JobState(
+            id="atomic-job-2",
+            status=JobStatus.COMPLETED,
+            total_files=10,
+            completed_files=10,
+        )
+
+        with patch.object(
+            Path, "write_text", autospec=True, side_effect=failing_temp_write
+        ):
+            with self.assertRaises(OSError):
+                self.persistence.save_job(updated_job)
+
+        self.assertEqual(
+            job_path.read_text(encoding="utf-8"),
+            original_contents,
+            "Existing job file should remain intact on failed save",
+        )
+        self.assertFalse(job_path.with_suffix(".tmp").exists())
 
 
 if __name__ == "__main__":

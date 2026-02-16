@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from file_organizer.parallel.checkpoint import (
     CheckpointManager,
@@ -255,6 +256,83 @@ class TestUpdateCheckpoint(unittest.TestCase):
         assert updated is not None
         count = updated.completed_paths.count(f1)
         self.assertEqual(count, 1)
+
+
+class TestCheckpointAtomicWrites(unittest.TestCase):
+    """Test atomic write behavior for checkpoint persistence."""
+
+    def setUp(self) -> None:
+        """Set up temp directory and manager."""
+        import tempfile
+
+        self._tmpdir = tempfile.mkdtemp()
+        self.tmp_path = Path(self._tmpdir)
+        self.ckpt_dir = self.tmp_path / "checkpoints"
+        self.mgr = CheckpointManager(checkpoints_dir=self.ckpt_dir)
+
+    def tearDown(self) -> None:
+        """Clean up temp directory."""
+        import shutil
+
+        shutil.rmtree(self._tmpdir, ignore_errors=True)
+
+    def test_save_checkpoint_uses_temp_file_then_replace(self) -> None:
+        """Test save_checkpoint writes temp file before replacing target."""
+        f1 = self.tmp_path / "a.txt"
+        f1.write_text("a", encoding="utf-8")
+        ckpt = self.mgr.create_checkpoint("atomic-1", [f1], [])
+
+        checkpoint_path = self.ckpt_dir / "atomic-1.checkpoint.json"
+        original_replace = Path.replace
+        saw_temp_file_before_replace = False
+
+        def wrapped_replace(path_self: Path, target: Path) -> Path:
+            nonlocal saw_temp_file_before_replace
+            if path_self.suffix == ".tmp":
+                saw_temp_file_before_replace = path_self.exists()
+            return original_replace(path_self, target)
+
+        with patch.object(Path, "replace", autospec=True, side_effect=wrapped_replace):
+            self.mgr.save_checkpoint(ckpt)
+
+        self.assertTrue(saw_temp_file_before_replace)
+        self.assertTrue(checkpoint_path.exists())
+        self.assertFalse(checkpoint_path.with_suffix(".tmp").exists())
+
+    def test_save_checkpoint_failure_keeps_existing_file(self) -> None:
+        """Test failed temp write does not corrupt existing checkpoint file."""
+        f1 = self.tmp_path / "a.txt"
+        f2 = self.tmp_path / "b.txt"
+        f1.write_text("a", encoding="utf-8")
+        f2.write_text("b", encoding="utf-8")
+        ckpt = self.mgr.create_checkpoint("atomic-2", [f1], [f2])
+
+        checkpoint_path = self.ckpt_dir / "atomic-2.checkpoint.json"
+        original_contents = checkpoint_path.read_text(encoding="utf-8")
+        original_write_text = Path.write_text
+
+        def failing_temp_write(
+            path_self: Path, data: str, encoding: str = "utf-8"
+        ) -> int:
+            if path_self.suffix == ".tmp":
+                raise OSError("simulated write failure")
+            return original_write_text(path_self, data, encoding=encoding)
+
+        ckpt.completed_paths.append(f2)
+        ckpt.pending_paths = []
+
+        with patch.object(
+            Path, "write_text", autospec=True, side_effect=failing_temp_write
+        ):
+            with self.assertRaises(OSError):
+                self.mgr.save_checkpoint(ckpt)
+
+        self.assertEqual(
+            checkpoint_path.read_text(encoding="utf-8"),
+            original_contents,
+            "Existing checkpoint file should remain intact on failed save",
+        )
+        self.assertFalse(checkpoint_path.with_suffix(".tmp").exists())
 
 
 class TestDeleteCheckpoint(unittest.TestCase):

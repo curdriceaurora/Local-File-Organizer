@@ -27,9 +27,9 @@ class TestPriorityQueueFix(unittest.TestCase):
         # 3. Dequeue -> Should get priority 20
         first = pq.dequeue()
         self.assertIsNotNone(first)
-        self.assertEqual(first.priority, 20, "Should dequeue the updating priority item first")
+        self.assertEqual(first.priority, 20, "Should dequeue the updated priority item first")
 
-        # 4. Dequeue again -> Should NOT get the old specific entry
+        # 4. Dequeue again -> Should NOT get the old stale entry
         second = pq.dequeue()
         self.assertIsNone(second, "Should not dequeue the stale entry")
 

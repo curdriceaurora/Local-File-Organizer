@@ -215,6 +215,8 @@ class ResumableProcessor:
             files: Files to process in this run.
             process_fn: Processing function.
             checkpoint: Optional in-memory checkpoint object to update.
+                Batched persistence means in-memory updates between save intervals
+                can be lost if the process crashes.
 
         Returns:
             BatchResult for this processing run.

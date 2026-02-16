@@ -188,14 +188,16 @@ class ParallelProcessor:
             executor_cls = self._get_executor_class()
             exec_instance = executor_cls(max_workers=max_workers)
         else:
+            assert executor is not None
             exec_instance = executor
 
         completed_count = 0
         total = len(files)
 
         # Use a bounded set of futures to control memory usage (backpressure)
-        # Limit to max_workers so timeout tracks actual run time, not queue delay.
-        limit = max_workers
+        # Keep at most 2 * max_workers pending futures to cap memory growth.
+        # Timeout is measured from task start (future.running()), not submission time.
+        limit = max_workers * 2
         pending: set[Future[FileResult]] = set()
         # Track scheduling metadata for timeout handling.
         future_paths: dict[Future[FileResult], Path] = {}
@@ -203,11 +205,15 @@ class ParallelProcessor:
         force_nonblocking_shutdown = False
 
         iterator = iter(files)
+        iterator_exhausted = False
 
         try:
 
             def submit_next() -> bool:
                 """Submit next file if available."""
+                nonlocal iterator_exhausted
+                if iterator_exhausted:
+                    return False
                 try:
                     path = next(iterator)
                     future = exec_instance.submit(_execute_with_timing, path, process_fn)
@@ -216,6 +222,7 @@ class ParallelProcessor:
                     future_started[future] = None
                     return True
                 except StopIteration:
+                    iterator_exhausted = True
                     return False
 
             # Initial fill
@@ -269,13 +276,11 @@ class ParallelProcessor:
                         continue
                     path = future_paths[future]
                     if (now - start_time) > timeout:
-                        # Task timed out
+                        # Report timeout immediately so callers are not blocked
+                        # by uncancellable tasks continuing in the background.
                         cancelled = future.cancel()
-                        if not cancelled and not owns_executor:
-                            # Caller owns the executor. Keep tracking this running task.
-                            continue
-
-                        force_nonblocking_shutdown = True
+                        if owns_executor and not cancelled:
+                            force_nonblocking_shutdown = True
                         pending.remove(future)
                         del future_paths[future]
                         del future_started[future]
