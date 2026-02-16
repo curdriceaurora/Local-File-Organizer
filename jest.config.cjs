@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   testEnvironment: "jsdom",
   setupFilesAfterEnv: ["<rootDir>/tests/frontend/setup.js"],
   moduleNameMapper: {
@@ -26,22 +26,12 @@ export default {
     },
   },
   testMatch: [
-    "tests/frontend/component/**/*.test.js",
-    "tests/frontend/unit/**/*.test.js",
-  ],
-  testPathIgnorePatterns: [
-    "/node_modules/",
-    "/archive/",
+    "**/tests/frontend/**/*.test.js",
   ],
   moduleFileExtensions: [
     "js",
     "jsx",
     "json",
   ],
-  globals: {
-    "ts-jest": {
-      isolatedModules: true,
-    },
-  },
   verbose: true,
 };
