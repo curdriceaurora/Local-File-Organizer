@@ -1,26 +1,20 @@
 # GitHub Mapping Audit
 
-## Update: 2026-02-16T19:07:15Z
+## Update: 2026-02-16T19:44:50Z
 
 - Open issues reviewed: 92
 - Previously unlabeled open issues: 24
 - Unlabeled open issues after triage: 0
 - Labels assigned across all previously unlabeled issues (Phase 2/3/4/5/6 + technical debt/meta tickets)
 - Technical debt epic #266 updated with new sub-issues:
-  - #262, #278, #279, #280, #281, #291, #292, #293, #294, #295
+  - #97, #105, #262, #278, #279, #280, #281, #291, #292, #293, #294, #295
+- Added `phase-2` label to #176 for phase routing consistency.
 - Phase status sync updates applied in local CCPM docs:
   - `.claude/epics/phase-6-web-interface/240.md` (closed after PR #290 merge)
   - `.claude/epics/phase-6-web-interface/epic.md`
   - `.claude/epics/phase-6-web-interface/github-mapping.md`
   - `.claude/epics/phase-5-architecture/epic.md`
   - `.claude/epics/phase-5-architecture/github-mapping.md`
-
-## Update: 2026-02-16T19:33:51Z
-
-- Added `phase-2` label to #176 for phase routing consistency.
-- Linked additional technical-debt items under epic #266:
-  - #97 - datetime UTC deprecation migration
-  - #105 - optional torch dependency split
 
 Original report generated: 2026-02-09 17:54 (local)
 
