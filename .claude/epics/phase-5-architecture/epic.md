@@ -5,11 +5,11 @@ github_issue: 4
 github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/4
 status: completed
 created: 2026-01-20T23:30:00Z
-updated: 2026-02-09T22:10:57Z
+updated: 2026-02-16T19:07:15Z
 progress: 100%
 labels: [enhancement, epic, phase-5]
 github: https://github.com/curdriceaurora/Local-File-Organizer/issues/4
-last_sync: 2026-01-26T00:52:32Z
+last_sync: 2026-02-16T19:07:15Z
 ---
 
 # Epic: Architecture & Performance (Phase 5)
@@ -101,6 +101,17 @@ Automated testing and deployment
 ## Related
 - GitHub Issue: #4
 - Related PRD: file-organizer-v2
+
+## Post-Completion Follow-Ups (2026-02-16)
+Additional defects were opened after Phase 5 completion and are tracked under the technical debt epic.
+
+- Parent: #266 - Technical Debt & Maintenance
+- Sub-issues:
+  - #291 - Priority queue duplicate processing bug
+  - #292 - CheckpointManager per-file IO performance overhead
+  - #293 - ParallelProcessor unbounded memory usage
+  - #294 - Timeout cancellation leaves background tasks running
+  - #295 - Non-atomic persistence writes risk data corruption
 
 ---
 

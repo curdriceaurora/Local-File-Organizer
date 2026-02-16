@@ -65,8 +65,14 @@ https://github.com/curdriceaurora/Local-File-Organizer/issues/125
 ---
 
 **Total:** 21 tasks, 228 hours
-**Synced:** EOF
-echo "$CURRENT_TIME" >> github-mapping.md
+**Synced:** 2026-02-16T19:07:15Z
 
-echo "Mapping file created!"
-cat github-mapping.md | head -30
+## Follow-Up Defect Issues (Post-Completion)
+
+The following production defect tickets were opened after task completion and linked under technical-debt epic #266:
+
+- #291 - Bug: Duplicate processing in PriorityQueue due to faulty reordering logic
+- #292 - Performance: O(N^2) overhead in CheckpointManager due to per-file disk IO
+- #293 - Bug: Unbounded memory usage in ParallelProcessor.process_batch_iter
+- #294 - Bug: Zombie tasks not cancelled on timeout in ParallelProcessor
+- #295 - Critical: Non-atomic writes in JobPersistence and CheckpointManager risk data corruption

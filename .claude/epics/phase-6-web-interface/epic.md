@@ -5,10 +5,10 @@ github_issue: 5
 github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/5
 status: open
 created: 2026-01-20T23:30:00Z
-updated: 2026-02-16T16:33:37Z
+updated: 2026-02-16T19:07:15Z
 labels: [enhancement, epic, phase-6]
 github: https://github.com/curdriceaurora/Local-File-Organizer/issues/5
-last_sync: 2026-02-16T16:33:37Z
+last_sync: 2026-02-16T19:07:15Z
 ---
 
 # Epic: Web Interface & Plugin Ecosystem (Phase 6)
@@ -103,6 +103,14 @@ Third-party integrations
 - GitHub Issue: #5
 - Related PRD: file-organizer-v2
 
+## Technical Debt Follow-Ups (2026-02-16)
+The following open review follow-up issues are tracked under technical-debt epic #266 and tagged `phase-6`:
+
+- #278 - Optimize job metadata pruning in dashboard polling
+- #279 - Sanitize plan generation error messages
+- #280 - Sanitize queue job error responses
+- #281 - Speed up SSE polling test with shorter interval
+
 ---
 
 ## Tasks Created
@@ -130,7 +138,7 @@ Third-party integrations
 
 ### Phase 3: Plugin System & Integrations (Tasks #239-243)
 - [x] #239 - Design Plugin Architecture (L, 18-22h, parallel: true, depends: #230)
-- [ ] #240 - Implement Plugin Marketplace (M, 14-16h, parallel: false, depends: #239)
+- [x] #240 - Implement Plugin Marketplace (M, 14-16h, parallel: false, depends: #239)
 - [x] #241 - Create Plugin API & Documentation (L, 16-20h, parallel: true, depends: #239)
 - [x] #242 - Build Third-Party Integration Framework (XL, 20-24h, parallel: true, depends: #230, #241)
 - [x] #243 - Implement API Client Libraries (M, 12-16h, parallel: true, depends: #230)
