@@ -398,7 +398,7 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
         # And the job file was never created
         self.assertFalse(job_path.exists())
 
-    def test_partial_write_does_not_corrupt_existing_file(self) -> None:
+    def test_failed_save_does_not_corrupt_existing_file(self) -> None:
         """Test failed save operations don't corrupt existing job files."""
         job = JobState(id="atomic-job-4", status=JobStatus.PENDING, total_files=10)
         self.persistence.save_job(job)
