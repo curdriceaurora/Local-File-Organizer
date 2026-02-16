@@ -19,12 +19,21 @@ def test_resolve_database_url_file_path(tmp_path: Path) -> None:
     url = resolve_database_url(str(db_path))
     assert url.startswith("sqlite+pysqlite:///")
     assert "test.db" in url
-    assert db_path.parent.exists()
 
 
 def test_resolve_database_url_passthrough() -> None:
     postgres = "postgresql+psycopg://user:pass@localhost:5432/file_organizer"
     assert resolve_database_url(postgres) == postgres
+
+
+def test_resolve_database_url_rejects_empty_path() -> None:
+    with pytest.raises(ValueError, match="cannot be empty"):
+        resolve_database_url("   ")
+
+
+def test_resolve_database_url_rejects_null_byte() -> None:
+    with pytest.raises(ValueError, match="null byte"):
+        resolve_database_url("db.sqlite3\x00")
 
 
 def test_get_engine_sqlite_memory_uses_static_pool() -> None:

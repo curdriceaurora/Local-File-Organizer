@@ -148,7 +148,14 @@ export class FileOrganizerClient {
           const errorBody = await response.json();
           detail = errorBody.detail ?? errorBody.message ?? "";
         } catch {
-          detail = await response.text();
+          try {
+            detail = await response.text();
+          } catch (error: unknown) {
+            detail =
+              error instanceof Error
+                ? error.message
+                : "Failed to parse error response body.";
+          }
         }
         const message = `HTTP ${response.status}: ${detail}`;
 

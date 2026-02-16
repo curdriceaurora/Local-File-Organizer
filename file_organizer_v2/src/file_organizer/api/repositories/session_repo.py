@@ -92,7 +92,7 @@ class SessionRepository:
         count = (
             session.query(UserSession)
             .filter((UserSession.expires_at <= current) | UserSession.revoked_at.is_not(None))
-            .delete(synchronize_session=False)
+            .delete(synchronize_session="fetch")
         )
         session.flush()
         return int(count)

@@ -526,6 +526,45 @@ class TestFileMetadataRepository:
         assert found is not None
         assert found.id == row.id
         assert found.mime_type == "text/plain"
+        assert found is db_session.get(type(row), row.id)
+
+    def test_get_by_relative_path_stale_cache_falls_back_to_db(
+        self,
+        db_session: Session,
+        user: User,
+    ) -> None:
+        ws = WorkspaceRepository.create(
+            db_session,
+            name="meta-ws-stale-cache",
+            owner_id=user.id,
+            root_path="/tmp/meta-ws-stale",
+        )
+        row = FileMetadataRepository.upsert(
+            db_session,
+            workspace_id=ws.id,
+            path="/tmp/meta-ws-stale/a.txt",
+            relative_path="a.txt",
+            name="a.txt",
+            size_bytes=123,
+        )
+        cache = InMemoryCache()
+        cache.set(
+            f"file_metadata:{ws.id}:a.txt",
+            json.dumps({"id": "missing-id"}),
+            ttl_seconds=30,
+        )
+
+        found = FileMetadataRepository.get_by_relative_path(
+            db_session,
+            workspace_id=ws.id,
+            relative_path="a.txt",
+            cache=cache,
+        )
+        assert found is not None
+        assert found.id == row.id
+        cached = cache.get(f"file_metadata:{ws.id}:a.txt")
+        assert cached is not None
+        assert json.loads(cached)["id"] == row.id
 
     def test_upsert_updates_existing_row(self, db_session: Session, user: User) -> None:
         ws = WorkspaceRepository.create(

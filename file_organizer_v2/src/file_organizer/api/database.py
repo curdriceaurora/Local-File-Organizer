@@ -31,13 +31,16 @@ def resolve_database_url(database: str) -> str:
     - full SQLAlchemy URL (e.g. ``postgresql+psycopg://...``)
     """
     value = database.strip()
+    if not value:
+        raise ValueError("Database path/URL cannot be empty")
+    if "\x00" in value:
+        raise ValueError("Database path/URL contains null byte")
     if value == ":memory:":
         return "sqlite+pysqlite:///:memory:"
     if _URL_SCHEME_RE.match(value):
         return value
 
     resolved = Path(value).expanduser()
-    resolved.parent.mkdir(parents=True, exist_ok=True)
     return f"sqlite+pysqlite:///{resolved}"
 
 

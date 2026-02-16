@@ -17,6 +17,21 @@ def _cache_key(workspace_id: str, relative_path: str) -> str:
     return f"{_CACHE_PREFIX}:{workspace_id}:{relative_path}"
 
 
+def _cache_payload(row: FileMetadata) -> dict[str, object]:
+    return {
+        "id": row.id,
+        "workspace_id": row.workspace_id,
+        "path": row.path,
+        "relative_path": row.relative_path,
+        "name": row.name,
+        "size_bytes": row.size_bytes,
+        "mime_type": row.mime_type,
+        "checksum_sha256": row.checksum_sha256,
+        "last_modified": row.last_modified.isoformat() if row.last_modified is not None else None,
+        "extra_json": row.extra_json,
+    }
+
+
 class FileMetadataRepository:
     """CRUD access for file metadata records."""
 
@@ -71,23 +86,9 @@ class FileMetadataRepository:
         session.flush()
 
         if cache is not None:
-            payload = {
-                "id": row.id,
-                "workspace_id": row.workspace_id,
-                "path": row.path,
-                "relative_path": row.relative_path,
-                "name": row.name,
-                "size_bytes": row.size_bytes,
-                "mime_type": row.mime_type,
-                "checksum_sha256": row.checksum_sha256,
-                "last_modified": (
-                    row.last_modified.isoformat() if row.last_modified is not None else None
-                ),
-                "extra_json": row.extra_json,
-            }
             cache.set(
                 _cache_key(workspace_id, relative_path),
-                json.dumps(payload),
+                json.dumps(_cache_payload(row)),
                 ttl_seconds=cache_ttl_seconds,
             )
 
@@ -105,25 +106,18 @@ class FileMetadataRepository:
         if cache is not None:
             cached = cache.get(_cache_key(workspace_id, relative_path))
             if cached:
-                data = json.loads(cached)
-                return FileMetadata(
-                    id=data["id"],
-                    workspace_id=data["workspace_id"],
-                    path=data["path"],
-                    relative_path=data["relative_path"],
-                    name=data["name"],
-                    size_bytes=data["size_bytes"],
-                    mime_type=data["mime_type"],
-                    checksum_sha256=data["checksum_sha256"],
-                    last_modified=(
-                        datetime.fromisoformat(data["last_modified"])
-                        if data["last_modified"]
-                        else None
-                    ),
-                    extra_json=data["extra_json"],
-                )
+                try:
+                    data = json.loads(cached)
+                    cached_id = data.get("id")
+                except (TypeError, ValueError, AttributeError):
+                    cached_id = None
+                if isinstance(cached_id, str):
+                    row = session.get(FileMetadata, cached_id)
+                    if row is not None:
+                        return row
+                cache.delete(_cache_key(workspace_id, relative_path))
 
-        return (
+        row = (
             session.query(FileMetadata)
             .filter(
                 FileMetadata.workspace_id == workspace_id,
@@ -131,6 +125,13 @@ class FileMetadataRepository:
             )
             .first()
         )
+        if row is not None and cache is not None:
+            cache.set(
+                _cache_key(workspace_id, relative_path),
+                json.dumps(_cache_payload(row)),
+                ttl_seconds=900,
+            )
+        return row
 
     @staticmethod
     def list_for_workspace(

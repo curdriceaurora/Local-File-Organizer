@@ -9,15 +9,18 @@ import json
 import time
 from dataclasses import dataclass
 from typing import Optional, Protocol
+from urllib.parse import urlparse
 
 from loguru import logger
 
 try:
     from redis import Redis
     from redis.exceptions import RedisError
-except Exception:  # pragma: no cover - optional dependency runtime fallback
+except (ImportError, ModuleNotFoundError):  # pragma: no cover - optional dependency runtime fallback
     Redis = None  # type: ignore[assignment]
-    RedisError = Exception  # type: ignore[assignment]
+
+    class RedisError(Exception):
+        """Fallback Redis exception type when redis package is unavailable."""
 
 
 class CacheBackend(Protocol):
@@ -103,6 +106,11 @@ class RedisCache:
             pass
 
 
+def _is_valid_redis_url(redis_url: str) -> bool:
+    parsed = urlparse(redis_url)
+    return parsed.scheme in {"redis", "rediss", "unix"}
+
+
 def build_cache_backend(redis_url: Optional[str]) -> CacheBackend:
     """Build a cache backend from configuration.
 
@@ -111,11 +119,18 @@ def build_cache_backend(redis_url: Optional[str]) -> CacheBackend:
     """
     if not redis_url:
         return InMemoryCache()
+    if not _is_valid_redis_url(redis_url):
+        logger.warning("Invalid Redis URL scheme; falling back to in-memory cache")
+        return InMemoryCache()
 
     try:
         backend = RedisCache(redis_url)
         backend.set("__fo_cache_health__", json.dumps({"ok": True}), ttl_seconds=5)
         return backend
-    except Exception as exc:  # pragma: no cover - depends on runtime environment
-        logger.warning("Falling back to in-memory cache (redis unavailable): {}", exc)
+    except (RedisError, RuntimeError, ValueError, OSError) as exc:
+        logger.warning(
+            "Falling back to in-memory cache (redis unavailable: {}): {}",
+            type(exc).__name__,
+            exc,
+        )
         return InMemoryCache()
