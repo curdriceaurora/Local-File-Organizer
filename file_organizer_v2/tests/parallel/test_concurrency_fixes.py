@@ -133,3 +133,37 @@ class TestConcurrencyFixes(unittest.TestCase):
             config.timeout_per_file * 1000 + 150,
             "Should finish close to timeout_per_file, not full task duration",
         )
+
+    def test_process_batch_iter_bounded_futures_memory_usage(self):
+        """Test that process_batch_iter uses bounded concurrency to avoid unbounded memory (Issue #293)."""
+        # Use a small worker pool and many slow tasks; total time should scale with
+        # len(paths) / max_workers if concurrency is bounded.
+        config = ParallelConfig(
+            max_workers=4,
+        )
+        processor = ParallelProcessor(config=config)
+
+        per_file_sleep = 0.05
+        num_files = 40
+        paths = [Path(f"large_batch_file_{i}") for i in range(num_files)]
+
+        def slow_task(_path: Path) -> FileResult:
+            time.sleep(per_file_sleep)
+            return "ok"
+
+        start = time.time()
+        results = list(processor.process_batch_iter(paths, slow_task))
+        duration = time.time() - start
+
+        # All files should be processed.
+        self.assertEqual(len(results), num_files)
+
+        # If futures were unbounded (e.g., starting one thread per file), total duration
+        # would be close to per_file_sleep. With bounded concurrency, duration should be
+        # significantly larger, roughly scaling with num_files / max_workers.
+        expected_min_duration = (num_files / config.max_workers) * per_file_sleep * 0.5
+        self.assertGreater(
+            duration,
+            expected_min_duration,
+            "process_batch_iter appears to run too many tasks concurrently, which risks unbounded memory usage",
+        )
