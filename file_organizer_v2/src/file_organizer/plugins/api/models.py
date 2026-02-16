@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -66,7 +66,7 @@ class PluginConfigValueResponse(BaseModel):
 class PluginHookRegistrationRequest(BaseModel):
     event: HookEvent
     callback_url: str
-    secret: str | None = Field(default=None, max_length=256)
+    secret: Optional[str] = Field(default=None, max_length=256)
 
     @field_validator("callback_url")
     @classmethod
@@ -112,9 +112,9 @@ class PluginHookTriggerResult(BaseModel):
     plugin_id: str
     event: HookEvent
     callback_url: str
-    status_code: int | None
+    status_code: Optional[int]
     delivered: bool
-    error: str | None = None
+    error: Optional[str] = None
 
 
 class PluginHookTriggerResponse(BaseModel):

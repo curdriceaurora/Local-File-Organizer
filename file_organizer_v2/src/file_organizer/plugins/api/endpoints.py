@@ -5,7 +5,7 @@ import shutil
 from collections.abc import Mapping
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Query
 
@@ -229,7 +229,7 @@ def unregister_plugin_hook(
 
 @router.get("/plugins/hooks", response_model=PluginHookListResponse)
 def list_plugin_hooks(
-    event: HookEvent | None = Query(None),
+    event: Optional[HookEvent] = Query(None),
     user: UserLike = Depends(get_current_active_user),
     hook_manager: PluginHookManager = Depends(get_hook_manager),
 ) -> PluginHookListResponse:
