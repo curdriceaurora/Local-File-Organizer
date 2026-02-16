@@ -1,7 +1,7 @@
 # GitHub Issue Mapping - Phase 6 Web Interface
 
-**Epic Issue**: #228 - Phase 6 - Web Interface & Plugin Ecosystem
-**Epic URL**: https://github.com/curdriceaurora/Local-File-Organizer/issues/228
+**Epic Issue**: #5 - [EPIC] Phase 6: Web Interface & Plugin Ecosystem
+**Epic URL**: https://github.com/curdriceaurora/Local-File-Organizer/issues/5
 **Synced**: 2026-02-16T19:07:15Z
 
 ## Task to Issue Mapping
@@ -78,6 +78,9 @@ All issues can be viewed at:
 https://github.com/curdriceaurora/Local-File-Organizer/issues?q=is:issue+label:phase-6
 
 Epic and sub-issues:
+https://github.com/curdriceaurora/Local-File-Organizer/issues/5
+
+Legacy phase-6 epic issue (closed):
 https://github.com/curdriceaurora/Local-File-Organizer/issues/228
 
 ## Technical Debt Follow-Ups

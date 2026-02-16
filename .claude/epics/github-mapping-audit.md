@@ -22,7 +22,7 @@
   - #97 - datetime UTC deprecation migration
   - #105 - optional torch dependency split
 
-Generated: 2026-02-09 17:54 (local)
+Original report generated: 2026-02-09 17:54 (local)
 
 ## Summary
 - Total tasks scanned: 79
