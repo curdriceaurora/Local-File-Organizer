@@ -1,9 +1,3 @@
-[submodule "phase3-audio"]
-	path = phase3-audio
-	url = https://github.com/curdriceaurora/Local-File-Organizer.git
-[submodule "phase4-intelligence"]
-	path = phase4-intelligence
-	url = https://github.com/curdriceaurora/Local-File-Organizer.git
 [submodule "technical-debt"]
 	path = technical-debt
 	url = https://github.com/curdriceaurora/Local-File-Organizer.git
