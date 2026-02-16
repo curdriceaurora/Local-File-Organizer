@@ -35,5 +35,6 @@ class FileLoggerPlugin(Plugin):
     def on_file_organized(self, payload: dict[str, object]) -> dict[str, object]:
         line = f"organized:{payload.get('source_path')}->{payload.get('destination_path')}\n"
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
-        self.log_file.write_text(line, encoding="utf-8")
+        with self.log_file.open("a", encoding="utf-8") as log_fp:
+            log_fp.write(line)
         return {"logged": True, "file": str(self.log_file)}
