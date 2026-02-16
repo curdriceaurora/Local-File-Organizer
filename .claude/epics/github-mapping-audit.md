@@ -15,6 +15,13 @@
   - `.claude/epics/phase-5-architecture/epic.md`
   - `.claude/epics/phase-5-architecture/github-mapping.md`
 
+## Update: 2026-02-16T19:33:51Z
+
+- Added `phase-2` label to #176 for phase routing consistency.
+- Linked additional technical-debt items under epic #266:
+  - #97 - datetime UTC deprecation migration
+  - #105 - optional torch dependency split
+
 Generated: 2026-02-09 17:54 (local)
 
 ## Summary
