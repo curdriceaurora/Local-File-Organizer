@@ -381,41 +381,37 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
         job_path = self.jobs_dir / "atomic-job-3.json"
         temp_path = job_path.with_suffix(".tmp")
 
-        original_write_text = Path.write_text
+        original_replace = Path.replace
 
-        def failing_temp_write(
-            path_self: Path, data: str, encoding: str = "utf-8"
-        ) -> int:
+        def failing_replace(path_self: Path, target: Path) -> Path:
+            # Let write_text succeed so temp file is created, then fail on replace
             if path_self.suffix == ".tmp":
-                raise OSError("simulated write failure")
-            return original_write_text(path_self, data, encoding=encoding)
+                raise OSError("simulated replace failure")
+            return original_replace(path_self, target)
 
-        with patch.object(
-            Path, "write_text", autospec=True, side_effect=failing_temp_write
-        ):
+        with patch.object(Path, "replace", autospec=True, side_effect=failing_replace):
             with self.assertRaises(OSError):
                 self.persistence.save_job(job)
 
-        # Verify temp file was cleaned up even though write failed
+        # Verify temp file was cleaned up even though replace failed
         self.assertFalse(temp_path.exists())
         # And the job file was never created
         self.assertFalse(job_path.exists())
 
     def test_partial_write_does_not_corrupt_existing_file(self) -> None:
-        """Test partial writes don't corrupt existing job files."""
+        """Test failed save operations don't corrupt existing job files."""
         job = JobState(id="atomic-job-4", status=JobStatus.PENDING, total_files=10)
         self.persistence.save_job(job)
         job_path = self.jobs_dir / "atomic-job-4.json"
         original_contents = job_path.read_text(encoding="utf-8")
 
-        original_write_text = Path.write_text
+        original_replace = Path.replace
 
-        def failing_temp_write(
-            path_self: Path, data: str, encoding: str = "utf-8"
-        ) -> int:
+        def failing_replace(path_self: Path, target: Path) -> Path:
+            # Let write_text succeed so temp file is created, then fail on replace
             if path_self.suffix == ".tmp":
-                raise OSError("simulated write failure")
-            return original_write_text(path_self, data, encoding=encoding)
+                raise OSError("simulated replace failure")
+            return original_replace(path_self, target)
 
         updated_job = JobState(
             id="atomic-job-4",
@@ -424,9 +420,7 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
             completed_files=10,
         )
 
-        with patch.object(
-            Path, "write_text", autospec=True, side_effect=failing_temp_write
-        ):
+        with patch.object(Path, "replace", autospec=True, side_effect=failing_replace):
             with self.assertRaises(OSError):
                 self.persistence.save_job(updated_job)
 
