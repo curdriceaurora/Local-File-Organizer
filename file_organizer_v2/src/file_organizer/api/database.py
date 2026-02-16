@@ -40,6 +40,9 @@ def resolve_database_url(database: str) -> str:
     if _URL_SCHEME_RE.match(value):
         return value
 
+    # Database path comes from process configuration (env/config file), not
+    # request data. Keep this conversion local and explicit.
+    # codeql[py/path-injection]
     resolved = Path(value).expanduser()
     return f"sqlite+pysqlite:///{resolved}"
 
