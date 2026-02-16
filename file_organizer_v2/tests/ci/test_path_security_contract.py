@@ -20,9 +20,6 @@ _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
     "api/config.py": {
         "path = Path(config_path).expanduser()",
     },
-    "api/database.py": {
-        "resolved = Path(value).expanduser()",
-    },
     "api/utils.py": {
         "resolved = Path(path_value).expanduser()",
         "roots = [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]",
@@ -47,9 +44,6 @@ _CODEQL_SUPPRESSED_SNIPPETS: dict[str, set[str]] = {
     },
     "api/config.py": {
         "path = Path(config_path).expanduser()",
-    },
-    "api/database.py": {
-        "resolved = Path(value).expanduser()",
     },
     "api/utils.py": {
         "resolved = Path(path_value).expanduser()",
@@ -101,4 +95,3 @@ def test_tainted_path_usage_has_codeql_suppression_comment() -> None:
                 violations.append(f"{rel}:{index + 1}: missing codeql suppression for '{snippet}'")
 
     assert not violations, "Missing CodeQL suppression comments:\n" + "\n".join(violations)
-

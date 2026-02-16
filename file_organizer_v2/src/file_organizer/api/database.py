@@ -11,7 +11,6 @@ persistence layers can reuse the same connection behavior.
 from __future__ import annotations
 
 from functools import lru_cache
-from pathlib import Path
 from re import compile as re_compile
 
 from sqlalchemy import create_engine
@@ -40,11 +39,11 @@ def resolve_database_url(database: str) -> str:
     if _URL_SCHEME_RE.match(value):
         return value
 
-    # Database path comes from process configuration (env/config file), not
-    # request data. Keep this conversion local and explicit.
-    # codeql[py/path-injection]
-    resolved = Path(value).expanduser()
-    return f"sqlite+pysqlite:///{resolved}"
+    # Preserve relative-vs-absolute semantics expected by SQLAlchemy:
+    # - "db.sqlite" -> sqlite:///db.sqlite (relative)
+    # - "/tmp/db.sqlite" -> sqlite:////tmp/db.sqlite (absolute)
+    normalized = value.replace("\\", "/")
+    return f"sqlite+pysqlite:///{normalized}"
 
 
 def _is_sqlite_url(url: str) -> bool:

@@ -26,6 +26,10 @@ def test_resolve_database_url_passthrough() -> None:
     assert resolve_database_url(postgres) == postgres
 
 
+def test_resolve_database_url_normalizes_backslashes() -> None:
+    assert resolve_database_url(r"folder\db.sqlite") == "sqlite+pysqlite:///folder/db.sqlite"
+
+
 def test_resolve_database_url_rejects_empty_path() -> None:
     with pytest.raises(ValueError, match="cannot be empty"):
         resolve_database_url("   ")
