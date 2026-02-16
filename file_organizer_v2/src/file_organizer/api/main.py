@@ -20,9 +20,14 @@ from file_organizer.api.routers import (
     dedupe_router,
     files_router,
     health_router,
+    integrations_router,
     organize_router,
     realtime_router,
     system_router,
+)
+from file_organizer.api.routers.integrations import (
+    build_browser_extension_manager,
+    build_integration_manager,
 )
 from file_organizer.plugins.api.endpoints import router as plugin_api_router
 from file_organizer.web import STATIC_DIR
@@ -84,6 +89,8 @@ def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
     setup_middleware(app, settings)
     setup_exception_handlers(app)
     app.dependency_overrides[get_settings] = lambda: settings
+    app.state.integration_manager = build_integration_manager(settings)
+    app.state.browser_extension_manager = build_browser_extension_manager(settings)
 
     app.include_router(web_router, prefix="/ui")
     app.include_router(health_router, prefix="/api/v1")
@@ -93,6 +100,7 @@ def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
     app.include_router(dedupe_router, prefix="/api/v1")
     app.include_router(realtime_router, prefix="/api/v1")
     app.include_router(system_router, prefix="/api/v1")
+    app.include_router(integrations_router, prefix="/api/v1")
     app.include_router(plugin_api_router, prefix="/api/v1")
 
     @app.get("/")
