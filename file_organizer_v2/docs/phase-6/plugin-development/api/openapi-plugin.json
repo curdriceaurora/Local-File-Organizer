@@ -1,0 +1,2873 @@
+{
+  "components": {
+    "schemas": {
+      "Body_account_settings_change_password_ui_profile_account_settings_password_post": {
+        "properties": {
+          "confirm_password": {
+            "title": "Confirm Password",
+            "type": "string"
+          },
+          "current_password": {
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password",
+          "confirm_password"
+        ],
+        "title": "Body_account_settings_change_password_ui_profile_account_settings_password_post",
+        "type": "object"
+      },
+      "Body_account_settings_toggle_2fa_ui_profile_account_settings_2fa_post": {
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "title": "Body_account_settings_toggle_2fa_ui_profile_account_settings_2fa_post",
+        "type": "object"
+      },
+      "Body_api_key_generate_ui_profile_api_keys_generate_post": {
+        "properties": {
+          "label": {
+            "default": "default",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "title": "Body_api_key_generate_ui_profile_api_keys_generate_post",
+        "type": "object"
+      },
+      "Body_api_key_revoke_ui_profile_api_keys_revoke_post": {
+        "properties": {
+          "key_id": {
+            "title": "Key Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_id"
+        ],
+        "title": "Body_api_key_revoke_ui_profile_api_keys_revoke_post",
+        "type": "object"
+      },
+      "Body_files_upload_ui_files_upload_post": {
+        "properties": {
+          "file_type": {
+            "default": "all",
+            "title": "File Type",
+            "type": "string"
+          },
+          "files": {
+            "default": [],
+            "items": {
+              "format": "binary",
+              "type": "string"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "limit": {
+            "default": 48,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "path": {
+            "default": "",
+            "title": "Path",
+            "type": "string"
+          },
+          "q": {
+            "default": "",
+            "title": "Q",
+            "type": "string"
+          },
+          "sort_by": {
+            "default": "name",
+            "title": "Sort By",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": "asc",
+            "title": "Sort Order",
+            "type": "string"
+          },
+          "view": {
+            "default": "grid",
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "title": "Body_files_upload_ui_files_upload_post",
+        "type": "object"
+      },
+      "Body_forgot_password_submit_ui_profile_forgot_password_post": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "Body_forgot_password_submit_ui_profile_forgot_password_post",
+        "type": "object"
+      },
+      "Body_login_api_v1_auth_login_post": {
+        "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "password",
+            "title": "Client Secret"
+          },
+          "grant_type": {
+            "anyOf": [
+              {
+                "pattern": "^password$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Type"
+          },
+          "password": {
+            "format": "password",
+            "title": "Password",
+            "type": "string"
+          },
+          "scope": {
+            "default": "",
+            "title": "Scope",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_login_api_v1_auth_login_post",
+        "type": "object"
+      },
+      "Body_login_submit_ui_profile_login_post": {
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_login_submit_ui_profile_login_post",
+        "type": "object"
+      },
+      "Body_notification_mark_read_ui_profile_notifications_mark_read_post": {
+        "properties": {
+          "notification_id": {
+            "title": "Notification Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_id"
+        ],
+        "title": "Body_notification_mark_read_ui_profile_notifications_mark_read_post",
+        "type": "object"
+      },
+      "Body_organize_clear_plan_ui_organize_plan_clear_post": {
+        "properties": {
+          "plan_id": {
+            "default": "",
+            "title": "Plan Id",
+            "type": "string"
+          }
+        },
+        "title": "Body_organize_clear_plan_ui_organize_plan_clear_post",
+        "type": "object"
+      },
+      "Body_organize_execute_ui_organize_execute_post": {
+        "properties": {
+          "dry_run": {
+            "default": "0",
+            "title": "Dry Run",
+            "type": "string"
+          },
+          "plan_id": {
+            "default": "",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "schedule_delay_minutes": {
+            "default": "0",
+            "title": "Schedule Delay Minutes",
+            "type": "string"
+          }
+        },
+        "title": "Body_organize_execute_ui_organize_execute_post",
+        "type": "object"
+      },
+      "Body_organize_scan_ui_organize_scan_post": {
+        "properties": {
+          "include_hidden": {
+            "default": "0",
+            "title": "Include Hidden",
+            "type": "string"
+          },
+          "input_dir": {
+            "default": "",
+            "title": "Input Dir",
+            "type": "string"
+          },
+          "methodology": {
+            "default": "content_based",
+            "title": "Methodology",
+            "type": "string"
+          },
+          "output_dir": {
+            "default": "",
+            "title": "Output Dir",
+            "type": "string"
+          },
+          "recursive": {
+            "default": "1",
+            "title": "Recursive",
+            "type": "string"
+          },
+          "skip_existing": {
+            "default": "1",
+            "title": "Skip Existing",
+            "type": "string"
+          },
+          "use_hardlinks": {
+            "default": "1",
+            "title": "Use Hardlinks",
+            "type": "string"
+          }
+        },
+        "title": "Body_organize_scan_ui_organize_scan_post",
+        "type": "object"
+      },
+      "Body_profile_avatar_upload_ui_profile_edit_avatar_post": {
+        "properties": {
+          "avatar": {
+            "format": "binary",
+            "title": "Avatar",
+            "type": "string"
+          }
+        },
+        "required": [
+          "avatar"
+        ],
+        "title": "Body_profile_avatar_upload_ui_profile_edit_avatar_post",
+        "type": "object"
+      },
+      "Body_profile_edit_submit_ui_profile_edit_post": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "default": "",
+            "title": "Full Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "Body_profile_edit_submit_ui_profile_edit_post",
+        "type": "object"
+      },
+      "Body_register_submit_ui_profile_register_post": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "default": "",
+            "title": "Full Name",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "email",
+          "password"
+        ],
+        "title": "Body_register_submit_ui_profile_register_post",
+        "type": "object"
+      },
+      "Body_reset_password_submit_ui_profile_reset_password_post": {
+        "properties": {
+          "confirm_password": {
+            "title": "Confirm Password",
+            "type": "string"
+          },
+          "new_password": {
+            "title": "New Password",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "new_password",
+          "confirm_password"
+        ],
+        "title": "Body_reset_password_submit_ui_profile_reset_password_post",
+        "type": "object"
+      },
+      "Body_settings_advanced_post_ui_settings_advanced_post": {
+        "properties": {
+          "cache_enabled": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Enabled"
+          },
+          "debug_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debug Mode"
+          },
+          "log_level": {
+            "default": "INFO",
+            "title": "Log Level",
+            "type": "string"
+          },
+          "performance_mode": {
+            "default": "balanced",
+            "title": "Performance Mode",
+            "type": "string"
+          }
+        },
+        "title": "Body_settings_advanced_post_ui_settings_advanced_post",
+        "type": "object"
+      },
+      "Body_settings_appearance_post_ui_settings_appearance_post": {
+        "properties": {
+          "custom_theme_name": {
+            "default": "",
+            "title": "Custom Theme Name",
+            "type": "string"
+          },
+          "theme": {
+            "default": "light",
+            "title": "Theme",
+            "type": "string"
+          }
+        },
+        "title": "Body_settings_appearance_post_ui_settings_appearance_post",
+        "type": "object"
+      },
+      "Body_settings_general_post_ui_settings_general_post": {
+        "properties": {
+          "default_input_dir": {
+            "default": "",
+            "title": "Default Input Dir",
+            "type": "string"
+          },
+          "default_output_dir": {
+            "default": "",
+            "title": "Default Output Dir",
+            "type": "string"
+          },
+          "language": {
+            "default": "en",
+            "title": "Language",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "UTC",
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "title": "Body_settings_general_post_ui_settings_general_post",
+        "type": "object"
+      },
+      "Body_settings_import_ui_settings_import_post": {
+        "properties": {
+          "section": {
+            "default": "general",
+            "title": "Section",
+            "type": "string"
+          },
+          "settings_file": {
+            "format": "binary",
+            "title": "Settings File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "settings_file"
+        ],
+        "title": "Body_settings_import_ui_settings_import_post",
+        "type": "object"
+      },
+      "Body_settings_models_post_ui_settings_models_post": {
+        "properties": {
+          "ollama_url": {
+            "default": "",
+            "title": "Ollama Url",
+            "type": "string"
+          },
+          "text_model": {
+            "default": "",
+            "title": "Text Model",
+            "type": "string"
+          },
+          "vision_model": {
+            "default": "",
+            "title": "Vision Model",
+            "type": "string"
+          }
+        },
+        "title": "Body_settings_models_post_ui_settings_models_post",
+        "type": "object"
+      },
+      "Body_settings_models_test_ui_settings_models_test_post": {
+        "properties": {
+          "ollama_url": {
+            "default": "",
+            "title": "Ollama Url",
+            "type": "string"
+          }
+        },
+        "title": "Body_settings_models_test_ui_settings_models_test_post",
+        "type": "object"
+      },
+      "Body_settings_organization_post_ui_settings_organization_post": {
+        "properties": {
+          "auto_organize": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Organize"
+          },
+          "default_methodology": {
+            "default": "content_based",
+            "title": "Default Methodology",
+            "type": "string"
+          },
+          "file_filter_glob": {
+            "default": "*",
+            "title": "File Filter Glob",
+            "type": "string"
+          },
+          "notifications_enabled": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notifications Enabled"
+          },
+          "organization_rules": {
+            "default": "",
+            "title": "Organization Rules",
+            "type": "string"
+          }
+        },
+        "title": "Body_settings_organization_post_ui_settings_organization_post",
+        "type": "object"
+      },
+      "Body_settings_organization_validate_ui_settings_organization_validate_post": {
+        "properties": {
+          "organization_rules": {
+            "default": "",
+            "title": "Organization Rules",
+            "type": "string"
+          }
+        },
+        "title": "Body_settings_organization_validate_ui_settings_organization_validate_post",
+        "type": "object"
+      },
+      "Body_settings_reset_ui_settings_reset_post": {
+        "properties": {
+          "section": {
+            "default": "general",
+            "title": "Section",
+            "type": "string"
+          }
+        },
+        "title": "Body_settings_reset_ui_settings_reset_post",
+        "type": "object"
+      },
+      "Body_shared_add_ui_profile_shared_add_post": {
+        "properties": {
+          "folder_path": {
+            "title": "Folder Path",
+            "type": "string"
+          },
+          "permission": {
+            "default": "view",
+            "title": "Permission",
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder_path"
+        ],
+        "title": "Body_shared_add_ui_profile_shared_add_post",
+        "type": "object"
+      },
+      "Body_shared_remove_ui_profile_shared_remove_post": {
+        "properties": {
+          "folder_id": {
+            "title": "Folder Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder_id"
+        ],
+        "title": "Body_shared_remove_ui_profile_shared_remove_post",
+        "type": "object"
+      },
+      "Body_team_invite_ui_profile_team_invite_post": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "role": {
+            "default": "viewer",
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "Body_team_invite_ui_profile_team_invite_post",
+        "type": "object"
+      },
+      "Body_team_update_role_ui_profile_team_role_post": {
+        "properties": {
+          "member_id": {
+            "title": "Member Id",
+            "type": "string"
+          },
+          "role": {
+            "default": "viewer",
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "member_id"
+        ],
+        "title": "Body_team_update_role_ui_profile_team_role_post",
+        "type": "object"
+      },
+      "Body_workspace_create_ui_profile_workspaces_create_post": {
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "root_path": {
+            "title": "Root Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "root_path"
+        ],
+        "title": "Body_workspace_create_ui_profile_workspaces_create_post",
+        "type": "object"
+      },
+      "Body_workspace_switch_ui_profile_workspaces_switch_post": {
+        "properties": {
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id"
+        ],
+        "title": "Body_workspace_switch_ui_profile_workspaces_switch_post",
+        "type": "object"
+      },
+      "ConfigResponse": {
+        "properties": {
+          "config": {
+            "additionalProperties": true,
+            "title": "Config",
+            "type": "object"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "profiles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Profiles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "profile",
+          "config"
+        ],
+        "title": "ConfigResponse",
+        "type": "object"
+      },
+      "ConfigUpdateRequest": {
+        "properties": {
+          "daemon": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daemon"
+          },
+          "default_methodology": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Methodology"
+          },
+          "deploy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deploy"
+          },
+          "events": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Events"
+          },
+          "johnny_decimal": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Johnny Decimal"
+          },
+          "models": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelPresetUpdate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "para": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Para"
+          },
+          "parallel": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parallel"
+          },
+          "pipeline": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pipeline"
+          },
+          "profile": {
+            "default": "default",
+            "title": "Profile",
+            "type": "string"
+          },
+          "updates": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UpdateSettingsUpdate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "watcher": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watcher"
+          }
+        },
+        "title": "ConfigUpdateRequest",
+        "type": "object"
+      },
+      "DedupeExecuteRequest": {
+        "properties": {
+          "algorithm": {
+            "default": "sha256",
+            "enum": [
+              "md5",
+              "sha256"
+            ],
+            "title": "Algorithm",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "exclude_patterns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exclude Patterns"
+          },
+          "include_patterns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Patterns"
+          },
+          "max_file_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max File Size"
+          },
+          "min_file_size": {
+            "default": 0,
+            "title": "Min File Size",
+            "type": "integer"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "recursive": {
+            "default": true,
+            "title": "Recursive",
+            "type": "boolean"
+          },
+          "trash": {
+            "default": true,
+            "title": "Trash",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "DedupeExecuteRequest",
+        "type": "object"
+      },
+      "DedupeExecuteResponse": {
+        "properties": {
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "removed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed",
+            "type": "array"
+          },
+          "stats": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Stats",
+            "type": "object"
+          }
+        },
+        "required": [
+          "path",
+          "removed",
+          "dry_run",
+          "stats"
+        ],
+        "title": "DedupeExecuteResponse",
+        "type": "object"
+      },
+      "DedupeFileInfo": {
+        "properties": {
+          "accessed": {
+            "format": "date-time",
+            "title": "Accessed",
+            "type": "string"
+          },
+          "modified": {
+            "format": "date-time",
+            "title": "Modified",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "size",
+          "modified",
+          "accessed"
+        ],
+        "title": "DedupeFileInfo",
+        "type": "object"
+      },
+      "DedupeGroup": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/DedupeFileInfo"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "hash_value": {
+            "title": "Hash Value",
+            "type": "string"
+          },
+          "total_size": {
+            "title": "Total Size",
+            "type": "integer"
+          },
+          "wasted_space": {
+            "title": "Wasted Space",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hash_value",
+          "files",
+          "total_size",
+          "wasted_space"
+        ],
+        "title": "DedupeGroup",
+        "type": "object"
+      },
+      "DedupePreviewGroup": {
+        "properties": {
+          "hash_value": {
+            "title": "Hash Value",
+            "type": "string"
+          },
+          "keep": {
+            "title": "Keep",
+            "type": "string"
+          },
+          "remove": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Remove",
+            "type": "array"
+          }
+        },
+        "required": [
+          "hash_value",
+          "keep",
+          "remove"
+        ],
+        "title": "DedupePreviewGroup",
+        "type": "object"
+      },
+      "DedupePreviewResponse": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "preview": {
+            "items": {
+              "$ref": "#/components/schemas/DedupePreviewGroup"
+            },
+            "title": "Preview",
+            "type": "array"
+          },
+          "stats": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Stats",
+            "type": "object"
+          }
+        },
+        "required": [
+          "path",
+          "preview",
+          "stats"
+        ],
+        "title": "DedupePreviewResponse",
+        "type": "object"
+      },
+      "DedupeScanRequest": {
+        "properties": {
+          "algorithm": {
+            "default": "sha256",
+            "enum": [
+              "md5",
+              "sha256"
+            ],
+            "title": "Algorithm",
+            "type": "string"
+          },
+          "exclude_patterns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exclude Patterns"
+          },
+          "include_patterns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Patterns"
+          },
+          "max_file_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max File Size"
+          },
+          "min_file_size": {
+            "default": 0,
+            "title": "Min File Size",
+            "type": "integer"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "recursive": {
+            "default": true,
+            "title": "Recursive",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "DedupeScanRequest",
+        "type": "object"
+      },
+      "DedupeScanResponse": {
+        "properties": {
+          "duplicates": {
+            "items": {
+              "$ref": "#/components/schemas/DedupeGroup"
+            },
+            "title": "Duplicates",
+            "type": "array"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "stats": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Stats",
+            "type": "object"
+          }
+        },
+        "required": [
+          "path",
+          "duplicates",
+          "stats"
+        ],
+        "title": "DedupeScanResponse",
+        "type": "object"
+      },
+      "DeleteFileRequest": {
+        "properties": {
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "permanent": {
+            "default": false,
+            "title": "Permanent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "DeleteFileRequest",
+        "type": "object"
+      },
+      "DeleteFileResponse": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "trashed_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trashed Path"
+          }
+        },
+        "required": [
+          "path",
+          "deleted",
+          "dry_run"
+        ],
+        "title": "DeleteFileResponse",
+        "type": "object"
+      },
+      "FileContentResponse": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "encoding": {
+            "title": "Encoding",
+            "type": "string"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path",
+          "content",
+          "encoding",
+          "truncated",
+          "size"
+        ],
+        "title": "FileContentResponse",
+        "type": "object"
+      },
+      "FileInfo": {
+        "properties": {
+          "created": {
+            "format": "date-time",
+            "title": "Created",
+            "type": "string"
+          },
+          "file_type": {
+            "title": "File Type",
+            "type": "string"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "modified": {
+            "format": "date-time",
+            "title": "Modified",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "name",
+          "size",
+          "created",
+          "modified",
+          "file_type"
+        ],
+        "title": "FileInfo",
+        "type": "object"
+      },
+      "FileListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FileInfo"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "skip": {
+            "title": "Skip",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "skip",
+          "limit"
+        ],
+        "title": "FileListResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HookEvent": {
+        "description": "Canonical plugin hook events exposed via API + SDK.",
+        "enum": [
+          "file.scanned",
+          "file.organized",
+          "file.duplicated",
+          "file.deleted",
+          "organization.started",
+          "organization.completed",
+          "organization.failed",
+          "deduplication.started",
+          "deduplication.completed",
+          "deduplication.found",
+          "para.categorized",
+          "johnny_decimal.assigned"
+        ],
+        "title": "HookEvent",
+        "type": "string"
+      },
+      "JobStatusResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationResultResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JobStatusResponse",
+        "type": "object"
+      },
+      "ModelPresetUpdate": {
+        "properties": {
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device"
+          },
+          "framework": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Framework"
+          },
+          "max_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tokens"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "text_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Model"
+          },
+          "vision_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vision Model"
+          }
+        },
+        "title": "ModelPresetUpdate",
+        "type": "object"
+      },
+      "MoveFileRequest": {
+        "properties": {
+          "allow_directory_overwrite": {
+            "default": false,
+            "title": "Allow Directory Overwrite",
+            "type": "boolean"
+          },
+          "destination": {
+            "title": "Destination",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "overwrite": {
+            "default": false,
+            "title": "Overwrite",
+            "type": "boolean"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "destination"
+        ],
+        "title": "MoveFileRequest",
+        "type": "object"
+      },
+      "MoveFileResponse": {
+        "properties": {
+          "destination": {
+            "title": "Destination",
+            "type": "string"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "moved": {
+            "title": "Moved",
+            "type": "boolean"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "destination",
+          "moved",
+          "dry_run"
+        ],
+        "title": "MoveFileResponse",
+        "type": "object"
+      },
+      "OrganizationError": {
+        "properties": {
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "file": {
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "error"
+        ],
+        "title": "OrganizationError",
+        "type": "object"
+      },
+      "OrganizationResultResponse": {
+        "properties": {
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizationError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "failed_files": {
+            "title": "Failed Files",
+            "type": "integer"
+          },
+          "organized_structure": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Organized Structure",
+            "type": "object"
+          },
+          "processed_files": {
+            "title": "Processed Files",
+            "type": "integer"
+          },
+          "processing_time": {
+            "title": "Processing Time",
+            "type": "number"
+          },
+          "skipped_files": {
+            "title": "Skipped Files",
+            "type": "integer"
+          },
+          "total_files": {
+            "title": "Total Files",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_files",
+          "processed_files",
+          "skipped_files",
+          "failed_files",
+          "processing_time",
+          "organized_structure",
+          "errors"
+        ],
+        "title": "OrganizationResultResponse",
+        "type": "object"
+      },
+      "OrganizeExecuteResponse": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationResultResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "OrganizeExecuteResponse",
+        "type": "object"
+      },
+      "OrganizeRequest": {
+        "properties": {
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "input_dir": {
+            "title": "Input Dir",
+            "type": "string"
+          },
+          "output_dir": {
+            "title": "Output Dir",
+            "type": "string"
+          },
+          "run_in_background": {
+            "default": true,
+            "title": "Run In Background",
+            "type": "boolean"
+          },
+          "skip_existing": {
+            "default": true,
+            "title": "Skip Existing",
+            "type": "boolean"
+          },
+          "use_hardlinks": {
+            "default": true,
+            "title": "Use Hardlinks",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "input_dir",
+          "output_dir"
+        ],
+        "title": "OrganizeRequest",
+        "type": "object"
+      },
+      "PluginConfigValueResponse": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "title": "PluginConfigValueResponse",
+        "type": "object"
+      },
+      "PluginFileListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FileInfo"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PluginFileListResponse",
+        "type": "object"
+      },
+      "PluginHookListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PluginHookRegistrationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PluginHookListResponse",
+        "type": "object"
+      },
+      "PluginHookRegistrationRequest": {
+        "properties": {
+          "callback_url": {
+            "title": "Callback Url",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/components/schemas/HookEvent"
+          },
+          "secret": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret"
+          }
+        },
+        "required": [
+          "event",
+          "callback_url"
+        ],
+        "title": "PluginHookRegistrationRequest",
+        "type": "object"
+      },
+      "PluginHookRegistrationResponse": {
+        "properties": {
+          "callback_url": {
+            "title": "Callback Url",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/components/schemas/HookEvent"
+          },
+          "plugin_id": {
+            "title": "Plugin Id",
+            "type": "string"
+          },
+          "registered": {
+            "title": "Registered",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "plugin_id",
+          "event",
+          "callback_url",
+          "created_at",
+          "registered"
+        ],
+        "title": "PluginHookRegistrationResponse",
+        "type": "object"
+      },
+      "PluginHookTriggerRequest": {
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/HookEvent"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "event"
+        ],
+        "title": "PluginHookTriggerRequest",
+        "type": "object"
+      },
+      "PluginHookTriggerResponse": {
+        "properties": {
+          "delivered": {
+            "title": "Delivered",
+            "type": "integer"
+          },
+          "event": {
+            "$ref": "#/components/schemas/HookEvent"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/PluginHookTriggerResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "event",
+          "delivered",
+          "failed",
+          "results"
+        ],
+        "title": "PluginHookTriggerResponse",
+        "type": "object"
+      },
+      "PluginHookTriggerResult": {
+        "properties": {
+          "callback_url": {
+            "title": "Callback Url",
+            "type": "string"
+          },
+          "delivered": {
+            "title": "Delivered",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "event": {
+            "$ref": "#/components/schemas/HookEvent"
+          },
+          "plugin_id": {
+            "title": "Plugin Id",
+            "type": "string"
+          },
+          "status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Code"
+          }
+        },
+        "required": [
+          "plugin_id",
+          "event",
+          "callback_url",
+          "status_code",
+          "delivered"
+        ],
+        "title": "PluginHookTriggerResult",
+        "type": "object"
+      },
+      "PluginHookUnregisterRequest": {
+        "properties": {
+          "callback_url": {
+            "title": "Callback Url",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/components/schemas/HookEvent"
+          }
+        },
+        "required": [
+          "event",
+          "callback_url"
+        ],
+        "title": "PluginHookUnregisterRequest",
+        "type": "object"
+      },
+      "PluginHookUnregisterResponse": {
+        "properties": {
+          "callback_url": {
+            "title": "Callback Url",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/components/schemas/HookEvent"
+          },
+          "plugin_id": {
+            "title": "Plugin Id",
+            "type": "string"
+          },
+          "removed": {
+            "title": "Removed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "plugin_id",
+          "event",
+          "callback_url",
+          "removed"
+        ],
+        "title": "PluginHookUnregisterResponse",
+        "type": "object"
+      },
+      "PluginOrganizeFileRequest": {
+        "properties": {
+          "destination_path": {
+            "title": "Destination Path",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "overwrite": {
+            "default": false,
+            "title": "Overwrite",
+            "type": "boolean"
+          },
+          "source_path": {
+            "title": "Source Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_path",
+          "destination_path"
+        ],
+        "title": "PluginOrganizeFileRequest",
+        "type": "object"
+      },
+      "PluginOrganizeFileResponse": {
+        "properties": {
+          "destination_path": {
+            "title": "Destination Path",
+            "type": "string"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "moved": {
+            "title": "Moved",
+            "type": "boolean"
+          },
+          "source_path": {
+            "title": "Source Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_path",
+          "destination_path",
+          "moved",
+          "dry_run"
+        ],
+        "title": "PluginOrganizeFileResponse",
+        "type": "object"
+      },
+      "ScanRequest": {
+        "properties": {
+          "include_hidden": {
+            "default": false,
+            "title": "Include Hidden",
+            "type": "boolean"
+          },
+          "input_dir": {
+            "title": "Input Dir",
+            "type": "string"
+          },
+          "recursive": {
+            "default": true,
+            "title": "Recursive",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "input_dir"
+        ],
+        "title": "ScanRequest",
+        "type": "object"
+      },
+      "ScanResponse": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "input_dir": {
+            "title": "Input Dir",
+            "type": "string"
+          },
+          "total_files": {
+            "title": "Total Files",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "input_dir",
+          "total_files",
+          "counts"
+        ],
+        "title": "ScanResponse",
+        "type": "object"
+      },
+      "StorageStatsResponse": {
+        "properties": {
+          "directory_count": {
+            "title": "Directory Count",
+            "type": "integer"
+          },
+          "file_count": {
+            "title": "File Count",
+            "type": "integer"
+          },
+          "largest_files": {
+            "items": {
+              "$ref": "#/components/schemas/FileInfo"
+            },
+            "title": "Largest Files",
+            "type": "array"
+          },
+          "organized_size": {
+            "title": "Organized Size",
+            "type": "integer"
+          },
+          "saved_size": {
+            "title": "Saved Size",
+            "type": "integer"
+          },
+          "size_by_type": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Size By Type",
+            "type": "object"
+          },
+          "total_size": {
+            "title": "Total Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_size",
+          "organized_size",
+          "saved_size",
+          "file_count",
+          "directory_count",
+          "size_by_type",
+          "largest_files"
+        ],
+        "title": "StorageStatsResponse",
+        "type": "object"
+      },
+      "SystemStatusResponse": {
+        "properties": {
+          "active_jobs": {
+            "title": "Active Jobs",
+            "type": "integer"
+          },
+          "app": {
+            "title": "App",
+            "type": "string"
+          },
+          "disk_free": {
+            "title": "Disk Free",
+            "type": "integer"
+          },
+          "disk_total": {
+            "title": "Disk Total",
+            "type": "integer"
+          },
+          "disk_used": {
+            "title": "Disk Used",
+            "type": "integer"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "app",
+          "version",
+          "environment",
+          "disk_total",
+          "disk_used",
+          "disk_free",
+          "active_jobs"
+        ],
+        "title": "SystemStatusResponse",
+        "type": "object"
+      },
+      "TokenRefreshRequest": {
+        "properties": {
+          "refresh_token": {
+            "title": "Refresh Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refresh_token"
+        ],
+        "title": "TokenRefreshRequest",
+        "type": "object"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "refresh_token": {
+            "title": "Refresh Token",
+            "type": "string"
+          },
+          "token_type": {
+            "default": "bearer",
+            "title": "Token Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token"
+        ],
+        "title": "TokenResponse",
+        "type": "object"
+      },
+      "TokenRevokeRequest": {
+        "properties": {
+          "refresh_token": {
+            "title": "Refresh Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refresh_token"
+        ],
+        "title": "TokenRevokeRequest",
+        "type": "object"
+      },
+      "UpdateSettingsUpdate": {
+        "properties": {
+          "check_on_startup": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check On Startup"
+          },
+          "include_prereleases": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Prereleases"
+          },
+          "interval_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Hours"
+          },
+          "repo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repo"
+          }
+        },
+        "title": "UpdateSettingsUpdate",
+        "type": "object"
+      },
+      "UserCreateRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "email",
+          "password"
+        ],
+        "title": "UserCreateRequest",
+        "type": "object"
+      },
+      "UserResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_admin": {
+            "title": "Is Admin",
+            "type": "boolean"
+          },
+          "last_login": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "email",
+          "is_active",
+          "is_admin",
+          "created_at"
+        ],
+        "title": "UserResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "/api/v1/auth/login"
+          }
+        },
+        "type": "oauth2"
+      }
+    }
+  },
+  "info": {
+    "description": "REST API for AI-powered file organization",
+    "title": "File Organizer API",
+    "version": "2.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/plugins/config/get": {
+      "get": {
+        "operationId": "get_config_for_plugins_api_v1_plugins_config_get_get",
+        "parameters": [
+          {
+            "description": "Dot path to config value, e.g. updates.interval_hours",
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "description": "Dot path to config value, e.g. updates.interval_hours",
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "profile",
+            "required": false,
+            "schema": {
+              "default": "default",
+              "title": "Profile",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginConfigValueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Config For Plugins",
+        "tags": [
+          "plugins"
+        ]
+      }
+    },
+    "/api/v1/plugins/files/list": {
+      "get": {
+        "operationId": "list_files_for_plugins_api_v1_plugins_files_list_get",
+        "parameters": [
+          {
+            "description": "Directory or file path",
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "description": "Directory or file path",
+              "title": "Path",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recursive",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Recursive",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_hidden",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Hidden",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_items",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Max Items",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginFileListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Files For Plugins",
+        "tags": [
+          "plugins"
+        ]
+      }
+    },
+    "/api/v1/plugins/files/metadata": {
+      "get": {
+        "operationId": "get_file_metadata_for_plugins_api_v1_plugins_files_metadata_get",
+        "parameters": [
+          {
+            "description": "File path",
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "description": "File path",
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get File Metadata For Plugins",
+        "tags": [
+          "plugins"
+        ]
+      }
+    },
+    "/api/v1/plugins/files/organize": {
+      "post": {
+        "operationId": "organize_file_for_plugins_api_v1_plugins_files_organize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PluginOrganizeFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginOrganizeFileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Organize File For Plugins",
+        "tags": [
+          "plugins"
+        ]
+      }
+    },
+    "/api/v1/plugins/hooks": {
+      "get": {
+        "operationId": "list_plugin_hooks_api_v1_plugins_hooks_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "event",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/HookEvent"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginHookListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Plugin Hooks",
+        "tags": [
+          "plugins"
+        ]
+      }
+    },
+    "/api/v1/plugins/hooks/register": {
+      "post": {
+        "operationId": "register_plugin_hook_api_v1_plugins_hooks_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PluginHookRegistrationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginHookRegistrationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Register Plugin Hook",
+        "tags": [
+          "plugins"
+        ]
+      }
+    },
+    "/api/v1/plugins/hooks/trigger": {
+      "post": {
+        "operationId": "trigger_plugin_hook_event_api_v1_plugins_hooks_trigger_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PluginHookTriggerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginHookTriggerResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Trigger Plugin Hook Event",
+        "tags": [
+          "plugins"
+        ]
+      }
+    },
+    "/api/v1/plugins/hooks/unregister": {
+      "post": {
+        "operationId": "unregister_plugin_hook_api_v1_plugins_hooks_unregister_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PluginHookUnregisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginHookUnregisterResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Unregister Plugin Hook",
+        "tags": [
+          "plugins"
+        ]
+      }
+    }
+  }
+}

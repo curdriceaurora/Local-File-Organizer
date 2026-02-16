@@ -65,3 +65,8 @@ This allows the app to choose reliability mode per hook path.
 - Plugin modules are imported dynamically; unload removes module entries from `sys.modules`, but plugins should still release external resources in `on_unload()`.
 - Sandbox checks are opt-in at plugin call sites; plugin code should call `require_*` before sensitive operations.
 
+## Next Reference
+
+Task #241 builds on this with plugin-facing HTTP APIs, SDK utilities, and examples documented under:
+
+- `docs/phase-6/plugin-development/README.md`

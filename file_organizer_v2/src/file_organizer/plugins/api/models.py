@@ -1,0 +1,124 @@
+"""Pydantic models for plugin-facing API endpoints."""
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, Field, field_validator
+
+from file_organizer.api.models import FileInfo
+from file_organizer.plugins.api.hooks import HookEvent
+
+_MAX_PATH_LENGTH = 4096
+_MAX_CALLBACK_URL_LENGTH = 2048
+
+
+def _validate_path(value: str) -> str:
+    if not value:
+        raise ValueError("Path must not be empty")
+    if len(value) > _MAX_PATH_LENGTH:
+        raise ValueError("Path exceeds maximum length")
+    if "\x00" in value:
+        raise ValueError("Path contains invalid characters")
+    return value
+
+
+def _validate_callback_url(value: str) -> str:
+    candidate = value.strip()
+    if not candidate:
+        raise ValueError("Callback URL must not be empty")
+    if len(candidate) > _MAX_CALLBACK_URL_LENGTH:
+        raise ValueError("Callback URL exceeds maximum length")
+    if "\x00" in candidate:
+        raise ValueError("Callback URL contains invalid characters")
+    return candidate
+
+
+class PluginFileListResponse(BaseModel):
+    items: list[FileInfo]
+    total: int
+
+
+class PluginOrganizeFileRequest(BaseModel):
+    source_path: str
+    destination_path: str
+    overwrite: bool = False
+    dry_run: bool = False
+
+    @field_validator("source_path", "destination_path")
+    @classmethod
+    def validate_paths(cls, value: str) -> str:
+        return _validate_path(value)
+
+
+class PluginOrganizeFileResponse(BaseModel):
+    source_path: str
+    destination_path: str
+    moved: bool
+    dry_run: bool
+
+
+class PluginConfigValueResponse(BaseModel):
+    key: str
+    value: Any
+
+
+class PluginHookRegistrationRequest(BaseModel):
+    event: HookEvent
+    callback_url: str
+    secret: str | None = Field(default=None, max_length=256)
+
+    @field_validator("callback_url")
+    @classmethod
+    def validate_callback_url(cls, value: str) -> str:
+        return _validate_callback_url(value)
+
+
+class PluginHookUnregisterRequest(BaseModel):
+    event: HookEvent
+    callback_url: str
+
+    @field_validator("callback_url")
+    @classmethod
+    def validate_callback_url(cls, value: str) -> str:
+        return _validate_callback_url(value)
+
+
+class PluginHookRegistrationResponse(BaseModel):
+    plugin_id: str
+    event: HookEvent
+    callback_url: str
+    created_at: datetime
+    registered: bool
+
+
+class PluginHookListResponse(BaseModel):
+    items: list[PluginHookRegistrationResponse]
+
+
+class PluginHookUnregisterResponse(BaseModel):
+    plugin_id: str
+    event: HookEvent
+    callback_url: str
+    removed: bool
+
+
+class PluginHookTriggerRequest(BaseModel):
+    event: HookEvent
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class PluginHookTriggerResult(BaseModel):
+    plugin_id: str
+    event: HookEvent
+    callback_url: str
+    status_code: int | None
+    delivered: bool
+    error: str | None = None
+
+
+class PluginHookTriggerResponse(BaseModel):
+    event: HookEvent
+    delivered: int
+    failed: int
+    results: list[PluginHookTriggerResult]
