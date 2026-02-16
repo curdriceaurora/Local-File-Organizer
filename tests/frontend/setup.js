@@ -38,6 +38,42 @@ if (typeof global.fetch === "undefined") {
   global.fetch = jest.fn();
 }
 
+// Polyfill DataTransfer for drag-and-drop tests
+if (typeof global.DataTransfer === "undefined") {
+  class DataTransfer {
+    constructor() {
+      this._files = [];
+      this._items = {
+        add: (file) => {
+          this._files.push(file);
+        },
+      };
+    }
+
+    get items() {
+      return this._items;
+    }
+
+    get files() {
+      return this._files;
+    }
+  }
+
+  global.DataTransfer = DataTransfer;
+}
+
+// Polyfill DragEvent
+if (typeof global.DragEvent === "undefined") {
+  class DragEvent extends MouseEvent {
+    constructor(type, eventInitDict = {}) {
+      super(type, eventInitDict);
+      this.dataTransfer = eventInitDict.dataTransfer || null;
+    }
+  }
+
+  global.DragEvent = DragEvent;
+}
+
 // Suppress console errors during tests (optional)
 const originalError = console.error;
 beforeAll(() => {

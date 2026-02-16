@@ -15,7 +15,7 @@ router = APIRouter(tags=["health"])
 def health(settings: ApiSettings = Depends(get_settings)) -> dict[str, str]:
     """Return basic health status for the API."""
     return {
-        "status": "ok",
+        "status": "healthy",
         "version": settings.version,
         "environment": settings.environment,
         "timestamp": datetime.now(timezone.utc).isoformat(),

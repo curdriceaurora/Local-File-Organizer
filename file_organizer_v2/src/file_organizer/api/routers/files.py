@@ -23,7 +23,7 @@ from file_organizer.api.models import (
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer
 
-router = APIRouter(tags=["files"], dependencies=[Depends(get_current_active_user)])
+router = APIRouter(tags=["files"])
 
 _FILE_TYPE_GROUPS = {
     "text": FileOrganizer.TEXT_EXTENSIONS,

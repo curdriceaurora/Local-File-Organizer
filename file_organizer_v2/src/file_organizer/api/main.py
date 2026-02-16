@@ -16,7 +16,9 @@ from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.middleware import setup_middleware
 from file_organizer.api.routers import (
+    analyze_router,
     auth_router,
+    config_router,
     dedupe_router,
     files_router,
     health_router,
@@ -24,6 +26,7 @@ from file_organizer.api.routers import (
     marketplace_router,
     organize_router,
     realtime_router,
+    search_router,
     system_router,
 )
 from file_organizer.api.routers.integrations import (
@@ -98,6 +101,9 @@ def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(files_router, prefix="/api/v1")
     app.include_router(organize_router, prefix="/api/v1")
+    app.include_router(analyze_router, prefix="/api/v1")
+    app.include_router(search_router, prefix="/api/v1")
+    app.include_router(config_router, prefix="/api/v1")
     app.include_router(dedupe_router, prefix="/api/v1")
     app.include_router(realtime_router, prefix="/api/v1")
     app.include_router(system_router, prefix="/api/v1")
