@@ -341,32 +341,86 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
         self.assertTrue(job_path.exists())
         self.assertFalse(job_path.with_suffix(".tmp").exists())
 
-    def test_save_job_failure_keeps_existing_file(self) -> None:
-        """Test failed temp write does not corrupt existing job file."""
-        job = JobState(id="atomic-job-2", status=JobStatus.PENDING, total_files=10)
-        self.persistence.save_job(job)
+    def test_temp_file_cleaned_up_after_successful_write(self) -> None:
+        """Test temporary files are created during writes and cleaned up after."""
+        job = JobState(id="atomic-job-2", status=JobStatus.RUNNING, total_files=5)
+        temp_path = self.jobs_dir / "atomic-job-2.tmp"
         job_path = self.jobs_dir / "atomic-job-2.json"
-        original_contents = job_path.read_text(encoding="utf-8")
 
         original_write_text = Path.write_text
+        temp_file_was_created = False
 
-        def failing_temp_write(
+        def track_temp_write(
             path_self: Path, data: str, encoding: str = "utf-8"
         ) -> int:
+            nonlocal temp_file_was_created
             if path_self.suffix == ".tmp":
-                raise OSError("simulated write failure")
+                temp_file_was_created = True
             return original_write_text(path_self, data, encoding=encoding)
 
+        with patch.object(
+            Path, "write_text", autospec=True, side_effect=track_temp_write
+        ):
+            self.persistence.save_job(job)
+
+        # Verify temp file was created during save
+        self.assertTrue(temp_file_was_created)
+        # Verify the final file exists and temp file does not
+        self.assertTrue(job_path.exists())
+        self.assertFalse(temp_path.exists())
+
+        # Verify we can read back the data correctly
+        loaded = self.persistence.load_job("atomic-job-2")
+        self.assertIsNotNone(loaded)
+        self.assertEqual(loaded.id, "atomic-job-2")
+        self.assertEqual(loaded.status, JobStatus.RUNNING)
+
+    def test_temp_file_cleaned_up_after_write_failure(self) -> None:
+        """Test temporary files are cleaned up after failed writes."""
+        job = JobState(id="atomic-job-3", status=JobStatus.PENDING, total_files=10)
+        job_path = self.jobs_dir / "atomic-job-3.json"
+        temp_path = job_path.with_suffix(".tmp")
+
+        original_replace = Path.replace
+
+        def failing_replace(path_self: Path, target: Path) -> Path:
+            # Let write_text succeed so temp file is created, then fail on replace
+            if path_self.suffix == ".tmp":
+                raise OSError("simulated replace failure")
+            return original_replace(path_self, target)
+
+        with patch.object(Path, "replace", autospec=True, side_effect=failing_replace):
+            with self.assertRaises(OSError):
+                self.persistence.save_job(job)
+
+        # Verify temp file was cleaned up even though replace failed
+        self.assertFalse(temp_path.exists())
+        # And the job file was never created
+        self.assertFalse(job_path.exists())
+
+    def test_failed_save_does_not_corrupt_existing_file(self) -> None:
+        """Test failed save operations don't corrupt existing job files."""
+        job = JobState(id="atomic-job-4", status=JobStatus.PENDING, total_files=10)
+        self.persistence.save_job(job)
+        job_path = self.jobs_dir / "atomic-job-4.json"
+        original_contents = job_path.read_text(encoding="utf-8")
+
+        original_replace = Path.replace
+
+        def failing_replace(path_self: Path, target: Path) -> Path:
+            # Let write_text succeed so temp file is created, then fail on replace
+            if path_self.suffix == ".tmp":
+                raise OSError("simulated replace failure")
+            return original_replace(path_self, target)
+
         updated_job = JobState(
-            id="atomic-job-2",
+            id="atomic-job-4",
             status=JobStatus.COMPLETED,
             total_files=10,
             completed_files=10,
         )
 
-        with patch.object(
-            Path, "write_text", autospec=True, side_effect=failing_temp_write
-        ):
+        with patch.object(Path, "replace", autospec=True, side_effect=failing_replace):
             with self.assertRaises(OSError):
                 self.persistence.save_job(updated_job)
 
