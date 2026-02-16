@@ -111,7 +111,7 @@ class CheckpointManager:
             file_hashes=file_hashes,
             last_updated=datetime.now(timezone.utc),
         )
-        self._save_checkpoint(checkpoint)
+        self.save_checkpoint(checkpoint)
         return checkpoint
 
     def load_checkpoint(self, job_id: str) -> Checkpoint | None:
@@ -137,16 +137,74 @@ class CheckpointManager:
             logger.warning("Failed to load checkpoint %s: %s", job_id, exc)
             return None
 
+    def save_checkpoint(self, checkpoint: Checkpoint) -> None:
+        """
+        Save a checkpoint to disk using atomic write.
+
+        Args:
+            checkpoint: The checkpoint to save.
+        """
+        self._ensure_dir()
+        path = self._checkpoint_path(checkpoint.job_id)
+        data = checkpoint.to_dict()
+
+        # Atomic write: write to temp file, then rename
+        temp_path = path.with_suffix(".tmp")
+        try:
+            temp_path.write_text(
+                json.dumps(data, indent=2, default=str), encoding="utf-8"
+            )
+            temp_path.replace(path)
+            logger.debug("Saved checkpoint for job %s", checkpoint.job_id)
+        except Exception:
+            if temp_path.exists():
+                temp_path.unlink()
+            raise
+
+    def update_checkpoint_state(
+        self,
+        checkpoint: Checkpoint,
+        completed_file: Path,
+    ) -> None:
+        """
+        Update the checkpoint object in-memory to mark a file as completed.
+
+        This moves the file from pending to completed and updates its content hash.
+        It does NOT persist the change to disk.
+
+        Args:
+            checkpoint: The checkpoint object to update.
+            completed_file: The file that has been processed.
+        """
+        resolved = completed_file
+        # Remove from pending (using list filtering is O(N), but pending list shrinks)
+        # For very large lists, using a set for pending would be better, but
+        # that requires changing the model. For now we stick to list to match existing API.
+        checkpoint.pending_paths = [
+            p for p in checkpoint.pending_paths if p != resolved
+        ]
+
+        if resolved not in checkpoint.completed_paths:
+            checkpoint.completed_paths.append(resolved)
+
+        # Update hash if the file exists
+        try:
+            checkpoint.file_hashes[str(resolved)] = compute_file_hash(resolved)
+        except OSError:
+            pass
+
+        checkpoint.last_updated = datetime.now(timezone.utc)
+
     def update_checkpoint(
         self,
         job_id: str,
         completed_file: Path,
     ) -> Checkpoint | None:
         """
-        Mark a single file as completed in an existing checkpoint.
+        Mark a single file as completed and immediately persist to disk.
 
-        Moves the file from pending to completed and updates the
-        file hash if the file still exists on disk.
+        WARNING: This performs a full disk read/write cycle. For batch processing,
+        use update_checkpoint_state() and save_checkpoint() manually.
 
         Args:
             job_id: Identifier of the associated job.
@@ -162,22 +220,8 @@ class CheckpointManager:
             )
             return None
 
-        # Move from pending to completed
-        resolved = completed_file
-        checkpoint.pending_paths = [
-            p for p in checkpoint.pending_paths if p != resolved
-        ]
-        if resolved not in checkpoint.completed_paths:
-            checkpoint.completed_paths.append(resolved)
-
-        # Update hash if the file exists
-        try:
-            checkpoint.file_hashes[str(resolved)] = compute_file_hash(resolved)
-        except OSError:
-            pass
-
-        checkpoint.last_updated = datetime.now(timezone.utc)
-        self._save_checkpoint(checkpoint)
+        self.update_checkpoint_state(checkpoint, completed_file)
+        self.save_checkpoint(checkpoint)
         return checkpoint
 
     def delete_checkpoint(self, job_id: str) -> bool:
@@ -222,12 +266,4 @@ class CheckpointManager:
 
         return current_hash != stored_hash
 
-    def _save_checkpoint(self, checkpoint: Checkpoint) -> None:
-        """Write a checkpoint to its JSON file."""
-        self._ensure_dir()
-        path = self._checkpoint_path(checkpoint.job_id)
-        data = checkpoint.to_dict()
-        path.write_text(
-            json.dumps(data, indent=2, default=str), encoding="utf-8"
-        )
-        logger.debug("Saved checkpoint for job %s", checkpoint.job_id)
+

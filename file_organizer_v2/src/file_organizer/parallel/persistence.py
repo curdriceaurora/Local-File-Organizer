@@ -52,6 +52,8 @@ class JobPersistence:
         Save a job state to disk as JSON.
 
         Creates or overwrites the JSON file for the given job.
+        Uses an atomic write strategy (write to temp file then rename) so that
+        readers never see a partially written file.
 
         Args:
             job: The job state to persist.
@@ -59,8 +61,20 @@ class JobPersistence:
         self._ensure_dir()
         path = self._job_path(job.id)
         data = job.to_dict()
-        path.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
-        logger.debug("Saved job %s to %s", job.id, path)
+
+        # Atomic write: write to temp file, then rename
+        temp_path = path.with_suffix(".tmp")
+        try:
+            temp_path.write_text(
+                json.dumps(data, indent=2, default=str), encoding="utf-8"
+            )
+            temp_path.replace(path)
+            logger.debug("Saved job %s to %s", job.id, path)
+        except Exception:
+            # Clean up temp file if something went wrong
+            if temp_path.exists():
+                temp_path.unlink()
+            raise
 
     def load_job(self, job_id: str) -> JobState | None:
         """

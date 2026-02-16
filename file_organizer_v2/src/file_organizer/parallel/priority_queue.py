@@ -52,7 +52,6 @@ class PriorityQueue:
         self._lock = threading.Lock()
         self._counter = 0
         self._item_map: dict[str, tuple[int, int, QueueItem]] = {}
-        self._removed: set[str] = set()
 
     @property
     def size(self) -> int:
@@ -82,16 +81,10 @@ class PriorityQueue:
             item.priority = priority
 
         with self._lock:
-            # If item already exists, mark old entry as removed
-            if item.id in self._item_map:
-                self._removed.add(item.id)
-
             entry = (-item.priority, self._counter, item)
             self._counter += 1
             heapq.heappush(self._heap, entry)
             self._item_map[item.id] = entry
-            # Remove from removed set since we just re-added it
-            self._removed.discard(item.id)
 
     def dequeue(self) -> QueueItem | None:
         """
@@ -107,11 +100,15 @@ class PriorityQueue:
     def _dequeue_locked(self) -> QueueItem | None:
         """Internal dequeue that assumes the lock is already held."""
         while self._heap:
-            neg_priority, counter, item = heapq.heappop(self._heap)
-            if item.id in self._removed:
-                self._removed.discard(item.id)
+            entry = heapq.heappop(self._heap)
+            neg_priority, counter, item = entry
+
+            # Check if this is the current valid entry for this item
+            current_entry = self._item_map.get(item.id)
+            if current_entry is not entry:
                 continue
-            self._item_map.pop(item.id, None)
+
+            del self._item_map[item.id]
             return item
         return None
 
@@ -125,10 +122,14 @@ class PriorityQueue:
         """
         with self._lock:
             while self._heap:
-                neg_priority, counter, item = self._heap[0]
-                if item.id in self._removed:
+                entry = self._heap[0]
+                neg_priority, counter, item = entry
+
+                # Check validity against item map
+                current_entry = self._item_map.get(item.id)
+                if current_entry is not entry:
+                    # Stale entry at top of heap, remove it
                     heapq.heappop(self._heap)
-                    self._removed.discard(item.id)
                     continue
                 return item
             return None
@@ -148,22 +149,18 @@ class PriorityQueue:
             item is not in the queue.
         """
         with self._lock:
-            if item_id not in self._item_map or item_id in self._removed:
+            if item_id not in self._item_map:
                 return False
 
             old_entry = self._item_map[item_id]
             item = old_entry[2]
             item.priority = new_priority
 
-            # Mark old entry as removed
-            self._removed.add(item_id)
-
             # Push new entry
             entry = (-new_priority, self._counter, item)
             self._counter += 1
             heapq.heappush(self._heap, entry)
             self._item_map[item_id] = entry
-            self._removed.discard(item_id)
             return True
 
     def remove(self, item_id: str) -> bool:
@@ -177,9 +174,8 @@ class PriorityQueue:
             ``True`` if the item was found and removed, ``False`` otherwise.
         """
         with self._lock:
-            if item_id not in self._item_map or item_id in self._removed:
+            if item_id not in self._item_map:
                 return False
-            self._removed.add(item_id)
             del self._item_map[item_id]
             return True
 
@@ -188,7 +184,6 @@ class PriorityQueue:
         with self._lock:
             self._heap.clear()
             self._item_map.clear()
-            self._removed.clear()
             self._counter = 0
 
     def items(self) -> list[QueueItem]:
@@ -199,9 +194,5 @@ class PriorityQueue:
             List of :class:`QueueItem` sorted by descending priority.
         """
         with self._lock:
-            active = [
-                entry[2]
-                for entry in self._item_map.values()
-                if entry[2].id not in self._removed
-            ]
+            active = [entry[2] for entry in self._item_map.values()]
         return sorted(active, key=lambda item: -item.priority)

@@ -10,6 +10,7 @@ modifications between runs.
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -18,7 +19,7 @@ from typing import Any
 
 from file_organizer.parallel.checkpoint import CheckpointManager
 from file_organizer.parallel.config import ParallelConfig
-from file_organizer.parallel.models import JobState, JobStatus
+from file_organizer.parallel.models import Checkpoint, JobState, JobStatus
 from file_organizer.parallel.persistence import JobPersistence
 from file_organizer.parallel.processor import ParallelProcessor
 from file_organizer.parallel.result import BatchResult, FileResult
@@ -88,7 +89,7 @@ class ResumableProcessor:
         self._persistence.save_job(job)
 
         # Create initial checkpoint
-        self._checkpoint_mgr.create_checkpoint(
+        checkpoint = self._checkpoint_mgr.create_checkpoint(
             job_id=job_id,
             completed_files=[],
             pending_files=files,
@@ -99,6 +100,7 @@ class ResumableProcessor:
             job=job,
             files=files,
             process_fn=process_fn,
+            checkpoint=checkpoint,
         )
         return result
 
@@ -158,7 +160,7 @@ class ResumableProcessor:
         self._persistence.save_job(job)
 
         # Update checkpoint to reflect re-queued files
-        self._checkpoint_mgr.create_checkpoint(
+        checkpoint = self._checkpoint_mgr.create_checkpoint(
             job_id=job_id,
             completed_files=still_completed,
             pending_files=files_to_process,
@@ -181,6 +183,7 @@ class ResumableProcessor:
             job=job,
             files=files_to_process,
             process_fn=process_fn,
+            checkpoint=checkpoint,
         )
 
         # Adjust totals to reflect the full job
@@ -199,6 +202,7 @@ class ResumableProcessor:
         job: JobState,
         files: list[Path],
         process_fn: Callable[[Path], Any],
+        checkpoint: Checkpoint | None = None,
     ) -> BatchResult:
         """
         Process files using the parallel processor, checkpointing each result.
@@ -210,11 +214,19 @@ class ResumableProcessor:
             job: The current job state.
             files: Files to process in this run.
             process_fn: Processing function.
+            checkpoint: Optional in-memory checkpoint object to update.
 
         Returns:
             BatchResult for this processing run.
         """
         results: list[FileResult] = []
+
+        # Load checkpoint if not provided (fallback)
+        if checkpoint is None:
+            checkpoint = self._checkpoint_mgr.load_checkpoint(job.id)
+
+        last_save_time = time.monotonic()
+        files_since_save = 0
 
         try:
             for file_result in self._processor.process_batch_iter(
@@ -223,21 +235,40 @@ class ResumableProcessor:
                 results.append(file_result)
 
                 if file_result.success:
-                    self._checkpoint_mgr.update_checkpoint(
-                        job.id, file_result.path
-                    )
+                    # Update in-memory state
+                    if checkpoint:
+                        self._checkpoint_mgr.update_checkpoint_state(
+                            checkpoint, file_result.path
+                        )
                     job.completed_files += 1
                 else:
                     job.failed_files += 1
 
                 job.updated = datetime.now(timezone.utc)
-                self._persistence.save_job(job)
+
+                # Batched persistence: save every 5 seconds or 50 files
+                files_since_save += 1
+                now = time.monotonic()
+                if (now - last_save_time) >= 5.0 or files_since_save >= 50:
+                    self._persistence.save_job(job)
+                    if checkpoint:
+                        self._checkpoint_mgr.save_checkpoint(checkpoint)
+                    last_save_time = now
+                    files_since_save = 0
+
+            # flush remaining updates
+            self._persistence.save_job(job)
+            if checkpoint:
+                self._checkpoint_mgr.save_checkpoint(checkpoint)
+
         except Exception as exc:
             logger.error("Job %s failed with error: %s", job.id, exc)
             job.status = JobStatus.FAILED
             job.error = str(exc)
             job.updated = datetime.now(timezone.utc)
             self._persistence.save_job(job)
+            if checkpoint:
+                self._checkpoint_mgr.save_checkpoint(checkpoint)
             raise
 
         # Determine final status
@@ -247,6 +278,8 @@ class ResumableProcessor:
             job.status = JobStatus.COMPLETED
         job.updated = datetime.now(timezone.utc)
         self._persistence.save_job(job)
+        if checkpoint:
+            self._checkpoint_mgr.save_checkpoint(checkpoint)
 
         succeeded = sum(1 for r in results if r.success)
         failed = sum(1 for r in results if not r.success)

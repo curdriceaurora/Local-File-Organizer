@@ -12,10 +12,11 @@ import os
 import time
 from collections.abc import Callable, Iterator
 from concurrent.futures import (
+    FIRST_COMPLETED,
     Future,
     ProcessPoolExecutor,
     ThreadPoolExecutor,
-    as_completed,
+    wait,
 )
 from pathlib import Path
 from typing import Any
@@ -115,28 +116,31 @@ class ParallelProcessor:
         max_workers = self._config.max_workers or os.cpu_count() or 1
         executor_cls = self._get_executor_class()
 
-        for attempt in range(1 + self._config.retry_count):
-            if not remaining:
-                break
+        # Create executor once for the whole batch + retries
+        with executor_cls(max_workers=max_workers) as executor:
+            for attempt in range(1 + self._config.retry_count):
+                if not remaining:
+                    break
 
-            attempt_results = self._run_batch(
-                executor_cls=executor_cls,
-                max_workers=max_workers,
-                files=remaining,
-                process_fn=process_fn,
-            )
+                attempt_results = self._run_batch(
+                    executor_cls=executor_cls,
+                    max_workers=max_workers,
+                    files=remaining,
+                    process_fn=process_fn,
+                    executor=executor,
+                )
 
-            succeeded = [r for r in attempt_results if r.success]
-            failed = [r for r in attempt_results if not r.success]
+                succeeded = [r for r in attempt_results if r.success]
+                failed = [r for r in attempt_results if not r.success]
 
-            results.extend(succeeded)
+                results.extend(succeeded)
 
-            # On last attempt, include failures in results
-            if attempt == self._config.retry_count:
-                results.extend(failed)
-            else:
-                # Retry only the failures
-                remaining = [r.path for r in failed]
+                # On last attempt, include failures in results
+                if attempt == self._config.retry_count:
+                    results.extend(failed)
+                else:
+                    # Retry only the failures
+                    remaining = [r.path for r in failed]
 
         batch_elapsed_ms = (time.perf_counter() - batch_start) * 1000
         succeeded_count = sum(1 for r in results if r.success)
@@ -156,6 +160,7 @@ class ParallelProcessor:
         self,
         files: list[Path],
         process_fn: Callable[[Path], Any],
+        executor: Any | None = None,
     ) -> Iterator[FileResult]:
         """
         Process a batch of files, yielding results as they complete.
@@ -169,6 +174,9 @@ class ParallelProcessor:
         Args:
             files: List of file paths to process.
             process_fn: Function to apply to each file path.
+            executor: Optional executor instance to reuse. If None, a new
+                executor specific to this batch is created and shut down
+                upon completion.
 
         Yields:
             FileResult for each completed file, in completion order.
@@ -177,44 +185,105 @@ class ParallelProcessor:
             return
 
         max_workers = self._config.max_workers or os.cpu_count() or 1
-        executor_cls = self._get_executor_class()
+        
+        # If executor is provided, we don't own it (no-op context manager).
+        # If not provided, we create one and own it (standard context manager).
+        if executor is None:
+            executor_cls = self._get_executor_class()
+            executor_ctx = executor_cls(max_workers=max_workers)
+        else:
+            # Simple context manager that does nothing on exit
+            class NoOpContext_Executor:
+                def __enter__(self): return executor
+                def __exit__(self, *args): pass
+            executor_ctx = NoOpContext_Executor()
+
         completed_count = 0
         total = len(files)
 
-        with executor_cls(max_workers=max_workers) as executor:
-            future_to_path: dict[Future[FileResult], Path] = {}
+        # Use a bounded set of futures to control memory usage (backpressure)
+        # Limit to 2x workers to keep pipeline full but not overflow memory
+        limit = max_workers * 2
+        pending: set[Future[FileResult]] = set()
+        # Track start time for timeout handling: Future -> (Path, start_time)
+        future_metadata: dict[Future[FileResult], tuple[Path, float]] = {}
 
-            for path in files:
-                future = executor.submit(_execute_with_timing, path, process_fn)
-                future_to_path[future] = path
+        iterator = iter(files)
 
-            for future in as_completed(future_to_path):
+        with executor_ctx as exec_instance:
+
+            def submit_next() -> bool:
+                """Submit next file if available."""
                 try:
-                    file_result = future.result(
-                        timeout=self._config.timeout_per_file
-                    )
-                except TimeoutError:
-                    path = future_to_path[future]
-                    file_result = FileResult(
-                        path=path,
-                        success=False,
-                        error=f"Timed out after {self._config.timeout_per_file}s",
-                    )
-                except Exception as exc:
-                    path = future_to_path[future]
-                    file_result = FileResult(
-                        path=path,
-                        success=False,
-                        error=str(exc),
-                    )
+                    path = next(iterator)
+                    future = exec_instance.submit(_execute_with_timing, path, process_fn)
+                    pending.add(future)
+                    future_metadata[future] = (path, time.monotonic())
+                    return True
+                except StopIteration:
+                    return False
 
-                completed_count += 1
-                if self._config.progress_callback is not None:
-                    self._config.progress_callback(
-                        completed_count, total, file_result
-                    )
+            # Initial fill
+            while len(pending) < limit:
+                if not submit_next():
+                    break
 
-                yield file_result
+            while pending:
+                # Wait for completion or timeout check
+                # We use a short timeout to periodically check for stale tasks
+                # Using 0.05s ensures responsive timeout detection
+                done, _ = wait(pending, timeout=0.05, return_when=FIRST_COMPLETED)
+
+                # 1. Process completed tasks
+                for future in done:
+                    pending.remove(future)
+                    path, _ = future_metadata.pop(future)
+
+                    try:
+                        file_result = future.result()
+                    except Exception as exc:
+                        # Should be captured by _execute_with_timing, but safety net
+                        file_result = FileResult(
+                            path=path, success=False, error=str(exc)
+                        )
+
+                    completed_count += 1
+                    if self._config.progress_callback:
+                        self._config.progress_callback(
+                            completed_count, total, file_result
+                        )
+
+                    yield file_result
+                    submit_next()
+
+                # 2. Check for timed-out tasks
+                now = time.monotonic()
+                timeout = self._config.timeout_per_file
+
+                # Check running tasks (those in pending but not in done)
+                # We iterate a copy because we might modify pending
+                for future in list(pending):
+                    path, start_time = future_metadata[future]
+                    if (now - start_time) > timeout:
+                        # Task timed out
+                        future.cancel()  # Attempt to cancel (fixes zombie tasks if not started)
+                        pending.remove(future)
+                        del future_metadata[future]
+
+                        file_result = FileResult(
+                            path=path,
+                            success=False,
+                            error=f"Timed out after {timeout}s",
+                        )
+
+                        completed_count += 1
+                        if self._config.progress_callback:
+                            self._config.progress_callback(
+                                completed_count, total, file_result
+                            )
+
+                        yield file_result
+                        submit_next()
 
     def _get_executor_class(
         self,
@@ -235,66 +304,27 @@ class ParallelProcessor:
         max_workers: int,
         files: list[Path],
         process_fn: Callable[[Path], Any],
+        executor: Any | None = None,
     ) -> list[FileResult]:
         """
         Submit files to the executor and collect all results.
 
-        Handles per-file timeouts and invokes the progress callback.
+        Wrapper around process_batch_iter.
 
         Args:
-            executor_cls: The executor class to use.
-            max_workers: Number of worker threads/processes.
+            executor_cls: Ignored (uses config).
+            max_workers: Ignored (uses config).
             files: Files to process in this batch.
             process_fn: Processing function.
+            executor: Optional executor to use.
 
         Returns:
             List of FileResult for each submitted file.
         """
-        results: list[FileResult] = []
-        total = len(files)
-        completed_count = 0
-
-        with executor_cls(max_workers=max_workers) as executor:
-            future_to_path: dict[Future[FileResult], Path] = {}
-
-            # Submit in chunks to control memory usage
-            for i in range(0, len(files), self._config.chunk_size):
-                chunk = files[i : i + self._config.chunk_size]
-                for path in chunk:
-                    future = executor.submit(
-                        _execute_with_timing, path, process_fn
-                    )
-                    future_to_path[future] = path
-
-            for future in as_completed(future_to_path):
-                try:
-                    file_result = future.result(
-                        timeout=self._config.timeout_per_file
-                    )
-                except TimeoutError:
-                    path = future_to_path[future]
-                    file_result = FileResult(
-                        path=path,
-                        success=False,
-                        error=f"Timed out after {self._config.timeout_per_file}s",
-                    )
-                except Exception as exc:
-                    path = future_to_path[future]
-                    file_result = FileResult(
-                        path=path,
-                        success=False,
-                        error=str(exc),
-                    )
-
-                completed_count += 1
-                if self._config.progress_callback is not None:
-                    self._config.progress_callback(
-                        completed_count, total, file_result
-                    )
-
-                results.append(file_result)
-
-        return results
+        # Delegate to process_batch_iter which handles bounding and timeouts correctly
+        return list(
+            self.process_batch_iter(files, process_fn, executor=executor)
+        )
 
     def shutdown(self) -> None:
         """
