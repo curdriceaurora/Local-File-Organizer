@@ -4,24 +4,40 @@ Real-time updates via WebSocket connections.
 
 ## Connecting to WebSocket
 
-The WebSocket endpoint requires a unique `client_id` path parameter. Each client session must use a distinct `client_id`. Authentication is handled via the `X-API-Key` header during the WebSocket upgrade handshake.
+The WebSocket endpoint requires a unique `client_id` path parameter. Each client session must use a distinct `client_id`. Authentication is handled via the `token` query parameter. This approach works in both browser and Node.js environments.
 
-**Endpoint**: `ws://localhost:8000/api/v1/ws/{client_id}`
+**Endpoint**: `ws://localhost:8000/api/v1/ws/{client_id}?token=YOUR_API_KEY`
 
 ```javascript
-// Node.js example using 'ws' library
+// Browser example
+const clientId = crypto.randomUUID();
+const ws = new WebSocket(
+  `ws://localhost:8000/api/v1/ws/${clientId}?token=YOUR_API_KEY`
+);
+
+ws.onopen = () => {
+  console.log('Connected');
+};
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Received:', data);
+};
+```
+
+**Node.js Alternative**: You can also use the `Authorization: Bearer` header with the Node.js `ws` library:
+
+```javascript
 const WebSocket = require('ws');
 const { randomUUID } = require('crypto');
 
-// Generate a unique client ID for this session
 const clientId = randomUUID();
 
-// Authenticate via headers (not URL query string for security)
 const ws = new WebSocket(
   `ws://localhost:8000/api/v1/ws/${clientId}`,
   {
     headers: {
-      'X-API-Key': 'YOUR_API_KEY'
+      'Authorization': 'Bearer YOUR_API_KEY'
     }
   }
 );

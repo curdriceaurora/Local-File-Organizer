@@ -308,12 +308,10 @@ curl -X POST http://localhost:8000/api/v1/dedupe/scan \
 ```javascript
 // Real-time job monitoring — replace CLIENT_ID with a unique identifier
 const clientId = crypto.randomUUID();
-// Authentication via header (not URL query string) for security
-const ws = new WebSocket(`ws://localhost:8000/api/v1/ws/${clientId}`, {
-  headers: {
-    'X-API-Key': 'YOUR_API_KEY'
-  }
-});
+// Browser WebSocket API: authentication via token query parameter
+const ws = new WebSocket(
+  `ws://localhost:8000/api/v1/ws/${clientId}?token=YOUR_API_KEY`
+);
 
 ws.onmessage = (event) => {
   const job = JSON.parse(event.data);
