@@ -21,29 +21,31 @@ API keys are personal access tokens for API requests.
 
 ### API Key Format
 
-API keys are bearer tokens:
+API keys are personal access tokens:
 
 ```
-fk_live_abcdef0123456789...
+fo_abc123_token456
 ```
 
-- Prefix indicates environment (fk_live, fk_test)
-- 32+ character random string
+- Prefix: `fo_` (File Organizer)
+- ID: unique identifier
+- Token: secret portion
 - Unique per key
 
 ### Using Your API Key
 
-Include API key in Authorization header:
+Include API key in the `X-API-Key` header:
+
+```bash
+curl http://localhost:8000/api/v1/files \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+Or as a Bearer token:
 
 ```bash
 curl http://localhost:8000/api/v1/files \
   -H "Authorization: Bearer YOUR_API_KEY"
-```
-
-Or as query parameter:
-
-```bash
-curl "http://localhost:8000/api/v1/files?api_key=YOUR_API_KEY"
 ```
 
 ## API Key Permissions
@@ -233,7 +235,7 @@ If you exceed the limit:
 1. **Use Environment Variables**
 
    ```bash
-   export FILE_ORGANIZER_API_KEY="fk_live_..."
+   export FILE_ORGANIZER_API_KEY="fo_abc123_token456"
    ```
 
 1. **Rotate Regularly**
@@ -266,7 +268,7 @@ const apiKey = process.env.FILE_ORGANIZER_API_KEY;
 **.env File**:
 
 ```
-FILE_ORGANIZER_API_KEY=fk_live_...
+FILE_ORGANIZER_API_KEY=fo_abc123_token456
 ```
 
 ## API Key Expiration

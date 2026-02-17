@@ -37,7 +37,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd file_organizer_v2
-          pip install mkdocs mkdocs-material pymdown-extensions
+          pip install mkdocs mkdocs-material pymdown-extensions mkdocs-minify-plugin
 
       - name: Build documentation
         run: |
@@ -73,7 +73,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd file_organizer_v2
-          pip install mkdocs mkdocs-material pymdown-extensions
+          pip install mkdocs mkdocs-material pymdown-extensions mkdocs-minify-plugin
 
       - name: Build documentation
         run: |
@@ -85,7 +85,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./file_organizer_v2/site
-          cname: docs.fileorganizer.local
 
   test:
     runs-on: ubuntu-latest

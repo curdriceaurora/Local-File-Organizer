@@ -43,34 +43,17 @@ GET /api/v1/files
 }
 ```
 
-## Upload File
+## Upload Files
 
-Upload a single file.
+Upload files to the system.
 
-```
-POST /api/v1/files/upload
-Content-Type: multipart/form-data
-```
+Files can be uploaded through the web UI by:
+1. Opening the file browser
+2. Clicking **Upload**
+3. Selecting files
+4. Clicking **Upload**
 
-### Parameters
-
-- `file` - File to upload (required)
-- `path` - Destination path (optional)
-- `scanForDuplicates` - Auto-detect duplicates (optional, default: false)
-
-### Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "file_456",
-    "name": "newfile.pdf",
-    "size": 512000,
-    "type": "pdf"
-  }
-}
-```
+For programmatic uploads, use the web UI file upload form or consult the web framework documentation.
 
 ## Get File Details
 
@@ -166,18 +149,22 @@ GET /api/v1/files/{file_id}/download
 
 Binary file content with appropriate headers.
 
-## Batch Upload
+## File Listing with Path
 
-Upload multiple files at once.
+List files in a specific directory.
 
 ```
-POST /api/v1/files/upload/batch
-Content-Type: multipart/form-data
+GET /api/v1/files
 ```
 
-### Parameters
+### Query Parameters
 
-- `files[]` - Multiple files to upload
+- `path` - Directory path to list (required)
+- `page` - Page number (default: 1)
+- `pageSize` - Items per page (default: 50)
+- `sort` - Sort field (name, date, size)
+- `order` - Sort order (asc, desc)
+- `type` - Filter by file type
 
 ### Response
 
@@ -185,9 +172,10 @@ Content-Type: multipart/form-data
 {
   "success": true,
   "data": {
-    "uploaded": 5,
-    "failed": 0,
-    "files": [...]
+    "files": [...],
+    "total": 150,
+    "page": 1,
+    "pageSize": 50
   }
 }
 ```

@@ -24,7 +24,7 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-**Access**: Open browser to `http://localhost:8000`
+**Access**: Open browser to `http://localhost:8000/ui/`
 
 See [Deployment Guide](admin/deployment.md) for detailed Docker setup.
 ````
@@ -46,7 +46,7 @@ pip install file-organizer
 file-organizer serve
 ```
 
-**Access**: Open browser to `http://localhost:8000`
+**Access**: Open browser to `http://localhost:8000/ui/`
 
 See [Installation Guide](admin/installation.md) for options.
 ````
@@ -77,7 +77,7 @@ ollama pull qwen2.5vl:7b-q4_K_M             # Vision model
 file-organizer serve
 ```
 
-**Access**: Open browser to `http://localhost:8000`
+**Access**: Open browser to `http://localhost:8000/ui/`
 ````
 
 ## System Requirements
@@ -385,4 +385,4 @@ For more issues, see [Troubleshooting Guide](troubleshooting.md).
 
 ______________________________________________________________________
 
-**Ready to start?** Access File Organizer at `http://localhost:8000` and begin organizing your files!
+**Ready to start?** Access File Organizer at `http://localhost:8000/ui/` and begin organizing your files!

@@ -2,26 +2,21 @@
 
 API endpoints for file organization operations.
 
-## Start Organization Job
+## Scan for Organization
 
-Create and start an organization job.
+Analyze files to plan organization.
 
 ```
-POST /api/v1/organize
+POST /api/v1/organize/scan
 ```
 
 ### Request Body
 
 ```json
 {
-  "file_ids": ["file_1", "file_2", "file_3"],
+  "path": "/uploads",
   "methodology": "para",
-  "options": {
-    "dryRun": false,
-    "preserveOriginals": false,
-    "createFolders": true,
-    "applyMetadata": true
-  }
+  "dry_run": true
 }
 ```
 
@@ -31,28 +26,30 @@ POST /api/v1/organize
 {
   "success": true,
   "data": {
-    "jobId": "job_123",
+    "job_id": "job_123",
     "status": "pending",
     "methodology": "para",
-    "fileCount": 3,
-    "createdAt": "2024-02-15T14:00:00Z"
+    "file_count": 100,
+    "created_at": "2024-02-15T14:00:00Z"
   }
 }
 ```
 
-## List Organization Jobs
+## Preview Organization
 
-List all organization jobs.
+Preview what organization will do (dry run).
 
 ```
-GET /api/v1/organize/jobs
+POST /api/v1/organize/preview
 ```
 
-### Query Parameters
+### Request Body
 
-- `status` - Filter by status (pending, in_progress, completed, failed)
-- `methodology` - Filter by methodology
-- `limit` - Limit results (default: 50)
+```json
+{
+  "job_id": "job_123"
+}
+```
 
 ### Response
 
@@ -60,25 +57,31 @@ GET /api/v1/organize/jobs
 {
   "success": true,
   "data": {
-    "jobs": [
+    "changes": [
       {
-        "jobId": "job_123",
-        "status": "in_progress",
-        "methodology": "para",
-        "progress": 65,
-        "createdAt": "2024-02-15T14:00:00Z"
+        "file_id": "file_1",
+        "original_path": "/uploads/document.pdf",
+        "new_path": "/organized/Projects/document.pdf"
       }
     ]
   }
 }
 ```
 
-## Get Job Status
+## Execute Organization
 
-Get detailed job information.
+Apply the planned organization.
 
 ```
-GET /api/v1/organize/jobs/{job_id}
+POST /api/v1/organize/execute
+```
+
+### Request Body
+
+```json
+{
+  "job_id": "job_123"
+}
 ```
 
 ### Response
@@ -87,65 +90,39 @@ GET /api/v1/organize/jobs/{job_id}
 {
   "success": true,
   "data": {
-    "jobId": "job_123",
+    "job_id": "job_123",
+    "status": "in_progress",
+    "methodology": "para",
+    "file_count": 100,
+    "started_at": "2024-02-15T14:00:00Z"
+  }
+}
+```
+
+## Get Job Status
+
+Get organization job status and progress.
+
+```
+GET /api/v1/organize/status/{job_id}
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "job_123",
     "status": "in_progress",
     "methodology": "para",
     "progress": 65,
-    "fileCount": 100,
-    "processedCount": 65,
-    "errorCount": 0,
-    "startedAt": "2024-02-15T14:00:00Z",
-    "estimatedCompletion": "2024-02-15T14:05:00Z"
+    "file_count": 100,
+    "processed_count": 65,
+    "error_count": 0,
+    "started_at": "2024-02-15T14:00:00Z",
+    "estimated_completion": "2024-02-15T14:05:00Z"
   }
-}
-```
-
-## Get Job Results
-
-Get detailed results of completed job.
-
-```
-GET /api/v1/organize/jobs/{job_id}/results
-```
-
-### Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "jobId": "job_123",
-    "status": "completed",
-    "results": {
-      "organized": 100,
-      "skipped": 0,
-      "failed": 0,
-      "changes": [
-        {
-          "fileId": "file_1",
-          "originalPath": "/downloads/document.pdf",
-          "newPath": "/organized/Projects/Website/document.pdf"
-        }
-      ]
-    }
-  }
-}
-```
-
-## Cancel Job
-
-Cancel a running job.
-
-```
-POST /api/v1/organize/jobs/{job_id}/cancel
-```
-
-### Response
-
-```json
-{
-  "success": true,
-  "message": "Job cancelled successfully"
 }
 ```
 
