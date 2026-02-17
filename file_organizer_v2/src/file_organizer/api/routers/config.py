@@ -2,15 +2,17 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
+from typing import Optional, TypeVar
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 
 router = APIRouter(tags=["config"])
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class OrganizationMethod(str, Enum):
@@ -50,13 +52,11 @@ class AISettingsUpdate(BaseModel):
     All fields are optional. When provided, they must pass validation.
     """
 
+    model_config = ConfigDict(validate_assignment=True)
+
     model: Optional[str] = None
     temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(default=None, gt=0, le=100000)
-
-    class Config:
-        """Pydantic config to validate fields even when None is allowed."""
-        validate_assignment = True
 
 
 class StorageSettingsUpdate(BaseModel):
@@ -65,12 +65,10 @@ class StorageSettingsUpdate(BaseModel):
     All fields are optional. When provided, they must pass validation.
     """
 
+    model_config = ConfigDict(validate_assignment=True)
+
     base_path: Optional[str] = None
     auto_backup: Optional[bool] = None
-
-    class Config:
-        """Pydantic config to validate fields even when None is allowed."""
-        validate_assignment = True
 
 
 class OrganizationSettingsUpdate(BaseModel):
@@ -79,12 +77,10 @@ class OrganizationSettingsUpdate(BaseModel):
     All fields are optional. When provided, they must pass validation.
     """
 
+    model_config = ConfigDict(validate_assignment=True)
+
     method: Optional[OrganizationMethod] = None
     auto_organize: Optional[bool] = None
-
-    class Config:
-        """Pydantic config to validate fields even when None is allowed."""
-        validate_assignment = True
 
 
 class ConfigUpdateRequest(BaseModel):
@@ -109,6 +105,21 @@ class ConfigResponse(BaseModel):
 _config = ConfigResponse()
 
 
+def _merge_update(current: T, update: BaseModel) -> T:
+    """Merge update data into current configuration.
+    
+    Args:
+        current: Current configuration object
+        update: Update object with optional fields
+        
+    Returns:
+        New configuration object with merged data
+    """
+    update_data = update.model_dump(exclude_none=True)
+    merged_data = {**current.model_dump(), **update_data}
+    return type(current)(**merged_data)
+
+
 @router.get("/config", response_model=ConfigResponse)
 def get_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
     """Get current configuration."""
@@ -130,23 +141,11 @@ def update_config(
 
     # Update config with validated values
     if config_update.organization is not None:
-        update_data = config_update.organization.model_dump(exclude_none=True)
-        _config.organization = OrganizationSettings(**{
-            **_config.organization.model_dump(),
-            **update_data,
-        })
+        _config.organization = _merge_update(_config.organization, config_update.organization)
     if config_update.ai is not None:
-        update_data = config_update.ai.model_dump(exclude_none=True)
-        _config.ai = AISettings(**{
-            **_config.ai.model_dump(),
-            **update_data,
-        })
+        _config.ai = _merge_update(_config.ai, config_update.ai)
     if config_update.storage is not None:
-        update_data = config_update.storage.model_dump(exclude_none=True)
-        _config.storage = StorageSettings(**{
-            **_config.storage.model_dump(),
-            **update_data,
-        })
+        _config.storage = _merge_update(_config.storage, config_update.storage)
 
     return _config
 
