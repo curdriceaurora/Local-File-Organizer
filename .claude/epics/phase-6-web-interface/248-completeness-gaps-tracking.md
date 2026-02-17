@@ -4,7 +4,7 @@ title: Task 248 Documentation Completeness Gaps - GitHub Issue Tracking
 task: 248
 epic: phase-6-web-interface
 created: 2026-02-17T05:30:00Z
-updated: 2026-02-17T14:23:08Z
+updated: 2026-02-17T18:50:37Z
 status: open
 github_issues: [314, 315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327]
 total_effort_hours: 153-207
@@ -304,7 +304,7 @@ Each GitHub issue contains detailed specifications for its implementation.
 
 ---
 
-**Last Updated**: 2026-02-17T14:23:08Z
+**Last Updated**: 2026-02-17T18:50:37Z
 **Updated By**: Claude Code
 **Status**: CCPM Synchronized
 
@@ -322,3 +322,15 @@ Each GitHub issue contains detailed specifications for its implementation.
 - **Root Cause**: `playwright.config.js` webServer requires full backend (Ollama, Redis, Celery) which is unavailable in CI
 - **Workaround**: `continue-on-error: true` in CI — component tests still pass
 - **Proposed Fix**: Mock webServer, separate E2E workflow, or Docker Compose in CI
+
+**Issue #333: [Tech Debt] CI Pipeline Optimization: Two-Tier Fast/Full Matrix**
+- **Priority**: Medium
+- **Epic**: Technical Debt & Maintenance (#266)
+- **Status**: Open (Backlog)
+- **Created**: 2026-02-17
+- **GitHub**: https://github.com/curdriceaurora/Local-File-Organizer/issues/333
+- **Branch**: `feature/ci-optimization` (not yet created)
+- **Effort**: 2-3 hours
+- **Problem**: CI runs 8 parallel jobs (~27.5 billable min) on every push; 76% is waste (redundant Python versions, broken Playwright, EOL Node 18.x)
+- **Solution**: Two-tier CI — fast 3-job pipeline for feature pushes (~6.5 min), full matrix only for PRs to main
+- **Related**: #331 (Playwright E2E failures)
