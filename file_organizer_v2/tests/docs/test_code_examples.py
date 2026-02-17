@@ -42,7 +42,6 @@ PHANTOM_ENDPOINTS = [
     "/api/v1/organize",      # No single POST /organize — uses sub-paths
     "/api/v1/analyze",       # No /analyze prefix
     "/api/v1/analyze/duplicates",  # Wrong — should be /dedupe/*
-    "/api/v1/search",        # Not implemented as documented
 ]
 
 # Real importable modules under src/file_organizer/

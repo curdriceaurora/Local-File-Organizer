@@ -93,11 +93,7 @@ class TestWebSocketPathDocumentation:
         # The real WS endpoint accepts ?token= for auth
         # If docs talk about auth, they should mention the token parameter
         if "auth" in content.lower() or "token" in content.lower():
-            has_query_token = bool(
-                re.search(r"\?token=|token.*query|query.*token", content, re.IGNORECASE)
-            )
-            # This is a soft warning — not all docs need to document this
-            # Just ensure they don't document wrong auth method
+            # Ensure docs don't document wrong auth method
             bearer_in_ws = bool(
                 re.search(r"Authorization:\s*Bearer", content, re.IGNORECASE)
             )

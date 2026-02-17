@@ -225,7 +225,7 @@ async def test_on_upload(plugin):
 ```python
 @pytest.mark.asyncio
 async def test_plugin_integration(app_client):
-    # List files (requires ?path= parameter)
+    # List files (path= is optional; omit to list home directory)
     response = await app_client.get(
         "/api/v1/files",
         params={"path": "/test-dir"}
