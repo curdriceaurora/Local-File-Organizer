@@ -1,6 +1,7 @@
 """Unit tests for organize endpoint."""
 import pytest
 from fastapi.testclient import TestClient
+
 from file_organizer.api.main import create_app
 
 

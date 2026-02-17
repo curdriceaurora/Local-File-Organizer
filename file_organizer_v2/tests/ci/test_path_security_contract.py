@@ -28,6 +28,12 @@ _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
     "api/routers/system.py": {
         "file_info_from_path(Path(info.path))",
     },
+    # Mock endpoints that treat file_id as a path for simple ID lookup;
+    # these are intentionally not resolve_path()-guarded as they are
+    # placeholder implementations for future database-backed ID lookup.
+    "api/routers/files.py": {
+        "target = Path(file_id)",
+    },
     "web/_helpers.py": {
         "BASE_DIR = Path(__file__).resolve().parent",
         "safe_name = Path(name).name.strip()",
