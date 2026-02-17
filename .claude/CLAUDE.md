@@ -1407,11 +1407,11 @@ alembic current
 ### Phase Roadmap
 
 - ✅ **Phase 1**: Text + Image processing (Complete)
-- 📅 **Phase 2**: Modern UI (TUI with Textual) - 22 tasks remaining
-- ✅ **Phase 3**: Feature Expansion (Complete) - Audio, PARA, JD, CAD, Archives, Scientific
-- ✅ **Phase 4**: Intelligence & Learning (Complete) - Dedup, Preferences, Undo/Redo, Analytics
+- 📅 **Phase 2**: Modern UI (TUI with Textual) - 4 tasks remaining (84%)
+- 📅 **Phase 3**: Feature Expansion - 1 task remaining (94%) - Audio, PARA, JD, CAD, Archives, Scientific
+- 📅 **Phase 4**: Intelligence & Learning - 1 task remaining (96%) - Dedup, Preferences, Undo/Redo, Analytics
 - ✅ **Phase 5**: Architecture & Performance (Complete) - Events, Daemon, Docker, CI/CD
-- 📅 **Phase 6**: Web Interface - 20 tasks remaining
+- 📅 **Phase 6**: Web Interface - 1 task remaining (95%)
 
 ### Contributing
 
