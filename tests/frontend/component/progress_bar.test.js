@@ -476,7 +476,7 @@ describe("Progress Bar Component", () => {
       errorMsg.style.display = "block";
 
       expect(errorMsg.style.display).toBe("block");
-      expect(errorMsg.textContent).toBe("Operation failed: Connection timeout");
+      expect(errorMsg.textContent.trim()).toBe("Operation failed: Connection timeout");
     });
 
     it("should provide retry option on error", () => {
