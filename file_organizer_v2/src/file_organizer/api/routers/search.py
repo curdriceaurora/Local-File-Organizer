@@ -24,7 +24,7 @@ class SearchResult(BaseModel):
     created: Optional[str] = None
 
 
-@router.get("/search", response_model=list[SearchResult])
+@router.get("/search", response_model=None)
 def search(
     q: str = Query(None, description="Search query"),
     type: Optional[str] = None,

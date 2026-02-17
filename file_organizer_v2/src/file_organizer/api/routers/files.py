@@ -311,7 +311,7 @@ class FileUploadResponse(BaseModel):
     size: int
 
 
-@router.post("/files/upload")
+@router.post("/files/upload", response_model=None)
 async def upload_files(
     files: list[UploadFile] = File(None),
     file: Optional[UploadFile] = File(None),

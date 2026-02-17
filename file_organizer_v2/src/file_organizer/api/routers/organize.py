@@ -208,7 +208,7 @@ class SimpleOrganizeResponse(BaseModel):
     confidence: float
 
 
-@router.post("/organize", response_model=SimpleOrganizeResponse)
+@router.post("/organize", response_model=None)
 async def organize_file(
     file: Optional[UploadFile] = File(None),
     request: Optional[SimpleOrganizeRequest] = None,
