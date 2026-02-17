@@ -68,7 +68,9 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "npm run dev 2>/dev/null || python3 -m file_organizer.web.app 2>/dev/null || true",
+    // Try npm dev first, then fall back to Python server
+    // Do NOT use || true as it silently swallows errors
+    command: "npm run dev 2>/dev/null || python3 -m file_organizer.web.app",
     url: "http://localhost:5000",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

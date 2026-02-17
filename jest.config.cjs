@@ -17,7 +17,15 @@ module.exports = {
     "/node_modules/",
     "/tests/",
   ],
-  coverageThreshold: {},
+  // Enforce minimum coverage thresholds (70%+)
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
+    },
+  },
   testMatch: [
     "**/tests/frontend/**/*.test.js",
   ],

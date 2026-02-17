@@ -4,10 +4,9 @@ Real-time updates via WebSocket connections.
 
 ## Connecting to WebSocket
 
-The WebSocket endpoint requires a unique `client_id` path parameter and an API token
-passed as a query parameter. Each client session must use a distinct `client_id`.
+The WebSocket endpoint requires a unique `client_id` path parameter. Each client session must use a distinct `client_id`. Authentication is handled via the `X-API-Key` header during the WebSocket upgrade handshake.
 
-**Endpoint**: `ws://localhost:8000/api/v1/ws/{client_id}?token=YOUR_API_KEY`
+**Endpoint**: `ws://localhost:8000/api/v1/ws/{client_id}`
 
 ```javascript
 // Node.js example using 'ws' library
@@ -17,8 +16,14 @@ const { randomUUID } = require('crypto');
 // Generate a unique client ID for this session
 const clientId = randomUUID();
 
+// Authenticate via headers (not URL query string for security)
 const ws = new WebSocket(
-  `ws://localhost:8000/api/v1/ws/${clientId}?token=YOUR_API_KEY`
+  `ws://localhost:8000/api/v1/ws/${clientId}`,
+  {
+    headers: {
+      'X-API-Key': 'YOUR_API_KEY'
+    }
+  }
 );
 
 ws.on('open', () => {

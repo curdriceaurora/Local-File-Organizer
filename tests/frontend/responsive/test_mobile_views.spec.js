@@ -345,9 +345,10 @@ test.describe("Mobile Views (320px - 480px)", () => {
         });
 
         // Should have visible focus indicator
+        // Using explicit parentheses for clarity (both conditions AND together)
         const hasFocusIndicator =
-          focusStyles.outline && focusStyles.outline !== "none" ||
-          focusStyles.boxShadow && focusStyles.boxShadow !== "none";
+          (focusStyles.outline && focusStyles.outline !== "none") ||
+          (focusStyles.boxShadow && focusStyles.boxShadow !== "none");
         expect(hasFocusIndicator).toBe(true);
       }
     }
