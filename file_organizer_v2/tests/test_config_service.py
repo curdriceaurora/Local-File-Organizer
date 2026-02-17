@@ -236,21 +236,21 @@ def test_organization_settings_update(db_session: Session) -> None:
     assert config.organization.auto_organize is True
 
 
-def test_concurrent_update_simulation(db_session: Session) -> None:
-    """Test that database locking prevents race conditions.
-    
-    This is a basic test - true concurrent testing would require
-    multiple threads/processes, but this verifies the locking mechanism
-    is in place.
+def test_sequential_updates(db_session: Session) -> None:
+    """Test that sequential updates work correctly.
+
+    Note: This test performs sequential updates and verifies final state.
+    True concurrent testing would require multiple threads/processes and
+    is beyond the scope of this unit test suite.
     """
     service = ConfigService(db_session)
-    
+
     # First update
     service.update_config({"ai": {"model": "model-1"}})
-    
+
     # Second update in same session should work
     service.update_config({"ai": {"model": "model-2"}})
-    
+
     # Verify final state
     config = service.get_config()
     assert config.ai.model == "model-2"

@@ -68,14 +68,13 @@ class ConfigService:
         Returns:
             ConfigResponse: Current configuration or defaults if not set
         """
-        # Query with row-level locking to prevent concurrent modification issues
+        # Query without locking for read operations
         setting = (
             self.db.query(SettingsStore)
             .filter(
                 SettingsStore.user_id == self.user_id,
                 SettingsStore.key == self.CONFIG_KEY,
             )
-            .with_for_update()
             .first()
         )
 
