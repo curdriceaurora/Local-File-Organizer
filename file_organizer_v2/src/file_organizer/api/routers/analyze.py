@@ -13,6 +13,10 @@ from file_organizer.models.text_model import TextModel
 
 router = APIRouter(tags=["analyze"])
 
+# Confidence score bounds
+MIN_CONFIDENCE = 0.3
+MAX_CONFIDENCE = 0.95
+
 
 class AnalyzeResponse(BaseModel):
     """Response from analyze endpoint."""
@@ -55,6 +59,8 @@ async def analyze(
 
     try:
         # Initialize text model for AI-based analysis
+        # TODO: Consider moving model initialization to application startup
+        # and reusing across requests for better performance
         config = TextModel.get_default_config()
         text_model = TextModel(config)
         text_model.initialize()
@@ -123,9 +129,6 @@ Output ONLY the category name, nothing else."""
         response = model.generate(prompt, temperature=0.3, max_tokens=20)
         category = response.strip().lower()
 
-        # Clean up response - remove any extra text
-        category = category.split()[0] if category else "general"
-
         # Validate category is in our predefined list
         valid_categories = {
             "technical",
@@ -139,9 +142,23 @@ Output ONLY the category name, nothing else."""
             "general",
         }
 
-        if category not in valid_categories:
-            logger.warning(f"AI returned invalid category '{category}', defaulting to 'general'")
-            category = "general"
+        # Extract first word and validate it's in our list
+        first_word = category.split()[0] if category else ""
+        if first_word in valid_categories:
+            category = first_word
+        else:
+            # If not valid, try to find any valid category in the response
+            found = False
+            for word in category.split():
+                if word in valid_categories:
+                    category = word
+                    found = True
+                    break
+            if not found:
+                logger.warning(
+                    f"AI returned invalid category '{category}', defaulting to 'general'"
+                )
+                category = "general"
 
         return category
 
@@ -213,7 +230,7 @@ def _calculate_confidence(content: str, description: str) -> float:
     if len(content) < 100:
         confidence -= 0.2
 
-    # Cap between 0.3 and 0.95
-    confidence = max(0.3, min(0.95, confidence))
+    # Cap between MIN_CONFIDENCE and MAX_CONFIDENCE
+    confidence = max(MIN_CONFIDENCE, min(MAX_CONFIDENCE, confidence))
 
     return round(confidence, 2)
