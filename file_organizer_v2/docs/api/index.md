@@ -55,8 +55,8 @@ The File Organizer API allows you to:
 ### 2. Make Your First Request
 
 ```bash
-curl -X GET http://localhost:8000/api/v1/files \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl -X GET "http://localhost:8000/api/v1/files?path=/" \
+  -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json"
 ```
 
@@ -78,7 +78,7 @@ curl -X GET http://localhost:8000/api/v1/files \
 ### File Management
 
 - `GET /api/v1/files` - List files
-- `POST /api/v1/files/upload` - Upload file
+
 - `GET /api/v1/files/{id}` - Get file details
 - `DELETE /api/v1/files/{id}` - Delete file
 
@@ -111,7 +111,7 @@ curl -X GET http://localhost:8000/api/v1/files \
 
 ### WebSocket
 
-- `WS /api/v1/ws` - Real-time events
+- `WS /api/v1/ws/{client_id}` - Real-time events
 - Job progress updates
 - File operation notifications
 
@@ -124,16 +124,17 @@ curl -X GET http://localhost:8000/api/v1/files \
 All API requests require authentication via API key:
 
 ```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-  http://localhost:8000/api/v1/files
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:8000/api/v1/files?path=/"
 ```
 
 ### Rate Limiting
 
 API requests are rate-limited:
 
-- **Tier 1**: 100 requests/minute (free)
-- **Tier 2**: 1,000 requests/minute (with subscription)
+- **Default**: 1000 requests/minute
+- **Configurable**: Via app settings
+
 
 Check rate limit in response headers:
 
@@ -246,7 +247,7 @@ Official client libraries available:
 ### Python
 
 ```bash
-pip install file-organizer-client
+pip install file_organizer
 ```
 
 ```python
@@ -292,12 +293,12 @@ Explore the API interactively:
 ### 1. Organize Files Programmatically
 
 ```bash
-# Start organization job
-curl -X POST http://localhost:8000/api/v1/organize \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+# Start organization preview
+curl -X POST http://localhost:8000/api/v1/organize/preview \
+  -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "file_ids": ["file_1", "file_2"],
+    "path": "/documents",
     "methodology": "para"
   }'
 ```

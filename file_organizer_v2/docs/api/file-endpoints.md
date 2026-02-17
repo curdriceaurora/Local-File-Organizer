@@ -2,46 +2,7 @@
 
 API endpoints for file upload, listing, and management.
 
-## List Files
 
-List all files in workspace.
-
-```
-GET /api/v1/files
-```
-
-### Query Parameters
-
-- `page` - Page number (default: 1)
-- `pageSize` - Items per page (default: 50)
-- `sort` - Sort field (name, date, size)
-- `order` - Ascending or descending (asc, desc)
-- `type` - Filter by file type
-- `search` - Search query
-
-### Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "files": [
-      {
-        "id": "file_123",
-        "name": "document.pdf",
-        "path": "/documents/",
-        "size": 1024000,
-        "type": "pdf",
-        "created": "2024-02-01T10:30:00Z",
-        "modified": "2024-02-15T14:20:00Z"
-      }
-    ],
-    "total": 150,
-    "page": 1,
-    "pageSize": 50
-  }
-}
-```
 
 ## Upload Files
 
@@ -208,6 +169,6 @@ POST /api/v1/files/delete/batch
 }
 ```
 
-______________________________________________________________________
+---
 
 See [API Reference](index.md) for more endpoints.

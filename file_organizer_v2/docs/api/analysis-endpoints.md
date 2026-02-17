@@ -4,19 +4,18 @@ API endpoints for file analysis operations.
 
 ## Detect Duplicates
 
-Analyze and find duplicate files.
+Scan directory for duplicates.
 
 ```
-POST /api/v1/analyze/duplicates
+POST /api/v1/dedupe/scan
 ```
 
 ### Request Body
 
 ```json
 {
-  "paths": ["/documents", "/downloads"],
-  "method": "smart",
-  "minSize": 1000000
+  "path": "/documents",
+  "type": "image"
 }
 ```
 
@@ -26,25 +25,8 @@ POST /api/v1/analyze/duplicates
 {
   "success": true,
   "data": {
-    "jobId": "job_234",
-    "status": "completed",
-    "groups": [
-      {
-        "similarity": 1.0,
-        "files": [
-          {
-            "id": "file_1",
-            "name": "document.pdf",
-            "size": 1024000
-          },
-          {
-            "id": "file_2",
-            "name": "document_copy.pdf",
-            "size": 1024000
-          }
-        ]
-      }
-    ]
+    "job_id": "job_234",
+    "status": "pending"
   }
 }
 ```
@@ -112,6 +94,6 @@ GET /api/v1/analyze/categories
 }
 ```
 
-______________________________________________________________________
+---
 
 See [API Reference](index.md) for more information.

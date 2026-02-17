@@ -53,7 +53,7 @@ Created comprehensive documentation for File Organizer v2.0 web interface coveri
 
 #### Support & Resources (2 files)
 - `docs/faq.md` - Frequently asked questions
-- `docs/troubleshooting.md` - Troubleshooting guide
+- `docs/TROUBLESHOOTING.md` - Troubleshooting guide
 
 ## Acceptance Criteria Met
 
@@ -99,7 +99,7 @@ file_organizer_v2/
     ├── getting-started.md        # Installation guide
     ├── cli-reference.md          # CLI reference
     ├── faq.md                    # FAQ
-    ├── troubleshooting.md        # Troubleshooting
+    ├── TROUBLESHOOTING.md        # Troubleshooting
     ├── web-ui/                   # Web UI guide (6 files)
     ├── api/                      # API reference (7 files)
     ├── admin/                    # Admin guide (7 files)
@@ -115,7 +115,7 @@ file_organizer_v2/
 ### Building Locally
 ```bash
 cd file_organizer_v2
-pip install mkdocs mkdocs-material pymdown-extensions
+pip install mkdocs mkdocs-material pymdown-extensions mkdocs-minify-plugin
 mkdocs serve  # Runs at http://localhost:8000
 ```
 
@@ -159,7 +159,9 @@ Developer stub files have structure but may need:
 - 1 GitHub Actions workflow
 - 28 markdown documentation files
 
-**No existing files modified** (additive only)
+**Modified Files**:
+- `file_organizer_v2/docs/TROUBLESHOOTING.md` (updated/renamed)
+- `.claude/epics/phase-6-web-interface/245.md` (metadata update)
 
 ## Testing
 

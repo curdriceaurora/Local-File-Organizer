@@ -84,7 +84,9 @@ dependencies = [
 
     # Logging
     "loguru>=0.7.0",
+    "mkdocs-minify-plugin>=0.8.0",
 ]
+
 
 [project.optional-dependencies]
 dev = [
@@ -139,6 +141,14 @@ cad = [
 build = [
     "pyinstaller>=6.0.0",  # Cross-platform executable packaging
 ]
+
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.5.0",
+    "pymdown-extensions>=10.7.0",
+    "mkdocs-minify-plugin>=0.8.0",
+]
+
 
 all = [
     "file-organizer[dev,gui,audio,video,dedup,archive,scientific,cad,build]",

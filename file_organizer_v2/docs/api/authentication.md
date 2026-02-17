@@ -41,12 +41,8 @@ curl http://localhost:8000/api/v1/files \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
-Or as a Bearer token:
+> **Security Note:** Do not pass API keys in URL query parameters. Always use the `X-API-Key` header.
 
-```bash
-curl http://localhost:8000/api/v1/files \
-  -H "Authorization: Bearer YOUR_API_KEY"
-```
 
 ## API Key Permissions
 
@@ -118,13 +114,10 @@ Generate a new key and revoke the old:
 
 API requests are rate-limited to prevent abuse.
 
-### Rate Limit Tiers
+Rate limits are configured in the application settings (`ApiSettings`).
 
-| Tier | Requests/Min | Best For |
-|------|-------------|----------|
-| Free | 100 | Testing, personal use |
-| Pro | 1,000 | Production applications |
-| Enterprise | Custom | High-volume use |
+- **Default Limit**: 1000 requests/minute
+- **Configurable**: Administrators can adjust `rate_limit_default_requests` and `rate_limit_rules`.
 
 ### Checking Rate Limits
 

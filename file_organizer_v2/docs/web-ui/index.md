@@ -68,7 +68,7 @@ File Organizer works best on modern browsers:
 Open your browser and navigate to:
 
 ```
-http://localhost:8000
+http://localhost:8000/ui/
 ```
 
 (Replace `localhost:8000` with your server address if deployed remotely)
@@ -281,6 +281,6 @@ Choose a guide based on what you want to do:
 - **Search & Analyze**: [Analysis & Search Guide](analysis-search.md)
 - **Customize Settings**: [Settings Guide](settings.md)
 
-______________________________________________________________________
+---
 
 **Ready to get started?** [Jump to File Management](file-management.md)!

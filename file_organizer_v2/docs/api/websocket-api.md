@@ -4,17 +4,26 @@ Real-time updates via WebSocket connections.
 
 ## Connecting to WebSocket
 
+> **Security Note:** Do not pass API keys in URL. Use headers for authentication.
+
 ```javascript
-const ws = new WebSocket('ws://localhost:8000/api/v1/ws?api_key=YOUR_KEY');
+// Node.js example using 'ws' library
+const WebSocket = require('ws');
 
-ws.onopen = () => {
+const ws = new WebSocket('ws://localhost:8000/api/v1/ws', {
+  headers: {
+    'X-API-Key': 'YOUR_API_KEY'
+  }
+});
+
+ws.on('open', () => {
   console.log('Connected');
-};
+});
 
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log('Received:', data);
-};
+ws.on('message', (data) => {
+  const event = JSON.parse(data);
+  console.log('Received:', event);
+});
 ```
 
 ## Events
@@ -74,6 +83,6 @@ Error occurred during operation.
 }
 ```
 
-______________________________________________________________________
+---
 
 See [API Reference](index.md) for more information.

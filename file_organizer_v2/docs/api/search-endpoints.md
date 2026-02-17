@@ -1,14 +1,17 @@
 # Search Endpoints
 
-API endpoints for searching and filtering files.
+> **Note:** The Search API is currently under development.
 
-## Search Files
+## Search Files (Coming Soon)
 
-Search files with query and filters.
+Future endpoints will support:
 
-```
-GET /api/v1/search
-```
+- `GET /api/v1/search` - Search files
+- `POST /api/v1/search/advanced` - Advanced search
+
+---
+
+See [API Reference](index.md) for available endpoints.
 
 ### Query Parameters
 
