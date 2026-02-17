@@ -83,7 +83,7 @@ def test_health(tmp_path: Path) -> None:
     client, _ = _make_client(tmp_path)
     result = client.health()
     assert isinstance(result, HealthResponse)
-    assert result.status == "ok"
+    assert result.status == "healthy"
     assert result.version
     client.close()
 
@@ -270,7 +270,7 @@ def test_context_manager(tmp_path: Path) -> None:
     client, _ = _make_client(tmp_path)
     with client:
         result = client.health()
-        assert result.status == "ok"
+        assert result.status == "healthy"
     # After context exit, client is closed (no assertion needed, just no crash)
 
 

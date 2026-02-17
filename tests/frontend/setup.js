@@ -78,10 +78,10 @@ if (typeof global.DragEvent === "undefined") {
 const originalError = console.error;
 beforeAll(() => {
   console.error = (...args) => {
+    const msg = typeof args[0] === "string" ? args[0] : (args[0] instanceof Error ? args[0].message : "");
     if (
-      typeof args[0] === "string" &&
-      (args[0].includes("Not implemented: HTMLFormElement.prototype.submit") ||
-        args[0].includes("Not implemented: HTMLFormElement.prototype.requestSubmit"))
+      msg.includes("Not implemented: HTMLFormElement.prototype.submit") ||
+      msg.includes("Not implemented: HTMLFormElement.prototype.requestSubmit")
     ) {
       return;
     }

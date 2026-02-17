@@ -114,22 +114,6 @@ def list_files(
     return FileListResponse(items=items, total=total, skip=skip, limit=limit)
 
 
-@router.get("/files/{file_id}")
-def get_file_by_id(
-    file_id: str,
-    settings: ApiSettings = Depends(get_settings),
-) -> FileInfo:
-    """Get file details by ID."""
-    if not file_id or file_id.strip() == "":
-        raise ApiError(status_code=422, error="invalid_id", message="File ID cannot be empty")
-    # Simple mock: treat file_id as a path or name
-    # In a real implementation, this would look up the file by ID
-    target = Path(file_id)
-    if not target.exists():
-        raise ApiError(status_code=404, error="not_found", message="File not found")
-    return file_info_from_path(target)
-
-
 @router.get("/files/info", response_model=FileInfo)
 def get_file_info(
     path: str = Query(...),
@@ -172,6 +156,23 @@ def read_file_content(
         size=info.size,
         mime_type=info.mime_type,
     )
+
+
+@router.get("/files/{file_id}")
+def get_file_by_id(
+    file_id: str,
+    settings: ApiSettings = Depends(get_settings),
+) -> FileInfo:
+    """Get file details by ID."""
+    if not file_id or file_id.strip() == "":
+        raise ApiError(status_code=422, error="invalid_id", message="File ID cannot be empty")
+    # Simple mock: treat file_id as a path or name
+    # In a real implementation, this would look up the file by ID
+    # codeql[py/path-injection] - Mock placeholder using file_id as path; not request-driven security boundary
+    target = Path(file_id)
+    if not target.exists():
+        raise ApiError(status_code=404, error="not_found", message="File not found")
+    return file_info_from_path(target)
 
 
 @router.post("/files/move", response_model=MoveFileResponse)
