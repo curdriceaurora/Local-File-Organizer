@@ -37,7 +37,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd file_organizer_v2
-          pip install mkdocs mkdocs-material pymdown-extensions mkdocs-minify-plugin
+          pip install -e .[docs]
 
       - name: Build documentation
         run: |
@@ -73,7 +73,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd file_organizer_v2
-          pip install mkdocs mkdocs-material pymdown-extensions mkdocs-minify-plugin
+          pip install -e .[docs]
 
       - name: Build documentation
         run: |

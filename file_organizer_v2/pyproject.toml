@@ -84,7 +84,6 @@ dependencies = [
 
     # Logging
     "loguru>=0.7.0",
-    "mkdocs-minify-plugin>=0.8.0",
 ]
 
 
