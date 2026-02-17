@@ -6,56 +6,46 @@ Welcome to the **File Organizer** documentation! A privacy-first, AI-powered loc
 
 === "🚀 Getting Started"
 
-```
-**New to File Organizer?** Start here to understand the basics.
+    **New to File Organizer?** Start here to understand the basics.
 
-- [Installation & Setup](getting-started.md)
-- [Web UI Quick Start](web-ui/getting-started.md)
-- [CLI Reference](cli-reference.md)
-```
+    - [Installation & Setup](getting-started.md)
+    - [Web UI Quick Start](web-ui/getting-started.md)
+    - [CLI Reference](cli-reference.md)
 
 === "🖥️ Web Interface"
 
-```
-**Using the web browser interface?** Learn how to use all features.
+    **Using the web browser interface?** Learn how to use all features.
 
-- [File Management](web-ui/file-management.md)
-- [Organization Workflows](web-ui/organization.md)
-- [Analysis & Search](web-ui/analysis-search.md)
-- [Settings & Configuration](web-ui/settings.md)
-```
+    - [File Management](web-ui/file-management.md)
+    - [Organization Workflows](web-ui/organization.md)
+    - [Analysis & Search](web-ui/analysis-search.md)
+    - [Settings & Configuration](web-ui/settings.md)
 
 === "📚 API Reference"
 
-```
-**Building integrations?** Use our REST API.
+    **Building integrations?** Use our REST API.
 
-- [Authentication](api/authentication.md)
-- [File Endpoints](api/file-endpoints.md)
-- [Organization Endpoints](api/organization-endpoints.md)
-- [Search & Analysis](api/search-endpoints.md)
-```
+    - [Authentication](api/authentication.md)
+    - [File Endpoints](api/file-endpoints.md)
+    - [Organization Endpoints](api/organization-endpoints.md)
+    - [Search & Analysis](api/search-endpoints.md)
 
 === "🔧 Deployment"
 
-```
-**Running your own instance?** Deploy and configure File Organizer.
+    **Running your own instance?** Deploy and configure File Organizer.
 
-- [Installation](admin/installation.md)
-- [Deployment](admin/deployment.md)
-- [Configuration](admin/configuration.md)
-- [Monitoring](admin/monitoring.md)
-```
+    - [Installation](admin/installation.md)
+    - [Deployment](admin/deployment.md)
+    - [Configuration](admin/configuration.md)
+    - [Monitoring](admin/monitoring.md)
 
 === "👨‍💻 Development"
 
-```
-**Extending File Organizer?** Build plugins and integrations.
+    **Extending File Organizer?** Build plugins and integrations.
 
-- [Architecture](developer/architecture.md)
-- [Plugin Development](developer/plugin-development.md)
-- [API Clients](developer/api-clients.md)
-```
+    - [Architecture](developer/architecture.md)
+    - [Plugin Development](developer/plugin-development.md)
+    - [API Clients](developer/api-clients.md)
 
 ## Key Features
 
