@@ -7,7 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
  * @see https://playwright.dev/docs/intro
  */
 export default defineConfig({
-  testDir: "./tests/frontend/e2e",
+  testDir: "./tests/frontend",
   testMatch: "**/*.spec.js",
   timeout: 30 * 1000,
   expect: {
