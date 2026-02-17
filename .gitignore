@@ -40,6 +40,9 @@ dist/
 build/
 *.egg
 
+# MkDocs build output
+site/
+
 # Type checking and linting
 .mypy_cache/
 .ruff_cache/

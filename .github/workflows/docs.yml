@@ -100,11 +100,13 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Validate markdown
-        run: |
-          cd file_organizer_v2
-          pip install mdformat
-          mdformat --check docs/
+      # mdformat check removed - it enforces 70-char horizontal rules which conflicts
+      # with Markdown best practices (---). See PR #299 feedback.
+      # - name: Validate markdown
+      #   run: |
+      #     cd file_organizer_v2
+      #     pip install mdformat
+      #     mdformat --check docs/
 
       - name: Lint YAML
         run: |
