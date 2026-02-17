@@ -1,6 +1,8 @@
 """Search endpoints."""
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -17,19 +19,19 @@ class SearchResult(BaseModel):
     filename: str
     path: str
     score: float
-    type: str | None = None
-    size: int | None = None
-    created: str | None = None
+    type: Optional[str] = None
+    size: Optional[int] = None
+    created: Optional[str] = None
 
 
 @router.get("/search", response_model=list[SearchResult])
 def search(
     q: str = Query(None, description="Search query"),
-    type: str | None = None,
-    limit: int | None = None,
-    offset: int | None = None,
+    type: Optional[str] = None,
+    limit: Optional[int] = None,
+    offset: Optional[int] = None,
     settings: ApiSettings = Depends(get_settings),
-) -> list[SearchResult] | JSONResponse:
+) -> "list[SearchResult] | JSONResponse":
     """Search for files by query.
 
     Supports filtering, pagination, and relevance scoring.

@@ -311,11 +311,11 @@ class FileUploadResponse(BaseModel):
     size: int
 
 
-@router.post("/files/upload", response_model=FileUploadResponse | list[FileUploadResponse])
+@router.post("/files/upload")
 async def upload_files(
     files: list[UploadFile] = File(None),
-    file: UploadFile = File(None),
-) -> FileUploadResponse | list[FileUploadResponse] | JSONResponse:
+    file: Optional[UploadFile] = File(None),
+) -> "FileUploadResponse | list[FileUploadResponse] | JSONResponse":
     """Upload one or more files.
 
     Accepts either a single file or multiple files.

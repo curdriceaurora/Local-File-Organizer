@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile
 from fastapi.responses import JSONResponse
@@ -196,7 +197,7 @@ class SimpleOrganizeRequest(BaseModel):
     """Simple single-file organization request."""
 
     filename: str
-    folder_suggestion: str | None = None
+    folder_suggestion: Optional[str] = None
 
 
 class SimpleOrganizeResponse(BaseModel):
@@ -209,10 +210,10 @@ class SimpleOrganizeResponse(BaseModel):
 
 @router.post("/organize", response_model=SimpleOrganizeResponse)
 async def organize_file(
-    file: UploadFile | None = File(None),
-    request: SimpleOrganizeRequest | None = None,
+    file: Optional[UploadFile] = File(None),
+    request: Optional[SimpleOrganizeRequest] = None,
     settings: ApiSettings = Depends(get_settings),
-) -> SimpleOrganizeResponse | JSONResponse:
+) -> "SimpleOrganizeResponse | JSONResponse":
     """Organize a single file with naming and folder suggestions.
 
     Accepts either file upload (multipart/form-data) or JSON request body.
