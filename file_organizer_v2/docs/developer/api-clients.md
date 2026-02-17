@@ -100,19 +100,13 @@ const results = await client.organize.getResults(job.jobId);
 
 ### Authentication
 
+The API uses API key authentication via the `X-API-Key` header.
+API keys follow the format `fo_<id>_<token>`.
+
 ```bash
-# API Key header
+# API Key header (recommended)
 curl -H "X-API-Key: fo_abc123_token456" \
   http://localhost:8000/api/v1/files
-
-# JWT Bearer token
-curl -H "Authorization: Bearer eyJhbGc..." \
-  http://localhost:8000/api/v1/files
-
-# Login to get JWT
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "user", "password": "pass"}'
 ```
 
 ### File Operations

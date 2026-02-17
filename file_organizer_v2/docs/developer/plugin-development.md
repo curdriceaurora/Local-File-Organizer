@@ -173,12 +173,10 @@ class MyPlugin(Plugin):
 
 ```python
 from file_organizer.core import FileOrganizer
-from file_organizer.db import SessionLocal
 
 class MyPlugin:
     def __init__(self):
         self.core = FileOrganizer()
-        self.db = SessionLocal()
 
     async def process_file(self, file_path):
         result = await self.core.organize_file(file_path)
@@ -227,10 +225,10 @@ async def test_on_upload(plugin):
 ```python
 @pytest.mark.asyncio
 async def test_plugin_integration(app_client):
-    # Upload file
-    response = await app_client.post(
-        "/api/v1/files/upload",
-        files={"file": ("test.txt", b"content")}
+    # List files (requires ?path= parameter)
+    response = await app_client.get(
+        "/api/v1/files",
+        params={"path": "/test-dir"}
     )
 
     # Check plugin was called
