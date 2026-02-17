@@ -1,6 +1,7 @@
 """Configuration endpoints."""
 from __future__ import annotations
 
+from enum import Enum
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -10,6 +11,15 @@ from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 
 router = APIRouter(tags=["config"])
+
+
+class OrganizationMethod(str, Enum):
+    """Valid organization methods."""
+
+    PARA = "PARA"
+    DATE = "DATE"
+    CONTENT = "content_based"
+    NONE = "none"
 
 
 class AISettings(BaseModel):
@@ -30,30 +40,51 @@ class StorageSettings(BaseModel):
 class OrganizationSettings(BaseModel):
     """Organization method settings."""
 
-    method: str = "PARA"
+    method: OrganizationMethod = OrganizationMethod.PARA
     auto_organize: bool = False
 
 
 class AISettingsUpdate(BaseModel):
-    """Partial AI model settings for updates."""
+    """Partial AI model settings for updates.
+    
+    All fields are optional. When provided, they must pass validation.
+    """
 
     model: Optional[str] = None
     temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(default=None, gt=0, le=100000)
 
+    class Config:
+        """Pydantic config to validate fields even when None is allowed."""
+        validate_assignment = True
+
 
 class StorageSettingsUpdate(BaseModel):
-    """Partial storage configuration for updates."""
+    """Partial storage configuration for updates.
+    
+    All fields are optional. When provided, they must pass validation.
+    """
 
     base_path: Optional[str] = None
     auto_backup: Optional[bool] = None
 
+    class Config:
+        """Pydantic config to validate fields even when None is allowed."""
+        validate_assignment = True
+
 
 class OrganizationSettingsUpdate(BaseModel):
-    """Partial organization method settings for updates."""
+    """Partial organization method settings for updates.
+    
+    All fields are optional. When provided, they must pass validation.
+    """
 
-    method: Optional[str] = None
+    method: Optional[OrganizationMethod] = None
     auto_organize: Optional[bool] = None
+
+    class Config:
+        """Pydantic config to validate fields even when None is allowed."""
+        validate_assignment = True
 
 
 class ConfigUpdateRequest(BaseModel):
