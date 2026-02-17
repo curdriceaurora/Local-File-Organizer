@@ -53,7 +53,7 @@ class TestWorkflowDirectory:
 
     def test_all_expected_workflows_exist(self) -> None:
         """Verify all expected workflow files are present."""
-        expected_workflows = ["ci.yml", "release.yml", "docker.yml", "security.yml"]
+        expected_workflows = ["ci.yml", "ci-full.yml", "release.yml", "docker.yml", "security.yml"]
         for workflow in expected_workflows:
             path = WORKFLOWS_DIR / workflow
             assert path.exists(), f"Expected workflow file not found: {workflow}"
@@ -99,24 +99,41 @@ class TestCIWorkflow:
         jobs = workflow.get("jobs", {})
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
-    def test_ci_test_matrix_has_python_versions(self, workflow: dict) -> None:
-        """Verify test job uses a Python version matrix."""
-        test_job = workflow.get("jobs", {}).get("test", {})
-        strategy = test_job.get("strategy", {})
-        matrix = strategy.get("matrix", {})
-        python_versions = matrix.get("python-version", [])
-        assert len(python_versions) >= 2, (
-            "Test job should test against multiple Python versions"
+    def test_ci_uses_python_312(self, workflow: dict) -> None:
+        """Verify fast CI test job uses Python 3.12 without a matrix strategy."""
+        jobs = workflow.get("jobs", {})
+        assert "test" in jobs, "CI workflow should have a 'test' job"
+        test_job = jobs["test"]
+
+        # Ensure the test job does not use a matrix strategy
+        strategy = test_job.get("strategy")
+        if strategy is not None:
+            assert "matrix" not in strategy, (
+                "Fast CI 'test' job should not use a matrix strategy"
+            )
+
+        # Ensure the setup-python step uses Python 3.12
+        steps = test_job.get("steps", [])
+        assert isinstance(steps, list), (
+            "Fast CI 'test' job must define a list of steps"
         )
 
-    def test_ci_test_matrix_includes_target_versions(self, workflow: dict) -> None:
-        """Verify test matrix includes key Python versions."""
-        test_job = workflow.get("jobs", {}).get("test", {})
-        strategy = test_job.get("strategy", {})
-        matrix = strategy.get("matrix", {})
-        python_versions = matrix.get("python-version", [])
-        assert "3.12" in python_versions, "Test matrix should include Python 3.12"
-        assert "3.9" in python_versions, "Test matrix should include Python 3.9"
+        setup_python_step = None
+        for step in steps:
+            uses = step.get("uses")
+            if isinstance(uses, str) and "actions/setup-python" in uses:
+                setup_python_step = step
+                break
+
+        assert setup_python_step is not None, (
+            "Fast CI 'test' job must include an actions/setup-python step"
+        )
+
+        with_section = setup_python_step.get("with", {})
+        python_version = with_section.get("python-version")
+        assert python_version == "3.12", (
+            "Fast CI 'test' job must use python-version '3.12'"
+        )
 
     def test_ci_uses_pip_caching(self, workflow: dict) -> None:
         """Verify CI workflow uses pip caching for performance."""
@@ -136,6 +153,185 @@ class TestCIWorkflow:
         """Verify CI workflow has concurrency settings to cancel stale runs."""
         assert "concurrency" in workflow, (
             "CI workflow should set concurrency to cancel stale runs"
+        )
+
+    def test_ci_has_frontend_test_job(self, workflow: dict) -> None:
+        """Verify CI workflow includes a frontend-test job."""
+        jobs = workflow.get("jobs", {})
+        assert "frontend-test" in jobs, "CI workflow should have a 'frontend-test' job"
+
+    def test_ci_has_docs_accuracy_step(self, workflow: dict) -> None:
+        """Verify test job includes documentation accuracy tests."""
+        test_job = workflow.get("jobs", {}).get("test", {})
+        steps = test_job.get("steps", [])
+
+        # Look for a step that runs documentation accuracy tests
+        has_docs_step = False
+        for step in steps:
+            if not isinstance(step, dict):
+                continue
+            step_name = step.get("name", "")
+            run_cmd = step.get("run", "")
+            if "documentation" in step_name.lower() or "tests/docs" in run_cmd:
+                has_docs_step = True
+                break
+
+        assert has_docs_step, (
+            "Test job should include a step for documentation accuracy tests"
+        )
+
+
+class TestCIFullWorkflow:
+    """Tests for the CI Full Matrix workflow (ci-full.yml)."""
+
+    @pytest.fixture
+    def workflow(self) -> dict[str, Any]:
+        return load_workflow("ci-full.yml")
+
+    def test_ci_full_has_name(self, workflow: dict) -> None:
+        """Verify CI Full workflow has a name."""
+        assert "name" in workflow, "CI Full workflow must have a name"
+
+    def test_ci_full_triggers_on_pr_to_main(self, workflow: dict) -> None:
+        """Verify CI Full triggers on pull requests to main."""
+        triggers = get_triggers(workflow)
+        assert triggers, "CI Full workflow must define triggers"
+        assert "pull_request" in triggers, "CI Full should trigger on pull_request"
+        pr_config = triggers.get("pull_request", {})
+        branches = pr_config.get("branches", [])
+        assert "main" in branches, "CI Full should trigger on PRs to main"
+
+    def test_ci_full_supports_manual_trigger(self, workflow: dict) -> None:
+        """Verify CI Full can be triggered manually."""
+        triggers = get_triggers(workflow)
+        assert "workflow_dispatch" in triggers, (
+            "CI Full should support workflow_dispatch for manual triggers"
+        )
+
+    def test_ci_full_has_test_matrix_job(self, workflow: dict) -> None:
+        """Verify CI Full workflow includes a test-matrix job."""
+        jobs = workflow.get("jobs", {})
+        assert "test-matrix" in jobs, "CI Full workflow should have a 'test-matrix' job"
+
+    def test_ci_full_test_matrix_has_python_versions(self, workflow: dict) -> None:
+        """Verify test-matrix job uses multiple Python versions."""
+        test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
+        strategy = test_matrix_job.get("strategy", {})
+        matrix = strategy.get("matrix", {})
+        python_versions = matrix.get("python-version", [])
+        assert len(python_versions) >= 2, (
+            "Test-matrix job should test against multiple Python versions"
+        )
+
+    def test_ci_full_test_matrix_includes_versions(self, workflow: dict) -> None:
+        """Verify test matrix includes Python 3.9, 3.10, 3.11 but NOT 3.12."""
+        test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
+        strategy = test_matrix_job.get("strategy", {})
+        matrix = strategy.get("matrix", {})
+        python_versions = matrix.get("python-version", [])
+        assert "3.9" in python_versions, "Test matrix should include Python 3.9"
+        assert "3.10" in python_versions, "Test matrix should include Python 3.10"
+        assert "3.11" in python_versions, "Test matrix should include Python 3.11"
+        assert "3.12" not in python_versions, (
+            "Test matrix should NOT include Python 3.12 (used only in fast CI)"
+        )
+
+    def test_ci_full_test_matrix_does_not_collect_coverage(
+        self, workflow: dict
+    ) -> None:
+        """Ensure test-matrix job does not collect coverage."""
+        test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
+        steps = test_matrix_job.get("steps", [])
+        for step in steps:
+            if not isinstance(step, dict):
+                continue
+            run_cmd = step.get("run", "")
+            assert "--cov" not in run_cmd, (
+                "test-matrix job should not collect coverage (no '--cov' in commands)"
+            )
+
+    def test_ci_full_has_frontend_compat_job(self, workflow: dict) -> None:
+        """Verify CI Full workflow includes a frontend-compat job using Node 18.x."""
+        jobs = workflow.get("jobs", {})
+        assert "frontend-compat" in jobs, (
+            "CI Full workflow should have a 'frontend-compat' job"
+        )
+        frontend_compat_job = jobs.get("frontend-compat", {})
+        steps = frontend_compat_job.get("steps", [])
+        assert steps, "Frontend-compat job should define steps"
+
+        node_setup_steps = [
+            step
+            for step in steps
+            if isinstance(step, dict)
+            and isinstance(step.get("uses"), str)
+            and step["uses"].startswith("actions/setup-node")
+        ]
+        assert node_setup_steps, (
+            "Frontend-compat job should use actions/setup-node to configure Node"
+        )
+
+        for step in node_setup_steps:
+            node_version = step.get("with", {}).get("node-version")
+            assert node_version, (
+                "Frontend-compat job's setup-node step should specify a node-version"
+            )
+            assert str(node_version).startswith("18"), (
+                "Frontend-compat job should use Node 18.x for compatibility testing"
+            )
+
+    def test_ci_full_has_e2e_placeholder_job(self, workflow: dict) -> None:
+        """Verify CI Full workflow includes a disabled E2E placeholder job."""
+        jobs = workflow.get("jobs", {})
+        assert "frontend-e2e" in jobs, (
+            "CI Full workflow should have a 'frontend-e2e' placeholder job"
+        )
+        e2e_job = jobs["frontend-e2e"]
+
+        # The E2E job should remain a placeholder and must not run real E2E tests
+        steps = e2e_job.get("steps", [])
+        for step in steps:
+            if not isinstance(step, dict):
+                continue
+            # Check that no step uses setup-node action
+            uses = step.get("uses", "")
+            assert "setup-node" not in uses, (
+                "Frontend E2E placeholder job must not set up Node.js"
+            )
+            # Check run commands for actual E2E test execution (not just mentions in echo)
+            run_cmd = step.get("run", "")
+            # Only check non-echo lines for actual commands
+            for line in run_cmd.split('\n'):
+                line_stripped = line.strip()
+                # Skip echo statements and comments
+                if line_stripped.startswith('echo') or line_stripped.startswith('#'):
+                    continue
+                # Check for actual playwright or E2E test commands
+                assert "playwright install" not in line_stripped.lower(), (
+                    "Frontend E2E placeholder job must not install Playwright"
+                )
+                assert "npm run test:e2e" not in line_stripped.lower(), (
+                    "Frontend E2E placeholder job must not run E2E tests"
+                )
+                assert "npx playwright test" not in line_stripped.lower(), (
+                    "Frontend E2E placeholder job must not execute Playwright tests"
+                )
+
+        # Verify the job only has echo/informational steps
+        run_steps = [
+            step
+            for step in steps
+            if isinstance(step, dict) and "run" in step
+        ]
+        assert run_steps, (
+            "Frontend E2E placeholder job should have run steps that document "
+            "that E2E tests are disabled"
+        )
+
+    def test_ci_full_has_concurrency(self, workflow: dict) -> None:
+        """Verify CI Full workflow has concurrency settings to cancel stale runs."""
+        assert "concurrency" in workflow, (
+            "CI Full workflow should set concurrency to cancel stale runs"
         )
 
 
