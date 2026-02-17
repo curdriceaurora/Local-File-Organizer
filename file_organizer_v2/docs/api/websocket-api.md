@@ -25,21 +25,20 @@ ws.onmessage = (event) => {
 };
 ```
 
-**Node.js Alternative**: You can also use the `Authorization: Bearer` header with the Node.js `ws` library:
+**Query Parameter Authentication**:
+
+All WebSocket connections must use the `?token=` query parameter for authentication. This is the only method that works with browser WebSocket APIs.
 
 ```javascript
+// Standard approach for both browser and Node.js
 const WebSocket = require('ws');
 const { randomUUID } = require('crypto');
 
 const clientId = randomUUID();
+const token = 'YOUR_API_KEY';
 
 const ws = new WebSocket(
-  `ws://localhost:8000/api/v1/ws/${clientId}`,
-  {
-    headers: {
-      'Authorization': 'Bearer YOUR_API_KEY'
-    }
-  }
+  `ws://localhost:8000/api/v1/ws/${clientId}?token=${token}`
 );
 
 ws.on('open', () => {
