@@ -68,14 +68,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    // Development: Try npm dev first, fall back to Python server
-    // CI: Use || true because CI environments don't have npm dev setup
-    // In CI, the server URL health check will still fail if no server is running,
-    // providing proper error feedback instead of silently succeeding
-    // For local development, remove '|| true' to catch server startup errors immediately
-    command: process.env.CI
-      ? "npm run dev 2>/dev/null || python3 -m file_organizer.web.app 2>/dev/null || true"
-      : "npm run dev 2>/dev/null || python3 -m file_organizer.web.app",
+    command: "npm run dev 2>/dev/null || python3 -m file_organizer.web.app 2>/dev/null || true",
     url: "http://localhost:5000",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
