@@ -101,7 +101,7 @@ nav:
       - Contributing: developer/contributing.md
       - Testing: developer/testing.md
   - CLI Reference: cli-reference.md
-  - Troubleshooting: TROUBLESHOOTING.md
+  - Troubleshooting: troubleshooting.md
   - FAQ: faq.md
 
 extra:
