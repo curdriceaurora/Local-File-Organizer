@@ -352,7 +352,7 @@ describe("Search Interface Component", () => {
       const resultCount = document.querySelector(".result-count");
 
       resultCount.textContent = `${mockSearchResults.length} results`;
-      expect(resultCount.textContent).toContain(mockSearchResults.length);
+      expect(resultCount.textContent).toContain(String(mockSearchResults.length));
     });
 
     it("should render search results", () => {

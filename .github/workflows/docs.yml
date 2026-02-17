@@ -1,0 +1,115 @@
+name: Build and Deploy Documentation
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'file_organizer_v2/docs/**'
+      - 'file_organizer_v2/mkdocs.yml'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'file_organizer_v2/docs/**'
+      - 'file_organizer_v2/mkdocs.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd file_organizer_v2
+          pip install -e .[docs] mkdocs-minify-plugin
+
+      - name: Build documentation
+        run: |
+          cd file_organizer_v2
+          mkdocs build --strict
+
+      - name: Upload documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: file_organizer_v2/site/
+          retention-days: 30
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd file_organizer_v2
+          pip install -e .[docs]
+
+      - name: Build documentation
+        run: |
+          cd file_organizer_v2
+          mkdocs build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./file_organizer_v2/site
+
+  test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # mdformat check removed - it enforces 70-char horizontal rules which conflicts
+      # with Markdown best practices (---). See PR #299 feedback.
+      # - name: Validate markdown
+      #   run: |
+      #     cd file_organizer_v2
+      #     pip install mdformat
+      #     mdformat --check docs/
+
+      - name: Lint YAML
+        run: |
+          cd file_organizer_v2
+          pip install yamllint
+          yamllint mkdocs.yml

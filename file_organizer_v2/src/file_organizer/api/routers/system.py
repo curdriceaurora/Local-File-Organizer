@@ -112,7 +112,10 @@ def get_stats(
     analyzer = StorageAnalyzer()
     stats = analyzer.analyze_directory(target, max_depth=max_depth, use_cache=use_cache)
 
-    largest_files = [file_info_from_path(Path(info.path)) for info in stats.largest_files]
+    largest_files = []
+    for info in stats.largest_files:
+        validated_path: Path = resolve_path(str(info.path), settings.allowed_paths)
+        largest_files.append(file_info_from_path(validated_path))
 
     return StorageStatsResponse(
         total_size=stats.total_size,

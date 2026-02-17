@@ -40,6 +40,9 @@ dist/
 build/
 *.egg
 
+# MkDocs build output
+site/
+
 # Type checking and linting
 .mypy_cache/
 .ruff_cache/
@@ -55,6 +58,9 @@ output/
 .coverage
 coverage.xml
 htmlcov/
+
+# MkDocs build output
+site/
 
 # Backup files
 *.bak
@@ -88,3 +94,7 @@ __snapshots__/
 
 # Node modules (if not already there)
 node_modules/
+
+# MkDocs build output
+file_organizer_v2/site/
+site/

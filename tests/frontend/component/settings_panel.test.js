@@ -352,6 +352,7 @@ describe("Settings Panel Component", () => {
 
     it("should ask for confirmation before reset", () => {
       document.body.innerHTML = `
+        <button class="reset-btn">Reset Settings</button>
         <div id="reset-dialog" style="display: none;">
           <p>Are you sure? This will reset all settings to default.</p>
           <button class="confirm-reset">Yes, Reset</button>

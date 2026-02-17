@@ -1,0 +1,112 @@
+site_name: File Organizer Documentation
+site_url: https://curdriceaurora.github.io/Local-File-Organizer/
+repo_url: https://github.com/curdriceaurora/Local-File-Organizer
+repo_name: Local-File-Organizer
+copyright: Copyright &copy; 2024-2026 File Organizer Contributors
+
+theme:
+  name: material
+  language: en
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.select
+    - content.tabs.link
+
+plugins:
+  - search:
+      lang:
+        - en
+  - minify:
+      minify_html: true
+      minify_js: true
+      minify_css: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - pymdownx.highlight:
+      use_pygments: true
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:pymdownx.emoji.twemoji
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg
+  - toc:
+      permalink: true
+      title: Table of Contents
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Web UI Guide:
+      - Overview: web-ui/index.md
+      - Getting Started: web-ui/getting-started.md
+      - File Management: web-ui/file-management.md
+      - Organization Workflows: web-ui/organization.md
+      - Analysis & Search: web-ui/analysis-search.md
+      - Settings & Configuration: web-ui/settings.md
+  - API Reference:
+      - Overview: api/index.md
+      - Authentication: api/authentication.md
+      - File Management: api/file-endpoints.md
+      - Organization: api/organization-endpoints.md
+      - Analysis: api/analysis-endpoints.md
+      - Search: api/search-endpoints.md
+      - WebSocket Events: api/websocket-api.md
+  - Admin Guide:
+      - Overview: admin/index.md
+      - Installation: admin/installation.md
+      - Deployment: admin/deployment.md
+      - Configuration: admin/configuration.md
+      - Monitoring & Maintenance: admin/monitoring.md
+      - Troubleshooting: admin/troubleshooting.md
+      - Security: admin/security.md
+  - Developer Guide:
+      - Overview: developer/index.md
+      - Architecture: developer/architecture.md
+      - Plugin Development: developer/plugin-development.md
+      - API Clients: developer/api-clients.md
+      - Contributing: developer/contributing.md
+      - Testing: developer/testing.md
+  - CLI Reference: cli-reference.md
+  - Troubleshooting: troubleshooting.md
+  - FAQ: faq.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/curdriceaurora/Local-File-Organizer
+    - icon: fontawesome/brands/python
+      link: https://python.org

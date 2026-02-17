@@ -1,11 +1,13 @@
 """Configuration endpoints."""
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_settings, require_admin_user
 
 router = APIRouter(tags=["config"])
 
@@ -32,6 +34,14 @@ class OrganizationSettings(BaseModel):
     auto_organize: bool = False
 
 
+class ConfigUpdateRequest(BaseModel):
+    """Configuration update request."""
+
+    ai: Optional[AISettings] = None
+    storage: Optional[StorageSettings] = None
+    organization: Optional[OrganizationSettings] = None
+
+
 class ConfigResponse(BaseModel):
     """Complete configuration response."""
 
@@ -55,34 +65,31 @@ def get_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
 
 @router.put("/config", response_model=ConfigResponse)
 def update_config(
-    config_update: dict,
+    request: ConfigUpdateRequest,
     settings: ApiSettings = Depends(get_settings),
+    _admin: object = Depends(require_admin_user),
 ) -> ConfigResponse:
     """Update configuration with provided values."""
     global _config
 
     # Update config with provided values
-    if "organization" in config_update:
-        _config.organization = OrganizationSettings(**{
-            **_config.organization.model_dump(),
-            **config_update["organization"],
-        })
-    if "ai" in config_update:
-        _config.ai = AISettings(**{
-            **_config.ai.model_dump(),
-            **config_update["ai"],
-        })
-    if "storage" in config_update:
-        _config.storage = StorageSettings(**{
-            **_config.storage.model_dump(),
-            **config_update["storage"],
-        })
+    if request.organization is not None:
+        _config.organization = request.organization
+
+    if request.ai is not None:
+        _config.ai = request.ai
+
+    if request.storage is not None:
+        _config.storage = request.storage
 
     return _config
 
 
 @router.post("/config/reset", response_model=ConfigResponse)
-def reset_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
+def reset_config(
+    settings: ApiSettings = Depends(get_settings),
+    _admin: object = Depends(require_admin_user),
+) -> ConfigResponse:
     """Reset configuration to defaults."""
     global _config
     _config = ConfigResponse()

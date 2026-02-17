@@ -34,10 +34,22 @@ def resolve_database_url(database: str) -> str:
         raise ValueError("Database path/URL cannot be empty")
     if "\x00" in value:
         raise ValueError("Database path/URL contains null byte")
+
+    # Reject dangerous SQL characters that could enable SQL injection
+    dangerous_chars = [";", "--", "/*", "*/"]
+    if any(seq in value for seq in dangerous_chars):
+        raise ValueError("Database path/URL contains invalid characters")
+
     if value == ":memory:":
         return "sqlite+pysqlite:///:memory:"
     if _URL_SCHEME_RE.match(value):
-        return value
+        # For full URLs, use SQLAlchemy's validator
+        from sqlalchemy.engine.url import make_url
+        try:
+            url = make_url(value)
+            return url.render_as_string(hide_password=False)
+        except Exception as e:
+            raise ValueError(f"Invalid database URL: {e}") from e
 
     # Preserve relative-vs-absolute semantics expected by SQLAlchemy:
     # - "db.sqlite" -> sqlite:///db.sqlite (relative)
