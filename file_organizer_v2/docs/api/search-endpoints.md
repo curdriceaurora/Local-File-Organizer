@@ -1,8 +1,8 @@
 # Search Endpoints
 
 !!! warning "Coming Soon"
-    The Search API is currently under development and not yet available.
-    The endpoints documented below represent the planned API surface.
+The Search API is currently under development and not yet available.
+The endpoints documented below represent the planned API surface.
 
 ## Planned Endpoints
 

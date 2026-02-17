@@ -105,7 +105,7 @@ curl -X GET "http://localhost:8000/api/v1/files?path=/" \
 ### Search (Planned)
 
 !!! note
-    Search endpoints are under development and not yet available.
+Search endpoints are under development and not yet available.
 
 - `GET /api/v1/search` - Search files
 - `POST /api/v1/search/advanced` - Advanced search
