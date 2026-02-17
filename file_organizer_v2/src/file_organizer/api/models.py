@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 
 _MAX_PATH_LENGTH = 4096
 _USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,31}$")
@@ -46,6 +46,12 @@ class FileListResponse(BaseModel):
     total: int
     skip: int
     limit: int
+
+    @computed_field
+    @property
+    def files(self) -> list[FileInfo]:
+        """Alias for items field for API compatibility."""
+        return self.items
 
 
 class FileContentResponse(BaseModel):

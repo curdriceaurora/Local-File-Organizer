@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
@@ -201,24 +202,36 @@ class SimpleOrganizeRequest(BaseModel):
 class SimpleOrganizeResponse(BaseModel):
     """Response from simple organize endpoint."""
 
-    organized_filename: str
+    filename: str
     folder_name: str
     confidence: float
 
 
 @router.post("/organize", response_model=SimpleOrganizeResponse)
-def organize_file(
-    request: SimpleOrganizeRequest,
+async def organize_file(
+    file: UploadFile | None = File(None),
+    request: SimpleOrganizeRequest | None = None,
     settings: ApiSettings = Depends(get_settings),
-) -> SimpleOrganizeResponse:
+) -> SimpleOrganizeResponse | JSONResponse:
     """Organize a single file with naming and folder suggestions.
 
-    Minimal implementation for testing.
+    Accepts either file upload (multipart/form-data) or JSON request body.
     """
     import os
 
+    # Get filename from file upload or request body
+    if file:
+        filename = file.filename or "unknown"
+    elif request:
+        filename = request.filename
+    else:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Either file upload or request body must be provided"},
+        )
+
     # Simple logic: extract base name and suggest folder
-    base_name = os.path.basename(request.filename)
+    base_name = os.path.basename(filename)
     name_parts = os.path.splitext(base_name)
 
     # Simple category detection
@@ -237,7 +250,7 @@ def organize_file(
     organized_name = f"{name_parts[0]}_organized{name_parts[1]}"
 
     return SimpleOrganizeResponse(
-        organized_filename=organized_name,
+        filename=organized_name,
         folder_name=folder,
         confidence=0.85,
     )

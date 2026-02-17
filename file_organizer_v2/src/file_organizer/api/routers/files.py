@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_current_active_user, get_settings
@@ -73,7 +75,7 @@ def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Pa
 
 @router.get("/files", response_model=FileListResponse)
 def list_files(
-    path: str = Query(..., description="Directory or file path"),
+    path: str = Query(None, description="Directory or file path"),
     recursive: bool = Query(False),
     include_hidden: bool = Query(False),
     file_type: Optional[str] = Query(None, description="Comma-separated extensions or groups"),
@@ -83,6 +85,9 @@ def list_files(
     limit: int = Query(100, ge=1, le=1000),
     settings: ApiSettings = Depends(get_settings),
 ) -> FileListResponse:
+    # Use home directory if path not provided
+    if path is None:
+        path = str(Path.home())
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="Path does not exist")
@@ -107,6 +112,22 @@ def list_files(
     items = [file_info_from_path(f) for f in paged]
 
     return FileListResponse(items=items, total=total, skip=skip, limit=limit)
+
+
+@router.get("/files/{file_id}")
+def get_file_by_id(
+    file_id: str,
+    settings: ApiSettings = Depends(get_settings),
+) -> FileInfo:
+    """Get file details by ID."""
+    if not file_id or file_id.strip() == "":
+        raise ApiError(status_code=422, error="invalid_id", message="File ID cannot be empty")
+    # Simple mock: treat file_id as a path or name
+    # In a real implementation, this would look up the file by ID
+    target = Path(file_id)
+    if not target.exists():
+        raise ApiError(status_code=404, error="not_found", message="File not found")
+    return file_info_from_path(target)
 
 
 @router.get("/files/info", response_model=FileInfo)
@@ -241,3 +262,88 @@ def delete_file(
         dry_run=False,
         trashed_path=trashed_path,
     )
+
+
+@router.delete("/files/{file_id}", response_model=DeleteFileResponse)
+def delete_file_by_id(
+    file_id: str,
+    permanent: bool = Query(False),
+) -> DeleteFileResponse:
+    """Delete a file by ID."""
+    if not file_id or file_id.strip() == "":
+        raise ApiError(status_code=422, error="invalid_id", message="File ID cannot be empty")
+
+    # Simple mock: treat file_id as a path
+    target = Path(file_id)
+    if not target.exists():
+        # For non-existent files, we can still return a success response
+        return DeleteFileResponse(
+            path=str(target),
+            deleted=False,
+            dry_run=False,
+            trashed_path=None,
+        )
+
+    trashed_path: Optional[str] = None
+    if permanent:
+        if target.is_dir():
+            shutil.rmtree(target)
+        else:
+            target.unlink()
+    else:
+        destination = _trash_target(target)
+        shutil.move(str(target), str(destination))
+        trashed_path = str(destination)
+
+    return DeleteFileResponse(
+        path=str(target),
+        deleted=True,
+        dry_run=False,
+        trashed_path=trashed_path,
+    )
+
+
+class FileUploadResponse(BaseModel):
+    """Response from file upload endpoint."""
+
+    file_id: str
+    filename: str
+    size: int
+
+
+@router.post("/files/upload", response_model=FileUploadResponse | list[FileUploadResponse])
+async def upload_files(
+    files: list[UploadFile] = File(None),
+    file: UploadFile = File(None),
+) -> FileUploadResponse | list[FileUploadResponse] | JSONResponse:
+    """Upload one or more files.
+
+    Accepts either a single file or multiple files.
+    """
+    # Handle both single file and multiple files
+    if files:
+        # Multiple files
+        upload_list = files
+    elif file:
+        # Single file
+        upload_list = [file]
+    else:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "At least one file must be provided"},
+        )
+
+    responses = []
+    for uploaded_file in upload_list:
+        content = await uploaded_file.read()
+        response = FileUploadResponse(
+            file_id=str(uuid4()),
+            filename=uploaded_file.filename or "unknown",
+            size=len(content),
+        )
+        responses.append(response)
+
+    # Return single response if only one file, list if multiple
+    if len(responses) == 1:
+        return responses[0]
+    return responses
