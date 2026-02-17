@@ -166,6 +166,9 @@ def get_file_by_id(
     """Get file details by ID."""
     if not file_id or file_id.strip() == "":
         raise ApiError(status_code=422, error="invalid_id", message="File ID cannot be empty")
+    # Validate file_id has no path traversal characters (defense-in-depth)
+    if any(sep in file_id for sep in ("/", "\\")) or ".." in file_id:
+        raise ApiError(status_code=400, error="invalid_id", message="File ID has an invalid format")
     # Simple mock: treat file_id as a path or name
     # In a real implementation, this would look up the file by ID
     target = resolve_path(file_id, settings.allowed_paths)
@@ -273,17 +276,14 @@ def delete_file_by_id(
     """Delete a file by ID."""
     if not file_id or file_id.strip() == "":
         raise ApiError(status_code=422, error="invalid_id", message="File ID cannot be empty")
+    # Validate file_id has no path traversal characters (defense-in-depth)
+    if any(sep in file_id for sep in ("/", "\\")) or ".." in file_id:
+        raise ApiError(status_code=400, error="invalid_id", message="File ID has an invalid format")
 
     # Simple mock: treat file_id as a path (validated against allowed paths)
     target = resolve_path(file_id, settings.allowed_paths)
     if not target.exists():
-        # For non-existent files, we can still return a success response
-        return DeleteFileResponse(
-            path=str(target),
-            deleted=False,
-            dry_run=False,
-            trashed_path=None,
-        )
+        raise ApiError(status_code=404, error="not_found", message="File not found")
 
     trashed_path: Optional[str] = None
     if permanent:
@@ -314,7 +314,7 @@ class FileUploadResponse(BaseModel):
 
 @router.post("/files/upload", response_model=None)
 async def upload_files(
-    files: list[UploadFile] = File(None),
+    files: Optional[list[UploadFile]] = File(None),
     file: Optional[UploadFile] = File(None),
 ) -> FileUploadResponse | list[FileUploadResponse] | JSONResponse:
     """Upload one or more files.
