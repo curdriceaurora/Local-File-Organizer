@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import threading
 from functools import lru_cache
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
@@ -91,16 +91,15 @@ def _get_config_store() -> ConfigStore:
     return ConfigStore()
 
 
-def get_config_store(request: Optional[Request] = None) -> ConfigStore:
+def get_config_store(request: Request) -> ConfigStore:
     """Dependency to get the config store.
 
-    If a request is provided and has app.state.config_store, use that.
+    If the request has app.state.config_store, use that.
     Otherwise, fall back to the singleton instance.
     """
-    if request is not None and hasattr(request.app, "state"):
-        store = getattr(request.app.state, "config_store", None)
-        if store is not None:
-            return store
+    store = getattr(request.app.state, "config_store", None)
+    if store is not None:
+        return store
     return _get_config_store()
 
 
