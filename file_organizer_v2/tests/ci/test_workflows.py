@@ -179,6 +179,19 @@ class TestCIFullWorkflow:
         assert "3.10" in python_versions, "Test matrix should include Python 3.10"
         assert "3.11" in python_versions, "Test matrix should include Python 3.11"
 
+    def test_ci_full_test_matrix_does_not_collect_coverage(
+        self, workflow: dict
+    ) -> None:
+        """Ensure test-matrix job does not collect coverage."""
+        test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
+        steps = test_matrix_job.get("steps", [])
+        for step in steps:
+            if not isinstance(step, dict):
+                continue
+            run_cmd = step.get("run", "")
+            assert "--cov" not in run_cmd, (
+                "test-matrix job should not collect coverage (no '--cov' in commands)"
+            )
     def test_ci_full_has_frontend_compat_job(self, workflow: dict) -> None:
         """Verify CI Full workflow includes a frontend-compat job."""
         jobs = workflow.get("jobs", {})
