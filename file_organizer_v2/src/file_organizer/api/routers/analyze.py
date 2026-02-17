@@ -3,13 +3,25 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
 from loguru import logger
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.models.text_model import TextModel
+
+# Global model instance
+_text_model: TextModel | None = None
+
+
+def get_text_model() -> TextModel:
+    """Get or initialize the text model."""
+    global _text_model
+    if _text_model is None:
+        config = TextModel.get_default_config()
+        _text_model = TextModel(config)
+        _text_model.initialize()
+    return _text_model
 
 router = APIRouter(tags=["analyze"])
 
@@ -40,9 +52,9 @@ async def analyze(
     Note: Requires Ollama to be installed and running with a text model.
     """
     if content is None and file is None:
-        return JSONResponse(
+        raise HTTPException(
             status_code=400,
-            content={"detail": "Either content or file must be provided"},
+            detail="Either content or file must be provided",
         )
 
     if file:
@@ -59,23 +71,16 @@ async def analyze(
 
     try:
         # Initialize text model for AI-based analysis
-        # TODO: Consider moving model initialization to application startup
-        # and reusing across requests for better performance
-        config = TextModel.get_default_config()
-        text_model = TextModel(config)
-        text_model.initialize()
+        model = get_text_model()
 
         # Generate category using AI
-        category = _generate_category(text_model, text_content)
+        category = _generate_category(model, text_content)
 
         # Generate description using AI
-        description = _generate_description(text_model, text_content)
+        description = _generate_description(model, text_content)
 
         # Calculate confidence based on content length and clarity
         confidence = _calculate_confidence(text_content, description)
-
-        # Cleanup
-        text_model.cleanup()
 
         logger.info(f"Analysis complete: category={category}, confidence={confidence:.2f}")
 

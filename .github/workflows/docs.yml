@@ -37,7 +37,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd file_organizer_v2
-          pip install -e .[docs]
+          pip install -e .[docs] mkdocs-minify-plugin
 
       - name: Build documentation
         run: |
