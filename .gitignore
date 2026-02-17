@@ -56,6 +56,9 @@ output/
 coverage.xml
 htmlcov/
 
+# MkDocs build output
+site/
+
 # Backup files
 *.bak
 
