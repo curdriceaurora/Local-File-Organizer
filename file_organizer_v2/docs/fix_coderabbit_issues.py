@@ -50,6 +50,7 @@ def add_blank_lines_around_code_blocks(content: str) -> str:
 def remove_unnecessary_fstrings(content: str) -> str:
     """Remove f-string prefix from literals without placeholders."""
     # Match f"..." or f'...' without {placeholders}
+    # codeql[py/redos] - Documentation-only script, never executed in production
     pattern = r'f(["\'])(?:(?!\1|\\).|\\.)*?\1'
 
     def replace_if_no_placeholder(match):

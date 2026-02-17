@@ -215,6 +215,7 @@ class TestDockerWorkflow:
     def test_docker_pushes_to_ghcr(self, workflow: dict) -> None:
         """Verify Docker workflow pushes to GitHub Container Registry."""
         workflow_text = yaml.dump(workflow)
+        # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
         assert "ghcr.io" in workflow_text, (
             "Docker workflow should push to ghcr.io"
         )

@@ -36,7 +36,9 @@ class TestPublishConfig:
     def test_default_config_values(self) -> None:
         """Default config has standard PyPI URLs."""
         config = PublishConfig()
+        # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
         assert "pypi.org" in config.pypi_url
+        # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
         assert "test.pypi.org" in config.test_pypi_url
 
     def test_default_token_env_var(self) -> None:
@@ -187,6 +189,7 @@ class TestPublishPypi:
         publish_pypi(dist, test=True)
 
         call_args = mock_run.call_args[0][0]
+        # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
         assert any("test.pypi.org" in str(arg) for arg in call_args)
 
     @patch("publish._run_command")
@@ -200,6 +203,7 @@ class TestPublishPypi:
         publish_pypi(dist, test=False)
 
         call_args = mock_run.call_args[0][0]
+        # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
         assert any("upload.pypi.org" in str(arg) for arg in call_args)
 
     @patch("publish._run_command")

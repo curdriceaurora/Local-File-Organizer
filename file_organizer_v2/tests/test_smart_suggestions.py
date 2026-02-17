@@ -347,7 +347,8 @@ class TestSuggestionFeedback:
     @pytest.fixture
     def temp_feedback_file(self):
         """Create temporary feedback file."""
-        temp_file = Path(tempfile.mktemp(suffix='.json'))
+        with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as _tmp:
+            temp_file = Path(_tmp.name)
         yield temp_file
         if temp_file.exists():
             temp_file.unlink()
