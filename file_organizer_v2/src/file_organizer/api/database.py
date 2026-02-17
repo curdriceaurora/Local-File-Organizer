@@ -49,7 +49,7 @@ def resolve_database_url(database: str) -> str:
             url = make_url(value)
             return str(url)
         except Exception as e:
-            raise ValueError(f"Invalid database URL: {e}")
+            raise ValueError(f"Invalid database URL: {e}") from e
 
     # Preserve relative-vs-absolute semantics expected by SQLAlchemy:
     # - "db.sqlite" -> sqlite:///db.sqlite (relative)

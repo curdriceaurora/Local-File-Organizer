@@ -179,6 +179,7 @@ file_organizer = [
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -195,7 +196,7 @@ ignore = [
     "UP045", # type hint upgrades handled project-wide
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
 # MyPy configuration (type checking)
