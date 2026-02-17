@@ -1,8 +1,7 @@
 """File analysis endpoints."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
@@ -31,9 +30,9 @@ async def analyze(
     Returns description, category, and confidence score.
     """
     if content is None and file is None:
-        return JSONResponse(
+        raise HTTPException(
             status_code=400,
-            content={"detail": "Either content or file must be provided"},
+            detail="Either content or file must be provided",
         )
 
     if file:
