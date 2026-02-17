@@ -307,3 +307,18 @@ Each GitHub issue contains detailed specifications for its implementation.
 **Last Updated**: 2026-02-17T14:23:08Z
 **Updated By**: Claude Code
 **Status**: CCPM Synchronized
+
+---
+
+## Frontend / CI Issues
+
+**Issue #331: [Bug] Playwright E2E tests fail in CI: webServer exits early**
+- **Priority**: Medium
+- **Epic**: phase-6-web-interface
+- **Status**: Open (Backlog)
+- **Created**: 2026-02-17
+- **GitHub**: https://github.com/curdriceaurora/Local-File-Organizer/issues/331
+- **Effort**: 2-4 hours
+- **Root Cause**: `playwright.config.js` webServer requires full backend (Ollama, Redis, Celery) which is unavailable in CI
+- **Workaround**: `continue-on-error: true` in CI — component tests still pass
+- **Proposed Fix**: Mock webServer, separate E2E workflow, or Docker Compose in CI
