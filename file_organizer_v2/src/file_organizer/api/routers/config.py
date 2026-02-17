@@ -12,6 +12,7 @@ from file_organizer.api.dependencies import get_settings
 
 router = APIRouter(tags=["config"])
 
+# TypeVar for generic merge function - represents a BaseModel subclass
 T = TypeVar("T", bound=BaseModel)
 
 
@@ -47,7 +48,7 @@ class OrganizationSettings(BaseModel):
 
 
 class AISettingsUpdate(BaseModel):
-    """Partial AI model settings for updates.
+    """Partial update model for AI model settings (model name, temperature, max_tokens).
     
     All fields are optional. When provided, they must pass validation.
     """
@@ -60,7 +61,7 @@ class AISettingsUpdate(BaseModel):
 
 
 class StorageSettingsUpdate(BaseModel):
-    """Partial storage configuration for updates.
+    """Partial update model for storage configuration (base path, auto backup).
     
     All fields are optional. When provided, they must pass validation.
     """
@@ -72,7 +73,7 @@ class StorageSettingsUpdate(BaseModel):
 
 
 class OrganizationSettingsUpdate(BaseModel):
-    """Partial organization method settings for updates.
+    """Partial update model for organization settings (method, auto-organize flag).
     
     All fields are optional. When provided, they must pass validation.
     """
