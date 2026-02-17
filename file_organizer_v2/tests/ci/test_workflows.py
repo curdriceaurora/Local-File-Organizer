@@ -53,7 +53,7 @@ class TestWorkflowDirectory:
 
     def test_all_expected_workflows_exist(self) -> None:
         """Verify all expected workflow files are present."""
-        expected_workflows = ["ci.yml", "release.yml", "docker.yml", "security.yml"]
+        expected_workflows = ["ci.yml", "ci-full.yml", "release.yml", "docker.yml", "security.yml"]
         for workflow in expected_workflows:
             path = WORKFLOWS_DIR / workflow
             assert path.exists(), f"Expected workflow file not found: {workflow}"
@@ -99,24 +99,12 @@ class TestCIWorkflow:
         jobs = workflow.get("jobs", {})
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
-    def test_ci_test_matrix_has_python_versions(self, workflow: dict) -> None:
-        """Verify test job uses a Python version matrix."""
-        test_job = workflow.get("jobs", {}).get("test", {})
-        strategy = test_job.get("strategy", {})
-        matrix = strategy.get("matrix", {})
-        python_versions = matrix.get("python-version", [])
-        assert len(python_versions) >= 2, (
-            "Test job should test against multiple Python versions"
+    def test_ci_uses_python_312(self, workflow: dict) -> None:
+        """Verify fast CI uses Python 3.12 for quick feedback."""
+        workflow_text = yaml.dump(workflow)
+        assert "3.12" in workflow_text, (
+            "Fast CI should use Python 3.12"
         )
-
-    def test_ci_test_matrix_includes_target_versions(self, workflow: dict) -> None:
-        """Verify test matrix includes key Python versions."""
-        test_job = workflow.get("jobs", {}).get("test", {})
-        strategy = test_job.get("strategy", {})
-        matrix = strategy.get("matrix", {})
-        python_versions = matrix.get("python-version", [])
-        assert "3.12" in python_versions, "Test matrix should include Python 3.12"
-        assert "3.9" in python_versions, "Test matrix should include Python 3.9"
 
     def test_ci_uses_pip_caching(self, workflow: dict) -> None:
         """Verify CI workflow uses pip caching for performance."""
@@ -136,6 +124,73 @@ class TestCIWorkflow:
         """Verify CI workflow has concurrency settings to cancel stale runs."""
         assert "concurrency" in workflow, (
             "CI workflow should set concurrency to cancel stale runs"
+        )
+
+
+class TestCIFullWorkflow:
+    """Tests for the CI Full Matrix workflow (ci-full.yml)."""
+
+    @pytest.fixture
+    def workflow(self) -> dict[str, Any]:
+        return load_workflow("ci-full.yml")
+
+    def test_ci_full_has_name(self, workflow: dict) -> None:
+        """Verify CI Full workflow has a name."""
+        assert "name" in workflow, "CI Full workflow must have a name"
+
+    def test_ci_full_triggers_on_pr_to_main(self, workflow: dict) -> None:
+        """Verify CI Full triggers on pull requests to main."""
+        triggers = get_triggers(workflow)
+        assert triggers, "CI Full workflow must define triggers"
+        assert "pull_request" in triggers, "CI Full should trigger on pull_request"
+        pr_config = triggers.get("pull_request", {})
+        branches = pr_config.get("branches", [])
+        assert "main" in branches, "CI Full should trigger on PRs to main"
+
+    def test_ci_full_supports_manual_trigger(self, workflow: dict) -> None:
+        """Verify CI Full can be triggered manually."""
+        triggers = get_triggers(workflow)
+        assert "workflow_dispatch" in triggers, (
+            "CI Full should support workflow_dispatch for manual triggers"
+        )
+
+    def test_ci_full_has_test_matrix_job(self, workflow: dict) -> None:
+        """Verify CI Full workflow includes a test-matrix job."""
+        jobs = workflow.get("jobs", {})
+        assert "test-matrix" in jobs, "CI Full workflow should have a 'test-matrix' job"
+
+    def test_ci_full_test_matrix_has_python_versions(self, workflow: dict) -> None:
+        """Verify test-matrix job uses multiple Python versions."""
+        test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
+        strategy = test_matrix_job.get("strategy", {})
+        matrix = strategy.get("matrix", {})
+        python_versions = matrix.get("python-version", [])
+        assert len(python_versions) >= 2, (
+            "Test-matrix job should test against multiple Python versions"
+        )
+
+    def test_ci_full_test_matrix_includes_versions(self, workflow: dict) -> None:
+        """Verify test matrix includes Python 3.9, 3.10, 3.11."""
+        test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
+        strategy = test_matrix_job.get("strategy", {})
+        matrix = strategy.get("matrix", {})
+        python_versions = matrix.get("python-version", [])
+        assert "3.9" in python_versions, "Test matrix should include Python 3.9"
+        assert "3.10" in python_versions, "Test matrix should include Python 3.10"
+        assert "3.11" in python_versions, "Test matrix should include Python 3.11"
+
+    def test_ci_full_has_frontend_compat_job(self, workflow: dict) -> None:
+        """Verify CI Full workflow includes a frontend-compat job."""
+        jobs = workflow.get("jobs", {})
+        assert "frontend-compat" in jobs, (
+            "CI Full workflow should have a 'frontend-compat' job"
+        )
+
+    def test_ci_full_has_e2e_placeholder_job(self, workflow: dict) -> None:
+        """Verify CI Full workflow includes an E2E placeholder job."""
+        jobs = workflow.get("jobs", {})
+        assert "frontend-e2e" in jobs, (
+            "CI Full workflow should have a 'frontend-e2e' placeholder job"
         )
 
 
