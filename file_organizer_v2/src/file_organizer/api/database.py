@@ -47,7 +47,7 @@ def resolve_database_url(database: str) -> str:
         from sqlalchemy.engine.url import make_url
         try:
             url = make_url(value)
-            return str(url)
+            return url.render_as_string(hide_password=False)
         except Exception as e:
             raise ValueError(f"Invalid database URL: {e}") from e
 
