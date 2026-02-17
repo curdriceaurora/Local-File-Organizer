@@ -1,117 +1,10 @@
 # File Management Endpoints
 
-API endpoints for file upload, listing, and management.
+API endpoints for file listing, content reading, moving, and deletion.
 
-## Upload Files
+## List Files
 
-Upload files to the system.
-
-Files can be uploaded through the web UI by:
-
-1. Opening the file browser
-1. Clicking **Upload**
-1. Selecting files
-1. Clicking **Upload**
-
-For programmatic uploads, use the web UI file upload form or consult the web framework documentation.
-
-## Get File Details
-
-Get detailed information about a file.
-
-```
-GET /api/v1/files/{file_id}
-```
-
-### Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "file_123",
-    "name": "document.pdf",
-    "path": "/documents/",
-    "size": 1024000,
-    "type": "pdf",
-    "created": "2024-02-01T10:30:00Z",
-    "modified": "2024-02-15T14:20:00Z",
-    "description": "AI-generated description",
-    "tags": ["important", "project-x"],
-    "duplicates": [
-      {
-        "id": "file_789",
-        "similarity": 0.98
-      }
-    ]
-  }
-}
-```
-
-## Update File
-
-Update file metadata.
-
-```
-PATCH /api/v1/files/{file_id}
-```
-
-### Request Body
-
-```json
-{
-  "description": "Updated description",
-  "tags": ["new-tag"],
-  "name": "renamed.pdf"
-}
-```
-
-### Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "file_123",
-    "name": "renamed.pdf",
-    "description": "Updated description",
-    "tags": ["new-tag"]
-  }
-}
-```
-
-## Delete File
-
-Delete a file.
-
-```
-DELETE /api/v1/files/{file_id}
-```
-
-### Response
-
-```json
-{
-  "success": true,
-  "message": "File deleted successfully"
-}
-```
-
-## Download File
-
-Download a file.
-
-```
-GET /api/v1/files/{file_id}/download
-```
-
-### Response
-
-Binary file content with appropriate headers.
-
-## File Listing with Path
-
-List files in a specific directory.
+List files in a directory.
 
 ```
 GET /api/v1/files
@@ -119,40 +12,112 @@ GET /api/v1/files
 
 ### Query Parameters
 
-- `path` - Directory path to list (required)
-- `page` - Page number (default: 1)
-- `pageSize` - Items per page (default: 50)
-- `sort` - Sort field (name, date, size)
-- `order` - Sort order (asc, desc)
-- `type` - Filter by file type
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `path` | string | *(required)* | Directory or file path to list |
+| `recursive` | boolean | `false` | Include files in subdirectories |
+| `include_hidden` | boolean | `false` | Include hidden files |
+| `file_type` | string | `null` | Comma-separated extensions or groups (`text`, `image`, `video`, `audio`, `cad`) |
+| `sort_by` | string | `name` | Sort field: `name`, `size`, `created`, `modified` |
+| `sort_order` | string | `asc` | Sort order: `asc`, `desc` |
+| `skip` | integer | `0` | Number of items to skip (pagination offset) |
+| `limit` | integer | `100` | Items per page (1–1000) |
 
 ### Response
 
 ```json
 {
-  "success": true,
-  "data": {
-    "files": [...],
-    "total": 150,
-    "page": 1,
-    "pageSize": 50
-  }
+  "items": [
+    {
+      "path": "/documents/report.pdf",
+      "name": "report.pdf",
+      "size": 1024000,
+      "created": "2024-02-01T10:30:00Z",
+      "modified": "2024-02-15T14:20:00Z",
+      "file_type": "pdf",
+      "mime_type": "application/pdf"
+    }
+  ],
+  "total": 150,
+  "skip": 0,
+  "limit": 100
 }
 ```
 
-## Batch Delete
+## Get File Info
 
-Delete multiple files.
+Get detailed information about a specific file.
 
 ```
-POST /api/v1/files/delete/batch
+GET /api/v1/files/info
+```
+
+### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `path` | string | *(required)* Path to the file |
+
+### Response
+
+```json
+{
+  "path": "/documents/report.pdf",
+  "name": "report.pdf",
+  "size": 1024000,
+  "created": "2024-02-01T10:30:00Z",
+  "modified": "2024-02-15T14:20:00Z",
+  "file_type": "pdf",
+  "mime_type": "application/pdf"
+}
+```
+
+## Read File Content
+
+Read the text content of a file.
+
+```
+GET /api/v1/files/content
+```
+
+### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `path` | string | *(required)* | Path to the file |
+| `max_bytes` | integer | `200000` | Max bytes to read (1–5,000,000) |
+| `encoding` | string | `utf-8` | Text encoding |
+
+### Response
+
+```json
+{
+  "path": "/documents/report.txt",
+  "content": "File content here...",
+  "encoding": "utf-8",
+  "truncated": false,
+  "size": 5120,
+  "mime_type": "text/plain"
+}
+```
+
+## Move File
+
+Move or rename a file.
+
+```
+POST /api/v1/files/move
 ```
 
 ### Request Body
 
 ```json
 {
-  "file_ids": ["file_1", "file_2", "file_3"]
+  "source": "/downloads/report.pdf",
+  "destination": "/documents/report.pdf",
+  "overwrite": false,
+  "allow_directory_overwrite": false,
+  "dry_run": false
 }
 ```
 
@@ -160,13 +125,43 @@ POST /api/v1/files/delete/batch
 
 ```json
 {
-  "success": true,
-  "data": {
-    "deleted": 3,
-    "failed": 0
-  }
+  "source": "/downloads/report.pdf",
+  "destination": "/documents/report.pdf",
+  "moved": true,
+  "dry_run": false
 }
 ```
+
+## Delete File
+
+Delete a file (moves to trash by default).
+
+```
+DELETE /api/v1/files
+```
+
+### Request Body
+
+```json
+{
+  "path": "/documents/old-report.pdf",
+  "permanent": false,
+  "dry_run": false
+}
+```
+
+### Response
+
+```json
+{
+  "path": "/documents/old-report.pdf",
+  "deleted": true,
+  "dry_run": false,
+  "trashed_path": "/home/user/.config/file-organizer/trash/old-report.pdf"
+}
+```
+
+Set `permanent: true` to bypass trash and permanently delete the file.
 
 ______________________________________________________________________
 

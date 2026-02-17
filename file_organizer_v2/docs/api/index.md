@@ -102,11 +102,13 @@ curl -X GET "http://localhost:8000/api/v1/files?path=/" \
 
 **Guide**: [Analysis Endpoints](analysis-endpoints.md)
 
-### Search
+### Search (Planned)
+
+!!! note
+    Search endpoints are under development and not yet available.
 
 - `GET /api/v1/search` - Search files
 - `POST /api/v1/search/advanced` - Advanced search
-- `GET /api/v1/search/saved` - Saved searches
 
 **Guide**: [Search Endpoints](search-endpoints.md)
 
@@ -240,45 +242,35 @@ All API responses use consistent JSON format:
 }
 ```
 
-## Client Libraries
+## Using the API Programmatically
 
-Official client libraries available:
-
-### Python
-
-```bash
-pip install file_organizer
-```
+### Python (with `httpx`)
 
 ```python
-from file_organizer import FileOrganizerClient
+import httpx
 
-client = FileOrganizerClient(
-  base_url="http://localhost:8000",
-  api_key="your-api-key"
+client = httpx.Client(
+    base_url="http://localhost:8000/api/v1",
+    headers={"X-API-Key": "your-api-key"},
 )
 
-files = client.list_files()
+response = client.get("/files", params={"path": "/documents"})
+files = response.json()
 ```
 
-### JavaScript/Node.js
-
-```bash
-npm install file-organizer-client
-```
+### JavaScript/Node.js (with `fetch`)
 
 ```javascript
-const { FileOrganizerClient } = require('file-organizer-client');
-
-const client = new FileOrganizerClient({
-  baseUrl: 'http://localhost:8000',
-  apiKey: 'your-api-key'
-});
-
-const files = await client.listFiles();
+const response = await fetch(
+  'http://localhost:8000/api/v1/files?path=/documents',
+  {
+    headers: { 'X-API-Key': 'your-api-key' },
+  }
+);
+const files = await response.json();
 ```
 
-See [API Clients Guide](../developer/api-clients.md) for more details.
+See [Developer Guide](../developer/index.md) for more details.
 
 ## Interactive Documentation
 
