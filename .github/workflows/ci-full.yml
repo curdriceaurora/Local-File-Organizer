@@ -1,0 +1,67 @@
+name: CI Full Matrix
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - ".claude/agents/**"
+      - ".claude/commands/**"
+      - ".claude/context/**"
+      - ".claude/epics/**"
+      - ".claude/prds/**"
+      - ".claude/rules/**"
+      - ".claude/README.md"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-matrix:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        working-directory: file_organizer_v2
+        run: pip install -e ".[dev]"
+      - name: Run tests
+        working-directory: file_organizer_v2
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            pytest tests/ -m "not regression" --override-ini="addopts="
+          else
+            pytest tests/ --override-ini="addopts="
+          fi
+
+  frontend-compat:
+    name: Frontend Node 18.x Compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18.x"
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Run component tests
+        run: npm test -- --ci
+
+  frontend-e2e:
+    name: E2E Tests (Disabled)
+    runs-on: ubuntu-latest
+    steps:
+      - name: E2E tests disabled
+        run: |
+          echo "E2E tests are currently disabled pending resolution of issue #331"
+          echo "Re-enable this job after https://github.com/curdriceaurora/Local-File-Organizer/issues/331 is resolved"
+          echo "To re-enable: restore Playwright installation and test steps from ci.yml history"

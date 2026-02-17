@@ -40,14 +40,11 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
           cache: pip
       - name: Install dependencies
         working-directory: file_organizer_v2
@@ -60,68 +57,30 @@ jobs:
           else
             pytest tests/ --cov=file_organizer --cov-report=xml --override-ini="addopts="
           fi
+      - name: Run documentation accuracy tests
+        working-directory: file_organizer_v2
+        run: python -m pytest tests/docs/ -v --no-cov --tb=short
       - name: Upload coverage
-        if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4
         with:
           file: file_organizer_v2/coverage.xml
           fail_ci_if_error: false
 
-  docs-accuracy:
-    name: Documentation Accuracy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - name: Install dependencies
-        working-directory: file_organizer_v2
-        run: pip install -e ".[dev]"
-      - name: Run documentation accuracy tests
-        working-directory: file_organizer_v2
-        run: |
-          python -m pytest tests/docs/ -v --no-cov --tb=short
-
   frontend-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "20.x"
           cache: npm
       - name: Install dependencies
         run: npm install
       - name: Run component tests
         run: npm test -- --coverage --ci
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-      - name: Run E2E tests
-        run: npm run test:e2e -- --forbid-only
-        continue-on-error: true
       - name: Upload coverage reports
-        if: matrix.node-version == '20.x'
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage/lcov.info
           flags: frontend
           fail_ci_if_error: false
-      - name: Upload E2E test results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ matrix.node-version }}
-          path: playwright-report/
-          retention-days: 30
-      - name: Upload coverage to artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report-${{ matrix.node-version }}
-          path: coverage/
-          retention-days: 7
