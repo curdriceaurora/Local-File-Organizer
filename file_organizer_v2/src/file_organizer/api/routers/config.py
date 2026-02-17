@@ -2,88 +2,61 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.config_service import ConfigResponse, ConfigService
+from file_organizer.api.dependencies import UserLike, get_current_active_user, get_db, get_settings
 
 router = APIRouter(tags=["config"])
 
 
-class AISettings(BaseModel):
-    """AI model settings."""
-
-    model: str = "qwen2.5:3b-instruct-q4_K_M"
-    temperature: float = 0.5
-    max_tokens: int = 3000
-
-
-class StorageSettings(BaseModel):
-    """Storage configuration."""
-
-    base_path: str = "/default/path"
-    auto_backup: bool = True
-
-
-class OrganizationSettings(BaseModel):
-    """Organization method settings."""
-
-    method: str = "PARA"
-    auto_organize: bool = False
-
-
-class ConfigResponse(BaseModel):
-    """Complete configuration response."""
-
-    version: str = "2.0.0"
-    ai: AISettings = AISettings()
-    storage: StorageSettings = StorageSettings()
-    organization: OrganizationSettings = OrganizationSettings()
-    app_version: str = "2.0.0"
-
-
-# Global config store (in-memory for testing)
-_config = ConfigResponse()
-
-
 @router.get("/config", response_model=ConfigResponse)
-def get_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
-    """Get current configuration."""
-    global _config
-    return _config
+def get_config(
+    settings: ApiSettings = Depends(get_settings),
+    db: Session = Depends(get_db),
+    user: UserLike = Depends(get_current_active_user),
+) -> ConfigResponse:
+    """Get current configuration from database.
+
+    Configuration is stored persistently in the database and is thread-safe.
+    User-specific configuration is supported when auth is enabled.
+    """
+    # Use user-specific config when auth is enabled, global config otherwise
+    user_id = user.id if settings.auth_enabled and hasattr(user, "id") else None
+    service = ConfigService(db, user_id=user_id)
+    return service.get_config()
 
 
 @router.put("/config", response_model=ConfigResponse)
 def update_config(
     config_update: dict,
     settings: ApiSettings = Depends(get_settings),
+    db: Session = Depends(get_db),
+    user: UserLike = Depends(get_current_active_user),
 ) -> ConfigResponse:
-    """Update configuration with provided values."""
-    global _config
+    """Update configuration with provided values.
 
-    # Update config with provided values
-    if "organization" in config_update:
-        _config.organization = OrganizationSettings(**{
-            **_config.organization.model_dump(),
-            **config_update["organization"],
-        })
-    if "ai" in config_update:
-        _config.ai = AISettings(**{
-            **_config.ai.model_dump(),
-            **config_update["ai"],
-        })
-    if "storage" in config_update:
-        _config.storage = StorageSettings(**{
-            **_config.storage.model_dump(),
-            **config_update["storage"],
-        })
-
-    return _config
+    Updates are persisted to the database and protected with row-level locking
+    to ensure thread-safety across multiple workers or instances.
+    """
+    # Use user-specific config when auth is enabled, global config otherwise
+    user_id = user.id if settings.auth_enabled and hasattr(user, "id") else None
+    service = ConfigService(db, user_id=user_id)
+    return service.update_config(config_update)
 
 
 @router.post("/config/reset", response_model=ConfigResponse)
-def reset_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
-    """Reset configuration to defaults."""
-    global _config
-    _config = ConfigResponse()
-    return _config
+def reset_config(
+    settings: ApiSettings = Depends(get_settings),
+    db: Session = Depends(get_db),
+    user: UserLike = Depends(get_current_active_user),
+) -> ConfigResponse:
+    """Reset configuration to defaults.
+
+    Deletes stored configuration from the database and returns default values.
+    """
+    # Use user-specific config when auth is enabled, global config otherwise
+    user_id = user.id if settings.auth_enabled and hasattr(user, "id") else None
+    service = ConfigService(db, user_id=user_id)
+    return service.reset_config()
