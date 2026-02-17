@@ -45,17 +45,11 @@ python -m uvicorn main:app --reload
 - Webhook integration
 - Third-party service integration
 
-### Contributing
+### Best Practices
 
-- [Contributing Guide](contributing.md) - How to contribute
 - Code style and standards
 - Pull request process
-
-### Testing
-
-- [Testing Guide](testing.md) - Test strategies and examples
-- Unit testing
-- Integration testing
+- Unit and integration testing
 
 ## Architecture
 
@@ -255,4 +249,3 @@ pytest                    # Tests
 - [Architecture Guide](architecture.md)
 - [Plugin Development](plugin-development.md)
 - [API Reference](../api/index.md)
-- [Contributing Guide](contributing.md)

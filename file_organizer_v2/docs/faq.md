@@ -75,8 +75,6 @@ File Organizer supports 43+ file types:
 - Scientific: HDF5, NetCDF, MATLAB
 - CAD: DXF, DWG, STEP, IGES
 
-See [Supported File Types](getting-started.md#supported-file-types).
-
 ### How do I undo an organization?
 
 Click **Undo** immediately after organizing (or Ctrl+Z).
@@ -213,7 +211,7 @@ Solutions:
 - Reduce upload file size
 - Use CPU-only mode
 
-See [Troubleshooting Guide](troubleshooting.md) for more issues.
+See [Troubleshooting Guide](TROUBLESHOOTING.md) for more issues.
 
 ## Contributing Questions
 
@@ -224,7 +222,7 @@ See [Troubleshooting Guide](troubleshooting.md) for more issues.
 1. Make changes with tests
 1. Create pull request
 
-See [Contributing Guide](developer/contributing.md).
+See [GitHub Repository](https://github.com/curdriceaurora/Local-File-Organizer) for contribution guidelines.
 
 ### How do I report bugs?
 
@@ -244,4 +242,4 @@ Can't find your answer?
 - **Documentation**: Browse [full docs](index.md)
 - **Issues**: [GitHub Issues](https://github.com/curdriceaurora/Local-File-Organizer/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/curdriceaurora/Local-File-Organizer/discussions)
-- **Troubleshooting**: [Troubleshooting Guide](troubleshooting.md)
+- **Troubleshooting**: [Troubleshooting Guide](TROUBLESHOOTING.md)

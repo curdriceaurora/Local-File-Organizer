@@ -55,7 +55,6 @@ Welcome to the **File Organizer** documentation! A privacy-first, AI-powered loc
 - [Architecture](developer/architecture.md)
 - [Plugin Development](developer/plugin-development.md)
 - [API Clients](developer/api-clients.md)
-- [Contributing](developer/contributing.md)
 ```
 
 ## Key Features
@@ -95,7 +94,7 @@ File Organizer processes **43+ file formats** including:
 - [Web UI Guide](web-ui/index.md) - Browser-based file management
 - [Getting Started](getting-started.md) - Initial setup and overview
 - [CLI Reference](cli-reference.md) - Command-line interface guide
-- [Troubleshooting](troubleshooting.md) - Common issues and solutions
+- [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions
 
 ### API & Integration
 
@@ -116,14 +115,12 @@ File Organizer processes **43+ file formats** including:
 - [Architecture Guide](developer/architecture.md) - System design
 - [Plugin Development](developer/plugin-development.md) - Creating plugins
 - [API Clients](developer/api-clients.md) - Client libraries
-- [Contributing](developer/contributing.md) - Development guidelines
-- [Testing](developer/testing.md) - Test strategies
 
 ## Getting Help
 
 - **Issues**: Found a bug? [Report it on GitHub](https://github.com/curdriceaurora/Local-File-Organizer/issues)
 - **Discussions**: [Ask questions in discussions](https://github.com/curdriceaurora/Local-File-Organizer/discussions)
-- **Troubleshooting**: Check the [Troubleshooting Guide](troubleshooting.md)
+- **Troubleshooting**: Check the [Troubleshooting Guide](TROUBLESHOOTING.md)
 - **FAQ**: Browse [Frequently Asked Questions](faq.md)
 
 ## Installation Quick Start
