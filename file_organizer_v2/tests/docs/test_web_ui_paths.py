@@ -8,12 +8,10 @@ Validates:
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 import pytest
 
 from tests.docs.conftest import DOCS_DIR
-
 
 WEB_UI_DOCS_DIR = DOCS_DIR / "web-ui"
 
@@ -62,7 +60,7 @@ class TestWebUIPaths:
         assert not wrong_url_files, (
             "These web-ui docs reference the root URL without /ui/ prefix:\n"
             + "\n".join(wrong_url_files)
-            + f"\n\nFix: Change 'http://localhost:8000/' to 'http://localhost:8000/ui/'"
+            + "\n\nFix: Change 'http://localhost:8000/' to 'http://localhost:8000/ui/'"
         )
 
     def test_web_ui_getting_started_uses_ui_path(self) -> None:

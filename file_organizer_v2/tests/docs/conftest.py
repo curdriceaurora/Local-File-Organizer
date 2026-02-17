@@ -5,13 +5,11 @@ by comparing documented paths, auth formats, and examples against the code.
 """
 from __future__ import annotations
 
-import ast
 import re
 from pathlib import Path
 
 import pytest
 import yaml
-
 
 # ---------------------------------------------------------------------------
 # Project path fixtures

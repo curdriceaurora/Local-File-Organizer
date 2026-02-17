@@ -14,8 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.docs.conftest import DOCS_DIR, extract_code_blocks, get_router_paths
-
+from tests.docs.conftest import DOCS_DIR, get_router_paths
 
 # ---------------------------------------------------------------------------
 # Real route paths from actual implementation
@@ -114,7 +113,7 @@ class TestOrganizeEndpoints:
         """Organization docs must use real endpoint paths: /scan, /preview, /execute."""
         org_doc = DOCS_DIR / "api" / "organization-endpoints.md"
         if not org_doc.exists():
-            pytest.skip(f"organization-endpoints.md not found")
+            pytest.skip("organization-endpoints.md not found")
 
         content = org_doc.read_text()
 
