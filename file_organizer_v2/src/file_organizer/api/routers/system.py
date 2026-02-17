@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import shutil
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -113,7 +114,7 @@ def get_stats(
 
     largest_files = []
     for info in stats.largest_files:
-        validated_path = resolve_path(info.path, settings.allowed_paths)
+        validated_path: Path = resolve_path(str(info.path), settings.allowed_paths)
         largest_files.append(file_info_from_path(validated_path))
 
     return StorageStatsResponse(
