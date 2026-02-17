@@ -138,7 +138,15 @@ def _validate_setting_paths(
                 # Bare filenames should resolve to a deterministic base directory.
                 candidate = settings.allowed_paths[0] if settings.allowed_paths else str(Path.home())
             validated_root = resolve_path(candidate, settings.allowed_paths)
-            normalized[key] = os.path.join(str(validated_root), os.path.basename(raw_path))
+            base_name = os.path.basename(raw_path)
+            # Validate basename to prevent path traversal attacks
+            if not base_name or "/" in base_name or "\\" in base_name or ".." in base_name:
+                raise ApiError(
+                    status_code=400,
+                    error="invalid_filename",
+                    message="Invalid filename in path"
+                )
+            normalized[key] = os.path.join(str(validated_root), base_name)
         else:
             validated_root = resolve_path(raw_path, settings.allowed_paths)
             normalized[key] = str(validated_root)
