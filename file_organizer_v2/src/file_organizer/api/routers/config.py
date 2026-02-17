@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_current_active_user, get_settings
+from file_organizer.api.dependencies import get_settings
 
 router = APIRouter(tags=["config"])
 

@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_current_active_user, get_settings
+from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import (
     DeleteFileRequest,
