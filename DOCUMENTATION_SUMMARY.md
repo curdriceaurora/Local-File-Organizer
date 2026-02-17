@@ -53,7 +53,7 @@ Created comprehensive documentation for File Organizer v2.0 web interface coveri
 
 #### Support & Resources (2 files)
 - `docs/faq.md` - Frequently asked questions
-- `docs/TROUBLESHOOTING.md` - Troubleshooting guide
+- `docs/troubleshooting.md` - Troubleshooting guide
 
 ## Acceptance Criteria Met
 
