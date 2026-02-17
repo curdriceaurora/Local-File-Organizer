@@ -164,7 +164,7 @@ class TestCIWorkflow:
         """Verify test job includes documentation accuracy tests."""
         test_job = workflow.get("jobs", {}).get("test", {})
         steps = test_job.get("steps", [])
-        
+
         # Look for a step that runs documentation accuracy tests
         has_docs_step = False
         for step in steps:
@@ -175,7 +175,7 @@ class TestCIWorkflow:
             if "documentation" in step_name.lower() or "tests/docs" in run_cmd:
                 has_docs_step = True
                 break
-        
+
         assert has_docs_step, (
             "Test job should include a step for documentation accuracy tests"
         )
