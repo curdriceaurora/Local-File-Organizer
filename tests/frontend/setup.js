@@ -80,7 +80,8 @@ beforeAll(() => {
   console.error = (...args) => {
     if (
       typeof args[0] === "string" &&
-      args[0].includes("Not implemented: HTMLFormElement.prototype.submit")
+      (args[0].includes("Not implemented: HTMLFormElement.prototype.submit") ||
+        args[0].includes("Not implemented: HTMLFormElement.prototype.requestSubmit"))
     ) {
       return;
     }

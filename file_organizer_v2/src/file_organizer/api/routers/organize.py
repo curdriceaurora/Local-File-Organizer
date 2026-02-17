@@ -213,7 +213,7 @@ async def organize_file(
     file: Optional[UploadFile] = File(None),
     request: Optional[SimpleOrganizeRequest] = None,
     settings: ApiSettings = Depends(get_settings),
-) -> "SimpleOrganizeResponse | JSONResponse":
+) -> SimpleOrganizeResponse | JSONResponse:
     """Organize a single file with naming and folder suggestions.
 
     Accepts either file upload (multipart/form-data) or JSON request body.

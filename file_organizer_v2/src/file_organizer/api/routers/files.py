@@ -315,7 +315,7 @@ class FileUploadResponse(BaseModel):
 async def upload_files(
     files: list[UploadFile] = File(None),
     file: Optional[UploadFile] = File(None),
-) -> "FileUploadResponse | list[FileUploadResponse] | JSONResponse":
+) -> FileUploadResponse | list[FileUploadResponse] | JSONResponse:
     """Upload one or more files.
 
     Accepts either a single file or multiple files.

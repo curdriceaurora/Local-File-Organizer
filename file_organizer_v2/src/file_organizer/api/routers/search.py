@@ -31,7 +31,7 @@ def search(
     limit: Optional[int] = None,
     offset: Optional[int] = None,
     settings: ApiSettings = Depends(get_settings),
-) -> "list[SearchResult] | JSONResponse":
+) -> list[SearchResult] | JSONResponse:
     """Search for files by query.
 
     Supports filtering, pagination, and relevance scoring.
