@@ -112,17 +112,16 @@ find /data/uploads/ -mtime +30 -delete
 
 **Solution**:
 
+API keys follow the format `fo_<id>_<token>` and must be sent via the `X-API-Key` header.
+
 ```bash
-# Verify API key format
-# Should be: fo_<id>_<token>
-
-# Check API key header
+# Verify API key is accepted
 curl -H "X-API-Key: YOUR_API_KEY" http://localhost:8000/api/v1/files
-
-# Do NOT use Bearer token for API keys:
-# Wrong: Authorization: Bearer YOUR_API_KEY
-# Right: X-API-Key: YOUR_API_KEY
 ```
+
+!!! warning "Auth header"
+    Use `X-API-Key: YOUR_API_KEY`, **not** `Authorization: Bearer YOUR_API_KEY`.
+    Bearer tokens are not supported for API key authentication.
 
 ### 403 Forbidden
 
@@ -169,10 +168,9 @@ docker-compose exec web python -c \
 **Solution**:
 
 ```bash
-# Check file size limit
-curl -i http://localhost:8000/api/v1/files/upload \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -F "file=@large_file.zip"
+# Test file access endpoint to verify authentication
+curl -i "http://localhost:8000/api/v1/files?path=/" \
+  -H "X-API-Key: YOUR_API_KEY"
 
 # Increase MAX_UPLOAD_SIZE if needed
 MAX_UPLOAD_SIZE=1G docker-compose up -d

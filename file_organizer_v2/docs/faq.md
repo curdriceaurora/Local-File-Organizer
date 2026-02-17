@@ -129,7 +129,7 @@ Solutions:
 Yes. Store in environment variables:
 
 ```bash
-export FILE_ORGANIZER_API_KEY="fk_live_..."
+export FILE_ORGANIZER_API_KEY="fo_your_id_your_token"
 ```
 
 Then use in your script.

@@ -7,9 +7,9 @@
 #### Generate API Keys
 
 ```bash
-# Via API endpoint
+# Via API endpoint — authenticate with an existing API key
 curl -X POST http://localhost:8000/api/v1/auth/keys \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "X-API-Key: YOUR_EXISTING_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"name": "client-key"}'
 ```

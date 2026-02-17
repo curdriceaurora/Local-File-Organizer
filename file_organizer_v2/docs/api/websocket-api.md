@@ -4,17 +4,22 @@ Real-time updates via WebSocket connections.
 
 ## Connecting to WebSocket
 
-> **Security Note:** Do not pass API keys in URL. Use headers for authentication.
+The WebSocket endpoint requires a unique `client_id` path parameter and an API token
+passed as a query parameter. Each client session must use a distinct `client_id`.
+
+**Endpoint**: `ws://localhost:8000/api/v1/ws/{client_id}?token=YOUR_API_KEY`
 
 ```javascript
 // Node.js example using 'ws' library
 const WebSocket = require('ws');
+const { randomUUID } = require('crypto');
 
-const ws = new WebSocket('ws://localhost:8000/api/v1/ws', {
-  headers: {
-    'X-API-Key': 'YOUR_API_KEY'
-  }
-});
+// Generate a unique client ID for this session
+const clientId = randomUUID();
+
+const ws = new WebSocket(
+  `ws://localhost:8000/api/v1/ws/${clientId}?token=YOUR_API_KEY`
+);
 
 ws.on('open', () => {
   console.log('Connected');

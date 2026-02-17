@@ -4,12 +4,15 @@ This guide covers the basics of using the File Organizer web interface.
 
 ## Accessing the Web Interface
 
+The web UI is served at the `/ui/` path prefix. The API is available at `/api/v1/`
+and the interactive API docs are at `/docs` and `/redoc`.
+
 ### Local Deployment
 
 If you're running File Organizer locally:
 
 ```
-http://localhost:8000
+http://localhost:8000/ui/
 ```
 
 ### Remote Deployment
@@ -17,7 +20,7 @@ http://localhost:8000
 If deployed on a remote server:
 
 ```
-http://your-server-address:8000
+http://your-server-address:8000/ui/
 ```
 
 Contact your administrator for the correct address.

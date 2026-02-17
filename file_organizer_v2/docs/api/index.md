@@ -87,28 +87,25 @@ curl -X GET "http://localhost:8000/api/v1/files?path=/" \
 
 ### Organization
 
-- `POST /api/v1/organize` - Start organization job
-- `GET /api/v1/organize/jobs` - List jobs
-- `GET /api/v1/organize/jobs/{id}` - Get job status
-- `GET /api/v1/organize/jobs/{id}/results` - Get results
+- `POST /api/v1/organize/scan` - Scan files for organization
+- `POST /api/v1/organize/preview` - Preview organization plan
+- `POST /api/v1/organize/execute` - Execute organization
+- `GET /api/v1/organize/status` - Get job status
 
 **Guide**: [Organization Endpoints](organization-endpoints.md)
 
-### Analysis
+### Deduplication
 
-- `POST /api/v1/analyze/duplicates` - Find duplicates
-- `GET /api/v1/analyze/storage` - Storage analysis
-- `GET /api/v1/analyze/categories` - Category analysis
+- `POST /api/v1/dedupe/scan` - Scan for duplicate files
+- `POST /api/v1/dedupe/preview` - Preview deduplication plan
+- `POST /api/v1/dedupe/execute` - Execute deduplication
 
 **Guide**: [Analysis Endpoints](analysis-endpoints.md)
 
 ### Search (Planned)
 
 !!! note
-Search endpoints are under development and not yet available.
-
-- `GET /api/v1/search` - Search files
-- `POST /api/v1/search/advanced` - Advanced search
+Search endpoints are under development and not yet available in this release.
 
 **Guide**: [Search Endpoints](search-endpoints.md)
 
@@ -298,28 +295,21 @@ curl -X POST http://localhost:8000/api/v1/organize/preview \
 ### 2. Find Duplicate Files
 
 ```bash
-# Analyze duplicates
-curl -X POST http://localhost:8000/api/v1/analyze/duplicates \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+# Scan for duplicates
+curl -X POST http://localhost:8000/api/v1/dedupe/scan \
+  -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "paths": ["/documents", "/downloads"]
   }'
 ```
 
-### 3. Search Files
-
-```bash
-# Search with filters
-curl -X GET "http://localhost:8000/api/v1/search?q=report&type=pdf" \
-  -H "Authorization: Bearer YOUR_API_KEY"
-```
-
-### 4. Monitor Organization Job
+### 3. Monitor Organization Job
 
 ```javascript
-// Real-time job monitoring
-const ws = new WebSocket('ws://localhost:8000/api/v1/ws');
+// Real-time job monitoring — replace CLIENT_ID with a unique identifier
+const clientId = crypto.randomUUID();
+const ws = new WebSocket(`ws://localhost:8000/api/v1/ws/${clientId}?token=YOUR_API_KEY`);
 
 ws.onmessage = (event) => {
   const job = JSON.parse(event.data);
