@@ -127,35 +127,29 @@ File Organizer processes **43+ file formats** including:
 
 === "Docker (Recommended)"
 
-````
-```bash
-git clone https://github.com/curdriceaurora/Local-File-Organizer.git
-cd Local-File-Organizer
-docker-compose up -d
-```
+    ```bash
+    git clone https://github.com/curdriceaurora/Local-File-Organizer.git
+    cd Local-File-Organizer
+    docker-compose up -d
+    ```
 
-Access at `http://localhost:8000`
-````
+    Access at `http://localhost:8000`
 
 === "Python Package"
 
-````
-```bash
-pip install file-organizer
-file-organizer serve
-```
-````
+    ```bash
+    pip install file-organizer
+    file-organizer serve
+    ```
 
 === "From Source"
 
-````
-```bash
-git clone https://github.com/curdriceaurora/Local-File-Organizer.git
-cd file_organizer_v2
-pip install -e .
-file-organizer serve
-```
-````
+    ```bash
+    git clone https://github.com/curdriceaurora/Local-File-Organizer.git
+    cd file_organizer_v2
+    pip install -e .
+    file-organizer serve
+    ```
 
 See the [Installation Guide](admin/installation.md) for detailed instructions.
 
