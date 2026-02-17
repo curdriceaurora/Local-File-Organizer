@@ -362,7 +362,7 @@ df -h > disk.log
 Include:
 
 1. Error message and logs
-2. Steps to reproduce
-3. System information (OS, Docker version)
-4. Recent configuration changes
-5. Diagnostic information collected above
+1. Steps to reproduce
+1. System information (OS, Docker version)
+1. Recent configuration changes
+1. Diagnostic information collected above

@@ -34,19 +34,22 @@ This guide covers installing the File Organizer system for deployment and admini
 #### Steps
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/curdriceaurora/Local-File-Organizer.git
    cd Local-File-Organizer
    ```
 
-2. **Configure environment** (see Configuration Guide)
+1. **Configure environment** (see Configuration Guide)
 
-3. **Start services**:
+1. **Start services**:
+
    ```bash
    docker-compose up -d
    ```
 
-4. **Access the web UI**:
+1. **Access the web UI**:
+
    ```
    http://localhost:8000/ui/
    ```
@@ -62,23 +65,27 @@ This guide covers installing the File Organizer system for deployment and admini
 #### Steps
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/curdriceaurora/Local-File-Organizer.git
    cd Local-File-Organizer/file_organizer_v2
    ```
 
-2. **Create virtual environment**:
+1. **Create virtual environment**:
+
    ```bash
    python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Install dependencies**:
+1. **Install dependencies**:
+
    ```bash
    pip install -e .
    ```
 
-4. **Install Ollama** (for AI models):
+1. **Install Ollama** (for AI models):
+
    ```bash
    # macOS/Linux
    curl -fsSL https://ollama.ai/install.sh | sh
@@ -88,7 +95,8 @@ This guide covers installing the File Organizer system for deployment and admini
    ollama pull qwen2.5vl:7b-q4_K_M
    ```
 
-5. **Start the application**:
+1. **Start the application**:
+
    ```bash
    python app.py
    # Or using the CLI

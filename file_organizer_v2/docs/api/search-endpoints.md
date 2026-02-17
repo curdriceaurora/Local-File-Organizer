@@ -9,7 +9,7 @@ Future endpoints will support:
 - `GET /api/v1/search` - Search files
 - `POST /api/v1/search/advanced` - Advanced search
 
----
+______________________________________________________________________
 
 See [API Reference](index.md) for available endpoints.
 

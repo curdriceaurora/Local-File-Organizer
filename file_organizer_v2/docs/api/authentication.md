@@ -43,7 +43,6 @@ curl http://localhost:8000/api/v1/files \
 
 > **Security Note:** Do not pass API keys in URL query parameters. Always use the `X-API-Key` header.
 
-
 ## API Key Permissions
 
 Control what each API key can do:

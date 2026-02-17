@@ -11,6 +11,6 @@ We welcome contributions! Please check back soon for detailed guidelines on:
 - Submitting pull requests
 - Reporting issues
 
----
+______________________________________________________________________
 
 See [Developer Overview](index.md) for more information.

@@ -2,17 +2,16 @@
 
 API endpoints for file upload, listing, and management.
 
-
-
 ## Upload Files
 
 Upload files to the system.
 
 Files can be uploaded through the web UI by:
+
 1. Opening the file browser
-2. Clicking **Upload**
-3. Selecting files
-4. Clicking **Upload**
+1. Clicking **Upload**
+1. Selecting files
+1. Clicking **Upload**
 
 For programmatic uploads, use the web UI file upload form or consult the web framework documentation.
 
@@ -169,6 +168,6 @@ POST /api/v1/files/delete/batch
 }
 ```
 
----
+______________________________________________________________________
 
 See [API Reference](index.md) for more endpoints.

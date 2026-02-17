@@ -80,6 +80,7 @@ curl -X GET "http://localhost:8000/api/v1/files?path=/" \
 - `GET /api/v1/files` - List files
 
 - `GET /api/v1/files/{id}` - Get file details
+
 - `DELETE /api/v1/files/{id}` - Delete file
 
 **Guide**: [File Management Endpoints](file-endpoints.md)
@@ -134,7 +135,6 @@ API requests are rate-limited:
 
 - **Default**: 1000 requests/minute
 - **Configurable**: Via app settings
-
 
 Check rate limit in response headers:
 

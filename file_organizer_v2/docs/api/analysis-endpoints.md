@@ -94,6 +94,6 @@ GET /api/v1/analyze/categories
 }
 ```
 
----
+______________________________________________________________________
 
 See [API Reference](index.md) for more information.

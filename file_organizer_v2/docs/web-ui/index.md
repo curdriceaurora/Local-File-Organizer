@@ -281,6 +281,6 @@ Choose a guide based on what you want to do:
 - **Search & Analyze**: [Analysis & Search Guide](analysis-search.md)
 - **Customize Settings**: [Settings Guide](settings.md)
 
----
+______________________________________________________________________
 
 **Ready to get started?** [Jump to File Management](file-management.md)!

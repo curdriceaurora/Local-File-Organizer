@@ -209,11 +209,11 @@ pip install -r requirements.txt --upgrade
 ### If Compromised
 
 1. Immediately revoke all API keys
-2. Reset all passwords
-3. Review audit logs for unauthorized access
-4. Rotate database credentials
-5. Notify users if data was accessed
-6. Enable enhanced logging
+1. Reset all passwords
+1. Review audit logs for unauthorized access
+1. Rotate database credentials
+1. Notify users if data was accessed
+1. Enable enhanced logging
 
 ### Suspicious Activity
 

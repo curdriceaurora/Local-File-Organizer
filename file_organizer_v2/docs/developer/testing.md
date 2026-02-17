@@ -14,6 +14,6 @@ pytest
 
 Detailed testing guidelines coming soon.
 
----
+______________________________________________________________________
 
 See [Developer Overview](index.md) for more information.
