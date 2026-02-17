@@ -8,12 +8,10 @@ Validates:
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 import pytest
 
 from tests.docs.conftest import DOCS_DIR
-
 
 WEBSOCKET_DOC = DOCS_DIR / "api" / "websocket-api.md"
 
@@ -30,7 +28,7 @@ class TestWebSocketPathDocumentation:
     def test_websocket_doc_exists(self) -> None:
         """websocket-api.md must exist."""
         if not WEBSOCKET_DOC.exists():
-            pytest.skip(f"websocket-api.md not found — Issue #317 tracks this gap")
+            pytest.skip("websocket-api.md not found — Issue #317 tracks this gap")
 
     def test_websocket_path_includes_client_id(self) -> None:
         """WebSocket path must include {client_id} parameter."""
@@ -80,7 +78,7 @@ class TestWebSocketPathDocumentation:
         assert not bad_connections, (
             "WebSocket connection examples use incomplete paths (missing client_id):\n"
             + "\n".join(f"  - {c}" for c in bad_connections)
-            + f"\n\nFix: Use 'ws://host/api/v1/ws/{{client_id}}' pattern"
+            + "\n\nFix: Use 'ws://host/api/v1/ws/{client_id}' pattern"
         )
 
     def test_websocket_token_parameter_documented(self) -> None:

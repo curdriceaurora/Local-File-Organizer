@@ -16,7 +16,6 @@ import pytest
 
 from tests.docs.conftest import DOCS_DIR, SRC_DIR, extract_code_blocks
 
-
 # Known-real endpoint paths (derived from code inspection of api/routers/)
 REAL_API_ENDPOINTS = {
     "/api/v1/health",
@@ -69,7 +68,7 @@ class TestPythonCodeExamples:
                 if not stripped:
                     continue
                 # Skip blocks that start with #! (shebang) or are just comments
-                lines = [l for l in stripped.splitlines() if l.strip() and not l.strip().startswith("#")]
+                lines = [line for line in stripped.splitlines() if line.strip() and not line.strip().startswith("#")]
                 if not lines:
                     continue
 
