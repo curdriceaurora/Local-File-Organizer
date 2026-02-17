@@ -76,3 +76,4 @@ logs/
 .claude/settings.json
 .claude/settings.local.json
 file_organizer_v2/site/
+site/
