@@ -1,6 +1,8 @@
 """File analysis endpoints."""
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -21,8 +23,8 @@ class AnalyzeResponse(BaseModel):
 
 @router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(
-    content: str | None = None,
-    file: UploadFile | None = None,
+    content: Optional[str] = None,
+    file: Optional[UploadFile] = None,
     settings: ApiSettings = Depends(get_settings),
 ) -> AnalyzeResponse:
     """Analyze file content and provide description and category.
