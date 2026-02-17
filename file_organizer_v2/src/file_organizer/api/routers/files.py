@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_current_active_user, get_settings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import (
     DeleteFileRequest,
@@ -25,7 +25,7 @@ from file_organizer.api.models import (
 from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.core.organizer import FileOrganizer
 
-router = APIRouter(tags=["files"])
+router = APIRouter(tags=["files"], dependencies=[Depends(get_current_active_user)])
 
 _FILE_TYPE_GROUPS = {
     "text": FileOrganizer.TEXT_EXTENSIONS,
@@ -168,8 +168,7 @@ def get_file_by_id(
         raise ApiError(status_code=422, error="invalid_id", message="File ID cannot be empty")
     # Simple mock: treat file_id as a path or name
     # In a real implementation, this would look up the file by ID
-    # codeql[py/path-injection] - Mock placeholder using file_id as path; not request-driven security boundary
-    target = Path(file_id)
+    target = resolve_path(file_id, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="File not found")
     return file_info_from_path(target)
@@ -269,13 +268,14 @@ def delete_file(
 def delete_file_by_id(
     file_id: str,
     permanent: bool = Query(False),
+    settings: ApiSettings = Depends(get_settings),
 ) -> DeleteFileResponse:
     """Delete a file by ID."""
     if not file_id or file_id.strip() == "":
         raise ApiError(status_code=422, error="invalid_id", message="File ID cannot be empty")
 
-    # Simple mock: treat file_id as a path
-    target = Path(file_id)
+    # Simple mock: treat file_id as a path (validated against allowed paths)
+    target = resolve_path(file_id, settings.allowed_paths)
     if not target.exists():
         # For non-existent files, we can still return a success response
         return DeleteFileResponse(
