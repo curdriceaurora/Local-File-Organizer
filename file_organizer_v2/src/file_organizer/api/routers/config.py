@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_settings
+from file_organizer.api.dependencies import get_settings, require_admin_user
 
 router = APIRouter(tags=["config"])
 
@@ -47,7 +47,10 @@ _config = ConfigResponse()
 
 
 @router.get("/config", response_model=ConfigResponse)
-def get_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
+def get_config(
+    settings: ApiSettings = Depends(get_settings),
+    _admin: object = Depends(require_admin_user),
+) -> ConfigResponse:
     """Get current configuration."""
     global _config
     return _config
@@ -57,6 +60,7 @@ def get_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
 def update_config(
     config_update: dict,
     settings: ApiSettings = Depends(get_settings),
+    _admin: object = Depends(require_admin_user),
 ) -> ConfigResponse:
     """Update configuration with provided values."""
     global _config
@@ -82,7 +86,10 @@ def update_config(
 
 
 @router.post("/config/reset", response_model=ConfigResponse)
-def reset_config(settings: ApiSettings = Depends(get_settings)) -> ConfigResponse:
+def reset_config(
+    settings: ApiSettings = Depends(get_settings),
+    _admin: object = Depends(require_admin_user),
+) -> ConfigResponse:
     """Reset configuration to defaults."""
     global _config
     _config = ConfigResponse()
