@@ -4,8 +4,6 @@ Real-time updates via WebSocket connections.
 
 ## Connecting to WebSocket
 
-> **Security Note:** Do not pass API keys in URL. Use headers for authentication.
-
 ```javascript
 // Node.js example using 'ws' library
 const WebSocket = require('ws');
