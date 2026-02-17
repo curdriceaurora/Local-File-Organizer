@@ -69,8 +69,9 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
     // Try npm dev first, then fall back to Python server
-    // Do NOT use || true as it silently swallows errors
-    command: "npm run dev 2>/dev/null || python3 -m file_organizer.web.app",
+    // Error handling: If both fail, Playwright will timeout after checking the URL
+    // This provides clear feedback rather than silently succeeding with no server
+    command: "npm run dev 2>/dev/null || python3 -m file_organizer.web.app 2>&1",
     url: "http://localhost:5000",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
