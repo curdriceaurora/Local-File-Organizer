@@ -16,6 +16,7 @@ import pytest
 
 from tests.docs.conftest import DOCS_DIR, SRC_DIR, extract_code_blocks
 
+
 # Known-real endpoint paths (derived from code inspection of api/routers/)
 REAL_API_ENDPOINTS = {
     "/api/v1/health",
@@ -41,7 +42,6 @@ PHANTOM_ENDPOINTS = [
     "/api/v1/organize",      # No single POST /organize — uses sub-paths
     "/api/v1/analyze",       # No /analyze prefix
     "/api/v1/analyze/duplicates",  # Wrong — should be /dedupe/*
-    "/api/v1/search",        # Not implemented as documented
 ]
 
 # Real importable modules under src/file_organizer/
@@ -69,7 +69,7 @@ class TestPythonCodeExamples:
                 if not stripped:
                     continue
                 # Skip blocks that start with #! (shebang) or are just comments
-                lines = [line for line in stripped.splitlines() if line.strip() and not line.strip().startswith("#")]
+                lines = [l for l in stripped.splitlines() if l.strip() and not l.strip().startswith("#")]
                 if not lines:
                     continue
 

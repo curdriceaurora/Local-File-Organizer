@@ -10,6 +10,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+import yaml
+
 from tests.docs.conftest import DOCS_DIR, MKDOCS_FILE
 
 

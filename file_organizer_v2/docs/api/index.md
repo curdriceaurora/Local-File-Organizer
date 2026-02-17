@@ -90,7 +90,7 @@ curl -X GET "http://localhost:8000/api/v1/files?path=/" \
 - `POST /api/v1/organize/scan` - Scan files for organization
 - `POST /api/v1/organize/preview` - Preview organization plan
 - `POST /api/v1/organize/execute` - Execute organization
-- `GET /api/v1/organize/status` - Get job status
+- `GET /api/v1/organize/status/{job_id}` - Get job status
 
 **Guide**: [Organization Endpoints](organization-endpoints.md)
 
@@ -102,10 +102,9 @@ curl -X GET "http://localhost:8000/api/v1/files?path=/" \
 
 **Guide**: [Analysis Endpoints](analysis-endpoints.md)
 
-### Search (Planned)
+### Search
 
-!!! note
-Search endpoints are under development and not yet available in this release.
+- `GET /api/v1/search` - Search files
 
 **Guide**: [Search Endpoints](search-endpoints.md)
 
