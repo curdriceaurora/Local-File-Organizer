@@ -211,7 +211,7 @@ Solutions:
 - Reduce upload file size
 - Use CPU-only mode
 
-See [Troubleshooting Guide](TROUBLESHOOTING.md) for more issues.
+See [Troubleshooting Guide](troubleshooting.md) for more issues.
 
 ## Contributing Questions
 
@@ -242,4 +242,4 @@ Can't find your answer?
 - **Documentation**: Browse [full docs](index.md)
 - **Issues**: [GitHub Issues](https://github.com/curdriceaurora/Local-File-Organizer/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/curdriceaurora/Local-File-Organizer/discussions)
-- **Troubleshooting**: [Troubleshooting Guide](TROUBLESHOOTING.md)
+- **Troubleshooting**: [Troubleshooting Guide](troubleshooting.md)

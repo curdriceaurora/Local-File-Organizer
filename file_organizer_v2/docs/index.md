@@ -94,7 +94,7 @@ File Organizer processes **43+ file formats** including:
 - [Web UI Guide](web-ui/index.md) - Browser-based file management
 - [Getting Started](getting-started.md) - Initial setup and overview
 - [CLI Reference](cli-reference.md) - Command-line interface guide
-- [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions
+- [Troubleshooting](troubleshooting.md) - Common issues and solutions
 
 ### API & Integration
 
@@ -120,7 +120,7 @@ File Organizer processes **43+ file formats** including:
 
 - **Issues**: Found a bug? [Report it on GitHub](https://github.com/curdriceaurora/Local-File-Organizer/issues)
 - **Discussions**: [Ask questions in discussions](https://github.com/curdriceaurora/Local-File-Organizer/discussions)
-- **Troubleshooting**: Check the [Troubleshooting Guide](TROUBLESHOOTING.md)
+- **Troubleshooting**: Check the [Troubleshooting Guide](troubleshooting.md)
 - **FAQ**: Browse [Frequently Asked Questions](faq.md)
 
 ## Installation Quick Start
