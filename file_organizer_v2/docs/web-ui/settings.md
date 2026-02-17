@@ -13,9 +13,9 @@ Click the **gear icon** (⚙️) in the top right corner, then select **Settings
 Configure where File Organizer stores its data:
 
 1. Click **Workspace** → **Path**
-2. Choose workspace location
-3. Ensure sufficient disk space (10+ GB recommended)
-4. Click **Save**
+1. Choose workspace location
+1. Ensure sufficient disk space (10+ GB recommended)
+1. Click **Save**
 
 **Note**: Changing workspace requires restart
 
@@ -24,8 +24,8 @@ Configure where File Organizer stores its data:
 Give your workspace a custom name:
 
 1. Click **Workspace** → **Name**
-2. Enter workspace name
-3. Click **Save**
+1. Enter workspace name
+1. Click **Save**
 
 Uses: Shown in web interface title and API responses
 
@@ -36,44 +36,44 @@ Uses: Shown in web interface title and API responses
 Choose light or dark theme:
 
 1. Click **Appearance** → **Theme**
-2. Select:
+1. Select:
    - Light mode
    - Dark mode
    - Auto (follows system)
-3. Changes apply immediately
+1. Changes apply immediately
 
 ### Language
 
 Select interface language:
 
 1. Click **Appearance** → **Language**
-2. Choose from:
+1. Choose from:
    - English
    - Spanish
    - French
    - German
    - Japanese
    - (More coming soon)
-3. Interface updates immediately
+1. Interface updates immediately
 
 ### Display Density
 
 Adjust interface spacing:
 
 1. Click **Appearance** → **Density**
-2. Choose:
+1. Choose:
    - Compact (more content visible)
    - Normal (default)
    - Spacious (easier to read)
-3. Updates immediately
+1. Updates immediately
 
 ### Font Size
 
 Adjust text size:
 
 1. Click **Appearance** → **Font Size**
-2. Choose from slider
-3. Updates immediately
+1. Choose from slider
+1. Updates immediately
 
 ## Notifications
 
@@ -82,28 +82,28 @@ Adjust text size:
 Control what notifications you receive:
 
 1. Click **Notifications**
-2. Toggle notification types:
+1. Toggle notification types:
    - Job completion
    - Errors and warnings
    - System updates
    - Tips and suggestions
-3. Click **Save**
+1. Click **Save**
 
 ### Desktop Notifications
 
 Enable browser desktop notifications:
 
 1. Click **Notifications** → **Desktop**
-2. Grant permission when prompted
-3. Notifications appear even when tab inactive
+1. Grant permission when prompted
+1. Notifications appear even when tab inactive
 
 ### Notification Sound
 
 Enable/disable notification sounds:
 
 1. Click **Notifications** → **Sound**
-2. Toggle on/off
-3. Test sound button available
+1. Toggle on/off
+1. Test sound button available
 
 ## API Configuration
 
@@ -112,19 +112,20 @@ Enable/disable notification sounds:
 Create API tokens for programmatic access:
 
 1. Click **API Keys**
-2. Click **Generate New Key**
-3. Configure:
+1. Click **Generate New Key**
+1. Configure:
    - **Name**: Identify the key
    - **Expiration**: When key expires
    - **Permissions**: What can be accessed
-4. Key is shown once - copy immediately
-5. Click **Done**
+1. Key is shown once - copy immediately
+1. Click **Done**
 
 ### Managing API Keys
 
 View and manage your API keys:
 
 **For Each Key**:
+
 - Name and creation date
 - Expiration date
 - Last used date
@@ -150,27 +151,30 @@ Control what each API key can do:
 Set default organization method:
 
 1. Click **Organization** → **Default**
-2. Choose:
+1. Choose:
    - PARA
    - Johnny Decimal
    - Custom
    - None
-3. Click **Save**
+1. Click **Save**
 
 ### Methodology Options
 
 Configure methodology-specific settings:
 
 **PARA**
+
 - Default folder structure
 - Auto-create subfolders
 
 **Johnny Decimal**
+
 - Starting number range
 - Subfolder naming
 - Archiving rules
 
 **Custom**
+
 - Save custom rules
 - Import/export rules
 - Create rule templates
@@ -180,12 +184,12 @@ Configure methodology-specific settings:
 Control how organization works:
 
 1. Click **Organization** → **Behavior**
-2. Configure:
+1. Configure:
    - **Dry Run**: Always preview first
    - **Preserve Originals**: Keep copies
    - **Create Folders**: Auto-create structure
    - **Auto-Backup**: Backup before organizing
-3. Click **Save**
+1. Click **Save**
 
 ## File Upload Settings
 
@@ -194,33 +198,33 @@ Control how organization works:
 Configure file upload restrictions:
 
 1. Click **Upload** → **Limits**
-2. Set:
+1. Set:
    - Max file size (per file)
    - Max batch size (total)
    - Supported file types
-3. Click **Save**
+1. Click **Save**
 
 ### Auto-Scan
 
 Enable automatic duplicate detection:
 
 1. Click **Upload** → **Auto-Scan**
-2. Toggle **Enable Auto-Scan**
-3. Configure:
+1. Toggle **Enable Auto-Scan**
+1. Configure:
    - Scan after upload
    - Similarity threshold
-4. Click **Save**
+1. Click **Save**
 
 ### Backup Settings
 
 Configure file backups:
 
 1. Click **Upload** → **Backups**
-2. Configure:
+1. Configure:
    - Keep backups before organizing
    - Backup retention (days)
    - Backup location
-3. Click **Save**
+1. Click **Save**
 
 ## Security Settings
 
@@ -229,11 +233,12 @@ Configure file backups:
 Update your account password:
 
 1. Click **Security** → **Password**
-2. Enter current password
-3. Enter new password (twice)
-4. Click **Change Password**
+1. Enter current password
+1. Enter new password (twice)
+1. Click **Change Password**
 
 **Password Requirements**:
+
 - At least 8 characters
 - Mix of upper and lowercase
 - At least one number
@@ -244,30 +249,30 @@ Update your account password:
 Enable additional security:
 
 1. Click **Security** → **2FA**
-2. Choose method:
+1. Choose method:
    - Authenticator app (Google Authenticator, Authy, etc.)
    - SMS (if configured)
-3. Follow setup wizard
-4. Save backup codes (securely!)
+1. Follow setup wizard
+1. Save backup codes (securely!)
 
 ### Sessions
 
 View and manage active sessions:
 
 1. Click **Security** → **Sessions**
-2. See all active sessions:
+1. See all active sessions:
    - Browser type
    - IP address
    - Last activity
-3. Click **Logout** to end session
-4. **Logout All** to sign out everywhere
+1. Click **Logout** to end session
+1. **Logout All** to sign out everywhere
 
 ### Login History
 
 Review recent login activity:
 
 1. Click **Security** → **Login History**
-2. See:
+1. See:
    - Date and time
    - IP address
    - Browser and OS
@@ -280,7 +285,7 @@ Review recent login activity:
 Control what data is collected:
 
 1. Click **Privacy** → **Data Collection**
-2. Toggle options:
+1. Toggle options:
    - Usage analytics
    - Error reporting
    - Feature suggestions
@@ -291,19 +296,19 @@ Control what data is collected:
 Manage browser cookies:
 
 1. Click **Privacy** → **Cookies**
-2. See what cookies are used:
+1. See what cookies are used:
    - Session management
    - User preferences
    - Analytics
-3. Clear cookies if desired
+1. Clear cookies if desired
 
 ### Third-Party Services
 
 View integrations:
 
 1. Click **Privacy** → **Integrations**
-2. No third-party integrations by default
-3. Enable if connecting external services
+1. No third-party integrations by default
+1. Enable if connecting external services
 
 ## Storage Settings
 
@@ -312,7 +317,7 @@ View integrations:
 See storage usage breakdown:
 
 1. Click **Storage** → **Usage**
-2. See:
+1. See:
    - Total capacity
    - Used space
    - Available space
@@ -323,23 +328,23 @@ See storage usage breakdown:
 Free up disk space:
 
 1. Click **Storage** → **Cleanup**
-2. Options:
+1. Options:
    - Delete old backups
    - Clear caches
    - Archive old files
    - Remove duplicates
-3. Preview what will be deleted
-4. Click **Cleanup**
+1. Preview what will be deleted
+1. Click **Cleanup**
 
 ### Storage Alerts
 
 Get notified when storage runs low:
 
 1. Click **Storage** → **Alerts**
-2. Configure:
+1. Configure:
    - Alert at % full (e.g., 80%)
    - Notification method
-3. Click **Save**
+1. Click **Save**
 
 ## Advanced Settings
 
@@ -348,7 +353,7 @@ Get notified when storage runs low:
 View system details:
 
 1. Click **Advanced** → **System**
-2. See:
+1. See:
    - Python version
    - Ollama version
    - Database info
@@ -359,39 +364,41 @@ View system details:
 Backup and restore settings:
 
 **Export Settings**
+
 1. Click **Advanced** → **Import/Export**
-2. Click **Export Settings**
-3. JSON file downloads
+1. Click **Export Settings**
+1. JSON file downloads
 
 **Import Settings**
+
 1. Click **Import Settings**
-2. Choose JSON file
-3. Settings are restored
+1. Choose JSON file
+1. Settings are restored
 
 ### Logs
 
 Access application logs:
 
 1. Click **Advanced** → **Logs**
-2. Filter by level:
+1. Filter by level:
    - Debug
    - Info
    - Warning
    - Error
-3. View recent logs
-4. Download logs file
+1. View recent logs
+1. Download logs file
 
 ### Reset to Defaults
 
 Reset all settings:
 
 1. Click **Advanced** → **Reset**
-2. Choose what to reset:
+1. Choose what to reset:
    - All settings
    - Workspace only
    - User preferences
-3. **WARNING**: This cannot be undone
-4. Click **Reset**
+1. **WARNING**: This cannot be undone
+1. Click **Reset**
 
 ## Mobile Settings
 
@@ -400,9 +407,9 @@ Reset all settings:
 The web interface adapts to mobile:
 
 1. Settings accessible on mobile
-2. Same functionality as desktop
-3. Touch-optimized interface
-4. Reduced features on very small screens
+1. Same functionality as desktop
+1. Touch-optimized interface
+1. Reduced features on very small screens
 
 ### Offline Mode
 
@@ -451,9 +458,9 @@ Quick keyboard shortcuts in settings:
 Export all settings before major changes:
 
 1. Click **Advanced** → **Export Settings**
-2. Save JSON file
-3. Keep in secure location
-4. Can restore if needed
+1. Save JSON file
+1. Keep in secure location
+1. Can restore if needed
 
 ## Next Steps
 

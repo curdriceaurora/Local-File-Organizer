@@ -111,6 +111,6 @@ GET /api/v1/search/saved
 }
 ```
 
----
+______________________________________________________________________
 
 See [API Reference](index.md) for more information.

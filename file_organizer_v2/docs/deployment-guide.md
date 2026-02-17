@@ -35,6 +35,7 @@ docker run -d \
 ```
 
 The container:
+
 - Runs as non-root user `organizer` (UID/GID 1000).
 - Exposes port 8000 for the web API.
 - Declares `data` as a persistent volume.
@@ -50,10 +51,10 @@ docker compose up -d
 
 This starts two services:
 
-| Service          | Image               | Ports | Purpose              |
+| Service | Image | Ports | Purpose |
 |------------------|---------------------|-------|----------------------|
-| `file-organizer` | Built from Dockerfile | 8000  | Web API server       |
-| `redis`          | redis:7-alpine      | 6379  | Event stream backend |
+| `file-organizer` | Built from Dockerfile | 8000 | Web API server |
+| `redis` | redis:7-alpine | 6379 | Event stream backend |
 
 Redis includes a health check (`redis-cli ping`), and the app service waits
 for Redis to be healthy before starting.
@@ -79,6 +80,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
 
 The development overlay (`docker-compose.dev.yml`):
+
 - Uses `Dockerfile.dev` (full Python image with dev tools).
 - Bind-mounts `./file_organizer_v2/src` into the container for live code
   changes.
@@ -121,12 +123,12 @@ The development container exposes debugpy on port 5678. Configure your IDE:
 
 ## Environment Variables
 
-| Variable                    | Default                   | Description                          |
+| Variable | Default | Description |
 |-----------------------------|---------------------------|--------------------------------------|
-| `FILE_ORGANIZER_DATA_DIR`   | `data`                   | Base directory for persistent data   |
-| `FILE_ORGANIZER_LOG_LEVEL`  | `INFO`                    | Logging level (DEBUG/INFO/WARNING/ERROR) |
-| `FILE_ORGANIZER_DEBUG`      | `0`                       | Enable debug mode (set to `1`)       |
-| `REDIS_URL`                 | `redis://localhost:6379/0`| Redis connection URL                 |
+| `FILE_ORGANIZER_DATA_DIR` | `data` | Base directory for persistent data |
+| `FILE_ORGANIZER_LOG_LEVEL` | `INFO` | Logging level (DEBUG/INFO/WARNING/ERROR) |
+| `FILE_ORGANIZER_DEBUG` | `0` | Enable debug mode (set to `1`) |
+| `REDIS_URL` | `redis://localhost:6379/0`| Redis connection URL |
 
 These variables are read by the application at startup. In Docker Compose,
 they are set in the `environment` section of each service.
@@ -205,12 +207,14 @@ export FO_API_RATE_LIMIT_RULES='{\"/api/v1/auth/login\": {\"requests\": 10, \"wi
 ```
 
 Responses include:
+
 - `X-RateLimit-Limit`
 - `X-RateLimit-Remaining`
 - `X-RateLimit-Reset`
 - `Retry-After` (on 429)
 
 Pitfalls:
+
 - In-memory rate limiting resets on restart. For multi-instance deployments,
   set `FO_API_AUTH_REDIS_URL` or `FO_REDIS_URL` to share limits across nodes.
 - If the API runs behind a proxy, enable trusted proxy headers and ensure
@@ -224,6 +228,7 @@ export FO_API_RATE_LIMIT_TRUST_PROXY_HEADERS=true
 ### Security Headers
 
 Security headers are enabled by default and include:
+
 - `Content-Security-Policy`
 - `X-Frame-Options`
 - `X-Content-Type-Options`
@@ -242,20 +247,20 @@ export FO_API_SECURITY_HEADERS_ENABLED=false
 
 ### Production Volumes
 
-| Volume           | Mount Point | Purpose                              |
+| Volume | Mount Point | Purpose |
 |------------------|-------------|--------------------------------------|
-| `organizer-data` | `data`     | Persistent storage for organized files, database, and configuration |
-| `redis-data`     | `data`     | Redis persistence (RDB/AOF)          |
+| `organizer-data` | `data` | Persistent storage for organized files, database, and configuration |
+| `redis-data` | `data` | Redis persistence (RDB/AOF) |
 
 Both volumes use the `local` driver by default. For cloud deployments, replace
 with your storage driver (e.g., EFS, GCE PD).
 
 ### Development Volumes
 
-| Bind Mount                       | Container Path                | Purpose              |
+| Bind Mount | Container Path | Purpose |
 |----------------------------------|-------------------------------|----------------------|
-| `./file_organizer_v2/src`        | `app/file_organizer_v2/src`  | Live code reload     |
-| `./file_organizer_v2/tests`      | `app/file_organizer_v2/tests`| Test files (test-runner only) |
+| `./file_organizer_v2/src` | `app/file_organizer_v2/src` | Live code reload |
+| `./file_organizer_v2/tests` | `app/file_organizer_v2/tests`| Test files (test-runner only) |
 
 ### Custom Watch Directories
 
@@ -351,6 +356,7 @@ MONITOR
 ### Graceful Degradation
 
 If Redis is unavailable:
+
 - The event system operates in no-op mode.
 - Events are silently dropped (logged at debug level).
 - File processing continues without event emission.

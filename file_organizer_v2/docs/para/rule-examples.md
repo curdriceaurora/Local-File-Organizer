@@ -5,13 +5,13 @@ This document provides comprehensive examples of PARA categorization rules for c
 ## Table of Contents
 
 1. [Project Rules](#project-rules)
-2. [Area Rules](#area-rules)
-3. [Resource Rules](#resource-rules)
-4. [Archive Rules](#archive-rules)
-5. [Advanced Examples](#advanced-examples)
-6. [Industry-Specific Examples](#industry-specific-examples)
+1. [Area Rules](#area-rules)
+1. [Resource Rules](#resource-rules)
+1. [Archive Rules](#archive-rules)
+1. [Advanced Examples](#advanced-examples)
+1. [Industry-Specific Examples](#industry-specific-examples)
 
----
+______________________________________________________________________
 
 ## Project Rules
 

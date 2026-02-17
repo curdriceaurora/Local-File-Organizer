@@ -189,14 +189,14 @@ tox -e py39 -- -k "test_watcher" --tb=long
 
 The project's `tox.ini` defines the following environments:
 
-| Environment | Description                        |
+| Environment | Description |
 |-------------|------------------------------------|
-| `py39`      | Run tests under Python 3.9         |
-| `py310`     | Run tests under Python 3.10        |
-| `py311`     | Run tests under Python 3.11        |
-| `py312`     | Run tests under Python 3.12        |
-| `lint`      | Lint with ruff (target: py39)       |
-| `type`      | Type check with mypy (target: py39) |
+| `py39` | Run tests under Python 3.9 |
+| `py310` | Run tests under Python 3.10 |
+| `py311` | Run tests under Python 3.11 |
+| `py312` | Run tests under Python 3.12 |
+| `lint` | Lint with ruff (target: py39) |
+| `type` | Type check with mypy (target: py39) |
 
 The `skip_missing_interpreters = true` setting means tox will not fail if a
 Python version is not installed -- it simply skips that environment.
@@ -233,26 +233,28 @@ annotation syntax at all.
 1. **Always add `from __future__ import annotations`** as the first import in
    every new Python file.
 
-2. **Use modern annotation syntax** (`X | Y`, `list[str]`, `dict[str, int]`)
+1. **Use modern annotation syntax** (`X | Y`, `list[str]`, `dict[str, int]`)
    in type hints. The future import ensures compatibility.
 
-3. **Do not use `X | Y` at runtime** outside annotations on Python 3.9. For
+1. **Do not use `X | Y` at runtime** outside annotations on Python 3.9. For
    runtime type checks, use:
+
    ```python
    from file_organizer._compat import check_type
    if check_type(value, (str, int)):
        ...
    ```
 
-4. **Import `StrEnum` from `_compat`**, not from `enum`:
+1. **Import `StrEnum` from `_compat`**, not from `enum`:
+
    ```python
    from file_organizer._compat import StrEnum
    ```
 
-5. **Use `datetime.timezone.utc`** (or `_compat.UTC`) instead of
+1. **Use `datetime.timezone.utc`** (or `_compat.UTC`) instead of
    `datetime.UTC`.
 
-6. **Run `tox -e py39`** before pushing to verify backward compatibility.
+1. **Run `tox -e py39`** before pushing to verify backward compatibility.
 
-7. **Set ruff and mypy targets to `py39`** (already configured in
+1. **Set ruff and mypy targets to `py39`** (already configured in
    `pyproject.toml`).

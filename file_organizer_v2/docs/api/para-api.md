@@ -14,7 +14,7 @@ The PARA API provides programmatic access to the PARA methodology implementation
 - [User Preferences](#user-preferences)
 - [Examples](#examples)
 
----
+______________________________________________________________________
 
 ## Core Classes
 
@@ -38,6 +38,7 @@ config = PARAConfig(
 ```
 
 **Parameters**:
+
 - `enabled` - Enable PARA methodology
 - `auto_categorize` - Automatically categorize files
 - `confidence_threshold` - Minimum confidence for auto-categorization (0-1)
@@ -96,19 +97,21 @@ class PARAResult:
 ```
 
 **Attributes**:
+
 - `category` - Assigned PARA category
 - `confidence` - Confidence score (0-1)
 - `reasoning` - Explanation of categorization
 - `suggested_subfolder` - Recommended subfolder path
 - `alternative_categories` - Other possible categories with scores
 
----
+______________________________________________________________________
 
 ## Configuration
 
 ### Creating Configuration
 
 **Basic Setup**:
+
 ```python
 from file_organizer.methodologies.para import PARAConfig
 
@@ -132,6 +135,7 @@ config = PARAConfig(
 ```
 
 **Loading from File**:
+
 ```python
 # Load from YAML
 config = PARAConfig.load("config/file-organizer/para.json")
@@ -146,6 +150,7 @@ config = PARAConfig(**config_dict)
 ```
 
 **Saving Configuration**:
+
 ```python
 # Save to file
 config.save("config/file-organizer/para.json")
@@ -154,7 +159,7 @@ config.save("config/file-organizer/para.json")
 config_dict = config.to_dict()
 ```
 
----
+______________________________________________________________________
 
 ## Auto-Categorization
 
@@ -183,6 +188,7 @@ result = categorizer.categorize(
 Categorize a file into PARA structure.
 
 **Parameters**:
+
 - `file_path` - Path to file
 - `content` - Optional file content (extracted if not provided)
 - `metadata` - Optional metadata dict
@@ -190,6 +196,7 @@ Categorize a file into PARA structure.
 **Returns**: `PARAResult` with category and confidence
 
 **Example**:
+
 ```python
 from pathlib import Path
 
@@ -217,12 +224,14 @@ results = categorizer.batch_categorize(
 Categorize multiple files in batch.
 
 **Parameters**:
+
 - `file_paths` - List of file paths
 - `progress_callback` - Optional callback for progress updates
 
 **Returns**: List of `PARAResult` objects
 
 **Example**:
+
 ```python
 from pathlib import Path
 
@@ -253,6 +262,7 @@ score = heuristic.evaluate(content, metadata)
 ```
 
 **Detects**:
+
 - Deadlines and dates
 - Frequency indicators (daily, weekly, ongoing)
 - Completion markers
@@ -270,6 +280,7 @@ score = heuristic.evaluate(content, metadata)
 ```
 
 **Detects**:
+
 - Goal-oriented language (deliver, complete, finish)
 - Maintenance language (maintain, monitor, track)
 - Reference indicators (guide, tutorial, reference)
@@ -287,12 +298,13 @@ score = heuristic.evaluate(content, metadata)
 ```
 
 **Detects**:
+
 - Folder structure hints
 - Naming patterns
 - Metadata tags
 - File relationships
 
----
+______________________________________________________________________
 
 ## Custom Rules
 
@@ -313,6 +325,7 @@ rule = PARARule(
 ```
 
 **Parameters**:
+
 - `name` - Rule identifier
 - `category` - Target PARA category
 - `conditions` - Dictionary of conditions to match
@@ -320,6 +333,7 @@ rule = PARARule(
 - `enabled` - Whether rule is active
 
 **Condition Keys**:
+
 - `keywords` - List of keywords to match
 - `file_extension` - List of extensions
 - `path_contains` - Path substring match
@@ -331,6 +345,7 @@ rule = PARARule(
 - `recurring` - Boolean for recurring items
 
 **Example**:
+
 ```python
 # Work projects rule
 work_rule = PARARule(
@@ -394,6 +409,7 @@ engine.set_rule_enabled(rule_name: str, enabled: bool)
 ```
 
 **Example**:
+
 ```python
 # Add custom rules
 engine.add_rule(work_rule)
@@ -410,7 +426,7 @@ if result:
     print(f"Rule matched: {result.category.value}")
 ```
 
----
+______________________________________________________________________
 
 ## Smart Suggestions
 
@@ -438,12 +454,14 @@ suggestions = engine.suggest(
 Get categorization suggestions.
 
 **Parameters**:
+
 - `file_path` - File to analyze
 - `context` - Optional context (recent activity, current focus)
 
 **Returns**: List of `PARASuggestion` objects (sorted by confidence)
 
 **Example**:
+
 ```python
 suggestions = engine.suggest(
     Path("document.pdf"),
@@ -470,6 +488,7 @@ engine.accept_suggestion(
 Record acceptance for learning.
 
 **Example**:
+
 ```python
 # Accept suggestion
 engine.accept_suggestion(
@@ -492,6 +511,7 @@ engine.reject_suggestion(
 Record rejection with correction.
 
 **Example**:
+
 ```python
 # Reject and correct
 engine.reject_suggestion(
@@ -502,7 +522,7 @@ engine.reject_suggestion(
 )
 ```
 
----
+______________________________________________________________________
 
 ## User Preferences
 
@@ -544,6 +564,7 @@ tracker.import_preferences(preferences: Dict)
 ```
 
 **Example**:
+
 ```python
 # Record user choices
 tracker.record_action(
@@ -558,7 +579,7 @@ confidence = tracker.get_preference_confidence("*-report.pdf")
 print(f"Preference: {preference.value} ({confidence:.0%} confidence)")
 ```
 
----
+______________________________________________________________________
 
 ## Examples
 
@@ -720,7 +741,7 @@ new_suggestions = engine.suggest(Path("similar-document.pdf"))
 # Now likely suggests AREAS first
 ```
 
----
+______________________________________________________________________
 
 ## Exception Handling
 
@@ -739,14 +760,14 @@ except Exception as e:
     print(f"Unexpected error: {e}")
 ```
 
----
+______________________________________________________________________
 
 ## Related APIs
 
 - [Johnny Decimal API](johnny-decimal-api.md) - Numbering system API
 - [File Organization API](organization-api.md) - Core organization API
 
----
+______________________________________________________________________
 
 **API Version**: 2.0
 **Last Updated**: 2026-01-24

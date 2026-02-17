@@ -7,9 +7,9 @@
 The History & Undo/Redo system provides:
 
 1. **Operation History** (#53) - Track all file operations with metadata
-2. **Undo/Redo** (#55) - Reverse or replay file operations safely
-3. **Transaction Support** - Group operations and undo/redo them together
-4. **History Viewer** - Browse and analyze operation history
+1. **Undo/Redo** (#55) - Reverse or replay file operations safely
+1. **Transaction Support** - Group operations and undo/redo them together
+1. **History Viewer** - Browse and analyze operation history
 
 ## Quick Start
 
@@ -67,6 +67,7 @@ undo_manager.redo_last_operation()
 The system tracks all file operations:
 
 **Operation Types:**
+
 - **MOVE**: File moved from one location to another
 - **RENAME**: File renamed in same directory
 - **DELETE**: File deleted (backed up first)
@@ -74,6 +75,7 @@ The system tracks all file operations:
 - **CREATE**: New file created
 
 **Tracked Metadata:**
+
 - Timestamp
 - Source and destination paths
 - File hash (SHA256)
@@ -166,6 +168,7 @@ print(f"\nSuccess rate: {stats['success_rate']:.1%}")
 Transactions group related operations together so they can be undone/redone as a unit.
 
 **Example Use Cases:**
+
 - Organize entire directory (multiple moves)
 - Batch rename files
 - Deduplication cleanup (multiple deletes)
@@ -534,6 +537,7 @@ print("Preview: operation would be undone")
 ### Validation
 
 Before undo/redo, the system validates:
+
 - File still exists at expected location
 - Target location is available
 - Sufficient permissions
@@ -737,10 +741,11 @@ if can_undo:
 **Problem**: Undo fails with "Cannot undo" error
 
 **Common Causes**:
+
 1. File no longer at expected location
-2. Target location doesn't exist
-3. Permission denied
-4. Disk space issues
+1. Target location doesn't exist
+1. Permission denied
+1. Disk space issues
 
 **Solutions**:
 
@@ -799,6 +804,7 @@ python -m file_organizer.cli.undo_redo --archive --days 365
 **Problem**: Cannot redo after new operation
 
 **Explanation**:
+
 - Redo stack is cleared when new operations occur
 - This is standard undo/redo behavior
 - Export history if you need to preserve it

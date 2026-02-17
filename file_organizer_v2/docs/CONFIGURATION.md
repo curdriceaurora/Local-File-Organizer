@@ -230,7 +230,6 @@ profiles:
 
 Note: deployment defaults may be tuned for container environments. Use `FO_DATA_DIR` to align the data directory with your runtime.
 
-
 ### PARA
 
 | Setting | Default | Description |

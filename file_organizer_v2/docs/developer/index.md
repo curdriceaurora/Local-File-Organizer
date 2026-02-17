@@ -28,26 +28,31 @@ python -m uvicorn main:app --reload
 ## Main Sections
 
 ### Understanding the System
+
 - [Architecture Guide](architecture.md) - System design and components
 - Understanding API structure
 - Database schema overview
 
 ### Extending File Organizer
+
 - [Plugin Development](plugin-development.md) - Create custom plugins
 - Creating custom methodologies
 - Adding new file type handlers
 
 ### Integration
+
 - [API Clients](api-clients.md) - Client libraries and examples
 - Webhook integration
 - Third-party service integration
 
 ### Contributing
+
 - [Contributing Guide](contributing.md) - How to contribute
 - Code style and standards
 - Pull request process
 
 ### Testing
+
 - [Testing Guide](testing.md) - Test strategies and examples
 - Unit testing
 - Integration testing
@@ -90,16 +95,19 @@ File Organizer v2.0
 ## Key Files
 
 **Web Server**
+
 - `web_server/main.py` - FastAPI application
 - `web_server/routes/` - API endpoints
 - `web_server/models.py` - Pydantic models
 
 **Core Engine**
+
 - `file_organizer/core/` - Main orchestrator
 - `file_organizer/services/` - Business logic
 - `file_organizer/models/` - AI model interfaces
 
 **Database**
+
 - `file_organizer/db/` - Database models
 - `alembic/` - Database migrations
 
@@ -135,9 +143,9 @@ async def custom_endpoint(data: MyModel):
 ### Add File Type Support
 
 1. Create reader in `utils/file_readers.py`
-2. Register in processor
-3. Add tests
-4. Update documentation
+1. Register in processor
+1. Add tests
+1. Update documentation
 
 ## Testing
 
@@ -169,18 +177,21 @@ def test_my_feature():
 ## Code Standards
 
 ### Python Style
+
 - Follow PEP 8
 - Use type hints
 - Max line length 88 (Black)
 - Sort imports (isort)
 
 ### Naming
+
 - Classes: `PascalCase`
 - Functions: `snake_case`
 - Constants: `UPPER_SNAKE_CASE`
 - Private: `_leading_underscore`
 
 ### Documentation
+
 - Google-style docstrings
 - Document public APIs
 - Include usage examples
@@ -190,11 +201,11 @@ def test_my_feature():
 ### Process
 
 1. Fork repository
-2. Create feature branch: `git checkout -b feature/my-feature`
-3. Make changes with tests
-4. Run quality checks
-5. Commit with clear message
-6. Push and create PR
+1. Create feature branch: `git checkout -b feature/my-feature`
+1. Make changes with tests
+1. Run quality checks
+1. Commit with clear message
+1. Push and create PR
 
 ### Quality Checks
 
@@ -208,16 +219,19 @@ pytest                    # Tests
 ## Resources
 
 ### Documentation
+
 - This Developer Guide
 - [API Reference](../api/index.md)
 - Code comments and docstrings
 
 ### Community
+
 - [GitHub Issues](https://github.com/curdriceaurora/Local-File-Organizer/issues)
 - [GitHub Discussions](https://github.com/curdriceaurora/Local-File-Organizer/discussions)
 - [GitHub Releases](https://github.com/curdriceaurora/Local-File-Organizer/releases)
 
 ### Related Projects
+
 - [Ollama](https://ollama.ai) - Local LLM inference
 - [FastAPI](https://fastapi.tiangolo.com) - Web framework
 - [SQLAlchemy](https://www.sqlalchemy.org) - Database ORM
@@ -225,11 +239,13 @@ pytest                    # Tests
 ## Getting Help
 
 ### Documentation
+
 - Read the architecture guide
 - Check API documentation
 - Review existing code
 
 ### Support
+
 - GitHub Issues for bugs
 - GitHub Discussions for questions
 - Code comments in relevant files

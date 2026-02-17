@@ -7,8 +7,8 @@
 The Intelligence system learns from your actions and preferences to make smarter suggestions over time. It includes:
 
 1. **Preference Tracking** (#50) - Learns from your corrections and choices
-2. **Pattern Learning** (#49) - Identifies patterns in file organization
-3. **Profile Management** (#51) - Save, share, and manage learned preferences
+1. **Pattern Learning** (#49) - Identifies patterns in file organization
+1. **Profile Management** (#51) - Save, share, and manage learned preferences
 
 ## Quick Start
 
@@ -67,22 +67,25 @@ python -m file_organizer.cli.profile activate work-profile
 ### How It Works
 
 The preference tracker learns from:
+
 - **File moves**: Where you move files instead of suggested locations
 - **Renames**: How you rename files differently
 - **Category changes**: When you override suggested categories
 - **Manual overrides**: Any manual organization decisions
 
 **Learning Process:**
+
 1. System suggests an action based on AI analysis
-2. You accept or correct the suggestion
-3. Correction is tracked with metadata
-4. Confidence increases with repeated patterns
-5. Future suggestions adapt to your preferences
+1. You accept or correct the suggestion
+1. Correction is tracked with metadata
+1. Confidence increases with repeated patterns
+1. Future suggestions adapt to your preferences
 
 ### Preference Types
 
 **FOLDER_MAPPING**
 Where files should be moved based on type/extension:
+
 ```python
 # System learns: *.pdf files go to Documents/Work
 tracker.add_correction(
@@ -96,6 +99,7 @@ tracker.add_correction(
 
 **NAMING_PATTERN**
 How files should be renamed:
+
 ```python
 # System learns: Screenshots should be renamed to Screenshot_{date}
 tracker.add_correction(
@@ -109,6 +113,7 @@ tracker.add_correction(
 
 **CATEGORY_OVERRIDE**
 Custom category assignments:
+
 ```python
 # System learns: technical_spec.pdf is categorized as "Work", not "General"
 tracker.add_correction(
@@ -125,17 +130,21 @@ tracker.add_correction(
 Preferences have confidence scores (0.0 to 1.0) that adjust based on:
 
 **Initial Confidence**: 0.5
+
 - First correction creates preference with 50% confidence
 
 **Increase Confidence**: +0.05 per success
+
 - Each time the preference is successfully applied
 - Caps at 0.98 maximum
 
 **Decrease Confidence**: -0.1 per failure
+
 - When preference doesn't work or is corrected again
 - Floor at 0.1 minimum
 
 **Frequency Boost**: Up to +0.45
+
 - More corrections increase confidence faster
 - Formula: `min(0.45, frequency * 0.05)`
 
@@ -151,6 +160,7 @@ tracker.update_confidence(success=False)  # 0.55 (decreased)
 ### Thread Safety
 
 All operations are thread-safe:
+
 ```python
 # Multiple threads can track corrections simultaneously
 from concurrent.futures import ThreadPoolExecutor
@@ -183,6 +193,7 @@ tracker.import_data(data)
 ### How It Works
 
 Pattern learning analyzes your file organization to identify:
+
 - **Naming conventions**: Common file naming patterns
 - **Folder structures**: Directory organization patterns
 - **File associations**: Which files belong together
@@ -237,18 +248,21 @@ new_name = analyzer.apply_pattern(
 ### Pattern Types
 
 **Sequential Patterns**
+
 ```python
 # Files: file_001.txt, file_002.txt, file_003.txt
 # Pattern: file_{sequence:3d}.txt
 ```
 
 **Date Patterns**
+
 ```python
 # Files: backup_2024-01-15.zip, backup_2024-01-16.zip
 # Pattern: backup_{date:YYYY-MM-DD}.zip
 ```
 
 **Category Patterns**
+
 ```python
 # Files: work_report.pdf, work_notes.txt, work_data.csv
 # Pattern: {category}_{description}.{ext}
@@ -395,6 +409,7 @@ python -m file_organizer.cli.profile delete old-profile
 ### Sharing Profiles
 
 **Export for Sharing**
+
 ```python
 from file_organizer.services.intelligence import ProfileExporter
 
@@ -411,6 +426,7 @@ exporter.export(
 ```
 
 **Import Shared Profile**
+
 ```python
 from file_organizer.services.intelligence import ProfileImporter
 
@@ -515,6 +531,7 @@ When multiple preferences conflict:
 
 **Global Preferences**
 Apply to all directories unless overridden:
+
 ```python
 store.add_global_preference(
     preference_type="folder_mapping",
@@ -525,6 +542,7 @@ store.add_global_preference(
 
 **Directory Preferences**
 Override global preferences for specific paths:
+
 ```python
 store.add_preference(
     path=Path("./Documents/Work"),
@@ -628,6 +646,7 @@ print(f"Consistency score: {insights.consistency_score:.2%}")
 ### 1. Let It Learn Gradually
 
 Don't force the system to learn everything at once:
+
 ```python
 # Good: Let it learn naturally over time
 tracker = PreferenceTracker()
@@ -640,6 +659,7 @@ tracker = PreferenceTracker()
 ### 2. Review Confidence Scores
 
 Check confidence before applying preferences:
+
 ```python
 preference = tracker.get_preference(file_path, pref_type)
 
@@ -657,6 +677,7 @@ else:
 ### 3. Regular Exports
 
 Back up learned preferences regularly:
+
 ```bash
 # Weekly backup
 python -m file_organizer.cli.profile export weekly-backup-$(date +%Y%m%d).json
@@ -665,6 +686,7 @@ python -m file_organizer.cli.profile export weekly-backup-$(date +%Y%m%d).json
 ### 4. Share Team Profiles
 
 For teams with similar organization needs:
+
 ```bash
 # Team lead exports profile
 python -m file_organizer.cli.profile export team-profile.json --anonymize
@@ -676,6 +698,7 @@ python -m file_organizer.cli.profile import team-profile.json --merge
 ### 5. Monitor Learning Progress
 
 Track how well the system is learning:
+
 ```python
 # Check statistics regularly
 stats = tracker.get_statistics()
@@ -692,6 +715,7 @@ elif stats['average_confidence'] > 0.8:
 
 **Problem**: Preferences stay at low confidence
 **Solutions**:
+
 - Provide more consistent corrections
 - Review if patterns are actually consistent
 - Check for conflicting preferences
@@ -700,6 +724,7 @@ elif stats['average_confidence'] > 0.8:
 
 **Problem**: System makes wrong suggestions
 **Solutions**:
+
 - Correct the suggestion (system will learn)
 - Check for conflicting learned patterns
 - Review preference confidence and frequency
@@ -712,6 +737,7 @@ elif stats['average_confidence'] > 0.8:
 
 **Problem**: Imported profile conflicts with existing preferences
 **Solutions**:
+
 ```python
 # Merge with conflict resolution
 importer.import_profile(

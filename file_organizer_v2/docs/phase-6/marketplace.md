@@ -74,4 +74,3 @@ Marketplace API routes are available under `/api/v1/marketplace/*`:
   - `plugin.py` at archive root, or
   - one top-level directory containing `plugin.py`
 - ZIP extraction rejects `..` traversal paths and symlink entries.
-

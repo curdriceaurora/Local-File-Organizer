@@ -5,13 +5,13 @@ Comprehensive examples demonstrating how to categorize various types of files us
 ## Table of Contents
 
 1. [Work Examples](#work-examples)
-2. [Personal Examples](#personal-examples)
-3. [Creative Work Examples](#creative-work-examples)
-4. [Academic Examples](#academic-examples)
-5. [Technical/Development Examples](#technical-development-examples)
-6. [Edge Cases](#edge-cases)
+1. [Personal Examples](#personal-examples)
+1. [Creative Work Examples](#creative-work-examples)
+1. [Academic Examples](#academic-examples)
+1. [Technical/Development Examples](#technical-development-examples)
+1. [Edge Cases](#edge-cases)
 
----
+______________________________________________________________________
 
 ## Work Examples
 

@@ -13,13 +13,14 @@ This guide helps you migrate to Phase 3 features from earlier versions or from m
 - [Format Support Migration](#format-support-migration)
 - [Data Preservation](#data-preservation)
 
----
+______________________________________________________________________
 
 ## Upgrading from Phase 2
 
 ### Prerequisites
 
 **Backup Your Data**:
+
 ```bash
 # Create complete backup
 cp -r ./Documents ./Documents-backup-$(date +%Y%m%d)
@@ -29,6 +30,7 @@ tar -czf documents-backup-$(date +%Y%m%d).tar.gz ./Documents
 ```
 
 **Check Current Version**:
+
 ```bash
 file-organizer --version
 # Should show: file-organizer 1.x or 2.x
@@ -37,6 +39,7 @@ file-organizer --version
 ### Installation
 
 **Update Package**:
+
 ```bash
 # Upgrade to Phase 3
 pip install --upgrade file-organizer-v2
@@ -47,6 +50,7 @@ file-organizer --version
 ```
 
 **Install Phase 3 Features**:
+
 ```bash
 # All Phase 3 features
 pip install file-organizer-v2[phase3-all]
@@ -62,6 +66,7 @@ pip install file-organizer-v2[video]         # Video support
 ### Configuration Migration
 
 **Migrate Settings**:
+
 ```bash
 # Automatic migration
 file-organizer config migrate --from-version 1.x
@@ -73,6 +78,7 @@ file-organizer config create --defaults phase3
 ```
 
 **New Phase 3 Settings**:
+
 ```yaml
 # config/file-organizer/config.yaml
 
@@ -113,17 +119,19 @@ file-organizer db status
 **Note**: Database migration commands are planned for a future release. For now, the system will automatically handle schema updates on first run.
 
 **Preserve History** (manual approach):
+
 - Phase 3 uses a new database schema
 - Manual backup: Copy `data/file-organizer/history.db` to a safe location
 - History from Phase 2 can be queried separately if needed
 
----
+______________________________________________________________________
 
 ## Migrating to PARA
 
 ### From Flat Directory Structure
 
 **Before**:
+
 ```
 ./Documents/
 ├── project1.pdf
@@ -134,6 +142,7 @@ file-organizer db status
 ```
 
 **After PARA**:
+
 ```
 ./Documents-PARA/
 ├── 1-Projects/
@@ -155,6 +164,7 @@ file-organizer db status
 **Migration Steps**:
 
 1. **Analyze Current Structure**:
+
 ```bash
 # Preview PARA categorization
 file-organizer analyze ./Documents --methodology para --dry-run
@@ -168,6 +178,7 @@ file-organizer analyze ./Documents --methodology para --dry-run
 ```
 
 2. **Review Suggestions**:
+
 ```bash
 # Review low-confidence categorizations
 file-organizer analyze ./Documents --methodology para --show-low-confidence
@@ -177,6 +188,7 @@ file-organizer analyze ./Documents --methodology para --export-csv review.csv
 ```
 
 3. **Execute Migration**:
+
 ```bash
 # Migrate to PARA structure
 file-organizer migrate ./Documents ./Documents-PARA --methodology para
@@ -191,6 +203,7 @@ file-organizer migrate ./Documents ./Documents-PARA --methodology para
 ```
 
 4. **Verify Results**:
+
 ```bash
 # Check structure
 tree ./Documents-PARA -L 2
@@ -202,6 +215,7 @@ file-organizer validate ./Documents-PARA --methodology para
 ### From Dated Folders
 
 **Before**:
+
 ```
 ./Documents/
 ├── 2024-01-Project-Alpha/
@@ -211,6 +225,7 @@ file-organizer validate ./Documents-PARA --methodology para
 ```
 
 **Migration Strategy**:
+
 ```python
 from file_organizer import FileOrganizer
 from file_organizer.methodologies.para import PARAConfig
@@ -240,6 +255,7 @@ organizer.migrate(
 ### From Topic-Based Folders
 
 **Before**:
+
 ```
 ./Documents/
 ├── Work/
@@ -250,6 +266,7 @@ organizer.migrate(
 ```
 
 **Mapping to PARA**:
+
 ```python
 # Define custom mapping
 category_mapping = {
@@ -265,13 +282,14 @@ file-organizer migrate ./Documents ./Documents-PARA \
     --mapping-file category_mapping.json
 ```
 
----
+______________________________________________________________________
 
 ## Migrating to Johnny Decimal
 
 ### From Flat Structure
 
 **Before**:
+
 ```
 ./Documents/
 ├── invoice-jan.pdf
@@ -281,6 +299,7 @@ file-organizer migrate ./Documents ./Documents-PARA \
 ```
 
 **After Johnny Decimal**:
+
 ```
 ./Documents-JD/
 ├── 10-19-Administration/
@@ -297,6 +316,7 @@ file-organizer migrate ./Documents ./Documents-PARA \
 **Migration Steps**:
 
 1. **Choose Numbering Scheme**:
+
 ```bash
 # List available schemes
 file-organizer jd list-schemes
@@ -309,6 +329,7 @@ file-organizer jd list-schemes
 ```
 
 2. **Generate Scheme from Existing Structure**:
+
 ```bash
 # Analyze and suggest scheme
 file-organizer jd generate-scheme ./Documents --output custom-scheme.json
@@ -321,6 +342,7 @@ file-organizer jd init ./Documents-JD --scheme custom-scheme.json
 ```
 
 3. **Assign Numbers**:
+
 ```bash
 # Dry run first
 file-organizer jd batch-assign ./Documents \
@@ -335,6 +357,7 @@ file-organizer jd batch-assign ./Documents \
 ```
 
 4. **Create Index**:
+
 ```bash
 # Generate Johnny Decimal index
 file-organizer jd generate-index ./Documents-JD > "00.00 Index.md"
@@ -348,6 +371,7 @@ mv "00.00 Index.md" ./Documents-JD/
 If you already use a numbering system (e.g., folders named "01", "02", etc.):
 
 **Before**:
+
 ```
 ./Documents/
 ├── 01-Admin/
@@ -356,6 +380,7 @@ If you already use a numbering system (e.g., folders named "01", "02", etc.):
 ```
 
 **Migration**:
+
 ```bash
 # Import existing structure
 file-organizer jd import-structure ./Documents --map-to-areas
@@ -372,6 +397,7 @@ file-organizer jd batch-assign ./Documents --preserve-folders
 ### From Topic Folders with Many Files
 
 **Before**:
+
 ```
 ./Documents/
 └── Invoices/
@@ -381,6 +407,7 @@ file-organizer jd batch-assign ./Documents --preserve-folders
 ```
 
 **Strategy**:
+
 ```bash
 # Use Johnny Decimal to organize large folders
 file-organizer jd organize ./Documents/Invoices \
@@ -396,7 +423,7 @@ file-organizer jd organize ./Documents/Invoices \
 # 22.01-invoice100.pdf (overflows to next category)
 ```
 
----
+______________________________________________________________________
 
 ## Combined Migration
 
@@ -405,6 +432,7 @@ file-organizer jd organize ./Documents/Invoices \
 Combine both methodologies for maximum organization:
 
 **Result**:
+
 ```
 ./Documents-Organized/
 ├── 1-Projects/
@@ -430,7 +458,8 @@ Combine both methodologies for maximum organization:
 ```
 
 **Migration Command**:
-```bash
+
+````bash
 # Apply both methodologies
 file-organizer migrate ./Documents ./Documents-Organized \
     --methodology para,johnny-decimal \
@@ -462,9 +491,9 @@ organizer.migrate(
     para_config=para_config,
     jd_config=jd_config
 )
-```
+````
 
----
+______________________________________________________________________
 
 ## Format Support Migration
 
@@ -473,6 +502,7 @@ organizer.migrate(
 **No migration needed** - Phase 3 automatically uses enhanced EPUB processing.
 
 **Enable Features**:
+
 ```yaml
 file_formats:
   epub_enhanced: true
@@ -482,6 +512,7 @@ file_formats:
 ```
 
 **Re-organize Existing Books**:
+
 ```bash
 # Re-analyze with enhanced features
 file-organizer re-organize ./Books --format epub --use-enhanced
@@ -494,6 +525,7 @@ file-organizer re-organize ./Books --format epub --use-enhanced
 **After**: Archives analyzed and organized by contents.
 
 **Enable**:
+
 ```yaml
 file_formats:
   archive_support: true
@@ -501,18 +533,20 @@ file_formats:
 ```
 
 **Re-process Archives**:
+
 ```bash
 # Re-analyze existing archives
 file-organizer re-organize ./Downloads/*.zip --analyze-contents
 ```
 
----
+______________________________________________________________________
 
 ## Data Preservation
 
 ### Preserving Metadata
 
 **File Timestamps**:
+
 ```bash
 # Preserve original timestamps during migration
 file-organizer migrate ./Documents ./Documents-PARA \
@@ -520,6 +554,7 @@ file-organizer migrate ./Documents ./Documents-PARA \
 ```
 
 **Extended Attributes** (macOS/Linux):
+
 ```bash
 # Preserve extended attributes (tags, comments)
 file-organizer migrate ./Documents ./Documents-PARA \
@@ -527,6 +562,7 @@ file-organizer migrate ./Documents ./Documents-PARA \
 ```
 
 **File Permissions**:
+
 ```bash
 # Preserve file permissions
 file-organizer migrate ./Documents ./Documents-PARA \
@@ -536,6 +572,7 @@ file-organizer migrate ./Documents ./Documents-PARA \
 ### Preserving History
 
 **Export Operation History**:
+
 ```bash
 # Export history before migration
 file-organizer history export ./Documents-history.json
@@ -557,13 +594,14 @@ file-organizer migrate ./Documents ./Documents-PARA \
 cat migration-log.txt
 ```
 
----
+______________________________________________________________________
 
 ## Rollback Strategy
 
 ### Before Migration
 
 **Create Restore Point** (manual approach):
+
 <!-- CLI snapshot commands not yet implemented
 ```bash
 file-organizer snapshot create ./Documents --name before-phase3
@@ -585,6 +623,7 @@ tar -czf documents-backup.tar.gz ./Documents
 ### After Migration
 
 **Verify Before Deleting Original**:
+
 ```bash
 # Compare original and migrated
 file-organizer compare ./Documents ./Documents-PARA
@@ -599,6 +638,7 @@ rm -rf ./Documents  # Use with caution!
 ### Incremental Migration
 
 **Migrate in Stages**:
+
 ```bash
 # Stage 1: Migrate projects only
 file-organizer migrate ./Documents ./Documents-PARA \
@@ -614,13 +654,14 @@ file-organizer migrate ./Documents ./Documents-PARA \
     --complete
 ```
 
----
+______________________________________________________________________
 
 ## Post-Migration
 
 ### Validation
 
 **Validate Structure**:
+
 ```bash
 # Validate PARA structure
 file-organizer validate ./Documents-PARA --methodology para
@@ -635,6 +676,7 @@ file-organizer verify ./Documents-PARA --check-hashes
 ### Setup Automation
 
 **Watch for New Files**:
+
 ```bash
 # Auto-organize new files
 file-organizer watch ./Downloads \
@@ -644,6 +686,7 @@ file-organizer watch ./Downloads \
 ```
 
 **Scheduled Maintenance**:
+
 ```bash
 # Add to crontab
 crontab -e
@@ -658,6 +701,7 @@ crontab -e
 ### Update Workflows
 
 **Update Shortcuts**:
+
 ```bash
 # Update shell aliases
 echo 'alias docs="cd ./Documents-PARA"' >> ./.bashrc
@@ -668,18 +712,20 @@ source ./.bashrc
 ```
 
 **Update Backup Scripts**:
+
 ```bash
 # Update backup paths
 sed -i 's|./Documents|./Documents-PARA|g' backup-script.sh
 ```
 
----
+______________________________________________________________________
 
 ## Troubleshooting Migration
 
 ### Migration Failed
 
 **Check Logs**:
+
 ```bash
 # View migration log
 tail -f config/file-organizer/logs/migration.log
@@ -689,6 +735,7 @@ grep ERROR config/file-organizer/logs/migration.log
 ```
 
 **Retry Failed Files**:
+
 ```bash
 # Get list of failed files
 file-organizer migration status --show-failures > failed-files.txt
@@ -700,6 +747,7 @@ file-organizer migrate failed-files.txt ./Documents-PARA --retry
 ### Partial Migration
 
 **Resume Interrupted Migration**:
+
 ```bash
 # Check migration progress
 file-organizer migration status
@@ -711,6 +759,7 @@ file-organizer migrate ./Documents ./Documents-PARA --resume
 ### Conflicts During Migration
 
 **Resolve Naming Conflicts**:
+
 ```bash
 # Find conflicts
 file-organizer migration check-conflicts ./Documents-PARA
@@ -720,35 +769,35 @@ file-organizer migration resolve-conflicts ./Documents-PARA \
     --strategy rename  # or skip, overwrite
 ```
 
----
+______________________________________________________________________
 
 ## Best Practices
 
 ### Before Migration
 
 1. ✅ **Backup everything**
-2. ✅ **Test with sample files first**
-3. ✅ **Review configuration**
-4. ✅ **Check disk space** (migration needs ~2x space temporarily)
-5. ✅ **Close other applications** accessing files
+1. ✅ **Test with sample files first**
+1. ✅ **Review configuration**
+1. ✅ **Check disk space** (migration needs ~2x space temporarily)
+1. ✅ **Close other applications** accessing files
 
 ### During Migration
 
 1. ✅ **Use dry-run mode first**
-2. ✅ **Start with small batches**
-3. ✅ **Monitor progress**
-4. ✅ **Don't interrupt process**
-5. ✅ **Keep logs**
+1. ✅ **Start with small batches**
+1. ✅ **Monitor progress**
+1. ✅ **Don't interrupt process**
+1. ✅ **Keep logs**
 
 ### After Migration
 
 1. ✅ **Validate results**
-2. ✅ **Test file access**
-3. ✅ **Update shortcuts and scripts**
-4. ✅ **Keep original for 30 days**
-5. ✅ **Document custom rules**
+1. ✅ **Test file access**
+1. ✅ **Update shortcuts and scripts**
+1. ✅ **Keep original for 30 days**
+1. ✅ **Document custom rules**
 
----
+______________________________________________________________________
 
 ## Migration Checklist
 
@@ -784,7 +833,7 @@ file-organizer migration resolve-conflicts ./Documents-PARA \
 - [ ] Document issues
 ```
 
----
+______________________________________________________________________
 
 ## Getting Help
 
@@ -792,7 +841,7 @@ file-organizer migration resolve-conflicts ./Documents-PARA \
 - **Migration Guide**: [Online Documentation](https://docs.file-organizer.io/migration)
 - **Community Forums**: https://community.file-organizer.io
 
----
+______________________________________________________________________
 
 **Last Updated**: 2026-01-24
 **Migration Support**: migration@file-organizer.io

@@ -9,6 +9,7 @@ Common issues and solutions.
 **Error**: `ConnectionRefusedError` or "Ollama unavailable"
 
 **Solution**:
+
 ```bash
 # Start Ollama
 ollama serve
@@ -22,6 +23,7 @@ curl http://localhost:11434/api/version
 **Error**: "Model not found"
 
 **Solution**:
+
 ```bash
 ollama pull qwen2.5:3b-instruct-q4_K_M
 ollama pull qwen2.5vl:7b-q4_K_M
@@ -33,6 +35,7 @@ ollama list  # Verify they're installed
 **Error**: "Port 8000 is already in use"
 
 **Solution**:
+
 ```bash
 # Use different port
 file-organizer serve --port 8001
@@ -47,7 +50,7 @@ kill -9 <PID>
 If you can't find a solution:
 
 1. **Check documentation**: [Full docs](index.md)
-2. **Review logs**: `docker-compose logs`
-3. **GitHub Issues**: [Report issue](https://github.com/curdriceaurora/Local-File-Organizer/issues)
-4. **Discussions**: [Ask questions](https://github.com/curdriceaurora/Local-File-Organizer/discussions)
-5. **FAQ**: [Frequently Asked Questions](faq.md)
+1. **Review logs**: `docker-compose logs`
+1. **GitHub Issues**: [Report issue](https://github.com/curdriceaurora/Local-File-Organizer/issues)
+1. **Discussions**: [Ask questions](https://github.com/curdriceaurora/Local-File-Organizer/discussions)
+1. **FAQ**: [Frequently Asked Questions](faq.md)

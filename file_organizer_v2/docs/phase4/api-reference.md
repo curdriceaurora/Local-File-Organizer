@@ -25,9 +25,11 @@ from file_organizer.services.deduplication import HashDeduplicator
 Initialize hash deduplicator.
 
 **Parameters:**
+
 - `algorithm` (str): Hash algorithm to use ("md5" or "sha256")
 
 **Example:**
+
 ```python
 deduper = HashDeduplicator(algorithm="sha256")
 ```
@@ -37,6 +39,7 @@ deduper = HashDeduplicator(algorithm="sha256")
 Find duplicate files by hash.
 
 **Parameters:**
+
 - `directory` (Path): Directory to scan
 - `recursive` (bool): Scan subdirectories (default: True)
 - `min_size` (int): Minimum file size in bytes (default: 0)
@@ -45,9 +48,11 @@ Find duplicate files by hash.
 - `exclude_patterns` (List[str]): File patterns to exclude
 
 **Returns:**
+
 - Dict mapping file hashes to list of duplicate file paths
 
 **Example:**
+
 ```python
 duplicates = deduper.find_duplicates(
     Path("./Documents"),
@@ -74,15 +79,18 @@ Initialize image deduplicator.
 Find visually similar images.
 
 **Parameters:**
+
 - `directory` (Path): Directory to scan
 - `similarity_threshold` (float): Similarity threshold 0.0-1.0 (default: 0.90)
 - `algorithm` (str): Hash algorithm ("dhash", "phash", "whash")
 - `recursive` (bool): Scan subdirectories (default: True)
 
 **Returns:**
+
 - List of duplicate groups, each containing ImageInfo objects
 
 **Example:**
+
 ```python
 deduper = ImageDeduplicator()
 duplicates = deduper.find_duplicates(
@@ -105,6 +113,7 @@ from file_organizer.services.deduplication import DocumentDeduplicator
 Initialize document deduplicator.
 
 **Parameters:**
+
 - `model_name` (str): AI model name for embeddings
 - `embedding_dim` (int): Embedding dimension size
 
@@ -113,15 +122,18 @@ Initialize document deduplicator.
 Find semantically similar documents.
 
 **Parameters:**
+
 - `directory` (Path): Directory to scan
 - `similarity_threshold` (float): Similarity threshold 0.0-1.0 (default: 0.85)
 - `recursive` (bool): Scan subdirectories (default: True)
 - `file_extensions` (List[str]): File extensions to process
 
 **Returns:**
+
 - List of similar document groups
 
 **Example:**
+
 ```python
 deduper = DocumentDeduplicator()
 similar = deduper.find_similar_documents(
@@ -150,6 +162,7 @@ Initialize preference tracker.
 Add a correction to track.
 
 **Parameters:**
+
 - `correction_type` (CorrectionType): Type of correction
 - `preference_type` (PreferenceType): Type of preference
 - `key` (str): Preference key
@@ -158,6 +171,7 @@ Add a correction to track.
 - `metadata` (Dict): Additional metadata
 
 **Example:**
+
 ```python
 tracker = PreferenceTracker()
 tracker.add_correction(
@@ -174,13 +188,16 @@ tracker.add_correction(
 Get a learned preference.
 
 **Parameters:**
+
 - `key` (str): Preference key to look up
 - `preference_type` (PreferenceType): Type of preference
 
 **Returns:**
+
 - Preference object if found, None otherwise
 
 **Example:**
+
 ```python
 pref = tracker.get_preference("*.pdf", PreferenceType.FOLDER_MAPPING)
 if pref:
@@ -192,6 +209,7 @@ if pref:
 Export all preferences.
 
 **Returns:**
+
 - Dictionary containing all preference data
 
 #### `import_data(data: Dict[str, Any])`
@@ -199,6 +217,7 @@ Export all preferences.
 Import preferences from data.
 
 **Parameters:**
+
 - `data` (Dict): Preference data to import
 
 ### PreferenceStore
@@ -214,6 +233,7 @@ from file_organizer.services.intelligence import PreferenceStore
 Initialize preference store.
 
 **Parameters:**
+
 - `storage_path` (Path): Custom storage location (default: data/file-organizer/preferences/)
 
 #### `add_preference(path: Path, preference_data: Dict)`
@@ -221,10 +241,12 @@ Initialize preference store.
 Add preference for a directory.
 
 **Parameters:**
+
 - `path` (Path): Directory path
 - `preference_data` (Dict): Preference data
 
 **Example:**
+
 ```python
 store = PreferenceStore()
 store.add_preference(
@@ -241,10 +263,12 @@ store.add_preference(
 Get preference for a path.
 
 **Parameters:**
+
 - `path` (Path): Directory path
 - `fallback_to_parent` (bool): Use parent directory if not found
 
 **Returns:**
+
 - Preference dictionary or None
 
 #### `save_preferences()`
@@ -268,10 +292,12 @@ from file_organizer.services.intelligence import ProfileManager
 Create a new profile.
 
 **Parameters:**
+
 - `name` (str): Profile name
 - `description` (str): Profile description
 
 **Returns:**
+
 - Profile object
 
 #### `save_profile(profile: Profile)`
@@ -301,6 +327,7 @@ from file_organizer.history import HistoryTracker
 Initialize history tracker.
 
 **Parameters:**
+
 - `db_path` (Path): Custom database path (default: data/file-organizer/history/operations.db)
 
 #### `track_operation(operation_type: OperationType, source_path: Path, **kwargs) -> Operation`
@@ -308,6 +335,7 @@ Initialize history tracker.
 Track a file operation.
 
 **Parameters:**
+
 - `operation_type` (OperationType): Type of operation
 - `source_path` (Path): Source file path
 - `destination_path` (Optional[Path]): Destination path
@@ -316,9 +344,11 @@ Track a file operation.
 - `transaction_id` (Optional[str]): Transaction ID
 
 **Returns:**
+
 - Operation object
 
 **Example:**
+
 ```python
 tracker = HistoryTracker()
 operation = tracker.track_operation(
@@ -334,9 +364,11 @@ operation = tracker.track_operation(
 Get recent operations.
 
 **Parameters:**
+
 - `limit` (int): Maximum number of operations
 
 **Returns:**
+
 - List of Operation objects
 
 #### `get_operations_by_date_range(start: datetime, end: datetime) -> List[Operation]`
@@ -344,10 +376,12 @@ Get recent operations.
 Get operations in date range.
 
 **Parameters:**
+
 - `start` (datetime): Start date
 - `end` (datetime): End date
 
 **Returns:**
+
 - List of Operation objects
 
 ### OperationHistory
@@ -365,9 +399,11 @@ history = OperationHistory()
 Start a new transaction.
 
 **Parameters:**
+
 - `description` (str): Transaction description
 
 **Returns:**
+
 - Transaction ID
 
 #### `commit_transaction(transaction_id: str) -> bool`
@@ -375,9 +411,11 @@ Start a new transaction.
 Commit a transaction.
 
 **Parameters:**
+
 - `transaction_id` (str): Transaction ID
 
 **Returns:**
+
 - True if successful
 
 #### `rollback_transaction(transaction_id: str) -> bool`
@@ -385,9 +423,11 @@ Commit a transaction.
 Rollback a transaction.
 
 **Parameters:**
+
 - `transaction_id` (str): Transaction ID
 
 **Returns:**
+
 - True if successful
 
 #### `transaction(description: str = "") -> ContextManager[str]`
@@ -395,12 +435,15 @@ Rollback a transaction.
 Context manager for transactions.
 
 **Parameters:**
+
 - `description` (str): Transaction description
 
 **Returns:**
+
 - Context manager yielding transaction ID
 
 **Example:**
+
 ```python
 manager = TransactionManager()
 with manager.transaction("Batch operation") as tx_id:
@@ -422,6 +465,7 @@ from file_organizer.undo import UndoManager
 Undo the last operation.
 
 **Returns:**
+
 - True if successful
 
 #### `undo_operation(operation_id: int) -> bool`
@@ -429,9 +473,11 @@ Undo the last operation.
 Undo specific operation.
 
 **Parameters:**
+
 - `operation_id` (int): Operation ID
 
 **Returns:**
+
 - True if successful
 
 #### `undo_transaction(transaction_id: str) -> bool`
@@ -439,9 +485,11 @@ Undo specific operation.
 Undo all operations in a transaction.
 
 **Parameters:**
+
 - `transaction_id` (str): Transaction ID
 
 **Returns:**
+
 - True if successful
 
 #### `redo_last_operation() -> bool`
@@ -449,6 +497,7 @@ Undo all operations in a transaction.
 Redo the last undone operation.
 
 **Returns:**
+
 - True if successful
 
 #### `can_undo(operation_id: int) -> Tuple[bool, str]`
@@ -456,12 +505,15 @@ Redo the last undone operation.
 Check if operation can be undone.
 
 **Parameters:**
+
 - `operation_id` (int): Operation ID
 
 **Returns:**
+
 - Tuple of (can_undo, reason)
 
 **Example:**
+
 ```python
 manager = UndoManager()
 can_undo, reason = manager.can_undo(42)
@@ -486,6 +538,7 @@ from file_organizer.services.smart_suggestions import SmartSuggestionEngine
 Initialize suggestion engine.
 
 **Parameters:**
+
 - `preference_tracker` (Optional[PreferenceTracker]): Preference tracker to use
 - `min_confidence` (float): Minimum confidence threshold (default: 0.6)
 
@@ -494,14 +547,17 @@ Initialize suggestion engine.
 Get smart suggestions for a file.
 
 **Parameters:**
+
 - `file_path` (Path): File to analyze
 - `min_confidence` (float): Minimum confidence threshold
 - `max_suggestions` (int): Maximum number of suggestions
 
 **Returns:**
+
 - Suggestions object containing destinations, names, categories, and tags
 
 **Example:**
+
 ```python
 engine = SmartSuggestionEngine()
 suggestions = engine.get_suggestions(
@@ -516,6 +572,7 @@ suggestions = engine.get_suggestions(
 Track whether suggestion was accepted.
 
 **Parameters:**
+
 - `file_path` (Path): File path
 - `suggestion` (Suggestion): Suggestion object
 - `accepted` (bool): Whether suggestion was accepted
@@ -537,14 +594,17 @@ Initialize auto-tagging service.
 Suggest tags for a file.
 
 **Parameters:**
+
 - `file_path` (Path): File to analyze
 - `top_n` (int): Maximum number of tags (default: 10)
 - `min_confidence` (float): Minimum confidence threshold (default: 50.0)
 
 **Returns:**
+
 - List of (tag, confidence) tuples
 
 **Example:**
+
 ```python
 tagger = AutoTaggingService()
 tags = tagger.suggest_tags(
@@ -559,6 +619,7 @@ tags = tagger.suggest_tags(
 Apply tags to a file.
 
 **Parameters:**
+
 - `file_path` (Path): File to tag
 - `tags` (List[str]): Tags to apply
 - `source` (str): Tag source ("user", "ai", "automatic")
@@ -568,9 +629,11 @@ Apply tags to a file.
 Get tags for a file.
 
 **Parameters:**
+
 - `file_path` (Path): File path
 
 **Returns:**
+
 - List of tags
 
 #### `get_popular_tags(limit: int = 20) -> List[Tuple[str, int]]`
@@ -578,9 +641,11 @@ Get tags for a file.
 Get most popular tags.
 
 **Parameters:**
+
 - `limit` (int): Maximum number of tags
 
 **Returns:**
+
 - List of (tag, usage_count) tuples
 
 ## Analytics
@@ -598,6 +663,7 @@ from file_organizer.services.analytics import AnalyticsService
 Initialize analytics service.
 
 **Parameters:**
+
 - `cache_enabled` (bool): Enable caching (default: True)
 - `workers` (int): Number of worker threads (default: 4)
 
@@ -606,14 +672,17 @@ Initialize analytics service.
 Analyze a directory.
 
 **Parameters:**
+
 - `directory` (Path): Directory to analyze
 - `include_subdirs` (bool): Include subdirectories (default: True)
 - `exclude_patterns` (List[str]): Patterns to exclude
 
 **Returns:**
+
 - AnalysisResults object
 
 **Example:**
+
 ```python
 analytics = AnalyticsService()
 results = analytics.analyze_directory(
@@ -627,9 +696,11 @@ results = analytics.analyze_directory(
 Get storage statistics.
 
 **Parameters:**
+
 - `directory` (Path): Directory to analyze
 
 **Returns:**
+
 - StorageStats object with size, file counts, etc.
 
 #### `get_quality_metrics(directory: Path) -> QualityMetrics`
@@ -637,12 +708,15 @@ Get storage statistics.
 Get quality metrics.
 
 **Parameters:**
+
 - `directory` (Path): Directory to analyze
 
 **Returns:**
+
 - QualityMetrics object with quality scores
 
 **Example:**
+
 ```python
 quality = analytics.get_quality_metrics(Path("./Documents"))
 print(f"Quality score: {quality.quality_score}/100")
@@ -653,9 +727,11 @@ print(f"Quality score: {quality.quality_score}/100")
 Analyze organization patterns.
 
 **Parameters:**
+
 - `directory` (Path): Directory to analyze
 
 **Returns:**
+
 - PatternAnalysis object
 
 #### `get_trends(directory: Path, start_date: datetime, end_date: datetime, **kwargs) -> TrendAnalysis`
@@ -663,12 +739,14 @@ Analyze organization patterns.
 Get trend analysis.
 
 **Parameters:**
+
 - `directory` (Path): Directory to analyze
 - `start_date` (datetime): Start date
 - `end_date` (datetime): End date
 - `granularity` (str): Time granularity ("day", "week", "month")
 
 **Returns:**
+
 - TrendAnalysis object
 
 ## Data Models
@@ -812,6 +890,7 @@ All APIs may raise the following exceptions:
 - `DatabaseError`: Database operation failed
 
 **Example Error Handling:**
+
 ```python
 try:
     duplicates = deduper.find_duplicates(directory)

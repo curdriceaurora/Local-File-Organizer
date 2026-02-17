@@ -9,6 +9,7 @@ Phase 3 significantly expands File Organizer's file format support with speciali
 ### Document Formats (Enhanced)
 
 #### EPUB Books (Enhanced)
+
 - **Extensions**: `.epub`
 - **Status**: ✅ Enhanced in Phase 3
 - **New Features**:
@@ -18,6 +19,7 @@ Phase 3 significantly expands File Organizer's file format support with speciali
   - Cover image extraction
 
 **Usage**:
+
 ```python
 from file_organizer.utils.file_readers import read_ebook_file
 
@@ -29,6 +31,7 @@ text = read_ebook_file("book.epub", max_chars=5000)
 ```
 
 **Organization**:
+
 ```
 3-Resources/
 └── Books/
@@ -44,6 +47,7 @@ text = read_ebook_file("book.epub", max_chars=5000)
 ### Archive Formats
 
 #### ZIP Archives
+
 - **Extensions**: `.zip`
 - **Status**: ✅ Active
 - **Features**:
@@ -53,6 +57,7 @@ text = read_ebook_file("book.epub", max_chars=5000)
   - Nested archive handling
 
 **Usage**:
+
 ```python
 from file_organizer.utils.file_readers import read_archive_file
 
@@ -72,6 +77,7 @@ content = read_tar_file("backup.tar.gz")  # Returns formatted string
 ```
 
 **Organization Strategy**:
+
 ```python
 from file_organizer import FileOrganizer
 
@@ -91,6 +97,7 @@ result = organizer.organize(
 ```
 
 #### TAR Archives
+
 - **Extensions**: `.tar`, `.tar.gz`, `.tgz`, `.tar.bz2`
 - **Status**: ✅ Active
 - **Features**: Same as ZIP plus:
@@ -99,11 +106,13 @@ result = organizer.organize(
   - Large file optimization
 
 #### 7-Zip Archives
+
 - **Extensions**: `.7z`
 - **Status**: ✅ Active
 - **Features**: High compression ratio support
 
 #### RAR Archives
+
 - **Extensions**: `.rar`
 - **Status**: ✅ Active (requires unrar)
 - **Installation**:
@@ -118,6 +127,7 @@ result = organizer.organize(
 ### CAD File Formats
 
 #### DXF (Drawing Exchange Format)
+
 - **Extensions**: `.dxf`
 - **Status**: 📅 Phase 3 (Basic support available)
 - **Features**:
@@ -127,6 +137,7 @@ result = organizer.organize(
   - Unit detection
 
 **Usage**:
+
 ```python
 from file_organizer.utils.file_readers import read_cad_file
 
@@ -146,6 +157,7 @@ output = read_cad_file("design.dxf")
 ```
 
 **Organization**:
+
 ```
 1-Projects/
 └── Engineering/
@@ -157,12 +169,14 @@ output = read_cad_file("design.dxf")
 ```
 
 #### DWG (AutoCAD Drawing)
+
 - **Extensions**: `.dwg`
 - **Status**: 📅 Phase 3 (Planned)
 - **Features**: Similar to DXF
 - **Note**: Requires additional library (ezdxf or ODA File Converter)
 
 #### STEP Files
+
 - **Extensions**: `.step`, `.stp`
 - **Status**: 📅 Phase 3 (Planned)
 - **Features**:
@@ -171,6 +185,7 @@ output = read_cad_file("design.dxf")
   - Part properties
 
 #### IGES Files
+
 - **Extensions**: `.iges`, `.igs`
 - **Status**: 📅 Phase 3 (Planned)
 - **Features**: Similar to STEP
@@ -178,6 +193,7 @@ output = read_cad_file("design.dxf")
 ### Scientific Data Formats
 
 #### HDF5 (Hierarchical Data Format)
+
 - **Extensions**: `.h5`, `.hdf5`
 - **Status**: 📅 Phase 3 (Planned)
 - **Features**:
@@ -187,6 +203,7 @@ output = read_cad_file("design.dxf")
   - Data type detection
 
 **Planned Usage**:
+
 ```python
 from file_organizer.utils.file_readers import read_hdf5_file
 
@@ -201,6 +218,7 @@ info = read_hdf5_file("experiment.h5")
 ```
 
 **Organization**:
+
 ```
 1-Projects/
 └── Research/
@@ -212,6 +230,7 @@ info = read_hdf5_file("experiment.h5")
 ```
 
 #### NetCDF (Network Common Data Form)
+
 - **Extensions**: `.nc`, `.nc4`
 - **Status**: 📅 Phase 3 (Planned)
 - **Features**:
@@ -221,6 +240,7 @@ info = read_hdf5_file("experiment.h5")
   - Time series analysis
 
 #### MATLAB Files
+
 - **Extensions**: `.mat`
 - **Status**: 📅 Phase 3 (Planned)
 - **Features**:
@@ -231,10 +251,12 @@ info = read_hdf5_file("experiment.h5")
 ## Format Detection
 
 ### Automatic Detection
+
 File Organizer automatically detects formats based on:
+
 1. **File extension** - Primary detection method
-2. **Magic numbers** - Binary file signature validation
-3. **Content analysis** - Structural validation
+1. **Magic numbers** - Binary file signature validation
+1. **Content analysis** - Structural validation
 
 ```python
 from file_organizer.utils import detect_file_type
@@ -249,6 +271,7 @@ file_info = detect_file_type("unknown_file.bin")
 ```
 
 ### Format Validation
+
 ```python
 from file_organizer.utils import validate_file_format
 
@@ -264,6 +287,7 @@ if not is_valid:
 ### Enable/Disable Format Support
 
 **Global Configuration** (`config/file-organizer/config.yaml`):
+
 ```yaml
 file_formats:
   # Document formats
@@ -285,6 +309,7 @@ file_formats:
 ```
 
 **Python API**:
+
 ```python
 from file_organizer import FileOrganizer
 from file_organizer.models.base import ModelConfig
@@ -308,6 +333,7 @@ organizer = FileOrganizer(
 ### Format-Specific Options
 
 **EPUB Configuration**:
+
 ```python
 epub_config = {
     "extract_chapters": True,
@@ -318,6 +344,7 @@ epub_config = {
 ```
 
 **Archive Configuration**:
+
 ```python
 archive_config = {
     "analyze_contents": True,
@@ -328,6 +355,7 @@ archive_config = {
 ```
 
 **CAD Configuration**:
+
 ```python
 cad_config = {
     "extract_layers": True,
@@ -363,15 +391,18 @@ cad_config = {
 ### Optimization Tips
 
 1. **Archives**:
+
    - Disable `analyze_archive_contents` for faster processing
    - Set `max_archive_size_mb` to skip very large archives
    - Use `skip_encrypted` to avoid password prompts
 
-2. **CAD Files**:
+1. **CAD Files**:
+
    - Disable `extract_layers` if not needed
    - Skip thumbnail generation (Phase 3)
 
-3. **Large Files**:
+1. **Large Files**:
+
    - Process in batches
    - Use `--parallel` flag (Phase 5)
    - Set memory limits in config
@@ -381,6 +412,7 @@ cad_config = {
 ### Content-Based Organization
 
 Archives are organized based on their contents:
+
 ```python
 # ZIP containing Python code
 python-project.zip → 1-Projects/Development/Python/
@@ -395,6 +427,7 @@ contracts.zip → 2-Areas/Legal/Contracts/
 ### Extension-Based Organization
 
 Simple organization by format:
+
 ```python
 from file_organizer import FileOrganizer
 
@@ -415,6 +448,7 @@ organizer.organize(
 ### Hybrid Approach
 
 Combine content analysis with format rules:
+
 ```python
 organizer.organize(
     "downloads/",
@@ -427,6 +461,7 @@ organizer.organize(
 ## Error Handling
 
 ### Corrupted Files
+
 ```python
 try:
     organizer.organize("document.epub")
@@ -436,6 +471,7 @@ except CorruptedFileError as e:
 ```
 
 ### Unsupported Formats
+
 ```python
 from file_organizer.exceptions import UnsupportedFormatError
 
@@ -446,6 +482,7 @@ except UnsupportedFormatError:
 ```
 
 ### Missing Dependencies
+
 ```python
 from file_organizer.utils import check_format_support
 
@@ -475,11 +512,13 @@ file-organizer test-all-formats
 ### Upgrading to Phase 3
 
 1. **Update package**:
+
    ```bash
    pip install --upgrade file-organizer-v2
    ```
 
-2. **Update configuration**:
+1. **Update configuration**:
+
    ```yaml
    # Add to config/file-organizer/config.yaml
    file_formats:
@@ -488,7 +527,8 @@ file-organizer test-all-formats
      cad_support: true
    ```
 
-3. **Re-organize existing files**:
+1. **Re-organize existing files**:
+
    ```bash
    file-organizer re-organize ./Documents --use-enhanced-formats
    ```
@@ -496,6 +536,7 @@ file-organizer test-all-formats
 ### From Manual Organization
 
 If you've been organizing files manually:
+
 ```bash
 # Analyze what changed
 file-organizer analyze ./Documents --show-improvements
@@ -507,6 +548,7 @@ file-organizer organize ./Documents --methodology para --use-enhanced-formats
 ## Troubleshooting
 
 ### EPUB Not Recognized
+
 ```bash
 # Check file integrity
 file-organizer validate book.epub
@@ -516,6 +558,7 @@ pip install --upgrade ebooklib
 ```
 
 ### Archive Analysis Slow
+
 ```yaml
 # Disable content analysis
 file_formats:
@@ -523,6 +566,7 @@ file_formats:
 ```
 
 ### CAD Files Not Loading
+
 ```bash
 # Check dependencies
 pip install ezdxf
@@ -532,7 +576,9 @@ file-organizer detect-format design.dxf
 ```
 
 ### Scientific Formats (Phase 3)
+
 These are planned for Phase 3:
+
 ```bash
 # Check status
 file-organizer feature-status scientific-formats
@@ -603,11 +649,11 @@ elif ext == '.epub':
 ## Further Reading
 
 - [EPUB Specification](http://idpf.org/epub)
-- [ZIP File Format](https://en.wikipedia.org/wiki/ZIP_(file_format))
+- [ZIP File Format](<https://en.wikipedia.org/wiki/ZIP_(file_format)>)
 - [DXF Reference](https://www.autodesk.com/techpubs/autocad/dxf/)
 - [HDF5 Documentation](https://www.hdfgroup.org/solutions/hdf5/)
 
----
+______________________________________________________________________
 
 **Format Support Status**: 20 active formats, 5 planned (Phase 3)
 **Last Updated**: 2026-01-24

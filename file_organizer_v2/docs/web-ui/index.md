@@ -78,8 +78,8 @@ http://localhost:8000
 On first access, you'll see:
 
 1. **Welcome Screen** - Overview and setup instructions
-2. **Configuration** - Set workspace path and preferences
-3. **Dashboard** - Your home screen
+1. **Configuration** - Set workspace path and preferences
+1. **Dashboard** - Your home screen
 
 ### 3. Upload Your First Files
 
@@ -88,6 +88,7 @@ Click **Upload Files** or drag files into the interface to get started.
 ## Key Features
 
 ### File Management
+
 - Browse file library with thumbnail previews
 - View file properties and metadata
 - Support for 43+ file formats
@@ -96,6 +97,7 @@ Click **Upload Files** or drag files into the interface to get started.
 **Read more**: [File Management Guide](file-management.md)
 
 ### Organization
+
 - Choose from multiple methodologies (PARA, Johnny Decimal)
 - Preview organization results before applying
 - Monitor job progress in real-time
@@ -104,6 +106,7 @@ Click **Upload Files** or drag files into the interface to get started.
 **Read more**: [Organization Guide](organization.md)
 
 ### Analysis & Insights
+
 - Storage usage breakdown by file type and folder
 - Duplicate detection with similarity matching
 - Metadata extraction and analysis
@@ -112,6 +115,7 @@ Click **Upload Files** or drag files into the interface to get started.
 **Read more**: [Analysis & Search Guide](analysis-search.md)
 
 ### Search & Discovery
+
 - Full-text search across file contents
 - Faceted search with filters
 - Save frequently-used searches
@@ -120,6 +124,7 @@ Click **Upload Files** or drag files into the interface to get started.
 **Read more**: [Analysis & Search Guide](analysis-search.md)
 
 ### Configuration
+
 - Customize workspace settings
 - Manage user preferences
 - Generate API keys
@@ -157,43 +162,43 @@ Use these in search for precise results:
 Save frequently-used searches for quick access:
 
 1. Enter search query
-2. Click "Save Search"
-3. Give it a name
-4. Access from sidebar
+1. Click "Save Search"
+1. Give it a name
+1. Access from sidebar
 
 ## Workflows
 
 ### Quick Organization
 
 1. Upload files
-2. Click **Organize**
-3. Select methodology
-4. Review preview
-5. Click **Apply**
+1. Click **Organize**
+1. Select methodology
+1. Review preview
+1. Click **Apply**
 
 ### Duplicate Cleanup
 
 1. Click **Analysis**
-2. Select **Detect Duplicates**
-3. Choose folder to scan
-4. Review results
-5. Remove duplicates or merge
+1. Select **Detect Duplicates**
+1. Choose folder to scan
+1. Review results
+1. Remove duplicates or merge
 
 ### Storage Analysis
 
 1. Click **Analysis**
-2. Select **Storage Usage**
-3. View breakdown by category
-4. Click on sections to drill down
-5. Export report
+1. Select **Storage Usage**
+1. View breakdown by category
+1. Click on sections to drill down
+1. Export report
 
 ### Backup & Export
 
 1. Click **Search** to find files
-2. Select files to export
-3. Click **Export**
-4. Choose format and location
-5. Files are packaged for download
+1. Select files to export
+1. Click **Export**
+1. Choose format and location
+1. Files are packaged for download
 
 ## Real-Time Updates
 
@@ -276,6 +281,6 @@ Choose a guide based on what you want to do:
 - **Search & Analyze**: [Analysis & Search Guide](analysis-search.md)
 - **Customize Settings**: [Settings Guide](settings.md)
 
----
+______________________________________________________________________
 
 **Ready to get started?** [Jump to File Management](file-management.md)!

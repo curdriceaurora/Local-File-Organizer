@@ -149,6 +149,6 @@ POST /api/v1/organize/jobs/{job_id}/cancel
 }
 ```
 
----
+______________________________________________________________________
 
 See [API Reference](index.md) for more information.

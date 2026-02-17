@@ -220,6 +220,6 @@ POST /api/v1/files/delete/batch
 }
 ```
 
----
+______________________________________________________________________
 
 See [API Reference](index.md) for more endpoints.

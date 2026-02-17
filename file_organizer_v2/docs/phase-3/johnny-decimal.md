@@ -13,18 +13,21 @@ File Organizer v2 provides automatic Johnny Decimal number generation, conflict 
 Johnny Decimal uses a two-level hierarchy:
 
 **Areas (00-99)** - Broad categories
+
 - 10-19: Administration
 - 20-29: Finance
 - 30-39: Projects
 - etc.
 
 **Categories (00-99)** - Specific topics within areas
+
 - 11: Company documents
 - 12: Contracts
 - 13: Policies
 - etc.
 
 **IDs (00-99)** - Individual items within categories
+
 - 11.01: Business registration
 - 11.02: Insurance documents
 - 12.01: Client contract template
@@ -60,6 +63,7 @@ Johnny Decimal uses a two-level hierarchy:
 ### Quick Start
 
 1. **Initialize Johnny Decimal system**:
+
 ```python
 from file_organizer.methodologies.johnny_decimal import JohnnyDecimalSystem
 from pathlib import Path
@@ -69,11 +73,13 @@ system.initialize_from_directory(Path.home() / "Documents")
 ```
 
 2. **Organize your first file**:
+
 ```bash
 file-organizer organize document.pdf --methodology johnny-decimal
 ```
 
 3. **View assigned number**:
+
 ```
 File: document.pdf
 Assigned: 11.04
@@ -92,9 +98,9 @@ Johnny Decimal support is built into File Organizer v2. No additional setup requ
 File Organizer automatically assigns Johnny Decimal numbers based on:
 
 1. **Content Analysis** - Examines file content to determine topic
-2. **Existing Structure** - Looks at where file currently resides
-3. **Naming Patterns** - Analyzes filename for category hints
-4. **Metadata** - Uses file metadata (tags, descriptions)
+1. **Existing Structure** - Looks at where file currently resides
+1. **Naming Patterns** - Analyzes filename for category hints
+1. **Metadata** - Uses file metadata (tags, descriptions)
 
 ### Number Assignment
 
@@ -119,7 +125,7 @@ print(f"Confidence: {result.confidence}%")
 
 - **High (>90%)**: Clear indicators, reliable assignment
 - **Medium (70-90%)**: Good match, minor ambiguity
-- **Low (<70%)**: Manual review recommended
+- **Low (\<70%)**: Manual review recommended
 
 ## Creating Custom Numbering Schemes
 
@@ -202,6 +208,7 @@ else:
 ### Resolution Strategies
 
 **Auto-increment**:
+
 ```python
 # Automatically find next available number
 result = generator.assign_number(
@@ -213,6 +220,7 @@ result = generator.assign_number(
 ```
 
 **Skip to next category**:
+
 ```python
 result = generator.assign_number(
     file_path="document.pdf",
@@ -223,6 +231,7 @@ result = generator.assign_number(
 ```
 
 **Manual resolution**:
+
 ```python
 result = generator.assign_number(
     file_path="document.pdf",
@@ -239,11 +248,13 @@ if result.needs_manual_review:
 ### Migration from Traditional Folders
 
 **Step 1: Analyze existing structure**
+
 ```bash
 file-organizer analyze ./Documents --methodology johnny-decimal --generate-scheme
 ```
 
 This scans your folders and suggests a Johnny Decimal scheme:
+
 ```
 Suggested Scheme:
 10-19: Administration (found 45 admin files)
@@ -257,11 +268,13 @@ Suggested Scheme:
 ```
 
 **Step 2: Review and customize**
+
 ```bash
 file-organizer scheme edit ./Documents/.jd-scheme.json
 ```
 
 **Step 3: Execute migration**
+
 ```bash
 file-organizer migrate ./Documents --methodology johnny-decimal --preserve-originals
 ```
@@ -367,6 +380,7 @@ config.set_category_config(
 ### Structuring Your System
 
 **Start with areas (10s)**:
+
 - 10-19: Administration
 - 20-29: Finance
 - 30-39: Projects
@@ -378,11 +392,13 @@ config.set_category_config(
 - 90-99: Archive/Misc
 
 **Keep it balanced**:
+
 - Aim for 3-7 categories per area
 - Don't go beyond 50 items per category
 - Use area 90-99 for overflow
 
 **Be consistent**:
+
 - Use same numbering logic across areas
 - Document your scheme
 - Train team members
@@ -390,6 +406,7 @@ config.set_category_config(
 ### Naming Conventions
 
 **Include numbers in folder names**:
+
 ```
 11 Company documents/
 12 Contracts/
@@ -397,6 +414,7 @@ config.set_category_config(
 ```
 
 **Include numbers in file names**:
+
 ```
 11.01 Business registration certificate.pdf
 11.02 Insurance policy.pdf
@@ -404,6 +422,7 @@ config.set_category_config(
 ```
 
 **Alternative format**:
+
 ```
 11.01 - Business registration certificate.pdf
 ```
@@ -529,13 +548,15 @@ system.clear_reservations()
 **Problem**: Running out of numbers in category
 
 **Solution**:
+
 1. Archive old items to free up numbers
-2. Use sub-categories (11.01a, 11.01b) temporarily
-3. Split category into two categories
+1. Use sub-categories (11.01a, 11.01b) temporarily
+1. Split category into two categories
 
 **Problem**: Conflicting numbers
 
 **Solution**:
+
 ```bash
 # Find all conflicts
 file-organizer jd check-conflicts ./Documents
@@ -547,13 +568,15 @@ file-organizer jd resolve-conflicts ./Documents --strategy increment
 **Problem**: Incorrect auto-assignment
 
 **Solution**:
+
 1. Provide better content hints
-2. Add custom categories for your domain
-3. Use manual assignment for edge cases
+1. Add custom categories for your domain
+1. Use manual assignment for edge cases
 
 ### Validation Errors
 
 **Invalid number format**:
+
 ```python
 try:
     result = generator.assign_number("document.pdf", preferred_number="11.4")
@@ -693,6 +716,6 @@ watcher.start()
 - [Implementation Examples](tutorials/johnny-decimal-setup.md)
 - [Migration Guide](migration-guide.md) - Migrate existing files
 
----
+______________________________________________________________________
 
 **Next Steps**: Set up your first Johnny Decimal system using the [Quick Start Tutorial](tutorials/johnny-decimal-setup.md)

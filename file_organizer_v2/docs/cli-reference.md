@@ -11,11 +11,13 @@ file-organizer organize <input> <output> [OPTIONS]
 ```
 
 **Example**:
+
 ```bash
 file-organizer organize ./Downloads ./Organized
 ```
 
 **Options**:
+
 - `--methodology {para,johnny-decimal}` - Organization system
 - `--dry-run` - Preview without moving files
 - `--preserve` - Keep originals
@@ -28,6 +30,7 @@ file-organizer search <query> [OPTIONS]
 ```
 
 **Example**:
+
 ```bash
 file-organizer search "*.pdf"
 ```
@@ -39,6 +42,7 @@ file-organizer dedupe scan <path> [OPTIONS]
 ```
 
 **Example**:
+
 ```bash
 file-organizer dedupe scan ~/Documents
 ```
@@ -50,6 +54,7 @@ file-organizer serve [OPTIONS]
 ```
 
 **Options**:
+
 - `--host` - Server host (default: localhost)
 - `--port` - Server port (default: 8000)
 

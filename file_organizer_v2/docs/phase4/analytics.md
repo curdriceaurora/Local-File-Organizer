@@ -7,9 +7,9 @@
 The Analytics system provides detailed insights into your file organization:
 
 1. **Storage Analytics** - Size, distribution, and space usage
-2. **Quality Metrics** - Organization quality scores
-3. **Pattern Analysis** - Discover organization patterns
-4. **Trend Tracking** - Monitor changes over time
+1. **Quality Metrics** - Organization quality scores
+1. **Pattern Analysis** - Discover organization patterns
+1. **Trend Tracking** - Monitor changes over time
 
 ## Quick Start
 
@@ -67,6 +67,7 @@ print(f"Average file size: {storage.avg_file_size}")
 ### Size Distribution
 
 **By File Type**
+
 ```python
 # Size distribution by file type
 type_dist = storage.size_by_type
@@ -83,6 +84,7 @@ for file_type, size in sorted(type_dist.items(), key=lambda x: x[1], reverse=Tru
 ```
 
 **By Directory**
+
 ```python
 # Size by directory
 dir_dist = storage.size_by_directory
@@ -150,6 +152,7 @@ print(f"  Completeness: {quality.completeness_score:.1%}")
 ```
 
 **Score Interpretation:**
+
 - **90-100**: Excellent - Well-organized, consistent structure
 - **70-89**: Good - Generally organized with minor issues
 - **50-69**: Fair - Some organization, needs improvement
@@ -159,6 +162,7 @@ print(f"  Completeness: {quality.completeness_score:.1%}")
 
 **Organization Score**
 Measures directory structure quality:
+
 ```python
 org_score = quality.organization_score
 
@@ -171,6 +175,7 @@ org_score = quality.organization_score
 
 **Naming Score**
 Measures file naming quality:
+
 ```python
 naming_score = quality.naming_score
 
@@ -184,6 +189,7 @@ naming_score = quality.naming_score
 
 **Consistency Score**
 Measures pattern consistency:
+
 ```python
 consistency_score = quality.consistency_score
 
@@ -196,6 +202,7 @@ consistency_score = quality.consistency_score
 
 **Completeness Score**
 Measures metadata completeness:
+
 ```python
 completeness_score = quality.completeness_score
 
@@ -266,6 +273,7 @@ for pattern in patterns.patterns:
 ### Pattern Types
 
 **Naming Patterns**
+
 ```python
 naming_patterns = patterns.naming_patterns
 
@@ -276,6 +284,7 @@ naming_patterns = patterns.naming_patterns
 ```
 
 **Folder Patterns**
+
 ```python
 folder_patterns = patterns.folder_patterns
 
@@ -286,6 +295,7 @@ folder_patterns = patterns.folder_patterns
 ```
 
 **Category Patterns**
+
 ```python
 category_patterns = patterns.category_patterns
 
@@ -440,6 +450,7 @@ report_data = report.to_dict()
 ### Report Sections
 
 **Executive Summary**
+
 ```python
 summary = report.executive_summary
 
@@ -450,6 +461,7 @@ print(f"Key Findings: {summary.key_findings}")
 ```
 
 **Storage Analysis**
+
 ```python
 storage_section = report.storage_analysis
 
@@ -461,6 +473,7 @@ storage_section = report.storage_analysis
 ```
 
 **Quality Analysis**
+
 ```python
 quality_section = report.quality_analysis
 
@@ -472,6 +485,7 @@ quality_section = report.quality_analysis
 ```
 
 **Pattern Analysis**
+
 ```python
 pattern_section = report.pattern_analysis
 
@@ -487,6 +501,7 @@ pattern_section = report.pattern_analysis
 > **Note**: This feature is not yet implemented. It is planned for a future release.
 
 The scheduled reports feature will enable automatic generation and delivery of analytics reports. This will require:
+
 - `ReportScheduler` class implementation
 - Background job scheduling system
 - Email delivery integration
@@ -696,6 +711,7 @@ for metric, target in kpis.items():
 **Problem**: Analytics takes too long
 
 **Solutions**:
+
 ```python
 # Use sampling for large directories
 analytics = AnalyticsService(sample_size=10000)
@@ -715,6 +731,7 @@ analytics = AnalyticsService(cache_enabled=True)
 **Problem**: Metrics seem wrong
 
 **Solutions**:
+
 ```bash
 # Refresh cache
 python -m file_organizer.cli.analytics ./Documents --refresh-cache

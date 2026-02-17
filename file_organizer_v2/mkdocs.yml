@@ -70,41 +70,34 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-
   - Web UI Guide:
-    - Overview: web-ui/index.md
-    - Getting Started: web-ui/getting-started.md
-    - File Management: web-ui/file-management.md
-    - Organization Workflows: web-ui/organization.md
-    - Analysis & Search: web-ui/analysis-search.md
-    - Settings & Configuration: web-ui/settings.md
-
+      - Overview: web-ui/index.md
+      - Getting Started: web-ui/getting-started.md
+      - File Management: web-ui/file-management.md
+      - Organization Workflows: web-ui/organization.md
+      - Analysis & Search: web-ui/analysis-search.md
+      - Settings & Configuration: web-ui/settings.md
   - API Reference:
-    - Overview: api/index.md
-    - Authentication: api/authentication.md
-    - File Management: api/file-endpoints.md
-    - Organization: api/organization-endpoints.md
-    - Analysis: api/analysis-endpoints.md
-    - Search: api/search-endpoints.md
-    - WebSocket Events: api/websocket-api.md
-
+      - Overview: api/index.md
+      - Authentication: api/authentication.md
+      - File Management: api/file-endpoints.md
+      - Organization: api/organization-endpoints.md
+      - Analysis: api/analysis-endpoints.md
+      - Search: api/search-endpoints.md
+      - WebSocket Events: api/websocket-api.md
   - Admin Guide:
-    - Overview: admin/index.md
-    - Installation: admin/installation.md
-    - Deployment: admin/deployment.md
-    - Configuration: admin/configuration.md
-    - Monitoring & Maintenance: admin/monitoring.md
-    - Troubleshooting: admin/troubleshooting.md
-    - Security: admin/security.md
-
+      - Overview: admin/index.md
+      - Installation: admin/installation.md
+      - Deployment: admin/deployment.md
+      - Configuration: admin/configuration.md
+      - Monitoring & Maintenance: admin/monitoring.md
+      - Troubleshooting: admin/troubleshooting.md
+      - Security: admin/security.md
   - Developer Guide:
-    - Overview: developer/index.md
-    - Architecture: developer/architecture.md
-    - Plugin Development: developer/plugin-development.md
-    - API Clients: developer/api-clients.md
-    - Contributing: developer/contributing.md
-    - Testing: developer/testing.md
-
+      - Overview: developer/index.md
+      - Architecture: developer/architecture.md
+      - Plugin Development: developer/plugin-development.md
+      - API Clients: developer/api-clients.md
   - CLI Reference: cli-reference.md
   - Troubleshooting: troubleshooting.md
   - FAQ: faq.md

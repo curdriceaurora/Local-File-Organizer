@@ -7,8 +7,8 @@
 File Organizer v2 provides three powerful deduplication strategies to help you reclaim storage space and maintain a clean file system:
 
 1. **Hash-Based Deduplication** (#46) - Fast, byte-perfect duplicate detection
-2. **Perceptual Image Deduplication** (#47) - Find visually similar images
-3. **Semantic Document Deduplication** (#48) - Detect similar documents by content meaning
+1. **Perceptual Image Deduplication** (#47) - Find visually similar images
+1. **Semantic Document Deduplication** (#48) - Detect similar documents by content meaning
 
 ## Quick Start
 
@@ -92,12 +92,14 @@ for group in duplicates:
 Hash-based deduplication calculates cryptographic hashes (MD5 or SHA256) of file contents. Files with identical hashes are exact duplicates.
 
 **Advantages:**
+
 - Extremely fast and accurate
 - Works with any file type
 - Minimal memory usage
 - No false positives
 
 **Limitations:**
+
 - Only finds byte-perfect duplicates
 - Won't detect similar files (e.g., edited photos)
 
@@ -119,38 +121,49 @@ python -m file_organizer.cli.dedupe ./Downloads --no-recursive
 #### Selection Strategies
 
 **Manual Selection (Default)**
+
 ```bash
 python -m file_organizer.cli.dedupe ./Documents --strategy manual
 ```
+
 Interactively choose which files to keep for each duplicate group.
 
 **Keep Oldest**
+
 ```bash
 python -m file_organizer.cli.dedupe ./Downloads --strategy oldest
 ```
+
 Automatically keeps the file with the oldest modification time.
 
 **Keep Newest**
+
 ```bash
 python -m file_organizer.cli.dedupe ./Downloads --strategy newest
 ```
+
 Automatically keeps the file with the newest modification time.
 
 **Keep Largest**
+
 ```bash
 python -m file_organizer.cli.dedupe ./Videos --strategy largest
 ```
+
 Keeps the largest file (useful for media files).
 
 **Keep Smallest**
+
 ```bash
 python -m file_organizer.cli.dedupe ./Documents --strategy smallest
 ```
+
 Keeps the smallest file.
 
 #### Filters
 
 **Size Filters**
+
 ```bash
 # Only files larger than 1MB
 python -m file_organizer.cli.dedupe ./Downloads --min-size 1048576
@@ -162,6 +175,7 @@ python -m file_organizer.cli.dedupe ./Downloads \
 ```
 
 **Pattern Filters**
+
 ```bash
 # Only process image files
 python -m file_organizer.cli.dedupe ./Pictures \
@@ -178,21 +192,27 @@ python -m file_organizer.cli.dedupe ./Documents \
 #### Safety Features
 
 **Dry Run (Recommended First Step)**
+
 ```bash
 python -m file_organizer.cli.dedupe ./Downloads --dry-run
 ```
+
 Preview what would be removed without actually deleting files.
 
 **Safe Mode (Default)**
+
 ```bash
 python -m file_organizer.cli.dedupe ./Downloads
 ```
+
 Creates backups in `.file_organizer_backups/` before deletion.
 
 **Disable Safe Mode (Not Recommended)**
+
 ```bash
 python -m file_organizer.cli.dedupe ./Downloads --no-safe-mode
 ```
+
 ⚠️ **Warning:** Deleted files cannot be recovered without backups.
 
 ### Python API
@@ -234,6 +254,7 @@ for file_hash, files in duplicates.items():
 ### How It Works
 
 Perceptual hashing analyzes image visual content to find similar images, even if they've been:
+
 - Resized
 - Compressed
 - Slightly edited
@@ -241,6 +262,7 @@ Perceptual hashing analyzes image visual content to find similar images, even if
 - Cropped
 
 **Algorithms:**
+
 - **dHash (Difference Hash)**: Fast, good for basic similarity
 - **pHash (Perceptual Hash)**: More accurate, handles transformations better
 - **wHash (Wavelet Hash)**: Best for compressed/edited images
@@ -285,6 +307,7 @@ for group in duplicates:
 ### Quality Metrics
 
 The `ImageQualityAnalyzer` evaluates images based on:
+
 - **Resolution**: Higher resolution = better quality
 - **Sharpness**: Laplacian variance for edge detection
 - **Compression**: JPEG quality factor
@@ -330,12 +353,14 @@ viewer.show_duplicates(
 ### How It Works
 
 Semantic deduplication uses AI embeddings to understand document content and find semantically similar documents, even if:
+
 - Text is paraphrased
 - Format is different
 - File names are different
 - Minor edits have been made
 
 **Use Cases:**
+
 - Find duplicate reports with different file names
 - Detect near-duplicate documents
 - Identify similar meeting notes
@@ -390,6 +415,7 @@ for group in duplicates:
 ### Advanced Features
 
 **Custom Similarity Function**
+
 ```python
 def custom_similarity(doc1, doc2):
     """Custom similarity calculation."""
@@ -403,6 +429,7 @@ deduper.similarity_function = custom_similarity
 ```
 
 **Incremental Processing**
+
 ```python
 # Build index incrementally for large datasets
 deduper = DocumentDeduplicator()
@@ -418,6 +445,7 @@ duplicates = deduper.get_duplicates(threshold=0.85)
 ## Best Practices
 
 ### 1. Always Start with Dry Run
+
 ```bash
 python -m file_organizer.cli.dedupe ./Downloads --dry-run
 ```
@@ -445,6 +473,7 @@ Always review duplicate groups before deletion, especially with perceptual and s
 ### 5. Keep Backups
 
 Enable safe mode or maintain separate backups:
+
 ```bash
 python -m file_organizer.cli.dedupe ./Documents  # Safe mode enabled by default
 ```
@@ -454,11 +483,13 @@ python -m file_organizer.cli.dedupe ./Documents  # Safe mode enabled by default
 ### Hash-Based Issues
 
 **"No duplicates found" but I know there are duplicates**
+
 - Check file permissions
 - Try `--recursive` flag
 - Verify you're scanning correct directory
 
 **Process is very slow**
+
 - Use MD5 instead of SHA256: `--algorithm md5`
 - Use size filters: `--min-size 1048576`
 - Process smaller directories separately
@@ -466,11 +497,13 @@ python -m file_organizer.cli.dedupe ./Documents  # Safe mode enabled by default
 ### Perceptual Issues
 
 **Too many false positives**
+
 - Increase similarity threshold: `similarity_threshold=0.95`
 - Try different algorithm: `algorithm="dhash"`
 - Use quality-based filtering
 
 **Missing similar images**
+
 - Lower similarity threshold: `similarity_threshold=0.85`
 - Try pHash: `algorithm="phash"`
 - Check image formats are supported
@@ -478,12 +511,14 @@ python -m file_organizer.cli.dedupe ./Documents  # Safe mode enabled by default
 ### Semantic Issues
 
 **Documents not being matched**
+
 - Lower similarity threshold
 - Verify file types are supported
 - Check document content isn't empty
 - Ensure AI model is running (Ollama)
 
 **Too many false matches**
+
 - Increase similarity threshold to 0.90+
 - Use more sophisticated similarity function
 - Filter by document type/category
@@ -491,22 +526,25 @@ python -m file_organizer.cli.dedupe ./Documents  # Safe mode enabled by default
 ## Performance Tips
 
 ### Hash-Based
+
 1. Use MD5 for local deduplication (faster)
-2. Use size filters to reduce file count
-3. Process directories separately
-4. Use batch mode for automation
+1. Use size filters to reduce file count
+1. Process directories separately
+1. Use batch mode for automation
 
 ### Perceptual
+
 1. Use dHash for speed, pHash for accuracy
-2. Process images in batches
-3. Cache computed hashes
-4. Use GPU acceleration if available
+1. Process images in batches
+1. Cache computed hashes
+1. Use GPU acceleration if available
 
 ### Semantic
+
 1. Use smaller embedding models for speed
-2. Process documents in batches
-3. Cache embeddings for reuse
-4. Use incremental indexing for large datasets
+1. Process documents in batches
+1. Cache embeddings for reuse
+1. Use incremental indexing for large datasets
 
 ## API Reference
 

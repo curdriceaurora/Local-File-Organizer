@@ -16,9 +16,9 @@ The plugin API separates **extension logic** from **core internals** so plugins 
 ## Quick Start
 
 1. Create a plugin package directory under `examples/plugins/` (for local iteration).
-2. Implement `Plugin` lifecycle methods and metadata.
-3. Use SDK decorators from `file_organizer.plugins.sdk`.
-4. Call plugin API endpoints via `PluginClient`.
+1. Implement `Plugin` lifecycle methods and metadata.
+1. Use SDK decorators from `file_organizer.plugins.sdk`.
+1. Call plugin API endpoints via `PluginClient`.
 
 Example skeleton:
 

@@ -31,11 +31,12 @@ python -m file_organizer.cli.dedupe path/to/directory
 ```
 
 This will:
+
 1. Scan the directory for duplicate files
-2. Display each group of duplicates with metadata
-3. Ask you to select which files to keep
-4. Create backups before deletion (safe mode)
-5. Remove the selected duplicates
+1. Display each group of duplicates with metadata
+1. Ask you to select which files to keep
+1. Create backups before deletion (safe mode)
+1. Remove the selected duplicates
 
 ### Dry-Run Mode
 
@@ -60,6 +61,7 @@ python -m file_organizer.cli.dedupe ./Documents --strategy manual
 ```
 
 When prompted:
+
 - Enter file numbers to keep (e.g., `1,3` to keep files 1 and 3)
 - Enter `a` to keep all (skip deletion for this group)
 - Enter `s` to skip this group entirely
@@ -67,6 +69,7 @@ When prompted:
 ### Automatic Strategies
 
 #### Keep Oldest Files
+
 Automatically keep the file with the oldest modification time:
 
 ```bash
@@ -76,6 +79,7 @@ python -m file_organizer.cli.dedupe ./Downloads --strategy oldest
 ```
 
 #### Keep Newest Files
+
 Automatically keep the file with the newest modification time:
 
 ```bash
@@ -85,6 +89,7 @@ python -m file_organizer.cli.dedupe ./Downloads --strategy newest
 ```
 
 #### Keep Largest Files
+
 Automatically keep the largest file in each group:
 
 ```bash
@@ -94,6 +99,7 @@ python -m file_organizer.cli.dedupe ./Videos --strategy largest
 ```
 
 #### Keep Smallest Files
+
 Automatically keep the smallest file in each group:
 
 ```bash
@@ -117,6 +123,7 @@ This is useful for processing large numbers of duplicate groups automatically.
 ## Hash Algorithms
 
 ### SHA256 (Default, Recommended)
+
 More secure, slightly slower:
 
 ```bash
@@ -126,6 +133,7 @@ python -m file_organizer.cli.dedupe ./Documents --algorithm sha256
 ```
 
 ### MD5 (Faster)
+
 Faster but less secure (suitable for local deduplication):
 
 ```bash
@@ -137,6 +145,7 @@ python -m file_organizer.cli.dedupe ./Documents --algorithm md5
 ## Scanning Options
 
 ### Non-Recursive Scanning
+
 Only scan the specified directory, not subdirectories:
 
 ```bash
@@ -148,6 +157,7 @@ python -m file_organizer.cli.dedupe ./Downloads --no-recursive
 ### Size Filters
 
 #### Minimum File Size
+
 Only consider files larger than a certain size (in bytes):
 
 ```bash
@@ -158,6 +168,7 @@ python -m file_organizer.cli.dedupe ./Downloads --min-size 1048576
 ```
 
 #### Maximum File Size
+
 Only consider files smaller than a certain size:
 
 ```bash
@@ -181,6 +192,7 @@ python -m file_organizer.cli.dedupe ./Downloads \
 ### File Pattern Filters
 
 #### Include Patterns
+
 Only process files matching specific patterns:
 
 ```bash
@@ -194,6 +206,7 @@ python -m file_organizer.cli.dedupe ./Pictures \
 ```
 
 #### Exclude Patterns
+
 Skip files matching specific patterns:
 
 ```bash
@@ -312,17 +325,21 @@ python -m file_organizer.cli.dedupe data/archive \
 ### Optional Arguments
 
 #### Algorithm Options
+
 - `--algorithm {md5,sha256}` - Hash algorithm (default: sha256)
 
 #### Strategy Options
+
 - `--strategy {manual,oldest,newest,largest,smallest}` - Selection strategy (default: manual)
 - `--batch` - Batch mode: apply strategy without per-group confirmation
 
 #### Safety Options
+
 - `--dry-run` - Show what would be removed without deleting
 - `--no-safe-mode` - Disable backups (not recommended)
 
 #### Scanning Options
+
 - `--no-recursive` - Don't scan subdirectories
 - `--min-size BYTES` - Minimum file size to consider
 - `--max-size BYTES` - Maximum file size to consider
@@ -330,11 +347,13 @@ python -m file_organizer.cli.dedupe data/archive \
 - `--exclude PATTERN` - File patterns to exclude (can specify multiple times)
 
 #### Output Options
+
 - `--verbose` - Enable verbose logging
 
 ## Understanding the Output
 
 ### Configuration Panel
+
 Shows your selected options before scanning:
 
 ```
@@ -352,6 +371,7 @@ Mode:       LIVE
 ```
 
 ### Duplicate Group Display
+
 For each group of duplicates:
 
 ```
@@ -390,21 +410,25 @@ Space saved:            15.3 MB
 ## Troubleshooting
 
 ### "No duplicate files found"
+
 - Check if you're using the correct directory
 - Try using `--recursive` if you want to scan subdirectories
 - Verify file permissions (some files may be inaccessible)
 
 ### "Permission denied" errors
+
 - Make sure you have read access to all files
 - Make sure you have write access to create backups
 - Try running with appropriate permissions
 
 ### Progress is slow
+
 - Use MD5 instead of SHA256: `--algorithm md5`
 - Use size filters to reduce the number of files: `--min-size`
 - Consider using batch mode: `--batch`
 
 ### Out of memory errors
+
 - The tool uses chunked reading, so this should be rare
 - Try processing smaller directories separately
 - Use size filters to exclude very large files temporarily
@@ -427,21 +451,22 @@ Backups are stored in:
 ### Restoring Files
 
 To restore a backup manually:
+
 1. Navigate to `.file_organizer_backups/`
-2. Find the backup file (timestamp in filename)
-3. Copy it back to the original location
+1. Find the backup file (timestamp in filename)
+1. Copy it back to the original location
 
 The manifest.json file contains the original paths.
 
 ## Best Practices
 
 1. **Always use dry-run first**: Test with `--dry-run` before actual deletion
-2. **Keep safe mode enabled**: Only disable if you're absolutely sure
-3. **Start with small directories**: Test on a small directory first
-4. **Review manual mode output**: Even with automatic strategies, review the output
-5. **Use appropriate algorithms**: SHA256 for important files, MD5 for quick scans
-6. **Combine with filters**: Use size and pattern filters to focus on specific files
-7. **Keep backups**: Don't delete backups immediately after deduplication
+1. **Keep safe mode enabled**: Only disable if you're absolutely sure
+1. **Start with small directories**: Test on a small directory first
+1. **Review manual mode output**: Even with automatic strategies, review the output
+1. **Use appropriate algorithms**: SHA256 for important files, MD5 for quick scans
+1. **Combine with filters**: Use size and pattern filters to focus on specific files
+1. **Keep backups**: Don't delete backups immediately after deduplication
 
 ## Integration with Scripts
 
@@ -468,14 +493,15 @@ else:
 ## Performance Tips
 
 1. **Use MD5 for local deduplication**: It's faster and sufficient for local duplicate detection
-2. **Filter by size first**: Use `--min-size` to skip small files
-3. **Use batch mode**: Skip interactive prompts with `--batch`
-4. **Exclude unnecessary patterns**: Use `--exclude` to skip temporary files
-5. **Process in stages**: Handle different file types separately
+1. **Filter by size first**: Use `--min-size` to skip small files
+1. **Use batch mode**: Skip interactive prompts with `--batch`
+1. **Exclude unnecessary patterns**: Use `--exclude` to skip temporary files
+1. **Process in stages**: Handle different file types separately
 
 ## Safety Checklist
 
 Before running deduplication:
+
 - [ ] I've tested with `--dry-run`
 - [ ] Safe mode is enabled (or I have other backups)
 - [ ] I've reviewed the output
@@ -486,8 +512,9 @@ Before running deduplication:
 ## Support
 
 For issues or questions:
+
 1. Check this documentation
-2. Run with `--verbose` for detailed logging
-3. Review the output carefully
-4. Check file permissions
-5. Consult the main project documentation
+1. Run with `--verbose` for detailed logging
+1. Review the output carefully
+1. Check file permissions
+1. Consult the main project documentation

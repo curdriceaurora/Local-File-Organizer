@@ -17,6 +17,7 @@ The File Organizer API allows you to:
 ## API Features
 
 ### REST Endpoints
+
 - File management (upload, list, delete)
 - Organization (start jobs, monitor progress)
 - Search and filtering
@@ -24,16 +25,19 @@ The File Organizer API allows you to:
 - Settings and configuration
 
 ### Authentication
+
 - API key-based authentication
 - Bearer token in Authorization header
 - Rate limiting and quotas
 
 ### Real-Time Updates
+
 - WebSocket connections for live progress
 - Job status streaming
 - Event notifications
 
 ### Response Formats
+
 - JSON responses
 - Proper HTTP status codes
 - Error details in response body
@@ -43,10 +47,10 @@ The File Organizer API allows you to:
 ### 1. Generate API Key
 
 1. Log in to web interface
-2. Click **Settings** (gear icon)
-3. Select **API Keys**
-4. Click **Generate New Key**
-5. Copy the token (shown only once)
+1. Click **Settings** (gear icon)
+1. Select **API Keys**
+1. Click **Generate New Key**
+1. Copy the token (shown only once)
 
 ### 2. Make Your First Request
 
@@ -72,6 +76,7 @@ curl -X GET http://localhost:8000/api/v1/files \
 ## API Endpoints
 
 ### File Management
+
 - `GET /api/v1/files` - List files
 - `POST /api/v1/files/upload` - Upload file
 - `GET /api/v1/files/{id}` - Get file details
@@ -80,6 +85,7 @@ curl -X GET http://localhost:8000/api/v1/files \
 **Guide**: [File Management Endpoints](file-endpoints.md)
 
 ### Organization
+
 - `POST /api/v1/organize` - Start organization job
 - `GET /api/v1/organize/jobs` - List jobs
 - `GET /api/v1/organize/jobs/{id}` - Get job status
@@ -88,6 +94,7 @@ curl -X GET http://localhost:8000/api/v1/files \
 **Guide**: [Organization Endpoints](organization-endpoints.md)
 
 ### Analysis
+
 - `POST /api/v1/analyze/duplicates` - Find duplicates
 - `GET /api/v1/analyze/storage` - Storage analysis
 - `GET /api/v1/analyze/categories` - Category analysis
@@ -95,6 +102,7 @@ curl -X GET http://localhost:8000/api/v1/files \
 **Guide**: [Analysis Endpoints](analysis-endpoints.md)
 
 ### Search
+
 - `GET /api/v1/search` - Search files
 - `POST /api/v1/search/advanced` - Advanced search
 - `GET /api/v1/search/saved` - Saved searches
@@ -102,6 +110,7 @@ curl -X GET http://localhost:8000/api/v1/files \
 **Guide**: [Search Endpoints](search-endpoints.md)
 
 ### WebSocket
+
 - `WS /api/v1/ws` - Real-time events
 - Job progress updates
 - File operation notifications
@@ -139,9 +148,9 @@ X-RateLimit-Reset: 1645026000
 API keys have configurable expiration:
 
 1. Generate key with expiration date
-2. Expired keys return 401 Unauthorized
-3. Generate new key if expired
-4. Revoke old keys in Settings
+1. Expired keys return 401 Unauthorized
+1. Generate new key if expired
+1. Revoke old keys in Settings
 
 ## Response Format
 
@@ -328,15 +337,18 @@ ws.onmessage = (event) => {
 ## Getting Help
 
 ### Documentation
+
 - This API Reference
 - [Developer Guide](../developer/index.md)
 - [API Clients Guide](../developer/api-clients.md)
 
 ### Support
+
 - [GitHub Issues](https://github.com/curdriceaurora/Local-File-Organizer/issues)
 - [GitHub Discussions](https://github.com/curdriceaurora/Local-File-Organizer/discussions)
 
 ### Troubleshooting
+
 - Check [Troubleshooting Guide](../troubleshooting.md)
 - Review error codes and messages
 - Check server logs for details

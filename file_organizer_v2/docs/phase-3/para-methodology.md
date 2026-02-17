@@ -11,21 +11,25 @@ File Organizer v2 provides automatic PARA categorization using AI-powered heuris
 ### The Four Categories
 
 **Projects** - Short-term efforts with specific goals and deadlines
+
 - Active work with clear end dates
 - Examples: "Q1 Marketing Campaign", "Website Redesign", "Conference Presentation"
 - Characteristics: Time-bound, goal-oriented, temporary
 
 **Areas** - Long-term responsibilities requiring ongoing attention
+
 - Continuous maintenance without end dates
 - Examples: "Finance", "Health", "Professional Development", "Home Management"
 - Characteristics: Standards to maintain, indefinite timeline, recurring
 
 **Resources** - Topics of ongoing interest and reference materials
+
 - Information you want to keep for future reference
 - Examples: "Recipes", "Design Inspiration", "Programming Tutorials", "Travel Ideas"
 - Characteristics: Reference material, learning resources, inspiration
 
 **Archive** - Inactive items from Projects, Areas, or Resources
+
 - Completed projects, outdated resources, old documents
 - Examples: "2023 Tax Returns", "Completed Projects", "Old Course Materials"
 - Characteristics: No longer active, kept for records, infrequently accessed
@@ -35,6 +39,7 @@ File Organizer v2 provides automatic PARA categorization using AI-powered heuris
 ### Quick Start
 
 1. **Enable PARA categorization** in your configuration:
+
 ```python
 from file_organizer.methodologies.para import PARAConfig
 
@@ -46,12 +51,13 @@ config = PARAConfig(
 ```
 
 2. **Organize your first file**:
+
 ```bash
 file-organizer organize ./Downloads/project-plan.pdf --methodology para
 ```
 
 3. **View categorization results**:
-The file will be automatically categorized into one of the four PARA categories based on content analysis.
+   The file will be automatically categorized into one of the four PARA categories based on content analysis.
 
 ### Installation
 
@@ -64,17 +70,20 @@ PARA support is built into File Organizer v2. No additional installation require
 File Organizer uses multiple heuristics to determine the appropriate PARA category:
 
 1. **Temporal Heuristics** - Analyzes time-related indicators
+
    - Deadlines, dates, timeframes
    - Frequency indicators (daily, weekly, ongoing)
    - Completion markers
 
-2. **Content Heuristics** - Examines file content
+1. **Content Heuristics** - Examines file content
+
    - Goal-oriented language (deliver, complete, finish)
    - Maintenance language (maintain, monitor, track)
    - Reference indicators (guide, tutorial, reference)
    - Archive markers (old, completed, final)
 
-3. **Structural Heuristics** - Looks at file organization
+1. **Structural Heuristics** - Looks at file organization
+
    - Existing folder structure hints
    - File naming patterns
    - Metadata and tags
@@ -82,11 +91,13 @@ File Organizer uses multiple heuristics to determine the appropriate PARA catego
 ### Confidence Scoring
 
 Each categorization includes a confidence score:
+
 - **High (>80%)**: Strong indicators, reliable categorization
 - **Medium (50-80%)**: Some indicators, may need review
-- **Low (<50%)**: Ambiguous, manual review recommended
+- **Low (\<50%)**: Ambiguous, manual review recommended
 
 Example output:
+
 ```
 File: quarterly-report-draft.docx
 Category: Projects (Confidence: 92%)
@@ -141,6 +152,7 @@ config.add_rule(finance_rule)
 ### Rule Priority
 
 Rules are evaluated in priority order (highest first):
+
 - Priority 10: Critical overrides
 - Priority 5-9: Custom category rules
 - Priority 1-4: Minor adjustments
@@ -192,6 +204,7 @@ engine.reject_suggestion(
 ### Step-by-Step Migration
 
 1. **Analyze existing structure**:
+
 ```bash
 file-organizer analyze ./Documents --methodology para --dry-run
 ```
@@ -199,6 +212,7 @@ file-organizer analyze ./Documents --methodology para --dry-run
 This scans your files and provides a migration preview.
 
 2. **Review categorization**:
+
 ```
 Analysis Complete:
 - 234 files analyzed
@@ -209,11 +223,13 @@ Analysis Complete:
 ```
 
 3. **Execute migration**:
+
 ```bash
 file-organizer migrate ./Documents --methodology para --target ./Documents-PARA
 ```
 
 4. **Verify results**:
+
 ```
 Migration Complete:
 ./Documents-PARA/
@@ -233,12 +249,14 @@ Migration Complete:
 ### Handling Edge Cases
 
 **Mixed content folders**:
+
 ```python
 # Configure behavior for folders with multiple categories
 config.mixed_folder_strategy = "split"  # or "dominant", "manual"
 ```
 
 **Uncertain categorization**:
+
 ```python
 # Set threshold for manual review
 config.manual_review_threshold = 0.6  # Files with confidence < 60% flagged for review
@@ -270,6 +288,7 @@ config.manual_review_threshold = 0.6  # Files with confidence < 60% flagged for 
 ### Numbering Convention
 
 The 1-2-3-4 prefixes ensure correct sorting and visual hierarchy:
+
 - **1-Projects**: Always first (highest priority)
 - **2-Areas**: Second (important but not urgent)
 - **3-Resources**: Third (reference material)
@@ -280,6 +299,7 @@ The 1-2-3-4 prefixes ensure correct sorting and visual hierarchy:
 Within each category:
 
 **Projects** - Group by status or timeframe:
+
 ```
 1-Projects/
 ├── Active/
@@ -288,6 +308,7 @@ Within each category:
 ```
 
 **Areas** - Group by life domain:
+
 ```
 2-Areas/
 ├── Personal/
@@ -296,6 +317,7 @@ Within each category:
 ```
 
 **Resources** - Group by topic:
+
 ```
 3-Resources/
 ├── Technical/
@@ -377,14 +399,15 @@ for directory in directories:
 ### Best Practices
 
 1. **Review regularly**: Move completed projects to Archive monthly
-2. **Keep it simple**: Don't over-subdivide categories
-3. **Trust the process**: Let the system learn from your patterns
-4. **Be consistent**: Use the same naming conventions
-5. **Archive liberally**: Don't keep active what's inactive
+1. **Keep it simple**: Don't over-subdivide categories
+1. **Trust the process**: Let the system learn from your patterns
+1. **Be consistent**: Use the same naming conventions
+1. **Archive liberally**: Don't keep active what's inactive
 
 ### Common Patterns
 
 **Time-based archiving**:
+
 ```python
 # Automatically archive old projects
 config.auto_archive = True
@@ -392,6 +415,7 @@ config.archive_after_days = 90  # Archive projects inactive for 90 days
 ```
 
 **Seasonal organization**:
+
 ```
 1-Projects/
 ├── 2024-Q1/
@@ -407,22 +431,27 @@ Combine PARA with other systems (e.g., Johnny Decimal for sub-organization)
 ### Avoid These Mistakes
 
 ❌ **Too many subcategories**
+
 - Don't create Projects/Work/Client-A/Project-X/Phase-1/...
 - Keep hierarchy flat: Projects/Client-A-Project-X/
 
 ❌ **Mixing categories**
+
 - Don't put Resources in Projects folder
 - Trust the automatic categorization
 
 ❌ **Never archiving**
+
 - Regular archiving keeps your system clean
 - Set up automatic archiving rules
 
 ❌ **Ignoring context**
+
 - Same file name in different contexts = different categories
 - Use content analysis, not just filenames
 
 ✅ **Do this instead**:
+
 - Keep categories distinct and clear
 - Archive completed projects promptly
 - Let the AI handle categorization
@@ -435,9 +464,11 @@ Combine PARA with other systems (e.g., Johnny Decimal for sub-organization)
 **Problem**: File placed in wrong category
 
 **Solutions**:
+
 1. Check confidence score - low confidence needs manual review
-2. Add custom rule for this file type
-3. Provide feedback to improve AI:
+1. Add custom rule for this file type
+1. Provide feedback to improve AI:
+
 ```python
 organizer.provide_feedback(
     file_path="document.pdf",
@@ -452,6 +483,7 @@ organizer.provide_feedback(
 **Problem**: Unclear if file is Project or Area
 
 **Rule of thumb**:
+
 - Has deadline or completion criteria? → **Project**
 - Ongoing without end date? → **Area**
 - Just for reference? → **Resource**
@@ -462,9 +494,10 @@ organizer.provide_feedback(
 **Problem**: Existing structure doesn't fit PARA
 
 **Solutions**:
+
 1. Use `--mixed-folder-strategy split` to separate mixed folders
-2. Set `--confidence-threshold 0.8` for stricter categorization
-3. Enable `--manual-review` for ambiguous files
+1. Set `--confidence-threshold 0.8` for stricter categorization
+1. Enable `--manual-review` for ambiguous files
 
 ## Advanced Usage
 
@@ -498,6 +531,7 @@ config.add_heuristic(ProjectDeadlineHeuristic())
 ### Integration with Other Systems
 
 **Combine with Johnny Decimal**:
+
 ```
 1-Projects/
 ├── 10-19-Active-Projects/
@@ -508,6 +542,7 @@ config.add_heuristic(ProjectDeadlineHeuristic())
 ```
 
 **Sync with Cloud Storage**:
+
 ```python
 # Automatically sync PARA structure to cloud
 from file_organizer.integrations import CloudSync
@@ -532,6 +567,6 @@ sync.sync_structure(
 - [Building a Second Brain](https://www.buildingasecondbrain.com/)
 - [PARA Implementation Examples](tutorials/para-setup.md)
 
----
+______________________________________________________________________
 
 **Next Steps**: Try organizing your first directory with PARA using the [Quick Start Tutorial](tutorials/para-setup.md)

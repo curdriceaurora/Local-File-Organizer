@@ -9,13 +9,14 @@ Learn how to search, filter, and analyze your files in File Organizer.
 Use the search bar at the top of any page:
 
 1. Click the search box (or press `/`)
-2. Type your search query
-3. Results appear as you type
-4. Click a result to view it
+1. Type your search query
+1. Results appear as you type
+1. Click a result to view it
 
 ### Search Results
 
 Results show:
+
 - File name and type
 - Location
 - Size and date
@@ -27,10 +28,10 @@ Results show:
 Save searches for later use:
 
 1. Enter search query
-2. Click **Save Search**
-3. Give it a name
-4. Access from **Saved Searches** sidebar
-5. Saved searches update automatically
+1. Click **Save Search**
+1. Give it a name
+1. Access from **Saved Searches** sidebar
+1. Saved searches update automatically
 
 ## Advanced Search
 
@@ -65,6 +66,7 @@ Use search operators for precision:
 Refine results with filters:
 
 **File Type**
+
 - Document (PDF, Word, etc.)
 - Image (JPEG, PNG, etc.)
 - Video
@@ -73,6 +75,7 @@ Refine results with filters:
 - Other
 
 **Date Range**
+
 - Any time
 - Last 24 hours
 - Last 7 days
@@ -81,6 +84,7 @@ Refine results with filters:
 - Custom range
 
 **File Size**
+
 - All sizes
 - < 1 MB (small)
 - 1-10 MB (medium)
@@ -88,11 +92,13 @@ Refine results with filters:
 - > 100 MB (huge)
 
 **Location**
+
 - All locations
 - Specific folder
 - Multiple folders
 
 **Tags**
+
 - Select specific tags
 - Multiple tags
 - Exclude tags
@@ -100,6 +106,7 @@ Refine results with filters:
 ### Sorting
 
 Sort results by:
+
 - **Relevance** - Best match first
 - **Name** - Alphabetical
 - **Date Modified** - Newest first
@@ -113,16 +120,19 @@ Sort results by:
 View breakdown of disk usage:
 
 **By File Type**
+
 - See which types use most space
 - Compare document vs images vs video
 - Identify large file categories
 
 **By Folder**
+
 - See folder size breakdown
 - Identify large folders
 - Navigate to folders
 
 **By Size Range**
+
 - Tiny (< 1 MB)
 - Small (1-10 MB)
 - Medium (10-100 MB)
@@ -132,9 +142,9 @@ View breakdown of disk usage:
 ### View Analytics
 
 1. Click **Analysis** → **Storage**
-2. See charts and breakdowns
-3. Click sections to drill down
-4. Export report if needed
+1. See charts and breakdowns
+1. Click sections to drill down
+1. Export report if needed
 
 ### Storage Tips
 
@@ -150,22 +160,24 @@ Find and manage duplicate files.
 ### Running Detection
 
 1. Click **Analysis** → **Duplicates**
-2. Choose folder(s) to scan
-3. Choose detection method:
+1. Choose folder(s) to scan
+1. Choose detection method:
    - **Exact**: Byte-for-byte match
    - **Smart**: Content-based similarity
    - **All**: Both exact and similar
-4. Click **Scan**
-5. Wait for analysis to complete
+1. Click **Scan**
+1. Wait for analysis to complete
 
 ### Understanding Results
 
 **Duplicate Groups**
+
 - Exact duplicates (100% match)
 - Similar (90%+ match)
 - Possible (80%+ match)
 
 For each group:
+
 - Number of duplicates
 - File details (name, size, location)
 - Similarity percentage
@@ -175,18 +187,22 @@ For each group:
 For each duplicate group:
 
 **Keep This File**
+
 - Mark which copy to keep
 - Other copies deleted
 
 **Delete All But One**
+
 - Quick delete all duplicates
 - Keep one copy
 
 **Merge Files**
+
 - Combine into single file
 - Keep all content
 
 **Ignore**
+
 - Skip this group
 - Don't delete
 
@@ -204,18 +220,21 @@ For each duplicate group:
 Click a file to see:
 
 **Content Analysis**
+
 - AI-generated description
 - Extracted text/metadata
 - Language detection
 - Category suggestions
 
 **Properties**
+
 - File type
 - Size
 - Creation/modification date
 - Location
 
 **Related Files**
+
 - Similar files
 - Potential duplicates
 - Same category
@@ -225,8 +244,8 @@ Click a file to see:
 Analyze multiple files:
 
 1. Select multiple files
-2. Click **Analyze**
-3. See combined statistics:
+1. Click **Analyze**
+1. See combined statistics:
    - Total size
    - File count by type
    - Average file size
@@ -266,47 +285,49 @@ See trends over time:
 ### Export Search Results
 
 1. Create search
-2. Apply filters
-3. Click **Export**
-4. Choose format:
+1. Apply filters
+1. Click **Export**
+1. Choose format:
    - CSV spreadsheet
    - JSON data
    - ZIP archive (includes files)
-5. Download starts
+1. Download starts
 
 ### Export Reports
 
 1. Create report (search, analysis, etc.)
-2. Click **Export Report**
-3. Choose format:
+1. Click **Export Report**
+1. Choose format:
    - PDF (formatted)
    - CSV (data only)
    - JSON (raw data)
-4. Download
+1. Download
 
 ### Scheduled Exports
 
 Set up automatic exports:
 
 1. Click **Schedules** → **New Export**
-2. Configure:
+1. Configure:
    - What to export (search, analysis)
    - When to run
    - Export format
    - Destination
-3. Exports run automatically
+1. Exports run automatically
 
 ## Search Tips
 
 ### Better Search Results
 
 **Tips**:
+
 - Use quotes for exact phrases: `"quarterly report"`
 - Use wildcards: `report*` finds report, reports, reporting
 - Combine operators: `type:pdf AND size:>5mb`
 - Use date ranges: `date:>2024-01-01`
 
 **Examples**:
+
 - Find all PDFs: `type:pdf`
 - Find recent documents: `type:document AND date:>7days`
 - Find large images: `type:image AND size:>50mb`
@@ -315,21 +336,25 @@ Set up automatic exports:
 ### Common Searches
 
 **Recent Files**
+
 ```
 date:last7days
 ```
 
 **Large Files to Clean**
+
 ```
 size:>100mb
 ```
 
 **Unorganized Files**
+
 ```
 path:/downloads
 ```
 
 **Project Files**
+
 ```
 tag:project-x OR path:/projects/x
 ```

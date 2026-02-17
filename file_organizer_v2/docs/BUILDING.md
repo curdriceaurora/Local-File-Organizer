@@ -30,6 +30,7 @@ file-organizer-<version>-<platform>-<arch>
 ```
 
 Examples:
+
 - `file-organizer-2.0.0-alpha.1-macos-arm64`
 - `file-organizer-2.0.0-alpha.1-windows-x86_64.exe`
 
@@ -124,6 +125,7 @@ python scripts/build.py --one-dir
 ## CI Build Pipeline
 
 GitHub Actions builds are defined in:
+
 - `.github/workflows/build.yml`
 
 The CI pipeline installs dependencies, runs tests, and invokes:

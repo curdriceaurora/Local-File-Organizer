@@ -14,7 +14,7 @@ The Johnny Decimal API provides programmatic access to the Johnny Decimal number
 - [Validation](#validation)
 - [Examples](#examples)
 
----
+______________________________________________________________________
 
 ## Core Classes
 
@@ -43,6 +43,7 @@ config = JohnnyDecimalConfig(
 ```
 
 **Parameters**:
+
 - `enabled` - Enable Johnny Decimal system
 - `auto_assign` - Automatically assign numbers
 - `auto_increment` - Auto-increment on conflicts
@@ -80,6 +81,7 @@ class JohnnyDecimalNumber:
 ```
 
 **Example**:
+
 ```python
 # Full 3-level number
 number = JohnnyDecimalNumber(area=11, category=4, item_id=12)
@@ -110,6 +112,7 @@ class AssignmentResult:
 ```
 
 **Attributes**:
+
 - `number` - Assigned number
 - `category` - Category definition
 - `suggested_path` - Full file path with number
@@ -117,13 +120,14 @@ class AssignmentResult:
 - `needs_manual_review` - Whether manual review needed
 - `suggested_alternatives` - Other possible numbers
 
----
+______________________________________________________________________
 
 ## Configuration
 
 ### Creating Configuration
 
 **Basic Setup**:
+
 ```python
 from file_organizer.methodologies.johnny_decimal import JohnnyDecimalConfig
 
@@ -147,6 +151,7 @@ config = JohnnyDecimalConfig(
 ```
 
 **Using Pre-defined Schemes**:
+
 ```python
 # Business scheme
 config = JohnnyDecimalConfig(scheme="business")
@@ -162,6 +167,7 @@ config = JohnnyDecimalConfig(scheme="creative")
 ```
 
 **Saving/Loading**:
+
 ```python
 # Save configuration
 config.save("config/file-organizer/jd-config.json")
@@ -170,7 +176,7 @@ config.save("config/file-organizer/jd-config.json")
 config = JohnnyDecimalConfig.load("config/file-organizer/jd-config.json")
 ```
 
----
+______________________________________________________________________
 
 ## Number Generation
 
@@ -206,6 +212,7 @@ result = generator.assign_number(
 Assign a Johnny Decimal number to a file.
 
 **Parameters**:
+
 - `file_path` - File to number
 - `content_hint` - Hint about file content
 - `suggested_area` - Preferred area (10-19, 20-29, etc.)
@@ -217,6 +224,7 @@ Assign a Johnny Decimal number to a file.
 **Returns**: `AssignmentResult` with assigned number
 
 **Example**:
+
 ```python
 from pathlib import Path
 
@@ -247,6 +255,7 @@ number = generator.next_available(
 Get next available number in category.
 
 **Example**:
+
 ```python
 # Get next number in category 11
 number = generator.next_available(category=11)
@@ -264,6 +273,7 @@ available = generator.is_number_available(
 Check if number is available.
 
 **Example**:
+
 ```python
 if generator.is_number_available("11.04"):
     print("Number is free to use")
@@ -283,6 +293,7 @@ results = generator.batch_assign(
 Assign numbers to multiple files.
 
 **Example**:
+
 ```python
 files = list(Path("./Documents").glob("*.pdf"))
 
@@ -295,7 +306,7 @@ for file, result in zip(files, results):
     print(f"{file.name} → {result.number.full_number}")
 ```
 
----
+______________________________________________________________________
 
 ## Numbering Schemes
 
@@ -358,6 +369,7 @@ area = AreaDefinition(
 ```
 
 **Example**:
+
 ```python
 # Define Administration area
 admin_area = AreaDefinition(
@@ -388,6 +400,7 @@ category = CategoryDefinition(
 ```
 
 **Example**:
+
 ```python
 # Define Company Documents category
 company_docs = CategoryDefinition(
@@ -487,7 +500,7 @@ scheme.add_category(accounting)
 generator = JohnnyDecimalGenerator(scheme=scheme)
 ```
 
----
+______________________________________________________________________
 
 ## Conflict Resolution
 
@@ -575,7 +588,7 @@ report = resolver.generate_conflict_report(
 ) -> str
 ```
 
----
+______________________________________________________________________
 
 ## Validation
 
@@ -626,6 +639,7 @@ class ValidationResult:
 ```
 
 **Example**:
+
 ```python
 from file_organizer.methodologies.johnny_decimal import Validator
 
@@ -639,7 +653,7 @@ if not result.is_valid:
         print(f"Suggestion: {suggestion}")
 ```
 
----
+______________________________________________________________________
 
 ## System Management
 
@@ -669,6 +683,7 @@ system.initialize(
 Initialize Johnny Decimal structure in directory.
 
 **Example**:
+
 ```python
 system.initialize(Path("./Documents"))
 # Creates:
@@ -698,6 +713,7 @@ class UsageStats:
 ```
 
 **Example**:
+
 ```python
 stats = system.get_usage_stats()
 print(f"Total items: {stats.total_items}")
@@ -718,6 +734,7 @@ system.reserve_range(
 Reserve number range for future use.
 
 **Example**:
+
 ```python
 system.reserve_range("15.00", "15.99", reason="Future expansion")
 ```
@@ -740,7 +757,7 @@ system.import_existing_structure(
 
 Import existing Johnny Decimal structure.
 
----
+______________________________________________________________________
 
 ## Examples
 
@@ -904,7 +921,7 @@ stats = system.get_usage_stats()
 print(f"System capacity: {stats.available_slots} slots available")
 ```
 
----
+______________________________________________________________________
 
 ## Exception Handling
 
@@ -928,14 +945,14 @@ except SchemeError as e:
     print(f"Scheme error: {e}")
 ```
 
----
+______________________________________________________________________
 
 ## Related APIs
 
 - [PARA Methodology API](para-api.md) - Organization system API
 - [File Organization API](organization-api.md) - Core organization API
 
----
+______________________________________________________________________
 
 **API Version**: 2.0
 **Last Updated**: 2026-01-24

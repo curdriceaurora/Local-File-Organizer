@@ -28,6 +28,7 @@ config.save("config/file-organizer/para.json")
 ```
 
 Or use CLI:
+
 ```bash
 file-organizer config set para.enabled true
 file-organizer config set para.auto_categorize true
@@ -42,6 +43,7 @@ file-organizer analyze ./Downloads --methodology para --dry-run
 ```
 
 Example output:
+
 ```
 Analysis Results:
 ├── Projects: 15 files
@@ -80,6 +82,7 @@ file-organizer organize ./Downloads \
 ```
 
 Watch the magic happen:
+
 ```
 Processing files...
 [1/102] Q1-Report-Draft.docx → 1-Projects/Q1-Marketing/
@@ -98,6 +101,7 @@ tree ./Documents-PARA -L 2
 ```
 
 Output:
+
 ```
 ./Documents-PARA/
 ├── 1-Projects/
@@ -125,6 +129,7 @@ file-organizer review ./Documents-PARA --confidence-below 0.7
 ```
 
 Adjust if needed:
+
 ```bash
 # Move file to correct category
 file-organizer move document.pdf --to areas/finance --feedback
@@ -174,15 +179,18 @@ file-organizer watch ./Downloads \
 ## Troubleshooting
 
 **Files in wrong category?**
+
 - Check confidence score
 - Add custom rules
 - Provide feedback to improve AI
 
 **Too many subcategories?**
+
 - Simplify: Keep hierarchy flat
 - Use `--max-depth 2` flag
 
 **Mixed results?**
+
 - Lower confidence threshold: `--confidence-threshold 0.8`
 - Enable manual review: `--manual-review`
 
@@ -202,7 +210,7 @@ file-organizer review DEST --confidence-below 0.7
 file-organizer watch DIR --methodology para --daemon
 ```
 
----
+______________________________________________________________________
 
 **Time to completion**: ~10 minutes
 **Files organized**: Unlimited

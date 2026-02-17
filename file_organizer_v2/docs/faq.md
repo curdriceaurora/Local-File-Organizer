@@ -9,6 +9,7 @@ File Organizer is an AI-powered local file management system that automatically 
 ### Is my data safe?
 
 Yes. File Organizer:
+
 - Runs 100% locally
 - Never uploads files to cloud
 - Uses local AI models
@@ -32,8 +33,8 @@ Yes. File Organizer runs on all three platforms.
 Three options:
 
 1. **Docker** (recommended): `docker-compose up -d`
-2. **Python Package**: `pip install file-organizer`
-3. **From Source**: Clone repo and `pip install -e .`
+1. **Python Package**: `pip install file-organizer`
+1. **From Source**: Clone repo and `pip install -e .`
 
 See [Installation Guide](admin/installation.md).
 
@@ -44,6 +45,7 @@ Yes, Ollama provides the AI models. Install from https://ollama.ai
 ### Which AI models should I use?
 
 We recommend:
+
 - **Text**: qwen2.5:3b-instruct-q4_K_M (~1.9 GB)
 - **Vision**: qwen2.5vl:7b-q4_K_M (~6 GB)
 
@@ -54,16 +56,17 @@ Both are optimized for balance between speed and accuracy.
 ### How do I organize my files?
 
 1. Upload files
-2. Click **Organize**
-3. Choose methodology (PARA, Johnny Decimal, etc.)
-4. Review preview
-5. Click **Apply**
+1. Click **Organize**
+1. Choose methodology (PARA, Johnny Decimal, etc.)
+1. Review preview
+1. Click **Apply**
 
 See [Organization Guide](web-ui/organization.md).
 
 ### What file types does it support?
 
 File Organizer supports 43+ file types:
+
 - Documents: PDF, Word, Excel, PowerPoint, Markdown
 - Images: JPEG, PNG, GIF, BMP, TIFF
 - Video: MP4, AVI, MKV, MOV, WMV
@@ -93,6 +96,7 @@ Click **Analysis** → **Detect Duplicates**, choose folder(s) to scan, and wait
 ### Organization is slow
 
 Optimizations:
+
 - Use smaller batches
 - Close other applications
 - Check available disk space
@@ -101,6 +105,7 @@ Optimizations:
 ### Memory usage is high
 
 Solutions:
+
 - Close browser tabs
 - Reduce maximum file size
 - Limit batch size
@@ -118,8 +123,8 @@ Solutions:
 ### How do I use the API?
 
 1. Generate API key in **Settings** → **API Keys**
-2. Include in requests: `Authorization: Bearer YOUR_KEY`
-3. See [API Reference](api/index.md) for endpoints
+1. Include in requests: `Authorization: Bearer YOUR_KEY`
+1. See [API Reference](api/index.md) for endpoints
 
 ### Can I use API keys from scripts?
 
@@ -184,6 +189,7 @@ See [Admin Guide](admin/index.md).
 ### Ollama connection fails
 
 Start Ollama service:
+
 ```bash
 ollama serve
 ```
@@ -193,6 +199,7 @@ Verify: `curl http://localhost:11434/api/version`
 ### Port already in use
 
 Use different port:
+
 ```bash
 file-organizer serve --port 8001
 ```
@@ -200,6 +207,7 @@ file-organizer serve --port 8001
 ### Out of memory
 
 Solutions:
+
 - Increase available RAM
 - Process smaller batches
 - Reduce upload file size
@@ -212,16 +220,16 @@ See [Troubleshooting Guide](troubleshooting.md) for more issues.
 ### How can I contribute?
 
 1. Fork repository
-2. Create feature branch
-3. Make changes with tests
-4. Create pull request
+1. Create feature branch
+1. Make changes with tests
+1. Create pull request
 
 See [Contributing Guide](developer/contributing.md).
 
 ### How do I report bugs?
 
 1. Search existing issues
-2. Create new issue with:
+1. Create new issue with:
    - Clear description
    - Steps to reproduce
    - System info

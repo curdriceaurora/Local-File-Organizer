@@ -16,9 +16,9 @@ This separation prevents the common failure mode where discovery, lifecycle, and
 ## Runtime Flow
 
 1. `PluginRegistry.discover_plugins()` scans plugin entrypoints (`<plugin>/plugin.py` or single-file plugins).
-2. `PluginRegistry.load_plugin(name)` resolves config, loads module, instantiates plugin, validates metadata/dependencies, and calls `on_load()`.
-3. `PluginLifecycleManager.enable(name)` calls `on_enable()` and marks state as `enabled`.
-4. `PluginLifecycleManager.disable(name)` and `unload(name)` provide deterministic shutdown and module cleanup.
+1. `PluginRegistry.load_plugin(name)` resolves config, loads module, instantiates plugin, validates metadata/dependencies, and calls `on_load()`.
+1. `PluginLifecycleManager.enable(name)` calls `on_enable()` and marks state as `enabled`.
+1. `PluginLifecycleManager.disable(name)` and `unload(name)` provide deterministic shutdown and module cleanup.
 
 ## Security Model
 
@@ -44,6 +44,7 @@ Writes are atomic to avoid partial/corrupt config files after crashes.
 Dependencies are declared in `PluginMetadata.dependencies`.
 
 Current behavior:
+
 - missing dependency -> load fails with `PluginDependencyError`
 - discovered or already loaded dependency -> accepted
 

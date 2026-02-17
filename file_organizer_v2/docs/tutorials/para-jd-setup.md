@@ -17,8 +17,8 @@ file-organizer config edit --methodology jd
 ## Preview in the TUI
 
 1. Launch the TUI: `file-organizer tui`.
-2. Press `4` for Methodology.
-3. Press `p` for PARA or `j` for Johnny Decimal.
+1. Press `4` for Methodology.
+1. Press `p` for PARA or `j` for Johnny Decimal.
 
 ## Configure PARA
 

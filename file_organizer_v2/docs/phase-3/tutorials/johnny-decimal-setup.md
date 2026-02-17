@@ -111,6 +111,7 @@ file-organizer organize ./Documents \
 ```
 
 Result:
+
 ```
 ./Documents-JD/
 ├── 10-19-Administration/
@@ -137,6 +138,7 @@ file-organizer jd generate-index ./Documents-JD > "00.00 Index.md"
 ```
 
 Example index:
+
 ```markdown
 # Johnny Decimal Index
 
@@ -248,6 +250,7 @@ file-organizer jd clear-reservation 15
 ## Tips for Success
 
 ### DO:
+
 ✅ Keep your index updated
 ✅ Use the system consistently
 ✅ Document your decisions
@@ -255,6 +258,7 @@ file-organizer jd clear-reservation 15
 ✅ Keep categories balanced (< 50 items each)
 
 ### DON'T:
+
 ❌ Skip numbers arbitrarily
 ❌ Create too many categories
 ❌ Use category 99 for important files
@@ -266,6 +270,7 @@ file-organizer jd clear-reservation 15
 **Problem**: Category is full (99 items)
 
 **Solution**:
+
 ```bash
 # Check what's in the category
 file-organizer jd list --category 11
@@ -280,6 +285,7 @@ file-organizer jd split-category 11 --into 11,15
 **Problem**: Number conflict
 
 **Solution**:
+
 ```bash
 # Find conflicts
 file-organizer jd check-conflicts ./Documents-JD
@@ -291,6 +297,7 @@ file-organizer jd resolve-conflicts ./Documents-JD --strategy increment
 **Problem**: Wrong category assignment
 
 **Solution**:
+
 ```bash
 # Move to correct category
 file-organizer jd reassign 11.04 --to-category 12
@@ -319,6 +326,7 @@ Combine both systems:
 ```
 
 Setup:
+
 ```bash
 # Enable both methodologies
 file-organizer organize ./Documents \
@@ -366,7 +374,7 @@ file-organizer jd stats DIR
 file-organizer jd generate-index DIR
 ```
 
----
+______________________________________________________________________
 
 **Time to completion**: ~15 minutes
 **System capacity**: 9,900 items (99 categories × 100 items each)

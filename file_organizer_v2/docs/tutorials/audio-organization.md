@@ -15,7 +15,7 @@ Audio features also benefit from a system FFmpeg install.
 ## Use the Audio View
 
 1. Launch the TUI: `file-organizer tui`.
-2. Press `5` for Audio.
-3. Use `j`/`k` to change selection, `r` to rescan.
+1. Press `5` for Audio.
+1. Use `j`/`k` to change selection, `r` to rescan.
 
 The view shows metadata (duration, codec, bitrate) and classification confidence.

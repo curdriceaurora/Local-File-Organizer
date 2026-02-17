@@ -285,13 +285,13 @@ Update checks run on TUI startup by default and are throttled by the configured 
 
 ## Supported File Types
 
-**Documents**: txt, md, pdf, docx, csv, xlsx, ppt, pptx, epub  
-**Images**: jpg, png, gif, bmp, tiff  
-**Video**: mp4, avi, mkv, mov, wmv  
-**Audio**: mp3, wav, flac, m4a, ogg  
-**Archives**: zip, 7z, tar, rar  
-**Scientific**: hdf5, netcdf, mat  
-**CAD**: dxf, dwg, step, iges  
+**Documents**: txt, md, pdf, docx, csv, xlsx, ppt, pptx, epub\
+**Images**: jpg, png, gif, bmp, tiff\
+**Video**: mp4, avi, mkv, mov, wmv\
+**Audio**: mp3, wav, flac, m4a, ogg\
+**Archives**: zip, 7z, tar, rar\
+**Scientific**: hdf5, netcdf, mat\
+**CAD**: dxf, dwg, step, iges
 
 **Total**: 43 file types supported.
 

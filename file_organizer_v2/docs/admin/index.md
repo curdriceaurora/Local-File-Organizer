@@ -19,11 +19,13 @@ See [Installation Guide](installation.md) for detailed setup.
 ## Main Sections
 
 ### Deployment
+
 - [Installation Guide](installation.md) - Setup and system requirements
 - [Deployment Guide](deployment.md) - Production deployment and configuration
 - [Configuration](configuration.md) - Environment variables and settings
 
 ### Operations
+
 - [Monitoring & Maintenance](monitoring.md) - Health checks and logs
 - [Security](security.md) - Authentication and secure deployment
 - [Troubleshooting](troubleshooting.md) - Common issues and solutions
@@ -31,18 +33,21 @@ See [Installation Guide](installation.md) for detailed setup.
 ## Key Topics
 
 ### Installation
+
 - System requirements
 - Docker setup
 - Manual installation
 - AI model configuration
 
 ### Deployment
+
 - Docker Compose setup
 - Reverse proxy configuration (nginx, Apache)
 - SSL/TLS setup
 - Environment variables
 
 ### Configuration
+
 - Database setup (PostgreSQL)
 - Redis configuration
 - Ollama integration
@@ -50,18 +55,21 @@ See [Installation Guide](installation.md) for detailed setup.
 - Rate limiting
 
 ### Monitoring
+
 - Health check endpoints
 - Logging configuration
 - Metrics collection
 - Performance monitoring
 
 ### Security
+
 - User authentication
 - API key management
 - HTTPS/TLS configuration
 - Firewall rules
 
 ### Backup & Recovery
+
 - Database backups
 - File backups
 - Restoration procedures
@@ -91,10 +99,10 @@ File System Storage
 ## Installation Steps
 
 1. **Install Docker** (if using Docker)
-2. **Clone Repository**
-3. **Configure Environment** (copy .env.example to .env)
-4. **Start Services** (docker-compose up)
-5. **Configure Settings** (web interface)
+1. **Clone Repository**
+1. **Configure Environment** (copy .env.example to .env)
+1. **Start Services** (docker-compose up)
+1. **Configure Settings** (web interface)
 
 See [Installation Guide](installation.md) for details.
 
@@ -123,22 +131,26 @@ See [Installation Guide](installation.md) for details.
 ## Maintenance Schedule
 
 ### Daily
+
 - Check health endpoints
 - Review error logs
 - Monitor disk space
 
 ### Weekly
+
 - Review user activity logs
 - Check backup integrity
 - Verify API performance
 
 ### Monthly
+
 - Full system backup
 - Review security logs
 - Test restoration procedures
 - Update documentation
 
 ### Quarterly
+
 - Update AI models if available
 - Security audit
 - Performance optimization
@@ -187,16 +199,19 @@ docker-compose logs --tail=100 web
 ### Common Issues
 
 **Services won't start**
+
 - Check Docker running
 - Review error logs
 - Verify port availability
 
 **Out of memory**
+
 - Check resource limits
 - Review running processes
 - Increase RAM allocation
 
 **Database connection failed**
+
 - Verify PostgreSQL running
 - Check connection string
 - Review database logs
@@ -206,12 +221,12 @@ See [Troubleshooting Guide](troubleshooting.md) for solutions.
 ## Upgrade Procedure
 
 1. Backup database and files
-2. Pull latest code
-3. Review release notes
-4. Update Docker images
-5. Run migrations
-6. Test thoroughly
-7. Deploy to production
+1. Pull latest code
+1. Review release notes
+1. Update Docker images
+1. Run migrations
+1. Test thoroughly
+1. Deploy to production
 
 ## Support
 

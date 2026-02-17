@@ -13,7 +13,7 @@ This guide helps you diagnose and resolve common issues with Phase 3 features, i
 - [Performance Issues](#performance-issues)
 - [Integration Issues](#integration-issues)
 
----
+______________________________________________________________________
 
 ## PARA Methodology Issues
 
@@ -22,13 +22,15 @@ This guide helps you diagnose and resolve common issues with Phase 3 features, i
 **Symptom**: Files are placed in the wrong PARA category.
 
 **Causes**:
+
 1. Low confidence score (< 70%)
-2. Ambiguous file content
-3. Missing custom rules
+1. Ambiguous file content
+1. Missing custom rules
 
 **Solutions**:
 
 **Check Confidence Score**:
+
 ```python
 from file_organizer.methodologies.para import PARACategorizer
 
@@ -41,6 +43,7 @@ if result.confidence < 0.7:
 ```
 
 **Add Custom Rules**:
+
 ```python
 from file_organizer.methodologies.para import PARARule, PARACategory
 
@@ -59,6 +62,7 @@ config.add_rule(custom_rule)
 ```
 
 **Provide Feedback**:
+
 ```python
 from file_organizer.methodologies.para import PARASuggestionEngine
 
@@ -78,13 +82,15 @@ engine.reject_suggestion(
 **Symptom**: Categorization takes > 5 seconds per file.
 
 **Causes**:
+
 1. AI model not optimized
-2. Large file content
-3. Too many custom rules
+1. Large file content
+1. Too many custom rules
 
 **Solutions**:
 
 **Adjust Confidence Threshold**:
+
 ```yaml
 # config/file-organizer/config.yaml
 para:
@@ -92,6 +98,7 @@ para:
 ```
 
 **Disable Smart Suggestions**:
+
 ```python
 config = PARAConfig(
     auto_categorize=True,
@@ -100,6 +107,7 @@ config = PARAConfig(
 ```
 
 **Limit Content Analysis**:
+
 ```python
 # Only analyze first 1000 characters
 content = file_content[:1000]
@@ -111,12 +119,14 @@ result = categorizer.categorize(file_path, content=content)
 **Symptom**: Deep folder hierarchies (Projects/Work/Client-A/Phase-1/...).
 
 **Causes**:
+
 1. Over-organization
-2. Incorrect mixed_folder_strategy
+1. Incorrect mixed_folder_strategy
 
 **Solutions**:
 
 **Keep Hierarchy Flat**:
+
 ```yaml
 para:
   max_depth: 2  # Limit folder depth
@@ -124,6 +134,7 @@ para:
 ```
 
 **Simplify Structure**:
+
 ```bash
 # Use flat structure
 1-Projects/
@@ -142,12 +153,14 @@ para:
 **Symptom**: Old projects not automatically archived.
 
 **Causes**:
+
 1. Auto-archive disabled
-2. Incorrect date detection
+1. Incorrect date detection
 
 **Solutions**:
 
 **Enable Auto-Archive**:
+
 ```python
 config = PARAConfig(
     auto_archive=True,
@@ -156,12 +169,13 @@ config = PARAConfig(
 ```
 
 **Manual Archive**:
+
 ```bash
 # Archive projects older than 90 days
 file-organizer archive-old --days 90 --category projects
 ```
 
----
+______________________________________________________________________
 
 ## Johnny Decimal Issues
 
@@ -170,17 +184,20 @@ file-organizer archive-old --days 90 --category projects
 **Symptom**: "Number already exists" error.
 
 **Causes**:
+
 1. Duplicate number assignment
-2. Existing files not imported
+1. Existing files not imported
 
 **Solutions**:
 
 **Find Conflicts**:
+
 ```bash
 file-organizer jd check-conflicts ./Documents
 ```
 
 **Auto-Resolve**:
+
 ```bash
 # Increment strategy (11.04 → 11.05)
 file-organizer jd resolve-conflicts ./Documents --strategy increment
@@ -190,6 +207,7 @@ file-organizer jd resolve-conflicts ./Documents --strategy skip
 ```
 
 **Import Existing**:
+
 ```python
 from file_organizer.methodologies.johnny_decimal import JohnnyDecimalGenerator
 
@@ -202,24 +220,28 @@ generator.import_existing_structure("./Documents")
 **Symptom**: "Category 11 is full" error.
 
 **Causes**:
+
 1. Too many files in one category
-2. No archiving strategy
+1. No archiving strategy
 
 **Solutions**:
 
 **Archive Old Items**:
+
 ```bash
 # Move old items to archive
 file-organizer jd archive 11 --older-than 1year
 ```
 
 **Split Category**:
+
 ```bash
 # Split category 11 into 11 and 15
 file-organizer jd split-category 11 --into 11,15
 ```
 
 **Use Sub-Categories** (temporary):
+
 ```python
 # Use decimal notation (not ideal, but works)
 # 11.01a, 11.01b, etc.
@@ -230,12 +252,14 @@ file-organizer jd split-category 11 --into 11,15
 **Symptom**: Files assigned to incorrect categories.
 
 **Causes**:
+
 1. Ambiguous content
-2. Missing keywords in category definition
+1. Missing keywords in category definition
 
 **Solutions**:
 
 **Add Keywords**:
+
 ```python
 from file_organizer.methodologies.johnny_decimal import CategoryDefinition
 
@@ -250,6 +274,7 @@ scheme.add_category(category)
 ```
 
 **Manual Reassignment**:
+
 ```bash
 # Move file to correct category
 file-organizer jd reassign 11.04 --to-category 12
@@ -261,12 +286,14 @@ file-organizer jd reassign 11.04 --to-category 12
 **Symptom**: "Invalid number format" error.
 
 **Causes**:
+
 1. Incorrect format (not XX.YY)
-2. Out of range (> 99.99)
+1. Out of range (> 99.99)
 
 **Solutions**:
 
 **Validate Before Assignment**:
+
 ```python
 from file_organizer.methodologies.johnny_decimal import validate_number
 
@@ -277,6 +304,7 @@ else:
 ```
 
 **Common Mistakes**:
+
 ```python
 # ❌ Wrong
 validate_number("11.100")  # ID must be 00-99
@@ -290,7 +318,7 @@ validate_number("00.01")
 validate_number("99.99")
 ```
 
----
+______________________________________________________________________
 
 ## File Format Issues
 
@@ -299,23 +327,27 @@ validate_number("99.99")
 **Symptom**: EPUB files not processed correctly.
 
 **Causes**:
+
 1. Corrupted EPUB file
-2. Missing dependency
+1. Missing dependency
 
 **Solutions**:
 
 **Verify EPUB**:
+
 ```bash
 # Check file integrity
 file-organizer validate book.epub
 ```
 
 **Reinstall Dependencies**:
+
 ```bash
 pip install --upgrade ebooklib
 ```
 
 **Manual Extraction**:
+
 ```python
 from file_organizer.utils.file_readers import read_epub_file
 
@@ -330,25 +362,29 @@ except Exception as e:
 **Symptom**: ZIP/TAR files take > 10 seconds to analyze.
 
 **Causes**:
+
 1. Large archive size
-2. Nested archives
-3. Many files in archive
+1. Nested archives
+1. Many files in archive
 
 **Solutions**:
 
 **Disable Content Analysis**:
+
 ```yaml
 file_formats:
   analyze_archive_contents: false  # Just look at filename
 ```
 
 **Set Size Limit**:
+
 ```yaml
 file_formats:
   max_archive_size_mb: 500  # Skip archives larger than 500 MB
 ```
 
 **Skip Nested Archives**:
+
 ```yaml
 file_formats:
   max_archive_depth: 1  # Don't analyze nested archives
@@ -359,18 +395,21 @@ file_formats:
 **Symptom**: DXF/DWG files fail to process.
 
 **Causes**:
+
 1. Missing dependencies
-2. Unsupported CAD version
-3. Corrupted file
+1. Unsupported CAD version
+1. Corrupted file
 
 **Solutions**:
 
 **Install Dependencies**:
+
 ```bash
 pip install ezdxf
 ```
 
 **Check Version**:
+
 ```python
 from file_organizer.utils.file_readers import read_cad_file
 
@@ -382,6 +421,7 @@ except Exception as e:
 ```
 
 **Use DXF Instead of DWG**:
+
 ```bash
 # Convert DWG to DXF (if you have AutoCAD or LibreCAD)
 # DXF is better supported
@@ -396,16 +436,19 @@ except Exception as e:
 **Solutions**:
 
 **Check Status**:
+
 ```bash
 file-organizer feature-status scientific-formats
 ```
 
 **Get Notified**:
+
 ```bash
 file-organizer notify-me scientific-formats
 ```
 
 **Alternative**:
+
 ```python
 # Use external tools for now
 import h5py
@@ -415,7 +458,7 @@ with h5py.File("data.h5", "r") as f:
     # Extract data
 ```
 
----
+______________________________________________________________________
 
 ## Installation & Dependencies
 
@@ -426,6 +469,7 @@ with h5py.File("data.h5", "r") as f:
 **Solutions**:
 
 **Install Ollama**:
+
 ```bash
 # macOS/Linux
 curl -fsSL https://ollama.ai/install.sh | sh
@@ -434,12 +478,14 @@ curl -fsSL https://ollama.ai/install.sh | sh
 ```
 
 **Pull Models**:
+
 ```bash
 ollama pull qwen2.5:3b-instruct-q4_K_M
 ollama pull qwen2.5vl:7b-q4_K_M
 ```
 
 **Verify Installation**:
+
 ```bash
 ollama list
 ollama run qwen2.5:3b-instruct-q4_K_M "Hello"
@@ -452,11 +498,13 @@ ollama run qwen2.5:3b-instruct-q4_K_M "Hello"
 **Solutions**:
 
 **Install All Dependencies**:
+
 ```bash
 pip install file-organizer-v2[phase3-all]
 ```
 
 **Install Specific Features**:
+
 ```bash
 # Audio support
 pip install file-organizer-v2[audio]
@@ -472,6 +520,7 @@ pip install file-organizer-v2[scientific]
 ```
 
 **Verify Installation**:
+
 ```bash
 file-organizer --version
 file-organizer test-dependencies
@@ -484,6 +533,7 @@ file-organizer test-dependencies
 **Solutions**:
 
 **Create Fresh Environment**:
+
 ```bash
 python3 -m venv venv-fresh
 source venv-fresh/bin/activate
@@ -491,12 +541,13 @@ pip install file-organizer-v2[phase3-all]
 ```
 
 **Update All Dependencies**:
+
 ```bash
 pip install --upgrade file-organizer-v2
 pip install --upgrade -r requirements.txt
 ```
 
----
+______________________________________________________________________
 
 ## Performance Issues
 
@@ -505,13 +556,15 @@ pip install --upgrade -r requirements.txt
 **Symptom**: Processing takes > 5 seconds per file.
 
 **Causes**:
+
 1. Large files
-2. Slow AI model
-3. Too much analysis
+1. Slow AI model
+1. Too much analysis
 
 **Solutions**:
 
 **Use Faster Model** (if available):
+
 ```python
 from file_organizer.models import TextModel, ModelConfig
 
@@ -524,12 +577,14 @@ model = TextModel(config)
 ```
 
 **Batch Processing**:
+
 ```bash
 # Process multiple files at once
 file-organizer organize ./Downloads --batch-size 10
 ```
 
 **Disable Features**:
+
 ```yaml
 # Disable expensive features
 para:
@@ -545,19 +600,22 @@ file_formats:
 **Symptom**: Memory usage > 4 GB.
 
 **Causes**:
+
 1. Large files loaded into memory
-2. AI models too large
-3. Many files processed at once
+1. AI models too large
+1. Many files processed at once
 
 **Solutions**:
 
 **Use Smaller Models**:
+
 ```python
 # Use 3B instead of 7B model
 config = ModelConfig(name="qwen2.5:3b-instruct-q4_K_M")
 ```
 
 **Process in Batches**:
+
 ```python
 # Process files in smaller batches
 organizer.organize(
@@ -567,6 +625,7 @@ organizer.organize(
 ```
 
 **Set Memory Limits**:
+
 ```yaml
 system:
   max_memory_mb: 2000  # Limit to 2 GB
@@ -578,13 +637,15 @@ system:
 **Symptom**: Database queries slow.
 
 **Causes**:
+
 1. Large history database
-2. Missing indexes
-3. No cleanup
+1. Missing indexes
+1. No cleanup
 
 **Solutions**:
 
 **Clean Old History**:
+
 ```bash
 # Remove history older than 90 days
 file-organizer history clean --older-than 90
@@ -594,11 +655,12 @@ file-organizer history optimize
 ```
 
 **Compact Database**:
+
 ```bash
 sqlite3 config/file-organizer/history.db "VACUUM;"
 ```
 
----
+______________________________________________________________________
 
 ## Integration Issues
 
@@ -607,24 +669,28 @@ sqlite3 config/file-organizer/history.db "VACUUM;"
 **Symptom**: Cannot sync with GitHub issues.
 
 **Causes**:
+
 1. gh CLI not authenticated
-2. Wrong repository
-3. Network issues
+1. Wrong repository
+1. Network issues
 
 **Solutions**:
 
 **Authenticate**:
+
 ```bash
 gh auth login
 gh auth status
 ```
 
 **Verify Repository**:
+
 ```bash
 gh repo view
 ```
 
 **Test Connection**:
+
 ```bash
 gh issue list
 ```
@@ -634,13 +700,15 @@ gh issue list
 **Symptom**: Settings not applied.
 
 **Causes**:
+
 1. Wrong config file location
-2. Invalid YAML
-3. Permissions issue
+1. Invalid YAML
+1. Permissions issue
 
 **Solutions**:
 
 **Check Config Location**:
+
 ```bash
 # Should be at:
 config/file-organizer/config.yaml
@@ -650,12 +718,14 @@ file-organizer config path
 ```
 
 **Validate YAML**:
+
 ```bash
 # Test YAML syntax
 python3 -c "import yaml; yaml.safe_load(open('config.yaml'))"
 ```
 
 **Fix Permissions**:
+
 ```bash
 chmod 644 config/file-organizer/config.yaml
 ```
@@ -667,29 +737,33 @@ chmod 644 config/file-organizer/config.yaml
 **Solutions**:
 
 **Reinstall Package**:
+
 ```bash
 pip install --force-reinstall file-organizer-v2
 ```
 
 **Check Installation**:
+
 ```bash
 pip show file-organizer-v2
 which file-organizer
 ```
 
 **Add to PATH**:
+
 ```bash
 # Add to ./.bashrc or ./.zshrc
 export PATH="$PATH:$HOME/.local/bin"
 ```
 
----
+______________________________________________________________________
 
 ## Getting Help
 
 ### Log Files
 
 Check logs for detailed error information:
+
 ```bash
 # View logs
 tail -f config/file-organizer/logs/file-organizer.log
@@ -701,11 +775,13 @@ file-organizer --debug organize ./Downloads
 ### Diagnostic Information
 
 Collect diagnostic info:
+
 ```bash
 file-organizer diagnose > diagnostic-report.txt
 ```
 
 Includes:
+
 - Python version
 - Dependency versions
 - Configuration
@@ -721,14 +797,16 @@ Includes:
 ### Reporting Bugs
 
 When reporting bugs, include:
+
 1. File Organizer version (`file-organizer --version`)
-2. Python version (`python --version`)
-3. Operating system
-4. Steps to reproduce
-5. Error messages
-6. Diagnostic report
+1. Python version (`python --version`)
+1. Operating system
+1. Steps to reproduce
+1. Error messages
+1. Diagnostic report
 
 **Template**:
+
 ```markdown
 ## Bug Report
 
@@ -743,14 +821,16 @@ When reporting bugs, include:
 
 **Error Message**:
 ```
+
 [Paste error here]
+
 ```
 
 **Diagnostic Report**:
 [Attach diagnostic-report.txt]
 ```
 
----
+______________________________________________________________________
 
 ## Related Documentation
 
@@ -759,7 +839,7 @@ When reporting bugs, include:
 - [Johnny Decimal](johnny-decimal.md) - Johnny Decimal guide
 - [File Formats](file-formats.md) - Format support
 
----
+______________________________________________________________________
 
 **Last Updated**: 2026-01-24
 **Help needed?** Open an issue on GitHub

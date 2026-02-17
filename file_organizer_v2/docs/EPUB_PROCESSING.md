@@ -38,6 +38,7 @@ pip install ebooklib beautifulsoup4 lxml
 ```
 
 Optional for cover extraction:
+
 ```bash
 pip install Pillow
 ```
@@ -171,6 +172,7 @@ Main class for reading and processing EPUB files.
 Initialize the reader.
 
 **Raises:**
+
 - `ImportError` - If ebooklib or BeautifulSoup not installed
 
 ##### `read_epub(file_path, extract_cover=False, cover_output_dir=None, max_chapters=None)`
@@ -178,19 +180,23 @@ Initialize the reader.
 Read and parse an EPUB file.
 
 **Parameters:**
+
 - `file_path: str | Path` - Path to EPUB file
 - `extract_cover: bool` - Whether to extract cover image (default: False)
 - `cover_output_dir: Optional[Path]` - Directory for cover (default: same as EPUB)
 - `max_chapters: Optional[int]` - Maximum chapters to extract (default: all)
 
 **Returns:**
+
 - `EPUBContent` - Complete book data
 
 **Raises:**
+
 - `EPUBProcessingError` - If file cannot be read or parsed
 - `FileNotFoundError` - If file does not exist
 
 **Example:**
+
 ```python
 reader = EnhancedEPUBReader()
 content = reader.read_epub("book.epub", extract_cover=True, max_chapters=10)
@@ -203,13 +209,16 @@ content = reader.read_epub("book.epub", extract_cover=True, max_chapters=10)
 Simple text extraction for backward compatibility.
 
 **Parameters:**
+
 - `file_path: str | Path` - Path to EPUB file
 - `max_chars: int` - Maximum characters to extract (default: 10000)
 
 **Returns:**
+
 - `str` - Extracted text content
 
 **Example:**
+
 ```python
 text = read_epub_simple("book.epub", max_chars=5000)
 ```
@@ -219,12 +228,15 @@ text = read_epub_simple("book.epub", max_chars=5000)
 Extract only metadata (no chapter parsing).
 
 **Parameters:**
+
 - `file_path: str | Path` - Path to EPUB file
 
 **Returns:**
+
 - `EPUBMetadata` - Book metadata
 
 **Example:**
+
 ```python
 metadata = get_epub_metadata("book.epub")
 print(metadata.title, metadata.isbn)
@@ -235,7 +247,7 @@ print(metadata.title, metadata.isbn)
 The reader automatically detects if a book is part of a series using:
 
 1. **Calibre Metadata**: Checks for `calibre:series` and `calibre:series_index` metadata
-2. **Title Patterns**: Detects common series patterns:
+1. **Title Patterns**: Detects common series patterns:
    - "Series Name, Book 1"
    - "Series Name #2"
    - "Series Name: Book Three"
@@ -292,8 +304,8 @@ if content.metadata.cover_path:
 Cover detection methods:
 
 1. Check OPF metadata for cover reference
-2. Look for items with type `ITEM_COVER`
-3. Search images with "cover" in filename
+1. Look for items with type `ITEM_COVER`
+1. Search images with "cover" in filename
 
 ## Performance Considerations
 
@@ -379,10 +391,10 @@ except ImportError as e:
 ## Limitations
 
 1. **Text-Only**: Only text content is extracted (images, audio, video are skipped)
-2. **No Interactive Elements**: JavaScript and interactive content ignored
-3. **Basic Formatting**: Complex CSS and formatting removed
-4. **English-Focused**: Series detection patterns optimized for English titles
-5. **No DRM**: Does not handle DRM-protected EPUBs
+1. **No Interactive Elements**: JavaScript and interactive content ignored
+1. **Basic Formatting**: Complex CSS and formatting removed
+1. **English-Focused**: Series detection patterns optimized for English titles
+1. **No DRM**: Does not handle DRM-protected EPUBs
 
 ## Examples
 
@@ -463,17 +475,17 @@ Potential improvements for future versions:
 When contributing EPUB processing enhancements:
 
 1. Maintain backward compatibility with `read_ebook_file()`
-2. Add tests for new features
-3. Update this documentation
-4. Follow project coding standards (type hints, docstrings)
-5. Handle errors gracefully with clear messages
+1. Add tests for new features
+1. Update this documentation
+1. Follow project coding standards (type hints, docstrings)
+1. Handle errors gracefully with clear messages
 
 ## Support
 
 For issues related to EPUB processing:
 
 1. Check that `ebooklib` and `beautifulsoup4` are installed
-2. Verify EPUB file is not corrupted
-3. Test with different EPUB files
-4. Check logs for detailed error messages
-5. Report issues with sample EPUB files (if redistributable)
+1. Verify EPUB file is not corrupted
+1. Test with different EPUB files
+1. Check logs for detailed error messages
+1. Report issues with sample EPUB files (if redistributable)

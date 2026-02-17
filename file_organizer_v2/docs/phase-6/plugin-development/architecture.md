@@ -13,10 +13,10 @@ This avoids coupling plugin code to internal API router implementations.
 ## Request/Execution Flow
 
 1. Plugin authenticates with bearer token.
-2. Plugin calls `/api/v1/plugins/*` endpoints.
-3. Router validates paths via `resolve_path(...)` and allowed roots.
-4. Hook registration is persisted in process memory.
-5. Event trigger dispatches local hooks and outbound webhooks.
+1. Plugin calls `/api/v1/plugins/*` endpoints.
+1. Router validates paths via `resolve_path(...)` and allowed roots.
+1. Hook registration is persisted in process memory.
+1. Event trigger dispatches local hooks and outbound webhooks.
 
 ## Failure Strategy
 

@@ -8,75 +8,82 @@ Choose the installation method that best fits your needs:
 
 === "Docker (Recommended)"
 
-    **Best for**: Production deployments, consistent environments
+````
+**Best for**: Production deployments, consistent environments
 
-    **Prerequisites**:
-    - Docker & Docker Compose installed
-    - 4GB+ available disk space
+**Prerequisites**:
+- Docker & Docker Compose installed
+- 4GB+ available disk space
 
-    **Install**:
+**Install**:
 
-    ```bash
-    git clone https://github.com/curdriceaurora/Local-File-Organizer.git
-    cd Local-File-Organizer
-    cp .env.example .env
-    docker-compose up -d
-    ```
+```bash
+git clone https://github.com/curdriceaurora/Local-File-Organizer.git
+cd Local-File-Organizer
+cp .env.example .env
+docker-compose up -d
+```
 
-    **Access**: Open browser to `http://localhost:8000`
+**Access**: Open browser to `http://localhost:8000`
 
-    See [Deployment Guide](admin/deployment.md) for detailed Docker setup.
+See [Deployment Guide](admin/deployment.md) for detailed Docker setup.
+````
 
 === "Python Package"
 
-    **Best for**: Quick testing, simple deployments
+````
+**Best for**: Quick testing, simple deployments
 
-    **Prerequisites**:
-    - Python 3.9 or higher
-    - Ollama installed and running
-    - 4GB+ available disk space
+**Prerequisites**:
+- Python 3.9 or higher
+- Ollama installed and running
+- 4GB+ available disk space
 
-    **Install**:
+**Install**:
 
-    ```bash
-    pip install file-organizer
-    file-organizer serve
-    ```
+```bash
+pip install file-organizer
+file-organizer serve
+```
 
-    **Access**: Open browser to `http://localhost:8000`
+**Access**: Open browser to `http://localhost:8000`
 
-    See [Installation Guide](admin/installation.md) for options.
+See [Installation Guide](admin/installation.md) for options.
+````
 
 === "From Source"
 
-    **Best for**: Development, customization
+````
+**Best for**: Development, customization
 
-    **Prerequisites**:
-    - Python 3.9 or higher
-    - Git
-    - Ollama installed
-    - Development tools (C compiler)
+**Prerequisites**:
+- Python 3.9 or higher
+- Git
+- Ollama installed
+- Development tools (C compiler)
 
-    **Install**:
+**Install**:
 
-    ```bash
-    git clone https://github.com/curdriceaurora/Local-File-Organizer.git
-    cd file_organizer_v2
-    pip install -e .
+```bash
+git clone https://github.com/curdriceaurora/Local-File-Organizer.git
+cd file_organizer_v2
+pip install -e .
 
-    # Pull required AI models
-    ollama pull qwen2.5:3b-instruct-q4_K_M      # Text model
-    ollama pull qwen2.5vl:7b-q4_K_M             # Vision model
+# Pull required AI models
+ollama pull qwen2.5:3b-instruct-q4_K_M      # Text model
+ollama pull qwen2.5vl:7b-q4_K_M             # Vision model
 
-    # Start the web server
-    file-organizer serve
-    ```
+# Start the web server
+file-organizer serve
+```
 
-    **Access**: Open browser to `http://localhost:8000`
+**Access**: Open browser to `http://localhost:8000`
+````
 
 ## System Requirements
 
 ### Minimum
+
 - **CPU**: 2-core processor
 - **RAM**: 8 GB
 - **Storage**: 10 GB (for AI models)
@@ -84,12 +91,14 @@ Choose the installation method that best fits your needs:
 - **Ollama**: Latest version
 
 ### Recommended
+
 - **CPU**: 4+ cores
 - **RAM**: 16 GB or more
 - **Storage**: 20 GB SSD
 - **GPU**: NVIDIA, AMD, or Apple Silicon (optional, for faster processing)
 
 ### Optional
+
 - **FFmpeg**: For audio/video preprocessing
 - **Node.js**: For plugin development
 - **Docker**: For containerized deployment
@@ -101,6 +110,7 @@ After installation, File Organizer will guide you through initial setup:
 ### 1. Welcome Screen
 
 When you first access File Organizer, you'll see a welcome screen with:
+
 - License agreement
 - Basic configuration options
 - Link to full setup guide
@@ -115,6 +125,7 @@ File Organizer requires local AI models:
 These are automatically pulled on first run if Ollama is available.
 
 **Manual pull** (if needed):
+
 ```bash
 ollama pull qwen2.5:3b-instruct-q4_K_M
 ollama pull qwen2.5vl:7b-q4_K_M
@@ -123,6 +134,7 @@ ollama pull qwen2.5vl:7b-q4_K_M
 ### 3. Workspace Configuration
 
 Set up your workspace:
+
 - **Workspace Path**: Where to store workspace data
 - **Watch Directories**: Which folders to monitor (optional)
 - **Organization Methodology**: Choose PARA, Johnny Decimal, or Custom
@@ -130,6 +142,7 @@ Set up your workspace:
 ### 4. API Configuration (Optional)
 
 For external integrations:
+
 - Generate API keys
 - Configure rate limits
 - Set security options
@@ -139,33 +152,39 @@ For external integrations:
 Once logged in, the web interface has these main sections:
 
 ### Dashboard
+
 - Overview of recent activity
 - Quick access to main features
 - Storage statistics
 
 ### File Browser
+
 - Browse and organize files
 - Upload new files
 - View file properties
 
 ### Organization
+
 - Select methodology
 - Configure options
 - Start organization jobs
 - Monitor progress
 
 ### Analysis
+
 - Duplicate detection
 - Storage analysis
 - Metadata extraction
 
 ### Search
+
 - Full-text search
 - Apply filters
 - Save searches
 - Export results
 
 ### Settings
+
 - Workspace management
 - User preferences
 - API configuration
@@ -219,6 +238,7 @@ File Organizer supports multiple organization systems:
 **Best for**: Knowledge workers, complex projects
 
 **Structure**:
+
 ```
 PARA/
 ├── Projects/        # Active projects with deadlines
@@ -234,6 +254,7 @@ PARA/
 **Best for**: Hierarchical organization, fixed categories
 
 **Structure**:
+
 ```
 JD/
 ├── 10-19 Area 1/
@@ -262,33 +283,33 @@ Supported formats: 43+ file types including documents, images, videos, and more.
 ### 2. Organize Files
 
 1. Click **Organize**
-2. Select files to organize
-3. Choose methodology (PARA, Johnny Decimal, etc.)
-4. Review preview
-5. Click **Apply** to organize
+1. Select files to organize
+1. Choose methodology (PARA, Johnny Decimal, etc.)
+1. Review preview
+1. Click **Apply** to organize
 
 ### 3. Find Duplicates
 
 1. Click **Analysis**
-2. Select **Duplicate Detection**
-3. Choose directory to scan
-4. Review results
-5. Choose files to keep or remove
+1. Select **Duplicate Detection**
+1. Choose directory to scan
+1. Review results
+1. Choose files to keep or remove
 
 ### 4. Search Files
 
 1. Click **Search**
-2. Enter search terms
-3. Apply filters if needed
-4. View results
-5. Export or download
+1. Enter search terms
+1. Apply filters if needed
+1. View results
+1. Export or download
 
 ### 5. Configure Settings
 
 1. Click **Settings** (gear icon)
-2. Update workspace preferences
-3. Generate API keys if needed
-4. Configure methodology options
+1. Update workspace preferences
+1. Generate API keys if needed
+1. Configure methodology options
 
 ## Troubleshooting Installation
 
@@ -297,6 +318,7 @@ Supported formats: 43+ file types including documents, images, videos, and more.
 **Issue**: "Cannot connect to Ollama service"
 
 **Solutions**:
+
 ```bash
 # Start Ollama service
 ollama serve
@@ -310,6 +332,7 @@ curl http://localhost:11434/api/version
 **Issue**: "Port 8000 is already in use"
 
 **Solution**:
+
 ```bash
 # Use different port
 file-organizer serve --port 8001
@@ -323,6 +346,7 @@ lsof -i :8000
 **Issue**: "Model not found" error
 
 **Solution**:
+
 ```bash
 # Pull models manually
 ollama pull qwen2.5:3b-instruct-q4_K_M
@@ -337,6 +361,7 @@ ollama list
 **Issue**: "Out of memory" when processing files
 
 **Solutions**:
+
 - Increase available RAM
 - Process smaller batches
 - Reduce maximum file size
@@ -358,6 +383,6 @@ For more issues, see [Troubleshooting Guide](troubleshooting.md).
 - 🐛 **Issues**: [GitHub Issues](https://github.com/curdriceaurora/Local-File-Organizer/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/curdriceaurora/Local-File-Organizer/discussions)
 
----
+______________________________________________________________________
 
 **Ready to start?** Access File Organizer at `http://localhost:8000` and begin organizing your files!

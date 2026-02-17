@@ -7,19 +7,21 @@
 Smart Features enhance your file organization workflow with:
 
 1. **Smart Suggestions** (#52) - AI-powered organization recommendations
-2. **Auto-Tagging** (#54) - Intelligent file tagging based on content
+1. **Auto-Tagging** (#54) - Intelligent file tagging based on content
 
 ## Smart Suggestions
 
 ### How It Works
 
 Smart Suggestions analyzes files and provides intelligent recommendations for:
+
 - **Destination folders**: Where files should be moved
 - **File names**: Better naming conventions
 - **Categories**: Appropriate categorization
 - **Tags**: Relevant tags based on content
 
 The system combines:
+
 - AI content analysis
 - Learned user preferences
 - Historical patterns
@@ -100,6 +102,7 @@ engine.track_acceptance(
 
 **Destination Suggestions**
 Based on:
+
 - File type and extension
 - Content analysis
 - Similar files in your library
@@ -119,6 +122,7 @@ destinations = suggestions.destinations
 
 **Naming Suggestions**
 Based on:
+
 - Content analysis
 - Existing naming patterns
 - Date/time information
@@ -137,6 +141,7 @@ names = suggestions.names
 
 **Category Suggestions**
 Based on:
+
 - AI content understanding
 - Historical categorization
 - File type
@@ -155,6 +160,7 @@ categories = suggestions.categories
 
 **Tag Suggestions**
 Based on:
+
 - Content keywords
 - Named entities
 - Topics detected
@@ -691,6 +697,7 @@ engine = SmartSuggestionEngine(
 **Problem**: Suggestions are not relevant
 
 **Solutions**:
+
 - Increase confidence threshold
 - Provide more feedback
 - Check file content quality
@@ -710,6 +717,7 @@ print(f"Confidence sources: {debug_info.sources}")
 **Problem**: Auto-tagging doesn't generate tags
 
 **Solutions**:
+
 - Check file is readable
 - Verify content isn't empty
 - Lower confidence threshold
@@ -727,6 +735,7 @@ python -m file_organizer.cli.autotag suggest file.pdf --verbose
 **Problem**: Generated tags are generic or irrelevant
 
 **Solutions**:
+
 - Use content-based tagging (not just filename)
 - Increase minimum confidence
 - Provide manual feedback

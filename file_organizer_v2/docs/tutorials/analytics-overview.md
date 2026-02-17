@@ -15,5 +15,5 @@ Add `--verbose` for more detail.
 ## TUI Dashboard
 
 1. Launch the TUI: `file-organizer tui`.
-2. Press `3` to switch to Analytics.
-3. Press `r` to refresh the dashboard.
+1. Press `3` to switch to Analytics.
+1. Press `r` to refresh the dashboard.

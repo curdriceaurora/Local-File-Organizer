@@ -318,21 +318,25 @@ phase4/
 ## Performance Considerations
 
 ### Deduplication
+
 - Hash-based: Fast, handles large datasets
 - Perceptual: Slower, best for photo libraries
 - Semantic: Requires AI model, best for document collections
 
 ### Intelligence
+
 - Preference tracking: Real-time, minimal overhead
 - Pattern learning: Periodic analysis recommended
 - Profile operations: Fast, in-memory with disk persistence
 
 ### History
+
 - SQLite database for storage
 - Indexed for fast queries
 - Regular cleanup recommended for large histories
 
 ### Analytics
+
 - Caching enabled by default
 - Incremental analysis available
 - Parallel processing for large directories
@@ -342,21 +346,25 @@ phase4/
 ### Common Issues
 
 **Deduplication is slow**
+
 - Use MD5 instead of SHA256
 - Add size filters
 - Process directories separately
 
 **Low confidence suggestions**
+
 - Provide more training data
 - Review learned preferences
 - Check AI model availability
 
 **Cannot undo operation**
+
 - Verify file still exists
 - Check permissions
 - Review validation errors
 
 **Analytics taking too long**
+
 - Enable caching
 - Exclude large directories
 - Use sampling for very large datasets
@@ -411,12 +419,12 @@ with tx_manager.transaction("Smart organize") as tx_id:
 ## Best Practices
 
 1. **Start with dry-run**: Always preview changes first
-2. **Use transactions**: Group related operations
-3. **Regular backups**: Export preferences and history
-4. **Monitor quality**: Track organization quality over time
-5. **Provide feedback**: Correct suggestions to improve learning
-6. **Clean up history**: Periodically remove old history records
-7. **Review analytics**: Use insights to improve organization
+1. **Use transactions**: Group related operations
+1. **Regular backups**: Export preferences and history
+1. **Monitor quality**: Track organization quality over time
+1. **Provide feedback**: Correct suggestions to improve learning
+1. **Clean up history**: Periodically remove old history records
+1. **Review analytics**: Use insights to improve organization
 
 ## Contributing
 

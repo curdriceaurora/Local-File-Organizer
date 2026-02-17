@@ -7,10 +7,11 @@ Master the file organization workflows in File Organizer.
 ### What is Organization?
 
 File organization is the process of:
+
 1. Analyzing files
-2. Categorizing them based on content
-3. Moving/renaming them into a structured hierarchy
-4. Applying consistent naming conventions
+1. Categorizing them based on content
+1. Moving/renaming them into a structured hierarchy
+1. Applying consistent naming conventions
 
 ### Organization Methodologies
 
@@ -44,15 +45,15 @@ PARA/
 ### PARA Organization Steps
 
 1. Click **Organize** → **PARA**
-2. Select files
-3. Choose which category they fit:
+1. Select files
+1. Choose which category they fit:
    - **Projects**: Time-bound initiatives
    - **Areas**: Ongoing areas of life
    - **Resources**: Reference material
    - **Archives**: Completed/inactive
-4. AI analyzes content and suggests categories
-5. Review and confirm
-6. Click **Apply**
+1. AI analyzes content and suggests categories
+1. Review and confirm
+1. Click **Apply**
 
 ### PARA Best Practices
 
@@ -91,12 +92,12 @@ JD/
 ### Johnny Decimal Organization Steps
 
 1. Click **Organize** → **Johnny Decimal**
-2. Select files
-3. Choose category (10-99)
-4. Choose subcategory
-5. Enter decimal number
-6. Review organization
-7. Click **Apply**
+1. Select files
+1. Choose category (10-99)
+1. Choose subcategory
+1. Enter decimal number
+1. Review organization
+1. Click **Apply**
 
 ### Johnny Decimal Rules
 
@@ -121,21 +122,21 @@ Create your own organization system.
 ### Creating Custom Rules
 
 1. Click **Organize** → **Custom**
-2. Click **Create New Rule**
-3. Define rule:
+1. Click **Create New Rule**
+1. Define rule:
    - **Name**: Rule identifier
    - **Condition**: What files match (e.g., type:pdf)
    - **Action**: Where to put them
-4. Add more rules
-5. Test with **Preview**
-6. Apply when ready
+1. Add more rules
+1. Test with **Preview**
+1. Apply when ready
 
 ### Rule Conditions
 
 Match files by:
 
 - **File Type**: pdf, image, video, etc.
-- **File Size**: >10mb, <1mb, etc.
+- **File Size**: >10mb, \<1mb, etc.
 - **Extension**: .pdf, .docx, etc.
 - **Date**: Recent (last month, etc.)
 - **Name**: Pattern matching
@@ -154,14 +155,17 @@ Actions for matched files:
 ### Example Custom Rules
 
 **Rule 1: PDF Documents**
+
 - Condition: `type:pdf`
 - Action: Move to `Documents/PDFs/`
 
 **Rule 2: Recent Photos**
+
 - Condition: `type:image AND date:>30days`
 - Action: Move to `Photos/Recent/`
 
 **Rule 3: Large Files**
+
 - Condition: `size:>100mb`
 - Action: Move to `Archive/Large Files/`
 
@@ -170,12 +174,12 @@ Actions for matched files:
 ### Step 1: Select Files
 
 1. Navigate to **Organize**
-2. Click **Select Files**
-3. Choose:
+1. Click **Select Files**
+1. Choose:
    - **Specific Files**: Click individual files
    - **Folder**: Select entire folder
    - **Search Results**: Organize search results
-4. See count of selected files
+1. See count of selected files
 
 ### Step 2: Choose Methodology
 
@@ -184,7 +188,7 @@ Actions for matched files:
    - Johnny Decimal
    - Custom
    - None (undo previous)
-2. Configure options:
+1. Configure options:
    - Dry run (preview only)
    - Preserve originals
    - Create folders
@@ -196,18 +200,18 @@ Actions for matched files:
    - Current location of each file
    - Proposed new location
    - Metadata changes
-2. **Issues** appear if any:
+1. **Issues** appear if any:
    - Invalid paths
    - Permission problems
    - Naming conflicts
-3. Fix issues if needed
+1. Fix issues if needed
 
 ### Step 4: Apply Organization
 
 1. Review looks good
-2. Click **Apply**
-3. Progress bar shows organization status
-4. See results when complete:
+1. Click **Apply**
+1. Progress bar shows organization status
+1. See results when complete:
    - Files organized
    - Files skipped (and why)
    - Any errors
@@ -219,37 +223,37 @@ Actions for matched files:
 See what would happen without actually organizing:
 
 1. Enable **Dry Run**
-2. Complete organization workflow
-3. See preview and results
-4. No files are moved
-5. Run again with **Dry Run** off to apply
+1. Complete organization workflow
+1. See preview and results
+1. No files are moved
+1. Run again with **Dry Run** off to apply
 
 ### Preserve Originals
 
 Keep original files while organizing:
 
 1. Enable **Preserve Originals**
-2. Files are copied (not moved)
-3. Originals remain in source folder
-4. Useful as backup
+1. Files are copied (not moved)
+1. Originals remain in source folder
+1. Useful as backup
 
 ### Create Folders
 
 Automatically create folder structure:
 
 1. Enable **Create Folders**
-2. Non-existent folders are created
-3. Avoids "file not found" errors
-4. Useful for new methodologies
+1. Non-existent folders are created
+1. Avoids "file not found" errors
+1. Useful for new methodologies
 
 ### Apply Metadata
 
 Extract and apply file metadata:
 
 1. Enable **Apply Metadata**
-2. AI extracts information
-3. Creates metadata files
-4. Updates file properties
+1. AI extracts information
+1. Creates metadata files
+1. Updates file properties
 
 ## Monitoring Organization
 
@@ -258,29 +262,29 @@ Extract and apply file metadata:
 During organization:
 
 1. Progress bar shows % complete
-2. Current file being organized
-3. Estimated time remaining
-4. Speed (files/second)
+1. Current file being organized
+1. Estimated time remaining
+1. Speed (files/second)
 
 ### Pause & Resume
 
 1. Click **Pause** to stop
-2. Work resumes where it left off
-3. Click **Resume** to continue
-4. Or click **Cancel** to stop entirely
+1. Work resumes where it left off
+1. Click **Resume** to continue
+1. Or click **Cancel** to stop entirely
 
 ### Job History
 
 View past organization jobs:
 
 1. Click **History**
-2. See all past organization jobs
-3. Job details:
+1. See all past organization jobs
+1. Job details:
    - Date/time started
    - Files organized
    - Methodology used
    - Duration
-4. Click job to see details
+1. Click job to see details
 
 ## Undoing Organization
 
@@ -289,9 +293,9 @@ View past organization jobs:
 If you organize by mistake:
 
 1. Click **Undo** (or Ctrl+Z)
-2. Last operation is reversed
-3. All files return to original locations
-4. Original names restored
+1. Last operation is reversed
+1. All files return to original locations
+1. Original names restored
 
 ### Undo Limitations
 
@@ -305,10 +309,10 @@ If you organize by mistake:
 To revert all organization:
 
 1. Click **Organize**
-2. Choose **Original Structure**
-3. Select organized files
-4. Click **Apply**
-5. Files return to original structure
+1. Choose **Original Structure**
+1. Select organized files
+1. Click **Apply**
+1. Files return to original structure
 
 ## Scheduling Organization
 
@@ -317,33 +321,33 @@ Automatically organize files on a schedule.
 ### Creating Schedule
 
 1. Click **Organize** → **Schedule**
-2. Create new schedule:
+1. Create new schedule:
    - **Name**: Schedule name
    - **Folder**: Watch this folder
    - **Methodology**: Use this method
    - **Frequency**: Daily/Weekly/Monthly
    - **Time**: When to run
-3. Click **Create**
+1. Click **Create**
 
 ### Managing Schedules
 
 1. View active schedules
-2. Pause/resume schedule
-3. Edit schedule settings
-4. See schedule results
-5. Delete when no longer needed
+1. Pause/resume schedule
+1. Edit schedule settings
+1. See schedule results
+1. Delete when no longer needed
 
 ### Schedule History
 
 View scheduled organization results:
 
 1. Click **Schedule** → **History**
-2. See all past runs
-3. Details for each run:
+1. See all past runs
+1. Details for each run:
    - Date/time
    - Files organized
    - Success/failures
-4. Export results if needed
+1. Export results if needed
 
 ## Best Practices
 
