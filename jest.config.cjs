@@ -1,6 +1,5 @@
 module.exports = {
   testEnvironment: "jsdom",
-  setupFilesAfterEnv: ["<rootDir>/tests/frontend/setup.js"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/file_organizer/web/static/$1",
   },
