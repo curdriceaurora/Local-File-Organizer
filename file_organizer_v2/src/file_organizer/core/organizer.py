@@ -14,6 +14,8 @@ from rich.table import Table
 
 from file_organizer.models import TextModel, VisionModel
 from file_organizer.models.base import ModelConfig
+from file_organizer.parallel.config import ExecutorType, ParallelConfig
+from file_organizer.parallel.processor import ParallelProcessor
 from file_organizer.services import ProcessedFile, ProcessedImage, TextProcessor, VisionProcessor
 
 
@@ -55,6 +57,7 @@ class FileOrganizer:
         vision_model_config: ModelConfig | None = None,
         dry_run: bool = True,
         use_hardlinks: bool = True,
+        parallel_workers: int | None = None,
     ):
         """Initialize file organizer.
 
@@ -63,6 +66,7 @@ class FileOrganizer:
             vision_model_config: Configuration for vision model (optional)
             dry_run: If True, only simulate operations
             use_hardlinks: If True, create hardlinks instead of copying
+            parallel_workers: Number of parallel workers (default: None = auto)
         """
         self.text_model_config = text_model_config or TextModel.get_default_config()
         self.vision_model_config = vision_model_config or VisionModel.get_default_config()
@@ -71,8 +75,17 @@ class FileOrganizer:
         self.console = Console()
         self.text_processor: TextProcessor | None = None
         self.vision_processor: VisionProcessor | None = None
+        
+        # Initialize parallel processor
+        self.parallel_config = ParallelConfig(
+            max_workers=parallel_workers,
+            executor_type=ExecutorType.THREAD,  # IO-bound (Ollama HTTP calls)
+            timeout_per_file=60.0,
+            retry_count=1,
+        )
+        self.parallel_processor = ParallelProcessor(self.parallel_config)
 
-        logger.info(f"FileOrganizer initialized (dry_run={dry_run})")
+        logger.info(f"FileOrganizer initialized (dry_run={dry_run}, parallel={parallel_workers})")
 
     def organize(
         self,
@@ -163,16 +176,20 @@ class FileOrganizer:
 
         # Organize all files
         if all_processed:
+            # Calculate statistics
+            failed_cnt = len([p for p in all_processed if p.error])
+            success_cnt = len(all_processed) - failed_cnt
+            result.processed_files = success_cnt
+            result.failed_files = failed_cnt
+            
             if not self.dry_run:
                 self.console.print("\n[bold blue]Organizing files...[/bold blue]")
                 organized = self._organize_files(all_processed, output_path, skip_existing)
                 result.organized_structure = organized
-                result.processed_files = len(all_processed)
             else:
                 self.console.print("\n[bold yellow]DRY RUN - Simulating organization...[/bold yellow]")
                 simulated = self._simulate_organization(all_processed, output_path)
                 result.organized_structure = simulated
-                result.processed_files = len(all_processed)
 
         # Handle unsupported files
         unsupported = audio_files + other_files
@@ -185,6 +202,8 @@ class FileOrganizer:
             self.text_processor.cleanup()
         if self.vision_processor:
             self.vision_processor.cleanup()
+        if self.parallel_processor:
+            self.parallel_processor.shutdown()
 
         # Final statistics
         result.processing_time = time.time() - start_time
@@ -259,29 +278,46 @@ class FileOrganizer:
 
             task = progress.add_task("Processing files...", total=len(files))
 
-            for file_path in files:
-                try:
-                    result = self.text_processor.process_file(file_path)
-                    processed.append(result)
+            # Helper for pickling
+            def _process_one(path: Path) -> ProcessedFile:
+                # self.text_processor is initialized before this call
+                assert self.text_processor is not None
+                return self.text_processor.process_file(path)
 
+            for file_result in self.parallel_processor.process_batch_iter(
+                files, _process_one
+            ):
+                if file_result.success:
+                    result = file_result.result
+                    processed.append(result)
+                    
                     if not result.error:
                         progress.update(
                             task,
                             advance=1,
-                            description=f"[green]✓[/green] {file_path.name}"
+                            description=f"[green]✓[/green] {file_result.path.name}"
                         )
                     else:
                         progress.update(
                             task,
                             advance=1,
-                            description=f"[red]✗[/red] {file_path.name}"
+                            description=f"[red]✗[/red] {file_result.path.name} (Error)"
                         )
-                except Exception as e:
-                    logger.error(f"Failed to process {file_path}: {e}")
+                else:
+                     # Infrastructure failure (timeout, etc)
+                    error_msg = file_result.error or "Unknown error"
+                    logger.error(f"Failed to process {file_result.path}: {error_msg}")
+                    processed.append(ProcessedFile(
+                        file_path=file_result.path,
+                        description="",
+                        folder_name="errors",
+                        filename=file_result.path.stem,
+                        error=error_msg,
+                    ))
                     progress.update(
                         task,
                         advance=1,
-                        description=f"[red]✗[/red] {file_path.name}"
+                        description=f"[red]✗[/red] {file_result.path.name} (Failed)"
                     )
 
         return processed
@@ -308,29 +344,46 @@ class FileOrganizer:
 
             task = progress.add_task("Processing images...", total=len(files))
 
-            for file_path in files:
-                try:
-                    result = self.vision_processor.process_file(file_path)
+            # Helper for pickling
+            def _process_one_image(path: Path) -> ProcessedImage:
+                # self.vision_processor is initialized before this call
+                assert self.vision_processor is not None
+                return self.vision_processor.process_file(path)
+
+            for file_result in self.parallel_processor.process_batch_iter(
+                files, _process_one_image
+            ):
+                if file_result.success:
+                    result = file_result.result
                     processed.append(result)
 
                     if not result.error:
                         progress.update(
                             task,
                             advance=1,
-                            description=f"[green]✓[/green] {file_path.name}"
+                            description=f"[green]✓[/green] {file_result.path.name}"
                         )
                     else:
                         progress.update(
                             task,
                             advance=1,
-                            description=f"[red]✗[/red] {file_path.name}"
+                            description=f"[red]✗[/red] {file_result.path.name} (Error)"
                         )
-                except Exception as e:
-                    logger.error(f"Failed to process {file_path}: {e}")
+                else:
+                    # Infrastructure failure
+                    error_msg = file_result.error or "Unknown error"
+                    logger.error(f"Failed to process {file_result.path}: {error_msg}")
+                    processed.append(ProcessedImage(
+                        file_path=file_result.path,
+                        description="",
+                        folder_name="errors",
+                        filename=file_result.path.stem,
+                        error=error_msg,
+                    ))
                     progress.update(
                         task,
                         advance=1,
-                        description=f"[red]✗[/red] {file_path.name}"
+                        description=f"[red]✗[/red] {file_result.path.name} (Failed)"
                     )
 
         return processed
