@@ -15,7 +15,6 @@ import json
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 # fcntl is Unix-only, not available on Windows
 try:
@@ -194,7 +193,7 @@ class BackupManager:
 
         return removed_backups
 
-    def get_backup_info(self, backup_path: Path) -> Optional[dict]:
+    def get_backup_info(self, backup_path: Path) -> dict | None:
         """
         Get metadata for a specific backup.
 
@@ -291,7 +290,7 @@ class BackupManager:
             return {}
 
         try:
-            with open(self.manifest_path, encoding='utf-8') as f:
+            with open(self.manifest_path, encoding="utf-8") as f:
                 # Acquire shared lock for reading (Unix only)
                 if HAS_FCNTL:
                     fcntl.flock(f.fileno(), fcntl.LOCK_SH)
@@ -315,8 +314,8 @@ class BackupManager:
         """
         try:
             # Open in read+ mode to avoid truncating before lock
-            mode = 'r+' if self.manifest_path.exists() else 'w'
-            with open(self.manifest_path, mode, encoding='utf-8') as f:
+            mode = "r+" if self.manifest_path.exists() else "w"
+            with open(self.manifest_path, mode, encoding="utf-8") as f:
                 # Acquire exclusive lock for writing (Unix only)
                 if HAS_FCNTL:
                     fcntl.flock(f.fileno(), fcntl.LOCK_EX)
