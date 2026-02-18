@@ -71,8 +71,8 @@ async def _make_auth_async_client(
     )
     username = f"user-{uuid4().hex[:8]}"
     email = f"{username}@test.com"
-    await client.register(username, email, "password123", full_name="Test User")
-    tokens = await client.login(username, "password123")
+    await client.register(username, email, "T3stP!", full_name="Test User")
+    tokens = await client.login(username, "T3stP!")
     return client, tokens.access_token
 
 
@@ -100,11 +100,11 @@ async def test_health(tmp_path: Path) -> None:
 async def test_register_and_login(tmp_path: Path) -> None:
     client, _ = _make_async_client(tmp_path, auth_enabled=True, bootstrap_admin=True)
     username = f"user-{uuid4().hex[:8]}"
-    user = await client.register(username, f"{username}@test.com", "password123")
+    user = await client.register(username, f"{username}@test.com", "T3stP!")
     assert isinstance(user, UserResponse)
     assert user.username == username
 
-    tokens = await client.login(username, "password123")
+    tokens = await client.login(username, "T3stP!")
     assert isinstance(tokens, TokenResponse)
     assert tokens.access_token
     assert tokens.refresh_token
@@ -115,7 +115,7 @@ async def test_register_and_login(tmp_path: Path) -> None:
 async def test_login_bad_password(tmp_path: Path) -> None:
     client, _ = _make_async_client(tmp_path, auth_enabled=True, bootstrap_admin=True)
     username = f"user-{uuid4().hex[:8]}"
-    await client.register(username, f"{username}@test.com", "password123")
+    await client.register(username, f"{username}@test.com", "T3stP!")
 
     with pytest.raises(AuthenticationError) as exc_info:
         await client.login(username, "wrong-password")
@@ -136,8 +136,8 @@ async def test_me(tmp_path: Path) -> None:
 async def test_refresh_token(tmp_path: Path) -> None:
     client, _ = _make_async_client(tmp_path, auth_enabled=True, bootstrap_admin=True)
     username = f"user-{uuid4().hex[:8]}"
-    await client.register(username, f"{username}@test.com", "password123")
-    tokens = await client.login(username, "password123")
+    await client.register(username, f"{username}@test.com", "T3stP!")
+    tokens = await client.login(username, "T3stP!")
 
     new_tokens = await client.refresh_token(tokens.refresh_token)
     assert isinstance(new_tokens, TokenResponse)
@@ -372,8 +372,8 @@ async def test_update_config_as_admin(tmp_path: Path) -> None:
 async def test_logout_revokes_tokens(tmp_path: Path) -> None:
     client, _ = _make_async_client(tmp_path, auth_enabled=True, bootstrap_admin=True)
     username = f"user-{uuid4().hex[:8]}"
-    await client.register(username, f"{username}@test.com", "password123")
-    tokens = await client.login(username, "password123")
+    await client.register(username, f"{username}@test.com", "T3stP!")
+    tokens = await client.login(username, "T3stP!")
     await client.logout(tokens.refresh_token)
     with pytest.raises(AuthenticationError):
         await client.me()

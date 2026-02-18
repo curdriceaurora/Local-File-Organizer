@@ -14,7 +14,6 @@ Stream A adds:
 from __future__ import annotations
 
 import os
-import stat
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -26,8 +25,8 @@ import pytest
 _STREAM_A_AVAILABLE = False
 try:
     from file_organizer.utils.file_readers import (
-        FileTooLargeError,
         MAX_FILE_SIZE_BYTES,
+        FileTooLargeError,
         _check_file_size,
         read_docx_file,
         read_ebook_file,

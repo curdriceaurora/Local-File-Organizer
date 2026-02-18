@@ -22,7 +22,7 @@ def _register(
     client: TestClient,
     username: str,
     email: str,
-    password: str = "password123",
+    password: str = "T3stP@ssword1!",
 ) -> None:
     response = client.post(
         "/api/v1/auth/register",
@@ -104,7 +104,7 @@ def test_register_duplicate_user(tmp_path: Path) -> None:
         json={
             "username": "dup-user",
             "email": "other@example.com",
-            "password": "password123",
+            "password": "T3stP@ssword1!",
             "full_name": "Dup User",
         },
     )
@@ -115,7 +115,7 @@ def test_register_duplicate_user(tmp_path: Path) -> None:
         json={
             "username": "dup-user-2",
             "email": "dup@example.com",
-            "password": "password123",
+            "password": "T3stP@ssword1!",
             "full_name": "Dup User",
         },
     )
@@ -168,7 +168,7 @@ def test_login_inactive_user_rejected(tmp_path: Path) -> None:
     finally:
         session.close()
 
-    response = _login(client, "inactive-user", "password123")
+    response = _login(client, "inactive-user", "T3stP@ssword1!")
     assert response.status_code == 400
 
 
@@ -221,8 +221,8 @@ def test_logout_rejects_mismatched_refresh_token(tmp_path: Path) -> None:
     _register(client, "user-a", "a@example.com")
     _register(client, "user-b", "b@example.com")
 
-    login_a = _login(client, "user-a", "password123")
-    login_b = _login(client, "user-b", "password123")
+    login_a = _login(client, "user-a", "T3stP@ssword1!")
+    login_b = _login(client, "user-b", "T3stP@ssword1!")
     assert login_a.status_code == 200
     assert login_b.status_code == 200
 

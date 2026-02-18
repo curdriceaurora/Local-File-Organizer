@@ -51,13 +51,17 @@ def create_auth_client(
     app = create_app(settings)
     client = TestClient(app)
 
+    # Use a password that satisfies all validators (length>=12, uppercase,
+    # digit, special char, not in common-passwords list).
+    _TEST_PASSWORD = "T3stP@ssword1!"
+
     def _register(username: str, email: str) -> None:
         response = client.post(
             "/api/v1/auth/register",
             json={
                 "username": username,
                 "email": email,
-                "password": "password123",
+                "password": _TEST_PASSWORD,
                 "full_name": "Test User",
             },
         )
@@ -72,7 +76,7 @@ def create_auth_client(
 
     login = client.post(
         "/api/v1/auth/login",
-        data={"username": username, "password": "password123"},
+        data={"username": username, "password": _TEST_PASSWORD},
     )
     assert login.status_code == 200
     tokens = login.json()
