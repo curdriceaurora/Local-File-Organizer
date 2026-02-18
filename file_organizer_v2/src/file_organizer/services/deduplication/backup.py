@@ -91,7 +91,7 @@ class BackupManager:
         try:
             shutil.copy2(file_path, backup_path)
         except Exception as e:
-            raise OSError(f"Failed to create backup: {e}")
+            raise OSError(f"Failed to create backup: {e}") from e
 
         # Update manifest
         manifest = self._load_manifest()
@@ -147,7 +147,7 @@ class BackupManager:
         try:
             shutil.copy2(backup_path, target_path)
         except Exception as e:
-            raise OSError(f"Failed to restore backup: {e}")
+            raise OSError(f"Failed to restore backup: {e}") from e
 
         return target_path
 
@@ -288,9 +288,8 @@ class BackupManager:
         if not self.manifest_path.exists():
             return {}
 
-        lock_path = self.manifest_path.with_suffix(".lock")
         try:
-            with open(self.manifest_path, 'r', encoding='utf-8') as f:
+            with open(self.manifest_path, encoding='utf-8') as f:
                 # Acquire shared lock for reading (Unix only)
                 if HAS_FCNTL:
                     fcntl.flock(f.fileno(), fcntl.LOCK_SH)
@@ -312,8 +311,6 @@ class BackupManager:
         Args:
             manifest: Dictionary containing manifest data
         """
-        lock_path = self.manifest_path.with_suffix(".lock")
-        tmp_path = self.manifest_path.with_suffix(".tmp")
         try:
             # Open in read+ mode to avoid truncating before lock
             mode = 'r+' if self.manifest_path.exists() else 'w'

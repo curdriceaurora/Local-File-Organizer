@@ -5,10 +5,10 @@ Coordinates hash computation, index building, and provides high-level
 interface for duplicate detection workflows.
 """
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from .hasher import FileHasher, HashAlgorithm
 from .index import DuplicateIndex, FileMetadata
