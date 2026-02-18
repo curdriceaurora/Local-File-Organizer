@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from pydantic import SecretStr
 
 from file_organizer.api.config import ApiSettings
