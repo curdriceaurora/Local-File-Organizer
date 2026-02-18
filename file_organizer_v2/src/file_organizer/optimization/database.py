@@ -9,11 +9,29 @@ organizer system.
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+# Regex that every SQL identifier (table name, index name, column name,
+# pragma name) must satisfy.  Only ASCII letters, digits, and underscores
+# are allowed, and the name must start with a letter or underscore.
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+# Per-pragma allowlists for string-typed values.  Numeric pragmas are
+# validated separately by checking that the stringified value is a valid
+# integer.
+_SAFE_PRAGMA_VALUES: dict[str, frozenset[str]] = {
+    "journal_mode": frozenset({"WAL", "DELETE", "TRUNCATE", "PERSIST", "MEMORY", "OFF"}),
+    "synchronous": frozenset({"FULL", "NORMAL", "OFF", "EXTRA"}),
+    "temp_store": frozenset({"DEFAULT", "FILE", "MEMORY", "0", "1", "2"}),
+}
+
+# Pragmas whose value must be a (possibly negative) integer.
+_INTEGER_PRAGMAS: frozenset[str] = frozenset({"cache_size", "mmap_size"})
 
 
 @dataclass(frozen=True)
@@ -130,6 +148,62 @@ class DatabaseOptimizer:
             logger.debug("Database connection closed for %s", self._db_path)
 
     # ------------------------------------------------------------------
+    # Security helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _validate_identifier(name: str) -> None:
+        """Validate that *name* is a safe SQL identifier.
+
+        Raises:
+            ValueError: If *name* contains characters outside
+                ``[A-Za-z0-9_]`` or does not start with a letter/underscore.
+        """
+        if not _IDENTIFIER_RE.match(name):
+            raise ValueError(
+                f"Invalid SQL identifier {name!r}: only ASCII letters, digits, and "
+                "underscores are allowed, and the name must start with a letter or "
+                "underscore."
+            )
+
+    @staticmethod
+    def _validate_pragma_value(pragma_name: str, pragma_value: str) -> None:
+        """Validate that *pragma_value* is safe for PRAGMA *pragma_name*.
+
+        For string-valued pragmas the value must appear in the allowlist
+        ``_SAFE_PRAGMA_VALUES``.  For integer-valued pragmas the value must
+        parse as an integer (negative values are allowed, e.g. for
+        ``cache_size``).
+
+        Raises:
+            ValueError: If the value is not permitted.
+        """
+        if pragma_name in _SAFE_PRAGMA_VALUES:
+            if pragma_value.upper() not in _SAFE_PRAGMA_VALUES[pragma_name]:
+                raise ValueError(
+                    f"Unsafe PRAGMA value {pragma_value!r} for {pragma_name!r}. "
+                    f"Allowed values: {sorted(_SAFE_PRAGMA_VALUES[pragma_name])}"
+                )
+        elif pragma_name in _INTEGER_PRAGMAS:
+            try:
+                int(pragma_value)
+            except ValueError:
+                raise ValueError(
+                    f"PRAGMA {pragma_name!r} requires an integer value, "
+                    f"got {pragma_value!r}."
+                ) from None
+        else:
+            # For pragmas not explicitly categorised, fall back to integer
+            # validation as the safest default.
+            try:
+                int(pragma_value)
+            except ValueError:
+                raise ValueError(
+                    f"PRAGMA {pragma_name!r} value {pragma_value!r} is not an "
+                    "integer and has no allowlist entry; refusing to execute."
+                ) from None
+
+    # ------------------------------------------------------------------
     # Index management
     # ------------------------------------------------------------------
 
@@ -143,17 +217,34 @@ class DatabaseOptimizer:
             extra_indexes: Additional indexes to create beyond the built-in
                 defaults.  Each tuple is
                 ``(index_name, table_name, column_expr, is_unique)``.
+                All identifier fields are validated before use.
 
         Returns:
             Number of indexes successfully created.
+
+        Raises:
+            ValueError: If any identifier in *extra_indexes* fails validation.
         """
         all_indexes = list(_DEFAULT_INDEXES)
         if extra_indexes:
+            # Validate all extra index identifiers eagerly before touching the DB.
+            for idx_name, table, columns, _unique in extra_indexes:
+                self._validate_identifier(idx_name)
+                self._validate_identifier(table)
+                # columns may be a comma-separated list; validate each part.
+                for col in columns.split(","):
+                    self._validate_identifier(col.strip())
             all_indexes.extend(extra_indexes)
 
         created = 0
         conn = self.connection
         for idx_name, table, columns, unique in all_indexes:
+            # Validate every identifier used in the dynamic SQL.
+            self._validate_identifier(idx_name)
+            self._validate_identifier(table)
+            for col in columns.split(","):
+                self._validate_identifier(col.strip())
+
             # Skip indexes for tables that don't exist yet.
             if not self._table_exists(table):
                 logger.debug("Skipping index %s: table %s does not exist", idx_name, table)
@@ -302,6 +393,9 @@ class DatabaseOptimizer:
 
         Returns:
             Dictionary of pragma names to their new effective values.
+
+        Raises:
+            ValueError: If any pragma name or value fails allowlist validation.
         """
         conn = self.connection
         pragmas: dict[str, str] = {}
@@ -315,6 +409,11 @@ class DatabaseOptimizer:
         ]
 
         for pragma_name, pragma_value in pragma_settings:
+            # Validate the pragma name is a safe identifier.
+            self._validate_identifier(pragma_name)
+            # Validate the pragma value against its allowlist or integer check.
+            self._validate_pragma_value(pragma_name, pragma_value)
+
             try:
                 conn.execute(f"PRAGMA {pragma_name} = {pragma_value}")
                 cursor = conn.execute(f"PRAGMA {pragma_name}")
@@ -355,6 +454,7 @@ class DatabaseOptimizer:
 
     def _count_rows(self, table: str) -> int:
         """Return the number of rows in *table*."""
+        self._validate_identifier(table)
         try:
             cursor = self.connection.execute(f"SELECT COUNT(*) FROM [{table}]")
             result = cursor.fetchone()
@@ -386,6 +486,7 @@ class DatabaseOptimizer:
 
     def _get_pragma_int(self, name: str) -> int:
         """Read a PRAGMA that returns an integer."""
+        self._validate_identifier(name)
         cursor = self.connection.execute(f"PRAGMA {name}")
         result = cursor.fetchone()
         return int(result[0]) if result else 0
