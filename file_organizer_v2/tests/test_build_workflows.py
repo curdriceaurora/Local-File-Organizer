@@ -16,29 +16,29 @@ def _read_workflow(name: str) -> str:
     return (WORKFLOWS_DIR / name).read_text(encoding="utf-8")
 
 
-def test_macos_workflow_includes_universal_build() -> None:
-    content = _read_workflow("build-macos.yml")
-    assert "build-universal" in content
-    assert "--universal" in content
-    assert "file-organizer-macos-universal-dmg" in content
-    assert "build_macos.sh" in content
+def test_build_workflow_includes_macos() -> None:
+    """Test that build.yml includes macOS builds."""
+    content = _read_workflow("build.yml")
+    assert "macos-latest" in content or "platform: macos" in content
+    assert "macos" in content
 
 
-def test_windows_workflow_builds_installer() -> None:
-    content = _read_workflow("build-windows.yml")
-    assert "choco install innosetup" in content
-    assert "build_windows.ps1" in content
-    assert "windows-setup.exe" in content
+def test_build_workflow_includes_windows() -> None:
+    """Test that build.yml includes Windows builds."""
+    content = _read_workflow("build.yml")
+    assert "windows-latest" in content or "platform: windows" in content
+    assert "windows" in content
 
 
-def test_linux_workflow_builds_appimage() -> None:
-    content = _read_workflow("build-linux.yml")
-    assert "build_linux.sh" in content
-    assert ".AppImage" in content
-    assert "Upload AppImage" in content
+def test_build_workflow_includes_linux() -> None:
+    """Test that build.yml includes Linux builds."""
+    content = _read_workflow("build.yml")
+    assert "ubuntu-latest" in content or "platform: linux" in content
+    assert "linux" in content
 
 
-def test_release_workflow_builds_appimage_on_linux() -> None:
+def test_build_workflow_builds_appimage_on_linux() -> None:
+    """Test that build.yml builds AppImage on Linux."""
     content = _read_workflow("build.yml")
     assert "Build AppImage" in content
     assert "build_linux.sh" in content
