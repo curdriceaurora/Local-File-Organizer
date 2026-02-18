@@ -96,19 +96,20 @@ class TestCIWorkflow:
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
     def test_ci_uses_python_312(self, workflow: dict) -> None:
-        """Verify CI test job uses Python matrix including 3.12."""
+        """Verify CI test job uses Python 3.9 and 3.12 for fast feedback."""
         jobs = workflow.get("jobs", {})
         assert "test" in jobs, "CI workflow should have a 'test' job"
         test_job = jobs["test"]
 
-        # Ensure the test job uses a matrix strategy with multiple Python versions
+        # Ensure the test job uses a matrix strategy with Python 3.9 and 3.12
         strategy = test_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
         python_versions = matrix.get("python-version", [])
 
-        assert len(python_versions) >= 1, (
-            "CI 'test' job must test against at least one Python version"
+        assert len(python_versions) == 2, (
+            "CI 'test' job must test against exactly 2 Python versions (3.9 and 3.12)"
         )
+        assert "3.9" in python_versions, "CI 'test' job must include Python 3.9 in the matrix"
         assert "3.12" in python_versions, "CI 'test' job must include Python 3.12 in the matrix"
 
         # Verify the setup-python step uses the matrix variable
@@ -220,17 +221,17 @@ class TestCIFullWorkflow:
         assert "test-matrix" in jobs, "CI Full workflow should have a 'test-matrix' job"
 
     def test_ci_full_test_matrix_has_python_versions(self, workflow: dict) -> None:
-        """Verify test-matrix job uses multiple Python versions."""
+        """Verify test-matrix job tests all four Python versions."""
         test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
         strategy = test_matrix_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
         python_versions = matrix.get("python-version", [])
-        assert len(python_versions) >= 2, (
-            "Test-matrix job should test against multiple Python versions"
+        assert len(python_versions) == 4, (
+            "Test-matrix job should test against all 4 Python versions (3.9, 3.10, 3.11, 3.12)"
         )
 
     def test_ci_full_test_matrix_includes_versions(self, workflow: dict) -> None:
-        """Verify test matrix includes Python 3.9, 3.10, 3.11 but NOT 3.12."""
+        """Verify test matrix includes all Python versions 3.9, 3.10, 3.11, and 3.12."""
         test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
         strategy = test_matrix_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
@@ -238,8 +239,8 @@ class TestCIFullWorkflow:
         assert "3.9" in python_versions, "Test matrix should include Python 3.9"
         assert "3.10" in python_versions, "Test matrix should include Python 3.10"
         assert "3.11" in python_versions, "Test matrix should include Python 3.11"
-        assert "3.12" not in python_versions, (
-            "Test matrix should NOT include Python 3.12 (used only in fast CI)"
+        assert "3.12" in python_versions, (
+            "Test matrix should include Python 3.12 for comprehensive coverage"
         )
 
     def test_ci_full_test_matrix_does_not_collect_coverage(self, workflow: dict) -> None:
