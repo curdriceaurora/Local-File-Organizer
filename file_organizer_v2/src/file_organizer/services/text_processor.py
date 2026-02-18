@@ -120,13 +120,13 @@ class TextProcessor:
             folder_name = ""
             if generate_folder:
                 folder_name = self._generate_folder_name(description or content)
-                logger.debug(f"Generated folder name: {folder_name}")
+                logger.debug("Generated folder name (%d chars)", len(folder_name))
 
             # Generate filename
             filename = ""
             if generate_filename:
                 filename = self._generate_filename(description or content)
-                logger.debug(f"Generated filename: {filename}")
+                logger.debug("Generated filename (%d chars)", len(filename))
 
             processing_time = time.time() - start_time
 
@@ -285,7 +285,7 @@ CATEGORY:"""
             response = self.text_model.generate(prompt, temperature=0.3, max_tokens=30)
 
             # Debug: Log raw AI response
-            logger.debug(f"AI folder response (raw): '{response}'")
+            logger.debug("AI folder response received (%d chars)", len(response))
 
             # Clean the response
             folder_name = response.strip().lower()
@@ -298,27 +298,24 @@ CATEGORY:"""
             # Remove newlines and extra spaces
             folder_name = " ".join(folder_name.split())
 
-            logger.debug(f"AI folder response (cleaned): '{folder_name}'")
 
             # Use lighter cleaning for AI-generated names
             folder_name = self._clean_ai_generated_name(folder_name, max_words=2)
 
-            logger.debug(f"AI folder response (after filter): '{folder_name}'")
 
             if not folder_name or len(folder_name) < 3:
                 # Fallback to keyword extraction
-                logger.warning(f"Folder name empty or too short ('{folder_name}'), using fallback")
+                logger.warning("Folder name empty or too short after AI generation, using keyword fallback")
                 folder_name = clean_text(text, max_words=2)
-                logger.debug(f"Fallback folder name: '{folder_name}'")
+                logger.debug("Fallback folder name (%d chars)", len(folder_name))
 
             # Skip sanitize_filename since we already cleaned it
             # Just do final safety check
             import re
-
-            folder_name = re.sub(r"[^\w_]", "_", folder_name)
-            folder_name = re.sub(r"_+", "_", folder_name).strip("_")
-            result = folder_name[:50] if folder_name else "documents"
-            logger.info(f"Final folder name: '{result}'")
+            folder_name = re.sub(r'[^\w_]', '_', folder_name)
+            folder_name = re.sub(r'_+', '_', folder_name).strip('_')
+            result = folder_name[:50] if folder_name else 'documents'
+            logger.info("Folder name generated (%d chars)", len(result))
             return result
 
         except Exception as e:
@@ -359,7 +356,7 @@ FILENAME:"""
             response = self.text_model.generate(prompt, temperature=0.3, max_tokens=30)
 
             # Debug: Log raw AI response
-            logger.debug(f"AI filename response (raw): '{response}'")
+            logger.debug("AI filename response received (%d chars)", len(response))
 
             # Clean the response
             filename = response.strip().lower()
@@ -377,27 +374,24 @@ FILENAME:"""
             # Remove newlines and extra spaces
             filename = " ".join(filename.split())
 
-            logger.debug(f"AI filename response (cleaned): '{filename}'")
 
             # Use lighter cleaning for AI-generated names
             filename = self._clean_ai_generated_name(filename, max_words=3)
 
-            logger.debug(f"AI filename response (after filter): '{filename}'")
 
             if not filename or len(filename) < 3:
                 # Fallback to keyword extraction
-                logger.warning(f"Filename empty or too short ('{filename}'), using fallback")
+                logger.warning("Filename empty or too short after AI generation, using keyword fallback")
                 filename = clean_text(text, max_words=3)
-                logger.debug(f"Fallback filename: '{filename}'")
+                logger.debug("Fallback filename (%d chars)", len(filename))
 
             # Skip sanitize_filename since we already cleaned it
             # Just do final safety check
             import re
-
-            filename = re.sub(r"[^\w_]", "_", filename)
-            filename = re.sub(r"_+", "_", filename).strip("_")
-            result = filename[:50] if filename else "document"
-            logger.info(f"Final filename: '{result}'")
+            filename = re.sub(r'[^\w_]', '_', filename)
+            filename = re.sub(r'_+', '_', filename).strip('_')
+            result = filename[:50] if filename else 'document'
+            logger.info("Filename generated (%d chars)", len(result))
             return result
 
         except Exception as e:
