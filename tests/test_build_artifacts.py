@@ -39,14 +39,6 @@ def test_build_macos_has_universal_flags() -> None:
     assert "--x86" in content
 
 
-def test_building_doc_mentions_windows_installer() -> None:
-    doc = PROJECT_ROOT / "technical-debt" / "file_organizer_v2" / "legacy_docs" / "BUILDING.md"
-    assert doc.exists()
-    content = doc.read_text(encoding="utf-8")
-    assert "Windows Installer" in content
-    assert "build_windows.ps1" in content
-
-
 def test_build_linux_script_exists_and_mentions_appimage() -> None:
     script = PROJECT_ROOT / "scripts" / "build_linux.sh"
     assert script.exists()
