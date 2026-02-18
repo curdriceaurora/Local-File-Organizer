@@ -36,7 +36,7 @@ import types
 from pathlib import Path
 from typing import Any
 
-from file_organizer.plugins.base import PluginError, PluginLoadError
+from file_organizer.plugins.errors import PluginError, PluginLoadError
 from file_organizer.plugins.ipc import (
     PluginCall,
     PluginResult,

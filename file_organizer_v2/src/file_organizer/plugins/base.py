@@ -1,86 +1,83 @@
-"""Base plugin interface and core exceptions for the plugin system.
-
-All user-defined plugins must subclass :class:`Plugin` and implement
-the lifecycle hooks that are appropriate for their use case.
-
-The sandbox enforcement layer (``PluginExecutor``) uses these exceptions
-to surface isolation violations back to the host process.
-"""
+"""Plugin base contracts."""
 
 from __future__ import annotations
 
-from pathlib import Path
+from abc import ABC, abstractmethod
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Any
 
+from file_organizer.plugins.errors import (
+    PluginError,
+    PluginLoadError,
+    PluginPermissionError,
+)
+from file_organizer.plugins.security import PluginSandbox
 
-class PluginError(Exception):
-    """Base class for all plugin-related errors."""
-
-
-class PluginLoadError(PluginError):
-    """Raised when a plugin fails to load or initialise.
-
-    This includes syntax errors in the plugin module, import failures,
-    and any exception raised during ``on_load()``.
-    """
-
-
-class PluginPermissionError(PluginError):
-    """Raised when a plugin attempts a disallowed operation.
-
-    Examples of disallowed operations (enforced by the sandbox executor):
-
-    * Calling :func:`os.system` or :func:`os.popen`.
-    * Spawning a subprocess via :mod:`subprocess`.
-    * Opening files outside the plugin's declared ``allowed_paths``.
-    * Importing security-sensitive modules such as ``ctypes`` or ``socket``.
-    """
+# Re-export errors for backward compatibility with code that imports
+# PluginError/PluginLoadError/PluginPermissionError from this module.
+__all__ = [
+    "Plugin",
+    "PluginError",
+    "PluginLoadError",
+    "PluginMetadata",
+    "PluginPermissionError",
+]
 
 
-class Plugin:
-    """Base class that every plugin must subclass.
+@dataclass(frozen=True)
+class PluginMetadata:
+    """Immutable metadata describing plugin identity and compatibility."""
 
-    Lifecycle hooks are called in this order:
+    name: str
+    version: str
+    author: str
+    description: str
+    homepage: str | None = None
+    license: str = "MIT"
+    dependencies: tuple[str, ...] = field(default_factory=tuple)
+    min_organizer_version: str = "2.0.0"
+    max_organizer_version: str | None = None
 
-    1. :meth:`on_load`  — called once when the plugin is loaded into the host.
-    2. :meth:`on_file`  — called for each file the organiser processes.
-    3. :meth:`on_unload` — called when the plugin is being removed.
 
-    All hooks are optional (default implementations are no-ops) so that
-    plugins only need to override the hooks they care about.
+class Plugin(ABC):
+    """Base interface all plugins must implement."""
 
-    Attributes:
-        name: Human-readable plugin name (set by subclass or overrideable).
-        version: SemVer string for the plugin.
-        allowed_paths: Filesystem paths the plugin is permitted to read/write.
-            The sandbox executor enforces these at runtime.
-    """
+    def __init__(
+        self,
+        config: Mapping[str, Any] | None = None,
+        *,
+        sandbox: PluginSandbox | None = None,
+    ) -> None:
+        self.config: dict[str, Any] = dict(config or {})
+        self.sandbox = sandbox or PluginSandbox(plugin_name=self.__class__.__name__)
+        self._enabled = False
 
-    name: str = "unnamed-plugin"
-    version: str = "0.0.0"
-    allowed_paths: list[Path] = []
+    @property
+    def enabled(self) -> bool:
+        """Return whether the plugin is active."""
+        return self._enabled
 
+    def set_enabled(self, enabled: bool) -> None:
+        """Set runtime activation state for lifecycle orchestration."""
+        self._enabled = enabled
+
+    @abstractmethod
+    def get_metadata(self) -> PluginMetadata:
+        """Return plugin metadata."""
+
+    @abstractmethod
     def on_load(self) -> None:
-        """Called once when the plugin is loaded.
+        """Handle load lifecycle event."""
 
-        Raises:
-            PluginLoadError: If the plugin cannot initialise.
-            PluginPermissionError: If the plugin attempts a forbidden
-                operation during initialisation (enforced by sandbox).
-        """
+    @abstractmethod
+    def on_enable(self) -> None:
+        """Handle enable lifecycle event."""
 
-    def on_file(self, file_path: Path, metadata: dict[str, Any]) -> dict[str, Any] | None:
-        """Called for every file the organiser processes.
+    @abstractmethod
+    def on_disable(self) -> None:
+        """Handle disable lifecycle event."""
 
-        Args:
-            file_path: Absolute path to the file being processed.
-            metadata: Current metadata dictionary for the file.
-
-        Returns:
-            An optional dictionary of metadata updates.  ``None`` means
-            "no changes".
-        """
-        return None
-
+    @abstractmethod
     def on_unload(self) -> None:
-        """Called when the plugin is being unloaded from the host."""
+        """Handle unload lifecycle event."""
