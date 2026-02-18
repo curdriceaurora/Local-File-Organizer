@@ -21,6 +21,8 @@ on:
       - ".claude/prds/**"
       - ".claude/rules/**"
       - ".claude/README.md"
+  schedule:
+    - cron: '0 6 * * *'  # daily at 06:00 UTC
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
