@@ -1,10 +1,10 @@
 """Tests for file size limits in file_readers (Issue #339 - DoS prevention).
 
-These tests verify that the file size gate added by Stream A correctly rejects
-files that exceed MAX_FILE_SIZE_BYTES before any file I/O or memory allocation
-occurs, preventing denial-of-service attacks via arbitrarily large files.
+These tests verify that the file size gate correctly rejects files that exceed
+MAX_FILE_SIZE_BYTES before any file I/O or memory allocation occurs, preventing
+denial-of-service attacks via arbitrarily large files.
 
-Stream A adds:
+Covered APIs:
 - FileTooLargeError exception class
 - MAX_FILE_SIZE_BYTES constant
 - _check_file_size(path, max_bytes) helper
@@ -19,51 +19,21 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# ---------------------------------------------------------------------------
-# Import guard — skip entire module if Stream A has not landed yet
-# ---------------------------------------------------------------------------
-_STREAM_A_AVAILABLE = False
-try:
-    from file_organizer.utils.file_readers import (
-        MAX_FILE_SIZE_BYTES,
-        FileTooLargeError,
-        _check_file_size,
-        read_docx_file,
-        read_ebook_file,
-        read_file,
-        read_presentation_file,
-        read_tar_file,
-    )
-
-    _STREAM_A_AVAILABLE = True
-except ImportError:
-    # Provide stubs so the module at least parses cleanly; tests will be skipped
-    FileTooLargeError = Exception  # type: ignore[assignment,misc]
-    MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB placeholder
-
-    def _check_file_size(path: object, max_bytes: int = MAX_FILE_SIZE_BYTES) -> None:  # type: ignore[misc]
-        pass
-
-    def read_file(path: object, **kwargs: object) -> object:  # type: ignore[misc]
-        pass
-
-    def read_docx_file(path: object) -> object:  # type: ignore[misc]
-        pass
-
-    def read_presentation_file(path: object) -> object:  # type: ignore[misc]
-        pass
-
-    def read_ebook_file(path: object, **kwargs: object) -> object:  # type: ignore[misc]
-        pass
-
-    def read_tar_file(path: object, **kwargs: object) -> object:  # type: ignore[misc]
-        pass
-
-
-_needs_stream_a = pytest.mark.skipif(
-    not _STREAM_A_AVAILABLE,
-    reason="Awaiting Stream A implementation of FileTooLargeError and _check_file_size",
+# Issue #339 implementation is required — import unconditionally so that a
+# missing symbol causes a collection error rather than silent test skipping.
+from file_organizer.utils.file_readers import (
+    MAX_FILE_SIZE_BYTES,
+    FileTooLargeError,
+    _check_file_size,
+    read_docx_file,
+    read_ebook_file,
+    read_file,
+    read_presentation_file,
+    read_tar_file,
 )
+
+# Marker kept for any tests that remain genuinely optional (none currently).
+_needs_stream_a = pytest.mark.usefixtures()
 
 # ---------------------------------------------------------------------------
 # Helpers

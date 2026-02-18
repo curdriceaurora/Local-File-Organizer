@@ -808,12 +808,24 @@ def read_file(file_path: str | Path, **kwargs) -> str | None:
         compound_ext = ext
 
     readers = {
+        # Document formats
         ('.txt', '.md'): read_text_file,
         ('.docx',): read_docx_file,  # Note: .doc (old binary format) is NOT supported
         ('.pdf',): read_pdf_file,
         ('.csv', '.xlsx', '.xls'): read_spreadsheet_file,
         ('.ppt', '.pptx'): read_presentation_file,
         ('.epub',): read_ebook_file,
+        # Archive formats
+        ('.zip',): read_zip_file,
+        ('.7z',): read_7z_file,
+        ('.tar', '.tar.gz', '.tgz', '.tar.bz2', '.tbz2', '.tar.xz'): read_tar_file,
+        ('.rar',): read_rar_file,
+        # Scientific formats
+        ('.hdf5', '.h5', '.hdf'): read_hdf5_file,
+        ('.nc', '.nc4', '.netcdf'): read_netcdf_file,
+        ('.mat',): read_mat_file,
+        # CAD formats
+        ('.dxf', '.dwg', '.step', '.stp', '.iges', '.igs'): read_cad_file,
     }
 
     # Try compound extension first, then fall back to simple extension

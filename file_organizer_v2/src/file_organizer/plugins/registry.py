@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Any
 
 from file_organizer.plugins.base import Plugin, PluginError, PluginLoadError
+from file_organizer.plugins.errors import PluginNotLoadedError
 from file_organizer.plugins.executor import PluginExecutor
 from file_organizer.plugins.security import PluginSecurityPolicy
 
@@ -186,11 +187,11 @@ class PluginRegistry:
             plugin_name: The canonical name of the plugin to unload.
 
         Raises:
-            KeyError: If no plugin with *plugin_name* is registered.
+            PluginNotLoadedError: If no plugin with *plugin_name* is registered.
             PluginError: If ``on_unload`` raises an error in the child process.
         """
         if plugin_name not in self._records:
-            raise KeyError(f"Plugin '{plugin_name}' is not loaded.")
+            raise PluginNotLoadedError(f"Plugin '{plugin_name}' is not loaded.")
 
         record = self._records.pop(plugin_name)
         try:
@@ -211,10 +212,10 @@ class PluginRegistry:
             plugin_name: The canonical name of the plugin to enable.
 
         Raises:
-            KeyError: If no plugin with *plugin_name* is registered.
+            PluginNotLoadedError: If no plugin with *plugin_name* is registered.
         """
         if plugin_name not in self._records:
-            raise KeyError(f"Plugin '{plugin_name}' is not loaded.")
+            raise PluginNotLoadedError(f"Plugin '{plugin_name}' is not loaded.")
         logger.debug("Plugin '%s' is already active (enabled on load).", plugin_name)
 
     def disable_plugin(self, plugin_name: str) -> None:
@@ -228,7 +229,7 @@ class PluginRegistry:
             plugin_name: The canonical name of the plugin to disable.
 
         Raises:
-            KeyError: If no plugin with *plugin_name* is registered.
+            PluginNotLoadedError: If no plugin with *plugin_name* is registered.
             PluginError: If ``on_unload`` raises during teardown.
         """
         self.unload_plugin(plugin_name)
@@ -243,10 +244,10 @@ class PluginRegistry:
             The corresponding :class:`PluginRecord`.
 
         Raises:
-            KeyError: If no plugin with *plugin_name* is registered.
+            PluginNotLoadedError: If no plugin with *plugin_name* is registered.
         """
         if plugin_name not in self._records:
-            raise KeyError(f"Plugin '{plugin_name}' is not loaded.")
+            raise PluginNotLoadedError(f"Plugin '{plugin_name}' is not loaded.")
         return self._records[plugin_name]
 
     def list_plugins(self) -> list[str]:
@@ -325,7 +326,7 @@ class PluginRegistry:
                 f"Cannot create an import spec for plugin: {plugin_path}"
             )
 
-        module = types.ModuleType(plugin_path.stem)
+        module = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(module)  # type: ignore[union-attr]
         except Exception as exc:

@@ -246,7 +246,7 @@ class PluginExecutor:
         bootstrap = (
             "import sys, json; "
             "from file_organizer.plugins.executor import _worker; "
-            f"_worker({str(self._plugin_path)!r}, json.loads({json.dumps(json.dumps(policy_dict))!r}))"
+            f"_worker({str(self._plugin_path)!r}, json.loads({json.dumps(policy_dict)!r}))"
         )
 
         try:
