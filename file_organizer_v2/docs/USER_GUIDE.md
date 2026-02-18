@@ -3,7 +3,7 @@
 ## Introduction
 File Organizer v2 is a privacy-first, AI-powered tool for managing your local files. It runs entirely on your device using local LLMs (Ollama) to categorize, rename, and organize your documents, images, and media.
 
-## key Features
+## Key Features
 - **AI-Powered Organization**: Uses Qwen 2.5 (3B) and Qwen 2.5-VL (7B) to understand file content.
 - **Privacy First**: No data leaves your machine.
 - **Terminal UI (TUI)**: A rich terminal interface for managing files.
