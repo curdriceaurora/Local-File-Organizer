@@ -51,7 +51,7 @@ class TestParallelExecution:
             organizer = FileOrganizer(dry_run=True, parallel_workers=2)
 
             # Run organize
-            start = time.time()
+            # start = time.time()
             result = organizer.organize(
                 input_path=sample_files[0].parent,
                 output_path=output_dir,
