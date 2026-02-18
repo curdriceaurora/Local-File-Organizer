@@ -396,9 +396,20 @@ class TestDockerWorkflow:
 
     def test_docker_pushes_to_ghcr(self, workflow: dict) -> None:
         """Verify Docker workflow pushes to GitHub Container Registry."""
-        workflow_text = yaml.dump(workflow)
-        # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
-        assert "ghcr.io" in workflow_text, "Docker workflow should push to ghcr.io"
+        jobs = workflow.get("jobs", {})
+        build_job = jobs.get("build-and-push", {})
+        steps = build_job.get("steps", [])
+
+        has_ghcr_login = False
+        for step in steps:
+            uses = step.get("uses", "")
+            if isinstance(uses, str) and "docker/login-action" in uses:
+                registry = step.get("with", {}).get("registry")
+                if registry == "ghcr.io":
+                    has_ghcr_login = True
+                    break
+
+        assert has_ghcr_login, "Docker workflow must log in to ghcr.io"
 
     def test_docker_uses_caching(self, workflow: dict) -> None:
         """Verify Docker workflow uses build caching."""
