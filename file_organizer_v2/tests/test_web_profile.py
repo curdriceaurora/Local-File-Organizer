@@ -38,7 +38,7 @@ def _seed_user(
         user = User(
             username=username,
             email=email,
-            hashed_password=hash_password("password1"),
+            hashed_password=hash_password("P@ssword1Test!"),
             full_name="Alice Test",
         )
         db.add(user)
@@ -49,7 +49,7 @@ def _seed_user(
         db.close()
 
 
-def _login(client: TestClient, username: str = "alice", password: str = "password1") -> TestClient:
+def _login(client: TestClient, username: str = "alice", password: str = "P@ssword1Test!") -> TestClient:
     """Log in via the web form and persist the session cookie on the client."""
     response = client.post(
         "/ui/profile/login",
@@ -135,7 +135,7 @@ class TestLoginForm:
 
         response = client.post(
             "/ui/profile/login",
-            data={"username": "alice", "password": "password1"},
+            data={"username": "alice", "password": "P@ssword1Test!"},
             follow_redirects=False,
         )
         assert response.status_code == 303
@@ -159,7 +159,7 @@ class TestRegisterForm:
             data={
                 "username": "bob",
                 "email": "bob@example.com",
-                "password": "password1",
+                "password": "P@ssword1Test!",
                 "full_name": "Bob User",
             },
             follow_redirects=False,
@@ -178,7 +178,7 @@ class TestRegisterForm:
             data={
                 "username": "alice",
                 "email": "alice2@example.com",
-                "password": "password1",
+                "password": "P@ssword1Test!",
             },
             follow_redirects=False,
         )
@@ -217,7 +217,7 @@ class TestFullAuthFlow:
             data={
                 "username": "testuser",
                 "email": "testuser@example.com",
-                "password": "password1",
+                "password": "P@ssword1Test!",
                 "full_name": "Test User",
             },
             follow_redirects=False,
@@ -227,7 +227,7 @@ class TestFullAuthFlow:
         # Login
         login = client.post(
             "/ui/profile/login",
-            data={"username": "testuser", "password": "password1"},
+            data={"username": "testuser", "password": "P@ssword1Test!"},
             follow_redirects=False,
         )
         assert login.status_code == 303
@@ -410,8 +410,8 @@ class TestPasswordResetFlow:
             "/ui/profile/reset-password",
             data={
                 "token": token,
-                "new_password": "newpassword1",
-                "confirm_password": "newpassword1",
+                "new_password": "NewP@ssw0rd1!",
+                "confirm_password": "NewP@ssw0rd1!",
             },
         )
         assert reset.status_code == 200
@@ -419,7 +419,7 @@ class TestPasswordResetFlow:
 
         login = client.post(
             "/ui/profile/login",
-            data={"username": "alice", "password": "newpassword1"},
+            data={"username": "alice", "password": "NewP@ssw0rd1!"},
             follow_redirects=False,
         )
         assert login.status_code == 303
@@ -522,9 +522,9 @@ class TestAccountSettingsAndFeeds:
         change = client.post(
             "/ui/profile/account-settings/password",
             data={
-                "current_password": "password1",
-                "new_password": "password2",
-                "confirm_password": "password2",
+                "current_password": "P@ssword1Test!",
+                "new_password": "P@ssword2Test!",
+                "confirm_password": "P@ssword2Test!",
             },
         )
         assert change.status_code == 200
@@ -536,7 +536,7 @@ class TestAccountSettingsAndFeeds:
 
         relogin = client.post(
             "/ui/profile/login",
-            data={"username": "alice", "password": "password2"},
+            data={"username": "alice", "password": "P@ssword2Test!"},
             follow_redirects=False,
         )
         assert relogin.status_code == 303

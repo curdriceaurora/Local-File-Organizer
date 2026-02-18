@@ -70,8 +70,8 @@ def _make_auth_client(
     )
     username = f"user-{uuid4().hex[:8]}"
     email = f"{username}@test.com"
-    client.register(username, email, "T3stP!", full_name="Test User")
-    tokens = client.login(username, "T3stP!")
+    client.register(username, email, "T3stP@ssword1!", full_name="Test User")
+    tokens = client.login(username, "T3stP@ssword1!")
     return client, tokens.access_token
 
 
@@ -97,11 +97,11 @@ def test_health(tmp_path: Path) -> None:
 def test_register_and_login(tmp_path: Path) -> None:
     client, _ = _make_client(tmp_path, auth_enabled=True, bootstrap_admin=True)
     username = f"user-{uuid4().hex[:8]}"
-    user = client.register(username, f"{username}@test.com", "T3stP!")
+    user = client.register(username, f"{username}@test.com", "T3stP@ssword1!")
     assert isinstance(user, UserResponse)
     assert user.username == username
 
-    tokens = client.login(username, "T3stP!")
+    tokens = client.login(username, "T3stP@ssword1!")
     assert isinstance(tokens, TokenResponse)
     assert tokens.access_token
     assert tokens.refresh_token
@@ -111,7 +111,7 @@ def test_register_and_login(tmp_path: Path) -> None:
 def test_login_bad_password(tmp_path: Path) -> None:
     client, _ = _make_client(tmp_path, auth_enabled=True, bootstrap_admin=True)
     username = f"user-{uuid4().hex[:8]}"
-    client.register(username, f"{username}@test.com", "T3stP!")
+    client.register(username, f"{username}@test.com", "T3stP@ssword1!")
 
     with pytest.raises(AuthenticationError) as exc_info:
         client.login(username, "wrong-password")
@@ -130,8 +130,8 @@ def test_me(tmp_path: Path) -> None:
 def test_refresh_token(tmp_path: Path) -> None:
     client, _ = _make_client(tmp_path, auth_enabled=True, bootstrap_admin=True)
     username = f"user-{uuid4().hex[:8]}"
-    client.register(username, f"{username}@test.com", "T3stP!")
-    tokens = client.login(username, "T3stP!")
+    client.register(username, f"{username}@test.com", "T3stP@ssword1!")
+    tokens = client.login(username, "T3stP@ssword1!")
 
     new_tokens = client.refresh_token(tokens.refresh_token)
     assert isinstance(new_tokens, TokenResponse)
@@ -353,8 +353,8 @@ def test_update_config_as_admin(tmp_path: Path) -> None:
 def test_logout_revokes_tokens(tmp_path: Path) -> None:
     client, _ = _make_client(tmp_path, auth_enabled=True, bootstrap_admin=True)
     username = f"user-{uuid4().hex[:8]}"
-    client.register(username, f"{username}@test.com", "T3stP!")
-    tokens = client.login(username, "T3stP!")
+    client.register(username, f"{username}@test.com", "T3stP@ssword1!")
+    tokens = client.login(username, "T3stP@ssword1!")
     client.logout(tokens.refresh_token)
     with pytest.raises(AuthenticationError):
         client.me()

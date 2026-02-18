@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
@@ -13,14 +12,13 @@ from file_organizer.plugins import (
     PluginConfig,
     PluginConfigError,
     PluginConfigManager,
-    PluginDependencyError,
-    PluginDiscoveryError,
-    PluginLifecycleManager,
+    PluginLoadError,
+    PluginNotLoadedError,
     PluginPermissionError,
+    PluginRecord,
     PluginRegistry,
     PluginSandbox,
     PluginSecurityPolicy,
-    PluginState,
 )
 
 
@@ -32,104 +30,84 @@ def _write_plugin(plugin_root: Path, plugin_name: str, source: str) -> Path:
     return plugin_file
 
 
-def test_plugin_registry_and_lifecycle_flow(tmp_path: Path) -> None:
+def test_plugin_registry_load_and_unload(tmp_path: Path) -> None:
+    """Registry correctly loads a plugin via subprocess executor and unloads it."""
     plugin_root = tmp_path / "plugins"
-    source = """
-from file_organizer.plugins import Plugin, PluginMetadata
-
-EVENTS = []
+    source = """\
+from file_organizer.plugins.base import Plugin
 
 class ExamplePlugin(Plugin):
-    def get_metadata(self) -> PluginMetadata:
+    name = "example"
+    version = "1.0.0"
+    allowed_paths: list = []
+
+    def get_metadata(self):  # type: ignore[override]
+        from file_organizer.plugins.base import PluginMetadata
         return PluginMetadata(
-            name="example",
-            version="1.0.0",
+            name=self.name,
+            version=self.version,
             author="test",
             description="example plugin",
         )
 
     def on_load(self) -> None:
-        EVENTS.append("load")
+        pass
 
     def on_enable(self) -> None:
-        EVENTS.append("enable")
+        pass
 
     def on_disable(self) -> None:
-        EVENTS.append("disable")
+        pass
 
     def on_unload(self) -> None:
-        EVENTS.append("unload")
+        pass
 """
-    _write_plugin(plugin_root, "example", source)
-    registry = PluginRegistry(plugin_root, config_manager=PluginConfigManager(tmp_path / "config"))
+    plugin_file = _write_plugin(plugin_root, "example", source)
 
-    assert registry.discover_plugins() == ["example"]
+    registry = PluginRegistry()
+    assert registry.list_plugins() == []
 
-    plugin = registry.load_plugin("example")
-    record = registry.get_record("example")
-    module_name = record.module_name
-    assert record.metadata.name == "example"
-    assert record.module.EVENTS == ["load"]  # type: ignore[attr-defined]
+    record = registry.load_plugin(plugin_file)
+    assert isinstance(record, PluginRecord)
+    assert record.name == "example"
+    assert record.version == "1.0.0"
+    assert record.plugin_path == plugin_file
+    assert registry.list_plugins() == ["example"]
 
-    same_plugin = registry.load_plugin("example")
-    assert same_plugin is plugin
-    assert record.module.EVENTS == ["load"]  # type: ignore[attr-defined]
+    # Attempting to load the same plugin again raises PluginLoadError
+    with pytest.raises(PluginLoadError, match="already loaded"):
+        registry.load_plugin(plugin_file)
 
-    lifecycle = PluginLifecycleManager(registry)
-    lifecycle.enable("example")
-    assert plugin.enabled
-    assert lifecycle.get_state("example") == PluginState.ENABLED
+    # Retrieve the record by name
+    fetched = registry.get_plugin("example")
+    assert fetched.name == record.name
 
-    lifecycle.disable("example")
-    assert not plugin.enabled
-    assert lifecycle.get_state("example") == PluginState.DISABLED
+    # Unload cleans up the registry entry
+    registry.unload_plugin("example")
+    assert registry.list_plugins() == []
 
-    lifecycle.unload("example")
-    assert lifecycle.get_state("example") == PluginState.UNLOADED
-    assert module_name not in sys.modules
-    assert record.module.EVENTS == ["load", "enable", "disable", "unload"]  # type: ignore[attr-defined]
-
-
-def test_plugin_registry_dependency_error(tmp_path: Path) -> None:
-    plugin_root = tmp_path / "plugins"
-    source = """
-from file_organizer.plugins import Plugin, PluginMetadata
-
-class DependsPlugin(Plugin):
-    def get_metadata(self) -> PluginMetadata:
-        return PluginMetadata(
-            name="dependent",
-            version="1.0.0",
-            author="test",
-            description="dependency plugin",
-            dependencies=("missing_dependency",),
-        )
-
-    def on_load(self) -> None:
-        return None
-
-    def on_enable(self) -> None:
-        return None
-
-    def on_disable(self) -> None:
-        return None
-
-    def on_unload(self) -> None:
-        return None
-"""
-    _write_plugin(plugin_root, "dependent", source)
-    registry = PluginRegistry(plugin_root)
-
-    with pytest.raises(PluginDependencyError):
-        registry.load_plugin("dependent")
+    # get_plugin after unload raises PluginNotLoadedError
+    with pytest.raises(PluginNotLoadedError):
+        registry.get_plugin("example")
 
 
-def test_plugin_discovery_requires_directory(tmp_path: Path) -> None:
-    not_a_dir = tmp_path / "not_a_dir.py"
-    not_a_dir.write_text("# not a plugin directory", encoding="utf-8")
-    registry = PluginRegistry(not_a_dir)
-    with pytest.raises(PluginDiscoveryError):
-        registry.discover_plugins()
+def test_plugin_registry_load_error_on_missing_file(tmp_path: Path) -> None:
+    """load_plugin raises PluginLoadError when the path does not exist."""
+    registry = PluginRegistry()
+    missing = tmp_path / "nonexistent_plugin.py"
+
+    with pytest.raises(PluginLoadError):
+        registry.load_plugin(missing)
+
+
+def test_plugin_registry_load_error_on_no_plugin_class(tmp_path: Path) -> None:
+    """load_plugin raises PluginLoadError when file has no Plugin subclass."""
+    plugin_file = tmp_path / "empty_plugin.py"
+    plugin_file.write_text("# This file has no Plugin subclass\nx = 1\n", encoding="utf-8")
+
+    registry = PluginRegistry()
+    with pytest.raises(PluginLoadError):
+        registry.load_plugin(plugin_file)
 
 
 def test_plugin_config_manager_roundtrip(tmp_path: Path) -> None:

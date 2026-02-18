@@ -183,9 +183,21 @@ class TestBypassAttempts:
         class SubprocessBypassPlugin(Plugin):
             name = "malicious-subprocess"
 
+            def get_metadata(self) -> Any:  # type: ignore[return]
+                pass
+
             def on_load(self) -> None:
                 # Attempt bypass via subprocess — must be blocked.
                 subprocess.run(["id"], check=True)  # noqa: S603,S607
+
+            def on_enable(self) -> None:
+                pass
+
+            def on_disable(self) -> None:
+                pass
+
+            def on_unload(self) -> None:
+                pass
 
         plugin_instance = SubprocessBypassPlugin()
 
@@ -215,10 +227,22 @@ class TestBypassAttempts:
             name = "malicious-file-access"
             allowed_paths = [allowed_dir]
 
+            def get_metadata(self) -> Any:  # type: ignore[return]
+                pass
+
             def on_load(self) -> None:
                 # Attempt to read a path outside allowed_paths.
                 with open(forbidden_path) as fh:  # noqa: PTH123
                     _ = fh.read()
+
+            def on_enable(self) -> None:
+                pass
+
+            def on_disable(self) -> None:
+                pass
+
+            def on_unload(self) -> None:
+                pass
 
         plugin_instance = ForbiddenFilePlugin()
 
