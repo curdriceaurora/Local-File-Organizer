@@ -192,9 +192,12 @@ class PluginExecutor:
     over stdin and reads back the :class:`~.ipc.PluginResult` from stdout.
 
     Args:
-        plugin_path: Path to the plugin ``.py`` file.
-        plugin_name: Human-readable name used for error messages.
+        plugin_path: Path (or path string) to the plugin ``.py`` file.
+        plugin_name: Human-readable name used for error messages.  Defaults
+            to the plugin file's stem when not supplied.
         policy: Security policy serialised and forwarded to the worker.
+            Defaults to :meth:`~.security.PluginSecurityPolicy.unrestricted`
+            when not supplied.
 
     Raises:
         PluginLoadError: If :meth:`start` fails to spawn the worker.
@@ -203,13 +206,13 @@ class PluginExecutor:
 
     def __init__(
         self,
-        plugin_path: Path,
-        plugin_name: str,
-        policy: PluginSecurityPolicy,
+        plugin_path: Path | str,
+        plugin_name: str | None = None,
+        policy: PluginSecurityPolicy | None = None,
     ) -> None:
-        self._plugin_path = plugin_path
-        self._plugin_name = plugin_name
-        self._policy = policy
+        self._plugin_path = Path(plugin_path)
+        self._plugin_name = plugin_name or self._plugin_path.stem
+        self._policy = policy or PluginSecurityPolicy.unrestricted()
         self._proc: subprocess.Popen[bytes] | None = None
 
     # ------------------------------------------------------------------
@@ -365,9 +368,14 @@ class PluginExecutor:
             ) from exc
 
         if not result.success:
-            raise PluginError(
+            error_msg = (
                 f"Plugin '{self._plugin_name}' raised an error in "
                 f"'{method}': {result.error}"
             )
+            # on_load failures surface as PluginLoadError so callers can
+            # distinguish initialisation errors from runtime errors.
+            if method == "on_load":
+                raise PluginLoadError(error_msg)
+            raise PluginError(error_msg)
 
         return result.return_value

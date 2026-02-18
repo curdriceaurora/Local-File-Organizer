@@ -257,7 +257,6 @@ class TestExecutorInterface:
     ``@pytest.mark.skip`` decorator when the executor is ready.
     """
 
-    @pytest.mark.skip(reason="Waiting for executor implementation (Stream A)")
     def test_executor_starts_and_stops(self, tmp_path: Path) -> None:
         """PluginExecutor starts a child process, accepts a call, stops cleanly.
 
@@ -293,7 +292,6 @@ class TestExecutorInterface:
         with pytest.raises((RuntimeError, BrokenPipeError, OSError)):
             executor.call("on_load")
 
-    @pytest.mark.skip(reason="Waiting for executor implementation (Stream A)")
     def test_executor_call_returns_result(self, tmp_path: Path) -> None:
         """Calling a method that returns a value works correctly end-to-end.
 
@@ -322,7 +320,6 @@ class TestExecutorInterface:
         )
         assert result.get("source") == "plugin"
 
-    @pytest.mark.skip(reason="Waiting for executor implementation (Stream A)")
     def test_executor_call_propagates_errors(self, tmp_path: Path) -> None:
         """Errors raised inside plugin code surface as exceptions in the host.
 
