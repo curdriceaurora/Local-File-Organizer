@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -40,6 +40,16 @@ def hash_password(password: str) -> str:
     return _PWD_CONTEXT.hash(password)
 
 
+_COMMON_PASSWORDS: frozenset[str] = frozenset({
+    "password", "password1", "password12", "password123",
+    "passw0rd", "p@ssword", "p@ssw0rd",
+    "admin", "admin123", "admin1234",
+    "letmein", "welcome1", "monkey123",
+    "qwerty123", "abc123456",
+    "iloveyou1", "sunshine1",
+})
+
+
 def validate_password(password: str, settings: ApiSettings) -> tuple[bool, str]:
     """Validate password strength based on API settings."""
     if len(password) < settings.auth_password_min_length:
@@ -51,11 +61,19 @@ def validate_password(password: str, settings: ApiSettings) -> tuple[bool, str]:
         return False, "Password must include at least one letter"
     if settings.auth_password_require_number and not any(ch.isdigit() for ch in password):
         return False, "Password must include at least one number"
+    if settings.auth_password_require_uppercase and not any(ch.isupper() for ch in password):
+        return False, "Password must include at least one uppercase letter"
+    if settings.auth_password_require_special and not any(
+        ch in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~' for ch in password
+    ):
+        return False, "Password must include at least one special character"
+    if password.lower() in _COMMON_PASSWORDS:
+        return False, "Password is too common, please choose a more unique password"
     return True, ""
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _build_token(
