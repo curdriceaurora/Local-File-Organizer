@@ -9,6 +9,8 @@ This module provides safe backup management for file operations, including:
 - Cleaning up old backups
 """
 
+from __future__ import annotations
+
 import json
 import shutil
 from datetime import datetime, timedelta
