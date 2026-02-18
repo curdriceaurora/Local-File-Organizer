@@ -294,10 +294,18 @@ class TestExecutorInterface:
         """
         benign_plugin_src = tmp_path / "benign_plugin.py"
         benign_plugin_src.write_text(
-            "from file_organizer.plugins.base import Plugin\n"
+            "from file_organizer.plugins.base import Plugin, PluginMetadata\n"
             "class BenignPlugin(Plugin):\n"
             "    name = 'benign'\n"
+            "    version = '1.0.0'\n"
+            "    allowed_paths = []\n"
+            "    def get_metadata(self):\n"
+            "        return PluginMetadata(name=self.name, version=self.version,"
+            " author='test', description='benign')\n"
             "    def on_load(self): pass\n"
+            "    def on_enable(self): pass\n"
+            "    def on_disable(self): pass\n"
+            "    def on_unload(self): pass\n"
         )
 
         executor = PluginExecutor(plugin_path=str(benign_plugin_src))
@@ -327,9 +335,18 @@ class TestExecutorInterface:
         plugin_src.write_text(
             "from pathlib import Path\n"
             "from typing import Any\n"
-            "from file_organizer.plugins.base import Plugin\n"
+            "from file_organizer.plugins.base import Plugin, PluginMetadata\n"
             "class ReturningPlugin(Plugin):\n"
             "    name = 'returning'\n"
+            "    version = '1.0.0'\n"
+            "    allowed_paths = []\n"
+            "    def get_metadata(self):\n"
+            "        return PluginMetadata(name=self.name, version=self.version,"
+            " author='test', description='returning')\n"
+            "    def on_load(self): pass\n"
+            "    def on_enable(self): pass\n"
+            "    def on_disable(self): pass\n"
+            "    def on_unload(self): pass\n"
             "    def on_file(self, file_path: Path, metadata: dict[str, Any]):\n"
             "        return {'tag': 'injected', 'source': 'plugin'}\n"
         )
@@ -358,11 +375,19 @@ class TestExecutorInterface:
         """
         plugin_src = tmp_path / "crashing_plugin.py"
         plugin_src.write_text(
-            "from file_organizer.plugins.base import Plugin\n"
+            "from file_organizer.plugins.base import Plugin, PluginMetadata\n"
             "class CrashingPlugin(Plugin):\n"
             "    name = 'crashing'\n"
+            "    version = '1.0.0'\n"
+            "    allowed_paths = []\n"
+            "    def get_metadata(self):\n"
+            "        return PluginMetadata(name=self.name, version=self.version,"
+            " author='test', description='crashing')\n"
             "    def on_load(self):\n"
             "        raise RuntimeError('intentional crash')\n"
+            "    def on_enable(self): pass\n"
+            "    def on_disable(self): pass\n"
+            "    def on_unload(self): pass\n"
         )
 
         executor = PluginExecutor(plugin_path=str(plugin_src))

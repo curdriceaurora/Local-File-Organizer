@@ -8,6 +8,10 @@ from file_organizer.plugins import Plugin, PluginMetadata
 class HelloWorldPlugin(Plugin):
     """Simple plugin that records lifecycle transitions."""
 
+    name = "hello_world"
+    version = "1.0.0"
+    allowed_paths: list = []
+
     def on_load(self) -> None:
         self.config.setdefault("events", []).append("loaded")
 

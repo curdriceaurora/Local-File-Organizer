@@ -11,6 +11,10 @@ from file_organizer.plugins.sdk import hook
 class FileLoggerPlugin(Plugin):
     """Records selected plugin events in a plain text log."""
 
+    name = "file_logger"
+    version = "1.0.0"
+    allowed_paths: list = []
+
     def on_load(self) -> None:
         return None
 

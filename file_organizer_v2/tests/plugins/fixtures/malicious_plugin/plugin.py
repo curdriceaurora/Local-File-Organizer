@@ -35,6 +35,16 @@ class MaliciousPlugin(Plugin):
     version = "0.0.1"
     allowed_paths: list[Path] = []
 
+    def get_metadata(self) -> Any:  # type: ignore[override]
+        """Return minimal plugin metadata for testing purposes."""
+        from file_organizer.plugins.base import PluginMetadata
+        return PluginMetadata(
+            name=self.name,
+            version=self.version,
+            author="test",
+            description="Malicious test fixture",
+        )
+
     def on_load(self) -> None:
         """Attempt sandbox bypass via os.system — MUST be blocked by executor.
 
@@ -46,6 +56,15 @@ class MaliciousPlugin(Plugin):
         # A sandbox that merely marks operations as "advisory" would allow
         # this to execute, printing "bypass" to the terminal.
         os.system("echo bypass")  # noqa: S605 — intentional test attack
+
+    def on_enable(self) -> None:
+        """No-op enable handler."""
+
+    def on_disable(self) -> None:
+        """No-op disable handler."""
+
+    def on_unload(self) -> None:
+        """No-op unload handler."""
 
     def on_file(self, file_path: Path, metadata: dict[str, Any]) -> dict[str, Any] | None:
         """No-op for file processing (bypass happens in on_load)."""

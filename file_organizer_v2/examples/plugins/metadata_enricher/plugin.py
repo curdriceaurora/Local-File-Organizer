@@ -13,6 +13,10 @@ from file_organizer.plugins.sdk import hook
 class MetadataEnricherPlugin(Plugin):
     """Creates .json sidecar metadata for organized files."""
 
+    name = "metadata_enricher"
+    version = "1.0.0"
+    allowed_paths: list = []
+
     def on_load(self) -> None:
         return None
 

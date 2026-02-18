@@ -29,7 +29,7 @@ from file_organizer.utils.file_readers import (
     read_ebook_file,  # noqa: F401 — verified via importlib in TestUnboundedReadersSizeGate
     read_file,
     read_presentation_file,  # noqa: F401 — verified via importlib in TestUnboundedReadersSizeGate
-    read_tar_file,
+    read_tar_file,  # noqa: F401 — verified via importlib in TestUnboundedReadersSizeGate
 )
 
 # Marker kept for any tests that remain genuinely optional (none currently).

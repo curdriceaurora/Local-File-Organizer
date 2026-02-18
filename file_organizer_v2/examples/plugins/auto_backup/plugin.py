@@ -12,6 +12,10 @@ from file_organizer.plugins.sdk import hook
 class AutoBackupPlugin(Plugin):
     """Creates a backup copy when files are organized."""
 
+    name = "auto_backup"
+    version = "1.0.0"
+    allowed_paths: list = []
+
     def on_load(self) -> None:
         return None
 
