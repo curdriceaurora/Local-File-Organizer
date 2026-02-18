@@ -376,13 +376,5 @@ def is_audio_file(file_path: str | Path) -> bool:
         ".aac",
         ".wma",
         ".opus",
-        ".MP3",
-        ".WAV",
-        ".M4A",
-        ".FLAC",
-        ".OGG",
-        ".AAC",
-        ".WMA",
-        ".OPUS",
     }
-    return file_path.suffix in audio_extensions
+    return file_path.suffix.lower() in audio_extensions
