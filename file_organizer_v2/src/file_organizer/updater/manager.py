@@ -2,6 +2,7 @@
 
 Ties together the checker and installer into a single ``update()`` call.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

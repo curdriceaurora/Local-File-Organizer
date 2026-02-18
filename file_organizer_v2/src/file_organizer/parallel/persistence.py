@@ -65,9 +65,7 @@ class JobPersistence:
         # Atomic write: write to temp file, then rename
         temp_path = path.with_suffix(".tmp")
         try:
-            temp_path.write_text(
-                json.dumps(data, indent=2, default=str), encoding="utf-8"
-            )
+            temp_path.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
             temp_path.replace(path)
             logger.debug("Saved job %s to %s", job.id, path)
         except Exception:

@@ -6,6 +6,7 @@ This module provides:
 - Perceptual image hashing for detecting visually similar images
 - Efficient indexing, batch processing, and safe file management
 """
+
 from __future__ import annotations
 
 from .backup import BackupManager

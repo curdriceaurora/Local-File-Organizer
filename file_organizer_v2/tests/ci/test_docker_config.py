@@ -62,15 +62,15 @@ class TestDockerfileStructure:
 
     def test_dockerfile_builder_stage_exists(self, dockerfile_content: str) -> None:
         """Verify Dockerfile has a named builder stage."""
-        assert re.search(
-            r"FROM\s+\S+\s+AS\s+builder", dockerfile_content, re.IGNORECASE
-        ), "Dockerfile should have a 'builder' stage"
+        assert re.search(r"FROM\s+\S+\s+AS\s+builder", dockerfile_content, re.IGNORECASE), (
+            "Dockerfile should have a 'builder' stage"
+        )
 
     def test_dockerfile_runtime_stage_exists(self, dockerfile_content: str) -> None:
         """Verify Dockerfile has a named runtime stage."""
-        assert re.search(
-            r"FROM\s+\S+\s+AS\s+runtime", dockerfile_content, re.IGNORECASE
-        ), "Dockerfile should have a 'runtime' stage"
+        assert re.search(r"FROM\s+\S+\s+AS\s+runtime", dockerfile_content, re.IGNORECASE), (
+            "Dockerfile should have a 'runtime' stage"
+        )
 
     def test_dockerfile_uses_python_311_slim(self, dockerfile_content: str) -> None:
         """Verify Dockerfile uses python:3.11-slim base image."""
@@ -86,9 +86,7 @@ class TestDockerfileStructure:
 
     def test_dockerfile_installs_to_opt_venv(self, dockerfile_content: str) -> None:
         """Verify dependencies are installed into /opt/venv."""
-        assert "/opt/venv" in dockerfile_content, (
-            "Dependencies should be installed to /opt/venv"
-        )
+        assert "/opt/venv" in dockerfile_content, "Dependencies should be installed to /opt/venv"
 
     def test_dockerfile_runtime_installs_ffmpeg(self, dockerfile_content: str) -> None:
         """Verify runtime stage installs ffmpeg."""
@@ -111,9 +109,7 @@ class TestDockerfileStructure:
 
     def test_dockerfile_user_is_organizer(self, dockerfile_content: str) -> None:
         """Verify the non-root user is named 'organizer' with UID 1000."""
-        assert "organizer" in dockerfile_content, (
-            "Non-root user should be named 'organizer'"
-        )
+        assert "organizer" in dockerfile_content, "Non-root user should be named 'organizer'"
         assert "1000" in dockerfile_content, "User should have UID/GID 1000"
 
     def test_dockerfile_has_healthcheck(self, dockerfile_content: str) -> None:
@@ -143,9 +139,7 @@ class TestDockerfileStructure:
             "org.opencontainers.image.version",
         ]
         for label in required_labels:
-            assert label in dockerfile_content, (
-                f"Dockerfile should include OCI label: {label}"
-            )
+            assert label in dockerfile_content, f"Dockerfile should include OCI label: {label}"
 
     def test_dockerfile_no_secrets(self, dockerfile_content: str) -> None:
         """Verify Dockerfile does not contain hardcoded secrets."""
@@ -157,9 +151,7 @@ class TestDockerfileStructure:
         ]
         for pattern in secret_patterns:
             matches = re.findall(pattern, dockerfile_content, re.IGNORECASE)
-            assert not matches, (
-                f"Dockerfile should not contain hardcoded secrets. Found: {matches}"
-            )
+            assert not matches, f"Dockerfile should not contain hardcoded secrets. Found: {matches}"
 
     def test_dockerfile_cleans_apt_lists(self, dockerfile_content: str) -> None:
         """Verify apt-get install is followed by cleanup."""
@@ -191,9 +183,7 @@ class TestDockerfileDev:
     @pytest.fixture
     def dockerfile_dev_content(self, dockerfile_dev_path: Path) -> str:
         """Read the Dockerfile.dev content."""
-        assert dockerfile_dev_path.exists(), (
-            f"Dockerfile.dev not found at {dockerfile_dev_path}"
-        )
+        assert dockerfile_dev_path.exists(), f"Dockerfile.dev not found at {dockerfile_dev_path}"
         return dockerfile_dev_path.read_text()
 
     def test_dockerfile_dev_exists(self, dockerfile_dev_path: Path) -> None:
@@ -209,17 +199,13 @@ class TestDockerfileDev:
         ]
         assert len(from_lines) >= 1
         # The dev image should use full python (not slim) for dev tools
-        assert "python:3.11" in from_lines[0], (
-            "Dev Dockerfile should use python:3.11 base image"
-        )
+        assert "python:3.11" in from_lines[0], "Dev Dockerfile should use python:3.11 base image"
 
     def test_dockerfile_dev_includes_dev_tools(self, dockerfile_dev_content: str) -> None:
         """Verify dev Dockerfile installs development tools."""
         dev_tools = ["git", "vim"]
         for tool in dev_tools:
-            assert tool in dockerfile_dev_content, (
-                f"Dev Dockerfile should install {tool}"
-            )
+            assert tool in dockerfile_dev_content, f"Dev Dockerfile should install {tool}"
 
     def test_dockerfile_dev_exposes_debug_port(self, dockerfile_dev_content: str) -> None:
         """Verify dev Dockerfile exposes debug port 5678."""
@@ -250,9 +236,7 @@ class TestDockerCompose:
     @pytest.fixture
     def compose_data(self, compose_path: Path) -> dict:
         """Parse docker-compose.yml."""
-        assert compose_path.exists(), (
-            f"docker-compose.yml not found at {compose_path}"
-        )
+        assert compose_path.exists(), f"docker-compose.yml not found at {compose_path}"
         content = compose_path.read_text()
         return yaml.safe_load(content)
 
@@ -304,20 +288,14 @@ class TestDockerCompose:
 
     def test_docker_compose_has_named_volumes(self, compose_data: dict) -> None:
         """Verify docker-compose.yml defines named volumes."""
-        assert "volumes" in compose_data, (
-            "docker-compose.yml must define named volumes"
-        )
+        assert "volumes" in compose_data, "docker-compose.yml must define named volumes"
         assert len(compose_data["volumes"]) >= 1
 
     def test_docker_compose_has_custom_network(self, compose_data: dict) -> None:
         """Verify docker-compose.yml defines a custom network."""
-        assert "networks" in compose_data, (
-            "docker-compose.yml should define a custom network"
-        )
+        assert "networks" in compose_data, "docker-compose.yml should define a custom network"
 
-    def test_docker_compose_file_organizer_depends_on_redis(
-        self, compose_data: dict
-    ) -> None:
+    def test_docker_compose_file_organizer_depends_on_redis(self, compose_data: dict) -> None:
         """Verify file-organizer depends on redis."""
         fo_svc = compose_data["services"]["file-organizer"]
         assert "depends_on" in fo_svc, "file-organizer should depend on redis"
@@ -353,21 +331,15 @@ class TestDockerComposeDev:
     @pytest.fixture
     def compose_dev_data(self, compose_dev_path: Path) -> dict:
         """Parse docker-compose.dev.yml."""
-        assert compose_dev_path.exists(), (
-            f"docker-compose.dev.yml not found at {compose_dev_path}"
-        )
+        assert compose_dev_path.exists(), f"docker-compose.dev.yml not found at {compose_dev_path}"
         content = compose_dev_path.read_text()
         return yaml.safe_load(content)
 
     def test_docker_compose_dev_exists(self, compose_dev_path: Path) -> None:
         """Verify docker-compose.dev.yml exists."""
-        assert compose_dev_path.exists(), (
-            "docker-compose.dev.yml must exist in project root"
-        )
+        assert compose_dev_path.exists(), "docker-compose.dev.yml must exist in project root"
 
-    def test_docker_compose_dev_uses_dev_dockerfile(
-        self, compose_dev_data: dict
-    ) -> None:
+    def test_docker_compose_dev_uses_dev_dockerfile(self, compose_dev_data: dict) -> None:
         """Verify dev compose uses Dockerfile.dev."""
         fo_svc = compose_dev_data["services"]["file-organizer"]
         assert fo_svc["build"]["dockerfile"] == "Dockerfile.dev", (
@@ -394,9 +366,7 @@ class TestDockerComposeDev:
             "Dev compose should define a test-runner service"
         )
 
-    def test_docker_compose_dev_exposes_debug_port(
-        self, compose_dev_data: dict
-    ) -> None:
+    def test_docker_compose_dev_exposes_debug_port(self, compose_dev_data: dict) -> None:
         """Verify dev compose exposes debug port."""
         fo_svc = compose_dev_data["services"]["file-organizer"]
         ports = fo_svc.get("ports", [])
@@ -420,9 +390,7 @@ class TestDockerignore:
     @pytest.fixture
     def dockerignore_content(self, dockerignore_path: Path) -> str:
         """Read .dockerignore content."""
-        assert dockerignore_path.exists(), (
-            f".dockerignore not found at {dockerignore_path}"
-        )
+        assert dockerignore_path.exists(), f".dockerignore not found at {dockerignore_path}"
         return dockerignore_path.read_text()
 
     def test_dockerignore_exists(self, dockerignore_path: Path) -> None:
@@ -435,36 +403,26 @@ class TestDockerignore:
 
     def test_dockerignore_excludes_venv(self, dockerignore_content: str) -> None:
         """Verify .dockerignore excludes virtual environments."""
-        has_venv = any(
-            pattern in dockerignore_content for pattern in [".venv", "venv", "env"]
-        )
+        has_venv = any(pattern in dockerignore_content for pattern in [".venv", "venv", "env"])
         assert has_venv, ".dockerignore should exclude virtual environments"
 
     def test_dockerignore_excludes_pycache(self, dockerignore_content: str) -> None:
         """Verify .dockerignore excludes __pycache__."""
         assert "__pycache__" in dockerignore_content
 
-    def test_dockerignore_excludes_test_artifacts(
-        self, dockerignore_content: str
-    ) -> None:
+    def test_dockerignore_excludes_test_artifacts(self, dockerignore_content: str) -> None:
         """Verify .dockerignore excludes test artifacts."""
         has_test_artifacts = any(
-            pattern in dockerignore_content
-            for pattern in [".pytest_cache", ".coverage", "htmlcov"]
+            pattern in dockerignore_content for pattern in [".pytest_cache", ".coverage", "htmlcov"]
         )
         assert has_test_artifacts
 
     def test_dockerignore_excludes_ide_files(self, dockerignore_content: str) -> None:
         """Verify .dockerignore excludes IDE configuration files."""
-        has_ide = any(
-            pattern in dockerignore_content
-            for pattern in [".vscode", ".idea"]
-        )
+        has_ide = any(pattern in dockerignore_content for pattern in [".vscode", ".idea"])
         assert has_ide, ".dockerignore should exclude IDE files"
 
-    def test_dockerignore_excludes_node_modules(
-        self, dockerignore_content: str
-    ) -> None:
+    def test_dockerignore_excludes_node_modules(self, dockerignore_content: str) -> None:
         """Verify .dockerignore excludes node_modules."""
         assert "node_modules" in dockerignore_content
 
@@ -519,9 +477,7 @@ class TestValidateDockerfile:
         """Verify detection of apt-get update without cleanup."""
         df = tmp_path / "Dockerfile"
         df.write_text(
-            "FROM python:3.11-slim\n"
-            "RUN apt-get update && apt-get install -y curl\n"
-            "USER nobody\n"
+            "FROM python:3.11-slim\nRUN apt-get update && apt-get install -y curl\nUSER nobody\n"
         )
         issues = validate_dockerfile(df)
         assert any("apt" in i.lower() and "cleanup" in i.lower() for i in issues)
@@ -574,9 +530,7 @@ class TestGetImageSizeEstimate:
         """Estimate size for dev Dockerfile is larger than production."""
         prod_size = get_image_size_estimate(PROJECT_ROOT / "Dockerfile")
         dev_size = get_image_size_estimate(PROJECT_ROOT / "Dockerfile.dev")
-        assert dev_size > prod_size, (
-            "Dev image should be larger than production image"
-        )
+        assert dev_size > prod_size, "Dev image should be larger than production image"
 
     def test_estimate_nonexistent_file(self) -> None:
         """Verify FileNotFoundError for missing Dockerfile."""

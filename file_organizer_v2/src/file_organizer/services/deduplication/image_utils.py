@@ -4,6 +4,7 @@ Image utility functions for deduplication operations.
 Provides helper functions for image validation, metadata extraction,
 format conversion, and batch processing operations.
 """
+
 from __future__ import annotations
 
 import logging
@@ -19,14 +20,14 @@ SUPPORTED_FORMATS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", "
 
 # Format preference ranking (higher is better quality)
 FORMAT_QUALITY_RANK = {
-    ".png": 5,      # Lossless
-    ".tiff": 5,     # Lossless
-    ".tif": 5,      # Lossless
-    ".bmp": 4,      # Lossless but large
-    ".webp": 3,     # Can be lossless or lossy
-    ".jpg": 2,      # Lossy
-    ".jpeg": 2,     # Lossy
-    ".gif": 1,      # Limited color palette
+    ".png": 5,  # Lossless
+    ".tiff": 5,  # Lossless
+    ".tif": 5,  # Lossless
+    ".bmp": 4,  # Lossless but large
+    ".webp": 3,  # Can be lossless or lossy
+    ".jpg": 2,  # Lossy
+    ".jpeg": 2,  # Lossy
+    ".gif": 1,  # Limited color palette
 }
 
 
@@ -45,13 +46,7 @@ class ImageMetadata:
     """
 
     def __init__(
-        self,
-        path: Path,
-        width: int,
-        height: int,
-        image_format: str,
-        mode: str,
-        size_bytes: int
+        self, path: Path, width: int, height: int, image_format: str, mode: str, size_bytes: int
     ):
         self.path = path
         self.width = width
@@ -111,7 +106,7 @@ def get_image_metadata(image_path: Path) -> ImageMetadata | None:
             height=height,
             image_format=image_format,
             mode=mode,
-            size_bytes=size_bytes
+            size_bytes=size_bytes,
         )
     except OSError as e:
         logger.warning(f"Could not read image {image_path}: {e}")
@@ -237,9 +232,7 @@ def filter_valid_images(file_paths: list[Path]) -> list[Path]:
 
 
 def find_images_in_directory(
-    directory: Path,
-    recursive: bool = True,
-    extensions: list[str] | None = None
+    directory: Path, recursive: bool = True, extensions: list[str] | None = None
 ) -> list[Path]:
     """
     Find all image files in a directory.
@@ -268,8 +261,7 @@ def find_images_in_directory(
     else:
         # Normalize extensions to lowercase with dot
         extensions = [
-            ext.lower() if ext.startswith('.') else f'.{ext.lower()}'
-            for ext in extensions
+            ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in extensions
         ]
 
     image_files: list[Path] = []
@@ -387,10 +379,7 @@ def get_best_quality_image(images: list[Path]) -> Path | None:
         return None
 
     # Get metadata for all valid images
-    metadata_list = [
-        (img, get_image_metadata(img))
-        for img in valid_images
-    ]
+    metadata_list = [(img, get_image_metadata(img)) for img in valid_images]
 
     # Filter out images where metadata couldn't be extracted
     metadata_list = [(img, meta) for img, meta in metadata_list if meta is not None]
@@ -402,9 +391,9 @@ def get_best_quality_image(images: list[Path]) -> Path | None:
     def quality_key(item: tuple[Path, ImageMetadata]) -> tuple[int, int, int]:
         img_path, meta = item
         return (
-            meta.resolution,                      # Higher resolution is better
+            meta.resolution,  # Higher resolution is better
             get_format_quality_score(img_path),  # Better format is better
-            meta.size_bytes                      # Larger file is better (less compression)
+            meta.size_bytes,  # Larger file is better (less compression)
         )
 
     sorted_images = sorted(metadata_list, key=quality_key, reverse=True)
@@ -422,7 +411,7 @@ def format_file_size(size_bytes: int) -> str:
     Returns:
         Formatted string (e.g., "1.5 MB", "234 KB")
     """
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
         if size_bytes < 1024.0:
             return f"{size_bytes:.1f} {unit}"
         size_bytes /= 1024.0
@@ -446,9 +435,4 @@ def get_image_info_string(image_path: Path) -> str:
 
     size_str = format_file_size(meta.size_bytes)
 
-    return (
-        f"{image_path.name}: "
-        f"{meta.width}x{meta.height}, "
-        f"{meta.format}, "
-        f"{size_str}"
-    )
+    return f"{image_path.name}: {meta.width}x{meta.height}, {meta.format}, {size_str}"

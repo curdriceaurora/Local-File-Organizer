@@ -1,4 +1,5 @@
 """API tests for deduplication endpoints."""
+
 from __future__ import annotations
 
 from pathlib import Path

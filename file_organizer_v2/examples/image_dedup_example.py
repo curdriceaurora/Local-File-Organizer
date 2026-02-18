@@ -52,9 +52,7 @@ def example_basic_usage():
 
     # Find duplicates with progress callback
     duplicates = deduper.find_duplicates(
-        directory,
-        recursive=True,
-        progress_callback=progress_callback
+        directory, recursive=True, progress_callback=progress_callback
     )
 
     print()
@@ -230,6 +228,7 @@ def main():
     except Exception as e:
         print(f"\nError: {e}")
         import traceback
+
         traceback.print_exc()
 
 

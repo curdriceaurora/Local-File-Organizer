@@ -3,6 +3,7 @@ Tests for PARA folder mapper.
 
 Tests category-based folder mapping and organization strategies.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -164,9 +165,7 @@ class TestCategoryFolderMapper:
 
     def test_mapping_strategy_date_folders(self, config, temp_source, temp_target):
         """Test mapping with date-based subfolders."""
-        strategy = MappingStrategy(
-            use_date_folders=True, date_format="%Y/%m"
-        )
+        strategy = MappingStrategy(use_date_folders=True, date_format="%Y/%m")
         mapper = CategoryFolderMapper(config, strategy=strategy)
 
         test_file = temp_source / "project_plan.txt"
@@ -374,9 +373,7 @@ class TestMappingStrategy:
 
     def test_date_strategy(self):
         """Test date-based strategy."""
-        strategy = MappingStrategy(
-            use_date_folders=True, date_format="%Y/%m/%d"
-        )
+        strategy = MappingStrategy(use_date_folders=True, date_format="%Y/%m/%d")
 
         assert strategy.use_date_folders is True
         assert strategy.date_format == "%Y/%m/%d"
@@ -384,9 +381,7 @@ class TestMappingStrategy:
     def test_type_strategy(self):
         """Test type-based strategy."""
         type_map = {".txt": "Documents", ".pdf": "PDFs"}
-        strategy = MappingStrategy(
-            use_type_folders=True, type_mapping=type_map
-        )
+        strategy = MappingStrategy(use_type_folders=True, type_mapping=type_map)
 
         assert strategy.use_type_folders is True
         assert strategy.type_mapping == type_map
@@ -394,9 +389,7 @@ class TestMappingStrategy:
     def test_keyword_strategy(self):
         """Test keyword-based strategy."""
         keyword_map = {"project": "Projects", "notes": "Notes"}
-        strategy = MappingStrategy(
-            use_keyword_folders=True, keyword_mapping=keyword_map
-        )
+        strategy = MappingStrategy(use_keyword_folders=True, keyword_mapping=keyword_map)
 
         assert strategy.use_keyword_folders is True
         assert strategy.keyword_mapping == keyword_map

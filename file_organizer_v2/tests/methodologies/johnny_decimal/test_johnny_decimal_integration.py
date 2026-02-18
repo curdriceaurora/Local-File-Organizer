@@ -3,6 +3,7 @@ Johnny Decimal Integration Tests
 
 Tests complete workflows, edge cases, and integration scenarios.
 """
+
 from __future__ import annotations
 
 import json
@@ -159,9 +160,7 @@ class TestJohnnyDecimalEdgeCases:
         # Register many numbers in one category (leave a few for the test)
         for i in range(95):
             number = JohnnyDecimalNumber(area=10, category=1, item_id=i)
-            system.generator.register_existing_number(
-                number, tmp_path / f"file{i}.txt"
-            )
+            system.generator.register_existing_number(number, tmp_path / f"file{i}.txt")
 
         # Try to assign another number in same category
         file_path = tmp_path / "extra-file.txt"
@@ -188,9 +187,7 @@ class TestJohnnyDecimalEdgeCases:
         system.assign_number_to_file(file_path=file1, preferred_number=preferred)
 
         # Try to assign same number to second file
-        result = system.assign_number_to_file(
-            file_path=file2, preferred_number=preferred
-        )
+        result = system.assign_number_to_file(file_path=file2, preferred_number=preferred)
 
         # Should either use different number or report conflict
         assert result.number != preferred or len(result.conflicts) > 0
@@ -417,9 +414,7 @@ class TestJohnnyDecimalScalability:
             category = (i // 10) % 10
             item_id = i % 10
             number = JohnnyDecimalNumber(area=area, category=category, item_id=item_id)
-            system.generator.register_existing_number(
-                number, tmp_path / f"file{i}.txt"
-            )
+            system.generator.register_existing_number(number, tmp_path / f"file{i}.txt")
 
         # Force garbage collection
         gc.collect()
@@ -484,7 +479,7 @@ class TestJohnnyDecimalMigrationScenarios:
 
         for _i, category in enumerate(categories):
             for j in range(3):
-                file_path = tmp_path / f"{category}-{j+1}.txt"
+                file_path = tmp_path / f"{category}-{j + 1}.txt"
                 file_path.touch()
 
         # Assign numbers

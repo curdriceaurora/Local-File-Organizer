@@ -33,7 +33,8 @@ class TestDockerfile:
     def test_dockerfile_has_from_instruction(self, dockerfile_content: str) -> None:
         """Verify Dockerfile has at least one FROM instruction."""
         from_lines = [
-            line for line in dockerfile_content.splitlines()
+            line
+            for line in dockerfile_content.splitlines()
             if line.strip().upper().startswith("FROM ")
         ]
         assert len(from_lines) >= 1, "Dockerfile must have at least one FROM instruction"
@@ -41,7 +42,8 @@ class TestDockerfile:
     def test_dockerfile_uses_multi_stage_build(self, dockerfile_content: str) -> None:
         """Verify Dockerfile uses multi-stage build pattern."""
         from_lines = [
-            line for line in dockerfile_content.splitlines()
+            line
+            for line in dockerfile_content.splitlines()
             if line.strip().upper().startswith("FROM ")
         ]
         assert len(from_lines) >= 2, (
@@ -90,9 +92,7 @@ class TestDockerfile:
         ]
         for pattern in secret_patterns:
             matches = re.findall(pattern, dockerfile_content, re.IGNORECASE)
-            assert not matches, (
-                f"Dockerfile should not contain hardcoded secrets. Found: {matches}"
-            )
+            assert not matches, f"Dockerfile should not contain hardcoded secrets. Found: {matches}"
 
     def test_dockerfile_has_labels(self, dockerfile_content: str) -> None:
         """Verify Dockerfile includes OCI labels."""
@@ -158,9 +158,7 @@ class TestDockerCompose:
 
     def test_docker_compose_has_networks(self, compose_data: dict) -> None:
         """Verify docker-compose.yml defines a network."""
-        assert "networks" in compose_data, (
-            "docker-compose.yml should define a custom network"
-        )
+        assert "networks" in compose_data, "docker-compose.yml should define a custom network"
 
     def test_docker_compose_no_secrets(self) -> None:
         """Verify docker-compose.yml does not contain hardcoded secrets."""
@@ -199,24 +197,16 @@ class TestDockerignore:
 
     def test_dockerignore_excludes_venv(self, dockerignore_content: str) -> None:
         """Verify .dockerignore excludes virtual environments."""
-        has_venv = any(
-            pattern in dockerignore_content
-            for pattern in [".venv", "venv", "env"]
-        )
+        has_venv = any(pattern in dockerignore_content for pattern in [".venv", "venv", "env"])
         assert has_venv, ".dockerignore should exclude virtual environments"
 
     def test_dockerignore_excludes_pycache(self, dockerignore_content: str) -> None:
         """Verify .dockerignore excludes Python cache."""
-        assert "__pycache__" in dockerignore_content, (
-            ".dockerignore should exclude __pycache__"
-        )
+        assert "__pycache__" in dockerignore_content, ".dockerignore should exclude __pycache__"
 
     def test_dockerignore_excludes_tests(self, dockerignore_content: str) -> None:
         """Verify .dockerignore excludes test artifacts."""
         has_test_artifacts = any(
-            pattern in dockerignore_content
-            for pattern in [".pytest_cache", ".coverage", "htmlcov"]
+            pattern in dockerignore_content for pattern in [".pytest_cache", ".coverage", "htmlcov"]
         )
-        assert has_test_artifacts, (
-            ".dockerignore should exclude test artifacts"
-        )
+        assert has_test_artifacts, ".dockerignore should exclude test artifacts"

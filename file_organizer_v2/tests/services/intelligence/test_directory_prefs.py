@@ -3,6 +3,7 @@ Unit tests for DirectoryPrefs class.
 
 Tests directory-level preference management with hierarchical inheritance.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -30,10 +31,7 @@ class TestDirectoryPrefs:
     def test_set_and_get_preference(self, dir_prefs):
         """Test setting and getting a single preference."""
         test_path = Path("/home/user/documents")
-        pref = {
-            "folder_mappings": {"pdf": "PDFs"},
-            "confidence": 0.8
-        }
+        pref = {"folder_mappings": {"pdf": "PDFs"}, "confidence": 0.8}
 
         dir_prefs.set_preference(test_path, pref)
 
@@ -115,16 +113,11 @@ class TestDirectoryPrefs:
         parent = Path("/home/user")
         child = Path("/home/user/documents")
 
-        parent_pref = {
-            "folder_mappings": {
-                "pdf": "Documents",
-                "txt": "TextFiles"
-            }
-        }
+        parent_pref = {"folder_mappings": {"pdf": "Documents", "txt": "TextFiles"}}
         child_pref = {
             "folder_mappings": {
                 "pdf": "PDFs",  # Override this
-                "doc": "WordDocs"  # Add this
+                "doc": "WordDocs",  # Add this
             }
         }
 
@@ -248,24 +241,19 @@ class TestDirectoryPrefs:
         """Test a complex real-world inheritance scenario."""
         # Setup: root has global settings
         root = Path("/home/user")
-        dir_prefs.set_preference(root, {
-            "naming_patterns": {"prefix": "user_"},
-            "confidence": 0.7
-        })
+        dir_prefs.set_preference(root, {"naming_patterns": {"prefix": "user_"}, "confidence": 0.7})
 
         # Documents overrides naming, adds folder mappings
         docs = Path("/home/user/documents")
-        dir_prefs.set_preference(docs, {
-            "naming_patterns": {"prefix": "doc_"},
-            "folder_mappings": {"pdf": "PDFs"}
-        })
+        dir_prefs.set_preference(
+            docs, {"naming_patterns": {"prefix": "doc_"}, "folder_mappings": {"pdf": "PDFs"}}
+        )
 
         # Work documents adds more mappings
         work = Path("/home/user/documents/work")
-        dir_prefs.set_preference(work, {
-            "folder_mappings": {"xlsx": "Spreadsheets"},
-            "confidence": 0.9
-        })
+        dir_prefs.set_preference(
+            work, {"folder_mappings": {"xlsx": "Spreadsheets"}, "confidence": 0.9}
+        )
 
         result = dir_prefs.get_preference_with_inheritance(work)
 

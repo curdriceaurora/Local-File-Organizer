@@ -3,6 +3,7 @@
 Provides panels showing discovered audio files, metadata details,
 and AI-powered classification results.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -83,7 +84,13 @@ class AudioMetadataPanel(Static):
             bitrate_str = f"{metadata.bitrate} bps"
 
         # Calculate tag completeness
-        tag_fields = [metadata.title, metadata.artist, metadata.album, metadata.genre, metadata.year]
+        tag_fields = [
+            metadata.title,
+            metadata.artist,
+            metadata.album,
+            metadata.genre,
+            metadata.year,
+        ]
         filled = sum(1 for f in tag_fields if f is not None)
         completeness = int(filled / len(tag_fields) * 100)
         bar_filled = int(filled / len(tag_fields) * 20)
@@ -129,7 +136,11 @@ class AudioClassificationPanel(Static):
             self.update("[b]Classification[/b]\n\n  [dim]No classification available.[/dim]")
             return
 
-        audio_type = str(result.audio_type.value) if hasattr(result.audio_type, "value") else str(result.audio_type)
+        audio_type = (
+            str(result.audio_type.value)
+            if hasattr(result.audio_type, "value")
+            else str(result.audio_type)
+        )
         confidence = result.confidence
         conf_bar_len = int(confidence * 30)
         color = "green" if confidence >= 0.7 else "yellow" if confidence >= 0.4 else "red"
@@ -145,7 +156,11 @@ class AudioClassificationPanel(Static):
         if result.alternatives:
             lines.append("\n  [dim]Alternatives:[/dim]")
             for alt in result.alternatives[:3]:
-                alt_type = str(alt.audio_type.value) if hasattr(alt.audio_type, "value") else str(alt.audio_type)
+                alt_type = (
+                    str(alt.audio_type.value)
+                    if hasattr(alt.audio_type, "value")
+                    else str(alt.audio_type)
+                )
                 lines.append(f"    {alt_type:<12} {alt.confidence:.0%}  {alt.reasoning}")
 
         self.update("\n".join(lines))

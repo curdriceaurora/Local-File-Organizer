@@ -5,6 +5,7 @@ Deduplication CLI - Interactive duplicate file detection and removal.
 This module provides a user-friendly command-line interface for finding and
 removing duplicate files using hash-based detection.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -74,7 +75,7 @@ def format_size(size_bytes: int) -> str:
     Returns:
         Formatted size string (e.g., '1.5 MB')
     """
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
         if size_bytes < 1024.0:
             return f"{size_bytes:.1f} {unit}"
         size_bytes /= 1024.0
@@ -95,10 +96,7 @@ def format_datetime(timestamp: float) -> str:
 
 
 def display_duplicate_group(
-    group_id: int,
-    file_hash: str,
-    files: list[dict],
-    total_groups: int
+    group_id: int, file_hash: str, files: list[dict], total_groups: int
 ) -> None:
     """Display a group of duplicate files in a formatted table.
 
@@ -109,11 +107,13 @@ def display_duplicate_group(
         total_groups: Total number of duplicate groups
     """
     console.print()
-    console.print(Panel(
-        f"[bold cyan]Duplicate Group {group_id}/{total_groups}[/bold cyan]\n"
-        f"Hash: [dim]{file_hash[:16]}...[/dim]",
-        expand=False
-    ))
+    console.print(
+        Panel(
+            f"[bold cyan]Duplicate Group {group_id}/{total_groups}[/bold cyan]\n"
+            f"Hash: [dim]{file_hash[:16]}...[/dim]",
+            expand=False,
+        )
+    )
 
     # Create table
     table = Table(show_header=True, header_style="bold magenta")
@@ -125,33 +125,24 @@ def display_duplicate_group(
 
     # Add files to table
     for idx, file_info in enumerate(files, 1):
-        path = file_info['path']
-        size = format_size(file_info['size'])
-        modified = format_datetime(file_info['mtime'])
+        path = file_info["path"]
+        size = format_size(file_info["size"])
+        modified = format_datetime(file_info["mtime"])
 
         # Mark the file that will be kept (for strategies)
-        status = "✓" if file_info.get('keep', False) else ""
+        status = "✓" if file_info.get("keep", False) else ""
 
-        table.add_row(
-            str(idx),
-            str(path),
-            size,
-            modified,
-            status
-        )
+        table.add_row(str(idx), str(path), size, modified, status)
 
     console.print(table)
 
     # Calculate space that can be saved
-    total_size = sum(f['size'] for f in files)
-    saved_space = total_size - files[0]['size']  # Keep one file
+    total_size = sum(f["size"] for f in files)
+    saved_space = total_size - files[0]["size"]  # Keep one file
     console.print(f"\n[dim]Potential space savings: {format_size(saved_space)}[/dim]")
 
 
-def select_files_to_keep(
-    files: list[dict],
-    strategy: str
-) -> list[dict]:
+def select_files_to_keep(files: list[dict], strategy: str) -> list[dict]:
     """Apply selection strategy to determine which files to keep/remove.
 
     Args:
@@ -163,23 +154,23 @@ def select_files_to_keep(
     """
     if strategy == "oldest":
         # Keep the file with the oldest modification time
-        oldest_idx = min(range(len(files)), key=lambda i: files[i]['mtime'])
-        files[oldest_idx]['keep'] = True
+        oldest_idx = min(range(len(files)), key=lambda i: files[i]["mtime"])
+        files[oldest_idx]["keep"] = True
 
     elif strategy == "newest":
         # Keep the file with the newest modification time
-        newest_idx = max(range(len(files)), key=lambda i: files[i]['mtime'])
-        files[newest_idx]['keep'] = True
+        newest_idx = max(range(len(files)), key=lambda i: files[i]["mtime"])
+        files[newest_idx]["keep"] = True
 
     elif strategy == "largest":
         # Keep the largest file (in case of slight differences)
-        largest_idx = max(range(len(files)), key=lambda i: files[i]['size'])
-        files[largest_idx]['keep'] = True
+        largest_idx = max(range(len(files)), key=lambda i: files[i]["size"])
+        files[largest_idx]["keep"] = True
 
     elif strategy == "smallest":
         # Keep the smallest file
-        smallest_idx = min(range(len(files)), key=lambda i: files[i]['size'])
-        files[smallest_idx]['keep'] = True
+        smallest_idx = min(range(len(files)), key=lambda i: files[i]["size"])
+        files[smallest_idx]["keep"] = True
 
     elif strategy == "manual":
         # Manual selection - no automatic marking
@@ -201,19 +192,21 @@ def get_user_selection(files: list[dict], strategy: str, batch: bool = False) ->
     """
     if strategy == "manual":
         console.print("\n[bold]Which file(s) should we keep?[/bold]")
-        console.print("[dim]Enter the number(s) to keep (comma-separated), or 'a' to keep all, or 's' to skip:[/dim]")
+        console.print(
+            "[dim]Enter the number(s) to keep (comma-separated), or 'a' to keep all, or 's' to skip:[/dim]"
+        )
 
         while True:
             try:
                 choice = console.input("[cyan]Keep file(s):[/cyan] ").strip().lower()
 
-                if choice == 's':
+                if choice == "s":
                     return []  # Skip this group
-                elif choice == 'a':
+                elif choice == "a":
                     return []  # Keep all (remove none)
                 else:
                     # Parse comma-separated numbers
-                    keep_indices = [int(x.strip()) - 1 for x in choice.split(',')]
+                    keep_indices = [int(x.strip()) - 1 for x in choice.split(",")]
 
                     # Validate indices
                     if all(0 <= idx < len(files) for idx in keep_indices):
@@ -230,7 +223,7 @@ def get_user_selection(files: list[dict], strategy: str, batch: bool = False) ->
         # For automatic strategies
         if batch:
             # Batch mode: automatically remove without confirmation
-            return [i for i, f in enumerate(files) if not f.get('keep', False)]
+            return [i for i, f in enumerate(files) if not f.get("keep", False)]
         else:
             # Confirm the selection
             console.print("\n[bold]Proceed with this selection?[/bold]")
@@ -239,23 +232,19 @@ def get_user_selection(files: list[dict], strategy: str, batch: bool = False) ->
             while True:
                 choice = console.input("[cyan]Choice:[/cyan] ").strip().lower()
 
-                if choice in ['y', 'yes']:
+                if choice in ["y", "yes"]:
                     # Remove files not marked to keep
-                    return [i for i, f in enumerate(files) if not f.get('keep', False)]
-                elif choice in ['n', 'no']:
+                    return [i for i, f in enumerate(files) if not f.get("keep", False)]
+                elif choice in ["n", "no"]:
                     return []  # Keep all
-                elif choice in ['s', 'skip']:
+                elif choice in ["s", "skip"]:
                     return []  # Skip
                 else:
                     console.print("[red]Please enter 'y', 'n', or 's'.[/red]")
 
 
 def display_summary(
-    total_groups: int,
-    total_duplicates: int,
-    total_removed: int,
-    space_saved: int,
-    dry_run: bool
+    total_groups: int, total_duplicates: int, total_removed: int, space_saved: int, dry_run: bool
 ) -> None:
     """Display summary of deduplication operation.
 
@@ -271,26 +260,30 @@ def display_summary(
     console.print()
 
     if dry_run:
-        console.print(Panel(
-            "[bold yellow]DRY RUN SUMMARY[/bold yellow]\n\n"
-            f"Duplicate groups found: [cyan]{total_groups}[/cyan]\n"
-            f"Total duplicate files: [cyan]{total_duplicates}[/cyan]\n"
-            f"Files that would be removed: [cyan]{total_removed}[/cyan]\n"
-            f"Space that would be saved: [green]{format_size(space_saved)}[/green]\n\n"
-            "[dim]Run without --dry-run to actually remove files.[/dim]",
-            title="Summary",
-            expand=False
-        ))
+        console.print(
+            Panel(
+                "[bold yellow]DRY RUN SUMMARY[/bold yellow]\n\n"
+                f"Duplicate groups found: [cyan]{total_groups}[/cyan]\n"
+                f"Total duplicate files: [cyan]{total_duplicates}[/cyan]\n"
+                f"Files that would be removed: [cyan]{total_removed}[/cyan]\n"
+                f"Space that would be saved: [green]{format_size(space_saved)}[/green]\n\n"
+                "[dim]Run without --dry-run to actually remove files.[/dim]",
+                title="Summary",
+                expand=False,
+            )
+        )
     else:
-        console.print(Panel(
-            "[bold green]DEDUPLICATION COMPLETE[/bold green]\n\n"
-            f"Duplicate groups found: [cyan]{total_groups}[/cyan]\n"
-            f"Total duplicate files: [cyan]{total_duplicates}[/cyan]\n"
-            f"Files removed: [cyan]{total_removed}[/cyan]\n"
-            f"Space saved: [green]{format_size(space_saved)}[/green]",
-            title="Summary",
-            expand=False
-        ))
+        console.print(
+            Panel(
+                "[bold green]DEDUPLICATION COMPLETE[/bold green]\n\n"
+                f"Duplicate groups found: [cyan]{total_groups}[/cyan]\n"
+                f"Total duplicate files: [cyan]{total_duplicates}[/cyan]\n"
+                f"Files removed: [cyan]{total_removed}[/cyan]\n"
+                f"Space saved: [green]{format_size(space_saved)}[/green]",
+                title="Summary",
+                expand=False,
+            )
+        )
 
 
 def dedupe_command(args: list[str] | None = None) -> int:
@@ -321,27 +314,23 @@ Examples:
 
   # Find large duplicate files only (>10MB)
   python -m file_organizer.cli.dedupe ~/Videos --min-size 10485760
-        """
+        """,
     )
 
-    parser.add_argument(
-        "directory",
-        type=str,
-        help="Directory to scan for duplicate files"
-    )
+    parser.add_argument("directory", type=str, help="Directory to scan for duplicate files")
 
     parser.add_argument(
         "--algorithm",
         type=str,
         choices=["md5", "sha256"],
         default="sha256",
-        help="Hash algorithm to use (default: sha256)"
+        help="Hash algorithm to use (default: sha256)",
     )
 
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show what would be removed without actually deleting files"
+        help="Show what would be removed without actually deleting files",
     )
 
     parser.add_argument(
@@ -349,60 +338,52 @@ Examples:
         type=str,
         choices=["manual", "oldest", "newest", "largest", "smallest"],
         default="manual",
-        help="Strategy for selecting which duplicates to keep (default: manual)"
+        help="Strategy for selecting which duplicates to keep (default: manual)",
     )
 
     parser.add_argument(
         "--batch",
         action="store_true",
-        help="Batch mode: automatically apply strategy without confirmation for each group"
+        help="Batch mode: automatically apply strategy without confirmation for each group",
     )
 
     parser.add_argument(
         "--no-safe-mode",
         action="store_true",
-        help="Disable automatic backups before deletion (not recommended)"
+        help="Disable automatic backups before deletion (not recommended)",
     )
 
-    parser.add_argument(
-        "--no-recursive",
-        action="store_true",
-        help="Don't scan subdirectories"
-    )
+    parser.add_argument("--no-recursive", action="store_true", help="Don't scan subdirectories")
 
     parser.add_argument(
         "--min-size",
         type=int,
         default=0,
-        help="Minimum file size to consider in bytes (default: 0)"
+        help="Minimum file size to consider in bytes (default: 0)",
     )
 
     parser.add_argument(
         "--max-size",
         type=int,
         default=None,
-        help="Maximum file size to consider in bytes (default: unlimited)"
+        help="Maximum file size to consider in bytes (default: unlimited)",
     )
 
     parser.add_argument(
         "--include",
         type=str,
         action="append",
-        help="File patterns to include (e.g., '*.jpg'). Can be specified multiple times."
+        help="File patterns to include (e.g., '*.jpg'). Can be specified multiple times.",
     )
 
     parser.add_argument(
         "--exclude",
         type=str,
         action="append",
-        help="File patterns to exclude (e.g., '*.tmp'). Can be specified multiple times."
+        help="File patterns to exclude (e.g., '*.tmp'). Can be specified multiple times.",
     )
 
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose logging"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     parsed_args = parser.parse_args(args)
 
@@ -481,6 +462,7 @@ Examples:
         # Setup progress tracking
         try:
             from tqdm import tqdm
+
             has_tqdm = True
         except ImportError:
             has_tqdm = False
@@ -488,6 +470,7 @@ Examples:
 
         # Progress callback
         progress_bar = None
+
         def progress_callback(current: int, total: int):
             nonlocal progress_bar
             if has_tqdm:
@@ -522,7 +505,9 @@ Examples:
         total_groups = len(duplicate_groups)
         total_duplicates = sum(group.count for group in duplicate_groups.values())
 
-        console.print(f"\n[green]✓ Found {total_groups} duplicate group(s) with {total_duplicates} files total[/green]\n")
+        console.print(
+            f"\n[green]✓ Found {total_groups} duplicate group(s) with {total_duplicates} files total[/green]\n"
+        )
 
         # Process each duplicate group
         total_removed = 0
@@ -532,9 +517,9 @@ Examples:
             # Convert to dictionary format for display
             files = [
                 {
-                    'path': file_meta.path,
-                    'size': file_meta.size,
-                    'mtime': file_meta.modified_time.timestamp(),
+                    "path": file_meta.path,
+                    "size": file_meta.size,
+                    "mtime": file_meta.modified_time.timestamp(),
                 }
                 for file_meta in group.files
             ]
@@ -551,7 +536,7 @@ Examples:
             if remove_indices:
                 # Process each file to remove
                 for idx in remove_indices:
-                    file_to_remove = files[idx]['path']
+                    file_to_remove = files[idx]["path"]
 
                     try:
                         # Create backup if safe mode is enabled
@@ -565,7 +550,7 @@ Examples:
                             logger.info(f"Removed: {file_to_remove}")
 
                         # Update counters
-                        space_saved += files[idx]['size']
+                        space_saved += files[idx]["size"]
                         total_removed += 1
 
                     except Exception as e:
@@ -575,7 +560,9 @@ Examples:
                 if not config.dry_run:
                     console.print(f"\n[green]✓ Removed {len(remove_indices)} file(s)[/green]")
                 else:
-                    console.print(f"\n[yellow]✓ Would remove {len(remove_indices)} file(s)[/yellow]")
+                    console.print(
+                        f"\n[yellow]✓ Would remove {len(remove_indices)} file(s)[/yellow]"
+                    )
             else:
                 console.print("\n[dim]Skipped this group[/dim]")
 
@@ -585,7 +572,7 @@ Examples:
             total_duplicates=total_duplicates,
             total_removed=total_removed,
             space_saved=space_saved,
-            dry_run=config.dry_run
+            dry_run=config.dry_run,
         )
 
         if config.safe_mode and not config.dry_run and total_removed > 0:

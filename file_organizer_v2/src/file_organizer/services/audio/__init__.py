@@ -10,6 +10,7 @@ This module provides audio file processing capabilities including:
 - Audio content analysis
 - Audio utility functions
 """
+
 from __future__ import annotations
 
 from .classifier import AudioClassifier, AudioType, ClassificationResult

@@ -1,4 +1,5 @@
 """Validation and normalization helpers for marketplace metadata."""
+
 from __future__ import annotations
 
 import re

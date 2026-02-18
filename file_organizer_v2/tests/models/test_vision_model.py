@@ -1,9 +1,11 @@
 """Tests for VisionModel class."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.models.vision_model import VisionModel
 
@@ -30,7 +32,7 @@ class TestVisionModel:
         """Test text generation from image."""
         with patch("file_organizer.models.vision_model.OLLAMA_AVAILABLE", True):
             model = VisionModel(vision_model_config)
-            
+
             mock_client = MagicMock()
             mock_client.generate.return_value = {
                 "response": "Description of the image",
@@ -43,10 +45,9 @@ class TestVisionModel:
                 with patch("pathlib.Path.exists", return_value=True):
                     model.initialize()
                     response = model.generate(
-                        prompt="Describe this image",
-                        image_path="/path/to/image.jpg"
+                        prompt="Describe this image", image_path="/path/to/image.jpg"
                     )
-                    
+
                     assert response == "Description of the image"
                     mock_client.generate.assert_called_once()
                     args, kwargs = mock_client.generate.call_args
@@ -59,17 +60,18 @@ class TestVisionModel:
         """Test image generation error handling."""
         with patch("file_organizer.models.vision_model.OLLAMA_AVAILABLE", True):
             model = VisionModel(vision_model_config)
-            
+
             mock_client = MagicMock()
             mock_client.generate.side_effect = Exception("Ollama error")
 
             with patch("ollama.Client", return_value=mock_client):
-                 with patch("pathlib.Path.exists", return_value=True):
+                with patch("pathlib.Path.exists", return_value=True):
                     model.initialize()
                     with pytest.raises(Exception) as excinfo:
                         model.generate(
-                            prompt="Describe this image",
-                            image_path="/path/to/image.jpg"
+                            prompt="Describe this image", image_path="/path/to/image.jpg"
                         )
-                    
-                    assert "Failed to analyze image" in str(excinfo.value) or "Ollama error" in str(excinfo.value)
+
+                    assert "Failed to analyze image" in str(excinfo.value) or "Ollama error" in str(
+                        excinfo.value
+                    )

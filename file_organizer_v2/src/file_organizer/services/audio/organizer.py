@@ -5,6 +5,7 @@ Generates organized folder structures for audio files based on their
 classification type and metadata. Supports customizable path templates,
 dry-run previews, and safe file operations.
 """
+
 from __future__ import annotations
 
 import logging
@@ -328,9 +329,7 @@ class AudioOrganizer:
             "Artist": _safe_value(metadata.artist, "Unknown Artist"),
             "Album": _safe_value(metadata.album, "Unknown Album"),
             "AlbumArtist": _safe_value(metadata.album_artist, "Unknown Artist"),
-            "Title": _safe_value(
-                metadata.title, metadata.file_path.stem
-            ),
+            "Title": _safe_value(metadata.title, metadata.file_path.stem),
             "TrackNum": _format_track_number(metadata.track_number),
             "DiscNum": _format_track_number(metadata.disc_number),
             "Year": str(file_year),
@@ -338,9 +337,7 @@ class AudioOrganizer:
             "Date": now.strftime("%Y-%m-%d"),
             "Filename": sanitize_path_component(metadata.file_path.stem),
             # Podcast / show fields (fall back to title / artist)
-            "Show": _safe_value(
-                metadata.album_artist or metadata.artist, "Unknown Show"
-            ),
+            "Show": _safe_value(metadata.album_artist or metadata.artist, "Unknown Show"),
             "Episode": _safe_value(metadata.title, "Untitled Episode"),
             # Audiobook fields
             "Author": _safe_value(metadata.artist, "Unknown Author"),
@@ -375,14 +372,19 @@ class AudioOrganizer:
             shutil.move(str(source), str(final_dest))
             logger.info(f"Moved: {source} -> {final_dest}")
             return FileMove(
-                source=source, destination=final_dest,
-                audio_type=audio_type, success=True,
+                source=source,
+                destination=final_dest,
+                audio_type=audio_type,
+                success=True,
             )
         except Exception as exc:
             logger.error(f"Failed to move {source}: {exc}")
             return FileMove(
-                source=source, destination=dest,
-                audio_type=audio_type, success=False, error=str(exc),
+                source=source,
+                destination=dest,
+                audio_type=audio_type,
+                success=False,
+                error=str(exc),
             )
 
 
@@ -402,6 +404,4 @@ def _resolve_conflict(dest: Path) -> Path:
             return candidate
         counter += 1
         if counter > 9999:
-            raise RuntimeError(
-                f"Too many conflicting files for {dest.name}"
-            )
+            raise RuntimeError(f"Too many conflicting files for {dest.name}")

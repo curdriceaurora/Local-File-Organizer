@@ -1,4 +1,5 @@
 """Tests for marketplace repository, installer, and review managers."""
+
 from __future__ import annotations
 
 import json

@@ -1,4 +1,3 @@
-
 import unittest
 from pathlib import Path
 
@@ -32,6 +31,7 @@ class TestPriorityQueueFix(unittest.TestCase):
         # 4. Dequeue again -> Should NOT get the old stale entry
         second = pq.dequeue()
         self.assertIsNone(second, "Should not dequeue the stale entry")
+
 
 if __name__ == "__main__":
     unittest.main()

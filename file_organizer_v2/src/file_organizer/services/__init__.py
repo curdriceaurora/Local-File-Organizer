@@ -1,4 +1,5 @@
 """Processing services for different file types."""
+
 from __future__ import annotations
 
 from file_organizer.services.misplacement_detector import (

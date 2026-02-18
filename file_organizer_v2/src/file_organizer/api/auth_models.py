@@ -1,4 +1,5 @@
 """SQLAlchemy models for API authentication."""
+
 from __future__ import annotations
 
 import uuid

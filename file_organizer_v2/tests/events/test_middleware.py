@@ -5,6 +5,7 @@ Tests pipeline execution order, individual middleware behaviour,
 error handling, and the built-in LoggingMiddleware, MetricsMiddleware,
 and RetryMiddleware.
 """
+
 from __future__ import annotations
 
 import logging

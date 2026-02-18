@@ -1,4 +1,5 @@
 """Tests for the main Typer CLI application."""
+
 from __future__ import annotations
 
 import pytest

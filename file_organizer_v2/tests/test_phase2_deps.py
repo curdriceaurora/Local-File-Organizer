@@ -10,21 +10,25 @@ import sys
 # Version helpers
 # ---------------------------------------------------------------------------
 
+
 def _pkg_version(package_name: str) -> str:
     """Get installed version of a package via importlib.metadata."""
     from importlib.metadata import version as pkg_version
+
     return pkg_version(package_name)
 
 
 def _version_gte(installed: str, minimum: str) -> bool:
     """Return True if *installed* >= *minimum* (PEP 440 comparison)."""
     from packaging.version import Version
+
     return Version(installed) >= Version(minimum)
 
 
 # ---------------------------------------------------------------------------
 # Import smoke tests
 # ---------------------------------------------------------------------------
+
 
 class TestPhase2Imports:
     """Verify Phase 2 dependencies are importable."""
@@ -45,6 +49,7 @@ class TestPhase2Imports:
 # ---------------------------------------------------------------------------
 # Version checks
 # ---------------------------------------------------------------------------
+
 
 class TestPhase2Versions:
     """Verify Phase 2 dependencies meet minimum version requirements."""
@@ -69,6 +74,7 @@ class TestPhase2Versions:
 # ---------------------------------------------------------------------------
 # Basic functionality smoke tests
 # ---------------------------------------------------------------------------
+
 
 class TestPhase2Functionality:
     """Light functionality checks for Phase 2 dependencies."""

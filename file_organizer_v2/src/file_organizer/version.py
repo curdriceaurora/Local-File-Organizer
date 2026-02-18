@@ -140,6 +140,4 @@ def bump_version(current: str, part: str) -> str:
     elif part == "patch":
         return str(VersionInfo(major=info.major, minor=info.minor, patch=info.patch + 1))
     else:
-        raise ValueError(
-            f"Invalid version part: {part!r}. Must be 'major', 'minor', or 'patch'."
-        )
+        raise ValueError(f"Invalid version part: {part!r}. Must be 'major', 'minor', or 'patch'.")

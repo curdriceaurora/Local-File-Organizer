@@ -1,34 +1,40 @@
 """File reading utilities for various file types."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 try:
     from PIL import Image  # noqa: F401
+
     PILLOW_AVAILABLE = True
 except ImportError:
     PILLOW_AVAILABLE = False
 
 try:
     import fitz  # PyMuPDF
+
     PYMUPDF_AVAILABLE = True
 except ImportError:
     PYMUPDF_AVAILABLE = False
 
 try:
     import docx
+
     DOCX_AVAILABLE = True
 except ImportError:
     DOCX_AVAILABLE = False
 
 try:
     import pandas as pd
+
     PANDAS_AVAILABLE = True
 except ImportError:
     PANDAS_AVAILABLE = False
 
 try:
     from pptx import Presentation
+
     PPTX_AVAILABLE = True
 except ImportError:
     PPTX_AVAILABLE = False
@@ -36,12 +42,14 @@ except ImportError:
 try:
     import ebooklib
     from ebooklib import epub
+
     EBOOKLIB_AVAILABLE = True
 except ImportError:
     EBOOKLIB_AVAILABLE = False
 
 try:
     import ezdxf
+
     EZDXF_AVAILABLE = True
 except ImportError:
     EZDXF_AVAILABLE = False
@@ -52,12 +60,14 @@ import zipfile
 
 try:
     import py7zr
+
     PY7ZR_AVAILABLE = True
 except ImportError:
     PY7ZR_AVAILABLE = False
 
 try:
     import rarfile
+
     RARFILE_AVAILABLE = True
 except ImportError:
     RARFILE_AVAILABLE = False
@@ -65,18 +75,21 @@ except ImportError:
 # Scientific format support
 try:
     import h5py
+
     H5PY_AVAILABLE = True
 except ImportError:
     H5PY_AVAILABLE = False
 
 try:
     import netCDF4
+
     NETCDF4_AVAILABLE = True
 except ImportError:
     NETCDF4_AVAILABLE = False
 
 try:
     from scipy.io import loadmat
+
     SCIPY_AVAILABLE = True
 except ImportError:
     SCIPY_AVAILABLE = False
@@ -86,6 +99,7 @@ from loguru import logger
 
 class FileReadError(Exception):
     """Exception raised when file reading fails."""
+
     pass
 
 
@@ -104,7 +118,7 @@ def read_text_file(file_path: str | Path, max_chars: int = 5000) -> str:
     """
     file_path = Path(file_path)
     try:
-        with open(file_path, encoding='utf-8', errors='ignore') as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             text = f.read(max_chars)
         logger.debug(f"Read {len(text)} characters from {file_path.name}")
         return text
@@ -132,7 +146,7 @@ def read_docx_file(file_path: str | Path) -> str:
     try:
         doc = docx.Document(file_path)
         paragraphs = [para.text for para in doc.paragraphs if para.text.strip()]
-        text = '\n'.join(paragraphs)
+        text = "\n".join(paragraphs)
         logger.debug(f"Extracted {len(text)} characters from {file_path.name}")
         return text
     except Exception as e:
@@ -166,12 +180,10 @@ def read_pdf_file(file_path: str | Path, max_pages: int = 5) -> str:
             page = doc.load_page(page_num)
             pages_text.append(page.get_text())
 
-        text = '\n'.join(pages_text)
+        text = "\n".join(pages_text)
         doc.close()
 
-        logger.debug(
-            f"Extracted {len(text)} characters from {num_pages} pages of {file_path.name}"
-        )
+        logger.debug(f"Extracted {len(text)} characters from {num_pages} pages of {file_path.name}")
         return text
     except Exception as e:
         raise FileReadError(f"Failed to read PDF file {file_path}: {e}") from e
@@ -197,9 +209,9 @@ def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
     file_path = Path(file_path)
     try:
         # Determine file type and read
-        if file_path.suffix.lower() == '.csv':
+        if file_path.suffix.lower() == ".csv":
             df = pd.read_csv(file_path, nrows=max_rows)
-        elif file_path.suffix.lower() in ('.xlsx', '.xls'):
+        elif file_path.suffix.lower() in (".xlsx", ".xls"):
             df = pd.read_excel(file_path, nrows=max_rows)
         else:
             raise ValueError(f"Unsupported spreadsheet format: {file_path.suffix}")
@@ -207,9 +219,7 @@ def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
         # Convert to string, limiting size
         text = df.to_string(max_rows=max_rows)
 
-        logger.debug(
-            f"Extracted {len(text)} characters from {len(df)} rows of {file_path.name}"
-        )
+        logger.debug(f"Extracted {len(text)} characters from {len(df)} rows of {file_path.name}")
         return text
     except Exception as e:
         raise FileReadError(f"Failed to read spreadsheet file {file_path}: {e}") from e
@@ -245,7 +255,7 @@ def read_presentation_file(file_path: str | Path) -> str:
             if slide_content:
                 slides_text.append(f"Slide {slide_num}: " + " | ".join(slide_content))
 
-        text = '\n'.join(slides_text)
+        text = "\n".join(slides_text)
         logger.debug(
             f"Extracted {len(text)} characters from {len(slides_text)} slides of {file_path.name}"
         )
@@ -274,7 +284,7 @@ def read_ebook_file(file_path: str | Path, max_chars: int = 10000) -> str:
     file_path = Path(file_path)
 
     # Only support EPUB for now
-    if file_path.suffix.lower() != '.epub':
+    if file_path.suffix.lower() != ".epub":
         raise ValueError(f"Unsupported ebook format: {file_path.suffix}. Only .epub supported.")
 
     try:
@@ -285,11 +295,12 @@ def read_ebook_file(file_path: str | Path, max_chars: int = 10000) -> str:
 
         for item in book.get_items():
             if item.get_type() == ebooklib.ITEM_DOCUMENT:
-                content = item.get_content().decode('utf-8', errors='ignore')
+                content = item.get_content().decode("utf-8", errors="ignore")
                 # Basic HTML stripping (simple approach)
                 import re
-                content = re.sub(r'<[^>]+>', ' ', content)
-                content = re.sub(r'\s+', ' ', content).strip()
+
+                content = re.sub(r"<[^>]+>", " ", content)
+                content = re.sub(r"\s+", " ", content).strip()
 
                 if content:
                     text_parts.append(content)
@@ -298,7 +309,7 @@ def read_ebook_file(file_path: str | Path, max_chars: int = 10000) -> str:
                     if total_chars >= max_chars:
                         break
 
-        text = ' '.join(text_parts)[:max_chars]
+        text = " ".join(text_parts)[:max_chars]
 
         logger.debug(f"Extracted {len(text)} characters from ebook {file_path.name}")
         return text
@@ -321,14 +332,16 @@ def read_zip_file(file_path: str | Path, max_files: int = 50) -> str:
     """
     file_path = Path(file_path)
     try:
-        with zipfile.ZipFile(file_path, 'r') as zf:
+        with zipfile.ZipFile(file_path, "r") as zf:
             info_list = zf.infolist()[:max_files]
 
             # Calculate statistics
             total_files = len(zf.infolist())
             total_compressed = sum(info.compress_size for info in zf.infolist())
             total_uncompressed = sum(info.file_size for info in zf.infolist())
-            compression_ratio = (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
+            compression_ratio = (
+                (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
+            )
 
             # Check for encryption
             encrypted = any(info.flag_bits & 0x1 for info in zf.infolist())
@@ -341,22 +354,22 @@ def read_zip_file(file_path: str | Path, max_files: int = 50) -> str:
                 f"Uncompressed size: {total_uncompressed / 1024:.2f} KB",
                 f"Compression ratio: {compression_ratio:.1f}%",
                 f"Encrypted: {'Yes' if encrypted else 'No'}",
-                f"\nFiles (first {min(max_files, total_files)}):" ,
+                f"\nFiles (first {min(max_files, total_files)}):",
             ]
 
             # List files
             for info in info_list:
                 size_kb = info.file_size / 1024
                 compressed_kb = info.compress_size / 1024
-                lines.append(
-                    f"  - {info.filename} ({size_kb:.2f} KB → {compressed_kb:.2f} KB)"
-                )
+                lines.append(f"  - {info.filename} ({size_kb:.2f} KB → {compressed_kb:.2f} KB)")
 
             if total_files > max_files:
                 lines.append(f"  ... and {total_files - max_files} more files")
 
-            text = '\n'.join(lines)
-            logger.debug(f"Extracted metadata from ZIP archive {file_path.name} ({total_files} files)")
+            text = "\n".join(lines)
+            logger.debug(
+                f"Extracted metadata from ZIP archive {file_path.name} ({total_files} files)"
+            )
             return text
 
     except Exception as e:
@@ -382,17 +395,21 @@ def read_7z_file(file_path: str | Path, max_files: int = 50) -> str:
 
     file_path = Path(file_path)
     try:
-        with py7zr.SevenZipFile(file_path, 'r') as archive:
+        with py7zr.SevenZipFile(file_path, "r") as archive:
             all_files = archive.list()
 
             # Calculate statistics
             total_files = len(all_files)
             total_compressed = sum(f.compressed for f in all_files)
             total_uncompressed = sum(f.uncompressed for f in all_files)
-            compression_ratio = (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
+            compression_ratio = (
+                (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
+            )
 
             # Check for encryption
-            encrypted = archive.password_protected if hasattr(archive, 'password_protected') else False
+            encrypted = (
+                archive.password_protected if hasattr(archive, "password_protected") else False
+            )
 
             # Build metadata string
             lines = [
@@ -402,7 +419,7 @@ def read_7z_file(file_path: str | Path, max_files: int = 50) -> str:
                 f"Uncompressed size: {total_uncompressed / 1024:.2f} KB",
                 f"Compression ratio: {compression_ratio:.1f}%",
                 f"Encrypted: {'Yes' if encrypted else 'No'}",
-                f"\nFiles (first {min(max_files, total_files)}):" ,
+                f"\nFiles (first {min(max_files, total_files)}):",
             ]
 
             # List files
@@ -416,8 +433,10 @@ def read_7z_file(file_path: str | Path, max_files: int = 50) -> str:
             if total_files > max_files:
                 lines.append(f"  ... and {total_files - max_files} more files")
 
-            text = '\n'.join(lines)
-            logger.debug(f"Extracted metadata from 7Z archive {file_path.name} ({total_files} files)")
+            text = "\n".join(lines)
+            logger.debug(
+                f"Extracted metadata from 7Z archive {file_path.name} ({total_files} files)"
+            )
             return text
 
     except Exception as e:
@@ -439,7 +458,7 @@ def read_tar_file(file_path: str | Path, max_files: int = 50) -> str:
     """
     file_path = Path(file_path)
     try:
-        with tarfile.open(file_path, 'r:*') as tf:
+        with tarfile.open(file_path, "r:*") as tf:
             members = tf.getmembers()
 
             # Calculate statistics
@@ -449,11 +468,11 @@ def read_tar_file(file_path: str | Path, max_files: int = 50) -> str:
 
             # Determine compression type
             compression_type = "None"
-            if file_path.suffix in ('.gz', '.tgz'):
+            if file_path.suffix in (".gz", ".tgz"):
                 compression_type = "GZ"
-            elif file_path.suffix in ('.bz2', '.tbz2'):
+            elif file_path.suffix in (".bz2", ".tbz2"):
                 compression_type = "BZ2"
-            elif file_path.suffix == '.xz':
+            elif file_path.suffix == ".xz":
                 compression_type = "XZ"
 
             # Build metadata string
@@ -475,8 +494,10 @@ def read_tar_file(file_path: str | Path, max_files: int = 50) -> str:
             if total_files > max_files:
                 lines.append(f"  ... and {total_files - max_files} more files")
 
-            text = '\n'.join(lines)
-            logger.debug(f"Extracted metadata from TAR archive {file_path.name} ({total_files} files)")
+            text = "\n".join(lines)
+            logger.debug(
+                f"Extracted metadata from TAR archive {file_path.name} ({total_files} files)"
+            )
             return text
 
     except Exception as e:
@@ -505,14 +526,16 @@ def read_rar_file(file_path: str | Path, max_files: int = 50) -> str:
 
     file_path = Path(file_path)
     try:
-        with rarfile.RarFile(file_path, 'r') as rf:
+        with rarfile.RarFile(file_path, "r") as rf:
             info_list = rf.infolist()
 
             # Calculate statistics
             total_files = len(info_list)
             total_compressed = sum(info.compress_size for info in info_list)
             total_uncompressed = sum(info.file_size for info in info_list)
-            compression_ratio = (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
+            compression_ratio = (
+                (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
+            )
 
             # Check for encryption
             encrypted = rf.needs_password()
@@ -525,22 +548,22 @@ def read_rar_file(file_path: str | Path, max_files: int = 50) -> str:
                 f"Uncompressed size: {total_uncompressed / 1024:.2f} KB",
                 f"Compression ratio: {compression_ratio:.1f}%",
                 f"Encrypted: {'Yes' if encrypted else 'No'}",
-                f"\nFiles (first {min(max_files, total_files)}):" ,
+                f"\nFiles (first {min(max_files, total_files)}):",
             ]
 
             # List files
             for info in info_list[:max_files]:
                 size_kb = info.file_size / 1024
                 compressed_kb = info.compress_size / 1024
-                lines.append(
-                    f"  - {info.filename} ({size_kb:.2f} KB → {compressed_kb:.2f} KB)"
-                )
+                lines.append(f"  - {info.filename} ({size_kb:.2f} KB → {compressed_kb:.2f} KB)")
 
             if total_files > max_files:
                 lines.append(f"  ... and {total_files - max_files} more files")
 
-            text = '\n'.join(lines)
-            logger.debug(f"Extracted metadata from RAR archive {file_path.name} ({total_files} files)")
+            text = "\n".join(lines)
+            logger.debug(
+                f"Extracted metadata from RAR archive {file_path.name} ({total_files} files)"
+            )
             return text
 
     except Exception as e:
@@ -566,7 +589,7 @@ def read_hdf5_file(file_path: str | Path, max_datasets: int = 20) -> str:
 
     file_path = Path(file_path)
     try:
-        with h5py.File(file_path, 'r') as hf:
+        with h5py.File(file_path, "r") as hf:
             lines = [
                 f"HDF5 File: {file_path.name}",
                 f"Total groups: {len(list(hf.keys()))}",
@@ -581,11 +604,9 @@ def read_hdf5_file(file_path: str | Path, max_datasets: int = 20) -> str:
                     return
 
                 if isinstance(obj, h5py.Dataset):
-                    shape_str = 'x'.join(map(str, obj.shape))
+                    shape_str = "x".join(map(str, obj.shape))
                     size_kb = obj.nbytes / 1024
-                    lines.append(
-                        f"  Dataset: {name} [{obj.dtype}] {shape_str} ({size_kb:.2f} KB)"
-                    )
+                    lines.append(f"  Dataset: {name} [{obj.dtype}] {shape_str} ({size_kb:.2f} KB)")
 
                     # List attributes
                     if obj.attrs:
@@ -601,7 +622,7 @@ def read_hdf5_file(file_path: str | Path, max_datasets: int = 20) -> str:
             if dataset_count >= max_datasets:
                 lines.append(f"  ... (showing first {max_datasets} datasets)")
 
-            text = '\n'.join(lines)
+            text = "\n".join(lines)
             logger.debug(f"Extracted metadata from HDF5 file {file_path.name}")
             return text
 
@@ -627,7 +648,7 @@ def read_netcdf_file(file_path: str | Path) -> str:
 
     file_path = Path(file_path)
     try:
-        with netCDF4.Dataset(file_path, 'r') as nc:
+        with netCDF4.Dataset(file_path, "r") as nc:
             lines = [
                 f"NetCDF File: {file_path.name}",
                 f"Format: {nc.data_model}",
@@ -643,13 +664,13 @@ def read_netcdf_file(file_path: str | Path) -> str:
 
             # List variables (first 20)
             for _idx, (var_name, var) in enumerate(list(nc.variables.items())[:20]):
-                shape_str = 'x'.join(str(var.shape[i]) for i in range(len(var.shape)))
+                shape_str = "x".join(str(var.shape[i]) for i in range(len(var.shape)))
                 lines.append(f"  - {var_name} ({var.dtype}): {shape_str}")
 
                 # Show some attributes
-                if hasattr(var, 'units'):
+                if hasattr(var, "units"):
                     lines.append(f"      units: {var.units}")
-                if hasattr(var, 'long_name'):
+                if hasattr(var, "long_name"):
                     lines.append(f"      long_name: {var.long_name}")
 
             if len(nc.variables) > 20:
@@ -662,7 +683,7 @@ def read_netcdf_file(file_path: str | Path) -> str:
                     attr_value = nc.getncattr(attr_name)
                     lines.append(f"  - {attr_name}: {attr_value}")
 
-            text = '\n'.join(lines)
+            text = "\n".join(lines)
             logger.debug(f"Extracted metadata from NetCDF file {file_path.name}")
             return text
 
@@ -697,15 +718,15 @@ def read_mat_file(file_path: str | Path) -> str:
         ]
 
         # Filter out metadata variables
-        var_names = [k for k in mat_contents.keys() if not k.startswith('__')]
+        var_names = [k for k in mat_contents.keys() if not k.startswith("__")]
 
         for var_name in var_names[:30]:  # Limit to first 30 variables
             var = mat_contents[var_name]
 
             # Get type and shape info
             var_type = type(var).__name__
-            if hasattr(var, 'shape'):
-                shape_str = 'x'.join(map(str, var.shape))
+            if hasattr(var, "shape"):
+                shape_str = "x".join(map(str, var.shape))
                 lines.append(f"  - {var_name} ({var_type}): {shape_str}")
             else:
                 lines.append(f"  - {var_name} ({var_type})")
@@ -713,7 +734,7 @@ def read_mat_file(file_path: str | Path) -> str:
         if len(var_names) > 30:
             lines.append(f"  ... and {len(var_names) - 30} more variables")
 
-        text = '\n'.join(lines)
+        text = "\n".join(lines)
         logger.debug(f"Extracted metadata from MAT file {file_path.name}")
         return text
 
@@ -743,30 +764,34 @@ def read_file(file_path: str | Path, **kwargs) -> str | None:
     ext = file_path.suffix.lower()
 
     # Handle compound extensions for archives
-    if name_lower.endswith('.tar.gz') or name_lower.endswith('.tar.bz2') or name_lower.endswith('.tar.xz'):
-        compound_ext = '.' + '.'.join(file_path.name.split('.')[-2:]).lower()
+    if (
+        name_lower.endswith(".tar.gz")
+        or name_lower.endswith(".tar.bz2")
+        or name_lower.endswith(".tar.xz")
+    ):
+        compound_ext = "." + ".".join(file_path.name.split(".")[-2:]).lower()
     else:
         compound_ext = ext
 
     readers = {
         # Document formats
-        ('.txt', '.md'): read_text_file,
-        ('.docx',): read_docx_file,  # Note: .doc (old binary format) is NOT supported
-        ('.pdf',): read_pdf_file,
-        ('.csv', '.xlsx', '.xls'): read_spreadsheet_file,
-        ('.ppt', '.pptx'): read_presentation_file,
-        ('.epub',): read_ebook_file,
+        (".txt", ".md"): read_text_file,
+        (".docx",): read_docx_file,  # Note: .doc (old binary format) is NOT supported
+        (".pdf",): read_pdf_file,
+        (".csv", ".xlsx", ".xls"): read_spreadsheet_file,
+        (".ppt", ".pptx"): read_presentation_file,
+        (".epub",): read_ebook_file,
         # Archive formats
-        ('.zip',): read_zip_file,
-        ('.7z',): read_7z_file,
-        ('.tar', '.tar.gz', '.tgz', '.tar.bz2', '.tbz2', '.tar.xz'): read_tar_file,
-        ('.rar',): read_rar_file,
+        (".zip",): read_zip_file,
+        (".7z",): read_7z_file,
+        (".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz"): read_tar_file,
+        (".rar",): read_rar_file,
         # Scientific formats
-        ('.hdf5', '.h5', '.hdf'): read_hdf5_file,
-        ('.nc', '.nc4', '.netcdf'): read_netcdf_file,
-        ('.mat',): read_mat_file,
+        (".hdf5", ".h5", ".hdf"): read_hdf5_file,
+        (".nc", ".nc4", ".netcdf"): read_netcdf_file,
+        (".mat",): read_mat_file,
         # CAD formats
-        ('.dxf', '.dwg', '.step', '.stp', '.iges', '.igs'): read_cad_file,
+        (".dxf", ".dwg", ".step", ".stp", ".iges", ".igs"): read_cad_file,
     }
 
     # Try compound extension first, then fall back to simple extension
@@ -808,21 +833,21 @@ def read_dxf_file(file_path: str | Path, max_layers: int = 20) -> str:
         metadata_parts = []
 
         # Header variables
-        if hasattr(doc, 'header'):
+        if hasattr(doc, "header"):
             metadata_parts.append("=== DXF Document Metadata ===")
 
             # Try to get common header variables safely
             try:
-                title = doc.header.get('$TITLE', 'Untitled')
+                title = doc.header.get("$TITLE", "Untitled")
                 if title:
                     metadata_parts.append(f"Title: {title}")
             except Exception:
                 pass
 
             try:
-                author = doc.header.get('$AUTHOR', '')
+                author = doc.header.get("$AUTHOR", "")
                 if not author:
-                    author = doc.header.get('$LASTSAVEDBY', 'Unknown')
+                    author = doc.header.get("$LASTSAVEDBY", "Unknown")
                 metadata_parts.append(f"Author: {author}")
             except Exception:
                 pass
@@ -841,7 +866,7 @@ def read_dxf_file(file_path: str | Path, max_layers: int = 20) -> str:
                     break
 
                 layer_info = f"Layer: {layer.dxf.name}"
-                if hasattr(layer.dxf, 'color'):
+                if hasattr(layer.dxf, "color"):
                     layer_info += f" (Color: {layer.dxf.color})"
                 metadata_parts.append(layer_info)
 
@@ -863,12 +888,12 @@ def read_dxf_file(file_path: str | Path, max_layers: int = 20) -> str:
 
         # Blocks
         if doc.blocks:
-            block_count = len([b for b in doc.blocks if not b.name.startswith('*')])
+            block_count = len([b for b in doc.blocks if not b.name.startswith("*")])
             if block_count > 0:
                 metadata_parts.append("\n=== Blocks ===")
                 metadata_parts.append(f"Block definitions: {block_count}")
 
-        text = '\n'.join(metadata_parts)
+        text = "\n".join(metadata_parts)
         logger.debug(f"Extracted {len(text)} characters from DXF file {file_path.name}")
         return text
 
@@ -915,10 +940,10 @@ def read_dwg_file(file_path: str | Path) -> str:
             f"Size: {file_path.stat().st_size / 1024:.2f} KB",
             "",
             "Note: Full DWG parsing requires additional tools.",
-            "Consider using ODA File Converter to convert DWG to DXF for better support."
+            "Consider using ODA File Converter to convert DWG to DXF for better support.",
         ]
 
-        return '\n'.join(metadata_parts)
+        return "\n".join(metadata_parts)
 
 
 def read_step_file(file_path: str | Path, max_lines: int = 100) -> str:
@@ -939,7 +964,7 @@ def read_step_file(file_path: str | Path, max_lines: int = 100) -> str:
     """
     file_path = Path(file_path)
     try:
-        with open(file_path, encoding='utf-8', errors='ignore') as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             content = f.read(10000)  # Read first 10KB
 
         metadata_parts = ["=== STEP File Information ==="]
@@ -947,44 +972,44 @@ def read_step_file(file_path: str | Path, max_lines: int = 100) -> str:
         metadata_parts.append(f"Size: {file_path.stat().st_size / 1024:.2f} KB")
 
         # Extract header section (between HEADER; and ENDSEC;)
-        if 'HEADER;' in content and 'ENDSEC;' in content:
-            header_start = content.find('HEADER;')
-            header_end = content.find('ENDSEC;', header_start)
+        if "HEADER;" in content and "ENDSEC;" in content:
+            header_start = content.find("HEADER;")
+            header_end = content.find("ENDSEC;", header_start)
             header = content[header_start:header_end]
 
             metadata_parts.append("\n=== Header Information ===")
 
             # Extract file description
-            if 'FILE_DESCRIPTION' in header:
-                desc_start = header.find('FILE_DESCRIPTION')
-                desc_end = header.find(');', desc_start)
+            if "FILE_DESCRIPTION" in header:
+                desc_start = header.find("FILE_DESCRIPTION")
+                desc_end = header.find(");", desc_start)
                 if desc_end > desc_start:
-                    desc = header[desc_start:desc_end + 2]
+                    desc = header[desc_start : desc_end + 2]
                     metadata_parts.append(desc.strip())
 
             # Extract file name
-            if 'FILE_NAME' in header:
-                name_start = header.find('FILE_NAME')
-                name_end = header.find(');', name_start)
+            if "FILE_NAME" in header:
+                name_start = header.find("FILE_NAME")
+                name_end = header.find(");", name_start)
                 if name_end > name_start:
-                    name_info = header[name_start:name_end + 2]
+                    name_info = header[name_start : name_end + 2]
                     metadata_parts.append(name_info.strip())
 
             # Extract schema
-            if 'FILE_SCHEMA' in header:
-                schema_start = header.find('FILE_SCHEMA')
-                schema_end = header.find(');', schema_start)
+            if "FILE_SCHEMA" in header:
+                schema_start = header.find("FILE_SCHEMA")
+                schema_end = header.find(");", schema_start)
                 if schema_end > schema_start:
-                    schema = header[schema_start:schema_end + 2]
+                    schema = header[schema_start : schema_end + 2]
                     metadata_parts.append(schema.strip())
 
         # Count entities in DATA section
-        if 'DATA;' in content:
+        if "DATA;" in content:
             # Count lines starting with # (entities)
-            entity_count = content.count('\n#')
+            entity_count = content.count("\n#")
             metadata_parts.append(f"\nApproximate entity count: {entity_count}")
 
-        text = '\n'.join(metadata_parts)
+        text = "\n".join(metadata_parts)
         logger.debug(f"Extracted {len(text)} characters from STEP file {file_path.name}")
         return text
 
@@ -1010,7 +1035,7 @@ def read_iges_file(file_path: str | Path, max_lines: int = 50) -> str:
     """
     file_path = Path(file_path)
     try:
-        with open(file_path, encoding='utf-8', errors='ignore') as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             lines = [f.readline() for _ in range(max_lines)]
 
         metadata_parts = ["=== IGES File Information ==="]
@@ -1028,9 +1053,9 @@ def read_iges_file(file_path: str | Path, max_lines: int = 50) -> str:
                 section_type = line[72]
                 content = line[:72].strip()
 
-                if section_type == 'S' and content:
+                if section_type == "S" and content:
                     start_section.append(content)
-                elif section_type == 'G' and content:
+                elif section_type == "G" and content:
                     global_section.append(content)
 
         # Display start section (usually contains file description)
@@ -1042,8 +1067,8 @@ def read_iges_file(file_path: str | Path, max_lines: int = 50) -> str:
         if global_section:
             metadata_parts.append("\n=== Global Parameters ===")
             # Join and split by commas to get parameters
-            global_params = ''.join(global_section)
-            params = global_params.split(',')[:5]  # First 5 parameters
+            global_params = "".join(global_section)
+            params = global_params.split(",")[:5]  # First 5 parameters
 
             # Parameter meanings (typical order)
             param_names = [
@@ -1051,7 +1076,7 @@ def read_iges_file(file_path: str | Path, max_lines: int = 50) -> str:
                 "Record delimiter",
                 "Product ID from sender",
                 "File name",
-                "Native system ID"
+                "Native system ID",
             ]
 
             for _i, (name, value) in enumerate(zip(param_names, params)):
@@ -1059,11 +1084,11 @@ def read_iges_file(file_path: str | Path, max_lines: int = 50) -> str:
                     metadata_parts.append(f"{name}: {value.strip()}")
 
         # Count entities
-        entity_count = sum(1 for line in lines if len(line) >= 73 and line[72] == 'D')
+        entity_count = sum(1 for line in lines if len(line) >= 73 and line[72] == "D")
         if entity_count > 0:
             metadata_parts.append(f"\nDirectory entries found: {entity_count}")
 
-        text = '\n'.join(metadata_parts)
+        text = "\n".join(metadata_parts)
         logger.debug(f"Extracted {len(text)} characters from IGES file {file_path.name}")
         return text
 
@@ -1090,12 +1115,12 @@ def read_cad_file(file_path: str | Path, **kwargs) -> str:
     ext = file_path.suffix.lower()
 
     cad_readers = {
-        '.dxf': read_dxf_file,
-        '.dwg': read_dwg_file,
-        '.step': read_step_file,
-        '.stp': read_step_file,
-        '.iges': read_iges_file,
-        '.igs': read_iges_file,
+        ".dxf": read_dxf_file,
+        ".dwg": read_dwg_file,
+        ".step": read_step_file,
+        ".stp": read_step_file,
+        ".iges": read_iges_file,
+        ".igs": read_iges_file,
     }
 
     reader = cad_readers.get(ext)

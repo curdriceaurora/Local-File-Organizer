@@ -1,4 +1,5 @@
 """Search endpoints."""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -47,10 +48,25 @@ def search(
 
     # Mock file database
     mock_files = [
-        {"filename": "test_document.txt", "path": "/files/test_document.txt", "type": "text", "size": 1024},
-        {"filename": "presentation.pptx", "path": "/files/presentation.pptx", "type": "document", "size": 2048},
+        {
+            "filename": "test_document.txt",
+            "path": "/files/test_document.txt",
+            "type": "text",
+            "size": 1024,
+        },
+        {
+            "filename": "presentation.pptx",
+            "path": "/files/presentation.pptx",
+            "type": "document",
+            "size": 2048,
+        },
         {"filename": "image.png", "path": "/files/image.png", "type": "image", "size": 51200},
-        {"filename": "test_report.pdf", "path": "/files/test_report.pdf", "type": "document", "size": 4096},
+        {
+            "filename": "test_report.pdf",
+            "path": "/files/test_report.pdf",
+            "type": "document",
+            "size": 4096,
+        },
     ]
 
     # Filter by query (case insensitive)

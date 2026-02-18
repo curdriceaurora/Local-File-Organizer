@@ -1,4 +1,5 @@
 """Tests for API CLI wrapper commands."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

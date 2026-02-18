@@ -1,9 +1,11 @@
 """Tests for TextModel class."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.models.text_model import TextModel
 
@@ -31,7 +33,7 @@ class TestTextModel:
         """Test text generation."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
-            
+
             mock_client = MagicMock()
             mock_client.generate.return_value = {
                 "response": "Organized content",
@@ -42,7 +44,7 @@ class TestTextModel:
             with patch("ollama.Client", return_value=mock_client):
                 model.initialize()
                 response = model.generate("Process this file")
-                
+
                 assert response == "Organized content"
                 mock_client.generate.assert_called_once()
                 args, kwargs = mock_client.generate.call_args
@@ -53,7 +55,7 @@ class TestTextModel:
         """Test text generation error handling."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
-            
+
             mock_client = MagicMock()
             mock_client.generate.side_effect = Exception("Ollama error")
 
@@ -61,5 +63,7 @@ class TestTextModel:
                 model.initialize()
                 with pytest.raises(Exception) as excinfo:
                     model.generate("Process this file")
-                
-                assert "Failed to generate text" in str(excinfo.value) or "Ollama error" in str(excinfo.value)
+
+                assert "Failed to generate text" in str(excinfo.value) or "Ollama error" in str(
+                    excinfo.value
+                )

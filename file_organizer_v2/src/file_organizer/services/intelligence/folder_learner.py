@@ -4,6 +4,7 @@ Folder preference learning module.
 Learns user folder preferences based on file type, naming patterns, and user corrections.
 Maps file types to preferred folders and detects organization workflows.
 """
+
 from __future__ import annotations
 
 import json
@@ -54,10 +55,7 @@ class FolderPreferenceLearner:
         self._load_preferences()
 
     def track_folder_choice(
-        self,
-        file_type: str,
-        folder: Path,
-        context: dict | None = None
+        self, file_type: str, folder: Path, context: dict | None = None
     ) -> None:
         """
         Track a user's folder choice for a file type.
@@ -73,22 +71,22 @@ class FolderPreferenceLearner:
         self.type_folder_map[file_type.lower()][folder_str] += 1
 
         # Track pattern-based mapping if context provided
-        if context and 'pattern' in context:
-            pattern = context['pattern']
+        if context and "pattern" in context:
+            pattern = context["pattern"]
             self.pattern_folder_map[pattern][folder_str] += 1
 
         # Update folder metadata
         if folder_str not in self.folder_metadata:
             self.folder_metadata[folder_str] = {
-                'created': datetime.utcnow().isoformat(),
-                'file_types': set(),
-                'last_used': None,
-                'usage_count': 0
+                "created": datetime.utcnow().isoformat(),
+                "file_types": set(),
+                "last_used": None,
+                "usage_count": 0,
             }
 
-        self.folder_metadata[folder_str]['file_types'].add(file_type.lower())
-        self.folder_metadata[folder_str]['last_used'] = datetime.utcnow().isoformat()
-        self.folder_metadata[folder_str]['usage_count'] += 1
+        self.folder_metadata[folder_str]["file_types"].add(file_type.lower())
+        self.folder_metadata[folder_str]["last_used"] = datetime.utcnow().isoformat()
+        self.folder_metadata[folder_str]["usage_count"] += 1
 
         self.total_choices += 1
 
@@ -98,9 +96,7 @@ class FolderPreferenceLearner:
         logger.info(f"Tracked folder choice: {file_type} -> {folder_str}")
 
     def get_preferred_folder(
-        self,
-        file_type: str,
-        confidence_threshold: float = 0.6
+        self, file_type: str, confidence_threshold: float = 0.6
     ) -> Path | None:
         """
         Get the preferred folder for a file type.
@@ -128,10 +124,14 @@ class FolderPreferenceLearner:
         confidence = best_folder[1] / total_for_type
 
         if confidence >= confidence_threshold:
-            logger.info(f"Preferred folder for {file_type}: {best_folder[0]} (confidence: {confidence:.2f})")
+            logger.info(
+                f"Preferred folder for {file_type}: {best_folder[0]} (confidence: {confidence:.2f})"
+            )
             return Path(best_folder[0])
 
-        logger.debug(f"No confident preference for {file_type} (confidence: {confidence:.2f} < {confidence_threshold})")
+        logger.debug(
+            f"No confident preference for {file_type} (confidence: {confidence:.2f} < {confidence_threshold})"
+        )
         return None
 
     def get_folder_confidence(self, file_type: str, folder: Path) -> float:
@@ -167,23 +167,19 @@ class FolderPreferenceLearner:
             Dictionary with pattern analysis
         """
         analysis = {
-            'total_choices': self.total_choices,
-            'file_types_tracked': len(self.type_folder_map),
-            'folders_used': len(self.folder_metadata),
-            'top_folders': [],
-            'type_preferences': {}
+            "total_choices": self.total_choices,
+            "file_types_tracked": len(self.type_folder_map),
+            "folders_used": len(self.folder_metadata),
+            "top_folders": [],
+            "type_preferences": {},
         }
 
         # Find most used folders
         folder_usage = [
-            (folder, meta['usage_count'])
-            for folder, meta in self.folder_metadata.items()
+            (folder, meta["usage_count"]) for folder, meta in self.folder_metadata.items()
         ]
         folder_usage.sort(key=lambda x: x[1], reverse=True)
-        analysis['top_folders'] = [
-            {'folder': f, 'count': c}
-            for f, c in folder_usage[:10]
-        ]
+        analysis["top_folders"] = [{"folder": f, "count": c} for f, c in folder_usage[:10]]
 
         # Find strong type preferences (>70% confidence)
         for file_type, folders in self.type_folder_map.items():
@@ -192,19 +188,15 @@ class FolderPreferenceLearner:
             confidence = best[1] / total if total > 0 else 0
 
             if confidence > 0.7:
-                analysis['type_preferences'][file_type] = {
-                    'folder': best[0],
-                    'confidence': confidence,
-                    'count': best[1]
+                analysis["type_preferences"][file_type] = {
+                    "folder": best[0],
+                    "confidence": confidence,
+                    "count": best[1],
                 }
 
         return analysis
 
-    def suggest_folder_structure(
-        self,
-        file_info: dict,
-        min_confidence: float = 0.5
-    ) -> Path | None:
+    def suggest_folder_structure(self, file_info: dict, min_confidence: float = 0.5) -> Path | None:
         """
         Suggest a folder based on file information and learned patterns.
 
@@ -215,7 +207,7 @@ class FolderPreferenceLearner:
         Returns:
             Suggested folder path or None
         """
-        file_type = file_info.get('type', '').lower()
+        file_type = file_info.get("type", "").lower()
 
         # First, try type-based preference
         preferred = self.get_preferred_folder(file_type, min_confidence)
@@ -223,8 +215,8 @@ class FolderPreferenceLearner:
             return preferred
 
         # Try pattern-based if filename provided
-        if 'name' in file_info:
-            filename = file_info['name']
+        if "name" in file_info:
+            filename = file_info["name"]
             for pattern, folders in self.pattern_folder_map.items():
                 if pattern in filename.lower():
                     total = sum(folders.values())
@@ -249,19 +241,15 @@ class FolderPreferenceLearner:
         folder_str = str(folder.resolve())
 
         if folder_str not in self.folder_metadata:
-            return {
-                'exists': False,
-                'usage_count': 0,
-                'file_types': []
-            }
+            return {"exists": False, "usage_count": 0, "file_types": []}
 
         meta = self.folder_metadata[folder_str]
         return {
-            'exists': True,
-            'usage_count': meta['usage_count'],
-            'file_types': list(meta['file_types']),
-            'created': meta['created'],
-            'last_used': meta['last_used']
+            "exists": True,
+            "usage_count": meta["usage_count"],
+            "file_types": list(meta["file_types"]),
+            "created": meta["created"],
+            "last_used": meta["last_used"],
         }
 
     def clear_old_preferences(self, days: int = 90) -> int:
@@ -282,7 +270,7 @@ class FolderPreferenceLearner:
         # Clear folder metadata for old folders
         folders_to_remove = []
         for folder, meta in self.folder_metadata.items():
-            last_used = datetime.fromisoformat(meta['last_used'])
+            last_used = datetime.fromisoformat(meta["last_used"])
             if last_used < cutoff:
                 folders_to_remove.append(folder)
                 cleared += 1
@@ -303,20 +291,16 @@ class FolderPreferenceLearner:
     def _save_preferences(self) -> None:
         """Save preferences to disk."""
         data = {
-            'type_folder_map': {
-                k: dict(v) for k, v in self.type_folder_map.items()
-            },
-            'pattern_folder_map': {
-                k: dict(v) for k, v in self.pattern_folder_map.items()
-            },
-            'folder_metadata': {
-                k: {**v, 'file_types': list(v['file_types'])}
+            "type_folder_map": {k: dict(v) for k, v in self.type_folder_map.items()},
+            "pattern_folder_map": {k: dict(v) for k, v in self.pattern_folder_map.items()},
+            "folder_metadata": {
+                k: {**v, "file_types": list(v["file_types"])}
                 for k, v in self.folder_metadata.items()
             },
-            'total_choices': self.total_choices
+            "total_choices": self.total_choices,
         }
 
-        with open(self.storage_path, 'w') as f:
+        with open(self.storage_path, "w") as f:
             json.dump(data, f, indent=2)
 
     def _load_preferences(self) -> None:
@@ -329,21 +313,18 @@ class FolderPreferenceLearner:
                 data = json.load(f)
 
             # Load type_folder_map
-            for file_type, folders in data.get('type_folder_map', {}).items():
+            for file_type, folders in data.get("type_folder_map", {}).items():
                 self.type_folder_map[file_type] = defaultdict(int, folders)
 
             # Load pattern_folder_map
-            for pattern, folders in data.get('pattern_folder_map', {}).items():
+            for pattern, folders in data.get("pattern_folder_map", {}).items():
                 self.pattern_folder_map[pattern] = defaultdict(int, folders)
 
             # Load folder_metadata
-            for folder, meta in data.get('folder_metadata', {}).items():
-                self.folder_metadata[folder] = {
-                    **meta,
-                    'file_types': set(meta['file_types'])
-                }
+            for folder, meta in data.get("folder_metadata", {}).items():
+                self.folder_metadata[folder] = {**meta, "file_types": set(meta["file_types"])}
 
-            self.total_choices = data.get('total_choices', 0)
+            self.total_choices = data.get("total_choices", 0)
 
             logger.info(f"Loaded {len(self.type_folder_map)} folder preferences")
         except Exception as e:

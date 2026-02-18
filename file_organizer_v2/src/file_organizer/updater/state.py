@@ -1,4 +1,5 @@
 """Update state persistence for throttling background checks."""
+
 from __future__ import annotations
 
 import json
@@ -41,7 +42,9 @@ class UpdateStateStore:
 
     def __init__(self, state_path: str | Path | None = None) -> None:
         """Create a state store for a given path (defaults to config dir)."""
-        self._state_path = Path(state_path) if state_path else DEFAULT_CONFIG_DIR / "update_state.json"
+        self._state_path = (
+            Path(state_path) if state_path else DEFAULT_CONFIG_DIR / "update_state.json"
+        )
 
     @property
     def state_path(self) -> Path:

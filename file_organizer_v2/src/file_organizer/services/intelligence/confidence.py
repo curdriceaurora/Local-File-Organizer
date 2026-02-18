@@ -12,6 +12,7 @@ Features:
 - Pattern boosting for recent successes
 - Confidence trend analysis
 """
+
 from __future__ import annotations
 
 import math
@@ -23,6 +24,7 @@ from typing import Any
 @dataclass
 class UsageRecord:
     """Record of a single pattern usage."""
+
     timestamp: datetime
     success: bool
     context: dict[str, Any] = field(default_factory=dict)
@@ -31,6 +33,7 @@ class UsageRecord:
 @dataclass
 class PatternUsageData:
     """Usage data for a pattern."""
+
     pattern_id: str
     usage_records: list[UsageRecord] = field(default_factory=list)
     first_seen: datetime | None = None
@@ -80,7 +83,7 @@ class ConfidenceEngine:
     def __init__(
         self,
         decay_half_life_days: int = DECAY_HALF_LIFE_DAYS,
-        old_pattern_threshold_days: int = OLD_PATTERN_THRESHOLD_DAYS
+        old_pattern_threshold_days: int = OLD_PATTERN_THRESHOLD_DAYS,
     ):
         """
         Initialize the confidence engine.
@@ -97,7 +100,7 @@ class ConfidenceEngine:
         self,
         pattern_id: str,
         usage_data: PatternUsageData | None = None,
-        current_time: datetime | None = None
+        current_time: datetime | None = None,
     ) -> float:
         """
         Calculate confidence score for a pattern.
@@ -129,9 +132,9 @@ class ConfidenceEngine:
 
         # Weighted combination
         confidence = (
-            frequency_score * self.FREQUENCY_WEIGHT +
-            recency_score * self.RECENCY_WEIGHT +
-            consistency_score * self.CONSISTENCY_WEIGHT
+            frequency_score * self.FREQUENCY_WEIGHT
+            + recency_score * self.RECENCY_WEIGHT
+            + consistency_score * self.CONSISTENCY_WEIGHT
         )
 
         # Clamp to valid range
@@ -165,9 +168,7 @@ class ConfidenceEngine:
         return min(1.0, score)
 
     def _calculate_recency_score(
-        self,
-        usage_data: PatternUsageData,
-        current_time: datetime
+        self, usage_data: PatternUsageData, current_time: datetime
     ) -> float:
         """
         Calculate recency score with exponential time decay.
@@ -246,7 +247,7 @@ class ConfidenceEngine:
         self,
         patterns: list[dict],
         time_threshold: int | None = None,
-        current_time: datetime | None = None
+        current_time: datetime | None = None,
     ) -> list[dict]:
         """
         Apply time decay to old patterns.
@@ -274,7 +275,7 @@ class ConfidenceEngine:
             pattern_copy = pattern.copy()
 
             # Get last used timestamp
-            last_used = pattern.get('last_used')
+            last_used = pattern.get("last_used")
             if last_used is None:
                 # No last_used timestamp, skip decay
                 decayed_patterns.append(pattern_copy)
@@ -282,7 +283,7 @@ class ConfidenceEngine:
 
             # Ensure last_used is a datetime
             if isinstance(last_used, str):
-                last_used = datetime.fromisoformat(last_used.replace('Z', '+00:00'))
+                last_used = datetime.fromisoformat(last_used.replace("Z", "+00:00"))
 
             # Calculate age in days
             age_delta = current_time - last_used
@@ -295,13 +296,12 @@ class ConfidenceEngine:
                 decay_factor = math.exp(-decay_constant * days_over_threshold)
 
                 # Apply decay to confidence
-                original_confidence = pattern_copy.get('confidence', 0.5)
-                pattern_copy['confidence'] = max(
-                    self.MIN_CONFIDENCE,
-                    original_confidence * decay_factor
+                original_confidence = pattern_copy.get("confidence", 0.5)
+                pattern_copy["confidence"] = max(
+                    self.MIN_CONFIDENCE, original_confidence * decay_factor
                 )
-                pattern_copy['decayed'] = True
-                pattern_copy['decay_factor'] = decay_factor
+                pattern_copy["decayed"] = True
+                pattern_copy["decay_factor"] = decay_factor
 
             decayed_patterns.append(pattern_copy)
 
@@ -312,7 +312,7 @@ class ConfidenceEngine:
         patterns: list[dict],
         boost_threshold_days: int = 7,
         boost_factor: float = 1.15,
-        current_time: datetime | None = None
+        current_time: datetime | None = None,
     ) -> list[dict]:
         """
         Boost confidence for recently used patterns.
@@ -338,7 +338,7 @@ class ConfidenceEngine:
             pattern_copy = pattern.copy()
 
             # Get last used timestamp
-            last_used = pattern.get('last_used')
+            last_used = pattern.get("last_used")
             if last_used is None:
                 # No last_used timestamp, skip boost
                 boosted_patterns.append(pattern_copy)
@@ -346,7 +346,7 @@ class ConfidenceEngine:
 
             # Ensure last_used is a datetime
             if isinstance(last_used, str):
-                last_used = datetime.fromisoformat(last_used.replace('Z', '+00:00'))
+                last_used = datetime.fromisoformat(last_used.replace("Z", "+00:00"))
 
             # Calculate age in days
             age_delta = current_time - last_used
@@ -354,24 +354,17 @@ class ConfidenceEngine:
 
             # Apply boost if within threshold
             if age_days <= boost_threshold_days:
-                original_confidence = pattern_copy.get('confidence', 0.5)
-                boosted_confidence = min(
-                    self.MAX_CONFIDENCE,
-                    original_confidence * boost_factor
-                )
-                pattern_copy['confidence'] = boosted_confidence
-                pattern_copy['boosted'] = True
-                pattern_copy['boost_factor'] = boost_factor
+                original_confidence = pattern_copy.get("confidence", 0.5)
+                boosted_confidence = min(self.MAX_CONFIDENCE, original_confidence * boost_factor)
+                pattern_copy["confidence"] = boosted_confidence
+                pattern_copy["boosted"] = True
+                pattern_copy["boost_factor"] = boost_factor
 
             boosted_patterns.append(pattern_copy)
 
         return boosted_patterns
 
-    def validate_confidence_threshold(
-        self,
-        confidence: float,
-        threshold: float
-    ) -> bool:
+    def validate_confidence_threshold(self, confidence: float, threshold: float) -> bool:
         """
         Validate if confidence meets the threshold.
 
@@ -404,10 +397,7 @@ class ConfidenceEngine:
             return "very_low"
 
     def get_confidence_trend(
-        self,
-        pattern_id: str,
-        lookback_days: int = 30,
-        current_time: datetime | None = None
+        self, pattern_id: str, lookback_days: int = 30, current_time: datetime | None = None
     ) -> dict[str, Any]:
         """
         Analyze confidence trend for a pattern over time.
@@ -429,22 +419,19 @@ class ConfidenceEngine:
                 "trend": "unknown",
                 "direction": "stable",
                 "confidence_change": 0.0,
-                "sample_size": 0
+                "sample_size": 0,
             }
 
         # Get usage records within lookback period
         lookback_start = current_time - timedelta(days=lookback_days)
-        recent_records = [
-            r for r in usage_data.usage_records
-            if r.timestamp >= lookback_start
-        ]
+        recent_records = [r for r in usage_data.usage_records if r.timestamp >= lookback_start]
 
         if len(recent_records) < 2:
             return {
                 "trend": "insufficient_data",
                 "direction": "stable",
                 "confidence_change": 0.0,
-                "sample_size": len(recent_records)
+                "sample_size": len(recent_records),
             }
 
         # Calculate success rate for first and second half
@@ -474,15 +461,11 @@ class ConfidenceEngine:
             "confidence_change": round(confidence_change, 3),
             "sample_size": len(recent_records),
             "recent_success_rate": round(second_success_rate, 3),
-            "previous_success_rate": round(first_success_rate, 3)
+            "previous_success_rate": round(first_success_rate, 3),
         }
 
     def track_usage(
-        self,
-        pattern_id: str,
-        timestamp: datetime,
-        success: bool,
-        context: dict | None = None
+        self, pattern_id: str, timestamp: datetime, success: bool, context: dict | None = None
     ) -> None:
         """
         Track a pattern usage for confidence calculations.

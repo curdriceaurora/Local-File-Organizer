@@ -5,6 +5,7 @@ Tests topic-based routing, wildcard matching, event filtering,
 publish/subscribe lifecycle, middleware integration, and edge cases.
 All Redis operations are mocked.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -93,8 +94,10 @@ class TestPubSubSubscribe:
 
     def test_subscribe_with_filter(self, pubsub: PubSubManager) -> None:
         """subscribe() stores the filter function."""
+
         def fn(d):
             return d.get("size", 0) > 100
+
         sub = pubsub.subscribe("file.created", MagicMock(), filter_fn=fn)
         assert sub.filter_fn is fn
 
@@ -151,18 +154,14 @@ class TestPubSubPublish:
         pubsub.publish("file.created", {"path": "/tmp/f.txt"})
         handler.assert_called_once()
 
-    def test_publish_dispatches_to_wildcard_handler(
-        self, pubsub: PubSubManager
-    ) -> None:
+    def test_publish_dispatches_to_wildcard_handler(self, pubsub: PubSubManager) -> None:
         """Wildcard subscribers receive matching events."""
         handler = MagicMock()
         pubsub.subscribe("file.*", handler)
         pubsub.publish("file.created", {"path": "/tmp/f.txt"})
         handler.assert_called_once()
 
-    def test_publish_does_not_dispatch_to_non_matching(
-        self, pubsub: PubSubManager
-    ) -> None:
+    def test_publish_does_not_dispatch_to_non_matching(self, pubsub: PubSubManager) -> None:
         """Non-matching handlers are not invoked."""
         handler = MagicMock()
         pubsub.subscribe("scan.*", handler)
@@ -191,9 +190,7 @@ class TestPubSubPublish:
         pubsub.publish("file.created", {"size": 50})
         handler.assert_not_called()
 
-    def test_publish_multiple_handlers_all_called(
-        self, pubsub: PubSubManager
-    ) -> None:
+    def test_publish_multiple_handlers_all_called(self, pubsub: PubSubManager) -> None:
         """All matching handlers are called for a single publish."""
         h1, h2 = MagicMock(), MagicMock()
         pubsub.subscribe("file.created", h1)
@@ -202,9 +199,7 @@ class TestPubSubPublish:
         h1.assert_called_once()
         h2.assert_called_once()
 
-    def test_publish_handler_error_does_not_stop_others(
-        self, pubsub: PubSubManager
-    ) -> None:
+    def test_publish_handler_error_does_not_stop_others(self, pubsub: PubSubManager) -> None:
         """A handler error does not prevent other handlers from running."""
         h1 = MagicMock(side_effect=RuntimeError("boom"))
         h2 = MagicMock()
@@ -230,9 +225,7 @@ class TestPubSubPublish:
         pubsub.publish("file.a.b.c", {"key": "val"})
         handler.assert_called_once()
 
-    def test_publish_no_subscribers(
-        self, pubsub: PubSubManager, mock_manager: MagicMock
-    ) -> None:
+    def test_publish_no_subscribers(self, pubsub: PubSubManager, mock_manager: MagicMock) -> None:
         """Publishing with no subscribers still writes to Redis."""
         msg_id = pubsub.publish("orphan.topic", {"key": "val"})
         assert msg_id == "1234567890-0"
@@ -255,10 +248,9 @@ class TestPubSubPublish:
 class TestPubSubMiddleware:
     """Tests for middleware integration in PubSubManager."""
 
-    def test_middleware_before_publish_cancel(
-        self, mock_manager: MagicMock
-    ) -> None:
+    def test_middleware_before_publish_cancel(self, mock_manager: MagicMock) -> None:
         """Middleware can cancel publish by returning None."""
+
         class CancelMiddleware:
             def before_publish(self, topic: str, data: dict) -> None:
                 return None
@@ -270,15 +262,14 @@ class TestPubSubMiddleware:
         assert result is None
         mock_manager.publish.assert_not_called()
 
-    def test_middleware_after_publish_called(
-        self, mock_manager: MagicMock
-    ) -> None:
+    def test_middleware_after_publish_called(self, mock_manager: MagicMock) -> None:
         """after_publish middleware is called after Redis write."""
         tracker = MagicMock()
 
         class TrackMiddleware:
             def before_publish(self, topic: str, data: dict) -> dict:
                 return data
+
             def after_publish(self, topic: str, data: dict, msg_id: str | None) -> None:
                 tracker(msg_id)
 
@@ -288,9 +279,7 @@ class TestPubSubMiddleware:
         ps.publish("t", {"k": "v"})
         tracker.assert_called_once_with("1234567890-0")
 
-    def test_metrics_middleware_integration(
-        self, mock_manager: MagicMock
-    ) -> None:
+    def test_metrics_middleware_integration(self, mock_manager: MagicMock) -> None:
         """MetricsMiddleware counts publishes through the pipeline."""
         metrics = MetricsMiddleware()
         pipeline = MiddlewarePipeline()
@@ -300,9 +289,7 @@ class TestPubSubMiddleware:
         ps.publish("t2", {"b": 2})
         assert metrics.publish_count == 2
 
-    def test_logging_middleware_integration(
-        self, mock_manager: MagicMock
-    ) -> None:
+    def test_logging_middleware_integration(self, mock_manager: MagicMock) -> None:
         """LoggingMiddleware does not interfere with publish."""
         pipeline = MiddlewarePipeline()
         pipeline.add(LoggingMiddleware())
@@ -370,5 +357,6 @@ class TestHelpers:
         assert "timestamp" in result
         # payload is JSON-encoded
         import json
+
         decoded = json.loads(result["payload"])
         assert decoded == {"key": "val"}

@@ -5,6 +5,7 @@ Tests event handler registration, dispatching, start/stop lifecycle,
 and acknowledgment behavior. All tests mock the underlying
 RedisStreamManager.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -125,9 +126,7 @@ class TestEventConsumerHandlerRegistration:
 class TestEventConsumerDispatch:
     """Tests for event dispatching to handlers."""
 
-    def test_dispatch_calls_handler(
-        self, consumer: EventConsumer, mock_manager: MagicMock
-    ):
+    def test_dispatch_calls_handler(self, consumer: EventConsumer, mock_manager: MagicMock):
         """Test that dispatching an event calls the registered handler."""
         handler = MagicMock()
         consumer.register_handler(EventType.FILE_CREATED, handler)
@@ -141,9 +140,7 @@ class TestEventConsumerDispatch:
         consumer._dispatch_event(event, "file-events", "file-organizer")
 
         handler.assert_called_once_with(event)
-        mock_manager.acknowledge.assert_called_once_with(
-            "file-events", "file-organizer", "1-0"
-        )
+        mock_manager.acknowledge.assert_called_once_with("file-events", "file-organizer", "1-0")
         assert consumer.events_processed == 1
 
     def test_dispatch_calls_multiple_handlers(
@@ -178,9 +175,7 @@ class TestEventConsumerDispatch:
 
         consumer._dispatch_event(event, "file-events", "file-organizer")
 
-        mock_manager.acknowledge.assert_called_once_with(
-            "file-events", "file-organizer", "1-0"
-        )
+        mock_manager.acknowledge.assert_called_once_with("file-events", "file-organizer", "1-0")
         assert consumer.events_processed == 0
 
     def test_dispatch_handler_failure_skips_ack(
@@ -249,9 +244,7 @@ class TestEventConsumerStartStop:
         mock_mgr.create_consumer_group.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_start_consuming_processes_events(
-        self, mock_manager: MagicMock
-    ):
+    async def test_start_consuming_processes_events(self, mock_manager: MagicMock):
         """Test that start_consuming processes events and can be stopped."""
         event = Event(
             id="1-0",

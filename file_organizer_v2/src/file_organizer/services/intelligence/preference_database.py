@@ -4,6 +4,7 @@ SQLite database manager for preference tracking.
 This module provides database connection management, schema creation,
 and migration support for the intelligent preference tracking system.
 """
+
 from __future__ import annotations
 
 import json
@@ -127,7 +128,7 @@ class PreferenceDatabaseManager:
                     Defaults to ~/.file_organizer/preferences.db
         """
         if db_path is None:
-            db_path = Path.home() / '.file_organizer' / 'preferences.db'
+            db_path = Path.home() / ".file_organizer" / "preferences.db"
 
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -169,8 +170,7 @@ class PreferenceDatabaseManager:
                 if result is None:
                     # First time setup
                     conn.execute(
-                        "INSERT INTO schema_version (version) VALUES (?)",
-                        (self.SCHEMA_VERSION,)
+                        "INSERT INTO schema_version (version) VALUES (?)", (self.SCHEMA_VERSION,)
                     )
                     logger.info(f"Database schema version {self.SCHEMA_VERSION} created")
                 else:
@@ -218,7 +218,7 @@ class PreferenceDatabaseManager:
             self._connection = sqlite3.connect(
                 str(self.db_path),
                 check_same_thread=False,
-                isolation_level=None  # Autocommit mode
+                isolation_level=None,  # Autocommit mode
             )
             self._connection.row_factory = sqlite3.Row
             logger.debug(f"Database connection established: {self.db_path}")
@@ -271,7 +271,7 @@ class PreferenceDatabaseManager:
         confidence: float = 0.5,
         frequency: int = 1,
         source: str = "user_correction",
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
     ) -> int:
         """
         Add or update a preference.
@@ -289,7 +289,7 @@ class PreferenceDatabaseManager:
             Preference ID
         """
         conn = self.get_connection()
-        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         context_json = json.dumps(context) if context else None
 
         with self._lock:
@@ -310,7 +310,17 @@ class PreferenceDatabaseManager:
                         last_used_at = excluded.updated_at
                     RETURNING id
                     """,
-                    (preference_type, key, value, confidence, frequency, now, now, source, context_json)
+                    (
+                        preference_type,
+                        key,
+                        value,
+                        confidence,
+                        frequency,
+                        now,
+                        now,
+                        source,
+                        context_json,
+                    ),
                 )
                 row = cursor.fetchone()
                 pref_id = row[0] if row else None
@@ -340,14 +350,14 @@ class PreferenceDatabaseManager:
                 SELECT * FROM preferences
                 WHERE preference_type = ? AND key = ?
                 """,
-                (preference_type, key)
+                (preference_type, key),
             )
             row = cursor.fetchone()
 
             if row:
                 result = dict(row)
-                if result['context']:
-                    result['context'] = json.loads(result['context'])
+                if result["context"]:
+                    result["context"] = json.loads(result["context"])
                 return result
             return None
 
@@ -370,24 +380,20 @@ class PreferenceDatabaseManager:
                 WHERE preference_type = ?
                 ORDER BY confidence DESC, frequency DESC
                 """,
-                (preference_type,)
+                (preference_type,),
             )
             rows = cursor.fetchall()
 
             results = []
             for row in rows:
                 result = dict(row)
-                if result['context']:
-                    result['context'] = json.loads(result['context'])
+                if result["context"]:
+                    result["context"] = json.loads(result["context"])
                 results.append(result)
 
             return results
 
-    def update_preference_confidence(
-        self,
-        preference_id: int,
-        confidence: float
-    ) -> None:
+    def update_preference_confidence(self, preference_id: int, confidence: float) -> None:
         """
         Update preference confidence score.
 
@@ -396,7 +402,7 @@ class PreferenceDatabaseManager:
             confidence: New confidence score (0.0-1.0)
         """
         conn = self.get_connection()
-        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
         with self._lock:
             conn.execute(
@@ -405,7 +411,7 @@ class PreferenceDatabaseManager:
                 SET confidence = ?, updated_at = ?
                 WHERE id = ?
                 """,
-                (confidence, now, preference_id)
+                (confidence, now, preference_id),
             )
 
     def increment_preference_usage(self, preference_id: int) -> None:
@@ -416,7 +422,7 @@ class PreferenceDatabaseManager:
             preference_id: Preference ID
         """
         conn = self.get_connection()
-        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
         with self._lock:
             conn.execute(
@@ -427,7 +433,7 @@ class PreferenceDatabaseManager:
                     updated_at = ?
                 WHERE id = ?
                 """,
-                (now, now, preference_id)
+                (now, now, preference_id),
             )
 
     def delete_preference(self, preference_id: int) -> None:
@@ -440,10 +446,7 @@ class PreferenceDatabaseManager:
         conn = self.get_connection()
 
         with self._lock:
-            conn.execute(
-                "DELETE FROM preferences WHERE id = ?",
-                (preference_id,)
-            )
+            conn.execute("DELETE FROM preferences WHERE id = ?", (preference_id,))
 
     # Correction Tracking
 
@@ -456,7 +459,7 @@ class PreferenceDatabaseManager:
         category_new: str | None = None,
         confidence_before: float | None = None,
         confidence_after: float | None = None,
-        metadata: dict[str, Any] | None = None
+        metadata: dict[str, Any] | None = None,
     ) -> int:
         """
         Add a user correction to the database.
@@ -475,7 +478,7 @@ class PreferenceDatabaseManager:
             Correction ID
         """
         conn = self.get_connection()
-        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         metadata_json = json.dumps(metadata) if metadata else None
 
         with self._lock:
@@ -487,16 +490,22 @@ class PreferenceDatabaseManager:
                     confidence_before, confidence_after, metadata
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (correction_type, source_path, destination_path,
-                 category_old, category_new, now,
-                 confidence_before, confidence_after, metadata_json)
+                (
+                    correction_type,
+                    source_path,
+                    destination_path,
+                    category_old,
+                    category_new,
+                    now,
+                    confidence_before,
+                    confidence_after,
+                    metadata_json,
+                ),
             )
             return cursor.lastrowid
 
     def get_corrections(
-        self,
-        correction_type: str | None = None,
-        limit: int = 100
+        self, correction_type: str | None = None, limit: int = 100
     ) -> list[dict[str, Any]]:
         """
         Get corrections from the database.
@@ -519,7 +528,7 @@ class PreferenceDatabaseManager:
                     ORDER BY timestamp DESC
                     LIMIT ?
                     """,
-                    (correction_type, limit)
+                    (correction_type, limit),
                 )
             else:
                 cursor = conn.execute(
@@ -528,15 +537,15 @@ class PreferenceDatabaseManager:
                     ORDER BY timestamp DESC
                     LIMIT ?
                     """,
-                    (limit,)
+                    (limit,),
                 )
 
             rows = cursor.fetchall()
             results = []
             for row in rows:
                 result = dict(row)
-                if result['metadata']:
-                    result['metadata'] = json.loads(result['metadata'])
+                if result["metadata"]:
+                    result["metadata"] = json.loads(result["metadata"])
                 results.append(result)
 
             return results
@@ -571,18 +580,18 @@ class PreferenceDatabaseManager:
                 "total_preferences": 0,
                 "average_confidence": 0.0,
                 "total_usage_count": 0,
-                "by_type": {}
+                "by_type": {},
             }
 
             for row in rows:
                 row_dict = dict(row)
-                pref_type = row_dict['preference_type']
+                pref_type = row_dict["preference_type"]
                 stats["by_type"][pref_type] = {
-                    "count": row_dict['type_count'],
-                    "avg_confidence": row_dict['avg_confidence']
+                    "count": row_dict["type_count"],
+                    "avg_confidence": row_dict["avg_confidence"],
                 }
-                stats["total_preferences"] += row_dict['type_count']
-                stats["total_usage_count"] += row_dict['total_usage'] or 0
+                stats["total_preferences"] += row_dict["type_count"]
+                stats["total_usage_count"] += row_dict["total_usage"] or 0
 
             if stats["total_preferences"] > 0:
                 cursor = conn.execute("SELECT AVG(confidence) FROM preferences")

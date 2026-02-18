@@ -4,6 +4,7 @@ Event queue for batching file system events.
 Provides a thread-safe queue that collects FileEvent instances and
 supports batch dequeuing for efficient processing.
 """
+
 from __future__ import annotations
 
 import threading

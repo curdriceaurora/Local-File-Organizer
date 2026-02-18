@@ -1,4 +1,5 @@
 """Plugin example that writes sidecar metadata for organized files."""
+
 from __future__ import annotations
 
 import json

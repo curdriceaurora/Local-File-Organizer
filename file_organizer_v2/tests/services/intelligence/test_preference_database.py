@@ -1,6 +1,7 @@
 """
 Tests for preference database manager.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -44,19 +45,17 @@ class TestDatabaseInitialization:
         conn = db_manager.get_connection()
 
         # Check for required tables
-        cursor = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        )
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = {row[0] for row in cursor.fetchall()}
 
         required_tables = {
-            'preferences',
-            'preference_history',
-            'corrections',
-            'folder_mappings',
-            'naming_patterns',
-            'category_overrides',
-            'schema_version'
+            "preferences",
+            "preference_history",
+            "corrections",
+            "folder_mappings",
+            "naming_patterns",
+            "category_overrides",
+            "schema_version",
         }
 
         assert required_tables.issubset(tables)
@@ -65,15 +64,13 @@ class TestDatabaseInitialization:
         """Test that indexes are created."""
         conn = db_manager.get_connection()
 
-        cursor = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='index'"
-        )
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
         indexes = {row[0] for row in cursor.fetchall()}
 
         # Check for some key indexes
-        assert 'idx_preferences_type' in indexes
-        assert 'idx_preferences_key' in indexes
-        assert 'idx_corrections_type' in indexes
+        assert "idx_preferences_type" in indexes
+        assert "idx_preferences_key" in indexes
+        assert "idx_corrections_type" in indexes
 
     def test_initialize_sets_schema_version(self, db_manager):
         """Test that schema version is set."""
@@ -103,7 +100,7 @@ class TestPreferenceCRUD:
             value="/path/to/work",
             confidence=0.8,
             frequency=1,
-            source="user_correction"
+            source="user_correction",
         )
 
         assert pref_id is not None
@@ -117,7 +114,7 @@ class TestPreferenceCRUD:
             preference_type="naming_pattern",
             key="report_*.pdf",
             value="Report_{date}_{name}.pdf",
-            context=context
+            context=context,
         )
 
         # Verify ID was returned
@@ -127,48 +124,39 @@ class TestPreferenceCRUD:
         # Retrieve and verify context
         pref = db_manager.get_preference("naming_pattern", "report_*.pdf")
         assert pref is not None
-        assert pref['context'] == context
+        assert pref["context"] == context
 
     def test_add_duplicate_preference_updates(self, db_manager):
         """Test that adding duplicate preference updates existing one."""
         # Add initial preference
         db_manager.add_preference(
-            preference_type="folder_mapping",
-            key="test_key",
-            value="initial_value",
-            confidence=0.5
+            preference_type="folder_mapping", key="test_key", value="initial_value", confidence=0.5
         )
 
         # Add duplicate (should update)
         db_manager.add_preference(
-            preference_type="folder_mapping",
-            key="test_key",
-            value="updated_value",
-            confidence=0.8
+            preference_type="folder_mapping", key="test_key", value="updated_value", confidence=0.8
         )
 
         # Verify update
         pref = db_manager.get_preference("folder_mapping", "test_key")
-        assert pref['value'] == "updated_value"
-        assert pref['confidence'] == 0.8
-        assert pref['frequency'] == 2  # Should increment
+        assert pref["value"] == "updated_value"
+        assert pref["confidence"] == 0.8
+        assert pref["frequency"] == 2  # Should increment
 
     def test_get_preference(self, db_manager):
         """Test retrieving a preference."""
         db_manager.add_preference(
-            preference_type="category_override",
-            key="*.py",
-            value="Code/Python",
-            confidence=0.9
+            preference_type="category_override", key="*.py", value="Code/Python", confidence=0.9
         )
 
         pref = db_manager.get_preference("category_override", "*.py")
 
         assert pref is not None
-        assert pref['preference_type'] == "category_override"
-        assert pref['key'] == "*.py"
-        assert pref['value'] == "Code/Python"
-        assert pref['confidence'] == 0.9
+        assert pref["preference_type"] == "category_override"
+        assert pref["key"] == "*.py"
+        assert pref["value"] == "Code/Python"
+        assert pref["confidence"] == 0.9
 
     def test_get_nonexistent_preference(self, db_manager):
         """Test retrieving non-existent preference returns None."""
@@ -188,47 +176,35 @@ class TestPreferenceCRUD:
 
         assert len(prefs) == 3
         # Should be ordered by confidence DESC
-        assert prefs[0]['confidence'] == 0.9
-        assert prefs[1]['confidence'] == 0.8
-        assert prefs[2]['confidence'] == 0.7
+        assert prefs[0]["confidence"] == 0.9
+        assert prefs[1]["confidence"] == 0.8
+        assert prefs[2]["confidence"] == 0.7
 
     def test_update_preference_confidence(self, db_manager):
         """Test updating preference confidence."""
         pref_id = db_manager.add_preference(
-            "folder_mapping",
-            "test_key",
-            "test_value",
-            confidence=0.5
+            "folder_mapping", "test_key", "test_value", confidence=0.5
         )
 
         db_manager.update_preference_confidence(pref_id, 0.9)
 
         pref = db_manager.get_preference("folder_mapping", "test_key")
-        assert pref['confidence'] == 0.9
+        assert pref["confidence"] == 0.9
 
     def test_increment_preference_usage(self, db_manager):
         """Test incrementing preference usage frequency."""
-        pref_id = db_manager.add_preference(
-            "folder_mapping",
-            "test_key",
-            "test_value",
-            frequency=1
-        )
+        pref_id = db_manager.add_preference("folder_mapping", "test_key", "test_value", frequency=1)
 
         db_manager.increment_preference_usage(pref_id)
         db_manager.increment_preference_usage(pref_id)
 
         pref = db_manager.get_preference("folder_mapping", "test_key")
-        assert pref['frequency'] == 3
-        assert pref['last_used_at'] is not None
+        assert pref["frequency"] == 3
+        assert pref["last_used_at"] is not None
 
     def test_delete_preference(self, db_manager):
         """Test deleting a preference."""
-        pref_id = db_manager.add_preference(
-            "folder_mapping",
-            "test_key",
-            "test_value"
-        )
+        pref_id = db_manager.add_preference("folder_mapping", "test_key", "test_value")
 
         db_manager.delete_preference(pref_id)
 
@@ -246,7 +222,7 @@ class TestCorrectionTracking:
             source_path="/path/to/source.txt",
             destination_path="/path/to/dest.txt",
             confidence_before=0.5,
-            confidence_after=0.8
+            confidence_after=0.8,
         )
 
         assert corr_id is not None
@@ -254,17 +230,13 @@ class TestCorrectionTracking:
 
     def test_add_correction_with_metadata(self, db_manager):
         """Test adding correction with metadata."""
-        metadata = {
-            "file_size": 1024,
-            "file_type": "document",
-            "reason": "user_moved"
-        }
+        metadata = {"file_size": 1024, "file_type": "document", "reason": "user_moved"}
 
         corr_id = db_manager.add_correction(
             correction_type="file_rename",
             source_path="/old_name.txt",
             destination_path="/new_name.txt",
-            metadata=metadata
+            metadata=metadata,
         )
 
         # Verify ID was returned
@@ -273,7 +245,7 @@ class TestCorrectionTracking:
 
         corrections = db_manager.get_corrections(limit=1)
         assert len(corrections) == 1
-        assert corrections[0]['metadata'] == metadata
+        assert corrections[0]["metadata"] == metadata
 
     def test_add_category_correction(self, db_manager):
         """Test adding category change correction."""
@@ -283,17 +255,14 @@ class TestCorrectionTracking:
             category_old="Documents/General",
             category_new="Documents/Work",
             confidence_before=0.6,
-            confidence_after=0.9
+            confidence_after=0.9,
         )
 
-        corrections = db_manager.get_corrections(
-            correction_type="category_change",
-            limit=10
-        )
+        corrections = db_manager.get_corrections(correction_type="category_change", limit=10)
 
         assert len(corrections) == 1
-        assert corrections[0]['category_old'] == "Documents/General"
-        assert corrections[0]['category_new'] == "Documents/Work"
+        assert corrections[0]["category_old"] == "Documents/General"
+        assert corrections[0]["category_new"] == "Documents/Work"
 
     def test_get_corrections(self, db_manager):
         """Test retrieving corrections."""
@@ -307,10 +276,7 @@ class TestCorrectionTracking:
         assert len(all_corrections) == 3
 
         # Get specific type
-        move_corrections = db_manager.get_corrections(
-            correction_type="file_move",
-            limit=10
-        )
+        move_corrections = db_manager.get_corrections(correction_type="file_move", limit=10)
         assert len(move_corrections) == 2
 
     def test_get_corrections_limit(self, db_manager):
@@ -337,9 +303,9 @@ class TestCorrectionTracking:
         corrections = db_manager.get_corrections(limit=10)
 
         # Should be in DESC order (most recent first)
-        assert corrections[0]['source_path'] == "/src3.txt"
-        assert corrections[1]['source_path'] == "/src2.txt"
-        assert corrections[2]['source_path'] == "/src1.txt"
+        assert corrections[0]["source_path"] == "/src3.txt"
+        assert corrections[1]["source_path"] == "/src2.txt"
+        assert corrections[2]["source_path"] == "/src1.txt"
 
 
 class TestStatistics:
@@ -349,10 +315,10 @@ class TestStatistics:
         """Test stats for empty database."""
         stats = db_manager.get_preference_stats()
 
-        assert stats['total_preferences'] == 0
-        assert stats['average_confidence'] == 0.0
-        assert stats['total_usage_count'] == 0
-        assert len(stats['by_type']) == 0
+        assert stats["total_preferences"] == 0
+        assert stats["average_confidence"] == 0.0
+        assert stats["total_usage_count"] == 0
+        assert len(stats["by_type"]) == 0
 
     def test_get_preference_stats(self, db_manager):
         """Test preference statistics."""
@@ -363,12 +329,12 @@ class TestStatistics:
 
         stats = db_manager.get_preference_stats()
 
-        assert stats['total_preferences'] == 3
-        assert stats['total_usage_count'] == 10  # 5 + 3 + 2
-        assert 'folder_mapping' in stats['by_type']
-        assert 'naming_pattern' in stats['by_type']
-        assert stats['by_type']['folder_mapping']['count'] == 2
-        assert stats['by_type']['naming_pattern']['count'] == 1
+        assert stats["total_preferences"] == 3
+        assert stats["total_usage_count"] == 10  # 5 + 3 + 2
+        assert "folder_mapping" in stats["by_type"]
+        assert "naming_pattern" in stats["by_type"]
+        assert stats["by_type"]["folder_mapping"]["count"] == 2
+        assert stats["by_type"]["naming_pattern"]["count"] == 1
 
 
 class TestConcurrency:
@@ -381,10 +347,7 @@ class TestConcurrency:
         def add_prefs():
             for i in range(10):
                 db_manager.add_preference(
-                    "folder_mapping",
-                    f"key_{threading.get_ident()}_{i}",
-                    f"value_{i}",
-                    0.5
+                    "folder_mapping", f"key_{threading.get_ident()}_{i}", f"value_{i}", 0.5
                 )
 
         # Create multiple threads
@@ -418,4 +381,4 @@ class TestContextManager:
         with PreferenceDatabaseManager(db_path=temp_db) as manager:
             pref = manager.get_preference("folder_mapping", "key1")
             assert pref is not None
-            assert pref['value'] == "value1"
+            assert pref["value"] == "value1"

@@ -1,4 +1,5 @@
 """Tests for TUI analytics dashboard view."""
+
 from __future__ import annotations
 
 from unittest.mock import patch
@@ -70,11 +71,13 @@ class TestFileDistributionPanel:
 
     def test_with_data(self) -> None:
         panel = FileDistributionPanel()
-        panel.set_distribution({
-            ".pdf": 5_000_000,
-            ".jpg": 3_000_000,
-            ".txt": 500_000,
-        })
+        panel.set_distribution(
+            {
+                ".pdf": 5_000_000,
+                ".jpg": 3_000_000,
+                ".txt": 500_000,
+            }
+        )
         content = _get_content(panel)
         assert ".pdf" in content
         assert ".jpg" in content

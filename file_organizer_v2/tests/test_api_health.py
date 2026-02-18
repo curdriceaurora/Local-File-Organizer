@@ -1,4 +1,5 @@
 """Tests for the API health endpoint."""
+
 from __future__ import annotations
 
 import pytest

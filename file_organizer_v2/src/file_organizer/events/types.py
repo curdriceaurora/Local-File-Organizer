@@ -3,6 +3,7 @@
 Defines the core event types and data structures used throughout
 the event-driven architecture.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

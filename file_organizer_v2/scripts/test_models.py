@@ -82,6 +82,7 @@ def test_vision_model():
         # Check if model exists
         print("\nChecking if model is installed...")
         import ollama
+
         client = ollama.Client()
 
         try:

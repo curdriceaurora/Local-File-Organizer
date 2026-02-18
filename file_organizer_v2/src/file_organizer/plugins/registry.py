@@ -1,4 +1,5 @@
 """Plugin discovery and loading registry."""
+
 from __future__ import annotations
 
 import importlib.util

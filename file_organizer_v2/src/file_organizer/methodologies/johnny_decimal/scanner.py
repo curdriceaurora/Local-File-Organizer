@@ -4,6 +4,7 @@ Johnny Decimal Migration Scanner
 Scans existing folder structures to prepare for migration to Johnny Decimal system.
 Detects current organization patterns and suggests appropriate JD mappings.
 """
+
 from __future__ import annotations
 
 import logging
@@ -228,7 +229,8 @@ class FolderScanner:
         # Look for 4-digit years in reasonable range (1900-2099)
         def has_year_pattern(name: str) -> bool:
             import re
-            year_match = re.search(r'\b(19\d{2}|20\d{2})\b', name)
+
+            year_match = re.search(r"\b(19\d{2}|20\d{2})\b", name)
             return year_match is not None
 
         date_patterns = [

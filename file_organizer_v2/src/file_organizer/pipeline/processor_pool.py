@@ -4,6 +4,7 @@ Processor pool for lazy-loading and managing file processors.
 Provides centralized access to processor instances with lazy initialization
 and proper resource cleanup.
 """
+
 from __future__ import annotations
 
 import logging
@@ -105,9 +106,7 @@ class ProcessorPool:
             logger.info("Initialized processor for %s", processor_type.value)
             return processor
         except Exception:
-            logger.exception(
-                "Failed to create processor for %s", processor_type.value
-            )
+            logger.exception("Failed to create processor for %s", processor_type.value)
             return None
 
     def has_processor(self, processor_type: ProcessorType) -> bool:
@@ -120,10 +119,7 @@ class ProcessorPool:
         Returns:
             True if a factory is registered or processor is initialized.
         """
-        return (
-            processor_type in self._processors
-            or processor_type in self._factories
-        )
+        return processor_type in self._processors or processor_type in self._factories
 
     def is_initialized(self, processor_type: ProcessorType) -> bool:
         """
@@ -150,9 +146,7 @@ class ProcessorPool:
                 processor.cleanup()
                 logger.info("Cleaned up processor for %s", processor_type.value)
             except Exception:
-                logger.exception(
-                    "Error cleaning up processor for %s", processor_type.value
-                )
+                logger.exception("Error cleaning up processor for %s", processor_type.value)
 
         self._processors.clear()
 

@@ -4,6 +4,7 @@ PARA Rule Engine Implementation
 Provides interfaces and data structures for the PARA categorization rule engine.
 This is a design specification - actual implementation will be in subsequent tasks.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -16,6 +17,7 @@ from typing import Any
 
 class ConditionType(Enum):
     """Types of conditions that can be evaluated in rules."""
+
     CONTENT_KEYWORD = "content_keyword"
     FILENAME_PATTERN = "filename_pattern"
     PATH_CONTAINS = "path_contains"
@@ -30,6 +32,7 @@ class ConditionType(Enum):
 
 class ActionType(Enum):
     """Types of actions that can be executed by rules."""
+
     CATEGORIZE = "categorize"
     SUGGEST = "suggest"
     FLAG_REVIEW = "flag_review"
@@ -39,6 +42,7 @@ class ActionType(Enum):
 
 class LogicalOperator(Enum):
     """Logical operators for combining conditions."""
+
     AND = "and"
     OR = "or"
     NOT = "not"
@@ -46,6 +50,7 @@ class LogicalOperator(Enum):
 
 class ConflictResolutionStrategy(Enum):
     """Strategies for resolving conflicts when multiple rules match."""
+
     HIGHEST_CONFIDENCE = "highest_confidence"
     PRIORITY_BASED = "priority_based"
     CONFIDENCE_WEIGHTED_VOTING = "confidence_weighted_voting"
@@ -68,6 +73,7 @@ class RuleCondition:
         subconditions: Nested conditions for composite logic
         metadata: Additional configuration for the condition
     """
+
     type: ConditionType
     operator: LogicalOperator | None = None
     values: list[str] | None = None
@@ -98,6 +104,7 @@ class RuleAction:
         reason: Human-readable reason for this action
         metadata: Additional action configuration
     """
+
     type: ActionType
     category: str | None = None
     confidence: float | None = None
@@ -130,6 +137,7 @@ class Rule:
         actions: Actions to execute when conditions are met
         metadata: Additional rule metadata (author, created date, etc.)
     """
+
     name: str
     description: str
     priority: int
@@ -161,6 +169,7 @@ class EvaluationContext:
         ai_analysis: Results from AI analysis (if available)
         user_preferences: User-specific preferences
     """
+
     file_path: Path
     content: str | None = None
     file_stat: dict[str, Any] | None = None
@@ -181,9 +190,9 @@ class EvaluationContext:
     @property
     def file_age_days(self) -> int | None:
         """Calculate file age in days."""
-        if not self.file_stat or 'created' not in self.file_stat:
+        if not self.file_stat or "created" not in self.file_stat:
             return None
-        created = self.file_stat['created']
+        created = self.file_stat["created"]
         if isinstance(created, datetime):
             return (datetime.now() - created).days
         return None
@@ -203,6 +212,7 @@ class RuleMatchResult:
         condition_results: Detailed results for each condition
         execution_time_ms: Time taken to evaluate the rule
     """
+
     rule: Rule
     matched: bool
     confidence: float | None = None
@@ -278,11 +288,7 @@ class ConditionEvaluator(ABC):
     """
 
     @abstractmethod
-    def evaluate_condition(
-        self,
-        condition: RuleCondition,
-        context: EvaluationContext
-    ) -> bool:
+    def evaluate_condition(self, condition: RuleCondition, context: EvaluationContext) -> bool:
         """
         Evaluate a single condition against a file.
 
@@ -297,10 +303,7 @@ class ConditionEvaluator(ABC):
 
     @abstractmethod
     def evaluate_composite(
-        self,
-        conditions: list[RuleCondition],
-        operator: LogicalOperator,
-        context: EvaluationContext
+        self, conditions: list[RuleCondition], operator: LogicalOperator, context: EvaluationContext
     ) -> bool:
         """
         Evaluate multiple conditions with a logical operator.
@@ -316,11 +319,7 @@ class ConditionEvaluator(ABC):
         pass
 
     @abstractmethod
-    def get_match_score(
-        self,
-        condition: RuleCondition,
-        context: EvaluationContext
-    ) -> float:
+    def get_match_score(self, condition: RuleCondition, context: EvaluationContext) -> float:
         """
         Get a numeric score for how well a condition matches (0.0-1.0).
 
@@ -344,11 +343,7 @@ class ActionExecutor(ABC):
     """
 
     @abstractmethod
-    def execute_action(
-        self,
-        action: RuleAction,
-        context: EvaluationContext
-    ) -> dict[str, Any]:
+    def execute_action(self, action: RuleAction, context: EvaluationContext) -> dict[str, Any]:
         """
         Execute a single action.
 
@@ -362,11 +357,7 @@ class ActionExecutor(ABC):
         pass
 
     @abstractmethod
-    def can_execute(
-        self,
-        action: RuleAction,
-        context: EvaluationContext
-    ) -> bool:
+    def can_execute(self, action: RuleAction, context: EvaluationContext) -> bool:
         """
         Check if an action can be executed in the current context.
 
@@ -393,7 +384,7 @@ class ConflictResolver(ABC):
         self,
         matches: list[RuleMatchResult],
         strategy: ConflictResolutionStrategy,
-        context: EvaluationContext
+        context: EvaluationContext,
     ) -> RuleMatchResult:
         """
         Resolve conflicts between multiple matching rules.
@@ -409,11 +400,7 @@ class ConflictResolver(ABC):
         pass
 
     @abstractmethod
-    def should_flag_for_review(
-        self,
-        matches: list[RuleMatchResult],
-        threshold: float
-    ) -> bool:
+    def should_flag_for_review(self, matches: list[RuleMatchResult], threshold: float) -> bool:
         """
         Determine if the categorization should be flagged for manual review.
 
@@ -437,9 +424,7 @@ class CategoryScorer(ABC):
 
     @abstractmethod
     def calculate_category_scores(
-        self,
-        matches: list[RuleMatchResult],
-        context: EvaluationContext
+        self, matches: list[RuleMatchResult], context: EvaluationContext
     ) -> dict[str, float]:
         """
         Calculate confidence scores for all categories.
@@ -454,11 +439,7 @@ class CategoryScorer(ABC):
         pass
 
     @abstractmethod
-    def get_best_category(
-        self,
-        scores: dict[str, float],
-        threshold: float
-    ) -> str | None:
+    def get_best_category(self, scores: dict[str, float], threshold: float) -> str | None:
         """
         Get the best category based on scores.
 
@@ -473,9 +454,7 @@ class CategoryScorer(ABC):
 
     @abstractmethod
     def calculate_overall_confidence(
-        self,
-        matches: list[RuleMatchResult],
-        heuristic_scores: dict[str, float] | None = None
+        self, matches: list[RuleMatchResult], heuristic_scores: dict[str, float] | None = None
     ) -> float:
         """
         Calculate an overall confidence score for the categorization.
@@ -504,7 +483,7 @@ class RuleEngine:
         evaluator: ConditionEvaluator,
         executor: ActionExecutor,
         resolver: ConflictResolver,
-        scorer: CategoryScorer
+        scorer: CategoryScorer,
     ):
         """
         Initialize the rule engine with its components.
@@ -549,7 +528,7 @@ class RuleEngine:
     def evaluate_file(
         self,
         context: EvaluationContext,
-        strategy: ConflictResolutionStrategy = ConflictResolutionStrategy.HIGHEST_CONFIDENCE
+        strategy: ConflictResolutionStrategy = ConflictResolutionStrategy.HIGHEST_CONFIDENCE,
     ) -> RuleMatchResult | None:
         """
         Evaluate all rules against a file and return the best match.
@@ -585,10 +564,7 @@ class RuleEngine:
                         break
 
                 match = RuleMatchResult(
-                    rule=rule,
-                    matched=True,
-                    confidence=confidence,
-                    category=category
+                    rule=rule, matched=True, confidence=confidence, category=category
                 )
                 matches.append(match)
 
@@ -601,10 +577,7 @@ class RuleEngine:
         # Resolve conflicts
         return self.resolver.resolve(matches, strategy, context)
 
-    def get_category_scores(
-        self,
-        context: EvaluationContext
-    ) -> dict[str, float]:
+    def get_category_scores(self, context: EvaluationContext) -> dict[str, float]:
         """
         Get confidence scores for all categories.
 
@@ -621,8 +594,7 @@ class RuleEngine:
                 continue
 
             all_conditions_met = all(
-                self.evaluator.evaluate_condition(cond, context)
-                for cond in rule.conditions
+                self.evaluator.evaluate_condition(cond, context) for cond in rule.conditions
             )
 
             if all_conditions_met:

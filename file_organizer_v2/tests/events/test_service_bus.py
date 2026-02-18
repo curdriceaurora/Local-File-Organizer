@@ -5,6 +5,7 @@ Tests service registration, request/response lifecycle, broadcast,
 error handling, timeout detection, and pubsub integration.
 All Redis operations are mocked.
 """
+
 from __future__ import annotations
 
 import time
@@ -231,6 +232,7 @@ class TestSendRequest:
 
     def test_handler_exception_caught(self, bus: ServiceBus) -> None:
         """An exception in the handler produces an error response."""
+
         def boom(req: ServiceRequest) -> dict:
             raise RuntimeError("handler exploded")
 
@@ -248,9 +250,7 @@ class TestSendRequest:
         assert resp.success is True
         assert resp.data == {}
 
-    def test_request_publishes_events(
-        self, bus: ServiceBus, mock_manager: MagicMock
-    ) -> None:
+    def test_request_publishes_events(self, bus: ServiceBus, mock_manager: MagicMock) -> None:
         """send_request publishes request and response events."""
         bus.register_service("svc", lambda req: {"ok": True})
         bus.send_request("svc", "act")
@@ -265,6 +265,7 @@ class TestSendRequest:
 
     def test_timeout_detection(self, bus: ServiceBus) -> None:
         """A slow handler triggers timeout error response."""
+
         def slow_handler(req: ServiceRequest) -> dict:
             time.sleep(0.05)
             return {"done": True}

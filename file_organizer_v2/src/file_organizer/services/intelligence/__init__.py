@@ -4,6 +4,7 @@ Intelligence services for learning user preferences and patterns.
 This module provides intelligent learning capabilities that adapt to user
 behavior and preferences over time.
 """
+
 from __future__ import annotations
 
 from file_organizer.services.intelligence.confidence import (

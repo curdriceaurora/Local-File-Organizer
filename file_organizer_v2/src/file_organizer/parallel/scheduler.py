@@ -4,6 +4,7 @@ Task scheduling for parallel file processing.
 This module provides file ordering strategies to optimize batch throughput,
 such as processing small files first or grouping files by type.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -65,9 +66,7 @@ class TaskScheduler:
 
         if strategy == PriorityStrategy.CUSTOM:
             if priority_fn is None:
-                raise ValueError(
-                    "priority_fn is required when strategy is CUSTOM"
-                )
+                raise ValueError("priority_fn is required when strategy is CUSTOM")
             return sorted(files, key=priority_fn)
 
         # Unreachable with current enum, but satisfies exhaustiveness

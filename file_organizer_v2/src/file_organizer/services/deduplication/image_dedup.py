@@ -5,6 +5,7 @@ Provides ImageDeduplicator class with support for pHash, dHash, and aHash
 algorithms for detecting visually similar images. Uses the imagededup library
 for efficient perceptual hashing and Hamming distance calculations.
 """
+
 from __future__ import annotations
 
 import logging
@@ -41,11 +42,7 @@ class ImageDeduplicator:
         hasher: Initialized hash computation object
     """
 
-    def __init__(
-        self,
-        hash_method: HashMethod = "phash",
-        threshold: int = 10
-    ):
+    def __init__(self, hash_method: HashMethod = "phash", threshold: int = 10):
         """
         Initialize the ImageDeduplicator.
 
@@ -64,14 +61,11 @@ class ImageDeduplicator:
         """
         if hash_method not in ("phash", "dhash", "ahash"):
             raise ValueError(
-                f"Unsupported hash method: {hash_method}. "
-                f"Use 'phash', 'dhash', or 'ahash'."
+                f"Unsupported hash method: {hash_method}. Use 'phash', 'dhash', or 'ahash'."
             )
 
         if not 0 <= threshold <= 64:
-            raise ValueError(
-                f"Threshold must be between 0 and 64, got {threshold}"
-            )
+            raise ValueError(f"Threshold must be between 0 and 64, got {threshold}")
 
         self.hash_method = hash_method
         self.threshold = threshold
@@ -105,8 +99,7 @@ class ImageDeduplicator:
 
         if image_path.suffix.lower() not in SUPPORTED_FORMATS:
             logger.warning(
-                f"Unsupported image format: {image_path.suffix}. "
-                f"Supported: {SUPPORTED_FORMATS}"
+                f"Unsupported image format: {image_path.suffix}. Supported: {SUPPORTED_FORMATS}"
             )
             return None
 
@@ -147,7 +140,7 @@ class ImageDeduplicator:
             xor = int1 ^ int2
 
             # Count number of 1s (different bits)
-            distance = bin(xor).count('1')
+            distance = bin(xor).count("1")
 
             return distance
         except ValueError as e:
@@ -184,7 +177,7 @@ class ImageDeduplicator:
         self,
         directory: Path,
         recursive: bool = True,
-        progress_callback: Callable[[int, int], None] | None = None
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> dict[str, list[Path]]:
         """
         Find duplicate and similar images in a directory.
@@ -241,8 +234,7 @@ class ImageDeduplicator:
 
         # imagededup's find_duplicates returns dict[filename] -> list of similar filenames
         duplicates_dict = self.hasher.find_duplicates(
-            encoding_map=encoding_map,
-            max_distance_threshold=self.threshold
+            encoding_map=encoding_map, max_distance_threshold=self.threshold
         )
 
         # Convert back to Path objects and group by representative
@@ -274,9 +266,7 @@ class ImageDeduplicator:
         return grouped_duplicates
 
     def cluster_by_similarity(
-        self,
-        images: list[Path],
-        progress_callback: Callable[[int, int], None] | None = None
+        self, images: list[Path], progress_callback: Callable[[int, int], None] | None = None
     ) -> list[list[Path]]:
         """
         Cluster images into groups of similar images.
@@ -338,9 +328,7 @@ class ImageDeduplicator:
         return clusters
 
     def batch_compute_hashes(
-        self,
-        image_paths: list[Path],
-        progress_callback: Callable[[int, int], None] | None = None
+        self, image_paths: list[Path], progress_callback: Callable[[int, int], None] | None = None
     ) -> dict[Path, str]:
         """
         Compute perceptual hashes for multiple images.
@@ -368,11 +356,7 @@ class ImageDeduplicator:
 
         return results
 
-    def _find_image_files(
-        self,
-        directory: Path,
-        recursive: bool = True
-    ) -> list[Path]:
+    def _find_image_files(self, directory: Path, recursive: bool = True) -> list[Path]:
         """
         Find all supported image files in a directory.
 

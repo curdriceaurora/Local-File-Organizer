@@ -3,6 +3,7 @@ Tests for FileHasher class.
 
 Tests hash computation, chunk_size validation, and batch processing.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -3,6 +3,7 @@
 Replaces the legacy argparse ``dedupe`` command with a sub-app
 providing ``scan``, ``resolve``, and ``report`` commands.
 """
+
 from __future__ import annotations
 
 import json
@@ -88,9 +89,7 @@ def _display_groups_table(
                 fmeta.modified_time.strftime("%Y-%m-%d %H:%M"),
             )
         console.print(table)
-        console.print(
-            f"  [dim]Wasted space: {_format_size(group.wasted_space)}[/dim]\n"
-        )
+        console.print(f"  [dim]Wasted space: {_format_size(group.wasted_space)}[/dim]\n")
 
 
 def _format_size(size: int) -> str:

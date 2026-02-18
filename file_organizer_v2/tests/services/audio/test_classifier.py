@@ -13,6 +13,7 @@ Tests cover:
 - Confidence and alternatives
 - Edge cases
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -141,9 +142,7 @@ class TestMusicClassification:
         result = classifier.classify(metadata)
         assert result.audio_type == AudioType.MUSIC
 
-    def test_music_minimal_speech_in_transcription(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_music_minimal_speech_in_transcription(self, classifier: AudioClassifier) -> None:
         """Music with very few transcribed words should still classify as MUSIC."""
         metadata = _make_metadata(
             artist="Instrumental Artist",
@@ -167,9 +166,7 @@ class TestMusicClassification:
 class TestPodcastClassification:
     """Tests for podcast type detection."""
 
-    def test_podcast_with_episode_metadata(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_podcast_with_episode_metadata(self, classifier: AudioClassifier) -> None:
         """Episode-style title + podcast duration should classify as PODCAST."""
         metadata = _make_metadata(
             title="Ep. 42 - The Future of AI",
@@ -180,9 +177,7 @@ class TestPodcastClassification:
         result = classifier.classify(metadata)
         assert result.audio_type == AudioType.PODCAST
 
-    def test_podcast_keyword_in_title(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_podcast_keyword_in_title(self, classifier: AudioClassifier) -> None:
         """Title with podcast keywords should score PODCAST."""
         metadata = _make_metadata(
             title="Welcome to the show - Episode 10",
@@ -191,9 +186,7 @@ class TestPodcastClassification:
         result = classifier.classify(metadata)
         assert result.audio_type == AudioType.PODCAST
 
-    def test_podcast_from_transcription(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_podcast_from_transcription(self, classifier: AudioClassifier) -> None:
         """Transcription with podcast keywords should classify as PODCAST."""
         metadata = _make_metadata(duration=2400.0)
         transcription = _make_transcription(
@@ -208,9 +201,7 @@ class TestPodcastClassification:
         result = classifier.classify(metadata, transcription)
         assert result.audio_type == AudioType.PODCAST
 
-    def test_podcast_duration_range(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_podcast_duration_range(self, classifier: AudioClassifier) -> None:
         """Duration within 15-90 minutes should boost podcast score."""
         metadata = _make_metadata(
             title="Episode 5 - Weekly Update",
@@ -231,9 +222,7 @@ class TestPodcastClassification:
 class TestAudiobookClassification:
     """Tests for audiobook type detection."""
 
-    def test_audiobook_with_chapter_metadata(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_audiobook_with_chapter_metadata(self, classifier: AudioClassifier) -> None:
         """Chapter-tagged audiobook should classify as AUDIOBOOK."""
         metadata = _make_metadata(
             title="Chapter 3 - The Journey Begins",
@@ -244,9 +233,7 @@ class TestAudiobookClassification:
         result = classifier.classify(metadata)
         assert result.audio_type == AudioType.AUDIOBOOK
 
-    def test_audiobook_narrator_tag(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_audiobook_narrator_tag(self, classifier: AudioClassifier) -> None:
         """Narrator in extra tags should boost AUDIOBOOK score."""
         metadata = _make_metadata(
             title="The Great Novel",
@@ -256,9 +243,7 @@ class TestAudiobookClassification:
         result = classifier.classify(metadata)
         assert result.audio_type == AudioType.AUDIOBOOK
 
-    def test_audiobook_long_narrative_segments(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_audiobook_long_narrative_segments(self, classifier: AudioClassifier) -> None:
         """Long single-speaker narrative segments suggest audiobook."""
         metadata = _make_metadata(
             title="Chapter 1",
@@ -286,25 +271,19 @@ class TestAudiobookClassification:
 class TestRecordingClassification:
     """Tests for recording/voice memo type detection."""
 
-    def test_recording_no_metadata(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_recording_no_metadata(self, classifier: AudioClassifier) -> None:
         """Audio with no metadata tags should classify as RECORDING."""
         metadata = _make_metadata(duration=60.0)
         result = classifier.classify(metadata)
         assert result.audio_type == AudioType.RECORDING
 
-    def test_recording_short_voice_memo(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_recording_short_voice_memo(self, classifier: AudioClassifier) -> None:
         """Very short audio with no metadata is likely a voice memo."""
         metadata = _make_metadata(duration=30.0)
         result = classifier.classify(metadata)
         assert result.audio_type == AudioType.RECORDING
 
-    def test_recording_meeting_keywords(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_recording_meeting_keywords(self, classifier: AudioClassifier) -> None:
         """Transcription with meeting keywords should suggest RECORDING."""
         metadata = _make_metadata(duration=1800.0)
         transcription = _make_transcription(
@@ -327,9 +306,7 @@ class TestRecordingClassification:
 class TestInterviewClassification:
     """Tests for interview type detection."""
 
-    def test_interview_keywords_in_transcription(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_interview_keywords_in_transcription(self, classifier: AudioClassifier) -> None:
         """Transcription with Q&A patterns should classify as INTERVIEW."""
         metadata = _make_metadata(
             title="Interview with Expert",
@@ -355,9 +332,7 @@ class TestInterviewClassification:
         result = classifier.classify(metadata, transcription)
         assert result.audio_type == AudioType.INTERVIEW
 
-    def test_interview_title_keyword(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_interview_title_keyword(self, classifier: AudioClassifier) -> None:
         """Title containing 'interview' should boost INTERVIEW score."""
         metadata = _make_metadata(
             title="An interview with the CEO",
@@ -377,9 +352,7 @@ class TestInterviewClassification:
 class TestLectureClassification:
     """Tests for lecture type detection."""
 
-    def test_lecture_keywords_in_transcription(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_lecture_keywords_in_transcription(self, classifier: AudioClassifier) -> None:
         """Transcription with educational keywords should classify as LECTURE."""
         metadata = _make_metadata(duration=3000.0)  # 50 minutes
         transcription = _make_transcription(
@@ -398,9 +371,7 @@ class TestLectureClassification:
         result = classifier.classify(metadata, transcription)
         assert result.audio_type == AudioType.LECTURE
 
-    def test_lecture_single_speaker_duration(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_lecture_single_speaker_duration(self, classifier: AudioClassifier) -> None:
         """Single speaker at lecture duration should consider LECTURE."""
         metadata = _make_metadata(
             title="Lecture 5 - Advanced Topics",
@@ -451,9 +422,7 @@ class TestUnknownClassification:
         result = classifier.classify(metadata)
         assert 0.0 <= result.confidence <= 1.0
 
-    def test_classification_result_fields(
-        self, classifier: AudioClassifier
-    ) -> None:
+    def test_classification_result_fields(self, classifier: AudioClassifier) -> None:
         """ClassificationResult must have all required fields."""
         metadata = _make_metadata(artist="Test")
         result = classifier.classify(metadata)
@@ -509,8 +478,7 @@ class TestHelperFunctions:
     def test_estimate_speaker_count_single(self) -> None:
         """Uniform segment durations should suggest 1 speaker."""
         segments = [
-            Segment(id=i, start=i * 10.0, end=(i + 1) * 10.0 - 0.5, text="text")
-            for i in range(10)
+            Segment(id=i, start=i * 10.0, end=(i + 1) * 10.0 - 0.5, text="text") for i in range(10)
         ]
         assert _estimate_speaker_count(segments) == 1
 

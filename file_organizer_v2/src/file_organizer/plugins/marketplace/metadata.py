@@ -1,4 +1,5 @@
 """Local metadata cache for marketplace packages."""
+
 from __future__ import annotations
 
 import json

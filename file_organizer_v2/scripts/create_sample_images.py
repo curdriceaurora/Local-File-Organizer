@@ -6,6 +6,7 @@ from pathlib import Path
 
 try:
     from PIL import Image, ImageDraw, ImageFont
+
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
@@ -22,7 +23,7 @@ def create_sample_images(output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Sample 1: Landscape (nature scene)
-    img1 = Image.new('RGB', (800, 600), color=(135, 206, 235))  # Sky blue
+    img1 = Image.new("RGB", (800, 600), color=(135, 206, 235))  # Sky blue
     draw = ImageDraw.Draw(img1)
     # Draw mountains (green triangles)
     draw.polygon([(0, 400), (300, 200), (600, 400)], fill=(34, 139, 34))
@@ -33,7 +34,7 @@ def create_sample_images(output_dir: Path) -> None:
     print("✓ Created: mountain_landscape.jpg")
 
     # Sample 2: Abstract geometric
-    img2 = Image.new('RGB', (600, 600), color=(255, 255, 255))
+    img2 = Image.new("RGB", (600, 600), color=(255, 255, 255))
     draw = ImageDraw.Draw(img2)
     draw.rectangle([100, 100, 300, 300], fill=(255, 0, 0))
     draw.ellipse([300, 200, 500, 400], fill=(0, 0, 255))
@@ -42,7 +43,7 @@ def create_sample_images(output_dir: Path) -> None:
     print("✓ Created: geometric_shapes.jpg")
 
     # Sample 3: Simple text image
-    img3 = Image.new('RGB', (800, 400), color=(240, 240, 240))
+    img3 = Image.new("RGB", (800, 400), color=(240, 240, 240))
     draw = ImageDraw.Draw(img3)
     # Try to use a font, fallback to default if not available
     try:
@@ -54,17 +55,17 @@ def create_sample_images(output_dir: Path) -> None:
     print("✓ Created: text_hello_world.jpg")
 
     # Sample 4: Food-like image (pizza-ish)
-    img4 = Image.new('RGB', (600, 600), color=(255, 228, 196))  # Bisque
+    img4 = Image.new("RGB", (600, 600), color=(255, 228, 196))  # Bisque
     draw = ImageDraw.Draw(img4)
     draw.ellipse([50, 50, 550, 550], fill=(255, 140, 0))  # Orange (pizza base)
     # Add toppings (red circles)
     for x, y in [(200, 200), (400, 200), (300, 350), (150, 400), (450, 400)]:
-        draw.ellipse([x-30, y-30, x+30, y+30], fill=(220, 20, 60))
+        draw.ellipse([x - 30, y - 30, x + 30, y + 30], fill=(220, 20, 60))
     img4.save(output_dir / "food_pizza.jpg")
     print("✓ Created: food_pizza.jpg")
 
     # Sample 5: Architecture-like (building)
-    img5 = Image.new('RGB', (600, 800), color=(135, 206, 235))  # Sky
+    img5 = Image.new("RGB", (600, 800), color=(135, 206, 235))  # Sky
     draw = ImageDraw.Draw(img5)
     # Building
     draw.rectangle([150, 300, 450, 700], fill=(169, 169, 169))
@@ -73,7 +74,7 @@ def create_sample_images(output_dir: Path) -> None:
         for col in range(3):
             x = 200 + col * 80
             y = 350 + row * 80
-            draw.rectangle([x, y, x+50, y+60], fill=(255, 255, 200))
+            draw.rectangle([x, y, x + 50, y + 60], fill=(255, 255, 200))
     img5.save(output_dir / "urban_building.jpg")
     print("✓ Created: urban_building.jpg")
 

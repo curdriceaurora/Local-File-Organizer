@@ -83,9 +83,7 @@ else:
             return NotImplemented
 
         @staticmethod
-        def _generate_next_value_(
-            name: str, start: int, count: int, last_values: list[str]
-        ) -> str:
+        def _generate_next_value_(name: str, start: int, count: int, last_values: list[str]) -> str:
             """Generate lowercase name when auto() is used."""
             return name.lower()
 
@@ -102,6 +100,7 @@ UTC = timezone.utc
 # ---------------------------------------------------------------------------
 # isinstance() compatibility helper
 # ---------------------------------------------------------------------------
+
 
 def check_type(obj: object, types: tuple[type, ...]) -> bool:
     """

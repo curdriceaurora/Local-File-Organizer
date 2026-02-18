@@ -1,4 +1,5 @@
 """Tests for video metadata extraction - Phase 3."""
+
 from __future__ import annotations
 
 import pytest
@@ -13,6 +14,7 @@ class TestVideoMetadataPlaceholder:
         """Test that video metadata module exists."""
         try:
             from file_organizer.services.video import scene_detector
+
             assert scene_detector is not None
         except ImportError:
             pytest.skip("Video metadata extraction not yet implemented (Phase 3)")

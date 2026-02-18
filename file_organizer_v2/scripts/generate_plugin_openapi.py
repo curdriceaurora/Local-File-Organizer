@@ -1,4 +1,5 @@
 """Generate plugin API OpenAPI reference JSON for docs."""
+
 from __future__ import annotations
 
 import json

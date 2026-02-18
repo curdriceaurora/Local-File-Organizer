@@ -43,9 +43,7 @@ class TestMemoryLimiterInit:
 
     def test_custom_action(self) -> None:
         """Test custom action setting."""
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.RAISE
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.RAISE)
         assert limiter.action == LimitAction.RAISE
 
     def test_max_memory_mb_property(self) -> None:
@@ -95,53 +93,39 @@ class TestMemoryLimiterEnforce:
     """Tests for the enforce() method with different actions."""
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=100 * 1024 * 1024)
-    def test_enforce_under_limit_no_action(
-        self, mock_rss: MagicMock
-    ) -> None:
+    def test_enforce_under_limit_no_action(self, mock_rss: MagicMock) -> None:
         """Test enforce does nothing when under limit."""
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.RAISE
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.RAISE)
         limiter.enforce()  # Should not raise
         assert limiter.violation_count == 0
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_enforce_warn_action(self, mock_rss: MagicMock) -> None:
         """Test enforce with WARN action logs but does not raise."""
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.WARN
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.WARN)
         limiter.enforce()  # Should not raise
         assert limiter.violation_count == 1
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_enforce_block_action(self, mock_rss: MagicMock) -> None:
         """Test enforce with BLOCK action logs but does not raise."""
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.BLOCK
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.BLOCK)
         limiter.enforce()  # Should not raise
         assert limiter.violation_count == 1
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
     def test_enforce_raise_action(self, mock_rss: MagicMock) -> None:
         """Test enforce with RAISE action raises MemoryLimitError."""
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.RAISE
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.RAISE)
         with pytest.raises(MemoryLimitError, match="Memory limit exceeded"):
             limiter.enforce()
         assert limiter.violation_count == 1
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
-    def test_enforce_evict_cache_calls_callback(
-        self, mock_rss: MagicMock
-    ) -> None:
+    def test_enforce_evict_cache_calls_callback(self, mock_rss: MagicMock) -> None:
         """Test enforce with EVICT_CACHE calls the eviction callback."""
         callback = MagicMock()
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.EVICT_CACHE
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.EVICT_CACHE)
         limiter.set_evict_callback(callback)
         limiter.enforce()
 
@@ -149,24 +133,16 @@ class TestMemoryLimiterEnforce:
         assert limiter.violation_count == 1
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
-    def test_enforce_evict_cache_no_callback(
-        self, mock_rss: MagicMock
-    ) -> None:
+    def test_enforce_evict_cache_no_callback(self, mock_rss: MagicMock) -> None:
         """Test enforce with EVICT_CACHE but no callback set."""
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.EVICT_CACHE
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.EVICT_CACHE)
         limiter.enforce()  # Should not raise even without callback
         assert limiter.violation_count == 1
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
-    def test_enforce_increments_violation_count(
-        self, mock_rss: MagicMock
-    ) -> None:
+    def test_enforce_increments_violation_count(self, mock_rss: MagicMock) -> None:
         """Test that violation count increments on each enforcement."""
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.WARN
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.WARN)
         limiter.enforce()
         limiter.enforce()
         limiter.enforce()
@@ -179,20 +155,14 @@ class TestMemoryLimiterGuarded:
     @patch.object(MemoryLimiter, "_get_rss", return_value=100 * 1024 * 1024)
     def test_guarded_under_limit(self, mock_rss: MagicMock) -> None:
         """Test guarded context when under limit."""
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.RAISE
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.RAISE)
         with limiter.guarded():
             pass  # Should not raise
 
     @patch.object(MemoryLimiter, "_get_rss", return_value=600 * 1024 * 1024)
-    def test_guarded_over_limit_raises_on_entry(
-        self, mock_rss: MagicMock
-    ) -> None:
+    def test_guarded_over_limit_raises_on_entry(self, mock_rss: MagicMock) -> None:
         """Test guarded context raises on entry when over limit."""
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.RAISE
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.RAISE)
         with pytest.raises(MemoryLimitError):
             with limiter.guarded():
                 pass
@@ -208,9 +178,7 @@ class TestMemoryLimiterGuarded:
                 return 100 * 1024 * 1024  # Under limit on entry
             return 600 * 1024 * 1024  # Over limit on exit
 
-        limiter = MemoryLimiter(
-            max_memory_mb=512, action=LimitAction.RAISE
-        )
+        limiter = MemoryLimiter(max_memory_mb=512, action=LimitAction.RAISE)
 
         with patch.object(MemoryLimiter, "_get_rss", side_effect=rss_values):
             with pytest.raises(MemoryLimitError):

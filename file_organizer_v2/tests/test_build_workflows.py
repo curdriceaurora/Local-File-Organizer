@@ -1,4 +1,5 @@
 """CI-focused tests for build workflows."""
+
 from __future__ import annotations
 
 from pathlib import Path

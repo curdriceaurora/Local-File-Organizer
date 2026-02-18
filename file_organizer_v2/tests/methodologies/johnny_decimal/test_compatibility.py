@@ -3,6 +3,7 @@ Tests for Johnny Decimal PARA Compatibility
 
 Tests PARA integration, compatibility analyzer, and hybrid organizer.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -148,9 +149,7 @@ class TestPARAJohnnyDecimalBridge:
 
     def test_get_para_path_suggestion(self, para_bridge):
         """Test path suggestion generation."""
-        path = para_bridge.get_para_path_suggestion(
-            PARACategory.PROJECTS, "Website Redesign"
-        )
+        path = para_bridge.get_para_path_suggestion(PARACategory.PROJECTS, "Website Redesign")
 
         assert "10" in path
         assert "Projects" in path
@@ -259,9 +258,7 @@ class TestHybridOrganizer:
 
     def test_categorize_item(self, hybrid_organizer):
         """Test item categorization."""
-        jd_number = hybrid_organizer.categorize_item(
-            "Website Project", PARACategory.PROJECTS
-        )
+        jd_number = hybrid_organizer.categorize_item("Website Project", PARACategory.PROJECTS)
 
         assert jd_number.area == 10  # Projects area
         assert jd_number.category is not None
@@ -269,35 +266,25 @@ class TestHybridOrganizer:
 
     def test_get_item_path_area(self, hybrid_organizer, tmp_path):
         """Test path generation for area level."""
-        jd_number = JohnnyDecimalNumber(
-            area=10, category=None, item_id=None
-        )
+        jd_number = JohnnyDecimalNumber(area=10, category=None, item_id=None)
 
-        path = hybrid_organizer.get_item_path(
-            tmp_path, PARACategory.PROJECTS, jd_number, "General"
-        )
+        path = hybrid_organizer.get_item_path(tmp_path, PARACategory.PROJECTS, jd_number, "General")
 
         assert "10 Projects" in str(path)
         assert "10 General" in str(path)
 
     def test_get_item_path_category(self, hybrid_organizer, tmp_path):
         """Test path generation for category level."""
-        jd_number = JohnnyDecimalNumber(
-            area=10, category=1, item_id=None
-        )
+        jd_number = JohnnyDecimalNumber(area=10, category=1, item_id=None)
 
-        path = hybrid_organizer.get_item_path(
-            tmp_path, PARACategory.PROJECTS, jd_number, "Website"
-        )
+        path = hybrid_organizer.get_item_path(tmp_path, PARACategory.PROJECTS, jd_number, "Website")
 
         assert "10 Projects" in str(path)
         assert "10.01 Website" in str(path)
 
     def test_get_item_path_id(self, hybrid_organizer, tmp_path):
         """Test path generation for ID level."""
-        jd_number = JohnnyDecimalNumber(
-            area=10, category=1, item_id=1
-        )
+        jd_number = JohnnyDecimalNumber(area=10, category=1, item_id=1)
 
         path = hybrid_organizer.get_item_path(
             tmp_path, PARACategory.PROJECTS, jd_number, "Design Phase"
@@ -378,9 +365,7 @@ class TestPARAAdapter:
 
     def test_adapt_from_jd_projects(self, para_adapter):
         """Test adapting JD to PARA Projects."""
-        jd_number = JohnnyDecimalNumber(
-            area=15, category=1, item_id=None
-        )
+        jd_number = JohnnyDecimalNumber(area=15, category=1, item_id=None)
 
         item = para_adapter.adapt_from_jd(jd_number, "Website")
 
@@ -389,9 +374,7 @@ class TestPARAAdapter:
 
     def test_adapt_from_jd_invalid_area(self, para_adapter):
         """Test adapting JD number outside PARA range."""
-        jd_number = JohnnyDecimalNumber(
-            area=50, category=1, item_id=None
-        )
+        jd_number = JohnnyDecimalNumber(area=50, category=1, item_id=None)
 
         with pytest.raises(ValueError, match="not in PARA range"):
             para_adapter.adapt_from_jd(jd_number, "Item")
@@ -432,9 +415,7 @@ class TestPARAIntegration:
         # Add items to each PARA category
         for para_cat in PARACategory:
             jd_number = organizer.categorize_item(f"Test {para_cat.value}", para_cat)
-            path = organizer.get_item_path(
-                tmp_path, para_cat, jd_number, f"Test {para_cat.value}"
-            )
+            path = organizer.get_item_path(tmp_path, para_cat, jd_number, f"Test {para_cat.value}")
 
             # Create the path
             path.mkdir(parents=True, exist_ok=True)

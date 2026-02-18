@@ -3,6 +3,7 @@
 Each test creates a real FastAPI app wired to an in-process ASGI transport
 so requests hit the actual API code without needing a running server.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

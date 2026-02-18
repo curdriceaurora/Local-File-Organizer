@@ -5,6 +5,7 @@ tracking using a JSON file as the persistent store.  Designed
 for privacy-first, single-machine deployments where an external
 service registry is not desired.
 """
+
 from __future__ import annotations
 
 import json
@@ -116,19 +117,14 @@ class ServiceDiscovery:
         if self._path.exists():
             try:
                 raw = json.loads(self._path.read_text(encoding="utf-8"))
-                self._services = {
-                    name: ServiceInfo.from_dict(entry)
-                    for name, entry in raw.items()
-                }
+                self._services = {name: ServiceInfo.from_dict(entry) for name, entry in raw.items()}
                 logger.debug(
                     "Loaded %d services from %s",
                     len(self._services),
                     self._path,
                 )
             except (json.JSONDecodeError, KeyError):
-                logger.warning(
-                    "Corrupt registry at %s; starting fresh", self._path
-                )
+                logger.warning("Corrupt registry at %s; starting fresh", self._path)
                 self._services = {}
         else:
             self._services = {}
@@ -136,9 +132,7 @@ class ServiceDiscovery:
     def _save(self) -> None:
         """Persist the current registry to disk."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {
-            name: info.to_dict() for name, info in self._services.items()
-        }
+        payload = {name: info.to_dict() for name, info in self._services.items()}
         self._path.write_text(
             json.dumps(payload, indent=2, sort_keys=True),
             encoding="utf-8",
@@ -232,9 +226,7 @@ class ServiceDiscovery:
         """
         info = self._services.get(name)
         if info is None:
-            logger.warning(
-                "Heartbeat for unknown service '%s'", name
-            )
+            logger.warning("Heartbeat for unknown service '%s'", name)
             return False
         info.last_heartbeat = datetime.now(timezone.utc).isoformat()
         self._save()
@@ -267,7 +259,4 @@ class ServiceDiscovery:
         return count
 
     def __repr__(self) -> str:
-        return (
-            f"ServiceDiscovery(services={len(self._services)}, "
-            f"path={self._path!r})"
-        )
+        return f"ServiceDiscovery(services={len(self._services)}, path={self._path!r})"

@@ -1,4 +1,5 @@
 """Tests for StorageAnalyzer."""
+
 from __future__ import annotations
 
 import tempfile
@@ -78,9 +79,7 @@ class TestStorageAnalyzer:
         large_file.write_bytes(b"x" * (150 * 1024 * 1024))  # 150MB
 
         analyzer = StorageAnalyzer()
-        large_files = analyzer.identify_large_files(
-            temp_directory, threshold=100 * 1024 * 1024
-        )
+        large_files = analyzer.identify_large_files(temp_directory, threshold=100 * 1024 * 1024)
 
         assert len(large_files) == 1
         assert large_files[0].path == large_file

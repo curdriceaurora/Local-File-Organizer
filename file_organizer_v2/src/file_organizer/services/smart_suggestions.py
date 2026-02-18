@@ -4,6 +4,7 @@ Smart Suggestions Service
 Generates intelligent file organization suggestions using AI models
 and pattern analysis.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -33,7 +34,7 @@ class ConfidenceScorer:
         target_path: Path | None,
         suggestion_type: SuggestionType,
         pattern_analysis: PatternAnalysis | None = None,
-        user_history: dict | None = None
+        user_history: dict | None = None,
     ) -> ConfidenceFactors:
         """
         Calculate confidence score for a suggestion.
@@ -52,15 +53,11 @@ class ConfidenceScorer:
 
         # Pattern strength
         if pattern_analysis:
-            factors.pattern_strength = self._calculate_pattern_strength(
-                file_path, pattern_analysis
-            )
+            factors.pattern_strength = self._calculate_pattern_strength(file_path, pattern_analysis)
 
         # Content similarity (if target exists)
         if target_path and target_path.exists():
-            factors.content_similarity = self._calculate_content_similarity(
-                file_path, target_path
-            )
+            factors.content_similarity = self._calculate_content_similarity(file_path, target_path)
 
         # User history
         if user_history:
@@ -85,15 +82,11 @@ class ConfidenceScorer:
 
         # Size appropriateness
         if target_path:
-            factors.size_appropriateness = self._calculate_size_score(
-                file_path, target_path
-            )
+            factors.size_appropriateness = self._calculate_size_score(file_path, target_path)
 
         return factors
 
-    def _calculate_pattern_strength(
-        self, file_path: Path, analysis: PatternAnalysis
-    ) -> float:
+    def _calculate_pattern_strength(self, file_path: Path, analysis: PatternAnalysis) -> float:
         """Calculate how strongly the file matches detected patterns."""
         if not analysis.naming_patterns:
             return 50.0
@@ -108,9 +101,7 @@ class ConfidenceScorer:
 
         return max_confidence
 
-    def _calculate_content_similarity(
-        self, file_path: Path, target_path: Path
-    ) -> float:
+    def _calculate_content_similarity(self, file_path: Path, target_path: Path) -> float:
         """Calculate content similarity between file and target location."""
         # For now, use simple file type matching
         # In a full implementation, this would use AI to analyze content
@@ -141,7 +132,7 @@ class ConfidenceScorer:
         target_str = str(target_path.parent)
 
         # Look for similar actions in history
-        similar_actions = history.get('move_history', {}).get(file_type, {})
+        similar_actions = history.get("move_history", {}).get(file_type, {})
         target_count = similar_actions.get(target_str, 0)
 
         if target_count > 0:
@@ -160,10 +151,7 @@ class ConfidenceScorer:
         target_dir = target_path if target_path.is_dir() else target_path.parent
 
         # Find naming patterns in target directory
-        target_patterns = [
-            p for p in analysis.location_patterns
-            if p.directory == target_dir
-        ]
+        target_patterns = [p for p in analysis.location_patterns if p.directory == target_dir]
 
         if not target_patterns:
             return 40.0
@@ -188,10 +176,7 @@ class ConfidenceScorer:
         file_type = file_path.suffix.lower()
 
         # Find what file types exist in target directory
-        target_patterns = [
-            p for p in analysis.location_patterns
-            if p.directory == target_dir
-        ]
+        target_patterns = [p for p in analysis.location_patterns if p.directory == target_dir]
 
         if not target_patterns:
             return 40.0
@@ -255,11 +240,7 @@ class SuggestionEngine:
     Generates intelligent file organization suggestions.
     """
 
-    def __init__(
-        self,
-        text_model: TextModel | None = None,
-        min_confidence: float = 40.0
-    ):
+    def __init__(self, text_model: TextModel | None = None, min_confidence: float = 40.0):
         """
         Initialize the suggestion engine.
 
@@ -277,7 +258,7 @@ class SuggestionEngine:
         files: list[Path],
         pattern_analysis: PatternAnalysis | None = None,
         user_history: dict | None = None,
-        max_suggestions: int = 50
+        max_suggestions: int = 50,
     ) -> list[Suggestion]:
         """
         Generate suggestions for organizing files.
@@ -319,10 +300,7 @@ class SuggestionEngine:
         return ranked_suggestions[:max_suggestions]
 
     def _suggest_moves(
-        self,
-        files: list[Path],
-        analysis: PatternAnalysis,
-        user_history: dict | None
+        self, files: list[Path], analysis: PatternAnalysis, user_history: dict | None
     ) -> list[Suggestion]:
         """Suggest moving files to better locations."""
         suggestions = []
@@ -341,21 +319,21 @@ class SuggestionEngine:
                 # Generate reasoning
                 reasoning = self._generate_move_reasoning(file_path, target, factors)
 
-                suggestions.append(Suggestion(
-                    suggestion_id=self._generate_id(file_path, target),
-                    suggestion_type=SuggestionType.MOVE,
-                    file_path=file_path,
-                    target_path=target / file_path.name,
-                    confidence=confidence,
-                    reasoning=reasoning,
-                    metadata={'factors': factors.to_dict()}
-                ))
+                suggestions.append(
+                    Suggestion(
+                        suggestion_id=self._generate_id(file_path, target),
+                        suggestion_type=SuggestionType.MOVE,
+                        file_path=file_path,
+                        target_path=target / file_path.name,
+                        confidence=confidence,
+                        reasoning=reasoning,
+                        metadata={"factors": factors.to_dict()},
+                    )
+                )
 
         return suggestions
 
-    def _suggest_renames(
-        self, files: list[Path], analysis: PatternAnalysis
-    ) -> list[Suggestion]:
+    def _suggest_renames(self, files: list[Path], analysis: PatternAnalysis) -> list[Suggestion]:
         """Suggest renaming files to match patterns."""
         suggestions = []
 
@@ -371,15 +349,17 @@ class SuggestionEngine:
 
                 reasoning = "Rename to match detected naming pattern in this directory"
 
-                suggestions.append(Suggestion(
-                    suggestion_id=self._generate_id(file_path, None),
-                    suggestion_type=SuggestionType.RENAME,
-                    file_path=file_path,
-                    new_name=new_name,
-                    confidence=confidence,
-                    reasoning=reasoning,
-                    metadata={'factors': factors.to_dict()}
-                ))
+                suggestions.append(
+                    Suggestion(
+                        suggestion_id=self._generate_id(file_path, None),
+                        suggestion_type=SuggestionType.RENAME,
+                        file_path=file_path,
+                        new_name=new_name,
+                        confidence=confidence,
+                        reasoning=reasoning,
+                        metadata={"factors": factors.to_dict()},
+                    )
+                )
 
         return suggestions
 
@@ -394,8 +374,7 @@ class SuggestionEngine:
                 target_dir = analysis.directory / cluster.category
 
                 factors = ConfidenceFactors(
-                    pattern_strength=cluster.confidence,
-                    content_similarity=80.0
+                    pattern_strength=cluster.confidence, content_similarity=80.0
                 )
                 confidence = factors.calculate_weighted_score()
 
@@ -407,21 +386,21 @@ class SuggestionEngine:
 
                 # Create a restructure suggestion for the first file as example
                 if cluster.file_paths:
-                    suggestions.append(Suggestion(
-                        suggestion_id=self._generate_id(
-                            cluster.file_paths[0], target_dir
-                        ),
-                        suggestion_type=SuggestionType.RESTRUCTURE,
-                        file_path=cluster.file_paths[0],
-                        target_path=target_dir,
-                        confidence=confidence,
-                        reasoning=reasoning,
-                        related_files=cluster.file_paths,
-                        metadata={
-                            'cluster_id': cluster.cluster_id,
-                            'factors': factors.to_dict()
-                        }
-                    ))
+                    suggestions.append(
+                        Suggestion(
+                            suggestion_id=self._generate_id(cluster.file_paths[0], target_dir),
+                            suggestion_type=SuggestionType.RESTRUCTURE,
+                            file_path=cluster.file_paths[0],
+                            target_path=target_dir,
+                            confidence=confidence,
+                            reasoning=reasoning,
+                            related_files=cluster.file_paths,
+                            metadata={
+                                "cluster_id": cluster.cluster_id,
+                                "factors": factors.to_dict(),
+                            },
+                        )
+                    )
 
         return suggestions
 
@@ -442,13 +421,13 @@ class SuggestionEngine:
             SuggestionType.MOVE: 3,
             SuggestionType.RENAME: 2,
             SuggestionType.TAG: 1,
-            SuggestionType.DELETE: 0
+            SuggestionType.DELETE: 0,
         }
 
         return sorted(
             suggestions,
             key=lambda s: (s.confidence, type_priority.get(s.suggestion_type, 0)),
-            reverse=True
+            reverse=True,
         )
 
     def explain_suggestion(self, suggestion: Suggestion) -> str:
@@ -465,24 +444,23 @@ class SuggestionEngine:
         explanation_parts.append(f"Confidence: {suggestion.confidence:.1f}%")
         explanation_parts.append(f"\nReasoning: {suggestion.reasoning}")
 
-        if 'factors' in suggestion.metadata:
-            factors = suggestion.metadata['factors']
+        if "factors" in suggestion.metadata:
+            factors = suggestion.metadata["factors"]
             explanation_parts.append("\nConfidence Factors:")
             for factor, value in factors.items():
-                if factor != 'weights' and factor != 'weighted_score':
+                if factor != "weights" and factor != "weighted_score":
                     explanation_parts.append(f"  - {factor}: {value:.1f}%")
 
         return "\n".join(explanation_parts)
 
-    def _find_best_location(
-        self, file_path: Path, analysis: PatternAnalysis
-    ) -> Path | None:
+    def _find_best_location(self, file_path: Path, analysis: PatternAnalysis) -> Path | None:
         """Find the best location for a file based on patterns."""
         file_type = file_path.suffix.lower()
 
         # Look for location patterns with matching file types
         candidates = [
-            p for p in analysis.location_patterns
+            p
+            for p in analysis.location_patterns
             if file_type in p.file_types and p.directory != file_path.parent
         ]
 
@@ -493,15 +471,10 @@ class SuggestionEngine:
         best_location = max(candidates, key=lambda p: p.file_count)
         return best_location.directory
 
-    def _suggest_better_name(
-        self, file_path: Path, analysis: PatternAnalysis
-    ) -> str | None:
+    def _suggest_better_name(self, file_path: Path, analysis: PatternAnalysis) -> str | None:
         """Suggest a better name for the file based on patterns."""
         # Find patterns in the file's directory
-        dir_patterns = [
-            p for p in analysis.location_patterns
-            if p.directory == file_path.parent
-        ]
+        dir_patterns = [p for p in analysis.location_patterns if p.directory == file_path.parent]
 
         if not dir_patterns or not dir_patterns[0].naming_patterns:
             return None
@@ -550,7 +523,7 @@ class SuggestionEngine:
         common = parents[0]
         for parent in parents[1:]:
             try:
-                common = Path(*common.parts[:len(common.parts)])
+                common = Path(*common.parts[: len(common.parts)])
                 while common not in parent.parents and common != parent:
                     common = common.parent
             except (ValueError, IndexError):

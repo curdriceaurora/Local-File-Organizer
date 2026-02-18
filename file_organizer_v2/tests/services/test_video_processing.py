@@ -1,4 +1,5 @@
 """Tests for video processing service - Phase 3."""
+
 from __future__ import annotations
 
 import pytest
@@ -13,6 +14,7 @@ class TestVideoProcessingPlaceholder:
         """Test that VisionProcessor exists."""
         try:
             from file_organizer.services.vision_processor import VisionProcessor
+
             assert VisionProcessor is not None
         except ImportError:
             pytest.skip("VisionProcessor not available")

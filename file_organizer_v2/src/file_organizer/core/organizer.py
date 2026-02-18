@@ -1,4 +1,5 @@
 """Main file organizer orchestrator."""
+
 from __future__ import annotations
 
 import os
@@ -44,12 +45,23 @@ class FileOrganizer:
     """
 
     # Supported file extensions
-    TEXT_EXTENSIONS: ClassVar[set[str]] = {'.txt', '.md', '.docx', '.doc', '.pdf', '.csv',
-                                            '.xlsx', '.xls', '.ppt', '.pptx', '.epub'}
-    IMAGE_EXTENSIONS: ClassVar[set[str]] = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff'}
-    VIDEO_EXTENSIONS: ClassVar[set[str]] = {'.mp4', '.avi', '.mkv', '.mov', '.wmv'}
-    AUDIO_EXTENSIONS: ClassVar[set[str]] = {'.mp3', '.wav', '.flac', '.m4a', '.ogg'}
-    CAD_EXTENSIONS: ClassVar[set[str]] = {'.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'}
+    TEXT_EXTENSIONS: ClassVar[set[str]] = {
+        ".txt",
+        ".md",
+        ".docx",
+        ".doc",
+        ".pdf",
+        ".csv",
+        ".xlsx",
+        ".xls",
+        ".ppt",
+        ".pptx",
+        ".epub",
+    }
+    IMAGE_EXTENSIONS: ClassVar[set[str]] = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"}
+    VIDEO_EXTENSIONS: ClassVar[set[str]] = {".mp4", ".avi", ".mkv", ".mov", ".wmv"}
+    AUDIO_EXTENSIONS: ClassVar[set[str]] = {".mp3", ".wav", ".flac", ".m4a", ".ogg"}
+    CAD_EXTENSIONS: ClassVar[set[str]] = {".dwg", ".dxf", ".step", ".stp", ".iges", ".igs"}
 
     def __init__(
         self,
@@ -75,7 +87,7 @@ class FileOrganizer:
         self.console = Console()
         self.text_processor: TextProcessor | None = None
         self.vision_processor: VisionProcessor | None = None
-        
+
         # Initialize parallel processor
         self.parallel_config = ParallelConfig(
             max_workers=parallel_workers,
@@ -129,10 +141,16 @@ class FileOrganizer:
         video_files = [f for f in files if f.suffix.lower() in self.VIDEO_EXTENSIONS]
         audio_files = [f for f in files if f.suffix.lower() in self.AUDIO_EXTENSIONS]
         cad_files = [f for f in files if f.suffix.lower() in self.CAD_EXTENSIONS]
-        other_files = [f for f in files if f not in text_files + image_files + video_files + audio_files + cad_files]
+        other_files = [
+            f
+            for f in files
+            if f not in text_files + image_files + video_files + audio_files + cad_files
+        ]
 
         # Show file type breakdown
-        self._show_file_breakdown(text_files, image_files, video_files, audio_files, cad_files, other_files)
+        self._show_file_breakdown(
+            text_files, image_files, video_files, audio_files, cad_files, other_files
+        )
 
         # Initialize models
         self.console.print("\n[bold blue]Initializing AI models...[/bold blue]")
@@ -152,7 +170,9 @@ class FileOrganizer:
         # Process text files
         all_processed = []
         if text_files:
-            self.console.print(f"\n[bold blue]Processing {len(text_files)} text files...[/bold blue]")
+            self.console.print(
+                f"\n[bold blue]Processing {len(text_files)} text files...[/bold blue]"
+            )
             processed_text = self._process_text_files(text_files)
             all_processed.extend(processed_text)
 
@@ -181,13 +201,15 @@ class FileOrganizer:
             success_cnt = len(all_processed) - failed_cnt
             result.processed_files = success_cnt
             result.failed_files = failed_cnt
-            
+
             if not self.dry_run:
                 self.console.print("\n[bold blue]Organizing files...[/bold blue]")
                 organized = self._organize_files(all_processed, output_path, skip_existing)
                 result.organized_structure = organized
             else:
-                self.console.print("\n[bold yellow]DRY RUN - Simulating organization...[/bold yellow]")
+                self.console.print(
+                    "\n[bold yellow]DRY RUN - Simulating organization...[/bold yellow]"
+                )
                 simulated = self._simulate_organization(all_processed, output_path)
                 result.organized_structure = simulated
 
@@ -226,7 +248,7 @@ class FileOrganizer:
         else:
             for root, _, filenames in os.walk(path):
                 for filename in filenames:
-                    if not filename.startswith('.'):  # Skip hidden files
+                    if not filename.startswith("."):  # Skip hidden files
                         files.append(Path(root) / filename)
 
         self.console.print(f"[green]✓[/green] Found {len(files)} files")
@@ -275,7 +297,6 @@ class FileOrganizer:
             TimeElapsedColumn(),
             console=self.console,
         ) as progress:
-
             task = progress.add_task("Processing files...", total=len(files))
 
             # Helper for pickling
@@ -284,40 +305,38 @@ class FileOrganizer:
                 assert self.text_processor is not None
                 return self.text_processor.process_file(path)
 
-            for file_result in self.parallel_processor.process_batch_iter(
-                files, _process_one
-            ):
+            for file_result in self.parallel_processor.process_batch_iter(files, _process_one):
                 if file_result.success:
                     result = file_result.result
                     processed.append(result)
-                    
+
                     if not result.error:
                         progress.update(
-                            task,
-                            advance=1,
-                            description=f"[green]✓[/green] {file_result.path.name}"
+                            task, advance=1, description=f"[green]✓[/green] {file_result.path.name}"
                         )
                     else:
                         progress.update(
                             task,
                             advance=1,
-                            description=f"[red]✗[/red] {file_result.path.name} (Error)"
+                            description=f"[red]✗[/red] {file_result.path.name} (Error)",
                         )
                 else:
-                     # Infrastructure failure (timeout, etc)
+                    # Infrastructure failure (timeout, etc)
                     error_msg = file_result.error or "Unknown error"
                     logger.error(f"Failed to process {file_result.path}: {error_msg}")
-                    processed.append(ProcessedFile(
-                        file_path=file_result.path,
-                        description="",
-                        folder_name="errors",
-                        filename=file_result.path.stem,
-                        error=error_msg,
-                    ))
+                    processed.append(
+                        ProcessedFile(
+                            file_path=file_result.path,
+                            description="",
+                            folder_name="errors",
+                            filename=file_result.path.stem,
+                            error=error_msg,
+                        )
+                    )
                     progress.update(
                         task,
                         advance=1,
-                        description=f"[red]✗[/red] {file_result.path.name} (Failed)"
+                        description=f"[red]✗[/red] {file_result.path.name} (Failed)",
                     )
 
         return processed
@@ -341,7 +360,6 @@ class FileOrganizer:
             TimeElapsedColumn(),
             console=self.console,
         ) as progress:
-
             task = progress.add_task("Processing images...", total=len(files))
 
             # Helper for pickling
@@ -359,31 +377,31 @@ class FileOrganizer:
 
                     if not result.error:
                         progress.update(
-                            task,
-                            advance=1,
-                            description=f"[green]✓[/green] {file_result.path.name}"
+                            task, advance=1, description=f"[green]✓[/green] {file_result.path.name}"
                         )
                     else:
                         progress.update(
                             task,
                             advance=1,
-                            description=f"[red]✗[/red] {file_result.path.name} (Error)"
+                            description=f"[red]✗[/red] {file_result.path.name} (Error)",
                         )
                 else:
                     # Infrastructure failure
                     error_msg = file_result.error or "Unknown error"
                     logger.error(f"Failed to process {file_result.path}: {error_msg}")
-                    processed.append(ProcessedImage(
-                        file_path=file_result.path,
-                        description="",
-                        folder_name="errors",
-                        filename=file_result.path.stem,
-                        error=error_msg,
-                    ))
+                    processed.append(
+                        ProcessedImage(
+                            file_path=file_result.path,
+                            description="",
+                            folder_name="errors",
+                            filename=file_result.path.stem,
+                            error=error_msg,
+                        )
+                    )
                     progress.update(
                         task,
                         advance=1,
-                        description=f"[red]✗[/red] {file_result.path.name} (Failed)"
+                        description=f"[red]✗[/red] {file_result.path.name} (Failed)",
                     )
 
         return processed
@@ -486,11 +504,17 @@ class FileOrganizer:
         self.console.print("\n[bold yellow]Skipped Files:[/bold yellow]")
 
         if image_files:
-            self.console.print(f"  [yellow]•[/yellow] {len(image_files)} images (need vision model - Week 2)")
+            self.console.print(
+                f"  [yellow]•[/yellow] {len(image_files)} images (need vision model - Week 2)"
+            )
         if video_files:
-            self.console.print(f"  [yellow]•[/yellow] {len(video_files)} videos (need vision model - Week 2)")
+            self.console.print(
+                f"  [yellow]•[/yellow] {len(video_files)} videos (need vision model - Week 2)"
+            )
         if audio_files:
-            self.console.print(f"  [yellow]•[/yellow] {len(audio_files)} audio files (need audio model - Phase 3)")
+            self.console.print(
+                f"  [yellow]•[/yellow] {len(audio_files)} audio files (need audio model - Phase 3)"
+            )
 
         self.console.print("\n  [dim]These will be supported in future phases[/dim]")
 

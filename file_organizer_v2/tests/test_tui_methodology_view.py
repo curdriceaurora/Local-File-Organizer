@@ -1,4 +1,5 @@
 """Tests for TUI methodology selector view."""
+
 from __future__ import annotations
 
 from unittest.mock import patch

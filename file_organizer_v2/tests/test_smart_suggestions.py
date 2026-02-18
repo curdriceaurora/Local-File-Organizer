@@ -4,6 +4,7 @@ Tests for Smart Suggestions System
 Comprehensive tests for pattern analyzer, suggestion engine,
 misplacement detector, and feedback system.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -79,14 +80,14 @@ class TestPatternAnalyzer:
         analyzer = PatternAnalyzer(min_pattern_count=2)
 
         # Collect all files
-        files = list(sample_files.rglob('*'))
+        files = list(sample_files.rglob("*"))
         files = [f for f in files if f.is_file()]
 
         patterns = analyzer.detect_naming_patterns(files)
 
         # Should detect at least date prefix and numeric suffix patterns
         pattern_types = [p.pattern for p in patterns]
-        assert 'DATE_PREFIX' in pattern_types or 'NUMERIC_SUFFIX' in pattern_types
+        assert "DATE_PREFIX" in pattern_types or "NUMERIC_SUFFIX" in pattern_types
 
         # Check pattern properties
         for pattern in patterns:
@@ -111,7 +112,7 @@ class TestPatternAnalyzer:
         """Test content-based clustering."""
         analyzer = PatternAnalyzer(min_pattern_count=2)
 
-        files = list(sample_files.rglob('*'))
+        files = list(sample_files.rglob("*"))
         files = [f for f in files if f.is_file()]
 
         clusters = analyzer.cluster_by_content(files)
@@ -122,9 +123,7 @@ class TestPatternAnalyzer:
         for cluster in clusters:
             assert len(cluster.file_paths) >= 2
             assert 0 <= cluster.confidence <= 100
-            assert cluster.category in [
-                'documents', 'images', 'code', 'general'
-            ]
+            assert cluster.category in ["documents", "images", "code", "general"]
 
     def test_empty_directory(self, temp_dir):
         """Test analysis of empty directory."""
@@ -189,9 +188,7 @@ class TestSuggestionEngine:
         file_path = organized_structure / "misplaced_photo.jpg"
         target_path = organized_structure / "images"
 
-        factors = scorer.score_suggestion(
-            file_path, target_path, SuggestionType.MOVE, analysis
-        )
+        factors = scorer.score_suggestion(file_path, target_path, SuggestionType.MOVE, analysis)
 
         assert 0 <= factors.pattern_strength <= 100
         assert 0 <= factors.content_similarity <= 100
@@ -211,21 +208,21 @@ class TestSuggestionEngine:
                 suggestion_type=SuggestionType.MOVE,
                 file_path=Path("file1.txt"),
                 confidence=50.0,
-                reasoning="Test"
+                reasoning="Test",
             ),
             Suggestion(
                 suggestion_id="2",
                 suggestion_type=SuggestionType.RESTRUCTURE,
                 file_path=Path("file2.txt"),
                 confidence=80.0,
-                reasoning="Test"
+                reasoning="Test",
             ),
             Suggestion(
                 suggestion_id="3",
                 suggestion_type=SuggestionType.RENAME,
                 file_path=Path("file3.txt"),
                 confidence=60.0,
-                reasoning="Test"
+                reasoning="Test",
             ),
         ]
 
@@ -245,7 +242,7 @@ class TestSuggestionEngine:
             file_path=Path("test.jpg"),
             target_path=Path("images/test.jpg"),
             confidence=75.5,
-            reasoning="File type matches target location"
+            reasoning="File type matches target location",
         )
 
         explanation = engine.explain_suggestion(suggestion)
@@ -347,7 +344,7 @@ class TestSuggestionFeedback:
     @pytest.fixture
     def temp_feedback_file(self):
         """Create temporary feedback file."""
-        with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as _tmp:
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as _tmp:
             temp_file = Path(_tmp.name)
         yield temp_file
         if temp_file.exists():
@@ -363,13 +360,13 @@ class TestSuggestionFeedback:
             file_path=Path("test.jpg"),
             target_path=Path("images/test.jpg"),
             confidence=75.0,
-            reasoning="Test"
+            reasoning="Test",
         )
 
-        feedback.record_action(suggestion, 'accepted')
+        feedback.record_action(suggestion, "accepted")
 
         assert len(feedback.feedback_entries) == 1
-        assert feedback.feedback_entries[0].action == 'accepted'
+        assert feedback.feedback_entries[0].action == "accepted"
 
     def test_get_acceptance_rate(self, temp_feedback_file):
         """Test acceptance rate calculation."""
@@ -382,9 +379,9 @@ class TestSuggestionFeedback:
                 suggestion_type=SuggestionType.MOVE,
                 file_path=Path(f"test{i}.jpg"),
                 confidence=70.0,
-                reasoning="Test"
+                reasoning="Test",
             )
-            action = 'accepted' if i < 3 else 'rejected'
+            action = "accepted" if i < 3 else "rejected"
             feedback.record_action(suggestion, action)
 
         # 3 accepted out of 5 = 60%
@@ -396,14 +393,14 @@ class TestSuggestionFeedback:
         feedback = SuggestionFeedback(feedback_file=temp_feedback_file)
 
         # Record various actions
-        actions = ['accepted', 'accepted', 'rejected', 'ignored', 'modified']
+        actions = ["accepted", "accepted", "rejected", "ignored", "modified"]
         for i, action in enumerate(actions):
             suggestion = Suggestion(
                 suggestion_id=f"test{i}",
                 suggestion_type=SuggestionType.MOVE,
                 file_path=Path(f"test{i}.jpg"),
                 confidence=70.0,
-                reasoning="Test"
+                reasoning="Test",
             )
             feedback.record_action(suggestion, action)
 
@@ -428,14 +425,14 @@ class TestSuggestionFeedback:
                 file_path=Path(f"test{i}.jpg"),
                 target_path=Path("images") / f"test{i}.jpg",
                 confidence=70.0,
-                reasoning="Test"
+                reasoning="Test",
             )
-            feedback.record_action(suggestion, 'accepted')
+            feedback.record_action(suggestion, "accepted")
 
         history = feedback.get_user_history()
 
-        assert 'move_history' in history
-        assert '.jpg' in history['move_history']
+        assert "move_history" in history
+        assert ".jpg" in history["move_history"]
 
     def test_persistence(self, temp_feedback_file):
         """Test feedback persistence."""
@@ -447,9 +444,9 @@ class TestSuggestionFeedback:
             suggestion_type=SuggestionType.MOVE,
             file_path=Path("test.jpg"),
             confidence=70.0,
-            reasoning="Test"
+            reasoning="Test",
         )
-        feedback1.record_action(suggestion, 'accepted')
+        feedback1.record_action(suggestion, "accepted")
 
         # Create new instance and check if data persists
         feedback2 = SuggestionFeedback(feedback_file=temp_feedback_file)
@@ -468,9 +465,9 @@ class TestSuggestionFeedback:
                 suggestion_type=SuggestionType.MOVE,
                 file_path=Path(f"test{i}.jpg"),
                 confidence=70.0,
-                reasoning="Test"
+                reasoning="Test",
             )
-            feedback.record_action(suggestion, 'accepted')
+            feedback.record_action(suggestion, "accepted")
 
         initial_count = len(feedback.feedback_entries)
 
@@ -524,27 +521,23 @@ class TestIntegration:
         engine = SuggestionEngine(min_confidence=30.0)
         misplaced_files = [
             complete_structure / "random_photo.jpg",
-            complete_structure / "lost_document.pdf"
+            complete_structure / "lost_document.pdf",
         ]
 
-        suggestions = engine.generate_suggestions(
-            misplaced_files, pattern_analysis=analysis
-        )
+        suggestions = engine.generate_suggestions(misplaced_files, pattern_analysis=analysis)
 
         assert len(suggestions) > 0
 
         # 3. Detect misplacements
         detector = MisplacementDetector(min_mismatch_score=40.0)
-        misplaced = detector.detect_misplaced(
-            complete_structure, pattern_analysis=analysis
-        )
+        misplaced = detector.detect_misplaced(complete_structure, pattern_analysis=analysis)
 
         assert len(misplaced) >= 1
 
         # 4. Record feedback
         feedback = SuggestionFeedback()
         if suggestions:
-            feedback.record_action(suggestions[0], 'accepted')
+            feedback.record_action(suggestions[0], "accepted")
 
         stats = feedback.get_learning_stats()
         assert stats.total_suggestions >= 1
@@ -553,20 +546,17 @@ class TestIntegration:
         """Test performance on larger dataset."""
         # Create 100 files
         for i in range(100):
-            category = ['docs', 'images', 'code'][i % 3]
+            category = ["docs", "images", "code"][i % 3]
             cat_dir = temp_dir / category
             cat_dir.mkdir(exist_ok=True)
 
-            ext = {
-                'docs': '.pdf',
-                'images': '.jpg',
-                'code': '.py'
-            }[category]
+            ext = {"docs": ".pdf", "images": ".jpg", "code": ".py"}[category]
 
             (cat_dir / f"file_{i:04d}{ext}").touch()
 
         # Time the analysis
         import time
+
         start = time.time()
 
         analyzer = PatternAnalyzer()
@@ -579,5 +569,5 @@ class TestIntegration:
         assert analysis.total_files == 100
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

@@ -8,6 +8,7 @@ Provides command-line interface for all profile management operations including:
 - Template management
 - Migration operations
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -30,7 +31,7 @@ def get_profile_manager() -> ProfileManager:
     return ProfileManager()
 
 
-@click.group(name='profile')
+@click.group(name="profile")
 def profile_command():
     """Profile management commands."""
     pass
@@ -40,7 +41,8 @@ def profile_command():
 # Profile CRUD Commands
 # ============================================================================
 
-@profile_command.command(name='list')
+
+@profile_command.command(name="list")
 def list_profiles():
     """List all available profiles."""
     try:
@@ -64,8 +66,8 @@ def list_profiles():
             click.echo(f"  Updated: {profile.updated}")
 
             # Show statistics
-            global_prefs = len(profile.preferences.get('global', {}))
-            dir_prefs = len(profile.preferences.get('directory_specific', {}))
+            global_prefs = len(profile.preferences.get("global", {}))
+            dir_prefs = len(profile.preferences.get("directory_specific", {}))
             click.echo(f"  Preferences: {global_prefs} global, {dir_prefs} directory-specific")
 
         click.echo("\n" + "=" * 80)
@@ -75,10 +77,10 @@ def list_profiles():
         raise click.Abort() from e
 
 
-@profile_command.command(name='create')
-@click.argument('name')
-@click.option('--description', '-d', default='', help='Profile description')
-@click.option('--activate', '-a', is_flag=True, help='Activate profile after creation')
+@profile_command.command(name="create")
+@click.argument("name")
+@click.option("--description", "-d", default="", help="Profile description")
+@click.option("--activate", "-a", is_flag=True, help="Activate profile after creation")
 def create_profile(name: str, description: str, activate: bool):
     """Create a new profile."""
     try:
@@ -105,8 +107,8 @@ def create_profile(name: str, description: str, activate: bool):
         raise click.Abort() from e
 
 
-@profile_command.command(name='activate')
-@click.argument('name')
+@profile_command.command(name="activate")
+@click.argument("name")
 def activate_profile(name: str):
     """Activate a profile (make it the current active profile)."""
     try:
@@ -123,9 +125,9 @@ def activate_profile(name: str):
         raise click.Abort() from e
 
 
-@profile_command.command(name='delete')
-@click.argument('name')
-@click.option('--force', '-', is_flag=True, help='Force delete even if active')
+@profile_command.command(name="delete")
+@click.argument("name")
+@click.option("--force", "-", is_flag=True, help="Force delete even if active")
 def delete_profile(name: str, force: bool):
     """Delete a profile."""
     try:
@@ -148,7 +150,7 @@ def delete_profile(name: str, force: bool):
         raise click.Abort() from e
 
 
-@profile_command.command(name='current')
+@profile_command.command(name="current")
 def show_current():
     """Show currently active profile."""
     try:
@@ -167,8 +169,8 @@ def show_current():
         click.echo(f"Updated: {profile.updated}")
 
         # Show statistics
-        global_prefs = len(profile.preferences.get('global', {}))
-        dir_prefs = len(profile.preferences.get('directory_specific', {}))
+        global_prefs = len(profile.preferences.get("global", {}))
+        dir_prefs = len(profile.preferences.get("directory_specific", {}))
         patterns = len(profile.learned_patterns)
         confidence = len(profile.confidence_data)
 
@@ -188,10 +190,11 @@ def show_current():
 # Export/Import Commands
 # ============================================================================
 
-@profile_command.command(name='export')
-@click.argument('name')
-@click.option('--output', '-o', type=click.Path(), required=True, help='Output file path')
-@click.option('--selective', '-s', multiple=True, help='Select specific preferences to export')
+
+@profile_command.command(name="export")
+@click.argument("name")
+@click.option("--output", "-o", type=click.Path(), required=True, help="Output file path")
+@click.option("--selective", "-s", multiple=True, help="Select specific preferences to export")
 def export_profile(name: str, output: str, selective: tuple):
     """Export a profile to JSON file."""
     try:
@@ -218,10 +221,10 @@ def export_profile(name: str, output: str, selective: tuple):
         raise click.Abort() from e
 
 
-@profile_command.command(name='import')
-@click.argument('file', type=click.Path(exists=True))
-@click.option('--as', 'new_name', help='Import with a different name')
-@click.option('--preview', is_flag=True, help='Preview import without applying')
+@profile_command.command(name="import")
+@click.argument("file", type=click.Path(exists=True))
+@click.option("--as", "new_name", help="Import with a different name")
+@click.option("--preview", is_flag=True, help="Preview import without applying")
 def import_profile(file: str, new_name: str | None, preview: bool):
     """Import a profile from JSON file."""
     try:
@@ -244,24 +247,24 @@ def import_profile(file: str, new_name: str | None, preview: bool):
             click.echo(f"Version: {preview_data['profile_version']}")
             click.echo(f"Export Type: {preview_data['export_type']}")
 
-            if 'preferences_count' in preview_data:
+            if "preferences_count" in preview_data:
                 click.echo("\nPreferences:")
-                for key, count in preview_data['preferences_count'].items():
+                for key, count in preview_data["preferences_count"].items():
                     click.echo(f"  {key}: {count}")
 
             click.echo(f"\nLearned patterns: {preview_data['learned_patterns_count']}")
             click.echo(f"Confidence data: {preview_data['confidence_data_count']}")
 
             # Show validation
-            validation = preview_data['validation']
+            validation = preview_data["validation"]
             click.echo("\nValidation:")
             click.echo(f"  Valid: {validation['valid']}")
-            if validation['errors']:
+            if validation["errors"]:
                 click.echo(f"  Errors: {', '.join(validation['errors'])}")
-            if validation['warnings']:
+            if validation["warnings"]:
                 click.echo(f"  Warnings: {', '.join(validation['warnings'])}")
 
-            if 'conflicts' in preview_data:
+            if "conflicts" in preview_data:
                 click.echo("\n⚠ Conflicts detected:")
                 click.echo(f"  {preview_data['conflicts']['message']}")
 
@@ -286,14 +289,18 @@ def import_profile(file: str, new_name: str | None, preview: bool):
 # Merge Commands
 # ============================================================================
 
-@profile_command.command(name='merge')
-@click.argument('profiles', nargs=-1, required=True)
-@click.option('--output', '-o', required=True, help='Name for merged profile')
-@click.option('--strategy', '-s',
-              type=click.Choice(['recent', 'frequent', 'confident', 'first', 'last']),
-              default='confident',
-              help='Merge strategy for conflicts')
-@click.option('--show-conflicts', is_flag=True, help='Show conflicts before merging')
+
+@profile_command.command(name="merge")
+@click.argument("profiles", nargs=-1, required=True)
+@click.option("--output", "-o", required=True, help="Name for merged profile")
+@click.option(
+    "--strategy",
+    "-s",
+    type=click.Choice(["recent", "frequent", "confident", "first", "last"]),
+    default="confident",
+    help="Merge strategy for conflicts",
+)
+@click.option("--show-conflicts", is_flag=True, help="Show conflicts before merging")
 def merge_profiles(profiles: tuple, output: str, strategy: str, show_conflicts: bool):
     """Merge multiple profiles into one."""
     try:
@@ -343,13 +350,14 @@ def merge_profiles(profiles: tuple, output: str, strategy: str, show_conflicts: 
 # Template Commands
 # ============================================================================
 
-@profile_command.group(name='template')
+
+@profile_command.group(name="template")
 def template_commands():
     """Template management commands."""
     pass
 
 
-@template_commands.command(name='list')
+@template_commands.command(name="list")
 def list_templates():
     """List all available templates."""
     try:
@@ -374,8 +382,8 @@ def list_templates():
         raise click.Abort() from e
 
 
-@template_commands.command(name='preview')
-@click.argument('name')
+@template_commands.command(name="preview")
+@click.argument("name")
 def preview_template(name: str):
     """Preview a template."""
     try:
@@ -393,7 +401,7 @@ def preview_template(name: str):
         click.echo(f"Description: {preview['description']}")
 
         click.echo("\nPreferences Summary:")
-        summary = preview['preferences_summary']
+        summary = preview["preferences_summary"]
         click.echo(f"  Naming patterns: {', '.join(summary['naming_patterns'])}")
         click.echo(f"  Folder mappings: {', '.join(summary['folder_mappings'])}")
         click.echo(f"  Category overrides: {summary['category_overrides']}")
@@ -401,7 +409,7 @@ def preview_template(name: str):
         click.echo(f"\nLearned patterns: {', '.join(preview['learned_patterns'])}")
 
         click.echo("\nConfidence levels:")
-        for key, value in preview['confidence_levels'].items():
+        for key, value in preview["confidence_levels"].items():
             click.echo(f"  {key}: {value}")
 
         click.echo("=" * 80 + "\n")
@@ -411,10 +419,10 @@ def preview_template(name: str):
         raise click.Abort() from e
 
 
-@template_commands.command(name='apply')
-@click.argument('template_name')
-@click.argument('profile_name')
-@click.option('--activate', '-a', is_flag=True, help='Activate profile after creation')
+@template_commands.command(name="apply")
+@click.argument("template_name")
+@click.argument("profile_name")
+@click.option("--activate", "-a", is_flag=True, help="Activate profile after creation")
 def apply_template(template_name: str, profile_name: str, activate: bool):
     """Create a profile from a template."""
     try:
@@ -444,10 +452,11 @@ def apply_template(template_name: str, profile_name: str, activate: bool):
 # Migration Commands
 # ============================================================================
 
-@profile_command.command(name='migrate')
-@click.argument('name')
-@click.option('--to-version', required=True, help='Target version')
-@click.option('--no-backup', is_flag=True, help='Skip backup before migration')
+
+@profile_command.command(name="migrate")
+@click.argument("name")
+@click.option("--to-version", required=True, help="Target version")
+@click.option("--no-backup", is_flag=True, help="Skip backup before migration")
 def migrate_profile(name: str, to_version: str, no_backup: bool):
     """Migrate a profile to a different version."""
     try:
@@ -469,8 +478,8 @@ def migrate_profile(name: str, to_version: str, no_backup: bool):
         raise click.Abort() from e
 
 
-@profile_command.command(name='validate')
-@click.argument('name')
+@profile_command.command(name="validate")
+@click.argument("name")
 def validate_profile(name: str):
     """Validate a profile."""
     try:
@@ -490,19 +499,19 @@ def validate_profile(name: str):
 
 # Export all commands
 __all__ = [
-    'profile_command',
-    'list_profiles',
-    'create_profile',
-    'activate_profile',
-    'delete_profile',
-    'show_current',
-    'export_profile',
-    'import_profile',
-    'merge_profiles',
-    'template_commands',
-    'list_templates',
-    'preview_template',
-    'apply_template',
-    'migrate_profile',
-    'validate_profile',
+    "profile_command",
+    "list_profiles",
+    "create_profile",
+    "activate_profile",
+    "delete_profile",
+    "show_current",
+    "export_profile",
+    "import_profile",
+    "merge_profiles",
+    "template_commands",
+    "list_templates",
+    "preview_template",
+    "apply_template",
+    "migrate_profile",
+    "validate_profile",
 ]

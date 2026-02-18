@@ -4,6 +4,7 @@ File system watcher package.
 Provides real-time file system monitoring with debouncing, filtering,
 and batch event processing using the watchdog library.
 """
+
 from __future__ import annotations
 
 from .config import WatcherConfig

@@ -3,6 +3,7 @@ Tests for ProfileExporter and ProfileImporter
 
 Tests export/import functionality, validation, and selective operations.
 """
+
 from __future__ import annotations
 
 import json
@@ -52,16 +53,11 @@ def sample_profile(profile_manager):
     profile_manager.update_profile(
         "sample",
         preferences={
-            'global': {
-                'test_setting': 'test_value',
-                'naming_patterns': {'pattern1': 'value1'}
-            },
-            'directory_specific': {
-                '/test/path': {'setting': 'value'}
-            }
+            "global": {"test_setting": "test_value", "naming_patterns": {"pattern1": "value1"}},
+            "directory_specific": {"/test/path": {"setting": "value"}},
         },
-        learned_patterns={'pattern_type': 'learned_value'},
-        confidence_data={'setting1': 0.85}
+        learned_patterns={"pattern_type": "learned_value"},
+        confidence_data={"setting1": 0.85},
     )
 
     return profile_manager.get_profile("sample")
@@ -70,6 +66,7 @@ def sample_profile(profile_manager):
 # ============================================================================
 # ProfileExporter Tests
 # ============================================================================
+
 
 def test_export_profile(exporter, sample_profile, temp_storage):
     """Test exporting a profile."""
@@ -83,10 +80,10 @@ def test_export_profile(exporter, sample_profile, temp_storage):
     with open(output_file) as f:
         data = json.load(f)
 
-    assert data['profile_name'] == "sample"
-    assert data['description'] == "Sample profile"
-    assert 'exported_at' in data
-    assert 'preferences' in data
+    assert data["profile_name"] == "sample"
+    assert data["description"] == "Sample profile"
+    assert "exported_at" in data
+    assert "preferences" in data
 
 
 def test_export_nonexistent_profile(exporter, temp_storage):
@@ -101,11 +98,7 @@ def test_export_selective(exporter, sample_profile, temp_storage):
     """Test selective export."""
     output_file = temp_storage / "selective_export.json"
 
-    success = exporter.export_selective(
-        "sample",
-        output_file,
-        ['global', 'learned_patterns']
-    )
+    success = exporter.export_selective("sample", output_file, ["global", "learned_patterns"])
     assert success
     assert output_file.exists()
 
@@ -113,10 +106,10 @@ def test_export_selective(exporter, sample_profile, temp_storage):
     with open(output_file) as f:
         data = json.load(f)
 
-    assert data['export_type'] == 'selective'
-    assert 'included_preferences' in data
-    assert 'global' in data['included_preferences']
-    assert 'preferences' in data
+    assert data["export_type"] == "selective"
+    assert "included_preferences" in data
+    assert "global" in data["included_preferences"]
+    assert "preferences" in data
 
 
 def test_validate_export(exporter, sample_profile, temp_storage):
@@ -134,9 +127,9 @@ def test_preview_export(exporter, sample_profile):
     preview = exporter.preview_export("sample")
 
     assert preview is not None
-    assert preview['profile_name'] == "sample"
-    assert 'statistics' in preview
-    assert 'export_size_estimate' in preview
+    assert preview["profile_name"] == "sample"
+    assert "statistics" in preview
+    assert "export_size_estimate" in preview
 
 
 def test_export_multiple_profiles(exporter, profile_manager, temp_storage):
@@ -147,10 +140,7 @@ def test_export_multiple_profiles(exporter, profile_manager, temp_storage):
 
     output_dir = temp_storage / "exports"
 
-    results = exporter.export_multiple(
-        ["profile1", "profile2"],
-        output_dir
-    )
+    results = exporter.export_multiple(["profile1", "profile2"], output_dir)
 
     assert results["profile1"] is True
     assert results["profile2"] is True
@@ -161,6 +151,7 @@ def test_export_multiple_profiles(exporter, profile_manager, temp_storage):
 # ============================================================================
 # ProfileImporter Tests
 # ============================================================================
+
 
 def test_import_profile(exporter, importer, sample_profile, temp_storage):
     """Test importing a profile."""
@@ -197,8 +188,8 @@ def test_validate_invalid_import_file(importer, temp_storage):
     """Test validation of invalid import file."""
     # Create invalid file
     invalid_file = temp_storage / "invalid.json"
-    with open(invalid_file, 'w') as f:
-        json.dump({'invalid': 'data'}, f)
+    with open(invalid_file, "w") as f:
+        json.dump({"invalid": "data"}, f)
 
     validation = importer.validate_import_file(invalid_file)
 
@@ -216,9 +207,9 @@ def test_preview_import(exporter, importer, sample_profile, temp_storage):
     preview = importer.preview_import(export_file)
 
     assert preview is not None
-    assert preview['profile_name'] == "sample"
-    assert 'preferences_count' in preview
-    assert 'validation' in preview
+    assert preview["profile_name"] == "sample"
+    assert "preferences_count" in preview
+    assert "validation" in preview
 
 
 def test_import_with_name_conflict(exporter, importer, sample_profile, temp_storage):
@@ -244,11 +235,7 @@ def test_import_selective(exporter, importer, sample_profile, temp_storage):
     importer.profile_manager.create_profile("target", "Target profile")
 
     # Import selective preferences
-    imported = importer.import_selective(
-        export_file,
-        ['global'],
-        "target"
-    )
+    imported = importer.import_selective(export_file, ["global"], "target")
 
     assert imported is not None
     assert imported.profile_name == "target"
@@ -276,7 +263,7 @@ def test_export_import_roundtrip(exporter, importer, sample_profile, temp_storag
     assert imported.description == original.description
 
     # Compare preferences
-    assert imported.preferences['global'] == original_prefs['global']
+    assert imported.preferences["global"] == original_prefs["global"]
 
 
 def test_import_with_migration_needed(importer, temp_storage):
@@ -284,19 +271,16 @@ def test_import_with_migration_needed(importer, temp_storage):
     # Create export file with old version
     old_export = temp_storage / "old_export.json"
     old_data = {
-        'profile_name': 'old_profile',
-        'profile_version': '1.0',  # Current version
-        'description': 'Old profile',
-        'exported_at': '2024-01-01T00:00:00Z',
-        'preferences': {
-            'global': {},
-            'directory_specific': {}
-        },
-        'learned_patterns': {},
-        'confidence_data': {}
+        "profile_name": "old_profile",
+        "profile_version": "1.0",  # Current version
+        "description": "Old profile",
+        "exported_at": "2024-01-01T00:00:00Z",
+        "preferences": {"global": {}, "directory_specific": {}},
+        "learned_patterns": {},
+        "confidence_data": {},
     }
 
-    with open(old_export, 'w') as f:
+    with open(old_export, "w") as f:
         json.dump(old_data, f)
 
     # Import should work
@@ -324,7 +308,7 @@ def test_import_corrupted_file(importer, temp_storage):
     """Test importing corrupted JSON file."""
     # Create corrupted file
     corrupted = temp_storage / "corrupted.json"
-    with open(corrupted, 'w') as f:
+    with open(corrupted, "w") as f:
         f.write("{corrupted json content")
 
     validation = importer.validate_import_file(corrupted)
@@ -337,8 +321,8 @@ def test_import_large_profile(exporter, importer, profile_manager, temp_storage)
     profile_manager.create_profile("large", "Large profile")
 
     large_prefs = {
-        'global': {f'key_{i}': f'value_{i}' for i in range(1000)},
-        'directory_specific': {f'/path/{i}': {'data': i} for i in range(100)}
+        "global": {f"key_{i}": f"value_{i}" for i in range(1000)},
+        "directory_specific": {f"/path/{i}": {"data": i} for i in range(100)},
     }
 
     profile_manager.update_profile("large", preferences=large_prefs)
@@ -353,7 +337,7 @@ def test_import_large_profile(exporter, importer, profile_manager, temp_storage)
     imported = importer.import_profile(export_file, "large")
 
     assert imported is not None
-    assert len(imported.preferences['global']) == 1000
+    assert len(imported.preferences["global"]) == 1000
 
 
 if __name__ == "__main__":

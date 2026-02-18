@@ -3,6 +3,7 @@
 Provides completion helpers that enumerate directory children matching
 a user-typed prefix, suitable for ``typer.Argument(autocompletion=...)``.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator

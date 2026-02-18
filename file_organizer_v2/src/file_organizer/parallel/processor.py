@@ -242,9 +242,7 @@ class ParallelProcessor:
                 nonlocal completed_count
                 completed_count += 1
                 if self._config.progress_callback:
-                    self._config.progress_callback(
-                        completed_count, total, file_result
-                    )
+                    self._config.progress_callback(completed_count, total, file_result)
                 return file_result
 
             # Initial fill
@@ -270,9 +268,7 @@ class ParallelProcessor:
                         file_result = future.result()
                     except Exception as exc:
                         # Should be captured by _execute_with_timing, but safety net
-                        file_result = FileResult(
-                            path=path, success=False, error=str(exc)
-                        )
+                        file_result = FileResult(path=path, success=False, error=str(exc))
 
                     yield finalize_result(file_result)
                     submit_round_of_work()
@@ -387,9 +383,7 @@ class ParallelProcessor:
             List of FileResult for each submitted file.
         """
         # Delegate to process_batch_iter which handles bounding and timeouts correctly
-        return list(
-            self.process_batch_iter(files, process_fn, executor=executor)
-        )
+        return list(self.process_batch_iter(files, process_fn, executor=executor))
 
     def shutdown(self) -> None:
         """

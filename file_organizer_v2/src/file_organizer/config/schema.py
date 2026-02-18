@@ -3,6 +3,7 @@
 Defines the top-level AppConfig and ModelPreset dataclasses that provide
 a unified configuration interface across all modules.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

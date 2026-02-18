@@ -1,4 +1,5 @@
 """SQLAlchemy ORM models for workspaces, jobs, settings, and plugins."""
+
 from __future__ import annotations
 
 import uuid
@@ -105,9 +106,7 @@ class SettingsStore(Base):
     created_at = Column(DateTime(timezone=True), default=_utcnow)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
-    __table_args__ = (
-        UniqueConstraint("user_id", "key", name="uq_settings_user_key"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_settings_user_key"),)
 
     def __repr__(self) -> str:
         return f"<SettingsStore key={self.key!r} user={self.user_id}>"

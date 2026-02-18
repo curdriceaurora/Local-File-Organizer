@@ -1,6 +1,7 @@
 """
 Tests for database manager.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -17,14 +18,14 @@ class TestDatabaseManager:
     @pytest.fixture
     def temp_db_path(self):
         """Create temporary database path."""
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = Path(f.name)
         yield db_path
         # Cleanup
         if db_path.exists():
             db_path.unlink()
         # Clean up WAL and SHM files if they exist
-        for suffix in ['-wal', '-shm']:
+        for suffix in ["-wal", "-shm"]:
             wal_file = Path(str(db_path) + suffix)
             if wal_file.exists():
                 wal_file.unlink()
@@ -50,9 +51,9 @@ class TestDatabaseManager:
         cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = [row[0] for row in cursor.fetchall()]
 
-        assert 'operations' in tables
-        assert 'transactions' in tables
-        assert 'schema_version' in tables
+        assert "operations" in tables
+        assert "transactions" in tables
+        assert "schema_version" in tables
 
         db.close()
 
@@ -61,7 +62,7 @@ class TestDatabaseManager:
         conn = db_manager.get_connection()
         cursor = conn.execute("PRAGMA journal_mode")
         result = cursor.fetchone()
-        assert result[0].lower() == 'wal'
+        assert result[0].lower() == "wal"
 
     def test_indexes_created(self, db_manager):
         """Test that indexes were created."""
@@ -70,11 +71,11 @@ class TestDatabaseManager:
         indexes = [row[0] for row in cursor.fetchall()]
 
         expected_indexes = [
-            'idx_operations_timestamp',
-            'idx_operations_transaction',
-            'idx_operations_type',
-            'idx_operations_status',
-            'idx_transactions_status'
+            "idx_operations_timestamp",
+            "idx_operations_transaction",
+            "idx_operations_type",
+            "idx_operations_status",
+            "idx_transactions_status",
         ]
 
         for idx in expected_indexes:
@@ -83,19 +84,23 @@ class TestDatabaseManager:
     def test_transaction_context_manager(self, db_manager):
         """Test transaction context manager."""
         with db_manager.transaction() as conn:
-            conn.execute("INSERT INTO operations (operation_type, timestamp, source_path, status) VALUES (?, ?, ?, ?)",
-                        ('move', '2024-01-01T00:00:00Z', '/test/path', 'completed'))
+            conn.execute(
+                "INSERT INTO operations (operation_type, timestamp, source_path, status) VALUES (?, ?, ?, ?)",
+                ("move", "2024-01-01T00:00:00Z", "/test/path", "completed"),
+            )
 
         # Verify insert succeeded
         result = db_manager.fetch_one("SELECT COUNT(*) as count FROM operations")
-        assert result['count'] == 1
+        assert result["count"] == 1
 
     def test_transaction_rollback_on_error(self, db_manager):
         """Test that transaction rolls back on error."""
         try:
             with db_manager.transaction() as conn:
-                conn.execute("INSERT INTO operations (operation_type, timestamp, source_path, status) VALUES (?, ?, ?, ?)",
-                            ('move', '2024-01-01T00:00:00Z', '/test/path', 'completed'))
+                conn.execute(
+                    "INSERT INTO operations (operation_type, timestamp, source_path, status) VALUES (?, ?, ?, ?)",
+                    ("move", "2024-01-01T00:00:00Z", "/test/path", "completed"),
+                )
                 # Trigger an error
                 raise ValueError("Test error")
         except ValueError:
@@ -103,52 +108,52 @@ class TestDatabaseManager:
 
         # Verify insert was rolled back
         result = db_manager.fetch_one("SELECT COUNT(*) as count FROM operations")
-        assert result['count'] == 0
+        assert result["count"] == 0
 
     def test_execute_query(self, db_manager):
         """Test execute_query method."""
         db_manager.execute_query(
             "INSERT INTO operations (operation_type, timestamp, source_path, status) VALUES (?, ?, ?, ?)",
-            ('move', '2024-01-01T00:00:00Z', '/test/path', 'completed')
+            ("move", "2024-01-01T00:00:00Z", "/test/path", "completed"),
         )
         db_manager.get_connection().commit()
 
         result = db_manager.fetch_one("SELECT * FROM operations")
         assert result is not None
-        assert result['operation_type'] == 'move'
+        assert result["operation_type"] == "move"
 
     def test_execute_many(self, db_manager):
         """Test batch insert with execute_many."""
         data = [
-            ('move', '2024-01-01T00:00:00Z', '/test/path1', 'completed'),
-            ('rename', '2024-01-01T00:00:01Z', '/test/path2', 'completed'),
-            ('delete', '2024-01-01T00:00:02Z', '/test/path3', 'completed'),
+            ("move", "2024-01-01T00:00:00Z", "/test/path1", "completed"),
+            ("rename", "2024-01-01T00:00:01Z", "/test/path2", "completed"),
+            ("delete", "2024-01-01T00:00:02Z", "/test/path3", "completed"),
         ]
 
         db_manager.execute_many(
             "INSERT INTO operations (operation_type, timestamp, source_path, status) VALUES (?, ?, ?, ?)",
-            data
+            data,
         )
 
         result = db_manager.fetch_one("SELECT COUNT(*) as count FROM operations")
-        assert result['count'] == 3
+        assert result["count"] == 3
 
     def test_fetch_all(self, db_manager):
         """Test fetch_all method."""
         # Insert test data
         data = [
-            ('move', '2024-01-01T00:00:00Z', '/test/path1', 'completed'),
-            ('rename', '2024-01-01T00:00:01Z', '/test/path2', 'completed'),
+            ("move", "2024-01-01T00:00:00Z", "/test/path1", "completed"),
+            ("rename", "2024-01-01T00:00:01Z", "/test/path2", "completed"),
         ]
         db_manager.execute_many(
             "INSERT INTO operations (operation_type, timestamp, source_path, status) VALUES (?, ?, ?, ?)",
-            data
+            data,
         )
 
         results = db_manager.fetch_all("SELECT * FROM operations ORDER BY timestamp")
         assert len(results) == 2
-        assert results[0]['operation_type'] == 'move'
-        assert results[1]['operation_type'] == 'rename'
+        assert results[0]["operation_type"] == "move"
+        assert results[1]["operation_type"] == "rename"
 
     def test_get_database_size(self, db_manager):
         """Test get_database_size method."""
@@ -162,12 +167,12 @@ class TestDatabaseManager:
 
         # Insert operations
         data = [
-            ('move', '2024-01-01T00:00:00Z', '/test/path1', 'completed'),
-            ('rename', '2024-01-01T00:00:01Z', '/test/path2', 'completed'),
+            ("move", "2024-01-01T00:00:00Z", "/test/path1", "completed"),
+            ("rename", "2024-01-01T00:00:01Z", "/test/path2", "completed"),
         ]
         db_manager.execute_many(
             "INSERT INTO operations (operation_type, timestamp, source_path, status) VALUES (?, ?, ?, ?)",
-            data
+            data,
         )
 
         assert db_manager.get_operation_count() == 2
@@ -175,10 +180,10 @@ class TestDatabaseManager:
     def test_vacuum(self, db_manager):
         """Test vacuum operation."""
         # Insert and delete data to create free space
-        data = [('move', '2024-01-01T00:00:00Z', f'/test/path{i}', 'completed') for i in range(100)]
+        data = [("move", "2024-01-01T00:00:00Z", f"/test/path{i}", "completed") for i in range(100)]
         db_manager.execute_many(
             "INSERT INTO operations (operation_type, timestamp, source_path, status) VALUES (?, ?, ?, ?)",
-            data
+            data,
         )
 
         db_manager.execute_query("DELETE FROM operations")
@@ -199,11 +204,11 @@ class TestDatabaseManager:
         """Test that row factory is set for easy data access."""
         db_manager.execute_query(
             "INSERT INTO operations (operation_type, timestamp, source_path, status) VALUES (?, ?, ?, ?)",
-            ('move', '2024-01-01T00:00:00Z', '/test/path', 'completed')
+            ("move", "2024-01-01T00:00:00Z", "/test/path", "completed"),
         )
         db_manager.get_connection().commit()
 
         result = db_manager.fetch_one("SELECT * FROM operations")
         # Should be able to access by column name
-        assert result['operation_type'] == 'move'
-        assert result['source_path'] == '/test/path'
+        assert result["operation_type"] == "move"
+        assert result["source_path"] == "/test/path"

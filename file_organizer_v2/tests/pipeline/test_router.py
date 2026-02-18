@@ -1,4 +1,5 @@
 """Tests for FileRouter."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -189,6 +190,7 @@ class TestFileRouterCustomRules:
 
     def test_custom_rule_error_is_skipped(self, router: FileRouter) -> None:
         """Custom rules that raise exceptions are skipped."""
+
         def bad_rule(path: Path) -> bool:
             raise ValueError("Rule error")
 

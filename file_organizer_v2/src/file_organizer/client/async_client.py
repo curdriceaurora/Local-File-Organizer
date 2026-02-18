@@ -10,6 +10,7 @@ Example::
         health = await client.health()
         print(health.status)
 """
+
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -265,9 +266,7 @@ class AsyncFileOrganizerClient:
         Returns:
             FileInfo with file metadata.
         """
-        response = await self._client.get(
-            self._url("/files/info"), params={"path": path}
-        )
+        response = await self._client.get(self._url("/files/info"), params={"path": path})
         self._raise_for_status(response)
         return FileInfo.model_validate(response.json())
 
@@ -478,9 +477,7 @@ class AsyncFileOrganizerClient:
         Returns:
             SystemStatusResponse with system information.
         """
-        response = await self._client.get(
-            self._url("/system/status"), params={"path": path}
-        )
+        response = await self._client.get(self._url("/system/status"), params={"path": path})
         self._raise_for_status(response)
         return SystemStatusResponse.model_validate(response.json())
 
@@ -493,9 +490,7 @@ class AsyncFileOrganizerClient:
         Returns:
             ConfigResponse with the configuration data.
         """
-        response = await self._client.get(
-            self._url("/system/config"), params={"profile": profile}
-        )
+        response = await self._client.get(self._url("/system/config"), params={"profile": profile})
         self._raise_for_status(response)
         return ConfigResponse.model_validate(response.json())
 

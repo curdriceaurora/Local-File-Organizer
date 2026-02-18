@@ -1,4 +1,5 @@
 """Plugin example that writes event logs to a text file."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,7 +15,9 @@ class FileLoggerPlugin(Plugin):
         return None
 
     def on_enable(self) -> None:
-        log_name = str(self.config.get("log_file", "plugin-events.log")).strip() or "plugin-events.log"
+        log_name = (
+            str(self.config.get("log_file", "plugin-events.log")).strip() or "plugin-events.log"
+        )
         self.log_file = Path(log_name)
 
     def on_disable(self) -> None:

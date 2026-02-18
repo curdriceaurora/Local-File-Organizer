@@ -3,6 +3,7 @@
 Tests cover FeedbackEvent serialization, FeedbackCollector persistence,
 AccuracyStats computation, and PatternLearner rule generation.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -162,7 +163,8 @@ class TestFeedbackCollector:
         assert len(collector.get_events()) == 0
 
     def test_empty_collector_returns_empty_stats(
-        self, collector: FeedbackCollector,
+        self,
+        collector: FeedbackCollector,
     ) -> None:
         """Empty collector should return zero-value stats."""
         stats = collector.get_accuracy_stats()
@@ -170,7 +172,8 @@ class TestFeedbackCollector:
         assert stats.accuracy_rate == 0.0
 
     def test_accuracy_stats_all_accepted(
-        self, collector: FeedbackCollector,
+        self,
+        collector: FeedbackCollector,
     ) -> None:
         """100% acceptance should show accuracy_rate of 1.0."""
         for i in range(10):
@@ -182,7 +185,8 @@ class TestFeedbackCollector:
         assert stats.accuracy_rate == 1.0
 
     def test_accuracy_stats_mixed(
-        self, collector: FeedbackCollector,
+        self,
+        collector: FeedbackCollector,
     ) -> None:
         """Mixed feedback should compute correct accuracy."""
         # 7 accepted
@@ -202,7 +206,8 @@ class TestFeedbackCollector:
         assert stats.accuracy_rate == pytest.approx(0.7)
 
     def test_per_category_accuracy(
-        self, collector: FeedbackCollector,
+        self,
+        collector: FeedbackCollector,
     ) -> None:
         """Per-category accuracy should be broken down correctly."""
         # 2 accepted projects
@@ -228,7 +233,8 @@ class TestFeedbackCollector:
         assert stats.per_category_accuracy["resource"] == pytest.approx(1.0)
 
     def test_confidence_stats(
-        self, collector: FeedbackCollector,
+        self,
+        collector: FeedbackCollector,
     ) -> None:
         """Should compute average confidence correctly."""
         collector.record_acceptance(
@@ -346,7 +352,8 @@ class TestPatternLearner:
         assert prefs["preferred_categories"]["resource"] == 3
 
     def test_get_user_preferences_override_patterns(
-        self, learner: PatternLearner,
+        self,
+        learner: PatternLearner,
     ) -> None:
         """Should capture override patterns from rejections."""
         events = [
@@ -366,7 +373,8 @@ class TestPatternLearner:
         assert prefs["override_patterns"][0]["to"] == "area"
 
     def test_adjust_weights_insufficient_data(
-        self, learner: PatternLearner,
+        self,
+        learner: PatternLearner,
     ) -> None:
         """Should return default weights with insufficient data."""
         # min_occurrences=2, providing only 1 event

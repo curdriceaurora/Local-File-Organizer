@@ -1,4 +1,5 @@
 """API tests for integration framework endpoints."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -150,7 +151,9 @@ def test_vscode_settings_normalize_bare_command_output_path(tmp_path: Path) -> N
 
     update = client.post(
         "/api/v1/integrations/vscode/settings",
-        json={"settings": {"workspace_path": str(workspace), "command_output_path": "commands.jsonl"}},
+        json={
+            "settings": {"workspace_path": str(workspace), "command_output_path": "commands.jsonl"}
+        },
         headers=headers,
     )
     assert update.status_code == 200

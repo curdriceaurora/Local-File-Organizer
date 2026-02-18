@@ -1,4 +1,5 @@
 """Plugin subsystem exceptions."""
+
 from __future__ import annotations
 
 
@@ -40,4 +41,3 @@ class PluginLifecycleError(PluginError):
 
 class HookExecutionError(PluginError):
     """Raised when a hook callback fails in fail-fast mode."""
-

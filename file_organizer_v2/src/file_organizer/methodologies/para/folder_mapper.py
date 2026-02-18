@@ -4,6 +4,7 @@ PARA Category Folder Mapper
 Maps files to PARA folders based on categorization results from heuristics
 and rules. Provides flexible mapping strategies and subfolder organization.
 """
+
 from __future__ import annotations
 
 import logging
@@ -96,9 +97,7 @@ class CategoryFolderMapper:
         self.folder_generator = folder_generator or PARAFolderGenerator(self.config)
         self.strategy = strategy or MappingStrategy()
 
-    def map_file(
-        self, file_path: Path, root_path: Path, use_rules: bool = True
-    ) -> MappingResult:
+    def map_file(self, file_path: Path, root_path: Path, use_rules: bool = True) -> MappingResult:
         """
         Map a file to its target PARA folder.
 
@@ -130,9 +129,7 @@ class CategoryFolderMapper:
             reasoning.append("Defaulted to Resource (no clear category)")
 
         # Get base category folder
-        category_folder = self.folder_generator.get_category_path(
-            category, root_path
-        )
+        category_folder = self.folder_generator.get_category_path(category, root_path)
 
         # Apply mapping strategy for subfolder
         subfolder_path = self._determine_subfolder(file_path, category)
@@ -233,9 +230,7 @@ class CategoryFolderMapper:
 
         return reasoning
 
-    def _determine_subfolder(
-        self, file_path: Path, category: PARACategory
-    ) -> str | None:
+    def _determine_subfolder(self, file_path: Path, category: PARACategory) -> str | None:
         """
         Determine subfolder path based on mapping strategy.
 
@@ -352,9 +347,7 @@ class CategoryFolderMapper:
 
         return folder_status
 
-    def generate_mapping_report(
-        self, results: list[MappingResult]
-    ) -> str:
+    def generate_mapping_report(self, results: list[MappingResult]) -> str:
         """
         Generate human-readable report of mapping results.
 
@@ -375,9 +368,7 @@ class CategoryFolderMapper:
         # Count by category
         by_category: dict[PARACategory, int] = {}
         for result in results:
-            by_category[result.target_category] = (
-                by_category.get(result.target_category, 0) + 1
-            )
+            by_category[result.target_category] = by_category.get(result.target_category, 0) + 1
 
         for category, count in sorted(by_category.items()):
             percentage = (count / len(results) * 100) if results else 0
@@ -387,9 +378,7 @@ class CategoryFolderMapper:
 
         # Show first 10 mappings as examples
         for i, result in enumerate(results[:10]):
-            lines.append(
-                f"{i+1}. {result.source_path.name} → {result.target_category.value}"
-            )
+            lines.append(f"{i + 1}. {result.source_path.name} → {result.target_category.value}")
             lines.append(f"   Target: {result.target_folder}")
             lines.append(f"   Confidence: {result.confidence:.0%}")
             if result.reasoning:

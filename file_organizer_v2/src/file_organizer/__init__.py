@@ -4,6 +4,7 @@ File Organizer v2 - AI-powered local file management with state-of-the-art model
 A privacy-first file organization system that uses local AI models to intelligently
 categorize, rename, and organize files without sending data to the cloud.
 """
+
 from __future__ import annotations
 
 __version__ = "2.0.0-alpha.1"

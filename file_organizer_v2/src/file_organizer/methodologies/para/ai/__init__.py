@@ -10,6 +10,7 @@ AI-powered smart suggestions for PARA categorization including:
 All AI features are privacy-first and work locally without cloud APIs.
 The Ollama/TextModel integration is optional - everything works without it.
 """
+
 from __future__ import annotations
 
 from .feature_extractor import (

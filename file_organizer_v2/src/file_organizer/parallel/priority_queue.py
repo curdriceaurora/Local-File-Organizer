@@ -6,6 +6,7 @@ priority level (higher number = higher priority). It uses a min-heap
 internally with negated priorities so that the highest priority items
 are dequeued first.
 """
+
 from __future__ import annotations
 
 import heapq

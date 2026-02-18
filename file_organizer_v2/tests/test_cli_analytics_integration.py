@@ -1,4 +1,5 @@
 """Integration tests for CLI analytics command."""
+
 from __future__ import annotations
 
 import pytest

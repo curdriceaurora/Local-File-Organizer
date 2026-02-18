@@ -3,6 +3,7 @@ Tests for Johnny Decimal Migration Engine
 
 Tests scanner, transformer, validator, and migrator components.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -144,9 +145,7 @@ class TestFolderTransformer:
     def test_create_transformation_plan(self, transformer, scanner, temp_structure):
         """Test transformation plan creation."""
         scan_result = scanner.scan_directory(temp_structure)
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, temp_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, temp_structure)
 
         assert plan.root_path == temp_structure
         assert len(plan.rules) > 0
@@ -155,22 +154,16 @@ class TestFolderTransformer:
     def test_transformation_preserves_names(self, transformer, scanner, temp_structure):
         """Test that original names are preserved."""
         scan_result = scanner.scan_directory(temp_structure)
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, temp_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, temp_structure)
 
         # Check that target names include original names
         for rule in plan.rules:
             assert rule.source_path.name in rule.target_name
 
-    def test_transformation_assigns_jd_numbers(
-        self, transformer, scanner, temp_structure
-    ):
+    def test_transformation_assigns_jd_numbers(self, transformer, scanner, temp_structure):
         """Test JD number assignment."""
         scan_result = scanner.scan_directory(temp_structure)
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, temp_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, temp_structure)
 
         # Check that JD numbers are assigned
         for rule in plan.rules:
@@ -181,9 +174,7 @@ class TestFolderTransformer:
     def test_transformation_hierarchy(self, transformer, scanner, temp_structure):
         """Test hierarchical transformation."""
         scan_result = scanner.scan_directory(temp_structure)
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, temp_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, temp_structure)
 
         # Top level should be areas
         # Second level should be categories
@@ -200,9 +191,7 @@ class TestFolderTransformer:
     def test_generate_preview(self, transformer, scanner, temp_structure):
         """Test preview generation."""
         scan_result = scanner.scan_directory(temp_structure)
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, temp_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, temp_structure)
 
         preview = transformer.generate_preview(plan)
 
@@ -214,14 +203,10 @@ class TestFolderTransformer:
 class TestMigrationValidator:
     """Tests for MigrationValidator."""
 
-    def test_validate_valid_plan(
-        self, validator, transformer, scanner, temp_structure
-    ):
+    def test_validate_valid_plan(self, validator, transformer, scanner, temp_structure):
         """Test validation of valid plan."""
         scan_result = scanner.scan_directory(temp_structure)
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, temp_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, temp_structure)
 
         result = validator.validate_plan(plan)
 
@@ -230,14 +215,10 @@ class TestMigrationValidator:
         assert isinstance(result.errors, list)
         assert isinstance(result.warnings, list)
 
-    def test_validate_detects_conflicts(
-        self, validator, transformer, scanner, temp_structure
-    ):
+    def test_validate_detects_conflicts(self, validator, transformer, scanner, temp_structure):
         """Test conflict detection."""
         scan_result = scanner.scan_directory(temp_structure)
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, temp_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, temp_structure)
 
         # Manually add a duplicate rule to create conflict
         if len(plan.rules) > 0:
@@ -250,14 +231,10 @@ class TestMigrationValidator:
         if len(plan.rules) > 1:
             assert len(result.errors) > 0 or len(result.warnings) > 0
 
-    def test_validate_number_ranges(
-        self, validator, transformer, scanner, temp_structure
-    ):
+    def test_validate_number_ranges(self, validator, transformer, scanner, temp_structure):
         """Test number range validation."""
         scan_result = scanner.scan_directory(temp_structure)
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, temp_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, temp_structure)
 
         validator.validate_plan(plan)
 
@@ -270,9 +247,7 @@ class TestMigrationValidator:
     def test_generate_report(self, validator, transformer, scanner, temp_structure):
         """Test validation report generation."""
         scan_result = scanner.scan_directory(temp_structure)
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, temp_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, temp_structure)
 
         result = validator.validate_plan(plan)
         report = validator.generate_report(result)
@@ -376,9 +351,7 @@ class TestMigrationIntegration:
         assert "Migration Preview" in preview
 
         # Step 4: Dry run
-        dry_result = migrator.execute_migration(
-            plan, dry_run=True, create_backup=False
-        )
+        dry_result = migrator.execute_migration(plan, dry_run=True, create_backup=False)
         assert dry_result.transformed_count > 0 or dry_result.skipped_count > 0
 
         # Step 5: Execute (with backup)

@@ -4,6 +4,7 @@ Integration Tests for Audio Content-Based Organization
 Tests the complete pipeline: metadata -> classification -> content analysis -> organisation.
 All tests use mock data (no actual audio files or AI models required).
 """
+
 from __future__ import annotations
 
 import shutil
@@ -272,17 +273,13 @@ class TestCrossComponent:
         self, classifier: AudioClassifier, organizer: AudioOrganizer
     ) -> None:
         """AudioType from classifier is compatible with organizer."""
-        metadata = _make_metadata(
-            artist="Test", album="Album", genre="Pop", track_number=1
-        )
+        metadata = _make_metadata(artist="Test", album="Album", genre="Pop", track_number=1)
         result = classifier.classify(metadata)
         # Should not raise
         path = organizer.generate_path(result.audio_type, metadata)
         assert isinstance(path, Path)
 
-    def test_all_audio_types_generate_valid_paths(
-        self, organizer: AudioOrganizer
-    ) -> None:
+    def test_all_audio_types_generate_valid_paths(self, organizer: AudioOrganizer) -> None:
         """Every AudioType should produce a valid, non-empty path."""
         metadata = _make_metadata(title="Test File")
         for audio_type in AudioType:
@@ -324,8 +321,12 @@ class TestCrossComponent:
         music_src = tmp_dir / "track.mp3"
         music_src.write_text("music")
         music_meta = _make_metadata(
-            file_path=music_src, artist="Artist", album="Album",
-            genre="Rock", track_number=1, duration=200.0,
+            file_path=music_src,
+            artist="Artist",
+            album="Album",
+            genre="Rock",
+            track_number=1,
+            duration=200.0,
         )
         music_type = classifier.classify(music_meta).audio_type
         files_data.append((music_src, music_type, music_meta))
@@ -334,7 +335,8 @@ class TestCrossComponent:
         rec_src = tmp_dir / "memo.mp3"
         rec_src.write_text("rec")
         rec_meta = _make_metadata(
-            file_path=rec_src, duration=30.0,
+            file_path=rec_src,
+            duration=30.0,
         )
         rec_type = classifier.classify(rec_meta).audio_type
         files_data.append((rec_src, rec_type, rec_meta))
@@ -364,7 +366,10 @@ class TestCustomRulesIntegration:
         src = tmp_dir / "song.mp3"
         src.write_text("data")
         metadata = _make_metadata(
-            file_path=src, title="Song", artist="Artist", genre="Pop",
+            file_path=src,
+            title="Song",
+            artist="Artist",
+            genre="Pop",
         )
         classification = classifier.classify(metadata)
 
@@ -372,9 +377,7 @@ class TestCustomRulesIntegration:
         # Should be a simple flat path
         assert len(path.parts) <= 2  # "Artist - Song.mp3"
 
-    def test_date_based_recording_template(
-        self, tmp_dir: Path
-    ) -> None:
+    def test_date_based_recording_template(self, tmp_dir: Path) -> None:
         """Custom recording template with date should work."""
         rules = OrganizationRules(recording_template="Voice Memos/{Date}/{Title}")
         organizer = AudioOrganizer(rules=rules)
@@ -421,9 +424,7 @@ class TestEdgeCases:
         assert isinstance(path, Path)
         assert path.suffix == ".mp3"
 
-    def test_very_long_metadata_values(
-        self, organizer: AudioOrganizer
-    ) -> None:
+    def test_very_long_metadata_values(self, organizer: AudioOrganizer) -> None:
         """Very long metadata should be truncated in paths."""
         metadata = _make_metadata(
             title="A" * 500,

@@ -4,6 +4,7 @@ Johnny Decimal Folder Transformer
 Transforms existing folder structures to Johnny Decimal naming convention.
 Handles renaming, restructuring, and maintains file integrity.
 """
+
 from __future__ import annotations
 
 import logging
@@ -136,9 +137,7 @@ class FolderTransformer:
         area_number = self._suggest_area_number(folder, suggested_index)
 
         # Create JD number
-        jd_number = JohnnyDecimalNumber(
-            area=area_number, category=None, item_id=None
-        )
+        jd_number = JohnnyDecimalNumber(area=area_number, category=None, item_id=None)
 
         # Create target name
         if self.preserve_original_names:
@@ -178,9 +177,7 @@ class FolderTransformer:
         rules = []
 
         for idx, child in enumerate(children):
-            category_number = self._suggest_category_number(
-                child, parent_number.area, idx
-            )
+            category_number = self._suggest_category_number(child, parent_number.area, idx)
 
             jd_number = JohnnyDecimalNumber(
                 area=parent_number.area,
@@ -247,8 +244,7 @@ class FolderTransformer:
                 )
             else:
                 target_name = (
-                    f"{parent_number.area:02d}.{parent_number.category:02d}."
-                    f"{id_number:03d}"
+                    f"{parent_number.area:02d}.{parent_number.category:02d}.{id_number:03d}"
                 )
 
             rule = TransformationRule(
@@ -285,7 +281,10 @@ class FolderTransformer:
         # Try to match with scheme areas
         if self.scheme.areas:
             for area_num, area_def in self.scheme.areas.items():
-                if area_def.name.lower() in folder_name_lower or folder_name_lower in area_def.name.lower():
+                if (
+                    area_def.name.lower() in folder_name_lower
+                    or folder_name_lower in area_def.name.lower()
+                ):
                     return area_num
 
         # Default: assign sequentially starting from 10
@@ -311,12 +310,9 @@ class FolderTransformer:
         # Try to match with scheme categories
         if self.scheme.categories:
             for category in self.scheme.categories.values():
-                if (
-                    category.area == area
-                    and (
-                        category.name.lower() in folder_name_lower
-                        or folder_name_lower in category.name.lower()
-                    )
+                if category.area == area and (
+                    category.name.lower() in folder_name_lower
+                    or folder_name_lower in category.name.lower()
                 ):
                     return category.category
 

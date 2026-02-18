@@ -4,6 +4,7 @@ Result dataclasses for parallel file processing.
 This module defines data structures for tracking individual file processing
 results and aggregated batch results.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

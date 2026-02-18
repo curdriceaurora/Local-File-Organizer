@@ -5,6 +5,7 @@ the target LLM's context window (default: 4 096 tokens for Qwen 2.5 3B).
 Older messages are summarised into a compact context string when the window
 overflows.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

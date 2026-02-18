@@ -105,9 +105,9 @@ def test_basic_tracking():
     for i, corr in enumerate(recent, 1):
         print(f"  {i}. {corr.correction_type.value}: {corr.source.name} -> {corr.destination.name}")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("All tests passed! ✓")
-    print("="*60)
+    print("=" * 60)
 
 
 def test_thread_safety():
@@ -147,16 +147,16 @@ def test_thread_safety():
     print(f"  - Total corrections: {stats['total_corrections']}")
     print(f"  - Expected corrections: {len(results) * 5}")
 
-    if stats['total_corrections'] == len(results) * 5:
+    if stats["total_corrections"] == len(results) * 5:
         print("  - Result: PASS ✓")
     else:
         print("  - Result: FAIL ✗ (race condition detected)")
 
 
 if __name__ == "__main__":
-    print("="*60)
+    print("=" * 60)
     print("PreferenceTracker Functionality Test")
-    print("="*60)
+    print("=" * 60)
 
     test_basic_tracking()
     test_thread_safety()

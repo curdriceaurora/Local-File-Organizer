@@ -1,4 +1,5 @@
 """Text file processing service."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -172,18 +173,39 @@ class TextProcessor:
         import re
 
         # Convert underscores and hyphens to spaces
-        name = name.replace('_', ' ').replace('-', ' ')
+        name = name.replace("_", " ").replace("-", " ")
 
         # Remove special characters and numbers (keep letters and spaces)
-        name = re.sub(r'[^a-z\s]', '', name.lower())
+        name = re.sub(r"[^a-z\s]", "", name.lower())
 
         # Split into words
         words = name.split()
 
         # Only filter out truly problematic words (very minimal list)
-        bad_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at',
-                     'to', 'for', 'of', 'is', 'are', 'was', 'were', 'be',
-                     'document', 'file', 'text', 'untitled', 'unknown'}
+        bad_words = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "document",
+            "file",
+            "text",
+            "untitled",
+            "unknown",
+        }
 
         # Filter and deduplicate
         filtered = []
@@ -197,7 +219,7 @@ class TextProcessor:
         filtered = filtered[:max_words]
 
         # Join with underscores
-        return '_'.join(filtered) if filtered else ''
+        return "_".join(filtered) if filtered else ""
 
     def _generate_description(self, content: str) -> str:
         """Generate a summary/description of the content.
@@ -220,9 +242,9 @@ SUMMARY:"""
             summary = response.strip()
 
             # Remove any "Summary:" prefix the AI might add
-            for prefix in ['summary:', 'here is the summary:', 'the summary is:']:
+            for prefix in ["summary:", "here is the summary:", "the summary is:"]:
                 if summary.lower().startswith(prefix):
-                    summary = summary[len(prefix):].strip()
+                    summary = summary[len(prefix) :].strip()
 
             return summary
         except Exception as e:
@@ -269,12 +291,12 @@ CATEGORY:"""
             folder_name = response.strip().lower()
 
             # Remove common prefixes and quotes
-            for prefix in ['category:', 'folder:', 'the category is', 'the folder is']:
-                folder_name = folder_name.replace(prefix, '').strip()
-            folder_name = folder_name.strip('"\'')
+            for prefix in ["category:", "folder:", "the category is", "the folder is"]:
+                folder_name = folder_name.replace(prefix, "").strip()
+            folder_name = folder_name.strip("\"'")
 
             # Remove newlines and extra spaces
-            folder_name = ' '.join(folder_name.split())
+            folder_name = " ".join(folder_name.split())
 
             logger.debug(f"AI folder response (cleaned): '{folder_name}'")
 
@@ -292,15 +314,16 @@ CATEGORY:"""
             # Skip sanitize_filename since we already cleaned it
             # Just do final safety check
             import re
-            folder_name = re.sub(r'[^\w_]', '_', folder_name)
-            folder_name = re.sub(r'_+', '_', folder_name).strip('_')
-            result = folder_name[:50] if folder_name else 'documents'
+
+            folder_name = re.sub(r"[^\w_]", "_", folder_name)
+            folder_name = re.sub(r"_+", "_", folder_name).strip("_")
+            result = folder_name[:50] if folder_name else "documents"
             logger.info(f"Final folder name: '{result}'")
             return result
 
         except Exception as e:
             logger.error(f"Failed to generate folder name: {e}")
-            return 'documents'
+            return "documents"
 
     def _generate_filename(self, text: str) -> str:
         """Generate a filename from text.
@@ -342,16 +365,17 @@ FILENAME:"""
             filename = response.strip().lower()
 
             # Remove common prefixes and quotes
-            for prefix in ['filename:', 'file:', 'name:', 'the filename is', 'the name is']:
-                filename = filename.replace(prefix, '').strip()
-            filename = filename.strip('"\'')
+            for prefix in ["filename:", "file:", "name:", "the filename is", "the name is"]:
+                filename = filename.replace(prefix, "").strip()
+            filename = filename.strip("\"'")
 
             # Remove file extensions if AI added them
             import re
-            filename = re.sub(r'\.(txt|pdf|docx|md|jpg|png)$', '', filename)
+
+            filename = re.sub(r"\.(txt|pdf|docx|md|jpg|png)$", "", filename)
 
             # Remove newlines and extra spaces
-            filename = ' '.join(filename.split())
+            filename = " ".join(filename.split())
 
             logger.debug(f"AI filename response (cleaned): '{filename}'")
 
@@ -369,15 +393,16 @@ FILENAME:"""
             # Skip sanitize_filename since we already cleaned it
             # Just do final safety check
             import re
-            filename = re.sub(r'[^\w_]', '_', filename)
-            filename = re.sub(r'_+', '_', filename).strip('_')
-            result = filename[:50] if filename else 'document'
+
+            filename = re.sub(r"[^\w_]", "_", filename)
+            filename = re.sub(r"_+", "_", filename).strip("_")
+            result = filename[:50] if filename else "document"
             logger.info(f"Final filename: '{result}'")
             return result
 
         except Exception as e:
             logger.error(f"Failed to generate filename: {e}")
-            return 'document'
+            return "document"
 
     def cleanup(self) -> None:
         """Cleanup resources."""

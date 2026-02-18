@@ -1,4 +1,5 @@
 """Tests for archive and scientific format readers."""
+
 from __future__ import annotations
 
 import io
@@ -25,7 +26,7 @@ from file_organizer.utils.file_readers import (
 def sample_zip_file(tmp_path: Path) -> Path:
     """Create a sample ZIP file for testing."""
     zip_path = tmp_path / "sample.zip"
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("file1.txt", "Hello World" * 100)
         zf.writestr("dir/file2.txt", "Test content" * 50)
         zf.writestr("file3.dat", b"Binary data" * 200)
@@ -36,7 +37,7 @@ def sample_zip_file(tmp_path: Path) -> Path:
 def sample_tar_file(tmp_path: Path) -> Path:
     """Create a sample TAR file for testing."""
     tar_path = tmp_path / "sample.tar.gz"
-    with tarfile.open(tar_path, 'w:gz') as tf:
+    with tarfile.open(tar_path, "w:gz") as tf:
         # Create in-memory files
         for name, content in [
             ("file1.txt", b"Hello World"),
@@ -60,18 +61,18 @@ def sample_hdf5_file(tmp_path: Path) -> Path:
         pytest.skip("h5py not installed")
 
     h5_path = tmp_path / "sample.h5"
-    with h5py.File(h5_path, 'w') as f:
+    with h5py.File(h5_path, "w") as f:
         # Create dataset
-        f.create_dataset('data1', data=np.random.rand(100, 50))
-        f.create_dataset('data2', data=np.arange(1000))
+        f.create_dataset("data1", data=np.random.rand(100, 50))
+        f.create_dataset("data2", data=np.arange(1000))
 
         # Add attributes
-        f['data1'].attrs['units'] = 'meters'
-        f['data1'].attrs['description'] = 'Random data'
+        f["data1"].attrs["units"] = "meters"
+        f["data1"].attrs["description"] = "Random data"
 
         # Create group
-        grp = f.create_group('group1')
-        grp.create_dataset('nested', data=np.ones((10, 10)))
+        grp = f.create_group("group1")
+        grp.create_dataset("nested", data=np.ones((10, 10)))
 
     return h5_path
 
@@ -86,25 +87,25 @@ def sample_netcdf_file(tmp_path: Path) -> Path:
         pytest.skip("netCDF4 not installed")
 
     nc_path = tmp_path / "sample.nc"
-    with netCDF4.Dataset(nc_path, 'w', format='NETCDF4') as nc:
+    with netCDF4.Dataset(nc_path, "w", format="NETCDF4") as nc:
         # Create dimensions
-        nc.createDimension('time', 10)
-        nc.createDimension('lat', 20)
-        nc.createDimension('lon', 30)
+        nc.createDimension("time", 10)
+        nc.createDimension("lat", 20)
+        nc.createDimension("lon", 30)
 
         # Create variables
-        temp = nc.createVariable('temperature', 'f4', ('time', 'lat', 'lon'))
-        temp.units = 'Celsius'
-        temp.long_name = 'Surface Temperature'
+        temp = nc.createVariable("temperature", "f4", ("time", "lat", "lon"))
+        temp.units = "Celsius"
+        temp.long_name = "Surface Temperature"
         temp[:] = np.random.rand(10, 20, 30)
 
-        lat = nc.createVariable('latitude', 'f4', ('lat',))
-        lat.units = 'degrees_north'
+        lat = nc.createVariable("latitude", "f4", ("lat",))
+        lat.units = "degrees_north"
         lat[:] = np.linspace(-90, 90, 20)
 
         # Add global attributes
-        nc.title = 'Test NetCDF File'
-        nc.institution = 'Test Lab'
+        nc.title = "Test NetCDF File"
+        nc.institution = "Test Lab"
 
     return nc_path
 
@@ -120,10 +121,10 @@ def sample_mat_file(tmp_path: Path) -> Path:
 
     mat_path = tmp_path / "sample.mat"
     data = {
-        'var1': np.random.rand(10, 10),
-        'var2': np.arange(100),
-        'var3': 'test string',
-        'var4': {'nested': np.ones((5, 5))},
+        "var1": np.random.rand(10, 10),
+        "var2": np.arange(100),
+        "var3": "test string",
+        "var4": {"nested": np.ones((5, 5))},
     }
     savemat(mat_path, data)
     return mat_path
@@ -149,7 +150,7 @@ class TestArchiveReaders:
     def test_read_zip_file_encryption_detection(self, tmp_path: Path) -> None:
         """Test detection of encrypted ZIP files."""
         zip_path = tmp_path / "encrypted.zip"
-        with zipfile.ZipFile(zip_path, 'w') as zf:
+        with zipfile.ZipFile(zip_path, "w") as zf:
             zf.writestr("test.txt", "content")
             # Note: Creating truly encrypted ZIP requires pyminizip or similar
             # This test verifies the code path works
@@ -160,7 +161,7 @@ class TestArchiveReaders:
     def test_read_zip_file_max_files_limit(self, tmp_path: Path) -> None:
         """Test that max_files limit is respected."""
         zip_path = tmp_path / "many_files.zip"
-        with zipfile.ZipFile(zip_path, 'w') as zf:
+        with zipfile.ZipFile(zip_path, "w") as zf:
             for i in range(100):
                 zf.writestr(f"file{i}.txt", f"content {i}")
 
@@ -188,7 +189,7 @@ class TestArchiveReaders:
         """Test reading TAR files with different compression types."""
         # Test plain TAR
         tar_path = tmp_path / "sample.tar"
-        with tarfile.open(tar_path, 'w') as tf:
+        with tarfile.open(tar_path, "w") as tf:
             data = io.BytesIO(b"test")
             info = tarfile.TarInfo(name="test.txt")
             info.size = 4
@@ -205,6 +206,7 @@ class TestArchiveReaders:
 
         # Mock py7zr as unavailable
         import file_organizer.utils.file_readers as readers
+
         original = readers.PY7ZR_AVAILABLE
         try:
             readers.PY7ZR_AVAILABLE = False
@@ -219,6 +221,7 @@ class TestArchiveReaders:
         file_path.write_bytes(b"dummy")
 
         import file_organizer.utils.file_readers as readers
+
         original = readers.RARFILE_AVAILABLE
         try:
             readers.RARFILE_AVAILABLE = False
@@ -258,9 +261,9 @@ class TestScientificReaders:
             pytest.skip("h5py not installed")
 
         h5_path = tmp_path / "many_datasets.h5"
-        with h5py.File(h5_path, 'w') as f:
+        with h5py.File(h5_path, "w") as f:
             for i in range(50):
-                f.create_dataset(f'data{i}', data=np.random.rand(10))
+                f.create_dataset(f"data{i}", data=np.random.rand(10))
 
         result = read_hdf5_file(h5_path, max_datasets=10)
         assert "(showing first 10 datasets)" in result
@@ -271,6 +274,7 @@ class TestScientificReaders:
         file_path.write_bytes(b"dummy")
 
         import file_organizer.utils.file_readers as readers
+
         original = readers.H5PY_AVAILABLE
         try:
             readers.H5PY_AVAILABLE = False
@@ -304,6 +308,7 @@ class TestScientificReaders:
         file_path.write_bytes(b"dummy")
 
         import file_organizer.utils.file_readers as readers
+
         original = readers.NETCDF4_AVAILABLE
         try:
             readers.NETCDF4_AVAILABLE = False
@@ -328,6 +333,7 @@ class TestScientificReaders:
         file_path.write_bytes(b"dummy")
 
         import file_organizer.utils.file_readers as readers
+
         original = readers.SCIPY_AVAILABLE
         try:
             readers.SCIPY_AVAILABLE = False
@@ -374,7 +380,7 @@ class TestReadFileDispatcher:
         """Test that various archive extensions are recognized."""
         # Test .tgz extension
         tgz_path = tmp_path / "test.tgz"
-        with tarfile.open(tgz_path, 'w:gz') as tf:
+        with tarfile.open(tgz_path, "w:gz") as tf:
             data = io.BytesIO(b"test")
             info = tarfile.TarInfo(name="test.txt")
             info.size = 4
@@ -393,8 +399,8 @@ class TestReadFileDispatcher:
             pytest.skip("h5py not installed")
 
         h5_path = tmp_path / "test.h5"
-        with h5py.File(h5_path, 'w') as f:
-            f.create_dataset('data', data=np.random.rand(10))
+        with h5py.File(h5_path, "w") as f:
+            f.create_dataset("data", data=np.random.rand(10))
 
         result = read_file(h5_path)
         assert result is not None

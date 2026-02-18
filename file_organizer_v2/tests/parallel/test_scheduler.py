@@ -59,18 +59,14 @@ class TestTaskScheduler(unittest.TestCase):
     def test_size_asc_explicit(self) -> None:
         """Test explicit SIZE_ASC sorts smallest first."""
         files = [self.large_file, self.medium_file, self.small_file]
-        result = self.scheduler.schedule(
-            files, strategy=PriorityStrategy.SIZE_ASC
-        )
+        result = self.scheduler.schedule(files, strategy=PriorityStrategy.SIZE_ASC)
         self.assertEqual(result[0], self.small_file)
         self.assertEqual(result[-1], self.large_file)
 
     def test_size_desc(self) -> None:
         """Test SIZE_DESC sorts largest first."""
         files = [self.small_file, self.medium_file, self.large_file]
-        result = self.scheduler.schedule(
-            files, strategy=PriorityStrategy.SIZE_DESC
-        )
+        result = self.scheduler.schedule(files, strategy=PriorityStrategy.SIZE_DESC)
         self.assertEqual(result[0], self.large_file)
         self.assertEqual(result[-1], self.small_file)
 
@@ -82,9 +78,7 @@ class TestTaskScheduler(unittest.TestCase):
             self.another_py,
             self.small_file,
         ]
-        result = self.scheduler.schedule(
-            files, strategy=PriorityStrategy.TYPE_GROUPED
-        )
+        result = self.scheduler.schedule(files, strategy=PriorityStrategy.TYPE_GROUPED)
         # Files should be grouped: .js, .py, .txt
         extensions = [f.suffix for f in result]
         # Check that same extensions are adjacent
@@ -103,9 +97,7 @@ class TestTaskScheduler(unittest.TestCase):
     def test_type_grouped_sorts_within_group(self) -> None:
         """Test TYPE_GROUPED sorts files by name within each group."""
         files = [self.another_py, self.py_file]  # utils.py, script.py
-        result = self.scheduler.schedule(
-            files, strategy=PriorityStrategy.TYPE_GROUPED
-        )
+        result = self.scheduler.schedule(files, strategy=PriorityStrategy.TYPE_GROUPED)
         # Both .py files, should be sorted by name
         self.assertEqual(result[0], self.py_file)  # script.py
         self.assertEqual(result[1], self.another_py)  # utils.py
@@ -135,9 +127,7 @@ class TestTaskScheduler(unittest.TestCase):
         """Test that non-existent files get size 0 and sort first ascending."""
         missing = Path(self.test_dir / "missing.txt")
         files = [self.large_file, missing, self.small_file]
-        result = self.scheduler.schedule(
-            files, strategy=PriorityStrategy.SIZE_ASC
-        )
+        result = self.scheduler.schedule(files, strategy=PriorityStrategy.SIZE_ASC)
         self.assertEqual(result[0], missing)
 
     def test_single_file(self) -> None:

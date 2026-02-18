@@ -4,6 +4,7 @@ Scoring Module - Confidence Scoring Utilities
 This module provides utility functions and classes for confidence scoring,
 including score normalization, ranking, and comparison operations.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from typing import Any
 @dataclass
 class ScoredPattern:
     """A pattern with its calculated confidence score."""
+
     pattern_id: str
     pattern_data: dict
     confidence: float
@@ -35,11 +37,7 @@ class PatternScorer:
     """
 
     @staticmethod
-    def normalize_score(
-        score: float,
-        min_val: float = 0.0,
-        max_val: float = 1.0
-    ) -> float:
+    def normalize_score(score: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
         """
         Normalize a score to a given range.
 
@@ -55,9 +53,7 @@ class PatternScorer:
 
     @staticmethod
     def rank_patterns(
-        patterns: list[ScoredPattern],
-        key: str = 'confidence',
-        reverse: bool = True
+        patterns: list[ScoredPattern], key: str = "confidence", reverse: bool = True
     ) -> list[ScoredPattern]:
         """
         Rank patterns by a given score attribute.
@@ -74,9 +70,7 @@ class PatternScorer:
 
     @staticmethod
     def filter_by_confidence(
-        patterns: list[ScoredPattern],
-        min_confidence: float,
-        max_confidence: float | None = None
+        patterns: list[ScoredPattern], min_confidence: float, max_confidence: float | None = None
     ) -> list[ScoredPattern]:
         """
         Filter patterns by confidence threshold.
@@ -98,9 +92,7 @@ class PatternScorer:
 
     @staticmethod
     def get_top_patterns(
-        patterns: list[ScoredPattern],
-        n: int = 5,
-        min_confidence: float | None = None
+        patterns: list[ScoredPattern], n: int = 5, min_confidence: float | None = None
     ) -> list[ScoredPattern]:
         """
         Get top N patterns by confidence.
@@ -116,14 +108,11 @@ class PatternScorer:
         if min_confidence is not None:
             patterns = PatternScorer.filter_by_confidence(patterns, min_confidence)
 
-        ranked = PatternScorer.rank_patterns(patterns, key='confidence')
+        ranked = PatternScorer.rank_patterns(patterns, key="confidence")
         return ranked[:n]
 
     @staticmethod
-    def calculate_weighted_score(
-        scores: dict[str, float],
-        weights: dict[str, float]
-    ) -> float:
+    def calculate_weighted_score(scores: dict[str, float], weights: dict[str, float]) -> float:
         """
         Calculate weighted score from multiple factors.
 
@@ -138,18 +127,13 @@ class PatternScorer:
         if total_weight == 0:
             return 0.0
 
-        weighted_sum = sum(
-            scores.get(key, 0) * weight
-            for key, weight in weights.items()
-        )
+        weighted_sum = sum(scores.get(key, 0) * weight for key, weight in weights.items())
 
         return weighted_sum / total_weight
 
     @staticmethod
     def compare_patterns(
-        pattern1: ScoredPattern,
-        pattern2: ScoredPattern,
-        comparison_key: str = 'confidence'
+        pattern1: ScoredPattern, pattern2: ScoredPattern, comparison_key: str = "confidence"
     ) -> int:
         """
         Compare two patterns by a given attribute.
@@ -174,8 +158,7 @@ class PatternScorer:
 
     @staticmethod
     def aggregate_scores(
-        patterns: list[ScoredPattern],
-        aggregation: str = 'mean'
+        patterns: list[ScoredPattern], aggregation: str = "mean"
     ) -> dict[str, float]:
         """
         Aggregate scores across patterns.
@@ -189,34 +172,34 @@ class PatternScorer:
         """
         if not patterns:
             return {
-                'confidence': 0.0,
-                'frequency_score': 0.0,
-                'recency_score': 0.0,
-                'consistency_score': 0.0
+                "confidence": 0.0,
+                "frequency_score": 0.0,
+                "recency_score": 0.0,
+                "consistency_score": 0.0,
             }
 
         scores = {
-            'confidence': [p.confidence for p in patterns],
-            'frequency_score': [p.frequency_score for p in patterns],
-            'recency_score': [p.recency_score for p in patterns],
-            'consistency_score': [p.consistency_score for p in patterns]
+            "confidence": [p.confidence for p in patterns],
+            "frequency_score": [p.frequency_score for p in patterns],
+            "recency_score": [p.recency_score for p in patterns],
+            "consistency_score": [p.consistency_score for p in patterns],
         }
 
         aggregated = {}
 
         for key, values in scores.items():
-            if aggregation == 'mean':
+            if aggregation == "mean":
                 aggregated[key] = sum(values) / len(values)
-            elif aggregation == 'median':
+            elif aggregation == "median":
                 sorted_values = sorted(values)
                 mid = len(sorted_values) // 2
                 if len(sorted_values) % 2 == 0:
                     aggregated[key] = (sorted_values[mid - 1] + sorted_values[mid]) / 2
                 else:
                     aggregated[key] = sorted_values[mid]
-            elif aggregation == 'min':
+            elif aggregation == "min":
                 aggregated[key] = min(values)
-            elif aggregation == 'max':
+            elif aggregation == "max":
                 aggregated[key] = max(values)
             else:
                 aggregated[key] = sum(values) / len(values)
@@ -225,8 +208,7 @@ class PatternScorer:
 
     @staticmethod
     def calculate_confidence_interval(
-        patterns: list[ScoredPattern],
-        confidence_level: float = 0.95
+        patterns: list[ScoredPattern], confidence_level: float = 0.95
     ) -> tuple[float, float]:
         """
         Calculate confidence interval for pattern scores.
@@ -270,9 +252,7 @@ class ScoreAnalyzer:
     """
 
     @staticmethod
-    def analyze_score_distribution(
-        patterns: list[ScoredPattern]
-    ) -> dict[str, Any]:
+    def analyze_score_distribution(patterns: list[ScoredPattern]) -> dict[str, Any]:
         """
         Analyze the distribution of confidence scores.
 
@@ -284,13 +264,13 @@ class ScoreAnalyzer:
         """
         if not patterns:
             return {
-                'count': 0,
-                'mean': 0.0,
-                'median': 0.0,
-                'std_dev': 0.0,
-                'min': 0.0,
-                'max': 0.0,
-                'quartiles': (0.0, 0.0, 0.0)
+                "count": 0,
+                "mean": 0.0,
+                "median": 0.0,
+                "std_dev": 0.0,
+                "min": 0.0,
+                "max": 0.0,
+                "quartiles": (0.0, 0.0, 0.0),
             }
 
         import statistics
@@ -299,17 +279,17 @@ class ScoreAnalyzer:
         confidences_sorted = sorted(confidences)
 
         result = {
-            'count': len(confidences),
-            'mean': statistics.mean(confidences),
-            'median': statistics.median(confidences),
-            'min': min(confidences),
-            'max': max(confidences)
+            "count": len(confidences),
+            "mean": statistics.mean(confidences),
+            "median": statistics.median(confidences),
+            "min": min(confidences),
+            "max": max(confidences),
         }
 
         if len(confidences) > 1:
-            result['std_dev'] = statistics.stdev(confidences)
+            result["std_dev"] = statistics.stdev(confidences)
         else:
-            result['std_dev'] = 0.0
+            result["std_dev"] = 0.0
 
         # Calculate quartiles
         n = len(confidences_sorted)
@@ -317,21 +297,19 @@ class ScoreAnalyzer:
             q1_idx = n // 4
             q2_idx = n // 2
             q3_idx = 3 * n // 4
-            result['quartiles'] = (
+            result["quartiles"] = (
                 confidences_sorted[q1_idx],
                 confidences_sorted[q2_idx],
-                confidences_sorted[q3_idx]
+                confidences_sorted[q3_idx],
             )
         else:
-            result['quartiles'] = (result['min'], result['median'], result['max'])
+            result["quartiles"] = (result["min"], result["median"], result["max"])
 
         return result
 
     @staticmethod
     def identify_outliers(
-        patterns: list[ScoredPattern],
-        method: str = 'iqr',
-        threshold: float = 1.5
+        patterns: list[ScoredPattern], method: str = "iqr", threshold: float = 1.5
     ) -> tuple[list[ScoredPattern], list[ScoredPattern]]:
         """
         Identify outlier patterns based on confidence scores.
@@ -351,7 +329,7 @@ class ScoreAnalyzer:
 
         confidences = [p.confidence for p in patterns]
 
-        if method == 'iqr':
+        if method == "iqr":
             # Interquartile range method
             confidences_sorted = sorted(confidences)
             n = len(confidences_sorted)
@@ -363,10 +341,12 @@ class ScoreAnalyzer:
             lower_bound = q1 - threshold * iqr
             upper_bound = q3 + threshold * iqr
 
-            outliers = [p for p in patterns if p.confidence < lower_bound or p.confidence > upper_bound]
+            outliers = [
+                p for p in patterns if p.confidence < lower_bound or p.confidence > upper_bound
+            ]
             inliers = [p for p in patterns if lower_bound <= p.confidence <= upper_bound]
 
-        elif method == 'zscore':
+        elif method == "zscore":
             # Z-score method
             mean = statistics.mean(confidences)
             stdev = statistics.stdev(confidences) if len(confidences) > 1 else 0
@@ -390,8 +370,7 @@ class ScoreAnalyzer:
 
     @staticmethod
     def calculate_score_variance(
-        patterns: list[ScoredPattern],
-        score_type: str = 'confidence'
+        patterns: list[ScoredPattern], score_type: str = "confidence"
     ) -> float:
         """
         Calculate variance for a specific score type.
@@ -413,8 +392,7 @@ class ScoreAnalyzer:
 
     @staticmethod
     def compare_score_groups(
-        group1: list[ScoredPattern],
-        group2: list[ScoredPattern]
+        group1: list[ScoredPattern], group2: list[ScoredPattern]
     ) -> dict[str, Any]:
         """
         Compare two groups of patterns statistically.
@@ -429,7 +407,7 @@ class ScoreAnalyzer:
         import statistics
 
         if not group1 or not group2:
-            return {'valid': False, 'reason': 'Empty group'}
+            return {"valid": False, "reason": "Empty group"}
 
         scores1 = [p.confidence for p in group1]
         scores2 = [p.confidence for p in group2]
@@ -438,12 +416,12 @@ class ScoreAnalyzer:
         mean2 = statistics.mean(scores2)
 
         return {
-            'valid': True,
-            'group1_mean': mean1,
-            'group2_mean': mean2,
-            'mean_difference': mean2 - mean1,
-            'group1_size': len(group1),
-            'group2_size': len(group2),
-            'group1_std': statistics.stdev(scores1) if len(scores1) > 1 else 0,
-            'group2_std': statistics.stdev(scores2) if len(scores2) > 1 else 0
+            "valid": True,
+            "group1_mean": mean1,
+            "group2_mean": mean2,
+            "mean_difference": mean2 - mean1,
+            "group1_size": len(group1),
+            "group2_size": len(group2),
+            "group1_std": statistics.stdev(scores1) if len(scores1) > 1 else 0,
+            "group2_std": statistics.stdev(scores2) if len(scores2) > 1 else 0,
         }

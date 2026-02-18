@@ -1,4 +1,5 @@
 """Vision model implementation using Ollama for multimodal tasks."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,6 +7,7 @@ from typing import Any
 
 try:
     import ollama
+
     OLLAMA_AVAILABLE = True
 except ImportError:
     OLLAMA_AVAILABLE = False
@@ -36,14 +38,10 @@ class VisionModel(BaseModel):
             ValueError: If model type is not VISION or VIDEO
         """
         if not OLLAMA_AVAILABLE:
-            raise ImportError(
-                "Ollama is not installed. Install it with: pip install ollama"
-            )
+            raise ImportError("Ollama is not installed. Install it with: pip install ollama")
 
         if config.model_type not in (ModelType.VISION, ModelType.VIDEO):
-            raise ValueError(
-                f"Expected VISION or VIDEO model type, got {config.model_type}"
-            )
+            raise ValueError(f"Expected VISION or VIDEO model type, got {config.model_type}")
 
         super().__init__(config)
         self.client: ollama.Client | None = None
@@ -66,9 +64,7 @@ class VisionModel(BaseModel):
                 logger.debug(f"Model {self.config.name} found locally")
             except ollama.ResponseError:
                 logger.info(f"Model {self.config.name} not found locally, pulling...")
-                logger.warning(
-                    "Downloading large vision model, this may take several minutes..."
-                )
+                logger.warning("Downloading large vision model, this may take several minutes...")
                 self.client.pull(self.config.name)
                 logger.info(f"Model {self.config.name} pulled successfully")
 
@@ -190,9 +186,7 @@ class VisionModel(BaseModel):
             ),
         }
 
-        prompt = kwargs.pop("custom_prompt", None) or prompts.get(
-            task, prompts["describe"]
-        )
+        prompt = kwargs.pop("custom_prompt", None) or prompts.get(task, prompts["describe"])
 
         return self.generate(prompt=prompt, image_path=image_path, **kwargs)
 

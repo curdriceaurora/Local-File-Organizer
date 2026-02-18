@@ -4,6 +4,7 @@ PARA Heuristics Engine
 Multi-factor heuristic detection system for automatic PARA categorization.
 Uses temporal, content, structural, and AI-based heuristics.
 """
+
 from __future__ import annotations
 
 import logging
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CategoryScore:
     """Score for a PARA category."""
+
     category: PARACategory
     score: float  # 0.0 to 1.0
     confidence: float  # 0.0 to 1.0
@@ -41,6 +43,7 @@ class CategoryScore:
 @dataclass
 class HeuristicResult:
     """Result from a heuristic evaluation."""
+
     scores: dict[PARACategory, CategoryScore]
     overall_confidence: float
     recommended_category: PARACategory | None = None
@@ -101,8 +104,9 @@ class TemporalHeuristic(Heuristic):
             True if path contains year older than threshold
         """
         import re
+
         # Match standalone 4-digit years (word boundaries)
-        year_pattern = r'\b(19\d{2}|20\d{2})\b'
+        year_pattern = r"\b(19\d{2}|20\d{2})\b"
         matches = re.findall(year_pattern, path_str)
 
         for year_str in matches:
@@ -172,7 +176,7 @@ class TemporalHeuristic(Heuristic):
             overall_confidence=confidence,
             recommended_category=recommended,
             needs_manual_review=confidence < 0.5,
-            metadata={"temporal_analysis": "complete"}
+            metadata={"temporal_analysis": "complete"},
         )
 
 
@@ -189,23 +193,61 @@ class ContentHeuristic(Heuristic):
 
     # Keyword patterns for each category
     PROJECT_KEYWORDS = [
-        "project", "deadline", "due", "sprint", "milestone", "deliverable",
-        "proposal", "presentation", "report", "draft", "final", "v1", "v2"
+        "project",
+        "deadline",
+        "due",
+        "sprint",
+        "milestone",
+        "deliverable",
+        "proposal",
+        "presentation",
+        "report",
+        "draft",
+        "final",
+        "v1",
+        "v2",
     ]
 
     AREA_KEYWORDS = [
-        "area", "ongoing", "recurring", "weekly", "monthly", "routine",
-        "maintenance", "health", "finance", "learning", "notes"
+        "area",
+        "ongoing",
+        "recurring",
+        "weekly",
+        "monthly",
+        "routine",
+        "maintenance",
+        "health",
+        "finance",
+        "learning",
+        "notes",
     ]
 
     RESOURCE_KEYWORDS = [
-        "reference", "template", "guide", "tutorial", "documentation",
-        "handbook", "manual", "example", "sample", "resource", "library"
+        "reference",
+        "template",
+        "guide",
+        "tutorial",
+        "documentation",
+        "handbook",
+        "manual",
+        "example",
+        "sample",
+        "resource",
+        "library",
     ]
 
     ARCHIVE_KEYWORDS = [
-        "archive", "old", "backup", "deprecated", "obsolete", "legacy",
-        "completed", "finished", "done", "past", "historical"
+        "archive",
+        "old",
+        "backup",
+        "deprecated",
+        "obsolete",
+        "legacy",
+        "completed",
+        "finished",
+        "done",
+        "past",
+        "historical",
     ]
 
     @staticmethod
@@ -224,7 +266,7 @@ class ContentHeuristic(Heuristic):
             True if keyword matches as a complete word
         """
         # Escape special regex characters and add word boundaries
-        pattern = r'\b' + re.escape(keyword) + r'\b'
+        pattern = r"\b" + re.escape(keyword) + r"\b"
         return bool(re.search(pattern, text, re.IGNORECASE))
 
     def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
@@ -237,10 +279,11 @@ class ContentHeuristic(Heuristic):
 
         # Check for date patterns (PROJECT indicator)
         import re
+
         date_patterns = [
-            r'\d{4}-\d{2}-\d{2}',  # 2024-01-15
-            r'\d{2}/\d{2}/\d{4}',  # 01/15/2024
-            r'due[_-]?\d{2}',      # due_15
+            r"\d{4}-\d{2}-\d{2}",  # 2024-01-15
+            r"\d{2}/\d{2}/\d{4}",  # 01/15/2024
+            r"due[_-]?\d{2}",  # due_15
         ]
 
         for pattern in date_patterns:
@@ -290,7 +333,7 @@ class ContentHeuristic(Heuristic):
             overall_confidence=confidence,
             recommended_category=recommended,
             needs_manual_review=confidence < 0.5,
-            metadata={"content_analysis": "complete"}
+            metadata={"content_analysis": "complete"},
         )
 
 
@@ -355,7 +398,7 @@ class StructuralHeuristic(Heuristic):
             overall_confidence=confidence,
             recommended_category=recommended,
             needs_manual_review=confidence < 0.5,
-            metadata={"structural_analysis": "complete"}
+            metadata={"structural_analysis": "complete"},
         )
 
 
@@ -385,7 +428,7 @@ class AIHeuristic(Heuristic):
             overall_confidence=0.0,
             recommended_category=None,
             needs_manual_review=True,
-            metadata={"ai_analysis": "not_implemented"}
+            metadata={"ai_analysis": "not_implemented"},
         )
 
 
@@ -513,5 +556,5 @@ class HeuristicEngine:
             overall_confidence=confidence,
             recommended_category=recommended,
             needs_manual_review=needs_review,
-            metadata={"combined_analysis": "complete"}
+            metadata={"combined_analysis": "complete"},
         )

@@ -4,6 +4,7 @@ Pattern learning orchestrator module.
 Coordinates pattern extraction, confidence scoring, folder learning, and feedback processing
 to provide a unified pattern learning system.
 """
+
 from __future__ import annotations
 
 import logging
@@ -46,9 +47,7 @@ class PatternLearner:
 
         # Initialize components
         self.pattern_extractor = NamingPatternExtractor()
-        self.confidence_engine = ConfidenceEngine(
-            storage_path=storage_path / "confidence.json"
-        )
+        self.confidence_engine = ConfidenceEngine(storage_path=storage_path / "confidence.json")
         self.folder_learner = FolderPreferenceLearner(
             storage_path=storage_path / "folder_prefs.json"
         )
@@ -62,10 +61,7 @@ class PatternLearner:
         logger.info("PatternLearner initialized")
 
     def learn_from_correction(
-        self,
-        original: Path,
-        corrected: Path,
-        context: dict | None = None
+        self, original: Path, corrected: Path, context: dict | None = None
     ) -> dict:
         """
         Learn from a user correction.
@@ -82,44 +78,39 @@ class PatternLearner:
         """
         if not self.learning_enabled:
             logger.debug("Learning disabled, skipping correction")
-            return {'learning_enabled': False}
+            return {"learning_enabled": False}
 
         logger.info(f"Learning from correction: {original.name} -> {corrected.name}")
 
         results = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'original': str(original),
-            'corrected': str(corrected),
-            'learned': []
+            "timestamp": datetime.utcnow().isoformat(),
+            "original": str(original),
+            "corrected": str(corrected),
+            "learned": [],
         }
 
         # Process the correction
-        insights = self.feedback_processor.process_correction(
-            original, corrected, context
-        )
+        insights = self.feedback_processor.process_correction(original, corrected, context)
 
         # Extract and learn naming patterns
         if original.name != corrected.name:
             naming_result = self._learn_naming_pattern(original.name, corrected.name)
-            results['learned'].append(naming_result)
+            results["learned"].append(naming_result)
 
         # Learn folder preferences
         if original.parent != corrected.parent:
-            folder_result = self._learn_folder_preference(
-                original, corrected, context
-            )
-            results['learned'].append(folder_result)
+            folder_result = self._learn_folder_preference(original, corrected, context)
+            results["learned"].append(folder_result)
 
         # Update preference tracker
         self.preference_tracker.track_operation(
-            'correction',
-            {'from': str(original), 'to': str(corrected)}
+            "correction", {"from": str(original), "to": str(corrected)}
         )
 
         # Check if retraining needed
-        if insights.get('trigger_retraining'):
+        if insights.get("trigger_retraining"):
             self.confidence_engine.recalculate_all()
-            results['retraining_triggered'] = True
+            results["retraining_triggered"] = True
 
         logger.info(f"Learned {len(results['learned'])} patterns from correction")
 
@@ -136,25 +127,21 @@ class PatternLearner:
             Dictionary with extracted patterns
         """
         if not filenames:
-            return {'patterns': []}
+            return {"patterns": []}
 
         patterns = {
-            'common_elements': [],
-            'structure': {},
-            'delimiters': {},
-            'case_style': None,
-            'confidence': 0.0
+            "common_elements": [],
+            "structure": {},
+            "delimiters": {},
+            "case_style": None,
+            "confidence": 0.0,
         }
 
         # Extract common elements
-        patterns['common_elements'] = self.pattern_extractor.extract_common_elements(
-            filenames
-        )
+        patterns["common_elements"] = self.pattern_extractor.extract_common_elements(filenames)
 
         # Identify structure pattern
-        patterns['structure'] = self.pattern_extractor.identify_structure_pattern(
-            filenames
-        )
+        patterns["structure"] = self.pattern_extractor.identify_structure_pattern(filenames)
 
         # Analyze delimiters
         delimiter_counts = {}
@@ -163,27 +150,21 @@ class PatternLearner:
             for d in delims:
                 delimiter_counts[d] = delimiter_counts.get(d, 0) + 1
 
-        patterns['delimiters'] = delimiter_counts
+        patterns["delimiters"] = delimiter_counts
 
         # Detect common case style
-        case_styles = [
-            self.pattern_extractor.detect_case_style(f)
-            for f in filenames
-        ]
+        case_styles = [self.pattern_extractor.detect_case_style(f) for f in filenames]
         if case_styles:
-            patterns['case_style'] = max(set(case_styles), key=case_styles.count)
+            patterns["case_style"] = max(set(case_styles), key=case_styles.count)
 
         # Calculate confidence based on consistency
-        consistency = len(patterns['common_elements']) / max(len(filenames), 1)
-        patterns['confidence'] = consistency
+        consistency = len(patterns["common_elements"]) / max(len(filenames), 1)
+        patterns["confidence"] = consistency
 
         return patterns
 
     def identify_folder_preference(
-        self,
-        file_type: str,
-        chosen_folder: Path,
-        context: dict | None = None
+        self, file_type: str, chosen_folder: Path, context: dict | None = None
     ) -> None:
         """
         Record a folder choice for learning.
@@ -193,9 +174,7 @@ class PatternLearner:
             chosen_folder: Folder path chosen by user
             context: Additional context
         """
-        self.folder_learner.track_folder_choice(
-            file_type, chosen_folder, context
-        )
+        self.folder_learner.track_folder_choice(file_type, chosen_folder, context)
 
         logger.debug(f"Tracked folder preference: {file_type} -> {chosen_folder}")
 
@@ -212,9 +191,7 @@ class PatternLearner:
         logger.debug(f"Updated confidence for {pattern_id}: success={success}")
 
     def get_pattern_suggestion(
-        self,
-        file_info: dict,
-        min_confidence: float | None = None
+        self, file_info: dict, min_confidence: float | None = None
     ) -> dict | None:
         """
         Get pattern-based suggestions for a file.
@@ -229,44 +206,33 @@ class PatternLearner:
         if min_confidence is None:
             min_confidence = self.min_confidence
 
-        suggestion = {
-            'naming': None,
-            'folder': None,
-            'confidence': 0.0
-        }
+        suggestion = {"naming": None, "folder": None, "confidence": 0.0}
 
         # Get naming suggestion
-        if 'name' in file_info:
-            naming_patterns = self._get_naming_suggestions(file_info['name'])
-            if naming_patterns and naming_patterns['confidence'] >= min_confidence:
-                suggestion['naming'] = naming_patterns
+        if "name" in file_info:
+            naming_patterns = self._get_naming_suggestions(file_info["name"])
+            if naming_patterns and naming_patterns["confidence"] >= min_confidence:
+                suggestion["naming"] = naming_patterns
 
         # Get folder suggestion
-        if 'type' in file_info:
-            folder = self.folder_learner.suggest_folder_structure(
-                file_info, min_confidence
-            )
+        if "type" in file_info:
+            folder = self.folder_learner.suggest_folder_structure(file_info, min_confidence)
             if folder:
-                confidence = self.folder_learner.get_folder_confidence(
-                    file_info['type'], folder
-                )
-                suggestion['folder'] = {
-                    'path': str(folder),
-                    'confidence': confidence
-                }
+                confidence = self.folder_learner.get_folder_confidence(file_info["type"], folder)
+                suggestion["folder"] = {"path": str(folder), "confidence": confidence}
 
         # Calculate overall confidence
         confidences = []
-        if suggestion['naming']:
-            confidences.append(suggestion['naming']['confidence'])
-        if suggestion['folder']:
-            confidences.append(suggestion['folder']['confidence'])
+        if suggestion["naming"]:
+            confidences.append(suggestion["naming"]["confidence"])
+        if suggestion["folder"]:
+            confidences.append(suggestion["folder"]["confidence"])
 
         if confidences:
-            suggestion['confidence'] = sum(confidences) / len(confidences)
+            suggestion["confidence"] = sum(confidences) / len(confidences)
 
         # Return only if we have suggestions with sufficient confidence
-        if suggestion['confidence'] >= min_confidence:
+        if suggestion["confidence"] >= min_confidence:
             return suggestion
 
         return None
@@ -279,19 +245,17 @@ class PatternLearner:
             Dictionary with learning statistics
         """
         stats = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'confidence_stats': self.confidence_engine.get_stats(),
-            'folder_stats': self.folder_learner.analyze_organization_patterns(),
-            'correction_count': self.feedback_processor.correction_count,
-            'learning_enabled': self.learning_enabled
+            "timestamp": datetime.utcnow().isoformat(),
+            "confidence_stats": self.confidence_engine.get_stats(),
+            "folder_stats": self.folder_learner.analyze_organization_patterns(),
+            "correction_count": self.feedback_processor.correction_count,
+            "learning_enabled": self.learning_enabled,
         }
 
         return stats
 
     def batch_learn_from_history(
-        self,
-        corrections: list[dict],
-        max_age_days: int | None = None
+        self, corrections: list[dict], max_age_days: int | None = None
     ) -> dict:
         """
         Learn from historical corrections in batch.
@@ -305,18 +269,16 @@ class PatternLearner:
         """
         logger.info(f"Batch learning from {len(corrections)} corrections")
 
-        results = self.feedback_processor.batch_process_history(
-            corrections, max_age_days
-        )
+        results = self.feedback_processor.batch_process_history(corrections, max_age_days)
 
         # Apply learned patterns
-        for pattern in results.get('name_patterns', []):
-            if pattern['pattern_type'] == 'preferred_delimiter':
+        for pattern in results.get("name_patterns", []):
+            if pattern["pattern_type"] == "preferred_delimiter":
                 # Store as a learned pattern
                 pass  # Would integrate with pattern storage
 
-        for pattern in results.get('folder_patterns', []):
-            if pattern['pattern_type'] == 'type_folder_preference':
+        for pattern in results.get("folder_patterns", []):
+            if pattern["pattern_type"] == "type_folder_preference":
                 # Already tracked through folder_learner
                 pass
 
@@ -335,18 +297,13 @@ class PatternLearner:
         Returns:
             Dictionary with clearing results
         """
-        results = {
-            'folder_preferences_cleared': 0,
-            'patterns_decayed': 0
-        }
+        results = {"folder_preferences_cleared": 0, "patterns_decayed": 0}
 
         # Clear old folder preferences
-        results['folder_preferences_cleared'] = \
-            self.folder_learner.clear_old_preferences(days)
+        results["folder_preferences_cleared"] = self.folder_learner.clear_old_preferences(days)
 
         # Apply decay to old patterns
-        results['patterns_decayed'] = \
-            self.confidence_engine.decay_old_patterns(days)
+        results["patterns_decayed"] = self.confidence_engine.decay_old_patterns(days)
 
         logger.info(f"Cleared {results['folder_preferences_cleared']} old preferences")
 
@@ -362,11 +319,7 @@ class PatternLearner:
         self.learning_enabled = False
         logger.info("Pattern learning disabled")
 
-    def _learn_naming_pattern(
-        self,
-        original_name: str,
-        corrected_name: str
-    ) -> dict:
+    def _learn_naming_pattern(self, original_name: str, corrected_name: str) -> dict:
         """
         Learn from a naming correction.
 
@@ -377,43 +330,34 @@ class PatternLearner:
         Returns:
             Learning result dictionary
         """
-        result = {
-            'type': 'naming',
-            'patterns': []
-        }
+        result = {"type": "naming", "patterns": []}
 
         # Analyze the correction
         orig_info = self.pattern_extractor.analyze_filename(original_name)
         corr_info = self.pattern_extractor.analyze_filename(corrected_name)
 
         # Learn delimiter preference
-        if orig_info['delimiters'] != corr_info['delimiters']:
-            result['patterns'].append({
-                'pattern_type': 'delimiter',
-                'value': corr_info['delimiters']
-            })
+        if orig_info["delimiters"] != corr_info["delimiters"]:
+            result["patterns"].append(
+                {"pattern_type": "delimiter", "value": corr_info["delimiters"]}
+            )
 
         # Learn case style preference
-        if orig_info['case_style'] != corr_info['case_style']:
-            result['patterns'].append({
-                'pattern_type': 'case_style',
-                'value': corr_info['case_style']
-            })
+        if orig_info["case_style"] != corr_info["case_style"]:
+            result["patterns"].append(
+                {"pattern_type": "case_style", "value": corr_info["case_style"]}
+            )
 
         # Learn structure pattern
-        if corr_info.get('structure'):
-            result['patterns'].append({
-                'pattern_type': 'structure',
-                'value': corr_info['structure']
-            })
+        if corr_info.get("structure"):
+            result["patterns"].append(
+                {"pattern_type": "structure", "value": corr_info["structure"]}
+            )
 
         return result
 
     def _learn_folder_preference(
-        self,
-        original: Path,
-        corrected: Path,
-        context: dict | None
+        self, original: Path, corrected: Path, context: dict | None
     ) -> dict:
         """
         Learn from a folder correction.
@@ -427,23 +371,18 @@ class PatternLearner:
             Learning result dictionary
         """
         result = {
-            'type': 'folder',
-            'file_type': original.suffix.lower(),
-            'from': str(original.parent),
-            'to': str(corrected.parent)
+            "type": "folder",
+            "file_type": original.suffix.lower(),
+            "from": str(original.parent),
+            "to": str(corrected.parent),
         }
 
         # Track the folder choice
-        self.folder_learner.track_folder_choice(
-            original.suffix.lower(),
-            corrected.parent,
-            context
-        )
+        self.folder_learner.track_folder_choice(original.suffix.lower(), corrected.parent, context)
 
         # Get updated confidence
-        result['confidence'] = self.folder_learner.get_folder_confidence(
-            original.suffix.lower(),
-            corrected.parent
+        result["confidence"] = self.folder_learner.get_folder_confidence(
+            original.suffix.lower(), corrected.parent
         )
 
         return result
@@ -466,9 +405,9 @@ class PatternLearner:
 
         if suggested:
             return {
-                'suggested_name': suggested,
-                'confidence': 0.7,  # Base confidence
-                'reason': 'Based on learned patterns'
+                "suggested_name": suggested,
+                "confidence": 0.7,  # Base confidence
+                "reason": "Based on learned patterns",
             }
 
         return None

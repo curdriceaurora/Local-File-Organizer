@@ -3,6 +3,7 @@
 Provides real-time monitoring of stream health, consumer lag,
 and event throughput metrics.
 """
+
 from __future__ import annotations
 
 import logging
@@ -188,9 +189,7 @@ class EventMonitor:
 
         try:
             now = datetime.now(timezone.utc)
-            start_ms = str(
-                int((now.timestamp() - window_seconds) * 1000)
-            )
+            start_ms = str(int((now.timestamp() - window_seconds) * 1000))
             end_ms = str(int(now.timestamp() * 1000))
 
             # Count events in the window using XRANGE
@@ -221,9 +220,7 @@ class EventMonitor:
 
     def __repr__(self) -> str:
         """String representation."""
-        return (
-            f"EventMonitor(connected={self._manager.is_connected})"
-        )
+        return f"EventMonitor(connected={self._manager.is_connected})"
 
 
 def _parse_entry_timestamp(

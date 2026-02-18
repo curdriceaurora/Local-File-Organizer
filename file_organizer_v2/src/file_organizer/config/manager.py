@@ -3,6 +3,7 @@
 Handles loading, saving, and profile management for the unified
 application configuration.
 """
+
 from __future__ import annotations
 
 import logging
@@ -225,9 +226,7 @@ class ConfigManager:
         overrides = config.watcher or {}
         # Convert directory strings to Paths
         if "watch_directories" in overrides:
-            overrides["watch_directories"] = [
-                Path(d) for d in overrides["watch_directories"]
-            ]
+            overrides["watch_directories"] = [Path(d) for d in overrides["watch_directories"]]
         return WatcherConfig(**overrides)
 
     def to_daemon_config(self, config: AppConfig) -> Any:
@@ -243,9 +242,7 @@ class ConfigManager:
 
         overrides = config.daemon or {}
         if "watch_directories" in overrides:
-            overrides["watch_directories"] = [
-                Path(d) for d in overrides["watch_directories"]
-            ]
+            overrides["watch_directories"] = [Path(d) for d in overrides["watch_directories"]]
         if "output_directory" in overrides:
             overrides["output_directory"] = Path(overrides["output_directory"])
         return DaemonConfig(**overrides)
@@ -348,8 +345,14 @@ class ConfigManager:
 
         # Only include module overrides that are set
         for name in (
-            "watcher", "daemon", "parallel", "pipeline",
-            "events", "deploy", "para", "johnny_decimal",
+            "watcher",
+            "daemon",
+            "parallel",
+            "pipeline",
+            "events",
+            "deploy",
+            "para",
+            "johnny_decimal",
         ):
             value = getattr(config, name)
             if value is not None:

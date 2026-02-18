@@ -1,4 +1,5 @@
 """Tests for CLI interactive prompts and completion helpers."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -105,9 +106,7 @@ class TestPromptChoice:
         from file_organizer.cli import interactive
 
         interactive.set_flags(no_interactive=True)
-        result = interactive.prompt_choice(
-            "Pick", ["a", "b", "c"], default="b"
-        )
+        result = interactive.prompt_choice("Pick", ["a", "b", "c"], default="b")
         assert result == "b"
         interactive.set_flags(no_interactive=False)
 

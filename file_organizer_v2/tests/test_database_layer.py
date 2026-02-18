@@ -1,4 +1,5 @@
 """Tests for shared database utilities (URL resolution + pooled engine config)."""
+
 from __future__ import annotations
 
 from pathlib import Path

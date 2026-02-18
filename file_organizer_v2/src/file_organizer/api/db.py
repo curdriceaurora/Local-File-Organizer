@@ -5,6 +5,7 @@ This module provides:
 - pooled engine/session factory access for SQLite and PostgreSQL
 - a stable import surface used by repositories and tests
 """
+
 from __future__ import annotations
 
 from sqlalchemy.engine import Engine

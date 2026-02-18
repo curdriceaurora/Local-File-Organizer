@@ -9,6 +9,7 @@ Tests cover:
 - Integration with AudioMetadata and TranscriptionResult
 - Edge cases (empty text, no transcription, short segments)
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -136,9 +137,7 @@ class TestTopicExtraction:
         topics = analyzer.extract_topics(text)
         assert len(topics) >= 2
 
-    def test_no_topics_for_unrelated_text(
-        self, analyzer: AudioContentAnalyzer
-    ) -> None:
+    def test_no_topics_for_unrelated_text(self, analyzer: AudioContentAnalyzer) -> None:
         text = "lorem ipsum dolor sit amet"
         topics = analyzer.extract_topics(text)
         assert len(topics) == 0
@@ -146,8 +145,7 @@ class TestTopicExtraction:
     def test_max_topics_limit(self) -> None:
         analyzer = AudioContentAnalyzer(max_topics=2)
         text = (
-            "software programming education university health medical "
-            "business market sports game"
+            "software programming education university health medical business market sports game"
         )
         topics = analyzer.extract_topics(text)
         assert len(topics) <= 2
@@ -203,26 +201,19 @@ class TestKeywordExtraction:
 class TestSpeakerExtraction:
     """Tests for speaker estimation from segments."""
 
-    def test_no_segments_no_speakers(
-        self, analyzer: AudioContentAnalyzer
-    ) -> None:
+    def test_no_segments_no_speakers(self, analyzer: AudioContentAnalyzer) -> None:
         speakers = analyzer.extract_speakers([])
         assert speakers == []
 
-    def test_single_speaker_uniform_segments(
-        self, analyzer: AudioContentAnalyzer
-    ) -> None:
+    def test_single_speaker_uniform_segments(self, analyzer: AudioContentAnalyzer) -> None:
         """Uniform segments with small gaps should show 1 speaker."""
         segments = [
-            Segment(id=i, start=i * 5.0, end=(i + 1) * 5.0 - 0.3, text="text")
-            for i in range(10)
+            Segment(id=i, start=i * 5.0, end=(i + 1) * 5.0 - 0.3, text="text") for i in range(10)
         ]
         speakers = analyzer.extract_speakers(segments)
         assert "Speaker 1" in speakers
 
-    def test_multiple_speakers_from_gaps(
-        self, analyzer: AudioContentAnalyzer
-    ) -> None:
+    def test_multiple_speakers_from_gaps(self, analyzer: AudioContentAnalyzer) -> None:
         """Large gaps between segments should produce multiple speakers."""
         segments = [
             Segment(id=0, start=0.0, end=5.0, text="Hello"),
@@ -233,9 +224,7 @@ class TestSpeakerExtraction:
         speakers = analyzer.extract_speakers(segments)
         assert len(speakers) >= 2
 
-    def test_multiple_speakers_from_duration_variance(
-        self, analyzer: AudioContentAnalyzer
-    ) -> None:
+    def test_multiple_speakers_from_duration_variance(self, analyzer: AudioContentAnalyzer) -> None:
         """Large duration differences should hint at speaker changes."""
         segments = [
             Segment(id=0, start=0.0, end=2.0, text="short question"),
@@ -337,9 +326,7 @@ class TestAnalyzeIntegration:
         assert analysis.keyword_count == 0
         assert analysis.speaker_count == 0
 
-    def test_content_analysis_properties(
-        self, analyzer: AudioContentAnalyzer
-    ) -> None:
+    def test_content_analysis_properties(self, analyzer: AudioContentAnalyzer) -> None:
         """ContentAnalysis properties should work correctly."""
         analysis = ContentAnalysis(
             topics=["Tech", "Science"],

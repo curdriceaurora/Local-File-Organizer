@@ -5,6 +5,7 @@ Provides a privacy-first feedback loop: user acceptances and rejections
 are stored locally in JSON and used to learn patterns that improve future
 suggestions. No data leaves the local machine.
 """
+
 from __future__ import annotations
 
 import json
@@ -225,14 +226,8 @@ class FeedbackCollector:
         accuracy_rate = len(accepted) / total if total > 0 else 0.0
         avg_confidence = sum(e.confidence for e in events) / total
 
-        conf_accepted = (
-            sum(e.confidence for e in accepted) / len(accepted)
-            if accepted else 0.0
-        )
-        conf_rejected = (
-            sum(e.confidence for e in rejected) / len(rejected)
-            if rejected else 0.0
-        )
+        conf_accepted = sum(e.confidence for e in accepted) / len(accepted) if accepted else 0.0
+        conf_rejected = sum(e.confidence for e in rejected) / len(rejected) if rejected else 0.0
 
         # Per-category accuracy
         per_cat: dict[str, dict[str, int]] = {}
@@ -362,7 +357,8 @@ class PatternLearner:
         return rules
 
     def get_user_preferences(
-        self, events: list[FeedbackEvent] | None = None,
+        self,
+        events: list[FeedbackEvent] | None = None,
     ) -> dict[str, Any]:
         """Derive user preferences from feedback history.
 
@@ -389,12 +385,14 @@ class PatternLearner:
         override_patterns: list[dict[str, str]] = []
         rejections = [e for e in events if not e.accepted]
         for rej in rejections:
-            override_patterns.append({
-                "from": rej.suggested.value,
-                "to": rej.actual.value,
-                "extension": rej.file_extension,
-                "directory": rej.parent_directory,
-            })
+            override_patterns.append(
+                {
+                    "from": rej.suggested.value,
+                    "to": rej.actual.value,
+                    "extension": rej.file_extension,
+                    "directory": rej.parent_directory,
+                }
+            )
 
         return {
             "preferred_categories": category_counts,
@@ -444,9 +442,7 @@ class PatternLearner:
         # Check if directory-based patterns dominate rejections
         rejections = [e for e in events if not e.accepted]
         if rejections:
-            dir_rejections = [
-                e for e in rejections if e.parent_directory
-            ]
+            dir_rejections = [e for e in rejections if e.parent_directory]
             if len(dir_rejections) > len(rejections) * 0.6:
                 # Directory-based signals are unreliable
                 structural = max(0.20, structural - 0.05)
@@ -471,7 +467,8 @@ class PatternLearner:
     # ------------------------------------------------------------------
 
     def _learn_extension_patterns(
-        self, events: list[FeedbackEvent],
+        self,
+        events: list[FeedbackEvent],
     ) -> list[LearnedRule]:
         """Learn patterns from file extensions.
 
@@ -491,18 +488,21 @@ class PatternLearner:
         rules: list[LearnedRule] = []
         for (ext, cat_value), count in ext_counts.items():
             if count >= self._min_occurrences:
-                rules.append(LearnedRule(
-                    pattern_type="extension",
-                    pattern_value=ext,
-                    suggested_category=PARACategory(cat_value),
-                    occurrences=count,
-                    confidence=min(0.9, 0.5 + count * 0.05),
-                ))
+                rules.append(
+                    LearnedRule(
+                        pattern_type="extension",
+                        pattern_value=ext,
+                        suggested_category=PARACategory(cat_value),
+                        occurrences=count,
+                        confidence=min(0.9, 0.5 + count * 0.05),
+                    )
+                )
 
         return rules
 
     def _learn_directory_patterns(
-        self, events: list[FeedbackEvent],
+        self,
+        events: list[FeedbackEvent],
     ) -> list[LearnedRule]:
         """Learn patterns from parent directory names.
 
@@ -521,12 +521,14 @@ class PatternLearner:
         rules: list[LearnedRule] = []
         for (dirname, cat_value), count in dir_counts.items():
             if count >= self._min_occurrences:
-                rules.append(LearnedRule(
-                    pattern_type="directory",
-                    pattern_value=dirname,
-                    suggested_category=PARACategory(cat_value),
-                    occurrences=count,
-                    confidence=min(0.9, 0.5 + count * 0.05),
-                ))
+                rules.append(
+                    LearnedRule(
+                        pattern_type="directory",
+                        pattern_value=dirname,
+                        suggested_category=PARACategory(cat_value),
+                        occurrences=count,
+                        confidence=min(0.9, 0.5 + count * 0.05),
+                    )
+                )
 
         return rules

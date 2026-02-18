@@ -4,6 +4,7 @@ Unit tests for Naming Analyzer
 Tests advanced filename analysis, structure comparison, pattern detection,
 and semantic component extraction.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -24,7 +25,7 @@ class TestNameStructure:
             tokens=["test", "file"],
             delimiters=["_"],
             has_date=False,
-            has_version=False
+            has_version=False,
         )
 
         assert structure.original == "test_file.txt"
@@ -33,17 +34,13 @@ class TestNameStructure:
 
     def test_to_dict(self):
         """Test converting structure to dictionary."""
-        structure = NameStructure(
-            original="test.txt",
-            tokens=["test"],
-            word_count=1
-        )
+        structure = NameStructure(original="test.txt", tokens=["test"], word_count=1)
 
         data = structure.to_dict()
 
-        assert data['original'] == "test.txt"
-        assert data['tokens'] == ["test"]
-        assert data['word_count'] == 1
+        assert data["original"] == "test.txt"
+        assert data["tokens"] == ["test"]
+        assert data["word_count"] == 1
 
 
 class TestNamingAnalyzer:
@@ -96,46 +93,36 @@ class TestNamingAnalyzer:
         analyzer = NamingAnalyzer()
         comparison = analyzer.compare_structures("test.txt", "test.txt")
 
-        assert comparison['overall_similarity'] == 1.0
-        assert comparison['same_structure'] is True
-        assert comparison['compatible'] is True
+        assert comparison["overall_similarity"] == 1.0
+        assert comparison["same_structure"] is True
+        assert comparison["compatible"] is True
 
     def test_compare_structures_similar(self):
         """Test comparing similar structures."""
         analyzer = NamingAnalyzer()
-        comparison = analyzer.compare_structures(
-            "report_january.pdf",
-            "report_february.pdf"
-        )
+        comparison = analyzer.compare_structures("report_january.pdf", "report_february.pdf")
 
-        assert comparison['overall_similarity'] > 0.5
-        assert comparison['compatible'] is True
+        assert comparison["overall_similarity"] > 0.5
+        assert comparison["compatible"] is True
 
     def test_compare_structures_different(self):
         """Test comparing different structures."""
         analyzer = NamingAnalyzer()
-        comparison = analyzer.compare_structures(
-            "Report2024.PDF",
-            "document-jan.txt"
-        )
+        comparison = analyzer.compare_structures("Report2024.PDF", "document-jan.txt")
 
-        assert comparison['overall_similarity'] < 0.8
+        assert comparison["overall_similarity"] < 0.8
 
     def test_find_common_pattern(self):
         """Test finding common pattern across files."""
         analyzer = NamingAnalyzer()
-        filenames = [
-            "report_2024-01-15.pdf",
-            "report_2024-02-20.pdf",
-            "report_2024-03-10.pdf"
-        ]
+        filenames = ["report_2024-01-15.pdf", "report_2024-02-20.pdf", "report_2024-03-10.pdf"]
 
         pattern = analyzer.find_common_pattern(filenames)
 
         assert pattern is not None
-        assert pattern['sample_size'] == 3
-        assert '_' in pattern['common_delimiters']
-        assert pattern['date_frequency'] == 1.0  # All have dates
+        assert pattern["sample_size"] == 3
+        assert "_" in pattern["common_delimiters"]
+        assert pattern["date_frequency"] == 1.0  # All have dates
 
     def test_find_common_pattern_empty(self):
         """Test finding pattern with empty list."""
@@ -147,35 +134,26 @@ class TestNamingAnalyzer:
     def test_extract_pattern_differences(self):
         """Test extracting differences between filenames."""
         analyzer = NamingAnalyzer()
-        differences = analyzer.extract_pattern_differences(
-            "report_draft.txt",
-            "report_final.txt"
-        )
+        differences = analyzer.extract_pattern_differences("report_draft.txt", "report_final.txt")
 
-        assert differences['added_tokens'] == ['final']
-        assert differences['removed_tokens'] == ['draft']
-        assert 'report' in differences['common_tokens']
+        assert differences["added_tokens"] == ["final"]
+        assert differences["removed_tokens"] == ["draft"]
+        assert "report" in differences["common_tokens"]
 
     def test_extract_pattern_differences_date_added(self):
         """Test detecting added date."""
         analyzer = NamingAnalyzer()
-        differences = analyzer.extract_pattern_differences(
-            "report.txt",
-            "report_2024-01-15.txt"
-        )
+        differences = analyzer.extract_pattern_differences("report.txt", "report_2024-01-15.txt")
 
-        assert differences['added_date'] is True
-        assert differences['removed_date'] is False
+        assert differences["added_date"] is True
+        assert differences["removed_date"] is False
 
     def test_extract_pattern_differences_version_added(self):
         """Test detecting added version."""
         analyzer = NamingAnalyzer()
-        differences = analyzer.extract_pattern_differences(
-            "document.txt",
-            "document_v2.txt"
-        )
+        differences = analyzer.extract_pattern_differences("document.txt", "document_v2.txt")
 
-        assert differences['added_version'] is True
+        assert differences["added_version"] is True
 
     def test_identify_naming_style_snake_case(self):
         """Test identifying snake_case style."""
@@ -252,25 +230,25 @@ class TestNamingAnalyzer:
         analyzer = NamingAnalyzer()
         components = analyzer.extract_semantic_components("report_2024-01-15_final.pdf")
 
-        assert components['base_name'] == "report_2024-01-15_final"
-        assert len(components['tokens']) > 0
-        assert len(components['potential_description']) > 0
+        assert components["base_name"] == "report_2024-01-15_final"
+        assert len(components["tokens"]) > 0
+        assert len(components["potential_description"]) > 0
 
     def test_extract_semantic_components_with_version(self):
         """Test extracting components with version."""
         analyzer = NamingAnalyzer()
         components = analyzer.extract_semantic_components("document_v2.txt")
 
-        assert 'version' in components
-        assert components['version'] is not None
+        assert "version" in components
+        assert components["version"] is not None
 
     def test_extract_semantic_components_with_date(self):
         """Test extracting components with date."""
         analyzer = NamingAnalyzer()
         components = analyzer.extract_semantic_components("report_2024-01-15.txt")
 
-        assert 'date' in components
-        assert components['date'] is not None
+        assert "date" in components
+        assert components["date"] is not None
 
 
 class TestNamingAnalyzerIntegration:
@@ -284,7 +262,7 @@ class TestNamingAnalyzerIntegration:
             "report_2024-01-15.pdf",
             "report_2024-02-20.pdf",
             "invoice_2024-01-15.pdf",
-            "invoice_2024-02-20.pdf"
+            "invoice_2024-02-20.pdf",
         ]
 
         # Analyze all
@@ -292,12 +270,12 @@ class TestNamingAnalyzerIntegration:
 
         # Reports should be similar to each other
         report_comparison = analyzer.compare_structures(files[0], files[1])
-        assert report_comparison['overall_similarity'] > 0.5  # Relaxed threshold
+        assert report_comparison["overall_similarity"] > 0.5  # Relaxed threshold
 
         # Reports and invoices should be different (but may still be somewhat similar due to dates)
         mixed_comparison = analyzer.compare_structures(files[0], files[2])
         # Just check that they're not identical
-        assert mixed_comparison['overall_similarity'] < 1.0
+        assert mixed_comparison["overall_similarity"] < 1.0
 
     def test_pattern_evolution_tracking(self):
         """Test tracking pattern evolution over corrections."""
@@ -308,9 +286,9 @@ class TestNamingAnalyzerIntegration:
 
         # User corrections
         corrections = [
-            "my_report.pdf",       # snake_case
-            "my_report_v2.pdf",    # added version
-            "my_report_v2_2024-01-15.pdf"  # added date
+            "my_report.pdf",  # snake_case
+            "my_report_v2.pdf",  # added version
+            "my_report_v2_2024-01-15.pdf",  # added date
         ]
 
         differences_history = []
@@ -323,19 +301,14 @@ class TestNamingAnalyzerIntegration:
 
         # Verify evolution
         assert len(differences_history) == 3
-        assert differences_history[1]['added_version'] is True
-        assert differences_history[2]['added_date'] is True
+        assert differences_history[1]["added_version"] is True
+        assert differences_history[2]["added_date"] is True
 
     def test_normalize_batch_files(self):
         """Test normalizing multiple files to same style."""
         analyzer = NamingAnalyzer()
 
-        files = [
-            "MyFile.txt",
-            "another-file.txt",
-            "third_file.txt",
-            "FourthFile.txt"
-        ]
+        files = ["MyFile.txt", "another-file.txt", "third_file.txt", "FourthFile.txt"]
 
         # Normalize all to snake_case
         normalized = [analyzer.normalize_filename(f, "snake_case") for f in files]
@@ -350,25 +323,17 @@ class TestNamingAnalyzerIntegration:
         analyzer = NamingAnalyzer()
 
         # Consistent group
-        consistent_files = [
-            "report_jan.pdf",
-            "report_feb.pdf",
-            "report_mar.pdf"
-        ]
+        consistent_files = ["report_jan.pdf", "report_feb.pdf", "report_mar.pdf"]
 
         # Inconsistent group
-        inconsistent_files = [
-            "Report-Jan.PDF",
-            "report_feb.pdf",
-            "ReportMar.txt"
-        ]
+        inconsistent_files = ["Report-Jan.PDF", "report_feb.pdf", "ReportMar.txt"]
 
         pattern1 = analyzer.find_common_pattern(consistent_files)
         pattern2 = analyzer.find_common_pattern(inconsistent_files)
 
         # Consistent group should have higher consistency
-        assert pattern1['consistency'] > pattern2['consistency']
+        assert pattern1["consistency"] > pattern2["consistency"]
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

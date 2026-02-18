@@ -4,6 +4,7 @@ Unit tests for the PriorityQueue.
 Tests thread-safe priority queue operations including enqueue, dequeue,
 peek, reorder, and concurrent access patterns.
 """
+
 from __future__ import annotations
 
 import threading
@@ -54,9 +55,7 @@ class TestPriorityQueue(unittest.TestCase):
         """Set up a fresh queue for each test."""
         self.queue = PriorityQueue()
 
-    def _make_item(
-        self, item_id: str, priority: int = 0
-    ) -> QueueItem:
+    def _make_item(self, item_id: str, priority: int = 0) -> QueueItem:
         """Helper to create a QueueItem."""
         return QueueItem(
             id=item_id,
@@ -221,9 +220,7 @@ class TestPriorityQueue(unittest.TestCase):
         def producer(start: int) -> None:
             try:
                 for i in range(50):
-                    item = self._make_item(
-                        f"producer-{start}-{i}", priority=i
-                    )
+                    item = self._make_item(f"producer-{start}-{i}", priority=i)
                     self.queue.enqueue(item)
             except Exception as exc:
                 errors.append(str(exc))
@@ -265,9 +262,7 @@ class TestPriorityQueue(unittest.TestCase):
         def reorderer(offset: int) -> None:
             try:
                 for i in range(20):
-                    self.queue.reorder(
-                        f"item-{i}", new_priority=i + offset
-                    )
+                    self.queue.reorder(f"item-{i}", new_priority=i + offset)
             except Exception as exc:
                 errors.append(str(exc))
 

@@ -1,4 +1,5 @@
 """Tests for SQLAlchemy ORM models defined in db_models.py."""
+
 from __future__ import annotations
 
 import uuid

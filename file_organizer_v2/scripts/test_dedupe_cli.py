@@ -55,12 +55,16 @@ def test_dry_run(test_dir: Path):
     print()
 
     # Run dedupe in dry-run mode
-    exit_code = dedupe_command([
-        str(test_dir),
-        "--algorithm", "sha256",
-        "--dry-run",
-        "--strategy", "oldest",
-    ])
+    exit_code = dedupe_command(
+        [
+            str(test_dir),
+            "--algorithm",
+            "sha256",
+            "--dry-run",
+            "--strategy",
+            "oldest",
+        ]
+    )
 
     print()
     print(f"Exit code: {exit_code}")
@@ -76,12 +80,16 @@ def test_md5_algorithm(test_dir: Path):
     print("=" * 70)
     print()
 
-    exit_code = dedupe_command([
-        str(test_dir),
-        "--algorithm", "md5",
-        "--dry-run",
-        "--strategy", "newest",
-    ])
+    exit_code = dedupe_command(
+        [
+            str(test_dir),
+            "--algorithm",
+            "md5",
+            "--dry-run",
+            "--strategy",
+            "newest",
+        ]
+    )
 
     print()
     print(f"Exit code: {exit_code}")
@@ -98,11 +106,14 @@ def test_size_filters(test_dir: Path):
     print()
 
     # Should only find the large duplicates (100KB each)
-    exit_code = dedupe_command([
-        str(test_dir),
-        "--min-size", "10240",  # 10KB minimum
-        "--dry-run",
-    ])
+    exit_code = dedupe_command(
+        [
+            str(test_dir),
+            "--min-size",
+            "10240",  # 10KB minimum
+            "--dry-run",
+        ]
+    )
 
     print()
     print(f"Exit code: {exit_code}")
@@ -118,11 +129,13 @@ def test_non_recursive(test_dir: Path):
     print("=" * 70)
     print()
 
-    exit_code = dedupe_command([
-        str(test_dir),
-        "--no-recursive",
-        "--dry-run",
-    ])
+    exit_code = dedupe_command(
+        [
+            str(test_dir),
+            "--no-recursive",
+            "--dry-run",
+        ]
+    )
 
     print()
     print(f"Exit code: {exit_code}")

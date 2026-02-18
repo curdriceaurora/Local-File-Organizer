@@ -5,6 +5,7 @@ Validates:
 - mkdocs.yml nav entries point to existing files
 - No case-mismatch issues (troubleshooting.md vs TROUBLESHOOTING.md)
 """
+
 from __future__ import annotations
 
 import re
@@ -69,9 +70,7 @@ class TestMkdocsNavIntegrity:
                 if nav_path != actual:
                     mismatched.append(f"  nav: '{nav_path}' → actual: '{actual}'")
 
-        assert not mismatched, (
-            "Case mismatches found in mkdocs.yml nav:\n" + "\n".join(mismatched)
-        )
+        assert not mismatched, "Case mismatches found in mkdocs.yml nav:\n" + "\n".join(mismatched)
 
 
 class TestInternalLinkIntegrity:
@@ -117,6 +116,7 @@ class TestInternalLinkIntegrity:
                     broken.append(f"  {rel_source}: [{link}] → {target} (not found)")
 
         assert not broken, (
-            f"Found {len(broken)} broken internal link(s):\n" + "\n".join(broken[:20])
+            f"Found {len(broken)} broken internal link(s):\n"
+            + "\n".join(broken[:20])
             + ("\n  ... (truncated)" if len(broken) > 20 else "")
         )

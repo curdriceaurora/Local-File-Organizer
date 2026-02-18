@@ -5,6 +5,7 @@ Tests health checking via the service bus, status resolution from
 latency thresholds, history tracking, discovery integration, and
 edge cases.  All Redis operations are mocked.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -118,9 +119,7 @@ class TestServiceHealth:
 class TestCheckService:
     """Tests for checking a single service."""
 
-    def test_healthy_service(
-        self, checker: HealthChecker, bus: ServiceBus
-    ) -> None:
+    def test_healthy_service(self, checker: HealthChecker, bus: ServiceBus) -> None:
         """A fast, successful handler yields HEALTHY."""
         bus.register_service("fast", lambda req: {"ok": True})
         health = checker.check_service("fast")
@@ -133,10 +132,9 @@ class TestCheckService:
         assert health.status == HealthStatus.UNKNOWN
         assert "not registered" in health.details.get("error", "")
 
-    def test_unhealthy_on_handler_error(
-        self, checker: HealthChecker, bus: ServiceBus
-    ) -> None:
+    def test_unhealthy_on_handler_error(self, checker: HealthChecker, bus: ServiceBus) -> None:
         """A handler that raises yields UNHEALTHY."""
+
         def broken(req: ServiceRequest) -> dict:
             raise RuntimeError("broken")
 
@@ -145,9 +143,7 @@ class TestCheckService:
         assert health.status == HealthStatus.UNHEALTHY
         assert "broken" in health.details.get("error", "")
 
-    def test_check_records_history(
-        self, checker: HealthChecker, bus: ServiceBus
-    ) -> None:
+    def test_check_records_history(self, checker: HealthChecker, bus: ServiceBus) -> None:
         """check_service records results in history."""
         bus.register_service("hist", lambda req: {})
         checker.check_service("hist")
@@ -164,9 +160,7 @@ class TestCheckService:
 class TestCheckAll:
     """Tests for checking all services."""
 
-    def test_check_all_bus_services(
-        self, checker: HealthChecker, bus: ServiceBus
-    ) -> None:
+    def test_check_all_bus_services(self, checker: HealthChecker, bus: ServiceBus) -> None:
         """check_all includes all services registered on the bus."""
         bus.register_service("svc1", lambda req: {})
         bus.register_service("svc2", lambda req: {})
@@ -203,9 +197,7 @@ class TestHistory:
         """get_history for unknown service returns empty list."""
         assert checker.get_history("nonexistent") == []
 
-    def test_clear_history_specific(
-        self, checker: HealthChecker, bus: ServiceBus
-    ) -> None:
+    def test_clear_history_specific(self, checker: HealthChecker, bus: ServiceBus) -> None:
         """clear_history(name) clears only that service's history."""
         bus.register_service("a", lambda req: {})
         bus.register_service("b", lambda req: {})
@@ -216,9 +208,7 @@ class TestHistory:
         assert checker.get_history("a") == []
         assert len(checker.get_history("b")) == 1
 
-    def test_clear_history_all(
-        self, checker: HealthChecker, bus: ServiceBus
-    ) -> None:
+    def test_clear_history_all(self, checker: HealthChecker, bus: ServiceBus) -> None:
         """clear_history() without name clears all history."""
         bus.register_service("x", lambda req: {})
         checker.check_service("x")

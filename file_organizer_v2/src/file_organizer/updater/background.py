@@ -1,4 +1,5 @@
 """Background update checks respecting user preferences."""
+
 from __future__ import annotations
 
 import os

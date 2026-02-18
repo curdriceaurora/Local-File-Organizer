@@ -4,6 +4,7 @@ Provides a navigable directory tree with vim keybindings, a metadata
 panel for the highlighted file, and a filter input for extension-based
 filtering.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -65,9 +66,7 @@ class FileBrowserTree(DirectoryTree):
             extensions: Set of extensions to show (e.g. ``{'.py', '.txt'}``).
                         Pass an empty set to clear the filter.
         """
-        self._extension_filter = {
-            ext if ext.startswith(".") else f".{ext}" for ext in extensions
-        }
+        self._extension_filter = {ext if ext.startswith(".") else f".{ext}" for ext in extensions}
         try:
             self.reload()
         except RuntimeError:
@@ -87,11 +86,7 @@ class FileBrowserTree(DirectoryTree):
         """
         if not self._extension_filter:
             return paths
-        return [
-            p
-            for p in paths
-            if p.is_dir() or p.suffix.lower() in self._extension_filter
-        ]
+        return [p for p in paths if p.is_dir() or p.suffix.lower() in self._extension_filter]
 
     # Vim-style cursor actions ------------------------------------------
 
@@ -137,14 +132,9 @@ class FileMetadataPanel(Static):
         try:
             stat = path.stat()
             size = _format_size(stat.st_size)
-            modified = datetime.fromtimestamp(stat.st_mtime).strftime(
-                "%Y-%m-%d %H:%M"
-            )
+            modified = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
             kind = "Directory" if path.is_dir() else (path.suffix or "File")
-            self.update(
-                f"[b]{path.name}[/b]\n"
-                f"Type: {kind}  Size: {size}  Modified: {modified}"
-            )
+            self.update(f"[b]{path.name}[/b]\nType: {kind}  Size: {size}  Modified: {modified}")
         except OSError:
             self.update(f"[dim]Cannot read metadata for {path.name}[/dim]")
 
@@ -233,9 +223,7 @@ class FileBrowserView(Vertical):
     # Event handlers ---------------------------------------------------
 
     @on(DirectoryTree.NodeHighlighted)
-    def _on_node_highlighted(
-        self, event: DirectoryTree.NodeHighlighted
-    ) -> None:
+    def _on_node_highlighted(self, event: DirectoryTree.NodeHighlighted) -> None:
         """Update metadata panel and post FileHighlighted message."""
         node = event.node
         path = node.data.path if node.data else None
@@ -248,9 +236,7 @@ class FileBrowserView(Vertical):
         """Apply the extension filter from the filter input."""
         raw = event.value.strip()
         if raw:
-            extensions = {
-                tok.strip() for tok in raw.replace(",", " ").split() if tok.strip()
-            }
+            extensions = {tok.strip() for tok in raw.replace(",", " ").split() if tok.strip()}
         else:
             extensions = set()
         self.query_one(FileBrowserTree).set_extension_filter(extensions)

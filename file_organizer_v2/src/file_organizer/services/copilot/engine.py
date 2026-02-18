@@ -3,6 +3,7 @@
 Constructs copilot-specific prompts, calls the underlying TextModel, and
 parses responses into structured output.
 """
+
 from __future__ import annotations
 
 from typing import Any

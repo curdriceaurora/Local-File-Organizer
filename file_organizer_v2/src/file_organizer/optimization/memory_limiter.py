@@ -61,9 +61,7 @@ class MemoryLimiter:
         action: LimitAction = LimitAction.WARN,
     ) -> None:
         if max_memory_mb <= 0:
-            raise ValueError(
-                f"max_memory_mb must be > 0, got {max_memory_mb}"
-            )
+            raise ValueError(f"max_memory_mb must be > 0, got {max_memory_mb}")
         self._max_memory_bytes = max_memory_mb * 1024 * 1024
         self._max_memory_mb = max_memory_mb
         self._action = action
@@ -152,15 +150,12 @@ class MemoryLimiter:
                 current_mb,
                 self._max_memory_mb,
             )
-            if self._evict_callback is not None and callable(
-                self._evict_callback
-            ):
+            if self._evict_callback is not None and callable(self._evict_callback):
                 self._evict_callback()
 
         elif self._action == LimitAction.RAISE:
             raise MemoryLimitError(
-                f"Memory limit exceeded: {current_mb:.1f} MB / "
-                f"{self._max_memory_mb} MB"
+                f"Memory limit exceeded: {current_mb:.1f} MB / {self._max_memory_mb} MB"
             )
 
     @contextlib.contextmanager

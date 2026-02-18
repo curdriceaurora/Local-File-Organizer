@@ -133,9 +133,7 @@ class Checkpoint:
     completed_paths: list[Path] = field(default_factory=list)
     pending_paths: list[Path] = field(default_factory=list)
     file_hashes: dict[str, str] = field(default_factory=dict)
-    last_updated: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> dict[str, object]:
         """Serialize checkpoint to a dictionary suitable for JSON storage."""

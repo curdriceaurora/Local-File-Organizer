@@ -1,4 +1,5 @@
 """Base model interface for all AI models."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -9,6 +10,7 @@ from typing import Any
 
 class ModelType(Enum):
     """Types of AI models supported."""
+
     TEXT = "text"
     VISION = "vision"
     AUDIO = "audio"
@@ -17,6 +19,7 @@ class ModelType(Enum):
 
 class DeviceType(Enum):
     """Types of devices for inference."""
+
     AUTO = "auto"
     CPU = "cpu"
     CUDA = "cuda"

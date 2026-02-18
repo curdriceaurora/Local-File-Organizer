@@ -3,6 +3,7 @@ Tests for DatabaseOptimizer.
 
 All tests use in-memory SQLite databases so no files are created on disk.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -19,6 +20,7 @@ from file_organizer.optimization.database import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _create_schema(conn: sqlite3.Connection) -> None:
     """Create the standard file-organizer schema in *conn*."""
@@ -79,6 +81,7 @@ def _seed_operations(conn: sqlite3.Connection, count: int = 50) -> None:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def optimizer() -> DatabaseOptimizer:
     """Create an optimizer backed by an in-memory database."""
@@ -106,6 +109,7 @@ def optimizer_with_data(
 # ---------------------------------------------------------------------------
 # Tests — Initialisation
 # ---------------------------------------------------------------------------
+
 
 class TestDatabaseOptimizerInit:
     """Tests for basic lifecycle."""
@@ -135,6 +139,7 @@ class TestDatabaseOptimizerInit:
 # ---------------------------------------------------------------------------
 # Tests — Index Management
 # ---------------------------------------------------------------------------
+
 
 class TestCreateIndexes:
     """Tests for create_indexes()."""
@@ -184,19 +189,16 @@ class TestCreateIndexes:
 # Tests — Table Analysis
 # ---------------------------------------------------------------------------
 
+
 class TestAnalyzeTables:
     """Tests for analyze_tables()."""
 
-    def test_empty_database_returns_empty_list(
-        self, optimizer: DatabaseOptimizer
-    ) -> None:
+    def test_empty_database_returns_empty_list(self, optimizer: DatabaseOptimizer) -> None:
         """No tables means no stats."""
         stats = optimizer.analyze_tables()
         assert stats == []
 
-    def test_returns_all_tables(
-        self, optimizer_with_schema: DatabaseOptimizer
-    ) -> None:
+    def test_returns_all_tables(self, optimizer_with_schema: DatabaseOptimizer) -> None:
         """All user tables appear in results."""
         stats = optimizer_with_schema.analyze_tables()
         table_names = {s.name for s in stats}
@@ -205,17 +207,13 @@ class TestAnalyzeTables:
         assert "preferences" in table_names
         assert "analytics_events" in table_names
 
-    def test_row_count_reflects_data(
-        self, optimizer_with_data: DatabaseOptimizer
-    ) -> None:
+    def test_row_count_reflects_data(self, optimizer_with_data: DatabaseOptimizer) -> None:
         """Row counts are accurate after seeding data."""
         stats = optimizer_with_data.analyze_tables()
         ops = next(s for s in stats if s.name == "operations")
         assert ops.row_count == 50
 
-    def test_index_count_after_create(
-        self, optimizer_with_schema: DatabaseOptimizer
-    ) -> None:
+    def test_index_count_after_create(self, optimizer_with_schema: DatabaseOptimizer) -> None:
         """Index count increases after create_indexes()."""
         before = optimizer_with_schema.analyze_tables()
         ops_before = next(s for s in before if s.name == "operations")
@@ -226,9 +224,7 @@ class TestAnalyzeTables:
         ops_after = next(s for s in after if s.name == "operations")
         assert ops_after.index_count > ops_before.index_count
 
-    def test_stats_sorted_by_name(
-        self, optimizer_with_schema: DatabaseOptimizer
-    ) -> None:
+    def test_stats_sorted_by_name(self, optimizer_with_schema: DatabaseOptimizer) -> None:
         """Results are sorted alphabetically by table name."""
         stats = optimizer_with_schema.analyze_tables()
         names = [s.name for s in stats]
@@ -247,12 +243,11 @@ class TestAnalyzeTables:
 # Tests — VACUUM
 # ---------------------------------------------------------------------------
 
+
 class TestVacuum:
     """Tests for vacuum()."""
 
-    def test_vacuum_runs_without_error(
-        self, optimizer_with_data: DatabaseOptimizer
-    ) -> None:
+    def test_vacuum_runs_without_error(self, optimizer_with_data: DatabaseOptimizer) -> None:
         """VACUUM completes successfully on a populated database."""
         optimizer_with_data.vacuum()  # Should not raise.
 
@@ -265,12 +260,11 @@ class TestVacuum:
 # Tests — Query Plan
 # ---------------------------------------------------------------------------
 
+
 class TestGetQueryPlan:
     """Tests for get_query_plan()."""
 
-    def test_simple_select(
-        self, optimizer_with_schema: DatabaseOptimizer
-    ) -> None:
+    def test_simple_select(self, optimizer_with_schema: DatabaseOptimizer) -> None:
         """A simple SELECT produces a non-empty plan."""
         plan = optimizer_with_schema.get_query_plan(
             "SELECT * FROM operations WHERE status = ?", ("completed",)
@@ -278,16 +272,12 @@ class TestGetQueryPlan:
         assert isinstance(plan, QueryPlan)
         assert len(plan.steps) > 0
 
-    def test_plan_cost_for_scan(
-        self, optimizer_with_schema: DatabaseOptimizer
-    ) -> None:
+    def test_plan_cost_for_scan(self, optimizer_with_schema: DatabaseOptimizer) -> None:
         """A full table scan has cost >= 100."""
         plan = optimizer_with_schema.get_query_plan("SELECT * FROM operations")
         assert plan.estimated_cost >= 100.0
 
-    def test_plan_cost_for_indexed_search(
-        self, optimizer_with_schema: DatabaseOptimizer
-    ) -> None:
+    def test_plan_cost_for_indexed_search(self, optimizer_with_schema: DatabaseOptimizer) -> None:
         """An indexed lookup costs less than a full scan."""
         optimizer_with_schema.create_indexes()
         plan = optimizer_with_schema.get_query_plan(
@@ -300,9 +290,7 @@ class TestGetQueryPlan:
         self, optimizer_with_schema: DatabaseOptimizer
     ) -> None:
         """An invalid query returns a plan with cost -1."""
-        plan = optimizer_with_schema.get_query_plan(
-            "SELECT * FROM nonexistent_table"
-        )
+        plan = optimizer_with_schema.get_query_plan("SELECT * FROM nonexistent_table")
         assert plan.estimated_cost == -1.0
         assert plan.steps == []
 
@@ -317,6 +305,7 @@ class TestGetQueryPlan:
 # ---------------------------------------------------------------------------
 # Tests — Pragma Optimisation
 # ---------------------------------------------------------------------------
+
 
 class TestOptimizePragmas:
     """Tests for optimize_pragmas()."""

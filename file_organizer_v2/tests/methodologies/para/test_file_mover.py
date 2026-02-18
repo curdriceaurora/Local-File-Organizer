@@ -3,6 +3,7 @@
 Tests cover move suggestion generation, dry-run and actual file moves,
 bulk organization, archive suggestions, and collision handling.
 """
+
 from __future__ import annotations
 
 import time
@@ -112,7 +113,9 @@ class TestSuggestMove:
     """Tests for the suggest_move method."""
 
     def test_returns_move_suggestion(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Should return a MoveSuggestion."""
         f = tmp_path / "test_file.txt"
@@ -123,7 +126,10 @@ class TestSuggestMove:
         assert result.target_category == PARACategory.PROJECT
 
     def test_target_path_under_root(
-        self, mover: PARAFileMover, para_root: Path, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        para_root: Path,
+        tmp_path: Path,
     ) -> None:
         """Target path should be under the PARA root."""
         f = tmp_path / "file.txt"
@@ -132,7 +138,10 @@ class TestSuggestMove:
         assert str(result.target_path).startswith(str(para_root))
 
     def test_target_path_includes_category_dir(
-        self, mover: PARAFileMover, para_root: Path, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        para_root: Path,
+        tmp_path: Path,
     ) -> None:
         """Target path should include the category directory."""
         f = tmp_path / "file.txt"
@@ -172,7 +181,9 @@ class TestMoveFile:
     """Tests for the move_file method."""
 
     def test_dry_run_does_not_move(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Dry run should not actually move the file."""
         f = tmp_path / "original.txt"
@@ -189,7 +200,9 @@ class TestMoveFile:
         assert f.exists()  # File should still be at original location
 
     def test_actual_move_moves_file(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Actual move should relocate the file."""
         f = tmp_path / "to_move.txt"
@@ -208,7 +221,8 @@ class TestMoveFile:
         assert result.destination.exists()  # Destination should exist
 
     def test_move_nonexistent_file_fails(
-        self, mover: PARAFileMover,
+        self,
+        mover: PARAFileMover,
     ) -> None:
         """Moving a non-existent file should fail."""
         suggestion = MoveSuggestion(
@@ -222,7 +236,9 @@ class TestMoveFile:
         assert result.error is not None
 
     def test_move_to_same_location_succeeds(
-        self, mover: PARAFileMover, para_root: Path,
+        self,
+        mover: PARAFileMover,
+        para_root: Path,
     ) -> None:
         """Moving a file to its current location should succeed (no-op)."""
         projects_dir = para_root / "Projects"
@@ -240,7 +256,9 @@ class TestMoveFile:
         assert f.exists()
 
     def test_collision_resolution(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Should handle filename collisions by appending counter."""
         # Create existing file at target
@@ -264,7 +282,9 @@ class TestMoveFile:
         assert "report_1.txt" in str(result.destination)
 
     def test_creates_target_directory(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Should create target directory if it doesn't exist."""
         f = tmp_path / "deep_file.txt"
@@ -289,7 +309,9 @@ class TestBulkOrganize:
     """Tests for the bulk_organize method."""
 
     def test_empty_directory_returns_empty_report(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Empty directory should produce zero-count report."""
         empty_dir = tmp_path / "empty"
@@ -299,14 +321,17 @@ class TestBulkOrganize:
         assert report.moved == 0
 
     def test_nonexistent_directory(
-        self, mover: PARAFileMover,
+        self,
+        mover: PARAFileMover,
     ) -> None:
         """Non-existent directory should return empty report."""
         report = mover.bulk_organize(Path("/nonexistent/dir"))
         assert report.total_files == 0
 
     def test_dry_run_counts_files(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Dry run should count files but not move them."""
         src = tmp_path / "source"
@@ -342,7 +367,9 @@ class TestBulkOrganize:
         assert report.moved == 0
 
     def test_report_has_category_distribution(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Report should include category distribution."""
         src = tmp_path / "source"
@@ -375,7 +402,9 @@ class TestSuggestArchive:
     """Tests for the suggest_archive method."""
 
     def test_old_files_suggested_for_archive(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Files older than threshold should be suggested for archive."""
         src = tmp_path / "old_files"
@@ -386,6 +415,7 @@ class TestSuggestArchive:
         # Set modification time to 200 days ago
         old_time = time.time() - (200 * 86400)
         import os
+
         os.utime(f, (old_time, old_time))
 
         suggestions = mover.suggest_archive(src, inactive_days=180)
@@ -393,7 +423,9 @@ class TestSuggestArchive:
         assert suggestions[0].target_category == PARACategory.ARCHIVE
 
     def test_recent_files_not_suggested(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Recent files should not be suggested for archive."""
         src = tmp_path / "recent"
@@ -405,7 +437,9 @@ class TestSuggestArchive:
         assert len(suggestions) == 0
 
     def test_archive_suggestions_sorted_by_confidence(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Archive suggestions should be sorted by confidence (descending)."""
         src = tmp_path / "mixed"
@@ -417,6 +451,7 @@ class TestSuggestArchive:
             f.write_text(f"content {days_old}")
             old_time = time.time() - (days_old * 86400)
             import os
+
             os.utime(f, (old_time, old_time))
 
         suggestions = mover.suggest_archive(src, inactive_days=180)
@@ -425,14 +460,17 @@ class TestSuggestArchive:
             assert confidences == sorted(confidences, reverse=True)
 
     def test_nonexistent_directory_returns_empty(
-        self, mover: PARAFileMover,
+        self,
+        mover: PARAFileMover,
     ) -> None:
         """Non-existent directory should return empty list."""
         result = mover.suggest_archive(Path("/nonexistent"))
         assert result == []
 
     def test_archive_reasoning_includes_days(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Archive suggestion reasoning should mention inactivity days."""
         src = tmp_path / "old"
@@ -441,6 +479,7 @@ class TestSuggestArchive:
         f.write_text("stale")
         old_time = time.time() - (250 * 86400)
         import os
+
         os.utime(f, (old_time, old_time))
 
         suggestions = mover.suggest_archive(src, inactive_days=180)

@@ -1,4 +1,5 @@
 """Database utilities for API authentication."""
+
 from __future__ import annotations
 
 from functools import cache

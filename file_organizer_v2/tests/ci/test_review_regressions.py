@@ -1,4 +1,5 @@
 """Guardrails based on recent PR review learnings."""
+
 from __future__ import annotations
 
 import ast
@@ -65,7 +66,9 @@ def test_loguru_formatting_uses_braces() -> None:
     violations: list[str] = []
     for path in SRC_ROOT.rglob("*.py"):
         violations.extend(_find_loguru_percent_formatting(path))
-    assert not violations, "Loguru format strings should use '{}' placeholders:\n" + "\n".join(violations)
+    assert not violations, "Loguru format strings should use '{}' placeholders:\n" + "\n".join(
+        violations
+    )
 
 
 def test_api_routers_do_not_call_get_settings_directly() -> None:
@@ -76,7 +79,9 @@ def test_api_routers_do_not_call_get_settings_directly() -> None:
         content = path.read_text(encoding="utf-8")
         if "get_settings()" in content:
             offenders.append(str(path))
-    assert not offenders, "Routers should use Depends(get_settings) instead of direct calls:\n" + "\n".join(offenders)
+    assert not offenders, (
+        "Routers should use Depends(get_settings) instead of direct calls:\n" + "\n".join(offenders)
+    )
 
 
 def test_api_tests_marked_ci() -> None:
@@ -85,4 +90,6 @@ def test_api_tests_marked_ci() -> None:
         content = path.read_text(encoding="utf-8")
         if "pytestmark = pytest.mark.ci" not in content:
             offenders.append(str(path))
-    assert not offenders, "API tests must include pytestmark = pytest.mark.ci:\n" + "\n".join(offenders)
+    assert not offenders, "API tests must include pytestmark = pytest.mark.ci:\n" + "\n".join(
+        offenders
+    )

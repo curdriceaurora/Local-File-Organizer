@@ -4,6 +4,7 @@ Unit tests for FileMonitor.
 Tests directory watching, event collection, dynamic directory management,
 and integration with real file operations using tmp_path fixtures.
 """
+
 from __future__ import annotations
 
 import time
@@ -102,9 +103,7 @@ class TestFileMonitorLifecycle:
         with pytest.raises(FileNotFoundError):
             mon.start()
 
-    def test_watched_directories_after_start(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_watched_directories_after_start(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that watched_directories reports correct directories."""
         monitor.start()
         dirs = monitor.watched_directories
@@ -115,9 +114,7 @@ class TestFileMonitorLifecycle:
 class TestFileMonitorFileDetection:
     """Tests for detecting real file system changes."""
 
-    def test_detect_file_creation(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_detect_file_creation(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that creating a file generates a CREATED event."""
         monitor.start()
         # Drain any initial events from observer startup
@@ -129,19 +126,15 @@ class TestFileMonitorFileDetection:
         events = _wait_for_event_matching(
             monitor,
             lambda evts: any(
-                e.event_type == EventType.CREATED and e.path.name == "new_file.txt"
-                for e in evts
+                e.event_type == EventType.CREATED and e.path.name == "new_file.txt" for e in evts
             ),
         )
         created = [
-            e for e in events
-            if e.event_type == EventType.CREATED and e.path.name == "new_file.txt"
+            e for e in events if e.event_type == EventType.CREATED and e.path.name == "new_file.txt"
         ]
         assert len(created) >= 1
 
-    def test_detect_file_modification(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_detect_file_modification(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that modifying a file generates a MODIFIED event."""
         test_file = watch_dir / "existing.txt"
         test_file.write_text("original")
@@ -159,9 +152,7 @@ class TestFileMonitorFileDetection:
         modified = [e for e in events if e.event_type == EventType.MODIFIED]
         assert len(modified) >= 1
 
-    def test_detect_file_deletion(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_detect_file_deletion(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that deleting a file generates a DELETED event."""
         test_file = watch_dir / "to_delete.txt"
         test_file.write_text("temporary")
@@ -179,9 +170,7 @@ class TestFileMonitorFileDetection:
         deleted = [e for e in events if e.event_type == EventType.DELETED]
         assert len(deleted) >= 1
 
-    def test_detect_subdirectory_file(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_detect_subdirectory_file(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that files in subdirectories are detected with recursive=True."""
         subdir = watch_dir / "subdir"
         subdir.mkdir()
@@ -195,19 +184,15 @@ class TestFileMonitorFileDetection:
         events = _wait_for_event_matching(
             monitor,
             lambda evts: any(
-                e.event_type == EventType.CREATED and "nested.txt" in str(e.path)
-                for e in evts
+                e.event_type == EventType.CREATED and "nested.txt" in str(e.path) for e in evts
             ),
         )
         nested = [
-            e for e in events
-            if e.event_type == EventType.CREATED and "nested.txt" in str(e.path)
+            e for e in events if e.event_type == EventType.CREATED and "nested.txt" in str(e.path)
         ]
         assert len(nested) >= 1
 
-    def test_filtered_files_not_detected(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_filtered_files_not_detected(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that filtered files do not appear in events."""
         monitor.start()
         time.sleep(0.2)
@@ -219,20 +204,13 @@ class TestFileMonitorFileDetection:
 
         events = _wait_for_event_matching(
             monitor,
-            lambda evts: any(
-                e.path.name == "allowed.txt" for e in evts
-            ),
+            lambda evts: any(e.path.name == "allowed.txt" for e in evts),
         )
         # Should not see .tmp files (non-directory file events)
-        tmp_events = [
-            e for e in events
-            if e.path.suffix == ".tmp" and not e.is_directory
-        ]
+        tmp_events = [e for e in events if e.path.suffix == ".tmp" and not e.is_directory]
         assert len(tmp_events) == 0
 
-    def test_multiple_files_batched(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_multiple_files_batched(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that multiple file creations are collected as a batch."""
         monitor.start()
         time.sleep(0.2)
@@ -250,9 +228,7 @@ class TestFileMonitorFileDetection:
         found_names = {e.path.name for e in events}
         assert filenames.issubset(found_names)
 
-    def test_event_count_property(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_event_count_property(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that event_count reflects pending events."""
         monitor.start()
         time.sleep(0.2)
@@ -299,9 +275,7 @@ class TestFileMonitorFileDetection:
         events = monitor.get_events_blocking(max_size=10, timeout=3.0)
         assert len(events) >= 1
 
-    def test_get_events_blocking_timeout(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_get_events_blocking_timeout(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that blocking get returns empty on timeout when no events."""
         monitor.start()
         time.sleep(0.2)
@@ -314,9 +288,7 @@ class TestFileMonitorFileDetection:
 class TestFileMonitorDynamicDirectories:
     """Tests for dynamically adding/removing watch directories."""
 
-    def test_add_directory_while_running(
-        self, monitor: FileMonitor, tmp_path: Path
-    ) -> None:
+    def test_add_directory_while_running(self, monitor: FileMonitor, tmp_path: Path) -> None:
         """Test adding a new directory to a running monitor."""
         monitor.start()
         time.sleep(0.1)
@@ -351,25 +323,19 @@ class TestFileMonitorDynamicDirectories:
 
         assert new_dir in mon.config.watch_directories
 
-    def test_add_duplicate_directory_raises(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_add_duplicate_directory_raises(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that adding an already-watched directory raises ValueError."""
         monitor.start()
         with pytest.raises(ValueError, match="already watched"):
             monitor.add_directory(watch_dir)
 
-    def test_add_nonexistent_directory_raises(
-        self, monitor: FileMonitor, tmp_path: Path
-    ) -> None:
+    def test_add_nonexistent_directory_raises(self, monitor: FileMonitor, tmp_path: Path) -> None:
         """Test that adding a non-existent directory raises FileNotFoundError."""
         monitor.start()
         with pytest.raises(FileNotFoundError):
             monitor.add_directory(tmp_path / "nope")
 
-    def test_remove_directory(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_remove_directory(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test removing a directory from monitoring."""
         monitor.start()
         monitor.remove_directory(watch_dir)
@@ -388,9 +354,7 @@ class TestFileMonitorDynamicDirectories:
 class TestFileMonitorCallbacks:
     """Tests for callback registration via monitor interface."""
 
-    def test_on_created_callback(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_on_created_callback(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that on_created callback fires for new files."""
         received_events: list = []
         monitor.on_created(lambda e: received_events.append(e))
@@ -407,9 +371,7 @@ class TestFileMonitorCallbacks:
 
         assert len(received_events) >= 1
 
-    def test_on_deleted_callback(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_on_deleted_callback(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that on_deleted callback fires for removed files."""
         test_file = watch_dir / "to_remove.txt"
         test_file.write_text("bye")
@@ -429,9 +391,7 @@ class TestFileMonitorCallbacks:
 
         assert len(received_events) >= 1
 
-    def test_on_modified_callback(
-        self, monitor: FileMonitor, watch_dir: Path
-    ) -> None:
+    def test_on_modified_callback(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that on_modified callback fires for changed files."""
         test_file = watch_dir / "to_modify.txt"
         test_file.write_text("original")

@@ -11,6 +11,7 @@ Tests cover:
 - Custom organisation rules
 - Edge cases (missing metadata, illegal characters)
 """
+
 from __future__ import annotations
 
 import shutil
@@ -281,17 +282,13 @@ class TestPreviewOrganization:
         # Create a real temp file
         src = tmp_dir / "song.mp3"
         src.touch()
-        metadata = _make_metadata(
-            file_path=src, title="Song", artist="Artist", genre="Pop"
-        )
+        metadata = _make_metadata(file_path=src, title="Song", artist="Artist", genre="Pop")
         files = [(src, AudioType.MUSIC, metadata)]
         plan = organizer.preview_organization(files, tmp_dir / "output")
         assert isinstance(plan, OrganizationPlan)
         assert plan.total_planned == 1
 
-    def test_preview_skips_missing_files(
-        self, organizer: AudioOrganizer, tmp_dir: Path
-    ) -> None:
+    def test_preview_skips_missing_files(self, organizer: AudioOrganizer, tmp_dir: Path) -> None:
         """Non-existent source files should be skipped."""
         metadata = _make_metadata(file_path=tmp_dir / "nonexistent.mp3")
         files = [(tmp_dir / "nonexistent.mp3", AudioType.MUSIC, metadata)]
@@ -318,15 +315,11 @@ class TestPreviewOrganization:
 class TestOrganizeDryRun:
     """Tests for organization in dry-run mode."""
 
-    def test_dry_run_does_not_move(
-        self, organizer: AudioOrganizer, tmp_dir: Path
-    ) -> None:
+    def test_dry_run_does_not_move(self, organizer: AudioOrganizer, tmp_dir: Path) -> None:
         """Dry run should not physically move files."""
         src = tmp_dir / "song.mp3"
         src.write_text("fake audio data")
-        metadata = _make_metadata(
-            file_path=src, title="Song", artist="Artist", genre="Pop"
-        )
+        metadata = _make_metadata(file_path=src, title="Song", artist="Artist", genre="Pop")
         files = [(src, AudioType.MUSIC, metadata)]
         result = organizer.organize(files, tmp_dir / "output", dry_run=True)
         assert result.total_moved == 1
@@ -334,9 +327,7 @@ class TestOrganizeDryRun:
         # File should still be in original location
         assert src.exists()
 
-    def test_dry_run_skips_nonexistent(
-        self, organizer: AudioOrganizer, tmp_dir: Path
-    ) -> None:
+    def test_dry_run_skips_nonexistent(self, organizer: AudioOrganizer, tmp_dir: Path) -> None:
         """Dry run should report skipped files."""
         metadata = _make_metadata(file_path=tmp_dir / "gone.mp3")
         files = [(tmp_dir / "gone.mp3", AudioType.MUSIC, metadata)]
@@ -353,9 +344,7 @@ class TestOrganizeDryRun:
 class TestOrganizeActual:
     """Tests for actual file organisation."""
 
-    def test_actual_move(
-        self, organizer: AudioOrganizer, tmp_dir: Path
-    ) -> None:
+    def test_actual_move(self, organizer: AudioOrganizer, tmp_dir: Path) -> None:
         """Actual run should physically move files."""
         src = tmp_dir / "song.mp3"
         src.write_text("fake audio data")
@@ -372,9 +361,7 @@ class TestOrganizeActual:
         # Destination should exist
         assert result.moved_files[0].destination.exists()
 
-    def test_creates_directories(
-        self, organizer: AudioOrganizer, tmp_dir: Path
-    ) -> None:
+    def test_creates_directories(self, organizer: AudioOrganizer, tmp_dir: Path) -> None:
         """Organisation should create nested directories."""
         src = tmp_dir / "track.mp3"
         src.write_text("data")
@@ -393,9 +380,7 @@ class TestOrganizeActual:
         assert dest.parent.exists()
         assert dest.parent.is_dir()
 
-    def test_conflict_resolution(
-        self, organizer: AudioOrganizer, tmp_dir: Path
-    ) -> None:
+    def test_conflict_resolution(self, organizer: AudioOrganizer, tmp_dir: Path) -> None:
         """Duplicate filenames should be resolved with numeric suffix."""
         output = tmp_dir / "organized"
 
@@ -413,22 +398,16 @@ class TestOrganizeActual:
         )
 
         # Move first file
-        result1 = organizer.organize(
-            [(src1, AudioType.MUSIC, meta1)], output, dry_run=False
-        )
+        result1 = organizer.organize([(src1, AudioType.MUSIC, meta1)], output, dry_run=False)
         assert result1.total_moved == 1
 
         # Move second file (same destination)
-        result2 = organizer.organize(
-            [(src2, AudioType.MUSIC, meta2)], output, dry_run=False
-        )
+        result2 = organizer.organize([(src2, AudioType.MUSIC, meta2)], output, dry_run=False)
         assert result2.total_moved == 1
         # Destination should have " (1)" suffix
         assert "(1)" in result2.moved_files[0].destination.stem
 
-    def test_report_generation(
-        self, organizer: AudioOrganizer, tmp_dir: Path
-    ) -> None:
+    def test_report_generation(self, organizer: AudioOrganizer, tmp_dir: Path) -> None:
         """OrganizationResult.report() should return a meaningful string."""
         src = tmp_dir / "test.mp3"
         src.write_text("data")
@@ -475,9 +454,7 @@ class TestResolveConflict:
 class TestMultipleFiles:
     """Tests for organising multiple files at once."""
 
-    def test_multiple_types(
-        self, organizer: AudioOrganizer, tmp_dir: Path
-    ) -> None:
+    def test_multiple_types(self, organizer: AudioOrganizer, tmp_dir: Path) -> None:
         """Different audio types should go to different directories."""
         output = tmp_dir / "organized"
         files_data = []
@@ -485,17 +462,13 @@ class TestMultipleFiles:
         # Create music file
         music = tmp_dir / "song.mp3"
         music.write_text("music")
-        music_meta = _make_metadata(
-            file_path=music, title="Song", artist="Artist", genre="Rock"
-        )
+        music_meta = _make_metadata(file_path=music, title="Song", artist="Artist", genre="Rock")
         files_data.append((music, AudioType.MUSIC, music_meta))
 
         # Create podcast file
         podcast = tmp_dir / "episode.mp3"
         podcast.write_text("podcast")
-        pod_meta = _make_metadata(
-            file_path=podcast, title="Ep 1", artist="Host"
-        )
+        pod_meta = _make_metadata(file_path=podcast, title="Ep 1", artist="Host")
         files_data.append((podcast, AudioType.PODCAST, pod_meta))
 
         result = organizer.organize(files_data, output, dry_run=False)

@@ -171,9 +171,7 @@ class TestValidateDeployment:
     """Tests for the validate_deployment function."""
 
     @mock.patch("deploy.urllib.request.urlopen")
-    def test_validate_deployment_healthy(
-        self, mock_urlopen: mock.MagicMock
-    ) -> None:
+    def test_validate_deployment_healthy(self, mock_urlopen: mock.MagicMock) -> None:
         """Verify validate_deployment returns healthy for 200 OK."""
         mock_response = mock.MagicMock()
         mock_response.status = 200
@@ -188,9 +186,7 @@ class TestValidateDeployment:
         assert result.response_time_ms >= 0
 
     @mock.patch("deploy.urllib.request.urlopen")
-    def test_validate_deployment_unhealthy_status(
-        self, mock_urlopen: mock.MagicMock
-    ) -> None:
+    def test_validate_deployment_unhealthy_status(self, mock_urlopen: mock.MagicMock) -> None:
         """Verify validate_deployment returns unhealthy for unhealthy status."""
         mock_response = mock.MagicMock()
         mock_response.status = 200
@@ -203,9 +199,7 @@ class TestValidateDeployment:
         assert result.healthy is False
 
     @mock.patch("deploy.urllib.request.urlopen")
-    def test_validate_deployment_connection_error(
-        self, mock_urlopen: mock.MagicMock
-    ) -> None:
+    def test_validate_deployment_connection_error(self, mock_urlopen: mock.MagicMock) -> None:
         """Verify validate_deployment handles connection errors."""
         mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
         result = validate_deployment("http://localhost:8000/health")
@@ -213,9 +207,7 @@ class TestValidateDeployment:
         assert result.status_code == 0
 
     @mock.patch("deploy.urllib.request.urlopen")
-    def test_validate_deployment_http_error(
-        self, mock_urlopen: mock.MagicMock
-    ) -> None:
+    def test_validate_deployment_http_error(self, mock_urlopen: mock.MagicMock) -> None:
         """Verify validate_deployment handles HTTP errors."""
         mock_urlopen.side_effect = urllib.error.HTTPError(
             url="http://localhost:8000/health",
@@ -260,8 +252,6 @@ class TestRollback:
     @mock.patch("deploy.subprocess.run")
     def test_rollback_timeout(self, mock_run: mock.MagicMock) -> None:
         """Verify rollback handles timeout gracefully."""
-        mock_run.side_effect = subprocess.TimeoutExpired(
-            cmd="docker-compose", timeout=120
-        )
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="docker-compose", timeout=120)
         result = rollback("v1.9.0")
         assert result is False

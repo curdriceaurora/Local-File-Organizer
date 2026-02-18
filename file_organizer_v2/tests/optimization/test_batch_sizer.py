@@ -95,9 +95,7 @@ class TestAdaptiveBatchSizerCalculate:
         sizer = AdaptiveBatchSizer(target_memory_percent=70.0)
         # 700,000,000 budget, 10M files + 10M overhead = 20M per file = 35 files
         file_sizes = [10_000_000] * 100
-        batch_size = sizer.calculate_batch_size(
-            file_sizes, overhead_per_file=10_000_000
-        )
+        batch_size = sizer.calculate_batch_size(file_sizes, overhead_per_file=10_000_000)
         assert batch_size == 35
 
     @patch.object(
@@ -193,16 +191,12 @@ class TestAdaptiveBatchSizerFeedback:
         "_get_available_memory",
         return_value=1_000_000_000,
     )
-    def test_adjust_increases_batch_when_low_memory(
-        self, mock_mem: MagicMock
-    ) -> None:
+    def test_adjust_increases_batch_when_low_memory(self, mock_mem: MagicMock) -> None:
         """Test that feedback adjusts batch size up when actual usage is low."""
         sizer = AdaptiveBatchSizer(target_memory_percent=70.0)
         # Budget is 700M, actual usage was 100M for 10 files
         # = 10M per file, so new batch = 700M / 10M = 70
-        new_size = sizer.adjust_from_feedback(
-            actual_memory=100_000_000, batch_size=10
-        )
+        new_size = sizer.adjust_from_feedback(actual_memory=100_000_000, batch_size=10)
         assert new_size == 70
 
     @patch.object(
@@ -210,16 +204,12 @@ class TestAdaptiveBatchSizerFeedback:
         "_get_available_memory",
         return_value=1_000_000_000,
     )
-    def test_adjust_decreases_batch_when_high_memory(
-        self, mock_mem: MagicMock
-    ) -> None:
+    def test_adjust_decreases_batch_when_high_memory(self, mock_mem: MagicMock) -> None:
         """Test that feedback adjusts batch size down when actual usage is high."""
         sizer = AdaptiveBatchSizer(target_memory_percent=70.0)
         # Budget is 700M, actual usage was 700M for 10 files
         # = 70M per file, so new batch = 700M / 70M = 10
-        new_size = sizer.adjust_from_feedback(
-            actual_memory=700_000_000, batch_size=10
-        )
+        new_size = sizer.adjust_from_feedback(actual_memory=700_000_000, batch_size=10)
         assert new_size == 10
 
     def test_adjust_with_zero_batch_size(self) -> None:
@@ -233,9 +223,7 @@ class TestAdaptiveBatchSizerFeedback:
         "_get_available_memory",
         return_value=1_000_000_000,
     )
-    def test_feedback_recorded_in_history(
-        self, mock_mem: MagicMock
-    ) -> None:
+    def test_feedback_recorded_in_history(self, mock_mem: MagicMock) -> None:
         """Test that feedback is recorded in history."""
         sizer = AdaptiveBatchSizer()
         sizer.adjust_from_feedback(actual_memory=1024, batch_size=5)
@@ -263,9 +251,7 @@ class TestAdaptiveBatchSizerFeedback:
         "_get_available_memory",
         return_value=0,
     )
-    def test_adjust_with_zero_available_memory(
-        self, mock_mem: MagicMock
-    ) -> None:
+    def test_adjust_with_zero_available_memory(self, mock_mem: MagicMock) -> None:
         """Test adjust_from_feedback when no memory info available."""
         sizer = AdaptiveBatchSizer()
         result = sizer.adjust_from_feedback(actual_memory=1024, batch_size=10)
@@ -282,7 +268,5 @@ class TestAdaptiveBatchSizerFeedback:
         sizer.set_bounds(min_size=1, max_size=20)
         # Budget=700M, actual=1M for 1 file => per_file=1M => new=700
         # But capped at max=20
-        new_size = sizer.adjust_from_feedback(
-            actual_memory=1_000_000, batch_size=1
-        )
+        new_size = sizer.adjust_from_feedback(actual_memory=1_000_000, batch_size=1)
         assert new_size == 20

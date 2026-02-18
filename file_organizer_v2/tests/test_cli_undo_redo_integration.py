@@ -3,6 +3,7 @@
 Uses mocked OperationHistory and UndoManager to test the CLI layer
 without real database operations.
 """
+
 from __future__ import annotations
 
 from typer.testing import CliRunner

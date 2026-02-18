@@ -3,6 +3,7 @@
 Provides commands to list, add, remove, preview, import, and export
 organisation rules.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -75,9 +76,16 @@ def rules_sets() -> None:
 @rules_app.command(name="add")
 def rules_add(
     name: str = typer.Argument(..., help="Rule name."),
-    extension: Optional[str] = typer.Option(None, "--ext", help="File extension filter (e.g. '.pdf,.docx')."),  # noqa: UP045
+    extension: Optional[str] = typer.Option(
+        None, "--ext", help="File extension filter (e.g. '.pdf,.docx')."
+    ),  # noqa: UP045
     pattern: Optional[str] = typer.Option(None, "--pattern", help="Filename glob pattern."),  # noqa: UP045
-    action: str = typer.Option("move", "--action", "-a", help="Action type (move, rename, tag, categorize, archive, copy, delete)."),
+    action: str = typer.Option(
+        "move",
+        "--action",
+        "-a",
+        help="Action type (move, rename, tag, categorize, archive, copy, delete).",
+    ),
     destination: str = typer.Option("", "--dest", "-d", help="Destination path or pattern."),
     priority: int = typer.Option(0, "--priority", "-p", help="Rule priority (higher = first)."),
     rule_set: str = typer.Option("default", "--set", "-s", help="Target rule set."),
@@ -153,7 +161,9 @@ def rules_toggle(
 def rules_preview(
     directory: Path = typer.Argument(..., help="Directory to preview against."),
     rule_set: str = typer.Option("default", "--set", "-s", help="Rule set to evaluate."),
-    recursive: bool = typer.Option(True, "--recursive/--no-recursive", help="Recurse into subdirectories."),
+    recursive: bool = typer.Option(
+        True, "--recursive/--no-recursive", help="Recurse into subdirectories."
+    ),
     max_files: int = typer.Option(500, "--max-files", help="Maximum files to scan."),
 ) -> None:
     """Preview what rules would do (dry-run)."""

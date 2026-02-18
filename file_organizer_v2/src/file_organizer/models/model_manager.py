@@ -3,6 +3,7 @@
 Wraps the Ollama CLI and the static model registry to provide
 user-facing model operations.
 """
+
 from __future__ import annotations
 
 import json

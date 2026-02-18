@@ -1,4 +1,5 @@
 """Tests for audio metadata extraction - Phase 3."""
+
 from __future__ import annotations
 
 import pytest
@@ -13,6 +14,7 @@ class TestAudioMetadataPlaceholder:
         """Test that audio metadata module exists."""
         try:
             from file_organizer.services.audio import metadata_extractor
+
             assert metadata_extractor is not None
         except ImportError:
             pytest.skip("Audio metadata extraction not yet implemented (Phase 3)")

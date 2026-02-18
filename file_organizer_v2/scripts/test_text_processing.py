@@ -31,7 +31,8 @@ def create_test_files(test_dir: Path) -> dict:
 
     # Test text file
     txt_file = test_dir / "sample.txt"
-    txt_file.write_text("""
+    txt_file.write_text(
+        """
 Artificial Intelligence in Healthcare
 
 Artificial intelligence (AI) is rapidly transforming the healthcare industry.
@@ -47,12 +48,14 @@ datasets that might be missed by human analysis.
 However, challenges remain including data privacy concerns, the need for
 regulatory frameworks, and ensuring AI systems are transparent and explainable
 to healthcare professionals.
-""".strip())
-    test_files['text'] = txt_file
+""".strip()
+    )
+    test_files["text"] = txt_file
 
     # Test markdown file
     md_file = test_dir / "notes.md"
-    md_file.write_text("""
+    md_file.write_text(
+        """
 # Python Programming Best Practices
 
 ## Code Style
@@ -69,12 +72,14 @@ to healthcare professionals.
 - Add docstrings to all public functions
 - Keep README up to date
 - Document complex algorithms
-""".strip())
-    test_files['markdown'] = md_file
+""".strip()
+    )
+    test_files["markdown"] = md_file
 
     # Test with shorter content
     short_file = test_dir / "recipe.txt"
-    short_file.write_text("""
+    short_file.write_text(
+        """
 Chocolate Chip Cookies Recipe
 
 Ingredients:
@@ -92,8 +97,9 @@ Instructions:
 4. Gradually add flour
 5. Fold in chocolate chips
 6. Bake for 12 minutes
-""".strip())
-    test_files['recipe'] = short_file
+""".strip()
+    )
+    test_files["recipe"] = short_file
 
     return test_files
 
@@ -232,6 +238,7 @@ def main():
     test_dir = Path(__file__).parent.parent / "test_data"
     if test_dir.exists():
         import shutil
+
         shutil.rmtree(test_dir)
         print(f"\n🧹 Cleaned up test directory: {test_dir}")
 

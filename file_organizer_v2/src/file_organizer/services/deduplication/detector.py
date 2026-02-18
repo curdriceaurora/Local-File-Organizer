@@ -4,6 +4,7 @@ Duplicate detection orchestrator.
 Coordinates hash computation, index building, and provides high-level
 interface for duplicate detection workflows.
 """
+
 from __future__ import annotations
 
 import logging
@@ -40,11 +41,7 @@ class DuplicateDetector:
     pre-filtering to avoid unnecessary hashing.
     """
 
-    def __init__(
-        self,
-        hasher: FileHasher | None = None,
-        index: DuplicateIndex | None = None
-    ):
+    def __init__(self, hasher: FileHasher | None = None, index: DuplicateIndex | None = None):
         """
         Initialize the DuplicateDetector.
 
@@ -55,11 +52,7 @@ class DuplicateDetector:
         self.hasher = hasher or FileHasher()
         self.index = index or DuplicateIndex()
 
-    def scan_directory(
-        self,
-        directory: Path,
-        options: ScanOptions | None = None
-    ) -> DuplicateIndex:
+    def scan_directory(self, directory: Path, options: ScanOptions | None = None) -> DuplicateIndex:
         """
         Scan a directory for duplicate files.
 
@@ -101,11 +94,7 @@ class DuplicateDetector:
 
         return self.index
 
-    def _find_files(
-        self,
-        directory: Path,
-        options: ScanOptions
-    ) -> list[Path]:
+    def _find_files(self, directory: Path, options: ScanOptions) -> list[Path]:
         """
         Find all files in directory matching the criteria.
 
@@ -159,11 +148,7 @@ class DuplicateDetector:
 
         return files
 
-    def _group_by_size(
-        self,
-        files: list[Path],
-        options: ScanOptions
-    ) -> dict[int, list[Path]]:
+    def _group_by_size(self, files: list[Path], options: ScanOptions) -> dict[int, list[Path]]:
         """
         Group files by size.
 
@@ -193,11 +178,7 @@ class DuplicateDetector:
 
         return size_groups
 
-    def _process_files(
-        self,
-        size_groups: dict[int, list[Path]],
-        options: ScanOptions
-    ) -> None:
+    def _process_files(self, size_groups: dict[int, list[Path]], options: ScanOptions) -> None:
         """
         Process files by hashing and adding to index.
 
@@ -228,10 +209,7 @@ class DuplicateDetector:
             for file_path in files:
                 try:
                     # Compute hash
-                    file_hash = self.hasher.compute_hash(
-                        file_path,
-                        options.algorithm
-                    )
+                    file_hash = self.hasher.compute_hash(file_path, options.algorithm)
 
                     # Add to index
                     self.index.add_file(file_path, file_hash)
@@ -248,10 +226,7 @@ class DuplicateDetector:
                     continue
 
     def find_duplicates_of_file(
-        self,
-        file_path: Path,
-        search_directory: Path,
-        algorithm: HashAlgorithm = "sha256"
+        self, file_path: Path, search_directory: Path, algorithm: HashAlgorithm = "sha256"
     ) -> list[FileMetadata]:
         """
         Find all duplicates of a specific file in a directory.

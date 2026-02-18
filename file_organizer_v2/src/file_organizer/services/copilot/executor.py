@@ -5,6 +5,7 @@ layer (``FileOrganizer``, ``UndoManager``, ``SmartSuggestions``, etc.).
 Each intent type maps to a handler method that invokes the appropriate
 service and returns an ``ExecutionResult``.
 """
+
 from __future__ import annotations
 
 import os
@@ -105,11 +106,13 @@ class CommandExecutor:
                     f"into {dest_path} ({result.skipped_files} skipped, "
                     f"{result.failed_files} failed)."
                 ),
-                details={"result": {
-                    "processed": result.processed_files,
-                    "skipped": result.skipped_files,
-                    "failed": result.failed_files,
-                }},
+                details={
+                    "result": {
+                        "processed": result.processed_files,
+                        "skipped": result.skipped_files,
+                        "failed": result.failed_files,
+                    }
+                },
             )
         except ImportError as exc:
             return ExecutionResult(
@@ -329,8 +332,7 @@ class CommandExecutor:
         except ImportError:
             return ExecutionResult(
                 success=True,
-                message=f"Suggestion engine not available. "
-                f"Try: file-organizer preview {target}",
+                message=f"Suggestion engine not available. Try: file-organizer preview {target}",
             )
 
     # ------------------------------------------------------------------

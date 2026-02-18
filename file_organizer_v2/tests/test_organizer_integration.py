@@ -3,6 +3,7 @@
 Tests the orchestrator's organize() method, dry-run mode, and error handling
 without requiring a running Ollama instance.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

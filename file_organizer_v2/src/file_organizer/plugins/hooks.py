@@ -1,4 +1,5 @@
 """Plugin hook registry."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -80,4 +81,3 @@ class HookRegistry:
         """Return callback count per hook."""
         with self._lock:
             return {hook_name: len(callbacks) for hook_name, callbacks in self._hooks.items()}
-

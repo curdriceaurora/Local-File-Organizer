@@ -87,8 +87,7 @@ class AlertThresholds:
         """Validate that warning thresholds are below critical thresholds."""
         if self.cpu_warning >= self.cpu_critical:
             raise ValueError(
-                f"cpu_warning ({self.cpu_warning}) must be < "
-                f"cpu_critical ({self.cpu_critical})"
+                f"cpu_warning ({self.cpu_warning}) must be < cpu_critical ({self.cpu_critical})"
             )
         if self.memory_warning >= self.memory_critical:
             raise ValueError(

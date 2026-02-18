@@ -1,4 +1,5 @@
 """Tests for the web UI settings page and section routes."""
+
 from __future__ import annotations
 
 import importlib
@@ -82,9 +83,7 @@ class TestSettingsSectionPartials:
             ("advanced", "Advanced settings"),
         ],
     )
-    def test_section_partial_loads(
-        self, tmp_path: Path, section: str, expected_text: str
-    ) -> None:
+    def test_section_partial_loads(self, tmp_path: Path, section: str, expected_text: str) -> None:
         client = _build_client(tmp_path)
         response = client.get(f"/ui/settings/{section}")
         assert response.status_code == 200

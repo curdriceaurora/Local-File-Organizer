@@ -7,6 +7,7 @@ Validates:
 - Organization endpoints use real paths (/scan, /preview, /execute)
 - Deduplication endpoints use real paths (/dedupe/*)
 """
+
 from __future__ import annotations
 
 import re
@@ -20,34 +21,41 @@ from tests.docs.conftest import DOCS_DIR, get_router_paths
 # Real route paths from actual implementation
 # ---------------------------------------------------------------------------
 
+
 def _get_api_router_paths() -> set[str]:
     """Import actual API routers and extract registered paths."""
     import sys
+
     sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
     paths = set()
     try:
         from file_organizer.api.routers import files as files_mod
+
         paths.update(get_router_paths(files_mod.router))
     except Exception:
         pass
     try:
         from file_organizer.api.routers import organize as org_mod
+
         paths.update(get_router_paths(org_mod.router))
     except Exception:
         pass
     try:
         from file_organizer.api.routers import search as search_mod
+
         paths.update(get_router_paths(search_mod.router))
     except Exception:
         pass
     try:
         from file_organizer.api.routers import dedupe as dedupe_mod
+
         paths.update(get_router_paths(dedupe_mod.router))
     except Exception:
         pass
     try:
         from file_organizer.api.routers import analyze as analyze_mod
+
         paths.update(get_router_paths(analyze_mod.router))
     except Exception:
         pass
@@ -66,9 +74,7 @@ class TestAuthDocumentation:
         content = auth_doc.read_text()
 
         # Check for incorrect Bearer token pattern
-        bearer_pattern = re.search(
-            r"Authorization:\s*Bearer", content, re.IGNORECASE
-        )
+        bearer_pattern = re.search(r"Authorization:\s*Bearer", content, re.IGNORECASE)
         assert not bearer_pattern, (
             "docs/api/authentication.md documents 'Authorization: Bearer' format, "
             "but the API uses 'X-API-Key' header. "

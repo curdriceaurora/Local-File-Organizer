@@ -1,4 +1,5 @@
 """Tests for the web profile UI routes."""
+
 from __future__ import annotations
 
 import html
@@ -28,7 +29,9 @@ def _build_client(tmp_path: Path, auth_enabled: bool = True) -> TestClient:
     return TestClient(app)
 
 
-def _seed_user(settings: ApiSettings, username: str = "alice", email: str = "alice@example.com") -> User:
+def _seed_user(
+    settings: ApiSettings, username: str = "alice", email: str = "alice@example.com"
+) -> User:
     """Create a user directly in the auth database and return it."""
     db = create_session(settings.auth_db_path)
     try:

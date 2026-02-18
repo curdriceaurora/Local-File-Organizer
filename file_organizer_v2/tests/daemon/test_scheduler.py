@@ -4,6 +4,7 @@ Unit tests for DaemonScheduler.
 Tests task registration, cancellation, periodic execution,
 background operation, and error handling.
 """
+
 from __future__ import annotations
 
 import threading
@@ -68,9 +69,7 @@ class TestCancelTask:
         assert scheduler.cancel_task("health") is True
         assert scheduler.task_count == 0
 
-    def test_cancel_nonexistent_returns_false(
-        self, scheduler: DaemonScheduler
-    ) -> None:
+    def test_cancel_nonexistent_returns_false(self, scheduler: DaemonScheduler) -> None:
         """cancel_task returns False when the task does not exist."""
         assert scheduler.cancel_task("ghost") is False
 
@@ -108,9 +107,7 @@ class TestRunAndStop:
         scheduler.stop()  # Should not raise
         scheduler.stop()  # Still safe
 
-    def test_task_executes_on_schedule(
-        self, scheduler: DaemonScheduler
-    ) -> None:
+    def test_task_executes_on_schedule(self, scheduler: DaemonScheduler) -> None:
         """A scheduled task fires when its interval elapses."""
         counter = {"value": 0}
         lock = threading.Lock()
@@ -130,9 +127,7 @@ class TestRunAndStop:
             # Should have fired multiple times
             assert counter["value"] >= 2
 
-    def test_task_exception_does_not_crash_scheduler(
-        self, scheduler: DaemonScheduler
-    ) -> None:
+    def test_task_exception_does_not_crash_scheduler(self, scheduler: DaemonScheduler) -> None:
         """A task that raises does not stop the scheduler."""
         healthy_calls = {"value": 0}
         lock = threading.Lock()

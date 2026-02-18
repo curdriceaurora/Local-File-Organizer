@@ -20,11 +20,11 @@ from file_organizer.services.deduplication.quality import (
 def print_separator(title: str = ""):
     """Print a separator line."""
     if title:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"  {title}")
-        print('='*60)
+        print("=" * 60)
     else:
-        print('-'*60)
+        print("-" * 60)
 
 
 def test_format_ranking():
@@ -37,7 +37,7 @@ def test_format_ranking():
         ImageFormat.JPEG,
         ImageFormat.WEBP,
         ImageFormat.PNG,
-        ImageFormat.TIFF
+        ImageFormat.TIFF,
     ]
 
     print("Format rankings (higher = better quality):")
@@ -53,13 +53,13 @@ def test_quality_metrics():
         resolution=12000000,  # 12MP
         width=4000,
         height=3000,
-        file_size=5000000,    # 5MB
+        file_size=5000000,  # 5MB
         format=ImageFormat.PNG,
-        aspect_ratio=4/3,
+        aspect_ratio=4 / 3,
         is_compressed=False,
         has_transparency=True,
         color_depth=32,
-        modification_time=1234567890.0
+        modification_time=1234567890.0,
     )
 
     print("Sample image metrics:")
@@ -76,97 +76,103 @@ def test_quality_scoring():
     # Create test scenarios
     scenarios = [
         {
-            'name': 'High Quality TIFF',
-            'metrics': QualityMetrics(
+            "name": "High Quality TIFF",
+            "metrics": QualityMetrics(
                 resolution=25000000,
-                width=5000, height=5000,
+                width=5000,
+                height=5000,
                 file_size=50000000,
                 format=ImageFormat.TIFF,
                 aspect_ratio=1.0,
                 is_compressed=False,
                 has_transparency=False,
                 color_depth=32,
-                modification_time=0
-            )
+                modification_time=0,
+            ),
         },
         {
-            'name': 'Medium Quality PNG',
-            'metrics': QualityMetrics(
+            "name": "Medium Quality PNG",
+            "metrics": QualityMetrics(
                 resolution=8000000,
-                width=4000, height=2000,
+                width=4000,
+                height=2000,
                 file_size=10000000,
                 format=ImageFormat.PNG,
                 aspect_ratio=2.0,
                 is_compressed=False,
                 has_transparency=True,
                 color_depth=32,
-                modification_time=0
-            )
+                modification_time=0,
+            ),
         },
         {
-            'name': 'Low Quality JPEG',
-            'metrics': QualityMetrics(
+            "name": "Low Quality JPEG",
+            "metrics": QualityMetrics(
                 resolution=2000000,
-                width=2000, height=1000,
+                width=2000,
+                height=1000,
                 file_size=500000,
                 format=ImageFormat.JPEG,
                 aspect_ratio=2.0,
                 is_compressed=True,
                 has_transparency=False,
                 color_depth=24,
-                modification_time=0
-            )
+                modification_time=0,
+            ),
         },
         {
-            'name': 'GIF Animation',
-            'metrics': QualityMetrics(
+            "name": "GIF Animation",
+            "metrics": QualityMetrics(
                 resolution=1000000,
-                width=1000, height=1000,
+                width=1000,
+                height=1000,
                 file_size=2000000,
                 format=ImageFormat.GIF,
                 aspect_ratio=1.0,
                 is_compressed=True,
                 has_transparency=True,
                 color_depth=8,
-                modification_time=0
-            )
-        }
+                modification_time=0,
+            ),
+        },
     ]
 
-    print(f"Scoring scenarios (weights: resolution={analyzer.weights['resolution']}, "
-          f"format={analyzer.weights['format']}, "
-          f"file_size={analyzer.weights['file_size']}, "
-          f"color_depth={analyzer.weights['color_depth']}, "
-          f"transparency={analyzer.weights['has_transparency']}):\n")
+    print(
+        f"Scoring scenarios (weights: resolution={analyzer.weights['resolution']}, "
+        f"format={analyzer.weights['format']}, "
+        f"file_size={analyzer.weights['file_size']}, "
+        f"color_depth={analyzer.weights['color_depth']}, "
+        f"transparency={analyzer.weights['has_transparency']}):\n"
+    )
 
     scores = []
     for scenario in scenarios:
         # Manually calculate score
-        metrics = scenario['metrics']
+        metrics = scenario["metrics"]
         score = 0.0
 
         # Resolution
         resolution_score = min(metrics.resolution / 25_000_000, 1.0)
-        score += resolution_score * analyzer.weights['resolution']
+        score += resolution_score * analyzer.weights["resolution"]
 
         # Format
         max_format = max(f.value for f in ImageFormat)
         format_score = metrics.format.value / max_format
-        score += format_score * analyzer.weights['format']
+        score += format_score * analyzer.weights["format"]
 
         # File size
         file_size_score = min(metrics.file_size / 50_000_000, 1.0)
-        score += file_size_score * analyzer.weights['file_size']
+        score += file_size_score * analyzer.weights["file_size"]
 
         # Color depth
         depth_score = metrics.color_depth / 32
-        score += depth_score * analyzer.weights['color_depth']
+        score += depth_score * analyzer.weights["color_depth"]
 
         # Transparency
         transparency_score = 1.0 if metrics.has_transparency else 0.0
-        score += transparency_score * analyzer.weights['has_transparency']
+        score += transparency_score * analyzer.weights["has_transparency"]
 
-        scores.append((scenario['name'], score, metrics))
+        scores.append((scenario["name"], score, metrics))
 
         print(f"{scenario['name']:25s}: {score:.3f}")
         print(f"  Resolution: {metrics.resolution:,} pixels ({metrics.width}x{metrics.height})")
@@ -189,11 +195,11 @@ def test_custom_weights():
 
     # Create analyzer that heavily favors resolution
     custom_weights = {
-        'resolution': 0.70,
-        'format': 0.10,
-        'file_size': 0.10,
-        'color_depth': 0.05,
-        'has_transparency': 0.05
+        "resolution": 0.70,
+        "format": 0.10,
+        "file_size": 0.10,
+        "color_depth": 0.05,
+        "has_transparency": 0.05,
     }
 
     print("Custom weights (resolution-focused):")
@@ -235,14 +241,15 @@ def test_edge_cases():
     print("1. Unknown format handling:")
     unknown_metrics = QualityMetrics(
         resolution=5000000,
-        width=2500, height=2000,
+        width=2500,
+        height=2000,
         file_size=1000000,
         format=ImageFormat.UNKNOWN,
         aspect_ratio=1.25,
         is_compressed=True,
         has_transparency=False,
         color_depth=24,
-        modification_time=0
+        modification_time=0,
     )
     print(f"   Format value: {unknown_metrics.format.value} ({unknown_metrics.format.name})")
     print("   ✓ Unknown format handled gracefully")
@@ -253,14 +260,15 @@ def test_edge_cases():
     print("2. Very large resolution (50MP):")
     large_metrics = QualityMetrics(
         resolution=50000000,
-        width=7071, height=7071,
+        width=7071,
+        height=7071,
         file_size=100000000,
         format=ImageFormat.TIFF,
         aspect_ratio=1.0,
         is_compressed=False,
         has_transparency=False,
         color_depth=32,
-        modification_time=0
+        modification_time=0,
     )
     print(f"   Resolution: {large_metrics.resolution:,} pixels")
     print("   ✓ Large resolution capped at 1.0 in scoring")
@@ -276,9 +284,9 @@ def test_edge_cases():
 
 def main():
     """Run all tests."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("  ImageQualityAnalyzer Test Suite")
-    print("="*60)
+    print("=" * 60)
 
     try:
         test_format_ranking()
@@ -302,6 +310,7 @@ def main():
     except Exception as e:
         print(f"\n❌ Test failed with error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

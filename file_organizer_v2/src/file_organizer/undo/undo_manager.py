@@ -4,6 +4,7 @@ Undo/redo manager for file operations.
 This module provides the main interface for undoing and redoing file operations,
 managing undo/redo stacks, and coordinating validation and rollback.
 """
+
 from __future__ import annotations
 
 import logging
@@ -29,7 +30,7 @@ class UndoManager:
         history: OperationHistory | None = None,
         validator: OperationValidator | None = None,
         executor: RollbackExecutor | None = None,
-        max_stack_size: int = 1000
+        max_stack_size: int = 1000,
     ):
         """
         Initialize undo manager.
@@ -54,10 +55,7 @@ class UndoManager:
             True if successful, False otherwise
         """
         # Get last completed operation
-        operations = self.history.get_operations(
-            status=OperationStatus.COMPLETED,
-            limit=1
-        )
+        operations = self.history.get_operations(status=OperationStatus.COMPLETED, limit=1)
 
         if not operations:
             logger.info("No operations to undo")
@@ -108,7 +106,7 @@ class UndoManager:
             # Update operation status
             self.history.db.execute_query(
                 "UPDATE operations SET status = ? WHERE id = ?",
-                (OperationStatus.ROLLED_BACK.value, operation_id)
+                (OperationStatus.ROLLED_BACK.value, operation_id),
             )
             self.history.db.get_connection().commit()
             logger.info(f"Successfully undid operation {operation_id}")
@@ -140,8 +138,7 @@ class UndoManager:
 
         # Get all operations in transaction
         operations = self.history.get_operations(
-            transaction_id=transaction_id,
-            status=OperationStatus.COMPLETED
+            transaction_id=transaction_id, status=OperationStatus.COMPLETED
         )
 
         if not operations:
@@ -185,10 +182,7 @@ class UndoManager:
             True if successful, False otherwise
         """
         # Get last rolled back operation
-        operations = self.history.get_operations(
-            status=OperationStatus.ROLLED_BACK,
-            limit=1
-        )
+        operations = self.history.get_operations(status=OperationStatus.ROLLED_BACK, limit=1)
 
         if not operations:
             logger.info("No operations to redo")
@@ -239,7 +233,7 @@ class UndoManager:
             # Update operation status back to completed
             self.history.db.execute_query(
                 "UPDATE operations SET status = ? WHERE id = ?",
-                (OperationStatus.COMPLETED.value, operation_id)
+                (OperationStatus.COMPLETED.value, operation_id),
             )
             self.history.db.get_connection().commit()
             logger.info(f"Successfully redid operation {operation_id}")
@@ -310,8 +304,7 @@ class UndoManager:
             List of completed operations (undo stack)
         """
         return self.history.get_operations(
-            status=OperationStatus.COMPLETED,
-            limit=self.max_stack_size
+            status=OperationStatus.COMPLETED, limit=self.max_stack_size
         )
 
     def get_redo_stack(self) -> list[Operation]:
@@ -322,8 +315,7 @@ class UndoManager:
             List of rolled back operations (redo stack)
         """
         return self.history.get_operations(
-            status=OperationStatus.ROLLED_BACK,
-            limit=self.max_stack_size
+            status=OperationStatus.ROLLED_BACK, limit=self.max_stack_size
         )
 
     def clear_redo_stack(self) -> None:

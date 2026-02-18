@@ -1,4 +1,5 @@
 """Unified configuration management for File Organizer."""
+
 from __future__ import annotations
 
 from file_organizer.config.manager import ConfigManager

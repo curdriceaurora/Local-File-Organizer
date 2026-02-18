@@ -10,6 +10,7 @@ Features:
 - Schema transformation
 - Data integrity validation
 """
+
 from __future__ import annotations
 
 import json
@@ -33,8 +34,8 @@ class ProfileMigrator:
     - Migration path discovery
     """
 
-    SUPPORTED_VERSIONS = ['1.0']
-    CURRENT_VERSION = '1.0'
+    SUPPORTED_VERSIONS = ["1.0"]
+    CURRENT_VERSION = "1.0"
 
     def __init__(self, profile_manager: ProfileManager):
         """
@@ -51,14 +52,9 @@ class ProfileMigrator:
 
     def _get_current_timestamp(self) -> str:
         """Get current UTC timestamp in ISO format."""
-        return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
-    def migrate_version(
-        self,
-        profile_name: str,
-        target_version: str,
-        backup: bool = True
-    ) -> bool:
+    def migrate_version(self, profile_name: str, target_version: str, backup: bool = True) -> bool:
         """
         Migrate a profile to a target version.
 
@@ -123,14 +119,16 @@ class ProfileMigrator:
                     return False
 
             # Update profile with migrated data
-            migrated_data['profile_version'] = target_version
-            migrated_data['updated'] = self._get_current_timestamp()
-            migrated_data['migration_history'] = migrated_data.get('migration_history', [])
-            migrated_data['migration_history'].append({
-                'from_version': current_version,
-                'to_version': target_version,
-                'migrated_at': self._get_current_timestamp()
-            })
+            migrated_data["profile_version"] = target_version
+            migrated_data["updated"] = self._get_current_timestamp()
+            migrated_data["migration_history"] = migrated_data.get("migration_history", [])
+            migrated_data["migration_history"].append(
+                {
+                    "from_version": current_version,
+                    "to_version": target_version,
+                    "migrated_at": self._get_current_timestamp(),
+                }
+            )
 
             # Validate migrated profile
             migrated_profile = Profile.from_dict(migrated_data)
@@ -146,7 +144,7 @@ class ProfileMigrator:
                 description=migrated_profile.description,
                 preferences=migrated_profile.preferences,
                 learned_patterns=migrated_profile.learned_patterns,
-                confidence_data=migrated_profile.confidence_data
+                confidence_data=migrated_profile.confidence_data,
             )
 
             if not success:
@@ -162,11 +160,7 @@ class ProfileMigrator:
             print(f"Error migrating profile: {e}")
             return False
 
-    def _find_migration_path(
-        self,
-        from_version: str,
-        to_version: str
-    ) -> list | None:
+    def _find_migration_path(self, from_version: str, to_version: str) -> list | None:
         """
         Find migration path between versions.
 
@@ -211,7 +205,7 @@ class ProfileMigrator:
             backup_path = backup_dir / f"{backup_name}.json"
 
             # Write backup
-            with open(backup_path, 'w', encoding='utf-8') as f:
+            with open(backup_path, "w", encoding="utf-8") as f:
                 json.dump(profile.to_dict(), f, indent=2, ensure_ascii=False)
 
             print(f"Created migration backup: {backup_path}")
@@ -242,7 +236,7 @@ class ProfileMigrator:
                 return False
 
             # Load backup data
-            with open(backup_path, encoding='utf-8') as f:
+            with open(backup_path, encoding="utf-8") as f:
                 backup_data = json.load(f)
 
             # Restore profile
@@ -258,7 +252,7 @@ class ProfileMigrator:
                 description=restored_profile.description,
                 preferences=restored_profile.preferences,
                 learned_patterns=restored_profile.learned_patterns,
-                confidence_data=restored_profile.confidence_data
+                confidence_data=restored_profile.confidence_data,
             )
 
             if success:
@@ -305,7 +299,10 @@ class ProfileMigrator:
                 print("Error: Invalid preferences structure")
                 return False
 
-            if 'global' not in profile.preferences or 'directory_specific' not in profile.preferences:
+            if (
+                "global" not in profile.preferences
+                or "directory_specific" not in profile.preferences
+            ):
                 print("Error: Missing required preference keys")
                 return False
 
@@ -334,7 +331,7 @@ class ProfileMigrator:
 
             # Get migration history from profile data
             profile_dict = profile.to_dict()
-            return profile_dict.get('migration_history', [])
+            return profile_dict.get("migration_history", [])
 
         except Exception as e:
             print(f"Error getting migration history: {e}")
@@ -393,10 +390,7 @@ class ProfileMigrator:
         pass
 
     def register_migration(
-        self,
-        from_version: str,
-        to_version: str,
-        migration_func: Callable
+        self, from_version: str, to_version: str, migration_func: Callable
     ) -> None:
         """
         Register a custom migration function.

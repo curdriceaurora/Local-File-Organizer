@@ -1,10 +1,12 @@
 """Text model implementation using Ollama."""
+
 from __future__ import annotations
 
 from typing import Any
 
 try:
     import ollama
+
     OLLAMA_AVAILABLE = True
 except ImportError:
     OLLAMA_AVAILABLE = False
@@ -35,9 +37,7 @@ class TextModel(BaseModel):
             ValueError: If model type is not TEXT
         """
         if not OLLAMA_AVAILABLE:
-            raise ImportError(
-                "Ollama is not installed. Install it with: pip install ollama"
-            )
+            raise ImportError("Ollama is not installed. Install it with: pip install ollama")
 
         if config.model_type != ModelType.TEXT:
             raise ValueError(f"Expected TEXT model type, got {config.model_type}")

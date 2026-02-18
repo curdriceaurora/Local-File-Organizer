@@ -1,4 +1,5 @@
 """Data models for plugin marketplace operations."""
+
 from __future__ import annotations
 
 import hashlib
@@ -119,9 +120,7 @@ class PluginPackage:
             downloads = int(payload.get("downloads", 0))
             reviews_count = int(payload.get("reviews_count", 0))
         except (TypeError, ValueError) as exc:
-            raise MarketplaceSchemaError(
-                "downloads and reviews_count must be integers."
-            ) from exc
+            raise MarketplaceSchemaError("downloads and reviews_count must be integers.") from exc
         if downloads < 0 or reviews_count < 0:
             raise MarketplaceSchemaError("downloads and reviews_count cannot be negative.")
 

@@ -5,6 +5,7 @@ This module implements a token-bucket rate limiter that controls the
 throughput of file processing operations. It is thread-safe and supports
 both blocking and non-blocking acquisition modes.
 """
+
 from __future__ import annotations
 
 import threading
@@ -50,15 +51,11 @@ class RateThrottler:
         window_seconds: Time window for rate calculation (default 1.0s).
     """
 
-    def __init__(
-        self, max_rate: float, window_seconds: float = 1.0
-    ) -> None:
+    def __init__(self, max_rate: float, window_seconds: float = 1.0) -> None:
         if max_rate <= 0:
             raise ValueError(f"max_rate must be > 0, got {max_rate}")
         if window_seconds <= 0:
-            raise ValueError(
-                f"window_seconds must be > 0, got {window_seconds}"
-            )
+            raise ValueError(f"window_seconds must be > 0, got {window_seconds}")
 
         self._max_rate = max_rate
         self._window_seconds = window_seconds

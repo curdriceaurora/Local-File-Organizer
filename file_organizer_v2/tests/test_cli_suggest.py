@@ -1,4 +1,5 @@
 """Tests for the suggest Typer sub-app."""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -158,14 +159,10 @@ class TestSuggestFiles:
 class TestSuggestPatterns:
     """Tests for the patterns command."""
 
-    def test_patterns_no_patterns(
-        self, tmp_path: Path, mock_analyzer: MagicMock
-    ) -> None:
+    def test_patterns_no_patterns(self, tmp_path: Path, mock_analyzer: MagicMock) -> None:
         from file_organizer.cli.suggest import suggest_app
 
-        with patch(
-            "file_organizer.cli.suggest._get_analyzer", return_value=mock_analyzer
-        ):
+        with patch("file_organizer.cli.suggest._get_analyzer", return_value=mock_analyzer):
             result = runner.invoke(suggest_app, ["patterns", str(tmp_path)])
         assert result.exit_code == 0
 
@@ -182,9 +179,7 @@ class TestSuggestPatterns:
         assert result.exit_code == 0
         assert "DATE_PREFIX" in result.output
 
-    def test_patterns_json(
-        self, tmp_path: Path, mock_analyzer_with_patterns: MagicMock
-    ) -> None:
+    def test_patterns_json(self, tmp_path: Path, mock_analyzer_with_patterns: MagicMock) -> None:
         from file_organizer.cli.suggest import suggest_app
 
         with patch(
@@ -234,8 +229,6 @@ class TestSuggestApply:
             ),
             patch("file_organizer.cli.suggest._get_analyzer", return_value=mock_analyzer),
         ):
-            result = runner.invoke(
-                suggest_app, ["apply", str(tmp_path), "--dry-run"]
-            )
+            result = runner.invoke(suggest_app, ["apply", str(tmp_path), "--dry-run"])
         assert result.exit_code == 0
         assert "dry run" in result.output.lower()

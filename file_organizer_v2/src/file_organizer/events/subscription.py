@@ -3,6 +3,7 @@
 Provides dataclass-based subscription tracking and a registry
 for managing multiple handlers per topic with optional filtering.
 """
+
 from __future__ import annotations
 
 import logging
@@ -33,9 +34,7 @@ class Subscription:
     topic: str
     handler: Callable[..., Any]
     filter_fn: Callable[[dict[str, Any]], bool] | None = None
-    created_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     active: bool = True
 
     def matches_topic(self, topic: str) -> bool:
@@ -85,9 +84,7 @@ class Subscription:
     def __repr__(self) -> str:
         filtered = "filtered" if self.filter_fn is not None else "unfiltered"
         status = "active" if self.active else "inactive"
-        return (
-            f"Subscription(topic={self.topic!r}, {filtered}, {status})"
-        )
+        return f"Subscription(topic={self.topic!r}, {filtered}, {status})"
 
 
 class SubscriptionRegistry:
@@ -209,11 +206,7 @@ class SubscriptionRegistry:
         Returns:
             List of matching active subscriptions.
         """
-        return [
-            sub
-            for sub in self._subscriptions
-            if sub.active and sub.matches_topic(topic)
-        ]
+        return [sub for sub in self._subscriptions if sub.active and sub.matches_topic(topic)]
 
     def get_all(self) -> list[Subscription]:
         """Return a shallow copy of every subscription (active or not).
@@ -245,10 +238,7 @@ class SubscriptionRegistry:
         return len(self._subscriptions)
 
     def __repr__(self) -> str:
-        return (
-            f"SubscriptionRegistry(total={self.count}, "
-            f"active={self.active_count})"
-        )
+        return f"SubscriptionRegistry(total={self.count}, active={self.active_count})"
 
 
 # ------------------------------------------------------------------

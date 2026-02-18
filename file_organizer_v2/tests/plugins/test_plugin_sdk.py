@@ -1,4 +1,5 @@
 """Unit tests for plugin SDK client and decorators."""
+
 from __future__ import annotations
 
 import json

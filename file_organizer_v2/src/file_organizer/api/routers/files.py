@@ -1,4 +1,5 @@
 """File operation endpoints."""
+
 from __future__ import annotations
 
 import shutil
@@ -108,7 +109,7 @@ def list_files(
         files.sort(key=lambda p: p.stat().st_mtime, reverse=reverse)
 
     total = len(files)
-    paged = files[skip: skip + limit]
+    paged = files[skip : skip + limit]
     items = [file_info_from_path(f) for f in paged]
 
     return FileListResponse(items=items, total=total, skip=skip, limit=limit)

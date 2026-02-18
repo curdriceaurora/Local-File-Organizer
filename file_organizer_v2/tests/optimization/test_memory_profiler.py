@@ -34,27 +34,19 @@ class TestMemorySnapshot:
 
     def test_snapshot_frozen(self) -> None:
         """Test that MemorySnapshot is immutable."""
-        snapshot = MemorySnapshot(
-            rss=1024, vms=2048, objects_by_type=(), timestamp=0.0
-        )
+        snapshot = MemorySnapshot(rss=1024, vms=2048, objects_by_type=(), timestamp=0.0)
         with pytest.raises(AttributeError):
             snapshot.rss = 999  # type: ignore[misc]
 
     def test_snapshot_equality(self) -> None:
         """Test MemorySnapshot equality comparison."""
-        snap1 = MemorySnapshot(
-            rss=1024, vms=2048, objects_by_type=(), timestamp=1.0
-        )
-        snap2 = MemorySnapshot(
-            rss=1024, vms=2048, objects_by_type=(), timestamp=1.0
-        )
+        snap1 = MemorySnapshot(rss=1024, vms=2048, objects_by_type=(), timestamp=1.0)
+        snap2 = MemorySnapshot(rss=1024, vms=2048, objects_by_type=(), timestamp=1.0)
         assert snap1 == snap2
 
     def test_snapshot_with_empty_objects(self) -> None:
         """Test snapshot with no tracked objects."""
-        snapshot = MemorySnapshot(
-            rss=0, vms=0, objects_by_type=(), timestamp=0.0
-        )
+        snapshot = MemorySnapshot(rss=0, vms=0, objects_by_type=(), timestamp=0.0)
         assert snapshot.objects_by_type == ()
 
 
@@ -78,9 +70,7 @@ class TestProfileResult:
 
     def test_profile_result_frozen(self) -> None:
         """Test that ProfileResult is immutable."""
-        result = ProfileResult(
-            peak_memory=0, allocated=0, freed=0, duration_ms=0.0, func_name="f"
-        )
+        result = ProfileResult(peak_memory=0, allocated=0, freed=0, duration_ms=0.0, func_name="f")
         with pytest.raises(AttributeError):
             result.peak_memory = 999  # type: ignore[misc]
 
@@ -107,9 +97,7 @@ class TestMemoryTimeline:
     def test_timeline_is_mutable(self) -> None:
         """Test that MemoryTimeline allows adding snapshots."""
         timeline = MemoryTimeline()
-        snap = MemorySnapshot(
-            rss=100, vms=200, objects_by_type=(), timestamp=1.0
-        )
+        snap = MemorySnapshot(rss=100, vms=200, objects_by_type=(), timestamp=1.0)
         timeline.snapshots.append(snap)
         assert len(timeline.snapshots) == 1
 
@@ -147,9 +135,7 @@ class TestMemoryProfilerProfile:
         assert profiler.last_result.duration_ms >= 0.0
 
     @patch.object(MemoryProfiler, "_get_rss", return_value=100_000_000)
-    def test_profile_preserves_function_name(
-        self, mock_rss: MagicMock
-    ) -> None:
+    def test_profile_preserves_function_name(self, mock_rss: MagicMock) -> None:
         """Test that the decorated function retains its name."""
         profiler = MemoryProfiler()
 
@@ -163,9 +149,7 @@ class TestMemoryProfilerProfile:
         """Test that duration is recorded correctly."""
         profiler = MemoryProfiler()
 
-        with patch.object(
-            MemoryProfiler, "_get_rss", return_value=50_000_000
-        ):
+        with patch.object(MemoryProfiler, "_get_rss", return_value=50_000_000):
 
             @profiler.profile
             def slow_func() -> None:
@@ -272,9 +256,7 @@ class TestMemoryProfilerProfile:
         assert profiler.last_result.peak_memory == 300_000_000
 
     @patch.object(MemoryProfiler, "_get_rss", return_value=100_000_000)
-    def test_profile_overwrites_last_result(
-        self, mock_rss: MagicMock
-    ) -> None:
+    def test_profile_overwrites_last_result(self, mock_rss: MagicMock) -> None:
         """Test that subsequent calls overwrite last_result."""
         profiler = MemoryProfiler()
 
@@ -307,9 +289,7 @@ class TestMemoryProfilerSnapshot:
         "_get_top_objects",
         return_value=[("list", 5000), ("dict", 3000)],
     )
-    def test_get_snapshot(
-        self, mock_objects: MagicMock, mock_rss_vms: MagicMock
-    ) -> None:
+    def test_get_snapshot(self, mock_objects: MagicMock, mock_rss_vms: MagicMock) -> None:
         """Test getting a memory snapshot."""
         profiler = MemoryProfiler()
         snapshot = profiler.get_snapshot()
@@ -353,9 +333,7 @@ class TestMemoryProfilerTracking:
         "_get_top_objects",
         return_value=[],
     )
-    def test_start_stop_tracking(
-        self, mock_objects: MagicMock, mock_rss_vms: MagicMock
-    ) -> None:
+    def test_start_stop_tracking(self, mock_objects: MagicMock, mock_rss_vms: MagicMock) -> None:
         """Test basic start/stop tracking flow."""
         profiler = MemoryProfiler()
         profiler.start_tracking(interval_seconds=0.5)

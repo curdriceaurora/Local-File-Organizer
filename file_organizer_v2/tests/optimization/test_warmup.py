@@ -112,6 +112,7 @@ class TestModelWarmupSync:
                 model = _make_mock_model(name)
                 models[name] = model
                 return model
+
             return loader
 
         warmup = ModelWarmup(cache=cache, loader_factory=loader_factory)
@@ -150,6 +151,7 @@ class TestModelWarmupSync:
                 nonlocal load_count
                 load_count += 1
                 return _make_mock_model(name)
+
             return loader
 
         warmup = ModelWarmup(cache=cache, loader_factory=loader_factory)
@@ -169,6 +171,7 @@ class TestModelWarmupSync:
                 nonlocal load_count
                 load_count += 1
                 return _make_mock_model(name)
+
             return loader
 
         warmup = ModelWarmup(cache=cache, loader_factory=loader_factory)
@@ -186,6 +189,7 @@ class TestModelWarmupSync:
                 if name == "bad-model":
                     raise ConnectionError("cannot connect")
                 return _make_mock_model(name)
+
             return loader
 
         warmup = ModelWarmup(cache=cache, loader_factory=loader_factory)
@@ -204,6 +208,7 @@ class TestModelWarmupSync:
             def loader():
                 time.sleep(0.02)
                 return _make_mock_model(name)
+
             return loader
 
         warmup = ModelWarmup(cache=cache, loader_factory=loader_factory)
@@ -237,6 +242,7 @@ class TestModelWarmupAsync:
             def loader():
                 time.sleep(0.1)
                 return _make_mock_model(name)
+
             return loader
 
         warmup = ModelWarmup(cache=cache, loader_factory=loader_factory)

@@ -1,4 +1,5 @@
 """Unit tests for health check endpoint."""
+
 from fastapi.testclient import TestClient
 
 from file_organizer.api.main import create_app

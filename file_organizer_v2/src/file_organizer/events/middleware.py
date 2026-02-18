@@ -4,6 +4,7 @@ Provides a protocol-based middleware architecture that intercepts
 events at publish and consume time.  Includes ready-made middleware
 for logging, metrics collection, and retry logic.
 """
+
 from __future__ import annotations
 
 import logging
@@ -27,9 +28,7 @@ class Middleware(Protocol):
     hooks are silently skipped by the :class:`MiddlewarePipeline`.
     """
 
-    def before_publish(
-        self, topic: str, data: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    def before_publish(self, topic: str, data: dict[str, Any]) -> dict[str, Any] | None:
         """Called before an event is published.
 
         Args:
@@ -57,9 +56,7 @@ class Middleware(Protocol):
         """
         ...  # pragma: no cover
 
-    def before_consume(
-        self, topic: str, data: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    def before_consume(self, topic: str, data: dict[str, Any]) -> dict[str, Any] | None:
         """Called before a consumed event is dispatched to handlers.
 
         Args:
@@ -140,9 +137,7 @@ class MiddlewarePipeline:
     # Hook execution
     # ------------------------------------------------------------------
 
-    def run_before_publish(
-        self, topic: str, data: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    def run_before_publish(self, topic: str, data: dict[str, Any]) -> dict[str, Any] | None:
         """Execute ``before_publish`` on all middleware in order.
 
         If any middleware returns ``None`` the chain is short-circuited
@@ -195,9 +190,7 @@ class MiddlewarePipeline:
                         exc_info=True,
                     )
 
-    def run_before_consume(
-        self, topic: str, data: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    def run_before_consume(self, topic: str, data: dict[str, Any]) -> dict[str, Any] | None:
         """Execute ``before_consume`` on all middleware in order.
 
         Args:
@@ -269,9 +262,7 @@ class LoggingMiddleware:
     def __init__(self, logger_name: str = "file_organizer.events.pubsub") -> None:
         self._logger = logging.getLogger(logger_name)
 
-    def before_publish(
-        self, topic: str, data: dict[str, Any]
-    ) -> dict[str, Any]:
+    def before_publish(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
         self._logger.info("Publishing to '%s': %s", topic, data)
         return data
 
@@ -282,15 +273,11 @@ class LoggingMiddleware:
         message_id: str | None,
     ) -> None:
         if message_id is not None:
-            self._logger.info(
-                "Published to '%s' (ID: %s)", topic, message_id
-            )
+            self._logger.info("Published to '%s' (ID: %s)", topic, message_id)
         else:
             self._logger.warning("Failed to publish to '%s'", topic)
 
-    def before_consume(
-        self, topic: str, data: dict[str, Any]
-    ) -> dict[str, Any]:
+    def before_consume(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
         self._logger.info("Consuming from '%s': %s", topic, data)
         return data
 
@@ -301,9 +288,7 @@ class LoggingMiddleware:
         error: Exception | None,
     ) -> None:
         if error is not None:
-            self._logger.warning(
-                "Handler error on '%s': %s", topic, error
-            )
+            self._logger.warning("Handler error on '%s': %s", topic, error)
         else:
             self._logger.info("Consumed from '%s' successfully", topic)
 
@@ -331,9 +316,7 @@ class MetricsMiddleware:
     topic_publish_counts: dict[str, int] = field(default_factory=dict)
     topic_consume_counts: dict[str, int] = field(default_factory=dict)
 
-    def before_publish(
-        self, topic: str, data: dict[str, Any]
-    ) -> dict[str, Any]:
+    def before_publish(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
         return data
 
     def after_publish(
@@ -344,15 +327,11 @@ class MetricsMiddleware:
     ) -> None:
         if message_id is not None:
             self.publish_count += 1
-            self.topic_publish_counts[topic] = (
-                self.topic_publish_counts.get(topic, 0) + 1
-            )
+            self.topic_publish_counts[topic] = self.topic_publish_counts.get(topic, 0) + 1
         else:
             self.publish_errors += 1
 
-    def before_consume(
-        self, topic: str, data: dict[str, Any]
-    ) -> dict[str, Any]:
+    def before_consume(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
         self._consume_start = time.monotonic()
         return data
 
@@ -368,9 +347,7 @@ class MetricsMiddleware:
             self.consume_errors += 1
         else:
             self.consume_count += 1
-            self.topic_consume_counts[topic] = (
-                self.topic_consume_counts.get(topic, 0) + 1
-            )
+            self.topic_consume_counts[topic] = self.topic_consume_counts.get(topic, 0) + 1
 
     @property
     def avg_consume_time_ms(self) -> float:
@@ -415,9 +392,7 @@ class RetryMiddleware:
         self._attempt_counts: dict[str, int] = {}
         self._total_retries: int = 0
 
-    def before_publish(
-        self, topic: str, data: dict[str, Any]
-    ) -> dict[str, Any]:
+    def before_publish(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
         return data
 
     def after_publish(
@@ -428,9 +403,7 @@ class RetryMiddleware:
     ) -> None:
         pass
 
-    def before_consume(
-        self, topic: str, data: dict[str, Any]
-    ) -> dict[str, Any]:
+    def before_consume(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
         # Reset attempt counter for this event
         event_key = f"{topic}:{id(data)}"
         self._attempt_counts[event_key] = 0
@@ -444,9 +417,7 @@ class RetryMiddleware:
     ) -> None:
         if error is not None:
             event_key = f"{topic}:{id(data)}"
-            self._attempt_counts[event_key] = (
-                self._attempt_counts.get(event_key, 0) + 1
-            )
+            self._attempt_counts[event_key] = self._attempt_counts.get(event_key, 0) + 1
 
     def should_retry(self, topic: str, data: dict[str, Any]) -> bool:
         """Check whether the event should be retried.

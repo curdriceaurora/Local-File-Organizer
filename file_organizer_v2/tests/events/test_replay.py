@@ -4,6 +4,7 @@ Unit tests for EventReplayManager.
 Tests event replay by time range, by message ID, and replay-to-consumer
 functionality. All tests mock Redis to avoid requiring a running instance.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -325,9 +326,7 @@ class TestReplayById:
         """Test graceful handling of Redis errors."""
         mock_redis_client.xrange.side_effect = RuntimeError("connection lost")
 
-        events = replay_manager.replay_by_id(
-            "file-events", ["1704067200000-0"]
-        )
+        events = replay_manager.replay_by_id("file-events", ["1704067200000-0"])
         assert events == []
 
 
@@ -351,9 +350,7 @@ class TestReplayToConsumer:
         consumer.register_handler(EventType.FILE_CREATED, handler)
 
         start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        count = replay_manager.replay_to_consumer(
-            "file-events", start, consumer
-        )
+        count = replay_manager.replay_to_consumer("file-events", start, consumer)
 
         assert count == 1
         handler.assert_called_once()
@@ -400,9 +397,7 @@ class TestReplayToConsumer:
         consumer.register_handler(EventType.FILE_CREATED, handler)
 
         start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        count = replay_manager.replay_to_consumer(
-            "file-events", start, consumer
-        )
+        count = replay_manager.replay_to_consumer("file-events", start, consumer)
 
         # Event is still counted as dispatched even if handler fails
         assert count == 1
@@ -421,8 +416,6 @@ class TestReplayToConsumer:
         consumer = EventConsumer()  # No handlers registered
 
         start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        count = replay_manager.replay_to_consumer(
-            "file-events", start, consumer
-        )
+        count = replay_manager.replay_to_consumer("file-events", start, consumer)
 
         assert count == 1

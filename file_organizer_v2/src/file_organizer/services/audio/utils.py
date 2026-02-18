@@ -3,6 +3,7 @@ Audio Utility Functions
 
 Common utility functions for audio file processing and analysis.
 """
+
 from __future__ import annotations
 
 import logging
@@ -30,11 +31,13 @@ def get_audio_duration(audio_path: str | Path) -> float:
 
     try:
         from pydub import AudioSegment
+
         audio = AudioSegment.from_file(str(audio_path))
         return len(audio) / 1000.0  # Convert ms to seconds
     except ImportError:
         try:
             from tinytag import TinyTag
+
             tag = TinyTag.get(str(audio_path))
             return tag.duration or 0.0
         except ImportError:
@@ -43,9 +46,7 @@ def get_audio_duration(audio_path: str | Path) -> float:
 
 
 def normalize_audio(
-    audio_path: str | Path,
-    output_path: str | Path | None = None,
-    target_db: float = -20.0
+    audio_path: str | Path, output_path: str | Path | None = None, target_db: float = -20.0
 ) -> Path:
     """
     Normalize audio to target dB level.
@@ -110,7 +111,7 @@ def split_audio(
         chunks = []
 
         for i, start in enumerate(range(0, len(audio), chunk_length_ms)):
-            chunk = audio[start:start + chunk_length_ms]
+            chunk = audio[start : start + chunk_length_ms]
             chunk_path = output_dir / f"{audio_path.stem}_chunk_{i:03d}{audio_path.suffix}"
             chunk.export(str(chunk_path), format=audio_path.suffix[1:])
             chunks.append(chunk_path)
@@ -151,11 +152,7 @@ def convert_audio_format(
         from pydub import AudioSegment
 
         audio = AudioSegment.from_file(str(audio_path))
-        audio.export(
-            str(output_path),
-            format=output_format,
-            bitrate=bitrate
-        )
+        audio.export(str(output_path), format=output_format, bitrate=bitrate)
 
         logger.info(f"Converted {audio_path} to {output_format}: {output_path}")
         return output_path
@@ -186,9 +183,7 @@ def validate_audio_file(audio_path: str | Path) -> tuple[bool, str | None]:
         return False, "Path is not a file"
 
     # Check file extension
-    supported_extensions = {
-        ".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".wma", ".opus"
-    }
+    supported_extensions = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".wma", ".opus"}
     if audio_path.suffix.lower() not in supported_extensions:
         return False, f"Unsupported file extension: {audio_path.suffix}"
 
@@ -224,9 +219,7 @@ def detect_silence_segments(
 
         audio = AudioSegment.from_file(str(audio_path))
         silence_ranges = detect_silence(
-            audio,
-            min_silence_len=min_silence_len,
-            silence_thresh=silence_thresh
+            audio, min_silence_len=min_silence_len, silence_thresh=silence_thresh
         )
 
         logger.info(f"Detected {len(silence_ranges)} silence segments")
@@ -375,7 +368,21 @@ def is_audio_file(file_path: str | Path) -> bool:
     """
     file_path = Path(file_path)
     audio_extensions = {
-        ".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".wma", ".opus",
-        ".MP3", ".WAV", ".M4A", ".FLAC", ".OGG", ".AAC", ".WMA", ".OPUS"
+        ".mp3",
+        ".wav",
+        ".m4a",
+        ".flac",
+        ".ogg",
+        ".aac",
+        ".wma",
+        ".opus",
+        ".MP3",
+        ".WAV",
+        ".M4A",
+        ".FLAC",
+        ".OGG",
+        ".AAC",
+        ".WMA",
+        ".OPUS",
     }
     return file_path.suffix in audio_extensions

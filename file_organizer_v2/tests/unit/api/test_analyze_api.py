@@ -1,4 +1,5 @@
 """Unit tests for analyze endpoint."""
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -57,7 +58,7 @@ class TestAnalyzeEndpoint:
     def test_analyze_handles_images(self, client):
         """Analyze endpoint should handle image files."""
         # Create a minimal PNG file (1x1 pixel)
-        png_data = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\r\x8b\x00\x00\x00\x00IEND\xaeB`\x82'
+        png_data = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\r\x8b\x00\x00\x00\x00IEND\xaeB`\x82"
         files = {"file": ("image.png", png_data, "image/png")}
         response = client.post("/api/v1/analyze", files=files)
 
@@ -66,7 +67,7 @@ class TestAnalyzeEndpoint:
     def test_analyze_handles_pdfs(self, client):
         """Analyze endpoint should handle PDF files."""
         # Minimal PDF header
-        pdf_data = b'%PDF-1.0\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n'
+        pdf_data = b"%PDF-1.0\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
         files = {"file": ("document.pdf", pdf_data, "application/pdf")}
         response = client.post("/api/v1/analyze", files=files)
 

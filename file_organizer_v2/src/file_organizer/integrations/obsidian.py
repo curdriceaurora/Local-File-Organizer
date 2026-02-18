@@ -1,4 +1,5 @@
 """Obsidian vault integration adapter."""
+
 from __future__ import annotations
 
 import shutil
@@ -54,7 +55,9 @@ class ObsidianIntegration(Integration):
             return False
 
         vault = self._vault_path()
-        attachments_subdir = str(self.config.settings.get("attachments_subdir", "Attachments")).strip()
+        attachments_subdir = str(
+            self.config.settings.get("attachments_subdir", "Attachments")
+        ).strip()
         notes_subdir = str(self.config.settings.get("notes_subdir", "Notes")).strip()
 
         target_dir = (vault / attachments_subdir).resolve(strict=False)
@@ -66,7 +69,9 @@ class ObsidianIntegration(Integration):
         note_dir = (vault / notes_subdir).resolve(strict=False)
         note_dir.mkdir(parents=True, exist_ok=True)
         note_path = note_dir / f"{source.stem}.md"
-        note_path.write_text(self._build_note_content(source, destination, metadata), encoding="utf-8")
+        note_path.write_text(
+            self._build_note_content(source, destination, metadata), encoding="utf-8"
+        )
         return True
 
     async def get_status(self) -> IntegrationStatus:

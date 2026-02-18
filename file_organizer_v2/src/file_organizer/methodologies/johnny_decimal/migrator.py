@@ -4,6 +4,7 @@ Johnny Decimal Migration Manager
 Orchestrates the complete migration process from existing folder structures
 to Johnny Decimal organization. Provides dry-run, rollback, and detailed reporting.
 """
+
 from __future__ import annotations
 
 import json
@@ -70,9 +71,7 @@ class JohnnyDecimalMigrator:
         self.scheme = scheme or get_default_scheme()
         self.generator = JohnnyDecimalGenerator(self.scheme)
         self.scanner = FolderScanner(self.scheme)
-        self.transformer = FolderTransformer(
-            self.scheme, self.generator, preserve_original_names
-        )
+        self.transformer = FolderTransformer(self.scheme, self.generator, preserve_original_names)
         self.validator = MigrationValidator(self.generator)
         self._rollback_history: list[RollbackInfo] = []
 
@@ -95,14 +94,11 @@ class JohnnyDecimalMigrator:
         scan_result = self.scanner.scan_directory(root_path)
 
         logger.info(
-            f"Scanned: {scan_result.total_folders} folders, "
-            f"{scan_result.total_files} files"
+            f"Scanned: {scan_result.total_folders} folders, {scan_result.total_files} files"
         )
 
         # Step 2: Create transformation plan
-        plan = self.transformer.create_transformation_plan(
-            scan_result.folder_tree, root_path
-        )
+        plan = self.transformer.create_transformation_plan(scan_result.folder_tree, root_path)
 
         logger.info(f"Plan created with {len(plan.rules)} transformations")
 
@@ -273,7 +269,10 @@ class JohnnyDecimalMigrator:
 
         try:
             # Restore original names
-            for original_path_str, (target_path_str, original_name) in rollback_info.original_structure.items():
+            for original_path_str, (
+                target_path_str,
+                original_name,
+            ) in rollback_info.original_structure.items():
                 current_path = Path(target_path_str)
                 original_path = Path(original_path_str)
 
@@ -316,7 +315,9 @@ class JohnnyDecimalMigrator:
         Args:
             rollback_info: Rollback information to save
         """
-        rollback_file = Path.home() / ".file_organizer" / "rollback" / f"{rollback_info.migration_id}.json"
+        rollback_file = (
+            Path.home() / ".file_organizer" / "rollback" / f"{rollback_info.migration_id}.json"
+        )
         rollback_file.parent.mkdir(parents=True, exist_ok=True)
 
         data = {
@@ -366,22 +367,26 @@ class JohnnyDecimalMigrator:
                 lines.append(f"- {pattern}")
             lines.append("")
 
-        lines.extend([
-            "## Migration Plan",
-            f"- Total transformations: {len(plan.rules)}",
-            f"- Conflicts: {len(plan.conflicts)}",
-            f"- Warnings: {len(plan.warnings)}",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Migration Plan",
+                f"- Total transformations: {len(plan.rules)}",
+                f"- Conflicts: {len(plan.conflicts)}",
+                f"- Warnings: {len(plan.warnings)}",
+                "",
+            ]
+        )
 
         if validation:
-            lines.extend([
-                "## Validation",
-                f"- Status: {'✅ VALID' if validation.is_valid else '❌ INVALID'}",
-                f"- Errors: {len(validation.errors)}",
-                f"- Warnings: {len(validation.warnings)}",
-                "",
-            ])
+            lines.extend(
+                [
+                    "## Validation",
+                    f"- Status: {'✅ VALID' if validation.is_valid else '❌ INVALID'}",
+                    f"- Errors: {len(validation.errors)}",
+                    f"- Warnings: {len(validation.warnings)}",
+                    "",
+                ]
+            )
 
         # Sample transformations
         lines.append("## Sample Transformations (first 10)")
@@ -419,11 +424,13 @@ class JohnnyDecimalMigrator:
         ]
 
         if result.backup_path:
-            lines.extend([
-                "## Backup",
-                f"- Location: {result.backup_path}",
-                "",
-            ])
+            lines.extend(
+                [
+                    "## Backup",
+                    f"- Location: {result.backup_path}",
+                    "",
+                ]
+            )
 
         if result.failed_paths:
             lines.append("## Failures")

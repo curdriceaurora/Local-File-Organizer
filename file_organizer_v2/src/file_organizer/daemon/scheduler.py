@@ -5,6 +5,7 @@ Provides the DaemonScheduler class that runs named tasks at fixed
 intervals in a single background thread, supporting dynamic task
 registration and graceful shutdown.
 """
+
 from __future__ import annotations
 
 import logging
@@ -77,9 +78,7 @@ class DaemonScheduler:
                 interval=interval,
                 callback=callback,
             )
-            logger.debug(
-                "Scheduled task '%s' every %.1fs", name, interval
-            )
+            logger.debug("Scheduled task '%s' every %.1fs", name, interval)
 
     def cancel_task(self, name: str) -> bool:
         """
@@ -191,8 +190,6 @@ class DaemonScheduler:
                     task.callback()
                     task.last_run = now
                 except Exception:
-                    logger.exception(
-                        "Task '%s' raised an exception", task.name
-                    )
+                    logger.exception("Task '%s' raised an exception", task.name)
                     # Update last_run even on failure to prevent tight loops
                     task.last_run = now

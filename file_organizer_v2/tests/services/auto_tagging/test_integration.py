@@ -1,4 +1,5 @@
 """Integration tests for auto-tagging system."""
+
 from __future__ import annotations
 
 import shutil
@@ -38,7 +39,7 @@ def sample_files(temp_dir):
         # Data processing function
         return [x * 2 for x in data]
     """)
-    files['python'] = py_file
+    files["python"] = py_file
 
     # Document file
     doc_file = temp_dir / "machine-learning-tutorial.txt"
@@ -47,12 +48,12 @@ def sample_files(temp_dir):
     This tutorial covers Python programming for machine learning.
     Topics: neural networks, deep learning, data science
     """)
-    files['document'] = doc_file
+    files["document"] = doc_file
 
     # Configuration file
     config_file = temp_dir / "config.json"
     config_file.write_text('{"setting": "value"}')
-    files['config'] = config_file
+    files["config"] = config_file
 
     return files
 
@@ -62,7 +63,7 @@ class TestAutoTaggingIntegration:
 
     def test_end_to_end_workflow(self, service, sample_files):
         """Test complete workflow: suggest -> apply -> improve."""
-        py_file = sample_files['python']
+        py_file = sample_files["python"]
 
         # 1. Get initial suggestions
         initial_rec = service.suggest_tags(py_file, top_n=5)
@@ -70,11 +71,11 @@ class TestAutoTaggingIntegration:
         [s.tag for s in initial_rec.suggestions]
 
         # 2. User applies some tags
-        applied_tags = ['python', 'code', 'dataprocessing']
+        applied_tags = ["python", "code", "dataprocessing"]
         service.record_tag_usage(py_file, applied_tags)
 
         # 3. Create another Python file
-        new_py_file = sample_files['python'].parent / "another_script.py"
+        new_py_file = sample_files["python"].parent / "another_script.py"
         new_py_file.write_text("def main(): pass")
 
         # 4. Get suggestions for new file (should be influenced by learning)
@@ -93,10 +94,7 @@ class TestAutoTaggingIntegration:
         for i in range(10):
             file_path = temp_dir / f"python_file_{i}.py"
             file_path.write_text(f"# Python code {i}")
-            service.record_tag_usage(
-                file_path,
-                ['python', 'code', 'programming']
-            )
+            service.record_tag_usage(file_path, ["python", "code", "programming"])
 
         # Test file
         test_file = temp_dir / "test_script.py"
@@ -106,7 +104,7 @@ class TestAutoTaggingIntegration:
         suggested_tags = [s.tag for s in recommendation.suggestions]
 
         # Should suggest learned tags
-        assert 'python' in suggested_tags or 'code' in suggested_tags
+        assert "python" in suggested_tags or "code" in suggested_tags
 
     def test_context_based_suggestions(self, service, temp_dir):
         """Test that suggestions are context-aware."""
@@ -120,13 +118,13 @@ class TestAutoTaggingIntegration:
         for i in range(5):
             file_path = code_dir / f"script_{i}.py"
             file_path.write_text("code")
-            service.record_tag_usage(file_path, ['python', 'code', 'development'])
+            service.record_tag_usage(file_path, ["python", "code", "development"])
 
         # Train on docs directory
         for i in range(5):
             file_path = docs_dir / f"doc_{i}.txt"
             file_path.write_text("documentation")
-            service.record_tag_usage(file_path, ['documentation', 'text', 'manual'])
+            service.record_tag_usage(file_path, ["documentation", "text", "manual"])
 
         # Test new file in code directory
         new_code = code_dir / "new_script.py"
@@ -135,7 +133,7 @@ class TestAutoTaggingIntegration:
         code_tags = [s.tag for s in code_rec.suggestions]
 
         # Should suggest code-related tags
-        code_related = {'python', 'code', 'development'}
+        code_related = {"python", "code", "development"}
         assert any(tag in code_related for tag in code_tags)
 
     def test_file_type_learning(self, service, temp_dir):
@@ -144,7 +142,7 @@ class TestAutoTaggingIntegration:
         for i in range(5):
             pdf_file = temp_dir / f"doc_{i}.pdf"
             pdf_file.write_text("pdf content")
-            service.record_tag_usage(pdf_file, ['document', 'pdf', 'important'])
+            service.record_tag_usage(pdf_file, ["document", "pdf", "important"])
 
         # Test new PDF
         new_pdf = temp_dir / "new_document.pdf"
@@ -153,25 +151,25 @@ class TestAutoTaggingIntegration:
         tags = [s.tag for s in recommendation.suggestions]
 
         # Should suggest learned associations
-        assert 'document' in tags or 'pdf' in tags
+        assert "document" in tags or "pdf" in tags
 
     def test_tag_cooccurrence_learning(self, service, sample_files):
         """Test that system learns tag co-occurrences."""
-        py_file = sample_files['python']
+        py_file = sample_files["python"]
 
         # Record that 'python' and 'ml' often occur together
         for _ in range(5):
-            service.record_tag_usage(py_file, ['python', 'ml', 'data-science'])
+            service.record_tag_usage(py_file, ["python", "ml", "data-science"])
 
         # When suggesting for a file with 'python', should suggest 'ml'
-        recommendation = service.suggest_tags(py_file, existing_tags=['python'])
+        recommendation = service.suggest_tags(py_file, existing_tags=["python"])
         suggested = [s.tag for s in recommendation.suggestions]
 
-        assert 'ml' in suggested or 'data-science' in suggested
+        assert "ml" in suggested or "data-science" in suggested
 
     def test_feedback_integration(self, service, sample_files):
         """Test feedback mechanism improves suggestions."""
-        doc_file = sample_files['document']
+        doc_file = sample_files["document"]
 
         # Get initial suggestions
         service.suggest_tags(doc_file)
@@ -179,11 +177,11 @@ class TestAutoTaggingIntegration:
         # Simulate user feedback
         feedback = [
             {
-                'file_path': str(doc_file),
-                'suggested_tags': ['tutorial', 'machine-learning', 'python'],
-                'accepted_tags': ['tutorial', 'machine-learning'],
-                'rejected_tags': ['python'],
-                'timestamp': time.time()
+                "file_path": str(doc_file),
+                "suggested_tags": ["tutorial", "machine-learning", "python"],
+                "accepted_tags": ["tutorial", "machine-learning"],
+                "rejected_tags": ["python"],
+                "timestamp": time.time(),
             }
         ]
 
@@ -195,13 +193,7 @@ class TestAutoTaggingIntegration:
     def test_popular_tags_tracking(self, service, temp_dir):
         """Test tracking of popular tags."""
         # Use various tags with different frequencies
-        tags_usage = {
-            'python': 10,
-            'code': 8,
-            'ml': 5,
-            'data': 3,
-            'test': 1
-        }
+        tags_usage = {"python": 10, "code": 8, "ml": 5, "data": 3, "test": 1}
 
         for tag, count in tags_usage.items():
             for i in range(count):
@@ -213,22 +205,22 @@ class TestAutoTaggingIntegration:
         popular_tags = [tag for tag, _ in popular]
 
         # Most popular should be first
-        assert popular_tags[0] == 'python'
-        assert popular_tags[1] == 'code'
+        assert popular_tags[0] == "python"
+        assert popular_tags[1] == "code"
 
     def test_recent_tags_tracking(self, service, sample_files):
         """Test tracking of recently used tags."""
-        py_file = sample_files['python']
+        py_file = sample_files["python"]
 
         # Use some tags recently
-        service.record_tag_usage(py_file, ['recent', 'new', 'fresh'])
+        service.record_tag_usage(py_file, ["recent", "new", "fresh"])
 
         recent = service.get_recent_tags(days=1, limit=10)
 
         # Should include recently used tags
-        assert 'recent' in recent
-        assert 'new' in recent
-        assert 'fresh' in recent
+        assert "recent" in recent
+        assert "new" in recent
+        assert "fresh" in recent
 
     def test_batch_processing(self, service, sample_files):
         """Test batch processing of multiple files."""
@@ -253,18 +245,18 @@ class TestAutoTaggingIntegration:
 
     def test_suggestion_sources(self, service, sample_files):
         """Test that suggestions come from multiple sources."""
-        py_file = sample_files['python']
+        py_file = sample_files["python"]
 
         # Train to get behavior-based suggestions
         for _i in range(3):
-            service.record_tag_usage(py_file, ['python', 'code'])
+            service.record_tag_usage(py_file, ["python", "code"])
 
         recommendation = service.suggest_tags(py_file)
 
         # Should have suggestions from different sources
         sources = {s.source for s in recommendation.suggestions}
         # At least should have content-based
-        assert 'content' in sources or 'behavior' in sources or 'hybrid' in sources
+        assert "content" in sources or "behavior" in sources or "hybrid" in sources
 
     def test_empty_file_handling(self, service, temp_dir):
         """Test handling of empty files."""
@@ -283,10 +275,7 @@ class TestAutoTaggingIntegration:
         for i in range(50):
             file_path = temp_dir / f"file_{i}.txt"
             file_path.write_text(f"content {i}")
-            service.record_tag_usage(
-                file_path,
-                [f'tag_{i}', f'category_{i % 5}']
-            )
+            service.record_tag_usage(file_path, [f"tag_{i}", f"category_{i % 5}"])
 
         # Should handle large vocabulary without issues
         test_file = temp_dir / "test.txt"
@@ -303,7 +292,7 @@ class TestAutoTaggingIntegration:
         service1 = AutoTaggingService(storage_path=storage_path)
         test_file = temp_dir / "test.py"
         test_file.write_text("code")
-        service1.record_tag_usage(test_file, ['python', 'persistent'])
+        service1.record_tag_usage(test_file, ["python", "persistent"])
 
         # Create new service with same storage
         service2 = AutoTaggingService(storage_path=storage_path)
@@ -312,11 +301,11 @@ class TestAutoTaggingIntegration:
         popular = service2.get_popular_tags()
         popular_tags = [tag for tag, _ in popular]
 
-        assert 'python' in popular_tags or 'persistent' in popular_tags
+        assert "python" in popular_tags or "persistent" in popular_tags
 
     def test_suggestion_reasoning(self, service, sample_files):
         """Test that suggestions include reasoning."""
-        doc_file = sample_files['document']
+        doc_file = sample_files["document"]
 
         recommendation = service.suggest_tags(doc_file)
 
@@ -328,19 +317,16 @@ class TestAutoTaggingIntegration:
 
     def test_existing_tags_filtering(self, service, sample_files):
         """Test that existing tags are filtered from suggestions."""
-        py_file = sample_files['python']
+        py_file = sample_files["python"]
 
-        existing_tags = ['python', 'code']
-        recommendation = service.suggest_tags(
-            py_file,
-            existing_tags=existing_tags
-        )
+        existing_tags = ["python", "code"]
+        recommendation = service.suggest_tags(py_file, existing_tags=existing_tags)
 
         suggested_tags = [s.tag for s in recommendation.suggestions]
 
         # Should not suggest tags that already exist
-        assert 'python' not in suggested_tags
-        assert 'code' not in suggested_tags
+        assert "python" not in suggested_tags
+        assert "code" not in suggested_tags
 
     def test_performance_batch_processing(self, service, temp_dir):
         """Test performance with batch processing."""

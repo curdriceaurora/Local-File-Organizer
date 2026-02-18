@@ -2,6 +2,7 @@
 
 Exercises model list/pull/cache with mocked Ollama responses.
 """
+
 from __future__ import annotations
 
 from typer.testing import CliRunner

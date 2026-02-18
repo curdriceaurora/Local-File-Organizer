@@ -3,6 +3,7 @@ Unit tests for RollbackExecutor.
 
 Tests rollback execution for all operation types.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -44,7 +45,7 @@ class TestRollbackExecutor(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Perform move
@@ -65,7 +66,7 @@ class TestRollbackExecutor(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Perform rename
@@ -85,7 +86,7 @@ class TestRollbackExecutor(unittest.TestCase):
             operation_type=OperationType.DELETE,
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Move to trash (simulating delete)
@@ -111,7 +112,7 @@ class TestRollbackExecutor(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Rollback (delete copy)
@@ -132,7 +133,7 @@ class TestRollbackExecutor(unittest.TestCase):
             operation_type=OperationType.CREATE,
             timestamp=datetime.utcnow(),
             source_path=created_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Rollback (delete created file)
@@ -150,7 +151,7 @@ class TestRollbackExecutor(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.ROLLED_BACK
+            status=OperationStatus.ROLLED_BACK,
         )
 
         # File is at source (after rollback)
@@ -169,7 +170,7 @@ class TestRollbackExecutor(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.ROLLED_BACK
+            status=OperationStatus.ROLLED_BACK,
         )
 
         # File is at source (after rollback)
@@ -187,7 +188,7 @@ class TestRollbackExecutor(unittest.TestCase):
             operation_type=OperationType.DELETE,
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
-            status=OperationStatus.ROLLED_BACK
+            status=OperationStatus.ROLLED_BACK,
         )
 
         # File is restored (after rollback)
@@ -206,7 +207,7 @@ class TestRollbackExecutor(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.ROLLED_BACK
+            status=OperationStatus.ROLLED_BACK,
         )
 
         # Copy was deleted (after rollback)
@@ -227,30 +228,34 @@ class TestRollbackExecutor(unittest.TestCase):
         dest1 = self.test_dir / "dest1.txt"
         file1.write_text("content1")
         shutil.move(str(file1), str(dest1))
-        operations.append(Operation(
-            id=1,
-            operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
-            source_path=file1,
-            destination_path=dest1,
-            transaction_id="txn1",
-            status=OperationStatus.COMPLETED
-        ))
+        operations.append(
+            Operation(
+                id=1,
+                operation_type=OperationType.MOVE,
+                timestamp=datetime.utcnow(),
+                source_path=file1,
+                destination_path=dest1,
+                transaction_id="txn1",
+                status=OperationStatus.COMPLETED,
+            )
+        )
 
         # Operation 2: Rename
         file2 = self.test_dir / "file2.txt"
         dest2 = self.test_dir / "dest2.txt"
         file2.write_text("content2")
         file2.rename(dest2)
-        operations.append(Operation(
-            id=2,
-            operation_type=OperationType.RENAME,
-            timestamp=datetime.utcnow(),
-            source_path=file2,
-            destination_path=dest2,
-            transaction_id="txn1",
-            status=OperationStatus.COMPLETED
-        ))
+        operations.append(
+            Operation(
+                id=2,
+                operation_type=OperationType.RENAME,
+                timestamp=datetime.utcnow(),
+                source_path=file2,
+                destination_path=dest2,
+                transaction_id="txn1",
+                status=OperationStatus.COMPLETED,
+            )
+        )
 
         # Rollback transaction
         result = self.executor.rollback_transaction("txn1", operations)
@@ -274,28 +279,32 @@ class TestRollbackExecutor(unittest.TestCase):
         dest1 = self.test_dir / "dest1.txt"
         file1.write_text("content1")
         shutil.move(str(file1), str(dest1))
-        operations.append(Operation(
-            id=1,
-            operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
-            source_path=file1,
-            destination_path=dest1,
-            transaction_id="txn1",
-            status=OperationStatus.COMPLETED
-        ))
+        operations.append(
+            Operation(
+                id=1,
+                operation_type=OperationType.MOVE,
+                timestamp=datetime.utcnow(),
+                source_path=file1,
+                destination_path=dest1,
+                transaction_id="txn1",
+                status=OperationStatus.COMPLETED,
+            )
+        )
 
         # Operation 2: Move (will fail - file doesn't exist)
         file2 = self.test_dir / "file2.txt"
         dest2 = self.test_dir / "dest2.txt"
-        operations.append(Operation(
-            id=2,
-            operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
-            source_path=file2,
-            destination_path=dest2,
-            transaction_id="txn1",
-            status=OperationStatus.COMPLETED
-        ))
+        operations.append(
+            Operation(
+                id=2,
+                operation_type=OperationType.MOVE,
+                timestamp=datetime.utcnow(),
+                source_path=file2,
+                destination_path=dest2,
+                transaction_id="txn1",
+                status=OperationStatus.COMPLETED,
+            )
+        )
 
         # Rollback transaction (should stop at first failure)
         result = self.executor.rollback_transaction("txn1", operations)
@@ -304,5 +313,5 @@ class TestRollbackExecutor(unittest.TestCase):
         self.assertGreater(result.operations_failed, 0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -4,6 +4,7 @@ Johnny Decimal Migration Validator
 Validates transformation plans before execution to prevent errors and data loss.
 Checks for conflicts, invalid numbers, and potential issues.
 """
+
 from __future__ import annotations
 
 import logging
@@ -88,15 +89,12 @@ class MigrationValidator:
         self._check_nested_conflicts(plan, result)
 
         logger.info(
-            f"Validation complete: {len(result.errors)} errors, "
-            f"{len(result.warnings)} warnings"
+            f"Validation complete: {len(result.errors)} errors, {len(result.warnings)} warnings"
         )
 
         return result
 
-    def _check_source_paths(
-        self, plan: TransformationPlan, result: ValidationResult
-    ) -> None:
+    def _check_source_paths(self, plan: TransformationPlan, result: ValidationResult) -> None:
         """Check that all source paths exist and are accessible."""
         for idx, rule in enumerate(plan.rules):
             if not rule.source_path.exists():
@@ -119,9 +117,7 @@ class MigrationValidator:
                     )
                 )
 
-    def _check_number_conflicts(
-        self, plan: TransformationPlan, result: ValidationResult
-    ) -> None:
+    def _check_number_conflicts(self, plan: TransformationPlan, result: ValidationResult) -> None:
         """Check for Johnny Decimal number conflicts."""
         used_numbers: set[str] = set()
 
@@ -190,12 +186,10 @@ class MigrationValidator:
                             rule_index=idx,
                             message=f"Target path already exists: {target_path}",
                             suggestion="May need to merge or rename existing folder",
+                        )
                     )
-                )
 
-    def _check_number_validity(
-        self, plan: TransformationPlan, result: ValidationResult
-    ) -> None:
+    def _check_number_validity(self, plan: TransformationPlan, result: ValidationResult) -> None:
         """Check that JD numbers are valid and in proper ranges."""
         for idx, rule in enumerate(plan.rules):
             jd_num = rule.jd_number
@@ -240,7 +234,7 @@ class MigrationValidator:
     ) -> None:
         """Check that target names are filesystem-compatible."""
         # Characters that may cause issues
-        problematic_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+        problematic_chars = ["/", "\\", ":", "*", "?", '"', "<", ">", "|"]
 
         for idx, rule in enumerate(plan.rules):
             target_name = rule.target_name
@@ -279,9 +273,7 @@ class MigrationValidator:
                     )
                 )
 
-    def _check_nested_conflicts(
-        self, plan: TransformationPlan, result: ValidationResult
-    ) -> None:
+    def _check_nested_conflicts(self, plan: TransformationPlan, result: ValidationResult) -> None:
         """Check for issues with nested transformations."""
         # Build path hierarchy
         all_paths = {rule.source_path for rule in plan.rules}
@@ -325,13 +317,15 @@ class MigrationValidator:
         else:
             lines.append("❌ **Plan has ERRORS** - Cannot execute until resolved")
 
-        lines.extend([
-            "",
-            f"- Errors: {len(result.errors)}",
-            f"- Warnings: {len(result.warnings)}",
-            f"- Info: {len(result.info)}",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                f"- Errors: {len(result.errors)}",
+                f"- Warnings: {len(result.warnings)}",
+                f"- Info: {len(result.info)}",
+                "",
+            ]
+        )
 
         if result.errors:
             lines.append("## Errors (Must Fix)")

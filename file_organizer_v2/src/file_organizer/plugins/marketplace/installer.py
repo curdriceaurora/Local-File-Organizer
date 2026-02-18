@@ -1,4 +1,5 @@
 """Plugin installation and update orchestration for marketplace packages."""
+
 from __future__ import annotations
 
 import json
@@ -62,9 +63,7 @@ class PluginInstaller:
             raise MarketplaceInstallError(str(exc)) from exc
         if normalized_name in install_stack:
             cycle = " -> ".join([*install_stack, normalized_name])
-            raise MarketplaceInstallError(
-                f"Circular plugin dependency detected: {cycle}."
-            )
+            raise MarketplaceInstallError(f"Circular plugin dependency detected: {cycle}.")
         install_stack.append(normalized_name)
 
         try:
@@ -195,7 +194,9 @@ class PluginInstaller:
                 try:
                     target.relative_to(destination_root)
                 except ValueError as exc:
-                    raise MarketplaceInstallError("Plugin archive extraction escaped target path.") from exc
+                    raise MarketplaceInstallError(
+                        "Plugin archive extraction escaped target path."
+                    ) from exc
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with archive.open(info, "r") as source, target.open("wb") as handle:
                     shutil.copyfileobj(source, handle)
@@ -210,7 +211,9 @@ class PluginInstaller:
         directory_children = [path for path in children if path.is_dir()]
         if len(directory_children) == 1 and (directory_children[0] / "plugin.py").exists():
             return directory_children[0]
-        raise MarketplaceInstallError("Plugin archive must include plugin.py at root or one top-level directory.")
+        raise MarketplaceInstallError(
+            "Plugin archive must include plugin.py at root or one top-level directory."
+        )
 
     def _load_installed(self) -> dict[str, InstalledPlugin]:
         if not self.installed_plugins_file.exists():

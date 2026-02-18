@@ -5,6 +5,7 @@ Provides a long-running daemon service that combines file watching
 with auto-organization, including PID file management, signal handling,
 and periodic task scheduling.
 """
+
 from __future__ import annotations
 
 from .config import DaemonConfig

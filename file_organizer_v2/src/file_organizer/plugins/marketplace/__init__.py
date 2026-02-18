@@ -1,4 +1,5 @@
 """Plugin marketplace primitives."""
+
 from __future__ import annotations
 
 from file_organizer.plugins.marketplace.errors import (
@@ -38,4 +39,3 @@ __all__ = [
     "compute_sha256",
     "utc_now_iso",
 ]
-

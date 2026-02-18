@@ -1,4 +1,5 @@
 """Plugin example that copies organized files to a backup directory."""
+
 from __future__ import annotations
 
 import shutil

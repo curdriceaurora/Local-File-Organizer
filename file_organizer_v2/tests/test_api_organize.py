@@ -1,4 +1,5 @@
 """API tests for organize endpoints."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -16,7 +17,9 @@ class DummyOrganizer:
     def __init__(self, *args, **kwargs) -> None:
         pass
 
-    def organize(self, input_path: str | Path, output_path: str | Path, skip_existing: bool = True) -> OrganizationResult:
+    def organize(
+        self, input_path: str | Path, output_path: str | Path, skip_existing: bool = True
+    ) -> OrganizationResult:
         return OrganizationResult(
             total_files=1,
             processed_files=1,

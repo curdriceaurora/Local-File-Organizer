@@ -4,6 +4,7 @@ Tests for QueryCache.
 Tests verify caching behaviour, TTL expiration, LRU eviction, table-based
 invalidation, and thread safety.
 """
+
 from __future__ import annotations
 
 import threading
@@ -16,6 +17,7 @@ from file_organizer.optimization.query_cache import CachedResult, QueryCache
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def cache() -> QueryCache:
@@ -32,6 +34,7 @@ def small_cache() -> QueryCache:
 # ---------------------------------------------------------------------------
 # Tests — Basic Get / Put
 # ---------------------------------------------------------------------------
+
 
 class TestBasicOperations:
     """Tests for get() and put()."""
@@ -77,6 +80,7 @@ class TestBasicOperations:
 # Tests — TTL Expiration
 # ---------------------------------------------------------------------------
 
+
 class TestTTLExpiration:
     """Tests for time-to-live based expiry."""
 
@@ -109,6 +113,7 @@ class TestTTLExpiration:
 # Tests — LRU Eviction
 # ---------------------------------------------------------------------------
 
+
 class TestLRUEviction:
     """Tests for least-recently-used eviction."""
 
@@ -139,6 +144,7 @@ class TestLRUEviction:
 # ---------------------------------------------------------------------------
 # Tests — Table Invalidation
 # ---------------------------------------------------------------------------
+
 
 class TestInvalidation:
     """Tests for invalidate() and clear()."""
@@ -176,6 +182,7 @@ class TestInvalidation:
 # Tests — Hit Rate
 # ---------------------------------------------------------------------------
 
+
 class TestHitRate:
     """Tests for hit_rate property."""
 
@@ -193,7 +200,7 @@ class TestHitRate:
     def test_mixed_hits_misses(self, cache: QueryCache) -> None:
         """Hit rate reflects the ratio of hits to total lookups."""
         cache.put("q1", "data")
-        cache.get("q1")   # hit
+        cache.get("q1")  # hit
         cache.get("miss")  # miss
         assert 0.4 < cache.hit_rate < 0.6  # ~0.5
 
@@ -201,6 +208,7 @@ class TestHitRate:
 # ---------------------------------------------------------------------------
 # Tests — make_hash
 # ---------------------------------------------------------------------------
+
 
 class TestMakeHash:
     """Tests for the static make_hash() helper."""
@@ -234,6 +242,7 @@ class TestMakeHash:
 # ---------------------------------------------------------------------------
 # Tests — Thread Safety
 # ---------------------------------------------------------------------------
+
 
 class TestCacheThreadSafety:
     """Tests for concurrent access."""
@@ -273,6 +282,7 @@ class TestCacheThreadSafety:
 # ---------------------------------------------------------------------------
 # Tests — Validation
 # ---------------------------------------------------------------------------
+
 
 class TestValidation:
     """Tests for constructor validation."""

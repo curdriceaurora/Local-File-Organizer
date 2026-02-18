@@ -1,4 +1,5 @@
 """Terminal User Interface for File Organizer."""
+
 from __future__ import annotations
 
 from file_organizer.tui.analytics_view import AnalyticsView

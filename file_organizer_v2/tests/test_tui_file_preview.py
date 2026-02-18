@@ -1,4 +1,5 @@
 """Tests for the TUI file preview and selection widgets."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -171,6 +172,5 @@ class TestTuiPreviewExports:
         )
 
         assert all(
-            cls is not None
-            for cls in (FilePreviewPanel, FilePreviewView, FileSelectionManager)
+            cls is not None for cls in (FilePreviewPanel, FilePreviewView, FileSelectionManager)
         )

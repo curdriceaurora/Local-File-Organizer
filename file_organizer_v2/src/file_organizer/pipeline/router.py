@@ -4,6 +4,7 @@ File routing for the auto-organization pipeline.
 Routes files to the appropriate processor based on file extension,
 with support for custom routing rules.
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,23 +27,58 @@ class ProcessorType(StrEnum):
 
 
 # Default extension-to-processor mappings
-_DEFAULT_TEXT_EXTENSIONS: frozenset[str] = frozenset({
-    ".txt", ".md", ".docx", ".doc", ".pdf", ".csv",
-    ".xlsx", ".xls", ".ppt", ".pptx", ".epub",
-    ".dwg", ".dxf", ".step", ".stp", ".iges", ".igs",
-})
+_DEFAULT_TEXT_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".txt",
+        ".md",
+        ".docx",
+        ".doc",
+        ".pdf",
+        ".csv",
+        ".xlsx",
+        ".xls",
+        ".ppt",
+        ".pptx",
+        ".epub",
+        ".dwg",
+        ".dxf",
+        ".step",
+        ".stp",
+        ".iges",
+        ".igs",
+    }
+)
 
-_DEFAULT_IMAGE_EXTENSIONS: frozenset[str] = frozenset({
-    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff",
-})
+_DEFAULT_IMAGE_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".tiff",
+    }
+)
 
-_DEFAULT_VIDEO_EXTENSIONS: frozenset[str] = frozenset({
-    ".mp4", ".avi", ".mkv", ".mov", ".wmv",
-})
+_DEFAULT_VIDEO_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".mp4",
+        ".avi",
+        ".mkv",
+        ".mov",
+        ".wmv",
+    }
+)
 
-_DEFAULT_AUDIO_EXTENSIONS: frozenset[str] = frozenset({
-    ".mp3", ".wav", ".flac", ".m4a", ".ogg",
-})
+_DEFAULT_AUDIO_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".mp3",
+        ".wav",
+        ".flac",
+        ".m4a",
+        ".ogg",
+    }
+)
 
 
 class FileRouter:
@@ -103,9 +139,7 @@ class FileRouter:
                     )
                     return processor_type
             except Exception:
-                logger.exception(
-                    "Error in custom routing rule for %s", file_path.name
-                )
+                logger.exception("Error in custom routing rule for %s", file_path.name)
                 continue
 
         # Fall back to extension-based routing

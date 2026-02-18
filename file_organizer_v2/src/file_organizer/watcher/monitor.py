@@ -4,6 +4,7 @@ File system monitor for real-time directory watching.
 Provides the FileMonitor class that manages watchdog observers,
 coordinates event handling, and supports dynamic directory management.
 """
+
 from __future__ import annotations
 
 import logging
@@ -274,7 +275,5 @@ class FileMonitor:
             raise FileNotFoundError(f"Watch directory does not exist: {path}")
 
         if self._observer is not None:
-            watch = self._observer.schedule(
-                self.handler, str(path), recursive=recursive
-            )
+            watch = self._observer.schedule(self.handler, str(path), recursive=recursive)
             self._watches[path_key] = watch

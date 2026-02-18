@@ -5,6 +5,7 @@ Defines the PipelineConfig dataclass that controls how the auto-organization
 pipeline behaves, including watch integration, output paths, concurrency,
 and dry-run safety defaults.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -16,19 +17,48 @@ if TYPE_CHECKING:
 
 
 # Default file extensions supported by the pipeline
-DEFAULT_SUPPORTED_EXTENSIONS: frozenset[str] = frozenset({
-    # Text
-    ".txt", ".md", ".docx", ".doc", ".pdf", ".csv",
-    ".xlsx", ".xls", ".ppt", ".pptx", ".epub",
-    # Images
-    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff",
-    # Video
-    ".mp4", ".avi", ".mkv", ".mov", ".wmv",
-    # Audio
-    ".mp3", ".wav", ".flac", ".m4a", ".ogg",
-    # CAD
-    ".dwg", ".dxf", ".step", ".stp", ".iges", ".igs",
-})
+DEFAULT_SUPPORTED_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        # Text
+        ".txt",
+        ".md",
+        ".docx",
+        ".doc",
+        ".pdf",
+        ".csv",
+        ".xlsx",
+        ".xls",
+        ".ppt",
+        ".pptx",
+        ".epub",
+        # Images
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".tiff",
+        # Video
+        ".mp4",
+        ".avi",
+        ".mkv",
+        ".mov",
+        ".wmv",
+        # Audio
+        ".mp3",
+        ".wav",
+        ".flac",
+        ".m4a",
+        ".ogg",
+        # CAD
+        ".dwg",
+        ".dxf",
+        ".step",
+        ".stp",
+        ".iges",
+        ".igs",
+    }
+)
 
 
 @dataclass
@@ -70,15 +100,12 @@ class PipelineConfig:
 
         # Validate max_concurrent
         if self.max_concurrent < 1:
-            raise ValueError(
-                f"max_concurrent must be at least 1, got {self.max_concurrent}"
-            )
+            raise ValueError(f"max_concurrent must be at least 1, got {self.max_concurrent}")
 
         # Normalize supported extensions to include leading dots
         if self.supported_extensions is not None:
             self.supported_extensions = {
-                ext if ext.startswith(".") else f".{ext}"
-                for ext in self.supported_extensions
+                ext if ext.startswith(".") else f".{ext}" for ext in self.supported_extensions
             }
 
     @property

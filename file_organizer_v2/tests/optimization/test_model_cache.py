@@ -368,10 +368,7 @@ class TestModelCacheThreadSafety:
             except Exception as e:
                 errors.append(str(e))
 
-        threads = [
-            threading.Thread(target=load_model, args=(f"model-{i}",))
-            for i in range(5)
-        ]
+        threads = [threading.Thread(target=load_model, args=(f"model-{i}",)) for i in range(5)]
         for t in threads:
             t.start()
         for t in threads:

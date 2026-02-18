@@ -1,4 +1,5 @@
 """Plugin architecture primitives."""
+
 from __future__ import annotations
 
 from file_organizer.plugins.api.hooks import (

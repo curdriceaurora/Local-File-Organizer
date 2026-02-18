@@ -4,6 +4,7 @@ Transaction context manager for batch operations.
 This module provides a context manager for grouping related file operations
 into atomic transactions that can be committed or rolled back.
 """
+
 from __future__ import annotations
 
 import logging
@@ -71,7 +72,9 @@ class OperationTransaction:
         if exc_type is not None:
             # Exception occurred, rollback
             if not self._rolled_back:
-                logger.warning(f"Transaction {self.transaction_id} failed with {exc_type.__name__}: {exc_val}")
+                logger.warning(
+                    f"Transaction {self.transaction_id} failed with {exc_type.__name__}: {exc_val}"
+                )
                 self.rollback()
         else:
             # Success, commit
@@ -87,7 +90,7 @@ class OperationTransaction:
         destination_path: Path | None = None,
         metadata: dict[str, Any] | None = None,
         status: OperationStatus = OperationStatus.COMPLETED,
-        error_message: str | None = None
+        error_message: str | None = None,
     ) -> int:
         """
         Log an operation within this transaction.
@@ -113,10 +116,12 @@ class OperationTransaction:
             metadata=metadata,
             transaction_id=self.transaction_id,
             status=status,
-            error_message=error_message
+            error_message=error_message,
         )
 
-    def log_move(self, source_path: Path, destination_path: Path, metadata: dict[str, Any] | None = None) -> int:
+    def log_move(
+        self, source_path: Path, destination_path: Path, metadata: dict[str, Any] | None = None
+    ) -> int:
         """
         Log a move operation.
 
@@ -132,10 +137,12 @@ class OperationTransaction:
             operation_type=OperationType.MOVE,
             source_path=source_path,
             destination_path=destination_path,
-            metadata=metadata
+            metadata=metadata,
         )
 
-    def log_rename(self, source_path: Path, destination_path: Path, metadata: dict[str, Any] | None = None) -> int:
+    def log_rename(
+        self, source_path: Path, destination_path: Path, metadata: dict[str, Any] | None = None
+    ) -> int:
         """
         Log a rename operation.
 
@@ -151,7 +158,7 @@ class OperationTransaction:
             operation_type=OperationType.RENAME,
             source_path=source_path,
             destination_path=destination_path,
-            metadata=metadata
+            metadata=metadata,
         )
 
     def log_delete(self, source_path: Path, metadata: dict[str, Any] | None = None) -> int:
@@ -166,12 +173,12 @@ class OperationTransaction:
             Operation ID
         """
         return self.log_operation(
-            operation_type=OperationType.DELETE,
-            source_path=source_path,
-            metadata=metadata
+            operation_type=OperationType.DELETE, source_path=source_path, metadata=metadata
         )
 
-    def log_copy(self, source_path: Path, destination_path: Path, metadata: dict[str, Any] | None = None) -> int:
+    def log_copy(
+        self, source_path: Path, destination_path: Path, metadata: dict[str, Any] | None = None
+    ) -> int:
         """
         Log a copy operation.
 
@@ -187,7 +194,7 @@ class OperationTransaction:
             operation_type=OperationType.COPY,
             source_path=source_path,
             destination_path=destination_path,
-            metadata=metadata
+            metadata=metadata,
         )
 
     def log_create(self, source_path: Path, metadata: dict[str, Any] | None = None) -> int:
@@ -202,9 +209,7 @@ class OperationTransaction:
             Operation ID
         """
         return self.log_operation(
-            operation_type=OperationType.CREATE,
-            source_path=source_path,
-            metadata=metadata
+            operation_type=OperationType.CREATE, source_path=source_path, metadata=metadata
         )
 
     def log_failed_operation(
@@ -213,7 +218,7 @@ class OperationTransaction:
         source_path: Path,
         error_message: str,
         destination_path: Path | None = None,
-        metadata: dict[str, Any] | None = None
+        metadata: dict[str, Any] | None = None,
     ) -> int:
         """
         Log a failed operation.
@@ -234,7 +239,7 @@ class OperationTransaction:
             destination_path=destination_path,
             metadata=metadata,
             status=OperationStatus.FAILED,
-            error_message=error_message
+            error_message=error_message,
         )
 
     def commit(self) -> bool:

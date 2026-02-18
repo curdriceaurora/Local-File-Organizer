@@ -3,6 +3,7 @@
 Provides topic-based routing with wildcard support, per-subscription
 filtering, and an optional middleware pipeline.
 """
+
 from __future__ import annotations
 
 import json
@@ -216,16 +217,12 @@ class PubSubManager:
         # --- before_consume middleware ---
         processed = self._pipeline.run_before_consume(topic, data)
         if processed is None:
-            logger.debug(
-                "Consume cancelled by middleware for '%s'", topic
-            )
+            logger.debug("Consume cancelled by middleware for '%s'", topic)
             return
 
         for sub in subs:
             if not sub.passes_filter(processed):
-                logger.debug(
-                    "Event filtered out for handler on '%s'", sub.topic
-                )
+                logger.debug("Event filtered out for handler on '%s'", sub.topic)
                 continue
 
             error: Exception | None = None

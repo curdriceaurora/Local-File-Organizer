@@ -108,11 +108,7 @@ def example_with_cover_extraction():
     reader = EnhancedEPUBReader()
 
     # Read with cover extraction
-    content = reader.read_epub(
-        epub_path,
-        extract_cover=True,
-        cover_output_dir=output_dir
-    )
+    content = reader.read_epub(epub_path, extract_cover=True, cover_output_dir=output_dir)
 
     print(f"\nTitle: {content.metadata.title}")
     print(f"Has Cover: {content.metadata.has_cover}")
@@ -167,6 +163,7 @@ def example_series_detection():
     for title in test_titles:
         # Simulate series detection
         from unittest.mock import Mock
+
         mock_book = Mock()
         mock_book.get_metadata = Mock(return_value=[])
 

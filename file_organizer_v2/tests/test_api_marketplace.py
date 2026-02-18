@@ -1,4 +1,5 @@
 """API tests for marketplace routes."""
+
 from __future__ import annotations
 
 import json
@@ -54,7 +55,9 @@ def _plugin_archive(repo_dir: Path, *, name: str, version: str) -> dict[str, obj
 
 
 def _write_repo(repo_dir: Path, plugins: list[dict[str, object]]) -> None:
-    (repo_dir / "index.json").write_text(json.dumps({"plugins": plugins}, indent=2), encoding="utf-8")
+    (repo_dir / "index.json").write_text(
+        json.dumps({"plugins": plugins}, indent=2), encoding="utf-8"
+    )
 
 
 def _build_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -128,4 +131,3 @@ def test_marketplace_install_updates_and_reviews(
     uninstall = client.delete("/api/v1/marketplace/plugins/alpha", headers=headers)
     assert uninstall.status_code == 200
     assert uninstall.json()["uninstalled"] is True
-

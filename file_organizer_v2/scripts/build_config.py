@@ -3,6 +3,7 @@
 Centralises version injection, bundled model list, platform detection,
 and excluded modules used by the build script and spec file.
 """
+
 from __future__ import annotations
 
 import platform

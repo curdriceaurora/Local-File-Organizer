@@ -3,6 +3,7 @@
 Manages rule sets stored as YAML files in the user's config directory.
 Each rule set is a separate ``.yaml`` file.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -42,9 +43,7 @@ class RuleManager:
         """
         if not self._rules_dir.is_dir():
             return []
-        return sorted(
-            p.stem for p in self._rules_dir.glob("*.yaml")
-        )
+        return sorted(p.stem for p in self._rules_dir.glob("*.yaml"))
 
     def load_rule_set(self, name: str = "default") -> RuleSet:
         """Load a rule set from disk.

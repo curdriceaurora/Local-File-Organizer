@@ -3,6 +3,7 @@ PARA Integration Tests
 
 Tests complete workflows and integration with file organizer system.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -103,6 +104,7 @@ class TestPARAWorkflow:
         # Make it old
         import os
         import time
+
         old_time = time.time() - (200 * 86400)
         os.utime(archive_file, (old_time, old_time))
 
@@ -193,9 +195,12 @@ class TestPARAMigrationScenarios:
 
         # All should have PROJECT as top or second scoring category
         project_high_scores = sum(
-            1 for r in results
-            if sorted(r.scores.values(), key=lambda x: x.score, reverse=True)[0].category == PARACategory.PROJECT
-            or sorted(r.scores.values(), key=lambda x: x.score, reverse=True)[1].category == PARACategory.PROJECT
+            1
+            for r in results
+            if sorted(r.scores.values(), key=lambda x: x.score, reverse=True)[0].category
+            == PARACategory.PROJECT
+            or sorted(r.scores.values(), key=lambda x: x.score, reverse=True)[1].category
+            == PARACategory.PROJECT
         )
         assert project_high_scores >= 2  # At least 2 out of 3 should have PROJECT in top 2
 

@@ -5,6 +5,7 @@ This module provides directory-scoped preferences with parent directory
 inheritance, allowing fine-grained control over file organization behavior
 at different levels of the directory tree.
 """
+
 from __future__ import annotations
 
 import logging
@@ -29,12 +30,7 @@ class DirectoryPrefs:
         self._preferences: dict[str, dict] = {}
         logger.debug("DirectoryPrefs initialized")
 
-    def set_preference(
-        self,
-        path: Path,
-        pref: dict,
-        override_parent: bool = False
-    ) -> None:
+    def set_preference(self, path: Path, pref: dict, override_parent: bool = False) -> None:
         """
         Set a preference for a specific directory.
 
@@ -54,21 +50,12 @@ class DirectoryPrefs:
         normalized_path = str(path.resolve())
 
         # Add metadata to preference
-        pref_with_meta = {
-            **pref,
-            "_override_parent": override_parent,
-            "_path": normalized_path
-        }
+        pref_with_meta = {**pref, "_override_parent": override_parent, "_path": normalized_path}
 
         self._preferences[normalized_path] = pref_with_meta
-        logger.debug(
-            f"Set preference for {normalized_path}, override_parent={override_parent}"
-        )
+        logger.debug(f"Set preference for {normalized_path}, override_parent={override_parent}")
 
-    def get_preference_with_inheritance(
-        self,
-        path: Path
-    ) -> dict | None:
+    def get_preference_with_inheritance(self, path: Path) -> dict | None:
         """
         Get preference for a path, with inheritance from parent directories.
 
@@ -110,9 +97,7 @@ class DirectoryPrefs:
 
                 # Stop if this preference overrides parent
                 if pref.get("_override_parent", False):
-                    logger.debug(
-                        f"Stopping inheritance at {current_str} (override_parent=True)"
-                    )
+                    logger.debug(f"Stopping inheritance at {current_str} (override_parent=True)")
                     break
 
             # Move to parent directory
@@ -129,14 +114,10 @@ class DirectoryPrefs:
         merged = self._merge_preferences(preferences_chain)
 
         # Remove internal metadata from result
-        result = {
-            k: v for k, v in merged.items()
-            if not k.startswith("_")
-        }
+        result = {k: v for k, v in merged.items() if not k.startswith("_")}
 
         logger.debug(
-            f"Resolved preference for {normalized_path} "
-            f"(merged {len(preferences_chain)} levels)"
+            f"Resolved preference for {normalized_path} (merged {len(preferences_chain)} levels)"
         )
         return result
 
@@ -203,10 +184,7 @@ class DirectoryPrefs:
 
         for path_str, pref in self._preferences.items():
             # Remove internal metadata
-            clean_pref = {
-                k: v for k, v in pref.items()
-                if not k.startswith("_")
-            }
+            clean_pref = {k: v for k, v in pref.items() if not k.startswith("_")}
             result.append((Path(path_str), clean_pref))
 
         logger.debug(f"Listed {len(result)} directory preferences")
@@ -270,12 +248,11 @@ class DirectoryPrefs:
             1
         """
         override_count = sum(
-            1 for pref in self._preferences.values()
-            if pref.get("_override_parent", False)
+            1 for pref in self._preferences.values() if pref.get("_override_parent", False)
         )
 
         return {
             "total_directories": len(self._preferences),
             "override_parent_count": override_count,
-            "inheritance_enabled_count": len(self._preferences) - override_count
+            "inheritance_enabled_count": len(self._preferences) - override_count,
         }

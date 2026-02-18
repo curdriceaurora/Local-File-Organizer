@@ -1,4 +1,5 @@
 """Plugin API hook and webhook orchestration."""
+
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
@@ -143,9 +144,7 @@ class PluginHookManager:
             new_list = [
                 existing
                 for existing in registrations
-                if not (
-                    existing.plugin_id == plugin_id and existing.callback_url == normalized_url
-                )
+                if not (existing.plugin_id == plugin_id and existing.callback_url == normalized_url)
             ]
             if len(new_list) == len(registrations):
                 return False
@@ -172,7 +171,9 @@ class PluginHookManager:
             else:
                 candidates = list(self._webhooks.get(event, []))
         if plugin_id is not None:
-            candidates = [registration for registration in candidates if registration.plugin_id == plugin_id]
+            candidates = [
+                registration for registration in candidates if registration.plugin_id == plugin_id
+            ]
         return sorted(
             candidates,
             key=lambda registration: (

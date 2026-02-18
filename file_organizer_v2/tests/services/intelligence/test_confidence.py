@@ -4,6 +4,7 @@ Unit tests for Confidence Engine
 Tests multi-factor confidence scoring, time decay, pattern boosting,
 and trend analysis functionality.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -23,15 +24,11 @@ class TestUsageRecord:
     def test_create_usage_record(self):
         """Test creating a usage record."""
         timestamp = datetime.now(timezone.utc)
-        record = UsageRecord(
-            timestamp=timestamp,
-            success=True,
-            context={'action': 'file_move'}
-        )
+        record = UsageRecord(timestamp=timestamp, success=True, context={"action": "file_move"})
 
         assert record.timestamp == timestamp
         assert record.success is True
-        assert record.context['action'] == 'file_move'
+        assert record.context["action"] == "file_move"
 
     def test_usage_record_defaults(self):
         """Test usage record with default context."""
@@ -98,10 +95,7 @@ class TestConfidenceEngine:
 
     def test_custom_initialization(self):
         """Test confidence engine with custom parameters."""
-        engine = ConfidenceEngine(
-            decay_half_life_days=60,
-            old_pattern_threshold_days=120
-        )
+        engine = ConfidenceEngine(decay_half_life_days=60, old_pattern_threshold_days=120)
 
         assert engine.decay_half_life_days == 60
         assert engine.old_pattern_threshold_days == 120
@@ -145,7 +139,7 @@ class TestConfidenceEngine:
 
         # 5 successes, 5 failures
         for i in range(10):
-            success = (i % 2 == 0)
+            success = i % 2 == 0
             engine.track_usage("pattern1", now - timedelta(days=i), success=success)
 
         confidence = engine.calculate_confidence("pattern1")
@@ -218,27 +212,19 @@ class TestConfidenceEngine:
         now = datetime.now(timezone.utc)
 
         patterns = [
-            {
-                'id': 'p1',
-                'confidence': 0.8,
-                'last_used': (now - timedelta(days=100)).isoformat()
-            },
-            {
-                'id': 'p2',
-                'confidence': 0.8,
-                'last_used': now.isoformat()
-            }
+            {"id": "p1", "confidence": 0.8, "last_used": (now - timedelta(days=100)).isoformat()},
+            {"id": "p2", "confidence": 0.8, "last_used": now.isoformat()},
         ]
 
         decayed = engine.decay_old_patterns(patterns, current_time=now)
 
         # Old pattern should have lower confidence
-        assert decayed[0]['confidence'] < 0.8
-        assert decayed[0]['decayed'] is True
+        assert decayed[0]["confidence"] < 0.8
+        assert decayed[0]["decayed"] is True
 
         # Recent pattern should be unchanged
-        assert decayed[1]['confidence'] == 0.8
-        assert 'decayed' not in decayed[1]
+        assert decayed[1]["confidence"] == 0.8
+        assert "decayed" not in decayed[1]
 
     def test_boost_recent_patterns(self):
         """Test confidence boost for recent patterns."""
@@ -246,27 +232,19 @@ class TestConfidenceEngine:
         now = datetime.now(timezone.utc)
 
         patterns = [
-            {
-                'id': 'p1',
-                'confidence': 0.6,
-                'last_used': (now - timedelta(days=2)).isoformat()
-            },
-            {
-                'id': 'p2',
-                'confidence': 0.6,
-                'last_used': (now - timedelta(days=30)).isoformat()
-            }
+            {"id": "p1", "confidence": 0.6, "last_used": (now - timedelta(days=2)).isoformat()},
+            {"id": "p2", "confidence": 0.6, "last_used": (now - timedelta(days=30)).isoformat()},
         ]
 
         boosted = engine.boost_recent_patterns(patterns, current_time=now)
 
         # Recent pattern should be boosted
-        assert boosted[0]['confidence'] > 0.6
-        assert boosted[0]['boosted'] is True
+        assert boosted[0]["confidence"] > 0.6
+        assert boosted[0]["boosted"] is True
 
         # Old pattern should be unchanged
-        assert boosted[1]['confidence'] == 0.6
-        assert 'boosted' not in boosted[1]
+        assert boosted[1]["confidence"] == 0.6
+        assert "boosted" not in boosted[1]
 
     def test_validate_confidence_threshold(self):
         """Test confidence threshold validation."""
@@ -293,12 +271,12 @@ class TestConfidenceEngine:
         # Improving trend: more successes in recent period
         for i in range(20):
             success = i > 10  # First half failures, second half successes
-            engine.track_usage("pattern1", now - timedelta(days=19-i), success=success)
+            engine.track_usage("pattern1", now - timedelta(days=19 - i), success=success)
 
         trend = engine.get_confidence_trend("pattern1", current_time=now)
 
-        assert trend['direction'] in ['increasing', 'stable']
-        assert trend['confidence_change'] >= 0
+        assert trend["direction"] in ["increasing", "stable"]
+        assert trend["confidence_change"] >= 0
 
     def test_get_confidence_trend_insufficient_data(self):
         """Test trend analysis with insufficient data."""
@@ -310,15 +288,15 @@ class TestConfidenceEngine:
         trend = engine.get_confidence_trend("pattern1", current_time=now)
 
         # With only 1 usage record, trend should be unknown or insufficient_data
-        assert trend['trend'] in ["unknown", "insufficient_data"]
-        assert trend['sample_size'] < 2
+        assert trend["trend"] in ["unknown", "insufficient_data"]
+        assert trend["sample_size"] < 2
 
     def test_track_usage(self):
         """Test tracking pattern usage."""
         engine = ConfidenceEngine()
         now = datetime.now(timezone.utc)
 
-        engine.track_usage("pattern1", now, success=True, context={'action': 'test'})
+        engine.track_usage("pattern1", now, success=True, context={"action": "test"})
 
         data = engine.get_usage_data("pattern1")
         assert data is not None
@@ -361,9 +339,9 @@ class TestConfidenceEngine:
     def test_confidence_weights_sum_to_one(self):
         """Test that confidence factor weights sum to 1.0."""
         assert (
-            ConfidenceEngine.FREQUENCY_WEIGHT +
-            ConfidenceEngine.RECENCY_WEIGHT +
-            ConfidenceEngine.CONSISTENCY_WEIGHT
+            ConfidenceEngine.FREQUENCY_WEIGHT
+            + ConfidenceEngine.RECENCY_WEIGHT
+            + ConfidenceEngine.CONSISTENCY_WEIGHT
         ) == 1.0
 
     def test_confidence_bounds(self):
@@ -373,10 +351,10 @@ class TestConfidenceEngine:
 
         # Test various scenarios
         scenarios = [
-            (1, True),    # Single success
+            (1, True),  # Single success
             (100, True),  # Many successes
             (10, False),  # Failures
-            (5, True),    # Few successes
+            (5, True),  # Few successes
         ]
 
         for count, success in scenarios:
@@ -389,5 +367,5 @@ class TestConfidenceEngine:
             assert ConfidenceEngine.MIN_CONFIDENCE <= confidence <= ConfidenceEngine.MAX_CONFIDENCE
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

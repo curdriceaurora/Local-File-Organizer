@@ -3,6 +3,7 @@
 Provides the ability to replay historical events from Redis Streams
 for debugging, recovery, and testing purposes.
 """
+
 from __future__ import annotations
 
 import logging
@@ -229,9 +230,7 @@ class EventReplayManager:
         events = self.replay_range(stream, start_time, end_time)
 
         if self._config.dry_run:
-            logger.info(
-                "Dry run: would replay %d events to consumer", len(events)
-            )
+            logger.info("Dry run: would replay %d events to consumer", len(events))
             return 0
 
         dispatched = 0

@@ -8,6 +8,7 @@ Provides a terminal-based UI for reviewing duplicate images with:
 - Batch review operations
 - User decision recording
 """
+
 from __future__ import annotations
 
 import shutil
@@ -27,6 +28,7 @@ from rich.table import Table
 
 class UserAction(Enum):
     """User actions for duplicate handling."""
+
     KEEP = "keep"
     DELETE = "delete"
     SKIP = "skip"
@@ -39,6 +41,7 @@ class UserAction(Enum):
 @dataclass
 class ImageMetadata:
     """Metadata for an image file."""
+
     path: Path
     width: int
     height: int
@@ -71,6 +74,7 @@ class ImageMetadata:
 @dataclass
 class DuplicateReview:
     """Result of reviewing a duplicate group."""
+
     files_to_keep: list[Path]
     files_to_delete: list[Path]
     skipped: bool = False
@@ -85,10 +89,7 @@ class ComparisonViewer:
     """
 
     def __init__(
-        self,
-        console: Console | None = None,
-        preview_width: int = 40,
-        preview_height: int = 20
+        self, console: Console | None = None, preview_width: int = 40, preview_height: int = 20
     ):
         """
         Initialize the ComparisonViewer.
@@ -104,9 +105,7 @@ class ComparisonViewer:
         self._terminal_width = shutil.get_terminal_size().columns
 
     def show_comparison(
-        self,
-        images: list[Path],
-        similarity_score: float | None = None
+        self, images: list[Path], similarity_score: float | None = None
     ) -> DuplicateReview:
         """
         Show comparison for a group of duplicate images.
@@ -146,9 +145,7 @@ class ComparisonViewer:
         return self._process_user_action(action, metadata_list)
 
     def batch_review(
-        self,
-        duplicate_groups: dict[str, list[Path]],
-        auto_select_best: bool = False
+        self, duplicate_groups: dict[str, list[Path]], auto_select_best: bool = False
     ) -> dict[Path, str]:
         """
         Review multiple groups of duplicates in batch.
@@ -163,7 +160,9 @@ class ComparisonViewer:
         decisions: dict[Path, str] = {}
         total_groups = len(duplicate_groups)
 
-        self.console.print(f"\n[bold cyan]Starting batch review of {total_groups} duplicate groups[/bold cyan]\n")
+        self.console.print(
+            f"\n[bold cyan]Starting batch review of {total_groups} duplicate groups[/bold cyan]\n"
+        )
 
         for idx, (group_id, images) in enumerate(duplicate_groups.items(), 1):
             self.console.print(f"\n[bold]Group {idx}/{total_groups}[/bold] (ID: {group_id[:8]}...)")
@@ -220,29 +219,20 @@ class ComparisonViewer:
             format=img_format,
             file_size=stat.st_size,
             modified_time=datetime.fromtimestamp(stat.st_mtime),
-            mode=mode
+            mode=mode,
         )
 
     def _display_comparison_header(
-        self,
-        image_count: int,
-        similarity_score: float | None = None
+        self, image_count: int, similarity_score: float | None = None
     ) -> None:
         """Display header for comparison."""
         header_text = f"Comparing {image_count} duplicate images"
         if similarity_score is not None:
             header_text += f" (Similarity: {similarity_score:.1f}%)"
 
-        self.console.print(Panel(
-            header_text,
-            style="bold cyan",
-            box=box.DOUBLE
-        ))
+        self.console.print(Panel(header_text, style="bold cyan", box=box.DOUBLE))
 
-    def _display_images_side_by_side(
-        self,
-        metadata_list: list[ImageMetadata]
-    ) -> None:
+    def _display_images_side_by_side(self, metadata_list: list[ImageMetadata]) -> None:
         """
         Display images side by side with metadata.
 
@@ -265,11 +255,7 @@ class ComparisonViewer:
                 self.console.print(table)
                 self.console.print()
 
-    def _create_image_info_table(
-        self,
-        index: int,
-        metadata: ImageMetadata
-    ) -> Table:
+    def _create_image_info_table(self, index: int, metadata: ImageMetadata) -> Table:
         """
         Create a table displaying image information.
 
@@ -284,7 +270,7 @@ class ComparisonViewer:
             title=f"[bold]Image {index}[/bold]",
             box=box.ROUNDED,
             show_header=False,
-            title_style="bold cyan"
+            title_style="bold cyan",
         )
 
         table.add_column("Property", style="cyan", no_wrap=True)
@@ -308,10 +294,7 @@ class ComparisonViewer:
         return table
 
     def _generate_ascii_preview(
-        self,
-        image_path: Path,
-        max_width: int = 40,
-        max_height: int = 15
+        self, image_path: Path, max_width: int = 40, max_height: int = 15
     ) -> str | None:
         """
         Generate ASCII art preview of image.
@@ -327,7 +310,7 @@ class ComparisonViewer:
         try:
             with Image.open(image_path) as img:
                 # Convert to grayscale
-                img = img.convert('L')
+                img = img.convert("L")
 
                 # Calculate aspect ratio preserving dimensions
                 aspect_ratio = img.width / img.height
@@ -342,16 +325,19 @@ class ComparisonViewer:
                 img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
                 # Convert to ASCII
-                ascii_chars = ' .:-=+*#%@'
+                ascii_chars = " .:-=+*#%@"
                 pixels = img.getdata()
 
                 ascii_lines = []
                 for i in range(0, len(pixels), new_width):
-                    row = pixels[i:i + new_width]
-                    ascii_row = ''.join(ascii_chars[min(p * len(ascii_chars) // 256, len(ascii_chars) - 1)] for p in row)
+                    row = pixels[i : i + new_width]
+                    ascii_row = "".join(
+                        ascii_chars[min(p * len(ascii_chars) // 256, len(ascii_chars) - 1)]
+                        for p in row
+                    )
                     ascii_lines.append(ascii_row)
 
-                return '\n'.join(ascii_lines)
+                return "\n".join(ascii_lines)
 
         except Exception:
             return None
@@ -375,21 +361,18 @@ class ComparisonViewer:
         self.console.print("  [q]   - Quit review")
 
         while True:
-            choice = Prompt.ask(
-                "\nYour choice",
-                default="a"
-            ).lower().strip()
+            choice = Prompt.ask("\nYour choice", default="a").lower().strip()
 
             # Parse choice
-            if choice == 'a':
+            if choice == "a":
                 return UserAction.AUTO_SELECT
-            elif choice == 's':
+            elif choice == "s":
                 return UserAction.SKIP
-            elif choice == 'k':
+            elif choice == "k":
                 return UserAction.KEEP_ALL
-            elif choice == 'd':
+            elif choice == "d":
                 return UserAction.DELETE_ALL
-            elif choice == 'q':
+            elif choice == "q":
                 return UserAction.QUIT
             elif choice.isdigit():
                 image_num = int(choice)
@@ -402,9 +385,7 @@ class ComparisonViewer:
                 self.console.print("[red]Invalid choice. Please try again.[/red]")
 
     def _process_user_action(
-        self,
-        action: UserAction,
-        metadata_list: list[ImageMetadata]
+        self, action: UserAction, metadata_list: list[ImageMetadata]
     ) -> DuplicateReview:
         """
         Process user action and return review result.
@@ -425,7 +406,9 @@ class ComparisonViewer:
             return DuplicateReview(all_paths, [])
 
         elif action == UserAction.DELETE_ALL:
-            if Confirm.ask("[bold red]Are you sure you want to delete ALL images?[/bold red]", default=False):
+            if Confirm.ask(
+                "[bold red]Are you sure you want to delete ALL images?[/bold red]", default=False
+            ):
                 return DuplicateReview([], all_paths)
             else:
                 return DuplicateReview([], [], skipped=True)
@@ -436,8 +419,7 @@ class ComparisonViewer:
         elif action == UserAction.KEEP:
             # Prompt for which image to keep
             choice = Prompt.ask(
-                "Which image to keep? (1-" + str(len(metadata_list)) + ")",
-                default="1"
+                "Which image to keep? (1-" + str(len(metadata_list)) + ")", default="1"
             )
 
             try:
@@ -489,8 +471,12 @@ class ComparisonViewer:
         best_metadata = scored[0][1]
 
         # Display selection
-        self.console.print(f"\n[green]Auto-selected best quality:[/green] {best_metadata.path.name}")
-        self.console.print(f"  Resolution: {best_metadata.dimensions}, Size: {best_metadata.size_mb:.2f} MB")
+        self.console.print(
+            f"\n[green]Auto-selected best quality:[/green] {best_metadata.path.name}"
+        )
+        self.console.print(
+            f"  Resolution: {best_metadata.dimensions}, Size: {best_metadata.size_mb:.2f} MB"
+        )
 
         # Keep best, delete others
         keep_path = best_metadata.path
@@ -516,13 +502,13 @@ class ComparisonViewer:
 
         # Format preference score
         format_scores = {
-            'PNG': 1.2,
-            'TIFF': 1.1,
-            'JPEG': 1.0,
-            'JPG': 1.0,
-            'WEBP': 0.9,
-            'GIF': 0.8,
-            'BMP': 0.7
+            "PNG": 1.2,
+            "TIFF": 1.1,
+            "JPEG": 1.0,
+            "JPG": 1.0,
+            "WEBP": 0.9,
+            "GIF": 0.8,
+            "BMP": 0.7,
         }
         format_score = format_scores.get(metadata.format.upper(), 0.5)
 
@@ -578,9 +564,7 @@ class ComparisonViewer:
             self.console.print(f"[red]Error loading image metadata: {e}[/red]")
 
     def interactive_select(
-        self,
-        images: list[Path],
-        prompt: str = "Select images to keep"
+        self, images: list[Path], prompt: str = "Select images to keep"
     ) -> list[Path]:
         """
         Interactive selection of images from a list.
@@ -609,18 +593,20 @@ class ComparisonViewer:
                 self.console.print(f"  [{idx}] {img_path.name} (could not load)")
 
         # Get selection
-        self.console.print("\n[yellow]Enter image numbers to keep (comma-separated, e.g., '1,3,5'):[/yellow]")
+        self.console.print(
+            "\n[yellow]Enter image numbers to keep (comma-separated, e.g., '1,3,5'):[/yellow]"
+        )
         self.console.print("[yellow]Or 'all' to keep all, 'none' to keep none[/yellow]")
 
         choice = Prompt.ask("Your selection", default="all").lower().strip()
 
-        if choice == 'all':
+        if choice == "all":
             return images
-        elif choice == 'none':
+        elif choice == "none":
             return []
         else:
             selected = []
-            for num_str in choice.split(','):
+            for num_str in choice.split(","):
                 try:
                     num = int(num_str.strip())
                     if 1 <= num <= len(images):

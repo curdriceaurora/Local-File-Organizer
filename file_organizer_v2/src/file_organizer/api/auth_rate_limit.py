@@ -1,4 +1,5 @@
 """Login rate limiting helpers."""
+
 from __future__ import annotations
 
 import time

@@ -1,4 +1,5 @@
 """Tests for TUI audio view."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,6 +24,7 @@ def _get_content(panel: object) -> str:
 # ---------------------------------------------------------------------------
 # Helper: create mock AudioMetadata and ClassificationResult
 # ---------------------------------------------------------------------------
+
 
 def _make_metadata(
     title: str | None = "Test Song",
@@ -71,6 +73,7 @@ def _make_classification(
 # Unit: AudioFileListPanel
 # ---------------------------------------------------------------------------
 
+
 class TestAudioFileListPanel:
     """Unit tests for AudioFileListPanel."""
 
@@ -96,6 +99,7 @@ class TestAudioFileListPanel:
 # ---------------------------------------------------------------------------
 # Unit: AudioMetadataPanel
 # ---------------------------------------------------------------------------
+
 
 class TestAudioMetadataPanel:
     """Unit tests for AudioMetadataPanel."""
@@ -123,6 +127,7 @@ class TestAudioMetadataPanel:
 # ---------------------------------------------------------------------------
 # Unit: AudioClassificationPanel
 # ---------------------------------------------------------------------------
+
 
 class TestAudioClassificationPanel:
     """Unit tests for AudioClassificationPanel."""
@@ -158,6 +163,7 @@ class TestAudioClassificationPanel:
 # Unit: helpers
 # ---------------------------------------------------------------------------
 
+
 class TestHelpers:
     """Unit tests for module-level helpers."""
 
@@ -173,6 +179,7 @@ class TestHelpers:
 # ---------------------------------------------------------------------------
 # Integration: AudioView in app context
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_audio_view_mounts() -> None:

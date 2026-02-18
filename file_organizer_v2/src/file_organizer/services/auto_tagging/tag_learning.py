@@ -4,6 +4,7 @@ Tag Learning Engine
 Learns from user tagging patterns to improve tag suggestions over time.
 Tracks tag usage, co-occurrences, and builds personalized tag models.
 """
+
 from __future__ import annotations
 
 import json
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TagPattern:
     """Represents a learned tag pattern."""
+
     pattern_type: str  # co-occurrence, frequency, context
     tags: list[str]
     frequency: float
@@ -30,20 +32,21 @@ class TagPattern:
         """Convert to dictionary."""
         data = asdict(self)
         if self.last_seen:
-            data['last_seen'] = self.last_seen.isoformat()
+            data["last_seen"] = self.last_seen.isoformat()
         return data
 
     @staticmethod
     def from_dict(data: dict) -> TagPattern:
         """Create from dictionary."""
-        if 'last_seen' in data and data['last_seen']:
-            data['last_seen'] = datetime.fromisoformat(data['last_seen'])
+        if "last_seen" in data and data["last_seen"]:
+            data["last_seen"] = datetime.fromisoformat(data["last_seen"])
         return TagPattern(**data)
 
 
 @dataclass
 class TagUsage:
     """Tracks usage statistics for a tag."""
+
     tag: str
     count: int = 0
     first_used: datetime | None = None
@@ -54,24 +57,26 @@ class TagUsage:
     def to_dict(self) -> dict:
         """Convert to dictionary."""
         return {
-            'tag': self.tag,
-            'count': self.count,
-            'first_used': self.first_used.isoformat() if self.first_used else None,
-            'last_used': self.last_used.isoformat() if self.last_used else None,
-            'file_types': list(self.file_types),
-            'contexts': self.contexts[-10:]  # Keep last 10 contexts
+            "tag": self.tag,
+            "count": self.count,
+            "first_used": self.first_used.isoformat() if self.first_used else None,
+            "last_used": self.last_used.isoformat() if self.last_used else None,
+            "file_types": list(self.file_types),
+            "contexts": self.contexts[-10:],  # Keep last 10 contexts
         }
 
     @staticmethod
     def from_dict(data: dict) -> TagUsage:
         """Create from dictionary."""
         return TagUsage(
-            tag=data['tag'],
-            count=data.get('count', 0),
-            first_used=datetime.fromisoformat(data['first_used']) if data.get('first_used') else None,
-            last_used=datetime.fromisoformat(data['last_used']) if data.get('last_used') else None,
-            file_types=set(data.get('file_types', [])),
-            contexts=data.get('contexts', [])
+            tag=data["tag"],
+            count=data.get("count", 0),
+            first_used=datetime.fromisoformat(data["first_used"])
+            if data.get("first_used")
+            else None,
+            last_used=datetime.fromisoformat(data["last_used"]) if data.get("last_used") else None,
+            file_types=set(data.get("file_types", [])),
+            contexts=data.get("contexts", []),
         )
 
 
@@ -112,10 +117,7 @@ class TagLearningEngine:
         logger.info("TagLearningEngine initialized")
 
     def record_tag_application(
-        self,
-        file_path: Path,
-        tags: list[str],
-        context: dict | None = None
+        self, file_path: Path, tags: list[str], context: dict | None = None
     ) -> None:
         """
         Record when a user applies tags to a file.
@@ -137,12 +139,7 @@ class TagLearningEngine:
         # Update tag usage statistics
         for tag in tags:
             if tag not in self.tag_usage:
-                self.tag_usage[tag] = TagUsage(
-                    tag=tag,
-                    first_used=now,
-                    last_used=now,
-                    count=1
-                )
+                self.tag_usage[tag] = TagUsage(tag=tag, first_used=now, last_used=now, count=1)
             else:
                 usage = self.tag_usage[tag]
                 usage.count += 1
@@ -163,7 +160,7 @@ class TagLearningEngine:
 
         # Track tag co-occurrences
         for i, tag1 in enumerate(tags):
-            for tag2 in tags[i + 1:]:
+            for tag2 in tags[i + 1 :]:
                 self.tag_cooccurrence[tag1][tag2] += 1
                 self.tag_cooccurrence[tag2][tag1] += 1
 
@@ -190,14 +187,16 @@ class TagLearningEngine:
             # Calculate confidence based on frequency and recency
             confidence = self._calculate_tag_confidence(usage)
 
-            patterns.append(TagPattern(
-                pattern_type='frequency',
-                tags=[tag],
-                frequency=usage.count,
-                confidence=confidence,
-                contexts=usage.contexts[-5:],
-                last_seen=usage.last_used
-            ))
+            patterns.append(
+                TagPattern(
+                    pattern_type="frequency",
+                    tags=[tag],
+                    frequency=usage.count,
+                    confidence=confidence,
+                    contexts=usage.contexts[-5:],
+                    last_seen=usage.last_used,
+                )
+            )
 
         # Co-occurrence patterns
         for tag1, cooccur_tags in self.tag_cooccurrence.items():
@@ -209,20 +208,18 @@ class TagLearningEngine:
                 total_tag1 = self.tag_usage[tag1].count
                 confidence = (count / total_tag1) * 100 if total_tag1 > 0 else 0
 
-                patterns.append(TagPattern(
-                    pattern_type='co-occurrence',
-                    tags=[tag1, tag2],
-                    frequency=count,
-                    confidence=confidence
-                ))
+                patterns.append(
+                    TagPattern(
+                        pattern_type="co-occurrence",
+                        tags=[tag1, tag2],
+                        frequency=count,
+                        confidence=confidence,
+                    )
+                )
 
         return patterns
 
-    def predict_tags(
-        self,
-        file_path: Path,
-        max_predictions: int = 5
-    ) -> list[tuple[str, float]]:
+    def predict_tags(self, file_path: Path, max_predictions: int = 5) -> list[tuple[str, float]]:
         """
         Predict tags for a file based on learned patterns.
 
@@ -254,11 +251,7 @@ class TagLearningEngine:
                 predictions[tag] = max(predictions.get(tag, 0), confidence * 1.1)
 
         # Sort by confidence
-        sorted_predictions = sorted(
-            predictions.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+        sorted_predictions = sorted(predictions.items(), key=lambda x: x[1], reverse=True)
 
         return sorted_predictions[:max_predictions]
 
@@ -296,9 +289,9 @@ class TagLearningEngine:
         logger.info(f"Updating model with {len(feedback)} feedback items")
 
         for item in feedback:
-            file_path = Path(item['file_path'])
-            accepted = item.get('accepted_tags', [])
-            rejected = item.get('rejected_tags', [])
+            file_path = Path(item["file_path"])
+            accepted = item.get("accepted_tags", [])
+            rejected = item.get("rejected_tags", [])
 
             # Record accepted tags
             if accepted:
@@ -308,10 +301,7 @@ class TagLearningEngine:
             for tag in rejected:
                 if tag in self.tag_usage:
                     # Reduce count slightly (but don't go below 1)
-                    self.tag_usage[tag].count = max(
-                        1,
-                        self.tag_usage[tag].count - 0.5
-                    )
+                    self.tag_usage[tag].count = max(1, self.tag_usage[tag].count - 0.5)
 
         self._save_data()
 
@@ -325,10 +315,7 @@ class TagLearningEngine:
         Returns:
             List of (tag, count) tuples
         """
-        tag_counts = [
-            (usage.tag, usage.count)
-            for usage in self.tag_usage.values()
-        ]
+        tag_counts = [(usage.tag, usage.count) for usage in self.tag_usage.values()]
 
         tag_counts.sort(key=lambda x: x[1], reverse=True)
         return tag_counts[:limit]
@@ -360,7 +347,7 @@ class TagLearningEngine:
         file_type: str | None = None,
         directory: str | None = None,
         existing_tags: list[str] | None = None,
-        limit: int = 10
+        limit: int = 10,
     ) -> list[tuple[str, float]]:
         """
         Get tag suggestions based on context.
@@ -405,11 +392,7 @@ class TagLearningEngine:
                 suggestions.pop(tag, None)
 
         # Sort and limit
-        sorted_suggestions = sorted(
-            suggestions.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+        sorted_suggestions = sorted(suggestions.items(), key=lambda x: x[1], reverse=True)
 
         return sorted_suggestions[:limit]
 
@@ -449,26 +432,20 @@ class TagLearningEngine:
         """Save learning data to disk."""
         try:
             data = {
-                'tag_usage': {
-                    tag: usage.to_dict()
-                    for tag, usage in self.tag_usage.items()
+                "tag_usage": {tag: usage.to_dict() for tag, usage in self.tag_usage.items()},
+                "tag_cooccurrence": {
+                    tag: dict(counter) for tag, counter in self.tag_cooccurrence.items()
                 },
-                'tag_cooccurrence': {
-                    tag: dict(counter)
-                    for tag, counter in self.tag_cooccurrence.items()
+                "file_type_tags": {
+                    ft: dict(counter) for ft, counter in self.file_type_tags.items()
                 },
-                'file_type_tags': {
-                    ft: dict(counter)
-                    for ft, counter in self.file_type_tags.items()
+                "directory_tags": {
+                    dir_: dict(counter) for dir_, counter in self.directory_tags.items()
                 },
-                'directory_tags': {
-                    dir_: dict(counter)
-                    for dir_, counter in self.directory_tags.items()
-                },
-                'last_updated': datetime.now().isoformat()
+                "last_updated": datetime.now().isoformat(),
             }
 
-            with open(self.storage_path, 'w') as f:
+            with open(self.storage_path, "w") as f:
                 json.dump(data, f, indent=2)
 
             logger.debug(f"Saved learning data to {self.storage_path}")
@@ -489,22 +466,22 @@ class TagLearningEngine:
             # Load tag usage
             self.tag_usage = {
                 tag: TagUsage.from_dict(usage_data)
-                for tag, usage_data in data.get('tag_usage', {}).items()
+                for tag, usage_data in data.get("tag_usage", {}).items()
             }
 
             # Load tag co-occurrence
             self.tag_cooccurrence = defaultdict(Counter)
-            for tag, counter_dict in data.get('tag_cooccurrence', {}).items():
+            for tag, counter_dict in data.get("tag_cooccurrence", {}).items():
                 self.tag_cooccurrence[tag] = Counter(counter_dict)
 
             # Load file type tags
             self.file_type_tags = defaultdict(Counter)
-            for ft, counter_dict in data.get('file_type_tags', {}).items():
+            for ft, counter_dict in data.get("file_type_tags", {}).items():
                 self.file_type_tags[ft] = Counter(counter_dict)
 
             # Load directory tags
             self.directory_tags = defaultdict(Counter)
-            for dir_, counter_dict in data.get('directory_tags', {}).items():
+            for dir_, counter_dict in data.get("directory_tags", {}).items():
                 self.directory_tags[dir_] = Counter(counter_dict)
 
             logger.info(f"Loaded learning data: {len(self.tag_usage)} tags tracked")

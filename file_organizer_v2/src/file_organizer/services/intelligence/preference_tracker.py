@@ -12,6 +12,7 @@ Features:
 - Preference confidence and frequency tracking
 - Real-time preference updates
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -24,6 +25,7 @@ from typing import Any
 
 class PreferenceType(Enum):
     """Types of preferences that can be tracked."""
+
     FOLDER_MAPPING = "folder_mapping"
     NAMING_PATTERN = "naming_pattern"
     CATEGORY_OVERRIDE = "category_override"
@@ -33,6 +35,7 @@ class PreferenceType(Enum):
 
 class CorrectionType(Enum):
     """Types of corrections that can be tracked."""
+
     FILE_MOVE = "file_move"
     FILE_RENAME = "file_rename"
     CATEGORY_CHANGE = "category_change"
@@ -43,6 +46,7 @@ class CorrectionType(Enum):
 @dataclass
 class PreferenceMetadata:
     """Metadata associated with a preference."""
+
     created: datetime
     updated: datetime
     confidence: float = 0.5  # Initial confidence 0.5
@@ -58,7 +62,7 @@ class PreferenceMetadata:
             "confidence": self.confidence,
             "frequency": self.frequency,
             "last_used": self.last_used.isoformat() if self.last_used else None,
-            "source": self.source
+            "source": self.source,
         }
 
     @staticmethod
@@ -70,13 +74,14 @@ class PreferenceMetadata:
             confidence=data.get("confidence", 0.5),
             frequency=data.get("frequency", 1),
             last_used=datetime.fromisoformat(data["last_used"]) if data.get("last_used") else None,
-            source=data.get("source", "user_correction")
+            source=data.get("source", "user_correction"),
         )
 
 
 @dataclass
 class Preference:
     """A tracked preference with its metadata."""
+
     preference_type: PreferenceType
     key: str  # Identifier for the preference (e.g., file pattern, category name)
     value: Any  # The preference value
@@ -90,7 +95,7 @@ class Preference:
             "key": self.key,
             "value": self.value,
             "metadata": self.metadata.to_dict(),
-            "context": self.context
+            "context": self.context,
         }
 
     @staticmethod
@@ -101,13 +106,14 @@ class Preference:
             key=data["key"],
             value=data["value"],
             metadata=PreferenceMetadata.from_dict(data["metadata"]),
-            context=data.get("context", {})
+            context=data.get("context", {}),
         )
 
 
 @dataclass
 class Correction:
     """A user correction that informs preferences."""
+
     correction_type: CorrectionType
     source: Path
     destination: Path
@@ -120,7 +126,7 @@ class Correction:
         key_parts = [
             self.correction_type.value,
             str(self.source.suffix.lower()) if self.source.suffix else "no_ext",
-            str(self.destination.parent.name) if self.destination.parent else "root"
+            str(self.destination.parent.name) if self.destination.parent else "root",
         ]
         return "|".join(key_parts)
 
@@ -131,7 +137,7 @@ class Correction:
             "source": str(self.source),
             "destination": str(self.destination),
             "timestamp": self.timestamp.isoformat(),
-            "context": self.context
+            "context": self.context,
         }
 
 
@@ -153,7 +159,7 @@ class PreferenceTracker:
             "total_corrections": 0,
             "total_preferences": 0,
             "successful_applications": 0,
-            "failed_applications": 0
+            "failed_applications": 0,
         }
 
     def track_correction(
@@ -161,7 +167,7 @@ class PreferenceTracker:
         source: Path,
         destination: Path,
         correction_type: CorrectionType,
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
     ) -> None:
         """
         Track a user correction and update preferences accordingly.
@@ -181,7 +187,7 @@ class PreferenceTracker:
                 source=source,
                 destination=destination,
                 timestamp=now,
-                context=context or {}
+                context=context or {},
             )
 
             self._corrections.append(correction)
@@ -222,7 +228,7 @@ class PreferenceTracker:
             pref_key = pattern_key
             pref_value = {
                 "destination": str(correction.destination),
-                "source": str(correction.source)
+                "source": str(correction.source),
             }
 
         # Check if preference already exists
@@ -236,8 +242,9 @@ class PreferenceTracker:
 
             # Increase confidence based on frequency (cap at 0.95)
             confidence_increase = min(0.05, (1.0 - existing_pref.metadata.confidence) * 0.1)
-            existing_pref.metadata.confidence = min(0.95,
-                existing_pref.metadata.confidence + confidence_increase)
+            existing_pref.metadata.confidence = min(
+                0.95, existing_pref.metadata.confidence + confidence_increase
+            )
 
             # Update value if it changed
             if existing_pref.value != pref_value:
@@ -251,7 +258,7 @@ class PreferenceTracker:
                 confidence=0.5,  # Start with medium confidence
                 frequency=1,
                 last_used=now,
-                source="user_correction"
+                source="user_correction",
             )
 
             preference = Preference(
@@ -261,8 +268,8 @@ class PreferenceTracker:
                 metadata=metadata,
                 context={
                     "correction_type": correction.correction_type.value,
-                    "source_extension": correction.source.suffix.lower()
-                }
+                    "source_extension": correction.source.suffix.lower(),
+                },
             )
 
             # Add to preferences
@@ -272,11 +279,7 @@ class PreferenceTracker:
             self._preferences[storage_key].append(preference)
             self._statistics["total_preferences"] += 1
 
-    def _find_preference(
-        self,
-        preference_type: PreferenceType,
-        key: str
-    ) -> Preference | None:
+    def _find_preference(self, preference_type: PreferenceType, key: str) -> Preference | None:
         """
         Find an existing preference by type and key.
 
@@ -299,7 +302,7 @@ class PreferenceTracker:
         self,
         file_path: Path,
         preference_type: PreferenceType,
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
     ) -> Preference | None:
         """
         Get a preference for a given file path and type.
@@ -341,7 +344,7 @@ class PreferenceTracker:
             pattern_parts = [
                 preference_type.value,
                 file_path.suffix.lower() if file_path.suffix else "no_ext",
-                file_path.parent.name if file_path.parent else "root"
+                file_path.parent.name if file_path.parent else "root",
             ]
             pattern_key = "|".join(pattern_parts)
 
@@ -360,8 +363,7 @@ class PreferenceTracker:
             return best_pref
 
     def get_all_preferences(
-        self,
-        preference_type: PreferenceType | None = None
+        self, preference_type: PreferenceType | None = None
     ) -> list[Preference]:
         """
         Get all preferences, optionally filtered by type.
@@ -378,16 +380,11 @@ class PreferenceTracker:
                 all_prefs.extend(prefs_list)
 
             if preference_type:
-                all_prefs = [p for p in all_prefs
-                           if p.preference_type == preference_type]
+                all_prefs = [p for p in all_prefs if p.preference_type == preference_type]
 
             return all_prefs
 
-    def update_preference_confidence(
-        self,
-        preference: Preference,
-        success: bool
-    ) -> None:
+    def update_preference_confidence(self, preference: Preference, success: bool) -> None:
         """
         Update preference confidence based on application success.
 
@@ -400,14 +397,12 @@ class PreferenceTracker:
 
             if success:
                 # Increase confidence (cap at 0.98)
-                preference.metadata.confidence = min(0.98,
-                    preference.metadata.confidence + 0.05)
+                preference.metadata.confidence = min(0.98, preference.metadata.confidence + 0.05)
                 preference.metadata.last_used = now
                 self._statistics["successful_applications"] += 1
             else:
                 # Decrease confidence (floor at 0.1)
-                preference.metadata.confidence = max(0.1,
-                    preference.metadata.confidence - 0.1)
+                preference.metadata.confidence = max(0.1, preference.metadata.confidence - 0.1)
                 self._statistics["failed_applications"] += 1
 
             preference.metadata.updated = now
@@ -458,8 +453,7 @@ class PreferenceTracker:
                 keys_to_remove = []
 
                 for storage_key, prefs_list in self._preferences.items():
-                    filtered_prefs = [p for p in prefs_list
-                                    if p.preference_type != preference_type]
+                    filtered_prefs = [p for p in prefs_list if p.preference_type != preference_type]
                     count += len(prefs_list) - len(filtered_prefs)
 
                     if not filtered_prefs:
@@ -483,12 +477,11 @@ class PreferenceTracker:
         with self._lock:
             return {
                 "preferences": {
-                    key: [p.to_dict() for p in prefs]
-                    for key, prefs in self._preferences.items()
+                    key: [p.to_dict() for p in prefs] for key, prefs in self._preferences.items()
                 },
                 "corrections": [c.to_dict() for c in self._corrections],
                 "statistics": self._statistics.copy(),
-                "exported_at": datetime.now(timezone.utc).isoformat()
+                "exported_at": datetime.now(timezone.utc).isoformat(),
             }
 
     def import_data(self, data: dict) -> None:
@@ -505,9 +498,7 @@ class PreferenceTracker:
 
             # Import preferences
             for key, prefs_list in data.get("preferences", {}).items():
-                self._preferences[key] = [
-                    Preference.from_dict(p) for p in prefs_list
-                ]
+                self._preferences[key] = [Preference.from_dict(p) for p in prefs_list]
 
             # Import corrections
             for corr_data in data.get("corrections", []):
@@ -516,7 +507,7 @@ class PreferenceTracker:
                     source=Path(corr_data["source"]),
                     destination=Path(corr_data["destination"]),
                     timestamp=datetime.fromisoformat(corr_data["timestamp"]),
-                    context=corr_data.get("context", {})
+                    context=corr_data.get("context", {}),
                 )
                 self._corrections.append(correction)
 
@@ -536,8 +527,7 @@ class PreferenceTracker:
         """
         with self._lock:
             return [
-                c for c in self._corrections
-                if c.source == file_path or c.destination == file_path
+                c for c in self._corrections if c.source == file_path or c.destination == file_path
             ]
 
     def get_recent_corrections(self, limit: int = 10) -> list[Correction]:
@@ -551,15 +541,12 @@ class PreferenceTracker:
             List of recent corrections
         """
         with self._lock:
-            sorted_corrections = sorted(
-                self._corrections,
-                key=lambda c: c.timestamp,
-                reverse=True
-            )
+            sorted_corrections = sorted(self._corrections, key=lambda c: c.timestamp, reverse=True)
             return sorted_corrections[:limit]
 
 
 # Convenience functions for common operations
+
 
 def create_tracker() -> PreferenceTracker:
     """Create a new preference tracker instance."""
@@ -570,7 +557,7 @@ def track_file_move(
     tracker: PreferenceTracker,
     source: Path,
     destination: Path,
-    context: dict[str, Any] | None = None
+    context: dict[str, Any] | None = None,
 ) -> None:
     """
     Convenience function to track a file move correction.
@@ -585,7 +572,7 @@ def track_file_move(
         source=source,
         destination=destination,
         correction_type=CorrectionType.FILE_MOVE,
-        context=context
+        context=context,
     )
 
 
@@ -593,7 +580,7 @@ def track_file_rename(
     tracker: PreferenceTracker,
     source: Path,
     destination: Path,
-    context: dict[str, Any] | None = None
+    context: dict[str, Any] | None = None,
 ) -> None:
     """
     Convenience function to track a file rename correction.
@@ -608,7 +595,7 @@ def track_file_rename(
         source=source,
         destination=destination,
         correction_type=CorrectionType.FILE_RENAME,
-        context=context
+        context=context,
     )
 
 
@@ -617,7 +604,7 @@ def track_category_change(
     file_path: Path,
     old_category: str,
     new_category: str,
-    context: dict[str, Any] | None = None
+    context: dict[str, Any] | None = None,
 ) -> None:
     """
     Convenience function to track a category change correction.
@@ -630,14 +617,11 @@ def track_category_change(
         context: Additional context
     """
     ctx = context or {}
-    ctx.update({
-        "old_category": old_category,
-        "new_category": new_category
-    })
+    ctx.update({"old_category": old_category, "new_category": new_category})
 
     tracker.track_correction(
         source=file_path,
         destination=file_path,  # Same path for category change
         correction_type=CorrectionType.CATEGORY_CHANGE,
-        context=ctx
+        context=ctx,
     )

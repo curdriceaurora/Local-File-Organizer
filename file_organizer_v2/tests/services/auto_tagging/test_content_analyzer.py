@@ -1,4 +1,5 @@
 """Tests for ContentTagAnalyzer."""
+
 from __future__ import annotations
 
 import shutil
@@ -58,10 +59,7 @@ class TestContentTagAnalyzer:
 
     def test_initialization(self):
         """Test analyzer initialization."""
-        analyzer = ContentTagAnalyzer(
-            min_keyword_length=4,
-            max_keywords=15
-        )
+        analyzer = ContentTagAnalyzer(min_keyword_length=4, max_keywords=15)
         assert analyzer.min_keyword_length == 4
         assert analyzer.max_keywords == 15
         assert len(analyzer.stop_words) > 0
@@ -73,9 +71,9 @@ class TestContentTagAnalyzer:
         assert isinstance(tags, list)
         assert len(tags) > 0
         # Should extract from filename
-        assert 'test' in tags or 'document' in tags
+        assert "test" in tags or "document" in tags
         # Should extract from extension
-        assert 'txt' in tags
+        assert "txt" in tags
 
     def test_analyze_nonexistent_file(self, analyzer, temp_dir):
         """Test analyzing nonexistent file."""
@@ -141,24 +139,24 @@ class TestContentTagAnalyzer:
         tags = analyzer.analyze_file(file_path)
 
         # Should split filename by delimiters
-        assert 'machine' in tags or 'learning' in tags or 'tutorial' in tags
+        assert "machine" in tags or "learning" in tags or "tutorial" in tags
 
     def test_extract_from_extension(self, analyzer):
         """Test tag extraction from file extensions."""
         # Test document
         tags = analyzer._extract_from_extension(Path("test.pdf"))
-        assert 'pdf' in tags
-        assert 'document' in tags
+        assert "pdf" in tags
+        assert "document" in tags
 
         # Test image
         tags = analyzer._extract_from_extension(Path("photo.jpg"))
-        assert 'jpg' in tags
-        assert 'image' in tags
+        assert "jpg" in tags
+        assert "image" in tags
 
         # Test code
         tags = analyzer._extract_from_extension(Path("script.py"))
-        assert 'py' in tags
-        assert 'code' in tags
+        assert "py" in tags
+        assert "code" in tags
 
     def test_is_text_file(self, analyzer):
         """Test text file detection."""
@@ -184,12 +182,12 @@ class TestContentTagAnalyzer:
         # Should be lowercase
         assert all(w.islower() for w in words)
         # Should filter stop words
-        assert 'and' not in words
-        assert 'with' not in words
+        assert "and" not in words
+        assert "with" not in words
         # Should keep meaningful words
-        assert 'machine' in words
-        assert 'learning' in words
-        assert 'python' in words
+        assert "machine" in words
+        assert "learning" in words
+        assert "python" in words
 
     def test_clean_tags(self, analyzer):
         """Test tag cleaning."""
@@ -200,15 +198,15 @@ class TestContentTagAnalyzer:
             "ai",  # Too short by default
             "data_science",
             "test@tag",  # Has special char
-            ""  # Empty
+            "",  # Empty
         ]
 
         cleaned = analyzer._clean_tags(tags)
 
         # Should remove duplicates
-        assert cleaned.count('python') == 1
+        assert cleaned.count("python") == 1
         # Should remove special characters (turns machine-learning to machinelearning)
-        assert 'machinelearning' in cleaned or 'datascience' in cleaned
+        assert "machinelearning" in cleaned or "datascience" in cleaned
         # Should be lowercase
         assert all(tag.islower() for tag in cleaned)
 
@@ -222,7 +220,7 @@ class TestContentTagAnalyzer:
         tags = analyzer._extract_from_directory(file_path)
 
         # Should extract from parent directory name
-        assert 'machine' in tags or 'learning' in tags or 'projects' in tags
+        assert "machine" in tags or "learning" in tags or "projects" in tags
 
     def test_analyze_code_file(self, analyzer, sample_code_file):
         """Test analyzing a code file."""
@@ -231,9 +229,9 @@ class TestContentTagAnalyzer:
         assert isinstance(tags, list)
         assert len(tags) > 0
         # Should identify file type
-        assert 'py' in tags or 'code' in tags
+        assert "py" in tags or "code" in tags
         # Should extract from filename or content
-        assert 'example' in tags or 'script' in tags or 'processing' in tags or 'data' in tags
+        assert "example" in tags or "script" in tags or "processing" in tags or "data" in tags
 
     def test_max_keywords_limit(self, analyzer, sample_text_file):
         """Test that max_keywords limit is respected."""
@@ -250,9 +248,9 @@ class TestContentTagAnalyzer:
         words = analyzer._tokenize(text)
 
         # Should filter short words
-        assert 'deep' not in words  # Length 4
-        assert 'learning' in words  # Length 8
-        assert 'machine' in words  # Length 7
+        assert "deep" not in words  # Length 4
+        assert "learning" in words  # Length 8
+        assert "machine" in words  # Length 7
 
     def test_keyword_scoring(self, analyzer, sample_text_file):
         """Test that keywords are properly scored."""
@@ -273,4 +271,4 @@ class TestContentTagAnalyzer:
 
         # Should still extract from filename and extension
         assert len(tags) > 0
-        assert 'txt' in tags
+        assert "txt" in tags

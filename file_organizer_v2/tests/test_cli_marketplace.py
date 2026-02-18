@@ -1,4 +1,5 @@
 """CLI tests for marketplace commands."""
+
 from __future__ import annotations
 
 import json
@@ -84,4 +85,3 @@ def test_marketplace_list_and_install(tmp_path: Path, monkeypatch: pytest.Monkey
     installed_list = runner.invoke(app, ["marketplace", "installed"])
     assert installed_list.exit_code == 0
     assert "cli-plugin" in installed_list.output
-

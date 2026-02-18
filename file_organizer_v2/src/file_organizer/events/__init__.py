@@ -24,6 +24,7 @@ Example:
     >>> bus = ServiceBus(name="gateway")
     >>> bus.register_service("echo", lambda req: {"echo": req.payload})
 """
+
 from __future__ import annotations
 
 from file_organizer.events.audit import AuditEntry, AuditFilter, AuditLogger

@@ -1,4 +1,5 @@
 """CI lint guardrails for Python sources."""
+
 from __future__ import annotations
 
 import shutil
@@ -24,7 +25,4 @@ def test_ruff_full_lint() -> None:
         check=False,
     )
     if result.returncode != 0:
-        raise AssertionError(
-            "ruff linting failed:\n"
-            f"{result.stdout}\n{result.stderr}"
-        )
+        raise AssertionError(f"ruff linting failed:\n{result.stdout}\n{result.stderr}")

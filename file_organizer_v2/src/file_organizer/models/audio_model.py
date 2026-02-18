@@ -1,4 +1,5 @@
 """Audio model implementation (placeholder for Phase 3)."""
+
 from __future__ import annotations
 
 from typing import Any

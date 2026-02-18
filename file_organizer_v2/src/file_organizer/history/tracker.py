@@ -4,6 +4,7 @@ Operation tracker for logging file operations.
 This module provides the main interface for tracking file operations
 and managing operation history.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -47,7 +48,7 @@ class OperationHistory:
         metadata: dict[str, Any] | None = None,
         transaction_id: str | None = None,
         status: OperationStatus = OperationStatus.COMPLETED,
-        error_message: str | None = None
+        error_message: str | None = None,
     ) -> int:
         """
         Log a file operation to the database.
@@ -82,13 +83,15 @@ class OperationHistory:
         if source_path.exists():
             try:
                 stat = source_path.stat()
-                metadata.update({
-                    'size': stat.st_size,
-                    'mode': stat.st_mode,
-                    'mtime': datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    'is_file': source_path.is_file(),
-                    'is_dir': source_path.is_dir()
-                })
+                metadata.update(
+                    {
+                        "size": stat.st_size,
+                        "mode": stat.st_mode,
+                        "mtime": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                        "is_file": source_path.is_file(),
+                        "is_dir": source_path.is_dir(),
+                    }
+                )
             except Exception as e:
                 logger.warning(f"Failed to collect metadata for {source_path}: {e}")
 
@@ -105,14 +108,14 @@ class OperationHistory:
 
         params = (
             operation_type.value if isinstance(operation_type, OperationType) else operation_type,
-            timestamp.isoformat() + 'Z',
+            timestamp.isoformat() + "Z",
             str(source_path),
             str(destination_path) if destination_path else None,
             file_hash,
             metadata_json,
             transaction_id,
             status.value if isinstance(status, OperationStatus) else status,
-            error_message
+            error_message,
         )
 
         with self.db.transaction() as conn:
@@ -123,7 +126,7 @@ class OperationHistory:
             if transaction_id:
                 conn.execute(
                     "UPDATE transactions SET operation_count = operation_count + 1 WHERE transaction_id = ?",
-                    (transaction_id,)
+                    (transaction_id,),
                 )
 
         logger.debug(f"Logged operation {operation_id}: {operation_type.value} {source_path}")
@@ -140,6 +143,7 @@ class OperationHistory:
             Transaction ID
         """
         import uuid
+
         transaction_id = str(uuid.uuid4())
         started_at = datetime.utcnow()
 
@@ -152,9 +156,9 @@ class OperationHistory:
 
         params = (
             transaction_id,
-            started_at.isoformat() + 'Z',
+            started_at.isoformat() + "Z",
             TransactionStatus.IN_PROGRESS.value,
-            metadata_json
+            metadata_json,
         )
 
         self.db.execute_query(query, params)
@@ -181,11 +185,7 @@ class OperationHistory:
         WHERE transaction_id = ?
         """
 
-        params = (
-            TransactionStatus.COMPLETED.value,
-            completed_at.isoformat() + 'Z',
-            transaction_id
-        )
+        params = (TransactionStatus.COMPLETED.value, completed_at.isoformat() + "Z", transaction_id)
 
         try:
             self.db.execute_query(query, params)
@@ -211,13 +211,17 @@ class OperationHistory:
                 # Update transaction status
                 conn.execute(
                     "UPDATE transactions SET status = ?, completed_at = ? WHERE transaction_id = ?",
-                    (TransactionStatus.FAILED.value, datetime.utcnow().isoformat() + 'Z', transaction_id)
+                    (
+                        TransactionStatus.FAILED.value,
+                        datetime.utcnow().isoformat() + "Z",
+                        transaction_id,
+                    ),
                 )
 
                 # Update all operations in this transaction
                 conn.execute(
                     "UPDATE operations SET status = ? WHERE transaction_id = ?",
-                    (OperationStatus.ROLLED_BACK.value, transaction_id)
+                    (OperationStatus.ROLLED_BACK.value, transaction_id),
                 )
 
             logger.info(f"Rolled back transaction {transaction_id}")
@@ -233,7 +237,7 @@ class OperationHistory:
         status: OperationStatus | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
-        limit: int | None = None
+        limit: int | None = None,
     ) -> list[Operation]:
         """
         Query operations with optional filters.
@@ -254,7 +258,11 @@ class OperationHistory:
 
         if operation_type:
             query += " AND operation_type = ?"
-            params.append(operation_type.value if isinstance(operation_type, OperationType) else operation_type)
+            params.append(
+                operation_type.value
+                if isinstance(operation_type, OperationType)
+                else operation_type
+            )
 
         if transaction_id:
             query += " AND transaction_id = ?"
@@ -266,11 +274,11 @@ class OperationHistory:
 
         if start_date:
             query += " AND timestamp >= ?"
-            params.append(start_date.isoformat() + 'Z')
+            params.append(start_date.isoformat() + "Z")
 
         if end_date:
             query += " AND timestamp <= ?"
-            params.append(end_date.isoformat() + 'Z')
+            params.append(end_date.isoformat() + "Z")
 
         query += " ORDER BY timestamp DESC"
 

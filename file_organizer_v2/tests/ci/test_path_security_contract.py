@@ -1,4 +1,5 @@
 """Guardrails for filesystem path handling in API/web modules."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -15,7 +16,7 @@ pytestmark = pytest.mark.ci
 # code is reviewed for allow-root enforcement and CodeQL compatibility.
 _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
     "api/api_keys.py": {
-        "output_path = Path(argv[argv.index(\"--output\") + 1]).expanduser()",
+        'output_path = Path(argv[argv.index("--output") + 1]).expanduser()',
     },
     "api/config.py": {
         "path = Path(config_path).expanduser()",
@@ -46,7 +47,7 @@ _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
 
 _CODEQL_SUPPRESSED_SNIPPETS: dict[str, set[str]] = {
     "api/api_keys.py": {
-        "output_path = Path(argv[argv.index(\"--output\") + 1]).expanduser()",
+        'output_path = Path(argv[argv.index("--output") + 1]).expanduser()',
     },
     "api/config.py": {
         "path = Path(config_path).expanduser()",

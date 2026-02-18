@@ -1,4 +1,5 @@
 """Tests for daemon CLI commands."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -41,13 +42,19 @@ class TestDaemonStart:
         mock_svc = MagicMock()
         mock_svc_cls.return_value = mock_svc
 
-        result = runner.invoke(daemon_app, [
-            "start",
-            "--watch-dir", "/tmp/watch",
-            "--output-dir", "/tmp/out",
-            "--poll-interval", "2.0",
-            "--dry-run",
-        ])
+        result = runner.invoke(
+            daemon_app,
+            [
+                "start",
+                "--watch-dir",
+                "/tmp/watch",
+                "--output-dir",
+                "/tmp/out",
+                "--poll-interval",
+                "2.0",
+                "--dry-run",
+            ],
+        )
         assert result.exit_code == 0
         assert "Dry-run" in result.output
 
@@ -64,7 +71,9 @@ class TestDaemonStop:
 
     @patch("file_organizer.cli.daemon.os.kill")
     @patch("file_organizer.daemon.pid.PidFileManager")
-    def test_stop_success(self, mock_mgr_cls: MagicMock, mock_kill: MagicMock, tmp_path: Path) -> None:
+    def test_stop_success(
+        self, mock_mgr_cls: MagicMock, mock_kill: MagicMock, tmp_path: Path
+    ) -> None:
         pid_file = tmp_path / "daemon.pid"
         pid_file.write_text("12345")
         mock_mgr = MagicMock()

@@ -3,6 +3,7 @@ Unit tests for OperationValidator.
 
 Tests validation logic for undo/redo operations.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -43,7 +44,7 @@ class TestOperationValidator(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Move file to destination
@@ -63,7 +64,7 @@ class TestOperationValidator(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Don't move file - destination doesn't exist
@@ -80,7 +81,7 @@ class TestOperationValidator(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Move file to destination
@@ -93,7 +94,9 @@ class TestOperationValidator(unittest.TestCase):
         result = self.validator.validate_undo(operation)
 
         self.assertFalse(result.can_proceed)
-        self.assertTrue(any(c.conflict_type == ConflictType.PATH_OCCUPIED for c in result.conflicts))
+        self.assertTrue(
+            any(c.conflict_type == ConflictType.PATH_OCCUPIED for c in result.conflicts)
+        )
 
     def test_validate_undo_rename_success(self):
         """Test successful validation of rename undo."""
@@ -103,7 +106,7 @@ class TestOperationValidator(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Rename file
@@ -122,7 +125,7 @@ class TestOperationValidator(unittest.TestCase):
             operation_type=OperationType.DELETE,
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Move to trash
@@ -143,7 +146,7 @@ class TestOperationValidator(unittest.TestCase):
             operation_type=OperationType.DELETE,
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Don't move to trash
@@ -163,7 +166,7 @@ class TestOperationValidator(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         # Validate undo
@@ -180,7 +183,7 @@ class TestOperationValidator(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.ROLLED_BACK
+            status=OperationStatus.ROLLED_BACK,
         )
 
         result = self.validator.validate_undo(operation)
@@ -196,7 +199,7 @@ class TestOperationValidator(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.ROLLED_BACK
+            status=OperationStatus.ROLLED_BACK,
         )
 
         # File should be at source after rollback
@@ -216,7 +219,7 @@ class TestOperationValidator(unittest.TestCase):
             timestamp=datetime.utcnow(),
             source_path=self.source_file,
             destination_path=self.dest_file,
-            status=OperationStatus.COMPLETED
+            status=OperationStatus.COMPLETED,
         )
 
         result = self.validator.validate_redo(operation)
@@ -227,6 +230,7 @@ class TestOperationValidator(unittest.TestCase):
     def test_check_file_integrity_match(self):
         """Test file integrity check with matching hash."""
         import hashlib
+
         content = b"test content"
         self.source_file.write_bytes(content)
         expected_hash = hashlib.sha256(content).hexdigest()
@@ -255,5 +259,5 @@ class TestOperationValidator(unittest.TestCase):
         self.assertTrue(self.validator.check_path_available(self.dest_file))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

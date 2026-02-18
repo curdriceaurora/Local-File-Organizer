@@ -4,6 +4,7 @@ File hashing module for duplicate detection.
 Provides FileHasher class with MD5 and SHA256 support, chunked reading
 for large files, and batch processing capabilities.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -44,26 +45,18 @@ class FileHasher:
             ValueError: If chunk_size is not a valid integer in the allowed range.
         """
         if not isinstance(chunk_size, int) or isinstance(chunk_size, bool):
-            raise ValueError(
-                f"chunk_size must be an integer, got {type(chunk_size).__name__}"
-            )
+            raise ValueError(f"chunk_size must be an integer, got {type(chunk_size).__name__}")
         if chunk_size < self.MIN_CHUNK_SIZE:
             raise ValueError(
-                f"chunk_size must be at least {self.MIN_CHUNK_SIZE} bytes "
-                f"(1KB), got {chunk_size}"
+                f"chunk_size must be at least {self.MIN_CHUNK_SIZE} bytes (1KB), got {chunk_size}"
             )
         if chunk_size > self.MAX_CHUNK_SIZE:
             raise ValueError(
-                f"chunk_size must not exceed {self.MAX_CHUNK_SIZE} bytes "
-                f"(10MB), got {chunk_size}"
+                f"chunk_size must not exceed {self.MAX_CHUNK_SIZE} bytes (10MB), got {chunk_size}"
             )
         self.chunk_size = chunk_size
 
-    def compute_hash(
-        self,
-        file_path: Path,
-        algorithm: HashAlgorithm = "sha256"
-    ) -> str:
+    def compute_hash(self, file_path: Path, algorithm: HashAlgorithm = "sha256") -> str:
         """
         Compute hash of a single file.
 
@@ -91,10 +84,7 @@ class FileHasher:
         elif algorithm == "sha256":
             hasher = hashlib.sha256()
         else:
-            raise ValueError(
-                f"Unsupported algorithm: {algorithm}. "
-                f"Use 'md5' or 'sha256'."
-            )
+            raise ValueError(f"Unsupported algorithm: {algorithm}. Use 'md5' or 'sha256'.")
 
         # Read file in chunks for memory efficiency
         try:
@@ -110,9 +100,7 @@ class FileHasher:
         return hasher.hexdigest()
 
     def compute_batch(
-        self,
-        file_paths: list[Path],
-        algorithm: HashAlgorithm = "sha256"
+        self, file_paths: list[Path], algorithm: HashAlgorithm = "sha256"
     ) -> dict[Path, str]:
         """
         Compute hashes for multiple files.
@@ -179,8 +167,5 @@ class FileHasher:
         """
         algorithm = algorithm.lower()
         if algorithm not in ("md5", "sha256"):
-            raise ValueError(
-                f"Unsupported algorithm: {algorithm}. "
-                f"Use 'md5' or 'sha256'."
-            )
+            raise ValueError(f"Unsupported algorithm: {algorithm}. Use 'md5' or 'sha256'.")
         return algorithm  # type: ignore

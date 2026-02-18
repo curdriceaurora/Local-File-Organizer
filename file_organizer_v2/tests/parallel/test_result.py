@@ -129,8 +129,7 @@ class TestBatchResult(unittest.TestCase):
     def test_all_succeeded(self) -> None:
         """Test batch where all files succeeded."""
         results = [
-            FileResult(path=Path(f"file{i}.txt"), success=True, duration_ms=10.0)
-            for i in range(5)
+            FileResult(path=Path(f"file{i}.txt"), success=True, duration_ms=10.0) for i in range(5)
         ]
         batch = BatchResult(
             total=5,
@@ -257,9 +256,7 @@ class TestBatchResult(unittest.TestCase):
         """Test that results list is independent across instances."""
         batch1 = BatchResult()
         batch2 = BatchResult()
-        batch1.results.append(
-            FileResult(path=Path("a.txt"), success=True)
-        )
+        batch1.results.append(FileResult(path=Path("a.txt"), success=True))
         self.assertEqual(len(batch2.results), 0)
 
     def test_summary_throughput_formatting(self) -> None:

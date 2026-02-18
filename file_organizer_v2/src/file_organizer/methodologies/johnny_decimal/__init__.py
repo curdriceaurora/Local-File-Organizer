@@ -28,6 +28,7 @@ Based on the Johnny Decimal system by Johnny Noble (johnnydecimal.com).
 Author: File Organizer v2.0
 License: MIT
 """
+
 from __future__ import annotations
 
 from .adapters import (

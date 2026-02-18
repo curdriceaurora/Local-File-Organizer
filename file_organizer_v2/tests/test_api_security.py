@@ -1,4 +1,5 @@
 """API tests for security middleware and rate limiting."""
+
 from __future__ import annotations
 
 from pathlib import Path

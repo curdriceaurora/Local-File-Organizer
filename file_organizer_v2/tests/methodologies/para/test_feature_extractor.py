@@ -3,6 +3,7 @@
 Tests cover text feature extraction, metadata feature extraction,
 and structural feature extraction without any external dependencies.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -162,7 +163,9 @@ class TestExtractMetadataFeatures:
     """Tests for extract_metadata_features method."""
 
     def test_existing_file_returns_metadata(
-        self, extractor: FeatureExtractor, tmp_file: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_file: Path,
     ) -> None:
         """Should return populated metadata for an existing file."""
         features = extractor.extract_metadata_features(tmp_file)
@@ -179,28 +182,36 @@ class TestExtractMetadataFeatures:
         assert features.creation_date is None
 
     def test_days_since_modified_is_positive(
-        self, extractor: FeatureExtractor, tmp_file: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_file: Path,
     ) -> None:
         """Days since modified should be a non-negative float."""
         features = extractor.extract_metadata_features(tmp_file)
         assert features.days_since_modified >= 0.0
 
     def test_days_since_created_is_positive(
-        self, extractor: FeatureExtractor, tmp_file: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_file: Path,
     ) -> None:
         """Days since created should be a non-negative float."""
         features = extractor.extract_metadata_features(tmp_file)
         assert features.days_since_created >= 0.0
 
     def test_access_frequency_in_range(
-        self, extractor: FeatureExtractor, tmp_file: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_file: Path,
     ) -> None:
         """Access frequency should be between 0.0 and 1.0."""
         features = extractor.extract_metadata_features(tmp_file)
         assert 0.0 <= features.access_frequency <= 1.0
 
     def test_file_type_extracted_correctly(
-        self, extractor: FeatureExtractor, tmp_path: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
     ) -> None:
         """File extension should be correctly extracted."""
         md_file = tmp_path / "notes.md"
@@ -227,7 +238,9 @@ class TestExtractStructuralFeatures:
         assert features.directory_depth >= 3
 
     def test_sibling_count(
-        self, extractor: FeatureExtractor, tmp_path: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
     ) -> None:
         """Should count sibling files correctly."""
         for i in range(5):
@@ -237,7 +250,9 @@ class TestExtractStructuralFeatures:
         assert features.sibling_count == 4  # 5 files minus the target
 
     def test_parent_category_hint_project(
-        self, extractor: FeatureExtractor, tmp_path: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
     ) -> None:
         """Should detect 'project' hint from parent directory."""
         proj_dir = tmp_path / "projects"
@@ -248,7 +263,9 @@ class TestExtractStructuralFeatures:
         assert features.parent_category_hint == "project"
 
     def test_parent_category_hint_archive(
-        self, extractor: FeatureExtractor, tmp_path: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
     ) -> None:
         """Should detect 'archive' hint from parent directory."""
         arch_dir = tmp_path / "archive"
@@ -259,7 +276,9 @@ class TestExtractStructuralFeatures:
         assert features.parent_category_hint == "archive"
 
     def test_parent_category_hint_none(
-        self, extractor: FeatureExtractor, tmp_path: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
     ) -> None:
         """Should return None when parent directory is not a PARA indicator."""
         random_dir = tmp_path / "stuff"
@@ -270,7 +289,9 @@ class TestExtractStructuralFeatures:
         assert features.parent_category_hint is None
 
     def test_has_project_structure(
-        self, extractor: FeatureExtractor, tmp_project_dir: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_project_dir: Path,
     ) -> None:
         """Should detect project structure when README/pyproject.toml present."""
         f = tmp_project_dir / "report.pdf"
@@ -278,7 +299,9 @@ class TestExtractStructuralFeatures:
         assert features.has_project_structure is True
 
     def test_no_project_structure(
-        self, extractor: FeatureExtractor, tmp_path: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
     ) -> None:
         """Should not detect project structure in a plain directory."""
         f = tmp_path / "some_file.txt"
@@ -287,7 +310,9 @@ class TestExtractStructuralFeatures:
         assert features.has_project_structure is False
 
     def test_date_in_path_detected(
-        self, extractor: FeatureExtractor, tmp_path: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
     ) -> None:
         """Should detect date patterns in the file path."""
         dated_dir = tmp_path / "2024-01-15"
@@ -298,7 +323,9 @@ class TestExtractStructuralFeatures:
         assert features.has_date_in_path is True
 
     def test_no_date_in_path(
-        self, extractor: FeatureExtractor, tmp_path: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
     ) -> None:
         """Should not detect date when path has no date pattern."""
         f = tmp_path / "regular_file.txt"
@@ -307,7 +334,9 @@ class TestExtractStructuralFeatures:
         assert features.has_date_in_path is False
 
     def test_path_keywords_extracted(
-        self, extractor: FeatureExtractor, tmp_path: Path,
+        self,
+        extractor: FeatureExtractor,
+        tmp_path: Path,
     ) -> None:
         """Should extract keywords found in the file path."""
         ref_dir = tmp_path / "reference"

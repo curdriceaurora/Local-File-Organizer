@@ -4,6 +4,7 @@ Unit tests for the RateThrottler.
 Tests token-bucket rate limiting including acquire, wait, stats tracking,
 and concurrent access from multiple threads.
 """
+
 from __future__ import annotations
 
 import threading
@@ -181,10 +182,7 @@ class TestRateThrottler(unittest.TestCase):
             with lock:
                 completed.append(worker_id)
 
-        threads = [
-            threading.Thread(target=worker, args=(i,))
-            for i in range(10)
-        ]
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(10)]
         for t in threads:
             t.start()
         for t in threads:

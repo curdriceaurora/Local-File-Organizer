@@ -1,4 +1,5 @@
 """API configuration and settings loader."""
+
 from __future__ import annotations
 
 import json
@@ -360,9 +361,11 @@ def load_settings() -> ApiSettings:
         except json.JSONDecodeError:
             logger.warning("Invalid FO_API_RATE_LIMIT_RULES JSON value")
     if "FO_API_SECURITY_HEADERS_ENABLED" in env:
-        data["security_headers_enabled"] = env[
-            "FO_API_SECURITY_HEADERS_ENABLED"
-        ].lower() in ("1", "true", "yes")
+        data["security_headers_enabled"] = env["FO_API_SECURITY_HEADERS_ENABLED"].lower() in (
+            "1",
+            "true",
+            "yes",
+        )
     if "FO_API_SECURITY_CSP" in env:
         data["security_csp"] = env["FO_API_SECURITY_CSP"]
     if "FO_API_SECURITY_HSTS_SECONDS" in env:
@@ -374,9 +377,11 @@ def load_settings() -> ApiSettings:
                 env["FO_API_SECURITY_HSTS_SECONDS"],
             )
     if "FO_API_SECURITY_HSTS_SUBDOMAINS" in env:
-        data["security_hsts_subdomains"] = env[
-            "FO_API_SECURITY_HSTS_SUBDOMAINS"
-        ].lower() in ("1", "true", "yes")
+        data["security_hsts_subdomains"] = env["FO_API_SECURITY_HSTS_SUBDOMAINS"].lower() in (
+            "1",
+            "true",
+            "yes",
+        )
     if "FO_API_SECURITY_REFERRER_POLICY" in env:
         data["security_referrer_policy"] = env["FO_API_SECURITY_REFERRER_POLICY"]
 

@@ -1,4 +1,5 @@
 """Plugin sandbox policy primitives."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -37,7 +38,9 @@ class PluginSecurityPolicy:
     ) -> PluginSecurityPolicy:
         """Create a policy from user permissions/config values."""
         normalized_paths = frozenset(_normalize_path(path) for path in allowed_paths)
-        normalized_operations = frozenset(operation.strip().lower() for operation in allowed_operations)
+        normalized_operations = frozenset(
+            operation.strip().lower() for operation in allowed_operations
+        )
         return cls(
             allowed_paths=normalized_paths,
             allowed_operations=normalized_operations,
@@ -64,7 +67,10 @@ class PluginSandbox:
         if not self.policy.allowed_paths:
             return False
         candidate = _normalize_path(path)
-        return any(candidate == root or candidate.is_relative_to(root) for root in self.policy.allowed_paths)
+        return any(
+            candidate == root or candidate.is_relative_to(root)
+            for root in self.policy.allowed_paths
+        )
 
     def validate_operation(self, operation: str) -> bool:
         """Return whether the plugin may execute the provided operation."""

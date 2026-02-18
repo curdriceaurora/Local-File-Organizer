@@ -4,6 +4,7 @@ Audio Transcription Service
 Provides audio transcription capabilities using Faster-Whisper models.
 Supports multiple model sizes, languages, and advanced transcription options.
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class ModelSize(StrEnum):
     """Whisper model sizes."""
+
     TINY = "tiny"
     BASE = "base"
     SMALL = "small"
@@ -28,6 +30,7 @@ class ModelSize(StrEnum):
 
 class ComputeType(StrEnum):
     """Computation precision types."""
+
     FLOAT16 = "float16"
     FLOAT32 = "float32"
     INT8 = "int8"
@@ -37,6 +40,7 @@ class ComputeType(StrEnum):
 @dataclass
 class TranscriptionOptions:
     """Options for audio transcription."""
+
     language: str | None = None  # Auto-detect if None
     word_timestamps: bool = False
     beam_size: int = 5
@@ -54,6 +58,7 @@ class TranscriptionOptions:
 @dataclass
 class WordTiming:
     """Word-level timing information."""
+
     word: str
     start: float  # seconds
     end: float  # seconds
@@ -63,6 +68,7 @@ class WordTiming:
 @dataclass
 class Segment:
     """Transcription segment with timing."""
+
     id: int
     start: float
     end: float
@@ -75,6 +81,7 @@ class Segment:
 @dataclass
 class TranscriptionResult:
     """Complete transcription result."""
+
     text: str
     segments: list[Segment]
     language: str
@@ -139,6 +146,7 @@ class AudioTranscriber:
 
         try:
             import torch
+
             if torch.cuda.is_available():
                 return "cuda"
             elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -232,10 +240,7 @@ class AudioTranscriber:
 
         try:
             # Perform transcription
-            segments_iter, info = model.transcribe(
-                str(audio_path),
-                **transcribe_params
-            )
+            segments_iter, info = model.transcribe(str(audio_path), **transcribe_params)
 
             # Process segments
             segments = []
@@ -243,14 +248,9 @@ class AudioTranscriber:
 
             for seg in segments_iter:
                 words = []
-                if options.word_timestamps and hasattr(seg, 'words'):
+                if options.word_timestamps and hasattr(seg, "words"):
                     words = [
-                        WordTiming(
-                            word=w.word,
-                            start=w.start,
-                            end=w.end,
-                            probability=w.probability
-                        )
+                        WordTiming(word=w.word, start=w.start, end=w.end, probability=w.probability)
                         for w in seg.words
                     ]
 

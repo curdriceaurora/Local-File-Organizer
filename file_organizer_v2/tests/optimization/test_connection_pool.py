@@ -4,6 +4,7 @@ Tests for ConnectionPool.
 Tests verify thread safety, pool lifecycle, and error handling using
 temporary SQLite database files.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -18,6 +19,7 @@ from file_organizer.optimization.connection_pool import ConnectionPool, PoolStat
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def db_path(tmp_path: Path) -> Path:
@@ -46,6 +48,7 @@ def pool_with_table(pool: ConnectionPool, db_path: Path) -> ConnectionPool:
 # ---------------------------------------------------------------------------
 # Tests — Initialisation
 # ---------------------------------------------------------------------------
+
 
 class TestPoolInit:
     """Tests for pool creation and configuration."""
@@ -76,6 +79,7 @@ class TestPoolInit:
 # Tests — Acquire / Release
 # ---------------------------------------------------------------------------
 
+
 class TestAcquireRelease:
     """Tests for connection checkout and return."""
 
@@ -84,9 +88,7 @@ class TestAcquireRelease:
         with pool.acquire() as conn:
             assert isinstance(conn, sqlite3.Connection)
 
-    def test_connection_usable(
-        self, pool_with_table: ConnectionPool
-    ) -> None:
+    def test_connection_usable(self, pool_with_table: ConnectionPool) -> None:
         """Acquired connection can execute queries."""
         with pool_with_table.acquire() as conn:
             conn.execute("INSERT INTO test_data (value) VALUES (?)", ("hello",))
@@ -94,9 +96,7 @@ class TestAcquireRelease:
             cursor = conn.execute("SELECT COUNT(*) FROM test_data")
             assert cursor.fetchone()[0] == 1
 
-    def test_release_returns_connection_to_pool(
-        self, pool: ConnectionPool
-    ) -> None:
+    def test_release_returns_connection_to_pool(self, pool: ConnectionPool) -> None:
         """After exiting the context manager, connection goes back to idle."""
         with pool.acquire():
             assert pool.stats().active == 1
@@ -119,9 +119,7 @@ class TestAcquireRelease:
         # Same connection object should be reused.
         assert id1 == id2
 
-    def test_multiple_concurrent_connections(
-        self, pool: ConnectionPool
-    ) -> None:
+    def test_multiple_concurrent_connections(self, pool: ConnectionPool) -> None:
         """Multiple connections can be checked out simultaneously."""
         with pool.acquire() as c1:
             with pool.acquire() as c2:
@@ -133,6 +131,7 @@ class TestAcquireRelease:
 # ---------------------------------------------------------------------------
 # Tests — Pool Stats
 # ---------------------------------------------------------------------------
+
 
 class TestPoolStats:
     """Tests for stats reporting."""
@@ -167,12 +166,11 @@ class TestPoolStats:
 # Tests — Thread Safety
 # ---------------------------------------------------------------------------
 
+
 class TestThreadSafety:
     """Tests verifying thread-safe access."""
 
-    def test_concurrent_acquire_release(
-        self, pool_with_table: ConnectionPool
-    ) -> None:
+    def test_concurrent_acquire_release(self, pool_with_table: ConnectionPool) -> None:
         """Multiple threads can acquire and release without errors."""
         errors: list[str] = []
         barrier = threading.Barrier(5)
@@ -254,6 +252,7 @@ class TestThreadSafety:
 # Tests — Close / Lifecycle
 # ---------------------------------------------------------------------------
 
+
 class TestPoolClose:
     """Tests for pool shutdown."""
 
@@ -281,6 +280,7 @@ class TestPoolClose:
 # ---------------------------------------------------------------------------
 # Tests — WAL mode
 # ---------------------------------------------------------------------------
+
 
 class TestWALMode:
     """Tests for connection configuration."""

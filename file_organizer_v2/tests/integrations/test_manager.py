@@ -1,4 +1,5 @@
 """Unit tests for integration manager orchestration."""
+
 from __future__ import annotations
 
 import asyncio

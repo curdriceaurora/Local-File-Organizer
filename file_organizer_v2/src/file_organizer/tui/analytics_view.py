@@ -3,6 +3,7 @@
 Provides storage overview, file distribution chart, quality scores,
 and duplicate statistics in a scrollable panel layout.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -76,9 +77,7 @@ class FileDistributionPanel(Static):
             self.update("[b]File Distribution[/b]\n\n  [dim]No data.[/dim]")
             return
 
-        sorted_types = sorted(size_by_type.items(), key=lambda x: x[1], reverse=True)[
-            :top_n
-        ]
+        sorted_types = sorted(size_by_type.items(), key=lambda x: x[1], reverse=True)[:top_n]
         max_val = sorted_types[0][1] if sorted_types else 1
 
         lines = ["[b]File Distribution[/b]  (by size)\n"]

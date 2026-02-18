@@ -56,9 +56,7 @@ class TestGpuMemoryInfo:
 
     def test_gpu_memory_info_frozen(self) -> None:
         """Test that GpuMemoryInfo is immutable."""
-        info = GpuMemoryInfo(
-            total=1024, used=512, free=512, percent=50.0, device_name="GPU"
-        )
+        info = GpuMemoryInfo(total=1024, used=512, free=512, percent=50.0, device_name="GPU")
         with pytest.raises(AttributeError):
             info.total = 999  # type: ignore[misc]
 

@@ -3,6 +3,7 @@ Unit tests for ConflictResolver class.
 
 Tests conflict resolution with multiple weighting strategies.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -23,11 +24,7 @@ class TestConflictResolver:
     @pytest.fixture
     def custom_resolver(self):
         """Create a ConflictResolver with custom weights."""
-        return ConflictResolver(
-            recency_weight=0.5,
-            frequency_weight=0.3,
-            confidence_weight=0.2
-        )
+        return ConflictResolver(recency_weight=0.5, frequency_weight=0.3, confidence_weight=0.2)
 
     def test_initialization_default_weights(self, resolver):
         """Test ConflictResolver initializes with default weights."""
@@ -43,24 +40,16 @@ class TestConflictResolver:
 
     def test_initialization_weight_normalization(self):
         """Test that weights are normalized to sum to 1.0."""
-        resolver = ConflictResolver(
-            recency_weight=2.0,
-            frequency_weight=2.0,
-            confidence_weight=2.0
-        )
+        resolver = ConflictResolver(recency_weight=2.0, frequency_weight=2.0, confidence_weight=2.0)
         # Should normalize to equal weights
-        assert abs(resolver.recency_weight - 1/3) < 0.01
-        assert abs(resolver.frequency_weight - 1/3) < 0.01
-        assert abs(resolver.confidence_weight - 1/3) < 0.01
+        assert abs(resolver.recency_weight - 1 / 3) < 0.01
+        assert abs(resolver.frequency_weight - 1 / 3) < 0.01
+        assert abs(resolver.confidence_weight - 1 / 3) < 0.01
 
     def test_initialization_zero_weights_raises_error(self):
         """Test that all-zero weights raise ValueError."""
         with pytest.raises(ValueError, match="Weights cannot all be zero"):
-            ConflictResolver(
-                recency_weight=0.0,
-                frequency_weight=0.0,
-                confidence_weight=0.0
-            )
+            ConflictResolver(recency_weight=0.0, frequency_weight=0.0, confidence_weight=0.0)
 
     def test_resolve_empty_list_raises_error(self, resolver):
         """Test that resolving empty list raises ValueError."""
@@ -83,13 +72,13 @@ class TestConflictResolver:
             "folder_mappings": {"pdf": "Documents"},
             "updated": old_date,
             "correction_count": 10,
-            "confidence": 0.8
+            "confidence": 0.8,
         }
         recent_pref = {
             "folder_mappings": {"pdf": "PDFs"},
             "updated": recent_date,
             "correction_count": 10,
-            "confidence": 0.8
+            "confidence": 0.8,
         }
 
         result = resolver.resolve([old_pref, recent_pref])
@@ -105,13 +94,13 @@ class TestConflictResolver:
             "folder_mappings": {"pdf": "Documents"},
             "updated": now,
             "correction_count": 2,
-            "confidence": 0.8
+            "confidence": 0.8,
         }
         high_freq = {
             "folder_mappings": {"pdf": "PDFs"},
             "updated": now,
             "correction_count": 20,
-            "confidence": 0.8
+            "confidence": 0.8,
         }
 
         result = resolver.resolve([low_freq, high_freq])
@@ -127,13 +116,13 @@ class TestConflictResolver:
             "folder_mappings": {"pdf": "Documents"},
             "updated": now,
             "correction_count": 10,
-            "confidence": 0.5
+            "confidence": 0.5,
         }
         high_conf = {
             "folder_mappings": {"pdf": "PDFs"},
             "updated": now,
             "correction_count": 10,
-            "confidence": 0.95
+            "confidence": 0.95,
         }
 
         result = resolver.resolve([low_conf, high_conf])
@@ -150,14 +139,14 @@ class TestConflictResolver:
             "value": "pref1",
             "updated": now.isoformat() + "Z",
             "correction_count": 2,
-            "confidence": 0.5
+            "confidence": 0.5,
         }
         # Old but high frequency and confidence
         pref2 = {
             "value": "pref2",
             "updated": (now - timedelta(days=60)).isoformat() + "Z",
             "correction_count": 50,
-            "confidence": 0.95
+            "confidence": 0.95,
         }
 
         result = resolver.resolve([pref1, pref2])
@@ -173,13 +162,13 @@ class TestConflictResolver:
             "value": "pref1",
             "updated": (now - timedelta(days=1)).isoformat() + "Z",
             "correction_count": 10,
-            "confidence": 0.8
+            "confidence": 0.8,
         }
         pref2 = {
             "value": "pref2",
             "updated": now.isoformat() + "Z",
             "correction_count": 10,
-            "confidence": 0.8
+            "confidence": 0.8,
         }
 
         result = resolver.resolve([pref1, pref2])
@@ -270,8 +259,8 @@ class TestConflictResolver:
 
         # Due to sqrt, the weight ratio should be 2:4:8, not 4:16:64
         # Check that ratio is compressed
-        ratio_1_to_2 = weights[1] / weights[0] if weights[0] > 0 else float('inf')
-        ratio_2_to_3 = weights[2] / weights[1] if weights[1] > 0 else float('inf')
+        ratio_1_to_2 = weights[1] / weights[0] if weights[0] > 0 else float("inf")
+        ratio_2_to_3 = weights[2] / weights[1] if weights[1] > 0 else float("inf")
 
         # Ratio should be constant (around 2) due to sqrt
         assert abs(ratio_1_to_2 - 2.0) < 0.1
@@ -305,13 +294,9 @@ class TestConflictResolver:
             {
                 "updated": (now - timedelta(days=60)).isoformat() + "Z",
                 "correction_count": 2,
-                "confidence": 0.5
+                "confidence": 0.5,
             },
-            {
-                "updated": now.isoformat() + "Z",
-                "correction_count": 50,
-                "confidence": 0.95
-            }
+            {"updated": now.isoformat() + "Z", "correction_count": 50, "confidence": 0.95},
         ]
 
         ambiguity = resolver.get_ambiguity_score(prefs)
@@ -324,16 +309,8 @@ class TestConflictResolver:
         now = datetime.utcnow()
 
         prefs = [
-            {
-                "updated": now.isoformat() + "Z",
-                "correction_count": 10,
-                "confidence": 0.8
-            },
-            {
-                "updated": now.isoformat() + "Z",
-                "correction_count": 10,
-                "confidence": 0.8
-            }
+            {"updated": now.isoformat() + "Z", "correction_count": 10, "confidence": 0.8},
+            {"updated": now.isoformat() + "Z", "correction_count": 10, "confidence": 0.8},
         ]
 
         ambiguity = resolver.get_ambiguity_score(prefs)
@@ -349,13 +326,9 @@ class TestConflictResolver:
             {
                 "updated": (now - timedelta(days=60)).isoformat() + "Z",
                 "correction_count": 2,
-                "confidence": 0.5
+                "confidence": 0.5,
             },
-            {
-                "updated": now.isoformat() + "Z",
-                "correction_count": 50,
-                "confidence": 0.95
-            }
+            {"updated": now.isoformat() + "Z", "correction_count": 50, "confidence": 0.95},
         ]
 
         assert not resolver.needs_user_input(prefs)
@@ -365,16 +338,8 @@ class TestConflictResolver:
         now = datetime.utcnow()
 
         prefs = [
-            {
-                "updated": now.isoformat() + "Z",
-                "correction_count": 10,
-                "confidence": 0.8
-            },
-            {
-                "updated": now.isoformat() + "Z",
-                "correction_count": 10,
-                "confidence": 0.8
-            }
+            {"updated": now.isoformat() + "Z", "correction_count": 10, "confidence": 0.8},
+            {"updated": now.isoformat() + "Z", "correction_count": 10, "confidence": 0.8},
         ]
 
         assert resolver.needs_user_input(prefs)
@@ -383,30 +348,14 @@ class TestConflictResolver:
         """Test needs_user_input with custom threshold."""
         # Very similar preferences (high ambiguity)
         similar_prefs = [
-            {
-                "updated": "2026-01-01T00:00:00Z",
-                "correction_count": 10,
-                "confidence": 0.7
-            },
-            {
-                "updated": "2026-01-01T00:00:00Z",
-                "correction_count": 12,
-                "confidence": 0.75
-            }
+            {"updated": "2026-01-01T00:00:00Z", "correction_count": 10, "confidence": 0.7},
+            {"updated": "2026-01-01T00:00:00Z", "correction_count": 12, "confidence": 0.75},
         ]
 
         # Very different preferences (low ambiguity)
         different_prefs = [
-            {
-                "updated": "2026-01-01T00:00:00Z",
-                "correction_count": 2,
-                "confidence": 0.5
-            },
-            {
-                "updated": "2026-01-20T00:00:00Z",
-                "correction_count": 50,
-                "confidence": 0.95
-            }
+            {"updated": "2026-01-01T00:00:00Z", "correction_count": 2, "confidence": 0.5},
+            {"updated": "2026-01-20T00:00:00Z", "correction_count": 50, "confidence": 0.95},
         ]
 
         # With low threshold, similar prefs need user input
@@ -439,20 +388,20 @@ class TestConflictResolver:
                 "value": "A",
                 "updated": "2026-01-01T00:00:00Z",
                 "correction_count": 10,
-                "confidence": 0.8
+                "confidence": 0.8,
             },
             {
                 "value": "B",
                 "updated": "2026-01-15T00:00:00Z",
                 "correction_count": 15,
-                "confidence": 0.85
+                "confidence": 0.85,
             },
             {
                 "value": "C",
                 "updated": "2026-01-10T00:00:00Z",
                 "correction_count": 8,
-                "confidence": 0.75
-            }
+                "confidence": 0.75,
+            },
         ]
 
         # Run resolution multiple times
@@ -471,7 +420,7 @@ class TestConflictResolver:
             "created": (now - timedelta(days=90)).isoformat() + "Z",
             "updated": (now - timedelta(days=30)).isoformat() + "Z",
             "correction_count": 45,  # High frequency
-            "confidence": 0.85
+            "confidence": 0.85,
         }
 
         # Recently started moving PDFs to "PDFs" folder
@@ -480,7 +429,7 @@ class TestConflictResolver:
             "created": (now - timedelta(days=7)).isoformat() + "Z",
             "updated": now.isoformat() + "Z",
             "correction_count": 8,  # Lower frequency but recent
-            "confidence": 0.9
+            "confidence": 0.9,
         }
 
         result = resolver.resolve([old_habit, new_habit])

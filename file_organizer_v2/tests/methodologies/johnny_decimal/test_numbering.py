@@ -3,6 +3,7 @@ Tests for Johnny Decimal numbering module.
 
 Tests number generation, validation, and conflict resolution.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

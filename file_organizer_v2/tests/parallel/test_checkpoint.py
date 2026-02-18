@@ -115,9 +115,7 @@ class TestCreateCheckpoint(unittest.TestCase):
         self.assertEqual(ckpt.job_id, "ckpt-1")
         self.assertEqual(len(ckpt.completed_paths), 1)
         self.assertEqual(len(ckpt.pending_paths), 1)
-        self.assertTrue(
-            (self.ckpt_dir / "ckpt-1.checkpoint.json").exists()
-        )
+        self.assertTrue((self.ckpt_dir / "ckpt-1.checkpoint.json").exists())
 
     def test_create_computes_hashes(self) -> None:
         """Test that file hashes are computed for all files."""
@@ -237,9 +235,7 @@ class TestUpdateCheckpoint(unittest.TestCase):
 
     def test_update_nonexistent_checkpoint_returns_none(self) -> None:
         """Test updating a missing checkpoint returns None."""
-        result = self.mgr.update_checkpoint(
-            "no-checkpoint", Path("/tmp/x.txt")
-        )
+        result = self.mgr.update_checkpoint("no-checkpoint", Path("/tmp/x.txt"))
         self.assertIsNone(result)
 
     def test_update_does_not_duplicate_completed(self) -> None:
@@ -311,9 +307,7 @@ class TestCheckpointAtomicWrites(unittest.TestCase):
         original_contents = checkpoint_path.read_text(encoding="utf-8")
         original_write_text = Path.write_text
 
-        def failing_temp_write(
-            path_self: Path, data: str, encoding: str = "utf-8"
-        ) -> int:
+        def failing_temp_write(path_self: Path, data: str, encoding: str = "utf-8") -> int:
             if path_self.suffix == ".tmp":
                 raise OSError("simulated write failure")
             return original_write_text(path_self, data, encoding=encoding)
@@ -321,9 +315,7 @@ class TestCheckpointAtomicWrites(unittest.TestCase):
         ckpt.completed_paths.append(f2)
         ckpt.pending_paths = []
 
-        with patch.object(
-            Path, "write_text", autospec=True, side_effect=failing_temp_write
-        ):
+        with patch.object(Path, "write_text", autospec=True, side_effect=failing_temp_write):
             with self.assertRaises(OSError):
                 self.mgr.save_checkpoint(ckpt)
 

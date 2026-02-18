@@ -1,4 +1,5 @@
 """Tests for API cache backends."""
+
 from __future__ import annotations
 
 import json
@@ -40,7 +41,9 @@ def test_build_cache_backend_invalid_url_falls_back_to_memory() -> None:
     assert isinstance(backend, InMemoryCache)
 
 
-def test_build_cache_backend_fallback_when_redis_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_build_cache_backend_fallback_when_redis_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     class BrokenRedisCache:
         def __init__(self, _url: str) -> None:
             raise RuntimeError("no redis")

@@ -3,6 +3,7 @@ Tests for Johnny Decimal categories module.
 
 Tests data models, validation, and category definitions.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -45,9 +46,7 @@ class TestJohnnyDecimalNumber:
 
     def test_full_id_number(self):
         """Test creating a full ID number."""
-        number = JohnnyDecimalNumber(
-            area=10, category=1, item_id=5, name="Q1 Budget"
-        )
+        number = JohnnyDecimalNumber(area=10, category=1, item_id=5, name="Q1 Budget")
         assert number.area == 10
         assert number.category == 1
         assert number.item_id == 5

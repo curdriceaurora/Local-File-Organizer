@@ -4,6 +4,7 @@ Unit tests for EventPublisher.
 Tests publishing file events and scan events through the high-level
 publisher API. All tests mock the underlying RedisStreamManager.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -82,13 +83,9 @@ class TestEventPublisherConnect:
 class TestEventPublisherFileEvents:
     """Tests for publishing file events."""
 
-    def test_publish_file_created(
-        self, publisher: EventPublisher, mock_manager: MagicMock
-    ):
+    def test_publish_file_created(self, publisher: EventPublisher, mock_manager: MagicMock):
         """Test publishing a FILE_CREATED event."""
-        result = publisher.publish_file_event(
-            EventType.FILE_CREATED, "/path/to/file.txt"
-        )
+        result = publisher.publish_file_event(EventType.FILE_CREATED, "/path/to/file.txt")
 
         assert result == "1700000000000-0"
         assert publisher.event_count == 1
@@ -115,20 +112,14 @@ class TestEventPublisherFileEvents:
         assert event_data["event_type"] == "file.modified"
         assert '"size": 1024' in event_data["metadata"]
 
-    def test_publish_file_deleted(
-        self, publisher: EventPublisher, mock_manager: MagicMock
-    ):
+    def test_publish_file_deleted(self, publisher: EventPublisher, mock_manager: MagicMock):
         """Test publishing a FILE_DELETED event."""
-        result = publisher.publish_file_event(
-            EventType.FILE_DELETED, "/path/to/removed.txt"
-        )
+        result = publisher.publish_file_event(EventType.FILE_DELETED, "/path/to/removed.txt")
         assert result is not None
         call_args = mock_manager.publish.call_args
         assert call_args.kwargs["event_data"]["event_type"] == "file.deleted"
 
-    def test_publish_file_organized(
-        self, publisher: EventPublisher, mock_manager: MagicMock
-    ):
+    def test_publish_file_organized(self, publisher: EventPublisher, mock_manager: MagicMock):
         """Test publishing a FILE_ORGANIZED event."""
         metadata = {"destination": "/organized/docs/report.txt"}
         result = publisher.publish_file_event(
@@ -138,23 +129,17 @@ class TestEventPublisherFileEvents:
         call_args = mock_manager.publish.call_args
         assert call_args.kwargs["event_data"]["event_type"] == "file.organized"
 
-    def test_publish_file_event_when_disconnected(
-        self, mock_manager: MagicMock
-    ):
+    def test_publish_file_event_when_disconnected(self, mock_manager: MagicMock):
         """Test that publishing when disconnected returns None."""
         mock_manager.is_connected = False
         mock_manager.publish.return_value = None
         publisher = EventPublisher(stream_manager=mock_manager)
 
-        result = publisher.publish_file_event(
-            EventType.FILE_CREATED, "/path/to/file.txt"
-        )
+        result = publisher.publish_file_event(EventType.FILE_CREATED, "/path/to/file.txt")
         assert result is None
         assert publisher.event_count == 0
 
-    def test_event_count_increments(
-        self, publisher: EventPublisher, mock_manager: MagicMock
-    ):
+    def test_event_count_increments(self, publisher: EventPublisher, mock_manager: MagicMock):
         """Test that event count increments on successful publish."""
         publisher.publish_file_event(EventType.FILE_CREATED, "/a.txt")
         publisher.publish_file_event(EventType.FILE_MODIFIED, "/b.txt")
@@ -166,9 +151,7 @@ class TestEventPublisherFileEvents:
 class TestEventPublisherScanEvents:
     """Tests for publishing scan events."""
 
-    def test_publish_scan_started(
-        self, publisher: EventPublisher, mock_manager: MagicMock
-    ):
+    def test_publish_scan_started(self, publisher: EventPublisher, mock_manager: MagicMock):
         """Test publishing a scan started event."""
         result = publisher.publish_scan_event("scan-001", "started")
 
@@ -193,9 +176,7 @@ class TestEventPublisherScanEvents:
         assert event_data["status"] == "completed"
         assert '"files_found": 42' in event_data["stats"]
 
-    def test_publish_scan_failed(
-        self, publisher: EventPublisher, mock_manager: MagicMock
-    ):
+    def test_publish_scan_failed(self, publisher: EventPublisher, mock_manager: MagicMock):
         """Test publishing a scan failed event."""
         stats = {"error_message": "Permission denied"}
         result = publisher.publish_scan_event("scan-003", "failed", stats)

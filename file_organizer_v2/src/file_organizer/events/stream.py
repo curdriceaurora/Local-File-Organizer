@@ -3,6 +3,7 @@
 Provides low-level Redis Streams operations with graceful fallback
 when Redis is unavailable.
 """
+
 from __future__ import annotations
 
 import logging
@@ -87,17 +88,12 @@ class RedisStreamManager:
             True if connection succeeded, False if Redis is unavailable.
         """
         if redis is None:
-            logger.warning(
-                "redis-py is not installed. Event system will operate "
-                "in no-op mode."
-            )
+            logger.warning("redis-py is not installed. Event system will operate in no-op mode.")
             return False
 
         url = redis_url or self._config.redis_url
         try:
-            self._redis = redis.Redis.from_url(
-                url, decode_responses=True, socket_timeout=5
-            )
+            self._redis = redis.Redis.from_url(url, decode_responses=True, socket_timeout=5)
             # Verify connection is alive
             self._redis.ping()
             self._connected = True
@@ -105,8 +101,7 @@ class RedisStreamManager:
             return True
         except Exception:
             logger.warning(
-                "Redis unavailable at %s. Event system will operate in "
-                "no-op mode.",
+                "Redis unavailable at %s. Event system will operate in no-op mode.",
                 url,
             )
             self._redis = None
@@ -159,14 +154,10 @@ class RedisStreamManager:
                 kwargs["approximate"] = True
 
             message_id: str = self._redis.xadd(**kwargs)
-            logger.debug(
-                "Published event to '%s' with ID '%s'", full_name, message_id
-            )
+            logger.debug("Published event to '%s' with ID '%s'", full_name, message_id)
             return message_id
         except Exception:
-            logger.error(
-                "Failed to publish event to '%s'", full_name, exc_info=True
-            )
+            logger.error("Failed to publish event to '%s'", full_name, exc_info=True)
             return None
 
     def create_consumer_group(
@@ -197,12 +188,8 @@ class RedisStreamManager:
         group = group_name or self._config.consumer_group
 
         try:
-            self._redis.xgroup_create(
-                name=full_name, groupname=group, id=start_id, mkstream=True
-            )
-            logger.info(
-                "Created consumer group '%s' on stream '%s'", group, full_name
-            )
+            self._redis.xgroup_create(name=full_name, groupname=group, id=start_id, mkstream=True)
+            logger.info("Created consumer group '%s' on stream '%s'", group, full_name)
             return True
         except Exception as exc:
             # BUSYGROUP means the group already exists
@@ -422,10 +409,7 @@ class RedisStreamManager:
 
     def __repr__(self) -> str:
         """String representation."""
-        return (
-            f"RedisStreamManager(connected={self._connected}, "
-            f"url={self._config.redis_url!r})"
-        )
+        return f"RedisStreamManager(connected={self._connected}, url={self._config.redis_url!r})"
 
 
 def _parse_timestamp_from_id(message_id: str) -> datetime:

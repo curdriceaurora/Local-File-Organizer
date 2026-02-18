@@ -1,4 +1,5 @@
 """Core audio transcription engine using faster-whisper."""
+
 from __future__ import annotations
 
 import time
@@ -144,8 +145,7 @@ class AudioTranscriber:
         valid_sizes = [m.value for m in ModelSize]
         if self.model_size not in valid_sizes:
             raise ValueError(
-                f"Invalid model size: {self.model_size}. "
-                f"Must be one of: {', '.join(valid_sizes)}"
+                f"Invalid model size: {self.model_size}. Must be one of: {', '.join(valid_sizes)}"
             )
 
         # Validate compute type
@@ -272,9 +272,7 @@ class AudioTranscriber:
 
         try:
             # Detect language from first 30 seconds
-            segments, info = self.model.transcribe(
-                str(audio_path), beam_size=5, language=None
-            )
+            segments, info = self.model.transcribe(str(audio_path), beam_size=5, language=None)
 
             # Get language from detected info
             language = info.language
@@ -294,8 +292,7 @@ class AudioTranscriber:
             language_name = language_names.get(language, language.upper())
 
             logger.info(
-                f"Detected language: {language_name} ({language}) "
-                f"with confidence {confidence:.2%}"
+                f"Detected language: {language_name} ({language}) with confidence {confidence:.2%}"
             )
 
             return LanguageDetection(
@@ -363,12 +360,18 @@ class AudioTranscriber:
                 words = None
                 if options.word_timestamps and hasattr(seg, "words"):
                     words = [
-                        {"word": w.word, "start": w.start, "end": w.end, "confidence": w.probability}
+                        {
+                            "word": w.word,
+                            "start": w.start,
+                            "end": w.end,
+                            "confidence": w.probability,
+                        }
                         for w in seg.words
                     ]
 
                 # Convert log probability to probability (0-1 scale)
                 import math
+
                 confidence = math.exp(seg.avg_logprob) if seg.avg_logprob else 0.0
 
                 transcription_segments.append(
@@ -389,7 +392,7 @@ class AudioTranscriber:
 
             logger.info(
                 f"Transcription complete: {duration:.1f}s audio in {processing_time:.1f}s "
-                f"({duration/processing_time:.2f}x realtime)"
+                f"({duration / processing_time:.2f}x realtime)"
             )
 
             return TranscriptionResult(

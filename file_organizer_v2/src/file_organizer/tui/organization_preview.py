@@ -3,6 +3,7 @@
 Shows a before/after panel of how files would be organized,
 along with an organization summary with file counts and status.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -4,6 +4,7 @@ Unit tests for EventMonitor.
 Tests stream statistics, consumer lag, and event rate calculation.
 All tests mock Redis to avoid requiring a running instance.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -220,9 +221,7 @@ class TestGetStreamStats:
 
         monitor.get_stream_stats("file-events")
 
-        mock_redis_client.xinfo_stream.assert_called_once_with(
-            "fileorg:file-events"
-        )
+        mock_redis_client.xinfo_stream.assert_called_once_with("fileorg:file-events")
 
 
 class TestGetConsumerLag:

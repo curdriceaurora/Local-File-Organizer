@@ -1,81 +1,105 @@
-# CLI Reference
+# File Organizer v2 CLI Reference
 
-Complete reference for File Organizer command-line interface.
+## Global Options
+- `--version`: Show version and exit.
+- `--help`: Show help message.
+- `-v, --verbose`: Enable verbose logging.
 
-## Basic Commands
+## Commands
 
-### Organize Files
+### `organize`
+Organize files in a directory using AI or rules.
 
+**Usage:**
 ```bash
-file-organizer organize <input> <output> [OPTIONS]
+file-organizer organize [OPTIONS] INPUT_DIR OUTPUT_DIR
 ```
 
-**Example**:
+**Options:**
+- `--dry-run`: Simulate the organization without moving files.
+- `--recursive / --no-recursive`: Process subdirectories (default: True).
+- `--methodology [none|para|jd]`: Override default methodology.
+- `--text-model TEXT`: Override AI text model.
+- `--vision-model TEXT`: Override AI vision model.
 
+### `config`
+Manage configuration settings.
+
+**Subcommands:**
+- `show`: Display current configuration.
+- `edit`: Modify settings via CLI flags.
+- `list`: List available profiles.
+
+**Examples:**
 ```bash
-file-organizer organize ./Downloads ./Organized
+file-organizer config show --profile work
+file-organizer config edit --temperature 0.8
 ```
 
-**Options**:
+### `rules`
+Manage organization rules.
 
-- `--methodology {para,johnny-decimal}` - Organization system
-- `--dry-run` - Preview without moving files
-- `--preserve` - Keep originals
-- `--verbose` - Detailed output
+**Subcommands:**
+- `add`: Add a new rule.
+- `remove`: Remove a rule.
+- `list`: List all active rules.
+- `preview`: Preview rule application.
 
-### Search Files
-
+**Examples:**
 ```bash
-file-organizer search <query> [OPTIONS]
+file-organizer rules add my-rule --ext ".pdf" --action move --dest "Docs"
 ```
 
-**Example**:
+### `dedupe`
+Find and manage duplicate files.
 
+**Subcommands:**
+- `scan`: Scan for duplicates.
+- `report`: Generate a duplication report.
+- `resolve`: interactively or automatically resolve duplicates.
+
+**Examples:**
 ```bash
-file-organizer search "*.pdf"
+file-organizer dedupe scan ./Images
 ```
 
-### Deduplicate
+### `daemon`
+Run the file watcher daemon.
 
+**Subcommands:**
+- `start`: Start the background daemon.
+- `stop`: Stop the daemon.
+- `status`: Check daemon status.
+- `watch`: Run in foreground mode (for debugging).
+
+**Examples:**
 ```bash
-file-organizer dedupe scan <path> [OPTIONS]
+file-organizer daemon start --watch-dir ./Inbox --output-dir ./Organized
 ```
 
-**Example**:
+### `tui`
+Launch the Terminal User Interface.
 
+**Usage:**
 ```bash
-file-organizer dedupe scan ~/Documents
+file-organizer tui
 ```
 
-### Start Web Server
+### `copilot`
+Interact with the AI assistant via CLI.
 
+**Subcommands:**
+- `chat`: Start a chat session or send a single command.
+
+**Examples:**
 ```bash
-file-organizer serve [OPTIONS]
+file-organizer copilot chat "Help me organize my photos"
 ```
 
-**Options**:
+### `update`
+Manage application updates.
 
-- `--host` - Server host (default: localhost)
-- `--port` - Server port (default: 8000)
-
-### Interactive Mode
-
-```bash
-file-organizer copilot chat
-```
-
-## Advanced Options
-
-- `--config` - Custom configuration file
-- `--debug` - Debug output
-- `--version` - Show version
-
-## Short Alias
-
-Use `fo` instead of `file-organizer`:
-
-```bash
-fo organize ./Downloads ./Organized
-```
-
-See [Getting Started](getting-started.md) for tutorials.
+**Subcommands:**
+- `check`: Check for new versions.
+- `install`: Install the latest version.
+- `rollback`: Revert to the previous version.

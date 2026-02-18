@@ -3,6 +3,7 @@
 Provides a high-level API for consuming and processing events
 from Redis Streams with handler registration.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -93,9 +94,7 @@ class EventConsumer:
         self.stop()
         self._manager.disconnect()
 
-    def register_handler(
-        self, event_type: EventType, handler: EventHandler
-    ) -> None:
+    def register_handler(self, event_type: EventType, handler: EventHandler) -> None:
         """Register a handler for a specific event type.
 
         Multiple handlers can be registered for the same event type.
@@ -115,9 +114,7 @@ class EventConsumer:
             len(self._handlers[key]),
         )
 
-    def unregister_handler(
-        self, event_type: EventType, handler: EventHandler
-    ) -> bool:
+    def unregister_handler(self, event_type: EventType, handler: EventHandler) -> bool:
         """Remove a previously registered handler.
 
         Args:
@@ -192,9 +189,7 @@ class EventConsumer:
             self._running = False
             logger.info("Stop signal received")
 
-    def _dispatch_event(
-        self, event: Event, stream_name: str, group_name: str
-    ) -> None:
+    def _dispatch_event(self, event: Event, stream_name: str, group_name: str) -> None:
         """Dispatch an event to registered handlers.
 
         After all handlers succeed, the event is acknowledged.

@@ -1,4 +1,5 @@
 """Smoke tests for bundled example plugins."""
+
 from __future__ import annotations
 
 from pathlib import Path

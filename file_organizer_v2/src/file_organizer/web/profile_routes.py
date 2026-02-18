@@ -1,4 +1,5 @@
 """Web UI routes for authentication, profile, and collaboration features."""
+
 from __future__ import annotations
 
 import json
@@ -359,7 +360,9 @@ def register_submit(
 
 
 @profile_router.get("/profile/forgot-password", response_class=HTMLResponse)
-def forgot_password_form(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def forgot_password_form(
+    request: Request, settings: ApiSettings = Depends(get_settings)
+) -> HTMLResponse:
     context = _make_profile_context(
         request,
         settings,
@@ -379,9 +382,7 @@ def forgot_password_submit(
     try:
         user = db.query(User).filter(User.email == email).first()
         token_preview = None
-        success = (
-            "If an account exists for that email, a reset link has been prepared."
-        )
+        success = "If an account exists for that email, a reset link has been prepared."
         if user is not None:
             _cleanup_expired_reset_tokens()
             token = secrets.token_urlsafe(24)
@@ -529,7 +530,9 @@ async def profile_avatar_upload(
 
 
 @profile_router.get("/profile/edit", response_class=HTMLResponse)
-def profile_edit_partial(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def profile_edit_partial(
+    request: Request, settings: ApiSettings = Depends(get_settings)
+) -> HTMLResponse:
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -592,7 +595,9 @@ def profile_edit_submit(
 
 
 @profile_router.get("/profile/workspaces", response_class=HTMLResponse)
-def workspaces_partial(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def workspaces_partial(
+    request: Request, settings: ApiSettings = Depends(get_settings)
+) -> HTMLResponse:
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -801,7 +806,9 @@ def shared_add(
                 "permission": normalized_permission,
             }
         )
-        _append_activity(state, f"Shared folder '{folder_path.strip()}' as {normalized_permission}.")
+        _append_activity(
+            state, f"Shared folder '{folder_path.strip()}' as {normalized_permission}."
+        )
         _save_profile_state(db, user.id, state)
         db.commit()
         return shared_partial(request, settings)
@@ -838,7 +845,9 @@ def shared_remove(
 
 
 @profile_router.get("/profile/activity", response_class=HTMLResponse)
-def activity_partial(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def activity_partial(
+    request: Request, settings: ApiSettings = Depends(get_settings)
+) -> HTMLResponse:
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -858,7 +867,9 @@ def activity_partial(request: Request, settings: ApiSettings = Depends(get_setti
 
 
 @profile_router.get("/profile/notifications", response_class=HTMLResponse)
-def notifications_partial(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def notifications_partial(
+    request: Request, settings: ApiSettings = Depends(get_settings)
+) -> HTMLResponse:
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -904,7 +915,9 @@ def notification_mark_read(
 
 
 @profile_router.get("/profile/account-settings", response_class=HTMLResponse)
-def account_settings_partial(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def account_settings_partial(
+    request: Request, settings: ApiSettings = Depends(get_settings)
+) -> HTMLResponse:
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1014,7 +1027,9 @@ def account_settings_toggle_2fa(
     try:
         state = _load_profile_state(db, user.id)
         state["two_factor_enabled"] = toggle
-        _append_activity(state, f"Set two-factor authentication to {'enabled' if toggle else 'disabled'}.")
+        _append_activity(
+            state, f"Set two-factor authentication to {'enabled' if toggle else 'disabled'}."
+        )
         _save_profile_state(db, user.id, state)
         db.commit()
         context = _make_profile_context(
@@ -1033,7 +1048,9 @@ def account_settings_toggle_2fa(
 
 
 @profile_router.get("/profile/api-keys", response_class=HTMLResponse)
-def api_keys_partial(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def api_keys_partial(
+    request: Request, settings: ApiSettings = Depends(get_settings)
+) -> HTMLResponse:
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user

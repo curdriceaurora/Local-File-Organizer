@@ -126,10 +126,7 @@ class TestGenerateChangelog:
         """Multiple commits in same category are grouped."""
         mock_run.return_value = MagicMock(
             returncode=0,
-            stdout=(
-                "feat: Add feature A|aaa1111|Dev\n"
-                "feat: Add feature B|bbb2222|Dev\n"
-            ),
+            stdout=("feat: Add feature A|aaa1111|Dev\nfeat: Add feature B|bbb2222|Dev\n"),
         )
         result = generate_changelog("v1.0.0", "HEAD")
         assert result.count("### Added") == 1

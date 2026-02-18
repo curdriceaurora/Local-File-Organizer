@@ -4,6 +4,7 @@ PARA Folder Structure Generator
 Creates and manages PARA (Projects, Areas, Resources, Archive) folder structures
 with support for custom templates and nested organizations.
 """
+
 from __future__ import annotations
 
 import logging
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FolderCreationResult:
     """Result of folder creation operation."""
+
     created_folders: list[Path]
     skipped_folders: list[Path]
     errors: list[tuple[Path, str]]
@@ -43,10 +45,7 @@ class PARAFolderGenerator:
         self.config = config or PARAConfig()
 
     def generate_structure(
-        self,
-        root_path: Path,
-        create_subdirs: bool = True,
-        dry_run: bool = False
+        self, root_path: Path, create_subdirs: bool = True, dry_run: bool = False
     ) -> FolderCreationResult:
         """
         Generate standard PARA folder structure.
@@ -139,41 +138,46 @@ class PARAFolderGenerator:
 
         # Projects subdirectories
         projects_root = root_path / self.config.project_dir
-        subdirs.extend([
-            projects_root / "Active",
-            projects_root / "Completed",
-        ])
+        subdirs.extend(
+            [
+                projects_root / "Active",
+                projects_root / "Completed",
+            ]
+        )
 
         # Areas subdirectories
         areas_root = root_path / self.config.area_dir
-        subdirs.extend([
-            areas_root / "Personal",
-            areas_root / "Professional",
-        ])
+        subdirs.extend(
+            [
+                areas_root / "Personal",
+                areas_root / "Professional",
+            ]
+        )
 
         # Resources subdirectories
         resources_root = root_path / self.config.resource_dir
-        subdirs.extend([
-            resources_root / "Topics",
-            resources_root / "References",
-        ])
+        subdirs.extend(
+            [
+                resources_root / "Topics",
+                resources_root / "References",
+            ]
+        )
 
         # Archive subdirectories (organized by year)
         # Note: Year-based organization can be added dynamically
         archive_root = root_path / self.config.archive_dir
-        subdirs.extend([
-            archive_root / "Projects",
-            archive_root / "Areas",
-            archive_root / "Resources",
-        ])
+        subdirs.extend(
+            [
+                archive_root / "Projects",
+                archive_root / "Areas",
+                archive_root / "Resources",
+            ]
+        )
 
         return subdirs
 
     def create_category_folder(
-        self,
-        category: PARACategory,
-        subfolder: str | None = None,
-        root_path: Path | None = None
+        self, category: PARACategory, subfolder: str | None = None, root_path: Path | None = None
     ) -> Path:
         """
         Create a specific category folder.
@@ -242,11 +246,7 @@ class PARAFolderGenerator:
         logger.info(f"PARA structure validated at: {root_path}")
         return True
 
-    def get_category_path(
-        self,
-        category: PARACategory,
-        root_path: Path | None = None
-    ) -> Path:
+    def get_category_path(self, category: PARACategory, root_path: Path | None = None) -> Path:
         """
         Get the path for a PARA category.
 

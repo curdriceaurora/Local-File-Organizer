@@ -6,6 +6,7 @@ prevent the file processing system from exceeding CPU, memory, IO, or
 GPU limits. Resources are acquired before processing begins and released
 when complete.
 """
+
 from __future__ import annotations
 
 import threading
@@ -45,21 +46,13 @@ class ResourceConfig:
     def __post_init__(self) -> None:
         """Validate configuration values after initialization."""
         if self.max_cpu_percent <= 0:
-            raise ValueError(
-                f"max_cpu_percent must be > 0, got {self.max_cpu_percent}"
-            )
+            raise ValueError(f"max_cpu_percent must be > 0, got {self.max_cpu_percent}")
         if self.max_memory_mb <= 0:
-            raise ValueError(
-                f"max_memory_mb must be > 0, got {self.max_memory_mb}"
-            )
+            raise ValueError(f"max_memory_mb must be > 0, got {self.max_memory_mb}")
         if self.max_io_operations <= 0:
-            raise ValueError(
-                f"max_io_operations must be > 0, got {self.max_io_operations}"
-            )
+            raise ValueError(f"max_io_operations must be > 0, got {self.max_io_operations}")
         if self.max_gpu_percent < 0:
-            raise ValueError(
-                f"max_gpu_percent must be >= 0, got {self.max_gpu_percent}"
-            )
+            raise ValueError(f"max_gpu_percent must be >= 0, got {self.max_gpu_percent}")
 
 
 class ResourceManager:
@@ -143,9 +136,7 @@ class ResourceManager:
             if resource_type not in self._used:
                 raise ValueError(f"Unknown resource type: {resource_type}")
 
-            self._used[resource_type] = max(
-                0.0, self._used[resource_type] - amount
-            )
+            self._used[resource_type] = max(0.0, self._used[resource_type] - amount)
 
     def get_available(self, resource_type: str) -> float:
         """

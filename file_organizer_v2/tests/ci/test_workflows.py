@@ -47,9 +47,7 @@ class TestWorkflowDirectory:
 
     def test_workflows_directory_exists(self) -> None:
         """Verify .github/workflows directory exists."""
-        assert WORKFLOWS_DIR.exists(), (
-            ".github/workflows directory must exist"
-        )
+        assert WORKFLOWS_DIR.exists(), ".github/workflows directory must exist"
 
     def test_all_expected_workflows_exist(self) -> None:
         """Verify all expected workflow files are present."""
@@ -64,9 +62,7 @@ class TestWorkflowDirectory:
             content = workflow_file.read_text()
             try:
                 data = yaml.safe_load(content)
-                assert isinstance(data, dict), (
-                    f"{workflow_file.name} did not parse as a mapping"
-                )
+                assert isinstance(data, dict), f"{workflow_file.name} did not parse as a mapping"
             except yaml.YAMLError as e:
                 pytest.fail(f"{workflow_file.name} is not valid YAML: {e}")
 
@@ -113,15 +109,11 @@ class TestCIWorkflow:
         assert len(python_versions) >= 1, (
             "CI 'test' job must test against at least one Python version"
         )
-        assert "3.12" in python_versions, (
-            "CI 'test' job must include Python 3.12 in the matrix"
-        )
+        assert "3.12" in python_versions, "CI 'test' job must include Python 3.12 in the matrix"
 
         # Verify the setup-python step uses the matrix variable
         steps = test_job.get("steps", [])
-        assert isinstance(steps, list), (
-            "CI 'test' job must define a list of steps"
-        )
+        assert isinstance(steps, list), "CI 'test' job must define a list of steps"
 
         setup_python_step = None
         for step in steps:
@@ -143,22 +135,16 @@ class TestCIWorkflow:
     def test_ci_uses_pip_caching(self, workflow: dict) -> None:
         """Verify CI workflow uses pip caching for performance."""
         workflow_text = yaml.dump(workflow)
-        assert "cache" in workflow_text.lower(), (
-            "CI workflow should use pip dependency caching"
-        )
+        assert "cache" in workflow_text.lower(), "CI workflow should use pip dependency caching"
 
     def test_ci_uploads_coverage(self, workflow: dict) -> None:
         """Verify CI workflow uploads coverage reports."""
         workflow_text = yaml.dump(workflow)
-        assert "codecov" in workflow_text.lower(), (
-            "CI workflow should upload coverage to Codecov"
-        )
+        assert "codecov" in workflow_text.lower(), "CI workflow should upload coverage to Codecov"
 
     def test_ci_has_concurrency(self, workflow: dict) -> None:
         """Verify CI workflow has concurrency settings to cancel stale runs."""
-        assert "concurrency" in workflow, (
-            "CI workflow should set concurrency to cancel stale runs"
-        )
+        assert "concurrency" in workflow, "CI workflow should set concurrency to cancel stale runs"
 
     def test_ci_has_frontend_test_job(self, workflow: dict) -> None:
         """Verify CI workflow includes frontend testing capability.
@@ -198,9 +184,7 @@ class TestCIWorkflow:
                 has_test_step = True
                 break
 
-        assert has_test_step, (
-            "Test job should run pytest which includes documentation tests"
-        )
+        assert has_test_step, "Test job should run pytest which includes documentation tests"
 
 
 class TestCIFullWorkflow:
@@ -258,9 +242,7 @@ class TestCIFullWorkflow:
             "Test matrix should NOT include Python 3.12 (used only in fast CI)"
         )
 
-    def test_ci_full_test_matrix_does_not_collect_coverage(
-        self, workflow: dict
-    ) -> None:
+    def test_ci_full_test_matrix_does_not_collect_coverage(self, workflow: dict) -> None:
         """Ensure test-matrix job does not collect coverage."""
         test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
         steps = test_matrix_job.get("steps", [])
@@ -275,9 +257,7 @@ class TestCIFullWorkflow:
     def test_ci_full_has_frontend_compat_job(self, workflow: dict) -> None:
         """Verify CI Full workflow includes a frontend-compat job using Node 18.x."""
         jobs = workflow.get("jobs", {})
-        assert "frontend-compat" in jobs, (
-            "CI Full workflow should have a 'frontend-compat' job"
-        )
+        assert "frontend-compat" in jobs, "CI Full workflow should have a 'frontend-compat' job"
         frontend_compat_job = jobs.get("frontend-compat", {})
         steps = frontend_compat_job.get("steps", [])
         assert steps, "Frontend-compat job should define steps"
@@ -317,16 +297,14 @@ class TestCIFullWorkflow:
                 continue
             # Check that no step uses setup-node action
             uses = step.get("uses", "")
-            assert "setup-node" not in uses, (
-                "Frontend E2E placeholder job must not set up Node.js"
-            )
+            assert "setup-node" not in uses, "Frontend E2E placeholder job must not set up Node.js"
             # Check run commands for actual E2E test execution (not just mentions in echo)
             run_cmd = step.get("run", "")
             # Only check non-echo lines for actual commands
-            for line in run_cmd.split('\n'):
+            for line in run_cmd.split("\n"):
                 line_stripped = line.strip()
                 # Skip echo statements and comments
-                if line_stripped.startswith('echo') or line_stripped.startswith('#'):
+                if line_stripped.startswith("echo") or line_stripped.startswith("#"):
                     continue
                 # Check for actual playwright or E2E test commands
                 assert "playwright install" not in line_stripped.lower(), (
@@ -340,11 +318,7 @@ class TestCIFullWorkflow:
                 )
 
         # Verify the job only has echo/informational steps
-        run_steps = [
-            step
-            for step in steps
-            if isinstance(step, dict) and "run" in step
-        ]
+        run_steps = [step for step in steps if isinstance(step, dict) and "run" in step]
         assert run_steps, (
             "Frontend E2E placeholder job should have run steps that document "
             "that E2E tests are disabled"
@@ -369,9 +343,7 @@ class TestReleaseWorkflow:
         triggers = get_triggers(workflow)
         push_config = triggers.get("push", {})
         tags = push_config.get("tags", [])
-        assert any("v*" in str(tag) for tag in tags), (
-            "Release should trigger on v* tags"
-        )
+        assert any("v*" in str(tag) for tag in tags), "Release should trigger on v* tags"
 
     def test_release_has_build_job(self, workflow: dict) -> None:
         """Verify release workflow has a build job."""
@@ -393,9 +365,7 @@ class TestReleaseWorkflow:
     def test_release_uses_secrets_for_pypi(self, workflow: dict) -> None:
         """Verify release uses secrets reference for PyPI token (not hardcoded)."""
         workflow_text = yaml.dump(workflow)
-        assert "PYPI_TOKEN" in workflow_text, (
-            "Release should reference PYPI_TOKEN secret"
-        )
+        assert "PYPI_TOKEN" in workflow_text, "Release should reference PYPI_TOKEN secret"
         assert "secrets.PYPI_TOKEN" in workflow_text, (
             "PYPI_TOKEN must be referenced via secrets context"
         )
@@ -416,34 +386,24 @@ class TestDockerWorkflow:
     def test_docker_uses_buildx(self, workflow: dict) -> None:
         """Verify Docker workflow uses Buildx for multi-arch builds."""
         workflow_text = yaml.dump(workflow)
-        assert "buildx" in workflow_text.lower(), (
-            "Docker workflow should use Docker Buildx"
-        )
+        assert "buildx" in workflow_text.lower(), "Docker workflow should use Docker Buildx"
 
     def test_docker_builds_multi_arch(self, workflow: dict) -> None:
         """Verify Docker workflow builds for multiple architectures."""
         workflow_text = yaml.dump(workflow)
-        assert "amd64" in workflow_text, (
-            "Docker workflow should build for linux/amd64"
-        )
-        assert "arm64" in workflow_text, (
-            "Docker workflow should build for linux/arm64"
-        )
+        assert "amd64" in workflow_text, "Docker workflow should build for linux/amd64"
+        assert "arm64" in workflow_text, "Docker workflow should build for linux/arm64"
 
     def test_docker_pushes_to_ghcr(self, workflow: dict) -> None:
         """Verify Docker workflow pushes to GitHub Container Registry."""
         workflow_text = yaml.dump(workflow)
         # codeql[py/incomplete-url-substring-sanitization] - Test assertion verifying expected URL pattern, not sanitizing user input
-        assert "ghcr.io" in workflow_text, (
-            "Docker workflow should push to ghcr.io"
-        )
+        assert "ghcr.io" in workflow_text, "Docker workflow should push to ghcr.io"
 
     def test_docker_uses_caching(self, workflow: dict) -> None:
         """Verify Docker workflow uses build caching."""
         workflow_text = yaml.dump(workflow)
-        assert "cache" in workflow_text.lower(), (
-            "Docker workflow should use build caching"
-        )
+        assert "cache" in workflow_text.lower(), "Docker workflow should use build caching"
 
 
 class TestSecurityWorkflow:
@@ -456,9 +416,7 @@ class TestSecurityWorkflow:
     def test_security_has_schedule(self, workflow: dict) -> None:
         """Verify security workflow runs on a schedule."""
         triggers = get_triggers(workflow)
-        assert "schedule" in triggers, (
-            "Security workflow should run on a schedule"
-        )
+        assert "schedule" in triggers, "Security workflow should run on a schedule"
 
     def test_security_has_dependency_audit(self, workflow: dict) -> None:
         """Verify security workflow includes dependency auditing."""
@@ -481,9 +439,7 @@ class TestSecurityWorkflow:
     def test_security_triggers_on_pr(self, workflow: dict) -> None:
         """Verify security workflow also triggers on pull requests."""
         triggers = get_triggers(workflow)
-        assert "pull_request" in triggers, (
-            "Security workflow should trigger on pull requests"
-        )
+        assert "pull_request" in triggers, "Security workflow should trigger on pull requests"
 
 
 class TestDependabotConfig:
@@ -503,31 +459,19 @@ class TestDependabotConfig:
 
     def test_dependabot_version(self, dependabot_data: dict) -> None:
         """Verify Dependabot config uses version 2."""
-        assert dependabot_data.get("version") == 2, (
-            "Dependabot config must use version 2"
-        )
+        assert dependabot_data.get("version") == 2, "Dependabot config must use version 2"
 
     def test_dependabot_has_pip_ecosystem(self, dependabot_data: dict) -> None:
         """Verify Dependabot monitors pip dependencies."""
-        ecosystems = [
-            u["package-ecosystem"] for u in dependabot_data.get("updates", [])
-        ]
+        ecosystems = [u["package-ecosystem"] for u in dependabot_data.get("updates", [])]
         assert "pip" in ecosystems, "Dependabot should monitor pip dependencies"
 
     def test_dependabot_has_github_actions_ecosystem(self, dependabot_data: dict) -> None:
         """Verify Dependabot monitors GitHub Actions versions."""
-        ecosystems = [
-            u["package-ecosystem"] for u in dependabot_data.get("updates", [])
-        ]
-        assert "github-actions" in ecosystems, (
-            "Dependabot should monitor GitHub Actions versions"
-        )
+        ecosystems = [u["package-ecosystem"] for u in dependabot_data.get("updates", [])]
+        assert "github-actions" in ecosystems, "Dependabot should monitor GitHub Actions versions"
 
     def test_dependabot_has_docker_ecosystem(self, dependabot_data: dict) -> None:
         """Verify Dependabot monitors Docker base images."""
-        ecosystems = [
-            u["package-ecosystem"] for u in dependabot_data.get("updates", [])
-        ]
-        assert "docker" in ecosystems, (
-            "Dependabot should monitor Docker base images"
-        )
+        ecosystems = [u["package-ecosystem"] for u in dependabot_data.get("updates", [])]
+        assert "docker" in ecosystems, "Dependabot should monitor Docker base images"

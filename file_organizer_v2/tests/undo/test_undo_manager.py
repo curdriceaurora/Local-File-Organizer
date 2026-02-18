@@ -3,6 +3,7 @@ Unit tests for UndoManager.
 
 Tests high-level undo/redo management functionality.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -31,9 +32,7 @@ class TestUndoManager(unittest.TestCase):
         self.validator = OperationValidator(trash_dir=self.trash_dir)
         self.executor = RollbackExecutor(validator=self.validator)
         self.manager = UndoManager(
-            history=self.history,
-            validator=self.validator,
-            executor=self.executor
+            history=self.history, validator=self.validator, executor=self.executor
         )
 
         # Create test files
@@ -53,7 +52,7 @@ class TestUndoManager(unittest.TestCase):
         self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
-            destination_path=self.dest_file
+            destination_path=self.dest_file,
         )
 
         # Undo
@@ -74,7 +73,7 @@ class TestUndoManager(unittest.TestCase):
         op_id = self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
-            destination_path=self.dest_file
+            destination_path=self.dest_file,
         )
 
         # Undo by ID
@@ -98,7 +97,7 @@ class TestUndoManager(unittest.TestCase):
             operation_type=OperationType.MOVE,
             source_path=file1,
             destination_path=dest1,
-            transaction_id=txn_id
+            transaction_id=txn_id,
         )
 
         file2 = self.test_dir / "file2.txt"
@@ -109,7 +108,7 @@ class TestUndoManager(unittest.TestCase):
             operation_type=OperationType.MOVE,
             source_path=file2,
             destination_path=dest2,
-            transaction_id=txn_id
+            transaction_id=txn_id,
         )
 
         # Commit transaction
@@ -131,7 +130,7 @@ class TestUndoManager(unittest.TestCase):
         self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
-            destination_path=self.dest_file
+            destination_path=self.dest_file,
         )
         self.manager.undo_last_operation()
 
@@ -153,7 +152,7 @@ class TestUndoManager(unittest.TestCase):
         op_id = self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
-            destination_path=self.dest_file
+            destination_path=self.dest_file,
         )
         self.manager.undo_operation(op_id)
 
@@ -171,7 +170,7 @@ class TestUndoManager(unittest.TestCase):
         op_id = self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
-            destination_path=self.dest_file
+            destination_path=self.dest_file,
         )
 
         can_undo, reason = self.manager.can_undo(op_id)
@@ -186,7 +185,7 @@ class TestUndoManager(unittest.TestCase):
         op_id = self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
-            destination_path=self.dest_file
+            destination_path=self.dest_file,
         )
         self.manager.undo_operation(op_id)
 
@@ -202,7 +201,7 @@ class TestUndoManager(unittest.TestCase):
         op_id = self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
-            destination_path=self.dest_file
+            destination_path=self.dest_file,
         )
         self.manager.undo_operation(op_id)
 
@@ -218,7 +217,7 @@ class TestUndoManager(unittest.TestCase):
         op_id = self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
-            destination_path=self.dest_file
+            destination_path=self.dest_file,
         )
 
         can_redo, reason = self.manager.can_redo(op_id)
@@ -233,7 +232,7 @@ class TestUndoManager(unittest.TestCase):
         self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
-            destination_path=self.dest_file
+            destination_path=self.dest_file,
         )
 
         undo_stack = self.manager.get_undo_stack()
@@ -248,7 +247,7 @@ class TestUndoManager(unittest.TestCase):
         op_id = self.history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=self.source_file,
-            destination_path=self.dest_file
+            destination_path=self.dest_file,
         )
         self.manager.undo_operation(op_id)
 
@@ -282,5 +281,5 @@ class TestUndoManager(unittest.TestCase):
         self.assertFalse(success)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

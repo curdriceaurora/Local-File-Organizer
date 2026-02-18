@@ -4,6 +4,7 @@ Configuration for parallel file processing.
 This module defines the configuration dataclass controlling parallelism,
 timeouts, retry behavior, and progress reporting.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -50,8 +51,6 @@ class ParallelConfig:
         if self.chunk_size < 1:
             raise ValueError(f"chunk_size must be >= 1, got {self.chunk_size}")
         if self.timeout_per_file <= 0:
-            raise ValueError(
-                f"timeout_per_file must be > 0, got {self.timeout_per_file}"
-            )
+            raise ValueError(f"timeout_per_file must be > 0, got {self.timeout_per_file}")
         if self.retry_count < 0:
             raise ValueError(f"retry_count must be >= 0, got {self.retry_count}")

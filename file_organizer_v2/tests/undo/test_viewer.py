@@ -3,6 +3,7 @@ Unit tests for HistoryViewer.
 
 Tests history viewing and filtering functionality.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -34,9 +35,7 @@ class TestHistoryViewer(unittest.TestCase):
         self.source1.write_text("content1")
         shutil.move(str(self.source1), str(self.dest1))
         self.op1_id = self.history.log_operation(
-            operation_type=OperationType.MOVE,
-            source_path=self.source1,
-            destination_path=self.dest1
+            operation_type=OperationType.MOVE, source_path=self.source1, destination_path=self.dest1
         )
 
         self.source2 = self.test_dir / "file2.txt"
@@ -46,7 +45,7 @@ class TestHistoryViewer(unittest.TestCase):
         self.op2_id = self.history.log_operation(
             operation_type=OperationType.RENAME,
             source_path=self.source2,
-            destination_path=self.dest2
+            destination_path=self.dest2,
         )
 
     def tearDown(self):
@@ -95,7 +94,7 @@ class TestHistoryViewer(unittest.TestCase):
             operation_type=OperationType.MOVE,
             source_path=file3,
             destination_path=dest3,
-            transaction_id=txn_id
+            transaction_id=txn_id,
         )
         self.history.commit_transaction(txn_id)
 
@@ -148,10 +147,10 @@ class TestHistoryViewer(unittest.TestCase):
         """Test getting statistics."""
         stats = self.viewer.get_statistics()
 
-        self.assertEqual(stats['total_operations'], 2)
-        self.assertEqual(stats['by_type']['move'], 1)
-        self.assertEqual(stats['by_type']['rename'], 1)
-        self.assertEqual(stats['by_status']['completed'], 2)
+        self.assertEqual(stats["total_operations"], 2)
+        self.assertEqual(stats["by_type"]["move"], 1)
+        self.assertEqual(stats["by_type"]["rename"], 1)
+        self.assertEqual(stats["by_status"]["completed"], 2)
 
     def test_show_statistics(self):
         """Test showing statistics."""
@@ -211,13 +210,12 @@ class TestHistoryViewer(unittest.TestCase):
         tomorrow = today + timedelta(days=2)
 
         operations = self.viewer.filter_operations(
-            since=yesterday.strftime("%Y-%m-%d"),
-            until=tomorrow.strftime("%Y-%m-%d")
+            since=yesterday.strftime("%Y-%m-%d"), until=tomorrow.strftime("%Y-%m-%d")
         )
 
         # Should include our test operations (logged today)
         self.assertGreater(len(operations), 0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

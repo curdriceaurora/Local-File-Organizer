@@ -6,6 +6,7 @@ Validates:
 - Import paths in examples reference real modules
 - No deprecated or wrong endpoint patterns in code blocks
 """
+
 from __future__ import annotations
 
 import ast
@@ -38,8 +39,8 @@ REAL_API_ENDPOINTS = {
 # Phantom endpoints that do NOT exist
 PHANTOM_ENDPOINTS = [
     "/api/v1/files/upload",  # No upload route — files router handles differently
-    "/api/v1/organize",      # No single POST /organize — uses sub-paths
-    "/api/v1/analyze",       # No /analyze prefix
+    "/api/v1/organize",  # No single POST /organize — uses sub-paths
+    "/api/v1/analyze",  # No /analyze prefix
     "/api/v1/analyze/duplicates",  # Wrong — should be /dedupe/*
 ]
 
@@ -68,7 +69,11 @@ class TestPythonCodeExamples:
                 if not stripped:
                     continue
                 # Skip blocks that start with #! (shebang) or are just comments
-                lines = [line for line in stripped.splitlines() if line.strip() and not line.strip().startswith("#")]
+                lines = [
+                    line
+                    for line in stripped.splitlines()
+                    if line.strip() and not line.strip().startswith("#")
+                ]
                 if not lines:
                     continue
 
@@ -125,9 +130,8 @@ class TestPythonCodeExamples:
                         f"Use '/organize/scan', '/organize/preview', or '/organize/execute'."
                     )
 
-        assert not violations, (
-            "Python code examples use wrong organize endpoint:\n"
-            + "\n".join(violations)
+        assert not violations, "Python code examples use wrong organize endpoint:\n" + "\n".join(
+            violations
         )
 
 
@@ -137,10 +141,7 @@ class TestCurlExamples:
     def _extract_curl_paths(self, block: str) -> list[str]:
         """Extract URL paths from cURL commands."""
         # Match curl http://host:port/path or curl -X METHOD http://host:port/path
-        paths = re.findall(
-            r"curl[^\n]*https?://[^/\s]+(/api/v\d+/[^\s'\"\\]+)",
-            block
-        )
+        paths = re.findall(r"curl[^\n]*https?://[^/\s]+(/api/v\d+/[^\s'\"\\]+)", block)
         return paths
 
     def test_curl_examples_use_real_endpoints(self, all_doc_files: list[Path]) -> None:
@@ -191,18 +192,13 @@ class TestCurlExamples:
                         f"should use 'X-API-Key: <key>'"
                     )
 
-        assert not violations, (
-            "cURL examples use wrong auth header:\n"
-            + "\n".join(violations)
-        )
+        assert not violations, "cURL examples use wrong auth header:\n" + "\n".join(violations)
 
 
 class TestImportPathsInExamples:
     """Validate that import statements in examples reference real modules."""
 
-    def test_file_organizer_imports_use_real_packages(
-        self, all_doc_files: list[Path]
-    ) -> None:
+    def test_file_organizer_imports_use_real_packages(self, all_doc_files: list[Path]) -> None:
         """Python imports from file_organizer.* must reference existing top-level modules."""
         # Get real top-level subpackages under src/file_organizer/
         fo_src = SRC_DIR / "file_organizer"
@@ -225,10 +221,7 @@ class TestImportPathsInExamples:
 
             for block in python_blocks:
                 # Find: from file_organizer.X import Y  or  import file_organizer.X
-                imports = re.findall(
-                    r"(?:from|import)\s+file_organizer\.(\w+)",
-                    block
-                )
+                imports = re.findall(r"(?:from|import)\s+file_organizer\.(\w+)", block)
                 for subpkg in imports:
                     if subpkg not in real_subpackages:
                         rel = md_file.relative_to(DOCS_DIR)
@@ -248,9 +241,7 @@ class TestImportPathsInExamples:
 class TestApiKeyFormatInExamples:
     """Validate API key format used in examples matches real format."""
 
-    def test_no_fk_live_api_key_format_in_examples(
-        self, all_doc_files: list[Path]
-    ) -> None:
+    def test_no_fk_live_api_key_format_in_examples(self, all_doc_files: list[Path]) -> None:
         """Code examples must not show 'fk_live_*' API key format (that's the wrong format)."""
         violations = []
 
@@ -272,7 +263,4 @@ class TestApiKeyFormatInExamples:
         # Deduplicate
         violations = list(dict.fromkeys(violations))
 
-        assert not violations, (
-            "Code examples use wrong API key format:\n"
-            + "\n".join(violations)
-        )
+        assert not violations, "Code examples use wrong API key format:\n" + "\n".join(violations)

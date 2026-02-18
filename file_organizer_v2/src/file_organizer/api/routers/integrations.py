@@ -1,4 +1,5 @@
 """API endpoints for third-party integration management."""
+
 from __future__ import annotations
 
 import os
@@ -100,7 +101,9 @@ def build_browser_extension_manager(settings: ApiSettings) -> BrowserExtensionMa
     return BrowserExtensionManager(allowed_origins=settings.cors_origins, token_ttl_seconds=3600)
 
 
-def get_integration_manager(request: Request, settings: ApiSettings = Depends(get_settings)) -> IntegrationManager:
+def get_integration_manager(
+    request: Request, settings: ApiSettings = Depends(get_settings)
+) -> IntegrationManager:
     manager = getattr(request.app.state, "integration_manager", None)
     if manager is None:
         manager = build_integration_manager(settings)
@@ -136,15 +139,15 @@ def _validate_setting_paths(
                 candidate = directory
             else:
                 # Bare filenames should resolve to a deterministic base directory.
-                candidate = settings.allowed_paths[0] if settings.allowed_paths else str(Path.home())
+                candidate = (
+                    settings.allowed_paths[0] if settings.allowed_paths else str(Path.home())
+                )
             validated_root = resolve_path(candidate, settings.allowed_paths)
             base_name = os.path.basename(raw_path)
             # Validate basename to prevent path traversal attacks
             if not base_name or "/" in base_name or "\\" in base_name or ".." in base_name:
                 raise ApiError(
-                    status_code=400,
-                    error="invalid_filename",
-                    message="Invalid filename in path"
+                    status_code=400, error="invalid_filename", message="Invalid filename in path"
                 )
             normalized[key] = os.path.join(str(validated_root), base_name)
         else:
@@ -201,7 +204,9 @@ async def connect_integration(
     return IntegrationConnectResponse(integration=integration_name, connected=connected)
 
 
-@router.post("/integrations/{integration_name}/disconnect", response_model=IntegrationConnectResponse)
+@router.post(
+    "/integrations/{integration_name}/disconnect", response_model=IntegrationConnectResponse
+)
 async def disconnect_integration(
     integration_name: str,
     manager: IntegrationManager = Depends(get_integration_manager),

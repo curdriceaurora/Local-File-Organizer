@@ -7,6 +7,7 @@ This module provides advanced EPUB processing capabilities including:
 - Genre and subject detection
 - ISBN and identifier parsing
 """
+
 from __future__ import annotations
 
 import io
@@ -17,18 +18,21 @@ from pathlib import Path
 try:
     import ebooklib
     from ebooklib import epub
+
     EBOOKLIB_AVAILABLE = True
 except ImportError:
     EBOOKLIB_AVAILABLE = False
 
 try:
     from PIL import Image
+
     PILLOW_AVAILABLE = True
 except ImportError:
     PILLOW_AVAILABLE = False
 
 try:
     from bs4 import BeautifulSoup
+
     BS4_AVAILABLE = True
 except ImportError:
     BS4_AVAILABLE = False
@@ -38,6 +42,7 @@ from loguru import logger
 
 class EPUBProcessingError(Exception):
     """Exception raised when EPUB processing fails."""
+
     pass
 
 
@@ -51,6 +56,7 @@ class EPUBChapter:
         order: Chapter order/position in book
         word_count: Number of words in chapter
     """
+
     title: str
     content: str
     order: int
@@ -79,6 +85,7 @@ class EPUBMetadata:
         cover_path: Path to extracted cover image (if extracted)
         epub_version: EPUB version (2 or 3)
     """
+
     title: str
     authors: list[str]
     language: str | None = None
@@ -117,6 +124,7 @@ class EPUBContent:
         total_chapters: Number of chapters
         raw_text: Combined text from all chapters
     """
+
     metadata: EPUBMetadata
     chapters: list[EPUBChapter]
     total_words: int
@@ -149,9 +157,7 @@ class EnhancedEPUBReader:
             ImportError: If required libraries are not installed
         """
         if not EBOOKLIB_AVAILABLE:
-            raise ImportError(
-                "ebooklib is not installed. Install with: pip install ebooklib"
-            )
+            raise ImportError("ebooklib is not installed. Install with: pip install ebooklib")
         if not BS4_AVAILABLE:
             raise ImportError(
                 "beautifulsoup4 is not installed. Install with: pip install beautifulsoup4 lxml"
@@ -162,7 +168,7 @@ class EnhancedEPUBReader:
         file_path: str | Path,
         extract_cover: bool = False,
         cover_output_dir: Path | None = None,
-        max_chapters: int | None = None
+        max_chapters: int | None = None,
     ) -> EPUBContent:
         """Read and parse an EPUB file.
 
@@ -214,7 +220,7 @@ class EnhancedEPUBReader:
             chapters=chapters,
             total_words=total_words,
             total_chapters=len(chapters),
-            raw_text=raw_text
+            raw_text=raw_text,
         )
 
     def _extract_metadata(self, book: epub.EpubBook) -> EPUBMetadata:
@@ -226,37 +232,38 @@ class EnhancedEPUBReader:
         Returns:
             EPUBMetadata with all available metadata
         """
+
         # Helper to get metadata value
         def get_meta(key: str) -> str | None:
             """Get single metadata value."""
-            values = book.get_metadata('DC', key)
+            values = book.get_metadata("DC", key)
             if values and len(values) > 0:
                 return str(values[0][0]) if values[0] else None
             return None
 
         def get_meta_list(key: str) -> list[str]:
             """Get list of metadata values."""
-            values = book.get_metadata('DC', key)
+            values = book.get_metadata("DC", key)
             return [str(v[0]) for v in values if v and v[0]] if values else []
 
         # Extract basic metadata
-        title = get_meta('title') or "Unknown Title"
-        authors = get_meta_list('creator') or ["Unknown Author"]
-        language = get_meta('language')
-        publisher = get_meta('publisher')
-        publication_date = get_meta('date')
-        description = get_meta('description')
-        rights = get_meta('rights')
+        title = get_meta("title") or "Unknown Title"
+        authors = get_meta_list("creator") or ["Unknown Author"]
+        language = get_meta("language")
+        publisher = get_meta("publisher")
+        publication_date = get_meta("date")
+        description = get_meta("description")
+        rights = get_meta("rights")
 
         # Extract subjects/genres
-        subjects = get_meta_list('subject')
+        subjects = get_meta_list("subject")
 
         # Extract contributors (editors, translators, etc.)
-        contributors = get_meta_list('contributor')
+        contributors = get_meta_list("contributor")
 
         # Extract identifiers
         identifiers = {}
-        identifier_list = book.get_metadata('DC', 'identifier')
+        identifier_list = book.get_metadata("DC", "identifier")
         if identifier_list:
             for identifier_tuple in identifier_list:
                 if identifier_tuple and len(identifier_tuple) >= 2:
@@ -264,17 +271,17 @@ class EnhancedEPUBReader:
                     attrs = identifier_tuple[1] if len(identifier_tuple) > 1 else {}
 
                     # Try to determine identifier type
-                    scheme = attrs.get('scheme', '').lower() if isinstance(attrs, dict) else ''
+                    scheme = attrs.get("scheme", "").lower() if isinstance(attrs, dict) else ""
 
-                    if 'isbn' in scheme or 'isbn' in value.lower():
-                        identifiers['isbn'] = self._clean_isbn(value)
-                    elif 'uuid' in scheme or 'uuid' in value.lower():
-                        identifiers['uuid'] = value
+                    if "isbn" in scheme or "isbn" in value.lower():
+                        identifiers["isbn"] = self._clean_isbn(value)
+                    elif "uuid" in scheme or "uuid" in value.lower():
+                        identifiers["uuid"] = value
                     else:
-                        identifiers['identifier'] = value
+                        identifiers["identifier"] = value
 
         # Get ISBN specifically
-        isbn = identifiers.get('isbn')
+        isbn = identifiers.get("isbn")
 
         # Try to detect series information from title or metadata
         series, series_index = self._detect_series(title, book)
@@ -300,13 +307,11 @@ class EnhancedEPUBReader:
             rights=rights,
             contributors=contributors,
             has_cover=has_cover,
-            epub_version=epub_version
+            epub_version=epub_version,
         )
 
     def _extract_chapters(
-        self,
-        book: epub.EpubBook,
-        max_chapters: int | None = None
+        self, book: epub.EpubBook, max_chapters: int | None = None
     ) -> list[EPUBChapter]:
         """Extract chapters from EPUB.
 
@@ -332,7 +337,7 @@ class EnhancedEPUBReader:
             try:
                 # Parse HTML content
                 content_bytes = item.get_content()
-                soup = BeautifulSoup(content_bytes, 'lxml')
+                soup = BeautifulSoup(content_bytes, "lxml")
 
                 # Extract title from heading tags or filename
                 title = self._extract_chapter_title(soup, item)
@@ -346,12 +351,9 @@ class EnhancedEPUBReader:
 
                 word_count = len(text.split())
 
-                chapters.append(EPUBChapter(
-                    title=title,
-                    content=text,
-                    order=chapter_num,
-                    word_count=word_count
-                ))
+                chapters.append(
+                    EPUBChapter(title=title, content=text, order=chapter_num, word_count=word_count)
+                )
 
                 chapter_num += 1
 
@@ -372,16 +374,16 @@ class EnhancedEPUBReader:
             Chapter title
         """
         # Try to find title in heading tags
-        for tag in ['h1', 'h2', 'h3', 'title']:
+        for tag in ["h1", "h2", "h3", "title"]:
             heading = soup.find(tag)
             if heading and heading.get_text(strip=True):
                 return heading.get_text(strip=True)
 
         # Fall back to filename
-        if hasattr(item, 'file_name'):
+        if hasattr(item, "file_name"):
             name = Path(item.file_name).stem
             # Clean up filename
-            name = name.replace('_', ' ').replace('-', ' ')
+            name = name.replace("_", " ").replace("-", " ")
             return name.title()
 
         return "Untitled Chapter"
@@ -396,23 +398,19 @@ class EnhancedEPUBReader:
             Clean text content
         """
         # Remove script and style elements
-        for element in soup(['script', 'style', 'meta', 'link']):
+        for element in soup(["script", "style", "meta", "link"]):
             element.decompose()
 
         # Get text
-        text = soup.get_text(separator=' ', strip=True)
+        text = soup.get_text(separator=" ", strip=True)
 
         # Clean up whitespace
-        text = re.sub(r'\s+', ' ', text)
-        text = re.sub(r'\n\s*\n', '\n\n', text)
+        text = re.sub(r"\s+", " ", text)
+        text = re.sub(r"\n\s*\n", "\n\n", text)
 
         return text.strip()
 
-    def _detect_series(
-        self,
-        title: str,
-        book: epub.EpubBook
-    ) -> tuple[str | None, float | None]:
+    def _detect_series(self, title: str, book: epub.EpubBook) -> tuple[str | None, float | None]:
         """Detect if book is part of a series.
 
         Args:
@@ -424,12 +422,12 @@ class EnhancedEPUBReader:
         """
         # Check for calibre series metadata
         try:
-            calibre_meta = book.get_metadata('', 'calibre:series')
+            calibre_meta = book.get_metadata("", "calibre:series")
             if calibre_meta and calibre_meta[0]:
                 series_name = str(calibre_meta[0][0])
 
                 # Get series index
-                series_index_meta = book.get_metadata('', 'calibre:series_index')
+                series_index_meta = book.get_metadata("", "calibre:series_index")
                 series_index = None
                 if series_index_meta and series_index_meta[0]:
                     try:
@@ -445,11 +443,11 @@ class EnhancedEPUBReader:
         # Try to detect from title patterns
         # Pattern: "Series Name, Book 1" or "Series Name #1" or "Series Name: Book One"
         patterns = [
-            r'^(.+?),\s*Book\s+(\d+)',
-            r'^(.+?)\s+#(\d+)',
-            r'^(.+?):\s*Book\s+(\w+)',
-            r'^(.+?)\s+\(Book\s+(\d+)\)',
-            r'^(.+?)\s+-\s+Book\s+(\d+)',
+            r"^(.+?),\s*Book\s+(\d+)",
+            r"^(.+?)\s+#(\d+)",
+            r"^(.+?):\s*Book\s+(\w+)",
+            r"^(.+?)\s+\(Book\s+(\d+)\)",
+            r"^(.+?)\s+-\s+Book\s+(\d+)",
         ]
 
         for pattern in patterns:
@@ -481,16 +479,26 @@ class EnhancedEPUBReader:
             Float value or None
         """
         word_map = {
-            'one': 1, 'first': 1,
-            'two': 2, 'second': 2,
-            'three': 3, 'third': 3,
-            'four': 4, 'fourth': 4,
-            'five': 5, 'fifth': 5,
-            'six': 6, 'sixth': 6,
-            'seven': 7, 'seventh': 7,
-            'eight': 8, 'eighth': 8,
-            'nine': 9, 'ninth': 9,
-            'ten': 10, 'tenth': 10,
+            "one": 1,
+            "first": 1,
+            "two": 2,
+            "second": 2,
+            "three": 3,
+            "third": 3,
+            "four": 4,
+            "fourth": 4,
+            "five": 5,
+            "fifth": 5,
+            "six": 6,
+            "sixth": 6,
+            "seven": 7,
+            "seventh": 7,
+            "eight": 8,
+            "eighth": 8,
+            "nine": 9,
+            "ninth": 9,
+            "ten": 10,
+            "tenth": 10,
         }
         return word_map.get(word.lower())
 
@@ -504,7 +512,7 @@ class EnhancedEPUBReader:
             Cleaned ISBN (digits only)
         """
         # Remove all non-digit characters except X (for ISBN-10)
-        cleaned = re.sub(r'[^\dX]', '', isbn.upper())
+        cleaned = re.sub(r"[^\dX]", "", isbn.upper())
         return cleaned
 
     def _has_cover(self, book: epub.EpubBook) -> bool:
@@ -520,7 +528,7 @@ class EnhancedEPUBReader:
             # Try multiple methods to find cover
 
             # Method 1: Use get_metadata
-            cover_meta = book.get_metadata('OPF', 'cover')
+            cover_meta = book.get_metadata("OPF", "cover")
             if cover_meta:
                 return True
 
@@ -530,7 +538,7 @@ class EnhancedEPUBReader:
                     return True
                 # Check if it's an image with 'cover' in the name
                 if item.get_type() == ebooklib.ITEM_IMAGE:
-                    if 'cover' in item.get_name().lower():
+                    if "cover" in item.get_name().lower():
                         return True
 
             return False
@@ -538,10 +546,7 @@ class EnhancedEPUBReader:
             return False
 
     def _extract_cover(
-        self,
-        book: epub.EpubBook,
-        epub_path: Path,
-        output_dir: Path | None = None
+        self, book: epub.EpubBook, epub_path: Path, output_dir: Path | None = None
     ) -> Path | None:
         """Extract cover image from EPUB.
 
@@ -562,7 +567,7 @@ class EnhancedEPUBReader:
             cover_item = None
 
             # Method 1: Check metadata
-            cover_meta = book.get_metadata('OPF', 'cover')
+            cover_meta = book.get_metadata("OPF", "cover")
             if cover_meta and cover_meta[0]:
                 cover_id = cover_meta[0][0]
                 cover_item = book.get_item_with_id(cover_id)
@@ -575,7 +580,7 @@ class EnhancedEPUBReader:
                         break
                     # Check images with 'cover' in name
                     if item.get_type() == ebooklib.ITEM_IMAGE:
-                        if 'cover' in item.get_name().lower():
+                        if "cover" in item.get_name().lower():
                             cover_item = item
                             break
 
@@ -595,12 +600,12 @@ class EnhancedEPUBReader:
 
             # Determine file extension from content
             img = Image.open(io.BytesIO(cover_data))
-            ext = img.format.lower() if img.format else 'jpg'
+            ext = img.format.lower() if img.format else "jpg"
 
             output_path = output_dir / f"{epub_path.stem}_cover.{ext}"
 
             # Save cover
-            with open(output_path, 'wb') as f:
+            with open(output_path, "wb") as f:
                 f.write(cover_data)
 
             logger.info(f"Extracted cover to: {output_path}")
@@ -628,17 +633,14 @@ class EnhancedEPUBReader:
             # Try to detect from content
             for item in book.get_items():
                 if item.get_type() == ebooklib.ITEM_NAVIGATION:
-                    return '3.0'  # EPUB 3 uses nav documents
+                    return "3.0"  # EPUB 3 uses nav documents
 
-            return '2.0'  # Default to EPUB 2
+            return "2.0"  # Default to EPUB 2
         except Exception:
             return None
 
 
-def read_epub_simple(
-    file_path: str | Path,
-    max_chars: int = 10000
-) -> str:
+def read_epub_simple(file_path: str | Path, max_chars: int = 10000) -> str:
     """Simple EPUB text extraction (backward compatible).
 
     This is a simplified version for quick text extraction,

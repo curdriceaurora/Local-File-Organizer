@@ -4,6 +4,7 @@ PARA Migration Manager
 Handles migration of files from flat or hierarchical structures to PARA organization.
 Supports dry-run, rollback, and detailed reporting.
 """
+
 from __future__ import annotations
 
 import logging
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MigrationFile:
     """Represents a file to be migrated."""
+
     source_path: Path
     target_category: PARACategory
     target_path: Path
@@ -34,6 +36,7 @@ class MigrationFile:
 @dataclass
 class MigrationPlan:
     """Plan for migrating files to PARA structure."""
+
     files: list[MigrationFile]
     total_count: int
     by_category: dict[PARACategory, int]
@@ -44,6 +47,7 @@ class MigrationPlan:
 @dataclass
 class MigrationReport:
     """Report of migration execution."""
+
     plan: MigrationPlan
     migrated: list[Path]
     failed: list[tuple[Path, str]]
@@ -61,9 +65,7 @@ class PARAMigrationManager:
     """
 
     def __init__(
-        self,
-        config: PARAConfig | None = None,
-        heuristic_engine: HeuristicEngine | None = None
+        self, config: PARAConfig | None = None, heuristic_engine: HeuristicEngine | None = None
     ):
         """
         Initialize migration manager.
@@ -90,7 +92,7 @@ class PARAMigrationManager:
         source_path: Path,
         target_root: Path,
         recursive: bool = True,
-        file_extensions: list[str] | None = None
+        file_extensions: list[str] | None = None,
     ) -> MigrationPlan:
         """
         Analyze source directory and create migration plan.
@@ -135,10 +137,7 @@ class PARAMigrationManager:
                 confidence = result.overall_confidence
 
                 # Determine target path
-                category_path = self.folder_generator.get_category_path(
-                    category,
-                    target_root
-                )
+                category_path = self.folder_generator.get_category_path(category, target_root)
                 relative_path = file_path.relative_to(source_path)
                 target_path = category_path / relative_path.name
 
@@ -153,7 +152,7 @@ class PARAMigrationManager:
                     target_category=category,
                     target_path=target_path,
                     confidence=confidence,
-                    reasoning=reasoning
+                    reasoning=reasoning,
                 )
                 files_to_migrate.append(migration_file)
 
@@ -170,7 +169,7 @@ class PARAMigrationManager:
             total_count=len(files_to_migrate),
             by_category=by_category,
             estimated_size=total_size,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
 
         logger.info(f"Migration plan created: {plan.total_count} files")
@@ -181,7 +180,7 @@ class PARAMigrationManager:
         plan: MigrationPlan,
         dry_run: bool = True,
         create_backup: bool = True,
-        preserve_timestamps: bool = True
+        preserve_timestamps: bool = True,
     ) -> MigrationReport:
         """
         Execute migration according to plan.
@@ -227,24 +226,24 @@ class PARAMigrationManager:
                         source_stat = migration_file.source_path.stat()
 
                     # Move file
-                    shutil.move(
-                        str(migration_file.source_path),
-                        str(migration_file.target_path)
-                    )
+                    shutil.move(str(migration_file.source_path), str(migration_file.target_path))
 
                     # Apply preserved timestamps after moving
                     if preserve_timestamps:
                         # Restore timestamps on target
                         os.utime(
-                            migration_file.target_path,
-                            (source_stat.st_atime, source_stat.st_mtime)
+                            migration_file.target_path, (source_stat.st_atime, source_stat.st_mtime)
                         )
 
                     migrated.append(migration_file.target_path)
-                    logger.info(f"Migrated: {migration_file.source_path} → {migration_file.target_path}")
+                    logger.info(
+                        f"Migrated: {migration_file.source_path} → {migration_file.target_path}"
+                    )
                 else:
                     migrated.append(migration_file.target_path)
-                    logger.info(f"[DRY RUN] Would migrate: {migration_file.source_path} → {migration_file.target_path}")
+                    logger.info(
+                        f"[DRY RUN] Would migrate: {migration_file.source_path} → {migration_file.target_path}"
+                    )
 
             except Exception as e:
                 logger.error(f"Failed to migrate {migration_file.source_path}: {e}")
@@ -261,10 +260,12 @@ class PARAMigrationManager:
             failed=failed,
             skipped=skipped,
             duration_seconds=duration,
-            success=success
+            success=success,
         )
 
-        logger.info(f"Migration completed: {len(migrated)} migrated, {len(failed)} failed, {len(skipped)} skipped")
+        logger.info(
+            f"Migration completed: {len(migrated)} migrated, {len(failed)} failed, {len(skipped)} skipped"
+        )
         return report
 
     def _create_backup(self, plan: MigrationPlan) -> str:
@@ -310,7 +311,7 @@ class PARAMigrationManager:
             "# PARA Migration Plan",
             "",
             f"Total files: {plan.total_count}",
-            f"Estimated size: {plan.estimated_size / (1024*1024):.2f} MB",
+            f"Estimated size: {plan.estimated_size / (1024 * 1024):.2f} MB",
             f"Created: {plan.created_at}",
             "",
             "## Distribution by Category",
@@ -320,15 +321,13 @@ class PARAMigrationManager:
             percentage = (count / plan.total_count * 100) if plan.total_count > 0 else 0
             lines.append(f"- {category.value.title()}: {count} files ({percentage:.1f}%)")
 
-        lines.extend([
-            "",
-            "## Files",
-            ""
-        ])
+        lines.extend(["", "## Files", ""])
 
         # Show first 20 files as examples
         for i, mf in enumerate(plan.files[:20]):
-            lines.append(f"{i+1}. {mf.source_path.name} → {mf.target_category.value} (confidence: {mf.confidence:.0%})")
+            lines.append(
+                f"{i + 1}. {mf.source_path.name} → {mf.target_category.value} (confidence: {mf.confidence:.0%})"
+            )
 
         if len(plan.files) > 20:
             lines.append(f"... and {len(plan.files) - 20} more files")

@@ -89,9 +89,7 @@ class HealthEndpoint:
             "response_time_ms": model_status.response_time_ms,
         }
 
-        all_healthy = all(
-            comp["healthy"] for comp in components.values()
-        )
+        all_healthy = all(comp["healthy"] for comp in components.values())
 
         return {
             "status": "healthy" if all_healthy else "unhealthy",
@@ -234,10 +232,7 @@ class HealthEndpoint:
                 return ComponentStatus(
                     name="model",
                     healthy=False,
-                    message=(
-                        f"Ollama not reachable at "
-                        f"{self.model_host}:{self.model_port}"
-                    ),
+                    message=(f"Ollama not reachable at {self.model_host}:{self.model_port}"),
                     response_time_ms=round(elapsed_ms, 2),
                 )
         except OSError as exc:

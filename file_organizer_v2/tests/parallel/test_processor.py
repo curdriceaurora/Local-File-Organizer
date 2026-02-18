@@ -19,6 +19,7 @@ from file_organizer.parallel.result import BatchResult, FileResult
 # Simple test functions (no real file I/O)
 # ---------------------------------------------------------------------------
 
+
 def _identity(path: Path) -> str:
     """Return the file name as a string."""
     return path.name
@@ -145,6 +146,7 @@ class TestProcessBatch(unittest.TestCase):
 
     def test_mixed_results(self) -> None:
         """Test batch with both successes and failures."""
+
         def mixed_fn(path: Path) -> str:
             if "bad" in path.name:
                 raise ValueError(f"Bad file: {path}")
@@ -177,15 +179,11 @@ class TestProcessBatch(unittest.TestCase):
         # Should be total / (duration_ms/1000)
         if result.total_duration_ms > 0:
             expected_fps = len(files) / (result.total_duration_ms / 1000)
-            self.assertAlmostEqual(
-                result.files_per_second, expected_fps, places=1
-            )
+            self.assertAlmostEqual(result.files_per_second, expected_fps, places=1)
 
     def test_single_file(self) -> None:
         """Test processing a single file."""
-        result = self.processor.process_batch(
-            [Path("only.txt")], _identity
-        )
+        result = self.processor.process_batch([Path("only.txt")], _identity)
         self.assertEqual(result.total, 1)
         self.assertEqual(result.succeeded, 1)
         self.assertEqual(result.results[0].result, "only.txt")
@@ -347,9 +345,7 @@ class TestProcessBatchIter(unittest.TestCase):
     def test_iter_captures_failures(self) -> None:
         """Test that iterator captures failures."""
         files = [Path("fail.txt")]
-        results = list(
-            self.processor.process_batch_iter(files, _always_fail)
-        )
+        results = list(self.processor.process_batch_iter(files, _always_fail))
         self.assertEqual(len(results), 1)
         self.assertFalse(results[0].success)
         assert results[0].error is not None

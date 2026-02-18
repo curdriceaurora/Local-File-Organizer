@@ -4,6 +4,7 @@ Johnny Decimal System Core
 This module provides the main system orchestration for Johnny Decimal
 file organization, including number assignment, validation, and management.
 """
+
 from __future__ import annotations
 
 import json
@@ -166,9 +167,7 @@ class JohnnyDecimalSystem:
                 conflicts.extend(errors)
                 # Try to resolve conflict
                 try:
-                    number = self.generator.resolve_conflict(
-                        preferred_number, strategy="increment"
-                    )
+                    number = self.generator.resolve_conflict(preferred_number, strategy="increment")
                     confidence = 0.7
                     reasons.append(f"Resolved conflict: using {number.formatted_number}")
                     alternative_numbers[preferred_number.formatted_number] = 0.95
@@ -180,12 +179,10 @@ class JohnnyDecimalSystem:
         else:
             # Suggest number based on content
             if content:
-                number, confidence, suggestion_reasons = (
-                    self.generator.suggest_number_for_content(
-                        content=content,
-                        filename=file_path.name,
-                        prefer_category=True,
-                    )
+                number, confidence, suggestion_reasons = self.generator.suggest_number_for_content(
+                    content=content,
+                    filename=file_path.name,
+                    prefer_category=True,
                 )
                 reasons.extend(suggestion_reasons)
             else:
@@ -203,10 +200,7 @@ class JohnnyDecimalSystem:
         # Check for conflicts
         found_conflicts = self.generator.find_conflicts(number)
         if found_conflicts:
-            conflicts.extend([
-                f"{num} (used by {path})"
-                for num, path in found_conflicts
-            ])
+            conflicts.extend([f"{num} (used by {path})" for num, path in found_conflicts])
 
         # Register the number if requested
         if auto_register and not found_conflicts:
@@ -232,8 +226,7 @@ class JohnnyDecimalSystem:
         )
 
         logger.info(
-            f"Assigned {number.formatted_number} to {file_path.name} "
-            f"(confidence: {confidence:.2f})"
+            f"Assigned {number.formatted_number} to {file_path.name} (confidence: {confidence:.2f})"
         )
 
         return result
@@ -257,10 +250,7 @@ class JohnnyDecimalSystem:
         confidence = 1.0 if is_valid else 0.0
         reasons = ["Number is valid and available"] if is_valid else errors
 
-        conflict_strs = [
-            f"{num} (used by {path})"
-            for num, path in conflicts
-        ]
+        conflict_strs = [f"{num} (used by {path})" for num, path in conflicts]
 
         return NumberingResult(
             file_path=file_path,
@@ -299,9 +289,7 @@ class JohnnyDecimalSystem:
 
         # Verify old number exists
         if old_str not in self.generator._used_numbers:
-            raise InvalidNumberError(
-                f"Old number {old_str} is not registered"
-            )
+            raise InvalidNumberError(f"Old number {old_str} is not registered")
 
         # Validate new number
         is_valid, errors = self.generator.validate_number(new_number)
@@ -335,8 +323,7 @@ class JohnnyDecimalSystem:
             )
 
             logger.info(
-                f"Renumbered {file_path.name} from {old_str} "
-                f"to {new_number.formatted_number}"
+                f"Renumbered {file_path.name} from {old_str} to {new_number.formatted_number}"
             )
 
             return result
@@ -361,10 +348,7 @@ class JohnnyDecimalSystem:
         categories = self.scheme.get_available_categories(area)
 
         # Count used numbers in this area
-        used_numbers = [
-            n for n in self.generator._used_numbers
-            if n.startswith(f"{area:02d}")
-        ]
+        used_numbers = [n for n in self.generator._used_numbers if n.startswith(f"{area:02d}")]
 
         return {
             "area": area,
@@ -428,8 +412,7 @@ class JohnnyDecimalSystem:
                 "reserved_numbers": list(self.scheme.reserved_numbers),
             },
             "used_numbers": {
-                num: str(path)
-                for num, path in self.generator._number_mappings.items()
+                num: str(path) for num, path in self.generator._number_mappings.items()
             },
             "statistics": self.generator.get_usage_statistics(),
         }
@@ -502,14 +485,9 @@ class JohnnyDecimalSystem:
             category_def: The category definition to add
         """
         self.scheme.add_category(category_def)
-        logger.info(
-            f"Added custom category: {category_def.formatted_number} "
-            f"{category_def.name}"
-        )
+        logger.info(f"Added custom category: {category_def.formatted_number} {category_def.name}")
 
-    def reserve_number_range(
-        self, start: JohnnyDecimalNumber, end: JohnnyDecimalNumber
-    ) -> None:
+    def reserve_number_range(self, start: JohnnyDecimalNumber, end: JohnnyDecimalNumber) -> None:
         """
         Reserve a range of numbers to prevent automatic assignment.
 
@@ -538,14 +516,10 @@ class JohnnyDecimalSystem:
             assert start.item_id is not None and end.item_id is not None
             assert start.category is not None
             for item in range(start.item_id, end.item_id + 1):
-                num = JohnnyDecimalNumber(
-                    area=start.area, category=start.category, item_id=item
-                )
+                num = JohnnyDecimalNumber(area=start.area, category=start.category, item_id=item)
                 self.scheme.reserve_number(num)
 
-        logger.info(
-            f"Reserved range {start.formatted_number} to {end.formatted_number}"
-        )
+        logger.info(f"Reserved range {start.formatted_number} to {end.formatted_number}")
 
     def clear_all_registrations(self) -> None:
         """Clear all number registrations (for testing or reset)."""
@@ -553,7 +527,9 @@ class JohnnyDecimalSystem:
         self._initialized = False
         logger.info("Cleared all registrations")
 
-    def create_area(self, area_number: int, name: str, description: str = "") -> JohnnyDecimalNumber:
+    def create_area(
+        self, area_number: int, name: str, description: str = ""
+    ) -> JohnnyDecimalNumber:
         """
         Create a new area and return its JD number.
 

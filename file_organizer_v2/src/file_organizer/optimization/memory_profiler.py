@@ -188,9 +188,7 @@ class MemoryProfiler:
             RuntimeError: If tracking has not been started.
         """
         if not self._tracking:
-            raise RuntimeError(
-                "Tracking not started. Call start_tracking() first."
-            )
+            raise RuntimeError("Tracking not started. Call start_tracking() first.")
         snapshot = self.get_snapshot()
         self._snapshots.append(snapshot)
         return snapshot
@@ -275,7 +273,5 @@ class MemoryProfiler:
             type_name = type(obj).__name__
             type_counts[type_name] = type_counts.get(type_name, 0) + 1
 
-        sorted_types = sorted(
-            type_counts.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_types = sorted(type_counts.items(), key=lambda x: x[1], reverse=True)
         return sorted_types[:limit]

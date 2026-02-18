@@ -1,6 +1,7 @@
 """
 Command-line interface modules for File Organizer.
 """
+
 from __future__ import annotations
 
 from file_organizer.cli.main import app, main

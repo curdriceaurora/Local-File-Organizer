@@ -1,4 +1,5 @@
 """Real-time connection manager for WebSocket updates."""
+
 from __future__ import annotations
 
 import asyncio

@@ -1,4 +1,5 @@
 """Organization endpoints."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -180,9 +181,7 @@ def get_job_status(job_id: str) -> JobStatusResponse:
     job = get_job(job_id)
     if not job:
         raise ApiError(status_code=404, error="not_found", message="Job not found")
-    result = (
-        OrganizationResultResponse(**job.result) if job.result is not None else None
-    )
+    result = OrganizationResultResponse(**job.result) if job.result is not None else None
     return JobStatusResponse(
         job_id=job.job_id,
         status=job.status,

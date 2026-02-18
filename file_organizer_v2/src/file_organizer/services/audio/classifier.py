@@ -5,6 +5,7 @@ Classifies audio files into content types (music, podcast, audiobook, etc.)
 using rule-based heuristics from metadata and optional transcription data.
 No external AI dependencies required.
 """
+
 from __future__ import annotations
 
 import logging
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class AudioType(StrEnum):
     """Audio content type classification."""
+
     MUSIC = "music"
     PODCAST = "podcast"
     AUDIOBOOK = "audiobook"
@@ -33,6 +35,7 @@ class AudioType(StrEnum):
 @dataclass
 class ClassificationAlternative:
     """An alternative classification with its confidence score."""
+
     audio_type: AudioType
     confidence: float
     reasoning: str
@@ -41,6 +44,7 @@ class ClassificationAlternative:
 @dataclass
 class ClassificationResult:
     """Result of audio type classification."""
+
     audio_type: AudioType
     confidence: float
     reasoning: str
@@ -52,43 +56,124 @@ class ClassificationResult:
 # ---------------------------------------------------------------------------
 
 PODCAST_KEYWORDS: set[str] = {
-    "episode", "podcast", "host", "guest", "listener", "subscribe",
-    "show notes", "sponsor", "advertisement", "intro", "outro",
-    "welcome to", "thanks for listening", "tune in", "weekly",
-    "ep.", "ep ", "series",
+    "episode",
+    "podcast",
+    "host",
+    "guest",
+    "listener",
+    "subscribe",
+    "show notes",
+    "sponsor",
+    "advertisement",
+    "intro",
+    "outro",
+    "welcome to",
+    "thanks for listening",
+    "tune in",
+    "weekly",
+    "ep.",
+    "ep ",
+    "series",
 }
 
 AUDIOBOOK_KEYWORDS: set[str] = {
-    "chapter", "narrator", "narrated by", "audiobook", "read by",
-    "prologue", "epilogue", "unabridged", "abridged", "book",
-    "novel", "author", "pages",
+    "chapter",
+    "narrator",
+    "narrated by",
+    "audiobook",
+    "read by",
+    "prologue",
+    "epilogue",
+    "unabridged",
+    "abridged",
+    "book",
+    "novel",
+    "author",
+    "pages",
 }
 
 LECTURE_KEYWORDS: set[str] = {
-    "lecture", "professor", "university", "syllabus", "exam",
-    "students", "course", "class", "semester", "homework",
-    "assignment", "textbook", "topic", "education", "lesson",
-    "tutorial", "slide", "curriculum",
+    "lecture",
+    "professor",
+    "university",
+    "syllabus",
+    "exam",
+    "students",
+    "course",
+    "class",
+    "semester",
+    "homework",
+    "assignment",
+    "textbook",
+    "topic",
+    "education",
+    "lesson",
+    "tutorial",
+    "slide",
+    "curriculum",
 }
 
 INTERVIEW_KEYWORDS: set[str] = {
-    "interview", "question", "answer", "interviewer", "interviewee",
-    "tell me about", "what do you think", "how did you", "q&a",
-    "panel", "discussion", "moderator", "respondent",
+    "interview",
+    "question",
+    "answer",
+    "interviewer",
+    "interviewee",
+    "tell me about",
+    "what do you think",
+    "how did you",
+    "q&a",
+    "panel",
+    "discussion",
+    "moderator",
+    "respondent",
 }
 
 RECORDING_KEYWORDS: set[str] = {
-    "meeting", "minutes", "memo", "recording", "voice note",
-    "dictation", "note to self", "reminder", "agenda",
-    "action items", "follow up", "conference call",
+    "meeting",
+    "minutes",
+    "memo",
+    "recording",
+    "voice note",
+    "dictation",
+    "note to self",
+    "reminder",
+    "agenda",
+    "action items",
+    "follow up",
+    "conference call",
 }
 
 MUSIC_GENRES: set[str] = {
-    "rock", "pop", "jazz", "blues", "classical", "country",
-    "hip hop", "hip-hop", "rap", "r&b", "rnb", "electronic",
-    "dance", "edm", "metal", "punk", "folk", "soul", "funk",
-    "reggae", "latin", "indie", "alternative", "ambient",
-    "techno", "house", "trance", "dubstep", "world",
+    "rock",
+    "pop",
+    "jazz",
+    "blues",
+    "classical",
+    "country",
+    "hip hop",
+    "hip-hop",
+    "rap",
+    "r&b",
+    "rnb",
+    "electronic",
+    "dance",
+    "edm",
+    "metal",
+    "punk",
+    "folk",
+    "soul",
+    "funk",
+    "reggae",
+    "latin",
+    "indie",
+    "alternative",
+    "ambient",
+    "techno",
+    "house",
+    "trance",
+    "dubstep",
+    "world",
 }
 
 
@@ -124,9 +209,7 @@ def _has_podcast_metadata(metadata: AudioMetadata) -> bool:
         return True
 
     # Check title/comment for podcast indicators
-    searchable = " ".join(
-        s for s in [metadata.title, metadata.comment] if s is not None
-    ).lower()
+    searchable = " ".join(s for s in [metadata.title, metadata.comment] if s is not None).lower()
     return bool(re.search(r"\bep(isode)?[\s.#]*\d", searchable))
 
 
@@ -163,7 +246,7 @@ def _estimate_speaker_count(segments: list[Segment]) -> int:
 
     mean_dur = sum(durations) / len(durations)
     variance = sum((d - mean_dur) ** 2 for d in durations) / len(durations)
-    std_dev = variance ** 0.5
+    std_dev = variance**0.5
 
     # High variability in segment length hints at multiple speakers
     coefficient_of_variation = std_dev / mean_dur if mean_dur > 0 else 0
@@ -189,12 +272,12 @@ class AudioClassifier:
     """
 
     # Duration thresholds in seconds
-    MUSIC_MAX_DURATION: float = 600.0       # 10 minutes
-    PODCAST_MIN_DURATION: float = 900.0     # 15 minutes
-    PODCAST_MAX_DURATION: float = 5400.0    # 90 minutes
+    MUSIC_MAX_DURATION: float = 600.0  # 10 minutes
+    PODCAST_MIN_DURATION: float = 900.0  # 15 minutes
+    PODCAST_MAX_DURATION: float = 5400.0  # 90 minutes
     AUDIOBOOK_MIN_DURATION: float = 1800.0  # 30 minutes
-    LECTURE_MIN_DURATION: float = 1800.0    # 30 minutes
-    LECTURE_MAX_DURATION: float = 5400.0    # 90 minutes
+    LECTURE_MIN_DURATION: float = 1800.0  # 30 minutes
+    LECTURE_MAX_DURATION: float = 5400.0  # 90 minutes
 
     def classify(
         self,
@@ -234,9 +317,7 @@ class AudioClassifier:
         # Select winner
         # ------------------------------------------------------------------
         # Remove UNKNOWN from competition (it is the fallback)
-        candidate_scores = {
-            t: s for t, s in scores.items() if t != AudioType.UNKNOWN
-        }
+        candidate_scores = {t: s for t, s in scores.items() if t != AudioType.UNKNOWN}
 
         if not candidate_scores or max(candidate_scores.values()) <= 0:
             return ClassificationResult(
@@ -320,8 +401,11 @@ class AudioClassifier:
         tag_count = sum(
             1
             for val in [
-                metadata.title, metadata.artist, metadata.album,
-                metadata.genre, metadata.track_number,
+                metadata.title,
+                metadata.artist,
+                metadata.album,
+                metadata.genre,
+                metadata.track_number,
             ]
             if val is not None
         )
@@ -333,9 +417,7 @@ class AudioClassifier:
             reasons[AudioType.RECORDING].append("Only title tag present, no other metadata")
 
         # Check title/comment text for keyword matches
-        searchable_text = " ".join(
-            s for s in [metadata.title, metadata.comment] if s is not None
-        )
+        searchable_text = " ".join(s for s in [metadata.title, metadata.comment] if s is not None)
         if searchable_text:
             for audio_type, kw_set in [
                 (AudioType.PODCAST, PODCAST_KEYWORDS),
@@ -347,9 +429,7 @@ class AudioClassifier:
                 matches = _count_keyword_matches(searchable_text, kw_set)
                 if matches > 0:
                     scores[audio_type] += matches * 1.5
-                    reasons[audio_type].append(
-                        f"{matches} keyword match(es) in title/comment"
-                    )
+                    reasons[audio_type].append(f"{matches} keyword match(es) in title/comment")
 
     def _score_from_duration(
         self,
@@ -364,9 +444,7 @@ class AudioClassifier:
         # Short audio -> likely music or recording
         if duration <= self.MUSIC_MAX_DURATION:
             scores[AudioType.MUSIC] += 1.5
-            reasons[AudioType.MUSIC].append(
-                f"Duration ({duration:.0f}s) within music range"
-            )
+            reasons[AudioType.MUSIC].append(f"Duration ({duration:.0f}s) within music range")
 
         # Podcast range
         if self.PODCAST_MIN_DURATION <= duration <= self.PODCAST_MAX_DURATION:
@@ -416,22 +494,16 @@ class AudioClassifier:
             matches = _count_keyword_matches(text, kw_set)
             if matches >= 3:
                 scores[audio_type] += 3.0
-                reasons[audio_type].append(
-                    f"{matches} keyword matches in transcription"
-                )
+                reasons[audio_type].append(f"{matches} keyword matches in transcription")
             elif matches >= 1:
                 scores[audio_type] += matches * 0.8
-                reasons[audio_type].append(
-                    f"{matches} keyword match(es) in transcription"
-                )
+                reasons[audio_type].append(f"{matches} keyword match(es) in transcription")
 
         # If transcription has minimal text, it might be music
         word_count = len(text.split())
         if word_count < 20 and transcription.duration > 60:
             scores[AudioType.MUSIC] += 2.0
-            reasons[AudioType.MUSIC].append(
-                "Very few words detected, likely instrumental/music"
-            )
+            reasons[AudioType.MUSIC].append("Very few words detected, likely instrumental/music")
 
         # Speaker count estimation from segments
         if transcription.segments:
@@ -449,27 +521,19 @@ class AudioClassifier:
             elif speaker_count == 2:
                 scores[AudioType.INTERVIEW] += 1.5
                 scores[AudioType.PODCAST] += 1.0
-                reasons[AudioType.INTERVIEW].append(
-                    "Estimated 2 speakers (segment variance)"
-                )
-                reasons[AudioType.PODCAST].append(
-                    "Estimated 2 speakers (segment variance)"
-                )
+                reasons[AudioType.INTERVIEW].append("Estimated 2 speakers (segment variance)")
+                reasons[AudioType.PODCAST].append("Estimated 2 speakers (segment variance)")
             elif speaker_count == 1:
                 scores[AudioType.LECTURE] += 1.0
                 scores[AudioType.AUDIOBOOK] += 1.0
-                reasons[AudioType.LECTURE].append(
-                    "Estimated single speaker (segment variance)"
-                )
-                reasons[AudioType.AUDIOBOOK].append(
-                    "Estimated single speaker (segment variance)"
-                )
+                reasons[AudioType.LECTURE].append("Estimated single speaker (segment variance)")
+                reasons[AudioType.AUDIOBOOK].append("Estimated single speaker (segment variance)")
 
         # Narrative speech pattern (long continuous segments)
         if transcription.segments:
-            avg_segment_len = sum(
-                seg.end - seg.start for seg in transcription.segments
-            ) / len(transcription.segments)
+            avg_segment_len = sum(seg.end - seg.start for seg in transcription.segments) / len(
+                transcription.segments
+            )
             if avg_segment_len > 15:
                 scores[AudioType.AUDIOBOOK] += 1.5
                 scores[AudioType.LECTURE] += 1.0

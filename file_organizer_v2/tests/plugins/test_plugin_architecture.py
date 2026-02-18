@@ -1,4 +1,5 @@
 """Tests for Phase 6 plugin architecture foundations."""
+
 from __future__ import annotations
 
 import sys
@@ -196,4 +197,3 @@ def test_plugin_sandbox_enforces_permissions(tmp_path: Path) -> None:
 
     with pytest.raises(PluginPermissionError):
         sandbox.require_operation("delete")
-

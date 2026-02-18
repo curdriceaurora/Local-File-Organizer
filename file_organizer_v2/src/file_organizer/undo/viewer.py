@@ -4,6 +4,7 @@ History viewer for displaying operation history.
 This module provides CLI-friendly formatting and filtering
 for viewing operation history.
 """
+
 from __future__ import annotations
 
 import logging
@@ -111,7 +112,7 @@ class HistoryViewer:
         if operation.metadata:
             print("\nMetadata:")
             for key, value in operation.metadata.items():
-                if key != 'metadata':  # Skip nested metadata field
+                if key != "metadata":  # Skip nested metadata field
                     print(f"  {key}: {value}")
 
     def filter_operations(
@@ -120,7 +121,7 @@ class HistoryViewer:
         status: str | None = None,
         since: str | None = None,
         until: str | None = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> list[Operation]:
         """
         Filter operations with various criteria.
@@ -163,7 +164,7 @@ class HistoryViewer:
             status=op_status,
             start_date=start_date,
             end_date=end_date,
-            limit=limit
+            limit=limit,
         )
 
         return operations
@@ -198,7 +199,7 @@ class HistoryViewer:
         since: str | None = None,
         until: str | None = None,
         search: str | None = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> None:
         """
         Display filtered operations.
@@ -220,11 +221,7 @@ class HistoryViewer:
             print(f"\n{len(operations)} operations found affecting path '{search}':\n")
         else:
             operations = self.filter_operations(
-                operation_type=operation_type,
-                status=status,
-                since=since,
-                until=until,
-                limit=limit
+                operation_type=operation_type, status=status, since=since, until=until, limit=limit
             )
             if not operations:
                 print("No operations found matching the filters.")
@@ -297,7 +294,7 @@ class HistoryViewer:
         """
         # Try ISO format
         try:
-            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
         except ValueError:
             pass
 
@@ -330,27 +327,27 @@ class HistoryViewer:
         all_ops = self.history.get_operations(limit=100000)
 
         stats = {
-            'total_operations': len(all_ops),
-            'by_type': {},
-            'by_status': {},
-            'latest_operation': None,
-            'oldest_operation': None
+            "total_operations": len(all_ops),
+            "by_type": {},
+            "by_status": {},
+            "latest_operation": None,
+            "oldest_operation": None,
         }
 
         # Count by type
         for op_type in OperationType:
             count = sum(1 for op in all_ops if op.operation_type == op_type)
-            stats['by_type'][op_type.value] = count
+            stats["by_type"][op_type.value] = count
 
         # Count by status
         for status in OperationStatus:
             count = sum(1 for op in all_ops if op.status == status)
-            stats['by_status'][status.value] = count
+            stats["by_status"][status.value] = count
 
         # Get latest and oldest
         if all_ops:
-            stats['latest_operation'] = all_ops[0]  # Already sorted DESC
-            stats['oldest_operation'] = all_ops[-1]
+            stats["latest_operation"] = all_ops[0]  # Already sorted DESC
+            stats["oldest_operation"] = all_ops[-1]
 
         return stats
 
@@ -362,20 +359,24 @@ class HistoryViewer:
         print(f"Total operations: {stats['total_operations']}")
 
         print("\nBy type:")
-        for op_type, count in stats['by_type'].items():
+        for op_type, count in stats["by_type"].items():
             print(f"  {op_type}: {count}")
 
         print("\nBy status:")
-        for status, count in stats['by_status'].items():
+        for status, count in stats["by_status"].items():
             print(f"  {status}: {count}")
 
-        if stats['latest_operation']:
-            print(f"\nLatest operation: {stats['latest_operation'].id} "
-                  f"({self._format_datetime(stats['latest_operation'].timestamp)})")
+        if stats["latest_operation"]:
+            print(
+                f"\nLatest operation: {stats['latest_operation'].id} "
+                f"({self._format_datetime(stats['latest_operation'].timestamp)})"
+            )
 
-        if stats['oldest_operation']:
-            print(f"Oldest operation: {stats['oldest_operation'].id} "
-                  f"({self._format_datetime(stats['oldest_operation'].timestamp)})")
+        if stats["oldest_operation"]:
+            print(
+                f"Oldest operation: {stats['oldest_operation'].id} "
+                f"({self._format_datetime(stats['oldest_operation'].timestamp)})"
+            )
 
     def close(self) -> None:
         """Close resources."""

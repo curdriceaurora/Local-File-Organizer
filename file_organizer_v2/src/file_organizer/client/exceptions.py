@@ -1,4 +1,5 @@
 """Exception classes for the File Organizer API client."""
+
 from __future__ import annotations
 
 

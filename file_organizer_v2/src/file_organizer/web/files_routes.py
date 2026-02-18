@@ -1,4 +1,5 @@
 """Web UI routes for file browsing, preview, upload, and thumbnails."""
+
 from __future__ import annotations
 
 import os
@@ -147,19 +148,19 @@ def _collect_entries(
         files.sort(key=lambda p: p.name.lower(), reverse=reverse)
     elif sort_by == "size":
         files.sort(
-            key=lambda p: (file_stats.get(p).st_size if file_stats.get(p) is not None else 0),
+            key=lambda p: file_stats.get(p).st_size if file_stats.get(p) is not None else 0,
             reverse=reverse,
         )
     elif sort_by == "created":
         files.sort(
-            key=lambda p: (file_stats.get(p).st_ctime if file_stats.get(p) is not None else 0),
+            key=lambda p: file_stats.get(p).st_ctime if file_stats.get(p) is not None else 0,
             reverse=reverse,
         )
     elif sort_by == "type":
         files.sort(key=lambda p: p.suffix.lower(), reverse=reverse)
     else:
         files.sort(
-            key=lambda p: (file_stats.get(p).st_mtime if file_stats.get(p) is not None else 0),
+            key=lambda p: file_stats.get(p).st_mtime if file_stats.get(p) is not None else 0,
             reverse=reverse,
         )
 
@@ -486,7 +487,9 @@ def files_preview(
         modified_display = format_timestamp(info.modified)
         if preview_kind == "text" and is_probably_text(target):
             try:
-                preview_text = target.read_text(encoding="utf-8", errors="replace")[:TEXT_PREVIEW_CHARS]
+                preview_text = target.read_text(encoding="utf-8", errors="replace")[
+                    :TEXT_PREVIEW_CHARS
+                ]
             except OSError:
                 preview_text = "Preview not available."
         elif preview_kind == "text":

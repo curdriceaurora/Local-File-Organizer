@@ -1,4 +1,5 @@
 """API routes for plugin marketplace operations."""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -247,6 +248,7 @@ def add_review(
     except MarketplaceError as exc:
         _raise_marketplace_error(exc)
     if not latest:
-        raise ApiError(status_code=500, error="review_write_failed", message="Review was not saved.")
+        raise ApiError(
+            status_code=500, error="review_write_failed", message="Review was not saved."
+        )
     return _review_to_response(latest[0])
-

@@ -77,4 +77,4 @@ All processing is local. Network requests are only made for:
 
 ## Troubleshooting
 If you encounter issues, check the logs or run with `-v` for verbose output.
-See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more details.
+See [troubleshooting.md](troubleshooting.md) for more details.

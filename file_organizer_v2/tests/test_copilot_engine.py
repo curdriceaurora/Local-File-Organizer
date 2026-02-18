@@ -1,4 +1,5 @@
 """Tests for copilot engine, conversation manager, intent parser, and executor."""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -3,6 +3,7 @@
 Provides a split-pane view with the file browser on the left and a
 type-dispatched preview panel on the right, plus multi-file selection.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -83,9 +84,27 @@ class FilePreviewPanel(Static):
     """
 
     _TEXT_EXTENSIONS = {
-        ".txt", ".md", ".py", ".js", ".ts", ".json", ".yaml", ".yml",
-        ".toml", ".cfg", ".ini", ".csv", ".log", ".sh", ".bash", ".html",
-        ".css", ".xml", ".rst", ".tex", ".sql",
+        ".txt",
+        ".md",
+        ".py",
+        ".js",
+        ".ts",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".cfg",
+        ".ini",
+        ".csv",
+        ".log",
+        ".sh",
+        ".bash",
+        ".html",
+        ".css",
+        ".xml",
+        ".rst",
+        ".tex",
+        ".sql",
     }
     _IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp"}
     _PDF_EXTENSIONS = {".pdf"}
@@ -131,7 +150,11 @@ class FilePreviewPanel(Static):
         """Return the first *max_lines* of a text file."""
         try:
             lines = path.read_text(errors="replace").splitlines()[:max_lines]
-            truncated = f"\n[dim]… ({len(lines)} of ~{len(lines)} lines shown)[/dim]" if len(lines) == max_lines else ""
+            truncated = (
+                f"\n[dim]… ({len(lines)} of ~{len(lines)} lines shown)[/dim]"
+                if len(lines) == max_lines
+                else ""
+            )
             return "\n".join(lines) + truncated
         except OSError as exc:
             return f"[red]Cannot read file: {exc}[/red]"
@@ -267,9 +290,7 @@ class FilePreviewView(Horizontal):
     # Event handlers ---------------------------------------------------
 
     @on(FileBrowserView.FileHighlighted)
-    def _on_file_highlighted(
-        self, event: FileBrowserView.FileHighlighted
-    ) -> None:
+    def _on_file_highlighted(self, event: FileBrowserView.FileHighlighted) -> None:
         """Update the preview panel when a file is highlighted."""
         self._current_path = event.path
         self.query_one(FilePreviewPanel).show_preview(event.path)
@@ -306,9 +327,7 @@ class FilePreviewView(Horizontal):
             bar = self.app.query_one(StatusBar)
             count = self.selection.count
             bar.set_status(
-                f"{count} file{'s' if count != 1 else ''} selected"
-                if count
-                else "Ready"
+                f"{count} file{'s' if count != 1 else ''} selected" if count else "Ready"
             )
         except Exception:
             pass

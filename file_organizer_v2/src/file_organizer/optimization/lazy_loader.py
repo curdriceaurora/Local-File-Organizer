@@ -89,9 +89,7 @@ class LazyModelLoader:
                     self._config.name,
                     exc,
                 )
-                raise RuntimeError(
-                    f"Failed to load model '{self._config.name}': {exc}"
-                ) from exc
+                raise RuntimeError(f"Failed to load model '{self._config.name}': {exc}") from exc
 
         return self._model
 

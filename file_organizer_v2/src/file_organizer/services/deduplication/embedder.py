@@ -3,6 +3,7 @@ Document embedding module using TF-IDF vectorization.
 
 Converts text documents into numerical vectors for similarity comparison.
 """
+
 from __future__ import annotations
 
 import logging
@@ -28,7 +29,7 @@ class DocumentEmbedder:
         ngram_range: tuple[int, int] = (1, 2),
         min_df: int = 1,
         max_df: float = 0.95,
-        cache_path: Path | None = None
+        cache_path: Path | None = None,
     ):
         """
         Initialize the document embedder.
@@ -48,9 +49,9 @@ class DocumentEmbedder:
                 ngram_range=ngram_range,
                 min_df=min_df,
                 max_df=max_df,
-                stop_words='english',
+                stop_words="english",
                 lowercase=True,
-                strip_accents='unicode'
+                strip_accents="unicode",
             )
 
         except ImportError as exc:
@@ -72,8 +73,7 @@ class DocumentEmbedder:
             self._load_cache()
 
         logger.info(
-            f"DocumentEmbedder initialized: max_features={max_features}, "
-            f"ngram_range={ngram_range}"
+            f"DocumentEmbedder initialized: max_features={max_features}, ngram_range={ngram_range}"
         )
 
     def fit_transform(self, documents: list[str]) -> np.ndarray:
@@ -125,9 +125,7 @@ class DocumentEmbedder:
             RuntimeError: If vectorizer not fitted
         """
         if not self.is_fitted:
-            raise RuntimeError(
-                "Vectorizer not fitted. Call fit_transform() from e first."
-            )
+            raise RuntimeError("Vectorizer not fitted. Call fit_transform() from e first.")
 
         # Check cache
         doc_hash = self._hash_document(document)
@@ -154,9 +152,7 @@ class DocumentEmbedder:
             Matrix of embeddings
         """
         if not self.is_fitted:
-            raise RuntimeError(
-                "Vectorizer not fitted. Call fit_transform() first."
-            )
+            raise RuntimeError("Vectorizer not fitted. Call fit_transform() first.")
 
         embeddings = self.vectorizer.transform(documents).toarray()
 
@@ -175,9 +171,7 @@ class DocumentEmbedder:
             RuntimeError: If vectorizer not fitted
         """
         if not self.is_fitted:
-            raise RuntimeError(
-                "Vectorizer not fitted. Call fit_transform() first."
-            )
+            raise RuntimeError("Vectorizer not fitted. Call fit_transform() first.")
 
         try:
             # Try new API first (sklearn >= 1.0)
@@ -194,17 +188,11 @@ class DocumentEmbedder:
             Dictionary mapping terms to indices
         """
         if not self.is_fitted:
-            raise RuntimeError(
-                "Vectorizer not fitted. Call fit_transform() first."
-            )
+            raise RuntimeError("Vectorizer not fitted. Call fit_transform() first.")
 
         return self.vectorizer.vocabulary_
 
-    def get_top_terms(
-        self,
-        embedding: np.ndarray,
-        top_n: int = 10
-    ) -> list[tuple[str, float]]:
+    def get_top_terms(self, embedding: np.ndarray, top_n: int = 10) -> list[tuple[str, float]]:
         """
         Get top N terms from an embedding by weight.
 
@@ -216,9 +204,7 @@ class DocumentEmbedder:
             List of (term, weight) tuples
         """
         if not self.is_fitted:
-            raise RuntimeError(
-                "Vectorizer not fitted. Call fit_transform() first."
-            )
+            raise RuntimeError("Vectorizer not fitted. Call fit_transform() first.")
 
         # Get feature names
         feature_names = self.get_feature_names()
@@ -227,11 +213,7 @@ class DocumentEmbedder:
         top_indices = np.argsort(embedding)[-top_n:][::-1]
 
         # Get terms and weights
-        top_terms = [
-            (feature_names[i], embedding[i])
-            for i in top_indices
-            if embedding[i] > 0
-        ]
+        top_terms = [(feature_names[i], embedding[i]) for i in top_indices if embedding[i] > 0]
 
         return top_terms
 
@@ -247,7 +229,7 @@ class DocumentEmbedder:
             return
 
         try:
-            with open(path, 'wb') as f:
+            with open(path, "wb") as f:
                 pickle.dump(self.vectorizer, f)
 
             logger.info(f"Saved vectorizer to {path}")
@@ -263,7 +245,7 @@ class DocumentEmbedder:
             path: Path to load the model from
         """
         try:
-            with open(path, 'rb') as f:
+            with open(path, "rb") as f:
                 self.vectorizer = pickle.load(f)
 
             self.is_fitted = True
@@ -282,6 +264,7 @@ class DocumentEmbedder:
     def _hash_document(self, document: str) -> str:
         """Generate hash for a document."""
         import hashlib
+
         return hashlib.sha256(document.encode()).hexdigest()
 
     def _save_cache(self) -> None:
@@ -290,7 +273,7 @@ class DocumentEmbedder:
             return
 
         try:
-            with open(self.cache_path, 'wb') as f:
+            with open(self.cache_path, "wb") as f:
                 pickle.dump(self.embedding_cache, f)
 
             logger.debug(f"Saved {len(self.embedding_cache)} embeddings to cache")
@@ -304,7 +287,7 @@ class DocumentEmbedder:
             return
 
         try:
-            with open(self.cache_path, 'rb') as f:
+            with open(self.cache_path, "rb") as f:
                 self.embedding_cache = pickle.load(f)
 
             logger.info(f"Loaded {len(self.embedding_cache)} embeddings from cache")

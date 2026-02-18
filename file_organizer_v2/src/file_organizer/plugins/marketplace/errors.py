@@ -1,4 +1,5 @@
 """Marketplace-specific plugin errors."""
+
 from __future__ import annotations
 
 from file_organizer.plugins.errors import PluginError
@@ -22,4 +23,3 @@ class MarketplaceInstallError(MarketplaceError):
 
 class MarketplaceReviewError(MarketplaceError):
     """Raised when review operations fail."""
-

@@ -1,4 +1,5 @@
 """Tests for PipelineOrchestrator."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -345,9 +346,7 @@ class TestPipelineDryRun:
             auto_organize=True,
         )
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, lambda: mock_processor
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, lambda: mock_processor)
 
         result = pipeline.process_file(tmp_files["document.txt"])
         assert result.success is True
@@ -379,9 +378,7 @@ class TestPipelineDryRun:
             auto_organize=True,
         )
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, lambda: mock_processor
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, lambda: mock_processor)
 
         result = pipeline.process_file(tmp_files["document.txt"])
         assert result.success is True
@@ -404,9 +401,7 @@ class TestPipelineErrorHandling:
 
         config = PipelineConfig(output_directory=output_dir)
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, lambda: failing_processor
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, lambda: failing_processor)
 
         result = pipeline.process_file(tmp_files["document.txt"])
         assert result.success is False
@@ -420,9 +415,7 @@ class TestPipelineErrorHandling:
         """When processor returns result with error field, pipeline reports failure."""
         config = PipelineConfig(output_directory=output_dir)
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, MockProcessorWithError
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, MockProcessorWithError)
 
         result = pipeline.process_file(tmp_files["document.txt"])
         assert result.success is False
@@ -453,9 +446,7 @@ class TestPipelineErrorHandling:
 
         config = PipelineConfig(output_directory=output_dir)
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, lambda: failing_processor
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, lambda: failing_processor)
 
         pipeline.process_file(tmp_files["document.txt"])
         assert pipeline.stats.failed == 1
@@ -496,8 +487,8 @@ class TestPipelineBatchProcessing:
         """Batch handles a mix of successful and failed files."""
         files = [
             tmp_files["document.txt"],  # Supported
-            tmp_files["archive.zip"],   # Unsupported
-            tmp_files["photo.jpg"],     # Supported
+            tmp_files["archive.zip"],  # Unsupported
+            tmp_files["photo.jpg"],  # Supported
         ]
         results = pipeline_with_mock.process_batch(files)
         assert results[0].success is True
@@ -540,9 +531,7 @@ class TestPipelineNotificationCallback:
             notification_callback=callback,
         )
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, lambda: mock_processor
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, lambda: mock_processor)
 
         pipeline.process_file(tmp_files["document.txt"])
         callback.assert_called_once_with(tmp_files["document.txt"], True)
@@ -562,9 +551,7 @@ class TestPipelineNotificationCallback:
             notification_callback=callback,
         )
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, lambda: failing_processor
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, lambda: failing_processor)
 
         pipeline.process_file(tmp_files["document.txt"])
         callback.assert_called_once_with(tmp_files["document.txt"], False)
@@ -576,6 +563,7 @@ class TestPipelineNotificationCallback:
         tmp_files: dict[str, Path],
     ) -> None:
         """Pipeline continues even if callback raises an exception."""
+
         def bad_callback(path: Path, success: bool) -> None:
             raise ValueError("Callback error")
 
@@ -584,9 +572,7 @@ class TestPipelineNotificationCallback:
             notification_callback=bad_callback,
         )
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, lambda: mock_processor
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, lambda: mock_processor)
 
         # Should not raise despite callback error
         result = pipeline.process_file(tmp_files["document.txt"])
@@ -609,9 +595,7 @@ class TestPipelineFileOrganization:
             auto_organize=True,
         )
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, lambda: mock_processor
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, lambda: mock_processor)
 
         result = pipeline.process_file(tmp_files["document.txt"])
         assert result.success is True
@@ -632,9 +616,7 @@ class TestPipelineFileOrganization:
             auto_organize=True,
         )
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, lambda: processor
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, lambda: processor)
 
         pipeline.process_file(tmp_files["document.txt"])
         assert (output_dir / "my_category").is_dir()
@@ -652,9 +634,7 @@ class TestPipelineFileOrganization:
             auto_organize=True,
         )
         pipeline = PipelineOrchestrator(config)
-        pipeline.processor_pool.register_factory(
-            ProcessorType.TEXT, lambda: processor
-        )
+        pipeline.processor_pool.register_factory(ProcessorType.TEXT, lambda: processor)
 
         # Process two files that would get the same name
         result1 = pipeline.process_file(tmp_files["document.txt"])

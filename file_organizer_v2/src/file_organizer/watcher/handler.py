@@ -4,6 +4,7 @@ File system event handler with debouncing and filtering.
 Extends watchdog's FileSystemEventHandler to add debounce logic,
 configurable pattern filtering, and event queuing for batch processing.
 """
+
 from __future__ import annotations
 
 import logging
@@ -139,9 +140,7 @@ class FileEventHandler(FileSystemEventHandler):
             dest_path: Destination path for move events.
         """
         path = Path(event.src_path)
-        is_directory = isinstance(
-            event, (DirCreatedEvent, DirDeletedEvent, DirMovedEvent)
-        )
+        is_directory = isinstance(event, (DirCreatedEvent, DirDeletedEvent, DirMovedEvent))
 
         # Skip directory events for non-directory-aware processing
         # (still allow them through if they pass filters)
@@ -215,9 +214,7 @@ class FileEventHandler(FileSystemEventHandler):
             try:
                 callback(file_event)
             except Exception:
-                logger.exception(
-                    "Error in %s callback for %s", event_type.value, file_event.path
-                )
+                logger.exception("Error in %s callback for %s", event_type.value, file_event.path)
 
     def clear_debounce_state(self) -> None:
         """Clear all debounce tracking state."""

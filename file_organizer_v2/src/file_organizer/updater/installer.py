@@ -3,6 +3,7 @@
 All operations are designed to be safe: the old binary is backed up before
 replacement, and the download is verified via SHA256 before installation.
 """
+
 from __future__ import annotations
 
 import hashlib

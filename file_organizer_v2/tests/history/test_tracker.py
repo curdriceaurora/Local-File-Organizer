@@ -1,6 +1,7 @@
 """
 Tests for operation tracker.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -19,14 +20,14 @@ class TestOperationHistory:
     @pytest.fixture
     def temp_db_path(self):
         """Create temporary database path."""
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = Path(f.name)
         yield db_path
         # Cleanup
         if db_path.exists():
             db_path.unlink()
         # Clean up WAL and SHM files
-        for suffix in ['-wal', '-shm']:
+        for suffix in ["-wal", "-shm"]:
             wal_file = Path(str(db_path) + suffix)
             if wal_file.exists():
                 wal_file.unlink()
@@ -54,8 +55,8 @@ class TestOperationHistory:
         operation_id = history.log_operation(
             operation_type=OperationType.MOVE,
             source_path=temp_file,
-            destination_path=Path('/test/dest'),
-            metadata={'test': 'data'}
+            destination_path=Path("/test/dest"),
+            metadata={"test": "data"},
         )
 
         assert operation_id > 0
@@ -68,10 +69,7 @@ class TestOperationHistory:
 
     def test_log_operation_with_file_hash(self, history, temp_file):
         """Test that file hash is calculated for existing files."""
-        history.log_operation(
-            operation_type=OperationType.MOVE,
-            source_path=temp_file
-        )
+        history.log_operation(operation_type=OperationType.MOVE, source_path=temp_file)
 
         operations = history.get_operations()
         assert len(operations) == 1
@@ -81,22 +79,19 @@ class TestOperationHistory:
 
     def test_log_operation_with_metadata(self, history, temp_file):
         """Test that file metadata is collected."""
-        history.log_operation(
-            operation_type=OperationType.MOVE,
-            source_path=temp_file
-        )
+        history.log_operation(operation_type=OperationType.MOVE, source_path=temp_file)
 
         operations = history.get_operations()
         assert len(operations) == 1
         metadata = operations[0].metadata
-        assert 'size' in metadata
-        assert 'mode' in metadata
-        assert 'mtime' in metadata
-        assert metadata['is_file'] is True
+        assert "size" in metadata
+        assert "mode" in metadata
+        assert "mtime" in metadata
+        assert metadata["is_file"] is True
 
     def test_start_transaction(self, history):
         """Test starting a transaction."""
-        transaction_id = history.start_transaction(metadata={'test': 'data'})
+        transaction_id = history.start_transaction(metadata={"test": "data"})
 
         assert transaction_id is not None
         assert len(transaction_id) > 0  # UUID format
@@ -115,7 +110,7 @@ class TestOperationHistory:
 
         # Verify transaction status
         transaction = history.get_transaction(transaction_id)
-        assert transaction.status.value == 'completed'
+        assert transaction.status.value == "completed"
         assert transaction.completed_at is not None
 
     def test_rollback_transaction(self, history, temp_file):
@@ -124,9 +119,7 @@ class TestOperationHistory:
 
         # Log some operations in the transaction
         history.log_operation(
-            operation_type=OperationType.MOVE,
-            source_path=temp_file,
-            transaction_id=transaction_id
+            operation_type=OperationType.MOVE, source_path=temp_file, transaction_id=transaction_id
         )
 
         result = history.rollback_transaction(transaction_id)
@@ -134,7 +127,7 @@ class TestOperationHistory:
 
         # Verify transaction status
         transaction = history.get_transaction(transaction_id)
-        assert transaction.status.value == 'failed'
+        assert transaction.status.value == "failed"
 
         # Verify operations were marked as rolled back
         operations = history.get_operations(transaction_id=transaction_id)
@@ -145,8 +138,7 @@ class TestOperationHistory:
         # Log multiple operations
         for i in range(3):
             history.log_operation(
-                operation_type=OperationType.MOVE,
-                source_path=Path(f'/test/path{i}')
+                operation_type=OperationType.MOVE, source_path=Path(f"/test/path{i}")
             )
 
         operations = history.get_operations()
@@ -155,9 +147,9 @@ class TestOperationHistory:
     def test_get_operations_by_type(self, history):
         """Test filtering operations by type."""
         # Log different operation types
-        history.log_operation(OperationType.MOVE, Path('/test/path1'))
-        history.log_operation(OperationType.RENAME, Path('/test/path2'))
-        history.log_operation(OperationType.DELETE, Path('/test/path3'))
+        history.log_operation(OperationType.MOVE, Path("/test/path1"))
+        history.log_operation(OperationType.RENAME, Path("/test/path2"))
+        history.log_operation(OperationType.DELETE, Path("/test/path3"))
 
         # Filter by type
         move_ops = history.get_operations(operation_type=OperationType.MOVE)
@@ -170,18 +162,14 @@ class TestOperationHistory:
 
         # Log operations in transaction
         history.log_operation(
-            OperationType.MOVE,
-            Path('/test/path1'),
-            transaction_id=transaction_id
+            OperationType.MOVE, Path("/test/path1"), transaction_id=transaction_id
         )
         history.log_operation(
-            OperationType.MOVE,
-            Path('/test/path2'),
-            transaction_id=transaction_id
+            OperationType.MOVE, Path("/test/path2"), transaction_id=transaction_id
         )
 
         # Log operation outside transaction
-        history.log_operation(OperationType.MOVE, Path('/test/path3'))
+        history.log_operation(OperationType.MOVE, Path("/test/path3"))
 
         # Filter by transaction
         txn_ops = history.get_operations(transaction_id=transaction_id)
@@ -191,15 +179,13 @@ class TestOperationHistory:
         """Test filtering operations by status."""
         # Log operations with different statuses
         history.log_operation(
-            OperationType.MOVE,
-            Path('/test/path1'),
-            status=OperationStatus.COMPLETED
+            OperationType.MOVE, Path("/test/path1"), status=OperationStatus.COMPLETED
         )
         history.log_operation(
             OperationType.MOVE,
-            Path('/test/path2'),
+            Path("/test/path2"),
             status=OperationStatus.FAILED,
-            error_message="Test error"
+            error_message="Test error",
         )
 
         # Filter by status
@@ -214,20 +200,17 @@ class TestOperationHistory:
         yesterday = now - timedelta(days=1)
         tomorrow = now + timedelta(days=1)
 
-        history.log_operation(OperationType.MOVE, Path('/test/path1'))
+        history.log_operation(OperationType.MOVE, Path("/test/path1"))
 
         # Filter by date range
-        ops = history.get_operations(
-            start_date=yesterday,
-            end_date=tomorrow
-        )
+        ops = history.get_operations(start_date=yesterday, end_date=tomorrow)
         assert len(ops) == 1
 
     def test_get_operations_with_limit(self, history):
         """Test limiting number of operations returned."""
         # Log multiple operations
         for i in range(10):
-            history.log_operation(OperationType.MOVE, Path(f'/test/path{i}'))
+            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
 
         # Get with limit
         ops = history.get_operations(limit=5)
@@ -237,23 +220,23 @@ class TestOperationHistory:
         """Test getting recent operations."""
         # Log multiple operations
         for i in range(5):
-            history.log_operation(OperationType.MOVE, Path(f'/test/path{i}'))
+            history.log_operation(OperationType.MOVE, Path(f"/test/path{i}"))
 
         recent = history.get_recent_operations(limit=3)
         assert len(recent) == 3
 
     def test_get_transaction(self, history):
         """Test getting transaction by ID."""
-        transaction_id = history.start_transaction(metadata={'test': 'data'})
+        transaction_id = history.start_transaction(metadata={"test": "data"})
 
         transaction = history.get_transaction(transaction_id)
         assert transaction is not None
         assert transaction.transaction_id == transaction_id
-        assert transaction.metadata == {'test': 'data'}
+        assert transaction.metadata == {"test": "data"}
 
     def test_get_nonexistent_transaction(self, history):
         """Test getting nonexistent transaction returns None."""
-        transaction = history.get_transaction('nonexistent-id')
+        transaction = history.get_transaction("nonexistent-id")
         assert transaction is None
 
     def test_transaction_operation_count(self, history):
@@ -263,9 +246,7 @@ class TestOperationHistory:
         # Log operations
         for i in range(3):
             history.log_operation(
-                OperationType.MOVE,
-                Path(f'/test/path{i}'),
-                transaction_id=transaction_id
+                OperationType.MOVE, Path(f"/test/path{i}"), transaction_id=transaction_id
             )
 
         transaction = history.get_transaction(transaction_id)
@@ -274,7 +255,7 @@ class TestOperationHistory:
     def test_context_manager(self, temp_db_path):
         """Test OperationHistory as context manager."""
         with OperationHistory(temp_db_path) as history:
-            history.log_operation(OperationType.MOVE, Path('/test/path'))
+            history.log_operation(OperationType.MOVE, Path("/test/path"))
 
         # Should close cleanly
 
@@ -282,9 +263,9 @@ class TestOperationHistory:
         """Test logging a failed operation."""
         history.log_operation(
             operation_type=OperationType.MOVE,
-            source_path=Path('/test/source'),
+            source_path=Path("/test/source"),
             status=OperationStatus.FAILED,
-            error_message="Permission denied"
+            error_message="Permission denied",
         )
 
         operations = history.get_operations()

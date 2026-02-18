@@ -3,6 +3,7 @@ Integration Tests for Johnny Decimal Methodology
 
 Tests complete workflows and cross-component integration.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -101,7 +102,7 @@ class TestCompleteWorkflows:
 
         for area_num, cat_num, cat_name in categories:
             number = system.create_category(area_num, cat_num, cat_name)
-            area_path = tmp_path / f"{area_num} {areas[area_num//10 - 1][1]}"
+            area_path = tmp_path / f"{area_num} {areas[area_num // 10 - 1][1]}"
             cat_path = area_path / f"{number.formatted_number} {cat_name}"
             cat_path.mkdir()
 
@@ -129,9 +130,7 @@ class TestCompleteWorkflows:
         assert len(preview) > 0
 
         # Step 5: Dry run
-        dry_result = migrator.execute_migration(
-            plan, dry_run=True, create_backup=False
-        )
+        dry_result = migrator.execute_migration(plan, dry_run=True, create_backup=False)
         assert dry_result.transformed_count > 0 or dry_result.skipped_count > 0
 
         # Step 6: Execute
@@ -140,9 +139,7 @@ class TestCompleteWorkflows:
 
         # Verify structure changed
         jd_folders = [f for f in complex_structure.rglob("*") if f.is_dir()]
-        any(
-            any(c.isdigit() for c in f.name[:3]) for f in jd_folders
-        )
+        any(any(c.isdigit() for c in f.name[:3]) for f in jd_folders)
 
         # Cleanup
         if result.backup_path and result.backup_path.exists():
@@ -258,9 +255,7 @@ class TestCrossComponentIntegration:
         generator = JohnnyDecimalGenerator(scheme)
         transformer = FolderTransformer(scheme, generator)
 
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, complex_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, complex_structure)
 
         # Should produce valid plan
         assert len(plan.rules) > 0
@@ -284,9 +279,7 @@ class TestCrossComponentIntegration:
         generator = JohnnyDecimalGenerator(scheme)
         transformer = FolderTransformer(scheme, generator)
 
-        plan = transformer.create_transformation_plan(
-            scan_result.folder_tree, complex_structure
-        )
+        plan = transformer.create_transformation_plan(scan_result.folder_tree, complex_structure)
 
         # Validate
         validator = MigrationValidator(generator)

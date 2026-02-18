@@ -4,6 +4,7 @@ Duplicate file index module.
 Maintains an efficient hash-to-files mapping for quick duplicate detection
 and provides statistics about duplicates and potential space savings.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -69,12 +70,7 @@ class DuplicateIndex:
         self._index: dict[str, list[FileMetadata]] = {}
         self._size_index: dict[int, list[Path]] = {}
 
-    def add_file(
-        self,
-        file_path: Path,
-        file_hash: str,
-        metadata: dict | None = None
-    ) -> None:
+    def add_file(self, file_path: Path, file_hash: str, metadata: dict | None = None) -> None:
         """
         Add a file to the index.
 
@@ -125,10 +121,7 @@ class DuplicateIndex:
 
         for hash_value, files in self._index.items():
             if len(files) > 1:
-                duplicates[hash_value] = DuplicateGroup(
-                    hash_value=hash_value,
-                    files=files
-                )
+                duplicates[hash_value] = DuplicateGroup(hash_value=hash_value, files=files)
 
         return duplicates
 
@@ -184,15 +177,10 @@ class DuplicateIndex:
 
         total_files = sum(len(files) for files in self._index.values())
         unique_files = len(self._index)
-        duplicate_files = sum(
-            len(files) for files in self._index.values() if len(files) > 1
-        )
+        duplicate_files = sum(len(files) for files in self._index.values() if len(files) > 1)
         duplicate_groups = len(duplicates)
         wasted_space = sum(group.wasted_space for group in duplicates.values())
-        largest_group = max(
-            (group.count for group in duplicates.values()),
-            default=0
-        )
+        largest_group = max((group.count for group in duplicates.values()), default=0)
 
         return {
             "total_files": total_files,

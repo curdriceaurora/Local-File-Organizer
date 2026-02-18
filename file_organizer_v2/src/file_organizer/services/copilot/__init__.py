@@ -3,6 +3,7 @@
 Provides natural-language interaction with the file organizer, including
 intent parsing, multi-turn conversation management, and command execution.
 """
+
 from __future__ import annotations
 
 from file_organizer.services.copilot.conversation import ConversationManager

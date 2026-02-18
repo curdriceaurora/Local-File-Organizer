@@ -5,6 +5,7 @@ Tests Redis Streams operations including connect, disconnect, publish,
 consume, acknowledge, and consumer group management. All tests mock
 Redis to avoid requiring a running Redis instance.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -329,9 +330,7 @@ class TestRedisStreamManagerConsumerGroup:
         )
 
     @patch("file_organizer.events.stream.redis")
-    def test_create_consumer_group_already_exists(
-        self, mock_redis_module: MagicMock
-    ):
+    def test_create_consumer_group_already_exists(self, mock_redis_module: MagicMock):
         """Test that existing groups are handled silently."""
         mock_client = MagicMock()
         mock_client.ping.return_value = True
@@ -574,9 +573,7 @@ class TestRedisStreamManagerContextManager:
         assert manager.is_connected is False
 
     @patch("file_organizer.events.stream.redis")
-    def test_context_manager_disconnects_on_error(
-        self, mock_redis_module: MagicMock
-    ):
+    def test_context_manager_disconnects_on_error(self, mock_redis_module: MagicMock):
         """Test context manager cleans up on exception."""
         mock_client = MagicMock()
         mock_client.ping.return_value = True

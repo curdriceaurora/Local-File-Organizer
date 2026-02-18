@@ -3,6 +3,7 @@ Unit tests for EventQueue and FileEvent.
 
 Tests thread safety, batching, capacity limits, and blocking behavior.
 """
+
 from __future__ import annotations
 
 import threading
@@ -199,14 +200,9 @@ class TestEventQueue:
 
         def enqueue_events(thread_id: int) -> None:
             for i in range(events_per_thread):
-                queue.enqueue(
-                    self._make_event(name=f"t{thread_id}_f{i}.txt")
-                )
+                queue.enqueue(self._make_event(name=f"t{thread_id}_f{i}.txt"))
 
-        threads = [
-            threading.Thread(target=enqueue_events, args=(t,))
-            for t in range(num_threads)
-        ]
+        threads = [threading.Thread(target=enqueue_events, args=(t,)) for t in range(num_threads)]
         for t in threads:
             t.start()
         for t in threads:

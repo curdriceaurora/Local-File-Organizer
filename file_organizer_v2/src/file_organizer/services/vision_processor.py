@@ -1,4 +1,5 @@
 """Vision file processing service."""
+
 from __future__ import annotations
 
 import re
@@ -164,18 +165,39 @@ class VisionProcessor:
             Cleaned name
         """
         # Convert underscores and hyphens to spaces
-        name = name.replace('_', ' ').replace('-', ' ')
+        name = name.replace("_", " ").replace("-", " ")
 
         # Remove special characters and numbers (keep letters and spaces)
-        name = re.sub(r'[^a-z\s]', '', name.lower())
+        name = re.sub(r"[^a-z\s]", "", name.lower())
 
         # Split into words
         words = name.split()
 
         # Only filter out truly problematic words
-        bad_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at',
-                     'to', 'for', 'of', 'is', 'are', 'was', 'were', 'be',
-                     'image', 'picture', 'photo', 'untitled', 'unknown'}
+        bad_words = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "image",
+            "picture",
+            "photo",
+            "untitled",
+            "unknown",
+        }
 
         # Filter and deduplicate
         filtered = []
@@ -189,7 +211,7 @@ class VisionProcessor:
         filtered = filtered[:max_words]
 
         # Join with underscores
-        return '_'.join(filtered) if filtered else ''
+        return "_".join(filtered) if filtered else ""
 
     def _generate_description(self, image_path: Path) -> str:
         """Generate a description of the image.
@@ -309,12 +331,12 @@ CATEGORY:"""
             folder_name = response.strip().lower()
 
             # Remove common prefixes and quotes
-            for prefix in ['category:', 'folder:', 'the category is', 'the folder is']:
-                folder_name = folder_name.replace(prefix, '').strip()
-            folder_name = folder_name.strip('"\'')
+            for prefix in ["category:", "folder:", "the category is", "the folder is"]:
+                folder_name = folder_name.replace(prefix, "").strip()
+            folder_name = folder_name.strip("\"'")
 
             # Remove newlines and extra spaces
-            folder_name = ' '.join(folder_name.split())
+            folder_name = " ".join(folder_name.split())
 
             logger.debug(f"AI folder response (cleaned): '{folder_name}'")
 
@@ -325,18 +347,18 @@ CATEGORY:"""
 
             if not folder_name or len(folder_name) < 3:
                 logger.warning(f"Folder name empty or too short ('{folder_name}'), using fallback")
-                folder_name = 'images'
+                folder_name = "images"
 
             # Final safety check
-            folder_name = re.sub(r'[^\w_]', '_', folder_name)
-            folder_name = re.sub(r'_+', '_', folder_name).strip('_')
-            result = folder_name[:50] if folder_name else 'images'
+            folder_name = re.sub(r"[^\w_]", "_", folder_name)
+            folder_name = re.sub(r"_+", "_", folder_name).strip("_")
+            result = folder_name[:50] if folder_name else "images"
             logger.info(f"Final folder name: '{result}'")
             return result
 
         except Exception as e:
             logger.error(f"Failed to generate folder name: {e}")
-            return 'images'
+            return "images"
 
     def _generate_filename(self, image_path: Path, context: str) -> str:
         """Generate a filename from image context.
@@ -383,15 +405,15 @@ FILENAME:"""
             filename = response.strip().lower()
 
             # Remove common prefixes and quotes
-            for prefix in ['filename:', 'file:', 'name:', 'the filename is', 'the name is']:
-                filename = filename.replace(prefix, '').strip()
-            filename = filename.strip('"\'')
+            for prefix in ["filename:", "file:", "name:", "the filename is", "the name is"]:
+                filename = filename.replace(prefix, "").strip()
+            filename = filename.strip("\"'")
 
             # Remove file extensions if AI added them
-            filename = re.sub(r'\.(txt|pdf|jpg|jpeg|png|gif|bmp)$', '', filename)
+            filename = re.sub(r"\.(txt|pdf|jpg|jpeg|png|gif|bmp)$", "", filename)
 
             # Remove newlines and extra spaces
-            filename = ' '.join(filename.split())
+            filename = " ".join(filename.split())
 
             logger.debug(f"AI filename response (cleaned): '{filename}'")
 
@@ -405,9 +427,9 @@ FILENAME:"""
                 filename = image_path.stem
 
             # Final safety check
-            filename = re.sub(r'[^\w_]', '_', filename)
-            filename = re.sub(r'_+', '_', filename).strip('_')
-            result = filename[:50] if filename else 'image'
+            filename = re.sub(r"[^\w_]", "_", filename)
+            filename = re.sub(r"_+", "_", filename).strip("_")
+            result = filename[:50] if filename else "image"
             logger.info(f"Final filename: '{result}'")
             return result
 

@@ -3,6 +3,7 @@
 Provides both an interactive REPL and a single-shot mode for sending
 commands to the copilot engine.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

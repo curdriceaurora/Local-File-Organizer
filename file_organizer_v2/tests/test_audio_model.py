@@ -1,4 +1,5 @@
 """Tests for AudioModel class - Phase 3 placeholder."""
+
 from __future__ import annotations
 
 import pytest
@@ -14,6 +15,7 @@ class TestAudioModelPlaceholder:
         """Test that AudioModel class exists."""
         try:
             from file_organizer.models.audio_model import AudioModel
+
             assert AudioModel is not None
         except ImportError:
             pytest.skip("AudioModel not yet implemented (Phase 3)")

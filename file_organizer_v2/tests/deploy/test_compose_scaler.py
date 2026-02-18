@@ -79,9 +79,7 @@ class TestComposeScalerGetServiceCount:
     """Tests for the get_service_count method."""
 
     @patch.object(ComposeScaler, "_run_command_output")
-    def test_get_service_count_multiple(
-        self, mock_output: MagicMock
-    ) -> None:
+    def test_get_service_count_multiple(self, mock_output: MagicMock) -> None:
         """Test counting multiple running containers."""
         # Simulate 3 containers, each producing one JSON line
         mock_output.return_value = (
@@ -94,9 +92,7 @@ class TestComposeScalerGetServiceCount:
         assert count == 3
 
     @patch.object(ComposeScaler, "_run_command_output", return_value=None)
-    def test_get_service_count_on_failure(
-        self, mock_output: MagicMock
-    ) -> None:
+    def test_get_service_count_on_failure(self, mock_output: MagicMock) -> None:
         """Test that 0 is returned when the command fails."""
         scaler = ComposeScaler()
         count = scaler.get_service_count("web")
@@ -152,9 +148,7 @@ class TestComposeScalerSubprocess:
     @patch("subprocess.run")
     def test_run_command_output_success(self, mock_run: MagicMock) -> None:
         """Test _run_command_output returns stdout on success."""
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="output data\n", stderr=""
-        )
+        mock_run.return_value = MagicMock(returncode=0, stdout="output data\n", stderr="")
         scaler = ComposeScaler()
         result = scaler._run_command_output(["docker-compose", "ps"])
         assert result == "output data\n"

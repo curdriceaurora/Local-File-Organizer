@@ -1,4 +1,5 @@
 """Deduplication endpoints."""
+
 from __future__ import annotations
 
 import shutil
@@ -26,7 +27,9 @@ from file_organizer.services.deduplication.detector import ScanOptions
 router = APIRouter(tags=["dedupe"], dependencies=[Depends(get_current_active_user)])
 
 
-def _scan_duplicates(path: Path, request: DedupeScanRequest) -> tuple[list[DedupeGroup], dict[str, int]]:
+def _scan_duplicates(
+    path: Path, request: DedupeScanRequest
+) -> tuple[list[DedupeGroup], dict[str, int]]:
     detector = DuplicateDetector()
     options = ScanOptions(
         algorithm=request.algorithm,

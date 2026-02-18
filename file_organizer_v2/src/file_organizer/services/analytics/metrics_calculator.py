@@ -1,6 +1,7 @@
 """
 Metrics calculation module for quality scoring and efficiency analysis.
 """
+
 from __future__ import annotations
 
 import logging
@@ -21,7 +22,7 @@ class MetricsCalculator:
         total_files: int,
         organized_files: int,
         naming_compliance: float,
-        structure_consistency: float
+        structure_consistency: float,
     ) -> float:
         """
         Calculate overall organization quality score (0-100).
@@ -42,9 +43,7 @@ class MetricsCalculator:
 
         # Weighted average
         score = (
-            organization_rate * 0.4 +
-            naming_compliance * 0.3 +
-            structure_consistency * 0.3
+            organization_rate * 0.4 + naming_compliance * 0.3 + structure_consistency * 0.3
         ) * 100
 
         return min(100.0, max(0.0, score))
@@ -73,17 +72,13 @@ class MetricsCalculator:
         for file_path in files:
             # Simple heuristic: lowercase, no spaces, proper delimiter
             name = file_path.stem
-            if name.islower() or '_' in name or '-' in name:
-                if ' ' not in name:
+            if name.islower() or "_" in name or "-" in name:
+                if " " not in name:
                     compliant += 1
 
         return compliant / len(files)
 
-    def calculate_efficiency_gain(
-        self,
-        before_operations: int,
-        after_operations: int
-    ) -> float:
+    def calculate_efficiency_gain(self, before_operations: int, after_operations: int) -> float:
         """
         Calculate efficiency gain percentage.
 
@@ -100,11 +95,7 @@ class MetricsCalculator:
         gain = ((before_operations - after_operations) / before_operations) * 100
         return max(0.0, gain)
 
-    def estimate_time_saved(
-        self,
-        automated_ops: int,
-        avg_manual_time_per_op: int = 30
-    ) -> int:
+    def estimate_time_saved(self, automated_ops: int, avg_manual_time_per_op: int = 30) -> int:
         """
         Estimate time saved through automation.
 
@@ -118,9 +109,7 @@ class MetricsCalculator:
         return automated_ops * avg_manual_time_per_op
 
     def calculate_improvement_metrics(
-        self,
-        current_score: float,
-        previous_score: float | None = None
+        self, current_score: float, previous_score: float | None = None
     ) -> dict:
         """
         Calculate improvement metrics.
@@ -132,17 +121,13 @@ class MetricsCalculator:
         Returns:
             Dictionary with improvement metrics
         """
-        metrics = {
-            'current_score': current_score,
-            'improvement': 0.0,
-            'trend': 'stable'
-        }
+        metrics = {"current_score": current_score, "improvement": 0.0, "trend": "stable"}
 
         if previous_score is not None:
-            metrics['improvement'] = current_score - previous_score
-            if metrics['improvement'] > 1:
-                metrics['trend'] = 'improving'
-            elif metrics['improvement'] < -1:
-                metrics['trend'] = 'declining'
+            metrics["improvement"] = current_score - previous_score
+            if metrics["improvement"] > 1:
+                metrics["trend"] = "improving"
+            elif metrics["improvement"] < -1:
+                metrics["trend"] = "declining"
 
         return metrics

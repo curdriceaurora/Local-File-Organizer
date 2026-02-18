@@ -3,6 +3,7 @@ Integration tests for PARA folder generation system.
 
 Tests the complete workflow of folder generation, file mapping, and migration.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -82,9 +83,7 @@ class TestPARAFolderIntegration:
         assert sum(plan.by_category.values()) == plan.total_count
 
         # Step 3: Execute migration
-        report = migration_manager.execute_migration(
-            plan, dry_run=False, create_backup=False
-        )
+        report = migration_manager.execute_migration(plan, dry_run=False, create_backup=False)
 
         assert report.success is True or len(report.failed) < len(plan.files)
         assert len(report.migrated) > 0
@@ -120,9 +119,7 @@ class TestPARAFolderIntegration:
         # All folders should be created successfully
         assert all(status for status in folder_status.values())
 
-    def test_mapper_with_subfolder_strategy(
-        self, config, temp_source, temp_target
-    ):
+    def test_mapper_with_subfolder_strategy(self, config, temp_source, temp_target):
         """Test mapper with subfolder strategy in full workflow."""
         # Generate base structure
         generator = PARAFolderGenerator(config)
@@ -150,14 +147,10 @@ class TestPARAFolderIntegration:
         assert all(status for status in folder_status.values())
 
         # Check subfolders were created
-        has_subfolders = any(
-            result.subfolder_path is not None for result in results
-        )
+        has_subfolders = any(result.subfolder_path is not None for result in results)
         assert has_subfolders
 
-    def test_migration_preserves_category_distribution(
-        self, config, temp_source, temp_target
-    ):
+    def test_migration_preserves_category_distribution(self, config, temp_source, temp_target):
         """Test that migration maintains category distribution."""
         # Generate structure
         generator = PARAFolderGenerator(config)
@@ -168,9 +161,7 @@ class TestPARAFolderIntegration:
         plan = migration_manager.analyze_source(temp_source, temp_target)
 
         # Execute migration
-        report = migration_manager.execute_migration(
-            plan, dry_run=False, create_backup=False
-        )
+        report = migration_manager.execute_migration(plan, dry_run=False, create_backup=False)
 
         # Count files in each category folder
         actual_distribution = {
@@ -188,17 +179,13 @@ class TestPARAFolderIntegration:
         ]:
             folder = temp_target / folder_name
             if folder.exists():
-                actual_distribution[category] = len(
-                    [f for f in folder.rglob("*") if f.is_file()]
-                )
+                actual_distribution[category] = len([f for f in folder.rglob("*") if f.is_file()])
 
         # Distribution should match (accounting for skipped files)
         total_migrated = sum(actual_distribution.values())
         assert total_migrated == len(report.migrated)
 
-    def test_structure_validation_after_migration(
-        self, config, temp_source, temp_target
-    ):
+    def test_structure_validation_after_migration(self, config, temp_source, temp_target):
         """Test that structure remains valid after migration."""
         # Generate and validate initial structure
         generator = PARAFolderGenerator(config)
@@ -260,9 +247,7 @@ class TestPARAFolderIntegration:
         """Test complete workflow in dry run mode."""
         # Generate structure (dry run)
         generator = PARAFolderGenerator(config)
-        structure_result = generator.generate_structure(
-            temp_target, dry_run=True
-        )
+        structure_result = generator.generate_structure(temp_target, dry_run=True)
 
         assert structure_result.success is True
         assert not (temp_target / "Projects").exists()
@@ -297,9 +282,7 @@ class TestPARAFolderIntegration:
         # Analyze and migrate
         migration_manager = PARAMigrationManager(config)
         plan = migration_manager.analyze_source(temp_source, temp_target)
-        report = migration_manager.execute_migration(
-            plan, dry_run=False, create_backup=False
-        )
+        report = migration_manager.execute_migration(plan, dry_run=False, create_backup=False)
 
         # Should have at least one skip due to conflict
         # Or migration might handle it differently
@@ -327,9 +310,7 @@ class TestPARAFolderIntegration:
         # Migrate with custom config
         migration_manager = PARAMigrationManager(custom_config)
         plan = migration_manager.analyze_source(temp_source, temp_target)
-        report = migration_manager.execute_migration(
-            plan, dry_run=False, create_backup=False
-        )
+        report = migration_manager.execute_migration(plan, dry_run=False, create_backup=False)
 
         # Migration should complete
         assert len(report.migrated) > 0 or len(report.skipped) > 0

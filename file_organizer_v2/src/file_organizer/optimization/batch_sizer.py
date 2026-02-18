@@ -69,9 +69,7 @@ class AdaptiveBatchSizer:
         if min_size < 1:
             raise ValueError(f"min_size must be >= 1, got {min_size}")
         if max_size < min_size:
-            raise ValueError(
-                f"max_size ({max_size}) must be >= min_size ({min_size})"
-            )
+            raise ValueError(f"max_size ({max_size}) must be >= min_size ({min_size})")
         self._min_batch_size = min_size
         self._max_batch_size = max_size
 
@@ -100,9 +98,7 @@ class AdaptiveBatchSizer:
         if available_memory <= 0:
             return self._min_batch_size
 
-        target_budget = int(
-            available_memory * (self._target_memory_percent / 100.0)
-        )
+        target_budget = int(available_memory * (self._target_memory_percent / 100.0))
 
         # Use average file size for estimation
         avg_file_size = sum(file_sizes) / len(file_sizes)
@@ -119,8 +115,7 @@ class AdaptiveBatchSizer:
         batch_size = min(len(file_sizes), batch_size)
 
         logger.debug(
-            "Calculated batch size: %d (budget: %d bytes, "
-            "per_file: %d bytes, files: %d)",
+            "Calculated batch size: %d (budget: %d bytes, per_file: %d bytes, files: %d)",
             batch_size,
             target_budget,
             int(per_file_cost),
@@ -154,9 +149,7 @@ class AdaptiveBatchSizer:
         if available_memory <= 0:
             return self._min_batch_size
 
-        target_budget = int(
-            available_memory * (self._target_memory_percent / 100.0)
-        )
+        target_budget = int(available_memory * (self._target_memory_percent / 100.0))
 
         # Calculate actual per-file cost
         actual_per_file = actual_memory / batch_size
@@ -172,8 +165,7 @@ class AdaptiveBatchSizer:
         new_batch_size = min(self._max_batch_size, new_batch_size)
 
         logger.debug(
-            "Adjusted batch size: %d -> %d (actual memory: %d bytes, "
-            "per_file: %d bytes)",
+            "Adjusted batch size: %d -> %d (actual memory: %d bytes, per_file: %d bytes)",
             batch_size,
             new_batch_size,
             actual_memory,

@@ -133,9 +133,7 @@ class TestAlertThresholds:
 
     def test_invalid_memory_thresholds(self) -> None:
         """Test that memory_warning >= memory_critical raises ValueError."""
-        with pytest.raises(
-            ValueError, match="memory_warning.*must be < memory_critical"
-        ):
+        with pytest.raises(ValueError, match="memory_warning.*must be < memory_critical"):
             AlertThresholds(memory_warning=95.0, memory_critical=90.0)
 
 

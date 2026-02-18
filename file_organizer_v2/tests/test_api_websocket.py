@@ -1,4 +1,5 @@
 """API tests for WebSocket endpoints."""
+
 from __future__ import annotations
 
 import asyncio
@@ -95,9 +96,7 @@ def test_websocket_requires_token(tmp_path: Path) -> None:
 
 def test_websocket_accepts_valid_token(tmp_path: Path) -> None:
     client, access_token = _client(tmp_path)
-    with client.websocket_connect(
-        f"/api/v1/ws/test-client?token={access_token}"
-    ) as websocket:
+    with client.websocket_connect(f"/api/v1/ws/test-client?token={access_token}") as websocket:
         message = _receive_json(websocket)
         assert message["type"] == "connection"
 
@@ -159,13 +158,16 @@ def test_websocket_rejects_invalid_channel(tmp_path: Path) -> None:
 def test_websocket_global_broadcast_reaches_all(tmp_path: Path) -> None:
     client, access_token = _client(tmp_path)
     headers = {"Authorization": f"Bearer {access_token}"}
-    with client.websocket_connect(
-        "/api/v1/ws/first",
-        headers=headers,
-    ) as first, client.websocket_connect(
-        "/api/v1/ws/second",
-        headers=headers,
-    ) as second:
+    with (
+        client.websocket_connect(
+            "/api/v1/ws/first",
+            headers=headers,
+        ) as first,
+        client.websocket_connect(
+            "/api/v1/ws/second",
+            headers=headers,
+        ) as second,
+    ):
         _receive_json(first)
         _receive_json(second)
         _broadcast_sync({"type": "announcement"}, channel="global")

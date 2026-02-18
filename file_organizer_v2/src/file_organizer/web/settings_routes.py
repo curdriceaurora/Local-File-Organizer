@@ -7,6 +7,7 @@ This module powers a multi-section settings page with:
 - lightweight validation helpers (rules + Ollama connectivity)
 - simple search across settings sections
 """
+
 from __future__ import annotations
 
 import json
@@ -246,7 +247,9 @@ def _render_section(
 
 
 @settings_router.get("/settings", response_class=HTMLResponse)
-def settings_page(request: Request, settings_obj: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def settings_page(
+    request: Request, settings_obj: ApiSettings = Depends(get_settings)
+) -> HTMLResponse:
     ws = _load_web_settings()
     context = base_context(
         request,

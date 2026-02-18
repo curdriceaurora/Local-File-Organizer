@@ -5,6 +5,7 @@ Combines heuristic analysis, feature extraction, and optional AI models
 to produce intelligent PARA categorization suggestions. Designed to work
 entirely offline with no cloud dependencies.
 """
+
 from __future__ import annotations
 
 import logging
@@ -149,12 +150,8 @@ class PARASuggestionEngine:
 
         # Step 1: Run heuristic engine
         heuristic_result = self._run_heuristics(file_path)
-        heuristic_scores = {
-            cat: score.score for cat, score in heuristic_result.scores.items()
-        }
-        heuristic_signals = {
-            cat: score.signals for cat, score in heuristic_result.scores.items()
-        }
+        heuristic_scores = {cat: score.score for cat, score in heuristic_result.scores.items()}
+        heuristic_signals = {cat: score.signals for cat, score in heuristic_result.scores.items()}
 
         # Step 2: Extract features
         text_features: TextFeatures | None = None
@@ -166,7 +163,9 @@ class PARASuggestionEngine:
 
         # Step 3: Compute feature-based scores
         feature_scores = self._compute_feature_scores(
-            text_features, metadata_features, structural_features,
+            text_features,
+            metadata_features,
+            structural_features,
         )
 
         # Step 4: Combine scores with configurable weights
@@ -174,7 +173,9 @@ class PARASuggestionEngine:
 
         # Step 5: Select best category
         sorted_categories = sorted(
-            combined_scores.items(), key=lambda x: x[1], reverse=True,
+            combined_scores.items(),
+            key=lambda x: x[1],
+            reverse=True,
         )
         best_category = sorted_categories[0][0]
         best_score = sorted_categories[0][1]
@@ -183,21 +184,26 @@ class PARASuggestionEngine:
         confidence = max(0.0, min(1.0, best_score))
 
         # Build reasoning
-        reasoning.extend(self._build_reasoning(
-            best_category, heuristic_signals, text_features,
-            metadata_features, structural_features,
-        ))
+        reasoning.extend(
+            self._build_reasoning(
+                best_category,
+                heuristic_signals,
+                text_features,
+                metadata_features,
+                structural_features,
+            )
+        )
 
         # Build alternative categories
         alternatives: list[tuple[PARACategory, float]] = [
-            (cat, max(0.0, min(1.0, score)))
-            for cat, score in sorted_categories[1:]
-            if score > 0.1
+            (cat, max(0.0, min(1.0, score))) for cat, score in sorted_categories[1:] if score > 0.1
         ]
 
         # Suggest subfolder
         suggested_subfolder = self._suggest_subfolder(
-            best_category, file_path, text_features,
+            best_category,
+            file_path,
+            text_features,
         )
 
         # Build tags
@@ -238,11 +244,13 @@ class PARASuggestionEngine:
             except Exception as e:
                 logger.error("Failed to generate suggestion for %s: %s", path, e)
                 # Return a low-confidence fallback
-                suggestions.append(PARASuggestion(
-                    category=PARACategory.RESOURCE,
-                    confidence=0.1,
-                    reasoning=[f"Error during analysis: {e}"],
-                ))
+                suggestions.append(
+                    PARASuggestion(
+                        category=PARACategory.RESOURCE,
+                        confidence=0.1,
+                        reasoning=[f"Error during analysis: {e}"],
+                    )
+                )
         return suggestions
 
     def explain(self, suggestion: PARASuggestion) -> str:
@@ -269,8 +277,7 @@ class PARASuggestionEngine:
             lines.append("Alternatives:")
             for alt_cat, alt_score in suggestion.alternative_categories:
                 lines.append(
-                    f"  - {alt_cat.value.title()}: {alt_score:.0%} "
-                    f"({_confidence_label(alt_score)})"
+                    f"  - {alt_cat.value.title()}: {alt_score:.0%} ({_confidence_label(alt_score)})"
                 )
 
         if suggestion.suggested_subfolder:
@@ -301,6 +308,7 @@ class PARASuggestionEngine:
         except Exception as e:
             logger.error("Heuristic evaluation failed for %s: %s", file_path, e)
             from ..detection.heuristics import CategoryScore
+
             return HeuristicResult(
                 scores={cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory},
                 overall_confidence=0.0,
@@ -344,13 +352,15 @@ class PARASuggestionEngine:
             # Temporal indicators boost PROJECT
             if text_features.temporal_indicators:
                 scores[PARACategory.PROJECT] += min(
-                    0.2, len(text_features.temporal_indicators) * 0.04,
+                    0.2,
+                    len(text_features.temporal_indicators) * 0.04,
                 )
 
             # Action items boost PROJECT
             if text_features.action_items:
                 scores[PARACategory.PROJECT] += min(
-                    0.15, len(text_features.action_items) * 0.03,
+                    0.15,
+                    len(text_features.action_items) * 0.03,
                 )
 
             # Document type hints
@@ -451,9 +461,7 @@ class PARASuggestionEngine:
         # Heuristic-based reasons
         signals = heuristic_signals.get(best_category, [])
         if signals:
-            reasons.append(
-                f"Heuristic analysis detected: {', '.join(signals[:5])}"
-            )
+            reasons.append(f"Heuristic analysis detected: {', '.join(signals[:5])}")
 
         # Text-based reasons
         if text_features:
@@ -461,26 +469,17 @@ class PARASuggestionEngine:
             cat_name = best_category.value
             if kw_counts.get(cat_name, 0) > 0:
                 reasons.append(
-                    f"Content contains {kw_counts[cat_name]} "
-                    f"{cat_name}-related keywords"
+                    f"Content contains {kw_counts[cat_name]} {cat_name}-related keywords"
                 )
 
-            if (
-                best_category == PARACategory.PROJECT
-                and text_features.temporal_indicators
-            ):
+            if best_category == PARACategory.PROJECT and text_features.temporal_indicators:
                 reasons.append(
                     f"Found {len(text_features.temporal_indicators)} "
                     f"temporal references suggesting time-bound work"
                 )
 
-            if (
-                best_category == PARACategory.PROJECT
-                and text_features.action_items
-            ):
-                reasons.append(
-                    f"Found {len(text_features.action_items)} action items"
-                )
+            if best_category == PARACategory.PROJECT and text_features.action_items:
+                reasons.append(f"Found {len(text_features.action_items)} action items")
 
         # Metadata reasons
         days = metadata_features.days_since_modified
@@ -488,9 +487,7 @@ class PARASuggestionEngine:
             if best_category == PARACategory.PROJECT and days < 30:
                 reasons.append("File was recently modified (active work)")
             elif best_category == PARACategory.ARCHIVE and days > 180:
-                reasons.append(
-                    f"File has not been modified in {int(days)} days"
-                )
+                reasons.append(f"File has not been modified in {int(days)} days")
 
         # Structural reasons
         if structural_features.parent_category_hint:
@@ -501,9 +498,7 @@ class PARASuggestionEngine:
             reasons.append("Directory contains project structure indicators")
 
         if not reasons:
-            reasons.append(
-                f"Best match based on combined analysis: {best_category.value}"
-            )
+            reasons.append(f"Best match based on combined analysis: {best_category.value}")
 
         return reasons
 

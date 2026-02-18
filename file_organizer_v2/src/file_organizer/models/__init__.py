@@ -1,4 +1,5 @@
 """AI model interfaces and implementations."""
+
 from __future__ import annotations
 
 from file_organizer.models.analytics import (

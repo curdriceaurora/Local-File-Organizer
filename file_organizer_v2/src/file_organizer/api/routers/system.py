@@ -1,4 +1,5 @@
 """System endpoints for configuration and status."""
+
 from __future__ import annotations
 
 import shutil

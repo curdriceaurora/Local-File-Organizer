@@ -1,4 +1,5 @@
 """Shared helpers, constants, and template setup for the web UI."""
+
 from __future__ import annotations
 
 import hashlib
@@ -261,7 +262,7 @@ def build_content_disposition(filename: str) -> str:
     if not fallback:
         fallback = "download"
     encoded = quote(filename)
-    return f'attachment; filename="{fallback}"; filename*=UTF-8\'\'{encoded}'
+    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{encoded}"
 
 
 def as_bool(value: Optional[str]) -> bool:

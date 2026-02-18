@@ -4,6 +4,7 @@ PID file management for the daemon.
 Provides the PidFileManager class for creating, reading, and removing
 PID files, plus checking whether a recorded process is still alive.
 """
+
 from __future__ import annotations
 
 import logging

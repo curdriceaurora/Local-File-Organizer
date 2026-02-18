@@ -15,10 +15,12 @@ from file_organizer.services import TextProcessor
 logger.remove()
 logger.add(sys.stderr, level="DEBUG", format="<level>{level: <8}</level> | {message}")
 
+
 def main():
     # Create a simple test file
     test_file = Path("/tmp/test_api_doc.md")
-    test_file.write_text("""
+    test_file.write_text(
+        """
 # REST API Documentation
 
 ## Authentication
@@ -31,7 +33,8 @@ Returns a list of all users in the system.
 
 ### POST /api/users
 Create a new user account.
-""".strip())
+""".strip()
+    )
 
     print("=" * 80)
     print("DEBUGGING SINGLE FILE PROCESSING")
@@ -51,6 +54,7 @@ Create a new user account.
 
     # Cleanup
     test_file.unlink()
+
 
 if __name__ == "__main__":
     main()

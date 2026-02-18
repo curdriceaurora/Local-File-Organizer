@@ -4,6 +4,7 @@ Johnny Decimal PARA Compatibility Layer
 Integrates Johnny Decimal methodology with PARA (Projects/Areas/Resources/Archive)
 organizational system, allowing hybrid setups and smooth migrations.
 """
+
 from __future__ import annotations
 
 import logging
@@ -131,9 +132,7 @@ class PARAJohnnyDecimalBridge:
         """
         return self.jd_area_to_para(area_number) is not None
 
-    def get_para_path_suggestion(
-        self, para_category: PARACategory, item_name: str
-    ) -> str:
+    def get_para_path_suggestion(self, para_category: PARACategory, item_name: str) -> str:
         """
         Suggest JD path for PARA item.
 
@@ -265,9 +264,7 @@ class CompatibilityAnalyzer:
                 return True
         return False
 
-    def suggest_migration_strategy(
-        self, root_path: Path
-    ) -> dict[str, Any]:
+    def suggest_migration_strategy(self, root_path: Path) -> dict[str, Any]:
         """
         Suggest migration strategy for existing structure.
 
@@ -301,9 +298,7 @@ class CompatibilityAnalyzer:
                     f"Archive -> Areas {self.config.compatibility.para_integration.archive_area}-{self.config.compatibility.para_integration.archive_area + 9}"
                 )
             else:
-                recommendations.append(
-                    "Enable PARA integration in config for better compatibility"
-                )
+                recommendations.append("Enable PARA integration in config for better compatibility")
 
         if is_mixed:
             recommendations.append(
@@ -317,8 +312,7 @@ class CompatibilityAnalyzer:
 
         strategy: dict[str, Any] = {
             "detected_para": {
-                cat.value: str(path) if path else None
-                for cat, path in para_detected.items()
+                cat.value: str(path) if path else None for cat, path in para_detected.items()
             },
             "is_mixed_structure": is_mixed,
             "recommendations": recommendations,
@@ -388,9 +382,7 @@ class HybridOrganizer:
         logger.info(f"Created hybrid PARA + JD structure at {root_path}")
         return created
 
-    def categorize_item(
-        self, item_name: str, para_category: PARACategory
-    ) -> JohnnyDecimalNumber:
+    def categorize_item(self, item_name: str, para_category: PARACategory) -> JohnnyDecimalNumber:
         """
         Categorize item into hybrid structure.
 
@@ -431,7 +423,9 @@ class HybridOrganizer:
             Full path in hybrid structure
         """
         # PARA category folder
-        para_folder = f"{self.bridge.mappings[para_category].jd_area_start:02d} {para_category.value.title()}"
+        para_folder = (
+            f"{self.bridge.mappings[para_category].jd_area_start:02d} {para_category.value.title()}"
+        )
         path = root_path / para_folder
 
         # JD formatted name

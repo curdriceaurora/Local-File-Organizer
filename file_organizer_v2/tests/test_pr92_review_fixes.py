@@ -9,6 +9,7 @@ Validates fixes for CodeRabbit and Copilot review comments:
 5. Audio preprocessing output_path handling
 6. Temporal heuristic old year detection
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -149,17 +150,13 @@ class TestTemporalHeuristicOldYearDetection:
 
         # With threshold=3, 5 years ago is old
         assert (
-            self.heuristic._contains_old_year(
-                path_str, self.current_year, threshold_years=3
-            )
+            self.heuristic._contains_old_year(path_str, self.current_year, threshold_years=3)
             is True
         )
 
         # With threshold=6, 5 years ago is recent
         assert (
-            self.heuristic._contains_old_year(
-                path_str, self.current_year, threshold_years=6
-            )
+            self.heuristic._contains_old_year(path_str, self.current_year, threshold_years=6)
             is False
         )
 
@@ -169,9 +166,7 @@ class TestTemporalHeuristicOldYearDetection:
         old_year = self.current_year - 4
         path_with_embedded_year = f"/home/user/file{old_year}123.txt"
 
-        result = self.heuristic._contains_old_year(
-            path_with_embedded_year, self.current_year
-        )
+        result = self.heuristic._contains_old_year(path_with_embedded_year, self.current_year)
 
         # Should NOT match embedded years (no word boundaries)
         assert result is False

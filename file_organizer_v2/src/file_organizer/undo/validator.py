@@ -4,6 +4,7 @@ Operation validator for undo/redo operations.
 This module provides validation logic to ensure undo/redo operations
 can be safely executed without conflicts.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -53,8 +54,7 @@ class OperationValidator:
         # Check operation status
         if operation.status == OperationStatus.ROLLED_BACK:
             return ValidationResult(
-                can_proceed=False,
-                error_message="Operation has already been rolled back"
+                can_proceed=False, error_message="Operation has already been rolled back"
             )
 
         if operation.status == OperationStatus.FAILED:
@@ -74,7 +74,7 @@ class OperationValidator:
         else:
             return ValidationResult(
                 can_proceed=False,
-                error_message=f"Unknown operation type: {operation.operation_type}"
+                error_message=f"Unknown operation type: {operation.operation_type}",
             )
 
         # Determine if we can proceed
@@ -85,7 +85,7 @@ class OperationValidator:
             can_proceed=can_proceed,
             conflicts=conflicts,
             warnings=warnings,
-            error_message=error_message
+            error_message=error_message,
         )
 
     def validate_redo(self, operation: Operation) -> ValidationResult:
@@ -105,7 +105,7 @@ class OperationValidator:
         if operation.status != OperationStatus.ROLLED_BACK:
             return ValidationResult(
                 can_proceed=False,
-                error_message="Can only redo operations that have been rolled back"
+                error_message="Can only redo operations that have been rolled back",
             )
 
         # Validate based on operation type (similar to original operation)
@@ -122,7 +122,7 @@ class OperationValidator:
         else:
             return ValidationResult(
                 can_proceed=False,
-                error_message=f"Unknown operation type: {operation.operation_type}"
+                error_message=f"Unknown operation type: {operation.operation_type}",
             )
 
         can_proceed = len(conflicts) == 0
@@ -132,7 +132,7 @@ class OperationValidator:
             can_proceed=can_proceed,
             conflicts=conflicts,
             warnings=warnings,
-            error_message=error_message
+            error_message=error_message,
         )
 
     def _validate_undo_move(self, operation: Operation) -> list[Conflict]:
@@ -141,45 +141,53 @@ class OperationValidator:
 
         # Destination should exist (current location)
         if not self.check_path_exists(operation.destination_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.FILE_MISSING,
-                path=str(operation.destination_path),
-                description="File has been moved or deleted since operation",
-                expected="File exists at destination",
-                actual="File not found"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(operation.destination_path),
+                    description="File has been moved or deleted since operation",
+                    expected="File exists at destination",
+                    actual="File not found",
+                )
+            )
         else:
             # Check file integrity
             if operation.file_hash and not self.check_file_integrity(
                 operation.destination_path, operation.file_hash
             ):
-                conflicts.append(Conflict(
-                    conflict_type=ConflictType.HASH_MISMATCH,
-                    path=str(operation.destination_path),
-                    description="File has been modified since operation",
-                    expected=f"Hash: {operation.file_hash[:16]}...",
-                    actual="Different hash"
-                ))
+                conflicts.append(
+                    Conflict(
+                        conflict_type=ConflictType.HASH_MISMATCH,
+                        path=str(operation.destination_path),
+                        description="File has been modified since operation",
+                        expected=f"Hash: {operation.file_hash[:16]}...",
+                        actual="Different hash",
+                    )
+                )
 
         # Source location should be available
         if not self.check_path_available(operation.source_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.PATH_OCCUPIED,
-                path=str(operation.source_path),
-                description="Source path is now occupied by another file",
-                expected="Path available",
-                actual="Path occupied"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.PATH_OCCUPIED,
+                    path=str(operation.source_path),
+                    description="Source path is now occupied by another file",
+                    expected="Path available",
+                    actual="Path occupied",
+                )
+            )
 
         # Check parent directory exists
         if not operation.source_path.parent.exists():
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.PARENT_MISSING,
-                path=str(operation.source_path.parent),
-                description="Parent directory no longer exists",
-                expected="Parent exists",
-                actual="Parent missing"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.PARENT_MISSING,
+                    path=str(operation.source_path.parent),
+                    description="Parent directory no longer exists",
+                    expected="Parent exists",
+                    actual="Parent missing",
+                )
+            )
 
         return conflicts
 
@@ -189,35 +197,41 @@ class OperationValidator:
 
         # New name should exist (current name)
         if not self.check_path_exists(operation.destination_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.FILE_MISSING,
-                path=str(operation.destination_path),
-                description="File has been renamed or deleted since operation",
-                expected="File exists with new name",
-                actual="File not found"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(operation.destination_path),
+                    description="File has been renamed or deleted since operation",
+                    expected="File exists with new name",
+                    actual="File not found",
+                )
+            )
         else:
             # Check file integrity
             if operation.file_hash and not self.check_file_integrity(
                 operation.destination_path, operation.file_hash
             ):
-                conflicts.append(Conflict(
-                    conflict_type=ConflictType.HASH_MISMATCH,
-                    path=str(operation.destination_path),
-                    description="File has been modified since operation",
-                    expected=f"Hash: {operation.file_hash[:16]}...",
-                    actual="Different hash"
-                ))
+                conflicts.append(
+                    Conflict(
+                        conflict_type=ConflictType.HASH_MISMATCH,
+                        path=str(operation.destination_path),
+                        description="File has been modified since operation",
+                        expected=f"Hash: {operation.file_hash[:16]}...",
+                        actual="Different hash",
+                    )
+                )
 
         # Old name should be available
         if not self.check_path_available(operation.source_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.PATH_OCCUPIED,
-                path=str(operation.source_path),
-                description="Original name is now used by another file",
-                expected="Path available",
-                actual="Path occupied"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.PATH_OCCUPIED,
+                    path=str(operation.source_path),
+                    description="Original name is now used by another file",
+                    expected="Path available",
+                    actual="Path occupied",
+                )
+            )
 
         return conflicts
 
@@ -228,43 +242,53 @@ class OperationValidator:
         # Find file in trash
         trash_path = self._get_trash_path(operation)
         if not trash_path or not trash_path.exists():
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.FILE_MISSING,
-                path=str(operation.source_path),
-                description="File not found in trash, may have been permanently deleted",
-                expected="File in trash",
-                actual="File not in trash"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(operation.source_path),
+                    description="File not found in trash, may have been permanently deleted",
+                    expected="File in trash",
+                    actual="File not in trash",
+                )
+            )
         else:
             # Check file integrity
-            if operation.file_hash and not self.check_file_integrity(trash_path, operation.file_hash):
-                conflicts.append(Conflict(
-                    conflict_type=ConflictType.HASH_MISMATCH,
-                    path=str(trash_path),
-                    description="File in trash has been modified",
-                    expected=f"Hash: {operation.file_hash[:16]}...",
-                    actual="Different hash"
-                ))
+            if operation.file_hash and not self.check_file_integrity(
+                trash_path, operation.file_hash
+            ):
+                conflicts.append(
+                    Conflict(
+                        conflict_type=ConflictType.HASH_MISMATCH,
+                        path=str(trash_path),
+                        description="File in trash has been modified",
+                        expected=f"Hash: {operation.file_hash[:16]}...",
+                        actual="Different hash",
+                    )
+                )
 
         # Original location should be available
         if not self.check_path_available(operation.source_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.PATH_OCCUPIED,
-                path=str(operation.source_path),
-                description="Original location is now occupied by another file",
-                expected="Path available",
-                actual="Path occupied"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.PATH_OCCUPIED,
+                    path=str(operation.source_path),
+                    description="Original location is now occupied by another file",
+                    expected="Path available",
+                    actual="Path occupied",
+                )
+            )
 
         # Check parent directory exists
         if not operation.source_path.parent.exists():
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.PARENT_MISSING,
-                path=str(operation.source_path.parent),
-                description="Parent directory no longer exists",
-                expected="Parent exists",
-                actual="Parent missing"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.PARENT_MISSING,
+                    path=str(operation.source_path.parent),
+                    description="Parent directory no longer exists",
+                    expected="Parent exists",
+                    actual="Parent missing",
+                )
+            )
 
         return conflicts
 
@@ -274,25 +298,29 @@ class OperationValidator:
 
         # Copy should exist
         if not self.check_path_exists(operation.destination_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.FILE_MISSING,
-                path=str(operation.destination_path),
-                description="Copy has already been deleted",
-                expected="Copy exists",
-                actual="Copy not found"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(operation.destination_path),
+                    description="Copy has already been deleted",
+                    expected="Copy exists",
+                    actual="Copy not found",
+                )
+            )
         else:
             # Verify it's the same file (hash check)
             if operation.file_hash and not self.check_file_integrity(
                 operation.destination_path, operation.file_hash
             ):
-                conflicts.append(Conflict(
-                    conflict_type=ConflictType.HASH_MISMATCH,
-                    path=str(operation.destination_path),
-                    description="Copy has been modified, may not be safe to delete",
-                    expected=f"Hash: {operation.file_hash[:16]}...",
-                    actual="Different hash"
-                ))
+                conflicts.append(
+                    Conflict(
+                        conflict_type=ConflictType.HASH_MISMATCH,
+                        path=str(operation.destination_path),
+                        description="Copy has been modified, may not be safe to delete",
+                        expected=f"Hash: {operation.file_hash[:16]}...",
+                        actual="Different hash",
+                    )
+                )
 
         return conflicts
 
@@ -302,13 +330,15 @@ class OperationValidator:
 
         # Created file should exist
         if not self.check_path_exists(operation.source_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.FILE_MISSING,
-                path=str(operation.source_path),
-                description="Created file has already been deleted",
-                expected="File exists",
-                actual="File not found"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(operation.source_path),
+                    description="Created file has already been deleted",
+                    expected="File exists",
+                    actual="File not found",
+                )
+            )
 
         return conflicts
 
@@ -318,23 +348,27 @@ class OperationValidator:
 
         # Source should exist again (was moved back during undo)
         if not self.check_path_exists(operation.source_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.FILE_MISSING,
-                path=str(operation.source_path),
-                description="Source file not found",
-                expected="File at source",
-                actual="File not found"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(operation.source_path),
+                    description="Source file not found",
+                    expected="File at source",
+                    actual="File not found",
+                )
+            )
 
         # Destination should be available
         if not self.check_path_available(operation.destination_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.PATH_OCCUPIED,
-                path=str(operation.destination_path),
-                description="Destination path is now occupied",
-                expected="Path available",
-                actual="Path occupied"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.PATH_OCCUPIED,
+                    path=str(operation.destination_path),
+                    description="Destination path is now occupied",
+                    expected="Path available",
+                    actual="Path occupied",
+                )
+            )
 
         return conflicts
 
@@ -348,13 +382,15 @@ class OperationValidator:
 
         # File should exist again (was restored during undo)
         if not self.check_path_exists(operation.source_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.FILE_MISSING,
-                path=str(operation.source_path),
-                description="File not found at original location",
-                expected="File exists",
-                actual="File not found"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(operation.source_path),
+                    description="File not found at original location",
+                    expected="File exists",
+                    actual="File not found",
+                )
+            )
 
         return conflicts
 
@@ -364,23 +400,27 @@ class OperationValidator:
 
         # Source should still exist
         if not self.check_path_exists(operation.source_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.FILE_MISSING,
-                path=str(operation.source_path),
-                description="Source file no longer exists",
-                expected="Source exists",
-                actual="Source not found"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.FILE_MISSING,
+                    path=str(operation.source_path),
+                    description="Source file no longer exists",
+                    expected="Source exists",
+                    actual="Source not found",
+                )
+            )
 
         # Destination should be available
         if not self.check_path_available(operation.destination_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.PATH_OCCUPIED,
-                path=str(operation.destination_path),
-                description="Destination path is now occupied",
-                expected="Path available",
-                actual="Path occupied"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.PATH_OCCUPIED,
+                    path=str(operation.destination_path),
+                    description="Destination path is now occupied",
+                    expected="Path available",
+                    actual="Path occupied",
+                )
+            )
 
         return conflicts
 
@@ -390,13 +430,15 @@ class OperationValidator:
 
         # Path should be available
         if not self.check_path_available(operation.source_path):
-            conflicts.append(Conflict(
-                conflict_type=ConflictType.PATH_OCCUPIED,
-                path=str(operation.source_path),
-                description="Path is now occupied",
-                expected="Path available",
-                actual="Path occupied"
-            ))
+            conflicts.append(
+                Conflict(
+                    conflict_type=ConflictType.PATH_OCCUPIED,
+                    path=str(operation.source_path),
+                    description="Path is now occupied",
+                    expected="Path available",
+                    actual="Path occupied",
+                )
+            )
 
         return conflicts
 

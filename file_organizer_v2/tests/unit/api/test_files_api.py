@@ -1,4 +1,5 @@
 """Unit tests for files endpoint."""
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -131,10 +132,7 @@ class TestFileUploadEndpoint:
             ("file1.txt", b"content1", "text/plain"),
             ("file2.txt", b"content2", "text/plain"),
         ]
-        response = client.post(
-            "/api/v1/files/upload",
-            files=[("files", f) for f in files]
-        )
+        response = client.post("/api/v1/files/upload", files=[("files", f) for f in files])
 
         assert response.status_code in (200, 201, 400, 401, 422)
 

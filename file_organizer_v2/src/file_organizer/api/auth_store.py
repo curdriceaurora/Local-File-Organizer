@@ -1,4 +1,5 @@
 """Token storage for authentication sessions."""
+
 from __future__ import annotations
 
 import time

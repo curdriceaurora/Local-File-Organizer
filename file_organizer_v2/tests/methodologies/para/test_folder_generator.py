@@ -3,6 +3,7 @@ Tests for PARA folder generation.
 
 Tests folder structure generation, validation, and category path management.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -121,9 +122,7 @@ class TestPARAFolderGenerator:
 
     def test_create_category_folder_project(self, generator, temp_dir):
         """Test creating a specific category folder."""
-        folder = generator.create_category_folder(
-            PARACategory.PROJECT, root_path=temp_dir
-        )
+        folder = generator.create_category_folder(PARACategory.PROJECT, root_path=temp_dir)
 
         assert folder == temp_dir / "Projects"
         assert folder.exists()

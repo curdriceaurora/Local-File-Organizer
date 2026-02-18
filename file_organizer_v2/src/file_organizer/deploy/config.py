@@ -73,13 +73,9 @@ class DeploymentConfig:
         self.log_level = self.log_level.upper()
 
         if self.max_workers < 1:
-            raise ValueError(
-                f"max_workers must be at least 1, got {self.max_workers}"
-            )
+            raise ValueError(f"max_workers must be at least 1, got {self.max_workers}")
         if self.port < 1 or self.port > 65535:
-            raise ValueError(
-                f"port must be between 1 and 65535, got {self.port}"
-            )
+            raise ValueError(f"port must be between 1 and 65535, got {self.port}")
         # Ensure data_directory is a Path
         if isinstance(self.data_directory, str):
             self.data_directory = Path(self.data_directory)
@@ -106,18 +102,10 @@ class DeploymentConfig:
         # Get environment-specific defaults
         env_defaults = _ENV_DEFAULTS.get(environment, _ENV_DEFAULTS["dev"])
 
-        redis_url = os.environ.get(
-            "FO_REDIS_URL", env_defaults["redis_url"]
-        )
-        data_directory = Path(
-            os.environ.get("FO_DATA_DIR", "/data")
-        )
-        log_level = os.environ.get(
-            "FO_LOG_LEVEL", env_defaults["log_level"]
-        )
-        max_workers = int(
-            os.environ.get("FO_MAX_WORKERS", env_defaults["max_workers"])
-        )
+        redis_url = os.environ.get("FO_REDIS_URL", env_defaults["redis_url"])
+        data_directory = Path(os.environ.get("FO_DATA_DIR", "/data"))
+        log_level = os.environ.get("FO_LOG_LEVEL", env_defaults["log_level"])
+        max_workers = int(os.environ.get("FO_MAX_WORKERS", env_defaults["max_workers"]))
         host = os.environ.get("FO_HOST", "0.0.0.0")
         port = int(os.environ.get("FO_PORT", "8000"))
 

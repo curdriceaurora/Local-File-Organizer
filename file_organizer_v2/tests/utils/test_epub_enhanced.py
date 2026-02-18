@@ -7,6 +7,7 @@ This module tests the EnhancedEPUBReader class which provides:
 - Series detection
 - EPUB 2/3 support
 """
+
 from __future__ import annotations
 
 import io
@@ -17,6 +18,7 @@ import pytest
 
 try:
     from PIL import Image
+
     PILLOW_AVAILABLE = True
 except ImportError:
     PILLOW_AVAILABLE = False
@@ -24,6 +26,7 @@ except ImportError:
 try:
     import ebooklib
     from ebooklib import epub
+
     EBOOKLIB_AVAILABLE = True
 except ImportError:
     EBOOKLIB_AVAILABLE = False
@@ -37,33 +40,32 @@ from file_organizer.utils.epub_enhanced import (
 )
 
 # Skip all tests if ebooklib not available
-pytestmark = pytest.mark.skipif(
-    not EBOOKLIB_AVAILABLE,
-    reason="ebooklib not installed"
-)
+pytestmark = pytest.mark.skipif(not EBOOKLIB_AVAILABLE, reason="ebooklib not installed")
 
 
 @pytest.fixture
 def mock_epub_book():
     """Create a mock EPUB book with metadata."""
     book = Mock(spec=epub.EpubBook)
-    book.version = '3.0'
+    book.version = "3.0"
 
     # Set up metadata
-    book.get_metadata = Mock(side_effect=lambda ns, key: {
-        ('DC', 'title'): [('Test Book Title', {})],
-        ('DC', 'creator'): [('John Doe', {}), ('Jane Smith', {})],
-        ('DC', 'language'): [('en', {})],
-        ('DC', 'publisher'): [('Test Publisher', {})],
-        ('DC', 'date'): [('2024-01-15', {})],
-        ('DC', 'description'): [('A test book for testing', {})],
-        ('DC', 'subject'): [('Fiction', {}), ('Science Fiction', {})],
-        ('DC', 'identifier'): [('978-1234567890', {'scheme': 'ISBN'})],
-        ('DC', 'contributor'): [('Editor Name', {})],
-        ('DC', 'rights'): [('Copyright 2024', {})],
-        ('', 'calibre:series'): [('Test Series', {})],
-        ('', 'calibre:series_index'): [('1.0', {})],
-    }.get((ns, key), []))
+    book.get_metadata = Mock(
+        side_effect=lambda ns, key: {
+            ("DC", "title"): [("Test Book Title", {})],
+            ("DC", "creator"): [("John Doe", {}), ("Jane Smith", {})],
+            ("DC", "language"): [("en", {})],
+            ("DC", "publisher"): [("Test Publisher", {})],
+            ("DC", "date"): [("2024-01-15", {})],
+            ("DC", "description"): [("A test book for testing", {})],
+            ("DC", "subject"): [("Fiction", {}), ("Science Fiction", {})],
+            ("DC", "identifier"): [("978-1234567890", {"scheme": "ISBN"})],
+            ("DC", "contributor"): [("Editor Name", {})],
+            ("DC", "rights"): [("Copyright 2024", {})],
+            ("", "calibre:series"): [("Test Series", {})],
+            ("", "calibre:series_index"): [("1.0", {})],
+        }.get((ns, key), [])
+    )
 
     # Set up items
     book.get_items = Mock(return_value=[])
@@ -76,10 +78,10 @@ def mock_epub_chapter():
     """Create a mock EPUB chapter item."""
     item = Mock()
     item.get_type = Mock(return_value=ebooklib.ITEM_DOCUMENT)
-    item.get_name = Mock(return_value='chapter1.xhtml')
-    item.file_name = 'chapter1.xhtml'
+    item.get_name = Mock(return_value="chapter1.xhtml")
+    item.file_name = "chapter1.xhtml"
 
-    html_content = b'''
+    html_content = b"""
     <html>
         <head><title>Chapter 1</title></head>
         <body>
@@ -88,7 +90,7 @@ def mock_epub_chapter():
             <p>This is the second paragraph with more content.</p>
         </body>
     </html>
-    '''
+    """
     item.get_content = Mock(return_value=html_content)
 
     return item
@@ -99,10 +101,7 @@ class TestEPUBMetadata:
 
     def test_metadata_creation(self):
         """Test creating metadata with required fields."""
-        metadata = EPUBMetadata(
-            title="Test Book",
-            authors=["Author One", "Author Two"]
-        )
+        metadata = EPUBMetadata(title="Test Book", authors=["Author One", "Author Two"])
 
         assert metadata.title == "Test Book"
         assert len(metadata.authors) == 2
@@ -113,10 +112,7 @@ class TestEPUBMetadata:
     def test_metadata_with_series(self):
         """Test metadata with series information."""
         metadata = EPUBMetadata(
-            title="Test Book",
-            authors=["Author"],
-            series="Test Series",
-            series_index=2.5
+            title="Test Book", authors=["Author"], series="Test Series", series_index=2.5
         )
 
         assert metadata.series == "Test Series"
@@ -128,7 +124,7 @@ class TestEPUBMetadata:
             title="Test Book",
             authors=["Author"],
             isbn="978-1234567890",
-            identifiers={"isbn": "978-1234567890", "uuid": "test-uuid"}
+            identifiers={"isbn": "978-1234567890", "uuid": "test-uuid"},
         )
 
         assert metadata.isbn == "978-1234567890"
@@ -141,10 +137,7 @@ class TestEPUBChapter:
     def test_chapter_creation(self):
         """Test creating a chapter."""
         chapter = EPUBChapter(
-            title="Chapter One",
-            content="This is chapter content.",
-            order=0,
-            word_count=4
+            title="Chapter One", content="This is chapter content.", order=0, word_count=4
         )
 
         assert chapter.title == "Chapter One"
@@ -162,17 +155,17 @@ class TestEnhancedEPUBReader:
 
     def test_reader_requires_ebooklib(self):
         """Test that ImportError is raised if ebooklib not available."""
-        with patch('file_organizer.utils.epub_enhanced.EBOOKLIB_AVAILABLE', False):
+        with patch("file_organizer.utils.epub_enhanced.EBOOKLIB_AVAILABLE", False):
             with pytest.raises(ImportError, match="ebooklib"):
                 EnhancedEPUBReader()
 
     def test_reader_requires_bs4(self):
         """Test that ImportError is raised if BeautifulSoup not available."""
-        with patch('file_organizer.utils.epub_enhanced.BS4_AVAILABLE', False):
+        with patch("file_organizer.utils.epub_enhanced.BS4_AVAILABLE", False):
             with pytest.raises(ImportError, match="beautifulsoup4"):
                 EnhancedEPUBReader()
 
-    @patch('file_organizer.utils.epub_enhanced.epub.read_epub')
+    @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
     def test_read_epub_nonexistent_file(self, mock_read):
         """Test reading non-existent file raises FileNotFoundError."""
         reader = EnhancedEPUBReader()
@@ -180,7 +173,7 @@ class TestEnhancedEPUBReader:
         with pytest.raises(FileNotFoundError):
             reader.read_epub(Path("/nonexistent/file.epub"))
 
-    @patch('file_organizer.utils.epub_enhanced.epub.read_epub')
+    @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
     def test_extract_metadata(self, mock_read, mock_epub_book, tmp_path):
         """Test metadata extraction from EPUB."""
         # Create a dummy file
@@ -251,7 +244,7 @@ class TestEnhancedEPUBReader:
         assert reader._word_to_number("tenth") == 10
         assert reader._word_to_number("eleventh") is None  # Not in map
 
-    @patch('file_organizer.utils.epub_enhanced.BeautifulSoup')
+    @patch("file_organizer.utils.epub_enhanced.BeautifulSoup")
     def test_extract_chapter_title(self, mock_bs):
         """Test extracting chapter title from HTML."""
         reader = EnhancedEPUBReader()
@@ -268,7 +261,7 @@ class TestEnhancedEPUBReader:
         title = reader._extract_chapter_title(mock_soup, mock_item)
         assert title == "Chapter Title"
 
-    @patch('file_organizer.utils.epub_enhanced.BeautifulSoup')
+    @patch("file_organizer.utils.epub_enhanced.BeautifulSoup")
     def test_extract_chapter_title_from_filename(self, mock_bs):
         """Test extracting chapter title from filename."""
         reader = EnhancedEPUBReader()
@@ -283,7 +276,7 @@ class TestEnhancedEPUBReader:
         title = reader._extract_chapter_title(mock_soup, mock_item)
         assert title == "Chapter One"
 
-    @patch('file_organizer.utils.epub_enhanced.BeautifulSoup')
+    @patch("file_organizer.utils.epub_enhanced.BeautifulSoup")
     def test_extract_text_from_html(self, mock_bs):
         """Test extracting clean text from HTML."""
         reader = EnhancedEPUBReader()
@@ -291,7 +284,7 @@ class TestEnhancedEPUBReader:
         # Create real BeautifulSoup
         from bs4 import BeautifulSoup
 
-        html = '''
+        html = """
         <html>
             <head><script>var x = 1;</script></head>
             <body>
@@ -300,9 +293,9 @@ class TestEnhancedEPUBReader:
                 <p>Paragraph two.</p>
             </body>
         </html>
-        '''
+        """
 
-        soup = BeautifulSoup(html, 'lxml')
+        soup = BeautifulSoup(html, "lxml")
         text = reader._extract_text_from_html(soup)
 
         assert "Title" in text
@@ -310,7 +303,7 @@ class TestEnhancedEPUBReader:
         assert "Paragraph two" in text
         assert "var x = 1" not in text  # Script removed
 
-    @patch('file_organizer.utils.epub_enhanced.epub.read_epub')
+    @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
     def test_extract_chapters(self, mock_read, mock_epub_chapter, tmp_path):
         """Test extracting chapters from EPUB."""
         mock_book = Mock()
@@ -324,7 +317,7 @@ class TestEnhancedEPUBReader:
         assert "first paragraph" in chapters[0].content
         assert chapters[0].word_count > 0
 
-    @patch('file_organizer.utils.epub_enhanced.epub.read_epub')
+    @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
     def test_extract_chapters_with_max_limit(self, mock_read, mock_epub_chapter):
         """Test extracting limited number of chapters."""
         # Create multiple chapter mocks
@@ -343,7 +336,7 @@ class TestEnhancedEPUBReader:
 
         # Mock book with cover metadata
         mock_book = Mock()
-        mock_book.get_metadata = Mock(return_value=[('cover-id', {})])
+        mock_book.get_metadata = Mock(return_value=[("cover-id", {})])
         assert reader._has_cover(mock_book) is True
 
         # Mock book without cover
@@ -352,7 +345,7 @@ class TestEnhancedEPUBReader:
         assert reader._has_cover(mock_book) is False
 
     @pytest.mark.skipif(not PILLOW_AVAILABLE, reason="Pillow not installed")
-    @patch('file_organizer.utils.epub_enhanced.epub.read_epub')
+    @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
     def test_extract_cover(self, mock_read, tmp_path):
         """Test extracting cover image."""
         reader = EnhancedEPUBReader()
@@ -362,9 +355,9 @@ class TestEnhancedEPUBReader:
         mock_cover.get_type = Mock(return_value=ebooklib.ITEM_COVER)
 
         # Create a minimal PNG image
-        img = Image.new('RGB', (100, 150), color='red')
+        img = Image.new("RGB", (100, 150), color="red")
         img_bytes = io.BytesIO()
-        img.save(img_bytes, format='PNG')
+        img.save(img_bytes, format="PNG")
         img_bytes.seek(0)
 
         mock_cover.get_content = Mock(return_value=img_bytes.read())
@@ -381,7 +374,7 @@ class TestEnhancedEPUBReader:
 
         assert cover_path is not None
         assert cover_path.exists()
-        assert cover_path.suffix == '.png'
+        assert cover_path.suffix == ".png"
 
     def test_detect_epub_version(self):
         """Test detecting EPUB version."""
@@ -389,18 +382,18 @@ class TestEnhancedEPUBReader:
 
         # Mock EPUB 3
         mock_book = Mock()
-        mock_book.version = '3.0'
-        assert reader._detect_epub_version(mock_book) == '3.0'
+        mock_book.version = "3.0"
+        assert reader._detect_epub_version(mock_book) == "3.0"
 
         # Mock EPUB 2
-        mock_book.version = '2.0'
-        assert reader._detect_epub_version(mock_book) == '2.0'
+        mock_book.version = "2.0"
+        assert reader._detect_epub_version(mock_book) == "2.0"
 
 
 class TestHelperFunctions:
     """Tests for module-level helper functions."""
 
-    @patch('file_organizer.utils.epub_enhanced.EnhancedEPUBReader')
+    @patch("file_organizer.utils.epub_enhanced.EnhancedEPUBReader")
     def test_read_epub_simple(self, mock_reader_class):
         """Test simple EPUB reading function."""
         # Setup mock
@@ -418,7 +411,7 @@ class TestHelperFunctions:
         assert len(text) <= 100
         assert isinstance(text, str)
 
-    @patch('file_organizer.utils.epub_enhanced.epub.read_epub')
+    @patch("file_organizer.utils.epub_enhanced.epub.read_epub")
     def test_get_epub_metadata(self, mock_read, mock_epub_book, tmp_path):
         """Test getting only metadata without chapter parsing."""
         test_file = tmp_path / "test.epub"
@@ -441,17 +434,13 @@ class TestIntegration:
         """Test creating a minimal EPUB and reading it."""
         # Create a minimal EPUB
         book = epub.EpubBook()
-        book.set_title('Integration Test Book')
-        book.add_author('Test Author')
-        book.set_language('en')
+        book.set_title("Integration Test Book")
+        book.add_author("Test Author")
+        book.set_language("en")
 
         # Add a chapter with substantial content
-        chapter = epub.EpubHtml(
-            title='Chapter 1',
-            file_name='chap_01.xhtml',
-            lang='en'
-        )
-        chapter.content = '''
+        chapter = epub.EpubHtml(title="Chapter 1", file_name="chap_01.xhtml", lang="en")
+        chapter.content = """
         <html xmlns="http://www.w3.org/1999/xhtml">
             <head><title>Chapter 1</title></head>
             <body>
@@ -461,12 +450,12 @@ class TestIntegration:
                 <p>And even more content to ensure we exceed the 50 character minimum threshold.</p>
             </body>
         </html>
-        '''
+        """
         book.add_item(chapter)
 
         # Define TOC and spine
         book.toc = (chapter,)
-        book.spine = ['nav', chapter]
+        book.spine = ["nav", chapter]
         book.add_item(epub.EpubNcx())
         book.add_item(epub.EpubNav())
 
@@ -479,8 +468,10 @@ class TestIntegration:
         content = reader.read_epub(epub_path)
 
         # Verify
-        assert content.metadata.title == 'Integration Test Book'
-        assert 'Test Author' in content.metadata.authors
-        assert len(content.chapters) >= 1, f"Expected at least 1 chapter, got {len(content.chapters)}"
+        assert content.metadata.title == "Integration Test Book"
+        assert "Test Author" in content.metadata.authors
+        assert len(content.chapters) >= 1, (
+            f"Expected at least 1 chapter, got {len(content.chapters)}"
+        )
         if len(content.chapters) > 0:
-            assert 'first chapter' in content.raw_text.lower()
+            assert "first chapter" in content.raw_text.lower()

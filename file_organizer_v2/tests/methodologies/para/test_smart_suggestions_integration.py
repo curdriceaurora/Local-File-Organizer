@@ -5,6 +5,7 @@ feature extraction through suggestion generation, feedback collection,
 and file organization. All tests use real (non-mocked) components but
 do not require Ollama or any AI models.
 """
+
 from __future__ import annotations
 
 import os
@@ -56,7 +57,9 @@ class TestFullPipeline:
     """End-to-end integration tests for the suggestion pipeline."""
 
     def test_suggest_project_file(
-        self, engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """A file in a projects directory with project content should suggest PROJECT."""
         proj_dir = tmp_path / "projects" / "website-redesign"
@@ -79,7 +82,9 @@ class TestFullPipeline:
         assert project_score > 0.1
 
     def test_suggest_resource_file(
-        self, engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """A reference document should suggest RESOURCE."""
         ref_dir = tmp_path / "resources" / "guides"
@@ -98,7 +103,9 @@ class TestFullPipeline:
         assert resource_score > 0.1
 
     def test_suggest_archive_file(
-        self, engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """An old, inactive file should suggest ARCHIVE."""
         archive_dir = tmp_path / "archive"
@@ -115,7 +122,9 @@ class TestFullPipeline:
         assert archive_score > 0.1
 
     def test_batch_suggest_multiple_files(
-        self, engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """Batch suggestion should process multiple files."""
         files: list[Path] = []
@@ -130,7 +139,9 @@ class TestFullPipeline:
             assert isinstance(r, PARASuggestion)
 
     def test_explain_produces_readable_output(
-        self, engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """Explanation should be a non-empty formatted string."""
         f = tmp_path / "test.txt"
@@ -142,7 +153,9 @@ class TestFullPipeline:
         assert "Recommended category" in explanation
 
     def test_suggest_and_move_dry_run(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Full pipeline: suggest then move in dry-run mode."""
         f = tmp_path / "report.txt"
@@ -154,7 +167,9 @@ class TestFullPipeline:
         assert f.exists()  # File should not have moved
 
     def test_suggest_and_move_actual(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Full pipeline: suggest then actually move the file."""
         f = tmp_path / "moveable.txt"
@@ -199,6 +214,7 @@ class TestFullPipeline:
         """PatternLearner should extract rules from accumulated feedback."""
         # Record several PDF -> RESOURCE feedbacks
         from file_organizer.methodologies.para.ai.suggestion_engine import PARASuggestion
+
         for i in range(5):
             suggestion = PARASuggestion(
                 category=PARACategory.RESOURCE,
@@ -215,7 +231,9 @@ class TestFullPipeline:
         assert len(ext_rules) >= 1
 
     def test_bulk_organize_integration(
-        self, mover: PARAFileMover, tmp_path: Path,
+        self,
+        mover: PARAFileMover,
+        tmp_path: Path,
     ) -> None:
         """Bulk organize should produce a comprehensive report."""
         src = tmp_path / "messy_folder"

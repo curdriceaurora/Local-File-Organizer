@@ -1,4 +1,5 @@
 """Tests for the web UI routing and template rendering."""
+
 from __future__ import annotations
 
 import base64
@@ -19,8 +20,7 @@ from file_organizer.core.organizer import OrganizationResult
 from file_organizer.plugins.marketplace import compute_sha256
 
 _PNG_BYTES = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8"
-    "/w8AAn8B9p4n9QAAAABJRU5ErkJggg=="
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/w8AAn8B9p4n9QAAAABJRU5ErkJggg=="
 )
 
 
@@ -99,9 +99,13 @@ class DummyOrganizer:
         skip_existing: bool = True,
     ) -> OrganizationResult:
         source = Path(input_path)
-        files = sorted(path for path in source.rglob("*") if path.is_file() and not path.name.startswith("."))
+        files = sorted(
+            path for path in source.rglob("*") if path.is_file() and not path.name.startswith(".")
+        )
         text_files = [path.name for path in files if path.suffix.lower() == ".txt"]
-        image_files = [path.name for path in files if path.suffix.lower() in {".png", ".jpg", ".jpeg"}]
+        image_files = [
+            path.name for path in files if path.suffix.lower() in {".png", ".jpg", ".jpeg"}
+        ]
         other_files = [
             path.name
             for path in files
@@ -124,13 +128,13 @@ class DummyOrganizer:
 
 
 def _extract_attr(html: str, attr_name: str) -> str:
-    match = re.search(rf'{attr_name}=\"([a-fA-F0-9]+)\"', html)
+    match = re.search(rf"{attr_name}=\"([a-fA-F0-9]+)\"", html)
     assert match is not None
     return match.group(1)
 
 
 def _extract_input_value(html: str, input_name: str) -> str:
-    match = re.search(rf'name=\"{re.escape(input_name)}\"[^>]*value=\"([^\"]+)\"', html)
+    match = re.search(rf"name=\"{re.escape(input_name)}\"[^>]*value=\"([^\"]+)\"", html)
     assert match is not None
     return match.group(1)
 
@@ -433,7 +437,9 @@ def test_job_metadata_prunes_stale_entries(monkeypatch, tmp_path: Path) -> None:
         def __init__(self, job_id: str) -> None:
             self.job_id = job_id
 
-    monkeypatch.setattr(organize_mod, "get_job", lambda job_id: FakeJob(job_id) if job_id == "keep" else None)
+    monkeypatch.setattr(
+        organize_mod, "get_job", lambda job_id: FakeJob(job_id) if job_id == "keep" else None
+    )
     monkeypatch.setattr(organize_mod, "JOB_METADATA_PRUNE_INTERVAL_SECONDS", 0.0)
 
     organize_mod._JOB_METADATA.clear()

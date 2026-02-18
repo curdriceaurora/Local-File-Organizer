@@ -12,6 +12,7 @@ Tests cover:
 - Thread safety
 - Performance benchmarks
 """
+
 from __future__ import annotations
 
 import json
@@ -53,7 +54,7 @@ class TestDirectoryPreference:
             created="2026-01-21T00:00:00Z",
             updated="2026-01-21T01:00:00Z",
             confidence=0.85,
-            correction_count=5
+            correction_count=5,
         )
 
         result = pref.to_dict()
@@ -70,7 +71,7 @@ class TestDirectoryPreference:
             "created": "2026-01-21T00:00:00Z",
             "updated": "2026-01-21T01:00:00Z",
             "confidence": 0.75,
-            "correction_count": 3
+            "correction_count": 3,
         }
 
         pref = DirectoryPreference.from_dict(data)
@@ -80,11 +81,7 @@ class TestDirectoryPreference:
 
     def test_from_dict_with_defaults(self):
         """Test creation from incomplete dictionary uses defaults"""
-        data = {
-            "folder_mappings": {},
-            "naming_patterns": {},
-            "category_overrides": {}
-        }
+        data = {"folder_mappings": {}, "naming_patterns": {}, "category_overrides": {}}
 
         pref = DirectoryPreference.from_dict(data)
         assert pref.confidence == 0.0
@@ -126,7 +123,7 @@ class TestSchemaValidation:
             "global_preferences": {
                 "folder_mappings": {},
                 "naming_patterns": {},
-                "category_overrides": {}
+                "category_overrides": {},
             },
             "directory_preferences": {
                 "/test/path": {
@@ -135,20 +132,16 @@ class TestSchemaValidation:
                     "category_overrides": {},
                     "created": "2026-01-21T00:00:00Z",
                     "updated": "2026-01-21T01:00:00Z",
-                    "confidence": 0.85
+                    "confidence": 0.85,
                 }
-            }
+            },
         }
 
         assert store._validate_schema(data) is True
 
     def test_validate_missing_version(self, store):
         """Test validation fails for missing version"""
-        data = {
-            "user_id": "default",
-            "global_preferences": {},
-            "directory_preferences": {}
-        }
+        data = {"user_id": "default", "global_preferences": {}, "directory_preferences": {}}
 
         assert store._validate_schema(data) is False
 
@@ -160,9 +153,9 @@ class TestSchemaValidation:
             "global_preferences": {
                 "folder_mappings": {},
                 "naming_patterns": {},
-                "category_overrides": {}
+                "category_overrides": {},
             },
-            "directory_preferences": {}
+            "directory_preferences": {},
         }
 
         assert store._validate_schema(data) is False
@@ -176,7 +169,7 @@ class TestSchemaValidation:
                 "folder_mappings": {}
                 # Missing naming_patterns and category_overrides
             },
-            "directory_preferences": {}
+            "directory_preferences": {},
         }
 
         assert store._validate_schema(data) is False
@@ -189,14 +182,14 @@ class TestSchemaValidation:
             "global_preferences": {
                 "folder_mappings": {},
                 "naming_patterns": {},
-                "category_overrides": {}
+                "category_overrides": {},
             },
             "directory_preferences": {
                 "/test/path": {
                     "folder_mappings": {},
                     # Missing required fields
                 }
-            }
+            },
         }
 
         assert store._validate_schema(data) is False
@@ -228,10 +221,9 @@ class TestLoadSave:
 
         # Add some data
         test_path = Path("/test/directory")
-        store.add_preference(test_path, {
-            "folder_mappings": {"*.txt": "Documents"},
-            "confidence": 0.9
-        })
+        store.add_preference(
+            test_path, {"folder_mappings": {"*.txt": "Documents"}, "confidence": 0.9}
+        )
 
         # Save
         store.save_preferences()
@@ -268,7 +260,7 @@ class TestLoadSave:
         store.save_preferences()
 
         # Corrupt the main file
-        with open(store.preference_file, 'w') as f:
+        with open(store.preference_file, "w") as f:
             f.write("{ invalid json }")
 
         # Create new store - should load from backup
@@ -283,9 +275,9 @@ class TestLoadSave:
     def test_both_files_corrupted_uses_defaults(self, store):
         """Test that corrupted files fall back to defaults"""
         # Create corrupted files
-        with open(store.preference_file, 'w') as f:
+        with open(store.preference_file, "w") as f:
             f.write("{ invalid }")
-        with open(store.backup_file, 'w') as f:
+        with open(store.backup_file, "w") as f:
             f.write("{ also invalid }")
 
         result = store.load_preferences()
@@ -303,11 +295,14 @@ class TestPreferenceOperations:
         store.load_preferences()
         test_path = Path("/test/directory")
 
-        store.add_preference(test_path, {
-            "folder_mappings": {"*.jpg": "Photos"},
-            "naming_patterns": {"IMG_*": "Image_{date}"},
-            "confidence": 0.8
-        })
+        store.add_preference(
+            test_path,
+            {
+                "folder_mappings": {"*.jpg": "Photos"},
+                "naming_patterns": {"IMG_*": "Image_{date}"},
+                "confidence": 0.8,
+            },
+        )
 
         pref = store.get_preference(test_path, fallback_to_parent=False)
         assert pref["folder_mappings"] == {"*.jpg": "Photos"}
@@ -320,16 +315,10 @@ class TestPreferenceOperations:
         test_path = Path("/test/directory")
 
         # Add initial
-        store.add_preference(test_path, {
-            "folder_mappings": {"*.jpg": "Photos"},
-            "confidence": 0.7
-        })
+        store.add_preference(test_path, {"folder_mappings": {"*.jpg": "Photos"}, "confidence": 0.7})
 
         # Update
-        store.add_preference(test_path, {
-            "folder_mappings": {"*.png": "Images"},
-            "confidence": 0.9
-        })
+        store.add_preference(test_path, {"folder_mappings": {"*.png": "Images"}, "confidence": 0.9})
 
         pref = store.get_preference(test_path, fallback_to_parent=False)
         assert pref["folder_mappings"] == {"*.png": "Images"}
@@ -340,9 +329,7 @@ class TestPreferenceOperations:
         store.load_preferences()
         test_path = Path("/test/directory")
 
-        store.add_preference(test_path, {
-            "folder_mappings": {"*.txt": "Docs"}
-        })
+        store.add_preference(test_path, {"folder_mappings": {"*.txt": "Docs"}})
 
         pref = store.get_preference(test_path, fallback_to_parent=False)
         assert pref is not None
@@ -355,9 +342,7 @@ class TestPreferenceOperations:
         child_path = Path("/test/child/grandchild")
 
         # Add preference to parent
-        store.add_preference(parent_path, {
-            "folder_mappings": {"*.txt": "ParentDocs"}
-        })
+        store.add_preference(parent_path, {"folder_mappings": {"*.txt": "ParentDocs"}})
 
         # Get from child should fallback to parent
         pref = store.get_preference(child_path, fallback_to_parent=True)
@@ -435,13 +420,13 @@ class TestConflictResolution:
             "folder_mappings": {"*.txt": "Docs1"},
             "confidence": 0.9,
             "correction_count": 5,
-            "updated": "2026-01-21T00:00:00Z"
+            "updated": "2026-01-21T00:00:00Z",
         }
         pref2 = {
             "folder_mappings": {"*.txt": "Docs2"},
             "confidence": 0.5,
             "correction_count": 5,
-            "updated": "2026-01-21T00:00:00Z"
+            "updated": "2026-01-21T00:00:00Z",
         }
 
         result = store.resolve_conflicts([pref1, pref2])
@@ -453,13 +438,13 @@ class TestConflictResolution:
             "folder_mappings": {"*.txt": "DocsOld"},
             "confidence": 0.7,
             "correction_count": 5,
-            "updated": "2026-01-01T00:00:00Z"  # Older
+            "updated": "2026-01-01T00:00:00Z",  # Older
         }
         pref2 = {
             "folder_mappings": {"*.txt": "DocsNew"},
             "confidence": 0.7,
             "correction_count": 5,
-            "updated": "2026-01-21T00:00:00Z"  # Newer
+            "updated": "2026-01-21T00:00:00Z",  # Newer
         }
 
         result = store.resolve_conflicts([pref1, pref2])
@@ -472,13 +457,13 @@ class TestConflictResolution:
             "folder_mappings": {"*.txt": "DocsFrequent"},
             "confidence": 0.7,
             "correction_count": 20,  # More corrections
-            "updated": "2026-01-21T00:00:00Z"
+            "updated": "2026-01-21T00:00:00Z",
         }
         pref2 = {
             "folder_mappings": {"*.txt": "DocsRare"},
             "confidence": 0.7,
             "correction_count": 2,  # Fewer corrections
-            "updated": "2026-01-21T00:00:00Z"
+            "updated": "2026-01-21T00:00:00Z",
         }
 
         result = store.resolve_conflicts([pref1, pref2])
@@ -487,11 +472,7 @@ class TestConflictResolution:
 
     def test_score_preference(self, store):
         """Test preference scoring"""
-        pref = {
-            "confidence": 0.8,
-            "correction_count": 10,
-            "updated": "2026-01-21T00:00:00Z"
-        }
+        pref = {"confidence": 0.8, "correction_count": 10, "updated": "2026-01-21T00:00:00Z"}
 
         score = store._score_preference(pref)
         assert 0.0 <= score <= 1.0
@@ -527,7 +508,7 @@ class TestImportExport:
             "global_preferences": {
                 "folder_mappings": {},
                 "naming_patterns": {},
-                "category_overrides": {}
+                "category_overrides": {},
             },
             "directory_preferences": {
                 "/imported/path": {
@@ -536,13 +517,13 @@ class TestImportExport:
                     "category_overrides": {},
                     "created": "2026-01-20T00:00:00Z",
                     "updated": "2026-01-20T01:00:00Z",
-                    "confidence": 0.95
+                    "confidence": 0.95,
                 }
-            }
+            },
         }
 
         import_path = temp_storage / "import.json"
-        with open(import_path, 'w') as f:
+        with open(import_path, "w") as f:
             json.dump(data, f)
 
         # Import
@@ -556,7 +537,7 @@ class TestImportExport:
     def test_import_invalid_json(self, store, temp_storage):
         """Test importing invalid JSON fails gracefully"""
         import_path = temp_storage / "invalid.json"
-        with open(import_path, 'w') as f:
+        with open(import_path, "w") as f:
             f.write("{ invalid json }")
 
         result = store.import_json(import_path)
@@ -567,7 +548,7 @@ class TestImportExport:
         data = {"version": "1.0", "invalid": "schema"}
 
         import_path = temp_storage / "invalid_schema.json"
-        with open(import_path, 'w') as f:
+        with open(import_path, "w") as f:
             json.dump(data, f)
 
         result = store.import_json(import_path)
@@ -583,7 +564,7 @@ class TestImportExport:
         data = store._create_empty_preferences()
         data["user_id"] = "new_user"
         import_path = temp_storage / "import.json"
-        with open(import_path, 'w') as f:
+        with open(import_path, "w") as f:
             json.dump(data, f)
 
         # Import should create timestamped backup
@@ -614,10 +595,7 @@ class TestStatistics:
         # Add multiple preferences
         for i in range(3):
             path = Path(f"/test/dir{i}")
-            store.add_preference(path, {
-                "confidence": 0.5 + i * 0.1,
-                "correction_count": i + 1
-            })
+            store.add_preference(path, {"confidence": 0.5 + i * 0.1, "correction_count": i + 1})
 
         stats = store.get_statistics()
 
@@ -650,9 +628,9 @@ class TestThreadSafety:
         def add_preferences(thread_id):
             for i in range(10):
                 path = Path(f"/test/thread{thread_id}/dir{i}")
-                store.add_preference(path, {
-                    "folder_mappings": {f"*.{thread_id}": f"Thread{thread_id}"}
-                })
+                store.add_preference(
+                    path, {"folder_mappings": {f"*.{thread_id}": f"Thread{thread_id}"}}
+                )
 
         threads = [threading.Thread(target=add_preferences, args=(i,)) for i in range(5)]
 
@@ -688,7 +666,7 @@ class TestThreadSafety:
         threads = [
             threading.Thread(target=reader),
             threading.Thread(target=writer),
-            threading.Thread(target=reader)
+            threading.Thread(target=reader),
         ]
 
         for t in threads:
@@ -741,7 +719,7 @@ class TestPerformance:
         elapsed = (time.time() - start) / 100
 
         # Should be under 10ms per lookup
-        assert elapsed < 0.01, f"Lookup took {elapsed*1000:.2f}ms, expected < 10ms"
+        assert elapsed < 0.01, f"Lookup took {elapsed * 1000:.2f}ms, expected < 10ms"
 
     def test_save_performance(self, store):
         """Test save operation is under 100ms"""
@@ -758,7 +736,7 @@ class TestPerformance:
         elapsed = time.time() - start
 
         # Should be under 100ms
-        assert elapsed < 0.1, f"Save took {elapsed*1000:.2f}ms, expected < 100ms"
+        assert elapsed < 0.1, f"Save took {elapsed * 1000:.2f}ms, expected < 100ms"
 
     def test_conflict_resolution_performance(self, store):
         """Test conflict resolution is under 50ms"""
@@ -769,7 +747,7 @@ class TestPerformance:
                 "folder_mappings": {"*.txt": f"Docs{i}"},
                 "confidence": 0.5 + i * 0.05,
                 "correction_count": i,
-                "updated": f"2026-01-{i+1:02d}T00:00:00Z"
+                "updated": f"2026-01-{i + 1:02d}T00:00:00Z",
             }
             preferences.append(pref)
 
@@ -780,7 +758,7 @@ class TestPerformance:
         elapsed = (time.time() - start) / 100
 
         # Should be under 50ms per resolution
-        assert elapsed < 0.05, f"Resolution took {elapsed*1000:.2f}ms, expected < 50ms"
+        assert elapsed < 0.05, f"Resolution took {elapsed * 1000:.2f}ms, expected < 50ms"
 
 
 class TestClearPreferences:

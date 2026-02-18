@@ -1,4 +1,3 @@
-
 import time
 import unittest
 from datetime import datetime
@@ -12,7 +11,6 @@ from file_organizer.parallel.resume import ResumableProcessor
 
 
 class TestConcurrencyFixes(unittest.TestCase):
-
     def test_checkpoint_batching_overhead(self) -> None:
         """Test that checkpoint saving is batched (Issue #292)."""
         # Setup mocks
@@ -25,7 +23,7 @@ class TestConcurrencyFixes(unittest.TestCase):
             completed_paths=[],
             pending_paths=[Path(f"file_{i}") for i in range(20)],
             file_hashes={},
-            last_updated=datetime.now()
+            last_updated=datetime.now(),
         )
         mock_checkpoint_mgr.create_checkpoint.return_value = initial_checkpoint
         mock_checkpoint_mgr.load_checkpoint.return_value = initial_checkpoint
@@ -37,23 +35,23 @@ class TestConcurrencyFixes(unittest.TestCase):
 
         with patch("file_organizer.parallel.resume.ParallelProcessor") as MockProcessorCls:
             mock_proc_instance = MockProcessorCls.return_value
+
             # Make process_batch_iter yield 20 successes
             def fake_iter(files, fn):
                 for p in files:
                     yield FileResult(path=p, success=True, result="ok")
+
             mock_proc_instance.process_batch_iter.side_effect = fake_iter
 
             processor = ResumableProcessor(
                 config=ParallelConfig(max_workers=2),
                 persistence=mock_persistence,
-                checkpoint_mgr=mock_checkpoint_mgr
+                checkpoint_mgr=mock_checkpoint_mgr,
             )
 
             # Run without crashing
             processor.process_with_resume(
-                [Path(f"file_{i}") for i in range(20)],
-                lambda x: x,
-                job_id="test_job"
+                [Path(f"file_{i}") for i in range(20)], lambda x: x, job_id="test_job"
             )
 
             # Verification
@@ -109,7 +107,7 @@ class TestConcurrencyFixes(unittest.TestCase):
         config = ParallelConfig(
             max_workers=2,
             timeout_per_file=0.1,  # Short timeout
-            retry_count=0  # Disable retries to speed up test
+            retry_count=0,  # Disable retries to speed up test
         )
         processor = ParallelProcessor(config=config)
 

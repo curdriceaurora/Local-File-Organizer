@@ -1,4 +1,5 @@
 """File analysis endpoints."""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -23,6 +24,7 @@ def get_text_model() -> TextModel:
         _text_model = TextModel(config)
         _text_model.initialize()
     return _text_model
+
 
 router = APIRouter(tags=["analyze"])
 

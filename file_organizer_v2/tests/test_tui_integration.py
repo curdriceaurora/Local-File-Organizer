@@ -3,6 +3,7 @@
 Covers round-trip view switching, binding dispatch, sidebar rendering,
 and the new copilot view integration.
 """
+
 from __future__ import annotations
 
 from unittest.mock import patch

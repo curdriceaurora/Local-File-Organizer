@@ -4,6 +4,7 @@ Provides a health-check protocol that queries services for their
 current status and tracks latency, degradation, and failure
 history.
 """
+
 from __future__ import annotations
 
 import logging
@@ -49,9 +50,7 @@ class ServiceHealth:
     name: str
     status: HealthStatus
     latency_ms: float = 0.0
-    last_check: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    last_check: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     details: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:

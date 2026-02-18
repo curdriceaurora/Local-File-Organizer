@@ -1,4 +1,5 @@
 """HTTP client used by external plugins."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -195,7 +196,9 @@ class PluginClient:
             raise PluginClientError("Invalid items payload from list_hooks")
         return [item for item in items if isinstance(item, dict)]
 
-    def trigger_event(self, *, event: HookEvent | str, payload: Mapping[str, Any]) -> dict[str, Any]:
+    def trigger_event(
+        self, *, event: HookEvent | str, payload: Mapping[str, Any]
+    ) -> dict[str, Any]:
         event_name = event.value if isinstance(event, HookEvent) else str(event)
         response_payload = self._request(
             "POST",

@@ -4,6 +4,7 @@ Unit tests for AuditLogger.
 Tests JSON-based audit logging including log_event, query_audit_log,
 and filtering. Uses temporary files for all I/O.
 """
+
 from __future__ import annotations
 
 import json
@@ -135,9 +136,7 @@ class TestAuditLoggerInit:
 class TestLogEvent:
     """Tests for the log_event method."""
 
-    def test_log_event_creates_entry(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_log_event_creates_entry(self, audit_logger: AuditLogger, sample_event: Event):
         """Test logging an event creates an audit entry."""
         entry = audit_logger.log_event(sample_event, "consumed")
 
@@ -146,9 +145,7 @@ class TestLogEvent:
         assert entry.action == "consumed"
         assert entry.metadata == sample_event.data
 
-    def test_log_event_creates_file(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_log_event_creates_file(self, audit_logger: AuditLogger, sample_event: Event):
         """Test that log_event creates the log file."""
         assert not audit_logger.log_path.exists()
 
@@ -156,9 +153,7 @@ class TestLogEvent:
 
         assert audit_logger.log_path.exists()
 
-    def test_log_event_creates_parent_dirs(
-        self, tmp_path: Path, sample_event: Event
-    ):
+    def test_log_event_creates_parent_dirs(self, tmp_path: Path, sample_event: Event):
         """Test that log_event creates parent directories."""
         deep_path = tmp_path / "a" / "b" / "c" / "audit.jsonl"
         logger = AuditLogger(deep_path)
@@ -167,9 +162,7 @@ class TestLogEvent:
 
         assert deep_path.exists()
 
-    def test_log_event_appends_to_file(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_log_event_appends_to_file(self, audit_logger: AuditLogger, sample_event: Event):
         """Test that multiple events are appended."""
         audit_logger.log_event(sample_event, "consumed")
         audit_logger.log_event(sample_event, "replayed")
@@ -177,9 +170,7 @@ class TestLogEvent:
         lines = audit_logger.log_path.read_text().strip().split("\n")
         assert len(lines) == 2
 
-    def test_log_event_writes_valid_json(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_log_event_writes_valid_json(self, audit_logger: AuditLogger, sample_event: Event):
         """Test that each line is valid JSON."""
         audit_logger.log_event(sample_event, "consumed")
 
@@ -189,9 +180,7 @@ class TestLogEvent:
         assert data["event_id"] == "1704067200000-0"
         assert data["action"] == "consumed"
 
-    def test_log_event_different_actions(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_log_event_different_actions(self, audit_logger: AuditLogger, sample_event: Event):
         """Test logging different action types."""
         actions = ["published", "consumed", "replayed", "failed"]
         for action in actions:
@@ -205,9 +194,7 @@ class TestLogEvent:
 class TestQueryAuditLog:
     """Tests for the query_audit_log method."""
 
-    def test_query_all_entries(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_query_all_entries(self, audit_logger: AuditLogger, sample_event: Event):
         """Test querying all entries without filters."""
         audit_logger.log_event(sample_event, "consumed")
         audit_logger.log_event(sample_event, "replayed")
@@ -216,66 +203,61 @@ class TestQueryAuditLog:
 
         assert len(entries) == 2
 
-    def test_query_with_action_filter(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_query_with_action_filter(self, audit_logger: AuditLogger, sample_event: Event):
         """Test filtering by action."""
         audit_logger.log_event(sample_event, "consumed")
         audit_logger.log_event(sample_event, "replayed")
         audit_logger.log_event(sample_event, "consumed")
 
-        entries = audit_logger.query_audit_log(
-            AuditFilter(action="consumed")
-        )
+        entries = audit_logger.query_audit_log(AuditFilter(action="consumed"))
 
         assert len(entries) == 2
         assert all(e.action == "consumed" for e in entries)
 
     def test_query_with_stream_filter(
-        self, audit_logger: AuditLogger,
+        self,
+        audit_logger: AuditLogger,
     ):
         """Test filtering by stream."""
         event_a = Event(
-            id="1-0", stream="stream-a", data={},
+            id="1-0",
+            stream="stream-a",
+            data={},
             timestamp=datetime.now(timezone.utc),
         )
         event_b = Event(
-            id="2-0", stream="stream-b", data={},
+            id="2-0",
+            stream="stream-b",
+            data={},
             timestamp=datetime.now(timezone.utc),
         )
 
         audit_logger.log_event(event_a, "consumed")
         audit_logger.log_event(event_b, "consumed")
 
-        entries = audit_logger.query_audit_log(
-            AuditFilter(stream="stream-a")
-        )
+        entries = audit_logger.query_audit_log(AuditFilter(stream="stream-a"))
 
         assert len(entries) == 1
         assert entries[0].stream == "stream-a"
 
-    def test_query_with_event_id_filter(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_query_with_event_id_filter(self, audit_logger: AuditLogger, sample_event: Event):
         """Test filtering by event ID."""
         other_event = Event(
-            id="9999-0", stream="fileorg:file-events", data={},
+            id="9999-0",
+            stream="fileorg:file-events",
+            data={},
             timestamp=datetime.now(timezone.utc),
         )
 
         audit_logger.log_event(sample_event, "consumed")
         audit_logger.log_event(other_event, "consumed")
 
-        entries = audit_logger.query_audit_log(
-            AuditFilter(event_id="1704067200000-0")
-        )
+        entries = audit_logger.query_audit_log(AuditFilter(event_id="1704067200000-0"))
 
         assert len(entries) == 1
         assert entries[0].event_id == "1704067200000-0"
 
-    def test_query_with_time_range_filter(
-        self, audit_logger: AuditLogger, tmp_log_path: Path
-    ):
+    def test_query_with_time_range_filter(self, audit_logger: AuditLogger, tmp_log_path: Path):
         """Test filtering by time range."""
         # Write entries with known timestamps directly
         entries_data = [
@@ -321,25 +303,27 @@ class TestQueryAuditLog:
         entries = audit_logger.query_audit_log()
         assert entries == []
 
-    def test_query_skips_malformed_lines(
-        self, audit_logger: AuditLogger, tmp_log_path: Path
-    ):
+    def test_query_skips_malformed_lines(self, audit_logger: AuditLogger, tmp_log_path: Path):
         """Test that malformed JSON lines are skipped."""
         tmp_log_path.parent.mkdir(parents=True, exist_ok=True)
         with open(tmp_log_path, "w") as f:
-            f.write('{"timestamp":"2024-01-01T00:00:00+00:00","event_id":"1-0","stream":"s","action":"ok","metadata":{}}\n')
+            f.write(
+                '{"timestamp":"2024-01-01T00:00:00+00:00","event_id":"1-0","stream":"s","action":"ok","metadata":{}}\n'
+            )
             f.write("not valid json\n")
-            f.write('{"timestamp":"2024-01-02T00:00:00+00:00","event_id":"2-0","stream":"s","action":"ok","metadata":{}}\n')
+            f.write(
+                '{"timestamp":"2024-01-02T00:00:00+00:00","event_id":"2-0","stream":"s","action":"ok","metadata":{}}\n'
+            )
 
         entries = audit_logger.query_audit_log()
         assert len(entries) == 2
 
-    def test_query_combined_filters(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_query_combined_filters(self, audit_logger: AuditLogger, sample_event: Event):
         """Test combining multiple filters."""
         other_event = Event(
-            id="9999-0", stream="other-stream", data={},
+            id="9999-0",
+            stream="other-stream",
+            data={},
             timestamp=datetime.now(timezone.utc),
         )
 
@@ -362,9 +346,7 @@ class TestQueryAuditLog:
 class TestAuditLoggerUtilities:
     """Tests for utility methods."""
 
-    def test_get_entry_count(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_get_entry_count(self, audit_logger: AuditLogger, sample_event: Event):
         """Test counting entries."""
         assert audit_logger.get_entry_count() == 0
 
@@ -373,9 +355,7 @@ class TestAuditLoggerUtilities:
 
         assert audit_logger.get_entry_count() == 2
 
-    def test_clear_removes_log(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_clear_removes_log(self, audit_logger: AuditLogger, sample_event: Event):
         """Test clearing the audit log."""
         audit_logger.log_event(sample_event, "consumed")
         assert audit_logger.log_path.exists()
@@ -387,9 +367,7 @@ class TestAuditLoggerUtilities:
         """Test clearing when log file doesn't exist."""
         audit_logger.clear()  # Should not raise
 
-    def test_log_after_clear(
-        self, audit_logger: AuditLogger, sample_event: Event
-    ):
+    def test_log_after_clear(self, audit_logger: AuditLogger, sample_event: Event):
         """Test logging after clearing starts fresh."""
         audit_logger.log_event(sample_event, "consumed")
         audit_logger.clear()

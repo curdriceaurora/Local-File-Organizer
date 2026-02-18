@@ -1,4 +1,5 @@
 """Tests for ConfigManager and AppConfig."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -152,9 +153,7 @@ class TestModelConfigDelegation:
 
     def test_to_text_model_config(self, tmp_path: Path) -> None:
         mgr = ConfigManager(tmp_path)
-        app_cfg = AppConfig(
-            models=ModelPreset(text_model="my-text:latest", temperature=0.3)
-        )
+        app_cfg = AppConfig(models=ModelPreset(text_model="my-text:latest", temperature=0.3))
         mc = mgr.to_text_model_config(app_cfg)
         assert mc.name == "my-text:latest"
         assert mc.model_type == ModelType.TEXT
@@ -163,9 +162,7 @@ class TestModelConfigDelegation:
 
     def test_to_vision_model_config(self, tmp_path: Path) -> None:
         mgr = ConfigManager(tmp_path)
-        app_cfg = AppConfig(
-            models=ModelPreset(vision_model="my-vis:7b", device="mps")
-        )
+        app_cfg = AppConfig(models=ModelPreset(vision_model="my-vis:7b", device="mps"))
         mc = mgr.to_vision_model_config(app_cfg)
         assert mc.name == "my-vis:7b"
         assert mc.model_type == ModelType.VISION
@@ -188,9 +185,7 @@ class TestModuleOverridesSerialization:
         mgr = ConfigManager(tmp_path)
         cfg = AppConfig()
         mgr.save(cfg)
-        raw = yaml.safe_load(
-            (tmp_path / "config.yaml").read_text(encoding="utf-8")
-        )
+        raw = yaml.safe_load((tmp_path / "config.yaml").read_text(encoding="utf-8"))
         profile_data = raw["profiles"]["default"]
         assert "watcher" not in profile_data
         assert "daemon" not in profile_data

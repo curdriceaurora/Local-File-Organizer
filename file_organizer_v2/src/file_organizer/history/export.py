@@ -4,6 +4,7 @@ Export utilities for operation history.
 This module provides functionality to export operation history
 to various formats (JSON, CSV).
 """
+
 from __future__ import annotations
 
 import csv
@@ -42,7 +43,7 @@ class HistoryExporter:
         operation_type: OperationType | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
-        include_transactions: bool = True
+        include_transactions: bool = True,
     ) -> dict[str, int]:
         """
         Export operations to JSON file.
@@ -65,15 +66,19 @@ class HistoryExporter:
 
         if operation_type:
             query += " AND operation_type = ?"
-            params.append(operation_type.value if isinstance(operation_type, OperationType) else operation_type)
+            params.append(
+                operation_type.value
+                if isinstance(operation_type, OperationType)
+                else operation_type
+            )
 
         if start_date:
             query += " AND timestamp >= ?"
-            params.append(start_date.isoformat() + 'Z')
+            params.append(start_date.isoformat() + "Z")
 
         if end_date:
             query += " AND timestamp <= ?"
-            params.append(end_date.isoformat() + 'Z')
+            params.append(end_date.isoformat() + "Z")
 
         query += " ORDER BY timestamp DESC"
 
@@ -83,33 +88,35 @@ class HistoryExporter:
 
         # Build export data
         export_data = {
-            'export_date': datetime.utcnow().isoformat() + 'Z',
-            'operation_count': len(operations),
-            'operations': operations
+            "export_date": datetime.utcnow().isoformat() + "Z",
+            "operation_count": len(operations),
+            "operations": operations,
         }
 
         # Include transactions if requested
         if include_transactions:
             # Get unique transaction IDs
-            transaction_ids = {op.get('transaction_id') for op in operations if op.get('transaction_id')}
+            transaction_ids = {
+                op.get("transaction_id") for op in operations if op.get("transaction_id")
+            }
 
             if transaction_ids:
-                placeholders = ','.join('?' * len(transaction_ids))
+                placeholders = ",".join("?" * len(transaction_ids))
                 txn_query = f"SELECT * FROM transactions WHERE transaction_id IN ({placeholders})"
                 txn_rows = self.db.fetch_all(txn_query, tuple(transaction_ids))
                 transactions = [Transaction.from_row(row).to_dict() for row in txn_rows]
-                export_data['transactions'] = transactions
-                export_data['transaction_count'] = len(transactions)
+                export_data["transactions"] = transactions
+                export_data["transaction_count"] = len(transactions)
 
         # Write to file
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(export_data, f, indent=2)
 
         logger.info(f"Exported {len(operations)} operations to {output_path}")
         return {
-            'operations_exported': len(operations),
-            'transactions_exported': len(export_data.get('transactions', []))
+            "operations_exported": len(operations),
+            "transactions_exported": len(export_data.get("transactions", [])),
         }
 
     def export_to_csv(
@@ -117,7 +124,7 @@ class HistoryExporter:
         output_path: Path,
         operation_type: OperationType | None = None,
         start_date: datetime | None = None,
-        end_date: datetime | None = None
+        end_date: datetime | None = None,
     ) -> int:
         """
         Export operations to CSV file.
@@ -139,15 +146,19 @@ class HistoryExporter:
 
         if operation_type:
             query += " AND operation_type = ?"
-            params.append(operation_type.value if isinstance(operation_type, OperationType) else operation_type)
+            params.append(
+                operation_type.value
+                if isinstance(operation_type, OperationType)
+                else operation_type
+            )
 
         if start_date:
             query += " AND timestamp >= ?"
-            params.append(start_date.isoformat() + 'Z')
+            params.append(start_date.isoformat() + "Z")
 
         if end_date:
             query += " AND timestamp <= ?"
-            params.append(end_date.isoformat() + 'Z')
+            params.append(end_date.isoformat() + "Z")
 
         query += " ORDER BY timestamp DESC"
 
@@ -160,34 +171,59 @@ class HistoryExporter:
 
         # Define CSV columns
         columns = [
-            'id', 'operation_type', 'timestamp', 'source_path', 'destination_path',
-            'file_hash', 'transaction_id', 'status', 'error_message', 'created_at',
-            'file_size', 'file_type', 'is_file', 'is_dir'
+            "id",
+            "operation_type",
+            "timestamp",
+            "source_path",
+            "destination_path",
+            "file_hash",
+            "transaction_id",
+            "status",
+            "error_message",
+            "created_at",
+            "file_size",
+            "file_type",
+            "is_file",
+            "is_dir",
         ]
 
         # Write to CSV
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w', newline='') as f:
+        with open(output_path, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=columns)
             writer.writeheader()
 
             for row in rows:
                 operation = Operation.from_row(row)
                 csv_row = {
-                    'id': operation.id,
-                    'operation_type': operation.operation_type.value if isinstance(operation.operation_type, OperationType) else operation.operation_type,
-                    'timestamp': operation.timestamp.isoformat() if isinstance(operation.timestamp, datetime) else operation.timestamp,
-                    'source_path': str(operation.source_path),
-                    'destination_path': str(operation.destination_path) if operation.destination_path else '',
-                    'file_hash': operation.file_hash or '',
-                    'transaction_id': operation.transaction_id or '',
-                    'status': operation.status.value if isinstance(operation.status, OperationStatus) else operation.status,
-                    'error_message': operation.error_message or '',
-                    'created_at': operation.created_at.isoformat() if operation.created_at and isinstance(operation.created_at, datetime) else operation.created_at or '',
-                    'file_size': operation.metadata.get('size', ''),
-                    'file_type': 'file' if operation.metadata.get('is_file') else 'dir' if operation.metadata.get('is_dir') else '',
-                    'is_file': operation.metadata.get('is_file', ''),
-                    'is_dir': operation.metadata.get('is_dir', '')
+                    "id": operation.id,
+                    "operation_type": operation.operation_type.value
+                    if isinstance(operation.operation_type, OperationType)
+                    else operation.operation_type,
+                    "timestamp": operation.timestamp.isoformat()
+                    if isinstance(operation.timestamp, datetime)
+                    else operation.timestamp,
+                    "source_path": str(operation.source_path),
+                    "destination_path": str(operation.destination_path)
+                    if operation.destination_path
+                    else "",
+                    "file_hash": operation.file_hash or "",
+                    "transaction_id": operation.transaction_id or "",
+                    "status": operation.status.value
+                    if isinstance(operation.status, OperationStatus)
+                    else operation.status,
+                    "error_message": operation.error_message or "",
+                    "created_at": operation.created_at.isoformat()
+                    if operation.created_at and isinstance(operation.created_at, datetime)
+                    else operation.created_at or "",
+                    "file_size": operation.metadata.get("size", ""),
+                    "file_type": "file"
+                    if operation.metadata.get("is_file")
+                    else "dir"
+                    if operation.metadata.get("is_dir")
+                    else "",
+                    "is_file": operation.metadata.get("is_file", ""),
+                    "is_dir": operation.metadata.get("is_dir", ""),
                 }
                 writer.writerow(csv_row)
 
@@ -215,25 +251,28 @@ class HistoryExporter:
             return 0
 
         # Define CSV columns
-        columns = [
-            'transaction_id', 'started_at', 'completed_at',
-            'operation_count', 'status'
-        ]
+        columns = ["transaction_id", "started_at", "completed_at", "operation_count", "status"]
 
         # Write to CSV
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w', newline='') as f:
+        with open(output_path, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=columns)
             writer.writeheader()
 
             for row in rows:
                 transaction = Transaction.from_row(row)
                 csv_row = {
-                    'transaction_id': transaction.transaction_id,
-                    'started_at': transaction.started_at.isoformat() if isinstance(transaction.started_at, datetime) else transaction.started_at,
-                    'completed_at': transaction.completed_at.isoformat() if transaction.completed_at and isinstance(transaction.completed_at, datetime) else transaction.completed_at or '',
-                    'operation_count': transaction.operation_count,
-                    'status': transaction.status.value if isinstance(transaction.status, TransactionStatus) else transaction.status
+                    "transaction_id": transaction.transaction_id,
+                    "started_at": transaction.started_at.isoformat()
+                    if isinstance(transaction.started_at, datetime)
+                    else transaction.started_at,
+                    "completed_at": transaction.completed_at.isoformat()
+                    if transaction.completed_at and isinstance(transaction.completed_at, datetime)
+                    else transaction.completed_at or "",
+                    "operation_count": transaction.operation_count,
+                    "status": transaction.status.value
+                    if isinstance(transaction.status, TransactionStatus)
+                    else transaction.status,
                 }
                 writer.writerow(csv_row)
 
@@ -255,39 +294,39 @@ class HistoryExporter:
         stats = {}
 
         # Overall counts
-        stats['total_operations'] = self.db.get_operation_count()
-        stats['database_size_mb'] = self.db.get_database_size() / (1024 * 1024)
+        stats["total_operations"] = self.db.get_operation_count()
+        stats["database_size_mb"] = self.db.get_database_size() / (1024 * 1024)
 
         # Count by operation type
         for op_type in OperationType:
             query = "SELECT COUNT(*) as count FROM operations WHERE operation_type = ?"
             result = self.db.fetch_one(query, (op_type.value,))
-            stats[f'operations_{op_type.value}'] = result['count'] if result else 0
+            stats[f"operations_{op_type.value}"] = result["count"] if result else 0
 
         # Count by status
         for status in OperationStatus:
             query = "SELECT COUNT(*) as count FROM operations WHERE status = ?"
             result = self.db.fetch_one(query, (status.value,))
-            stats[f'operations_{status.value}'] = result['count'] if result else 0
+            stats[f"operations_{status.value}"] = result["count"] if result else 0
 
         # Transaction counts
         query = "SELECT COUNT(*) as count FROM transactions"
         result = self.db.fetch_one(query)
-        stats['total_transactions'] = result['count'] if result else 0
+        stats["total_transactions"] = result["count"] if result else 0
 
         # Date range
         query = "SELECT MIN(timestamp) as oldest, MAX(timestamp) as newest FROM operations"
         result = self.db.fetch_one(query)
         if result:
-            stats['oldest_operation'] = result['oldest']
-            stats['newest_operation'] = result['newest']
+            stats["oldest_operation"] = result["oldest"]
+            stats["newest_operation"] = result["newest"]
 
         # Export date
-        stats['export_date'] = datetime.utcnow().isoformat() + 'Z'
+        stats["export_date"] = datetime.utcnow().isoformat() + "Z"
 
         # Write to file
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(stats, f, indent=2)
 
         logger.info(f"Exported statistics to {output_path}")

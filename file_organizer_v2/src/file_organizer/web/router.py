@@ -5,6 +5,7 @@ sub-routers for files, organization, settings, and profile management.
 It also hosts lightweight routes that don't warrant their own module
 (home page).
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request

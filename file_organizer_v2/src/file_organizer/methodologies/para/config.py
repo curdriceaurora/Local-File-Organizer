@@ -7,6 +7,7 @@ Configuration management for PARA methodology including:
 - Auto-categorization rules
 - Custom patterns and keywords
 """
+
 from __future__ import annotations
 
 import logging
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class HeuristicWeights:
     """Weights for different heuristics."""
+
     temporal: float = 0.25
     content: float = 0.35
     structural: float = 0.30
@@ -32,6 +34,7 @@ class HeuristicWeights:
 @dataclass
 class CategoryThresholds:
     """Auto-categorization thresholds for each category."""
+
     project: float = 0.75
     area: float = 0.75
     resource: float = 0.80
@@ -41,27 +44,58 @@ class CategoryThresholds:
 @dataclass
 class KeywordPatterns:
     """Custom keyword patterns for each category."""
-    project: list[str] = field(default_factory=lambda: [
-        "project", "deadline", "due", "sprint", "milestone",
-        "deliverable", "proposal", "presentation"
-    ])
-    area: list[str] = field(default_factory=lambda: [
-        "area", "ongoing", "recurring", "weekly", "monthly",
-        "routine", "maintenance"
-    ])
-    resource: list[str] = field(default_factory=lambda: [
-        "reference", "template", "guide", "tutorial",
-        "documentation", "handbook", "manual"
-    ])
-    archive: list[str] = field(default_factory=lambda: [
-        "archive", "old", "backup", "deprecated",
-        "obsolete", "legacy", "completed"
-    ])
+
+    project: list[str] = field(
+        default_factory=lambda: [
+            "project",
+            "deadline",
+            "due",
+            "sprint",
+            "milestone",
+            "deliverable",
+            "proposal",
+            "presentation",
+        ]
+    )
+    area: list[str] = field(
+        default_factory=lambda: [
+            "area",
+            "ongoing",
+            "recurring",
+            "weekly",
+            "monthly",
+            "routine",
+            "maintenance",
+        ]
+    )
+    resource: list[str] = field(
+        default_factory=lambda: [
+            "reference",
+            "template",
+            "guide",
+            "tutorial",
+            "documentation",
+            "handbook",
+            "manual",
+        ]
+    )
+    archive: list[str] = field(
+        default_factory=lambda: [
+            "archive",
+            "old",
+            "backup",
+            "deprecated",
+            "obsolete",
+            "legacy",
+            "completed",
+        ]
+    )
 
 
 @dataclass
 class TemporalThresholds:
     """Time-based thresholds for categorization (in days)."""
+
     project_max_age: int = 30  # Files modified within last 30 days
     area_min_age: int = 30  # Areas are 30-180 days old
     area_max_age: int = 180
@@ -73,6 +107,7 @@ class TemporalThresholds:
 @dataclass
 class PARAConfig:
     """Complete PARA configuration."""
+
     # Heuristic configuration
     heuristic_weights: HeuristicWeights = field(default_factory=HeuristicWeights)
     category_thresholds: CategoryThresholds = field(default_factory=CategoryThresholds)
@@ -121,24 +156,16 @@ class PARAConfig:
                 return cls()
 
             # Parse heuristic weights
-            heuristic_weights = HeuristicWeights(
-                **data.get('heuristic_weights', {})
-            )
+            heuristic_weights = HeuristicWeights(**data.get("heuristic_weights", {}))
 
             # Parse category thresholds
-            category_thresholds = CategoryThresholds(
-                **data.get('category_thresholds', {})
-            )
+            category_thresholds = CategoryThresholds(**data.get("category_thresholds", {}))
 
             # Parse keyword patterns
-            keyword_patterns = KeywordPatterns(
-                **data.get('keyword_patterns', {})
-            )
+            keyword_patterns = KeywordPatterns(**data.get("keyword_patterns", {}))
 
             # Parse temporal thresholds
-            temporal_thresholds = TemporalThresholds(
-                **data.get('temporal_thresholds', {})
-            )
+            temporal_thresholds = TemporalThresholds(**data.get("temporal_thresholds", {}))
 
             # Create config
             config = cls(
@@ -146,18 +173,18 @@ class PARAConfig:
                 category_thresholds=category_thresholds,
                 keyword_patterns=keyword_patterns,
                 temporal_thresholds=temporal_thresholds,
-                enable_temporal_heuristic=data.get('enable_temporal_heuristic', True),
-                enable_content_heuristic=data.get('enable_content_heuristic', True),
-                enable_structural_heuristic=data.get('enable_structural_heuristic', True),
-                enable_ai_heuristic=data.get('enable_ai_heuristic', False),
-                manual_review_threshold=data.get('manual_review_threshold', 0.60),
-                auto_categorize=data.get('auto_categorize', True),
-                preserve_user_overrides=data.get('preserve_user_overrides', True),
-                default_root=Path(data['default_root']) if 'default_root' in data else None,
-                project_dir=data.get('project_dir', 'Projects'),
-                area_dir=data.get('area_dir', 'Areas'),
-                resource_dir=data.get('resource_dir', 'Resources'),
-                archive_dir=data.get('archive_dir', 'Archive'),
+                enable_temporal_heuristic=data.get("enable_temporal_heuristic", True),
+                enable_content_heuristic=data.get("enable_content_heuristic", True),
+                enable_structural_heuristic=data.get("enable_structural_heuristic", True),
+                enable_ai_heuristic=data.get("enable_ai_heuristic", False),
+                manual_review_threshold=data.get("manual_review_threshold", 0.60),
+                auto_categorize=data.get("auto_categorize", True),
+                preserve_user_overrides=data.get("preserve_user_overrides", True),
+                default_root=Path(data["default_root"]) if "default_root" in data else None,
+                project_dir=data.get("project_dir", "Projects"),
+                area_dir=data.get("area_dir", "Areas"),
+                resource_dir=data.get("resource_dir", "Resources"),
+                archive_dir=data.get("archive_dir", "Archive"),
             )
 
             logger.info(f"Loaded configuration from {config_path}")
@@ -176,49 +203,49 @@ class PARAConfig:
             config_path: Path to save YAML configuration
         """
         data = {
-            'heuristic_weights': {
-                'temporal': self.heuristic_weights.temporal,
-                'content': self.heuristic_weights.content,
-                'structural': self.heuristic_weights.structural,
-                'ai': self.heuristic_weights.ai,
+            "heuristic_weights": {
+                "temporal": self.heuristic_weights.temporal,
+                "content": self.heuristic_weights.content,
+                "structural": self.heuristic_weights.structural,
+                "ai": self.heuristic_weights.ai,
             },
-            'category_thresholds': {
-                'project': self.category_thresholds.project,
-                'area': self.category_thresholds.area,
-                'resource': self.category_thresholds.resource,
-                'archive': self.category_thresholds.archive,
+            "category_thresholds": {
+                "project": self.category_thresholds.project,
+                "area": self.category_thresholds.area,
+                "resource": self.category_thresholds.resource,
+                "archive": self.category_thresholds.archive,
             },
-            'keyword_patterns': {
-                'project': self.keyword_patterns.project,
-                'area': self.keyword_patterns.area,
-                'resource': self.keyword_patterns.resource,
-                'archive': self.keyword_patterns.archive,
+            "keyword_patterns": {
+                "project": self.keyword_patterns.project,
+                "area": self.keyword_patterns.area,
+                "resource": self.keyword_patterns.resource,
+                "archive": self.keyword_patterns.archive,
             },
-            'temporal_thresholds': {
-                'project_max_age': self.temporal_thresholds.project_max_age,
-                'area_min_age': self.temporal_thresholds.area_min_age,
-                'area_max_age': self.temporal_thresholds.area_max_age,
-                'resource_min_age': self.temporal_thresholds.resource_min_age,
-                'archive_min_age': self.temporal_thresholds.archive_min_age,
-                'archive_min_inactive': self.temporal_thresholds.archive_min_inactive,
+            "temporal_thresholds": {
+                "project_max_age": self.temporal_thresholds.project_max_age,
+                "area_min_age": self.temporal_thresholds.area_min_age,
+                "area_max_age": self.temporal_thresholds.area_max_age,
+                "resource_min_age": self.temporal_thresholds.resource_min_age,
+                "archive_min_age": self.temporal_thresholds.archive_min_age,
+                "archive_min_inactive": self.temporal_thresholds.archive_min_inactive,
             },
-            'enable_temporal_heuristic': self.enable_temporal_heuristic,
-            'enable_content_heuristic': self.enable_content_heuristic,
-            'enable_structural_heuristic': self.enable_structural_heuristic,
-            'enable_ai_heuristic': self.enable_ai_heuristic,
-            'manual_review_threshold': self.manual_review_threshold,
-            'auto_categorize': self.auto_categorize,
-            'preserve_user_overrides': self.preserve_user_overrides,
-            'default_root': str(self.default_root) if self.default_root else None,
-            'project_dir': self.project_dir,
-            'area_dir': self.area_dir,
-            'resource_dir': self.resource_dir,
-            'archive_dir': self.archive_dir,
+            "enable_temporal_heuristic": self.enable_temporal_heuristic,
+            "enable_content_heuristic": self.enable_content_heuristic,
+            "enable_structural_heuristic": self.enable_structural_heuristic,
+            "enable_ai_heuristic": self.enable_ai_heuristic,
+            "manual_review_threshold": self.manual_review_threshold,
+            "auto_categorize": self.auto_categorize,
+            "preserve_user_overrides": self.preserve_user_overrides,
+            "default_root": str(self.default_root) if self.default_root else None,
+            "project_dir": self.project_dir,
+            "area_dir": self.area_dir,
+            "resource_dir": self.resource_dir,
+            "archive_dir": self.archive_dir,
         }
 
         try:
             config_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(config_path, 'w') as f:
+            with open(config_path, "w") as f:
                 yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
             logger.info(f"Configuration saved to {config_path}")

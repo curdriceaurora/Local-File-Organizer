@@ -1,4 +1,5 @@
 """Text processing utilities."""
+
 from __future__ import annotations
 
 import re
@@ -8,6 +9,7 @@ try:
     from nltk.corpus import stopwords
     from nltk.stem import WordNetLemmatizer
     from nltk.tokenize import word_tokenize
+
     NLTK_AVAILABLE = True
 except ImportError:
     NLTK_AVAILABLE = False
@@ -25,16 +27,17 @@ def ensure_nltk_data() -> None:
         logger.warning("NLTK not available, text processing will be limited")
         return
 
-    datasets = ['stopwords', 'punkt', 'wordnet']
+    datasets = ["stopwords", "punkt", "wordnet"]
     for dataset in datasets:
         try:
             # Try to load the dataset
-            if dataset == 'stopwords':
-                stopwords.words('english')
-            elif dataset == 'punkt':
+            if dataset == "stopwords":
+                stopwords.words("english")
+            elif dataset == "punkt":
                 word_tokenize("test")
-            elif dataset == 'wordnet':
+            elif dataset == "wordnet":
                 from nltk.corpus import wordnet
+
                 wordnet.synsets("test")
         except LookupError:
             # Dataset not found, download it
@@ -59,47 +62,141 @@ def get_unwanted_words() -> set[str]:
     """
     unwanted = {
         # Generic words
-        'the', 'and', 'based', 'generated', 'this', 'is', 'filename', 'file',
-        'document', 'text', 'output', 'only', 'below', 'category', 'summary',
-        'key', 'details', 'information', 'note', 'notes', 'main', 'ideas',
-        'concepts', 'untitled', 'unknown',
-
+        "the",
+        "and",
+        "based",
+        "generated",
+        "this",
+        "is",
+        "filename",
+        "file",
+        "document",
+        "text",
+        "output",
+        "only",
+        "below",
+        "category",
+        "summary",
+        "key",
+        "details",
+        "information",
+        "note",
+        "notes",
+        "main",
+        "ideas",
+        "concepts",
+        "untitled",
+        "unknown",
         # Prepositions and articles
-        'in', 'on', 'of', 'with', 'by', 'for', 'to', 'from', 'a', 'an',
-        'as', 'at',
-
+        "in",
+        "on",
+        "of",
+        "with",
+        "by",
+        "for",
+        "to",
+        "from",
+        "a",
+        "an",
+        "as",
+        "at",
         # Pronouns
-        'i', 'we', 'you', 'they', 'he', 'she', 'it', 'that', 'which',
-
+        "i",
+        "we",
+        "you",
+        "they",
+        "he",
+        "she",
+        "it",
+        "that",
+        "which",
         # Auxiliary verbs
-        'are', 'were', 'was', 'be', 'have', 'has', 'had', 'do', 'does', 'did',
-
+        "are",
+        "were",
+        "was",
+        "be",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
         # Conjunctions
-        'but', 'if', 'or', 'because', 'about', 'into', 'through', 'during',
-        'before', 'after', 'above', # Quantifiers
-        'any', 'each', 'few', 'more', 'most', 'other', 'some', 'such',
-
+        "but",
+        "if",
+        "or",
+        "because",
+        "about",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",  # Quantifiers
+        "any",
+        "each",
+        "few",
+        "more",
+        "most",
+        "other",
+        "some",
+        "such",
         # Negations
-        'no', 'nor', 'not',
-
+        "no",
+        "nor",
+        "not",
         # Other common words
-        'own', 'same', 'so', 'than', 'too', 'very', 's', 't',
-        'can', 'will', 'just', 'don', 'should', 'now', 'new',
-
+        "own",
+        "same",
+        "so",
+        "than",
+        "too",
+        "very",
+        "s",
+        "t",
+        "can",
+        "will",
+        "just",
+        "don",
+        "should",
+        "now",
+        "new",
         # Action verbs to avoid in filenames
-        'depicts', 'show', 'shows', 'display', 'illustrates', 'presents',
-        'features', 'provides', 'covers', 'includes', 'discusses',
-        'demonstrates', 'describes',
-
+        "depicts",
+        "show",
+        "shows",
+        "display",
+        "illustrates",
+        "presents",
+        "features",
+        "provides",
+        "covers",
+        "includes",
+        "discusses",
+        "demonstrates",
+        "describes",
         # File type words
-        'image', 'picture', 'photo', 'jpg', 'jpeg', 'png', 'gif', 'bmp',
-        'pdf', 'docx', 'xlsx', 'pptx', 'csv', 'txt', 'md',
+        "image",
+        "picture",
+        "photo",
+        "jpg",
+        "jpeg",
+        "png",
+        "gif",
+        "bmp",
+        "pdf",
+        "docx",
+        "xlsx",
+        "pptx",
+        "csv",
+        "txt",
+        "md",
     }
 
     # Add NLTK stopwords if available
     if NLTK_AVAILABLE:
         try:
-            unwanted.update(stopwords.words('english'))
+            unwanted.update(stopwords.words("english"))
         except LookupError:
             logger.warning("NLTK stopwords not available")
 
@@ -127,12 +224,12 @@ def clean_text(
         return ""
 
     # Remove special characters and numbers
-    text = re.sub(r'[^\w\s]', ' ', text)
-    text = re.sub(r'\d+', '', text)
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = re.sub(r"\d+", "", text)
     text = text.strip()
 
     # Split concatenated words (camelCase, PascalCase)
-    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
+    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
 
     # Tokenize
     if NLTK_AVAILABLE:
@@ -172,7 +269,7 @@ def clean_text(
     words = words[:max_words]
 
     # Join with underscores
-    return '_'.join(words)
+    return "_".join(words)
 
 
 def sanitize_filename(
@@ -195,22 +292,22 @@ def sanitize_filename(
 
     # If empty after cleaning, provide default
     if not cleaned:
-        return 'untitled'
+        return "untitled"
 
     # Remove any remaining non-alphanumeric except underscores
-    sanitized = re.sub(r'[^\w]', '_', cleaned)
+    sanitized = re.sub(r"[^\w]", "_", cleaned)
 
     # Replace multiple underscores with single
-    sanitized = re.sub(r'_+', '_', sanitized)
+    sanitized = re.sub(r"_+", "_", sanitized)
 
     # Remove leading/trailing underscores
-    sanitized = sanitized.strip('_')
+    sanitized = sanitized.strip("_")
 
     # Limit length
     if len(sanitized) > max_length:
-        sanitized = sanitized[:max_length].rstrip('_')
+        sanitized = sanitized[:max_length].rstrip("_")
 
-    return sanitized.lower() if sanitized else 'untitled'
+    return sanitized.lower() if sanitized else "untitled"
 
 
 def extract_keywords(text: str, top_n: int = 5) -> list[str]:
@@ -227,6 +324,7 @@ def extract_keywords(text: str, top_n: int = 5) -> list[str]:
         # Fallback: simple word frequency
         words = text.lower().split()
         from collections import Counter
+
         word_freq = Counter(words)
         return [word for word, _ in word_freq.most_common(top_n)]
 

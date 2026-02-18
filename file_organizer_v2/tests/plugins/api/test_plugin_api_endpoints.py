@@ -1,4 +1,5 @@
 """Integration tests for plugin API endpoints."""
+
 from __future__ import annotations
 
 from pathlib import Path

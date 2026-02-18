@@ -4,6 +4,7 @@ Tag Recommendation Engine
 Combines content analysis and learning insights to generate ranked tag suggestions.
 Integrates with smart suggestions infrastructure.
 """
+
 from __future__ import annotations
 
 import logging
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TagSuggestion:
     """A tag suggestion with confidence and reasoning."""
+
     tag: str
     confidence: float  # 0-100
     source: str  # content, behavior, hybrid
@@ -29,28 +31,29 @@ class TagSuggestion:
     def to_dict(self) -> dict:
         """Convert to dictionary."""
         return {
-            'tag': self.tag,
-            'confidence': self.confidence,
-            'source': self.source,
-            'reasoning': self.reasoning,
-            'metadata': self.metadata
+            "tag": self.tag,
+            "confidence": self.confidence,
+            "source": self.source,
+            "reasoning": self.reasoning,
+            "metadata": self.metadata,
         }
 
     @staticmethod
     def from_dict(data: dict) -> TagSuggestion:
         """Create from dictionary."""
         return TagSuggestion(
-            tag=data['tag'],
-            confidence=data['confidence'],
-            source=data['source'],
-            reasoning=data['reasoning'],
-            metadata=data.get('metadata', {})
+            tag=data["tag"],
+            confidence=data["confidence"],
+            source=data["source"],
+            reasoning=data["reasoning"],
+            metadata=data.get("metadata", {}),
         )
 
 
 @dataclass
 class TagRecommendation:
     """Complete tag recommendation for a file."""
+
     file_path: Path
     suggestions: list[TagSuggestion]
     existing_tags: list[str] = field(default_factory=list)
@@ -59,26 +62,20 @@ class TagRecommendation:
 
     def get_high_confidence_tags(self) -> list[str]:
         """Get tags with confidence >= 70%."""
-        return [
-            s.tag for s in self.suggestions
-            if s.confidence >= 70
-        ]
+        return [s.tag for s in self.suggestions if s.confidence >= 70]
 
     def get_medium_confidence_tags(self) -> list[str]:
         """Get tags with confidence 40-70%."""
-        return [
-            s.tag for s in self.suggestions
-            if 40 <= s.confidence < 70
-        ]
+        return [s.tag for s in self.suggestions if 40 <= s.confidence < 70]
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
         return {
-            'file_path': str(self.file_path),
-            'suggestions': [s.to_dict() for s in self.suggestions],
-            'existing_tags': self.existing_tags,
-            'confidence_threshold': self.confidence_threshold,
-            'timestamp': self.timestamp.isoformat()
+            "file_path": str(self.file_path),
+            "suggestions": [s.to_dict() for s in self.suggestions],
+            "existing_tags": self.existing_tags,
+            "confidence_threshold": self.confidence_threshold,
+            "timestamp": self.timestamp.isoformat(),
         }
 
 
@@ -98,7 +95,7 @@ class TagRecommender:
         self,
         content_analyzer: ContentTagAnalyzer | None = None,
         learning_engine: TagLearningEngine | None = None,
-        min_confidence: float = 40.0
+        min_confidence: float = 40.0,
     ):
         """
         Initialize the tag recommender.
@@ -113,19 +110,12 @@ class TagRecommender:
         self.min_confidence = min_confidence
 
         # Weights for different sources
-        self.source_weights = {
-            'content': 0.4,
-            'behavior': 0.4,
-            'hybrid': 0.2
-        }
+        self.source_weights = {"content": 0.4, "behavior": 0.4, "hybrid": 0.2}
 
         logger.info("TagRecommender initialized")
 
     def recommend_tags(
-        self,
-        file_path: Path,
-        existing_tags: list[str] | None = None,
-        top_n: int = 10
+        self, file_path: Path, existing_tags: list[str] | None = None, top_n: int = 10
     ) -> TagRecommendation:
         """
         Generate tag recommendations for a file.
@@ -141,9 +131,7 @@ class TagRecommender:
         if not file_path.exists():
             logger.warning(f"File not found: {file_path}")
             return TagRecommendation(
-                file_path=file_path,
-                suggestions=[],
-                existing_tags=existing_tags or []
+                file_path=file_path, suggestions=[], existing_tags=existing_tags or []
             )
 
         logger.debug(f"Generating tag recommendations for: {file_path.name}")
@@ -159,8 +147,8 @@ class TagRecommender:
             all_suggestions[tag] = TagSuggestion(
                 tag=tag,
                 confidence=confidence,
-                source='content',
-                reasoning=self._generate_content_reasoning(tag, file_path)
+                source="content",
+                reasoning=self._generate_content_reasoning(tag, file_path),
             )
 
         # 2. Behavior-based suggestions
@@ -170,23 +158,20 @@ class TagRecommender:
                 # Combine with existing suggestion (hybrid)
                 existing = all_suggestions[tag]
                 combined_confidence = self._combine_confidences(
-                    existing.confidence,
-                    confidence,
-                    existing.source,
-                    'behavior'
+                    existing.confidence, confidence, existing.source, "behavior"
                 )
                 all_suggestions[tag] = TagSuggestion(
                     tag=tag,
                     confidence=combined_confidence,
-                    source='hybrid',
-                    reasoning=self._generate_hybrid_reasoning(tag, file_path)
+                    source="hybrid",
+                    reasoning=self._generate_hybrid_reasoning(tag, file_path),
                 )
             else:
                 all_suggestions[tag] = TagSuggestion(
                     tag=tag,
                     confidence=confidence,
-                    source='behavior',
-                    reasoning=self._generate_behavior_reasoning(tag, file_path)
+                    source="behavior",
+                    reasoning=self._generate_behavior_reasoning(tag, file_path),
                 )
 
         # 3. Related tag suggestions (if existing tags provided)
@@ -197,8 +182,8 @@ class TagRecommender:
                     all_suggestions[tag] = TagSuggestion(
                         tag=tag,
                         confidence=confidence,
-                        source='behavior',
-                        reasoning=f"Often used with: {', '.join(existing_tags[:3])}"
+                        source="behavior",
+                        reasoning=f"Often used with: {', '.join(existing_tags[:3])}",
                     )
 
         # Filter existing tags
@@ -207,30 +192,22 @@ class TagRecommender:
 
         # Filter by minimum confidence
         filtered_suggestions = [
-            s for s in all_suggestions.values()
-            if s.confidence >= self.min_confidence
+            s for s in all_suggestions.values() if s.confidence >= self.min_confidence
         ]
 
         # Rank suggestions
         ranked_suggestions = self._rank_suggestions(filtered_suggestions)
 
-        logger.info(
-            f"Generated {len(ranked_suggestions)} tag suggestions "
-            f"for {file_path.name}"
-        )
+        logger.info(f"Generated {len(ranked_suggestions)} tag suggestions for {file_path.name}")
 
         return TagRecommendation(
             file_path=file_path,
             suggestions=ranked_suggestions[:top_n],
             existing_tags=existing_tags,
-            confidence_threshold=self.min_confidence
+            confidence_threshold=self.min_confidence,
         )
 
-    def batch_recommend(
-        self,
-        files: list[Path],
-        top_n: int = 10
-    ) -> dict[Path, TagRecommendation]:
+    def batch_recommend(self, files: list[Path], top_n: int = 10) -> dict[Path, TagRecommendation]:
         """
         Generate recommendations for multiple files.
 
@@ -250,10 +227,7 @@ class TagRecommender:
                 results[file_path] = recommendation
             except Exception as e:
                 logger.error(f"Error recommending tags for {file_path}: {e}")
-                results[file_path] = TagRecommendation(
-                    file_path=file_path,
-                    suggestions=[]
-                )
+                results[file_path] = TagRecommendation(file_path=file_path, suggestions=[])
 
         return results
 
@@ -288,12 +262,7 @@ class TagRecommender:
         # Return average
         return sum(confidence_scores) / len(confidence_scores)
 
-    def explain_tag(
-        self,
-        tag: str,
-        file_path: Path,
-        existing_tags: list[str] | None = None
-    ) -> str:
+    def explain_tag(self, tag: str, file_path: Path, existing_tags: list[str] | None = None) -> str:
         """
         Generate detailed explanation for why a tag was suggested.
 
@@ -310,9 +279,7 @@ class TagRecommender:
         # Check content analysis
         content_tags = self.content_analyzer.analyze_file(file_path)
         if tag in content_tags:
-            explanations.append(
-                "Found in file content or metadata"
-            )
+            explanations.append("Found in file content or metadata")
 
         # Check file type patterns
         file_ext = file_path.suffix.lower()
@@ -320,9 +287,7 @@ class TagRecommender:
             type_tags = self.learning_engine.file_type_tags[file_ext]
             if tag in type_tags:
                 count = type_tags[tag]
-                explanations.append(
-                    f"You've used this tag {count} times with {file_ext} files"
-                )
+                explanations.append(f"You've used this tag {count} times with {file_ext} files")
 
         # Check directory patterns
         directory = str(file_path.parent)
@@ -330,28 +295,21 @@ class TagRecommender:
             dir_tags = self.learning_engine.directory_tags[directory]
             if tag in dir_tags:
                 count = dir_tags[tag]
-                explanations.append(
-                    f"You've used this tag {count} times in this directory"
-                )
+                explanations.append(f"You've used this tag {count} times in this directory")
 
         # Check related tags
         if existing_tags:
             related = self.learning_engine.get_related_tags(tag)
             overlap = set(related) & set(existing_tags)
             if overlap:
-                explanations.append(
-                    f"Often used with: {', '.join(overlap)}"
-                )
+                explanations.append(f"Often used with: {', '.join(overlap)}")
 
         if not explanations:
             return "Suggested based on file analysis"
 
         return " • ".join(explanations)
 
-    def _get_content_suggestions(
-        self,
-        file_path: Path
-    ) -> list[tuple[str, float]]:
+    def _get_content_suggestions(self, file_path: Path) -> list[tuple[str, float]]:
         """Get suggestions from content analysis."""
         try:
             # Get keywords with scores
@@ -377,9 +335,7 @@ class TagRecommender:
             return []
 
     def _get_behavior_suggestions(
-        self,
-        file_path: Path,
-        existing_tags: list[str]
+        self, file_path: Path, existing_tags: list[str]
     ) -> list[tuple[str, float]]:
         """Get suggestions from learned behavior."""
         try:
@@ -388,10 +344,7 @@ class TagRecommender:
 
             # Get context-based suggestions
             suggestions = self.learning_engine.get_tag_suggestions_for_context(
-                file_type=file_ext,
-                directory=directory,
-                existing_tags=existing_tags,
-                limit=10
+                file_type=file_ext, directory=directory, existing_tags=existing_tags, limit=10
             )
 
             return suggestions
@@ -400,10 +353,7 @@ class TagRecommender:
             logger.debug(f"Error getting behavior suggestions: {e}")
             return []
 
-    def _get_related_suggestions(
-        self,
-        existing_tags: list[str]
-    ) -> list[tuple[str, float]]:
+    def _get_related_suggestions(self, existing_tags: list[str]) -> list[tuple[str, float]]:
         """Get suggestions based on tag relationships."""
         related_tags = {}
 
@@ -415,20 +365,11 @@ class TagRecommender:
                     count = self.learning_engine.tag_cooccurrence[tag][related_tag]
                     total = self.learning_engine.tag_usage[tag].count
                     confidence = (count / total) * 100 if total > 0 else 50
-                    related_tags[related_tag] = max(
-                        related_tags.get(related_tag, 0),
-                        confidence
-                    )
+                    related_tags[related_tag] = max(related_tags.get(related_tag, 0), confidence)
 
         return list(related_tags.items())
 
-    def _combine_confidences(
-        self,
-        conf1: float,
-        conf2: float,
-        source1: str,
-        source2: str
-    ) -> float:
+    def _combine_confidences(self, conf1: float, conf2: float, source1: str, source2: str) -> float:
         """Combine confidence scores from different sources."""
         # Weighted average based on source types
         weight1 = self.source_weights.get(source1, 0.5)
@@ -446,22 +387,15 @@ class TagRecommender:
 
         return min(combined + boost, 100.0)
 
-    def _rank_suggestions(
-        self,
-        suggestions: list[TagSuggestion]
-    ) -> list[TagSuggestion]:
+    def _rank_suggestions(self, suggestions: list[TagSuggestion]) -> list[TagSuggestion]:
         """Rank suggestions by confidence and source."""
         # Source priority: hybrid > behavior > content
-        source_priority = {
-            'hybrid': 3,
-            'behavior': 2,
-            'content': 1
-        }
+        source_priority = {"hybrid": 3, "behavior": 2, "content": 1}
 
         return sorted(
             suggestions,
             key=lambda s: (s.confidence, source_priority.get(s.source, 0)),
-            reverse=True
+            reverse=True,
         )
 
     def _generate_content_reasoning(self, tag: str, file_path: Path) -> str:

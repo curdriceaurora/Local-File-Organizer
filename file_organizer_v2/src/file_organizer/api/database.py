@@ -8,6 +8,7 @@ This module provides a single place for:
 It is intentionally generic so both auth-specific and feature-specific
 persistence layers can reuse the same connection behavior.
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -45,6 +46,7 @@ def resolve_database_url(database: str) -> str:
     if _URL_SCHEME_RE.match(value):
         # For full URLs, use SQLAlchemy's validator
         from sqlalchemy.engine.url import make_url
+
         try:
             url = make_url(value)
             return url.render_as_string(hide_password=False)

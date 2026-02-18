@@ -3,6 +3,7 @@
 Provides configuration dataclass with sensible defaults for Redis
 connection and stream behavior.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -12,6 +12,7 @@ Usage::
     python scripts/build.py --one-dir    # Build as directory (faster debug)
     python scripts/build.py --clean      # Clean before building
 """
+
 from __future__ import annotations
 
 import argparse

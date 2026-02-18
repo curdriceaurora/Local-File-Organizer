@@ -211,9 +211,7 @@ class ModelCache:
             CacheStats with current usage information.
         """
         with self._lock:
-            total_memory = sum(
-                entry.size_bytes for entry in self._cache.values()
-            )
+            total_memory = sum(entry.size_bytes for entry in self._cache.values())
             return CacheStats(
                 hits=self._hits,
                 misses=self._misses,

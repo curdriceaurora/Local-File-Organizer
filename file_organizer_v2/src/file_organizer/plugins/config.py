@@ -1,4 +1,5 @@
 """Plugin configuration persistence."""
+
 from __future__ import annotations
 
 import json
@@ -50,9 +51,11 @@ class PluginConfig:
         raw_settings = payload.get("settings", {})
         settings = raw_settings if isinstance(raw_settings, dict) else {}
         raw_permissions = payload.get("permissions", [])
-        permissions = [str(permission) for permission in raw_permissions] if isinstance(
-            raw_permissions, list
-        ) else []
+        permissions = (
+            [str(permission) for permission in raw_permissions]
+            if isinstance(raw_permissions, list)
+            else []
+        )
         return cls(name=name, enabled=enabled, settings=settings, permissions=permissions)
 
 
@@ -79,15 +82,15 @@ class PluginConfigManager:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except OSError as exc:
-            raise PluginConfigError(f"Failed to read config for plugin '{validated_name}'.") from exc
+            raise PluginConfigError(
+                f"Failed to read config for plugin '{validated_name}'."
+            ) from exc
         except json.JSONDecodeError as exc:
             raise PluginConfigError(
                 f"Config for plugin '{validated_name}' is not valid JSON."
             ) from exc
         if not isinstance(payload, dict):
-            raise PluginConfigError(
-                f"Config for plugin '{validated_name}' must be a JSON object."
-            )
+            raise PluginConfigError(f"Config for plugin '{validated_name}' must be a JSON object.")
         payload.setdefault("name", validated_name)
         config = PluginConfig.from_dict(payload)
         if config.name != validated_name:

@@ -4,6 +4,7 @@ Johnny Decimal Methodology Adapters
 Adapter pattern implementation for bridging Johnny Decimal with other
 organizational methodologies and file management systems.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -64,9 +65,7 @@ class MethodologyAdapter(ABC):
         pass
 
     @abstractmethod
-    def adapt_from_jd(
-        self, jd_number: JohnnyDecimalNumber, item_name: str
-    ) -> OrganizationItem:
+    def adapt_from_jd(self, jd_number: JohnnyDecimalNumber, item_name: str) -> OrganizationItem:
         """
         Adapt JD number to source methodology item.
 
@@ -149,9 +148,7 @@ class PARAAdapter(MethodologyAdapter):
             category=subcategory,
         )
 
-    def adapt_from_jd(
-        self, jd_number: JohnnyDecimalNumber, item_name: str
-    ) -> OrganizationItem:
+    def adapt_from_jd(self, jd_number: JohnnyDecimalNumber, item_name: str) -> OrganizationItem:
         """
         Convert JD number to PARA item.
 
@@ -169,9 +166,7 @@ class PARAAdapter(MethodologyAdapter):
         para_category = self.bridge.jd_area_to_para(jd_number.area)
 
         if not para_category:
-            raise ValueError(
-                f"JD area {jd_number.area} is not in PARA range"
-            )
+            raise ValueError(f"JD area {jd_number.area} is not in PARA range")
 
         # Construct path
         para_folder = para_category.value.title()
@@ -245,13 +240,9 @@ class FileSystemAdapter(MethodologyAdapter):
             area = self._suggest_area_from_name(item.path.parts[0])
             category = self._suggest_category_from_name(item.path.parts[1])
             id_num = self._suggest_id_from_index(depth - 3)
-            return JohnnyDecimalNumber(
-                area=area, category=category, item_id=id_num
-            )
+            return JohnnyDecimalNumber(area=area, category=category, item_id=id_num)
 
-    def adapt_from_jd(
-        self, jd_number: JohnnyDecimalNumber, item_name: str
-    ) -> OrganizationItem:
+    def adapt_from_jd(self, jd_number: JohnnyDecimalNumber, item_name: str) -> OrganizationItem:
         """
         Convert JD number to filesystem item.
 
@@ -272,7 +263,9 @@ class FileSystemAdapter(MethodologyAdapter):
         else:  # ID
             area_name = f"{jd_number.area:02d} Area"
             cat_name = f"{jd_number.area:02d}.{jd_number.category:02d} Category"
-            id_name = f"{jd_number.area:02d}.{jd_number.category:02d}.{jd_number.item_id:03d} {item_name}"
+            id_name = (
+                f"{jd_number.area:02d}.{jd_number.category:02d}.{jd_number.item_id:03d} {item_name}"
+            )
             path = Path(area_name) / cat_name / id_name
 
         return OrganizationItem(

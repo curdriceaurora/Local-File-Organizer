@@ -150,9 +150,7 @@ class ResumableProcessor:
         files_to_process.extend(modified_files)
 
         # Remove modified files from completed list in checkpoint
-        still_completed = [
-            p for p in checkpoint.completed_paths if p not in modified_files
-        ]
+        still_completed = [p for p in checkpoint.completed_paths if p not in modified_files]
 
         # Update job state
         job.status = JobStatus.RUNNING
@@ -231,17 +229,13 @@ class ResumableProcessor:
         files_since_save = 0
 
         try:
-            for file_result in self._processor.process_batch_iter(
-                files, process_fn
-            ):
+            for file_result in self._processor.process_batch_iter(files, process_fn):
                 results.append(file_result)
 
                 if file_result.success:
                     # Update in-memory state
                     if checkpoint:
-                        self._checkpoint_mgr.update_checkpoint_state(
-                            checkpoint, file_result.path
-                        )
+                        self._checkpoint_mgr.update_checkpoint_state(checkpoint, file_result.path)
                     job.completed_files += 1
                 else:
                     job.failed_files += 1

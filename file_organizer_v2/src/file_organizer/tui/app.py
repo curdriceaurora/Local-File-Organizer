@@ -3,6 +3,7 @@
 Provides the root App with a sidebar/main-content layout, status bar,
 and placeholder views that will be replaced by downstream Phase 2 tasks.
 """
+
 from __future__ import annotations
 
 import threading
@@ -242,9 +243,7 @@ class FileOrganizerApp(App[None]):
         titles = {
             "settings": "[b]Settings[/b]\n\nConfigure models, paths, and preferences.",
         }
-        return PlaceholderView(
-            titles.get(name, f"[b]{name.capitalize()}[/b]"), id="view"
-        )
+        return PlaceholderView(titles.get(name, f"[b]{name.capitalize()}[/b]"), id="view")
 
 
 def run_tui() -> None:

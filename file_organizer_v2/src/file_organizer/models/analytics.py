@@ -3,6 +3,7 @@ Analytics data models.
 
 Data classes for analytics dashboard, storage stats, and quality metrics.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -13,6 +14,7 @@ from pathlib import Path
 @dataclass
 class FileInfo:
     """Information about a single file."""
+
     path: Path
     size: int
     type: str
@@ -23,6 +25,7 @@ class FileInfo:
 @dataclass
 class StorageStats:
     """Storage usage statistics."""
+
     total_size: int
     organized_size: int
     saved_size: int
@@ -52,7 +55,7 @@ class StorageStats:
     @staticmethod
     def _format_size(size: int) -> str:
         """Format size in human-readable format."""
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        for unit in ["B", "KB", "MB", "GB", "TB"]:
             if size < 1024.0:
                 return f"{size:.2f} {unit}"
             size /= 1024.0
@@ -62,6 +65,7 @@ class StorageStats:
 @dataclass
 class FileDistribution:
     """File distribution statistics."""
+
     by_type: dict[str, int] = field(default_factory=dict)
     by_category: dict[str, int] = field(default_factory=dict)
     by_size_range: dict[str, int] = field(default_factory=dict)
@@ -77,6 +81,7 @@ class FileDistribution:
 @dataclass
 class DuplicateStats:
     """Duplicate detection statistics."""
+
     total_duplicates: int
     duplicate_groups: int
     space_wasted: int
@@ -98,6 +103,7 @@ class DuplicateStats:
 @dataclass
 class QualityMetrics:
     """File organization quality metrics."""
+
     quality_score: float  # 0-100
     naming_compliance: float  # 0-1
     structure_consistency: float  # 0-1
@@ -109,15 +115,15 @@ class QualityMetrics:
     def grade(self) -> str:
         """Get letter grade for quality score."""
         if self.quality_score >= 90:
-            return 'A'
+            return "A"
         elif self.quality_score >= 80:
-            return 'B'
+            return "B"
         elif self.quality_score >= 70:
-            return 'C'
+            return "C"
         elif self.quality_score >= 60:
-            return 'D'
+            return "D"
         else:
-            return 'F'
+            return "F"
 
     @property
     def formatted_score(self) -> str:
@@ -128,6 +134,7 @@ class QualityMetrics:
 @dataclass
 class TimeSavings:
     """Time savings from automation."""
+
     total_operations: int
     automated_operations: int
     manual_time_seconds: int
@@ -165,6 +172,7 @@ class TimeSavings:
 @dataclass
 class MetricsSnapshot:
     """Snapshot of metrics at a point in time."""
+
     timestamp: datetime
     storage_stats: StorageStats
     quality_metrics: QualityMetrics
@@ -175,6 +183,7 @@ class MetricsSnapshot:
 @dataclass
 class TrendData:
     """Trend data over time."""
+
     metric_name: str
     values: list[float] = field(default_factory=list)
     timestamps: list[datetime] = field(default_factory=list)
@@ -188,25 +197,26 @@ class TrendData:
     def trend_direction(self) -> str:
         """Determine trend direction (up, down, stable)."""
         if len(self.values) < 2:
-            return 'stable'
+            return "stable"
 
-        recent = self.values[-min(5, len(self.values)):]
-        first_half = sum(recent[:len(recent)//2]) / max(len(recent)//2, 1)
-        second_half = sum(recent[len(recent)//2:]) / max(len(recent) - len(recent)//2, 1)
+        recent = self.values[-min(5, len(self.values)) :]
+        first_half = sum(recent[: len(recent) // 2]) / max(len(recent) // 2, 1)
+        second_half = sum(recent[len(recent) // 2 :]) / max(len(recent) - len(recent) // 2, 1)
 
         change = ((second_half - first_half) / max(first_half, 1)) * 100
 
         if change > 5:
-            return 'up'
+            return "up"
         elif change < -5:
-            return 'down'
+            return "down"
         else:
-            return 'stable'
+            return "stable"
 
 
 @dataclass
 class AnalyticsDashboard:
     """Complete analytics dashboard data."""
+
     storage_stats: StorageStats
     file_distribution: FileDistribution
     duplicate_stats: DuplicateStats
@@ -218,35 +228,35 @@ class AnalyticsDashboard:
     def to_dict(self) -> dict:
         """Convert dashboard to dictionary for serialization."""
         return {
-            'storage_stats': {
-                'total_size': self.storage_stats.total_size,
-                'organized_size': self.storage_stats.organized_size,
-                'saved_size': self.storage_stats.saved_size,
-                'file_count': self.storage_stats.file_count,
-                'directory_count': self.storage_stats.directory_count,
+            "storage_stats": {
+                "total_size": self.storage_stats.total_size,
+                "organized_size": self.storage_stats.organized_size,
+                "saved_size": self.storage_stats.saved_size,
+                "file_count": self.storage_stats.file_count,
+                "directory_count": self.storage_stats.directory_count,
             },
-            'file_distribution': {
-                'by_type': self.file_distribution.by_type,
-                'by_category': self.file_distribution.by_category,
-                'total_files': self.file_distribution.total_files,
+            "file_distribution": {
+                "by_type": self.file_distribution.by_type,
+                "by_category": self.file_distribution.by_category,
+                "total_files": self.file_distribution.total_files,
             },
-            'duplicate_stats': {
-                'total_duplicates': self.duplicate_stats.total_duplicates,
-                'duplicate_groups': self.duplicate_stats.duplicate_groups,
-                'space_wasted': self.duplicate_stats.space_wasted,
-                'space_recoverable': self.duplicate_stats.space_recoverable,
+            "duplicate_stats": {
+                "total_duplicates": self.duplicate_stats.total_duplicates,
+                "duplicate_groups": self.duplicate_stats.duplicate_groups,
+                "space_wasted": self.duplicate_stats.space_wasted,
+                "space_recoverable": self.duplicate_stats.space_recoverable,
             },
-            'quality_metrics': {
-                'quality_score': self.quality_metrics.quality_score,
-                'naming_compliance': self.quality_metrics.naming_compliance,
-                'structure_consistency': self.quality_metrics.structure_consistency,
-                'grade': self.quality_metrics.grade,
+            "quality_metrics": {
+                "quality_score": self.quality_metrics.quality_score,
+                "naming_compliance": self.quality_metrics.naming_compliance,
+                "structure_consistency": self.quality_metrics.structure_consistency,
+                "grade": self.quality_metrics.grade,
             },
-            'time_savings': {
-                'total_operations': self.time_savings.total_operations,
-                'automated_operations': self.time_savings.automated_operations,
-                'automation_percentage': self.time_savings.automation_percentage,
-                'time_saved': self.time_savings.formatted_time_saved,
+            "time_savings": {
+                "total_operations": self.time_savings.total_operations,
+                "automated_operations": self.time_savings.automated_operations,
+                "automation_percentage": self.time_savings.automation_percentage,
+                "time_saved": self.time_savings.formatted_time_saved,
             },
-            'generated_at': self.generated_at.isoformat()
+            "generated_at": self.generated_at.isoformat(),
         }

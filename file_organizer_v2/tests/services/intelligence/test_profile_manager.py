@@ -3,6 +3,7 @@ Tests for ProfileManager
 
 Tests profile CRUD operations, activation, validation, and atomic operations.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -141,10 +142,7 @@ def test_update_profile(profile_manager):
     profile_manager.create_profile("update_test", "Original description")
 
     # Update description
-    success = profile_manager.update_profile(
-        "update_test",
-        description="Updated description"
-    )
+    success = profile_manager.update_profile("update_test", description="Updated description")
     assert success
 
     # Verify update
@@ -156,20 +154,14 @@ def test_update_profile_preferences(profile_manager):
     """Test updating profile preferences."""
     profile_manager.create_profile("prefs_test", "Preferences test")
 
-    new_prefs = {
-        'global': {'test_key': 'test_value'},
-        'directory_specific': {}
-    }
+    new_prefs = {"global": {"test_key": "test_value"}, "directory_specific": {}}
 
-    success = profile_manager.update_profile(
-        "prefs_test",
-        preferences=new_prefs
-    )
+    success = profile_manager.update_profile("prefs_test", preferences=new_prefs)
     assert success
 
     # Verify
     updated = profile_manager.get_profile("prefs_test")
-    assert updated.preferences['global']['test_key'] == 'test_value'
+    assert updated.preferences["global"]["test_key"] == "test_value"
 
 
 def test_profile_name_sanitization(profile_manager):
@@ -181,8 +173,8 @@ def test_profile_name_sanitization(profile_manager):
     assert profile is not None
     # Special chars should be replaced with underscores
     path = profile_manager._get_profile_path("test/profile:name")
-    assert '/' not in path.name
-    assert ':' not in path.name
+    assert "/" not in path.name
+    assert ":" not in path.name
 
 
 def test_profile_persistence(profile_manager):
@@ -277,31 +269,17 @@ def test_profile_with_complex_data(profile_manager):
     profile_manager.create_profile("complex_test", "Complex data test")
 
     complex_prefs = {
-        'global': {
-            'nested': {
-                'deep': {
-                    'value': 'test'
-                }
-            },
-            'list_data': [1, 2, 3, 4, 5]
-        },
-        'directory_specific': {
-            '/path/to/dir': {
-                'setting': 'value'
-            }
-        }
+        "global": {"nested": {"deep": {"value": "test"}}, "list_data": [1, 2, 3, 4, 5]},
+        "directory_specific": {"/path/to/dir": {"setting": "value"}},
     }
 
-    success = profile_manager.update_profile(
-        "complex_test",
-        preferences=complex_prefs
-    )
+    success = profile_manager.update_profile("complex_test", preferences=complex_prefs)
     assert success
 
     # Verify complex data
     loaded = profile_manager.get_profile("complex_test")
-    assert loaded.preferences['global']['nested']['deep']['value'] == 'test'
-    assert loaded.preferences['global']['list_data'] == [1, 2, 3, 4, 5]
+    assert loaded.preferences["global"]["nested"]["deep"]["value"] == "test"
+    assert loaded.preferences["global"]["list_data"] == [1, 2, 3, 4, 5]
 
 
 if __name__ == "__main__":

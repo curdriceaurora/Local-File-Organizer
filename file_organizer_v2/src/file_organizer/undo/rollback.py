@@ -4,6 +4,7 @@ Rollback executor for file operations.
 This module executes rollback operations for undo/redo,
 handling all operation types and transaction management.
 """
+
 from __future__ import annotations
 
 import logging
@@ -361,7 +362,7 @@ class RollbackExecutor:
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Create empty file or directory
-            if operation.metadata.get('is_dir'):
+            if operation.metadata.get("is_dir"):
                 file_path.mkdir(parents=True, exist_ok=True)
             else:
                 file_path.touch()
@@ -373,9 +374,7 @@ class RollbackExecutor:
             return False
 
     def rollback_transaction(
-        self,
-        transaction_id: str,
-        operations: list[Operation]
+        self, transaction_id: str, operations: list[Operation]
     ) -> RollbackResult:
         """
         Rollback an entire transaction atomically.
@@ -423,13 +422,12 @@ class RollbackExecutor:
             operations_rolled_back=rolled_back,
             operations_failed=failed,
             errors=errors,
-            warnings=warnings
+            warnings=warnings,
         )
 
         if success:
             logger.info(
-                f"Successfully rolled back transaction {transaction_id}: "
-                f"{rolled_back} operations"
+                f"Successfully rolled back transaction {transaction_id}: {rolled_back} operations"
             )
         else:
             logger.error(
@@ -455,6 +453,7 @@ class RollbackExecutor:
             trash_dir = self.trash_dir / str(operation_id)
         else:
             import uuid
+
             trash_dir = self.trash_dir / str(uuid.uuid4())
 
         trash_dir.mkdir(parents=True, exist_ok=True)

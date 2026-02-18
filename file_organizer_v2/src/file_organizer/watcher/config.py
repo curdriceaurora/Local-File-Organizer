@@ -4,6 +4,7 @@ Configuration for the file system watcher.
 Defines the WatcherConfig dataclass for controlling monitoring behavior
 including directory selection, filtering, debouncing, and batching.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -63,15 +64,11 @@ class WatcherConfig:
 
         # Normalize file type extensions to include leading dot
         if self.file_types is not None:
-            self.file_types = [
-                ext if ext.startswith(".") else f".{ext}" for ext in self.file_types
-            ]
+            self.file_types = [ext if ext.startswith(".") else f".{ext}" for ext in self.file_types]
 
         # Validate debounce_seconds
         if self.debounce_seconds < 0:
-            raise ValueError(
-                f"debounce_seconds must be non-negative, got {self.debounce_seconds}"
-            )
+            raise ValueError(f"debounce_seconds must be non-negative, got {self.debounce_seconds}")
 
         # Validate batch_size
         if self.batch_size < 1:

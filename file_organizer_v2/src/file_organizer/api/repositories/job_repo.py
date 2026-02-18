@@ -1,4 +1,5 @@
 """Repository for :class:`~file_organizer.api.db_models.OrganizationJob` CRUD."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone

@@ -20,7 +20,9 @@ from file_organizer.services.deduplication.image_utils import (
 )
 
 
-def create_test_image(path: Path, color: tuple, size: tuple = (100, 100), pattern: str = "rectangle"):
+def create_test_image(
+    path: Path, color: tuple, size: tuple = (100, 100), pattern: str = "rectangle"
+):
     """Create a simple colored test image."""
     img = Image.new("RGB", size, color)
     draw = ImageDraw.Draw(img)
@@ -131,7 +133,9 @@ def test_with_real_images():
 
         similarity_diff = deduper.compute_similarity(img1, img3)
         assert similarity_diff is not None
-        assert similarity_diff < similarity, "Different images should be less similar than identical ones"
+        assert similarity_diff < similarity, (
+            "Different images should be less similar than identical ones"
+        )
         print(f"    ✓ Similarity between different images: {similarity_diff:.2%}")
 
         # Test find_duplicates
@@ -187,6 +191,7 @@ def main():
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

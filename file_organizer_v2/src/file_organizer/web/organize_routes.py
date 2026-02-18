@@ -1,4 +1,5 @@
 """Web UI routes for the organization dashboard, jobs, and reports."""
+
 from __future__ import annotations
 
 import asyncio
@@ -141,7 +142,9 @@ def _result_to_response(result: OrganizationResult) -> OrganizationResultRespons
         failed_files=result.failed_files,
         processing_time=result.processing_time,
         organized_structure=result.organized_structure,
-        errors=[OrganizationError(file=file_name, error=error) for file_name, error in result.errors],
+        errors=[
+            OrganizationError(file=file_name, error=error) for file_name, error in result.errors
+        ],
     )
 
 
@@ -155,7 +158,9 @@ def _build_plan_movements(
         source_lookup.setdefault(file_path.name, []).append(str(file_path))
 
     movements: list[dict[str, str]] = []
-    for bucket, names in sorted(preview.organized_structure.items(), key=lambda item: item[0].lower()):
+    for bucket, names in sorted(
+        preview.organized_structure.items(), key=lambda item: item[0].lower()
+    ):
         for name in sorted(names, key=str.lower):
             sources = source_lookup.get(name, [])
             source_path = sources.pop(0) if sources else name
@@ -410,7 +415,9 @@ def _job_report_payload(job: dict[str, Any]) -> dict[str, Any]:
 
 
 @organize_router.get("/organize", response_class=HTMLResponse)
-def organize_dashboard(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+def organize_dashboard(
+    request: Request, settings: ApiSettings = Depends(get_settings)
+) -> HTMLResponse:
     from file_organizer.web._helpers import base_context
 
     roots = allowed_roots(settings)
@@ -566,7 +573,9 @@ def organize_execute(
             raise ApiError(status_code=400, error="missing_plan_id", message="Plan id is required.")
         plan = _get_organize_plan(plan_id)
         if plan is None:
-            raise ApiError(status_code=404, error="plan_not_found", message="Organization plan not found.")
+            raise ApiError(
+                status_code=404, error="plan_not_found", message="Organization plan not found."
+            )
 
         delay_minutes = _parse_delay_minutes(schedule_delay_minutes)
         dry_run_enabled = as_bool(dry_run)
@@ -586,9 +595,7 @@ def organize_execute(
         scheduled_for = ""
         if delay_minutes > 0:
             scheduled_at = datetime.now(timezone.utc).timestamp() + (delay_minutes * 60)
-            scheduled_for = format_timestamp(
-                datetime.fromtimestamp(scheduled_at, tz=timezone.utc)
-            )
+            scheduled_for = format_timestamp(datetime.fromtimestamp(scheduled_at, tz=timezone.utc))
         _set_job_metadata(
             job.job_id,
             {
@@ -786,7 +793,9 @@ def organize_stats(request: Request) -> HTMLResponse:
 
 
 @organize_router.get("/organize/report/{job_id}")
-def organize_report(job_id: str, format: str = Query("json", pattern="^(json|csv|txt)$")) -> Response:
+def organize_report(
+    job_id: str, format: str = Query("json", pattern="^(json|csv|txt)$")
+) -> Response:
     job = _build_job_view(job_id)
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")

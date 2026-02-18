@@ -1,4 +1,5 @@
 """Unit tests for search endpoint."""
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -108,8 +109,6 @@ class TestSearchEndpoint:
                 result = results[0]
                 # Should have at least one metadata field
                 has_metadata = any(
-                    key in result for key in [
-                        "size", "created", "modified", "type", "description"
-                    ]
+                    key in result for key in ["size", "created", "modified", "type", "description"]
                 )
                 assert has_metadata

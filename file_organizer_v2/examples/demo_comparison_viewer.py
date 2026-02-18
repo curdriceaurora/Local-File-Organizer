@@ -5,7 +5,6 @@ Demo script for ComparisonViewer.
 This script demonstrates the terminal-based UI for reviewing duplicate images.
 """
 
-
 # Add src to path
 from rich.console import Console
 

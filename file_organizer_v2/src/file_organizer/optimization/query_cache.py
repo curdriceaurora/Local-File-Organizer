@@ -5,6 +5,7 @@ This module provides a thread-safe, LRU-style cache for query results.  It
 supports per-table invalidation so that write operations can selectively
 clear stale entries without flushing the entire cache.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -69,9 +70,7 @@ class QueryCache:
         self._hits = 0
         self._misses = 0
 
-        logger.info(
-            "QueryCache initialised: max_size=%d, ttl=%.1fs", max_size, ttl_seconds
-        )
+        logger.info("QueryCache initialised: max_size=%d, ttl=%.1fs", max_size, ttl_seconds)
 
     # ------------------------------------------------------------------
     # Public API
@@ -158,11 +157,7 @@ class QueryCache:
             Number of entries invalidated.
         """
         with self._lock:
-            to_remove = [
-                key
-                for key, entry in self._cache.items()
-                if table_name in entry.tables
-            ]
+            to_remove = [key for key, entry in self._cache.items() if table_name in entry.tables]
             for key in to_remove:
                 del self._cache[key]
 

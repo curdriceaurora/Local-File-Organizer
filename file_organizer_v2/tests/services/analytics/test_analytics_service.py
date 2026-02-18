@@ -1,4 +1,5 @@
 """Tests for AnalyticsService."""
+
 from __future__ import annotations
 
 import tempfile
@@ -60,9 +61,7 @@ class TestAnalyticsService:
     def test_get_quality_metrics(self, temp_directory):
         """Test quality metrics calculation."""
         service = AnalyticsService()
-        metrics = service.get_quality_metrics(
-            temp_directory, total_files=6, organized_size=1000
-        )
+        metrics = service.get_quality_metrics(temp_directory, total_files=6, organized_size=1000)
 
         assert isinstance(metrics, QualityMetrics)
         assert 0 <= metrics.quality_score <= 100
@@ -190,9 +189,7 @@ class TestAnalyticsService:
 
         # Create nested structure
         (temp_directory / "level1" / "level2" / "level3").mkdir(parents=True)
-        (temp_directory / "level1" / "level2" / "level3" / "deep.txt").write_text(
-            "deep file"
-        )
+        (temp_directory / "level1" / "level2" / "level3" / "deep.txt").write_text("deep file")
 
         # Analyze with depth limit
         dashboard = service.generate_dashboard(temp_directory, max_depth=1)

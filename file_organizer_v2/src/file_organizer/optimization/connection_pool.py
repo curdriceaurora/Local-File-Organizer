@@ -6,6 +6,7 @@ connections, handing them out to callers and returning them when done.  It is
 designed for concurrent access from multiple threads while respecting SQLite's
 threading constraints.
 """
+
 from __future__ import annotations
 
 import logging

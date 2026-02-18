@@ -65,9 +65,12 @@ def build_image(tag: str, dockerfile: str = "Dockerfile") -> bool:
         True if the build succeeded, False otherwise.
     """
     cmd = [
-        "docker", "build",
-        "-f", dockerfile,
-        "-t", tag,
+        "docker",
+        "build",
+        "-f",
+        dockerfile,
+        "-t",
+        tag,
         ".",
     ]
     try:

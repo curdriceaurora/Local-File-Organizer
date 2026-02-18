@@ -1,4 +1,5 @@
 """FastAPI endpoints for plugin-facing capabilities."""
+
 from __future__ import annotations
 
 import shutil

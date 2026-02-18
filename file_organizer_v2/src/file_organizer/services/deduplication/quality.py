@@ -3,6 +3,7 @@
 This module provides quality scoring and comparison logic to automatically
 select the highest quality image from a group of similar/duplicate images.
 """
+
 from __future__ import annotations
 
 import logging
@@ -17,42 +18,42 @@ class ImageFormat(IntEnum):
     """Image format quality ranking (higher = better quality retention)."""
 
     UNKNOWN = 0
-    GIF = 1      # Limited color palette, lossy
-    BMP = 2      # Uncompressed but no metadata
-    JPEG = 3     # Lossy compression
-    WEBP = 4     # Modern format, good compression
-    PNG = 5      # Lossless compression
-    TIFF = 6     # Highest quality, uncompressed or lossless
+    GIF = 1  # Limited color palette, lossy
+    BMP = 2  # Uncompressed but no metadata
+    JPEG = 3  # Lossy compression
+    WEBP = 4  # Modern format, good compression
+    PNG = 5  # Lossless compression
+    TIFF = 6  # Highest quality, uncompressed or lossless
 
 
 @dataclass
 class QualityMetrics:
     """Quality metrics for an image file."""
 
-    resolution: int          # Width × Height (total pixels)
+    resolution: int  # Width × Height (total pixels)
     width: int
     height: int
-    file_size: int          # In bytes
+    file_size: int  # In bytes
     format: ImageFormat
     aspect_ratio: float
     is_compressed: bool
     has_transparency: bool
-    color_depth: int        # Bits per pixel
+    color_depth: int  # Bits per pixel
     modification_time: float
 
     def to_dict(self) -> dict:
         """Convert metrics to dictionary."""
         return {
-            'resolution': self.resolution,
-            'width': self.width,
-            'height': self.height,
-            'file_size': self.file_size,
-            'format': self.format.name,
-            'aspect_ratio': self.aspect_ratio,
-            'is_compressed': self.is_compressed,
-            'has_transparency': self.has_transparency,
-            'color_depth': self.color_depth,
-            'modification_time': self.modification_time
+            "resolution": self.resolution,
+            "width": self.width,
+            "height": self.height,
+            "file_size": self.file_size,
+            "format": self.format.name,
+            "aspect_ratio": self.aspect_ratio,
+            "is_compressed": self.is_compressed,
+            "has_transparency": self.has_transparency,
+            "color_depth": self.color_depth,
+            "modification_time": self.modification_time,
         }
 
 
@@ -61,23 +62,23 @@ class ImageQualityAnalyzer:
 
     # Format quality rankings
     FORMAT_RANKING = {
-        '.tif': ImageFormat.TIFF,
-        '.tiff': ImageFormat.TIFF,
-        '.png': ImageFormat.PNG,
-        '.webp': ImageFormat.WEBP,
-        '.jpg': ImageFormat.JPEG,
-        '.jpeg': ImageFormat.JPEG,
-        '.bmp': ImageFormat.BMP,
-        '.gif': ImageFormat.GIF,
+        ".tif": ImageFormat.TIFF,
+        ".tiff": ImageFormat.TIFF,
+        ".png": ImageFormat.PNG,
+        ".webp": ImageFormat.WEBP,
+        ".jpg": ImageFormat.JPEG,
+        ".jpeg": ImageFormat.JPEG,
+        ".bmp": ImageFormat.BMP,
+        ".gif": ImageFormat.GIF,
     }
 
     # Weight factors for quality scoring (sum to 1.0)
     DEFAULT_WEIGHTS = {
-        'resolution': 0.40,      # Most important: pixel count
-        'format': 0.25,          # Format quality ranking
-        'file_size': 0.20,       # Larger often means less compression
-        'color_depth': 0.10,     # Bit depth matters
-        'has_transparency': 0.05 # Transparency can be important
+        "resolution": 0.40,  # Most important: pixel count
+        "format": 0.25,  # Format quality ranking
+        "file_size": 0.20,  # Larger often means less compression
+        "color_depth": 0.10,  # Bit depth matters
+        "has_transparency": 0.05,  # Transparency can be important
     }
 
     def __init__(self, weights: dict[str, float] | None = None):
@@ -92,6 +93,7 @@ class ImageQualityAnalyzer:
         # Try to import PIL
         try:
             from PIL import Image
+
             self.Image = Image
             self._pil_available = True
         except ImportError:
@@ -135,27 +137,26 @@ class ImageQualityAnalyzer:
                 resolution = width * height
 
                 # Determine compression
-                is_compressed = img.format in ('JPEG', 'GIF', 'WEBP')
+                is_compressed = img.format in ("JPEG", "GIF", "WEBP")
 
                 # Check for transparency
-                has_transparency = (
-                    img.mode in ('RGBA', 'LA', 'PA') or
-                    (img.mode == 'P' and 'transparency' in img.info)
+                has_transparency = img.mode in ("RGBA", "LA", "PA") or (
+                    img.mode == "P" and "transparency" in img.info
                 )
 
                 # Calculate color depth
                 mode_bits = {
-                    '1': 1,        # 1-bit pixels, black and white
-                    'L': 8,        # 8-bit pixels, grayscale
-                    'P': 8,        # 8-bit pixels, palette
-                    'RGB': 24,     # 3x8-bit pixels, true color
-                    'RGBA': 32,    # 4x8-bit pixels, true color with alpha
-                    'CMYK': 32,    # 4x8-bit pixels, color separation
-                    'YCbCr': 24,   # 3x8-bit pixels, color video format
-                    'LAB': 24,     # 3x8-bit pixels, L*a*b color space
-                    'HSV': 24,     # 3x8-bit pixels, Hue, Saturation, Value
-                    'I': 32,       # 32-bit signed integer pixels
-                    'F': 32        # 32-bit floating point pixels
+                    "1": 1,  # 1-bit pixels, black and white
+                    "L": 8,  # 8-bit pixels, grayscale
+                    "P": 8,  # 8-bit pixels, palette
+                    "RGB": 24,  # 3x8-bit pixels, true color
+                    "RGBA": 32,  # 4x8-bit pixels, true color with alpha
+                    "CMYK": 32,  # 4x8-bit pixels, color separation
+                    "YCbCr": 24,  # 3x8-bit pixels, color video format
+                    "LAB": 24,  # 3x8-bit pixels, L*a*b color space
+                    "HSV": 24,  # 3x8-bit pixels, Hue, Saturation, Value
+                    "I": 32,  # 32-bit signed integer pixels
+                    "F": 32,  # 32-bit floating point pixels
                 }
                 color_depth = mode_bits.get(img.mode, 24)
 
@@ -175,7 +176,7 @@ class ImageQualityAnalyzer:
                     is_compressed=is_compressed,
                     has_transparency=has_transparency,
                     color_depth=color_depth,
-                    modification_time=modification_time
+                    modification_time=modification_time,
                 )
         except Exception as e:
             logger.warning(f"Failed to extract metrics from {path}: {e}")
@@ -200,7 +201,7 @@ class ImageQualityAnalyzer:
         if format_enum == ImageFormat.JPEG:
             estimated_pixels = file_size * 10  # Typical JPEG compression
         elif format_enum == ImageFormat.PNG:
-            estimated_pixels = file_size * 3   # PNG is less compressed
+            estimated_pixels = file_size * 3  # PNG is less compressed
         else:
             estimated_pixels = file_size * 5
 
@@ -214,7 +215,7 @@ class ImageQualityAnalyzer:
             is_compressed=format_enum in (ImageFormat.JPEG, ImageFormat.GIF, ImageFormat.WEBP),
             has_transparency=format_enum in (ImageFormat.PNG, ImageFormat.GIF, ImageFormat.WEBP),
             color_depth=24,  # Assume RGB
-            modification_time=modification_time
+            modification_time=modification_time,
         )
 
     def get_quality_metrics(self, image_path: Path) -> QualityMetrics | None:
@@ -253,27 +254,27 @@ class ImageQualityAnalyzer:
         # Resolution score (normalize to typical range: 0-25M pixels)
         max_resolution = 25_000_000  # 5000x5000
         resolution_score = min(metrics.resolution / max_resolution, 1.0)
-        score += resolution_score * self.weights['resolution']
+        score += resolution_score * self.weights["resolution"]
 
         # Format score (normalize to max format value)
         max_format = max(f.value for f in ImageFormat)
         format_score = metrics.format.value / max_format
-        score += format_score * self.weights['format']
+        score += format_score * self.weights["format"]
 
         # File size score (normalize to typical range: 0-50MB)
         # Larger is generally better (less compression) up to a point
         max_file_size = 50_000_000  # 50MB
         file_size_score = min(metrics.file_size / max_file_size, 1.0)
-        score += file_size_score * self.weights['file_size']
+        score += file_size_score * self.weights["file_size"]
 
         # Color depth score (normalize to 32-bit)
         max_depth = 32
         depth_score = metrics.color_depth / max_depth
-        score += depth_score * self.weights['color_depth']
+        score += depth_score * self.weights["color_depth"]
 
         # Transparency bonus (if present, it's desirable)
         transparency_score = 1.0 if metrics.has_transparency else 0.0
-        score += transparency_score * self.weights['has_transparency']
+        score += transparency_score * self.weights["has_transparency"]
 
         return score
 
@@ -335,10 +336,7 @@ class ImageQualityAnalyzer:
             return images[0]
 
         # Score all images
-        scored_images = [
-            (img, self.assess_quality(img))
-            for img in images
-        ]
+        scored_images = [(img, self.assess_quality(img)) for img in images]
 
         # Filter out failed assessments
         valid_images = [(img, score) for img, score in scored_images if score > 0]
@@ -355,8 +353,7 @@ class ImageQualityAnalyzer:
         logger.info(f"Best quality: {best_image.name} (score: {best_score:.3f})")
         return best_image
 
-    def is_likely_cropped(self, original: Path, candidate: Path,
-                          threshold: float = 0.8) -> bool:
+    def is_likely_cropped(self, original: Path, candidate: Path, threshold: float = 0.8) -> bool:
         """Detect if candidate is likely a cropped version of original.
 
         Args:

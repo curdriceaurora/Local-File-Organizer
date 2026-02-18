@@ -4,6 +4,7 @@ Feedback processing module.
 Processes user corrections and feedback to update pattern learning models in real-time.
 Supports both individual corrections and batch history analysis.
 """
+
 from __future__ import annotations
 
 import logging
@@ -31,10 +32,7 @@ class FeedbackProcessor:
         self.learning_threshold = 5  # Trigger retraining after N corrections
 
     def process_correction(
-        self,
-        original: Path,
-        corrected: Path,
-        context: dict | None = None
+        self, original: Path, corrected: Path, context: dict | None = None
     ) -> dict:
         """
         Process a single user correction in real-time.
@@ -48,45 +46,41 @@ class FeedbackProcessor:
             Dictionary with extracted learning insights
         """
         insights = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'original_path': str(original),
-            'corrected_path': str(corrected),
-            'learning_signals': []
+            "timestamp": datetime.utcnow().isoformat(),
+            "original_path": str(original),
+            "corrected_path": str(corrected),
+            "learning_signals": [],
         }
 
         # Analyze file name change
         if original.name != corrected.name:
             name_insight = self._analyze_name_correction(original.name, corrected.name)
-            insights['learning_signals'].append(name_insight)
+            insights["learning_signals"].append(name_insight)
             logger.debug(f"Name correction: {original.name} -> {corrected.name}")
 
         # Analyze folder change
         if original.parent != corrected.parent:
-            folder_insight = self._analyze_folder_correction(
-                original, corrected, context
-            )
-            insights['learning_signals'].append(folder_insight)
+            folder_insight = self._analyze_folder_correction(original, corrected, context)
+            insights["learning_signals"].append(folder_insight)
             logger.debug(f"Folder correction: {original.parent} -> {corrected.parent}")
 
         # Extract patterns from context
         if context:
             context_insight = self._extract_context_patterns(context)
             if context_insight:
-                insights['learning_signals'].append(context_insight)
+                insights["learning_signals"].append(context_insight)
 
         self.correction_count += 1
 
         # Check if retraining should be triggered
         if self.correction_count >= self.learning_threshold:
-            insights['trigger_retraining'] = True
+            insights["trigger_retraining"] = True
             logger.info(f"Retraining triggered after {self.correction_count} corrections")
 
         return insights
 
     def batch_process_history(
-        self,
-        corrections: list[dict],
-        max_age_days: int | None = None
+        self, corrections: list[dict], max_age_days: int | None = None
     ) -> dict:
         """
         Process historical corrections in batch to extract patterns.
@@ -103,19 +97,19 @@ class FeedbackProcessor:
         if max_age_days:
             cutoff = datetime.utcnow() - timedelta(days=max_age_days)
             corrections = [
-                c for c in corrections
-                if datetime.fromisoformat(c.get('timestamp', '1970-01-01'))
-                > cutoff
+                c
+                for c in corrections
+                if datetime.fromisoformat(c.get("timestamp", "1970-01-01")) > cutoff
             ]
 
         logger.info(f"Batch processing {len(corrections)} corrections")
 
         insights = {
-            'processed_count': len(corrections),
-            'name_patterns': [],
-            'folder_patterns': [],
-            'common_operations': {},
-            'timestamp': datetime.utcnow().isoformat()
+            "processed_count": len(corrections),
+            "name_patterns": [],
+            "folder_patterns": [],
+            "common_operations": {},
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
         # Aggregate naming patterns
@@ -123,29 +117,27 @@ class FeedbackProcessor:
         folder_changes = []
 
         for correction in corrections:
-            original = Path(correction.get('original_path', ''))
-            corrected = Path(correction.get('corrected_path', ''))
+            original = Path(correction.get("original_path", ""))
+            corrected = Path(correction.get("corrected_path", ""))
 
             if original.name != corrected.name:
                 name_changes.append((original.name, corrected.name))
 
             if original.parent != corrected.parent:
-                folder_changes.append((
-                    str(original.parent),
-                    str(corrected.parent),
-                    original.suffix.lower()
-                ))
+                folder_changes.append(
+                    (str(original.parent), str(corrected.parent), original.suffix.lower())
+                )
 
         # Analyze naming patterns
         if name_changes:
-            insights['name_patterns'] = self._extract_batch_name_patterns(name_changes)
+            insights["name_patterns"] = self._extract_batch_name_patterns(name_changes)
 
         # Analyze folder patterns
         if folder_changes:
-            insights['folder_patterns'] = self._extract_batch_folder_patterns(folder_changes)
+            insights["folder_patterns"] = self._extract_batch_folder_patterns(folder_changes)
 
         # Identify common operations
-        insights['common_operations'] = self._identify_common_operations(corrections)
+        insights["common_operations"] = self._identify_common_operations(corrections)
 
         return insights
 
@@ -161,11 +153,11 @@ class FeedbackProcessor:
         """
         # This would integrate with pattern learner
         # For now, just validate and log
-        if not insights or 'learning_signals' not in insights:
+        if not insights or "learning_signals" not in insights:
             logger.warning("No learning signals in insights")
             return False
 
-        signal_count = len(insights['learning_signals'])
+        signal_count = len(insights["learning_signals"])
         logger.info(f"Updating learning model with {signal_count} signals")
 
         return True
@@ -180,9 +172,9 @@ class FeedbackProcessor:
         logger.info("Triggering pattern learning retraining")
 
         status = {
-            'triggered_at': datetime.utcnow().isoformat(),
-            'correction_count': self.correction_count,
-            'status': 'queued'
+            "triggered_at": datetime.utcnow().isoformat(),
+            "correction_count": self.correction_count,
+            "status": "queued",
         }
 
         # Reset counter after triggering
@@ -190,11 +182,7 @@ class FeedbackProcessor:
 
         return status
 
-    def _analyze_name_correction(
-        self,
-        original_name: str,
-        corrected_name: str
-    ) -> dict:
+    def _analyze_name_correction(self, original_name: str, corrected_name: str) -> dict:
         """
         Analyze a filename correction to extract patterns.
 
@@ -206,10 +194,10 @@ class FeedbackProcessor:
             Dictionary with naming pattern insights
         """
         insight = {
-            'type': 'naming',
-            'original': original_name,
-            'corrected': corrected_name,
-            'patterns': []
+            "type": "naming",
+            "original": original_name,
+            "corrected": corrected_name,
+            "patterns": [],
         }
 
         # Detect delimiter changes
@@ -217,44 +205,35 @@ class FeedbackProcessor:
         corr_delimiters = self._extract_delimiters(corrected_name)
 
         if orig_delimiters != corr_delimiters:
-            insight['patterns'].append({
-                'pattern_type': 'delimiter_change',
-                'from': orig_delimiters,
-                'to': corr_delimiters
-            })
+            insight["patterns"].append(
+                {"pattern_type": "delimiter_change", "from": orig_delimiters, "to": corr_delimiters}
+            )
 
         # Detect case changes
         if original_name.lower() == corrected_name.lower():
-            insight['patterns'].append({
-                'pattern_type': 'case_change',
-                'from': self._detect_case_style(original_name),
-                'to': self._detect_case_style(corrected_name)
-            })
+            insight["patterns"].append(
+                {
+                    "pattern_type": "case_change",
+                    "from": self._detect_case_style(original_name),
+                    "to": self._detect_case_style(corrected_name),
+                }
+            )
 
         # Detect prefix/suffix additions
         orig_base = Path(original_name).stem
         corr_base = Path(corrected_name).stem
 
         if corr_base.startswith(orig_base):
-            suffix = corr_base[len(orig_base):]
-            insight['patterns'].append({
-                'pattern_type': 'suffix_addition',
-                'suffix': suffix
-            })
+            suffix = corr_base[len(orig_base) :]
+            insight["patterns"].append({"pattern_type": "suffix_addition", "suffix": suffix})
         elif corr_base.endswith(orig_base):
-            prefix = corr_base[:-len(orig_base)]
-            insight['patterns'].append({
-                'pattern_type': 'prefix_addition',
-                'prefix': prefix
-            })
+            prefix = corr_base[: -len(orig_base)]
+            insight["patterns"].append({"pattern_type": "prefix_addition", "prefix": prefix})
 
         return insight
 
     def _analyze_folder_correction(
-        self,
-        original: Path,
-        corrected: Path,
-        context: dict | None
+        self, original: Path, corrected: Path, context: dict | None
     ) -> dict:
         """
         Analyze a folder correction.
@@ -268,19 +247,18 @@ class FeedbackProcessor:
             Folder pattern insights
         """
         insight = {
-            'type': 'folder',
-            'file_type': original.suffix.lower(),
-            'from_folder': str(original.parent),
-            'to_folder': str(corrected.parent),
-            'patterns': []
+            "type": "folder",
+            "file_type": original.suffix.lower(),
+            "from_folder": str(original.parent),
+            "to_folder": str(corrected.parent),
+            "patterns": [],
         }
 
         # Check if it's a categorization change
-        if context and 'category' in context:
-            insight['patterns'].append({
-                'pattern_type': 'category_change',
-                'category': context['category']
-            })
+        if context and "category" in context:
+            insight["patterns"].append(
+                {"pattern_type": "category_change", "category": context["category"]}
+            )
 
         # Check for project-based organization
         from_parts = original.parent.parts
@@ -295,11 +273,13 @@ class FeedbackProcessor:
                 break
 
         if common_depth < len(to_parts):
-            insight['patterns'].append({
-                'pattern_type': 'subfolder_structure',
-                'depth': len(to_parts) - common_depth,
-                'structure': '/'.join(to_parts[common_depth:])
-            })
+            insight["patterns"].append(
+                {
+                    "pattern_type": "subfolder_structure",
+                    "depth": len(to_parts) - common_depth,
+                    "structure": "/".join(to_parts[common_depth:]),
+                }
+            )
 
         return insight
 
@@ -319,33 +299,26 @@ class FeedbackProcessor:
         patterns = []
 
         # Check for operation type patterns
-        if 'operation' in context:
-            patterns.append({
-                'pattern_type': 'operation',
-                'value': context['operation']
-            })
+        if "operation" in context:
+            patterns.append({"pattern_type": "operation", "value": context["operation"]})
 
         # Check for suggested action vs actual
-        if 'suggested' in context and 'actual' in context:
-            if context['suggested'] != context['actual']:
-                patterns.append({
-                    'pattern_type': 'suggestion_override',
-                    'suggested': context['suggested'],
-                    'actual': context['actual']
-                })
+        if "suggested" in context and "actual" in context:
+            if context["suggested"] != context["actual"]:
+                patterns.append(
+                    {
+                        "pattern_type": "suggestion_override",
+                        "suggested": context["suggested"],
+                        "actual": context["actual"],
+                    }
+                )
 
         if patterns:
-            return {
-                'type': 'context',
-                'patterns': patterns
-            }
+            return {"type": "context", "patterns": patterns}
 
         return None
 
-    def _extract_batch_name_patterns(
-        self,
-        name_changes: list[tuple]
-    ) -> list[dict]:
+    def _extract_batch_name_patterns(self, name_changes: list[tuple]) -> list[dict]:
         """
         Extract common naming patterns from batch changes.
 
@@ -366,11 +339,13 @@ class FeedbackProcessor:
 
         if delimiters:
             most_common = max(delimiters.items(), key=lambda x: x[1])
-            patterns.append({
-                'pattern_type': 'preferred_delimiter',
-                'delimiter': most_common[0],
-                'frequency': most_common[1]
-            })
+            patterns.append(
+                {
+                    "pattern_type": "preferred_delimiter",
+                    "delimiter": most_common[0],
+                    "frequency": most_common[1],
+                }
+            )
 
         # Find common case styles
         case_styles = {}
@@ -380,18 +355,17 @@ class FeedbackProcessor:
 
         if case_styles:
             most_common = max(case_styles.items(), key=lambda x: x[1])
-            patterns.append({
-                'pattern_type': 'preferred_case',
-                'style': most_common[0],
-                'frequency': most_common[1]
-            })
+            patterns.append(
+                {
+                    "pattern_type": "preferred_case",
+                    "style": most_common[0],
+                    "frequency": most_common[1],
+                }
+            )
 
         return patterns
 
-    def _extract_batch_folder_patterns(
-        self,
-        folder_changes: list[tuple]
-    ) -> list[dict]:
+    def _extract_batch_folder_patterns(self, folder_changes: list[tuple]) -> list[dict]:
         """
         Extract common folder patterns from batch changes.
 
@@ -408,28 +382,26 @@ class FeedbackProcessor:
         for _from_folder, to_folder, file_type in folder_changes:
             if file_type not in type_mappings:
                 type_mappings[file_type] = {}
-            type_mappings[file_type][to_folder] = \
-                type_mappings[file_type].get(to_folder, 0) + 1
+            type_mappings[file_type][to_folder] = type_mappings[file_type].get(to_folder, 0) + 1
 
         # Find strong preferences (>60% of moves for a type)
         for file_type, folders in type_mappings.items():
             total = sum(folders.values())
             for folder, count in folders.items():
                 if count / total > 0.6:
-                    patterns.append({
-                        'pattern_type': 'type_folder_preference',
-                        'file_type': file_type,
-                        'folder': folder,
-                        'confidence': count / total,
-                        'count': count
-                    })
+                    patterns.append(
+                        {
+                            "pattern_type": "type_folder_preference",
+                            "file_type": file_type,
+                            "folder": folder,
+                            "confidence": count / total,
+                            "count": count,
+                        }
+                    )
 
         return patterns
 
-    def _identify_common_operations(
-        self,
-        corrections: list[dict]
-    ) -> dict:
+    def _identify_common_operations(self, corrections: list[dict]) -> dict:
         """
         Identify common correction operations.
 
@@ -442,7 +414,7 @@ class FeedbackProcessor:
         operations = {}
 
         for correction in corrections:
-            op_type = correction.get('operation', 'unknown')
+            op_type = correction.get("operation", "unknown")
             operations[op_type] = operations.get(op_type, 0) + 1
 
         return operations
@@ -452,7 +424,7 @@ class FeedbackProcessor:
         """Extract delimiter characters from a filename."""
         delimiters = []
         for char in filename:
-            if char in ['_', '-', '.', ' ']:
+            if char in ["_", "-", ".", " "]:
                 if char not in delimiters:
                     delimiters.append(char)
         return delimiters
@@ -463,18 +435,18 @@ class FeedbackProcessor:
         stem = Path(filename).stem
 
         if stem.islower():
-            return 'lowercase'
+            return "lowercase"
         elif stem.isupper():
-            return 'uppercase'
-        elif '_' in stem and stem.replace('_', '').islower():
-            return 'snake_case'
-        elif '-' in stem and stem.replace('-', '').islower():
-            return 'kebab-case'
-        elif stem[0].isupper() and ' ' in stem:
-            return 'title_case'
+            return "uppercase"
+        elif "_" in stem and stem.replace("_", "").islower():
+            return "snake_case"
+        elif "-" in stem and stem.replace("-", "").islower():
+            return "kebab-case"
+        elif stem[0].isupper() and " " in stem:
+            return "title_case"
         elif stem[0].islower() and any(c.isupper() for c in stem[1:]):
-            return 'camelCase'
+            return "camelCase"
         elif stem[0].isupper() and any(c.isupper() for c in stem[1:]):
-            return 'PascalCase'
+            return "PascalCase"
 
-        return 'mixed'
+        return "mixed"

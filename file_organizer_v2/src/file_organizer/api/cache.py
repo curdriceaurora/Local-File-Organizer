@@ -3,6 +3,7 @@
 Provides a small key/value interface with an in-memory implementation and an
 optional Redis backend.
 """
+
 from __future__ import annotations
 
 import json
@@ -16,7 +17,10 @@ from loguru import logger
 try:
     from redis import Redis
     from redis.exceptions import RedisError
-except (ImportError, ModuleNotFoundError):  # pragma: no cover - optional dependency runtime fallback
+except (
+    ImportError,
+    ModuleNotFoundError,
+):  # pragma: no cover - optional dependency runtime fallback
     Redis = None  # type: ignore[assignment]
 
     class RedisError(Exception):

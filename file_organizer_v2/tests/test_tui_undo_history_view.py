@@ -1,4 +1,5 @@
 """Tests for TUI undo/history view."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -26,6 +27,7 @@ def _get_content(panel: object) -> str:
 # Helper: create a mock Operation
 # ---------------------------------------------------------------------------
 
+
 def _make_op(
     op_id: int = 1,
     op_type: str = "move",
@@ -47,6 +49,7 @@ def _make_op(
 # ---------------------------------------------------------------------------
 # Unit: OperationHistoryPanel
 # ---------------------------------------------------------------------------
+
 
 class TestOperationHistoryPanel:
     """Unit tests for OperationHistoryPanel."""
@@ -76,6 +79,7 @@ class TestOperationHistoryPanel:
 # ---------------------------------------------------------------------------
 # Unit: UndoRedoStackPanel
 # ---------------------------------------------------------------------------
+
 
 class TestUndoRedoStackPanel:
     """Unit tests for UndoRedoStackPanel."""
@@ -109,6 +113,7 @@ class TestUndoRedoStackPanel:
 # Unit: HistoryStatsPanel
 # ---------------------------------------------------------------------------
 
+
 class TestHistoryStatsPanel:
     """Unit tests for HistoryStatsPanel."""
 
@@ -136,6 +141,7 @@ class TestHistoryStatsPanel:
 # Unit: helpers
 # ---------------------------------------------------------------------------
 
+
 class TestHelpers:
     """Unit tests for module-level helpers."""
 
@@ -158,6 +164,7 @@ class TestHelpers:
 # ---------------------------------------------------------------------------
 # Integration: UndoHistoryView in app context
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_undo_history_view_mounts() -> None:

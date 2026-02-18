@@ -4,6 +4,7 @@ CLI commands for undo/redo operations.
 This module provides command-line interface for undoing and redoing
 file operations.
 """
+
 from __future__ import annotations
 
 import logging
@@ -20,7 +21,7 @@ def undo_command(
     operation_id: int | None = None,
     transaction_id: str | None = None,
     dry_run: bool = False,
-    verbose: bool = False
+    verbose: bool = False,
 ) -> int:
     """
     Undo file operations.
@@ -121,9 +122,7 @@ def undo_command(
 
 
 def redo_command(
-    operation_id: int | None = None,
-    dry_run: bool = False,
-    verbose: bool = False
+    operation_id: int | None = None, dry_run: bool = False, verbose: bool = False
 ) -> int:
     """
     Redo file operations.
@@ -216,7 +215,7 @@ def history_command(
     transaction: str | None = None,
     operation_id: int | None = None,
     stats: bool = False,
-    verbose: bool = False
+    verbose: bool = False,
 ) -> int:
     """
     View operation history.
@@ -257,7 +256,7 @@ def history_command(
                 since=since,
                 until=until,
                 search=search,
-                limit=limit
+                limit=limit,
             )
         else:
             viewer.show_recent_operations(limit=limit)
@@ -269,7 +268,7 @@ def history_command(
         print(f"✗ Error: {e}")
         return 1
     finally:
-        if 'viewer' in locals():
+        if "viewer" in locals():
             viewer.close()
 
 
@@ -285,12 +284,14 @@ def main_undo():
 
     args = parser.parse_args()
 
-    sys.exit(undo_command(
-        operation_id=args.operation_id,
-        transaction_id=args.transaction_id,
-        dry_run=args.dry_run,
-        verbose=args.verbose
-    ))
+    sys.exit(
+        undo_command(
+            operation_id=args.operation_id,
+            transaction_id=args.transaction_id,
+            dry_run=args.dry_run,
+            verbose=args.verbose,
+        )
+    )
 
 
 def main_redo():
@@ -304,11 +305,9 @@ def main_redo():
 
     args = parser.parse_args()
 
-    sys.exit(redo_command(
-        operation_id=args.operation_id,
-        dry_run=args.dry_run,
-        verbose=args.verbose
-    ))
+    sys.exit(
+        redo_command(operation_id=args.operation_id, dry_run=args.dry_run, verbose=args.verbose)
+    )
 
 
 def main_history():
@@ -329,18 +328,20 @@ def main_history():
 
     args = parser.parse_args()
 
-    sys.exit(history_command(
-        limit=args.limit,
-        operation_type=args.operation_type,
-        status=args.status,
-        since=args.since,
-        until=args.until,
-        search=args.search,
-        transaction=args.transaction,
-        operation_id=args.operation_id,
-        stats=args.stats,
-        verbose=args.verbose
-    ))
+    sys.exit(
+        history_command(
+            limit=args.limit,
+            operation_type=args.operation_type,
+            status=args.status,
+            since=args.since,
+            until=args.until,
+            search=args.search,
+            transaction=args.transaction,
+            operation_id=args.operation_id,
+            stats=args.stats,
+            verbose=args.verbose,
+        )
+    )
 
 
 if __name__ == "__main__":

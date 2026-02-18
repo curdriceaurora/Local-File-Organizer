@@ -3,6 +3,7 @@
 Provides sub-commands for starting, stopping, and monitoring the
 background file organization daemon, plus a one-shot ``process`` command.
 """
+
 from __future__ import annotations
 
 import os
@@ -42,9 +43,7 @@ def start(
     poll_interval: float = typer.Option(
         1.0, "--poll-interval", help="Seconds between file-system polls."
     ),
-    dry_run: bool = typer.Option(
-        False, "--dry-run", help="Preview changes without moving files."
-    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without moving files."),
 ) -> None:
     """Start the background file organization daemon."""
     from file_organizer.daemon.config import DaemonConfig
@@ -64,9 +63,7 @@ def start(
     service = DaemonService(config)
 
     if foreground:
-        console.print(
-            f"[bold]Starting daemon[/bold] (foreground, poll={poll_interval}s)"
-        )
+        console.print(f"[bold]Starting daemon[/bold] (foreground, poll={poll_interval}s)")
         if dry_run:
             console.print("[yellow]Dry-run mode — no files will be moved.[/yellow]")
         try:
@@ -78,9 +75,7 @@ def start(
         if dry_run:
             console.print("[yellow]Dry-run mode — no files will be moved.[/yellow]")
         service.start_background()
-        console.print(
-            f"[green]Daemon started.[/green]  PID file: {_DEFAULT_PID_FILE}"
-        )
+        console.print(f"[green]Daemon started.[/green]  PID file: {_DEFAULT_PID_FILE}")
 
 
 @daemon_app.command()
@@ -142,9 +137,7 @@ def status() -> None:
 @daemon_app.command()
 def watch(
     watch_dir: Path = typer.Argument(..., help="Directory to watch for file events."),
-    poll_interval: float = typer.Option(
-        1.0, "--poll-interval", help="Seconds between polls."
-    ),
+    poll_interval: float = typer.Option(1.0, "--poll-interval", help="Seconds between polls."),
 ) -> None:
     """Watch a directory and stream file events (Ctrl+C to stop)."""
     from file_organizer.watcher.config import WatcherConfig
@@ -175,12 +168,8 @@ def watch(
 @daemon_app.command()
 def process(
     input_dir: Path = typer.Argument(..., help="Directory containing files to process."),
-    output_dir: Path = typer.Argument(
-        ..., help="Destination directory for organized files."
-    ),
-    dry_run: bool = typer.Option(
-        False, "--dry-run", help="Preview changes without moving files."
-    ),
+    output_dir: Path = typer.Argument(..., help="Destination directory for organized files."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without moving files."),
 ) -> None:
     """One-shot: organize files and display a summary."""
     from file_organizer.core.organizer import FileOrganizer
@@ -210,9 +199,7 @@ def process(
             for fname, msg in result.errors[:10]:
                 console.print(f"  {fname}: {msg}")
             if len(result.errors) > 10:
-                console.print(
-                    f"  [dim]... and {len(result.errors) - 10} more[/dim]"
-                )
+                console.print(f"  [dim]... and {len(result.errors) - 10} more[/dim]")
 
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")

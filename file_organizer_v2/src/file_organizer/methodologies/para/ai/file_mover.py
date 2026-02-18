@@ -5,6 +5,7 @@ Organizes files into PARA directory structures based on AI suggestions.
 All file operations support dry-run mode for safety. Designed for local,
 privacy-first file management.
 """
+
 from __future__ import annotations
 
 import logging
@@ -332,20 +333,23 @@ class PARAFileMover:
 
                 if days_inactive >= inactive_days:
                     target_path = self._compute_target_path_for_category(
-                        file_path, PARACategory.ARCHIVE,
+                        file_path,
+                        PARACategory.ARCHIVE,
                     )
                     confidence = min(0.95, 0.5 + (days_inactive / (inactive_days * 3)))
 
-                    suggestions.append(MoveSuggestion(
-                        file_path=file_path,
-                        target_category=PARACategory.ARCHIVE,
-                        target_path=target_path,
-                        confidence=confidence,
-                        reasoning=[
-                            f"File has not been modified in {int(days_inactive)} days "
-                            f"(threshold: {inactive_days} days)",
-                        ],
-                    ))
+                    suggestions.append(
+                        MoveSuggestion(
+                            file_path=file_path,
+                            target_category=PARACategory.ARCHIVE,
+                            target_path=target_path,
+                            confidence=confidence,
+                            reasoning=[
+                                f"File has not been modified in {int(days_inactive)} days "
+                                f"(threshold: {inactive_days} days)",
+                            ],
+                        )
+                    )
             except OSError as e:
                 logger.warning("Cannot stat file %s: %s", file_path, e)
 

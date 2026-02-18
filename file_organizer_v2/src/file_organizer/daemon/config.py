@@ -5,6 +5,7 @@ Defines the DaemonConfig dataclass that controls daemon behavior
 including watch directories, output paths, PID management, logging,
 and concurrency settings.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -53,12 +54,8 @@ class DaemonConfig:
 
         # Validate poll_interval
         if self.poll_interval <= 0:
-            raise ValueError(
-                f"poll_interval must be positive, got {self.poll_interval}"
-            )
+            raise ValueError(f"poll_interval must be positive, got {self.poll_interval}")
 
         # Validate max_concurrent
         if self.max_concurrent < 1:
-            raise ValueError(
-                f"max_concurrent must be at least 1, got {self.max_concurrent}"
-            )
+            raise ValueError(f"max_concurrent must be at least 1, got {self.max_concurrent}")

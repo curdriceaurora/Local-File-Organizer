@@ -7,6 +7,7 @@ Extracts comprehensive metadata from audio files including:
 - Technical metadata (codec, channels)
 - Embedded artwork
 """
+
 from __future__ import annotations
 
 import logging
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AudioMetadata:
     """Comprehensive audio file metadata."""
+
     # File information
     file_path: Path
     file_size: int  # bytes
@@ -128,18 +130,18 @@ class AudioMetadataExtractor:
         format_name = audio_path.suffix[1:].upper()
 
         # Duration and bitrate
-        duration = audio.info.length if hasattr(audio.info, 'length') else 0.0
-        bitrate = audio.info.bitrate if hasattr(audio.info, 'bitrate') else 0
+        duration = audio.info.length if hasattr(audio.info, "length") else 0.0
+        bitrate = audio.info.bitrate if hasattr(audio.info, "bitrate") else 0
 
         # Sample rate and channels
-        sample_rate = audio.info.sample_rate if hasattr(audio.info, 'sample_rate') else 0
-        channels = audio.info.channels if hasattr(audio.info, 'channels') else 0
+        sample_rate = audio.info.sample_rate if hasattr(audio.info, "sample_rate") else 0
+        channels = audio.info.channels if hasattr(audio.info, "channels") else 0
 
         # Codec information
         codec = None
-        if hasattr(audio.info, 'codec'):
+        if hasattr(audio.info, "codec"):
             codec = audio.info.codec
-        elif hasattr(audio.info, 'codec_name'):
+        elif hasattr(audio.info, "codec_name"):
             codec = audio.info.codec_name
 
         # Extract tags based on format
@@ -267,11 +269,13 @@ class AudioMetadataExtractor:
         artwork_count = 0
 
         # Check different artwork tag formats
-        if hasattr(audio.tags, 'pictures'):  # FLAC
+        if hasattr(audio.tags, "pictures"):  # FLAC
             artwork_count = len(audio.tags.pictures)
-        elif hasattr(audio, 'pictures'):  # OGG
+        elif hasattr(audio, "pictures"):  # OGG
             artwork_count = len(audio.pictures)
-        elif any(k.startswith("APIC") for k in audio.tags.keys()):  # MP3 ID3 (APIC:Cover, APIC:, etc)
+        elif any(
+            k.startswith("APIC") for k in audio.tags.keys()
+        ):  # MP3 ID3 (APIC:Cover, APIC:, etc)
             apic_frames = [k for k in audio.tags.keys() if k.startswith("APIC")]
             artwork_count = len(apic_frames)
         elif "covr" in audio.tags:  # MP4
@@ -342,10 +346,7 @@ class AudioMetadataExtractor:
         logger.info(f"Metadata extracted (tinytag): {metadata.duration:.2f}s")
         return metadata
 
-    def extract_batch(
-        self,
-        audio_paths: list[str | Path]
-    ) -> list[AudioMetadata]:
+    def extract_batch(self, audio_paths: list[str | Path]) -> list[AudioMetadata]:
         """
         Extract metadata from multiple audio files.
 

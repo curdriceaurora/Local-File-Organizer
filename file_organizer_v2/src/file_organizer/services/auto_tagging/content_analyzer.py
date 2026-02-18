@@ -7,6 +7,7 @@ Analyzes file content to extract relevant tags using multiple techniques:
 - Entity recognition
 - File metadata analysis
 """
+
 from __future__ import annotations
 
 import logging
@@ -32,7 +33,7 @@ class ContentTagAnalyzer:
         self,
         min_keyword_length: int = 3,
         max_keywords: int = 20,
-        stop_words: set[str] | None = None
+        stop_words: set[str] | None = None,
     ):
         """
         Initialize the content tag analyzer.
@@ -47,12 +48,63 @@ class ContentTagAnalyzer:
 
         # Default stop words (common words to filter out)
         self.stop_words = stop_words or {
-            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-            'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'be',
-            'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
-            'would', 'could', 'should', 'may', 'might', 'must', 'can', 'this',
-            'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they',
-            'what', 'which', 'who', 'when', 'where', 'why', 'how', 'file', 'document'
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+            "from",
+            "as",
+            "is",
+            "was",
+            "are",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "must",
+            "can",
+            "this",
+            "that",
+            "these",
+            "those",
+            "i",
+            "you",
+            "he",
+            "she",
+            "it",
+            "we",
+            "they",
+            "what",
+            "which",
+            "who",
+            "when",
+            "where",
+            "why",
+            "how",
+            "file",
+            "document",
         }
 
         logger.info("ContentTagAnalyzer initialized")
@@ -93,11 +145,9 @@ class ContentTagAnalyzer:
         cleaned_tags = self._clean_tags(list(tags))
 
         logger.info(f"Extracted {len(cleaned_tags)} tags from {file_path.name}")
-        return cleaned_tags[:self.max_keywords]
+        return cleaned_tags[: self.max_keywords]
 
-    def extract_keywords(
-        self, file_path: Path, top_n: int = 10
-    ) -> list[tuple[str, float]]:
+    def extract_keywords(self, file_path: Path, top_n: int = 10) -> list[tuple[str, float]]:
         """
         Extract keywords with confidence scores using TF-IDF.
 
@@ -171,16 +221,16 @@ class ContentTagAnalyzer:
 
             # Extract capitalized words (potential proper nouns)
             # Pattern: Words starting with capital letter, possibly multi-word
-            pattern = r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b'
+            pattern = r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b"
             matches = re.findall(pattern, content)
 
             for match in matches:
                 # Filter out common sentence starters
-                if match.lower() not in {'the', 'this', 'that', 'these', 'those'}:
+                if match.lower() not in {"the", "this", "that", "these", "those"}:
                     entities.add(match)
 
             # Extract potential acronyms (2-5 capital letters)
-            acronym_pattern = r'\b[A-Z]{2,5}\b'
+            acronym_pattern = r"\b[A-Z]{2,5}\b"
             acronyms = re.findall(acronym_pattern, content)
             entities.update(acronyms)
 
@@ -218,11 +268,12 @@ class ContentTagAnalyzer:
         filename = file_path.stem
 
         # Split by common delimiters
-        parts = re.split(r'[-_\s.]+', filename.lower())
+        parts = re.split(r"[-_\s.]+", filename.lower())
 
         # Filter and clean
         tags = [
-            part for part in parts
+            part
+            for part in parts
             if len(part) >= self.min_keyword_length
             and part not in self.stop_words
             and not part.isdigit()
@@ -232,7 +283,7 @@ class ContentTagAnalyzer:
 
     def _extract_from_extension(self, file_path: Path) -> list[str]:
         """Extract tags from file extension."""
-        ext = file_path.suffix.lower().lstrip('.')
+        ext = file_path.suffix.lower().lstrip(".")
 
         if not ext:
             return []
@@ -241,14 +292,14 @@ class ContentTagAnalyzer:
 
         # Add category tags based on extension
         extension_categories = {
-            'document': ['pdf', 'doc', 'docx', 'txt', 'md', 'rtf', 'odt'],
-            'image': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'heic'],
-            'video': ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'],
-            'audio': ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma'],
-            'spreadsheet': ['xls', 'xlsx', 'csv', 'ods'],
-            'presentation': ['ppt', 'pptx', 'key', 'odp'],
-            'archive': ['zip', 'rar', '7z', 'tar', 'gz', 'bz2'],
-            'code': ['py', 'js', 'java', 'cpp', 'c', 'rb', 'go', 'rs', 'php'],
+            "document": ["pdf", "doc", "docx", "txt", "md", "rtf", "odt"],
+            "image": ["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp", "heic"],
+            "video": ["mp4", "avi", "mov", "wmv", "flv", "mkv", "webm"],
+            "audio": ["mp3", "wav", "flac", "aac", "ogg", "m4a", "wma"],
+            "spreadsheet": ["xls", "xlsx", "csv", "ods"],
+            "presentation": ["ppt", "pptx", "key", "odp"],
+            "archive": ["zip", "rar", "7z", "tar", "gz", "bz2"],
+            "code": ["py", "js", "java", "cpp", "c", "rb", "go", "rs", "php"],
         }
 
         for category, extensions in extension_categories.items():
@@ -266,14 +317,17 @@ class ContentTagAnalyzer:
         parts = file_path.parts
         if len(parts) > 1:
             # Last directory
-            last_dir = parts[-2] if len(parts) > 1 else ''
-            if last_dir and last_dir.lower() not in {'desktop', 'downloads', 'documents'}:
+            last_dir = parts[-2] if len(parts) > 1 else ""
+            if last_dir and last_dir.lower() not in {"desktop", "downloads", "documents"}:
                 # Split directory name
-                dir_parts = re.split(r'[-_\s]+', last_dir.lower())
-                tags.extend([
-                    p for p in dir_parts
-                    if len(p) >= self.min_keyword_length and p not in self.stop_words
-                ])
+                dir_parts = re.split(r"[-_\s]+", last_dir.lower())
+                tags.extend(
+                    [
+                        p
+                        for p in dir_parts
+                        if len(p) >= self.min_keyword_length and p not in self.stop_words
+                    ]
+                )
 
         return tags
 
@@ -307,13 +361,13 @@ class ContentTagAnalyzer:
             # Add size category
             size_mb = stat.st_size / (1024 * 1024)
             if size_mb < 1:
-                tags.append('small')
+                tags.append("small")
             elif size_mb < 10:
-                tags.append('medium')
+                tags.append("medium")
             elif size_mb < 100:
-                tags.append('large')
+                tags.append("large")
             else:
-                tags.append('very-large')
+                tags.append("very-large")
 
             # For images, could extract EXIF data here
             # For documents, could extract author, title, etc.
@@ -330,9 +384,31 @@ class ContentTagAnalyzer:
     def _is_text_file(self, file_path: Path) -> bool:
         """Check if file is likely a text file."""
         text_extensions = {
-            '.txt', '.md', '.rst', '.log', '.csv', '.json', '.xml', '.html',
-            '.css', '.js', '.py', '.java', '.cpp', '.c', '.h', '.rb', '.go',
-            '.rs', '.php', '.sh', '.bash', '.yaml', '.yml', '.toml', '.ini'
+            ".txt",
+            ".md",
+            ".rst",
+            ".log",
+            ".csv",
+            ".json",
+            ".xml",
+            ".html",
+            ".css",
+            ".js",
+            ".py",
+            ".java",
+            ".cpp",
+            ".c",
+            ".h",
+            ".rb",
+            ".go",
+            ".rs",
+            ".php",
+            ".sh",
+            ".bash",
+            ".yaml",
+            ".yml",
+            ".toml",
+            ".ini",
         }
 
         return file_path.suffix.lower() in text_extensions
@@ -348,9 +424,9 @@ class ContentTagAnalyzer:
 
             # Try reading with UTF-8, fallback to latin-1
             try:
-                return file_path.read_text(encoding='utf-8')
+                return file_path.read_text(encoding="utf-8")
             except UnicodeDecodeError:
-                return file_path.read_text(encoding='latin-1')
+                return file_path.read_text(encoding="latin-1")
 
         except Exception as e:
             logger.debug(f"Could not read {file_path}: {e}")
@@ -362,16 +438,16 @@ class ContentTagAnalyzer:
         text = text.lower()
 
         # Remove special characters, keep letters and spaces
-        text = re.sub(r'[^a-z\s]', ' ', text)
+        text = re.sub(r"[^a-z\s]", " ", text)
 
         # Split and filter
         words = text.split()
 
         # Filter by length and stop words
         words = [
-            word for word in words
-            if len(word) >= self.min_keyword_length
-            and word not in self.stop_words
+            word
+            for word in words
+            if len(word) >= self.min_keyword_length and word not in self.stop_words
         ]
 
         return words
@@ -386,7 +462,7 @@ class ContentTagAnalyzer:
             tag = tag.lower().strip()
 
             # Remove special characters
-            tag = re.sub(r'[^a-z0-9-]', '', tag)
+            tag = re.sub(r"[^a-z0-9-]", "", tag)
 
             # Skip if too short or duplicate
             if len(tag) < self.min_keyword_length or tag in seen:

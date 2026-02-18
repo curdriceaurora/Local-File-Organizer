@@ -7,6 +7,7 @@ This demo showcases the 100% quality text processing with real files.
 Supports: PDF, DOCX, TXT, MD, CSV, XLSX, PPT, PPTX, EPUB
 Coming soon: Images, Videos, Audio
 """
+
 from __future__ import annotations
 
 import sys
@@ -38,7 +39,8 @@ def create_sample_files(directory: Path) -> None:
     directory.mkdir(parents=True, exist_ok=True)
 
     # 1. Budget spreadsheet
-    (directory / "budget_2024.txt").write_text("""
+    (directory / "budget_2024.txt").write_text(
+        """
 2024 Annual Budget Summary
 
 Revenue:
@@ -60,10 +62,12 @@ Key Investments:
 - Cloud infrastructure upgrade: $85,000
 - New product development: $120,000
 - Team expansion: $200,000
-""".strip())
+""".strip()
+    )
 
     # 2. Meeting notes
-    (directory / "team_meeting_notes.md").write_text("""
+    (directory / "team_meeting_notes.md").write_text(
+        """
 # Sprint Planning Meeting - Jan 2024
 
 ## Attendees
@@ -90,10 +94,12 @@ Sarah (Product), Mike (Engineering), Lisa (Design), Tom (QA)
 ## Blockers
 - Waiting on API documentation from backend team
 - Need design approval for mobile layouts
-""".strip())
+""".strip()
+    )
 
     # 3. Technical documentation
-    (directory / "api_docs.txt").write_text("""
+    (directory / "api_docs.txt").write_text(
+        """
 REST API Documentation v2.0
 
 Base URL: https://api.example.com/v2
@@ -151,10 +157,12 @@ Headers include:
   X-RateLimit-Limit: 100
   X-RateLimit-Remaining: 95
   X-RateLimit-Reset: 1705320000
-""".strip())
+""".strip()
+    )
 
     # 4. Research paper
-    (directory / "ml_research_paper.txt").write_text("""
+    (directory / "ml_research_paper.txt").write_text(
+        """
 Transfer Learning in Natural Language Processing
 
 Abstract:
@@ -185,10 +193,12 @@ Remarkably, fine-tuning with just 10% of the training data achieved 95% of the p
 
 Conclusion:
 Transfer learning enables high-quality NLP systems with minimal data and compute requirements. This democratizes access to advanced NLP capabilities for researchers and practitioners with limited resources.
-""".strip())
+""".strip()
+    )
 
     # 5. Recipe
-    (directory / "cookie_recipe.md").write_text("""
+    (directory / "cookie_recipe.md").write_text(
+        """
 # Classic Chocolate Chip Cookies
 
 Yield: 48 cookies | Prep: 15 min | Bake: 12 min | Total: 27 min
@@ -240,10 +250,12 @@ Yield: 48 cookies | Prep: 15 min | Bake: 12 min | Total: 27 min
 
 ## Storage
 Store in airtight container at room temperature for up to 1 week.
-""".strip())
+""".strip()
+    )
 
     # 6. Travel itinerary
-    (directory / "paris_trip_2024.txt").write_text("""
+    (directory / "paris_trip_2024.txt").write_text(
+        """
 Paris Vacation Itinerary - April 2024
 
 Day 1: Arrival & Eiffel Tower
@@ -294,10 +306,12 @@ Budget Estimate:
 - Transportation: $100
 - Souvenirs: $150
 Total: ~$2,250 per person
-""".strip())
+""".strip()
+    )
 
     # 7. Product requirements
-    (directory / "feature_requirements.md").write_text("""
+    (directory / "feature_requirements.md").write_text(
+        """
 # Feature Requirements: Dark Mode Implementation
 
 ## Overview
@@ -380,7 +394,8 @@ Implement system-wide dark mode to reduce eye strain and improve user experience
   Mitigation: Optimize CSS variables, minimize re-renders
 - Risk: Designer availability
   Mitigation: Start with existing design system patterns
-""".strip())
+""".strip()
+    )
 
     console.print(f"[green]✓[/green] Created {7} sample files in {directory}")
 
@@ -403,39 +418,19 @@ Examples:
 
   # Organize with detailed logging
   python demo.py --input ./files --output ./organized --verbose
-        """
+        """,
     )
 
+    parser.add_argument("--sample", action="store_true", help="Use sample files for demo")
+    parser.add_argument("--input", type=str, help="Input directory with files to organize")
+    parser.add_argument("--output", type=str, help="Output directory for organized files")
     parser.add_argument(
-        "--sample",
-        action="store_true",
-        help="Use sample files for demo"
+        "--dry-run", action="store_true", help="Simulate organization without moving files"
     )
     parser.add_argument(
-        "--input",
-        type=str,
-        help="Input directory with files to organize"
+        "--copy", action="store_true", help="Copy files instead of creating hardlinks"
     )
-    parser.add_argument(
-        "--output",
-        type=str,
-        help="Output directory for organized files"
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Simulate organization without moving files"
-    )
-    parser.add_argument(
-        "--copy",
-        action="store_true",
-        help="Copy files instead of creating hardlinks"
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose logging"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
 
@@ -493,7 +488,9 @@ Examples:
             if not args.dry_run:
                 console.print(f"\nYour files are organized in: [cyan]{output_path}[/cyan]")
             else:
-                console.print("\n[yellow]To actually organize files, run without --dry-run[/yellow]")
+                console.print(
+                    "\n[yellow]To actually organize files, run without --dry-run[/yellow]"
+                )
 
         sys.exit(0)
 

@@ -4,6 +4,7 @@ Unit tests for the ResourceManager.
 Tests thread-safe resource allocation, release, and utilization tracking
 across CPU, memory, IO, and GPU resource types.
 """
+
 from __future__ import annotations
 
 import threading
@@ -96,43 +97,29 @@ class TestResourceManager(unittest.TestCase):
 
     def test_initial_availability(self) -> None:
         """Test that all resources are initially fully available."""
-        self.assertEqual(
-            self.manager.get_available(ResourceType.CPU), 100.0
-        )
-        self.assertEqual(
-            self.manager.get_available(ResourceType.MEMORY), 1024.0
-        )
-        self.assertEqual(
-            self.manager.get_available(ResourceType.IO), 10.0
-        )
-        self.assertEqual(
-            self.manager.get_available(ResourceType.GPU), 50.0
-        )
+        self.assertEqual(self.manager.get_available(ResourceType.CPU), 100.0)
+        self.assertEqual(self.manager.get_available(ResourceType.MEMORY), 1024.0)
+        self.assertEqual(self.manager.get_available(ResourceType.IO), 10.0)
+        self.assertEqual(self.manager.get_available(ResourceType.GPU), 50.0)
 
     def test_acquire_success(self) -> None:
         """Test successful resource acquisition."""
         result = self.manager.acquire(ResourceType.CPU, 30.0)
         self.assertTrue(result)
-        self.assertEqual(
-            self.manager.get_available(ResourceType.CPU), 70.0
-        )
+        self.assertEqual(self.manager.get_available(ResourceType.CPU), 70.0)
 
     def test_acquire_exact_limit(self) -> None:
         """Test acquiring exactly the available amount."""
         result = self.manager.acquire(ResourceType.IO, 10.0)
         self.assertTrue(result)
-        self.assertEqual(
-            self.manager.get_available(ResourceType.IO), 0.0
-        )
+        self.assertEqual(self.manager.get_available(ResourceType.IO), 0.0)
 
     def test_acquire_exceeds_limit(self) -> None:
         """Test that acquiring more than available fails."""
         result = self.manager.acquire(ResourceType.CPU, 150.0)
         self.assertFalse(result)
         # Resources should not be modified
-        self.assertEqual(
-            self.manager.get_available(ResourceType.CPU), 100.0
-        )
+        self.assertEqual(self.manager.get_available(ResourceType.CPU), 100.0)
 
     def test_acquire_after_partial_use(self) -> None:
         """Test acquisition after some resources are in use."""
@@ -146,24 +133,16 @@ class TestResourceManager(unittest.TestCase):
     def test_release_frees_resources(self) -> None:
         """Test that releasing resources makes them available again."""
         self.manager.acquire(ResourceType.CPU, 50.0)
-        self.assertEqual(
-            self.manager.get_available(ResourceType.CPU), 50.0
-        )
+        self.assertEqual(self.manager.get_available(ResourceType.CPU), 50.0)
         self.manager.release(ResourceType.CPU, 30.0)
-        self.assertEqual(
-            self.manager.get_available(ResourceType.CPU), 80.0
-        )
+        self.assertEqual(self.manager.get_available(ResourceType.CPU), 80.0)
 
     def test_release_clamps_to_zero(self) -> None:
         """Test that releasing more than used does not go below zero."""
         self.manager.acquire(ResourceType.IO, 3.0)
         self.manager.release(ResourceType.IO, 10.0)
-        self.assertEqual(
-            self.manager.get_used(ResourceType.IO), 0.0
-        )
-        self.assertEqual(
-            self.manager.get_available(ResourceType.IO), 10.0
-        )
+        self.assertEqual(self.manager.get_used(ResourceType.IO), 0.0)
+        self.assertEqual(self.manager.get_available(ResourceType.IO), 10.0)
 
     def test_acquire_negative_raises(self) -> None:
         """Test that acquiring a negative amount raises ValueError."""
@@ -190,27 +169,17 @@ class TestResourceManager(unittest.TestCase):
 
     def test_get_used(self) -> None:
         """Test tracking of used resources."""
-        self.assertEqual(
-            self.manager.get_used(ResourceType.CPU), 0.0
-        )
+        self.assertEqual(self.manager.get_used(ResourceType.CPU), 0.0)
         self.manager.acquire(ResourceType.CPU, 25.0)
-        self.assertEqual(
-            self.manager.get_used(ResourceType.CPU), 25.0
-        )
+        self.assertEqual(self.manager.get_used(ResourceType.CPU), 25.0)
 
     def test_get_utilization(self) -> None:
         """Test utilization ratio calculation."""
-        self.assertAlmostEqual(
-            self.manager.get_utilization(ResourceType.CPU), 0.0
-        )
+        self.assertAlmostEqual(self.manager.get_utilization(ResourceType.CPU), 0.0)
         self.manager.acquire(ResourceType.CPU, 50.0)
-        self.assertAlmostEqual(
-            self.manager.get_utilization(ResourceType.CPU), 0.5
-        )
+        self.assertAlmostEqual(self.manager.get_utilization(ResourceType.CPU), 0.5)
         self.manager.acquire(ResourceType.CPU, 50.0)
-        self.assertAlmostEqual(
-            self.manager.get_utilization(ResourceType.CPU), 1.0
-        )
+        self.assertAlmostEqual(self.manager.get_utilization(ResourceType.CPU), 1.0)
 
     def test_get_utilization_zero_limit(self) -> None:
         """Test utilization when resource limit is zero (GPU disabled)."""
@@ -222,9 +191,7 @@ class TestResourceManager(unittest.TestCase):
         )
         manager = ResourceManager(config)
         # GPU limit is 0, utilization should be 0
-        self.assertAlmostEqual(
-            manager.get_utilization(ResourceType.GPU), 0.0
-        )
+        self.assertAlmostEqual(manager.get_utilization(ResourceType.GPU), 0.0)
 
     def test_reset(self) -> None:
         """Test that reset releases all resources."""
@@ -234,15 +201,9 @@ class TestResourceManager(unittest.TestCase):
 
         self.manager.reset()
 
-        self.assertEqual(
-            self.manager.get_available(ResourceType.CPU), 100.0
-        )
-        self.assertEqual(
-            self.manager.get_available(ResourceType.MEMORY), 1024.0
-        )
-        self.assertEqual(
-            self.manager.get_available(ResourceType.IO), 10.0
-        )
+        self.assertEqual(self.manager.get_available(ResourceType.CPU), 100.0)
+        self.assertEqual(self.manager.get_available(ResourceType.MEMORY), 1024.0)
+        self.assertEqual(self.manager.get_available(ResourceType.IO), 10.0)
 
     def test_config_property(self) -> None:
         """Test that config property returns the configuration."""
@@ -252,9 +213,7 @@ class TestResourceManager(unittest.TestCase):
         """Test that acquiring zero amount succeeds without changing state."""
         result = self.manager.acquire(ResourceType.CPU, 0.0)
         self.assertTrue(result)
-        self.assertEqual(
-            self.manager.get_available(ResourceType.CPU), 100.0
-        )
+        self.assertEqual(self.manager.get_available(ResourceType.CPU), 100.0)
 
     def test_thread_safety_acquire_release(self) -> None:
         """Test concurrent acquire and release operations."""
@@ -268,12 +227,7 @@ class TestResourceManager(unittest.TestCase):
             except Exception as exc:
                 errors.append(str(exc))
 
-        threads = [
-            threading.Thread(
-                target=worker, args=(ResourceType.CPU, 10.0)
-            )
-            for _ in range(5)
-        ]
+        threads = [threading.Thread(target=worker, args=(ResourceType.CPU, 10.0)) for _ in range(5)]
         for t in threads:
             t.start()
         for t in threads:
@@ -281,9 +235,7 @@ class TestResourceManager(unittest.TestCase):
 
         self.assertEqual(errors, [], f"Thread errors: {errors}")
         # All resources should be released
-        self.assertEqual(
-            self.manager.get_available(ResourceType.CPU), 100.0
-        )
+        self.assertEqual(self.manager.get_available(ResourceType.CPU), 100.0)
 
     def test_thread_safety_no_over_allocation(self) -> None:
         """Test that concurrent acquisitions never exceed the limit."""
@@ -293,7 +245,7 @@ class TestResourceManager(unittest.TestCase):
             max_io_operations=5,
         )
         manager = ResourceManager(config)
-        acquired_count = threading.atomic() if hasattr(threading, 'atomic') else [0]
+        acquired_count = threading.atomic() if hasattr(threading, "atomic") else [0]
         lock = threading.Lock()
 
         def try_acquire() -> None:
@@ -305,18 +257,14 @@ class TestResourceManager(unittest.TestCase):
                     # Simulate some work
                     manager.release(ResourceType.IO, 1.0)
 
-        threads = [
-            threading.Thread(target=try_acquire) for _ in range(10)
-        ]
+        threads = [threading.Thread(target=try_acquire) for _ in range(10)]
         for t in threads:
             t.start()
         for t in threads:
             t.join(timeout=10)
 
         # All IO resources should be released
-        self.assertEqual(
-            manager.get_available(ResourceType.IO), 5.0
-        )
+        self.assertEqual(manager.get_available(ResourceType.IO), 5.0)
 
 
 if __name__ == "__main__":

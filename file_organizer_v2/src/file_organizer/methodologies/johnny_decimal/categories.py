@@ -11,6 +11,7 @@ The Johnny Decimal system:
 
 Based on the Johnny Decimal system by Johnny Noble.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -167,9 +168,7 @@ class JohnnyDecimalNumber:
             return cls(area=int(parts[0]), category=int(parts[1]))
         elif len(parts) == 3:
             # Full number with ID
-            return cls(
-                area=int(parts[0]), category=int(parts[1]), item_id=int(parts[2])
-            )
+            return cls(area=int(parts[0]), category=int(parts[1]), item_id=int(parts[2]))
         else:
             raise ValueError(
                 f"Invalid Johnny Decimal format: {number_str}. "
@@ -377,10 +376,7 @@ class NumberingScheme:
 
     def get_available_categories(self, area: int) -> list[str]:
         """Get list of all defined categories in an area."""
-        return sorted([
-            key for key in self.categories.keys()
-            if key.startswith(f"{area:02d}.")
-        ])
+        return sorted([key for key in self.categories.keys() if key.startswith(f"{area:02d}.")])
 
 
 # Default Johnny Decimal scheme with common area definitions
@@ -391,8 +387,16 @@ DEFAULT_AREAS: list[AreaDefinition] = [
         name="Finance & Administration",
         description="Financial records, budgets, invoices, and administrative tasks",
         keywords=[
-            "budget", "invoice", "receipt", "expense", "financial",
-            "accounting", "tax", "payment", "admin", "contract"
+            "budget",
+            "invoice",
+            "receipt",
+            "expense",
+            "financial",
+            "accounting",
+            "tax",
+            "payment",
+            "admin",
+            "contract",
         ],
         examples=["Budget spreadsheet", "Invoice template", "Expense report"],
     ),
@@ -402,8 +406,16 @@ DEFAULT_AREAS: list[AreaDefinition] = [
         name="Marketing & Sales",
         description="Marketing materials, campaigns, sales documents, and customer data",
         keywords=[
-            "marketing", "campaign", "sales", "customer", "lead",
-            "proposal", "pitch", "brand", "advertising", "promotion"
+            "marketing",
+            "campaign",
+            "sales",
+            "customer",
+            "lead",
+            "proposal",
+            "pitch",
+            "brand",
+            "advertising",
+            "promotion",
         ],
         examples=["Marketing plan", "Sales proposal", "Customer list"],
     ),
@@ -413,8 +425,16 @@ DEFAULT_AREAS: list[AreaDefinition] = [
         name="Operations & Projects",
         description="Project plans, operational procedures, and process documentation",
         keywords=[
-            "project", "operation", "process", "procedure", "workflow",
-            "plan", "schedule", "task", "milestone", "deliverable"
+            "project",
+            "operation",
+            "process",
+            "procedure",
+            "workflow",
+            "plan",
+            "schedule",
+            "task",
+            "milestone",
+            "deliverable",
         ],
         examples=["Project plan", "Process document", "Task list"],
     ),
@@ -424,8 +444,16 @@ DEFAULT_AREAS: list[AreaDefinition] = [
         name="Human Resources",
         description="Employee records, policies, training materials, and HR documents",
         keywords=[
-            "employee", "hr", "hiring", "training", "policy",
-            "benefit", "payroll", "performance", "recruitment", "onboarding"
+            "employee",
+            "hr",
+            "hiring",
+            "training",
+            "policy",
+            "benefit",
+            "payroll",
+            "performance",
+            "recruitment",
+            "onboarding",
         ],
         examples=["Employee handbook", "Training material", "Job description"],
     ),
@@ -435,8 +463,16 @@ DEFAULT_AREAS: list[AreaDefinition] = [
         name="Technology & IT",
         description="Technical documentation, code, infrastructure, and IT resources",
         keywords=[
-            "code", "technical", "documentation", "software", "hardware",
-            "infrastructure", "server", "database", "api", "system"
+            "code",
+            "technical",
+            "documentation",
+            "software",
+            "hardware",
+            "infrastructure",
+            "server",
+            "database",
+            "api",
+            "system",
         ],
         examples=["API documentation", "Code repository", "System diagram"],
     ),

@@ -4,6 +4,7 @@ Naming Analyzer - Advanced Filename Analysis
 This module provides advanced analysis of filename patterns, including
 semantic analysis, structure comparison, and pattern matching utilities.
 """
+
 from __future__ import annotations
 
 import re
@@ -16,6 +17,7 @@ from typing import Any
 @dataclass
 class NameStructure:
     """Analyzed structure of a filename."""
+
     original: str
     tokens: list[str] = field(default_factory=list)
     delimiters: list[str] = field(default_factory=list)
@@ -29,15 +31,15 @@ class NameStructure:
     def to_dict(self) -> dict:
         """Convert to dictionary."""
         return {
-            'original': self.original,
-            'tokens': self.tokens,
-            'delimiters': self.delimiters,
-            'has_date': self.has_date,
-            'has_version': self.has_version,
-            'has_numbers': self.has_numbers,
-            'word_count': self.word_count,
-            'char_count': self.char_count,
-            'structure_hash': self.structure_hash
+            "original": self.original,
+            "tokens": self.tokens,
+            "delimiters": self.delimiters,
+            "has_date": self.has_date,
+            "has_version": self.has_version,
+            "has_numbers": self.has_numbers,
+            "word_count": self.word_count,
+            "char_count": self.char_count,
+            "structure_hash": self.structure_hash,
         }
 
 
@@ -51,19 +53,19 @@ class NamingAnalyzer:
 
     # Version patterns
     VERSION_PATTERNS = [
-        r'v\d+',
-        r'V\d+',
-        r'version[-_]?\d+',
-        r'\d+\.\d+',
-        r'\d+\.\d+\.\d+',
-        r'_v?\d+$',
-        r'_final',
-        r'_draft',
-        r'_rev\d+',
+        r"v\d+",
+        r"V\d+",
+        r"version[-_]?\d+",
+        r"\d+\.\d+",
+        r"\d+\.\d+\.\d+",
+        r"_v?\d+$",
+        r"_final",
+        r"_draft",
+        r"_rev\d+",
     ]
 
     # Common word separators
-    SEPARATORS = ['_', '-', '.', ' ']
+    SEPARATORS = ["_", "-", ".", " "]
 
     def __init__(self):
         """Initialize the naming analyzer."""
@@ -94,7 +96,7 @@ class NamingAnalyzer:
         # Detect features
         structure.has_date = self._has_date_pattern(name)
         structure.has_version = self._has_version_pattern(name)
-        structure.has_numbers = bool(re.search(r'\d', name))
+        structure.has_numbers = bool(re.search(r"\d", name))
 
         # Count metrics
         structure.word_count = len(structure.tokens)
@@ -108,11 +110,7 @@ class NamingAnalyzer:
 
         return structure
 
-    def compare_structures(
-        self,
-        filename1: str,
-        filename2: str
-    ) -> dict[str, Any]:
+    def compare_structures(self, filename1: str, filename2: str) -> dict[str, Any]:
         """
         Compare structures of two filenames.
 
@@ -127,34 +125,24 @@ class NamingAnalyzer:
         struct2 = self.analyze_structure(filename2)
 
         # Token similarity
-        token_similarity = self._calculate_token_similarity(
-            struct1.tokens,
-            struct2.tokens
-        )
+        token_similarity = self._calculate_token_similarity(struct1.tokens, struct2.tokens)
 
         # Delimiter similarity
-        delim_sim = self._calculate_delimiter_similarity(
-            struct1.delimiters,
-            struct2.delimiters
-        )
+        delim_sim = self._calculate_delimiter_similarity(struct1.delimiters, struct2.delimiters)
 
         # Structure similarity
         structure_sim = 1.0 if struct1.structure_hash == struct2.structure_hash else 0.0
 
         # Overall similarity (weighted average)
-        overall_sim = (
-            token_similarity * 0.5 +
-            delim_sim * 0.3 +
-            structure_sim * 0.2
-        )
+        overall_sim = token_similarity * 0.5 + delim_sim * 0.3 + structure_sim * 0.2
 
         return {
-            'overall_similarity': overall_sim,
-            'token_similarity': token_similarity,
-            'delimiter_similarity': delim_sim,
-            'structure_similarity': structure_sim,
-            'same_structure': struct1.structure_hash == struct2.structure_hash,
-            'compatible': overall_sim > 0.6
+            "overall_similarity": overall_sim,
+            "token_similarity": token_similarity,
+            "delimiter_similarity": delim_sim,
+            "structure_similarity": structure_sim,
+            "same_structure": struct1.structure_hash == struct2.structure_hash,
+            "compatible": overall_sim > 0.6,
         }
 
     def find_common_pattern(self, filenames: list[str]) -> dict[str, Any] | None:
@@ -185,13 +173,13 @@ class NamingAnalyzer:
         has_version_count = sum(1 for s in structures if s.has_version)
 
         pattern = {
-            'sample_size': len(filenames),
-            'common_delimiters': list(common_delimiters),
-            'common_tokens': list(common_tokens),
-            'date_frequency': has_date_count / len(filenames),
-            'version_frequency': has_version_count / len(filenames),
-            'avg_word_count': sum(s.word_count for s in structures) / len(structures),
-            'avg_char_count': sum(s.char_count for s in structures) / len(structures),
+            "sample_size": len(filenames),
+            "common_delimiters": list(common_delimiters),
+            "common_tokens": list(common_tokens),
+            "date_frequency": has_date_count / len(filenames),
+            "version_frequency": has_version_count / len(filenames),
+            "avg_word_count": sum(s.word_count for s in structures) / len(structures),
+            "avg_char_count": sum(s.char_count for s in structures) / len(structures),
         }
 
         # Determine pattern consistency
@@ -199,16 +187,12 @@ class NamingAnalyzer:
         hash_counts = Counter(structure_hashes)
         most_common_hash, count = hash_counts.most_common(1)[0]
 
-        pattern['consistency'] = count / len(filenames)
-        pattern['dominant_structure'] = most_common_hash
+        pattern["consistency"] = count / len(filenames)
+        pattern["dominant_structure"] = most_common_hash
 
         return pattern
 
-    def extract_pattern_differences(
-        self,
-        original: str,
-        corrected: str
-    ) -> dict[str, Any]:
+    def extract_pattern_differences(self, original: str, corrected: str) -> dict[str, Any]:
         """
         Extract differences between original and corrected filenames.
 
@@ -223,33 +207,30 @@ class NamingAnalyzer:
         struct_corr = self.analyze_structure(corrected)
 
         differences = {
-            'delimiter_change': struct_orig.delimiters != struct_corr.delimiters,
-            'token_change': struct_orig.tokens != struct_corr.tokens,
-            'structure_change': struct_orig.structure_hash != struct_corr.structure_hash,
-            'added_date': not struct_orig.has_date and struct_corr.has_date,
-            'removed_date': struct_orig.has_date and not struct_corr.has_date,
-            'added_version': not struct_orig.has_version and struct_corr.has_version,
-            'removed_version': struct_orig.has_version and not struct_corr.has_version,
+            "delimiter_change": struct_orig.delimiters != struct_corr.delimiters,
+            "token_change": struct_orig.tokens != struct_corr.tokens,
+            "structure_change": struct_orig.structure_hash != struct_corr.structure_hash,
+            "added_date": not struct_orig.has_date and struct_corr.has_date,
+            "removed_date": struct_orig.has_date and not struct_corr.has_date,
+            "added_version": not struct_orig.has_version and struct_corr.has_version,
+            "removed_version": struct_orig.has_version and not struct_corr.has_version,
         }
 
         # Token differences
         orig_tokens = set(struct_orig.tokens)
         corr_tokens = set(struct_corr.tokens)
 
-        differences['added_tokens'] = list(corr_tokens - orig_tokens)
-        differences['removed_tokens'] = list(orig_tokens - corr_tokens)
-        differences['common_tokens'] = list(orig_tokens.intersection(corr_tokens))
+        differences["added_tokens"] = list(corr_tokens - orig_tokens)
+        differences["removed_tokens"] = list(orig_tokens - corr_tokens)
+        differences["common_tokens"] = list(orig_tokens.intersection(corr_tokens))
 
         # Delimiter differences
-        if differences['delimiter_change']:
-            differences['old_delimiters'] = struct_orig.delimiters
-            differences['new_delimiters'] = struct_corr.delimiters
+        if differences["delimiter_change"]:
+            differences["old_delimiters"] = struct_orig.delimiters
+            differences["new_delimiters"] = struct_corr.delimiters
 
         # Calculate edit distance
-        differences['edit_distance'] = self._calculate_edit_distance(
-            original,
-            corrected
-        )
+        differences["edit_distance"] = self._calculate_edit_distance(original, corrected)
 
         return differences
 
@@ -265,24 +246,20 @@ class NamingAnalyzer:
         """
         name = Path(filename).stem
 
-        if '_' in name and name.islower():
-            return 'snake_case'
-        elif '-' in name and name.islower():
-            return 'kebab-case'
-        elif re.match(r'^[a-z]+([A-Z][a-z]*)+$', name):
-            return 'camelCase'
-        elif re.match(r'^[A-Z][a-z]+([A-Z][a-z]*)*$', name):
-            return 'PascalCase'
-        elif ' ' in name:
-            return 'space_separated'
+        if "_" in name and name.islower():
+            return "snake_case"
+        elif "-" in name and name.islower():
+            return "kebab-case"
+        elif re.match(r"^[a-z]+([A-Z][a-z]*)+$", name):
+            return "camelCase"
+        elif re.match(r"^[A-Z][a-z]+([A-Z][a-z]*)*$", name):
+            return "PascalCase"
+        elif " " in name:
+            return "space_separated"
         else:
-            return 'mixed'
+            return "mixed"
 
-    def normalize_filename(
-        self,
-        filename: str,
-        target_style: str = 'snake_case'
-    ) -> str:
+    def normalize_filename(self, filename: str, target_style: str = "snake_case") -> str:
         """
         Normalize filename to a specific naming style.
 
@@ -301,16 +278,16 @@ class NamingAnalyzer:
         tokens = self._tokenize(name)
 
         # Apply target style
-        if target_style == 'snake_case':
-            normalized = '_'.join(t.lower() for t in tokens)
-        elif target_style == 'kebab-case':
-            normalized = '-'.join(t.lower() for t in tokens)
-        elif target_style == 'camelCase':
-            normalized = tokens[0].lower() + ''.join(t.capitalize() for t in tokens[1:])
-        elif target_style == 'PascalCase':
-            normalized = ''.join(t.capitalize() for t in tokens)
-        elif target_style == 'space_separated':
-            normalized = ' '.join(t.lower() for t in tokens)
+        if target_style == "snake_case":
+            normalized = "_".join(t.lower() for t in tokens)
+        elif target_style == "kebab-case":
+            normalized = "-".join(t.lower() for t in tokens)
+        elif target_style == "camelCase":
+            normalized = tokens[0].lower() + "".join(t.capitalize() for t in tokens[1:])
+        elif target_style == "PascalCase":
+            normalized = "".join(t.capitalize() for t in tokens)
+        elif target_style == "space_separated":
+            normalized = " ".join(t.lower() for t in tokens)
         else:
             normalized = name
 
@@ -330,37 +307,37 @@ class NamingAnalyzer:
         structure = self.analyze_structure(filename)
 
         components = {
-            'base_name': name,
-            'tokens': structure.tokens,
-            'potential_description': [],
-            'potential_metadata': []
+            "base_name": name,
+            "tokens": structure.tokens,
+            "potential_description": [],
+            "potential_metadata": [],
         }
 
         # Identify metadata vs description tokens
         for token in structure.tokens:
             if self._is_metadata_token(token):
-                components['potential_metadata'].append(token)
+                components["potential_metadata"].append(token)
             else:
-                components['potential_description'].append(token)
+                components["potential_description"].append(token)
 
         # Extract version if present
         if structure.has_version:
             version_match = self._extract_version(name)
             if version_match:
-                components['version'] = version_match
+                components["version"] = version_match
 
         # Extract date if present
         if structure.has_date:
             date_match = self._extract_date(name)
             if date_match:
-                components['date'] = date_match
+                components["date"] = date_match
 
         return components
 
     def _tokenize(self, text: str) -> list[str]:
         """Tokenize text by separators and camelCase."""
         # First split by explicit separators
-        pattern = '|'.join(re.escape(sep) for sep in self.SEPARATORS)
+        pattern = "|".join(re.escape(sep) for sep in self.SEPARATORS)
         if pattern:
             parts = re.split(pattern, text)
         else:
@@ -372,7 +349,7 @@ class NamingAnalyzer:
             if not part:
                 continue
             # Split on camelCase boundaries
-            subparts = re.sub('([a-z])([A-Z])', r'\1 \2', part).split()
+            subparts = re.sub("([a-z])([A-Z])", r"\1 \2", part).split()
             tokens.extend(subparts)
 
         return [t for t in tokens if t]
@@ -388,10 +365,10 @@ class NamingAnalyzer:
     def _has_date_pattern(self, text: str) -> bool:
         """Check if text contains a date pattern."""
         date_patterns = [
-            r'\d{4}-\d{2}-\d{2}',
-            r'\d{4}_\d{2}_\d{2}',
-            r'\d{2}-\d{2}-\d{4}',
-            r'\d{8}',
+            r"\d{4}-\d{2}-\d{2}",
+            r"\d{4}_\d{2}_\d{2}",
+            r"\d{2}-\d{2}-\d{4}",
+            r"\d{8}",
         ]
         return any(re.search(pattern, text) for pattern in date_patterns)
 
@@ -409,11 +386,7 @@ class NamingAnalyzer:
 
         return hashlib.md5(signature.encode()).hexdigest()[:8]
 
-    def _calculate_token_similarity(
-        self,
-        tokens1: list[str],
-        tokens2: list[str]
-    ) -> float:
+    def _calculate_token_similarity(self, tokens1: list[str], tokens2: list[str]) -> float:
         """Calculate similarity between token lists."""
         if not tokens1 or not tokens2:
             return 0.0
@@ -426,11 +399,7 @@ class NamingAnalyzer:
 
         return intersection / union if union > 0 else 0.0
 
-    def _calculate_delimiter_similarity(
-        self,
-        delims1: list[str],
-        delims2: list[str]
-    ) -> float:
+    def _calculate_delimiter_similarity(self, delims1: list[str], delims2: list[str]) -> float:
         """Calculate similarity between delimiter lists."""
         if not delims1 and not delims2:
             return 1.0
@@ -469,9 +438,9 @@ class NamingAnalyzer:
     def _is_metadata_token(self, token: str) -> bool:
         """Check if token is likely metadata (version, date, etc)."""
         return (
-            self._has_version_pattern(token) or
-            self._has_date_pattern(token) or
-            token.lower() in ['final', 'draft', 'copy', 'backup', 'temp', 'old', 'new']
+            self._has_version_pattern(token)
+            or self._has_date_pattern(token)
+            or token.lower() in ["final", "draft", "copy", "backup", "temp", "old", "new"]
         )
 
     def _extract_version(self, text: str) -> str | None:
@@ -485,10 +454,10 @@ class NamingAnalyzer:
     def _extract_date(self, text: str) -> str | None:
         """Extract date string from text."""
         date_patterns = [
-            r'\d{4}-\d{2}-\d{2}',
-            r'\d{4}_\d{2}_\d{2}',
-            r'\d{2}-\d{2}-\d{4}',
-            r'\d{8}',
+            r"\d{4}-\d{2}-\d{2}",
+            r"\d{4}_\d{2}_\d{2}",
+            r"\d{2}-\d{2}-\d{4}",
+            r"\d{8}",
         ]
         for pattern in date_patterns:
             match = re.search(pattern, text)

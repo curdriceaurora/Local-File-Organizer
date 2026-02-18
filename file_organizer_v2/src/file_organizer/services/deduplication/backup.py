@@ -8,6 +8,7 @@ This module provides safe backup management for file operations, including:
 - Restoring files from backups
 - Cleaning up old backups
 """
+
 from __future__ import annotations
 
 import json
@@ -287,7 +288,7 @@ class BackupManager:
         lock_path = self.manifest_path.with_suffix(".lock")
         try:
             with _FileLock(lock_path):
-                with open(self.manifest_path, encoding='utf-8') as f:
+                with open(self.manifest_path, encoding="utf-8") as f:
                     return json.load(f)
         except (json.JSONDecodeError, OSError):
             # If manifest is corrupted, start fresh
@@ -308,7 +309,7 @@ class BackupManager:
         try:
             with _FileLock(lock_path):
                 # Write to temp file first for atomic replacement
-                with open(tmp_path, 'w', encoding='utf-8') as f:
+                with open(tmp_path, "w", encoding="utf-8") as f:
                     json.dump(manifest, f, indent=2, ensure_ascii=False)
                 # Atomic rename
                 tmp_path.replace(self.manifest_path)

@@ -23,9 +23,7 @@ class TestJobPersistenceInit(unittest.TestCase):
     def test_default_jobs_dir(self) -> None:
         """Test that default directory is under home."""
         persistence = JobPersistence()
-        self.assertEqual(
-            persistence.jobs_dir, Path.home() / ".file-organizer" / "jobs"
-        )
+        self.assertEqual(persistence.jobs_dir, Path.home() / ".file-organizer" / "jobs")
 
     def test_custom_jobs_dir(self, tmp_path: Path | None = None) -> None:
         """Test that custom directory is used."""
@@ -186,15 +184,9 @@ class TestListJobs(unittest.TestCase):
 
     def test_list_with_status_filter(self) -> None:
         """Test listing jobs filtered by status."""
-        self.persistence.save_job(
-            JobState(id="pending-1", status=JobStatus.PENDING)
-        )
-        self.persistence.save_job(
-            JobState(id="running-1", status=JobStatus.RUNNING)
-        )
-        self.persistence.save_job(
-            JobState(id="completed-1", status=JobStatus.COMPLETED)
-        )
+        self.persistence.save_job(JobState(id="pending-1", status=JobStatus.PENDING))
+        self.persistence.save_job(JobState(id="running-1", status=JobStatus.RUNNING))
+        self.persistence.save_job(JobState(id="completed-1", status=JobStatus.COMPLETED))
 
         pending = self.persistence.list_jobs(status=JobStatus.PENDING)
         self.assertEqual(len(pending), 1)
@@ -206,9 +198,7 @@ class TestListJobs(unittest.TestCase):
 
     def test_list_skips_corrupted_files(self) -> None:
         """Test that corrupted files are skipped during listing."""
-        self.persistence.save_job(
-            JobState(id="good-job", status=JobStatus.COMPLETED)
-        )
+        self.persistence.save_job(JobState(id="good-job", status=JobStatus.COMPLETED))
         # Create a corrupted file
         corrupt_path = self.jobs_dir / "bad-job.json"
         corrupt_path.write_text("{{invalid json", encoding="utf-8")
@@ -350,17 +340,13 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
         original_write_text = Path.write_text
         temp_file_was_created = False
 
-        def track_temp_write(
-            path_self: Path, data: str, encoding: str = "utf-8"
-        ) -> int:
+        def track_temp_write(path_self: Path, data: str, encoding: str = "utf-8") -> int:
             nonlocal temp_file_was_created
             if path_self.suffix == ".tmp":
                 temp_file_was_created = True
             return original_write_text(path_self, data, encoding=encoding)
 
-        with patch.object(
-            Path, "write_text", autospec=True, side_effect=track_temp_write
-        ):
+        with patch.object(Path, "write_text", autospec=True, side_effect=track_temp_write):
             self.persistence.save_job(job)
 
         # Verify temp file was created during save

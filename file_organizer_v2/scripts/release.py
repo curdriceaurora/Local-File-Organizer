@@ -117,7 +117,7 @@ def _update_version_py(filepath: Path, new_version: str) -> None:
     content = filepath.read_text()
     updated = re.sub(
         r'(__version__\s*=\s*")[^"]+(")',
-        rf'\g<1>{new_version}\2',
+        rf"\g<1>{new_version}\2",
         content,
         count=1,
     )
@@ -131,7 +131,7 @@ def _update_init_py(filepath: Path, new_version: str) -> None:
     content = filepath.read_text()
     updated = re.sub(
         r'(__version__\s*=\s*")[^"]+(")',
-        rf'\g<1>{new_version}\2',
+        rf"\g<1>{new_version}\2",
         content,
         count=1,
     )
@@ -151,11 +151,15 @@ def generate_changelog(from_tag: str, to_tag: str) -> str:
         Formatted changelog string with categorized commits.
     """
     # Get commits between tags
-    result = _run_command([
-        "git", "log", f"{from_tag}..{to_tag}",
-        "--pretty=format:%s|%h|%an",
-        "--no-merges",
-    ])
+    result = _run_command(
+        [
+            "git",
+            "log",
+            f"{from_tag}..{to_tag}",
+            "--pretty=format:%s|%h|%an",
+            "--no-merges",
+        ]
+    )
 
     if result.returncode != 0:
         return f"Error generating changelog: {result.stderr.strip()}"
@@ -315,8 +319,7 @@ def validate_release() -> list[str]:
             init_ver = init_match.group(1)
             if init_ver != pyproject_version:
                 errors.append(
-                    f"Version mismatch: pyproject.toml={pyproject_version}, "
-                    f"__init__.py={init_ver}"
+                    f"Version mismatch: pyproject.toml={pyproject_version}, __init__.py={init_ver}"
                 )
         else:
             errors.append("Could not read version from __init__.py")

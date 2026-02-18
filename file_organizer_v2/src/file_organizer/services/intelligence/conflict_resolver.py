@@ -4,6 +4,7 @@ Conflict resolution for contradictory preferences.
 This module provides deterministic conflict resolution using multiple
 weighting strategies including recency, frequency, and confidence scoring.
 """
+
 from __future__ import annotations
 
 import logging
@@ -29,7 +30,7 @@ class ConflictResolver:
         self,
         recency_weight: float = 0.4,
         frequency_weight: float = 0.35,
-        confidence_weight: float = 0.25
+        confidence_weight: float = 0.25,
     ):
         """
         Initialize the conflict resolver with weighting factors.
@@ -116,39 +117,31 @@ class ConflictResolver:
         # Calculate weights for each preference
         recency_weights = self.weight_by_recency(conflicting_preferences)
         frequency_weights = self.weight_by_frequency(conflicting_preferences)
-        confidence_scores = [
-            self.score_confidence(pref) for pref in conflicting_preferences
-        ]
+        confidence_scores = [self.score_confidence(pref) for pref in conflicting_preferences]
 
         # Combine weights
         combined_scores = []
         for i in range(len(conflicting_preferences)):
             score = (
-                recency_weights[i] * self.recency_weight +
-                frequency_weights[i] * self.frequency_weight +
-                confidence_scores[i] * self.confidence_weight
+                recency_weights[i] * self.recency_weight
+                + frequency_weights[i] * self.frequency_weight
+                + confidence_scores[i] * self.confidence_weight
             )
             combined_scores.append(score)
 
         # Find preference with highest score
         # If tie, use most recent (last in sorted order)
         max_score = max(combined_scores)
-        best_indices = [
-            i for i, score in enumerate(combined_scores)
-            if score == max_score
-        ]
+        best_indices = [i for i, score in enumerate(combined_scores) if score == max_score]
 
         if len(best_indices) > 1:
             # Tie-breaker: choose most recent
             logger.debug(
-                f"Tie between {len(best_indices)} preferences, "
-                "using recency as tie-breaker"
+                f"Tie between {len(best_indices)} preferences, using recency as tie-breaker"
             )
             best_index = max(
                 best_indices,
-                key=lambda i: self._parse_timestamp(
-                    conflicting_preferences[i].get("updated")
-                )
+                key=lambda i: self._parse_timestamp(conflicting_preferences[i].get("updated")),
             )
         else:
             best_index = best_indices[0]
@@ -245,9 +238,7 @@ class ConflictResolver:
             return []
 
         # Get correction counts
-        counts = [
-            pref.get("correction_count", 0) for pref in preferences
-        ]
+        counts = [pref.get("correction_count", 0) for pref in preferences]
 
         # Handle all-zero case
         total_count = sum(counts)
@@ -266,9 +257,7 @@ class ConflictResolver:
             weights = [1.0 / len(preferences)] * len(preferences)
 
         logger.debug(
-            f"Frequency weights calculated: "
-            f"{[f'{w:.3f}' for w in weights]} "
-            f"(counts: {counts})"
+            f"Frequency weights calculated: {[f'{w:.3f}' for w in weights]} (counts: {counts})"
         )
 
         return weights
@@ -365,16 +354,14 @@ class ConflictResolver:
         # Calculate all combined scores
         recency_weights = self.weight_by_recency(conflicting_preferences)
         frequency_weights = self.weight_by_frequency(conflicting_preferences)
-        confidence_scores = [
-            self.score_confidence(pref) for pref in conflicting_preferences
-        ]
+        confidence_scores = [self.score_confidence(pref) for pref in conflicting_preferences]
 
         combined_scores = []
         for i in range(len(conflicting_preferences)):
             score = (
-                recency_weights[i] * self.recency_weight +
-                frequency_weights[i] * self.frequency_weight +
-                confidence_scores[i] * self.confidence_weight
+                recency_weights[i] * self.recency_weight
+                + frequency_weights[i] * self.frequency_weight
+                + confidence_scores[i] * self.confidence_weight
             )
             combined_scores.append(score)
 
@@ -395,16 +382,13 @@ class ConflictResolver:
         ambiguity = 1.0 - min(1.0, cv)
 
         logger.debug(
-            f"Ambiguity score: {ambiguity:.3f} "
-            f"(scores: {[f'{s:.3f}' for s in combined_scores]})"
+            f"Ambiguity score: {ambiguity:.3f} (scores: {[f'{s:.3f}' for s in combined_scores]})"
         )
 
         return ambiguity
 
     def needs_user_input(
-        self,
-        conflicting_preferences: list[dict],
-        ambiguity_threshold: float = 0.7
+        self, conflicting_preferences: list[dict], ambiguity_threshold: float = 0.7
     ) -> bool:
         """
         Determine if user input is needed to resolve conflict.

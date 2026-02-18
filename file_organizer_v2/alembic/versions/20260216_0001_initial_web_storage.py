@@ -4,6 +4,7 @@ Revision ID: 20260216_0001
 Revises:
 Create Date: 2026-02-16
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -121,7 +122,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("refresh_token_hash"),
     )
-    op.create_index(op.f("ix_user_sessions_token_hash"), "user_sessions", ["token_hash"], unique=True)
+    op.create_index(
+        op.f("ix_user_sessions_token_hash"), "user_sessions", ["token_hash"], unique=True
+    )
     op.create_index(op.f("ix_user_sessions_user_id"), "user_sessions", ["user_id"], unique=False)
 
     op.create_table(
@@ -140,10 +143,16 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"]),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("workspace_id", "relative_path", name="uq_file_metadata_workspace_path"),
+        sa.UniqueConstraint(
+            "workspace_id", "relative_path", name="uq_file_metadata_workspace_path"
+        ),
     )
-    op.create_index(op.f("ix_file_metadata_checksum_sha256"), "file_metadata", ["checksum_sha256"], unique=False)
-    op.create_index(op.f("ix_file_metadata_workspace_id"), "file_metadata", ["workspace_id"], unique=False)
+    op.create_index(
+        op.f("ix_file_metadata_checksum_sha256"), "file_metadata", ["checksum_sha256"], unique=False
+    )
+    op.create_index(
+        op.f("ix_file_metadata_workspace_id"), "file_metadata", ["workspace_id"], unique=False
+    )
 
 
 def downgrade() -> None:

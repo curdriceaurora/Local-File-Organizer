@@ -3,6 +3,7 @@
 Exercises config show/edit/list with temporary configuration directories,
 profile creation, and round-trip persistence.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -68,30 +69,22 @@ class TestConfigEdit:
     """Tests for ``file-organizer config edit``."""
 
     def test_edit_text_model(self) -> None:
-        result = runner.invoke(
-            app, ["config", "edit", "--text-model", "test:latest"]
-        )
+        result = runner.invoke(app, ["config", "edit", "--text-model", "test:latest"])
         assert result.exit_code == 0
         assert "Saved" in result.output
 
     def test_edit_temperature(self) -> None:
-        result = runner.invoke(
-            app, ["config", "edit", "--temperature", "0.8"]
-        )
+        result = runner.invoke(app, ["config", "edit", "--temperature", "0.8"])
         assert result.exit_code == 0
         assert "Saved" in result.output
 
     def test_edit_device(self) -> None:
-        result = runner.invoke(
-            app, ["config", "edit", "--device", "cpu"]
-        )
+        result = runner.invoke(app, ["config", "edit", "--device", "cpu"])
         assert result.exit_code == 0
         assert "Saved" in result.output
 
     def test_edit_methodology(self) -> None:
-        result = runner.invoke(
-            app, ["config", "edit", "--methodology", "para"]
-        )
+        result = runner.invoke(app, ["config", "edit", "--methodology", "para"])
         assert result.exit_code == 0
         assert "Saved" in result.output
 

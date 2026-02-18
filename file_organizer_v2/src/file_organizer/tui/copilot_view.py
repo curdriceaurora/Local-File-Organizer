@@ -4,6 +4,7 @@ Renders a scrollable message log and an input widget at the bottom.
 Messages are dispatched to the ``CopilotEngine`` in a worker thread
 so the UI stays responsive.
 """
+
 from __future__ import annotations
 
 from textual import work

@@ -1,4 +1,5 @@
 """Tests for build/packaging scripts and configs."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -24,7 +25,9 @@ def test_build_windows_iss_supports_version_override() -> None:
     content = iss.read_text(encoding="utf-8")
     assert "#ifndef AppVersion" in content
     assert "#define AppVersion" in content
-    assert "/DAppVersion" in (PROJECT_ROOT / "scripts" / "build_windows.ps1").read_text(encoding="utf-8")
+    assert "/DAppVersion" in (PROJECT_ROOT / "scripts" / "build_windows.ps1").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_build_macos_has_universal_flags() -> None:

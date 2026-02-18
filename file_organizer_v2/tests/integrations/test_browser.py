@@ -1,4 +1,5 @@
 """Unit tests for browser extension integration helpers."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone, tzinfo

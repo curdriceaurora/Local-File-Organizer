@@ -5,6 +5,7 @@ Validates:
 - WebSocket connection examples use the real path format
 - Documented event types are consistent with handler implementation
 """
+
 from __future__ import annotations
 
 import re
@@ -64,10 +65,7 @@ class TestWebSocketPathDocumentation:
         content = WEBSOCKET_DOC.read_text()
 
         # Find code blocks with ws:// or wss:// connections
-        ws_connections = re.findall(
-            r"wss?://[^\s\'\"\)]+",
-            content
-        )
+        ws_connections = re.findall(r"wss?://[^\s\'\"\)]+", content)
 
         bad_connections = []
         for conn in ws_connections:
@@ -92,9 +90,7 @@ class TestWebSocketPathDocumentation:
         # If docs talk about auth, they should mention the token parameter
         if "auth" in content.lower() or "token" in content.lower():
             # Ensure docs don't document wrong auth method
-            bearer_in_ws = bool(
-                re.search(r"Authorization:\s*Bearer", content, re.IGNORECASE)
-            )
+            bearer_in_ws = bool(re.search(r"Authorization:\s*Bearer", content, re.IGNORECASE))
             assert not bearer_in_ws, (
                 "websocket-api.md uses Authorization: Bearer for WebSocket auth, "
                 "but the real endpoint uses ?token= query parameter. "

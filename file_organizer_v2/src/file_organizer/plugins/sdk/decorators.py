@@ -1,4 +1,5 @@
 """Decorators for plugin hook and command registration metadata."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

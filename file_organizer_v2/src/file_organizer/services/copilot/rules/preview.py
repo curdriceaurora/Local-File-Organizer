@@ -3,6 +3,7 @@
 Evaluates rules against files without executing any actions.  Produces
 a report of what *would* happen if the rules were applied.
 """
+
 from __future__ import annotations
 
 import fnmatch

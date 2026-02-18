@@ -1,4 +1,5 @@
 """Authentication helpers for JWT and password hashing."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

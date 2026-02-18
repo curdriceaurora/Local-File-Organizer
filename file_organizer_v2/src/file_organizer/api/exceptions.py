@@ -1,4 +1,5 @@
 """Exception handlers for the API layer."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -38,10 +39,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
             content={
                 "error": "validation_error",
                 "message": "Invalid request payload.",
-                "details": [
-                    {"loc": err.get("loc"), "msg": err.get("msg")}
-                    for err in exc.errors()
-                ],
+                "details": [{"loc": err.get("loc"), "msg": err.get("msg")} for err in exc.errors()],
             },
         )
 

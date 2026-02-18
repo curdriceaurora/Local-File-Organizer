@@ -6,6 +6,7 @@ and their associated data structures for automated categorization.
 
 Based on Tiago Forte's PARA methodology from "Building a Second Brain".
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -44,7 +45,7 @@ class PARACategory(StrEnum):
             PARACategory.PROJECT: "Time-bound with specific completion criteria",
             PARACategory.AREA: "Ongoing responsibility without end date",
             PARACategory.RESOURCE: "Reference material or knowledge base",
-            PARACategory.ARCHIVE: "Completed or inactive item"
+            PARACategory.ARCHIVE: "Completed or inactive item",
         }
         return descriptions[self]
 
@@ -83,6 +84,7 @@ class CategoryDefinition:
     def matches_pattern(self, filename: str) -> bool:
         """Check if filename matches any of the category patterns."""
         from fnmatch import fnmatch
+
         filename_lower = filename.lower()
         return any(fnmatch(filename_lower, pattern.lower()) for pattern in self.patterns)
 
@@ -134,13 +136,12 @@ class CategorizationResult:
             "confidence": self.confidence,
             "reasons": self.reasons,
             "alternative_categories": {
-                cat.value: score
-                for cat, score in self.alternative_categories.items()
+                cat.value: score for cat, score in self.alternative_categories.items()
             },
             "applied_rules": self.applied_rules,
             "metadata": self.metadata,
             "is_confident": self.is_confident,
-            "requires_review": self.requires_review
+            "requires_review": self.requires_review,
         }
 
 
@@ -158,7 +159,7 @@ CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
             "Has a deadline or target completion date",
             "Requires multiple steps or tasks to complete",
             "Is actively being worked on",
-            "Will be finished at some point in time"
+            "Will be finished at some point in time",
         ],
         examples=[
             "Website redesign project",
@@ -166,21 +167,35 @@ CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
             "Client proposal",
             "Product launch plan",
             "Marketing campaign",
-            "Research paper"
+            "Research paper",
         ],
         keywords=[
-            "deadline", "milestone", "deliverable", "sprint", "goal",
-            "project plan", "due date", "completion", "task list",
-            "proposal", "campaign", "launch", "initiative"
+            "deadline",
+            "milestone",
+            "deliverable",
+            "sprint",
+            "goal",
+            "project plan",
+            "due date",
+            "completion",
+            "task list",
+            "proposal",
+            "campaign",
+            "launch",
+            "initiative",
         ],
         patterns=[
-            "project-*", "*-proposal", "*-plan", "*-campaign",
-            "*-initiative", "sprint-*", "*-deliverable"
+            "project-*",
+            "*-proposal",
+            "*-plan",
+            "*-campaign",
+            "*-initiative",
+            "sprint-*",
+            "*-deliverable",
         ],
         confidence_threshold=0.75,
-        auto_categorize=True
+        auto_categorize=True,
     ),
-
     PARACategory.AREA: CategoryDefinition(
         name=PARACategory.AREA,
         description=(
@@ -193,7 +208,7 @@ CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
             "Requires regular attention and maintenance",
             "Has no defined endpoint or completion date",
             "Represents a standard or quality to maintain",
-            "Contains recurring tasks or processes"
+            "Contains recurring tasks or processes",
         ],
         examples=[
             "Health and fitness tracking",
@@ -201,21 +216,38 @@ CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
             "Team management",
             "Customer relationships",
             "Home maintenance",
-            "Professional development"
+            "Professional development",
         ],
         keywords=[
-            "ongoing", "maintenance", "routine", "checklist", "regular",
-            "continuous", "process", "standard", "recurring", "daily",
-            "weekly", "monthly", "management", "operations", "relationship"
+            "ongoing",
+            "maintenance",
+            "routine",
+            "checklist",
+            "regular",
+            "continuous",
+            "process",
+            "standard",
+            "recurring",
+            "daily",
+            "weekly",
+            "monthly",
+            "management",
+            "operations",
+            "relationship",
         ],
         patterns=[
-            "routine-*", "*-checklist", "*-maintenance", "*-management",
-            "*-operations", "*-tracking", "daily-*", "weekly-*"
+            "routine-*",
+            "*-checklist",
+            "*-maintenance",
+            "*-management",
+            "*-operations",
+            "*-tracking",
+            "daily-*",
+            "weekly-*",
         ],
         confidence_threshold=0.75,
-        auto_categorize=True
+        auto_categorize=True,
     ),
-
     PARACategory.RESOURCE: CategoryDefinition(
         name=PARACategory.RESOURCE,
         description=(
@@ -228,7 +260,7 @@ CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
             "May be useful in the future but not immediately needed",
             "Contains knowledge, research, or learning materials",
             "Is accessed occasionally rather than regularly",
-            "Has value as a reference or template"
+            "Has value as a reference or template",
         ],
         examples=[
             "Technical documentation",
@@ -236,21 +268,39 @@ CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
             "Tutorials and how-to guides",
             "Templates and examples",
             "Industry reports",
-            "Learning materials"
+            "Learning materials",
         ],
         keywords=[
-            "reference", "tutorial", "guide", "template", "documentation",
-            "how-to", "example", "learning", "research", "article",
-            "manual", "handbook", "resource", "knowledge", "info"
+            "reference",
+            "tutorial",
+            "guide",
+            "template",
+            "documentation",
+            "how-to",
+            "example",
+            "learning",
+            "research",
+            "article",
+            "manual",
+            "handbook",
+            "resource",
+            "knowledge",
+            "info",
         ],
         patterns=[
-            "ref-*", "*-guide", "*-template", "*-tutorial", "*-docs",
-            "*-manual", "*-handbook", "example-*", "sample-*"
+            "ref-*",
+            "*-guide",
+            "*-template",
+            "*-tutorial",
+            "*-docs",
+            "*-manual",
+            "*-handbook",
+            "example-*",
+            "sample-*",
         ],
         confidence_threshold=0.80,
-        auto_categorize=True
+        auto_categorize=True,
     ),
-
     PARACategory.ARCHIVE: CategoryDefinition(
         name=PARACategory.ARCHIVE,
         description=(
@@ -263,7 +313,7 @@ CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
             "Is no longer active or relevant",
             "Has been completed or abandoned",
             "Is kept for historical reference",
-            "Is not expected to be accessed frequently"
+            "Is not expected to be accessed frequently",
         ],
         examples=[
             "Completed projects",
@@ -271,21 +321,40 @@ CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
             "Deprecated processes",
             "Historical records",
             "Obsolete information",
-            "Past year's files"
+            "Past year's files",
         ],
         keywords=[
-            "final", "completed", "archived", "old", "legacy",
-            "deprecated", "obsolete", "historical", "past",
-            "inactive", "finished", "done", "closed", "ended"
+            "final",
+            "completed",
+            "archived",
+            "old",
+            "legacy",
+            "deprecated",
+            "obsolete",
+            "historical",
+            "past",
+            "inactive",
+            "finished",
+            "done",
+            "closed",
+            "ended",
         ],
         patterns=[
-            "*-final", "*-archived", "*-old", "*-deprecated",
-            "*-legacy", "*-obsolete", "archive-*", "old-*",
-            "*-v1", "*-v2", "*-backup"
+            "*-final",
+            "*-archived",
+            "*-old",
+            "*-deprecated",
+            "*-legacy",
+            "*-obsolete",
+            "archive-*",
+            "old-*",
+            "*-v1",
+            "*-v2",
+            "*-backup",
         ],
         confidence_threshold=0.90,
-        auto_categorize=False  # Require manual confirmation for archival
-    )
+        auto_categorize=False,  # Require manual confirmation for archival
+    ),
 }
 
 

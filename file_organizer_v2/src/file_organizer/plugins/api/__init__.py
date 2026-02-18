@@ -1,4 +1,5 @@
 """Plugin API package."""
+
 from __future__ import annotations
 
 from file_organizer.plugins.api.endpoints import get_hook_manager, router

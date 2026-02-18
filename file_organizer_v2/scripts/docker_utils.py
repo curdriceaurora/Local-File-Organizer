@@ -57,9 +57,7 @@ def validate_dockerfile(path: str | Path) -> list[str]:
                         f"WARNING: Using ':latest' tag is not recommended: {line.strip()}"
                     )
                 elif ":" not in image_ref and "$" not in image_ref:
-                    issues.append(
-                        f"WARNING: No tag specified (defaults to latest): {line.strip()}"
-                    )
+                    issues.append(f"WARNING: No tag specified (defaults to latest): {line.strip()}")
 
     # Check for running as root (no USER instruction)
     has_user = any(
@@ -74,9 +72,7 @@ def validate_dockerfile(path: str | Path) -> list[str]:
     has_apt_update = any("apt-get update" in line for line in lines)
     has_apt_cleanup = any("rm -rf /var/lib/apt/lists" in line for line in lines)
     if has_apt_update and not has_apt_cleanup:
-        issues.append(
-            "WARNING: apt-get update without 'rm -rf /var/lib/apt/lists/*' cleanup"
-        )
+        issues.append("WARNING: apt-get update without 'rm -rf /var/lib/apt/lists/*' cleanup")
 
     # Check for HEALTHCHECK
     has_healthcheck = any(
@@ -97,14 +93,10 @@ def validate_dockerfile(path: str | Path) -> list[str]:
         issues.append("INFO: No EXPOSE instruction found")
 
     # Check for secrets in ENV instructions
-    secret_pattern = re.compile(
-        r"(password|secret|api_key|token)\s*=\s*['\"][^$]", re.IGNORECASE
-    )
+    secret_pattern = re.compile(r"(password|secret|api_key|token)\s*=\s*['\"][^$]", re.IGNORECASE)
     for line in lines:
         if line.strip().upper().startswith("ENV ") and secret_pattern.search(line):
-            issues.append(
-                f"ERROR: Possible hardcoded secret in ENV instruction: {line.strip()}"
-            )
+            issues.append(f"ERROR: Possible hardcoded secret in ENV instruction: {line.strip()}")
 
     # Check for ADD when COPY would suffice (ADD has extra features like tar extraction)
     for line in lines:
@@ -112,9 +104,7 @@ def validate_dockerfile(path: str | Path) -> list[str]:
         if stripped.upper().startswith("ADD ") and not stripped.startswith("#"):
             # ADD is only preferred for URL downloads or tar extraction
             if "http://" not in stripped and "https://" not in stripped:
-                issues.append(
-                    f"INFO: Consider using COPY instead of ADD: {stripped}"
-                )
+                issues.append(f"INFO: Consider using COPY instead of ADD: {stripped}")
 
     return issues
 
@@ -229,9 +219,22 @@ def get_image_size_estimate(dockerfile_path: str | Path) -> int:
             pkg_matches = re.findall(r"\b([a-z][a-z0-9._+-]+)\b", line)
             # Filter out common non-package words
             non_packages = {
-                "apt", "get", "install", "update", "rm", "rf", "var",
-                "lib", "lists", "no", "recommends", "yes",
-                "and", "the", "run", "dev",
+                "apt",
+                "get",
+                "install",
+                "update",
+                "rm",
+                "rf",
+                "var",
+                "lib",
+                "lists",
+                "no",
+                "recommends",
+                "yes",
+                "and",
+                "the",
+                "run",
+                "dev",
             }
             actual_packages = [p for p in pkg_matches if p not in non_packages and len(p) > 2]
             estimated_size += len(actual_packages) * apt_package_size
@@ -243,20 +246,26 @@ def get_image_size_estimate(dockerfile_path: str | Path) -> int:
             # Count non-flag arguments
             pkg_matches = re.findall(r"\b([a-zA-Z][a-zA-Z0-9_-]+)\b", line)
             non_packages = {
-                "pip", "install", "no", "cache", "dir", "upgrade",
-                "RUN", "run", "from", "requirements", "txt",
+                "pip",
+                "install",
+                "no",
+                "cache",
+                "dir",
+                "upgrade",
+                "RUN",
+                "run",
+                "from",
+                "requirements",
+                "txt",
             }
-            actual_packages = [
-                p for p in pkg_matches if p not in non_packages and len(p) > 2
-            ]
+            actual_packages = [p for p in pkg_matches if p not in non_packages and len(p) > 2]
             estimated_size += len(actual_packages) * pip_package_size
 
     # Add estimated COPY layer size (application code)
     copy_count = sum(
         1
         for line in lines
-        if line.strip().upper().startswith("COPY ")
-        and not line.strip().startswith("#")
+        if line.strip().upper().startswith("COPY ") and not line.strip().startswith("#")
     )
     estimated_size += copy_count * 5 * 1024 * 1024  # ~5MB per COPY layer average
 

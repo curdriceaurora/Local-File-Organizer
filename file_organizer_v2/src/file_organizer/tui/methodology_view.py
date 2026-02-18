@@ -3,6 +3,7 @@
 Allows users to choose a file organization methodology (PARA, Johnny Decimal,
 or none) and preview how files would be categorized under the selected scheme.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -231,9 +232,7 @@ class MethodologyView(Vertical):
 
             mapper = CategoryFolderMapper()
             scan = self._scan_dir
-            files = [p for p in scan.rglob("*") if p.is_file()][
-                : self._MAX_SAMPLE_FILES
-            ]
+            files = [p for p in scan.rglob("*") if p.is_file()][: self._MAX_SAMPLE_FILES]
 
             if not files:
                 self.call_from_thread(
@@ -273,15 +272,13 @@ class MethodologyView(Vertical):
             config = create_default_config()
             scheme = config.scheme
 
-            areas = {
-                num: defn.title
-                for num, defn in scheme.areas.items()
-            } if scheme.areas else {}
+            areas = {num: defn.title for num, defn in scheme.areas.items()} if scheme.areas else {}
 
-            categories = {
-                cat_id: defn.title
-                for cat_id, defn in scheme.categories.items()
-            } if scheme.categories else {}
+            categories = (
+                {cat_id: defn.title for cat_id, defn in scheme.categories.items()}
+                if scheme.categories
+                else {}
+            )
 
             self.call_from_thread(
                 self.query_one(MethodologyPreviewPanel).show_jd_preview,

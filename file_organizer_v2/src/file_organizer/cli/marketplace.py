@@ -1,4 +1,5 @@
 """CLI commands for the plugin marketplace."""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -104,7 +105,9 @@ def plugin_info(
     console.print(f"Author: {package.author}")
     console.print(f"Category: {package.category}")
     console.print(f"Tags: {', '.join(package.tags) if package.tags else '-'}")
-    console.print(f"Dependencies: {', '.join(package.dependencies) if package.dependencies else '-'}")
+    console.print(
+        f"Dependencies: {', '.join(package.dependencies) if package.dependencies else '-'}"
+    )
     console.print(f"Repository rating: {package.rating:.1f} ({package.reviews_count} reviews)")
     console.print(f"Local rating: {avg_rating:.1f}")
     console.print(f"Downloads: {package.downloads}")
@@ -212,4 +215,3 @@ def add_review(
         console.print(f"[red]Marketplace error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
     console.print(f"[green]Saved review for[/green] {name}")
-

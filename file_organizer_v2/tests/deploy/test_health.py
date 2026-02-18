@@ -48,35 +48,36 @@ class TestComponentStatus:
 
     def test_component_status_with_message(self) -> None:
         """Verify ComponentStatus stores message correctly."""
-        status = ComponentStatus(
-            name="redis", healthy=False, message="Connection refused"
-        )
+        status = ComponentStatus(name="redis", healthy=False, message="Connection refused")
         assert status.message == "Connection refused"
 
     def test_component_status_with_response_time(self) -> None:
         """Verify ComponentStatus stores response time correctly."""
-        status = ComponentStatus(
-            name="disk", healthy=True, response_time_ms=1.5
-        )
+        status = ComponentStatus(name="disk", healthy=True, response_time_ms=1.5)
         assert status.response_time_ms == 1.5
 
 
 class TestHealthEndpointGetHealth:
     """Tests for HealthEndpoint.get_health() method."""
 
-    def test_get_health_returns_required_keys(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_get_health_returns_required_keys(self, health_endpoint: HealthEndpoint) -> None:
         """Verify get_health returns all required keys."""
-        with mock.patch.object(
-            health_endpoint, "_check_redis",
-            return_value=ComponentStatus(name="redis", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_disk_space",
-            return_value=ComponentStatus(name="disk", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_model_availability",
-            return_value=ComponentStatus(name="model", healthy=True),
+        with (
+            mock.patch.object(
+                health_endpoint,
+                "_check_redis",
+                return_value=ComponentStatus(name="redis", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_disk_space",
+                return_value=ComponentStatus(name="disk", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_model_availability",
+                return_value=ComponentStatus(name="model", healthy=True),
+            ),
         ):
             result = health_endpoint.get_health()
             assert "status" in result
@@ -85,53 +86,68 @@ class TestHealthEndpointGetHealth:
             assert "environment" in result
             assert "components" in result
 
-    def test_get_health_all_healthy(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_get_health_all_healthy(self, health_endpoint: HealthEndpoint) -> None:
         """Verify status is 'healthy' when all components are healthy."""
-        with mock.patch.object(
-            health_endpoint, "_check_redis",
-            return_value=ComponentStatus(name="redis", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_disk_space",
-            return_value=ComponentStatus(name="disk", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_model_availability",
-            return_value=ComponentStatus(name="model", healthy=True),
+        with (
+            mock.patch.object(
+                health_endpoint,
+                "_check_redis",
+                return_value=ComponentStatus(name="redis", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_disk_space",
+                return_value=ComponentStatus(name="disk", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_model_availability",
+                return_value=ComponentStatus(name="model", healthy=True),
+            ),
         ):
             result = health_endpoint.get_health()
             assert result["status"] == "healthy"
 
-    def test_get_health_unhealthy_when_redis_down(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_get_health_unhealthy_when_redis_down(self, health_endpoint: HealthEndpoint) -> None:
         """Verify status is 'unhealthy' when Redis is down."""
-        with mock.patch.object(
-            health_endpoint, "_check_redis",
-            return_value=ComponentStatus(name="redis", healthy=False),
-        ), mock.patch.object(
-            health_endpoint, "_check_disk_space",
-            return_value=ComponentStatus(name="disk", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_model_availability",
-            return_value=ComponentStatus(name="model", healthy=True),
+        with (
+            mock.patch.object(
+                health_endpoint,
+                "_check_redis",
+                return_value=ComponentStatus(name="redis", healthy=False),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_disk_space",
+                return_value=ComponentStatus(name="disk", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_model_availability",
+                return_value=ComponentStatus(name="model", healthy=True),
+            ),
         ):
             result = health_endpoint.get_health()
             assert result["status"] == "unhealthy"
 
-    def test_get_health_unhealthy_when_disk_low(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_get_health_unhealthy_when_disk_low(self, health_endpoint: HealthEndpoint) -> None:
         """Verify status is 'unhealthy' when disk space is low."""
-        with mock.patch.object(
-            health_endpoint, "_check_redis",
-            return_value=ComponentStatus(name="redis", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_disk_space",
-            return_value=ComponentStatus(name="disk", healthy=False),
-        ), mock.patch.object(
-            health_endpoint, "_check_model_availability",
-            return_value=ComponentStatus(name="model", healthy=True),
+        with (
+            mock.patch.object(
+                health_endpoint,
+                "_check_redis",
+                return_value=ComponentStatus(name="redis", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_disk_space",
+                return_value=ComponentStatus(name="disk", healthy=False),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_model_availability",
+                return_value=ComponentStatus(name="model", healthy=True),
+            ),
         ):
             result = health_endpoint.get_health()
             assert result["status"] == "unhealthy"
@@ -140,67 +156,89 @@ class TestHealthEndpointGetHealth:
         self, health_endpoint: HealthEndpoint
     ) -> None:
         """Verify status is 'unhealthy' when model service is unavailable."""
-        with mock.patch.object(
-            health_endpoint, "_check_redis",
-            return_value=ComponentStatus(name="redis", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_disk_space",
-            return_value=ComponentStatus(name="disk", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_model_availability",
-            return_value=ComponentStatus(name="model", healthy=False),
+        with (
+            mock.patch.object(
+                health_endpoint,
+                "_check_redis",
+                return_value=ComponentStatus(name="redis", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_disk_space",
+                return_value=ComponentStatus(name="disk", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_model_availability",
+                return_value=ComponentStatus(name="model", healthy=False),
+            ),
         ):
             result = health_endpoint.get_health()
             assert result["status"] == "unhealthy"
 
-    def test_get_health_includes_version(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_get_health_includes_version(self, health_endpoint: HealthEndpoint) -> None:
         """Verify get_health includes the application version."""
-        with mock.patch.object(
-            health_endpoint, "_check_redis",
-            return_value=ComponentStatus(name="redis", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_disk_space",
-            return_value=ComponentStatus(name="disk", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_model_availability",
-            return_value=ComponentStatus(name="model", healthy=True),
+        with (
+            mock.patch.object(
+                health_endpoint,
+                "_check_redis",
+                return_value=ComponentStatus(name="redis", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_disk_space",
+                return_value=ComponentStatus(name="disk", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_model_availability",
+                return_value=ComponentStatus(name="model", healthy=True),
+            ),
         ):
             result = health_endpoint.get_health()
             assert isinstance(result["version"], str)
             assert len(str(result["version"])) > 0
 
-    def test_get_health_uptime_positive(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_get_health_uptime_positive(self, health_endpoint: HealthEndpoint) -> None:
         """Verify uptime_seconds is positive when start_time is in the past."""
-        with mock.patch.object(
-            health_endpoint, "_check_redis",
-            return_value=ComponentStatus(name="redis", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_disk_space",
-            return_value=ComponentStatus(name="disk", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_model_availability",
-            return_value=ComponentStatus(name="model", healthy=True),
+        with (
+            mock.patch.object(
+                health_endpoint,
+                "_check_redis",
+                return_value=ComponentStatus(name="redis", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_disk_space",
+                return_value=ComponentStatus(name="disk", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_model_availability",
+                return_value=ComponentStatus(name="model", healthy=True),
+            ),
         ):
             result = health_endpoint.get_health()
             assert result["uptime_seconds"] > 0  # type: ignore[operator]
 
-    def test_get_health_includes_environment(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_get_health_includes_environment(self, health_endpoint: HealthEndpoint) -> None:
         """Verify get_health includes the deployment environment."""
-        with mock.patch.object(
-            health_endpoint, "_check_redis",
-            return_value=ComponentStatus(name="redis", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_disk_space",
-            return_value=ComponentStatus(name="disk", healthy=True),
-        ), mock.patch.object(
-            health_endpoint, "_check_model_availability",
-            return_value=ComponentStatus(name="model", healthy=True),
+        with (
+            mock.patch.object(
+                health_endpoint,
+                "_check_redis",
+                return_value=ComponentStatus(name="redis", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_disk_space",
+                return_value=ComponentStatus(name="disk", healthy=True),
+            ),
+            mock.patch.object(
+                health_endpoint,
+                "_check_model_availability",
+                return_value=ComponentStatus(name="model", healthy=True),
+            ),
         ):
             result = health_endpoint.get_health()
             assert result["environment"] == "dev"
@@ -209,20 +247,27 @@ class TestHealthEndpointGetHealth:
         self, health_endpoint: HealthEndpoint
     ) -> None:
         """Verify each component in the health response has required keys."""
-        with mock.patch.object(
-            health_endpoint, "_check_redis",
-            return_value=ComponentStatus(
-                name="redis", healthy=True, message="ok", response_time_ms=1.0
+        with (
+            mock.patch.object(
+                health_endpoint,
+                "_check_redis",
+                return_value=ComponentStatus(
+                    name="redis", healthy=True, message="ok", response_time_ms=1.0
+                ),
             ),
-        ), mock.patch.object(
-            health_endpoint, "_check_disk_space",
-            return_value=ComponentStatus(
-                name="disk", healthy=True, message="ok", response_time_ms=0.5
+            mock.patch.object(
+                health_endpoint,
+                "_check_disk_space",
+                return_value=ComponentStatus(
+                    name="disk", healthy=True, message="ok", response_time_ms=0.5
+                ),
             ),
-        ), mock.patch.object(
-            health_endpoint, "_check_model_availability",
-            return_value=ComponentStatus(
-                name="model", healthy=True, message="ok", response_time_ms=2.0
+            mock.patch.object(
+                health_endpoint,
+                "_check_model_availability",
+                return_value=ComponentStatus(
+                    name="model", healthy=True, message="ok", response_time_ms=2.0
+                ),
             ),
         ):
             result = health_endpoint.get_health()
@@ -239,26 +284,18 @@ class TestHealthEndpointGetHealth:
 class TestHealthEndpointRedisCheck:
     """Tests for Redis health check."""
 
-    def test_check_redis_returns_bool(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_check_redis_returns_bool(self, health_endpoint: HealthEndpoint) -> None:
         """Verify check_redis returns a boolean."""
         result = health_endpoint.check_redis()
         assert isinstance(result, bool)
 
-    def test_check_redis_connection_refused(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_check_redis_connection_refused(self, health_endpoint: HealthEndpoint) -> None:
         """Verify check_redis returns False when connection is refused."""
         # Use a port that's unlikely to be listening
-        health_endpoint.config = DeploymentConfig(
-            redis_url="redis://localhost:59999/0"
-        )
+        health_endpoint.config = DeploymentConfig(redis_url="redis://localhost:59999/0")
         assert health_endpoint.check_redis() is False
 
-    def test_check_redis_socket_error(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_check_redis_socket_error(self, health_endpoint: HealthEndpoint) -> None:
         """Verify check_redis handles socket errors gracefully."""
         with mock.patch("socket.socket") as mock_socket:
             mock_sock_instance = mock.MagicMock()
@@ -268,9 +305,7 @@ class TestHealthEndpointRedisCheck:
             result = health_endpoint.check_redis()
             assert result is False
 
-    def test_internal_check_redis_has_response_time(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_internal_check_redis_has_response_time(self, health_endpoint: HealthEndpoint) -> None:
         """Verify _check_redis records response time."""
         status = health_endpoint._check_redis()
         assert status.response_time_ms >= 0
@@ -279,9 +314,7 @@ class TestHealthEndpointRedisCheck:
 class TestHealthEndpointDiskCheck:
     """Tests for disk space health check."""
 
-    def test_check_disk_space_returns_bool(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_check_disk_space_returns_bool(self, health_endpoint: HealthEndpoint) -> None:
         """Verify check_disk_space returns a boolean."""
         result = health_endpoint.check_disk_space()
         assert isinstance(result, bool)
@@ -300,9 +333,7 @@ class TestHealthEndpointDiskCheck:
         health_endpoint.min_disk_space_mb = 999_999_999  # ~1PB
         assert health_endpoint.check_disk_space() is False
 
-    def test_check_disk_space_uses_fallback_path(
-        self, dev_config: DeploymentConfig
-    ) -> None:
+    def test_check_disk_space_uses_fallback_path(self, dev_config: DeploymentConfig) -> None:
         """Verify disk check uses fallback path when data dir doesn't exist."""
         dev_config.data_directory = Path("/nonexistent/path/fo-test")
         endpoint = HealthEndpoint(config=dev_config, min_disk_space_mb=1)
@@ -322,24 +353,18 @@ class TestHealthEndpointDiskCheck:
 class TestHealthEndpointModelCheck:
     """Tests for model availability health check."""
 
-    def test_check_model_availability_returns_bool(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_check_model_availability_returns_bool(self, health_endpoint: HealthEndpoint) -> None:
         """Verify check_model_availability returns a boolean."""
         result = health_endpoint.check_model_availability()
         assert isinstance(result, bool)
 
-    def test_check_model_unavailable_on_closed_port(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_check_model_unavailable_on_closed_port(self, health_endpoint: HealthEndpoint) -> None:
         """Verify model check returns False when port is closed."""
         health_endpoint.model_host = "localhost"
         health_endpoint.model_port = 59998  # Unlikely to be open
         assert health_endpoint.check_model_availability() is False
 
-    def test_check_model_socket_error(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_check_model_socket_error(self, health_endpoint: HealthEndpoint) -> None:
         """Verify model check handles socket errors gracefully."""
         with mock.patch("socket.socket") as mock_socket:
             mock_sock_instance = mock.MagicMock()
@@ -349,9 +374,7 @@ class TestHealthEndpointModelCheck:
             result = health_endpoint.check_model_availability()
             assert result is False
 
-    def test_internal_check_model_has_response_time(
-        self, health_endpoint: HealthEndpoint
-    ) -> None:
+    def test_internal_check_model_has_response_time(self, health_endpoint: HealthEndpoint) -> None:
         """Verify _check_model_availability records response time."""
         status = health_endpoint._check_model_availability()
         assert status.response_time_ms >= 0

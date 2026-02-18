@@ -3,6 +3,7 @@ Unit tests for Scoring Module
 
 Tests pattern scoring, ranking, filtering, and statistical analysis.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -21,11 +22,11 @@ class TestScoredPattern:
         """Test creating a scored pattern."""
         pattern = ScoredPattern(
             pattern_id="p1",
-            pattern_data={'name': 'test'},
+            pattern_data={"name": "test"},
             confidence=0.8,
             frequency_score=0.7,
             recency_score=0.9,
-            consistency_score=0.8
+            consistency_score=0.8,
         )
 
         assert pattern.pattern_id == "p1"
@@ -41,10 +42,10 @@ class TestScoredPattern:
             frequency_score=0.5,
             recency_score=0.5,
             consistency_score=0.5,
-            metadata={'source': 'test'}
+            metadata={"source": "test"},
         )
 
-        assert pattern.metadata['source'] == 'test'
+        assert pattern.metadata["source"] == "test"
 
 
 class TestPatternScorer:
@@ -79,7 +80,7 @@ class TestPatternScorer:
             ScoredPattern("p3", {}, 0.5, 0.6, 0.5, 0.5),
         ]
 
-        ranked = PatternScorer.rank_patterns(patterns, key='frequency_score')
+        ranked = PatternScorer.rank_patterns(patterns, key="frequency_score")
 
         assert ranked[0].pattern_id == "p2"
         assert ranked[1].pattern_id == "p3"
@@ -107,9 +108,7 @@ class TestPatternScorer:
         ]
 
         filtered = PatternScorer.filter_by_confidence(
-            patterns,
-            min_confidence=0.5,
-            max_confidence=0.8
+            patterns, min_confidence=0.5, max_confidence=0.8
         )
 
         assert len(filtered) == 1
@@ -144,27 +143,19 @@ class TestPatternScorer:
 
     def test_calculate_weighted_score(self):
         """Test calculating weighted score."""
-        scores = {
-            'frequency': 0.8,
-            'recency': 0.6,
-            'consistency': 0.9
-        }
+        scores = {"frequency": 0.8, "recency": 0.6, "consistency": 0.9}
 
-        weights = {
-            'frequency': 0.4,
-            'recency': 0.3,
-            'consistency': 0.3
-        }
+        weights = {"frequency": 0.4, "recency": 0.3, "consistency": 0.3}
 
         weighted = PatternScorer.calculate_weighted_score(scores, weights)
 
-        expected = (0.8 * 0.4 + 0.6 * 0.3 + 0.9 * 0.3)
+        expected = 0.8 * 0.4 + 0.6 * 0.3 + 0.9 * 0.3
         assert abs(weighted - expected) < 0.001
 
     def test_calculate_weighted_score_zero_weights(self):
         """Test weighted score with zero total weight."""
-        scores = {'a': 0.5}
-        weights = {'a': 0.0}
+        scores = {"a": 0.5}
+        weights = {"a": 0.0}
 
         weighted = PatternScorer.calculate_weighted_score(scores, weights)
 
@@ -199,10 +190,10 @@ class TestPatternScorer:
             ScoredPattern("p2", {}, 0.8, 0.8, 0.8, 0.8),
         ]
 
-        aggregated = PatternScorer.aggregate_scores(patterns, aggregation='mean')
+        aggregated = PatternScorer.aggregate_scores(patterns, aggregation="mean")
 
-        assert aggregated['confidence'] == 0.7
-        assert aggregated['frequency_score'] == 0.7
+        assert aggregated["confidence"] == 0.7
+        assert aggregated["frequency_score"] == 0.7
 
     def test_aggregate_scores_median(self):
         """Test aggregating scores with median."""
@@ -212,9 +203,9 @@ class TestPatternScorer:
             ScoredPattern("p3", {}, 0.9, 0.9, 0.9, 0.9),
         ]
 
-        aggregated = PatternScorer.aggregate_scores(patterns, aggregation='median')
+        aggregated = PatternScorer.aggregate_scores(patterns, aggregation="median")
 
-        assert aggregated['confidence'] == 0.7
+        assert aggregated["confidence"] == 0.7
 
     def test_aggregate_scores_min_max(self):
         """Test aggregating scores with min/max."""
@@ -223,17 +214,17 @@ class TestPatternScorer:
             ScoredPattern("p2", {}, 0.9, 0.9, 0.9, 0.9),
         ]
 
-        min_agg = PatternScorer.aggregate_scores(patterns, aggregation='min')
-        max_agg = PatternScorer.aggregate_scores(patterns, aggregation='max')
+        min_agg = PatternScorer.aggregate_scores(patterns, aggregation="min")
+        max_agg = PatternScorer.aggregate_scores(patterns, aggregation="max")
 
-        assert min_agg['confidence'] == 0.5
-        assert max_agg['confidence'] == 0.9
+        assert min_agg["confidence"] == 0.5
+        assert max_agg["confidence"] == 0.9
 
     def test_aggregate_scores_empty(self):
         """Test aggregating empty pattern list."""
-        aggregated = PatternScorer.aggregate_scores([], aggregation='mean')
+        aggregated = PatternScorer.aggregate_scores([], aggregation="mean")
 
-        assert aggregated['confidence'] == 0.0
+        assert aggregated["confidence"] == 0.0
 
     def test_calculate_confidence_interval(self):
         """Test calculating confidence interval."""
@@ -272,19 +263,19 @@ class TestScoreAnalyzer:
 
         distribution = ScoreAnalyzer.analyze_score_distribution(patterns)
 
-        assert distribution['count'] == 3
-        assert distribution['mean'] == 0.7
-        assert distribution['median'] == 0.7
-        assert distribution['min'] == 0.5
-        assert distribution['max'] == 0.9
-        assert 'std_dev' in distribution
+        assert distribution["count"] == 3
+        assert distribution["mean"] == 0.7
+        assert distribution["median"] == 0.7
+        assert distribution["min"] == 0.5
+        assert distribution["max"] == 0.9
+        assert "std_dev" in distribution
 
     def test_analyze_score_distribution_empty(self):
         """Test distribution analysis with empty list."""
         distribution = ScoreAnalyzer.analyze_score_distribution([])
 
-        assert distribution['count'] == 0
-        assert distribution['mean'] == 0.0
+        assert distribution["count"] == 0
+        assert distribution["mean"] == 0.0
 
     def test_identify_outliers_iqr(self):
         """Test identifying outliers using IQR method."""
@@ -296,11 +287,7 @@ class TestScoreAnalyzer:
             ScoredPattern("p5", {}, 0.9, 0.9, 0.9, 0.9),  # Potential outlier
         ]
 
-        outliers, inliers = ScoreAnalyzer.identify_outliers(
-            patterns,
-            method='iqr',
-            threshold=1.5
-        )
+        outliers, inliers = ScoreAnalyzer.identify_outliers(patterns, method="iqr", threshold=1.5)
 
         assert len(outliers) >= 0  # May or may not detect outliers
         assert len(inliers) >= 0
@@ -315,9 +302,7 @@ class TestScoreAnalyzer:
         ]
 
         outliers, inliers = ScoreAnalyzer.identify_outliers(
-            patterns,
-            method='zscore',
-            threshold=2.0
+            patterns, method="zscore", threshold=2.0
         )
 
         assert len(outliers) + len(inliers) == len(patterns)
@@ -369,9 +354,9 @@ class TestScoreAnalyzer:
 
         comparison = ScoreAnalyzer.compare_score_groups(group1, group2)
 
-        assert comparison['valid'] is True
-        assert comparison['group1_mean'] < comparison['group2_mean']
-        assert comparison['mean_difference'] > 0
+        assert comparison["valid"] is True
+        assert comparison["group1_mean"] < comparison["group2_mean"]
+        assert comparison["mean_difference"] > 0
 
     def test_compare_score_groups_empty(self):
         """Test comparing with empty group."""
@@ -380,7 +365,7 @@ class TestScoreAnalyzer:
 
         comparison = ScoreAnalyzer.compare_score_groups(group1, group2)
 
-        assert comparison['valid'] is False
+        assert comparison["valid"] is False
 
 
 class TestScoringIntegration:
@@ -390,10 +375,10 @@ class TestScoringIntegration:
         """Test complete scoring pipeline."""
         # Create patterns
         patterns = [
-            ScoredPattern("p1", {'name': 'report'}, 0.9, 0.9, 0.9, 0.9),
-            ScoredPattern("p2", {'name': 'invoice'}, 0.7, 0.7, 0.7, 0.7),
-            ScoredPattern("p3", {'name': 'draft'}, 0.3, 0.3, 0.3, 0.3),
-            ScoredPattern("p4", {'name': 'final'}, 0.8, 0.8, 0.8, 0.8),
+            ScoredPattern("p1", {"name": "report"}, 0.9, 0.9, 0.9, 0.9),
+            ScoredPattern("p2", {"name": "invoice"}, 0.7, 0.7, 0.7, 0.7),
+            ScoredPattern("p3", {"name": "draft"}, 0.3, 0.3, 0.3, 0.3),
+            ScoredPattern("p4", {"name": "final"}, 0.8, 0.8, 0.8, 0.8),
         ]
 
         # Filter by confidence
@@ -410,8 +395,8 @@ class TestScoringIntegration:
 
         # Analyze distribution
         distribution = ScoreAnalyzer.analyze_score_distribution(filtered)
-        assert distribution['count'] == 3
+        assert distribution["count"] == 3
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

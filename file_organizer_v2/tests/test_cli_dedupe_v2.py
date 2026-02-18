@@ -1,4 +1,5 @@
 """Tests for the dedupe_v2 Typer sub-app."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -88,9 +89,7 @@ class TestDedupeScan:
         assert result.exit_code == 0
         assert "1" in result.output  # 1 group
 
-    def test_scan_json_output(
-        self, tmp_path: Path, mock_detector_with_groups: MagicMock
-    ) -> None:
+    def test_scan_json_output(self, tmp_path: Path, mock_detector_with_groups: MagicMock) -> None:
         from file_organizer.cli.dedupe_v2 import dedupe_app
 
         with patch(
@@ -106,9 +105,7 @@ class TestDedupeScan:
 class TestDedupeResolve:
     """Tests for the resolve command."""
 
-    def test_resolve_no_duplicates(
-        self, tmp_path: Path, mock_detector: MagicMock
-    ) -> None:
+    def test_resolve_no_duplicates(self, tmp_path: Path, mock_detector: MagicMock) -> None:
         from file_organizer.cli.dedupe_v2 import dedupe_app
 
         with patch(
@@ -119,9 +116,7 @@ class TestDedupeResolve:
         assert result.exit_code == 0
         assert "no duplicates" in result.output.lower()
 
-    def test_resolve_dry_run(
-        self, tmp_path: Path, mock_detector_with_groups: MagicMock
-    ) -> None:
+    def test_resolve_dry_run(self, tmp_path: Path, mock_detector_with_groups: MagicMock) -> None:
         from file_organizer.cli.dedupe_v2 import dedupe_app
 
         with patch(
@@ -149,9 +144,7 @@ class TestDedupeReport:
             result = runner.invoke(dedupe_app, ["report", str(tmp_path)])
         assert result.exit_code == 0
 
-    def test_report_json(
-        self, tmp_path: Path, mock_detector: MagicMock
-    ) -> None:
+    def test_report_json(self, tmp_path: Path, mock_detector: MagicMock) -> None:
         from file_organizer.cli.dedupe_v2 import dedupe_app
 
         with patch(

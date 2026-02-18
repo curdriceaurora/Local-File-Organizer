@@ -5,6 +5,7 @@ of the existing pub/sub layer.  Services register handlers and
 communicate through a shared bus with automatic request tracking,
 timeout support, and error handling.
 """
+
 from __future__ import annotations
 
 import logging
@@ -198,9 +199,7 @@ class ServiceBus:
         """
         if name in self._services:
             del self._services[name]
-            logger.info(
-                "Deregistered service '%s' from bus '%s'", name, self._name
-            )
+            logger.info("Deregistered service '%s' from bus '%s'", name, self._name)
             return True
         return False
 
@@ -259,9 +258,7 @@ class ServiceBus:
         handler = self._services.get(target)
         if handler is None:
             self._error_count += 1
-            logger.warning(
-                "Service '%s' not found on bus '%s'", target, self._name
-            )
+            logger.warning("Service '%s' not found on bus '%s'", target, self._name)
             return ServiceResponse(
                 request_id=request.id,
                 success=False,

@@ -3,6 +3,7 @@
 Provides a high-level API for publishing file and scan events
 to Redis Streams.
 """
+
 from __future__ import annotations
 
 import logging
@@ -174,6 +175,5 @@ class EventPublisher:
     def __repr__(self) -> str:
         """String representation."""
         return (
-            f"EventPublisher(connected={self.is_connected}, "
-            f"events_published={self._event_count})"
+            f"EventPublisher(connected={self.is_connected}, events_published={self._event_count})"
         )

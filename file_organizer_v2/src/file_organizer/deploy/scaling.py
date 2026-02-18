@@ -50,13 +50,10 @@ class ScalingConfig:
     def __post_init__(self) -> None:
         """Validate configuration values."""
         if self.min_replicas < 1:
-            raise ValueError(
-                f"min_replicas must be >= 1, got {self.min_replicas}"
-            )
+            raise ValueError(f"min_replicas must be >= 1, got {self.min_replicas}")
         if self.max_replicas < self.min_replicas:
             raise ValueError(
-                f"max_replicas ({self.max_replicas}) must be >= "
-                f"min_replicas ({self.min_replicas})"
+                f"max_replicas ({self.max_replicas}) must be >= min_replicas ({self.min_replicas})"
             )
         if not 0.0 < self.scale_down_threshold < self.scale_up_threshold <= 100.0:
             raise ValueError(
@@ -64,9 +61,7 @@ class ScalingConfig:
                 f"< scale_up ({self.scale_up_threshold}) <= 100"
             )
         if self.cooldown_seconds < 0:
-            raise ValueError(
-                f"cooldown_seconds must be >= 0, got {self.cooldown_seconds}"
-            )
+            raise ValueError(f"cooldown_seconds must be >= 0, got {self.cooldown_seconds}")
 
 
 @dataclass(frozen=True)

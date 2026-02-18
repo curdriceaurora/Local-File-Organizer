@@ -1,6 +1,7 @@
 """
 Chart generation module for terminal-based visualizations.
 """
+
 from __future__ import annotations
 
 import logging
@@ -20,12 +21,7 @@ class ChartGenerator:
         """
         self.use_unicode = use_unicode
 
-    def create_pie_chart(
-        self,
-        data: dict[str, float],
-        title: str,
-        width: int = 40
-    ) -> str:
+    def create_pie_chart(self, data: dict[str, float], title: str, width: int = 40) -> str:
         """
         Create ASCII pie chart.
 
@@ -54,12 +50,7 @@ class ChartGenerator:
 
         return "\n".join(lines)
 
-    def create_bar_chart(
-        self,
-        data: dict[str, int],
-        title: str,
-        width: int = 50
-    ) -> str:
+    def create_bar_chart(self, data: dict[str, int], title: str, width: int = 50) -> str:
         """
         Create ASCII bar chart.
 
@@ -87,12 +78,7 @@ class ChartGenerator:
 
         return "\n".join(lines)
 
-    def create_trend_line(
-        self,
-        data: list[tuple[str, float]],
-        title: str,
-        height: int = 10
-    ) -> str:
+    def create_trend_line(self, data: list[tuple[str, float]], title: str, height: int = 10) -> str:
         """
         Create ASCII trend line.
 
@@ -117,10 +103,7 @@ class ChartGenerator:
         lines = [title, "=" * len(title)]
 
         # Normalize values to height
-        normalized = [
-            int(((v - min_val) / (max_val - min_val)) * (height - 1))
-            for v in values
-        ]
+        normalized = [int(((v - min_val) / (max_val - min_val)) * (height - 1)) for v in values]
 
         # Build chart from top to bottom
         for level in range(height - 1, -1, -1):

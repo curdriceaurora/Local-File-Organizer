@@ -5,6 +5,7 @@ This module provides index management, table analysis, vacuuming, query plan
 inspection, and pragma optimization for SQLite databases used by the file
 organizer system.
 """
+
 from __future__ import annotations
 
 import logging
@@ -132,9 +133,7 @@ class DatabaseOptimizer:
     # Index management
     # ------------------------------------------------------------------
 
-    def create_indexes(
-        self, extra_indexes: list[tuple[str, str, str, bool]] | None = None
-    ) -> int:
+    def create_indexes(self, extra_indexes: list[tuple[str, str, str, bool]] | None = None) -> int:
         """Create optimal indexes for common query patterns.
 
         Indexes are created with ``IF NOT EXISTS`` so calling this method
@@ -157,16 +156,11 @@ class DatabaseOptimizer:
         for idx_name, table, columns, unique in all_indexes:
             # Skip indexes for tables that don't exist yet.
             if not self._table_exists(table):
-                logger.debug(
-                    "Skipping index %s: table %s does not exist", idx_name, table
-                )
+                logger.debug("Skipping index %s: table %s does not exist", idx_name, table)
                 continue
 
             unique_kw = "UNIQUE " if unique else ""
-            sql = (
-                f"CREATE {unique_kw}INDEX IF NOT EXISTS "
-                f"{idx_name} ON {table}({columns})"
-            )
+            sql = f"CREATE {unique_kw}INDEX IF NOT EXISTS {idx_name} ON {table}({columns})"
             try:
                 conn.execute(sql)
                 created += 1
@@ -238,9 +232,7 @@ class DatabaseOptimizer:
     # Query plan inspection
     # ------------------------------------------------------------------
 
-    def get_query_plan(
-        self, query: str, params: tuple[object, ...] = ()
-    ) -> QueryPlan:
+    def get_query_plan(self, query: str, params: tuple[object, ...] = ()) -> QueryPlan:
         """Retrieve the execution plan for a SQL query.
 
         Uses ``EXPLAIN QUERY PLAN`` to obtain the planner's strategy.
@@ -283,9 +275,7 @@ class DatabaseOptimizer:
                 cost += 1.0
 
         plan = QueryPlan(query=query, steps=steps, estimated_cost=cost)
-        logger.debug(
-            "Query plan for '%s': cost=%.1f, steps=%d", query, cost, len(steps)
-        )
+        logger.debug("Query plan for '%s': cost=%.1f, steps=%d", query, cost, len(steps))
         return plan
 
     # ------------------------------------------------------------------
@@ -359,8 +349,7 @@ class DatabaseOptimizer:
     def _list_tables(self) -> list[str]:
         """Return a list of all user-created tables."""
         cursor = self.connection.execute(
-            "SELECT name FROM sqlite_master "
-            "WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
         )
         return [row[0] for row in cursor.fetchall()]
 
@@ -376,8 +365,7 @@ class DatabaseOptimizer:
     def _count_indexes(self, table: str) -> int:
         """Return the number of indexes on *table*."""
         cursor = self.connection.execute(
-            "SELECT COUNT(*) FROM sqlite_master "
-            "WHERE type='index' AND tbl_name=?",
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name=?",
             (table,),
         )
         result = cursor.fetchone()

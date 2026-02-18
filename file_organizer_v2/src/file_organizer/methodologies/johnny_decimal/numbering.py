@@ -4,6 +4,7 @@ Johnny Decimal Number Generation
 This module provides number generation logic for the Johnny Decimal system,
 including automatic number assignment, validation, and conflict detection.
 """
+
 from __future__ import annotations
 
 import logging
@@ -167,9 +168,7 @@ class JohnnyDecimalGenerator:
             if self.is_number_available(test_num):
                 return item_id
 
-        raise InvalidNumberError(
-            f"No available ID numbers in category {area:02d}.{category:02d}"
-        )
+        raise InvalidNumberError(f"No available ID numbers in category {area:02d}.{category:02d}")
 
     def generate_area_number(
         self,
@@ -192,9 +191,7 @@ class JohnnyDecimalGenerator:
             InvalidNumberError: If number cannot be generated
         """
         if preferred_area is not None:
-            test_num = JohnnyDecimalNumber(
-                area=preferred_area, name=name, description=description
-            )
+            test_num = JohnnyDecimalNumber(area=preferred_area, name=name, description=description)
             if self.is_number_available(test_num):
                 return test_num
 
@@ -236,9 +233,7 @@ class JohnnyDecimalGenerator:
 
         # Find next available
         category = self.get_next_available_category(area)
-        return JohnnyDecimalNumber(
-            area=area, category=category, name=name, description=description
-        )
+        return JohnnyDecimalNumber(area=area, category=category, name=name, description=description)
 
     def generate_id_number(
         self,
@@ -311,7 +306,8 @@ class JohnnyDecimalGenerator:
         for area_num, area_def in self.scheme.areas.items():
             if area_def.matches_keyword(content) or area_def.matches_keyword(filename):
                 matches = sum(
-                    1 for kw in area_def.keywords
+                    1
+                    for kw in area_def.keywords
                     if kw.lower() in content.lower() or kw.lower() in filename.lower()
                 )
                 if matches > max_matches:
@@ -343,20 +339,13 @@ class JohnnyDecimalGenerator:
         # Generate the number
         if best_category and prefer_category:
             # Use the matched category directly
-            number = JohnnyDecimalNumber(
-                area=best_category.area,
-                category=best_category.category
-            )
+            number = JohnnyDecimalNumber(area=best_category.area, category=best_category.category)
             # Check if it's available, if not generate an ID within it
             if not self.is_number_available(number):
                 try:
-                    item_id = self.get_next_available_id(
-                        best_category.area, best_category.category
-                    )
+                    item_id = self.get_next_available_id(best_category.area, best_category.category)
                     number = JohnnyDecimalNumber(
-                        area=best_category.area,
-                        category=best_category.category,
-                        item_id=item_id
+                        area=best_category.area, category=best_category.category, item_id=item_id
                     )
                     reasons.append("Category matched but occupied, using ID level")
                 except InvalidNumberError:
@@ -371,9 +360,7 @@ class JohnnyDecimalGenerator:
                 if not prefer_category:
                     # Add ID level
                     item_id = self.get_next_available_id(best_area, category)
-                    number = JohnnyDecimalNumber(
-                        area=best_area, category=category, item_id=item_id
-                    )
+                    number = JohnnyDecimalNumber(area=best_area, category=category, item_id=item_id)
             except InvalidNumberError:
                 number = JohnnyDecimalNumber(area=best_area)
                 reasons.append("Using area-level number")
@@ -411,15 +398,11 @@ class JohnnyDecimalGenerator:
         # Check if number is already used
         if number.formatted_number in self._used_numbers:
             existing_path = self._number_mappings.get(number.formatted_number)
-            errors.append(
-                f"Number {number.formatted_number} is already used by {existing_path}"
-            )
+            errors.append(f"Number {number.formatted_number} is already used by {existing_path}")
 
         return len(errors) == 0, errors
 
-    def find_conflicts(
-        self, number: JohnnyDecimalNumber
-    ) -> list[tuple[str, Path]]:
+    def find_conflicts(self, number: JohnnyDecimalNumber) -> list[tuple[str, Path]]:
         """
         Find all numbers that conflict with the given number.
 
@@ -538,16 +521,13 @@ class JohnnyDecimalGenerator:
         """
         stats = {
             "total_numbers": len(self._used_numbers),
-            "areas_used": len({
-                JohnnyDecimalNumber.from_string(n).area
-                for n in self._used_numbers
-            }),
-            "categories_used": len({
-                n for n in self._used_numbers if "." in n and n.count(".") == 1
-            }),
-            "ids_used": len({
-                n for n in self._used_numbers if n.count(".") == 2
-            }),
+            "areas_used": len(
+                {JohnnyDecimalNumber.from_string(n).area for n in self._used_numbers}
+            ),
+            "categories_used": len(
+                {n for n in self._used_numbers if "." in n and n.count(".") == 1}
+            ),
+            "ids_used": len({n for n in self._used_numbers if n.count(".") == 2}),
             "reserved_numbers": len(self.scheme.reserved_numbers),
         }
 

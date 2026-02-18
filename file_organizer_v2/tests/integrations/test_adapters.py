@@ -1,4 +1,5 @@
 """Unit tests for third-party integration adapters."""
+
 from __future__ import annotations
 
 import asyncio
@@ -111,7 +112,9 @@ def test_workflow_integration_generates_alfred_and_raycast_payloads(tmp_path: Pa
     assert raycast_payload["metadata"]["summary"] == "Weekly report"
 
 
-def test_workflow_integration_reuses_single_timestamp(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_workflow_integration_reuses_single_timestamp(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     output_dir = tmp_path / "workflow"
     source = tmp_path / "report.md"
     source.write_text("# report\n", encoding="utf-8")
@@ -121,7 +124,9 @@ def test_workflow_integration_reuses_single_timestamp(monkeypatch: pytest.Monkey
 
         @classmethod
         def now(cls, tz: tzinfo | None = None) -> datetime:
-            value = datetime(2026, 2, 9, 12, 0, 0, tzinfo=timezone.utc) + timedelta(seconds=cls.calls)
+            value = datetime(2026, 2, 9, 12, 0, 0, tzinfo=timezone.utc) + timedelta(
+                seconds=cls.calls
+            )
             cls.calls += 1
             if tz is None:
                 return value
@@ -138,7 +143,10 @@ def test_workflow_integration_reuses_single_timestamp(monkeypatch: pytest.Monkey
     )
 
     assert asyncio.run(integration.connect()) is True
-    assert asyncio.run(integration.send_file(str(source), metadata={"summary": "Weekly report"})) is True
+    assert (
+        asyncio.run(integration.send_file(str(source), metadata={"summary": "Weekly report"}))
+        is True
+    )
 
     alfred_file = next(output_dir.glob("alfred-*.json"))
     raycast_file = next(output_dir.glob("raycast-*.json"))

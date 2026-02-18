@@ -1,4 +1,5 @@
 """Tests for build configuration and build script utilities."""
+
 from __future__ import annotations
 
 import sys

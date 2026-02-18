@@ -19,6 +19,7 @@ from file_organizer.api.realtime import realtime_manager
 # Version-aware fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def python_version() -> tuple[int, int]:
     """Return the current Python (major, minor) version tuple.

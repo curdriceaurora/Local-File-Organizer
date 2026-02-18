@@ -3,6 +3,7 @@
 Provides local JSON-based audit logging for tracking event actions.
 Privacy-first design with no external database dependencies.
 """
+
 from __future__ import annotations
 
 import json
@@ -156,9 +157,7 @@ class AuditLogger:
 
         return entry
 
-    def query_audit_log(
-        self, filters: AuditFilter | None = None
-    ) -> list[AuditEntry]:
+    def query_audit_log(self, filters: AuditFilter | None = None) -> list[AuditEntry]:
         """Query the audit log with optional filters.
 
         Reads the entire log file and applies filters in memory.
@@ -248,9 +247,7 @@ class AuditLogger:
             f.write(json.dumps(entry.to_dict()) + "\n")
 
     @staticmethod
-    def _matches_filter(
-        entry: AuditEntry, filters: AuditFilter | None
-    ) -> bool:
+    def _matches_filter(entry: AuditEntry, filters: AuditFilter | None) -> bool:
         """Check if an audit entry matches the given filters.
 
         Args:

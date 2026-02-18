@@ -1,4 +1,5 @@
 """Regression tests for build/packaging scripts."""
+
 from __future__ import annotations
 
 from pathlib import Path

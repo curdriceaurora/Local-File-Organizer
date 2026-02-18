@@ -3,6 +3,7 @@
 These models mirror the server-side API response shapes and provide
 typed deserialization for the client libraries.
 """
+
 from __future__ import annotations
 
 from datetime import datetime

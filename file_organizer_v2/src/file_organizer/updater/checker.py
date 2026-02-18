@@ -3,6 +3,7 @@
 Compares the running version against the latest release and determines
 whether an update is available.
 """
+
 from __future__ import annotations
 
 import re

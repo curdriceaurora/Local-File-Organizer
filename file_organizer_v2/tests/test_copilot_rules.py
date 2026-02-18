@@ -1,4 +1,5 @@
 """Tests for the copilot rule management and preview system."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -212,7 +213,9 @@ class TestPreviewEngine:
             rules=[
                 Rule(
                     name="pdf-rule",
-                    conditions=[RuleCondition(condition_type=ConditionType.EXTENSION, value=".pdf")],
+                    conditions=[
+                        RuleCondition(condition_type=ConditionType.EXTENSION, value=".pdf")
+                    ],
                     action=RuleAction(action_type=ActionType.MOVE, destination="~/PDFs"),
                 ),
             ],
@@ -232,7 +235,9 @@ class TestPreviewEngine:
             rules=[
                 Rule(
                     name="report-rule",
-                    conditions=[RuleCondition(condition_type=ConditionType.NAME_PATTERN, value="report_*")],
+                    conditions=[
+                        RuleCondition(condition_type=ConditionType.NAME_PATTERN, value="report_*")
+                    ],
                     action=RuleAction(action_type=ActionType.MOVE, destination="~/Reports"),
                 ),
             ],
@@ -251,7 +256,9 @@ class TestPreviewEngine:
                 Rule(
                     name="not-tmp",
                     conditions=[
-                        RuleCondition(condition_type=ConditionType.EXTENSION, value=".tmp", negate=True),
+                        RuleCondition(
+                            condition_type=ConditionType.EXTENSION, value=".tmp", negate=True
+                        ),
                     ],
                     action=RuleAction(action_type=ActionType.MOVE, destination="~/Keep"),
                 ),
@@ -276,8 +283,12 @@ class TestPreviewEngine:
             rules=[
                 Rule(
                     name="photo-rule",
-                    conditions=[RuleCondition(condition_type=ConditionType.EXTENSION, value=".jpg")],
-                    action=RuleAction(action_type=ActionType.MOVE, destination="~/Photos/{ext}/{stem}"),
+                    conditions=[
+                        RuleCondition(condition_type=ConditionType.EXTENSION, value=".jpg")
+                    ],
+                    action=RuleAction(
+                        action_type=ActionType.MOVE, destination="~/Photos/{ext}/{stem}"
+                    ),
                 ),
             ],
         )

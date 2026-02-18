@@ -1,4 +1,5 @@
 """Tests for CAD file format readers."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -28,31 +29,31 @@ def sample_dxf_file(tmp_path: Path) -> Path:
     dxf_path = tmp_path / "sample.dxf"
 
     # Create a minimal DXF document
-    doc = ezdxf.new('R2010')
+    doc = ezdxf.new("R2010")
 
     # Set header variables (use valid DXF header vars)
-    doc.header['$LASTSAVEDBY'] = 'Test User'
+    doc.header["$LASTSAVEDBY"] = "Test User"
 
     # Store custom properties via ezdxf's summary info if available
     try:
-        doc.header['$TITLE'] = 'Test Drawing'
+        doc.header["$TITLE"] = "Test Drawing"
     except Exception:
         # $TITLE not supported in this ezdxf version; skip it
         pass
 
     # Add some layers
-    doc.layers.add('Layer1', color=1)
-    doc.layers.add('Layer2', color=2)
-    doc.layers.add('Layer3', color=3)
+    doc.layers.add("Layer1", color=1)
+    doc.layers.add("Layer2", color=2)
+    doc.layers.add("Layer3", color=3)
 
     # Add some entities to modelspace
     msp = doc.modelspace()
     msp.add_line((0, 0), (10, 10))
     msp.add_circle((5, 5), radius=3)
-    msp.add_text('Test Text', dxfattribs={'layer': 'Layer1'})
+    msp.add_text("Test Text", dxfattribs={"layer": "Layer1"})
 
     # Add a block
-    block = doc.blocks.new('TestBlock')
+    block = doc.blocks.new("TestBlock")
     block.add_circle((0, 0), radius=1)
 
     # Save the document
@@ -110,6 +111,7 @@ def sample_iges_file(tmp_path: Path) -> Path:
 
 
 # ===== DXF File Tests =====
+
 
 def test_read_dxf_file_basic(sample_dxf_file: Path) -> None:
     """Test basic DXF file reading."""
@@ -179,6 +181,7 @@ def test_read_dxf_file_nonexistent() -> None:
 
 # ===== DWG File Tests =====
 
+
 def test_read_dwg_file_fallback(tmp_path: Path) -> None:
     """Test DWG file reading fallback when ezdxf can't parse."""
     try:
@@ -210,6 +213,7 @@ def test_read_dwg_file_nonexistent() -> None:
 
 
 # ===== STEP File Tests =====
+
 
 def test_read_step_file_basic(sample_step_file: Path) -> None:
     """Test basic STEP file reading."""
@@ -245,6 +249,7 @@ def test_read_step_file_nonexistent() -> None:
 
 # ===== IGES File Tests =====
 
+
 def test_read_iges_file_basic(sample_iges_file: Path) -> None:
     """Test basic IGES file reading."""
     result = read_iges_file(sample_iges_file)
@@ -270,6 +275,7 @@ def test_read_iges_file_nonexistent() -> None:
 
 
 # ===== CAD File Dispatcher Tests =====
+
 
 def test_read_cad_file_dxf(sample_dxf_file: Path) -> None:
     """Test CAD dispatcher with DXF file."""
@@ -310,6 +316,7 @@ def test_read_cad_file_unsupported(tmp_path: Path) -> None:
 
 
 # ===== Generic read_file Integration Tests =====
+
 
 def test_read_file_dxf_integration(sample_dxf_file: Path) -> None:
     """Test read_file() with DXF format."""
@@ -388,11 +395,13 @@ def test_read_file_igs_extension(tmp_path: Path) -> None:
 
 # ===== Error Handling Tests =====
 
+
 def test_read_dxf_without_ezdxf(tmp_path: Path, monkeypatch) -> None:
     """Test DXF reading when ezdxf is not available."""
     # Temporarily make ezdxf unavailable
     import file_organizer.utils.file_readers as readers
-    monkeypatch.setattr(readers, 'EZDXF_AVAILABLE', False)
+
+    monkeypatch.setattr(readers, "EZDXF_AVAILABLE", False)
 
     dxf_path = tmp_path / "test.dxf"
     dxf_path.write_text("fake dxf content")

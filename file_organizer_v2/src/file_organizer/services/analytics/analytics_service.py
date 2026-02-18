@@ -4,6 +4,7 @@ Analytics service - orchestrates all analytics components.
 Main service that coordinates storage analysis, metrics calculation,
 chart generation, and dashboard creation.
 """
+
 from __future__ import annotations
 
 import logging
@@ -76,9 +77,7 @@ class AnalyticsService:
         file_distribution = self.storage_analyzer.calculate_size_distribution(directory)
 
         # Get duplicate statistics
-        duplicate_stats = self.get_duplicate_stats(
-            duplicate_groups or [], storage_stats.total_size
-        )
+        duplicate_stats = self.get_duplicate_stats(duplicate_groups or [], storage_stats.total_size)
 
         # Get quality metrics
         quality_metrics = self.get_quality_metrics(
@@ -102,9 +101,7 @@ class AnalyticsService:
         logger.info("Dashboard generation complete")
         return dashboard
 
-    def get_storage_stats(
-        self, directory: Path, max_depth: int | None = None
-    ) -> StorageStats:
+    def get_storage_stats(self, directory: Path, max_depth: int | None = None) -> StorageStats:
         """
         Get storage usage statistics.
 
@@ -119,9 +116,7 @@ class AnalyticsService:
         stats = self.storage_analyzer.analyze_directory(directory, max_depth)
         return stats
 
-    def get_duplicate_stats(
-        self, duplicate_groups: list[dict], total_size: int
-    ) -> DuplicateStats:
+    def get_duplicate_stats(self, duplicate_groups: list[dict], total_size: int) -> DuplicateStats:
         """
         Get duplication statistics.
 
@@ -241,9 +236,7 @@ class AnalyticsService:
             categorization_accuracy=categorization_accuracy,
         )
 
-    def calculate_time_saved(
-        self, total_files: int, duplicates_removed: int
-    ) -> TimeSavings:
+    def calculate_time_saved(self, total_files: int, duplicates_removed: int) -> TimeSavings:
         """
         Calculate time saved through automation.
 

@@ -1,4 +1,5 @@
 """Tests for MetricsCalculator."""
+
 from __future__ import annotations
 
 import tempfile
@@ -168,9 +169,7 @@ class TestMetricsCalculator:
         """Test improvement metrics with improvement."""
         calculator = MetricsCalculator()
 
-        metrics = calculator.calculate_improvement_metrics(
-            current_score=85.0, previous_score=75.0
-        )
+        metrics = calculator.calculate_improvement_metrics(current_score=85.0, previous_score=75.0)
 
         assert metrics["current_score"] == 85.0
         assert metrics["improvement"] == 10.0
@@ -180,9 +179,7 @@ class TestMetricsCalculator:
         """Test improvement metrics with decline."""
         calculator = MetricsCalculator()
 
-        metrics = calculator.calculate_improvement_metrics(
-            current_score=70.0, previous_score=85.0
-        )
+        metrics = calculator.calculate_improvement_metrics(current_score=70.0, previous_score=85.0)
 
         assert metrics["current_score"] == 70.0
         assert metrics["improvement"] == -15.0
@@ -192,9 +189,7 @@ class TestMetricsCalculator:
         """Test improvement metrics when stable."""
         calculator = MetricsCalculator()
 
-        metrics = calculator.calculate_improvement_metrics(
-            current_score=80.0, previous_score=80.5
-        )
+        metrics = calculator.calculate_improvement_metrics(current_score=80.0, previous_score=80.5)
 
         assert metrics["current_score"] == 80.0
         assert abs(metrics["improvement"]) < 1.0

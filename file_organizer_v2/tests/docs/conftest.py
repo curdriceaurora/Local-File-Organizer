@@ -3,6 +3,7 @@
 These tests verify that the documentation matches the actual implementation
 by comparing documented paths, auth formats, and examples against the code.
 """
+
 from __future__ import annotations
 
 import re
@@ -84,6 +85,7 @@ def extract_all_links(content: str) -> list[str]:
     all_links = re.findall(pattern, content)
     # Filter to only relative/internal links
     return [
-        link for link in all_links
+        link
+        for link in all_links
         if not link.startswith("http://") and not link.startswith("https://")
     ]

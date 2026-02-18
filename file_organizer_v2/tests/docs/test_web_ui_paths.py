@@ -5,6 +5,7 @@ Validates:
 - API docs are at /docs and /redoc
 - Documented URLs in web-ui guides match actual FastAPI mount paths
 """
+
 from __future__ import annotations
 
 import re
@@ -27,9 +28,7 @@ class TestWebUIPaths:
 
     def test_web_ui_docs_dir_exists(self) -> None:
         """docs/web-ui/ directory must exist."""
-        assert WEB_UI_DOCS_DIR.exists(), (
-            f"docs/web-ui/ directory not found at {WEB_UI_DOCS_DIR}"
-        )
+        assert WEB_UI_DOCS_DIR.exists(), f"docs/web-ui/ directory not found at {WEB_UI_DOCS_DIR}"
 
     def test_web_ui_documented_at_ui_path(self) -> None:
         """Web UI must be documented as accessible at /ui/ not root /."""
@@ -43,19 +42,13 @@ class TestWebUIPaths:
 
             # Look for localhost:8000 or 127.0.0.1:8000 without /ui/ path
             wrong_access = re.findall(
-                r"https?://(?:localhost|127\.0\.0\.1):\d+(?:/(?!ui/))?(?:\s|\"|\)|$)",
-                content
+                r"https?://(?:localhost|127\.0\.0\.1):\d+(?:/(?!ui/))?(?:\s|\"|\)|$)", content
             )
             # Filter to only clearly wrong ones (root access without /ui/)
-            truly_wrong = [
-                url for url in wrong_access
-                if re.search(r":\d+/?(?:\s|\"|\))", url)
-            ]
+            truly_wrong = [url for url in wrong_access if re.search(r":\d+/?(?:\s|\"|\))", url)]
 
             if truly_wrong:
-                wrong_url_files.append(
-                    f"  {doc.relative_to(DOCS_DIR)}: {truly_wrong[:2]}"
-                )
+                wrong_url_files.append(f"  {doc.relative_to(DOCS_DIR)}: {truly_wrong[:2]}")
 
         assert not wrong_url_files, (
             "These web-ui docs reference the root URL without /ui/ prefix:\n"
@@ -73,9 +66,7 @@ class TestWebUIPaths:
 
         # Must mention /ui/ path somewhere
         has_ui_path = "/ui/" in content or "/ui" in content
-        has_wrong_root = bool(
-            re.search(r"localhost:\d+(?:/\s|/\"|\))", content)
-        )
+        has_wrong_root = bool(re.search(r"localhost:\d+(?:/\s|/\"|\))", content))
 
         if has_wrong_root and not has_ui_path:
             pytest.fail(
@@ -87,10 +78,7 @@ class TestWebUIPaths:
     def test_api_docs_path_documented(self) -> None:
         """API docs should be documented as accessible at /docs (FastAPI auto-generates this)."""
         # Check across web-ui and admin docs
-        docs_to_check = (
-            list(WEB_UI_DOCS_DIR.glob("*.md"))
-            + list((DOCS_DIR / "admin").glob("*.md"))
-        )
+        docs_to_check = list(WEB_UI_DOCS_DIR.glob("*.md")) + list((DOCS_DIR / "admin").glob("*.md"))
 
         for doc in docs_to_check:
             content = doc.read_text()
@@ -117,7 +105,11 @@ class TestHomePageRedirect:
         content = getting_started_global.read_text()
 
         # The global getting started should mention /ui/ as the web interface URL
-        if "web" in content.lower() or "browser" in content.lower() or "interface" in content.lower():
+        if (
+            "web" in content.lower()
+            or "browser" in content.lower()
+            or "interface" in content.lower()
+        ):
             has_ui_mention = "/ui" in content or "ui/" in content
             if not has_ui_mention:
                 pytest.fail(

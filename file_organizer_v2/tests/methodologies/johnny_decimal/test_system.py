@@ -3,6 +3,7 @@ Tests for Johnny Decimal system module.
 
 Tests system orchestration, configuration, and integration.
 """
+
 from __future__ import annotations
 
 import json
@@ -527,9 +528,7 @@ class TestIntegrationScenarios:
         # Create file-level items
         file_result = system.assign_number_to_file(
             file_path=temp_dir / "Q1-Budget.xlsx",
-            preferred_number=JohnnyDecimalNumber(
-                area=10, category=1, item_id=1, name="Q1 Budget"
-            ),
+            preferred_number=JohnnyDecimalNumber(area=10, category=1, item_id=1, name="Q1 Budget"),
         )
 
         assert area_result.number.level.value == "area"

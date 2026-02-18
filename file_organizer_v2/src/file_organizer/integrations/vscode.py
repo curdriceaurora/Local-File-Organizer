@@ -1,4 +1,5 @@
 """VS Code integration adapter."""
+
 from __future__ import annotations
 
 import json

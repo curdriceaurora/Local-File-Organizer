@@ -1,4 +1,5 @@
 """Tests for the auto-update mechanism."""
+
 from __future__ import annotations
 
 import hashlib
@@ -132,8 +133,10 @@ class TestUpdateInstaller:
                 AssetInfo(name="SHA256SUMS.txt", url="u4"),
             ]
         )
-        with patch("platform.system", return_value="Linux"), \
-             patch("platform.machine", return_value="x86_64"):
+        with (
+            patch("platform.system", return_value="Linux"),
+            patch("platform.machine", return_value="x86_64"),
+        ):
             asset = installer.select_asset(release)
             assert asset is not None
             assert "linux" in asset.name
@@ -146,8 +149,10 @@ class TestUpdateInstaller:
                 AssetInfo(name="file-organizer-2.0.0-macos-arm64", url="u2"),
             ]
         )
-        with patch("platform.system", return_value="Darwin"), \
-             patch("platform.machine", return_value="arm64"):
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.machine", return_value="arm64"),
+        ):
             asset = installer.select_asset(release)
             assert asset is not None
             assert "macos" in asset.name
@@ -160,8 +165,10 @@ class TestUpdateInstaller:
                 AssetInfo(name="file-organizer-2.0.0-macos-arm64", url="u2"),
             ]
         )
-        with patch("platform.system", return_value="Darwin"), \
-             patch("platform.machine", return_value="arm64"):
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.machine", return_value="arm64"),
+        ):
             asset = installer.select_asset(release)
             assert asset is not None
             assert asset.name.endswith("macos-arm64")
@@ -169,8 +176,10 @@ class TestUpdateInstaller:
     def test_select_asset_no_match(self) -> None:
         installer = UpdateInstaller()
         release = ReleaseInfo(assets=[AssetInfo(name="other-tool.tar.gz", url="u")])
-        with patch("platform.system", return_value="Linux"), \
-             patch("platform.machine", return_value="x86_64"):
+        with (
+            patch("platform.system", return_value="Linux"),
+            patch("platform.machine", return_value="x86_64"),
+        ):
             assert installer.select_asset(release) is None
 
     def test_select_asset_linux_prefers_appimage(self) -> None:
@@ -181,8 +190,10 @@ class TestUpdateInstaller:
                 AssetInfo(name="file-organizer-2.0.0-linux-x86_64.AppImage", url="u2"),
             ]
         )
-        with patch("platform.system", return_value="Linux"), \
-             patch("platform.machine", return_value="x86_64"):
+        with (
+            patch("platform.system", return_value="Linux"),
+            patch("platform.machine", return_value="x86_64"),
+        ):
             asset = installer.select_asset(release)
             assert asset is not None
             assert asset.name.endswith(".AppImage")
@@ -195,8 +206,10 @@ class TestUpdateInstaller:
                 AssetInfo(name="file-organizer-2.0.0-windows-x86_64.exe", url="u2"),
             ]
         )
-        with patch("platform.system", return_value="Windows"), \
-             patch("platform.machine", return_value="AMD64"):
+        with (
+            patch("platform.system", return_value="Windows"),
+            patch("platform.machine", return_value="AMD64"),
+        ):
             asset = installer.select_asset(release)
             assert asset is not None
             assert "setup" not in asset.name.lower()
@@ -213,7 +226,9 @@ class TestUpdateInstaller:
         assert (tmp_path / "file-organizer").exists()
         assert (tmp_path / "file-organizer").read_bytes() == b"new-content"
 
-    def test_install_uses_appimage_env(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_install_uses_appimage_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         appimage = tmp_path / "file-organizer-2.0.0-linux-x86_64.AppImage"
         appimage.write_bytes(b"old-content")
         monkeypatch.setenv("APPIMAGE", str(appimage))

@@ -2,6 +2,7 @@
 
 Provides the unified entry point with all commands and sub-apps.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -153,14 +154,11 @@ def config_show(
     console.print(f"[bold]Temperature:[/bold] {cfg.models.temperature}")
     console.print(f"[bold]Device:[/bold] {cfg.models.device}")
     console.print(
-        f"[bold]Update checks:[/bold] "
-        f"{'enabled' if cfg.updates.check_on_startup else 'disabled'}"
+        f"[bold]Update checks:[/bold] {'enabled' if cfg.updates.check_on_startup else 'disabled'}"
     )
     console.print(f"[bold]Update interval (hrs):[/bold] {cfg.updates.interval_hours}")
     console.print(f"[bold]Update repo:[/bold] {cfg.updates.repo}")
-    console.print(
-        f"[bold]Include prereleases:[/bold] {cfg.updates.include_prereleases}"
-    )
+    console.print(f"[bold]Include prereleases:[/bold] {cfg.updates.include_prereleases}")
 
 
 @config_app.command(name="list")
@@ -184,7 +182,9 @@ def config_edit(
     vision_model: Optional[str] = typer.Option(None, help="Set vision model name."),  # noqa: UP045
     temperature: Optional[float] = typer.Option(None, help="Set temperature (0.0-1.0)."),  # noqa: UP045
     device: Optional[str] = typer.Option(None, help="Set device (auto, cpu, cuda, mps, metal)."),  # noqa: UP045
-    methodology: Optional[str] = typer.Option(None, help="Set default methodology (none, para, jd)."),  # noqa: UP045
+    methodology: Optional[str] = typer.Option(
+        None, help="Set default methodology (none, para, jd)."
+    ),  # noqa: UP045
 ) -> None:
     """Edit a configuration profile."""
     from file_organizer.config import ConfigManager
@@ -230,7 +230,9 @@ def model_list(
 
 @model_app.command(name="pull")
 def model_pull(
-    name: str = typer.Argument(..., help="Model name to download (e.g. qwen2.5:3b-instruct-q4_K_M)."),
+    name: str = typer.Argument(
+        ..., help="Model name to download (e.g. qwen2.5:3b-instruct-q4_K_M)."
+    ),
 ) -> None:
     """Download an AI model via Ollama."""
     from file_organizer.models.model_manager import ModelManager

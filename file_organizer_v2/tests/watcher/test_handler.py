@@ -4,6 +4,7 @@ Unit tests for FileEventHandler.
 Tests debouncing, pattern filtering, callback dispatch, and event queuing.
 Uses real file operations via tmp_path where possible.
 """
+
 from __future__ import annotations
 
 import time
@@ -52,45 +53,35 @@ def queue() -> EventQueue:
 class TestFileEventHandlerFiltering:
     """Tests for event filtering by pattern and file type."""
 
-    def test_accepts_normal_file(
-        self, default_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_accepts_normal_file(self, default_config: WatcherConfig, queue: EventQueue) -> None:
         """Test that a normal file passes through filters."""
         handler = FileEventHandler(default_config, queue)
         event = FileCreatedEvent(src_path="/tmp/document.txt")
         handler.on_created(event)
         assert queue.size == 1
 
-    def test_filters_tmp_files(
-        self, default_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_filters_tmp_files(self, default_config: WatcherConfig, queue: EventQueue) -> None:
         """Test that .tmp files are filtered out."""
         handler = FileEventHandler(default_config, queue)
         event = FileCreatedEvent(src_path="/tmp/scratch.tmp")
         handler.on_created(event)
         assert queue.size == 0
 
-    def test_filters_git_directory(
-        self, default_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_filters_git_directory(self, default_config: WatcherConfig, queue: EventQueue) -> None:
         """Test that .git directory contents are filtered."""
         handler = FileEventHandler(default_config, queue)
         event = FileModifiedEvent(src_path="/repo/.git/index")
         handler.on_modified(event)
         assert queue.size == 0
 
-    def test_filters_pycache(
-        self, default_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_filters_pycache(self, default_config: WatcherConfig, queue: EventQueue) -> None:
         """Test that __pycache__ contents are filtered."""
         handler = FileEventHandler(default_config, queue)
         event = FileCreatedEvent(src_path="/project/__pycache__/module.cpython-312.pyc")
         handler.on_created(event)
         assert queue.size == 0
 
-    def test_file_type_filter_allows_matching_extension(
-        self, queue: EventQueue
-    ) -> None:
+    def test_file_type_filter_allows_matching_extension(self, queue: EventQueue) -> None:
         """Test that file_types filter allows matching extensions."""
         config = WatcherConfig(
             debounce_seconds=0.0,
@@ -103,9 +94,7 @@ class TestFileEventHandlerFiltering:
         handler.on_created(FileCreatedEvent(src_path="/tmp/report.pdf"))
         assert queue.size == 2
 
-    def test_file_type_filter_rejects_non_matching(
-        self, queue: EventQueue
-    ) -> None:
+    def test_file_type_filter_rejects_non_matching(self, queue: EventQueue) -> None:
         """Test that file_types filter rejects non-matching extensions."""
         config = WatcherConfig(
             debounce_seconds=0.0,
@@ -151,9 +140,7 @@ class TestFileEventHandlerDebounce:
         # Only the first should have gotten through
         assert queue.size == 1
 
-    def test_events_after_debounce_window_pass(
-        self, queue: EventQueue
-    ) -> None:
+    def test_events_after_debounce_window_pass(self, queue: EventQueue) -> None:
         """Test that events after debounce window are processed."""
         config = WatcherConfig(debounce_seconds=0.1, exclude_patterns=[])
         handler = FileEventHandler(config, queue)
@@ -189,9 +176,7 @@ class TestFileEventHandlerDebounce:
 
         assert queue.size == 10
 
-    def test_clear_debounce_state(
-        self, debounce_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_clear_debounce_state(self, debounce_config: WatcherConfig, queue: EventQueue) -> None:
         """Test that clearing debounce state allows immediate re-processing."""
         handler = FileEventHandler(debounce_config, queue)
 
@@ -213,9 +198,7 @@ class TestFileEventHandlerDebounce:
 class TestFileEventHandlerEventTypes:
     """Tests for correct handling of different event types."""
 
-    def test_created_event(
-        self, default_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_created_event(self, default_config: WatcherConfig, queue: EventQueue) -> None:
         """Test handling of file creation events."""
         handler = FileEventHandler(default_config, queue)
         handler.on_created(FileCreatedEvent(src_path="/tmp/new.txt"))
@@ -223,9 +206,7 @@ class TestFileEventHandlerEventTypes:
         events = queue.dequeue_batch(1)
         assert events[0].event_type == EventType.CREATED
 
-    def test_modified_event(
-        self, default_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_modified_event(self, default_config: WatcherConfig, queue: EventQueue) -> None:
         """Test handling of file modification events."""
         handler = FileEventHandler(default_config, queue)
         handler.on_modified(FileModifiedEvent(src_path="/tmp/existing.txt"))
@@ -233,9 +214,7 @@ class TestFileEventHandlerEventTypes:
         events = queue.dequeue_batch(1)
         assert events[0].event_type == EventType.MODIFIED
 
-    def test_deleted_event(
-        self, default_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_deleted_event(self, default_config: WatcherConfig, queue: EventQueue) -> None:
         """Test handling of file deletion events."""
         handler = FileEventHandler(default_config, queue)
         handler.on_deleted(FileDeletedEvent(src_path="/tmp/gone.txt"))
@@ -243,9 +222,7 @@ class TestFileEventHandlerEventTypes:
         events = queue.dequeue_batch(1)
         assert events[0].event_type == EventType.DELETED
 
-    def test_moved_event_with_dest(
-        self, default_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_moved_event_with_dest(self, default_config: WatcherConfig, queue: EventQueue) -> None:
         """Test handling of file move events with destination path."""
         handler = FileEventHandler(default_config, queue)
         event = FileMovedEvent(src_path="/tmp/old.txt", dest_path="/tmp/new.txt")
@@ -306,17 +283,13 @@ class TestFileEventHandlerCallbacks:
         handler.on_deleted(FileDeletedEvent(src_path="/tmp/gone.txt"))
         callback.assert_called_once()
 
-    def test_moved_callback_invoked(
-        self, default_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_moved_callback_invoked(self, default_config: WatcherConfig, queue: EventQueue) -> None:
         """Test that on_moved callback fires."""
         handler = FileEventHandler(default_config, queue)
         callback = MagicMock()
         handler.register_callback(EventType.MOVED, callback)
 
-        handler.on_moved(
-            FileMovedEvent(src_path="/tmp/old.txt", dest_path="/tmp/new.txt")
-        )
+        handler.on_moved(FileMovedEvent(src_path="/tmp/old.txt", dest_path="/tmp/new.txt"))
         callback.assert_called_once()
 
     def test_callback_error_does_not_crash(

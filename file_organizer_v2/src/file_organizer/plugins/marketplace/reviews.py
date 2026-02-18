@@ -1,4 +1,5 @@
 """Marketplace review storage and lookup."""
+
 from __future__ import annotations
 
 import json
@@ -160,4 +161,3 @@ class ReviewManager:
             leftover = Path(tmp_path)
             if leftover.exists():
                 leftover.unlink(missing_ok=True)
-

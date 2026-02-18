@@ -3,6 +3,7 @@ Tests for PARA migration manager.
 
 Tests file migration from flat structures to PARA organization.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -85,9 +86,7 @@ class TestPARAMigrationManager:
 
     def test_analyze_source_basic(self, migration_manager, temp_source, temp_target):
         """Test analyzing source directory."""
-        plan = migration_manager.analyze_source(
-            temp_source, temp_target, recursive=False
-        )
+        plan = migration_manager.analyze_source(temp_source, temp_target, recursive=False)
 
         assert isinstance(plan, MigrationPlan)
         assert plan.total_count == 4  # 4 files in root
@@ -96,9 +95,7 @@ class TestPARAMigrationManager:
 
     def test_analyze_source_recursive(self, migration_manager, temp_source, temp_target):
         """Test recursive source analysis."""
-        plan = migration_manager.analyze_source(
-            temp_source, temp_target, recursive=True
-        )
+        plan = migration_manager.analyze_source(temp_source, temp_target, recursive=True)
 
         assert plan.total_count == 5  # 4 in root + 1 in subdir
         assert len(plan.files) == 5
@@ -115,9 +112,7 @@ class TestPARAMigrationManager:
         assert all(f.source_path.suffix == ".txt" for f in plan.files)
         assert plan.total_count < 4  # Less than all files
 
-    def test_migration_plan_categories(
-        self, migration_manager, temp_source, temp_target
-    ):
+    def test_migration_plan_categories(self, migration_manager, temp_source, temp_target):
         """Test that migration plan includes category breakdown."""
         plan = migration_manager.analyze_source(temp_source, temp_target)
 
@@ -131,9 +126,7 @@ class TestPARAMigrationManager:
         total_by_cat = sum(plan.by_category.values())
         assert total_by_cat == plan.total_count
 
-    def test_migration_file_details(
-        self, migration_manager, temp_source, temp_target
-    ):
+    def test_migration_file_details(self, migration_manager, temp_source, temp_target):
         """Test migration file contains required details."""
         plan = migration_manager.analyze_source(temp_source, temp_target)
 
@@ -145,9 +138,7 @@ class TestPARAMigrationManager:
             assert 0.0 <= migration_file.confidence <= 1.0
             assert isinstance(migration_file.reasoning, list)
 
-    def test_execute_migration_dry_run(
-        self, migration_manager, temp_source, temp_target
-    ):
+    def test_execute_migration_dry_run(self, migration_manager, temp_source, temp_target):
         """Test dry run migration doesn't move files."""
         plan = migration_manager.analyze_source(temp_source, temp_target)
 
@@ -162,20 +153,14 @@ class TestPARAMigrationManager:
         assert (temp_source / "project_plan.txt").exists()
         assert (temp_source / "meeting_notes.txt").exists()
 
-    def test_execute_migration_actual(
-        self, migration_manager, temp_source, temp_target
-    ):
+    def test_execute_migration_actual(self, migration_manager, temp_source, temp_target):
         """Test actual file migration."""
         # Create target PARA structure first
         migration_manager.folder_generator.generate_structure(temp_target)
 
-        plan = migration_manager.analyze_source(
-            temp_source, temp_target, recursive=False
-        )
+        plan = migration_manager.analyze_source(temp_source, temp_target, recursive=False)
 
-        report = migration_manager.execute_migration(
-            plan, dry_run=False, create_backup=False
-        )
+        report = migration_manager.execute_migration(plan, dry_run=False, create_backup=False)
 
         assert report.success is True
         assert len(report.migrated) > 0
@@ -184,14 +169,11 @@ class TestPARAMigrationManager:
         for migration_file in plan.files:
             # Source should be moved (may not exist)
             # Target should exist
-            assert (
-                migration_file.target_path.exists()
-                or migration_file.source_path in [f[0] for f in report.failed]
-            )
+            assert migration_file.target_path.exists() or migration_file.source_path in [
+                f[0] for f in report.failed
+            ]
 
-    def test_execute_migration_skip_existing(
-        self, migration_manager, temp_source, temp_target
-    ):
+    def test_execute_migration_skip_existing(self, migration_manager, temp_source, temp_target):
         """Test that existing target files are skipped."""
         # Create target structure
         migration_manager.folder_generator.generate_structure(temp_target)
@@ -204,9 +186,7 @@ class TestPARAMigrationManager:
             first_migration.target_path.parent.mkdir(parents=True, exist_ok=True)
             first_migration.target_path.write_text("Existing content")
 
-            report = migration_manager.execute_migration(
-                plan, dry_run=False, create_backup=False
-            )
+            report = migration_manager.execute_migration(plan, dry_run=False, create_backup=False)
 
             assert len(report.skipped) >= 1
             assert first_migration.source_path in report.skipped
@@ -222,9 +202,7 @@ class TestPARAMigrationManager:
         test_file = temp_source / "project_plan.txt"
         original_mtime = test_file.stat().st_mtime
 
-        plan = migration_manager.analyze_source(
-            temp_source, temp_target, recursive=False
-        )
+        plan = migration_manager.analyze_source(temp_source, temp_target, recursive=False)
 
         migration_manager.execute_migration(
             plan, dry_run=False, create_backup=False, preserve_timestamps=True
@@ -239,9 +217,7 @@ class TestPARAMigrationManager:
                     assert abs(new_mtime - original_mtime) < 1.0
                     break
 
-    def test_migration_report_details(
-        self, migration_manager, temp_source, temp_target
-    ):
+    def test_migration_report_details(self, migration_manager, temp_source, temp_target):
         """Test migration report contains all details."""
         migration_manager.folder_generator.generate_structure(temp_target)
 
@@ -271,9 +247,7 @@ class TestPARAMigrationManager:
         for category in PARACategory:
             assert category.value in preview.lower()
 
-    def test_preview_shows_sample_files(
-        self, migration_manager, temp_source, temp_target
-    ):
+    def test_preview_shows_sample_files(self, migration_manager, temp_source, temp_target):
         """Test that preview shows sample file mappings."""
         plan = migration_manager.analyze_source(temp_source, temp_target)
 

@@ -3,6 +3,7 @@ Tests for PARA methodology system.
 
 Tests PARA categorization, rules engine, and heuristics.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -235,8 +236,10 @@ class TestTemporalHeuristic:
         file_path.touch()
         # Modify timestamp to be old
         import time
+
         old_time = time.time() - (200 * 86400)  # 200 days ago
         import os
+
         os.utime(file_path, (old_time, old_time))
         return file_path
 
@@ -454,7 +457,10 @@ class TestHeuristicEngine:
         assert project_score.score > 0.3
         # Check that PROJECT has the highest score or is recommended
         scores_list = sorted(result.scores.values(), key=lambda x: x.score, reverse=True)
-        assert scores_list[0].category == PARACategory.PROJECT or result.recommended_category == PARACategory.PROJECT
+        assert (
+            scores_list[0].category == PARACategory.PROJECT
+            or result.recommended_category == PARACategory.PROJECT
+        )
 
     def test_confidence_calculation(self, tmp_path):
         """Test confidence calculation based on score separation."""

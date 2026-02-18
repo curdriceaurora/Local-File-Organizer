@@ -5,6 +5,7 @@ Provides the DaemonService class that combines file watching with
 auto-organization, managing the full lifecycle including signal
 handling, PID file management, and periodic tasks.
 """
+
 from __future__ import annotations
 
 import logging
@@ -302,9 +303,7 @@ class DaemonService:
         Saves original handlers so they can be restored later.
         """
         if threading.current_thread() is not threading.main_thread():
-            logger.debug(
-                "Skipping signal handler installation (not main thread)"
-            )
+            logger.debug("Skipping signal handler installation (not main thread)")
             return
 
         try:
@@ -369,8 +368,7 @@ class DaemonService:
     def _stats_report(self) -> None:
         """Periodic stats reporting task."""
         logger.info(
-            "Stats: uptime=%.0fs, files_processed=%d, "
-            "scheduler_tasks=%d",
+            "Stats: uptime=%.0fs, files_processed=%d, scheduler_tasks=%d",
             self.uptime_seconds,
             self._files_processed,
             self._scheduler.task_count,

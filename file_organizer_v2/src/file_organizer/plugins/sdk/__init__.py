@@ -1,4 +1,5 @@
 """Public SDK surface for plugin development."""
+
 from __future__ import annotations
 
 from file_organizer.plugins.sdk.client import PluginClient, PluginClientAuthError, PluginClientError

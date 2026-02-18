@@ -1,3 +1,3 @@
 """Tests for the Redis Streams event system."""
-from __future__ import annotations
 
+from __future__ import annotations

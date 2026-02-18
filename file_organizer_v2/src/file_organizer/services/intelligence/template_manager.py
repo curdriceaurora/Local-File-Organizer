@@ -10,6 +10,7 @@ Features:
 - Custom template creation from existing profiles
 - Template customization options
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -40,34 +41,34 @@ class TemplateManager:
                         "date_format": "YYYY-MM-DD",
                         "separator": "_",
                         "case_style": "title",
-                        "include_metadata": True
+                        "include_metadata": True,
                     },
                     "folder_mappings": {
                         "documents": "Documents/Work",
                         "spreadsheets": "Documents/Work/Spreadsheets",
                         "presentations": "Documents/Work/Presentations",
                         "reports": "Documents/Work/Reports",
-                        "contracts": "Documents/Work/Legal/Contracts"
+                        "contracts": "Documents/Work/Legal/Contracts",
                     },
                     "category_overrides": {
                         "invoice": "financial",
                         "contract": "legal",
                         "presentation": "work",
-                        "report": "work"
-                    }
+                        "report": "work",
+                    },
                 },
-                "directory_specific": {}
+                "directory_specific": {},
             },
             "learned_patterns": {
                 "folder_structure": "date_based",
                 "organization_style": "client_project",
-                "naming_style": "formal"
+                "naming_style": "formal",
             },
             "confidence_data": {
                 "naming_patterns": 0.9,
                 "folder_mappings": 0.85,
-                "category_overrides": 0.9
-            }
+                "category_overrides": 0.9,
+            },
         },
         "personal": {
             "name": "Personal Profile",
@@ -78,33 +79,33 @@ class TemplateManager:
                         "date_format": "MM-DD-YYYY",
                         "separator": "-",
                         "case_style": "lower",
-                        "include_metadata": False
+                        "include_metadata": False,
                     },
                     "folder_mappings": {
                         "photos": "Pictures",
                         "videos": "Videos",
                         "documents": "Documents/Personal",
                         "music": "Music",
-                        "downloads": "Downloads"
+                        "downloads": "Downloads",
                     },
                     "category_overrides": {
                         "vacation": "personal",
                         "family": "personal",
-                        "hobby": "personal"
-                    }
+                        "hobby": "personal",
+                    },
                 },
-                "directory_specific": {}
+                "directory_specific": {},
             },
             "learned_patterns": {
                 "folder_structure": "topic_based",
                 "organization_style": "minimal",
-                "naming_style": "casual"
+                "naming_style": "casual",
             },
             "confidence_data": {
                 "naming_patterns": 0.7,
                 "folder_mappings": 0.75,
-                "category_overrides": 0.7
-            }
+                "category_overrides": 0.7,
+            },
         },
         "photography": {
             "name": "Photography Profile",
@@ -116,14 +117,14 @@ class TemplateManager:
                         "separator": "_",
                         "include_event": True,
                         "include_camera": True,
-                        "case_style": "lower"
+                        "case_style": "lower",
                     },
                     "folder_mappings": {
                         "raw": "Photos/RAW",
                         "edited": "Photos/Edited",
                         "exports": "Photos/Exports",
                         "originals": "Photos/Originals",
-                        "projects": "Photos/Projects"
+                        "projects": "Photos/Projects",
                     },
                     "category_overrides": {
                         ".raw": "raw",
@@ -133,22 +134,22 @@ class TemplateManager:
                         ".dng": "raw",
                         ".jpg": "edited",
                         ".jpeg": "edited",
-                        ".png": "export"
-                    }
+                        ".png": "export",
+                    },
                 },
-                "directory_specific": {}
+                "directory_specific": {},
             },
             "learned_patterns": {
                 "folder_structure": "year_month",
                 "organization_style": "event_based",
                 "naming_style": "metadata_rich",
-                "raw_vs_processed": "separate"
+                "raw_vs_processed": "separate",
             },
             "confidence_data": {
                 "naming_patterns": 0.95,
                 "folder_mappings": 0.9,
-                "category_overrides": 0.95
-            }
+                "category_overrides": 0.95,
+            },
         },
         "development": {
             "name": "Development Profile",
@@ -159,14 +160,14 @@ class TemplateManager:
                         "case_style": "snake_case",
                         "separator": "_",
                         "include_version": True,
-                        "date_format": "YYYY-MM-DD"
+                        "date_format": "YYYY-MM-DD",
                     },
                     "folder_mappings": {
                         "projects": "Projects",
                         "repositories": "Repos",
                         "documentation": "Docs",
                         "scripts": "Scripts",
-                        "configs": "Config"
+                        "configs": "Config",
                     },
                     "category_overrides": {
                         ".py": "python",
@@ -176,23 +177,23 @@ class TemplateManager:
                         ".cpp": "cpp",
                         ".go": "golang",
                         ".rs": "rust",
-                        ".md": "documentation"
-                    }
+                        ".md": "documentation",
+                    },
                 },
-                "directory_specific": {}
+                "directory_specific": {},
             },
             "learned_patterns": {
                 "folder_structure": "project_based",
                 "organization_style": "language_specific",
                 "naming_style": "technical",
                 "version_control": "aware",
-                "ignore_patterns": ["node_modules", ".git", "__pycache__", "build", "dist"]
+                "ignore_patterns": ["node_modules", ".git", "__pycache__", "build", "dist"],
             },
             "confidence_data": {
                 "naming_patterns": 0.85,
                 "folder_mappings": 0.9,
-                "category_overrides": 0.95
-            }
+                "category_overrides": 0.95,
+            },
         },
         "academic": {
             "name": "Academic Profile",
@@ -204,7 +205,7 @@ class TemplateManager:
                         "separator": "_",
                         "include_course": True,
                         "include_version": True,
-                        "case_style": "title"
+                        "case_style": "title",
                     },
                     "folder_mappings": {
                         "courses": "Academic/Courses",
@@ -212,7 +213,7 @@ class TemplateManager:
                         "papers": "Academic/Papers",
                         "notes": "Academic/Notes",
                         "presentations": "Academic/Presentations",
-                        "references": "Academic/References"
+                        "references": "Academic/References",
                     },
                     "category_overrides": {
                         "syllabus": "course_material",
@@ -220,24 +221,24 @@ class TemplateManager:
                         "exam": "coursework",
                         "paper": "research",
                         "thesis": "research",
-                        "citation": "reference"
-                    }
+                        "citation": "reference",
+                    },
                 },
-                "directory_specific": {}
+                "directory_specific": {},
             },
             "learned_patterns": {
                 "folder_structure": "course_semester",
                 "organization_style": "hierarchical",
                 "naming_style": "academic",
                 "version_control": "draft_versioning",
-                "citation_style": "apa"
+                "citation_style": "apa",
             },
             "confidence_data": {
                 "naming_patterns": 0.85,
                 "folder_mappings": 0.9,
-                "category_overrides": 0.85
-            }
-        }
+                "category_overrides": 0.85,
+            },
+        },
     }
 
     def __init__(self, profile_manager: ProfileManager):
@@ -291,25 +292,26 @@ class TemplateManager:
 
         # Build preview
         preview = {
-            'template_name': template_name.lower(),
-            'name': template['name'],
-            'description': template['description'],
-            'preferences_summary': {
-                'naming_patterns': list(template['preferences']['global']['naming_patterns'].keys()),
-                'folder_mappings': list(template['preferences']['global']['folder_mappings'].keys()),
-                'category_overrides': len(template['preferences']['global']['category_overrides'])
+            "template_name": template_name.lower(),
+            "name": template["name"],
+            "description": template["description"],
+            "preferences_summary": {
+                "naming_patterns": list(
+                    template["preferences"]["global"]["naming_patterns"].keys()
+                ),
+                "folder_mappings": list(
+                    template["preferences"]["global"]["folder_mappings"].keys()
+                ),
+                "category_overrides": len(template["preferences"]["global"]["category_overrides"]),
             },
-            'learned_patterns': list(template['learned_patterns'].keys()),
-            'confidence_levels': template['confidence_data']
+            "learned_patterns": list(template["learned_patterns"].keys()),
+            "confidence_levels": template["confidence_data"],
         }
 
         return preview
 
     def create_profile_from_template(
-        self,
-        template_name: str,
-        profile_name: str,
-        customize: dict[str, Any] | None = None
+        self, template_name: str, profile_name: str, customize: dict[str, Any] | None = None
     ) -> Profile | None:
         """
         Create a new profile from a template.
@@ -339,10 +341,7 @@ class TemplateManager:
                 template = self._apply_customizations(template, customize)
 
             # Create profile
-            profile = self.profile_manager.create_profile(
-                profile_name,
-                template['description']
-            )
+            profile = self.profile_manager.create_profile(profile_name, template["description"])
 
             if profile is None:
                 return None
@@ -350,9 +349,9 @@ class TemplateManager:
             # Update with template data
             success = self.profile_manager.update_profile(
                 profile_name,
-                preferences=template['preferences'],
-                learned_patterns=template['learned_patterns'],
-                confidence_data=template['confidence_data']
+                preferences=template["preferences"],
+                learned_patterns=template["learned_patterns"],
+                confidence_data=template["confidence_data"],
             )
 
             if not success:
@@ -367,9 +366,7 @@ class TemplateManager:
             return None
 
     def _apply_customizations(
-        self,
-        template: dict[str, Any],
-        customize: dict[str, Any]
+        self, template: dict[str, Any], customize: dict[str, Any]
     ) -> dict[str, Any]:
         """
         Apply customizations to a template.
@@ -383,37 +380,34 @@ class TemplateManager:
         """
         # Deep copy to avoid modifying original
         import copy
+
         customized = copy.deepcopy(template)
 
         # Apply naming pattern customizations
-        if 'naming_patterns' in customize:
-            customized['preferences']['global']['naming_patterns'].update(
-                customize['naming_patterns']
+        if "naming_patterns" in customize:
+            customized["preferences"]["global"]["naming_patterns"].update(
+                customize["naming_patterns"]
             )
 
         # Apply folder mapping customizations
-        if 'folder_mappings' in customize:
-            customized['preferences']['global']['folder_mappings'].update(
-                customize['folder_mappings']
+        if "folder_mappings" in customize:
+            customized["preferences"]["global"]["folder_mappings"].update(
+                customize["folder_mappings"]
             )
 
         # Apply category override customizations
-        if 'category_overrides' in customize:
-            customized['preferences']['global']['category_overrides'].update(
-                customize['category_overrides']
+        if "category_overrides" in customize:
+            customized["preferences"]["global"]["category_overrides"].update(
+                customize["category_overrides"]
             )
 
         # Update description if provided
-        if 'description' in customize:
-            customized['description'] = customize['description']
+        if "description" in customize:
+            customized["description"] = customize["description"]
 
         return customized
 
-    def create_custom_template(
-        self,
-        from_profile: str,
-        template_name: str
-    ) -> bool:
+    def create_custom_template(self, from_profile: str, template_name: str) -> bool:
         """
         Create a custom template from an existing profile.
 
@@ -438,11 +432,11 @@ class TemplateManager:
 
             # Create template data from profile
             template_data = {
-                'name': profile.profile_name,
-                'description': profile.description,
-                'preferences': profile.preferences,
-                'learned_patterns': profile.learned_patterns,
-                'confidence_data': profile.confidence_data
+                "name": profile.profile_name,
+                "description": profile.description,
+                "preferences": profile.preferences,
+                "learned_patterns": profile.learned_patterns,
+                "confidence_data": profile.confidence_data,
             }
 
             # Add to templates (in-memory only, not persisted)
@@ -459,9 +453,7 @@ class TemplateManager:
             return False
 
     def get_template_recommendations(
-        self,
-        file_types: list[str] | None = None,
-        use_case: str | None = None
+        self, file_types: list[str] | None = None, use_case: str | None = None
     ) -> list[str]:
         """
         Get template recommendations based on file types or use case.
@@ -480,39 +472,41 @@ class TemplateManager:
             file_types_lower = [ft.lower() for ft in file_types]
 
             # Check for development files
-            dev_extensions = ['.py', '.js', '.ts', '.java', '.cpp', '.go', '.rs', '.c', '.h']
+            dev_extensions = [".py", ".js", ".ts", ".java", ".cpp", ".go", ".rs", ".c", ".h"]
             if any(ext in file_types_lower for ext in dev_extensions):
-                recommendations.append('development')
+                recommendations.append("development")
 
             # Check for image files
-            image_extensions = ['.jpg', '.jpeg', '.png', '.raw', '.cr2', '.nef', '.arw']
+            image_extensions = [".jpg", ".jpeg", ".png", ".raw", ".cr2", ".nef", ".arw"]
             if any(ext in file_types_lower for ext in image_extensions):
-                recommendations.append('photography')
+                recommendations.append("photography")
 
             # Check for document files
-            doc_extensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']
+            doc_extensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"]
             if any(ext in file_types_lower for ext in doc_extensions):
-                recommendations.append('work')
-                recommendations.append('academic')
+                recommendations.append("work")
+                recommendations.append("academic")
 
         if use_case:
             use_case_lower = use_case.lower()
 
             # Keyword-based recommendations
-            if any(word in use_case_lower for word in ['work', 'business', 'corporate', 'office']):
-                recommendations.append('work')
+            if any(word in use_case_lower for word in ["work", "business", "corporate", "office"]):
+                recommendations.append("work")
 
-            if any(word in use_case_lower for word in ['personal', 'home', 'family']):
-                recommendations.append('personal')
+            if any(word in use_case_lower for word in ["personal", "home", "family"]):
+                recommendations.append("personal")
 
-            if any(word in use_case_lower for word in ['photo', 'picture', 'camera', 'shoot']):
-                recommendations.append('photography')
+            if any(word in use_case_lower for word in ["photo", "picture", "camera", "shoot"]):
+                recommendations.append("photography")
 
-            if any(word in use_case_lower for word in ['code', 'program', 'develop', 'software']):
-                recommendations.append('development')
+            if any(word in use_case_lower for word in ["code", "program", "develop", "software"]):
+                recommendations.append("development")
 
-            if any(word in use_case_lower for word in ['school', 'university', 'research', 'study']):
-                recommendations.append('academic')
+            if any(
+                word in use_case_lower for word in ["school", "university", "research", "study"]
+            ):
+                recommendations.append("academic")
 
         # Remove duplicates while preserving order
         seen = set()
@@ -524,10 +518,7 @@ class TemplateManager:
 
         return unique_recommendations
 
-    def compare_templates(
-        self,
-        template_names: list[str]
-    ) -> dict[str, Any] | None:
+    def compare_templates(self, template_names: list[str]) -> dict[str, Any] | None:
         """
         Compare multiple templates side by side.
 
@@ -538,10 +529,7 @@ class TemplateManager:
             Comparison dictionary or None on error
         """
         try:
-            comparison = {
-                'templates': [],
-                'differences': []
-            }
+            comparison = {"templates": [], "differences": []}
 
             templates = []
             for name in template_names:
@@ -549,7 +537,7 @@ class TemplateManager:
                 if template is None:
                     print(f"Warning: Template '{name}' not found, skipping")
                     continue
-                templates.append({'name': name, 'data': template})
+                templates.append({"name": name, "data": template})
 
             if len(templates) < 2:
                 print("Need at least 2 valid templates to compare")
@@ -557,14 +545,20 @@ class TemplateManager:
 
             # Add template summaries
             for t in templates:
-                comparison['templates'].append({
-                    'name': t['name'],
-                    'description': t['data']['description'],
-                    'naming_style': t['data']['learned_patterns'].get('naming_style'),
-                    'folder_structure': t['data']['learned_patterns'].get('folder_structure'),
-                    'num_folder_mappings': len(t['data']['preferences']['global']['folder_mappings']),
-                    'num_category_overrides': len(t['data']['preferences']['global']['category_overrides'])
-                })
+                comparison["templates"].append(
+                    {
+                        "name": t["name"],
+                        "description": t["data"]["description"],
+                        "naming_style": t["data"]["learned_patterns"].get("naming_style"),
+                        "folder_structure": t["data"]["learned_patterns"].get("folder_structure"),
+                        "num_folder_mappings": len(
+                            t["data"]["preferences"]["global"]["folder_mappings"]
+                        ),
+                        "num_category_overrides": len(
+                            t["data"]["preferences"]["global"]["category_overrides"]
+                        ),
+                    }
+                )
 
             return comparison
 

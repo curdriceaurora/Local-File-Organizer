@@ -3,6 +3,7 @@
 Rules describe conditions and actions for automatic file organisation.
 A ``RuleSet`` groups related rules with a shared scope and priority.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

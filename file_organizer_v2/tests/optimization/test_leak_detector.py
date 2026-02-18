@@ -28,9 +28,7 @@ class TestLeakSuspect:
 
     def test_leak_suspect_frozen(self) -> None:
         """Test that LeakSuspect is immutable."""
-        suspect = LeakSuspect(
-            type_name="str", count_delta=5, size_delta=100
-        )
+        suspect = LeakSuspect(type_name="str", count_delta=5, size_delta=100)
         with pytest.raises(AttributeError):
             suspect.type_name = "int"  # type: ignore[misc]
 
@@ -141,9 +139,7 @@ class TestLeakDetectorCheck:
         detector._started = True
         detector._baseline = baseline  # type: ignore[assignment]
 
-        with patch.object(
-            LeakDetector, "_snapshot_types", return_value=current
-        ):
+        with patch.object(LeakDetector, "_snapshot_types", return_value=current):
             suspects = detector.check()
 
         # "list" grew by 100 (>= 5 threshold)
@@ -155,9 +151,7 @@ class TestLeakDetectorCheck:
 
     def test_check_ignores_specified_types(self) -> None:
         """Test that ignored types are excluded from suspects."""
-        detector = LeakDetector(
-            min_count_delta=5, ignore_types={"list"}
-        )
+        detector = LeakDetector(min_count_delta=5, ignore_types={"list"})
 
         baseline = {
             "list": MagicMock(count=100, total_size=5000, timestamp=1.0),
@@ -169,9 +163,7 @@ class TestLeakDetectorCheck:
         detector._started = True
         detector._baseline = baseline  # type: ignore[assignment]
 
-        with patch.object(
-            LeakDetector, "_snapshot_types", return_value=current
-        ):
+        with patch.object(LeakDetector, "_snapshot_types", return_value=current):
             suspects = detector.check()
 
         assert len(suspects) == 0
@@ -188,9 +180,7 @@ class TestLeakDetectorCheck:
         detector._started = True
         detector._baseline = baseline  # type: ignore[assignment]
 
-        with patch.object(
-            LeakDetector, "_snapshot_types", return_value=current
-        ):
+        with patch.object(LeakDetector, "_snapshot_types", return_value=current):
             suspects = detector.check()
 
         assert len(suspects) == 1
@@ -215,9 +205,7 @@ class TestLeakDetectorCheck:
         detector._started = True
         detector._baseline = baseline  # type: ignore[assignment]
 
-        with patch.object(
-            LeakDetector, "_snapshot_types", return_value=current
-        ):
+        with patch.object(LeakDetector, "_snapshot_types", return_value=current):
             suspects = detector.check()
 
         assert len(suspects) == 3
@@ -263,21 +251,15 @@ class TestLeakDetectorResetBaseline:
         detector._baseline = baseline_initial  # type: ignore[assignment]
 
         # First check: 100 growth (suspect)
-        with patch.object(
-            LeakDetector, "_snapshot_types", return_value=after_growth
-        ):
+        with patch.object(LeakDetector, "_snapshot_types", return_value=after_growth):
             suspects = detector.check()
             assert len(suspects) == 1
 
         # Reset baseline to current state (200 lists)
-        with patch.object(
-            LeakDetector, "_snapshot_types", return_value=after_growth
-        ):
+        with patch.object(LeakDetector, "_snapshot_types", return_value=after_growth):
             detector.reset_baseline()
 
         # Check after reset: only 3 growth (below threshold)
-        with patch.object(
-            LeakDetector, "_snapshot_types", return_value=after_reset
-        ):
+        with patch.object(LeakDetector, "_snapshot_types", return_value=after_reset):
             suspects = detector.check()
             assert len(suspects) == 0

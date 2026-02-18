@@ -4,6 +4,7 @@ Video Scene Detection Service
 Detects scene changes in video files using content-aware and threshold-based algorithms.
 Supports multiple detection methods and provides detailed scene metadata.
 """
+
 from __future__ import annotations
 
 import logging
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class DetectionMethod(StrEnum):
     """Scene detection methods."""
+
     CONTENT = "content"  # Content-aware detection
     THRESHOLD = "threshold"  # Simple threshold-based
     ADAPTIVE = "adaptive"  # Adaptive threshold
@@ -26,6 +28,7 @@ class DetectionMethod(StrEnum):
 @dataclass
 class Scene:
     """Represents a detected scene in a video."""
+
     scene_number: int
     start_time: float  # seconds
     end_time: float  # seconds
@@ -39,6 +42,7 @@ class Scene:
 @dataclass
 class SceneDetectionResult:
     """Complete scene detection result."""
+
     video_path: Path
     scenes: list[Scene]
     total_duration: float  # seconds
@@ -96,9 +100,7 @@ class SceneDetector:
         try:
             import cv2  # noqa: F401
         except ImportError:
-            logger.warning(
-                "opencv-python not found. Install with: pip install opencv-python"
-            )
+            logger.warning("opencv-python not found. Install with: pip install opencv-python")
 
         try:
             import scenedetect  # noqa: F401
@@ -355,24 +357,34 @@ class SceneDetector:
 
         output_path = Path(output_path)
 
-        with open(output_path, 'w', newline='') as f:
+        with open(output_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow([
-                "Scene", "Start Time", "End Time", "Duration",
-                "Start Frame", "End Frame", "Frame Count", "Score"
-            ])
+            writer.writerow(
+                [
+                    "Scene",
+                    "Start Time",
+                    "End Time",
+                    "Duration",
+                    "Start Frame",
+                    "End Frame",
+                    "Frame Count",
+                    "Score",
+                ]
+            )
 
             for scene in result.scenes:
-                writer.writerow([
-                    scene.scene_number,
-                    f"{scene.start_time:.2f}",
-                    f"{scene.end_time:.2f}",
-                    f"{scene.duration:.2f}",
-                    scene.start_frame,
-                    scene.end_frame,
-                    scene.frame_count,
-                    f"{scene.score:.3f}",
-                ])
+                writer.writerow(
+                    [
+                        scene.scene_number,
+                        f"{scene.start_time:.2f}",
+                        f"{scene.end_time:.2f}",
+                        f"{scene.duration:.2f}",
+                        scene.start_frame,
+                        scene.end_frame,
+                        scene.frame_count,
+                        f"{scene.score:.3f}",
+                    ]
+                )
 
         logger.info(f"Scene list saved to: {output_path}")
 

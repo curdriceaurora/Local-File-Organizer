@@ -6,6 +6,7 @@ backup/restore functionality, and migration support.
 
 Schema Version: 1.0
 """
+
 from __future__ import annotations
 
 import json
@@ -20,12 +21,14 @@ from typing import Any
 
 class SchemaVersion(Enum):
     """Supported schema versions"""
+
     V1_0 = "1.0"
 
 
 @dataclass
 class DirectoryPreference:
     """Preference data for a specific directory"""
+
     folder_mappings: dict[str, str]
     naming_patterns: dict[str, str]
     category_overrides: dict[str, str]
@@ -41,15 +44,15 @@ class DirectoryPreference:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DirectoryPreference:
         """Create from dictionary"""
-        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         return cls(
-            folder_mappings=data.get('folder_mappings', {}),
-            naming_patterns=data.get('naming_patterns', {}),
-            category_overrides=data.get('category_overrides', {}),
-            created=data.get('created', now),
-            updated=data.get('updated', now),
-            confidence=data.get('confidence', 0.0),
-            correction_count=data.get('correction_count', 0)
+            folder_mappings=data.get("folder_mappings", {}),
+            naming_patterns=data.get("naming_patterns", {}),
+            category_overrides=data.get("category_overrides", {}),
+            created=data.get("created", now),
+            updated=data.get("updated", now),
+            confidence=data.get("confidence", 0.0),
+            correction_count=data.get("correction_count", 0),
         )
 
 
@@ -95,7 +98,7 @@ class PreferenceStore:
 
     def _get_current_timestamp(self) -> str:
         """Get current UTC timestamp in ISO format"""
-        return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     def _create_empty_preferences(self) -> dict[str, Any]:
         """Create empty preference structure"""
@@ -105,9 +108,9 @@ class PreferenceStore:
             "global_preferences": {
                 "folder_mappings": {},
                 "naming_patterns": {},
-                "category_overrides": {}
+                "category_overrides": {},
             },
-            "directory_preferences": {}
+            "directory_preferences": {},
         }
 
     def _validate_schema(self, data: dict[str, Any]) -> bool:
@@ -145,8 +148,14 @@ class PreferenceStore:
             for _path, pref in dir_prefs.items():
                 if not isinstance(pref, dict):
                     return False
-                required_dir_fields = ["folder_mappings", "naming_patterns", "category_overrides",
-                                      "created", "updated", "confidence"]
+                required_dir_fields = [
+                    "folder_mappings",
+                    "naming_patterns",
+                    "category_overrides",
+                    "created",
+                    "updated",
+                    "confidence",
+                ]
                 if not all(field in pref for field in required_dir_fields):
                     return False
 
@@ -188,12 +197,14 @@ class PreferenceStore:
             try:
                 # Try loading primary file
                 if self.preference_file.exists():
-                    with open(self.preference_file, encoding='utf-8') as f:
+                    with open(self.preference_file, encoding="utf-8") as f:
                         data = json.load(f)
 
                     # Validate schema
                     if not self._validate_schema(data):
-                        print(f"Warning: Invalid schema in {self.preference_file}, trying backup...")
+                        print(
+                            f"Warning: Invalid schema in {self.preference_file}, trying backup..."
+                        )
                         return self._try_load_backup()
 
                     # Migrate if needed
@@ -234,7 +245,7 @@ class PreferenceStore:
                 self._loaded = True
                 return False
 
-            with open(self.backup_file, encoding='utf-8') as f:
+            with open(self.backup_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             if not self._validate_schema(data):
@@ -272,7 +283,7 @@ class PreferenceStore:
 
                 # Write to temporary file first (atomic write)
                 temp_file = self.storage_path / f"{self.DEFAULT_FILENAME}.tmp"
-                with open(temp_file, 'w', encoding='utf-8') as f:
+                with open(temp_file, "w", encoding="utf-8") as f:
                     json.dump(self._preferences, f, indent=2, ensure_ascii=False)
 
                 # Create backup of existing file before overwriting
@@ -325,7 +336,7 @@ class PreferenceStore:
                     created=self._get_current_timestamp(),
                     updated=self._get_current_timestamp(),
                     confidence=preference_data.get("confidence", 0.5),
-                    correction_count=preference_data.get("correction_count", 1)
+                    correction_count=preference_data.get("correction_count", 1),
                 )
                 self._preferences["directory_preferences"][path_str] = dir_pref.to_dict()
 
@@ -438,7 +449,7 @@ class PreferenceStore:
         updated = pref.get("updated", "2000-01-01T00:00:00Z")
         try:
             # Parse ISO format and make timezone aware for comparison
-            updated_dt = datetime.fromisoformat(updated.replace('Z', '+00:00'))
+            updated_dt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
             # Make now timezone aware as well
             now = datetime.now(timezone.utc)
             days_old = (now - updated_dt).days
@@ -450,11 +461,7 @@ class PreferenceStore:
         frequency_score = min(1.0, correction_count / 10.0)  # Cap at 10 corrections
 
         # Combined score (weighted average)
-        score = (
-            0.4 * confidence +
-            0.3 * recency_score +
-            0.3 * frequency_score
-        )
+        score = 0.4 * confidence + 0.3 * recency_score + 0.3 * frequency_score
 
         return score
 
@@ -477,7 +484,7 @@ class PreferenceStore:
                 output_path = Path(output_path)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
 
-                with open(output_path, 'w', encoding='utf-8') as f:
+                with open(output_path, "w", encoding="utf-8") as f:
                     json.dump(self._preferences, f, indent=2, ensure_ascii=False)
 
                 return True
@@ -504,7 +511,7 @@ class PreferenceStore:
                     print(f"Error: Import file not found: {input_path}")
                     return False
 
-                with open(input_path, encoding='utf-8') as f:
+                with open(input_path, encoding="utf-8") as f:
                     data = json.load(f)
 
                 # Validate schema
@@ -519,7 +526,9 @@ class PreferenceStore:
                 # Create backup before importing
                 if self.preference_file.exists():
                     backup_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-                    backup_path = self.storage_path / f"{self.DEFAULT_FILENAME}.{backup_timestamp}.backup"
+                    backup_path = (
+                        self.storage_path / f"{self.DEFAULT_FILENAME}.{backup_timestamp}.backup"
+                    )
                     shutil.copy2(self.preference_file, backup_path)
 
                 # Update preferences
@@ -554,9 +563,12 @@ class PreferenceStore:
             stats = {
                 "total_directories": len(dir_prefs),
                 "total_corrections": sum(p.get("correction_count", 0) for p in dir_prefs.values()),
-                "average_confidence": sum(p.get("confidence", 0) for p in dir_prefs.values()) / len(dir_prefs) if dir_prefs else 0.0,
+                "average_confidence": sum(p.get("confidence", 0) for p in dir_prefs.values())
+                / len(dir_prefs)
+                if dir_prefs
+                else 0.0,
                 "schema_version": self._preferences["version"],
-                "user_id": self._preferences["user_id"]
+                "user_id": self._preferences["user_id"],
             }
 
             return stats

@@ -3,6 +3,7 @@ Semantic similarity analysis module.
 
 Computes cosine similarity between document embeddings and identifies similar documents.
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,11 +35,7 @@ class SemanticAnalyzer:
         self.threshold = threshold
         logger.info(f"SemanticAnalyzer initialized with threshold={threshold}")
 
-    def compute_similarity(
-        self,
-        doc1_vector: np.ndarray,
-        doc2_vector: np.ndarray
-    ) -> float:
+    def compute_similarity(self, doc1_vector: np.ndarray, doc2_vector: np.ndarray) -> float:
         """
         Compute cosine similarity between two document vectors.
 
@@ -64,10 +61,7 @@ class SemanticAnalyzer:
         return float(np.clip(similarity, 0.0, 1.0))
 
     def find_similar_documents(
-        self,
-        embeddings: np.ndarray,
-        paths: list[Path],
-        min_similarity: float | None = None
+        self, embeddings: np.ndarray, paths: list[Path], min_similarity: float | None = None
     ) -> dict[Path, list[tuple[Path, float]]]:
         """
         Find similar documents based on embeddings.
@@ -120,7 +114,7 @@ class SemanticAnalyzer:
         document_embeddings: np.ndarray,
         paths: list[Path],
         top_k: int | None = None,
-        min_similarity: float | None = None
+        min_similarity: float | None = None,
     ) -> list[tuple[Path, float]]:
         """
         Find documents similar to a query document.
@@ -158,8 +152,7 @@ class SemanticAnalyzer:
         return similarities
 
     def cluster_by_similarity(
-        self,
-        similar_docs: dict[Path, list[tuple[Path, float]]]
+        self, similar_docs: dict[Path, list[tuple[Path, float]]]
     ) -> list[list[Path]]:
         """
         Cluster documents by similarity into groups.
@@ -199,10 +192,7 @@ class SemanticAnalyzer:
 
         return clusters
 
-    def compute_similarity_matrix(
-        self,
-        embeddings: np.ndarray
-    ) -> np.ndarray:
+    def compute_similarity_matrix(self, embeddings: np.ndarray) -> np.ndarray:
         """
         Compute full pairwise similarity matrix.
 
@@ -228,10 +218,7 @@ class SemanticAnalyzer:
         return similarity_matrix
 
     def get_duplicate_groups(
-        self,
-        embeddings: np.ndarray,
-        paths: list[Path],
-        min_similarity: float | None = None
+        self, embeddings: np.ndarray, paths: list[Path], min_similarity: float | None = None
     ) -> list[dict]:
         """
         Get groups of duplicate/similar documents with metadata.
@@ -244,9 +231,7 @@ class SemanticAnalyzer:
         Returns:
             List of duplicate group dictionaries
         """
-        similar_docs = self.find_similar_documents(
-            embeddings, paths, min_similarity
-        )
+        similar_docs = self.find_similar_documents(embeddings, paths, min_similarity)
 
         clusters = self.cluster_by_similarity(similar_docs)
 
@@ -260,33 +245,29 @@ class SemanticAnalyzer:
             # Calculate average similarity within cluster
             cluster_sims = []
             for i, path1 in enumerate(cluster):
-                for path2 in cluster[i + 1:]:
+                for path2 in cluster[i + 1 :]:
                     # Find similarity from similar_docs
                     sims = [s for p, s in similar_docs.get(path1, []) if p == path2]
                     if sims:
                         cluster_sims.append(sims[0])
 
-            avg_similarity = (
-                sum(cluster_sims) / len(cluster_sims)
-                if cluster_sims else 0.0
-            )
+            avg_similarity = sum(cluster_sims) / len(cluster_sims) if cluster_sims else 0.0
 
             # Calculate total size
-            total_size = sum(
-                path.stat().st_size if path.exists() else 0
-                for path in cluster
+            total_size = sum(path.stat().st_size if path.exists() else 0 for path in cluster)
+
+            groups.append(
+                {
+                    "files": [str(p) for p in cluster],
+                    "count": len(cluster),
+                    "avg_similarity": avg_similarity,
+                    "total_size": total_size,
+                    "representative": str(cluster[0]),  # First file as representative
+                }
             )
 
-            groups.append({
-                'files': [str(p) for p in cluster],
-                'count': len(cluster),
-                'avg_similarity': avg_similarity,
-                'total_size': total_size,
-                'representative': str(cluster[0])  # First file as representative
-            })
-
         # Sort by similarity (descending)
-        groups.sort(key=lambda g: g['avg_similarity'], reverse=True)
+        groups.sort(key=lambda g: g["avg_similarity"], reverse=True)
 
         logger.info(f"Identified {len(groups)} duplicate groups")
 
@@ -305,10 +286,7 @@ class SemanticAnalyzer:
         self.threshold = threshold
         logger.info(f"Updated similarity threshold to {threshold}")
 
-    def get_statistics(
-        self,
-        similarity_matrix: np.ndarray
-    ) -> dict:
+    def get_statistics(self, similarity_matrix: np.ndarray) -> dict:
         """
         Compute statistics from similarity matrix.
 
@@ -324,12 +302,12 @@ class SemanticAnalyzer:
         similarities = similarity_matrix[mask]
 
         stats = {
-            'mean_similarity': float(np.mean(similarities)),
-            'median_similarity': float(np.median(similarities)),
-            'std_similarity': float(np.std(similarities)),
-            'max_similarity': float(np.max(similarities)),
-            'min_similarity': float(np.min(similarities)),
-            'above_threshold_count': int(np.sum(similarities >= self.threshold))
+            "mean_similarity": float(np.mean(similarities)),
+            "median_similarity": float(np.median(similarities)),
+            "std_similarity": float(np.std(similarities)),
+            "max_similarity": float(np.max(similarities)),
+            "min_similarity": float(np.min(similarities)),
+            "above_threshold_count": int(np.sum(similarities >= self.threshold)),
         }
 
         return stats

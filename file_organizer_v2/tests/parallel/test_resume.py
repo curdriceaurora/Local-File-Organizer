@@ -64,9 +64,7 @@ class TestProcessWithResume(unittest.TestCase):
         for f in files:
             f.write_text(f.name, encoding="utf-8")
 
-        result = self.processor.process_with_resume(
-            files, _identity, job_id="job-1"
-        )
+        result = self.processor.process_with_resume(files, _identity, job_id="job-1")
         self.assertEqual(result.succeeded, 3)
 
         job = self.persistence.load_job("job-1")
@@ -79,9 +77,7 @@ class TestProcessWithResume(unittest.TestCase):
         files = [self.tmp_path / "check.txt"]
         files[0].write_text("check", encoding="utf-8")
 
-        self.processor.process_with_resume(
-            files, _identity, job_id="ckpt-job"
-        )
+        self.processor.process_with_resume(files, _identity, job_id="ckpt-job")
         ckpt = self.checkpoint_mgr.load_checkpoint("ckpt-job")
         self.assertIsNotNone(ckpt)
 
@@ -98,9 +94,7 @@ class TestProcessWithResume(unittest.TestCase):
 
     def test_process_empty_file_list(self) -> None:
         """Test processing with no files."""
-        result = self.processor.process_with_resume(
-            [], _identity, job_id="empty"
-        )
+        result = self.processor.process_with_resume([], _identity, job_id="empty")
         self.assertEqual(result.total, 0)
         self.assertEqual(result.succeeded, 0)
 
@@ -110,9 +104,7 @@ class TestProcessWithResume(unittest.TestCase):
         for f in files:
             f.write_text(f.name, encoding="utf-8")
 
-        result = self.processor.process_with_resume(
-            files, _always_fail, job_id="all-fail"
-        )
+        result = self.processor.process_with_resume(files, _always_fail, job_id="all-fail")
         self.assertEqual(result.failed, 2)
 
         job = self.persistence.load_job("all-fail")
@@ -134,9 +126,7 @@ class TestProcessWithResume(unittest.TestCase):
         for f in files:
             f.write_text(f.name, encoding="utf-8")
 
-        result = self.processor.process_with_resume(
-            files, mixed_fn, job_id="mixed"
-        )
+        result = self.processor.process_with_resume(files, mixed_fn, job_id="mixed")
         self.assertEqual(result.succeeded, 1)
         self.assertEqual(result.failed, 1)
 
@@ -335,9 +325,7 @@ class TestResumeJob(unittest.TestCase):
             return path.name
 
         # First run: wf0 and wf1 succeed, wf2 and wf3 fail
-        result = self.processor.process_with_resume(
-            files, partial_fail, job_id="workflow"
-        )
+        result = self.processor.process_with_resume(files, partial_fail, job_id="workflow")
         self.assertEqual(result.succeeded, 2)
         self.assertEqual(result.failed, 2)
 

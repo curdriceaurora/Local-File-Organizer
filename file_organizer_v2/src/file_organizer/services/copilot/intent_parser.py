@@ -4,6 +4,7 @@ Uses keyword matching with confidence scoring.  When an LLM is available
 the parser can optionally upgrade to JSON-mode structured extraction, but
 the keyword approach provides a reliable zero-dependency baseline.
 """
+
 from __future__ import annotations
 
 import re
@@ -18,53 +19,85 @@ _INTENT_PATTERNS: list[tuple[IntentType, list[str], float]] = [
     # (intent, keyword_patterns, base_confidence)
     (IntentType.UNDO, [r"\bundo\b"], 0.95),
     (IntentType.REDO, [r"\bredo\b"], 0.95),
-    (IntentType.ORGANIZE, [
-        r"\borgani[sz]e\b",
-        r"\bsort\s+(my\s+)?files\b",
-        r"\bclean\s+up\b",
-        r"\btidy\b",
-        r"\bcategoriz[es]\b",
-    ], 0.85),
-    (IntentType.MOVE, [
-        r"\bmove\b",
-        r"\brelocate\b",
-        r"\btransfer\b",
-    ], 0.85),
-    (IntentType.RENAME, [
-        r"\brename\b",
-        r"\bchange\s+(the\s+)?name\b",
-    ], 0.85),
-    (IntentType.FIND, [
-        r"\bfind\b",
-        r"\bsearch\b",
-        r"\bwhere\s+is\b",
-        r"\blocate\b",
-        r"\blook\s+for\b",
-    ], 0.80),
-    (IntentType.PREVIEW, [
-        r"\bpreview\b",
-        r"\bdry[\s-]?run\b",
-        r"\bwhat\s+would\b",
-        r"\bsimulate\b",
-    ], 0.80),
-    (IntentType.SUGGEST, [
-        r"\bsuggest\b",
-        r"\brecommend\b",
-        r"\bwhere\s+should\b",
-        r"\bbetter\s+location\b",
-    ], 0.75),
-    (IntentType.STATUS, [
-        r"\bstatus\b",
-        r"\bhow\s+many\b",
-        r"\bstatistics\b",
-        r"\bstats\b",
-    ], 0.70),
-    (IntentType.HELP, [
-        r"\bhelp\b",
-        r"\bwhat\s+can\s+you\b",
-        r"\bcommands?\b",
-        r"\bcapabilit",
-    ], 0.70),
+    (
+        IntentType.ORGANIZE,
+        [
+            r"\borgani[sz]e\b",
+            r"\bsort\s+(my\s+)?files\b",
+            r"\bclean\s+up\b",
+            r"\btidy\b",
+            r"\bcategoriz[es]\b",
+        ],
+        0.85,
+    ),
+    (
+        IntentType.MOVE,
+        [
+            r"\bmove\b",
+            r"\brelocate\b",
+            r"\btransfer\b",
+        ],
+        0.85,
+    ),
+    (
+        IntentType.RENAME,
+        [
+            r"\brename\b",
+            r"\bchange\s+(the\s+)?name\b",
+        ],
+        0.85,
+    ),
+    (
+        IntentType.FIND,
+        [
+            r"\bfind\b",
+            r"\bsearch\b",
+            r"\bwhere\s+is\b",
+            r"\blocate\b",
+            r"\blook\s+for\b",
+        ],
+        0.80,
+    ),
+    (
+        IntentType.PREVIEW,
+        [
+            r"\bpreview\b",
+            r"\bdry[\s-]?run\b",
+            r"\bwhat\s+would\b",
+            r"\bsimulate\b",
+        ],
+        0.80,
+    ),
+    (
+        IntentType.SUGGEST,
+        [
+            r"\bsuggest\b",
+            r"\brecommend\b",
+            r"\bwhere\s+should\b",
+            r"\bbetter\s+location\b",
+        ],
+        0.75,
+    ),
+    (
+        IntentType.STATUS,
+        [
+            r"\bstatus\b",
+            r"\bhow\s+many\b",
+            r"\bstatistics\b",
+            r"\bstats\b",
+        ],
+        0.70,
+    ),
+    (
+        IntentType.HELP,
+        [
+            r"\bhelp\b",
+            r"\bwhat\s+can\s+you\b",
+            r"\bcommands?\b",
+            r"\bcapabilit",
+        ],
+        0.70,
+    ),
 ]
 
 
@@ -149,7 +182,7 @@ class IntentParser:
 
         # Extract paths (Unix-style or Windows-style)
         paths = re.findall(
-            r'(?:[~/][\w./-]+|[A-Z]:\\[\w.\\-]+)',
+            r"(?:[~/][\w./-]+|[A-Z]:\\[\w.\\-]+)",
             text,
         )
         if paths:
@@ -183,7 +216,7 @@ class IntentParser:
             for kw in ("find", "search", "locate", "look for"):
                 idx = text.lower().find(kw)
                 if idx >= 0:
-                    query = text[idx + len(kw):].strip().strip('"').strip("'")
+                    query = text[idx + len(kw) :].strip().strip('"').strip("'")
                     if query:
                         params["query"] = query
                     break

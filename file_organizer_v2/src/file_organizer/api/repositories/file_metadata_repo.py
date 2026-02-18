@@ -1,4 +1,5 @@
 """Repository for :class:`file_organizer.api.db_models.FileMetadata`."""
+
 from __future__ import annotations
 
 import json

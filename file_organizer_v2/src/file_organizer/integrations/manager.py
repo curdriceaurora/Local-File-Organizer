@@ -1,4 +1,5 @@
 """Integration registry and orchestration."""
+
 from __future__ import annotations
 
 from threading import RLock

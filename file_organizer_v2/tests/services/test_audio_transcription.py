@@ -1,4 +1,5 @@
 """Tests for audio transcription service - Phase 3."""
+
 from __future__ import annotations
 
 import pytest
@@ -13,6 +14,7 @@ class TestAudioTranscriptionPlaceholder:
         """Test that audio transcription module exists."""
         try:
             from file_organizer.services.audio import transcriber
+
             assert transcriber is not None
         except ImportError:
             pytest.skip("Audio transcription not yet implemented (Phase 3)")

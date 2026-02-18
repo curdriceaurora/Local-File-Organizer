@@ -1,4 +1,5 @@
 """Minimal plugin example for lifecycle hooks."""
+
 from __future__ import annotations
 
 from file_organizer.plugins import Plugin, PluginMetadata

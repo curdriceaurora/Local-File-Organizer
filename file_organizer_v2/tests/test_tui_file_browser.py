@@ -1,4 +1,5 @@
 """Tests for the TUI file browser widgets."""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -4,6 +4,7 @@ Unit tests for DaemonService.
 Tests daemon lifecycle (start, stop, restart), signal handling,
 PID file management, callback registration, and background operation.
 """
+
 from __future__ import annotations
 
 import os
@@ -41,9 +42,7 @@ def pid_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def config(
-    watch_dir: Path, output_dir: Path, pid_file: Path
-) -> DaemonConfig:
+def config(watch_dir: Path, output_dir: Path, pid_file: Path) -> DaemonConfig:
     """Create a DaemonConfig for testing."""
     return DaemonConfig(
         watch_directories=[watch_dir],
@@ -71,9 +70,7 @@ class TestDaemonLifecycle:
         """A fresh daemon reports is_running=False."""
         assert daemon.is_running is False
 
-    def test_start_background_sets_running(
-        self, daemon: DaemonService
-    ) -> None:
+    def test_start_background_sets_running(self, daemon: DaemonService) -> None:
         """start_background brings the daemon into running state."""
         daemon.start_background()
 
@@ -123,9 +120,7 @@ class TestDaemonLifecycle:
 class TestPidFileManagement:
     """Tests for PID file lifecycle with the daemon."""
 
-    def test_pid_file_created_on_start(
-        self, daemon: DaemonService, pid_file: Path
-    ) -> None:
+    def test_pid_file_created_on_start(self, daemon: DaemonService, pid_file: Path) -> None:
         """Starting the daemon creates the PID file."""
         daemon.start_background()
 
@@ -133,9 +128,7 @@ class TestPidFileManagement:
         content = pid_file.read_text().strip()
         assert int(content) == os.getpid()
 
-    def test_pid_file_removed_on_stop(
-        self, daemon: DaemonService, pid_file: Path
-    ) -> None:
+    def test_pid_file_removed_on_stop(self, daemon: DaemonService, pid_file: Path) -> None:
         """Stopping the daemon removes the PID file."""
         daemon.start_background()
         assert pid_file.exists()
@@ -145,9 +138,7 @@ class TestPidFileManagement:
 
         assert not pid_file.exists()
 
-    def test_no_pid_file_when_none(
-        self, watch_dir: Path, output_dir: Path
-    ) -> None:
+    def test_no_pid_file_when_none(self, watch_dir: Path, output_dir: Path) -> None:
         """No PID file is created when pid_file is None in config."""
         config = DaemonConfig(
             watch_directories=[watch_dir],
@@ -167,9 +158,7 @@ class TestPidFileManagement:
 class TestCallbacks:
     """Tests for on_start and on_stop callbacks."""
 
-    def test_on_start_callback_fires(
-        self, daemon: DaemonService
-    ) -> None:
+    def test_on_start_callback_fires(self, daemon: DaemonService) -> None:
         """The on_start callback is invoked when the daemon starts."""
         called = threading.Event()
         daemon.on_start(called.set)
@@ -178,9 +167,7 @@ class TestCallbacks:
 
         assert called.wait(timeout=2.0), "on_start callback was not called"
 
-    def test_on_stop_callback_fires(
-        self, daemon: DaemonService
-    ) -> None:
+    def test_on_stop_callback_fires(self, daemon: DaemonService) -> None:
         """The on_stop callback is invoked when the daemon stops."""
         called = threading.Event()
         daemon.on_stop(called.set)
@@ -190,10 +177,9 @@ class TestCallbacks:
 
         assert called.wait(timeout=2.0), "on_stop callback was not called"
 
-    def test_callback_exception_does_not_crash(
-        self, daemon: DaemonService
-    ) -> None:
+    def test_callback_exception_does_not_crash(self, daemon: DaemonService) -> None:
         """A failing on_start callback does not prevent daemon operation."""
+
         def bad_callback() -> None:
             raise RuntimeError("callback boom")
 
@@ -210,18 +196,14 @@ class TestUptimeAndStats:
         """uptime_seconds is 0 when the daemon is not running."""
         assert daemon.uptime_seconds == 0.0
 
-    def test_uptime_increases_while_running(
-        self, daemon: DaemonService
-    ) -> None:
+    def test_uptime_increases_while_running(self, daemon: DaemonService) -> None:
         """uptime_seconds increases while the daemon runs."""
         daemon.start_background()
         time.sleep(0.15)
 
         assert daemon.uptime_seconds >= 0.1
 
-    def test_files_processed_starts_at_zero(
-        self, daemon: DaemonService
-    ) -> None:
+    def test_files_processed_starts_at_zero(self, daemon: DaemonService) -> None:
         """files_processed is 0 initially."""
         assert daemon.files_processed == 0
 
@@ -234,9 +216,7 @@ class TestSchedulerIntegration:
         scheduler = daemon.scheduler
         assert scheduler is not None
 
-    def test_default_tasks_registered_on_start(
-        self, daemon: DaemonService
-    ) -> None:
+    def test_default_tasks_registered_on_start(self, daemon: DaemonService) -> None:
         """Default health_check and stats_report tasks are registered."""
         daemon.start_background()
 
@@ -244,9 +224,7 @@ class TestSchedulerIntegration:
         assert "health_check" in names
         assert "stats_report" in names
 
-    def test_custom_task_runs_with_daemon(
-        self, daemon: DaemonService
-    ) -> None:
+    def test_custom_task_runs_with_daemon(self, daemon: DaemonService) -> None:
         """A custom task registered before start runs during operation."""
         counter = {"value": 0}
         lock = threading.Lock()
@@ -267,9 +245,7 @@ class TestSchedulerIntegration:
 class TestSignalHandling:
     """Tests for signal handler installation."""
 
-    def test_signal_handler_restores_on_stop(
-        self, config: DaemonConfig
-    ) -> None:
+    def test_signal_handler_restores_on_stop(self, config: DaemonConfig) -> None:
         """Signal handlers are restored after daemon stops.
 
         This test must run in the main thread to install signal handlers.

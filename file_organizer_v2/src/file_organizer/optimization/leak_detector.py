@@ -75,9 +75,7 @@ class LeakDetector:
                 internals that are known to grow).
         """
         if min_count_delta < 1:
-            raise ValueError(
-                f"min_count_delta must be >= 1, got {min_count_delta}"
-            )
+            raise ValueError(f"min_count_delta must be >= 1, got {min_count_delta}")
         self._min_count_delta = min_count_delta
         self._ignore_types: set[str] = ignore_types or set()
         self._baseline: dict[str, _TypeSnapshot] | None = None
@@ -129,9 +127,7 @@ class LeakDetector:
             RuntimeError: If start() has not been called.
         """
         if not self._started or self._baseline is None:
-            raise RuntimeError(
-                "Leak detector not started. Call start() first."
-            )
+            raise RuntimeError("Leak detector not started. Call start() first.")
 
         self._check_count += 1
         gc.collect()
@@ -149,9 +145,7 @@ class LeakDetector:
                 size_delta = current_snap.total_size
             else:
                 count_delta = current_snap.count - baseline_snap.count
-                size_delta = (
-                    current_snap.total_size - baseline_snap.total_size
-                )
+                size_delta = current_snap.total_size - baseline_snap.total_size
 
             if count_delta >= self._min_count_delta:
                 suspects.append(
@@ -184,9 +178,7 @@ class LeakDetector:
             RuntimeError: If start() has not been called.
         """
         if not self._started:
-            raise RuntimeError(
-                "Leak detector not started. Call start() first."
-            )
+            raise RuntimeError("Leak detector not started. Call start() first.")
         gc.collect()
         self._baseline = self._snapshot_types()
         self._check_count = 0
@@ -209,9 +201,7 @@ class LeakDetector:
             type_name = type(obj).__name__
             type_counts[type_name] = type_counts.get(type_name, 0) + 1
             try:
-                type_sizes[type_name] = type_sizes.get(
-                    type_name, 0
-                ) + _sys.getsizeof(obj)
+                type_sizes[type_name] = type_sizes.get(type_name, 0) + _sys.getsizeof(obj)
             except TypeError:
                 # Some objects don't support getsizeof
                 pass

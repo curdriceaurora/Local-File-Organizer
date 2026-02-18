@@ -7,6 +7,7 @@ This module provides video file processing capabilities including:
 - Frame extraction
 - Video format detection
 """
+
 from __future__ import annotations
 
 from .scene_detector import Scene, SceneDetectionResult, SceneDetector

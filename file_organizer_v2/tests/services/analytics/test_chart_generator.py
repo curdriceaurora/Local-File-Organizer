@@ -1,4 +1,5 @@
 """Tests for ChartGenerator."""
+
 from __future__ import annotations
 
 from file_organizer.utils.chart_generator import ChartGenerator
@@ -141,12 +142,8 @@ class TestChartGenerator:
         """Test difference between Unicode and ASCII pie charts."""
         data = {"A": 50.0, "B": 30.0, "C": 20.0}
 
-        chart_unicode = ChartGenerator(use_unicode=True).create_pie_chart(
-            data, "Test", width=20
-        )
-        chart_ascii = ChartGenerator(use_unicode=False).create_pie_chart(
-            data, "Test", width=20
-        )
+        chart_unicode = ChartGenerator(use_unicode=True).create_pie_chart(data, "Test", width=20)
+        chart_ascii = ChartGenerator(use_unicode=False).create_pie_chart(data, "Test", width=20)
 
         # Both should produce output
         assert len(chart_unicode) > 0
@@ -161,12 +158,8 @@ class TestChartGenerator:
         """Test difference between Unicode and ASCII bar charts."""
         data = {"X": 100, "Y": 50, "Z": 75}
 
-        chart_unicode = ChartGenerator(use_unicode=True).create_bar_chart(
-            data, "Test", width=30
-        )
-        chart_ascii = ChartGenerator(use_unicode=False).create_bar_chart(
-            data, "Test", width=30
-        )
+        chart_unicode = ChartGenerator(use_unicode=True).create_bar_chart(data, "Test", width=30)
+        chart_ascii = ChartGenerator(use_unicode=False).create_bar_chart(data, "Test", width=30)
 
         # Both should produce output
         assert len(chart_unicode) > 0

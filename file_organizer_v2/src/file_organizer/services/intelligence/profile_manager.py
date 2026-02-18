@@ -11,6 +11,7 @@ Features:
 - Thread-safe operations
 - JSON-based profile storage with versioning
 """
+
 from __future__ import annotations
 
 import json
@@ -25,6 +26,7 @@ from typing import Any
 @dataclass
 class Profile:
     """Represents a user preference profile."""
+
     profile_name: str
     description: str
     profile_version: str = "1.0"
@@ -36,16 +38,13 @@ class Profile:
 
     def __post_init__(self):
         """Initialize default values after dataclass initialization."""
-        now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         if self.created is None:
             self.created = now
         if self.updated is None:
             self.updated = now
         if self.preferences is None:
-            self.preferences = {
-                "global": {},
-                "directory_specific": {}
-            }
+            self.preferences = {"global": {}, "directory_specific": {}}
         if self.learned_patterns is None:
             self.learned_patterns = {}
         if self.confidence_data is None:
@@ -59,14 +58,14 @@ class Profile:
     def from_dict(cls, data: dict[str, Any]) -> Profile:
         """Create profile from dictionary."""
         return cls(
-            profile_name=data.get('profile_name', 'default'),
-            description=data.get('description', ''),
-            profile_version=data.get('profile_version', '1.0'),
-            created=data.get('created'),
-            updated=data.get('updated'),
-            preferences=data.get('preferences'),
-            learned_patterns=data.get('learned_patterns'),
-            confidence_data=data.get('confidence_data')
+            profile_name=data.get("profile_name", "default"),
+            description=data.get("description", ""),
+            profile_version=data.get("profile_version", "1.0"),
+            created=data.get("created"),
+            updated=data.get("updated"),
+            preferences=data.get("preferences"),
+            learned_patterns=data.get("learned_patterns"),
+            confidence_data=data.get("confidence_data"),
         )
 
     def validate(self) -> bool:
@@ -85,14 +84,14 @@ class Profile:
 
             # Validate timestamps
             if self.created:
-                datetime.fromisoformat(self.created.replace('Z', '+00:00'))
+                datetime.fromisoformat(self.created.replace("Z", "+00:00"))
             if self.updated:
-                datetime.fromisoformat(self.updated.replace('Z', '+00:00'))
+                datetime.fromisoformat(self.updated.replace("Z", "+00:00"))
 
             # Validate preferences structure
             if not isinstance(self.preferences, dict):
                 return False
-            if 'global' not in self.preferences or 'directory_specific' not in self.preferences:
+            if "global" not in self.preferences or "directory_specific" not in self.preferences:
                 return False
 
             return True
@@ -140,7 +139,7 @@ class ProfileManager:
 
     def _get_current_timestamp(self) -> str:
         """Get current UTC timestamp in ISO format."""
-        return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     def _sanitize_profile_name(self, name: str) -> str:
         """
@@ -156,10 +155,10 @@ class ProfileManager:
         invalid_chars = '<>:"/\\|?*'
         sanitized = name
         for char in invalid_chars:
-            sanitized = sanitized.replace(char, '_')
+            sanitized = sanitized.replace(char, "_")
 
         # Remove leading/trailing whitespace and dots
-        sanitized = sanitized.strip('. ')
+        sanitized = sanitized.strip(". ")
 
         # Ensure not empty
         if not sanitized:
@@ -178,8 +177,7 @@ class ProfileManager:
 
         if not default_profile_path.exists():
             default_profile = Profile(
-                profile_name="default",
-                description="Default preference profile"
+                profile_name="default", description="Default preference profile"
             )
             self._save_profile_to_disk(default_profile)
 
@@ -202,7 +200,7 @@ class ProfileManager:
 
             # Write to temporary file first (atomic write)
             temp_file = profile_path.parent / f"{profile_path.name}.tmp"
-            with open(temp_file, 'w', encoding='utf-8') as f:
+            with open(temp_file, "w", encoding="utf-8") as f:
                 json.dump(profile.to_dict(), f, indent=2, ensure_ascii=False)
 
             # Atomic rename
@@ -230,7 +228,7 @@ class ProfileManager:
             if not profile_path.exists():
                 return None
 
-            with open(profile_path, encoding='utf-8') as f:
+            with open(profile_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             profile = Profile.from_dict(data)
@@ -253,7 +251,7 @@ class ProfileManager:
         """Get name of currently active profile."""
         try:
             if self.active_profile_file.exists():
-                with open(self.active_profile_file, encoding='utf-8') as f:
+                with open(self.active_profile_file, encoding="utf-8") as f:
                     return f.read().strip()
         except Exception as e:
             print(f"Error reading active profile: {e}")
@@ -273,7 +271,7 @@ class ProfileManager:
         try:
             # Write to temporary file first (atomic write)
             temp_file = self.active_profile_file.parent / f"{self.active_profile_file.name}.tmp"
-            with open(temp_file, 'w', encoding='utf-8') as f:
+            with open(temp_file, "w", encoding="utf-8") as f:
                 f.write(profile_name)
 
             # Atomic rename
@@ -303,10 +301,7 @@ class ProfileManager:
                 return None
 
             # Create new profile
-            profile = Profile(
-                profile_name=name,
-                description=description
-            )
+            profile = Profile(profile_name=name, description=description)
 
             # Validate
             if not profile.validate():
@@ -400,7 +395,9 @@ class ProfileManager:
             active_profile = self._get_active_profile_name()
             if profile_name == active_profile:
                 if not force:
-                    print("Error: Cannot delete active profile. Switch to another profile first or use force=True")
+                    print(
+                        "Error: Cannot delete active profile. Switch to another profile first or use force=True"
+                    )
                     return False
                 else:
                     # Switch to default before deleting
@@ -453,14 +450,14 @@ class ProfileManager:
                 return False
 
             # Update fields
-            if 'description' in updates:
-                profile.description = updates['description']
-            if 'preferences' in updates:
-                profile.preferences = updates['preferences']
-            if 'learned_patterns' in updates:
-                profile.learned_patterns = updates['learned_patterns']
-            if 'confidence_data' in updates:
-                profile.confidence_data = updates['confidence_data']
+            if "description" in updates:
+                profile.description = updates["description"]
+            if "preferences" in updates:
+                profile.preferences = updates["preferences"]
+            if "learned_patterns" in updates:
+                profile.learned_patterns = updates["learned_patterns"]
+            if "confidence_data" in updates:
+                profile.confidence_data = updates["confidence_data"]
 
             # Update timestamp
             profile.updated = self._get_current_timestamp()

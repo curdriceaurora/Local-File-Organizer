@@ -11,6 +11,7 @@ Features:
 - Pretty-printed JSON output
 - Error handling and recovery
 """
+
 from __future__ import annotations
 
 import json
@@ -44,7 +45,7 @@ class ProfileExporter:
 
     def _get_current_timestamp(self) -> str:
         """Get current UTC timestamp in ISO format."""
-        return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     def export_profile(self, profile_name: str, file_path: Path) -> bool:
         """
@@ -71,8 +72,8 @@ class ProfileExporter:
 
             # Prepare export data
             export_data = profile.to_dict()
-            export_data['exported_at'] = self._get_current_timestamp()
-            export_data['export_version'] = '1.0'
+            export_data["exported_at"] = self._get_current_timestamp()
+            export_data["export_version"] = "1.0"
 
             # Create parent directory if needed
             file_path = Path(file_path)
@@ -80,7 +81,7 @@ class ProfileExporter:
 
             # Write to temporary file first (atomic write)
             temp_file = file_path.parent / f"{file_path.name}.tmp"
-            with open(temp_file, 'w', encoding='utf-8') as f:
+            with open(temp_file, "w", encoding="utf-8") as f:
                 json.dump(export_data, f, indent=2, ensure_ascii=False)
 
             # Validate export file
@@ -99,10 +100,7 @@ class ProfileExporter:
             return False
 
     def export_selective(
-        self,
-        profile_name: str,
-        file_path: Path,
-        preferences_list: list[str]
+        self, profile_name: str, file_path: Path, preferences_list: list[str]
     ) -> bool:
         """
         Export selected preferences from a profile.
@@ -125,39 +123,45 @@ class ProfileExporter:
 
             # Build selective export data
             export_data = {
-                'profile_name': profile.profile_name,
-                'description': f"Selective export: {', '.join(preferences_list)}",
-                'profile_version': profile.profile_version,
-                'exported_at': self._get_current_timestamp(),
-                'export_version': '1.0',
-                'export_type': 'selective',
-                'included_preferences': preferences_list
+                "profile_name": profile.profile_name,
+                "description": f"Selective export: {', '.join(preferences_list)}",
+                "profile_version": profile.profile_version,
+                "exported_at": self._get_current_timestamp(),
+                "export_version": "1.0",
+                "export_type": "selective",
+                "included_preferences": preferences_list,
             }
 
             # Include requested preferences
             preferences = {}
 
             for pref_type in preferences_list:
-                if pref_type == 'global':
-                    preferences['global'] = profile.preferences.get('global', {})
-                elif pref_type == 'directory_specific':
-                    preferences['directory_specific'] = profile.preferences.get('directory_specific', {})
-                elif pref_type == 'naming':
+                if pref_type == "global":
+                    preferences["global"] = profile.preferences.get("global", {})
+                elif pref_type == "directory_specific":
+                    preferences["directory_specific"] = profile.preferences.get(
+                        "directory_specific", {}
+                    )
+                elif pref_type == "naming":
                     # Extract naming-related preferences
-                    global_prefs = profile.preferences.get('global', {})
-                    preferences['global'] = preferences.get('global', {})
-                    preferences['global']['naming_patterns'] = global_prefs.get('naming_patterns', {})
-                elif pref_type == 'folders':
+                    global_prefs = profile.preferences.get("global", {})
+                    preferences["global"] = preferences.get("global", {})
+                    preferences["global"]["naming_patterns"] = global_prefs.get(
+                        "naming_patterns", {}
+                    )
+                elif pref_type == "folders":
                     # Extract folder-related preferences
-                    global_prefs = profile.preferences.get('global', {})
-                    preferences['global'] = preferences.get('global', {})
-                    preferences['global']['folder_mappings'] = global_prefs.get('folder_mappings', {})
-                elif pref_type == 'learned_patterns':
-                    export_data['learned_patterns'] = profile.learned_patterns
-                elif pref_type == 'confidence_data':
-                    export_data['confidence_data'] = profile.confidence_data
+                    global_prefs = profile.preferences.get("global", {})
+                    preferences["global"] = preferences.get("global", {})
+                    preferences["global"]["folder_mappings"] = global_prefs.get(
+                        "folder_mappings", {}
+                    )
+                elif pref_type == "learned_patterns":
+                    export_data["learned_patterns"] = profile.learned_patterns
+                elif pref_type == "confidence_data":
+                    export_data["confidence_data"] = profile.confidence_data
 
-            export_data['preferences'] = preferences
+            export_data["preferences"] = preferences
 
             # Create parent directory if needed
             file_path = Path(file_path)
@@ -165,7 +169,7 @@ class ProfileExporter:
 
             # Write to temporary file first (atomic write)
             temp_file = file_path.parent / f"{file_path.name}.tmp"
-            with open(temp_file, 'w', encoding='utf-8') as f:
+            with open(temp_file, "w", encoding="utf-8") as f:
                 json.dump(export_data, f, indent=2, ensure_ascii=False)
 
             # Atomic rename
@@ -195,43 +199,43 @@ class ProfileExporter:
                 return False
 
             # Load and parse JSON
-            with open(file_path, encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             # Check required fields
-            required_fields = ['profile_name', 'profile_version', 'exported_at']
+            required_fields = ["profile_name", "profile_version", "exported_at"]
             if not all(field in data for field in required_fields):
                 print("Error: Missing required fields in export file")
                 return False
 
             # Check export type
-            export_type = data.get('export_type', 'full')
+            export_type = data.get("export_type", "full")
 
-            if export_type == 'full':
+            if export_type == "full":
                 # Validate full export structure
-                if 'preferences' not in data:
+                if "preferences" not in data:
                     print("Error: Full export missing preferences")
                     return False
 
-                prefs = data['preferences']
+                prefs = data["preferences"]
                 if not isinstance(prefs, dict):
                     print("Error: Invalid preferences structure")
                     return False
 
                 # Check preferences have required keys
-                if 'global' not in prefs or 'directory_specific' not in prefs:
+                if "global" not in prefs or "directory_specific" not in prefs:
                     print("Error: Invalid preferences structure")
                     return False
 
-            elif export_type == 'selective':
+            elif export_type == "selective":
                 # Validate selective export
-                if 'included_preferences' not in data:
+                if "included_preferences" not in data:
                     print("Error: Selective export missing included_preferences")
                     return False
 
             # Validate timestamps
             try:
-                datetime.fromisoformat(data['exported_at'].replace('Z', '+00:00'))
+                datetime.fromisoformat(data["exported_at"].replace("Z", "+00:00"))
             except (ValueError, AttributeError):
                 print("Error: Invalid timestamp format")
                 return False
@@ -265,17 +269,19 @@ class ProfileExporter:
 
             # Calculate export statistics
             preview = {
-                'profile_name': profile.profile_name,
-                'description': profile.description,
-                'created': profile.created,
-                'updated': profile.updated,
-                'statistics': {
-                    'global_preferences_count': len(profile.preferences.get('global', {})),
-                    'directory_specific_count': len(profile.preferences.get('directory_specific', {})),
-                    'learned_patterns_count': len(profile.learned_patterns),
-                    'confidence_data_count': len(profile.confidence_data)
+                "profile_name": profile.profile_name,
+                "description": profile.description,
+                "created": profile.created,
+                "updated": profile.updated,
+                "statistics": {
+                    "global_preferences_count": len(profile.preferences.get("global", {})),
+                    "directory_specific_count": len(
+                        profile.preferences.get("directory_specific", {})
+                    ),
+                    "learned_patterns_count": len(profile.learned_patterns),
+                    "confidence_data_count": len(profile.confidence_data),
                 },
-                'export_size_estimate': self._estimate_export_size(profile)
+                "export_size_estimate": self._estimate_export_size(profile),
             }
 
             return preview
@@ -297,7 +303,7 @@ class ProfileExporter:
         try:
             # Serialize to JSON to get size
             json_data = json.dumps(profile.to_dict(), indent=2)
-            size_bytes = len(json_data.encode('utf-8'))
+            size_bytes = len(json_data.encode("utf-8"))
 
             # Format size
             if size_bytes < 1024:
@@ -310,11 +316,7 @@ class ProfileExporter:
         except Exception:
             return "Unknown"
 
-    def export_multiple(
-        self,
-        profile_names: list[str],
-        output_dir: Path
-    ) -> dict[str, bool]:
+    def export_multiple(self, profile_names: list[str], output_dir: Path) -> dict[str, bool]:
         """
         Export multiple profiles to a directory.
 

@@ -4,6 +4,7 @@ History cleanup and maintenance utilities.
 This module provides functionality for managing operation history size,
 including automatic cleanup, manual purging, and database maintenance.
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,7 +35,7 @@ class HistoryCleanupConfig:
         max_age_days: int = 90,
         max_size_mb: int = 100,
         auto_cleanup_enabled: bool = True,
-        cleanup_batch_size: int = 1000
+        cleanup_batch_size: int = 1000,
     ):
         self.max_operations = max_operations
         self.max_age_days = max_age_days
@@ -76,13 +77,17 @@ class HistoryCleanup:
         # Check operation count
         operation_count = self.db.get_operation_count()
         if operation_count >= self.config.max_operations:
-            logger.info(f"Cleanup needed: {operation_count} operations exceeds limit of {self.config.max_operations}")
+            logger.info(
+                f"Cleanup needed: {operation_count} operations exceeds limit of {self.config.max_operations}"
+            )
             return True
 
         # Check database size
         db_size_mb = self.db.get_database_size() / (1024 * 1024)
         if db_size_mb >= self.config.max_size_mb:
-            logger.info(f"Cleanup needed: {db_size_mb:.2f}MB exceeds limit of {self.config.max_size_mb}MB")
+            logger.info(
+                f"Cleanup needed: {db_size_mb:.2f}MB exceeds limit of {self.config.max_size_mb}MB"
+            )
             return True
 
         return False
@@ -101,7 +106,7 @@ class HistoryCleanup:
             max_age_days = self.config.max_age_days
 
         cutoff_date = datetime.utcnow() - timedelta(days=max_age_days)
-        cutoff_str = cutoff_date.isoformat() + 'Z'
+        cutoff_str = cutoff_date.isoformat() + "Z"
 
         logger.info(f"Cleaning up operations older than {max_age_days} days (before {cutoff_str})")
 
@@ -139,11 +144,15 @@ class HistoryCleanup:
 
         current_count = self.db.get_operation_count()
         if current_count <= max_operations:
-            logger.info(f"No cleanup needed: {current_count} operations within limit of {max_operations}")
+            logger.info(
+                f"No cleanup needed: {current_count} operations within limit of {max_operations}"
+            )
             return 0
 
         operations_to_delete = current_count - max_operations
-        logger.info(f"Cleaning up {operations_to_delete} operations to maintain limit of {max_operations}")
+        logger.info(
+            f"Cleaning up {operations_to_delete} operations to maintain limit of {max_operations}"
+        )
 
         if max_operations == 0:
             # Special case: delete all operations
@@ -165,7 +174,7 @@ class HistoryCleanup:
                 logger.warning("Could not determine cutoff timestamp")
                 return 0
 
-            cutoff_timestamp = result['timestamp']
+            cutoff_timestamp = result["timestamp"]
 
             # Delete operations older than the cutoff (strictly less than)
             delete_query = "DELETE FROM operations WHERE timestamp < ?"
@@ -195,10 +204,14 @@ class HistoryCleanup:
         current_size_mb = self.db.get_database_size() / (1024 * 1024)
 
         if current_size_mb <= max_size_mb:
-            logger.info(f"No cleanup needed: {current_size_mb:.2f}MB within limit of {max_size_mb}MB")
+            logger.info(
+                f"No cleanup needed: {current_size_mb:.2f}MB within limit of {max_size_mb}MB"
+            )
             return 0
 
-        logger.info(f"Database size {current_size_mb:.2f}MB exceeds limit of {max_size_mb}MB, cleaning up...")
+        logger.info(
+            f"Database size {current_size_mb:.2f}MB exceeds limit of {max_size_mb}MB, cleaning up..."
+        )
 
         total_deleted = 0
         batch_size = self.config.cleanup_batch_size
@@ -217,8 +230,8 @@ class HistoryCleanup:
                 break
 
             # Delete the batch
-            ids = [row['id'] for row in rows]
-            placeholders = ','.join('?' * len(ids))
+            ids = [row["id"] for row in rows]
+            placeholders = ",".join("?" * len(ids))
             delete_query = f"DELETE FROM operations WHERE id IN ({placeholders})"
 
             with self.db.transaction() as conn:
@@ -236,7 +249,9 @@ class HistoryCleanup:
         # Clean up orphaned transactions
         self._cleanup_orphaned_transactions()
 
-        logger.info(f"Cleanup complete: deleted {total_deleted} operations, final size: {current_size_mb:.2f}MB")
+        logger.info(
+            f"Cleanup complete: deleted {total_deleted} operations, final size: {current_size_mb:.2f}MB"
+        )
         return total_deleted
 
     def cleanup_failed_operations(self, older_than_days: int = 7) -> int:
@@ -250,7 +265,7 @@ class HistoryCleanup:
             Number of operations deleted
         """
         cutoff_date = datetime.utcnow() - timedelta(days=older_than_days)
-        cutoff_str = cutoff_date.isoformat() + 'Z'
+        cutoff_str = cutoff_date.isoformat() + "Z"
 
         logger.info(f"Cleaning up failed operations older than {older_than_days} days")
 
@@ -273,7 +288,7 @@ class HistoryCleanup:
             Number of operations deleted
         """
         cutoff_date = datetime.utcnow() - timedelta(days=older_than_days)
-        cutoff_str = cutoff_date.isoformat() + 'Z'
+        cutoff_str = cutoff_date.isoformat() + "Z"
 
         logger.info(f"Cleaning up rolled back operations older than {older_than_days} days")
 
@@ -319,33 +334,30 @@ class HistoryCleanup:
         """
         if not self.should_cleanup():
             logger.debug("Auto cleanup not needed")
-            return {'deleted_operations': 0, 'deleted_transactions': 0}
+            return {"deleted_operations": 0, "deleted_transactions": 0}
 
         logger.info("Starting auto cleanup...")
 
-        stats = {
-            'deleted_operations': 0,
-            'deleted_transactions': 0
-        }
+        stats = {"deleted_operations": 0, "deleted_transactions": 0}
 
         # Clean by age
         deleted = self.cleanup_old_operations()
-        stats['deleted_operations'] += deleted
+        stats["deleted_operations"] += deleted
 
         # Clean by count if still over limit
         if self.db.get_operation_count() > self.config.max_operations:
             deleted = self.cleanup_by_count()
-            stats['deleted_operations'] += deleted
+            stats["deleted_operations"] += deleted
 
         # Clean by size if still over limit
         db_size_mb = self.db.get_database_size() / (1024 * 1024)
         if db_size_mb > self.config.max_size_mb:
             deleted = self.cleanup_by_size()
-            stats['deleted_operations'] += deleted
+            stats["deleted_operations"] += deleted
 
         # Clean orphaned transactions
         deleted = self._cleanup_orphaned_transactions()
-        stats['deleted_transactions'] = deleted
+        stats["deleted_transactions"] = deleted
 
         # Vacuum to reclaim space
         self.db.vacuum()
@@ -389,31 +401,35 @@ class HistoryCleanup:
         stats = {}
 
         # Operation counts
-        stats['total_operations'] = self.db.get_operation_count()
-        stats['database_size_mb'] = self.db.get_database_size() / (1024 * 1024)
+        stats["total_operations"] = self.db.get_operation_count()
+        stats["database_size_mb"] = self.db.get_database_size() / (1024 * 1024)
 
         # Count by status
-        for status in [OperationStatus.COMPLETED, OperationStatus.FAILED, OperationStatus.ROLLED_BACK]:
+        for status in [
+            OperationStatus.COMPLETED,
+            OperationStatus.FAILED,
+            OperationStatus.ROLLED_BACK,
+        ]:
             query = "SELECT COUNT(*) as count FROM operations WHERE status = ?"
             result = self.db.fetch_one(query, (status.value,))
-            stats[f'operations_{status.value}'] = result['count'] if result else 0
+            stats[f"operations_{status.value}"] = result["count"] if result else 0
 
         # Transaction counts
         query = "SELECT COUNT(*) as count FROM transactions"
         result = self.db.fetch_one(query)
-        stats['total_transactions'] = result['count'] if result else 0
+        stats["total_transactions"] = result["count"] if result else 0
 
         # Count by transaction status
         for status in [TransactionStatus.COMPLETED, TransactionStatus.FAILED]:
             query = "SELECT COUNT(*) as count FROM transactions WHERE status = ?"
             result = self.db.fetch_one(query, (status.value,))
-            stats[f'transactions_{status.value}'] = result['count'] if result else 0
+            stats[f"transactions_{status.value}"] = result["count"] if result else 0
 
         # Oldest and newest operations
         query = "SELECT MIN(timestamp) as oldest, MAX(timestamp) as newest FROM operations"
         result = self.db.fetch_one(query)
         if result:
-            stats['oldest_operation'] = result['oldest']
-            stats['newest_operation'] = result['newest']
+            stats["oldest_operation"] = result["oldest"]
+            stats["newest_operation"] = result["newest"]
 
         return stats

@@ -4,6 +4,7 @@ Johnny Decimal Configuration Management
 Manages configuration for Johnny Decimal methodology including hybrid setups
 with PARA and other organizational systems.
 """
+
 from __future__ import annotations
 
 import json
@@ -261,7 +262,7 @@ class ConfigBuilder:
                 area_range_start=area_number,
                 area_range_end=area_number,
                 name=title,
-                description=description
+                description=description,
             )
         )
         return self

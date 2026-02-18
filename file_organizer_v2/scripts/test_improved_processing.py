@@ -31,7 +31,8 @@ def create_diverse_test_files(test_dir: Path) -> dict:
 
     # 1. Technical documentation
     tech_doc = test_dir / "api_documentation.md"
-    tech_doc.write_text("""
+    tech_doc.write_text(
+        """
 # REST API Documentation
 
 ## Authentication
@@ -69,12 +70,14 @@ Required fields:
 
 ### Error Handling
 All errors return appropriate HTTP status codes with error messages in JSON format.
-""".strip())
-    test_files['Technical API Documentation'] = tech_doc
+""".strip()
+    )
+    test_files["Technical API Documentation"] = tech_doc
 
     # 2. Financial document
     finance_doc = test_dir / "quarterly_report.txt"
-    finance_doc.write_text("""
+    finance_doc.write_text(
+        """
 Q3 2024 Financial Summary
 
 Revenue: $2.4M (up 23% YoY)
@@ -95,12 +98,14 @@ Strategic Initiatives:
 
 Outlook:
 Q4 targets include reaching $3M revenue and expanding the sales team. Focus on enterprise customers and international growth.
-""".strip())
-    test_files['Financial Quarterly Report'] = finance_doc
+""".strip()
+    )
+    test_files["Financial Quarterly Report"] = finance_doc
 
     # 3. Scientific paper
     science_doc = test_dir / "research_paper.txt"
-    science_doc.write_text("""
+    science_doc.write_text(
+        """
 Machine Learning Approaches to Drug Discovery
 
 Abstract:
@@ -117,12 +122,14 @@ Our model achieved 92% accuracy on held-out test data, compared to 78% for tradi
 
 Conclusion:
 Deep learning shows significant promise for accelerating drug discovery pipelines while reducing costs.
-""".strip())
-    test_files['Scientific Research Paper'] = science_doc
+""".strip()
+    )
+    test_files["Scientific Research Paper"] = science_doc
 
     # 4. Meeting notes
     meeting_notes = test_dir / "team_meeting.md"
-    meeting_notes.write_text("""
+    meeting_notes.write_text(
+        """
 # Weekly Team Sync - Jan 15, 2024
 
 ## Attendees
@@ -158,12 +165,14 @@ Deep learning shows significant promise for accelerating drug discovery pipeline
 - Mike: Complete microservices migration (Due: Jan 31)
 - Jessica: Finalize dashboard mockups (Due: Jan 20)
 - Tom: Launch new content campaign (Due: Feb 1)
-""".strip())
-    test_files['Team Meeting Notes'] = meeting_notes
+""".strip()
+    )
+    test_files["Team Meeting Notes"] = meeting_notes
 
     # 5. Recipe
     recipe = test_dir / "baking.txt"
-    recipe.write_text("""
+    recipe.write_text(
+        """
 Homemade Sourdough Bread
 
 This classic sourdough bread recipe produces a crusty exterior with a soft, tangy interior. Perfect for sandwiches or toast.
@@ -189,12 +198,14 @@ Tips:
 - Starter should be bubbly and active
 - Dough should increase by 50% during bulk fermentation
 - Internal temperature should reach 205°F when done
-""".strip())
-    test_files['Sourdough Bread Recipe'] = recipe
+""".strip()
+    )
+    test_files["Sourdough Bread Recipe"] = recipe
 
     # 6. Travel itinerary
     travel = test_dir / "vacation_plan.md"
-    travel.write_text("""
+    travel.write_text(
+        """
 # Tokyo Trip Itinerary - March 2024
 
 ## Day 1: Arrival & Shibuya
@@ -227,12 +238,14 @@ Tips:
 - Afternoon: Airport departure (4:00 PM flight)
 
 Budget: ~$2,500 per person (flights, hotels, food, activities)
-""".strip())
-    test_files['Tokyo Travel Itinerary'] = travel
+""".strip()
+    )
+    test_files["Tokyo Travel Itinerary"] = travel
 
     # 7. Tutorial
     tutorial = test_dir / "guide.md"
-    tutorial.write_text("""
+    tutorial.write_text(
+        """
 # Complete Git and GitHub Tutorial for Beginners
 
 ## What is Git?
@@ -290,8 +303,9 @@ git merge <name>            # Merge branch
 5. Review and merge
 
 This workflow keeps the main branch stable while allowing parallel development.
-""".strip())
-    test_files['Git GitHub Tutorial'] = tutorial
+""".strip()
+    )
+    test_files["Git GitHub Tutorial"] = tutorial
 
     return test_files
 
@@ -373,28 +387,35 @@ def test_improved_processing():
 
         # Check if filenames are meaningful (not "untitled")
         meaningful_filenames = sum(
-            1 for _, r in results
-            if r.filename and r.filename not in ('untitled', 'document')
+            1 for _, r in results if r.filename and r.filename not in ("untitled", "document")
         )
         filename_quality = (meaningful_filenames / len(results) * 100) if results else 0
 
         # Check if folder names are meaningful
         meaningful_folders = sum(
-            1 for _, r in results
-            if r.folder_name and r.folder_name not in ('documents', 'untitled', 'files')
+            1
+            for _, r in results
+            if r.folder_name and r.folder_name not in ("documents", "untitled", "files")
         )
         folder_quality = (meaningful_folders / len(results) * 100) if results else 0
 
-        print(f"  Meaningful filenames: {meaningful_filenames}/{len(results)} ({filename_quality:.0f}%)")
+        print(
+            f"  Meaningful filenames: {meaningful_filenames}/{len(results)} ({filename_quality:.0f}%)"
+        )
         print(f"  Meaningful folders: {meaningful_folders}/{len(results)} ({folder_quality:.0f}%)")
 
         # Check descriptions
         good_descriptions = sum(
-            1 for _, r in results
-            if r.description and len(r.description) > 100 and not r.description.startswith("Content about")
+            1
+            for _, r in results
+            if r.description
+            and len(r.description) > 100
+            and not r.description.startswith("Content about")
         )
         description_quality = (good_descriptions / len(results) * 100) if results else 0
-        print(f"  Quality descriptions: {good_descriptions}/{len(results)} ({description_quality:.0f}%)")
+        print(
+            f"  Quality descriptions: {good_descriptions}/{len(results)} ({description_quality:.0f}%)"
+        )
 
         overall_quality = (filename_quality + folder_quality + description_quality) / 3
         print(f"\n  Overall Quality Score: {overall_quality:.1f}%")
@@ -426,6 +447,7 @@ def main():
         test_dir = Path(__file__).parent.parent / "test_data_improved"
         if test_dir.exists():
             import shutil
+
             shutil.rmtree(test_dir)
             print("\n🧹 Cleaned up test directory")
 

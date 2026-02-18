@@ -3,6 +3,7 @@
 Provides panels showing recent operations, undo/redo stacks,
 and aggregate history statistics.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -40,12 +41,18 @@ class OperationHistoryPanel(Static):
         ]
         for op in ops[:20]:
             op_id = str(op.id or "-")
-            op_type = str(op.operation_type.value) if hasattr(op.operation_type, "value") else str(op.operation_type)
+            op_type = (
+                str(op.operation_type.value)
+                if hasattr(op.operation_type, "value")
+                else str(op.operation_type)
+            )
             status = str(op.status.value) if hasattr(op.status, "value") else str(op.status)
             timestamp = _format_timestamp(op.timestamp) if op.timestamp else "-"
             source = _truncate(str(op.source_path), 25)
             dest = _truncate(str(op.destination_path), 25) if op.destination_path else "-"
-            lines.append(f"  {op_id:<6} {op_type:<8} {status:<12} {timestamp:<20} {source} -> {dest}")
+            lines.append(
+                f"  {op_id:<6} {op_type:<8} {status:<12} {timestamp:<20} {source} -> {dest}"
+            )
 
         self.update("\n".join(lines))
 
@@ -80,7 +87,11 @@ class UndoRedoStackPanel(Static):
         if undo_stack:
             lines.append("  [dim]Top 5 undoable:[/dim]")
             for op in undo_stack[:5]:
-                op_type = str(op.operation_type.value) if hasattr(op.operation_type, "value") else str(op.operation_type)
+                op_type = (
+                    str(op.operation_type.value)
+                    if hasattr(op.operation_type, "value")
+                    else str(op.operation_type)
+                )
                 source = _truncate(str(op.source_path), 35)
                 lines.append(f"    {op_type:<8} {source}")
 
@@ -89,7 +100,11 @@ class UndoRedoStackPanel(Static):
         if redo_stack:
             lines.append("  [dim]Top 5 redoable:[/dim]")
             for op in redo_stack[:5]:
-                op_type = str(op.operation_type.value) if hasattr(op.operation_type, "value") else str(op.operation_type)
+                op_type = (
+                    str(op.operation_type.value)
+                    if hasattr(op.operation_type, "value")
+                    else str(op.operation_type)
+                )
                 source = _truncate(str(op.source_path), 35)
                 lines.append(f"    {op_type:<8} {source}")
 
@@ -130,12 +145,22 @@ class HistoryStatsPanel(Static):
         if by_status:
             lines.append("\n  [dim]By status:[/dim]")
             for status, count in sorted(by_status.items()):
-                color = "green" if status.lower() == "completed" else "yellow" if status.lower() == "pending" else "red"
+                color = (
+                    "green"
+                    if status.lower() == "completed"
+                    else "yellow"
+                    if status.lower() == "pending"
+                    else "red"
+                )
                 lines.append(f"    {status:<14} [{color}]{count:>5}[/{color}]")
 
         latest = stats.get("latest_operation")
         if latest is not None:
-            ts = _format_timestamp(latest.timestamp) if hasattr(latest, "timestamp") and latest.timestamp else "unknown"
+            ts = (
+                _format_timestamp(latest.timestamp)
+                if hasattr(latest, "timestamp") and latest.timestamp
+                else "unknown"
+            )
             lines.append(f"\n  Latest: {ts}")
 
         self.update("\n".join(lines))

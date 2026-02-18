@@ -3,6 +3,7 @@
 Wraps ``SmartSuggestions`` (``SuggestionEngine``) and ``PatternAnalyzer``
 to provide ``files``, ``apply``, and ``patterns`` commands.
 """
+
 from __future__ import annotations
 
 import json
@@ -48,9 +49,7 @@ def _collect_files(directory: Path) -> list[Path]:
 @suggest_app.command()
 def files(
     directory: Path = typer.Argument(..., help="Directory to generate suggestions for."),
-    min_confidence: float = typer.Option(
-        40.0, help="Minimum confidence threshold (0-100)."
-    ),
+    min_confidence: float = typer.Option(40.0, help="Minimum confidence threshold (0-100)."),
     max_results: int = typer.Option(50, help="Maximum number of suggestions."),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Alias for preview mode."),
@@ -115,9 +114,7 @@ def files(
 @suggest_app.command()
 def apply(
     directory: Path = typer.Argument(..., help="Directory to organise."),
-    min_confidence: float = typer.Option(
-        60.0, help="Minimum confidence for auto-apply."
-    ),
+    min_confidence: float = typer.Option(60.0, help="Minimum confidence for auto-apply."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without changes."),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
 ) -> None:
@@ -135,9 +132,7 @@ def apply(
     with console.status("Analyzing…"):
         analysis = analyzer.analyze_directory(directory)
     with console.status("Generating suggestions…"):
-        suggestions = engine.generate_suggestions(
-            file_list, pattern_analysis=analysis
-        )
+        suggestions = engine.generate_suggestions(file_list, pattern_analysis=analysis)
 
     suggestions = [s for s in suggestions if s.confidence >= min_confidence]
     if not suggestions:
@@ -206,9 +201,7 @@ def patterns(
         console.print_json(json.dumps(data, indent=2))
         raise typer.Exit()
 
-    console.print(
-        f"[bold]Pattern Analysis[/bold] — {analysis.total_files} files\n"
-    )
+    console.print(f"[bold]Pattern Analysis[/bold] — {analysis.total_files} files\n")
 
     if analysis.naming_patterns:
         table = Table(title="Naming Patterns")

@@ -3,6 +3,7 @@ Auto-Tagging Service
 
 Intelligent tag suggestion system that learns from user behavior.
 """
+
 from __future__ import annotations
 
 from .content_analyzer import ContentTagAnalyzer
@@ -10,14 +11,14 @@ from .tag_learning import TagLearningEngine, TagPattern, TagUsage
 from .tag_recommender import TagRecommendation, TagRecommender, TagSuggestion
 
 __all__ = [
-    'ContentTagAnalyzer',
-    'TagLearningEngine',
-    'TagPattern',
-    'TagUsage',
-    'TagRecommender',
-    'TagSuggestion',
-    'TagRecommendation',
-    'AutoTaggingService'
+    "ContentTagAnalyzer",
+    "TagLearningEngine",
+    "TagPattern",
+    "TagUsage",
+    "TagRecommender",
+    "TagSuggestion",
+    "TagRecommendation",
+    "AutoTaggingService",
 ]
 
 
@@ -38,8 +39,7 @@ class AutoTaggingService:
         self.content_analyzer = ContentTagAnalyzer()
         self.learning_engine = TagLearningEngine(storage_path=storage_path)
         self.recommender = TagRecommender(
-            content_analyzer=self.content_analyzer,
-            learning_engine=self.learning_engine
+            content_analyzer=self.content_analyzer, learning_engine=self.learning_engine
         )
 
     def suggest_tags(self, file_path, existing_tags=None, top_n=10):
@@ -54,11 +54,7 @@ class AutoTaggingService:
         Returns:
             TagRecommendation object
         """
-        return self.recommender.recommend_tags(
-            file_path,
-            existing_tags=existing_tags,
-            top_n=top_n
-        )
+        return self.recommender.recommend_tags(file_path, existing_tags=existing_tags, top_n=top_n)
 
     def record_tag_usage(self, file_path, tags, context=None):
         """
@@ -69,11 +65,7 @@ class AutoTaggingService:
             tags: List of tags applied
             context: Optional context dict
         """
-        self.learning_engine.record_tag_application(
-            file_path,
-            tags,
-            context=context
-        )
+        self.learning_engine.record_tag_application(file_path, tags, context=context)
 
     def provide_feedback(self, feedback_items):
         """

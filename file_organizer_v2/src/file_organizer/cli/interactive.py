@@ -3,6 +3,7 @@
 All prompt functions respect a global ``--yes`` / ``--no-interactive``
 flag so that scripts can suppress interactive behaviour.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence

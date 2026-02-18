@@ -3,6 +3,7 @@
 Provides CRUD operations for organisation rules, a preview engine for
 dry-run evaluation, and YAML-based persistence.
 """
+
 from __future__ import annotations
 
 from file_organizer.services.copilot.rules.models import (

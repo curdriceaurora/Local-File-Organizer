@@ -4,6 +4,7 @@ Tests cover suggestion generation, batch processing, confidence levels,
 explanation formatting, and integration with heuristics. All tests use
 mocks for the heuristic engine to avoid filesystem dependencies.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -172,7 +173,9 @@ class TestSuggest:
     """Tests for the suggest method."""
 
     def test_returns_para_suggestion(
-        self, suggestion_engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        suggestion_engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """suggest() should return a PARASuggestion."""
         f = tmp_path / "test.txt"
@@ -183,7 +186,9 @@ class TestSuggest:
         assert 0.0 <= result.confidence <= 1.0
 
     def test_suggestion_has_reasoning(
-        self, suggestion_engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        suggestion_engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """Suggestions should include at least one reasoning string."""
         f = tmp_path / "project_plan.txt"
@@ -192,7 +197,9 @@ class TestSuggest:
         assert len(result.reasoning) >= 1
 
     def test_content_influences_suggestion(
-        self, suggestion_engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        suggestion_engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """Providing content should add content-based signals."""
         f = tmp_path / "file.txt"
@@ -205,7 +212,9 @@ class TestSuggest:
         assert project_score > 0
 
     def test_suggestion_has_metadata(
-        self, suggestion_engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        suggestion_engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """Suggestion metadata should contain score breakdowns."""
         f = tmp_path / "doc.txt"
@@ -216,7 +225,9 @@ class TestSuggest:
         assert "combined_scores" in result.metadata
 
     def test_alternatives_are_ranked(
-        self, suggestion_engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        suggestion_engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """Alternative categories should be ranked by score (descending)."""
         f = tmp_path / "file.txt"
@@ -227,7 +238,9 @@ class TestSuggest:
             assert scores == sorted(scores, reverse=True)
 
     def test_tags_generated(
-        self, suggestion_engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        suggestion_engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """Tags should include file extension."""
         f = tmp_path / "report.pdf"
@@ -251,21 +264,26 @@ class TestSuggest:
         assert result.confidence >= 0.0
 
     def test_nonexistent_file_handled(
-        self, suggestion_engine: PARASuggestionEngine,
+        self,
+        suggestion_engine: PARASuggestionEngine,
     ) -> None:
         """Should handle non-existent file paths gracefully."""
         result = suggestion_engine.suggest(Path("/nonexistent/path/file.txt"))
         assert isinstance(result, PARASuggestion)
 
     def test_structural_hint_influences_category(
-        self, config: PARAConfig, tmp_path: Path,
+        self,
+        config: PARAConfig,
+        tmp_path: Path,
     ) -> None:
         """Parent directory named 'archive' should boost ARCHIVE score."""
         mock_engine = MagicMock(spec=HeuristicEngine)
         # Return equal scores from heuristic -- structural features should tip it
         scores = {cat: CategoryScore(cat, 0.1, 0.3) for cat in PARACategory}
         mock_engine.evaluate.return_value = HeuristicResult(
-            scores=scores, overall_confidence=0.3, needs_manual_review=True,
+            scores=scores,
+            overall_confidence=0.3,
+            needs_manual_review=True,
         )
         engine = PARASuggestionEngine(config=config, heuristic_engine=mock_engine)
 
@@ -289,7 +307,9 @@ class TestSuggestBatch:
     """Tests for the suggest_batch method."""
 
     def test_returns_one_per_file(
-        self, suggestion_engine: PARASuggestionEngine, tmp_path: Path,
+        self,
+        suggestion_engine: PARASuggestionEngine,
+        tmp_path: Path,
     ) -> None:
         """Should return exactly one suggestion per file."""
         files = []
@@ -304,7 +324,9 @@ class TestSuggestBatch:
             assert isinstance(r, PARASuggestion)
 
     def test_handles_errors_in_batch(
-        self, config: PARAConfig, tmp_path: Path,
+        self,
+        config: PARAConfig,
+        tmp_path: Path,
     ) -> None:
         """Errors on individual files should not break the batch."""
         mock_engine = MagicMock(spec=HeuristicEngine)
@@ -319,7 +341,8 @@ class TestSuggestBatch:
         assert len(results) == 3
 
     def test_empty_batch_returns_empty(
-        self, suggestion_engine: PARASuggestionEngine,
+        self,
+        suggestion_engine: PARASuggestionEngine,
     ) -> None:
         """Empty input should return empty list."""
         assert suggestion_engine.suggest_batch([]) == []
@@ -334,7 +357,8 @@ class TestExplain:
     """Tests for the explain method."""
 
     def test_explain_includes_category(
-        self, suggestion_engine: PARASuggestionEngine,
+        self,
+        suggestion_engine: PARASuggestionEngine,
     ) -> None:
         """Explanation should mention the category."""
         suggestion = PARASuggestion(
@@ -346,7 +370,8 @@ class TestExplain:
         assert "Resource" in explanation
 
     def test_explain_includes_confidence(
-        self, suggestion_engine: PARASuggestionEngine,
+        self,
+        suggestion_engine: PARASuggestionEngine,
     ) -> None:
         """Explanation should include confidence percentage."""
         suggestion = PARASuggestion(
@@ -358,7 +383,8 @@ class TestExplain:
         assert "85%" in explanation
 
     def test_explain_includes_reasoning(
-        self, suggestion_engine: PARASuggestionEngine,
+        self,
+        suggestion_engine: PARASuggestionEngine,
     ) -> None:
         """Explanation should list reasoning items."""
         suggestion = PARASuggestion(
@@ -371,7 +397,8 @@ class TestExplain:
         assert "Regular updates" in explanation
 
     def test_explain_includes_alternatives(
-        self, suggestion_engine: PARASuggestionEngine,
+        self,
+        suggestion_engine: PARASuggestionEngine,
     ) -> None:
         """Explanation should list alternative categories."""
         suggestion = PARASuggestion(
@@ -388,7 +415,8 @@ class TestExplain:
         assert "Resource" in explanation
 
     def test_explain_includes_subfolder(
-        self, suggestion_engine: PARASuggestionEngine,
+        self,
+        suggestion_engine: PARASuggestionEngine,
     ) -> None:
         """Explanation should mention suggested subfolder if present."""
         suggestion = PARASuggestion(
@@ -401,7 +429,8 @@ class TestExplain:
         assert "References" in explanation
 
     def test_explain_includes_tags(
-        self, suggestion_engine: PARASuggestionEngine,
+        self,
+        suggestion_engine: PARASuggestionEngine,
     ) -> None:
         """Explanation should list tags."""
         suggestion = PARASuggestion(

@@ -58,6 +58,7 @@ def build_package(clean: bool = True) -> Path:
 
     if clean and dist_path.exists():
         import shutil
+
         shutil.rmtree(dist_path)
 
     result = _run_command(
@@ -66,9 +67,7 @@ def build_package(clean: bool = True) -> Path:
     )
 
     if result.returncode != 0:
-        raise RuntimeError(
-            f"Package build failed:\n{result.stdout}\n{result.stderr}"
-        )
+        raise RuntimeError(f"Package build failed:\n{result.stdout}\n{result.stderr}")
 
     if not dist_path.exists() or not list(dist_path.iterdir()):
         raise RuntimeError("Build completed but no dist/ files were created")
@@ -130,10 +129,16 @@ def publish_pypi(
     token_env = config.test_token_env_var if test else config.token_env_var
 
     cmd = [
-        sys.executable, "-m", "twine", "upload",
-        "--repository-url", repository_url,
-        "--username", "__token__",
-        "--password", f"${{{token_env}}}",
+        sys.executable,
+        "-m",
+        "twine",
+        "upload",
+        "--repository-url",
+        repository_url,
+        "--username",
+        "__token__",
+        "--password",
+        f"${{{token_env}}}",
         str(dist_path / "*"),
     ]
 
@@ -154,8 +159,7 @@ def get_dist_files(dist_path: Path) -> list[Path]:
         return []
 
     return sorted(
-        p for p in dist_path.iterdir()
-        if p.suffix in (".gz", ".whl") or p.name.endswith(".tar.gz")
+        p for p in dist_path.iterdir() if p.suffix in (".gz", ".whl") or p.name.endswith(".tar.gz")
     )
 
 

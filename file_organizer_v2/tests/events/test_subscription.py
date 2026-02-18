@@ -4,6 +4,7 @@ Unit tests for Subscription and SubscriptionRegistry.
 Tests subscription creation, topic matching (exact and wildcard),
 filter evaluation, and registry CRUD operations.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -67,20 +68,25 @@ class TestSubscription:
 
     def test_passes_filter_true(self) -> None:
         """Filter returning True passes."""
+
         def fn(data):
             return data.get("size", 0) > 100
+
         sub = Subscription(topic="t", handler=MagicMock(), filter_fn=fn)
         assert sub.passes_filter({"size": 200}) is True
 
     def test_passes_filter_false(self) -> None:
         """Filter returning False rejects."""
+
         def fn(data):
             return data.get("size", 0) > 100
+
         sub = Subscription(topic="t", handler=MagicMock(), filter_fn=fn)
         assert sub.passes_filter({"size": 50}) is False
 
     def test_passes_filter_exception_returns_false(self) -> None:
         """Filter that raises returns False (safe fallback)."""
+
         def bad_filter(data: dict) -> bool:
             raise ValueError("boom")
 
@@ -208,8 +214,10 @@ class TestSubscriptionRegistry:
     def test_add_with_filter(self) -> None:
         """Adding a subscription with a filter stores it correctly."""
         reg = SubscriptionRegistry()
+
         def fn(d):
             return True
+
         sub = reg.add("t", MagicMock(), filter_fn=fn)
         assert sub.filter_fn is fn
 

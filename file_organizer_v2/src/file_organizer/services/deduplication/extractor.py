@@ -4,6 +4,7 @@ Document text extraction module.
 Extracts text content from various document formats for semantic analysis.
 Supports PDF, DOCX, TXT, RTF, ODT, and Markdown document formats.
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,9 +27,7 @@ class DocumentExtractor:
 
     def __init__(self):
         """Initialize the document extractor."""
-        self.supported_extensions = {
-            '.pdf', '.docx', '.txt', '.rtf', '.odt', '.md'
-        }
+        self.supported_extensions = {".pdf", ".docx", ".txt", ".rtf", ".odt", ".md"}
         self._check_dependencies()
 
     def extract_text(self, file_path: Path) -> str:
@@ -54,15 +53,15 @@ class DocumentExtractor:
             raise ValueError(f"Unsupported format: {extension}")
 
         try:
-            if extension == '.pdf':
+            if extension == ".pdf":
                 return self._extract_pdf(file_path)
-            elif extension == '.docx':
+            elif extension == ".docx":
                 return self._extract_docx(file_path)
-            elif extension == '.txt' or extension == '.md':
+            elif extension == ".txt" or extension == ".md":
                 return self._extract_text(file_path)
-            elif extension == '.rtf':
+            elif extension == ".rtf":
                 return self._extract_rtf(file_path)
-            elif extension == '.odt':
+            elif extension == ".odt":
                 return self._extract_odt(file_path)
             else:
                 logger.warning(f"No extractor for {extension}, treating as text")
@@ -133,7 +132,7 @@ class DocumentExtractor:
 
             text_parts = []
 
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 pdf_reader = PyPDF2.PdfReader(f)
 
                 # Extract text from each page
@@ -143,7 +142,7 @@ class DocumentExtractor:
                     if text:
                         text_parts.append(text)
 
-            full_text = '\n'.join(text_parts)
+            full_text = "\n".join(text_parts)
             logger.debug(f"Extracted {len(full_text)} chars from PDF: {file_path.name}")
 
             return full_text
@@ -179,7 +178,7 @@ class DocumentExtractor:
                     for cell in row.cells:
                         text_parts.append(cell.text)
 
-            full_text = '\n'.join(text_parts)
+            full_text = "\n".join(text_parts)
             logger.debug(f"Extracted {len(full_text)} chars from DOCX: {file_path.name}")
 
             return full_text
@@ -203,7 +202,7 @@ class DocumentExtractor:
         """
         try:
             # Try multiple encodings
-            encodings = ['utf-8', 'latin-1', 'cp1252', 'ascii']
+            encodings = ["utf-8", "latin-1", "cp1252", "ascii"]
 
             for encoding in encodings:
                 try:
@@ -215,8 +214,8 @@ class DocumentExtractor:
                     continue
 
             # If all encodings fail, read as binary and decode with errors='ignore'
-            with open(file_path, 'rb') as f:
-                text = f.read().decode('utf-8', errors='ignore')
+            with open(file_path, "rb") as f:
+                text = f.read().decode("utf-8", errors="ignore")
 
             return text
 
@@ -239,7 +238,7 @@ class DocumentExtractor:
             try:
                 from striprtf.striprtf import rtf_to_text
 
-                with open(file_path, encoding='utf-8', errors='ignore') as f:
+                with open(file_path, encoding="utf-8", errors="ignore") as f:
                     rtf_content = f.read()
 
                 text = rtf_to_text(rtf_content)
@@ -251,13 +250,14 @@ class DocumentExtractor:
                 # Fallback: simple RTF stripping
                 logger.warning("striprtf not installed, using basic extraction")
 
-                with open(file_path, encoding='utf-8', errors='ignore') as f:
+                with open(file_path, encoding="utf-8", errors="ignore") as f:
                     content = f.read()
 
                 # Very basic RTF stripping (removes control words)
                 import re
-                text = re.sub(r'\\[a-z]+\d*\s?', '', content)
-                text = re.sub(r'[{}]', '', text)
+
+                text = re.sub(r"\\[a-z]+\d*\s?", "", content)
+                text = re.sub(r"[{}]", "", text)
                 text = text.strip()
 
                 return text
@@ -281,9 +281,9 @@ class DocumentExtractor:
             import zipfile
 
             # ODT files are ZIP archives
-            with zipfile.ZipFile(file_path, 'r') as odt_zip:
+            with zipfile.ZipFile(file_path, "r") as odt_zip:
                 # Extract content.xml
-                content_xml = odt_zip.read('content.xml')
+                content_xml = odt_zip.read("content.xml")
 
             # Parse XML
             root = ET.fromstring(content_xml)
@@ -291,14 +291,14 @@ class DocumentExtractor:
             # Extract all text nodes
             # ODT uses OpenDocument namespace
             namespaces = {
-                'text': 'urn:oasis:names:tc:opendocument:xmlns:text:1.0',
-                'office': 'urn:oasis:names:tc:opendocument:xmlns:office:1.0'
+                "text": "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
+                "office": "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
             }
 
             text_parts = []
 
             # Find all text:p (paragraph) elements
-            for paragraph in root.findall('.//text:p', namespaces):
+            for paragraph in root.findall(".//text:p", namespaces):
                 if paragraph.text:
                     text_parts.append(paragraph.text)
 
@@ -309,7 +309,7 @@ class DocumentExtractor:
                     if child.tail:
                         text_parts.append(child.tail)
 
-            full_text = '\n'.join(text_parts)
+            full_text = "\n".join(text_parts)
             logger.debug(f"Extracted {len(full_text)} chars from ODT: {file_path.name}")
 
             return full_text
@@ -321,14 +321,14 @@ class DocumentExtractor:
     def _check_dependencies(self) -> None:
         """Check if required dependencies are installed."""
         dependencies = {
-            'PyPDF2': 'PDF extraction',
-            'docx': 'DOCX extraction',
+            "PyPDF2": "PDF extraction",
+            "docx": "DOCX extraction",
         }
 
         missing = []
         for module, purpose in dependencies.items():
             try:
-                __import__(module if module != 'docx' else 'docx')
+                __import__(module if module != "docx" else "docx")
             except ImportError:
                 missing.append(f"{module} ({purpose})")
 

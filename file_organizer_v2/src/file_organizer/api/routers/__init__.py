@@ -1,4 +1,5 @@
 """API routers package."""
+
 from file_organizer.api.routers.analyze import router as analyze_router
 from file_organizer.api.routers.auth import router as auth_router
 from file_organizer.api.routers.config import router as config_router

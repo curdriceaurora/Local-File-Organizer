@@ -5,6 +5,7 @@ Analytics CLI - Display comprehensive analytics dashboard.
 This module provides a command-line interface for viewing storage analytics,
 quality metrics, and organization insights.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -23,7 +24,7 @@ console = Console()
 
 def _format_bytes(size_bytes: int) -> str:
     """Format bytes as human-readable size."""
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
         if size_bytes < 1024.0:
             return f"{size_bytes:.1f} {unit}"
         size_bytes /= 1024.0
@@ -65,12 +66,8 @@ def display_storage_stats(stats, chart_gen: ChartGenerator | None) -> None:
         # Convert bytes to percentages
         total_size = sum(stats.size_by_type.values())
         if total_size > 0:
-            type_percentages = {
-                k: (v / total_size) * 100 for k, v in stats.size_by_type.items()
-            }
-            chart = chart_gen.create_pie_chart(
-                type_percentages, "File Types", width=40
-            )
+            type_percentages = {k: (v / total_size) * 100 for k, v in stats.size_by_type.items()}
+            chart = chart_gen.create_pie_chart(type_percentages, "File Types", width=40)
             console.print(chart)
 
     # Show largest files
@@ -84,9 +81,7 @@ def display_storage_stats(stats, chart_gen: ChartGenerator | None) -> None:
         for file_info in stats.largest_files[:10]:
             # Format size using public method
             size_str = _format_bytes(file_info.size)
-            file_table.add_row(
-                size_str, file_info.type, str(file_info.path.name)
-            )
+            file_table.add_row(size_str, file_info.type, str(file_info.path.name))
 
         console.print(file_table)
 
@@ -97,7 +92,13 @@ def display_quality_metrics(metrics) -> None:
     console.print("=" * 70)
 
     # Overall score with color coding
-    score_color = "green" if metrics.quality_score >= 70 else "yellow" if metrics.quality_score >= 50 else "red"
+    score_color = (
+        "green"
+        if metrics.quality_score >= 70
+        else "yellow"
+        if metrics.quality_score >= 50
+        else "red"
+    )
 
     console.print(
         f"\n[bold]Overall Quality Score:[/bold] [{score_color}]{metrics.formatted_score}[/{score_color}]"
@@ -166,9 +167,9 @@ def display_duplicate_stats(stats) -> None:
         type_table.add_column("Type", style="cyan")
         type_table.add_column("Count", style="yellow", justify="right")
 
-        for file_type, count in sorted(
-            stats.by_type.items(), key=lambda x: x[1], reverse=True
-        )[:10]:
+        for file_type, count in sorted(stats.by_type.items(), key=lambda x: x[1], reverse=True)[
+            :10
+        ]:
             type_table.add_row(file_type, str(count))
 
         console.print(type_table)
@@ -258,9 +259,7 @@ Examples:
         """,
     )
 
-    parser.add_argument(
-        "directory", type=str, help="Directory to analyze"
-    )
+    parser.add_argument("directory", type=str, help="Directory to analyze")
 
     parser.add_argument(
         "--max-depth",
@@ -290,9 +289,7 @@ Examples:
         help="Disable chart visualizations",
     )
 
-    parser.add_argument(
-        "--verbose", action="store_true", help="Enable verbose logging"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     parsed_args = parser.parse_args(args)
 
@@ -355,9 +352,7 @@ Examples:
         if parsed_args.export:
             export_path = Path(parsed_args.export)
             console.print(f"\n[dim]Exporting to {export_path}...[/dim]")
-            analytics_service.export_dashboard(
-                dashboard, export_path, format=parsed_args.format
-            )
+            analytics_service.export_dashboard(dashboard, export_path, format=parsed_args.format)
             console.print(f"[green]✓ Exported to {export_path}[/green]")
 
         # Footer

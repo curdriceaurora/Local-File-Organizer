@@ -4,6 +4,7 @@ SQLite database manager for operation history tracking.
 This module provides database connection management, schema creation,
 and migration support for the operation history system.
 """
+
 from __future__ import annotations
 
 import logging
@@ -67,7 +68,7 @@ class DatabaseManager:
                     Defaults to ~/.file_organizer/history.db
         """
         if db_path is None:
-            db_path = Path.home() / '.file_organizer' / 'history.db'
+            db_path = Path.home() / ".file_organizer" / "history.db"
 
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -101,12 +102,16 @@ class DatabaseManager:
                 conn.executescript(self.SCHEMA_SQL)
 
                 # Check and update schema version
-                cursor = conn.execute("SELECT version FROM schema_version ORDER BY version DESC LIMIT 1")
+                cursor = conn.execute(
+                    "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1"
+                )
                 result = cursor.fetchone()
 
                 if result is None:
                     # First time setup
-                    conn.execute("INSERT INTO schema_version (version) VALUES (?)", (self.SCHEMA_VERSION,))
+                    conn.execute(
+                        "INSERT INTO schema_version (version) VALUES (?)", (self.SCHEMA_VERSION,)
+                    )
                     logger.info(f"Database schema version {self.SCHEMA_VERSION} created")
                 else:
                     current_version = result[0]
@@ -149,9 +154,7 @@ class DatabaseManager:
         """
         if self._connection is None:
             self._connection = sqlite3.connect(
-                str(self.db_path),
-                check_same_thread=False,
-                timeout=30.0
+                str(self.db_path), check_same_thread=False, timeout=30.0
             )
             # Enable row factory for easier data access
             self._connection.row_factory = sqlite3.Row
@@ -256,7 +259,7 @@ class DatabaseManager:
             Total operation count
         """
         result = self.fetch_one("SELECT COUNT(*) as count FROM operations")
-        return result['count'] if result else 0
+        return result["count"] if result else 0
 
     def vacuum(self) -> None:
         """

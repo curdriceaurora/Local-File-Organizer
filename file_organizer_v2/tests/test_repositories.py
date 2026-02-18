@@ -1,4 +1,5 @@
 """Tests for the repository layer (WorkspaceRepository, JobRepository, SettingsRepository)."""
+
 from __future__ import annotations
 
 import json
@@ -128,20 +129,14 @@ class TestWorkspaceRepository:
         assert result == []
 
     def test_update(self, db_session: Session, user: User) -> None:
-        ws = WorkspaceRepository.create(
-            db_session, name="Old", owner_id=user.id, root_path="/old"
-        )
-        updated = WorkspaceRepository.update(
-            db_session, ws.id, name="New", description="Updated"
-        )
+        ws = WorkspaceRepository.create(db_session, name="Old", owner_id=user.id, root_path="/old")
+        updated = WorkspaceRepository.update(db_session, ws.id, name="New", description="Updated")
         assert updated is not None
         assert updated.name == "New"
         assert updated.description == "Updated"
 
     def test_update_ignores_unknown_keys(self, db_session: Session, user: User) -> None:
-        ws = WorkspaceRepository.create(
-            db_session, name="Stable", owner_id=user.id, root_path="/s"
-        )
+        ws = WorkspaceRepository.create(db_session, name="Stable", owner_id=user.id, root_path="/s")
         updated = WorkspaceRepository.update(
             db_session, ws.id, name="Changed", unknown_field="ignored"
         )
@@ -153,17 +148,13 @@ class TestWorkspaceRepository:
         assert result is None
 
     def test_update_is_active(self, db_session: Session, user: User) -> None:
-        ws = WorkspaceRepository.create(
-            db_session, name="Active", owner_id=user.id, root_path="/a"
-        )
+        ws = WorkspaceRepository.create(db_session, name="Active", owner_id=user.id, root_path="/a")
         updated = WorkspaceRepository.update(db_session, ws.id, is_active=False)
         assert updated is not None
         assert updated.is_active is False
 
     def test_delete(self, db_session: Session, user: User) -> None:
-        ws = WorkspaceRepository.create(
-            db_session, name="Del", owner_id=user.id, root_path="/del"
-        )
+        ws = WorkspaceRepository.create(db_session, name="Del", owner_id=user.id, root_path="/del")
         ws_id = ws.id
         assert WorkspaceRepository.delete(db_session, ws_id) is True
         assert WorkspaceRepository.get_by_id(db_session, ws_id) is None
@@ -487,7 +478,9 @@ class TestSessionRepository:
         )
         pruned = SessionRepository.prune_expired(db_session, now=now)
         assert pruned == 1
-        assert SessionRepository.get_active_by_token_hash(db_session, "tok-new", now=now) is not None
+        assert (
+            SessionRepository.get_active_by_token_hash(db_session, "tok-new", now=now) is not None
+        )
 
 
 # ------------------------------------------------------------------
@@ -621,13 +614,19 @@ class TestFileMetadataRepository:
         listed = FileMetadataRepository.list_for_workspace(db_session, workspace_id=ws.id)
         assert len(listed) == 2
 
-        assert FileMetadataRepository.delete_by_relative_path(
-            db_session,
-            workspace_id=ws.id,
-            relative_path="a.txt",
-        ) is True
-        assert FileMetadataRepository.delete_by_relative_path(
-            db_session,
-            workspace_id=ws.id,
-            relative_path="missing.txt",
-        ) is False
+        assert (
+            FileMetadataRepository.delete_by_relative_path(
+                db_session,
+                workspace_id=ws.id,
+                relative_path="a.txt",
+            )
+            is True
+        )
+        assert (
+            FileMetadataRepository.delete_by_relative_path(
+                db_session,
+                workspace_id=ws.id,
+                relative_path="missing.txt",
+            )
+            is False
+        )

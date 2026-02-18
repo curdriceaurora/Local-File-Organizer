@@ -17,6 +17,7 @@ Components:
 Author: File Organizer v2.0
 License: MIT
 """
+
 from __future__ import annotations
 
 from .categories import (

@@ -4,6 +4,7 @@ Pipeline orchestrator for auto-organization.
 Coordinates file discovery (via watcher or batch), routing, processing,
 and organization into a cohesive pipeline.
 """
+
 from __future__ import annotations
 
 import logging
@@ -235,17 +236,13 @@ class PipelineOrchestrator:
 
         # Process the file
         try:
-            result = self._process_with_processor(
-                file_path, processor, processor_type
-            )
+            result = self._process_with_processor(file_path, processor, processor_type)
             duration_ms = (time.monotonic() - start_time) * 1000
 
             # Build destination path
             category = result.get("category", "uncategorized")
             filename = result.get("filename", file_path.stem)
-            destination = (
-                self.config.output_directory / category / f"{filename}{file_path.suffix}"
-            )
+            destination = self.config.output_directory / category / f"{filename}{file_path.suffix}"
 
             # Organize file if configured
             if self.config.should_move_files:
@@ -288,9 +285,7 @@ class PipelineOrchestrator:
                 try:
                     self.config.notification_callback(file_path, False)
                 except Exception:
-                    logger.exception(
-                        "Notification callback failed for %s", file_path
-                    )
+                    logger.exception("Notification callback failed for %s", file_path)
 
             return ProcessingResult(
                 file_path=file_path,
@@ -365,9 +360,7 @@ class PipelineOrchestrator:
 
         # Check for processing errors in the result
         if hasattr(result, "error") and result.error:
-            raise RuntimeError(
-                f"Processor reported error: {result.error}"
-            )
+            raise RuntimeError(f"Processor reported error: {result.error}")
 
         return {"category": category, "filename": filename}
 

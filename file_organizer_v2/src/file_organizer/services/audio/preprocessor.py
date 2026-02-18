@@ -4,6 +4,7 @@ Audio Preprocessing Service
 Provides audio format conversion, normalization, and preprocessing
 capabilities to prepare audio files for transcription and analysis.
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class AudioFormat(StrEnum):
     """Supported audio formats."""
+
     WAV = "wav"
     MP3 = "mp3"
     M4A = "m4a"
@@ -31,6 +33,7 @@ class AudioFormat(StrEnum):
 @dataclass
 class AudioConfig:
     """Audio configuration parameters."""
+
     sample_rate: int = 16000  # Whisper optimal rate
     channels: int = 1  # Mono
     bit_rate: str = "128k"
@@ -63,11 +66,9 @@ class AudioPreprocessor:
         """Check if ffmpeg is available."""
         try:
             import subprocess
+
             result = subprocess.run(
-                ["ffmpeg", "-version"],
-                capture_output=True,
-                text=True,
-                timeout=5
+                ["ffmpeg", "-version"], capture_output=True, text=True, timeout=5
             )
             if result.returncode != 0:
                 logger.warning("ffmpeg not found or not working properly")
@@ -123,19 +124,23 @@ class AudioPreprocessor:
             # Build ffmpeg command
             cmd = [
                 "ffmpeg",
-                "-i", str(audio_path),
-                "-ar", str(sample_rate),
-                "-ac", str(channels),
-                "-c:a", self.config.codec,
+                "-i",
+                str(audio_path),
+                "-ar",
+                str(sample_rate),
+                "-ac",
+                str(channels),
+                "-c:a",
+                self.config.codec,
                 "-y",  # Overwrite output file
-                str(output_path)
+                str(output_path),
             ]
 
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout
+                timeout=300,  # 5 minute timeout
             )
 
             if result.returncode != 0:
@@ -148,9 +153,7 @@ class AudioPreprocessor:
             # Fallback to pydub if ffmpeg executable not found
             # (input file existence already validated above)
             logger.debug(f"ffmpeg not found ({e}), falling back to pydub")
-            return self._convert_with_pydub(
-                audio_path, output_path, sample_rate, channels
-            )
+            return self._convert_with_pydub(audio_path, output_path, sample_rate, channels)
         except Exception as e:
             logger.error(f"Conversion failed: {e}")
             raise
@@ -176,11 +179,7 @@ class AudioPreprocessor:
             audio = audio.set_channels(channels)
 
             # Export as WAV
-            audio.export(
-                str(output_path),
-                format="wav",
-                parameters=["-ar", str(sample_rate)]
-            )
+            audio.export(str(output_path), format="wav", parameters=["-ar", str(sample_rate)])
 
             logger.info(f"Conversion complete using pydub: {output_path}")
             return output_path
@@ -268,9 +267,7 @@ class AudioPreprocessor:
 
             # Detect non-silent chunks
             nonsilent_ranges = detect_nonsilent(
-                audio,
-                min_silence_len=min_silence_len,
-                silence_thresh=silence_thresh
+                audio, min_silence_len=min_silence_len, silence_thresh=silence_thresh
             )
 
             # Concatenate non-silent chunks
@@ -332,6 +329,7 @@ class AudioPreprocessor:
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
             import shutil
+
             shutil.copy2(current_file, output_path)
             current_file = output_path
 

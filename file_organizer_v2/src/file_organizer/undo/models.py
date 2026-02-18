@@ -4,6 +4,7 @@ Data models for undo/redo operations.
 This module defines data structures for validation results, rollback results,
 and conflict detection.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -13,6 +14,7 @@ from file_organizer._compat import StrEnum
 
 class ConflictType(StrEnum):
     """Types of conflicts that can occur during undo/redo."""
+
     FILE_MODIFIED = "file_modified"  # File was modified after operation
     FILE_MISSING = "file_missing"  # Expected file doesn't exist
     PATH_OCCUPIED = "path_occupied"  # Target path is already occupied
@@ -34,6 +36,7 @@ class Conflict:
         expected: Expected state
         actual: Actual state
     """
+
     conflict_type: ConflictType
     path: str
     description: str
@@ -59,6 +62,7 @@ class ValidationResult:
         warnings: List of non-critical warnings
         error_message: Primary error message if validation failed
     """
+
     can_proceed: bool
     conflicts: list[Conflict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -97,6 +101,7 @@ class RollbackResult:
         errors: List of (operation_id, error_message) tuples
         warnings: List of non-critical warnings
     """
+
     success: bool
     operations_rolled_back: int = 0
     operations_failed: int = 0

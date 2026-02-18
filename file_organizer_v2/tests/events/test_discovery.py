@@ -4,6 +4,7 @@ Unit tests for ServiceDiscovery and ServiceInfo.
 Tests service registration, deregistration, lookup, heartbeat,
 JSON file persistence, and edge cases.
 """
+
 from __future__ import annotations
 
 import json
@@ -101,9 +102,7 @@ class TestRegistration:
 
     def test_register_with_metadata(self, discovery: ServiceDiscovery) -> None:
         """register() stores metadata."""
-        info = discovery.register(
-            "indexer", "local://idx:8002", {"version": "2.0"}
-        )
+        info = discovery.register("indexer", "local://idx:8002", {"version": "2.0"})
         assert info.metadata == {"version": "2.0"}
 
     def test_register_overwrite(self, discovery: ServiceDiscovery) -> None:
@@ -166,23 +165,20 @@ class TestLookup:
 class TestHeartbeat:
     """Tests for the heartbeat mechanism."""
 
-    def test_heartbeat_updates_timestamp(
-        self, discovery: ServiceDiscovery
-    ) -> None:
+    def test_heartbeat_updates_timestamp(self, discovery: ServiceDiscovery) -> None:
         """heartbeat() updates last_heartbeat."""
         info = discovery.register("hb-svc", "local://hb:5000")
         original_hb = info.last_heartbeat
         # Force a small time difference
         import time
+
         time.sleep(0.01)
         assert discovery.heartbeat("hb-svc") is True
         updated = discovery.discover("hb-svc")
         assert updated is not None
         assert updated.last_heartbeat >= original_hb
 
-    def test_heartbeat_unknown_service(
-        self, discovery: ServiceDiscovery
-    ) -> None:
+    def test_heartbeat_unknown_service(self, discovery: ServiceDiscovery) -> None:
         """heartbeat() returns False for unknown services."""
         assert discovery.heartbeat("ghost") is False
 
@@ -225,9 +221,7 @@ class TestPersistence:
 
     def test_missing_registry_starts_empty(self, tmp_path: Path) -> None:
         """Missing registry file starts with empty state."""
-        disc = ServiceDiscovery(
-            registry_path=tmp_path / "nonexistent" / "registry.json"
-        )
+        disc = ServiceDiscovery(registry_path=tmp_path / "nonexistent" / "registry.json")
         assert disc.count == 0
 
 
@@ -247,9 +241,7 @@ class TestDiscoveryUtility:
         assert removed == 2
         assert discovery.count == 0
 
-    def test_registry_path_property(
-        self, discovery: ServiceDiscovery, registry_path: Path
-    ) -> None:
+    def test_registry_path_property(self, discovery: ServiceDiscovery, registry_path: Path) -> None:
         """registry_path property returns the configured path."""
         assert discovery.registry_path == registry_path
 
