@@ -1,1 +1,1 @@
-"""Tests for the plugins package."""
+"""Tests for the file-organizer plugin sandbox system."""

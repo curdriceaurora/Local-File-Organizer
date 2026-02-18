@@ -1,0 +1,1 @@
+"""Malicious plugin fixture package."""
