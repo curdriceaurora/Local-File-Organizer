@@ -318,6 +318,7 @@ class BackupManager:
         Args:
             manifest: Dictionary containing manifest data
         """
+        tmp_path = None
         try:
             tmp_dir = self.manifest_path.parent
             with tempfile.NamedTemporaryFile(
@@ -333,4 +334,9 @@ class BackupManager:
                 tmp_path = tmp.name
             os.replace(tmp_path, self.manifest_path)
         except OSError as e:
+            if tmp_path is not None:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
             raise OSError(f"Failed to save manifest: {e}") from e
