@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -65,7 +65,7 @@ class OperationHistory:
         Returns:
             Operation ID
         """
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(timezone.utc)
 
         # Calculate file hash if source file exists
         file_hash = None
@@ -108,7 +108,7 @@ class OperationHistory:
 
         params = (
             operation_type.value if isinstance(operation_type, OperationType) else operation_type,
-            timestamp.isoformat() + "Z",
+            timestamp.isoformat().replace("+00:00", "Z"),
             str(source_path),
             str(destination_path) if destination_path else None,
             file_hash,
@@ -145,7 +145,7 @@ class OperationHistory:
         import uuid
 
         transaction_id = str(uuid.uuid4())
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
 
         metadata_json = json.dumps(metadata or {})
 
@@ -156,7 +156,7 @@ class OperationHistory:
 
         params = (
             transaction_id,
-            started_at.isoformat() + "Z",
+            started_at.isoformat().replace("+00:00", "Z"),
             TransactionStatus.IN_PROGRESS.value,
             metadata_json,
         )
@@ -177,7 +177,7 @@ class OperationHistory:
         Returns:
             True if successful, False otherwise
         """
-        completed_at = datetime.utcnow()
+        completed_at = datetime.now(timezone.utc)
 
         query = """
         UPDATE transactions
@@ -185,7 +185,7 @@ class OperationHistory:
         WHERE transaction_id = ?
         """
 
-        params = (TransactionStatus.COMPLETED.value, completed_at.isoformat() + "Z", transaction_id)
+        params = (TransactionStatus.COMPLETED.value, completed_at.isoformat().replace("+00:00", "Z"), transaction_id)
 
         try:
             self.db.execute_query(query, params)
@@ -213,7 +213,7 @@ class OperationHistory:
                     "UPDATE transactions SET status = ?, completed_at = ? WHERE transaction_id = ?",
                     (
                         TransactionStatus.FAILED.value,
-                        datetime.utcnow().isoformat() + "Z",
+                        datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                         transaction_id,
                     ),
                 )
@@ -274,11 +274,11 @@ class OperationHistory:
 
         if start_date:
             query += " AND timestamp >= ?"
-            params.append(start_date.isoformat() + "Z")
+            params.append(start_date.isoformat().replace("+00:00", "Z"))
 
         if end_date:
             query += " AND timestamp <= ?"
-            params.append(end_date.isoformat() + "Z")
+            params.append(end_date.isoformat().replace("+00:00", "Z"))
 
         query += " ORDER BY timestamp DESC"
 

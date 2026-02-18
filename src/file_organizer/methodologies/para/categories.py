@@ -120,8 +120,9 @@ class CategorizationResult:
 
     @property
     def is_confident(self) -> bool:
-        """Check if categorization confidence exceeds the default threshold."""
-        return self.confidence >= 0.75
+        """Check if categorization confidence exceeds the category-specific threshold."""
+        threshold = get_category_definition(self.category).confidence_threshold
+        return self.confidence >= threshold
 
     @property
     def requires_review(self) -> bool:

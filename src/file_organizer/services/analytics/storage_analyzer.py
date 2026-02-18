@@ -7,7 +7,7 @@ Analyzes storage usage, file distributions, and identifies optimization opportun
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from ...models.analytics import FileDistribution, FileInfo, StorageStats
@@ -52,7 +52,7 @@ class StorageAnalyzer:
 
         if use_cache and cache_key in self._cache:
             cached_time, cached_stats = self._cache[cache_key]
-            if (datetime.utcnow() - cached_time).seconds < self.cache_ttl:
+            if (datetime.now(timezone.utc) - cached_time).seconds < self.cache_ttl:
                 logger.debug(f"Using cached analysis for {path}")
                 return cached_stats
 
@@ -100,7 +100,7 @@ class StorageAnalyzer:
         )
 
         # Cache results
-        self._cache[cache_key] = (datetime.utcnow(), stats)
+        self._cache[cache_key] = (datetime.now(timezone.utc), stats)
 
         logger.info(
             f"Analysis complete: {file_count} files, "

@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .database import DatabaseManager
@@ -88,7 +88,7 @@ class HistoryExporter:
 
         # Build export data
         export_data = {
-            "export_date": datetime.utcnow().isoformat() + "Z",
+            "export_date": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "operation_count": len(operations),
             "operations": operations,
         }
@@ -322,7 +322,7 @@ class HistoryExporter:
             stats["newest_operation"] = result["newest"]
 
         # Export date
-        stats["export_date"] = datetime.utcnow().isoformat() + "Z"
+        stats["export_date"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
         # Write to file
         output_path.parent.mkdir(parents=True, exist_ok=True)

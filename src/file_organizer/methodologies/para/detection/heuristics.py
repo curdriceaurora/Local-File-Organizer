@@ -8,6 +8,7 @@ Uses temporal, content, structural, and AI-based heuristics.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -133,7 +134,15 @@ class TemporalHeuristic(Heuristic):
         # Calculate time differences
         days_since_modified = (now - stat.st_mtime) / 86400
         days_since_accessed = (now - stat.st_atime) / 86400
-        days_since_created = (now - stat.st_ctime) / 86400
+        # Cross-platform file age: use birth time if available (macOS/Windows),
+        # fall back to modification time on Linux (st_ctime is inode change time, not creation).
+        if hasattr(stat, 'st_birthtime'):  # macOS
+            ref_time = stat.st_birthtime
+        elif os.name == 'nt':  # Windows
+            ref_time = stat.st_ctime
+        else:  # Linux — use mtime as best proxy for "last active"
+            ref_time = stat.st_mtime
+        days_since_created = (now - ref_time) / 86400
 
         # Check for old year patterns in path (e.g., "/Projects/2020/...")
         if self._contains_old_year(str(file_path), current_year):

@@ -8,7 +8,7 @@ chart generation, and dashboard creation.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from ...models.analytics import (
@@ -95,7 +95,7 @@ class AnalyticsService:
             duplicate_stats=duplicate_stats,
             quality_metrics=quality_metrics,
             time_savings=time_savings,
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(timezone.utc),
         )
 
         logger.info("Dashboard generation complete")

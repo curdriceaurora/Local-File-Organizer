@@ -8,7 +8,7 @@ including automatic cleanup, manual purging, and database maintenance.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .database import DatabaseManager
@@ -105,7 +105,7 @@ class HistoryCleanup:
         if max_age_days is None:
             max_age_days = self.config.max_age_days
 
-        cutoff_date = datetime.utcnow() - timedelta(days=max_age_days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=max_age_days)
         cutoff_str = cutoff_date.isoformat() + "Z"
 
         logger.info(f"Cleaning up operations older than {max_age_days} days (before {cutoff_str})")
@@ -264,7 +264,7 @@ class HistoryCleanup:
         Returns:
             Number of operations deleted
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=older_than_days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=older_than_days)
         cutoff_str = cutoff_date.isoformat() + "Z"
 
         logger.info(f"Cleaning up failed operations older than {older_than_days} days")
@@ -287,7 +287,7 @@ class HistoryCleanup:
         Returns:
             Number of operations deleted
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=older_than_days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=older_than_days)
         cutoff_str = cutoff_date.isoformat() + "Z"
 
         logger.info(f"Cleaning up rolled back operations older than {older_than_days} days")

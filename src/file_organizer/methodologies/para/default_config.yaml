@@ -75,9 +75,11 @@ keyword_patterns:
     - done
     - past
     - historical
-    # Note: Old year detection (e.g., folders named "2020", "2021") is handled
-    # programmatically in the heuristics engine to avoid hardcoding year values
-    # that become outdated. See TemporalHeuristic for dynamic year matching.
+    # Note: Year-based archive detection (e.g., folders named "2020", "2021", "2022")
+    # is handled dynamically in TemporalHeuristic._contains_old_year() using the
+    # regex pattern r"\b(19\d{2}|20\d{2})\b" matched against the current year.
+    # Do NOT add year literals or regex strings here — keywords in this list are
+    # matched as plain strings (re.escaped), so regex patterns would not function.
 
 # Temporal Thresholds (in days)
 temporal_thresholds:
