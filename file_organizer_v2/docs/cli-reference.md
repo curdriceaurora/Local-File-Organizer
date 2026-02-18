@@ -56,7 +56,7 @@ Find and manage duplicate files.
 **Subcommands:**
 - `scan`: Scan for duplicates.
 - `report`: Generate a duplication report.
-- `resolve`: interactively or automatically resolve duplicates.
+- `resolve`: Interactively or automatically resolve duplicates.
 
 **Examples:**
 ```bash
