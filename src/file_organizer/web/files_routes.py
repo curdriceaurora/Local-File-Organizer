@@ -152,10 +152,18 @@ def _collect_entries(
             reverse=reverse,
         )
     elif sort_by == "created":
-        files.sort(
-            key=lambda p: file_stats.get(p).st_ctime if file_stats.get(p) is not None else 0,
-            reverse=reverse,
-        )
+        # Cross-platform: st_birthtime (macOS), st_ctime (Windows), st_mtime (Linux)
+        def _creation_key(p: Path) -> float:
+            s = file_stats.get(p)
+            if s is None:
+                return 0.0
+            if hasattr(s, "st_birthtime"):
+                return s.st_birthtime
+            if os.name == "nt":
+                return s.st_ctime
+            return s.st_mtime
+
+        files.sort(key=_creation_key, reverse=reverse)
     elif sort_by == "type":
         files.sort(key=lambda p: p.suffix.lower(), reverse=reverse)
     else:

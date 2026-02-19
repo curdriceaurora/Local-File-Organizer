@@ -9,6 +9,7 @@ without any cloud API dependencies.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 from dataclasses import dataclass, field
@@ -314,13 +315,24 @@ class FeatureExtractor:
 
         now = time.time()
 
+        # Cross-platform file creation time:
+        #   macOS  → st_birthtime (true birth time)
+        #   Windows → st_ctime    (creation time on NTFS)
+        #   Linux  → st_mtime     (st_ctime is inode-change time, not creation)
+        if hasattr(stat, "st_birthtime"):  # macOS
+            creation_ref = stat.st_birthtime
+        elif os.name == "nt":  # Windows
+            creation_ref = stat.st_ctime
+        else:  # Linux — use mtime as best available proxy
+            creation_ref = stat.st_mtime
+
         # Convert timestamps to datetime
-        creation_date = datetime.fromtimestamp(stat.st_ctime, tz=timezone.utc)
+        creation_date = datetime.fromtimestamp(creation_ref, tz=timezone.utc)
         modification_date = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
 
         # Days calculations
         days_since_modified = (now - stat.st_mtime) / 86400.0
-        days_since_created = (now - stat.st_ctime) / 86400.0
+        days_since_created = (now - creation_ref) / 86400.0
 
         # Access frequency estimate: ratio of access recency to modification recency
         # Higher value = more frequently accessed relative to modification

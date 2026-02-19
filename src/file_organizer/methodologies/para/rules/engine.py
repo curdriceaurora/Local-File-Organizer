@@ -14,6 +14,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from ..categories import PARACategory
+
+_VALID_PARA_CATEGORIES = {c.value for c in PARACategory}
+
 
 class ConditionType(Enum):
     """Types of conditions that can be evaluated in rules."""
@@ -117,6 +121,11 @@ class RuleAction:
         if self.type in [ActionType.CATEGORIZE, ActionType.SUGGEST]:
             if not self.category:
                 raise ValueError(f"Action type {self.type} requires a category")
+            if self.category not in _VALID_PARA_CATEGORIES:
+                raise ValueError(
+                    f"Invalid PARA category '{self.category}'. "
+                    f"Must be one of: {sorted(_VALID_PARA_CATEGORIES)}"
+                )
             if self.confidence is None:
                 raise ValueError(f"Action type {self.type} requires a confidence score")
             if not 0.0 <= self.confidence <= 1.0:
