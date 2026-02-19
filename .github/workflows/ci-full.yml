@@ -40,26 +40,3 @@ jobs:
             pytest tests/ --override-ini="addopts="
           fi
 
-  frontend-compat:
-    name: Frontend Node 18.x Compatibility
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "18.x"
-          cache: npm
-      - name: Install dependencies
-        run: npm install
-      - name: Run component tests
-        run: npm test -- --ci
-
-  frontend-e2e:
-    name: E2E Tests (Disabled)
-    runs-on: ubuntu-latest
-    steps:
-      - name: E2E tests disabled
-        run: |
-          echo "E2E tests are currently disabled pending resolution of issue #331"
-          echo "Re-enable this job after https://github.com/curdriceaurora/Local-File-Organizer/issues/331 is resolved"
-          echo "To re-enable: restore Playwright installation and test steps from ci.yml history"

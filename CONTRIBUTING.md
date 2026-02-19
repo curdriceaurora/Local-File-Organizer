@@ -5,7 +5,6 @@
 ### Prerequisites
 
 - **Python 3.9+** (we test against 3.9, 3.10, 3.11, 3.12)
-- **Node.js 18+** (for frontend tests)
 - **Ollama** (for AI model inference)
 
 ### Python Version Management (pyenv)
@@ -23,16 +22,6 @@ pyenv install 3.9.21
 pyenv install 3.10.16
 pyenv install 3.11.11
 pyenv install 3.12.8
-```
-
-### Node Version Management (optional)
-
-Frontend tests run against Node 18.x in CI. If your system Node is newer, consider
-[nvm](https://github.com/nvm-sh/nvm) to switch versions:
-
-```bash
-nvm install 18
-nvm use 18
 ```
 
 ### Install the Package
@@ -58,14 +47,14 @@ Before pushing changes, run these checks to avoid wasting CI minutes and Copilot
 ### Quick Check (recommended before every push)
 
 ```bash
-# Fastest — tests on Python 3.12 + frontend only (~2 min)
+# Fastest — tests on Python 3.12 only (~2 min)
 ./scripts/test-local-matrix.sh --quick
 ```
 
 ### Full Matrix (recommended before opening a PR)
 
 ```bash
-# Full CI mirror — Python 3.9/3.10/3.11/3.12 + frontend (~10 min)
+# Full CI mirror — Python 3.9/3.10/3.11/3.12 (~10 min)
 ./scripts/test-local-matrix.sh
 ```
 
@@ -74,9 +63,6 @@ Before pushing changes, run these checks to avoid wasting CI minutes and Copilot
 ```bash
 # Python matrix only
 ./scripts/test-local-matrix.sh --python
-
-# Frontend only
-./scripts/test-local-matrix.sh --node
 
 # Lint only
 ruff check src/
@@ -94,7 +80,7 @@ Our CI has two workflows triggered on PRs to `main`:
 | Workflow | File | What it runs |
 |----------|------|-------------|
 | **CI** | `.github/workflows/ci.yml` | Lint + Python 3.9/3.12 tests |
-| **CI Full Matrix** | `.github/workflows/ci-full.yml` | Python 3.9/3.10/3.11/3.12 + Node 18.x frontend |
+| **CI Full Matrix** | `.github/workflows/ci-full.yml` | Python 3.9/3.10/3.11/3.12 |
 
 `scripts/test-local-matrix.sh` mirrors the Full Matrix workflow locally.
 
@@ -111,7 +97,6 @@ These are the most frequent causes of CI failures that pass locally:
 | `match` statements | Python 3.10+ only | Use `if/elif` for 3.9 compatibility |
 | `X \| Y` union types | Python 3.10+ only | Use `Union[X, Y]` or `Optional[X]` |
 | `tomllib` | Python 3.11+ only | Use `tomli` backport or conditional import |
-| Jest config referencing deleted files | No local `npm test -- --ci` | Run `./scripts/test-local-matrix.sh --node` |
 
 ---
 
