@@ -524,7 +524,7 @@ class TestHeuristicEngine:
         # even though it has the highest score
         if custom_result.recommended_category == PARACategory.PROJECT:
             # If PROJECT is recommended, its score must be >= 1.0
-            assert project_score.score >= 1.0
+            assert custom_result.scores[PARACategory.PROJECT].score >= 1.0
         else:
             # More likely: no category meets threshold, so no recommendation
             # OR a different category with lower threshold is recommended
