@@ -490,6 +490,20 @@ class HeuristicEngine:
         if enable_ai:
             self.heuristics.append(AIHeuristic(weight=0.10))
 
+    @property
+    def THRESHOLDS(self) -> dict[PARACategory, float]:
+        """Backwards-compatible public accessor returning thresholds as a dict.
+
+        Returns a mapping from each PARACategory to its minimum confidence
+        threshold, matching the original class-level ``THRESHOLDS`` dict API.
+        """
+        return {
+            PARACategory.PROJECT: self._thresholds.project,
+            PARACategory.AREA: self._thresholds.area,
+            PARACategory.RESOURCE: self._thresholds.resource,
+            PARACategory.ARCHIVE: self._thresholds.archive,
+        }
+
     def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """
         Evaluate file using all enabled heuristics.
