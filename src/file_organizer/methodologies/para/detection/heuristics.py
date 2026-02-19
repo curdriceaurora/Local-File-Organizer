@@ -565,12 +565,7 @@ class HeuristicEngine:
             score.confidence = confidence
 
         # Determine recommendation based on thresholds
-        thresholds_map = {
-            PARACategory.PROJECT: self._thresholds.project,
-            PARACategory.AREA: self._thresholds.area,
-            PARACategory.RESOURCE: self._thresholds.resource,
-            PARACategory.ARCHIVE: self._thresholds.archive,
-        }
+        thresholds_map = self.THRESHOLDS
         recommended = None
         for category in scores_list:
             if category.score >= thresholds_map[category.category]:
