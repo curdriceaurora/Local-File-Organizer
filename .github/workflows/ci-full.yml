@@ -1,6 +1,8 @@
 name: CI Full Matrix
 
 on:
+  pull_request:
+    branches: [main]
   schedule:
     - cron: '0 6 * * *'  # daily at 06:00 UTC — full matrix
   workflow_dispatch:
@@ -26,4 +28,28 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Run tests
         run: pytest tests/ --override-ini="addopts="
+
+  frontend-compat:
+    name: Frontend Compatibility (Node 18.x)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18.x"
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm install --if-present
+      - name: Run frontend tests
+        run: npm test -- --ci --if-present
+
+  frontend-e2e:
+    name: Frontend E2E (placeholder — not yet implemented)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: E2E placeholder
+        run: |
+          echo "E2E tests are not yet implemented."
+          echo "This job is a placeholder for future Playwright/Cypress tests."
 
