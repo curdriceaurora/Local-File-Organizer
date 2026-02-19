@@ -1,8 +1,6 @@
 name: CI Full Matrix
 
 on:
-  pull_request:
-    branches: [main]
   schedule:
     - cron: '0 6 * * *'  # daily at 06:00 UTC — full matrix
   workflow_dispatch:

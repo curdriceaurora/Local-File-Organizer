@@ -199,14 +199,21 @@ class TestCIFullWorkflow:
         """Verify CI Full workflow has a name."""
         assert "name" in workflow, "CI Full workflow must have a name"
 
-    def test_ci_full_triggers_on_pr_to_main(self, workflow: dict) -> None:
-        """Verify CI Full triggers on pull requests to main."""
+    def test_ci_full_triggers_on_schedule(self, workflow: dict) -> None:
+        """Verify CI Full triggers on a daily schedule (not on every PR).
+
+        The full matrix workflow is expensive (4 Python versions + Node jobs)
+        and is intentionally run only on schedule and manual dispatch, not on
+        every pull request. ci.yml handles PR-triggered test runs.
+        """
         triggers = get_triggers(workflow)
         assert triggers, "CI Full workflow must define triggers"
-        assert "pull_request" in triggers, "CI Full should trigger on pull_request"
-        pr_config = triggers.get("pull_request", {})
-        branches = pr_config.get("branches", [])
-        assert "main" in branches, "CI Full should trigger on PRs to main"
+        assert "schedule" in triggers, "CI Full should trigger on a cron schedule"
+        assert "workflow_dispatch" in triggers, "CI Full should support manual dispatch"
+        assert "pull_request" not in triggers, (
+            "CI Full must NOT trigger on pull_request — use ci.yml for PR checks. "
+            "Running the full matrix on every PR causes duplicate expensive jobs."
+        )
 
     def test_ci_full_supports_manual_trigger(self, workflow: dict) -> None:
         """Verify CI Full can be triggered manually."""
