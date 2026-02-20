@@ -18,7 +18,7 @@ def mock_text_model(mocker):
     """Mock the text model for all tests in this file."""
     mock_model = mocker.MagicMock()
     mock_model.generate.return_value = "Mocked AI response"
-    
+
     # Mock both the get_text_model dependency and the global instance mechanism
     mocker.patch("file_organizer.api.routers.analyze.get_text_model", return_value=mock_model)
     return mock_model

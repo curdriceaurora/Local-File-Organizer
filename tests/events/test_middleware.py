@@ -230,33 +230,37 @@ class TestLoggingMiddleware:
         data = {"key": "val"}
         assert mw.before_consume("t", data) == data
 
-    def test_after_publish_success_logs_info(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_after_publish_success_logs_info(self, mocker) -> None:
         """Successful publish logs at INFO level."""
         mw = LoggingMiddleware()
-        with caplog.at_level(logging.INFO, logger="file_organizer.events.pubsub"):
-            mw.after_publish("topic.a", {}, "msg-1")
-        assert any("Published" in r.message for r in caplog.records)
+        mock_logger = mocker.patch.object(mw, "_logger")
+        mw.after_publish("topic.a", {}, "msg-1")
+        mock_logger.info.assert_called()
+        assert "Published" in mock_logger.info.call_args[0][0]
 
-    def test_after_publish_failure_logs_warning(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_after_publish_failure_logs_warning(self, mocker) -> None:
         """Failed publish logs at WARNING level."""
         mw = LoggingMiddleware()
-        with caplog.at_level(logging.WARNING, logger="file_organizer.events.pubsub"):
-            mw.after_publish("topic.a", {}, None)
-        assert any("Failed" in r.message for r in caplog.records)
+        mock_logger = mocker.patch.object(mw, "_logger")
+        mw.after_publish("topic.a", {}, None)
+        mock_logger.warning.assert_called()
+        assert "Failed" in mock_logger.warning.call_args[0][0]
 
-    def test_after_consume_error_logs_warning(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_after_consume_error_logs_warning(self, mocker) -> None:
         """Handler error logs at WARNING level."""
         mw = LoggingMiddleware()
-        with caplog.at_level(logging.WARNING, logger="file_organizer.events.pubsub"):
-            mw.after_consume("t", {}, ValueError("oops"))
-        assert any("error" in r.message.lower() for r in caplog.records)
+        mock_logger = mocker.patch.object(mw, "_logger")
+        mw.after_consume("t", {}, ValueError("oops"))
+        mock_logger.warning.assert_called()
+        assert "error" in mock_logger.warning.call_args[0][0].lower()
 
-    def test_after_consume_success_logs_info(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_after_consume_success_logs_info(self, mocker) -> None:
         """Successful consume logs at INFO level."""
         mw = LoggingMiddleware()
-        with caplog.at_level(logging.INFO, logger="file_organizer.events.pubsub"):
-            mw.after_consume("t", {}, None)
-        assert any("successfully" in r.message for r in caplog.records)
+        mock_logger = mocker.patch.object(mw, "_logger")
+        mw.after_consume("t", {}, None)
+        mock_logger.info.assert_called()
+        assert "successfully" in mock_logger.info.call_args[0][0]
 
 
 # ------------------------------------------------------------------
