@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- **Python 3.9+** (we test against 3.9, 3.10, 3.11, 3.12)
+- **Python 3.11+** (we test against 3.11, 3.12)
 - **Ollama** (for AI model inference)
 
 ### Python Version Management (pyenv)

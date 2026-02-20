@@ -4,7 +4,7 @@
 
 An AI-powered local file management system with privacy-first architecture. Organizes files intelligently using local LLMs with zero cloud dependencies.
 
-**Core Metrics**: ~78,800 LOC | 314 modules | 237 tests | Python 3.9+
+**Core Metrics**: ~78,800 LOC | 314 modules | 237 tests | Python 3.11+
 **Version**: 2.0.0-alpha.1
 
 ---

@@ -58,7 +58,7 @@ This guide covers installing the File Organizer system for deployment and admini
 
 #### Prerequisites
 
-- Python 3.9+
+- Python 3.11+
 - pip package manager
 - Virtual environment tool (venv or poetry)
 
