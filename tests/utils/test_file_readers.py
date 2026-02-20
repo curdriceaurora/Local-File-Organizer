@@ -1,4 +1,3 @@
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -16,12 +15,6 @@ from file_organizer.utils.file_readers import (
     read_spreadsheet_file,
     read_text_file,
 )
-
-
-@pytest.fixture
-def fixtures_dir():
-    """Return the path to the tests fixtures directory."""
-    return Path(__file__).parent.parent / "fixtures"
 
 
 class TestFileReaders:

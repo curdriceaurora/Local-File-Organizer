@@ -32,8 +32,10 @@ class TestTextProcessing:
         mock_stopwords.words.side_effect = LookupError()
         mock_tokenize.side_effect = LookupError()
 
-        # Patch wordnet directly where it's imported in the function
-        with patch("file_organizer.utils.text_processing.nltk.corpus.wordnet", create=True) as mock_wordnet:
+        # Patch wordnet at nltk.corpus level so the local
+        # ``from nltk.corpus import wordnet`` inside ensure_nltk_data()
+        # picks up the mock instead of the real lazy-loaded corpus.
+        with patch("nltk.corpus.wordnet") as mock_wordnet:
             mock_wordnet.synsets.side_effect = LookupError()
 
             ensure_nltk_data()

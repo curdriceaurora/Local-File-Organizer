@@ -1,1 +1,3 @@
-"""Empty file for testing"""
+Hello World
+This is a sample text file used for testing file readers.
+Line 3 with some numbers: 42 and 100.
