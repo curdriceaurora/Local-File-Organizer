@@ -85,7 +85,7 @@ class TestModelManager:
         for m in models:
             if m.name == "qwen2.5:3b-instruct-q4_K_M":
                 assert m.installed is True
-            elif m.name == "llama3":
+            elif m.name == "llava:7b-v1.6-q4_K_M":
                 assert m.installed is False
 
     @patch("file_organizer.models.model_manager.ModelManager.check_installed")
@@ -93,10 +93,10 @@ class TestModelManager:
         """Test list_models with type filter."""
         mock_check.return_value = set()
 
-        text_models = model_manager.list_models(type_filter=ModelType.TEXT)
+        text_models = model_manager.list_models(type_filter=ModelType.TEXT.value)
         assert len(text_models) > 0
         for m in text_models:
-            assert m.model_type == ModelType.TEXT
+            assert m.model_type == ModelType.TEXT.value
 
     @patch("file_organizer.models.model_manager.subprocess.run")
     def test_pull_model_success(self, mock_run, model_manager):

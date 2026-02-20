@@ -193,7 +193,7 @@ class TestTextProcessorGenerationOps:
 
     @patch("file_organizer.services.text_processor.clean_text")
     def test_generate_folder_name_empty_fallback(self, mock_clean, text_processor, mock_text_model):
-        """Test folding back to clean_text if AI yields empty category."""
+        """Test falling back to clean_text if AI yields empty category."""
         mock_text_model.generate.return_value = "the" # Gets filtered out
         mock_clean.return_value = "fallback_folder"
 
@@ -204,7 +204,7 @@ class TestTextProcessorGenerationOps:
 
     @patch("file_organizer.services.text_processor.clean_text")
     def test_generate_filename_empty_fallback(self, mock_clean, text_processor, mock_text_model):
-        """Test folding back to clean_text if AI yields empty filename."""
+        """Test falling back to clean_text if AI yields empty filename."""
         mock_text_model.generate.return_value = "document.pdf" # Gets filtered out
         mock_clean.return_value = "fallback_file"
 
