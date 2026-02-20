@@ -372,6 +372,36 @@ def test_create_custom_template_from_nonexistent_profile(template_manager):
     assert not success
 
 
+def test_template_manager_instance_isolation(profile_manager):
+    """Custom template in one TemplateManager instance doesn't bleed into another."""
+    tm1 = TemplateManager(profile_manager)
+    tm2 = TemplateManager(profile_manager)
+
+    profile_manager.create_profile("isolation_base", "Isolation test profile")
+    profile_manager.update_profile(
+        "isolation_base",
+        preferences={"global": {"key": "value"}, "directory_specific": {}},
+    )
+    tm1.create_custom_template("isolation_base", "isolation_custom")
+
+    assert "isolation_custom" in tm1.list_templates()
+    assert "isolation_custom" not in tm2.list_templates()
+
+    default_names = {"work", "personal", "photography", "development", "academic"}
+    assert default_names.issubset(set(tm1.list_templates()))
+    assert default_names.issubset(set(tm2.list_templates()))
+
+
+def test_get_template_returns_deep_copy(template_manager):
+    """Mutating nested data from get_template does not affect stored template."""
+    template = template_manager.get_template("work")
+
+    template["preferences"]["global"]["naming_patterns"]["injected"] = "mutated"
+
+    fresh = template_manager.get_template("work")
+    assert "injected" not in fresh["preferences"]["global"]["naming_patterns"]
+
+
 def test_work_template_has_proper_structure(template_manager):
     """Test work template has proper structure."""
     template = template_manager.get_template("work")

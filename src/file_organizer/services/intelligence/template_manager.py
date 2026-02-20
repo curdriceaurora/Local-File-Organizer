@@ -13,6 +13,7 @@ Features:
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 from file_organizer.services.intelligence.profile_manager import Profile, ProfileManager
@@ -249,7 +250,6 @@ class TemplateManager:
             profile_manager: ProfileManager instance
         """
         self.profile_manager = profile_manager
-        import copy
         self._templates = copy.deepcopy(self.TEMPLATES)
 
     def list_templates(self) -> list[str]:
@@ -273,7 +273,7 @@ class TemplateManager:
         """
         template_name_lower = template_name.lower()
         if template_name_lower in self._templates:
-            return self._templates[template_name_lower].copy()
+            return copy.deepcopy(self._templates[template_name_lower])
         return None
 
     def preview_template(self, template_name: str) -> dict[str, Any] | None:
@@ -381,8 +381,6 @@ class TemplateManager:
             Customized template data
         """
         # Deep copy to avoid modifying original
-        import copy
-
         customized = copy.deepcopy(template)
 
         # Apply naming pattern customizations
@@ -436,9 +434,9 @@ class TemplateManager:
             template_data = {
                 "name": profile.profile_name,
                 "description": profile.description,
-                "preferences": profile.preferences,
-                "learned_patterns": profile.learned_patterns,
-                "confidence_data": profile.confidence_data,
+                "preferences": copy.deepcopy(profile.preferences),
+                "learned_patterns": copy.deepcopy(profile.learned_patterns),
+                "confidence_data": copy.deepcopy(profile.confidence_data),
             }
 
             # Add to templates (in-memory only, not persisted)

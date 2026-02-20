@@ -8,10 +8,7 @@ and RetryMiddleware.
 
 from __future__ import annotations
 
-import logging
 from typing import Any
-
-import pytest
 
 from file_organizer.events.middleware import (
     LoggingMiddleware,

@@ -19,8 +19,9 @@ def mock_text_model(mocker):
     mock_model = mocker.MagicMock()
     mock_model.generate.return_value = "Mocked AI response"
 
-    # Mock both the get_text_model dependency and the global instance mechanism
+    # Mock the get_text_model dependency and reset the module-level cache
     mocker.patch("file_organizer.api.routers.analyze.get_text_model", return_value=mock_model)
+    mocker.patch("file_organizer.api.routers.analyze._text_model", None)
     return mock_model
 
 
@@ -82,7 +83,7 @@ class TestAnalyzeEndpoint:
         files = {"file": ("document.pdf", pdf_data, "application/pdf")}
         response = client.post("/api/v1/analyze", files=files)
 
-        assert response.status_code in (200, 201, 202, 400, 422, 503)
+        assert response.status_code in (200, 201, 202, 400, 422)
 
     def test_analyze_returns_confidence(self, client):
         """Analyze endpoint should return confidence score."""

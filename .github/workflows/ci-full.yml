@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
       - name: Run tests
-        run: pytest tests/ --override-ini="addopts="
+        run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts="
 
   frontend-compat:
     name: Frontend Compatibility (placeholder)
