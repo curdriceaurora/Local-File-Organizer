@@ -8,6 +8,7 @@ the underlying AI responses to avoid slow external dependencies.
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -95,6 +96,7 @@ class TestTextWorkflowsIntegration:
         # Verify original files still exist (copy mode)
         assert (source_dir / "report.txt").exists()
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Hardlinks require admin privileges on Windows")
     @patch("file_organizer.core.organizer.TextProcessor")
     @patch("file_organizer.core.organizer.VisionProcessor")
     def test_end_to_end_text_organization_hardlink(
