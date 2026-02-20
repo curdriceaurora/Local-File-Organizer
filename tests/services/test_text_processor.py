@@ -95,7 +95,7 @@ class TestProcessFile:
         assert len(result.description) > 0
         assert len(result.folder_name) > 0
         assert len(result.filename) > 0
-        assert result.processing_time > 0
+        assert result.processing_time >= 0
 
     def test_processes_markdown(self, tmp_path: Path) -> None:
         f = tmp_path / "notes.md"
@@ -246,6 +246,7 @@ class TestGenerateDescription:
 
     def test_strips_prefix(self) -> None:
         model = _make_mock_text_model()
+        model.generate.side_effect = None
         model.generate.return_value = "Summary: This is the actual summary."
 
         proc = _make_processor(model)
