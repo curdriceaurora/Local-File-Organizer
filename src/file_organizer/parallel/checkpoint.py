@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from file_organizer.parallel.models import Checkpoint
@@ -109,7 +109,7 @@ class CheckpointManager:
             completed_paths=list(completed_files),
             pending_paths=list(pending_files),
             file_hashes=file_hashes,
-            last_updated=datetime.now(timezone.utc),
+            last_updated=datetime.now(UTC),
         )
         self.save_checkpoint(checkpoint)
         return checkpoint
@@ -190,7 +190,7 @@ class CheckpointManager:
         except OSError:
             pass
 
-        checkpoint.last_updated = datetime.now(timezone.utc)
+        checkpoint.last_updated = datetime.now(UTC)
 
     def update_checkpoint(
         self,

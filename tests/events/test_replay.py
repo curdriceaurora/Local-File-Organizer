@@ -7,7 +7,7 @@ functionality. All tests mock Redis to avoid requiring a running instance.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -82,14 +82,14 @@ class TestDatetimeToRedisMs:
 
     def test_converts_datetime_to_ms_string(self):
         """Test converting a datetime to Redis millisecond timestamp."""
-        dt = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        dt = datetime(2024, 1, 15, 12, 0, 0, tzinfo=UTC)
         result = _datetime_to_redis_ms(dt)
         assert result == str(int(dt.timestamp() * 1000))
         assert result.isdigit()
 
     def test_preserves_millisecond_precision(self):
         """Test that millisecond precision is preserved."""
-        dt = datetime(2024, 1, 15, 12, 0, 0, 500000, tzinfo=timezone.utc)
+        dt = datetime(2024, 1, 15, 12, 0, 0, 500000, tzinfo=UTC)
         result = _datetime_to_redis_ms(dt)
         expected_ms = int(dt.timestamp() * 1000)
         assert result == str(expected_ms)
@@ -102,13 +102,13 @@ class TestParseTimestampFromId:
         """Test parsing a valid Redis Stream message ID."""
         result = _parse_timestamp_from_id("1700000000000-0")
         assert result.year == 2023
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
 
     def test_parse_invalid_id_returns_now(self):
         """Test that invalid IDs return current time."""
-        before = datetime.now(timezone.utc)
+        before = datetime.now(UTC)
         result = _parse_timestamp_from_id("invalid")
-        after = datetime.now(timezone.utc)
+        after = datetime.now(UTC)
         assert before <= result <= after
 
 
@@ -162,8 +162,8 @@ class TestReplayRange:
         mock_redis_client: MagicMock,
     ):
         """Test replaying events within a time range."""
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2024, 1, 2, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
+        end = datetime(2024, 1, 2, tzinfo=UTC)
 
         mock_redis_client.xrange.return_value = [
             ("1704067200000-0", {"event_type": "file.created", "file_path": "/a.txt"}),
@@ -183,8 +183,8 @@ class TestReplayRange:
         mock_redis_client: MagicMock,
     ):
         """Test replaying when no events exist in range."""
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2024, 1, 2, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
+        end = datetime(2024, 1, 2, tzinfo=UTC)
 
         mock_redis_client.xrange.return_value = []
 
@@ -197,8 +197,8 @@ class TestReplayRange:
         mock_redis_client: MagicMock,
     ):
         """Test graceful handling of Redis errors during replay."""
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2024, 1, 2, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
+        end = datetime(2024, 1, 2, tzinfo=UTC)
 
         mock_redis_client.xrange.side_effect = RuntimeError("connection lost")
 
@@ -210,8 +210,8 @@ class TestReplayRange:
         manager = RedisStreamManager()
         replay = EventReplayManager(manager)
 
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2024, 1, 2, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
+        end = datetime(2024, 1, 2, tzinfo=UTC)
 
         events = replay.replay_range("file-events", start, end)
         assert events == []
@@ -225,8 +225,8 @@ class TestReplayRange:
         config = ReplayConfig(batch_size=2)
         replay = EventReplayManager(connected_manager, replay_config=config)
 
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2024, 1, 2, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
+        end = datetime(2024, 1, 2, tzinfo=UTC)
 
         # First call returns batch_size (2) results, second returns less
         mock_redis_client.xrange.side_effect = [
@@ -250,8 +250,8 @@ class TestReplayRange:
         mock_redis_client: MagicMock,
     ):
         """Test that stream names are properly prefixed."""
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2024, 1, 2, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
+        end = datetime(2024, 1, 2, tzinfo=UTC)
 
         mock_redis_client.xrange.return_value = []
 
@@ -349,7 +349,7 @@ class TestReplayToConsumer:
 
         consumer.register_handler(EventType.FILE_CREATED, handler)
 
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
         count = replay_manager.replay_to_consumer("file-events", start, consumer)
 
         assert count == 1
@@ -374,7 +374,7 @@ class TestReplayToConsumer:
 
         consumer.register_handler(EventType.FILE_CREATED, handler)
 
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
         count = replay.replay_to_consumer("file-events", start, consumer)
 
         assert count == 0
@@ -396,7 +396,7 @@ class TestReplayToConsumer:
 
         consumer.register_handler(EventType.FILE_CREATED, handler)
 
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
         count = replay_manager.replay_to_consumer("file-events", start, consumer)
 
         # Event is still counted as dispatched even if handler fails
@@ -415,7 +415,7 @@ class TestReplayToConsumer:
 
         consumer = EventConsumer()  # No handlers registered
 
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
         count = replay_manager.replay_to_consumer("file-events", start, consumer)
 
         assert count == 1

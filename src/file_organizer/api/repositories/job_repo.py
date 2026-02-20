@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -119,7 +119,7 @@ class JobRepository:
             return None
         job.status = status
         job.error = error
-        job.updated_at = datetime.now(timezone.utc)
+        job.updated_at = datetime.now(UTC)
         session.flush()
         return job
 
@@ -156,6 +156,6 @@ class JobRepository:
         if result_json is not None:
             job.result_json = result_json
 
-        job.updated_at = datetime.now(timezone.utc)
+        job.updated_at = datetime.now(UTC)
         session.flush()
         return job

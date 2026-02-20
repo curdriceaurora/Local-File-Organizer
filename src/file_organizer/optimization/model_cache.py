@@ -11,8 +11,8 @@ import sys
 import threading
 import time
 from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from file_organizer.models.base import BaseModel
 

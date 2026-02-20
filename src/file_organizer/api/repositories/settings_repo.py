@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -72,7 +72,7 @@ class SettingsRepository:
         )
         if row is not None:
             row.value = value
-            row.updated_at = datetime.now(timezone.utc)
+            row.updated_at = datetime.now(UTC)
         else:
             row = SettingsStore(key=key, value=value, user_id=user_id)
             session.add(row)

@@ -18,7 +18,7 @@ import json
 import shutil
 import threading
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +38,7 @@ class Profile:
 
     def __post_init__(self):
         """Initialize default values after dataclass initialization."""
-        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         if self.created is None:
             self.created = now
         if self.updated is None:
@@ -139,7 +139,7 @@ class ProfileManager:
 
     def _get_current_timestamp(self) -> str:
         """Get current UTC timestamp in ISO format."""
-        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     def _sanitize_profile_name(self, name: str) -> str:
         """

@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 try:
@@ -36,7 +36,7 @@ class Event:
     id: str
     stream: str
     data: dict[str, str]
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 class RedisConnectionError(Exception):
@@ -426,6 +426,6 @@ def _parse_timestamp_from_id(message_id: str) -> datetime:
     """
     try:
         ms_part = message_id.split("-")[0]
-        return datetime.fromtimestamp(int(ms_part) / 1000.0, tz=timezone.utc)
+        return datetime.fromtimestamp(int(ms_part) / 1000.0, tz=UTC)
     except (ValueError, IndexError):
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)

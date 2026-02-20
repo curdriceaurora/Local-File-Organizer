@@ -7,7 +7,7 @@ or none) and preview how files would be categorized under the selected scheme.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional  # noqa: UP035
+from typing import Optional
 
 from textual import work
 from textual.binding import Binding

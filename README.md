@@ -5,7 +5,7 @@
 
 > AI-powered local file management. Privacy-first -- runs 100% on your device.
 
-**3,146 tests** | **184 modules** | **43 file types** | Python 3.9+
+**3,146 tests** | **184 modules** | **43 file types** | Python 3.11+
 
 ## Features
 

@@ -8,8 +8,8 @@ with support for custom routing rules.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from file_organizer._compat import StrEnum
 

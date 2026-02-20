@@ -8,6 +8,7 @@ Uses temporal, content, structural, and AI-based heuristics.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -15,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from ..categories import PARACategory
+from ..config import CategoryThresholds
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +135,15 @@ class TemporalHeuristic(Heuristic):
         # Calculate time differences
         days_since_modified = (now - stat.st_mtime) / 86400
         days_since_accessed = (now - stat.st_atime) / 86400
-        days_since_created = (now - stat.st_ctime) / 86400
+        # Cross-platform file age: use birth time if available (macOS/Windows),
+        # fall back to modification time on Linux (st_ctime is inode change time, not creation).
+        if hasattr(stat, 'st_birthtime'):  # macOS
+            ref_time = stat.st_birthtime
+        elif os.name == 'nt':  # Windows
+            ref_time = stat.st_ctime
+        else:  # Linux — use mtime as best proxy for "last active"
+            ref_time = stat.st_mtime
+        days_since_created = (now - ref_time) / 86400
 
         # Check for old year patterns in path (e.g., "/Projects/2020/...")
         if self._contains_old_year(str(file_path), current_year):
@@ -443,13 +453,8 @@ class HeuristicEngine:
     4. Confidence = (top_score - second_score) / top_score
     """
 
-    # Auto-categorization thresholds
-    THRESHOLDS = {
-        PARACategory.PROJECT: 0.75,
-        PARACategory.AREA: 0.75,
-        PARACategory.RESOURCE: 0.80,
-        PARACategory.ARCHIVE: 0.90,  # High bar for auto-archiving
-    }
+    # Default auto-categorization thresholds (used when no config is provided)
+    _DEFAULT_THRESHOLDS = CategoryThresholds()
 
     def __init__(
         self,
@@ -457,6 +462,7 @@ class HeuristicEngine:
         enable_content: bool = True,
         enable_structural: bool = True,
         enable_ai: bool = False,
+        thresholds: CategoryThresholds | None = None,
     ):
         """
         Initialize heuristic engine.
@@ -466,7 +472,10 @@ class HeuristicEngine:
             enable_content: Enable content heuristic
             enable_structural: Enable structural heuristic
             enable_ai: Enable AI heuristic
+            thresholds: Category-specific confidence thresholds; uses
+                ``CategoryThresholds`` defaults when not provided.
         """
+        self._thresholds = thresholds or self._DEFAULT_THRESHOLDS
         self.heuristics: list[Heuristic] = []
 
         if enable_temporal:
@@ -480,6 +489,20 @@ class HeuristicEngine:
 
         if enable_ai:
             self.heuristics.append(AIHeuristic(weight=0.10))
+
+    @property
+    def THRESHOLDS(self) -> dict[PARACategory, float]:
+        """Backwards-compatible public accessor returning thresholds as a dict.
+
+        Returns a mapping from each PARACategory to its minimum confidence
+        threshold, matching the original class-level ``THRESHOLDS`` dict API.
+        """
+        return {
+            PARACategory.PROJECT: self._thresholds.project,
+            PARACategory.AREA: self._thresholds.area,
+            PARACategory.RESOURCE: self._thresholds.resource,
+            PARACategory.ARCHIVE: self._thresholds.archive,
+        }
 
     def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """
@@ -542,9 +565,10 @@ class HeuristicEngine:
             score.confidence = confidence
 
         # Determine recommendation based on thresholds
+        thresholds_map = self.THRESHOLDS
         recommended = None
         for category in scores_list:
-            if category.score >= self.THRESHOLDS[category.category]:
+            if category.score >= thresholds_map[category.category]:
                 recommended = category.category
                 break
 

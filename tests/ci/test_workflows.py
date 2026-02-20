@@ -96,20 +96,20 @@ class TestCIWorkflow:
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
     def test_ci_uses_python_312(self, workflow: dict) -> None:
-        """Verify CI test job uses Python 3.9 and 3.12 for fast feedback."""
+        """Verify CI test job uses Python 3.11 and 3.12 for fast feedback."""
         jobs = workflow.get("jobs", {})
         assert "test" in jobs, "CI workflow should have a 'test' job"
         test_job = jobs["test"]
 
-        # Ensure the test job uses a matrix strategy with Python 3.9 and 3.12
+        # Ensure the test job uses a matrix strategy with Python 3.11 and 3.12
         strategy = test_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
         python_versions = matrix.get("python-version", [])
 
         assert len(python_versions) == 2, (
-            "CI 'test' job must test against exactly 2 Python versions (3.9 and 3.12)"
+            "CI 'test' job must test against exactly 2 Python versions (3.11 and 3.12)"
         )
-        assert "3.9" in python_versions, "CI 'test' job must include Python 3.9 in the matrix"
+        assert "3.11" in python_versions, "CI 'test' job must include Python 3.11 in the matrix"
         assert "3.12" in python_versions, "CI 'test' job must include Python 3.12 in the matrix"
 
         # Verify the setup-python step uses the matrix variable
@@ -199,14 +199,21 @@ class TestCIFullWorkflow:
         """Verify CI Full workflow has a name."""
         assert "name" in workflow, "CI Full workflow must have a name"
 
-    def test_ci_full_triggers_on_pr_to_main(self, workflow: dict) -> None:
-        """Verify CI Full triggers on pull requests to main."""
+    def test_ci_full_triggers_on_schedule(self, workflow: dict) -> None:
+        """Verify CI Full triggers on a daily schedule (not on every PR).
+
+        The full matrix workflow is expensive (4 Python versions + Node jobs)
+        and is intentionally run only on schedule and manual dispatch, not on
+        every pull request. ci.yml handles PR-triggered test runs.
+        """
         triggers = get_triggers(workflow)
         assert triggers, "CI Full workflow must define triggers"
-        assert "pull_request" in triggers, "CI Full should trigger on pull_request"
-        pr_config = triggers.get("pull_request", {})
-        branches = pr_config.get("branches", [])
-        assert "main" in branches, "CI Full should trigger on PRs to main"
+        assert "schedule" in triggers, "CI Full should trigger on a cron schedule"
+        assert "workflow_dispatch" in triggers, "CI Full should support manual dispatch"
+        assert "pull_request" not in triggers, (
+            "CI Full must NOT trigger on pull_request — use ci.yml for PR checks. "
+            "Running the full matrix on every PR causes duplicate expensive jobs."
+        )
 
     def test_ci_full_supports_manual_trigger(self, workflow: dict) -> None:
         """Verify CI Full can be triggered manually."""
@@ -221,23 +228,21 @@ class TestCIFullWorkflow:
         assert "test-matrix" in jobs, "CI Full workflow should have a 'test-matrix' job"
 
     def test_ci_full_test_matrix_has_python_versions(self, workflow: dict) -> None:
-        """Verify test-matrix job tests all four Python versions."""
+        """Verify test-matrix job tests Python 3.11 and 3.12."""
         test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
         strategy = test_matrix_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
         python_versions = matrix.get("python-version", [])
-        assert len(python_versions) == 4, (
-            "Test-matrix job should test against all 4 Python versions (3.9, 3.10, 3.11, 3.12)"
+        assert len(python_versions) == 2, (
+            "Test-matrix job should test against 2 Python versions (3.11, 3.12)"
         )
 
     def test_ci_full_test_matrix_includes_versions(self, workflow: dict) -> None:
-        """Verify test matrix includes all Python versions 3.9, 3.10, 3.11, and 3.12."""
+        """Verify test matrix includes Python versions 3.11 and 3.12."""
         test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
         strategy = test_matrix_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
         python_versions = matrix.get("python-version", [])
-        assert "3.9" in python_versions, "Test matrix should include Python 3.9"
-        assert "3.10" in python_versions, "Test matrix should include Python 3.10"
         assert "3.11" in python_versions, "Test matrix should include Python 3.11"
         assert "3.12" in python_versions, (
             "Test matrix should include Python 3.12 for comprehensive coverage"
@@ -256,13 +261,19 @@ class TestCIFullWorkflow:
             )
 
     def test_ci_full_has_frontend_compat_job(self, workflow: dict) -> None:
-        """Verify CI Full workflow includes a frontend-compat job using Node 18.x."""
+        """Verify CI Full workflow includes a frontend-compat placeholder job.
+
+        The frontend-compat job is currently a no-op placeholder because this repo
+        has no JS build system (package.json). Once a frontend build system is
+        introduced the job should be updated to run real Node/npm steps.
+        """
         jobs = workflow.get("jobs", {})
         assert "frontend-compat" in jobs, "CI Full workflow should have a 'frontend-compat' job"
         frontend_compat_job = jobs.get("frontend-compat", {})
         steps = frontend_compat_job.get("steps", [])
-        assert steps, "Frontend-compat job should define steps"
+        assert steps, "Frontend-compat job should define at least one step"
 
+        # The job must NOT install Node (no package.json exists — that would fail CI).
         node_setup_steps = [
             step
             for step in steps
@@ -270,18 +281,10 @@ class TestCIFullWorkflow:
             and isinstance(step.get("uses"), str)
             and step["uses"].startswith("actions/setup-node")
         ]
-        assert node_setup_steps, (
-            "Frontend-compat job should use actions/setup-node to configure Node"
+        assert not node_setup_steps, (
+            "Frontend-compat is a placeholder — it must not use actions/setup-node "
+            "until a JS build system (package.json) is added to the repo"
         )
-
-        for step in node_setup_steps:
-            node_version = step.get("with", {}).get("node-version")
-            assert node_version, (
-                "Frontend-compat job's setup-node step should specify a node-version"
-            )
-            assert str(node_version).startswith("18"), (
-                "Frontend-compat job should use Node 18.x for compatibility testing"
-            )
 
     def test_ci_full_has_e2e_placeholder_job(self, workflow: dict) -> None:
         """Verify CI Full workflow includes a disabled E2E placeholder job."""

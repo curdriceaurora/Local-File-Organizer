@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -93,7 +93,7 @@ class WorkspaceRepository:
             if key in allowed:
                 setattr(workspace, key, value)
 
-        workspace.updated_at = datetime.now(timezone.utc)
+        workspace.updated_at = datetime.now(UTC)
         session.flush()
         return workspace
 

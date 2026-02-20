@@ -1,17 +1,17 @@
 """
-Compatibility test suite for Python 3.9+ support validation.
+Compatibility test suite for Python 3.11+ support validation.
 
-Validates that all backward-compatibility patterns used in the codebase work
-correctly across Python 3.9 through 3.14+. This suite is designed to be run
-under tox against multiple Python interpreters.
+Validates that all patterns used in the codebase work correctly on Python
+3.11 and later. This suite is designed to be run under tox against Python
+3.11+ interpreters.
 
 Test areas:
 - ``from __future__ import annotations`` behavior
-- StrEnum backport correctness
+- StrEnum correctness (stdlib, Python 3.11+)
 - Dataclass field type resolution
-- isinstance() with tuple form (3.9-safe)
+- isinstance() with tuple form
 - Import path resolution
-- datetime.timezone.utc (not datetime.UTC)
+- datetime.UTC (Python 3.11+)
 """
 
 from __future__ import annotations
@@ -444,14 +444,6 @@ class TestIsinstanceTupleForm:
         assert isinstance(p, (str, Path))
         assert not isinstance(42, (str, Path))
 
-    def test_check_type_helper(self) -> None:
-        """The check_type helper from _compat should work correctly."""
-        from file_organizer._compat import check_type
-
-        assert check_type(42, (int, str))
-        assert check_type("hello", (int, str))
-        assert not check_type(3.14, (int, str))
-
     def test_isinstance_with_enum(self) -> None:
         """isinstance checks with Enum types should work."""
         from file_organizer._compat import StrEnum
@@ -502,63 +494,43 @@ class TestImportPaths:
 
         assert issubclass(ConflictType, Enum)
 
-    def test_import_version_constants(self) -> None:
-        """Version constants should be importable from _compat."""
-        from file_organizer._compat import (
-            HAS_DATETIME_UTC,
-            HAS_EXCEPTION_GROUPS,
-            HAS_MATCH_STATEMENT,
-            HAS_STRENUM,
-            HAS_UNION_TYPE,
-            PY_VERSION,
-        )
-
-        assert isinstance(PY_VERSION, tuple)
-        assert len(PY_VERSION) == 2
-        assert isinstance(HAS_STRENUM, bool)
-        assert isinstance(HAS_UNION_TYPE, bool)
-        assert isinstance(HAS_MATCH_STATEMENT, bool)
-        assert isinstance(HAS_EXCEPTION_GROUPS, bool)
-        assert isinstance(HAS_DATETIME_UTC, bool)
-
     def test_compat_all_exports(self) -> None:
         """_compat.__all__ should list all public exports."""
         from file_organizer import _compat
 
         assert "StrEnum" in _compat.__all__
         assert "UTC" in _compat.__all__
-        assert "check_type" in _compat.__all__
 
 
 # ===================================================================
-# Section 6: datetime.timezone.utc compatibility tests
+# Section 6: datetime.UTC tests (Python 3.11+)
 # ===================================================================
 
 
 class TestDatetimeCompatibility:
-    """Ensure datetime.timezone.utc is used instead of datetime.UTC."""
+    """Ensure datetime.UTC (Python 3.11+) is used throughout the codebase."""
 
     def test_timezone_utc_exists(self) -> None:
-        """datetime.timezone.utc should exist on all Python versions."""
-        utc = datetime.timezone.utc
+        """datetime.UTC should exist on Python 3.11+."""
+        utc = datetime.UTC
         assert utc is not None
 
     def test_timezone_utc_offset(self) -> None:
         """timezone.utc should have zero offset."""
-        utc = datetime.timezone.utc
+        utc = datetime.UTC
         assert utc.utcoffset(None) == datetime.timedelta(0)
 
     def test_utc_from_compat(self) -> None:
-        """UTC constant from _compat should match datetime.timezone.utc."""
+        """UTC constant from _compat should match datetime.UTC."""
         from file_organizer._compat import UTC
 
-        assert UTC is datetime.timezone.utc
+        assert UTC is datetime.UTC
 
     def test_datetime_now_with_utc(self) -> None:
-        """Creating UTC-aware datetimes should use timezone.utc."""
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        """Creating UTC-aware datetimes should use datetime.UTC."""
+        now = datetime.datetime.now(tz=datetime.UTC)
         assert now.tzinfo is not None
-        assert now.tzinfo == datetime.timezone.utc
+        assert now.tzinfo == datetime.UTC
 
     def test_datetime_now_with_compat_utc(self) -> None:
         """Creating UTC-aware datetimes with _compat.UTC should work."""
@@ -566,7 +538,7 @@ class TestDatetimeCompatibility:
 
         now = datetime.datetime.now(tz=UTC)
         assert now.tzinfo is not None
-        assert now.tzinfo == datetime.timezone.utc
+        assert now.tzinfo == datetime.UTC
 
     def test_utc_aware_comparison(self) -> None:
         """UTC-aware datetimes should be comparable."""
@@ -593,35 +565,11 @@ class TestDatetimeCompatibility:
 class TestVersionDetection:
     """Test runtime version detection utilities."""
 
-    def test_py_version_matches_sys(self) -> None:
-        """PY_VERSION should match sys.version_info[:2]."""
-        from file_organizer._compat import PY_VERSION
-
-        assert PY_VERSION == sys.version_info[:2]
-
-    def test_has_strenum_flag(self) -> None:
-        """HAS_STRENUM should be True on 3.11+, False otherwise."""
-        from file_organizer._compat import HAS_STRENUM
-
-        if sys.version_info >= (3, 11):
-            assert HAS_STRENUM is True
-        else:
-            assert HAS_STRENUM is False
-
-    def test_has_union_type_flag(self) -> None:
-        """HAS_UNION_TYPE should be True on 3.10+, False otherwise."""
-        from file_organizer._compat import HAS_UNION_TYPE
-
-        if sys.version_info >= (3, 10):
-            assert HAS_UNION_TYPE is True
-        else:
-            assert HAS_UNION_TYPE is False
-
     def test_python_version_fixture(self, python_version: tuple[int, int]) -> None:
         """The python_version fixture should return the correct version."""
         assert python_version == sys.version_info[:2]
         assert python_version[0] == 3
-        assert python_version[1] >= 9
+        assert python_version[1] >= 11
 
     def test_python_version_string_fixture(self, python_version_string: str) -> None:
         """The python_version_string fixture should be a dotted version."""

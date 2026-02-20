@@ -314,7 +314,7 @@ CATEGORY:"""
             import re
             folder_name = re.sub(r'[^\w_]', '_', folder_name)
             folder_name = re.sub(r'_+', '_', folder_name).strip('_')
-            result = folder_name[:50] if folder_name else 'documents'
+            result = folder_name[:50] if folder_name else "documents"
             logger.info("Folder name generated ({} chars)", len(result))
             return result
 
@@ -390,7 +390,7 @@ FILENAME:"""
             import re
             filename = re.sub(r'[^\w_]', '_', filename)
             filename = re.sub(r'_+', '_', filename).strip('_')
-            result = filename[:50] if filename else 'document'
+            result = filename[:50] if filename else "document"
             logger.info("Filename generated ({} chars)", len(result))
             return result
 

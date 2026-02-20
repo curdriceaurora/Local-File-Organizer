@@ -35,7 +35,7 @@ See [Deployment Guide](admin/deployment.md) for detailed Docker setup.
 **Best for**: Quick testing, simple deployments
 
 **Prerequisites**:
-- Python 3.9 or higher
+- Python 3.11 or higher
 - Ollama installed and running
 - 4GB+ available disk space
 
@@ -57,7 +57,7 @@ See [Installation Guide](admin/installation.md) for options.
 **Best for**: Development, customization
 
 **Prerequisites**:
-- Python 3.9 or higher
+- Python 3.11 or higher
 - Git
 - Ollama installed
 - Development tools (C compiler)
@@ -87,7 +87,7 @@ file-organizer serve
 - **CPU**: 2-core processor
 - **RAM**: 8 GB
 - **Storage**: 10 GB (for AI models)
-- **Python**: 3.9+
+- **Python**: 3.11+
 - **Ollama**: Latest version
 
 ### Recommended

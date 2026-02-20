@@ -12,10 +12,11 @@ This module provides safe backup management for file operations, including:
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 # fcntl is Unix-only, not available on Windows
 try:
@@ -194,7 +195,7 @@ class BackupManager:
 
         return removed_backups
 
-    def get_backup_info(self, backup_path: Path) -> Optional[dict]:
+    def get_backup_info(self, backup_path: Path) -> dict | None:
         """
         Get metadata for a specific backup.
 
@@ -291,7 +292,7 @@ class BackupManager:
             return {}
 
         try:
-            with open(self.manifest_path, encoding='utf-8') as f:
+            with open(self.manifest_path, encoding="utf-8") as f:
                 # Acquire shared lock for reading (Unix only)
                 if HAS_FCNTL:
                     fcntl.flock(f.fileno(), fcntl.LOCK_SH)
@@ -308,28 +309,34 @@ class BackupManager:
 
     def _save_manifest(self, manifest: dict) -> None:
         """
-        Save the backup manifest to disk with file locking.
+        Save the backup manifest to disk atomically.
+
+        Writes to a temp file in the same directory, then uses os.replace()
+        for an atomic rename. This prevents manifest corruption on crash and
+        works on both Unix and Windows.
 
         Args:
             manifest: Dictionary containing manifest data
         """
+        tmp_path = None
         try:
-            # Open in read+ mode to avoid truncating before lock
-            mode = 'r+' if self.manifest_path.exists() else 'w'
-            with open(self.manifest_path, mode, encoding='utf-8') as f:
-                # Acquire exclusive lock for writing (Unix only)
-                if HAS_FCNTL:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-                try:
-                    # Truncate file after acquiring lock
-                    if mode == 'r+':
-                        f.seek(0)
-                        f.truncate()
-                    json.dump(manifest, f, indent=2, ensure_ascii=False)
-                    f.flush()
-                finally:
-                    # Release lock (Unix only)
-                    if HAS_FCNTL:
-                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+            tmp_dir = self.manifest_path.parent
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                dir=tmp_dir,
+                delete=False,
+                encoding="utf-8",
+                suffix=".tmp",
+            ) as tmp:
+                json.dump(manifest, tmp, indent=2, ensure_ascii=False)
+                tmp.flush()
+                os.fsync(tmp.fileno())
+                tmp_path = tmp.name
+            os.replace(tmp_path, self.manifest_path)
         except OSError as e:
+            if tmp_path is not None:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
             raise OSError(f"Failed to save manifest: {e}") from e

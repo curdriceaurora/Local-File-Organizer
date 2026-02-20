@@ -8,7 +8,7 @@ and filtering. Uses temporary files for all I/O.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -38,7 +38,7 @@ def sample_event() -> Event:
         id="1704067200000-0",
         stream="fileorg:file-events",
         data={"event_type": "file.created", "file_path": "/test/a.txt"},
-        timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
     )
 
 
@@ -50,7 +50,7 @@ class TestAuditEntry:
 
     def test_to_dict(self):
         """Test serialization to dictionary."""
-        now = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2024, 1, 15, 12, 0, 0, tzinfo=UTC)
         entry = AuditEntry(
             timestamp=now,
             event_id="1-0",
@@ -98,7 +98,7 @@ class TestAuditEntry:
 
     def test_roundtrip(self):
         """Test serialization roundtrip preserves data."""
-        now = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2024, 1, 15, 12, 0, 0, tzinfo=UTC)
         original = AuditEntry(
             timestamp=now,
             event_id="1-0",
@@ -223,13 +223,13 @@ class TestQueryAuditLog:
             id="1-0",
             stream="stream-a",
             data={},
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         event_b = Event(
             id="2-0",
             stream="stream-b",
             data={},
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
         audit_logger.log_event(event_a, "consumed")
@@ -246,7 +246,7 @@ class TestQueryAuditLog:
             id="9999-0",
             stream="fileorg:file-events",
             data={},
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
         audit_logger.log_event(sample_event, "consumed")
@@ -290,8 +290,8 @@ class TestQueryAuditLog:
 
         result = audit_logger.query_audit_log(
             AuditFilter(
-                start_time=datetime(2024, 1, 1, 11, 0, 0, tzinfo=timezone.utc),
-                end_time=datetime(2024, 1, 1, 13, 0, 0, tzinfo=timezone.utc),
+                start_time=datetime(2024, 1, 1, 11, 0, 0, tzinfo=UTC),
+                end_time=datetime(2024, 1, 1, 13, 0, 0, tzinfo=UTC),
             )
         )
 
@@ -324,7 +324,7 @@ class TestQueryAuditLog:
             id="9999-0",
             stream="other-stream",
             data={},
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
         audit_logger.log_event(sample_event, "consumed")

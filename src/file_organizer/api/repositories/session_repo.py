@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -45,7 +45,7 @@ class SessionRepository:
         now: Optional[datetime] = None,
     ) -> Optional[UserSession]:
         """Return an active (unrevoked, unexpired) session by token hash."""
-        current = now or datetime.now(timezone.utc)
+        current = now or datetime.now(UTC)
         return (
             session.query(UserSession)
             .filter(
@@ -64,7 +64,7 @@ class SessionRepository:
         now: Optional[datetime] = None,
     ) -> list[UserSession]:
         """List active sessions for a user."""
-        current = now or datetime.now(timezone.utc)
+        current = now or datetime.now(UTC)
         return (
             session.query(UserSession)
             .filter(
@@ -82,14 +82,14 @@ class SessionRepository:
         row = session.get(UserSession, session_id)
         if row is None:
             return False
-        row.revoked_at = datetime.now(timezone.utc)
+        row.revoked_at = datetime.now(UTC)
         session.flush()
         return True
 
     @staticmethod
     def prune_expired(session: Session, *, now: Optional[datetime] = None) -> int:
         """Delete revoked/expired sessions and return deleted row count."""
-        current = now or datetime.now(timezone.utc)
+        current = now or datetime.now(UTC)
         count = (
             session.query(UserSession)
             .filter((UserSession.expires_at <= current) | UserSession.revoked_at.is_not(None))

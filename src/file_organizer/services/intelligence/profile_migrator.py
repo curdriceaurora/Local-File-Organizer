@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -52,7 +52,7 @@ class ProfileMigrator:
 
     def _get_current_timestamp(self) -> str:
         """Get current UTC timestamp in ISO format."""
-        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     def migrate_version(self, profile_name: str, target_version: str, backup: bool = True) -> bool:
         """
@@ -196,7 +196,7 @@ class ProfileMigrator:
             Path to backup file or None on failure
         """
         try:
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
             backup_name = f"{profile.profile_name}.{timestamp}.migration_backup"
 
             backup_dir = self.profile_manager.storage_path / "migration_backups"

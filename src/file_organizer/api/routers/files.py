@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 from typing import Optional
@@ -104,7 +105,16 @@ def list_files(
     elif sort_by == "size":
         files.sort(key=lambda p: p.stat().st_size, reverse=reverse)
     elif sort_by == "created":
-        files.sort(key=lambda p: p.stat().st_ctime, reverse=reverse)
+        # Cross-platform: st_birthtime (macOS), st_ctime (Windows), st_mtime (Linux)
+        def _creation_key(p: Path) -> float:
+            s = p.stat()
+            if hasattr(s, "st_birthtime"):
+                return s.st_birthtime
+            if os.name == "nt":
+                return s.st_ctime
+            return s.st_mtime
+
+        files.sort(key=_creation_key, reverse=reverse)
     else:
         files.sort(key=lambda p: p.stat().st_mtime, reverse=reverse)
 

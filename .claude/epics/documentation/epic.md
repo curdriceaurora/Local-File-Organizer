@@ -8,7 +8,7 @@ created: 2026-01-20T23:30:00Z
 updated: 2026-01-26T00:52:32Z
 labels: [documentation, epic]
 github: https://github.com/curdriceaurora/Local-File-Organizer/issues/7
-last_sync: 2026-02-18T06:53:53Z
+last_sync: 2026-02-19T00:43:37Z
 ---
 
 # Epic: Documentation & User Guides

@@ -2,6 +2,7 @@
 Shared test fixtures and configuration for the file_organizer test suite.
 
 Provides version-aware fixtures and skip markers for multi-version testing.
+Requires Python 3.11+.
 """
 
 from __future__ import annotations
@@ -36,31 +37,14 @@ def python_version_string() -> str:
 
 
 @pytest.fixture
-def is_py39() -> bool:
-    """True when running on Python 3.9."""
-    return sys.version_info[:2] == (3, 9)
-
-
-@pytest.fixture
-def is_py310_plus() -> bool:
-    """True when running on Python 3.10 or later."""
-    return sys.version_info >= (3, 10)
-
-
-@pytest.fixture
 def is_py311_plus() -> bool:
-    """True when running on Python 3.11 or later."""
+    """True when running on Python 3.11 or later (always True for this project)."""
     return sys.version_info >= (3, 11)
 
 
 # ---------------------------------------------------------------------------
 # Skip markers
 # ---------------------------------------------------------------------------
-
-skip_below_py310 = pytest.mark.skipif(
-    sys.version_info < (3, 10),
-    reason="Requires Python 3.10+",
-)
 
 skip_below_py311 = pytest.mark.skipif(
     sys.version_info < (3, 11),
@@ -70,16 +54,6 @@ skip_below_py311 = pytest.mark.skipif(
 skip_below_py312 = pytest.mark.skipif(
     sys.version_info < (3, 12),
     reason="Requires Python 3.12+",
-)
-
-skip_on_py39 = pytest.mark.skipif(
-    sys.version_info[:2] == (3, 9),
-    reason="Not applicable on Python 3.9",
-)
-
-requires_py39 = pytest.mark.skipif(
-    sys.version_info[:2] != (3, 9),
-    reason="Only runs on Python 3.9",
 )
 
 

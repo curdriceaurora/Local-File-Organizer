@@ -17,6 +17,7 @@ from file_organizer.methodologies.para.categories import (
     get_all_category_definitions,
     get_category_definition,
 )
+from file_organizer.methodologies.para.config import CategoryThresholds
 from file_organizer.methodologies.para.detection.heuristics import (
     ContentHeuristic,
     HeuristicEngine,
@@ -487,6 +488,62 @@ class TestHeuristicEngine:
             category_score = result.scores[result.recommended_category]
             threshold = engine.THRESHOLDS[result.recommended_category]
             assert category_score.score >= threshold
+
+    def test_custom_thresholds_injection(self, tmp_path):
+        """Test that HeuristicEngine respects custom CategoryThresholds."""
+        # Create file with PROJECT signals (recent, project keywords in path)
+        project_dir = tmp_path / "projects" / "deadline"
+        project_dir.mkdir(parents=True)
+        file_path = project_dir / "project-proposal.txt"
+        file_path.write_text("project deadline deliverable")
+
+        # Test 1: Default thresholds should allow PROJECT recommendation
+        default_engine = HeuristicEngine()
+        default_result = default_engine.evaluate(file_path)
+
+        # Verify PROJECT has a measurable score
+        project_score = default_result.scores[PARACategory.PROJECT]
+        assert project_score.score > 0.3, "PROJECT should have detectable signals"
+
+        # Test 2: Set PROJECT threshold impossibly high (1.0)
+        # This should prevent PROJECT from being recommended
+        custom_thresholds = CategoryThresholds(
+            project=1.0,  # Impossibly high - no recommendation should match
+            area=0.75,
+            resource=0.80,
+            archive=0.90,
+        )
+        custom_engine = HeuristicEngine(thresholds=custom_thresholds)
+        custom_result = custom_engine.evaluate(file_path)
+
+        # Verify custom thresholds are injected
+        assert custom_engine.THRESHOLDS[PARACategory.PROJECT] == 1.0
+        assert custom_engine.THRESHOLDS[PARACategory.AREA] == 0.75
+
+        # With PROJECT threshold at 1.0, it should NOT be recommended
+        # even though it has the highest score
+        if custom_result.recommended_category == PARACategory.PROJECT:
+            # If PROJECT is recommended, its score must be >= 1.0
+            assert custom_result.scores[PARACategory.PROJECT].score >= 1.0
+        else:
+            # More likely: no category meets threshold, so no recommendation
+            # OR a different category with lower threshold is recommended
+            if custom_result.recommended_category is not None:
+                # If there's a recommendation, it must meet its threshold
+                rec_score = custom_result.scores[custom_result.recommended_category]
+                rec_threshold = custom_engine.THRESHOLDS[custom_result.recommended_category]
+                assert rec_score.score >= rec_threshold
+
+        # Test 3: Verify scores are consistent between engines
+        # (only thresholds should differ, not the scoring itself)
+        for category in PARACategory:
+            assert (
+                abs(
+                    default_result.scores[category].score
+                    - custom_result.scores[category].score
+                )
+                < 0.01
+            ), f"Scores should be identical for {category}"
 
     def test_manual_review_flag(self, tmp_path):
         """Test manual review flag for low confidence."""

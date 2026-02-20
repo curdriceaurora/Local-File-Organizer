@@ -16,7 +16,7 @@ Features:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from threading import RLock
@@ -179,7 +179,7 @@ class PreferenceTracker:
             context: Additional context about the correction
         """
         with self._lock:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             # Create correction record
             correction = Correction(
@@ -203,7 +203,7 @@ class PreferenceTracker:
         This method analyzes the correction and updates relevant preferences.
         Must be called within a lock.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         pattern_key = correction.get_pattern_key()
 
         # Determine preference type based on correction type
@@ -337,7 +337,7 @@ class PreferenceTracker:
 
                 # Return the preference with highest confidence
                 best_pref = max(matching_prefs, key=lambda p: p.metadata.confidence)
-                best_pref.metadata.last_used = datetime.now(timezone.utc)
+                best_pref.metadata.last_used = datetime.now(UTC)
                 return best_pref
 
             # For other preference types, use exact pattern matching
@@ -358,7 +358,7 @@ class PreferenceTracker:
             best_pref = max(prefs, key=lambda p: p.metadata.confidence)
 
             # Update last used timestamp
-            best_pref.metadata.last_used = datetime.now(timezone.utc)
+            best_pref.metadata.last_used = datetime.now(UTC)
 
             return best_pref
 
@@ -393,7 +393,7 @@ class PreferenceTracker:
             success: Whether the application was successful
         """
         with self._lock:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             if success:
                 # Increase confidence (cap at 0.98)
@@ -481,7 +481,7 @@ class PreferenceTracker:
                 },
                 "corrections": [c.to_dict() for c in self._corrections],
                 "statistics": self._statistics.copy(),
-                "exported_at": datetime.now(timezone.utc).isoformat(),
+                "exported_at": datetime.now(UTC).isoformat(),
             }
 
     def import_data(self, data: dict) -> None:

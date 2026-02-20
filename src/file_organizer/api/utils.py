@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import mimetypes
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -75,12 +75,20 @@ def file_info_from_path(path: Path) -> FileInfo:
             message=f"Unable to access file metadata for {path}",
         ) from exc
     mime_type, _ = mimetypes.guess_type(path.as_posix())
+    # Cross-platform creation time: st_birthtime (macOS), st_ctime (Windows),
+    # st_mtime fallback (Linux — st_ctime is inode-change time, not creation).
+    if hasattr(stat, "st_birthtime"):
+        creation_ref = stat.st_birthtime
+    elif os.name == "nt":
+        creation_ref = stat.st_ctime
+    else:
+        creation_ref = stat.st_mtime
     return FileInfo(
         path=str(path),
         name=path.name,
         size=stat.st_size,
-        created=datetime.fromtimestamp(stat.st_ctime, tz=timezone.utc),
-        modified=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
+        created=datetime.fromtimestamp(creation_ref, tz=UTC),
+        modified=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
         file_type=path.suffix.lower() or "",
         mime_type=mime_type,
     )

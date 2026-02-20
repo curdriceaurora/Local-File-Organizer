@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -65,7 +65,7 @@ class TestSaveAndLoadJob(unittest.TestCase):
 
     def test_save_and_load_roundtrip(self) -> None:
         """Test that a job can be saved and loaded back identically."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         job = JobState(
             id="roundtrip-1",
             status=JobStatus.RUNNING,
@@ -211,7 +211,7 @@ class TestListJobs(unittest.TestCase):
         """Test that listed jobs are sorted by creation time (newest first)."""
         from datetime import timedelta
 
-        base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        base = datetime(2026, 1, 1, tzinfo=UTC)
 
         for i in range(3):
             job = JobState(

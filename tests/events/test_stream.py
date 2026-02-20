@@ -8,7 +8,7 @@ Redis to avoid requiring a running Redis instance.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,7 +26,7 @@ class TestEvent:
 
     def test_create_event(self):
         """Test creating an Event with all fields."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         event = Event(
             id="1234567890-0",
             stream="test:stream",
@@ -43,7 +43,7 @@ class TestEvent:
         """Test that Event gets a default timestamp."""
         event = Event(id="1-0", stream="s", data={})
         assert event.timestamp is not None
-        assert event.timestamp.tzinfo == timezone.utc
+        assert event.timestamp.tzinfo == UTC
 
     def test_event_is_frozen(self):
         """Test that Event is immutable."""
@@ -61,7 +61,7 @@ class TestParseTimestampFromId:
         result = _parse_timestamp_from_id("1700000000000-0")
         assert result.year == 2023
         assert result.month == 11
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
 
     def test_parse_id_with_sequence(self):
         """Test parsing an ID with a non-zero sequence number."""
@@ -70,15 +70,15 @@ class TestParseTimestampFromId:
 
     def test_parse_invalid_id_returns_now(self):
         """Test that an invalid ID returns current time."""
-        before = datetime.now(timezone.utc)
+        before = datetime.now(UTC)
         result = _parse_timestamp_from_id("invalid-id")
-        after = datetime.now(timezone.utc)
+        after = datetime.now(UTC)
         assert before <= result <= after
 
     def test_parse_empty_string(self):
         """Test that an empty string returns current time."""
         result = _parse_timestamp_from_id("")
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
 
 
 class TestRedisStreamManagerInit:

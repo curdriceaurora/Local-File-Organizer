@@ -7,8 +7,8 @@ such as processing small files first or grouping files by type.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from file_organizer._compat import StrEnum
 

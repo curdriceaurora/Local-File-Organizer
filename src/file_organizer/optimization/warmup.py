@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Callable
 
 from file_organizer.models.base import BaseModel
 from file_organizer.optimization.model_cache import ModelCache

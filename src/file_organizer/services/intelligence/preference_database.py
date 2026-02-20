@@ -11,7 +11,7 @@ import json
 import logging
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import RLock
 from typing import Any
@@ -289,7 +289,7 @@ class PreferenceDatabaseManager:
             Preference ID
         """
         conn = self.get_connection()
-        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         context_json = json.dumps(context) if context else None
 
         with self._lock:
@@ -402,7 +402,7 @@ class PreferenceDatabaseManager:
             confidence: New confidence score (0.0-1.0)
         """
         conn = self.get_connection()
-        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
         with self._lock:
             conn.execute(
@@ -422,7 +422,7 @@ class PreferenceDatabaseManager:
             preference_id: Preference ID
         """
         conn = self.get_connection()
-        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
         with self._lock:
             conn.execute(
@@ -478,7 +478,7 @@ class PreferenceDatabaseManager:
             Correction ID
         """
         conn = self.get_connection()
-        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         metadata_json = json.dumps(metadata) if metadata else None
 
         with self._lock:

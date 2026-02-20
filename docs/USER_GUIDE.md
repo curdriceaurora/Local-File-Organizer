@@ -13,7 +13,7 @@ File Organizer v2 is a privacy-first, AI-powered tool for managing your local fi
 ## Installation
 
 ### Prerequisites
-- Python 3.9+
+- Python 3.11+
 - [Ollama](https://ollama.ai/) installed and running.
 
 ### Setup

@@ -6,7 +6,7 @@ AccuracyStats computation, and PatternLearner rule generation.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -77,7 +77,7 @@ class TestFeedbackEvent:
             "suggested": "project",
             "actual": "project",
             "confidence": 0.8,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "accepted": True,
         }
         event = FeedbackEvent.from_dict(data)

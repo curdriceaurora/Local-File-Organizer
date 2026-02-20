@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -25,7 +25,7 @@ class TestFileEvent:
 
     def test_create_file_event(self) -> None:
         """Test basic FileEvent construction."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         event = FileEvent(
             event_type=EventType.CREATED,
             path=Path("/tmp/test.txt"),
@@ -42,7 +42,7 @@ class TestFileEvent:
         event = FileEvent(
             event_type=EventType.CREATED,
             path=Path("/tmp/newdir"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             is_directory=True,
         )
         assert event.is_directory is True
@@ -52,7 +52,7 @@ class TestFileEvent:
         event = FileEvent(
             event_type=EventType.MOVED,
             path=Path("/tmp/old.txt"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             dest_path=Path("/tmp/new.txt"),
         )
         assert event.dest_path == Path("/tmp/new.txt")
@@ -62,7 +62,7 @@ class TestFileEvent:
         event = FileEvent(
             event_type=EventType.CREATED,
             path=Path("/tmp/test.txt"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         with pytest.raises(AttributeError):
             event.event_type = EventType.DELETED  # type: ignore[misc]
@@ -90,7 +90,7 @@ class TestEventQueue:
         return FileEvent(
             event_type=event_type,
             path=Path(f"/tmp/{name}"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
     def test_enqueue_and_dequeue(self) -> None:

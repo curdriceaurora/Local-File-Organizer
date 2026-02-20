@@ -83,7 +83,7 @@ async def _heartbeat(websocket: WebSocket, interval: int, stop: asyncio.Event) -
         try:
             await asyncio.wait_for(stop.wait(), timeout=interval)
             break
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
         try:
             await websocket.send_json({"type": "ping"})

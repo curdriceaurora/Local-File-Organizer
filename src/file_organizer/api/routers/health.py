@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 
@@ -19,5 +19,5 @@ def health(settings: ApiSettings = Depends(get_settings)) -> dict[str, str]:
         "status": "healthy",
         "version": settings.version,
         "environment": settings.environment,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
