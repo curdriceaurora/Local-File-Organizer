@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
@@ -19,7 +20,7 @@ def test_version_command():
         assert "file-organizer 1.2.3" in result.stdout
 
 
-@patch("file_organizer.cli.main.FileOrganizer")
+@patch("file_organizer.core.organizer.FileOrganizer")
 def test_organize_command_live(mock_organizer_cls, tmp_path):
     """Test organize command executes FileOrganizer correctly."""
     mock_instance = MagicMock()
@@ -35,12 +36,12 @@ def test_organize_command_live(mock_organizer_cls, tmp_path):
     assert result.exit_code == 0
     assert "Organizing" in result.stdout
     mock_organizer_cls.assert_called_once_with(
-        input_dir=str(in_dir), output_dir=str(out_dir), dry_run=False
+        input_dir=in_dir, output_dir=out_dir, dry_run=False
     )
     mock_instance.run.assert_called_once()
 
 
-@patch("file_organizer.cli.main.FileOrganizer")
+@patch("file_organizer.core.organizer.FileOrganizer")
 def test_organize_command_dry_run(mock_organizer_cls, tmp_path):
     """Test organize command processes dry-run flag."""
     mock_instance = MagicMock()
@@ -54,11 +55,11 @@ def test_organize_command_dry_run(mock_organizer_cls, tmp_path):
     assert result.exit_code == 0
     assert "Dry run mode" in result.stdout
     mock_organizer_cls.assert_called_once_with(
-        input_dir=str(in_dir), output_dir=str(out_dir), dry_run=True
+        input_dir=in_dir, output_dir=out_dir, dry_run=True
     )
 
 
-@patch("file_organizer.cli.main.FileOrganizer")
+@patch("file_organizer.core.organizer.FileOrganizer")
 def test_organize_command_error(mock_organizer_cls, tmp_path):
     """Test organize command handles exceptions gracefully."""
     mock_instance = MagicMock()
@@ -71,7 +72,7 @@ def test_organize_command_error(mock_organizer_cls, tmp_path):
     assert "Error: Something broke" in result.stdout
 
 
-@patch("file_organizer.cli.main.FileOrganizer")
+@patch("file_organizer.core.organizer.FileOrganizer")
 def test_preview_command(mock_organizer_cls, tmp_path):
     """Test preview command runs organizer in dry_run mode."""
     mock_instance = MagicMock()
@@ -81,11 +82,11 @@ def test_preview_command(mock_organizer_cls, tmp_path):
 
     assert result.exit_code == 0
     assert "Previewing" in result.stdout
-    mock_organizer_cls.assert_called_once_with(input_dir="in_dir", dry_run=True)
+    mock_organizer_cls.assert_called_once_with(input_dir=Path("in_dir"), dry_run=True)
     mock_instance.run.assert_called_once()
 
 
-@patch("file_organizer.cli.main.FileOrganizer")
+@patch("file_organizer.core.organizer.FileOrganizer")
 def test_preview_command_error(mock_organizer_cls, tmp_path):
     """Test preview command handles exceptions."""
     mock_instance = MagicMock()
@@ -98,7 +99,7 @@ def test_preview_command_error(mock_organizer_cls, tmp_path):
     assert "Error: Bad input" in result.stdout
 
 
-@patch("file_organizer.cli.main.run_tui")
+@patch("file_organizer.tui.run_tui")
 def test_tui_command(mock_run_tui):
     """Test launching TUI."""
     result = runner.invoke(app, ["tui"])

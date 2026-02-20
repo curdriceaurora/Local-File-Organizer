@@ -60,7 +60,7 @@ class TestFileOrganizer:
         """Test scanning files in a directory hierarchy."""
         # Create some files
         (tmp_path / "file1.txt").touch()
-        (tmp_path / ".hidden.txt").touch() # Should be skipped
+        (tmp_path / ".hidden.txt").touch()  # Should be skipped
         subdir = tmp_path / "subdir"
         subdir.mkdir()
         (subdir / "file2.jpg").touch()

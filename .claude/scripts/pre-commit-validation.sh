@@ -162,6 +162,61 @@ if [[ -n "$MD_FILES" ]]; then
   echo ""
 fi
 
+# 7b. Run ALL staged test files directly (catches new/modified tests even
+#     when no src/ file is staged — the blind spot that caused PR #415 failures)
+STAGED_TEST_FILES=$(git diff --name-only --cached -- 'tests/**/*.py' | grep -E '^tests/.*test_.*\.py$' || true)
+if [[ -n "$STAGED_TEST_FILES" ]]; then
+  echo "🧪 Running staged test files directly..."
+  STAGED_TEST_FAILED=0
+  for test_file in $STAGED_TEST_FILES; do
+    if [[ -f "$test_file" ]]; then
+      echo "  Testing $test_file..."
+      if ! pytest "$test_file" --tb=short -q --override-ini="addopts="; then
+        echo "❌ Test file $test_file has failures"
+        STAGED_TEST_FAILED=1
+      fi
+    fi
+  done
+  if [[ $STAGED_TEST_FAILED -eq 1 ]]; then
+    echo ""
+    echo "❌ Some staged test files have failures"
+    echo "Fix failing tests before committing"
+    exit 1
+  fi
+  echo "✓ All staged test files passed"
+  echo ""
+fi
+
+# 7c. Validate mock @patch targets in staged test files resolve to real attributes
+if [[ -n "$STAGED_TEST_FILES" ]]; then
+  echo "🎯 Validating mock patch targets..."
+  PATCH_ISSUES=0
+  for test_file in $STAGED_TEST_FILES; do
+    # Extract patch targets from newly-added lines in the staged diff
+    PATCH_TARGETS=$(git diff --cached -- "$test_file" | grep -oP '^\+.*@patch\("\K[^"]+' || true)
+    for target in $PATCH_TARGETS; do
+      # Split into module path and attribute name
+      MODULE_PATH="${target%.*}"
+      ATTR_NAME="${target##*.}"
+      # Verify the attribute exists on the module
+      if ! python3 -c "import importlib; m = importlib.import_module('$MODULE_PATH'); getattr(m, '$ATTR_NAME')" 2>/dev/null; then
+        echo "❌ Invalid mock target in $test_file: $target"
+        echo "   '$ATTR_NAME' does not exist on module '$MODULE_PATH'"
+        echo "   If the function uses a local import, patch at the source module instead"
+        PATCH_ISSUES=1
+      fi
+    done
+  done
+  if [[ $PATCH_ISSUES -eq 1 ]]; then
+    echo ""
+    echo "Fix: Patch where the name is DEFINED, not where it's IMPORTED locally"
+    echo "See: https://docs.python.org/3/library/unittest.mock.html#where-to-patch"
+    exit 1
+  fi
+  echo "✓ All mock patch targets are valid"
+  echo ""
+fi
+
 # 8. Run tests on modified Python modules (if tests exist)
 if [[ -n "$PY_FILES" ]]; then
   echo "🧪 Running tests for modified modules..."
