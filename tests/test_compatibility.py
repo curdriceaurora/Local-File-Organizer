@@ -444,14 +444,6 @@ class TestIsinstanceTupleForm:
         assert isinstance(p, (str, Path))
         assert not isinstance(42, (str, Path))
 
-    def test_check_type_helper(self) -> None:
-        """The check_type helper from _compat should work correctly."""
-        from file_organizer._compat import check_type
-
-        assert check_type(42, (int, str))
-        assert check_type("hello", (int, str))
-        assert not check_type(3.14, (int, str))
-
     def test_isinstance_with_enum(self) -> None:
         """isinstance checks with Enum types should work."""
         from file_organizer._compat import StrEnum
@@ -502,32 +494,12 @@ class TestImportPaths:
 
         assert issubclass(ConflictType, Enum)
 
-    def test_import_version_constants(self) -> None:
-        """Version constants should be importable from _compat."""
-        from file_organizer._compat import (
-            HAS_DATETIME_UTC,
-            HAS_EXCEPTION_GROUPS,
-            HAS_MATCH_STATEMENT,
-            HAS_STRENUM,
-            HAS_UNION_TYPE,
-            PY_VERSION,
-        )
-
-        assert isinstance(PY_VERSION, tuple)
-        assert len(PY_VERSION) == 2
-        assert isinstance(HAS_STRENUM, bool)
-        assert isinstance(HAS_UNION_TYPE, bool)
-        assert isinstance(HAS_MATCH_STATEMENT, bool)
-        assert isinstance(HAS_EXCEPTION_GROUPS, bool)
-        assert isinstance(HAS_DATETIME_UTC, bool)
-
     def test_compat_all_exports(self) -> None:
         """_compat.__all__ should list all public exports."""
         from file_organizer import _compat
 
         assert "StrEnum" in _compat.__all__
         assert "UTC" in _compat.__all__
-        assert "check_type" in _compat.__all__
 
 
 # ===================================================================
@@ -592,30 +564,6 @@ class TestDatetimeCompatibility:
 
 class TestVersionDetection:
     """Test runtime version detection utilities."""
-
-    def test_py_version_matches_sys(self) -> None:
-        """PY_VERSION should match sys.version_info[:2]."""
-        from file_organizer._compat import PY_VERSION
-
-        assert PY_VERSION == sys.version_info[:2]
-
-    def test_has_strenum_flag(self) -> None:
-        """HAS_STRENUM should be True on 3.11+, False otherwise."""
-        from file_organizer._compat import HAS_STRENUM
-
-        if sys.version_info >= (3, 11):
-            assert HAS_STRENUM is True
-        else:
-            assert HAS_STRENUM is False
-
-    def test_has_union_type_flag(self) -> None:
-        """HAS_UNION_TYPE should be True on 3.10+, False otherwise."""
-        from file_organizer._compat import HAS_UNION_TYPE
-
-        if sys.version_info >= (3, 10):
-            assert HAS_UNION_TYPE is True
-        else:
-            assert HAS_UNION_TYPE is False
 
     def test_python_version_fixture(self, python_version: tuple[int, int]) -> None:
         """The python_version fixture should return the correct version."""

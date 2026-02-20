@@ -10,7 +10,7 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Optional  # noqa: UP035 — required for Typer on Python 3.9
+from typing import Optional
 
 import typer
 from rich.console import Console

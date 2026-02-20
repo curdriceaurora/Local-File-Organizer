@@ -7,7 +7,7 @@ along with an organization summary with file counts and status.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional  # noqa: UP035
+from typing import Optional
 
 from textual import work
 from textual.binding import Binding
