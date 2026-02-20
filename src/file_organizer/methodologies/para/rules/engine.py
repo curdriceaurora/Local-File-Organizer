@@ -19,7 +19,6 @@ from ..categories import PARACategory
 _VALID_PARA_CATEGORIES = {c.value for c in PARACategory}
 
 
-
 class ConditionType(Enum):
     """Types of conditions that can be evaluated in rules."""
 
