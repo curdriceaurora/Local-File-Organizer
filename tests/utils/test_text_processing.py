@@ -1,7 +1,7 @@
 """Tests for file_organizer.utils.text_processing module.
 
-Covers all public functions: clean_text, sanitize_filename,
-extract_keywords, truncate_text, get_unwanted_words, ensure_nltk_data.
+Covers public functions: clean_text, sanitize_filename,
+extract_keywords, truncate_text, get_unwanted_words.
 """
 
 from __future__ import annotations

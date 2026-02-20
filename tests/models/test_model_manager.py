@@ -177,8 +177,8 @@ class TestCacheInfo:
 
     def test_returns_empty_on_import_error(self) -> None:
         with patch(
-            "file_organizer.models.model_manager.ModelManager.cache_info",
-            return_value={},
+            "file_organizer.optimization.model_cache.ModelCache",
+            side_effect=Exception("simulated cache failure"),
         ):
             mgr = ModelManager()
             result = mgr.cache_info()
