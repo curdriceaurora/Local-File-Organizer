@@ -86,15 +86,15 @@ class TestTextModel:
         """Test TextModel pulls model if it's not found locally."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
-            
+
             mock_client = MagicMock()
             import ollama
             # Raise an error on show() to simulate missing model
             mock_client.show.side_effect = ollama.ResponseError("model not found")
             mock_client_cls.return_value = mock_client
-            
+
             model.initialize()
-            
+
             mock_client.show.assert_called_once_with(text_model_config.name)
             mock_client.pull.assert_called_once_with(text_model_config.name)
             assert model._initialized is True
@@ -105,9 +105,9 @@ class TestTextModel:
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
             model._initialized = True
-            
+
             model.initialize()
-            
+
             mock_client_cls.assert_not_called()
 
     @patch("file_organizer.models.text_model.ollama.Client")
@@ -115,9 +115,9 @@ class TestTextModel:
         """Test initialization propagating errors."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
-            
+
             mock_client_cls.side_effect = Exception("init error")
-            
+
             with pytest.raises(Exception, match="init error"):
                 model.initialize()
 
@@ -132,7 +132,7 @@ class TestTextModel:
         """Test text generation with streaming."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
-            
+
             mock_client = MagicMock()
             # Simulate streaming response
             mock_client.generate.return_value = [
@@ -140,11 +140,11 @@ class TestTextModel:
                 {"response": " Chunk 2", "done": False},
                 {"response": "", "done": True},
             ]
-            
+
             with patch("ollama.Client", return_value=mock_client):
                 model.initialize()
                 chunks = list(model.generate_streaming("Stream this"))
-                
+
                 assert chunks == ["Chunk 1", " Chunk 2", ""]
                 mock_client.generate.assert_called_once()
                 args, kwargs = mock_client.generate.call_args
@@ -164,9 +164,9 @@ class TestTextModel:
             model = TextModel(text_model_config)
             model.client = MagicMock()
             model._initialized = True
-            
+
             model.cleanup()
-            
+
             assert model.client is None
             assert model._initialized is False
 
@@ -175,14 +175,14 @@ class TestTextModel:
         """Test connection status lookup succeeds."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
-            
+
             mock_client = MagicMock()
             mock_client.show.return_value = {"size": "3GB"}
             mock_client_cls.return_value = mock_client
-            
+
             model.initialize()
             info = model.test_connection()
-            
+
             assert info["status"] == "connected"
             assert info["name"] == text_model_config.name
             assert info["size"] == "3GB"
@@ -200,15 +200,15 @@ class TestTextModel:
         """Test connection error handling."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
-            
+
             mock_client = MagicMock()
             # First call succeeds during initialize(), second fails during test_connection()
             mock_client.show.side_effect = [{"size": "3GB"}, Exception("connection lost")]
             mock_client_cls.return_value = mock_client
-            
+
             model.initialize()
             info = model.test_connection()
-            
+
             assert info["status"] == "error"
             assert "connection lost" in info["error"]
 
