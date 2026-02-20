@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from file_organizer.events.consumer import EventConsumer
 from file_organizer.events.stream import Event, RedisStreamManager
@@ -226,7 +226,7 @@ class EventReplayManager:
             Number of events dispatched to the consumer. Returns 0 if
             dry_run is enabled or Redis is unavailable.
         """
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
         events = self.replay_range(stream, start_time, end_time)
 
         if self._config.dry_run:
@@ -295,9 +295,9 @@ def _parse_timestamp_from_id(message_id: str) -> datetime:
     """
     try:
         ms_part = message_id.split("-")[0]
-        return datetime.fromtimestamp(int(ms_part) / 1000.0, tz=timezone.utc)
+        return datetime.fromtimestamp(int(ms_part) / 1000.0, tz=UTC)
     except (ValueError, IndexError):
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
 
 def _increment_id(message_id: str) -> str:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote, unquote
@@ -184,9 +184,9 @@ def _collect_entries(
     for entry in selected_dirs:
         try:
             stat = entry.stat()
-            modified = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
+            modified = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
         except OSError:
-            modified = datetime.now(timezone.utc)
+            modified = datetime.now(UTC)
         entries.append(
             {
                 "name": entry.name,

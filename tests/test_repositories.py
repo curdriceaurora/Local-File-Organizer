@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import create_engine
@@ -408,7 +408,7 @@ class TestSessionRepository:
     """Tests for SessionRepository lifecycle behavior."""
 
     def test_create_and_get_active(self, db_session: Session, user: User) -> None:
-        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        expires_at = datetime.now(UTC) + timedelta(hours=1)
         created = SessionRepository.create(
             db_session,
             user_id=user.id,
@@ -424,7 +424,7 @@ class TestSessionRepository:
         assert found.user_id == user.id
 
     def test_get_active_excludes_expired_or_revoked(self, db_session: Session, user: User) -> None:
-        expired = datetime.now(timezone.utc) - timedelta(minutes=1)
+        expired = datetime.now(UTC) - timedelta(minutes=1)
         expired_row = SessionRepository.create(
             db_session,
             user_id=user.id,
@@ -436,7 +436,7 @@ class TestSessionRepository:
         assert SessionRepository.get_active_by_token_hash(db_session, "tok-expired") is None
 
     def test_list_active_for_user(self, db_session: Session, user: User) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         SessionRepository.create(
             db_session,
             user_id=user.id,
@@ -457,13 +457,13 @@ class TestSessionRepository:
             db_session,
             user_id=user.id,
             token_hash="tok-revoke",
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
         )
         assert SessionRepository.revoke(db_session, row.id) is True
         assert SessionRepository.revoke(db_session, "missing") is False
 
     def test_prune_expired(self, db_session: Session, user: User) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         SessionRepository.create(
             db_session,
             user_id=user.id,

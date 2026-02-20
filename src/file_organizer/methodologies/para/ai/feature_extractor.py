@@ -13,7 +13,7 @@ import os
 import re
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -327,8 +327,8 @@ class FeatureExtractor:
             creation_ref = stat.st_mtime
 
         # Convert timestamps to datetime
-        creation_date = datetime.fromtimestamp(creation_ref, tz=timezone.utc)
-        modification_date = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
+        creation_date = datetime.fromtimestamp(creation_ref, tz=UTC)
+        modification_date = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
 
         # Days calculations
         days_since_modified = (now - stat.st_mtime) / 86400.0

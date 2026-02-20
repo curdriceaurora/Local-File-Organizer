@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -59,7 +59,7 @@ def _access_ttl_seconds(settings: ApiSettings, payload: dict) -> int:
     exp = payload.get("exp")
     if not isinstance(exp, (int, float)):
         return settings.auth_access_token_minutes * 60
-    now = datetime.now(timezone.utc).timestamp()
+    now = datetime.now(UTC).timestamp()
     ttl = int(exp - now)
     return max(ttl, 0)
 
@@ -139,12 +139,12 @@ def login(
     if settings.auth_login_rate_limit_enabled:
         rate_limiter.reset(rate_limit_key)
 
-    user.last_login = datetime.now(timezone.utc)
+    user.last_login = datetime.now(UTC)
     db.commit()
 
     token_bundle = create_token_bundle(user.id, user.username, settings)
     refresh_ttl = max(
-        int((token_bundle.refresh_expires_at - datetime.now(timezone.utc)).total_seconds()),
+        int((token_bundle.refresh_expires_at - datetime.now(UTC)).total_seconds()),
         1,
     )
     token_store.store_refresh(token_bundle.refresh_jti, user.id, refresh_ttl)
@@ -184,7 +184,7 @@ def refresh(
     token_store.revoke_refresh(refresh_jti)
     token_bundle = create_token_bundle(user.id, user.username, settings)
     refresh_ttl = max(
-        int((token_bundle.refresh_expires_at - datetime.now(timezone.utc)).total_seconds()),
+        int((token_bundle.refresh_expires_at - datetime.now(UTC)).total_seconds()),
         1,
     )
     token_store.store_refresh(token_bundle.refresh_jti, user.id, refresh_ttl)

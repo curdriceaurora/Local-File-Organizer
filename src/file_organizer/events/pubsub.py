@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from file_organizer.events.config import EventConfig
@@ -293,5 +293,5 @@ def _serialize(data: dict[str, Any], topic: str) -> dict[str, str]:
     return {
         "topic": topic,
         "payload": json.dumps(data),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }

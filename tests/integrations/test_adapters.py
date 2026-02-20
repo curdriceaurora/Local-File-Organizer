@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime, timedelta, timezone, tzinfo
+from datetime import UTC, datetime, timedelta, tzinfo
 from pathlib import Path
 
 import pytest
@@ -124,7 +124,7 @@ def test_workflow_integration_reuses_single_timestamp(
 
         @classmethod
         def now(cls, tz: tzinfo | None = None) -> datetime:
-            value = datetime(2026, 2, 9, 12, 0, 0, tzinfo=timezone.utc) + timedelta(
+            value = datetime(2026, 2, 9, 12, 0, 0, tzinfo=UTC) + timedelta(
                 seconds=cls.calls
             )
             cls.calls += 1

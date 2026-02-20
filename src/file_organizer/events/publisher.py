@@ -7,7 +7,7 @@ to Redis Streams.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from file_organizer.events.config import EventConfig
@@ -100,7 +100,7 @@ class EventPublisher:
             event_type=event_type,
             file_path=file_path,
             metadata=metadata or {},
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
         message_id = self._manager.publish(
@@ -139,7 +139,7 @@ class EventPublisher:
             scan_id=scan_id,
             status=status,
             stats=stats or {},
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
         message_id = self._manager.publish(

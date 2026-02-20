@@ -8,7 +8,7 @@ checkpoints, and job summaries used by the persistence and resume system.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from file_organizer._compat import StrEnum
@@ -43,8 +43,8 @@ class JobState:
 
     id: str
     status: JobStatus = JobStatus.PENDING
-    created: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated: datetime = field(default_factory=lambda: datetime.now(UTC))
     total_files: int = 0
     completed_files: int = 0
     failed_files: int = 0
@@ -133,7 +133,7 @@ class Checkpoint:
     completed_paths: list[Path] = field(default_factory=list)
     pending_paths: list[Path] = field(default_factory=list)
     file_hashes: dict[str, str] = field(default_factory=dict)
-    last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    last_updated: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict[str, object]:
         """Serialize checkpoint to a dictionary suitable for JSON storage."""

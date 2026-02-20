@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -189,7 +189,7 @@ def test_refresh_rejects_expired_token(tmp_path: Path) -> None:
     app = create_app(settings)
     client = TestClient(app)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": "expired-user",
         "user_id": "expired-user-id",

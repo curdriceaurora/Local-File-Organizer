@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from file_organizer.events.stream import RedisStreamManager
@@ -188,7 +188,7 @@ class EventMonitor:
         full_name = self._manager.config.get_stream_name(stream)
 
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             start_ms = str(int((now.timestamp() - window_seconds) * 1000))
             end_ms = str(int(now.timestamp() * 1000))
 
@@ -243,6 +243,6 @@ def _parse_entry_timestamp(
     try:
         message_id = entry[0] if isinstance(entry, (list, tuple)) else str(entry)
         ms_part = message_id.split("-")[0]
-        return datetime.fromtimestamp(int(ms_part) / 1000.0, tz=timezone.utc)
+        return datetime.fromtimestamp(int(ms_part) / 1000.0, tz=UTC)
     except (ValueError, IndexError, TypeError):
         return None

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -82,7 +82,7 @@ class FileMetadataRepository:
             row.checksum_sha256 = checksum_sha256
             row.last_modified = last_modified
             row.extra_json = extra_json
-            row.updated_at = datetime.now(timezone.utc)
+            row.updated_at = datetime.now(UTC)
 
         session.flush()
 

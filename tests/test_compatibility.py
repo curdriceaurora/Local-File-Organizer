@@ -1,17 +1,17 @@
 """
-Compatibility test suite for Python 3.9+ support validation.
+Compatibility test suite for Python 3.11+ support validation.
 
-Validates that all backward-compatibility patterns used in the codebase work
-correctly across Python 3.9 through 3.14+. This suite is designed to be run
-under tox against multiple Python interpreters.
+Validates that all patterns used in the codebase work correctly on Python
+3.11 and later. This suite is designed to be run under tox against Python
+3.11+ interpreters.
 
 Test areas:
 - ``from __future__ import annotations`` behavior
-- StrEnum backport correctness
+- StrEnum correctness (stdlib, Python 3.11+)
 - Dataclass field type resolution
-- isinstance() with tuple form (3.9-safe)
+- isinstance() with tuple form
 - Import path resolution
-- datetime.timezone.utc (not datetime.UTC)
+- datetime.UTC (Python 3.11+)
 """
 
 from __future__ import annotations
@@ -503,34 +503,34 @@ class TestImportPaths:
 
 
 # ===================================================================
-# Section 6: datetime.timezone.utc compatibility tests
+# Section 6: datetime.UTC tests (Python 3.11+)
 # ===================================================================
 
 
 class TestDatetimeCompatibility:
-    """Ensure datetime.timezone.utc is used instead of datetime.UTC."""
+    """Ensure datetime.UTC (Python 3.11+) is used throughout the codebase."""
 
     def test_timezone_utc_exists(self) -> None:
-        """datetime.timezone.utc should exist on all Python versions."""
-        utc = datetime.timezone.utc
+        """datetime.UTC should exist on Python 3.11+."""
+        utc = datetime.UTC
         assert utc is not None
 
     def test_timezone_utc_offset(self) -> None:
         """timezone.utc should have zero offset."""
-        utc = datetime.timezone.utc
+        utc = datetime.UTC
         assert utc.utcoffset(None) == datetime.timedelta(0)
 
     def test_utc_from_compat(self) -> None:
-        """UTC constant from _compat should match datetime.timezone.utc."""
+        """UTC constant from _compat should match datetime.UTC."""
         from file_organizer._compat import UTC
 
-        assert UTC is datetime.timezone.utc
+        assert UTC is datetime.UTC
 
     def test_datetime_now_with_utc(self) -> None:
-        """Creating UTC-aware datetimes should use timezone.utc."""
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        """Creating UTC-aware datetimes should use datetime.UTC."""
+        now = datetime.datetime.now(tz=datetime.UTC)
         assert now.tzinfo is not None
-        assert now.tzinfo == datetime.timezone.utc
+        assert now.tzinfo == datetime.UTC
 
     def test_datetime_now_with_compat_utc(self) -> None:
         """Creating UTC-aware datetimes with _compat.UTC should work."""
@@ -538,7 +538,7 @@ class TestDatetimeCompatibility:
 
         now = datetime.datetime.now(tz=UTC)
         assert now.tzinfo is not None
-        assert now.tzinfo == datetime.timezone.utc
+        assert now.tzinfo == datetime.UTC
 
     def test_utc_aware_comparison(self) -> None:
         """UTC-aware datetimes should be comparable."""
@@ -569,7 +569,7 @@ class TestVersionDetection:
         """The python_version fixture should return the correct version."""
         assert python_version == sys.version_info[:2]
         assert python_version[0] == 3
-        assert python_version[1] >= 9
+        assert python_version[1] >= 11
 
     def test_python_version_string_fixture(self, python_version_string: str) -> None:
         """The python_version_string fixture should be a dotted version."""

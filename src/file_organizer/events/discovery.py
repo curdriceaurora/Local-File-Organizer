@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +45,7 @@ class ServiceInfo:
     last_heartbeat: str = ""
 
     def __post_init__(self) -> None:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         if not self.registered_at:
             self.registered_at = now
         if not self.last_heartbeat:
@@ -228,7 +228,7 @@ class ServiceDiscovery:
         if info is None:
             logger.warning("Heartbeat for unknown service '%s'", name)
             return False
-        info.last_heartbeat = datetime.now(timezone.utc).isoformat()
+        info.last_heartbeat = datetime.now(UTC).isoformat()
         self._save()
         logger.debug("Heartbeat updated for '%s'", name)
         return True

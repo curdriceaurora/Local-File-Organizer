@@ -7,7 +7,7 @@ the event-driven architecture.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -38,7 +38,7 @@ class FileEvent:
     event_type: EventType
     file_path: str
     metadata: dict[str, Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict[str, str]:
         """Serialize the event to a dictionary suitable for Redis Streams.
@@ -93,7 +93,7 @@ class ScanEvent:
     scan_id: str
     status: str
     stats: dict[str, Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict[str, str]:
         """Serialize the scan event to a dictionary for Redis Streams.

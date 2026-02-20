@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from watchdog.events import (
@@ -157,7 +157,7 @@ class FileEventHandler(FileSystemEventHandler):
         file_event = FileEvent(
             event_type=event_type,
             path=path,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             is_directory=is_directory,
             dest_path=dest_path,
         )

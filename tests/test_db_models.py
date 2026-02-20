@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import create_engine, inspect
@@ -378,7 +378,7 @@ class TestUserSessionModel:
             user_id=user.id,
             token_hash="tok-hash",
             refresh_token_hash="ref-hash",
-            expires_at=datetime.now(timezone.utc),
+            expires_at=datetime.now(UTC),
         )
         db_session.add(session_row)
         db_session.flush()
@@ -388,11 +388,11 @@ class TestUserSessionModel:
         assert session_row.revoked_at is None
 
     def test_session_unique_token_hash(self, db_session: Session, user: User) -> None:
-        one = UserSession(user_id=user.id, token_hash="same", expires_at=datetime.now(timezone.utc))
+        one = UserSession(user_id=user.id, token_hash="same", expires_at=datetime.now(UTC))
         db_session.add(one)
         db_session.flush()
 
-        two = UserSession(user_id=user.id, token_hash="same", expires_at=datetime.now(timezone.utc))
+        two = UserSession(user_id=user.id, token_hash="same", expires_at=datetime.now(UTC))
         db_session.add(two)
         with pytest.raises(IntegrityError):
             db_session.flush()
@@ -485,20 +485,20 @@ class TestDefaultValues:
         assert parsed.version == 4
 
     def test_job_default_timestamps(self, db_session: Session) -> None:
-        before = datetime.now(timezone.utc)
+        before = datetime.now(UTC)
         job = OrganizationJob(input_dir="/i", output_dir="/o")
         db_session.add(job)
         db_session.flush()
-        after = datetime.now(timezone.utc)
+        after = datetime.now(UTC)
 
-        assert before <= job.created_at.replace(tzinfo=timezone.utc) <= after
-        assert before <= job.updated_at.replace(tzinfo=timezone.utc) <= after
+        assert before <= job.created_at.replace(tzinfo=UTC) <= after
+        assert before <= job.updated_at.replace(tzinfo=UTC) <= after
 
     def test_settings_default_timestamps(self, db_session: Session) -> None:
-        before = datetime.now(timezone.utc)
+        before = datetime.now(UTC)
         s = SettingsStore(key="ts-test", value="v")
         db_session.add(s)
         db_session.flush()
-        after = datetime.now(timezone.utc)
+        after = datetime.now(UTC)
 
-        assert before <= s.created_at.replace(tzinfo=timezone.utc) <= after
+        assert before <= s.created_at.replace(tzinfo=UTC) <= after

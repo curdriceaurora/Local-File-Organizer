@@ -10,7 +10,7 @@ import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class Subscription:
     topic: str
     handler: Callable[..., Any]
     filter_fn: Callable[[dict[str, Any]], bool] | None = None
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     active: bool = True
 
     def matches_topic(self, topic: str) -> bool:

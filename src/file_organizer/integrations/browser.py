@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import secrets
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from threading import RLock
 from typing import Any
 
@@ -37,7 +37,7 @@ class BrowserExtensionManager:
 
     def issue_token(self, extension_id: str) -> BrowserTokenRecord:
         """Issue a short-lived token for extension clients."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         token = secrets.token_urlsafe(32)
         record = BrowserTokenRecord(
             token=token,
@@ -52,7 +52,7 @@ class BrowserExtensionManager:
 
     def verify_token(self, token: str) -> bool:
         """Validate token existence and expiry state."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         with self._lock:
             self._prune_expired_locked(now)
             record = self._tokens.get(token)

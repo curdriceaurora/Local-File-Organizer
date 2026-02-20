@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -23,7 +23,7 @@ class DummyStore(UpdateStateStore):
     def record_check(self, version: str, *, now: datetime | None = None) -> UpdateState:  # type: ignore[override]
         self.recorded = (version, now)
         return UpdateState(
-            last_checked=(now or datetime.now(timezone.utc)).isoformat(),
+            last_checked=(now or datetime.now(UTC)).isoformat(),
             last_version=version,
         )
 
@@ -40,7 +40,7 @@ def test_skips_when_disabled_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_skips_when_interval_not_due(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
-    now = datetime(2026, 2, 9, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 2, 9, 12, 0, tzinfo=UTC)
     state = UpdateState(last_checked=(now - timedelta(hours=1)).isoformat())
     store = DummyStore(state)
 
@@ -56,7 +56,7 @@ def test_skips_when_interval_not_due(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_runs_when_due_and_records(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
-    now = datetime(2026, 2, 9, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 2, 9, 12, 0, tzinfo=UTC)
     state = UpdateState(last_checked=(now - timedelta(hours=48)).isoformat())
     store = DummyStore(state)
 

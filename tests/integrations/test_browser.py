@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone, tzinfo
+from datetime import UTC, datetime, tzinfo
 
 import pytest
 
@@ -12,7 +12,7 @@ pytestmark = pytest.mark.ci
 
 
 def test_issue_token_prunes_expired_records(monkeypatch: pytest.MonkeyPatch) -> None:
-    base = datetime(2026, 2, 9, 12, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 2, 9, 12, 0, 0, tzinfo=UTC)
     ticks = iter([base, base.replace(second=2)])
 
     class _FakeDateTime:
@@ -34,7 +34,7 @@ def test_issue_token_prunes_expired_records(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_verify_token_prunes_expired_records(monkeypatch: pytest.MonkeyPatch) -> None:
-    base = datetime(2026, 2, 9, 12, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 2, 9, 12, 0, 0, tzinfo=UTC)
     ticks = iter([base, base.replace(second=2)])
 
     class _FakeDateTime:

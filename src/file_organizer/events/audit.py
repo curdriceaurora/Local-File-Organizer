@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -139,7 +139,7 @@ class AuditLogger:
             OSError: If the log file cannot be written.
         """
         entry = AuditEntry(
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             event_id=event.id,
             stream=event.stream,
             action=action,

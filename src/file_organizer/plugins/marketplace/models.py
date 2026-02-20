@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -17,7 +17,7 @@ from file_organizer.plugins.marketplace.validators import (
 
 def utc_now_iso() -> str:
     """Return the current UTC timestamp in RFC3339/Zulu format."""
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _parse_str_list(raw: object, *, field_name: str) -> tuple[str, ...]:

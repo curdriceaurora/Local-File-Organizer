@@ -7,7 +7,7 @@ All tests mock Redis to avoid requiring a running instance.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -63,7 +63,7 @@ class TestStreamStats:
 
     def test_custom_values(self):
         """Test StreamStats accepts custom values."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stats = StreamStats(
             length=42,
             groups=3,
@@ -105,7 +105,7 @@ class TestParseEntryTimestamp:
         result = _parse_entry_timestamp(entry)
         assert result is not None
         assert result.year == 2023
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
 
     def test_parse_list_entry(self):
         """Test parsing a timestamp from a list entry."""

@@ -13,7 +13,7 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from file_organizer.events.pubsub import PubSubManager
@@ -44,7 +44,7 @@ class ServiceRequest:
     target: str
     action: str
     payload: dict[str, Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the request to a plain dictionary.
@@ -249,7 +249,7 @@ class ServiceBus:
             target=target,
             action=action,
             payload=payload or {},
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
         self._request_count += 1

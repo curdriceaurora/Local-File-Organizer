@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +181,7 @@ class ConflictResolver:
         if not preferences:
             return []
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)  # Make timezone-naive
+        now = datetime.now(UTC).replace(tzinfo=None)  # Make timezone-naive
         decay_factor = 30.0  # Days for weight to decay to ~37% (1/e)
 
         # Calculate days old for each preference

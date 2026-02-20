@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -76,7 +76,7 @@ def base_context(
         "active": active,
         "page_title": title,
         "nav_items": NAV_ITEMS,
-        "year": datetime.now(timezone.utc).year,
+        "year": datetime.now(UTC).year,
     }
     if extras:
         context.update(extras)
@@ -121,7 +121,7 @@ def format_bytes(size_bytes: int) -> str:
 
 def format_timestamp(timestamp: datetime) -> str:
     """Format a datetime for display."""
-    return timestamp.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return timestamp.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
 
 def parse_file_type_filter(file_type: Optional[str]) -> Optional[set[str]]:

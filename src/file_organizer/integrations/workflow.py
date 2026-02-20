@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -50,7 +50,7 @@ class WorkflowIntegration(Integration):
             return False
 
         payload = metadata or {}
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stamp = now.strftime("%Y%m%dT%H%M%SZ")
         stem = source.stem
 

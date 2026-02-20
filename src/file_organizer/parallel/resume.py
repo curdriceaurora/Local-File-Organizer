@@ -13,7 +13,7 @@ import logging
 import time
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -78,7 +78,7 @@ class ResumableProcessor:
             job_id = str(uuid.uuid4())
 
         # Create job state
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         job = JobState(
             id=job_id,
             status=JobStatus.RUNNING,
@@ -154,7 +154,7 @@ class ResumableProcessor:
 
         # Update job state
         job.status = JobStatus.RUNNING
-        job.updated = datetime.now(timezone.utc)
+        job.updated = datetime.now(UTC)
         self._persistence.save_job(job)
 
         # Update checkpoint to reflect re-queued files
@@ -167,7 +167,7 @@ class ResumableProcessor:
         if not files_to_process:
             # Nothing to process, job is already complete
             job.status = JobStatus.COMPLETED
-            job.updated = datetime.now(timezone.utc)
+            job.updated = datetime.now(UTC)
             self._persistence.save_job(job)
             return BatchResult(
                 total=job.total_files,
@@ -240,7 +240,7 @@ class ResumableProcessor:
                 else:
                     job.failed_files += 1
 
-                job.updated = datetime.now(timezone.utc)
+                job.updated = datetime.now(UTC)
 
                 # Batched persistence: save every 5 seconds or 50 files
                 files_since_save += 1
@@ -256,7 +256,7 @@ class ResumableProcessor:
             logger.error("Job %s failed with error: %s", job.id, exc)
             job.status = JobStatus.FAILED
             job.error = str(exc)
-            job.updated = datetime.now(timezone.utc)
+            job.updated = datetime.now(UTC)
             self._persistence.save_job(job)
             if checkpoint:
                 self._checkpoint_mgr.save_checkpoint(checkpoint)
@@ -267,7 +267,7 @@ class ResumableProcessor:
             job.status = JobStatus.FAILED
         else:
             job.status = JobStatus.COMPLETED
-        job.updated = datetime.now(timezone.utc)
+        job.updated = datetime.now(UTC)
         self._persistence.save_job(job)
         if checkpoint:
             self._checkpoint_mgr.save_checkpoint(checkpoint)

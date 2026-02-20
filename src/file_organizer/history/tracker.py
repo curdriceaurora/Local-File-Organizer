@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -65,7 +65,7 @@ class OperationHistory:
         Returns:
             Operation ID
         """
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
 
         # Calculate file hash if source file exists
         file_hash = None
@@ -145,7 +145,7 @@ class OperationHistory:
         import uuid
 
         transaction_id = str(uuid.uuid4())
-        started_at = datetime.now(timezone.utc)
+        started_at = datetime.now(UTC)
 
         metadata_json = json.dumps(metadata or {})
 
@@ -177,7 +177,7 @@ class OperationHistory:
         Returns:
             True if successful, False otherwise
         """
-        completed_at = datetime.now(timezone.utc)
+        completed_at = datetime.now(UTC)
 
         query = """
         UPDATE transactions
@@ -213,7 +213,7 @@ class OperationHistory:
                     "UPDATE transactions SET status = ?, completed_at = ? WHERE transaction_id = ?",
                     (
                         TransactionStatus.FAILED.value,
-                        datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                        datetime.now(UTC).isoformat().replace("+00:00", "Z"),
                         transaction_id,
                     ),
                 )

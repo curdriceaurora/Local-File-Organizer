@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from threading import RLock
 
 from file_organizer.plugins.base import Plugin
@@ -10,7 +10,7 @@ from file_organizer.plugins.errors import PluginLifecycleError, PluginNotLoadedE
 from file_organizer.plugins.registry import PluginRegistry
 
 
-class PluginState(str, Enum):
+class PluginState(StrEnum):
     """Plugin lifecycle states."""
 
     UNLOADED = "unloaded"

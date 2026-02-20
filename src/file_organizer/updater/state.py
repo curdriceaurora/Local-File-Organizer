@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from file_organizer.config.manager import DEFAULT_CONFIG_DIR
@@ -33,7 +33,7 @@ class UpdateState:
         last = self.last_checked_at()
         if last is None:
             return True
-        now = now or datetime.now(timezone.utc)
+        now = now or datetime.now(UTC)
         return now - last >= timedelta(hours=interval_hours)
 
 
@@ -77,7 +77,7 @@ class UpdateStateStore:
 
     def record_check(self, version: str, *, now: datetime | None = None) -> UpdateState:
         """Record a successful check and return the updated state."""
-        timestamp = (now or datetime.now(timezone.utc)).isoformat()
+        timestamp = (now or datetime.now(UTC)).isoformat()
         state = UpdateState(last_checked=timestamp, last_version=version)
         self.save(state)
         return state

@@ -1,19 +1,14 @@
 """
-Backward compatibility module.
+Compatibility shim module.
 
-Provides shared aliases used across the codebase.
+Provides re-exports used across the codebase for consistent imports.
+Requires Python 3.11+.
 """
 
 from __future__ import annotations
 
-from datetime import timezone
+from datetime import UTC
 from enum import StrEnum
-
-# ---------------------------------------------------------------------------
-# Timezone alias
-# ---------------------------------------------------------------------------
-
-UTC = timezone.utc
 
 __all__ = [
     "StrEnum",

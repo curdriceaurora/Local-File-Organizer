@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import logging
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -78,14 +78,14 @@ class FolderPreferenceLearner:
         # Update folder metadata
         if folder_str not in self.folder_metadata:
             self.folder_metadata[folder_str] = {
-                "created": datetime.now(timezone.utc).isoformat(),
+                "created": datetime.now(UTC).isoformat(),
                 "file_types": set(),
                 "last_used": None,
                 "usage_count": 0,
             }
 
         self.folder_metadata[folder_str]["file_types"].add(file_type.lower())
-        self.folder_metadata[folder_str]["last_used"] = datetime.now(timezone.utc).isoformat()
+        self.folder_metadata[folder_str]["last_used"] = datetime.now(UTC).isoformat()
         self.folder_metadata[folder_str]["usage_count"] += 1
 
         self.total_choices += 1
@@ -264,7 +264,7 @@ class FolderPreferenceLearner:
         """
         from datetime import timedelta
 
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         cleared = 0
 
         # Clear folder metadata for old folders

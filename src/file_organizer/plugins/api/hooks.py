@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from threading import RLock
 from typing import Any
 from urllib.parse import urlparse
@@ -15,7 +15,7 @@ import httpx
 from file_organizer.plugins.hooks import HookExecutionResult, HookRegistry
 
 
-class HookEvent(str, Enum):
+class HookEvent(StrEnum):
     """Canonical plugin hook events exposed via API + SDK."""
 
     FILE_SCANNED = "file.scanned"
@@ -129,7 +129,7 @@ class PluginHookManager:
                 event=event,
                 callback_url=normalized_url,
                 secret=normalized_secret,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             registrations.append(registration)
             return registration, True
@@ -198,7 +198,7 @@ class PluginHookManager:
         body = {
             "event": event.value,
             "payload": dict(payload),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         results: list[WebhookDeliveryResult] = []
 

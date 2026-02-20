@@ -8,7 +8,7 @@ to provide a unified pattern learning system.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .confidence import ConfidenceEngine
@@ -83,7 +83,7 @@ class PatternLearner:
         logger.info(f"Learning from correction: {original.name} -> {corrected.name}")
 
         results = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "original": str(original),
             "corrected": str(corrected),
             "learned": [],
@@ -245,7 +245,7 @@ class PatternLearner:
             Dictionary with learning statistics
         """
         stats = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "confidence_stats": self.confidence_engine.get_stats(),
             "folder_stats": self.folder_learner.analyze_organization_patterns(),
             "correction_count": self.feedback_processor.correction_count,

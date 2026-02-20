@@ -10,7 +10,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Project root is one level above scripts/
@@ -238,7 +238,7 @@ def create_release_notes(version: str, changelog: str) -> str:
     Returns:
         Formatted release notes string.
     """
-    today = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.now(tz=UTC).strftime("%Y-%m-%d")
 
     notes = f"""# Release v{version}
 

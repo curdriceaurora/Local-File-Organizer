@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -95,7 +95,7 @@ class ObsidianIntegration(Integration):
         metadata: dict[str, Any] | None,
     ) -> str:
         payload = metadata or {}
-        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         frontmatter: dict[str, Any] = {
             "source": source.as_posix(),
             "exported_at": now,

@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 from collections.abc import Generator
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Optional, Union
+from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -47,7 +47,7 @@ class AnonymousUser:
     full_name: Optional[str] = None
     is_active: bool = True
     is_admin: bool = True
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     last_login: Optional[datetime] = None
 
 
@@ -59,12 +59,12 @@ class ApiKeyIdentity:
     full_name: Optional[str] = None
     is_active: bool = True
     is_admin: bool = False
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     last_login: Optional[datetime] = None
     auth_type: str = "api_key"
 
 
-UserLike = Union[User, AnonymousUser, ApiKeyIdentity]
+UserLike = User | AnonymousUser | ApiKeyIdentity
 
 
 def get_db(settings: ApiSettings = Depends(get_settings)) -> Generator[Session, None, None]:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass, fields
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from threading import Lock
 from typing import Any, Literal, Optional
 from uuid import uuid4
@@ -34,7 +34,7 @@ _JOB_TTL = timedelta(hours=24)
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _prune_jobs(now: datetime) -> None:

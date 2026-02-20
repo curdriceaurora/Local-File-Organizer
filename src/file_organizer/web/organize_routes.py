@@ -6,7 +6,7 @@ import asyncio
 import csv
 import io
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock, Timer
 from time import monotonic
@@ -184,7 +184,7 @@ def _prune_plan_store() -> None:
 
 def _store_organize_plan(plan_data: dict[str, Any]) -> dict[str, Any]:
     plan_id = uuid4().hex
-    created_at = datetime.now(timezone.utc)
+    created_at = datetime.now(UTC)
     record = {
         "plan_id": plan_id,
         "created_at": created_at,
@@ -202,7 +202,7 @@ def _get_organize_plan(plan_id: str) -> Optional[dict[str, Any]]:
         plan = _ORGANIZE_PLAN_STORE.get(plan_id)
         if plan is None:
             return None
-        plan["updated_at"] = datetime.now(timezone.utc)
+        plan["updated_at"] = datetime.now(UTC)
         return dict(plan)
 
 
@@ -594,8 +594,8 @@ def organize_execute(
         job = create_job(ORGANIZE_JOB_TYPE)
         scheduled_for = ""
         if delay_minutes > 0:
-            scheduled_at = datetime.now(timezone.utc).timestamp() + (delay_minutes * 60)
-            scheduled_for = format_timestamp(datetime.fromtimestamp(scheduled_at, tz=timezone.utc))
+            scheduled_at = datetime.now(UTC).timestamp() + (delay_minutes * 60)
+            scheduled_for = format_timestamp(datetime.fromtimestamp(scheduled_at, tz=UTC))
         _set_job_metadata(
             job.job_id,
             {

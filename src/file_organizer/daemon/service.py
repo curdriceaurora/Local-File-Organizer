@@ -12,7 +12,7 @@ import logging
 import signal
 import threading
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from .config import DaemonConfig
 from .pid import PidFileManager

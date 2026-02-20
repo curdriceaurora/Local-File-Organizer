@@ -8,7 +8,7 @@ Supports both individual corrections and batch history analysis.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class FeedbackProcessor:
             Dictionary with extracted learning insights
         """
         insights = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "original_path": str(original),
             "corrected_path": str(corrected),
             "learning_signals": [],
@@ -95,7 +95,7 @@ class FeedbackProcessor:
         from datetime import timedelta
 
         if max_age_days:
-            cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+            cutoff = datetime.now(UTC) - timedelta(days=max_age_days)
             corrections = [
                 c
                 for c in corrections
@@ -109,7 +109,7 @@ class FeedbackProcessor:
             "name_patterns": [],
             "folder_patterns": [],
             "common_operations": {},
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         # Aggregate naming patterns
@@ -172,7 +172,7 @@ class FeedbackProcessor:
         logger.info("Triggering pattern learning retraining")
 
         status = {
-            "triggered_at": datetime.now(timezone.utc).isoformat(),
+            "triggered_at": datetime.now(UTC).isoformat(),
             "correction_count": self.correction_count,
             "status": "queued",
         }
@@ -266,7 +266,7 @@ class FeedbackProcessor:
 
         # Find common ancestor and divergence point
         common_depth = 0
-        for i, (f, t) in enumerate(zip(from_parts, to_parts)):
+        for i, (f, t) in enumerate(zip(from_parts, to_parts, strict=False)):
             if f == t:
                 common_depth = i + 1
             else:
