@@ -8,7 +8,7 @@ This guide covers installing the File Organizer system for deployment and admini
 
 ### Minimum Requirements
 
-- Python 3.9 or higher
+- Python 3.11 or higher
 - 4GB RAM
 - 10GB disk space (for models and application)
 - Docker (optional, but recommended)

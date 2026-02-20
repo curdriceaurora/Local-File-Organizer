@@ -72,7 +72,7 @@ File Organizer processes **43+ file formats** including:
 
 ## System Requirements
 
-- **Python**: 3.9+
+- **Python**: 3.11+
 - **RAM**: 8 GB minimum (16 GB recommended)
 - **Storage**: ~10 GB for AI models
 - **Ollama**: Latest version for local inference

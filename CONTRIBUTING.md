@@ -9,7 +9,7 @@
 
 ### Python Version Management (pyenv)
 
-Our CI tests against Python 3.9, 3.10, 3.11, and 3.12. To catch version-specific issues
+Our CI tests against Python 3.11 and 3.12. To catch version-specific issues
 locally before pushing, install all target versions via [pyenv](https://github.com/pyenv/pyenv):
 
 ```bash
@@ -18,8 +18,6 @@ brew install pyenv          # macOS
 curl https://pyenv.run | bash  # Linux
 
 # Install CI-targeted Python versions
-pyenv install 3.9.21
-pyenv install 3.10.16
 pyenv install 3.11.11
 pyenv install 3.12.8
 ```
@@ -54,7 +52,7 @@ Before pushing changes, run these checks to avoid wasting CI minutes and Copilot
 ### Full Matrix (recommended before opening a PR)
 
 ```bash
-# Full CI mirror — Python 3.9/3.10/3.11/3.12 (~10 min)
+# Full CI mirror — Python 3.11/3.12 (~10 min)
 ./scripts/test-local-matrix.sh
 ```
 
@@ -79,8 +77,8 @@ Our CI has two workflows triggered on PRs to `main`:
 
 | Workflow | File | What it runs |
 |----------|------|-------------|
-| **CI** | `.github/workflows/ci.yml` | Lint + Python 3.9/3.12 tests |
-| **CI Full Matrix** | `.github/workflows/ci-full.yml` | Python 3.9/3.10/3.11/3.12 |
+| **CI** | `.github/workflows/ci.yml` | Lint + Python 3.11/3.12 tests |
+| **CI Full Matrix** | `.github/workflows/ci-full.yml` | Python 3.11/3.12 |
 
 `scripts/test-local-matrix.sh` mirrors the Full Matrix workflow locally.
 
@@ -94,7 +92,6 @@ These are the most frequent causes of CI failures that pass locally:
 |---------|---------------|--------------|
 | `datetime.utcnow()` | Deprecated in 3.12, removed in 3.14 | Use `datetime.now(timezone.utc)` |
 | `os.stat().st_birthtime` | macOS-only; Linux raises `AttributeError` | Use platform-aware fallback (see `heuristics.py`) |
-| `match` statements | Python 3.10+ only | Use `if/elif` for 3.9 compatibility |
 | `X \| Y` union types | Python 3.10+ only | Use `Union[X, Y]` or `Optional[X]` |
 | `tomllib` | Python 3.11+ only | Use `tomli` backport or conditional import |
 

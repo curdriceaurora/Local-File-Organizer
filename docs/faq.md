@@ -17,7 +17,7 @@ Yes. File Organizer:
 
 ### What are the system requirements?
 
-- **Python**: 3.9+
+- **Python**: 3.11+
 - **RAM**: 8 GB minimum (16 GB recommended)
 - **Storage**: 10 GB for AI models
 - **Ollama**: Latest version
