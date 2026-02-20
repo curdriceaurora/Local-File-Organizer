@@ -33,19 +33,19 @@ class TestDedupeTextWorkflow:
         """Test engine identifies exact content duplicates."""
         detector = DuplicateDetector()
         options = ScanOptions(algorithm="sha256", recursive=True)
-        
+
         detector.scan_directory(source_dir, options)
         groups = detector.get_duplicate_groups()
-        
+
         # Should find 1 group of duplicates
         assert len(groups) == 1
-        
+
         # Get the first (and only) group value from the dictionary
         group = list(groups.values())[0]
         paths = {str(f.path) for f in group.files}
         assert str(source_dir / "report.txt") in paths
         assert str(source_dir / "report_copy.txt") in paths
-        
+
         # meeting.txt should not be in duplicates
         assert str(source_dir / "meeting.txt") not in paths
 
@@ -53,21 +53,21 @@ class TestDedupeTextWorkflow:
         """Test engine actually deletes duplicates during live run."""
         detector = DuplicateDetector()
         options = ScanOptions(algorithm="sha256", recursive=True)
-        
+
         detector.scan_directory(source_dir, options)
         groups = detector.get_duplicate_groups()
-        
-        for hash_val, group in groups.items():
+
+        for _hash_val, group in groups.items():
             # Oldest strategy
             files = sorted(group.files, key=lambda f: f.modified_time)
             keep = files[-1]
-            
+
             to_remove = [f for f in files if f.path != keep.path]
             for fmeta in to_remove:
                 fmeta.path.unlink()
-        
+
         remaining_files = [p.name for p in source_dir.iterdir() if p.is_file()]
-        
+
         # report.txt and meeting.txt should remain. report_copy.txt should be gone.
         assert len(remaining_files) == 2
         assert "meeting.txt" in remaining_files
