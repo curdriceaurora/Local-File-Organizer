@@ -1,0 +1,261 @@
+
+=== Issue 379 ===
+title:	[Testing] Story 2: File Readers Test Coverage
+state:	OPEN
+author:	curdriceaurora
+labels:	enhancement, testing
+comments:	0
+assignees:	
+projects:	Local File Organizer (Todo)
+milestone:	
+number:	379
+--
+## Story 2: File Readers Test Coverage
+
+**Epic:** Testing & QA (#6)
+**Effort:** 5-6 hours
+**Expected coverage gain:** +6-8%
+
+## Scope
+
+- Create/extend `tests/utils/test_file_readers.py` for text-based readers
+- Readers: `read_text_file`, `read_docx_file`, `read_pdf_file`, `read_spreadsheet_file`, `read_presentation_file`, `read_ebook_file`, `read_csv_file`
+- Add minimal fixture files (`.docx`, `.pdf`, `.xlsx`, `.csv`)
+- Test `_check_file_size()`, error paths (FileReadError, FileTooLargeError)
+- Test `*_AVAILABLE=True` and `*_AVAILABLE=False` paths
+- Skip audio/video/image readers (deferred)
+
+## Files
+
+- `tests/utils/test_file_readers.py`
+- `tests/fixtures/`
+- `src/file_organizer/utils/file_readers.py`
+
+## Acceptance Criteria
+
+- [ ] Tests for all 7 text-based file readers
+- [ ] Error path coverage (FileReadError, FileTooLargeError)
+- [ ] Optional dependency availability paths tested
+- [ ] Minimal fixture files committed
+- [ ] All new tests passing
+
+=== Issue 380 ===
+title:	[Testing] Story 3: Core Organizer Test Coverage
+state:	OPEN
+author:	curdriceaurora
+labels:	enhancement, testing
+comments:	0
+assignees:	
+projects:	Local File Organizer (Todo)
+milestone:	
+number:	380
+--
+## Story 3: Core Organizer Test Coverage
+
+**Epic:** Testing & QA (#6)
+**Effort:** 4-5 hours
+**Expected coverage gain:** +3-4%
+
+## Scope
+
+- Create `tests/core/test_organizer.py`
+- Test `_collect_files()` — directory walking, hidden file skip, filetype detection
+- Test `_organize_files()` — file copy/link, skip_existing, duplicate naming (tmp_path)
+- Test `_simulate_organization()` — dry-run (no fs mutations)
+- Test `_process_text_files()` — mock TextProcessor
+- Skip `_process_image_files()` paths (deferred)
+
+## Files
+
+- `tests/core/test_organizer.py`
+- `src/file_organizer/core/file_organizer.py`
+
+## Acceptance Criteria
+
+- [ ] Tests for `_collect_files()` with various directory structures
+- [ ] Tests for `_organize_files()` copy/link modes
+- [ ] Tests for dry-run simulation
+- [ ] Tests for text file processing pipeline (mocked AI)
+- [ ] All new tests passing
+
+=== Issue 381 ===
+title:	[Testing] Story 4: Text Processing Utils Test Coverage
+state:	OPEN
+author:	curdriceaurora
+labels:	enhancement, testing
+comments:	0
+assignees:	
+projects:	Local File Organizer (Todo)
+milestone:	
+number:	381
+--
+## Story 4: Text Processing Utils Test Coverage
+
+**Epic:** Testing & QA (#6)
+**Effort:** 2-3 hours
+**Expected coverage gain:** +1-2%
+
+## Scope
+
+- Create `tests/utils/test_text_processing.py`
+- Pure function unit tests — no mocking needed
+- Text normalization, extraction, cleaning utilities
+
+## Files
+
+- `tests/utils/test_text_processing.py`
+- `src/file_organizer/utils/text_processing.py`
+
+## Acceptance Criteria
+
+- [ ] All public functions in text_processing.py tested
+- [ ] Edge cases: empty strings, unicode, special characters
+- [ ] All new tests passing
+
+=== Issue 382 ===
+title:	[Testing] Story 5: Text Model & Model Manager Test Coverage
+state:	OPEN
+author:	curdriceaurora
+labels:	enhancement, testing
+comments:	0
+assignees:	
+projects:	Local File Organizer (Todo)
+milestone:	
+number:	382
+--
+## Story 5: Text Model & Model Manager Test Coverage
+
+**Epic:** Testing & QA (#6)
+**Effort:** 3-4 hours
+**Expected coverage gain:** +1-2%
+
+## Scope
+
+- Extend `tests/models/test_text_model.py` — streaming, cleanup, config edge cases, error paths
+- Create/extend `tests/models/test_model_manager.py` — lifecycle, registry coordination
+- Follow existing mock pattern (patch `OLLAMA_AVAILABLE`, mock `ollama.Client`)
+
+## Files
+
+- `tests/models/test_text_model.py`
+- `tests/models/test_model_manager.py`
+
+## Acceptance Criteria
+
+- [ ] TextModel streaming and cleanup paths tested
+- [ ] ModelManager lifecycle (init, cleanup, registry) tested
+- [ ] Error paths for unavailable Ollama tested
+- [ ] All new tests passing
+
+=== Issue 383 ===
+title:	[Testing] Story 6: Text Processor Service Test Coverage
+state:	OPEN
+author:	curdriceaurora
+labels:	enhancement, testing
+comments:	0
+assignees:	
+projects:	Local File Organizer (Todo)
+milestone:	
+number:	383
+--
+## Story 6: Text Processor Service Test Coverage
+
+**Epic:** Testing & QA (#6)
+**Effort:** 3-4 hours
+**Expected coverage gain:** +1-2%
+
+## Scope
+
+- New/extend `tests/services/test_text_processor.py`
+- Mock TextModel, test pipeline: file read → inference → metadata → suggestion
+- Test error handling, empty files, large files
+
+## Files
+
+- `tests/services/test_text_processor.py`
+- `src/file_organizer/services/text_processor.py`
+
+## Acceptance Criteria
+
+- [ ] Full text processing pipeline tested end-to-end (mocked AI)
+- [ ] Error handling for empty/corrupt/large files
+- [ ] Metadata extraction and suggestion generation tested
+- [ ] All new tests passing
+
+=== Issue 384 ===
+title:	[Testing] Story 7: Integration Tests for Text Workflows
+state:	OPEN
+author:	curdriceaurora
+labels:	enhancement, testing
+comments:	0
+assignees:	
+projects:	Local File Organizer (Todo)
+milestone:	
+number:	384
+--
+## Story 7: Integration Tests for Text Workflows
+
+**Epic:** Testing & QA (#6)
+**Effort:** 8-10 hours
+**Expected coverage gain:** +3-5%
+
+## Scope
+
+- Fill `tests/integration/`
+- `test_organize_text_workflow.py` — collect text files → process → organize → verify
+- `test_dedupe_text_workflow.py` — create dupes, run dedup, verify detection
+- `test_undo_workflow.py` — organize → undo → verify restoration
+- All use real fs ops (tmp_path) + mocked AI models
+- Tag `@pytest.mark.integration`
+
+## Files
+
+- `tests/integration/test_organize_text_workflow.py`
+- `tests/integration/test_dedupe_text_workflow.py`
+- `tests/integration/test_undo_workflow.py`
+
+## Acceptance Criteria
+
+- [ ] Text organization workflow tested end-to-end
+- [ ] Deduplication workflow tested with real filesystem
+- [ ] Undo/redo workflow tested
+- [ ] All tests tagged `@pytest.mark.integration`
+- [ ] All new tests passing
+
+=== Issue 385 ===
+title:	[Testing] Story 8: CLI & API Test Coverage
+state:	OPEN
+author:	curdriceaurora
+labels:	enhancement, testing
+comments:	0
+assignees:	
+projects:	Local File Organizer (Todo)
+milestone:	
+number:	385
+--
+## Story 8: CLI & API Test Coverage
+
+**Epic:** Testing & QA (#6)
+**Effort:** 6-8 hours
+**Expected coverage gain:** +2-3%
+
+## Scope
+
+- `cli/analytics.py` tests — `typer.testing.CliRunner`, mock service layer
+- `cli/undo_redo.py` tests — same pattern
+- `cli/main.py` — organize command `--dry-run`
+- Expand `tests/api/` — organize, files, health endpoints via FastAPI TestClient
+
+## Files
+
+- `tests/test_cli_analytics.py`
+- `tests/test_cli_undo_redo.py`
+- `tests/api/`
+
+## Acceptance Criteria
+
+- [ ] CLI analytics commands tested
+- [ ] CLI undo/redo commands tested
+- [ ] Organize `--dry-run` tested
+- [ ] API health, organize, files endpoints tested
+- [ ] All new tests passing
