@@ -11,7 +11,7 @@ authors = [
 ]
 readme = "README.md"
 license = {text = "MIT OR Apache-2.0"}
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 keywords = ["file-management", "ai", "organization", "local-llm", "privacy"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -19,8 +19,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Desktop Environment :: File Managers",
@@ -177,7 +175,7 @@ file_organizer = [
 # Ruff configuration (linting and formatting)
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py311"
 exclude = [
     "technical-debt/",
     "fix_coderabbit_issues.py",
@@ -205,7 +203,7 @@ ignore = [
 
 # MyPy configuration (type checking)
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
