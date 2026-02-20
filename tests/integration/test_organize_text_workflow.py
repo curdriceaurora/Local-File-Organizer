@@ -42,6 +42,7 @@ def output_dir(tmp_path: Path) -> Path:
     return out
 
 
+@pytest.mark.integration
 class TestTextWorkflowsIntegration:
     """Integration tests for text file organization workflow."""
 
