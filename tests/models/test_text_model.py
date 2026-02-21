@@ -155,7 +155,7 @@ class TestTextModel:
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
             with pytest.raises(RuntimeError, match="Model not initialized"):
-                # Generator raises immediately upon creation or first next()
+                # Consuming the generator via list() surfaces the error on first iteration
                 list(model.generate_streaming("test"))
 
     def test_cleanup(self, text_model_config):

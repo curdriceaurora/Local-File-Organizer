@@ -226,7 +226,7 @@ class TestFileReaders:
     def test_read_ebook_unsupported_format(self, tmp_path):
         test_file = tmp_path / "test.mobi"
         test_file.touch()
-        with pytest.raises(ValueError, match="Unsupported ebook format"):
+        with pytest.raises(FileReadError, match="Unsupported ebook format"):
             read_ebook_file(test_file)
 
 

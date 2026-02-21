@@ -315,11 +315,10 @@ def read_ebook_file(file_path: str | Path, max_chars: int = 10000) -> str:
     _check_file_size(Path(file_path))
     file_path = Path(file_path)
 
-    # Only support EPUB for now
-    if file_path.suffix.lower() != ".epub":
-        raise ValueError(f"Unsupported ebook format: {file_path.suffix}. Only .epub supported.")
-
     try:
+        # Only support EPUB for now
+        if file_path.suffix.lower() != ".epub":
+            raise ValueError(f"Unsupported ebook format: {file_path.suffix}. Only .epub supported.")
         book = epub.read_epub(file_path)
 
         text_parts = []
