@@ -108,6 +108,16 @@ class TestPARASuggestion:
         suggestion = PARASuggestion(category=PARACategory.PROJECT, confidence=0.50)
         assert suggestion.is_confident is False
 
+    def test_is_confident_uses_category_threshold(self) -> None:
+        """Confidence threshold should vary by category."""
+        # Archive threshold is 0.90 — 0.85 is below it
+        archive = PARASuggestion(category=PARACategory.ARCHIVE, confidence=0.85)
+        assert archive.is_confident is False
+
+        # Project threshold is 0.75 — 0.80 is above it
+        project = PARASuggestion(category=PARACategory.PROJECT, confidence=0.80)
+        assert project.is_confident is True
+
     def test_requires_review_low_confidence(self) -> None:
         """Low confidence suggestions should require review."""
         suggestion = PARASuggestion(category=PARACategory.PROJECT, confidence=0.30)

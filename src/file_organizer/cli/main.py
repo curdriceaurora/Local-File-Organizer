@@ -95,12 +95,12 @@ def organize(
     try:
         from file_organizer.core.organizer import FileOrganizer
 
-        organizer = FileOrganizer(
-            input_dir=input_dir,
-            output_dir=output_dir,
-            dry_run=dry_run or _dry_run,
+        organizer = FileOrganizer(dry_run=dry_run or _dry_run)
+        result = organizer.organize(input_dir, output_dir)
+        console.print(
+            f"[green]Done:[/green] {result.processed_files} processed, "
+            f"{result.skipped_files} skipped, {result.failed_files} failed"
         )
-        organizer.run()
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -115,8 +115,11 @@ def preview(
     try:
         from file_organizer.core.organizer import FileOrganizer
 
-        organizer = FileOrganizer(input_dir=input_dir, dry_run=True)
-        organizer.run()
+        organizer = FileOrganizer(dry_run=True)
+        result = organizer.organize(input_dir, input_dir)
+        console.print(
+            f"[green]Preview:[/green] {result.total_files} files would be organized"
+        )
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")
         raise typer.Exit(code=1) from exc
