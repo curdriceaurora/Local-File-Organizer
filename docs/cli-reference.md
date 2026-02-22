@@ -4,18 +4,16 @@ All commands are available via `file-organizer` or the short alias `fo`.
 
 ## Global Options
 
-These options are accepted by every command and must be passed **before** the command name (e.g., `file-organizer --verbose organize ...`):
+These options apply to every command and may be passed before or after the command name:
 
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--verbose` | `-v` | Enable verbose output |
-| `--dry-run` | | Preview changes without executing (where supported) |
-| `--json` | | Output results as JSON (for commands that support it) |
+| `--dry-run` | | Preview changes without executing |
+| `--json` | | Output results as JSON |
 | `--yes` | `-y` | Auto-confirm all prompts |
 | `--no-interactive` | | Disable interactive prompts |
 | `--help` | | Show help and exit |
-
-> **Note:** Not all commands honor `--dry-run` and `--json` at the global level. Many commands provide their own `--dry-run` or `--json` flags. When in doubt, pass the flag after the command name.
 
 ---
 
@@ -78,6 +76,111 @@ file-organizer preview INPUT_DIR
 file-organizer preview ~/Downloads
 fo preview ~/Downloads
 ```
+
+---
+
+### `serve`
+
+Start the File Organizer web server and API.
+
+**Usage:**
+```bash
+file-organizer serve [OPTIONS]
+```
+
+**Options:**
+- `--host TEXT` — Bind address (default: `0.0.0.0`)
+- `--port INTEGER` — Port number (default: `8000`)
+- `--reload` — Auto-reload on code changes (development mode)
+- `--workers INTEGER` — Number of worker processes (default: `1`)
+
+**Examples:**
+```bash
+# Start with defaults (port 8000, all interfaces)
+file-organizer serve
+
+# Development mode with auto-reload
+file-organizer serve --reload
+
+# Custom host and port
+file-organizer serve --host 127.0.0.1 --port 9000
+
+# Production with multiple workers
+file-organizer serve --workers 4
+```
+
+> **Access:** Once running, open `http://localhost:8000/ui/` in your browser.
+
+---
+
+### `search`
+
+Search for files by name pattern with optional type filtering.
+
+**Usage:**
+```bash
+file-organizer search QUERY [DIRECTORY] [OPTIONS]
+```
+
+**Arguments:**
+- `QUERY` — Search query (glob pattern like `*.pdf` or keyword like `report`)
+- `DIRECTORY` — Directory to search in (default: current directory)
+
+**Options:**
+- `--type, -t TEXT` — Filter by type: `text`, `image`, `video`, `audio`, `archive`
+- `--limit, -n INTEGER` — Max results to show (default: 50)
+- `--recursive / --no-recursive` — Search subdirectories (default: recursive)
+- `--json` — Output as JSON array
+
+**Examples:**
+```bash
+# Search by glob pattern
+file-organizer search "*.pdf" ~/Documents
+
+# Keyword search (case-insensitive)
+file-organizer search "report" ~/Documents
+
+# Filter by type
+file-organizer search "*" ~/Pictures --type image
+
+# Non-recursive, limited results
+file-organizer search "*.log" /var/log --no-recursive --limit 10
+
+# JSON output for scripting
+file-organizer search "*.py" ./src --json
+```
+
+---
+
+### `analyze`
+
+Analyze a file using AI and show its description, category, and confidence score.
+
+**Usage:**
+```bash
+file-organizer analyze FILE [OPTIONS]
+```
+
+**Arguments:**
+- `FILE` — Path to the file to analyze
+
+**Options:**
+- `--verbose, -v` — Show additional details (model name, processing time, content length)
+- `--json` — Output as JSON
+
+**Examples:**
+```bash
+# Basic analysis
+file-organizer analyze ~/Documents/report.pdf
+
+# Verbose output
+file-organizer analyze ~/Documents/report.pdf --verbose
+
+# JSON output for scripting
+file-organizer analyze ~/Documents/report.pdf --json
+```
+
+> **Note:** Requires Ollama to be installed and running with a text model available.
 
 ---
 
@@ -167,17 +270,18 @@ Display storage analytics dashboard.
 
 **Usage:**
 ```bash
-file-organizer analytics DIRECTORY [OPTIONS]
+file-organizer analytics [DIRECTORY] [OPTIONS]
 ```
 
 **Arguments:**
-- `DIRECTORY` — Directory to analyze (required)
+- `DIRECTORY` — Directory to analyze (optional; defaults to configured workspace)
 
 **Options:**
 - `--verbose, -v` — Verbose output
 
 **Examples:**
 ```bash
+file-organizer analytics
 file-organizer analytics ~/Documents
 ```
 
@@ -278,11 +382,11 @@ file-organizer model cache
 
 ### `copilot` — AI Assistant
 
-Interactive AI copilot for file organization.
+Interactive AI copilot for file organisation.
 
 #### `copilot chat`
 
-Chat with the file-organization copilot.
+Chat with the file-organisation copilot.
 
 ```bash
 file-organizer copilot chat [MESSAGE] [--dir DIRECTORY]
@@ -304,14 +408,6 @@ file-organizer copilot chat "Help me organize my photos"
 
 # Scoped to a specific directory
 file-organizer copilot chat --dir ~/Documents "What duplicates do I have?"
-```
-
-#### `copilot status`
-
-Show copilot engine status (Ollama model availability and readiness).
-
-```bash
-file-organizer copilot status
 ```
 
 ---
@@ -342,18 +438,10 @@ file-organizer daemon status
 
 #### `daemon watch`
 
-Run in foreground mode (useful for debugging). Requires a directory to watch.
+Run in foreground mode (useful for debugging).
 
 ```bash
-file-organizer daemon watch WATCH_DIR [--poll-interval SECONDS]
-```
-
-#### `daemon process`
-
-One-shot: organize files in a directory and display a summary.
-
-```bash
-file-organizer daemon process INPUT_DIR OUTPUT_DIR [--dry-run]
+file-organizer daemon watch
 ```
 
 **Examples:**
@@ -382,7 +470,7 @@ file-organizer dedupe scan DIRECTORY [OPTIONS]
 Generate a duplication report.
 
 ```bash
-file-organizer dedupe report DIRECTORY [OPTIONS]
+file-organizer dedupe report [OPTIONS]
 ```
 
 #### `dedupe resolve`
@@ -390,21 +478,21 @@ file-organizer dedupe report DIRECTORY [OPTIONS]
 Interactively or automatically resolve duplicates.
 
 ```bash
-file-organizer dedupe resolve DIRECTORY [OPTIONS]
+file-organizer dedupe resolve [OPTIONS]
 ```
 
 **Examples:**
 ```bash
 file-organizer dedupe scan ~/Images
-file-organizer dedupe report ~/Images
-file-organizer dedupe resolve ~/Images
+file-organizer dedupe report
+file-organizer dedupe resolve
 ```
 
 ---
 
-### `rules` — Organization Rules
+### `rules` — Organisation Rules
 
-Manage copilot organization rules and rule sets.
+Manage copilot organisation rules and rule sets.
 
 #### `rules list`
 
@@ -506,11 +594,11 @@ file-organizer rules import work-rules.yaml
 
 ### `suggest` — Smart File Suggestions
 
-Generate AI-powered file organization suggestions using pattern analysis.
+Generate AI-powered file organisation suggestions using pattern analysis.
 
 #### `suggest files`
 
-Generate organization suggestions for files in a directory.
+Generate organisation suggestions for files in a directory.
 
 ```bash
 file-organizer suggest files DIRECTORY [OPTIONS]
@@ -524,15 +612,15 @@ Options:
 
 #### `suggest apply`
 
-Apply accepted suggestions to a directory.
+Apply accepted suggestions.
 
 ```bash
-file-organizer suggest apply DIRECTORY [OPTIONS]
+file-organizer suggest apply [OPTIONS]
 ```
 
 #### `suggest patterns`
 
-Analyze naming patterns in a directory.
+Analyse naming patterns in a directory.
 
 ```bash
 file-organizer suggest patterns DIRECTORY [OPTIONS]
@@ -621,20 +709,6 @@ Update a specific plugin.
 file-organizer marketplace update PLUGIN_NAME
 ```
 
-#### `marketplace review`
-
-Add or update a plugin review.
-
-```bash
-file-organizer marketplace review PLUGIN_NAME [OPTIONS]
-```
-
-Options:
-- `--user TEXT` — Reviewer ID (required)
-- `--rating INTEGER` — Rating from 1 to 5 (required)
-- `--title TEXT` — Review title (required)
-- `--content TEXT` — Review text (required)
-
 ---
 
 ### `api` — Remote API Client
@@ -662,7 +736,7 @@ file-organizer api login [--base-url URL] [--save-token PATH]
 Show current authenticated user.
 
 ```bash
-file-organizer api me --token TOKEN [--base-url URL]
+file-organizer api me [--base-url URL] [--token TOKEN]
 ```
 
 #### `api logout`
@@ -670,7 +744,7 @@ file-organizer api me --token TOKEN [--base-url URL]
 Invalidate the current session token.
 
 ```bash
-file-organizer api logout --token TOKEN --refresh-token TOKEN [--base-url URL]
+file-organizer api logout [--base-url URL] [--token TOKEN]
 ```
 
 #### `api files`
@@ -678,21 +752,15 @@ file-organizer api logout --token TOKEN --refresh-token TOKEN [--base-url URL]
 List files via the API.
 
 ```bash
-file-organizer api files PATH --token TOKEN [--base-url URL]
+file-organizer api files [OPTIONS]
 ```
-
-Arguments:
-- `PATH` — Directory to list (required)
-
-Options:
-- `--token TOKEN` — Bearer token (required)
 
 #### `api system-status`
 
 Show system status from the API server.
 
 ```bash
-file-organizer api system-status --token TOKEN [--base-url URL]
+file-organizer api system-status [--base-url URL]
 ```
 
 #### `api system-stats`
@@ -700,7 +768,7 @@ file-organizer api system-status --token TOKEN [--base-url URL]
 Show system statistics from the API server.
 
 ```bash
-file-organizer api system-stats --token TOKEN [--base-url URL]
+file-organizer api system-stats [--base-url URL]
 ```
 
 **Default base URL:** `http://localhost:8000`
@@ -710,8 +778,7 @@ file-organizer api system-stats --token TOKEN [--base-url URL]
 file-organizer api health
 file-organizer api health --base-url http://myserver:8000
 file-organizer api login
-file-organizer api me --token YOUR_TOKEN
-file-organizer api system-status --token YOUR_TOKEN
+file-organizer api system-status
 ```
 
 ---
@@ -766,12 +833,12 @@ Create a new profile.
 file-organizer profile create PROFILE_NAME [OPTIONS]
 ```
 
-#### `profile activate`
+#### `profile load`
 
-Activate a profile (make it the current active profile).
+Load and activate a profile.
 
 ```bash
-file-organizer profile activate PROFILE_NAME
+file-organizer profile load PROFILE_NAME
 ```
 
 #### `profile delete`
@@ -787,12 +854,8 @@ file-organizer profile delete PROFILE_NAME
 Export a profile to a file.
 
 ```bash
-file-organizer profile export PROFILE_NAME --output FILE [--selective KEY ...]
+file-organizer profile export PROFILE_NAME [--output FILE]
 ```
-
-Options:
-- `--output, -o FILE` — Output file path (required)
-- `--selective, -s KEY` — Select specific preferences to export (repeatable, e.g. `--selective naming --selective folders`)
 
 #### `profile import`
 
@@ -802,101 +865,86 @@ Import a profile from a file.
 file-organizer profile import FILE [OPTIONS]
 ```
 
-#### `profile current`
-
-Show the currently active profile.
-
-```bash
-file-organizer profile current
-```
-
-#### `profile validate`
-
-Validate a profile's configuration.
-
-```bash
-file-organizer profile validate PROFILE_NAME
-```
-
-#### `profile merge`
-
-Merge multiple profiles into one.
-
-```bash
-file-organizer profile merge PROFILES... --output NAME [OPTIONS]
-```
-
-Options:
-- `--output, -o NAME` — Name for the merged profile (required)
-- `--strategy TEXT` — Merge strategy
-- `--show-conflicts` — Display merge conflicts
-
-#### `profile migrate`
-
-Migrate a profile to a newer version format.
-
-```bash
-file-organizer profile migrate PROFILE_NAME --to-version VERSION [--no-backup]
-```
-
-Options:
-- `--to-version TEXT` — Target version (required)
-- `--no-backup` — Skip backup before migration
-
-#### `profile template list`
-
-List available profile templates.
-
-```bash
-file-organizer profile template list
-```
-
-#### `profile template preview`
-
-Preview a profile template.
-
-```bash
-file-organizer profile template preview TEMPLATE_NAME
-```
-
-#### `profile template apply`
-
-Apply a template to a profile.
-
-```bash
-file-organizer profile template apply TEMPLATE_NAME PROFILE_NAME [--activate]
-```
-
 **Examples:**
 ```bash
 file-organizer profile list
 file-organizer profile create work --description "Work files config"
-file-organizer profile activate work
-file-organizer profile current
-file-organizer profile validate work
-file-organizer profile merge work personal --output combined
-file-organizer profile template list
-file-organizer profile template apply minimal my-profile --activate
+file-organizer profile load work
 ```
 
 > **Note:** The `profile` command requires the intelligence/learning optional dependencies (`pip install -e ".[all]"`). It degrades gracefully if not installed.
 
 ---
 
-## Auto-Tagging (Internal / Not Yet Exposed)
+### `autotag` — Auto-Tagging
 
-The auto-tagging system has an internal argparse-based interface that is **not currently registered** in the `file-organizer` CLI. The following commands are defined in the source but cannot be invoked via `file-organizer autotag ...`:
+AI-powered tag suggestions and management.
 
-| Subcommand | Description |
-|------------|-------------|
-| `autotag suggest FILE...` | Suggest tags for one or more files |
-| `autotag apply FILE TAG...` | Apply tags to a file and record for learning |
-| `autotag popular [--limit N]` | Show the most popular tags |
-| `autotag recent [--days N]` | Show recently used tags |
-| `autotag analyze FILE` | Analyze file content for tag candidates |
-| `autotag batch DIRECTORY` | Batch tag suggestion for a directory |
+#### `autotag suggest`
 
-> These commands will be migrated to a Typer sub-app and exposed via the CLI in a future release.
+Suggest tags for files in a directory.
+
+```bash
+file-organizer autotag suggest DIRECTORY [OPTIONS]
+```
+
+Options:
+- `--top-n, -n INTEGER` — Max suggestions per file (default: 10)
+- `--min-confidence FLOAT` — Minimum confidence % (default: 40.0)
+- `--json` — Output as JSON
+
+#### `autotag apply`
+
+Apply tags to a file and record for learning.
+
+```bash
+file-organizer autotag apply FILE TAG...
+```
+
+#### `autotag popular`
+
+Show the most popular tags.
+
+```bash
+file-organizer autotag popular [--limit N]
+```
+
+Options:
+- `--limit, -n INTEGER` — Number of tags to show (default: 20)
+
+#### `autotag recent`
+
+Show recently used tags.
+
+```bash
+file-organizer autotag recent [OPTIONS]
+```
+
+Options:
+- `--days INTEGER` — Days to look back (default: 30)
+- `--limit, -n INTEGER` — Number of tags to show (default: 20)
+
+#### `autotag batch`
+
+Batch tag suggestion for a directory.
+
+```bash
+file-organizer autotag batch DIRECTORY [OPTIONS]
+```
+
+Options:
+- `--pattern TEXT` — File pattern (default: `*`)
+- `--recursive / --no-recursive` — Recurse into subdirectories (default: true)
+- `--json` — Output as JSON
+
+**Examples:**
+```bash
+file-organizer autotag suggest ~/Documents
+file-organizer autotag apply ~/Documents/report.pdf finance quarterly
+file-organizer autotag popular --limit 10
+file-organizer autotag recent --days 7
+file-organizer autotag batch ~/Documents --pattern "*.pdf" --json
+```
 
 ---
 
@@ -905,10 +953,14 @@ The auto-tagging system has an internal argparse-based interface that is **not c
 Use `fo` as a short alias for `file-organizer`:
 
 ```bash
+fo serve
 fo organize ~/Downloads ~/Organized
+fo search "*.pdf" ~/Documents
+fo analyze ~/Documents/report.pdf
 fo tui
 fo copilot chat
 fo dedupe scan ~/Pictures
+fo autotag suggest ~/Documents
 ```
 
 ---

@@ -45,7 +45,7 @@ See [Deployment Guide](admin/deployment.md) for detailed Docker setup.
 pip install file-organizer
 
 # Start the API server
-uvicorn file_organizer.api.main:app --host 127.0.0.1 --port 8000
+file-organizer serve
 ```
 
 **Access**: Open browser to `http://localhost:8000/ui/`
@@ -76,7 +76,7 @@ ollama pull qwen2.5:3b-instruct-q4_K_M      # Text model
 ollama pull qwen2.5vl:7b-q4_K_M             # Vision model
 
 # Start the API server
-uvicorn file_organizer.api.main:app --host 127.0.0.1 --port 8000
+file-organizer serve
 ```
 
 **Access**: Open browser to `http://localhost:8000/ui/`
@@ -198,19 +198,34 @@ File Organizer also provides a command-line interface:
 ### Basic Commands
 
 ```bash
+# Start the web server and API
+file-organizer serve
+
 # Organize files
 file-organizer organize ./Downloads ./Organized
 
 # Preview without moving (dry run)
 file-organizer organize ./Downloads ./Organized --dry-run
 
-# Preview organization plan
+# Preview organisation plan
 file-organizer preview ./Downloads
+
+# Search for files
+file-organizer search "*.pdf" ~/Documents
+file-organizer search "report" ~/Documents --type text
+
+# Analyze a file with AI
+file-organizer analyze ./report.pdf
+file-organizer analyze ./report.pdf --verbose
+
+# Auto-tag files
+file-organizer autotag suggest ./Documents
+file-organizer autotag popular
 
 # Detect duplicates
 file-organizer dedupe scan ./Documents
 
-# Analyze storage
+# Analyse storage
 file-organizer analytics ./Documents
 
 # View operation history
@@ -225,8 +240,11 @@ file-organizer copilot chat
 Use `fo` instead of `file-organizer`:
 
 ```bash
+fo serve
 fo organize ./Downloads ./Organized
 fo preview ./Downloads
+fo search "*.pdf" ~/Documents
+fo analyze ./report.pdf
 fo dedupe scan ./Documents
 fo analytics ./Documents
 ```
@@ -342,7 +360,7 @@ curl http://localhost:11434/api/version
 lsof -i :8000
 
 # Use a different port when starting the server
-uvicorn file_organizer.api.main:app --port 8001
+file-organizer serve --port 8001
 
 # Or with Docker Compose, edit .env: APP_PORT=8001
 ```
