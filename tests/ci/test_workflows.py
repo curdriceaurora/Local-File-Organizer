@@ -36,7 +36,8 @@ def get_triggers(workflow: dict[str, Any]) -> dict[str, Any]:
     PyYAML parses the bare ``on`` key as the boolean ``True``, so we
     need to check for both ``"on"`` and ``True`` as dictionary keys.
     """
-    triggers = workflow.get("on", workflow.get(True, {}))
+    wf: dict[Any, Any] = workflow
+    triggers = wf.get("on", wf.get(True, {}))
     if not isinstance(triggers, dict):
         return {}
     return triggers
@@ -74,28 +75,28 @@ class TestCIWorkflow:
     def workflow(self) -> dict[str, Any]:
         return load_workflow("ci.yml")
 
-    def test_ci_has_name(self, workflow: dict) -> None:
+    def test_ci_has_name(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow has a name."""
         assert "name" in workflow, "CI workflow must have a name"
 
-    def test_ci_triggers_on_push_and_pr(self, workflow: dict) -> None:
+    def test_ci_triggers_on_push_and_pr(self, workflow: dict[str, Any]) -> None:
         """Verify CI triggers on push to main and pull requests."""
         triggers = get_triggers(workflow)
         assert triggers, "CI workflow must define triggers"
         assert "push" in triggers, "CI should trigger on push"
         assert "pull_request" in triggers, "CI should trigger on pull_request"
 
-    def test_ci_has_lint_job(self, workflow: dict) -> None:
+    def test_ci_has_lint_job(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow includes a lint job."""
         jobs = workflow.get("jobs", {})
         assert "lint" in jobs, "CI workflow should have a 'lint' job"
 
-    def test_ci_has_test_job(self, workflow: dict) -> None:
+    def test_ci_has_test_job(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow includes a test job."""
         jobs = workflow.get("jobs", {})
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
-    def test_ci_uses_python_312(self, workflow: dict) -> None:
+    def test_ci_uses_python_312(self, workflow: dict[str, Any]) -> None:
         """Verify CI test job uses Python 3.11 and 3.12 for fast feedback."""
         jobs = workflow.get("jobs", {})
         assert "test" in jobs, "CI workflow should have a 'test' job"
@@ -133,21 +134,21 @@ class TestCIWorkflow:
             "CI 'test' job must use matrix.python-version variable"
         )
 
-    def test_ci_uses_pip_caching(self, workflow: dict) -> None:
+    def test_ci_uses_pip_caching(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow uses pip caching for performance."""
         workflow_text = yaml.dump(workflow)
         assert "cache" in workflow_text.lower(), "CI workflow should use pip dependency caching"
 
-    def test_ci_uploads_coverage(self, workflow: dict) -> None:
+    def test_ci_uploads_coverage(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow uploads coverage reports."""
         workflow_text = yaml.dump(workflow)
         assert "codecov" in workflow_text.lower(), "CI workflow should upload coverage to Codecov"
 
-    def test_ci_has_concurrency(self, workflow: dict) -> None:
+    def test_ci_has_concurrency(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow has concurrency settings to cancel stale runs."""
         assert "concurrency" in workflow, "CI workflow should set concurrency to cancel stale runs"
 
-    def test_ci_has_frontend_test_job(self, workflow: dict) -> None:
+    def test_ci_has_frontend_test_job(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow includes frontend testing capability.
 
         Note: The fast CI workflow (ci.yml) focuses on backend testing for cost
@@ -161,7 +162,7 @@ class TestCIWorkflow:
         assert "lint" in jobs, "CI workflow should have a 'lint' job"
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
-    def test_ci_has_docs_accuracy_step(self, workflow: dict) -> None:
+    def test_ci_has_docs_accuracy_step(self, workflow: dict[str, Any]) -> None:
         """Verify documentation testing is part of the test suite.
 
         Note: Documentation accuracy tests are integrated into the main
@@ -195,11 +196,11 @@ class TestCIFullWorkflow:
     def workflow(self) -> dict[str, Any]:
         return load_workflow("ci-full.yml")
 
-    def test_ci_full_has_name(self, workflow: dict) -> None:
+    def test_ci_full_has_name(self, workflow: dict[str, Any]) -> None:
         """Verify CI Full workflow has a name."""
         assert "name" in workflow, "CI Full workflow must have a name"
 
-    def test_ci_full_triggers_on_schedule(self, workflow: dict) -> None:
+    def test_ci_full_triggers_on_schedule(self, workflow: dict[str, Any]) -> None:
         """Verify CI Full triggers on a daily schedule (not on every PR).
 
         The full matrix workflow is expensive (4 Python versions + Node jobs)
@@ -215,19 +216,19 @@ class TestCIFullWorkflow:
             "Running the full matrix on every PR causes duplicate expensive jobs."
         )
 
-    def test_ci_full_supports_manual_trigger(self, workflow: dict) -> None:
+    def test_ci_full_supports_manual_trigger(self, workflow: dict[str, Any]) -> None:
         """Verify CI Full can be triggered manually."""
         triggers = get_triggers(workflow)
         assert "workflow_dispatch" in triggers, (
             "CI Full should support workflow_dispatch for manual triggers"
         )
 
-    def test_ci_full_has_test_matrix_job(self, workflow: dict) -> None:
+    def test_ci_full_has_test_matrix_job(self, workflow: dict[str, Any]) -> None:
         """Verify CI Full workflow includes a test-matrix job."""
         jobs = workflow.get("jobs", {})
         assert "test-matrix" in jobs, "CI Full workflow should have a 'test-matrix' job"
 
-    def test_ci_full_test_matrix_has_python_versions(self, workflow: dict) -> None:
+    def test_ci_full_test_matrix_has_python_versions(self, workflow: dict[str, Any]) -> None:
         """Verify test-matrix job tests Python 3.11 and 3.12."""
         test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
         strategy = test_matrix_job.get("strategy", {})
@@ -237,7 +238,7 @@ class TestCIFullWorkflow:
             "Test-matrix job should test against 2 Python versions (3.11, 3.12)"
         )
 
-    def test_ci_full_test_matrix_includes_versions(self, workflow: dict) -> None:
+    def test_ci_full_test_matrix_includes_versions(self, workflow: dict[str, Any]) -> None:
         """Verify test matrix includes Python versions 3.11 and 3.12."""
         test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
         strategy = test_matrix_job.get("strategy", {})
@@ -248,7 +249,7 @@ class TestCIFullWorkflow:
             "Test matrix should include Python 3.12 for comprehensive coverage"
         )
 
-    def test_ci_full_test_matrix_does_not_collect_coverage(self, workflow: dict) -> None:
+    def test_ci_full_test_matrix_does_not_collect_coverage(self, workflow: dict[str, Any]) -> None:
         """Ensure test-matrix job does not collect coverage."""
         test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
         steps = test_matrix_job.get("steps", [])
@@ -260,7 +261,7 @@ class TestCIFullWorkflow:
                 "test-matrix job should not collect coverage (no '--cov' in commands)"
             )
 
-    def test_ci_full_has_frontend_compat_job(self, workflow: dict) -> None:
+    def test_ci_full_has_frontend_compat_job(self, workflow: dict[str, Any]) -> None:
         """Verify CI Full workflow includes a frontend-compat placeholder job.
 
         The frontend-compat job is currently a no-op placeholder because this repo
@@ -286,7 +287,7 @@ class TestCIFullWorkflow:
             "until a JS build system (package.json) is added to the repo"
         )
 
-    def test_ci_full_has_e2e_placeholder_job(self, workflow: dict) -> None:
+    def test_ci_full_has_e2e_placeholder_job(self, workflow: dict[str, Any]) -> None:
         """Verify CI Full workflow includes a disabled E2E placeholder job."""
         jobs = workflow.get("jobs", {})
         assert "frontend-e2e" in jobs, (
@@ -328,7 +329,7 @@ class TestCIFullWorkflow:
             "that E2E tests are disabled"
         )
 
-    def test_ci_full_has_macos_job(self, workflow: dict) -> None:
+    def test_ci_full_has_macos_job(self, workflow: dict[str, Any]) -> None:
         """Verify CI Full includes a macOS runner (issue #370)."""
         jobs = workflow.get("jobs", {})
         assert "test-macos" in jobs, "CI Full should have a 'test-macos' job (issue #370)"
@@ -337,7 +338,7 @@ class TestCIFullWorkflow:
             "macOS job must use macos-latest runner"
         )
 
-    def test_ci_full_has_windows_job(self, workflow: dict) -> None:
+    def test_ci_full_has_windows_job(self, workflow: dict[str, Any]) -> None:
         """Verify CI Full includes a Windows runner (issue #371)."""
         jobs = workflow.get("jobs", {})
         assert "test-windows" in jobs, "CI Full should have a 'test-windows' job (issue #371)"
@@ -346,7 +347,7 @@ class TestCIFullWorkflow:
             "Windows job must use windows-latest runner"
         )
 
-    def test_ci_full_platform_jobs_use_python_312(self, workflow: dict) -> None:
+    def test_ci_full_platform_jobs_use_python_312(self, workflow: dict[str, Any]) -> None:
         """Verify macOS and Windows jobs use Python 3.12 only (issue #387 cost constraint)."""
         jobs = workflow.get("jobs", {})
         for job_name in ("test-macos", "test-windows"):
@@ -363,7 +364,7 @@ class TestCIFullWorkflow:
                         f"{job_name} must use Python 3.12 only per issue #387 cost constraint"
                     )
 
-    def test_ci_full_has_concurrency(self, workflow: dict) -> None:
+    def test_ci_full_has_concurrency(self, workflow: dict[str, Any]) -> None:
         """Verify CI Full workflow has concurrency settings to cancel stale runs."""
         assert "concurrency" in workflow, (
             "CI Full workflow should set concurrency to cancel stale runs"
@@ -377,31 +378,31 @@ class TestReleaseWorkflow:
     def workflow(self) -> dict[str, Any]:
         return load_workflow("release.yml")
 
-    def test_release_triggers_on_tag(self, workflow: dict) -> None:
+    def test_release_triggers_on_tag(self, workflow: dict[str, Any]) -> None:
         """Verify release triggers on version tags."""
         triggers = get_triggers(workflow)
         push_config = triggers.get("push", {})
         tags = push_config.get("tags", [])
         assert any("v*" in str(tag) for tag in tags), "Release should trigger on v* tags"
 
-    def test_release_has_build_job(self, workflow: dict) -> None:
+    def test_release_has_build_job(self, workflow: dict[str, Any]) -> None:
         """Verify release workflow has a build job."""
         jobs = workflow.get("jobs", {})
         assert "build" in jobs, "Release workflow should have a 'build' job"
 
-    def test_release_has_publish_job(self, workflow: dict) -> None:
+    def test_release_has_publish_job(self, workflow: dict[str, Any]) -> None:
         """Verify release workflow has a publish job."""
         jobs = workflow.get("jobs", {})
         has_publish = any("publish" in job_name for job_name in jobs)
         assert has_publish, "Release workflow should have a publish job"
 
-    def test_release_has_github_release_job(self, workflow: dict) -> None:
+    def test_release_has_github_release_job(self, workflow: dict[str, Any]) -> None:
         """Verify release workflow creates a GitHub release."""
         jobs = workflow.get("jobs", {})
         has_release = any("release" in job_name for job_name in jobs)
         assert has_release, "Release workflow should create a GitHub release"
 
-    def test_release_uses_secrets_for_pypi(self, workflow: dict) -> None:
+    def test_release_uses_secrets_for_pypi(self, workflow: dict[str, Any]) -> None:
         """Verify release uses secrets reference for PyPI token (not hardcoded)."""
         workflow_text = yaml.dump(workflow)
         assert "PYPI_TOKEN" in workflow_text, "Release should reference PYPI_TOKEN secret"
@@ -417,23 +418,23 @@ class TestDockerWorkflow:
     def workflow(self) -> dict[str, Any]:
         return load_workflow("docker.yml")
 
-    def test_docker_triggers(self, workflow: dict) -> None:
+    def test_docker_triggers(self, workflow: dict[str, Any]) -> None:
         """Verify Docker workflow triggers on push and tags."""
         triggers = get_triggers(workflow)
         assert "push" in triggers, "Docker workflow should trigger on push"
 
-    def test_docker_uses_buildx(self, workflow: dict) -> None:
+    def test_docker_uses_buildx(self, workflow: dict[str, Any]) -> None:
         """Verify Docker workflow uses Buildx for multi-arch builds."""
         workflow_text = yaml.dump(workflow)
         assert "buildx" in workflow_text.lower(), "Docker workflow should use Docker Buildx"
 
-    def test_docker_builds_multi_arch(self, workflow: dict) -> None:
+    def test_docker_builds_multi_arch(self, workflow: dict[str, Any]) -> None:
         """Verify Docker workflow builds for multiple architectures."""
         workflow_text = yaml.dump(workflow)
         assert "amd64" in workflow_text, "Docker workflow should build for linux/amd64"
         assert "arm64" in workflow_text, "Docker workflow should build for linux/arm64"
 
-    def test_docker_pushes_to_ghcr(self, workflow: dict) -> None:
+    def test_docker_pushes_to_ghcr(self, workflow: dict[str, Any]) -> None:
         """Verify Docker workflow pushes to GitHub Container Registry."""
         jobs = workflow.get("jobs", {})
         build_job = jobs.get("build-and-push", {})
@@ -450,7 +451,7 @@ class TestDockerWorkflow:
 
         assert has_ghcr_login, "Docker workflow must log in to ghcr.io"
 
-    def test_docker_uses_caching(self, workflow: dict) -> None:
+    def test_docker_uses_caching(self, workflow: dict[str, Any]) -> None:
         """Verify Docker workflow uses build caching."""
         workflow_text = yaml.dump(workflow)
         assert "cache" in workflow_text.lower(), "Docker workflow should use build caching"
@@ -463,30 +464,30 @@ class TestSecurityWorkflow:
     def workflow(self) -> dict[str, Any]:
         return load_workflow("security.yml")
 
-    def test_security_has_schedule(self, workflow: dict) -> None:
+    def test_security_has_schedule(self, workflow: dict[str, Any]) -> None:
         """Verify security workflow runs on a schedule."""
         triggers = get_triggers(workflow)
         assert "schedule" in triggers, "Security workflow should run on a schedule"
 
-    def test_security_has_dependency_audit(self, workflow: dict) -> None:
+    def test_security_has_dependency_audit(self, workflow: dict[str, Any]) -> None:
         """Verify security workflow includes dependency auditing."""
         jobs = workflow.get("jobs", {})
         has_audit = any("audit" in job_name.lower() for job_name in jobs)
         assert has_audit, "Security workflow should include dependency auditing"
 
-    def test_security_has_bandit(self, workflow: dict) -> None:
+    def test_security_has_bandit(self, workflow: dict[str, Any]) -> None:
         """Verify security workflow includes bandit scanning."""
         jobs = workflow.get("jobs", {})
         has_bandit = any("bandit" in job_name.lower() for job_name in jobs)
         assert has_bandit, "Security workflow should include bandit scanning"
 
-    def test_security_has_codeql(self, workflow: dict) -> None:
+    def test_security_has_codeql(self, workflow: dict[str, Any]) -> None:
         """Verify security workflow includes CodeQL analysis."""
         jobs = workflow.get("jobs", {})
         has_codeql = any("codeql" in job_name.lower() for job_name in jobs)
         assert has_codeql, "Security workflow should include CodeQL analysis"
 
-    def test_security_triggers_on_pr(self, workflow: dict) -> None:
+    def test_security_triggers_on_pr(self, workflow: dict[str, Any]) -> None:
         """Verify security workflow also triggers on pull requests."""
         triggers = get_triggers(workflow)
         assert "pull_request" in triggers, "Security workflow should trigger on pull requests"
@@ -496,32 +497,34 @@ class TestDependabotConfig:
     """Tests for the Dependabot configuration."""
 
     @pytest.fixture
-    def dependabot_data(self) -> dict:
+    def dependabot_data(self) -> dict[str, Any]:
         path = PROJECT_ROOT / ".github" / "dependabot.yml"
         assert path.exists(), f"dependabot.yml not found at {path}"
         content = path.read_text()
-        return yaml.safe_load(content)
+        data = yaml.safe_load(content)
+        assert isinstance(data, dict), "dependabot.yml did not parse as a dict"
+        return data
 
     def test_dependabot_exists(self) -> None:
         """Verify dependabot.yml exists."""
         path = PROJECT_ROOT / ".github" / "dependabot.yml"
         assert path.exists(), "dependabot.yml must exist in .github/"
 
-    def test_dependabot_version(self, dependabot_data: dict) -> None:
+    def test_dependabot_version(self, dependabot_data: dict[str, Any]) -> None:
         """Verify Dependabot config uses version 2."""
         assert dependabot_data.get("version") == 2, "Dependabot config must use version 2"
 
-    def test_dependabot_has_pip_ecosystem(self, dependabot_data: dict) -> None:
+    def test_dependabot_has_pip_ecosystem(self, dependabot_data: dict[str, Any]) -> None:
         """Verify Dependabot monitors pip dependencies."""
         ecosystems = [u["package-ecosystem"] for u in dependabot_data.get("updates", [])]
         assert "pip" in ecosystems, "Dependabot should monitor pip dependencies"
 
-    def test_dependabot_has_github_actions_ecosystem(self, dependabot_data: dict) -> None:
+    def test_dependabot_has_github_actions_ecosystem(self, dependabot_data: dict[str, Any]) -> None:
         """Verify Dependabot monitors GitHub Actions versions."""
         ecosystems = [u["package-ecosystem"] for u in dependabot_data.get("updates", [])]
         assert "github-actions" in ecosystems, "Dependabot should monitor GitHub Actions versions"
 
-    def test_dependabot_has_docker_ecosystem(self, dependabot_data: dict) -> None:
+    def test_dependabot_has_docker_ecosystem(self, dependabot_data: dict[str, Any]) -> None:
         """Verify Dependabot monitors Docker base images."""
         ecosystems = [u["package-ecosystem"] for u in dependabot_data.get("updates", [])]
         assert "docker" in ecosystems, "Dependabot should monitor Docker base images"
