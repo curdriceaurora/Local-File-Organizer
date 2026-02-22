@@ -31,7 +31,7 @@ class UndoManager:
         validator: OperationValidator | None = None,
         executor: RollbackExecutor | None = None,
         max_stack_size: int = 1000,
-    ):
+    ) -> None:
         """
         Initialize undo manager.
 
@@ -160,6 +160,14 @@ class UndoManager:
         result = self.executor.rollback_transaction(transaction_id, operations)
 
         if result.success:
+            # Update all rolled-back operations to ROLLED_BACK status in DB
+            for operation in operations:
+                self.history.db.execute_query(
+                    "UPDATE operations SET status = ? WHERE id = ?",
+                    (OperationStatus.ROLLED_BACK.value, operation.id),
+                )
+            self.history.db.get_connection().commit()
+
             logger.info(
                 f"Successfully undid transaction {transaction_id}: "
                 f"{result.operations_rolled_back} operations"
@@ -173,6 +181,61 @@ class UndoManager:
             )
 
         return result.success
+
+    def redo_transaction(self, transaction_id: str) -> bool:
+        """
+        Redo an entire transaction (re-apply all rolled-back operations).
+
+        Args:
+            transaction_id: ID of transaction to redo
+
+        Returns:
+            True if successful, False otherwise
+        """
+        logger.info(f"Redoing transaction {transaction_id}")
+
+        # Get all rolled-back operations in this transaction (returned newest-first)
+        operations = self.history.get_operations(
+            transaction_id=transaction_id, status=OperationStatus.ROLLED_BACK
+        )
+
+        if not operations:
+            logger.warning(f"No rolled-back operations to redo in transaction {transaction_id}")
+            return False
+
+        # operations is newest-first; reversed gives chronological (forward) order
+        forward_ops = list(reversed(operations))
+
+        # Validate all operations before executing
+        for operation in forward_ops:
+            validation = self.validator.validate_redo(operation)
+            if not validation.can_proceed:
+                logger.error(
+                    f"Redo validation failed at operation {operation.id}: "
+                    f"{validation.error_message}"
+                )
+                return False
+
+        # Execute redo in chronological (forward) order
+        for operation in forward_ops:
+            success = self.executor.redo_operation(operation)
+            if success:
+                self.history.db.execute_query(
+                    "UPDATE operations SET status = ? WHERE id = ?",
+                    (OperationStatus.COMPLETED.value, operation.id),
+                )
+                self.history.db.get_connection().commit()
+                logger.info(f"Successfully redid operation {operation.id}")
+            else:
+                logger.error(
+                    f"Failed to redo operation {operation.id} in transaction {transaction_id}"
+                )
+                return False
+
+        logger.info(
+            f"Successfully redid transaction {transaction_id}: {len(forward_ops)} operations"
+        )
+        return True
 
     def redo_last_operation(self) -> bool:
         """
@@ -335,10 +398,15 @@ class UndoManager:
         """Close resources."""
         self.history.close()
 
-    def __enter__(self):
+    def __enter__(self) -> UndoManager:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
         """Context manager exit."""
         self.close()

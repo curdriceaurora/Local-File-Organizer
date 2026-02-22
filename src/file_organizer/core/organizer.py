@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
+from file_organizer.history.models import OperationType
 from file_organizer.models import TextModel, VisionModel
 from file_organizer.models.base import ModelConfig
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
@@ -23,6 +24,7 @@ from file_organizer.services.audio.metadata_extractor import AudioMetadataExtrac
 from file_organizer.services.audio.organizer import AudioOrganizer
 from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
 from file_organizer.services.video.organizer import VideoOrganizer
+from file_organizer.undo import UndoManager
 
 
 @dataclass
@@ -75,7 +77,7 @@ class FileOrganizer:
         dry_run: bool = True,
         use_hardlinks: bool = True,
         parallel_workers: int | None = None,
-    ):
+    ) -> None:
         """Initialize file organizer.
 
         Args:
@@ -101,6 +103,11 @@ class FileOrganizer:
             retry_count=1,
         )
         self.parallel_processor = ParallelProcessor(self.parallel_config)
+
+        # Undo/redo support (lazy-initialized on first non-dry-run organize call)
+        self._undo_manager: UndoManager | None = None
+        self._last_transaction_id: str | None = None
+        self._last_output_path: Path | None = None
 
         logger.info(f"FileOrganizer initialized (dry_run={dry_run}, parallel={parallel_workers})")
 
@@ -219,7 +226,19 @@ class FileOrganizer:
 
             if not self.dry_run:
                 self.console.print("\n[bold blue]Organizing files...[/bold blue]")
+                # Initialize undo manager and start a transaction for this organize session
+                if self._undo_manager is None:
+                    self._undo_manager = UndoManager()
+                self._last_transaction_id = self._undo_manager.history.start_transaction(
+                    metadata={"input_path": str(input_path), "output_path": str(output_path)}
+                )
+                self._last_output_path = output_path
+
                 organized = self._organize_files(all_processed, output_path, skip_existing)
+
+                # Commit the transaction so it's undoable
+                self._undo_manager.history.commit_transaction(self._last_transaction_id)
+
                 result.organized_structure = organized
             else:
                 self.console.print(
@@ -577,6 +596,15 @@ class FileOrganizer:
                 else:
                     shutil.copy2(result.file_path, new_path)
 
+                # Log the operation for undo/redo support
+                if self._undo_manager is not None and self._last_transaction_id is not None:
+                    self._undo_manager.history.log_operation(
+                        OperationType.COPY,
+                        source_path=result.file_path,
+                        destination_path=new_path,
+                        transaction_id=self._last_transaction_id,
+                    )
+
                 # Track in structure
                 if result.folder_name not in organized:
                     organized[result.folder_name] = []
@@ -674,3 +702,55 @@ class FileOrganizer:
             self.console.print("[dim]Run without --dry-run to perform actual organization[/dim]")
         else:
             self.console.print(f"\n[green]✓ Files organized in: {output_path}[/green]")
+
+    # ------------------------------------------------------------------
+    # Undo / Redo public API
+    # ------------------------------------------------------------------
+
+    def undo(self) -> bool:
+        """Undo the last organize session.
+
+        Returns:
+            True if undo succeeded, False otherwise
+        """
+        if self._undo_manager is None or self._last_transaction_id is None:
+            logger.warning("No organize session to undo")
+            return False
+
+        success = self._undo_manager.undo_transaction(self._last_transaction_id)
+
+        # After rolling back file copies, remove any leftover empty directories
+        if success and self._last_output_path is not None:
+            self._cleanup_empty_dirs(self._last_output_path)
+
+        return success
+
+    def redo(self) -> bool:
+        """Redo the last undone organize session.
+
+        Returns:
+            True if redo succeeded, False otherwise
+        """
+        if self._undo_manager is None or self._last_transaction_id is None:
+            logger.warning("No organize session to redo")
+            return False
+
+        return self._undo_manager.redo_transaction(self._last_transaction_id)
+
+    def _cleanup_empty_dirs(self, root: Path) -> None:
+        """Remove empty directories under *root*, bottom-up.
+
+        Only directories strictly below *root* are removed; the root itself
+        is left in place (it was pre-existing before organize was called).
+
+        Args:
+            root: The output directory that was used during organize.
+        """
+        # Collect all subdirectories sorted deepest-first so we can safely
+        # rmdir leaves before their parents.
+        for dirpath in sorted(root.rglob("*"), reverse=True):
+            if dirpath.is_dir() and dirpath != root:
+                try:
+                    dirpath.rmdir()  # Succeeds only when the directory is empty
+                except OSError:
+                    pass  # Not empty, or permission error – leave it in place
