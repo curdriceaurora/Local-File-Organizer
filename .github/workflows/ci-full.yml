@@ -30,6 +30,38 @@ jobs:
       - name: Run tests
         run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts="
 
+  test-macos:
+    name: Test macOS (Python 3.12)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
+      - name: Run tests
+        run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts="
+
+  test-windows:
+    name: Test Windows (Python 3.12)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
+      - name: Run tests
+        run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts="
+
   frontend-compat:
     name: Frontend Compatibility (placeholder)
     runs-on: ubuntu-latest

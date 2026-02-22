@@ -328,6 +328,41 @@ class TestCIFullWorkflow:
             "that E2E tests are disabled"
         )
 
+    def test_ci_full_has_macos_job(self, workflow: dict) -> None:
+        """Verify CI Full includes a macOS runner (issue #370)."""
+        jobs = workflow.get("jobs", {})
+        assert "test-macos" in jobs, "CI Full should have a 'test-macos' job (issue #370)"
+        macos_job = jobs["test-macos"]
+        assert macos_job.get("runs-on") == "macos-latest", (
+            "macOS job must use macos-latest runner"
+        )
+
+    def test_ci_full_has_windows_job(self, workflow: dict) -> None:
+        """Verify CI Full includes a Windows runner (issue #371)."""
+        jobs = workflow.get("jobs", {})
+        assert "test-windows" in jobs, "CI Full should have a 'test-windows' job (issue #371)"
+        windows_job = jobs["test-windows"]
+        assert windows_job.get("runs-on") == "windows-latest", (
+            "Windows job must use windows-latest runner"
+        )
+
+    def test_ci_full_platform_jobs_use_python_312(self, workflow: dict) -> None:
+        """Verify macOS and Windows jobs use Python 3.12 only (issue #387 cost constraint)."""
+        jobs = workflow.get("jobs", {})
+        for job_name in ("test-macos", "test-windows"):
+            assert job_name in jobs, f"Expected {job_name} job in CI Full workflow"
+            job = jobs[job_name]
+            steps = job.get("steps", [])
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                uses = step.get("uses", "")
+                if isinstance(uses, str) and "actions/setup-python" in uses:
+                    python_version = step.get("with", {}).get("python-version")
+                    assert python_version == "3.12", (
+                        f"{job_name} must use Python 3.12 only per issue #387 cost constraint"
+                    )
+
     def test_ci_full_has_concurrency(self, workflow: dict) -> None:
         """Verify CI Full workflow has concurrency settings to cancel stale runs."""
         assert "concurrency" in workflow, (
