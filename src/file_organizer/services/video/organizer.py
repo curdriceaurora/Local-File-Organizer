@@ -165,7 +165,7 @@ class VideoOrganizer:
 
         # Try to extract year from filename (e.g. "2025-01-15" or "20250115")
         stem = metadata.file_path.stem
-        match = re.search(r"(20[12]\d)-?\d{2}-?\d{2}", stem)
+        match = re.search(r"(20\d{2})-?\d{2}-?\d{2}", stem)
         if match:
             return match.group(1)
 

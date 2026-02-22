@@ -207,8 +207,8 @@ class VideoMetadataExtractor:
         except ImportError:
             return False
 
+        cap = cv2.VideoCapture(str(video_path))
         try:
-            cap = cv2.VideoCapture(str(video_path))
             if not cap.isOpened():
                 return False
 
@@ -220,11 +220,12 @@ class VideoMetadataExtractor:
             if metadata.fps and frame_count and metadata.fps > 0:
                 metadata.duration = frame_count / metadata.fps
 
-            cap.release()
             return True
         except Exception:
             logger.debug(f"OpenCV extraction failed for {video_path.name}", exc_info=True)
             return False
+        finally:
+            cap.release()
 
 
 # ---------------------------------------------------------------------------
@@ -260,9 +261,19 @@ def _parse_datetime(value: str) -> datetime | None:
     - Date only: 2024-01-15
     - With timezone offset: 2024-01-15T14:30:45+00:00
     """
+    stripped = value.strip()
+
+    # Try datetime.fromisoformat first — handles Z and ±HH:MM offsets (Python 3.11+)
+    try:
+        dt = datetime.fromisoformat(stripped.replace("Z", "+00:00"))
+        # Return naive datetime (strip tzinfo) for consistency with rest of codebase
+        return dt.replace(tzinfo=None)
+    except ValueError:
+        pass
+
+    # Fallback: strptime for formats fromisoformat can't handle
     formats = [
-        "%Y-%m-%dT%H:%M:%S.%fZ",
-        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%dT%H:%M:%S.%f",
         "%Y-%m-%dT%H:%M:%S",
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%d",
@@ -270,7 +281,7 @@ def _parse_datetime(value: str) -> datetime | None:
     ]
     for fmt in formats:
         try:
-            return datetime.strptime(value.strip(), fmt)
+            return datetime.strptime(stripped, fmt)
         except ValueError:
             continue
     return None

@@ -231,7 +231,10 @@ class FileOrganizer:
         # Handle unsupported files (audio and video are now processed above)
         if other_files:
             result.skipped_files = len(other_files)
-            self._show_skipped_files([], [], [])
+            self.console.print("\n[bold yellow]Skipped Files:[/bold yellow]")
+            for f in other_files:
+                self.console.print(f"  [yellow]•[/yellow] {f.name} (unsupported type)")
+            self.console.print("\n  [dim]These file types are not yet supported[/dim]")
 
         # Cleanup
         if self.text_processor:
@@ -442,7 +445,7 @@ class FileOrganizer:
 
                 # dest_path includes the extension (e.g. "Music/Artist/Album/01 - Track.mp3")
                 # Split into folder_name and filename stem for ProcessedFile compatibility
-                folder_name = str(dest_path.parent)
+                folder_name = dest_path.parent.as_posix()
                 filename_stem = dest_path.stem
 
                 # Build human-readable description
