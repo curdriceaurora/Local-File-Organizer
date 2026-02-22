@@ -216,22 +216,31 @@ class UndoManager:
                 )
                 return False
 
-        # Execute redo in chronological (forward) order
-        for operation in forward_ops:
-            success = self.executor.redo_operation(operation)
-            if success:
-                self.history.db.execute_query(
-                    "UPDATE operations SET status = ? WHERE id = ?",
-                    (OperationStatus.COMPLETED.value, operation.id),
-                )
-                self.history.db.get_connection().commit()
-                logger.info(f"Successfully redid operation {operation.id}")
-            else:
-                logger.error(
-                    f"Failed to redo operation {operation.id} in transaction {transaction_id}"
-                )
-                return False
+        # Execute redo in chronological (forward) order as a single DB transaction
+        conn = self.history.db.get_connection()
+        try:
+            for operation in forward_ops:
+                success = self.executor.redo_operation(operation)
+                if success:
+                    self.history.db.execute_query(
+                        "UPDATE operations SET status = ? WHERE id = ?",
+                        (OperationStatus.COMPLETED.value, operation.id),
+                    )
+                    logger.info(f"Successfully redid operation {operation.id}")
+                else:
+                    logger.error(
+                        f"Failed to redo operation {operation.id} in transaction {transaction_id}"
+                    )
+                    conn.rollback()
+                    return False
+        except Exception:
+            logger.exception(
+                f"Unexpected error while redoing transaction {transaction_id}"
+            )
+            conn.rollback()
+            return False
 
+        conn.commit()
         logger.info(
             f"Successfully redid transaction {transaction_id}: {len(forward_ops)} operations"
         )

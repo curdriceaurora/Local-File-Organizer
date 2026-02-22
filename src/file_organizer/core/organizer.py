@@ -234,12 +234,18 @@ class FileOrganizer:
                 )
                 self._last_output_path = output_path
 
-                organized = self._organize_files(all_processed, output_path, skip_existing)
-
-                # Commit the transaction so it's undoable
-                self._undo_manager.history.commit_transaction(self._last_transaction_id)
-
-                result.organized_structure = organized
+                try:
+                    organized = self._organize_files(all_processed, output_path, skip_existing)
+                except Exception:
+                    logger.exception(
+                        "Error while organizing files; leaving transaction %s uncommitted",
+                        self._last_transaction_id,
+                    )
+                    raise
+                else:
+                    # Commit the transaction so it's undoable
+                    self._undo_manager.history.commit_transaction(self._last_transaction_id)
+                    result.organized_structure = organized
             else:
                 self.console.print(
                     "\n[bold yellow]DRY RUN - Simulating organization...[/bold yellow]"
