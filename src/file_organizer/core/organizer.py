@@ -238,7 +238,7 @@ class FileOrganizer:
                     organized = self._organize_files(all_processed, output_path, skip_existing)
                 except Exception:
                     logger.exception(
-                        "Error while organizing files; leaving transaction %s uncommitted",
+                        "Error while organizing files; leaving transaction {} uncommitted",
                         self._last_transaction_id,
                     )
                     raise
