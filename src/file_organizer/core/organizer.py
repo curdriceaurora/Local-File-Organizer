@@ -18,6 +18,11 @@ from file_organizer.models.base import ModelConfig
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor
 from file_organizer.services import ProcessedFile, ProcessedImage, TextProcessor, VisionProcessor
+from file_organizer.services.audio.classifier import AudioClassifier
+from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
+from file_organizer.services.audio.organizer import AudioOrganizer
+from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
+from file_organizer.services.video.organizer import VideoOrganizer
 
 
 @dataclass
@@ -161,8 +166,8 @@ class FileOrganizer:
             self.text_processor.initialize()
             self.console.print("[green]✓[/green] Text model ready")
 
-        # Initialize vision processor for image/video files
-        if image_files or video_files:
+        # Initialize vision processor for image files only (video uses metadata now)
+        if image_files:
             self.vision_processor = VisionProcessor(config=self.vision_model_config)
             self.vision_processor.initialize()
             self.console.print("[green]✓[/green] Vision model ready")
@@ -188,10 +193,20 @@ class FileOrganizer:
             processed_images = self._process_image_files(image_files)
             all_processed.extend(processed_images)
 
-        # Process video files (treat as images for now - extract first frame later)
+        # Process audio files via metadata pipeline (no AI model required)
+        if audio_files:
+            self.console.print(
+                f"\n[bold blue]Processing {len(audio_files)} audio files...[/bold blue]"
+            )
+            processed_audio = self._process_audio_files(audio_files)
+            all_processed.extend(processed_audio)
+
+        # Process video files via metadata pipeline (no AI model required)
         if video_files:
-            self.console.print(f"\n[bold blue]Processing {len(video_files)} videos...[/bold blue]")
-            processed_videos = self._process_image_files(video_files)
+            self.console.print(
+                f"\n[bold blue]Processing {len(video_files)} videos...[/bold blue]"
+            )
+            processed_videos = self._process_video_files(video_files)
             all_processed.extend(processed_videos)
 
         # Organize all files
@@ -213,11 +228,10 @@ class FileOrganizer:
                 simulated = self._simulate_organization(all_processed, output_path)
                 result.organized_structure = simulated
 
-        # Handle unsupported files
-        unsupported = audio_files + other_files
-        if unsupported:
-            result.skipped_files = len(unsupported)
-            self._show_skipped_files([], [], audio_files)
+        # Handle unsupported files (audio and video are now processed above)
+        if other_files:
+            result.skipped_files = len(other_files)
+            self._show_skipped_files([], [], [])
 
         # Cleanup
         if self.text_processor:
@@ -271,9 +285,9 @@ class FileOrganizer:
 
         table.add_row("Text files", str(len(text_files)), "✓ Will process")
         table.add_row("Images", str(len(image_files)), "✓ Will process")
-        table.add_row("Videos", str(len(video_files)), "✓ Will process")
+        table.add_row("Videos", str(len(video_files)), "✓ Will process (metadata)")
+        table.add_row("Audio", str(len(audio_files)), "✓ Will process (metadata)")
         table.add_row("CAD files", str(len(cad_files)), "✓ Will process")
-        table.add_row("Audio", str(len(audio_files)), "⊘ Skip (needs audio model)")
         table.add_row("Other", str(len(other_files)), "⊘ Skip (unsupported)")
 
         self.console.print(table)
@@ -403,6 +417,110 @@ class FileOrganizer:
                         advance=1,
                         description=f"[red]✗[/red] {file_result.path.name} (Failed)",
                     )
+
+        return processed
+
+    def _process_audio_files(self, files: list[Path]) -> list[ProcessedFile]:
+        """Process audio files using metadata pipeline (no AI model required).
+
+        Args:
+            files: List of audio file paths
+
+        Returns:
+            List of processed file results
+        """
+        extractor = AudioMetadataExtractor()
+        classifier = AudioClassifier()
+        organizer = AudioOrganizer()
+        processed = []
+
+        for audio_path in files:
+            try:
+                metadata = extractor.extract(audio_path)
+                classification = classifier.classify(metadata)
+                dest_path = organizer.generate_path(classification.audio_type, metadata)
+
+                # dest_path includes the extension (e.g. "Music/Artist/Album/01 - Track.mp3")
+                # Split into folder_name and filename stem for ProcessedFile compatibility
+                folder_name = str(dest_path.parent)
+                filename_stem = dest_path.stem
+
+                # Build human-readable description
+                parts = [classification.audio_type.value.capitalize()]
+                if metadata.artist:
+                    parts.append(metadata.artist)
+                if metadata.title:
+                    parts.append(metadata.title)
+                description = ": ".join(parts[:1]) + " " + " - ".join(parts[1:]) if len(parts) > 1 else parts[0]
+
+                processed.append(
+                    ProcessedFile(
+                        file_path=audio_path,
+                        description=description,
+                        folder_name=folder_name,
+                        filename=filename_stem,
+                        error=None,
+                    )
+                )
+                logger.debug(f"Audio processed: {audio_path.name} → {folder_name}/{filename_stem}")
+
+            except Exception as exc:
+                logger.warning(f"Audio metadata extraction failed for {audio_path.name}: {exc}")
+                processed.append(
+                    ProcessedFile(
+                        file_path=audio_path,
+                        description="",
+                        folder_name="Audio/Unsorted",
+                        filename=audio_path.stem,
+                        error=str(exc),
+                    )
+                )
+
+        return processed
+
+    def _process_video_files(self, files: list[Path]) -> list[ProcessedFile]:
+        """Process video files using metadata pipeline (no AI model required).
+
+        Args:
+            files: List of video file paths
+
+        Returns:
+            List of processed file results
+        """
+        extractor = VideoMetadataExtractor()
+        organizer = VideoOrganizer()
+        processed = []
+
+        for video_path in files:
+            try:
+                metadata = extractor.extract(video_path)
+                folder_name, filename_stem = organizer.generate_path(metadata)
+                description = organizer.generate_description(metadata)
+
+                processed.append(
+                    ProcessedFile(
+                        file_path=video_path,
+                        description=description,
+                        folder_name=folder_name,
+                        filename=filename_stem,
+                        error=None,
+                    )
+                )
+                logger.debug(f"Video processed: {video_path.name} → {folder_name}/{filename_stem}")
+
+            except FileNotFoundError:
+                raise
+            except Exception as exc:
+                logger.warning(f"Video metadata extraction failed for {video_path.name}: {exc}")
+                processed.append(
+                    ProcessedFile(
+                        file_path=video_path,
+                        description="",
+                        folder_name="Videos/Unsorted",
+                        filename=video_path.stem,
+                        error=str(exc),
+                    )
+                )
 
         return processed
 
