@@ -1,105 +1,924 @@
-# File Organizer v2 CLI Reference
+# File Organizer CLI Reference
+
+All commands are available via `file-organizer` or the short alias `fo`.
 
 ## Global Options
-- `--version`: Show version and exit.
-- `--help`: Show help message.
-- `-v, --verbose`: Enable verbose logging.
 
-## Commands
+These options apply to every command and may be passed before or after the command name:
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--verbose` | `-v` | Enable verbose output |
+| `--dry-run` | | Preview changes without executing |
+| `--json` | | Output results as JSON |
+| `--yes` | `-y` | Auto-confirm all prompts |
+| `--no-interactive` | | Disable interactive prompts |
+| `--help` | | Show help and exit |
+
+---
+
+## Top-Level Commands
+
+### `version`
+
+Show the application version.
+
+```bash
+file-organizer version
+```
+
+---
 
 ### `organize`
-Organize files in a directory using AI or rules.
+
+Organize files in a directory using AI models.
 
 **Usage:**
 ```bash
-file-organizer organize [OPTIONS] INPUT_DIR OUTPUT_DIR
+file-organizer organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 ```
+
+**Arguments:**
+- `INPUT_DIR` — Directory containing files to organize
+- `OUTPUT_DIR` — Destination directory for organized files
 
 **Options:**
-- `--dry-run`: Simulate the organization without moving files.
-- `--recursive / --no-recursive`: Process subdirectories (default: True).
-- `--methodology [none|para|jd]`: Override default methodology.
-- `--text-model TEXT`: Override AI text model.
-- `--vision-model TEXT`: Override AI vision model.
-
-### `config`
-Manage configuration settings.
-
-**Subcommands:**
-- `show`: Display current configuration.
-- `edit`: Modify settings via CLI flags.
-- `list`: List available profiles.
+- `--dry-run` — Preview without moving files
+- `--verbose, -v` — Verbose output
 
 **Examples:**
 ```bash
-file-organizer config show --profile work
-file-organizer config edit --temperature 0.8
+# Organize ~/Downloads into ~/Organized
+file-organizer organize ~/Downloads ~/Organized
+
+# Preview what would happen (no files moved)
+file-organizer organize ~/Downloads ~/Organized --dry-run
+
+# Verbose output
+file-organizer organize ~/Downloads ~/Organized --verbose
 ```
 
-### `rules`
-Manage organization rules.
+> **Note:** To set a default methodology (PARA, Johnny Decimal, etc.) or override AI models, use `file-organizer config edit` before running organize.
 
-**Subcommands:**
-- `add`: Add a new rule.
-- `remove`: Remove a rule.
-- `list`: List all active rules.
-- `preview`: Preview rule application.
+---
 
-**Examples:**
-```bash
-file-organizer rules add my-rule --ext ".pdf" --action move --dest "Docs"
-```
+### `preview`
 
-### `dedupe`
-Find and manage duplicate files.
-
-**Subcommands:**
-- `scan`: Scan for duplicates.
-- `report`: Generate a duplication report.
-- `resolve`: Interactively or automatically resolve duplicates.
-
-**Examples:**
-```bash
-file-organizer dedupe scan ./Images
-```
-
-### `daemon`
-Run the file watcher daemon.
-
-**Subcommands:**
-- `start`: Start the background daemon.
-- `stop`: Stop the daemon.
-- `status`: Check daemon status.
-- `watch`: Run in foreground mode (for debugging).
-
-**Examples:**
-```bash
-file-organizer daemon start --watch-dir ./Inbox --output-dir ./Organized
-```
-
-### `tui`
-Launch the Terminal User Interface.
+Preview how files would be organized without moving them (dry-run shortcut).
 
 **Usage:**
+```bash
+file-organizer preview INPUT_DIR
+```
+
+**Examples:**
+```bash
+file-organizer preview ~/Downloads
+fo preview ~/Downloads
+```
+
+---
+
+### `tui`
+
+Launch the interactive Terminal User Interface.
+
 ```bash
 file-organizer tui
 ```
 
-### `copilot`
-Interact with the AI assistant via CLI.
+---
 
-**Subcommands:**
-- `chat`: Start a chat session or send a single command.
+### `undo`
+
+Undo file operations.
+
+**Usage:**
+```bash
+file-organizer undo [OPTIONS]
+```
+
+**Options:**
+- `--operation-id INTEGER` — Specific operation ID to undo
+- `--transaction-id TEXT` — Transaction ID to undo (undoes all operations in a transaction)
+- `--dry-run` — Preview without executing
+- `--verbose, -v` — Verbose output
 
 **Examples:**
 ```bash
-file-organizer copilot chat "Help me organize my photos"
+# Undo the last operation
+file-organizer undo
+
+# Undo a specific operation
+file-organizer undo --operation-id 42
+
+# Undo all operations in a transaction
+file-organizer undo --transaction-id abc123
 ```
 
-### `update`
+---
+
+### `redo`
+
+Redo previously undone file operations.
+
+**Usage:**
+```bash
+file-organizer redo [OPTIONS]
+```
+
+**Options:**
+- `--operation-id INTEGER` — Specific operation ID to redo
+- `--dry-run` — Preview without executing
+- `--verbose, -v` — Verbose output
+
+---
+
+### `history`
+
+View operation history.
+
+**Usage:**
+```bash
+file-organizer history [OPTIONS]
+```
+
+**Options:**
+- `--limit INTEGER` — Maximum number of operations to show (default: 10)
+- `--type TEXT` — Filter by operation type
+- `--status TEXT` — Filter by status
+- `--stats` — Show statistics summary
+- `--verbose, -v` — Verbose output
+
+**Examples:**
+```bash
+file-organizer history
+file-organizer history --limit 50
+file-organizer history --stats
+```
+
+---
+
+### `analytics`
+
+Display storage analytics dashboard.
+
+**Usage:**
+```bash
+file-organizer analytics [DIRECTORY] [OPTIONS]
+```
+
+**Arguments:**
+- `DIRECTORY` — Directory to analyze (optional; defaults to configured workspace)
+
+**Options:**
+- `--verbose, -v` — Verbose output
+
+**Examples:**
+```bash
+file-organizer analytics
+file-organizer analytics ~/Documents
+```
+
+---
+
+## Sub-Commands
+
+### `config` — Configuration Management
+
+Manage configuration profiles.
+
+#### `config show`
+
+Display the current configuration profile.
+
+```bash
+file-organizer config show [--profile PROFILE]
+```
+
+Options:
+- `--profile TEXT` — Profile name (default: `default`)
+
+#### `config list`
+
+List all available configuration profiles.
+
+```bash
+file-organizer config list
+```
+
+#### `config edit`
+
+Edit a configuration profile.
+
+```bash
+file-organizer config edit [OPTIONS]
+```
+
+Options:
+- `--profile TEXT` — Profile name to edit (default: `default`)
+- `--text-model TEXT` — Set the text model name
+- `--vision-model TEXT` — Set the vision model name
+- `--temperature FLOAT` — Set temperature (0.0–1.0)
+- `--device TEXT` — Set device (`auto`, `cpu`, `cuda`, `mps`, `metal`)
+- `--methodology TEXT` — Set default methodology (`none`, `para`, `jd`)
+
+**Examples:**
+```bash
+file-organizer config show
+file-organizer config show --profile work
+file-organizer config edit --text-model qwen2.5:3b-instruct-q4_K_M
+file-organizer config edit --device cuda --methodology para
+file-organizer config edit --profile work --temperature 0.7
+```
+
+---
+
+### `model` — AI Model Management
+
+Manage AI models via Ollama.
+
+#### `model list`
+
+List available models with their install status.
+
+```bash
+file-organizer model list [--type TYPE]
+```
+
+Options:
+- `--type TEXT` — Filter by type: `text`, `vision`, or `audio`
+
+#### `model pull`
+
+Download a model via Ollama.
+
+```bash
+file-organizer model pull MODEL_NAME
+```
+
+#### `model cache`
+
+Show model cache statistics.
+
+```bash
+file-organizer model cache
+```
+
+**Examples:**
+```bash
+file-organizer model list
+file-organizer model list --type vision
+file-organizer model pull qwen2.5:3b-instruct-q4_K_M
+file-organizer model cache
+```
+
+---
+
+### `copilot` — AI Assistant
+
+Interactive AI copilot for file organization.
+
+#### `copilot chat`
+
+Chat with the file-organization copilot.
+
+```bash
+file-organizer copilot chat [MESSAGE] [--dir DIRECTORY]
+```
+
+Arguments:
+- `MESSAGE` — Single message (optional; omit to start interactive REPL)
+
+Options:
+- `--dir, -d TEXT` — Working directory for file operations
+
+**Examples:**
+```bash
+# Interactive REPL
+file-organizer copilot chat
+
+# Single question
+file-organizer copilot chat "Help me organize my photos"
+
+# Scoped to a specific directory
+file-organizer copilot chat --dir ~/Documents "What duplicates do I have?"
+```
+
+#### `copilot status`
+
+Show copilot engine status (Ollama model availability and readiness).
+
+```bash
+file-organizer copilot status
+```
+
+---
+
+### `daemon` — Background File Watcher
+
+Run the file watcher as a background daemon.
+
+#### `daemon start`
+
+```bash
+file-organizer daemon start [OPTIONS]
+```
+
+Common options: `--watch-dir PATH`, `--output-dir PATH`
+
+#### `daemon stop`
+
+```bash
+file-organizer daemon stop
+```
+
+#### `daemon status`
+
+```bash
+file-organizer daemon status
+```
+
+#### `daemon watch`
+
+Run in foreground mode (useful for debugging).
+
+```bash
+file-organizer daemon watch
+```
+
+#### `daemon process`
+
+One-shot: organize files in a directory and display a summary.
+
+```bash
+file-organizer daemon process INPUT_DIR OUTPUT_DIR [--dry-run]
+```
+
+**Examples:**
+```bash
+file-organizer daemon start --watch-dir ~/Inbox --output-dir ~/Organized
+file-organizer daemon status
+file-organizer daemon stop
+```
+
+---
+
+### `dedupe` — Duplicate File Management
+
+Find and manage duplicate files.
+
+#### `dedupe scan`
+
+Scan a directory for duplicate files.
+
+```bash
+file-organizer dedupe scan DIRECTORY [OPTIONS]
+```
+
+#### `dedupe report`
+
+Generate a duplication report.
+
+```bash
+file-organizer dedupe report [OPTIONS]
+```
+
+#### `dedupe resolve`
+
+Interactively or automatically resolve duplicates.
+
+```bash
+file-organizer dedupe resolve [OPTIONS]
+```
+
+**Examples:**
+```bash
+file-organizer dedupe scan ~/Images
+file-organizer dedupe report
+file-organizer dedupe resolve
+```
+
+---
+
+### `rules` — Organization Rules
+
+Manage copilot organization rules and rule sets.
+
+#### `rules list`
+
+List all rules in a rule set.
+
+```bash
+file-organizer rules list [--set RULE_SET]
+```
+
+#### `rules sets`
+
+List available rule sets.
+
+```bash
+file-organizer rules sets
+```
+
+#### `rules add`
+
+Add a new rule to a rule set.
+
+```bash
+file-organizer rules add RULE_NAME [OPTIONS]
+```
+
+Options:
+- `--ext TEXT` — File extension filter (e.g. `.pdf,.docx`)
+- `--pattern TEXT` — Filename glob pattern
+- `--action, -a TEXT` — Action type: `move`, `rename`, `tag`, `categorize`, `archive`, `copy`, `delete` (default: `move`)
+- `--dest, -d TEXT` — Destination path or pattern
+- `--priority, -p INTEGER` — Rule priority (higher = runs first; default: 0)
+- `--set, -s TEXT` — Target rule set (default: `default`)
+
+#### `rules remove`
+
+Remove a rule from a rule set.
+
+```bash
+file-organizer rules remove RULE_NAME [--set RULE_SET]
+```
+
+#### `rules toggle`
+
+Enable or disable a rule.
+
+```bash
+file-organizer rules toggle RULE_NAME [--set RULE_SET]
+```
+
+#### `rules preview`
+
+Preview what rules would do against a directory (dry-run).
+
+```bash
+file-organizer rules preview DIRECTORY [OPTIONS]
+```
+
+Options:
+- `--set, -s TEXT` — Rule set to evaluate (default: `default`)
+- `--recursive/--no-recursive` — Recurse into subdirectories (default: true)
+- `--max-files INTEGER` — Maximum files to scan (default: 500)
+
+#### `rules export`
+
+Export a rule set to YAML.
+
+```bash
+file-organizer rules export [--set RULE_SET] [--output FILE]
+```
+
+#### `rules import`
+
+Import a rule set from a YAML file.
+
+```bash
+file-organizer rules import FILE [--set RULE_SET]
+```
+
+**Examples:**
+```bash
+# List rules in the default rule set
+file-organizer rules list
+
+# Add a rule to move PDFs to a Docs folder
+file-organizer rules add move-pdfs --ext .pdf --action move --dest Docs
+
+# Add a rule with glob pattern, high priority
+file-organizer rules add archive-old --pattern "*.2022*" --action archive --priority 10
+
+# Preview rules against a directory
+file-organizer rules preview ~/Downloads
+
+# Export/import rule sets
+file-organizer rules export --set work --output work-rules.yaml
+file-organizer rules import work-rules.yaml
+```
+
+---
+
+### `suggest` — Smart File Suggestions
+
+Generate AI-powered file organization suggestions using pattern analysis.
+
+#### `suggest files`
+
+Generate organization suggestions for files in a directory.
+
+```bash
+file-organizer suggest files DIRECTORY [OPTIONS]
+```
+
+Options:
+- `--min-confidence FLOAT` — Minimum confidence threshold 0–100 (default: 40.0)
+- `--max-results INTEGER` — Maximum suggestions (default: 50)
+- `--json` — Output as JSON
+- `--dry-run` — Preview mode
+
+#### `suggest apply`
+
+Apply accepted suggestions to a directory.
+
+```bash
+file-organizer suggest apply DIRECTORY [OPTIONS]
+```
+
+#### `suggest patterns`
+
+Analyze naming patterns in a directory.
+
+```bash
+file-organizer suggest patterns DIRECTORY [OPTIONS]
+```
+
+**Examples:**
+```bash
+file-organizer suggest files ~/Downloads
+file-organizer suggest files ~/Documents --min-confidence 60
+file-organizer suggest patterns ~/Projects
+```
+
+---
+
+### `marketplace` — Plugin Marketplace
+
+Browse and manage plugins from the marketplace.
+
+#### `marketplace list`
+
+List available plugins.
+
+```bash
+file-organizer marketplace list [OPTIONS]
+```
+
+Options:
+- `--page, -p INTEGER` — Page number (default: 1)
+- `--per-page INTEGER` — Results per page (default: 20)
+- `--category, -c TEXT` — Filter by category
+- `--tag, -t TEXT` — Filter by tag (repeatable)
+
+#### `marketplace search`
+
+Search the marketplace.
+
+```bash
+file-organizer marketplace search QUERY [OPTIONS]
+```
+
+#### `marketplace info`
+
+Show details for a specific plugin.
+
+```bash
+file-organizer marketplace info PLUGIN_NAME
+```
+
+#### `marketplace install`
+
+Install a plugin.
+
+```bash
+file-organizer marketplace install PLUGIN_NAME [--version VERSION]
+```
+
+#### `marketplace uninstall`
+
+Remove an installed plugin.
+
+```bash
+file-organizer marketplace uninstall PLUGIN_NAME
+```
+
+#### `marketplace installed`
+
+List installed plugins.
+
+```bash
+file-organizer marketplace installed
+```
+
+#### `marketplace updates`
+
+Check for plugin updates.
+
+```bash
+file-organizer marketplace updates
+```
+
+#### `marketplace update`
+
+Update a specific plugin.
+
+```bash
+file-organizer marketplace update PLUGIN_NAME
+```
+
+#### `marketplace review`
+
+Add or update a plugin review.
+
+```bash
+file-organizer marketplace review PLUGIN_NAME [OPTIONS]
+```
+
+Options:
+- `--user TEXT` — Reviewer ID (required)
+- `--rating INTEGER` — Rating from 1 to 5 (required)
+- `--title TEXT` — Review title (required)
+- `--content TEXT` — Review text (required)
+
+---
+
+### `api` — Remote API Client
+
+Interact with a running File Organizer API server.
+
+#### `api health`
+
+Check API server health.
+
+```bash
+file-organizer api health [--base-url URL] [--json]
+```
+
+#### `api login`
+
+Authenticate and store access tokens.
+
+```bash
+file-organizer api login [--base-url URL] [--save-token PATH]
+```
+
+#### `api me`
+
+Show current authenticated user.
+
+```bash
+file-organizer api me [--base-url URL] [--token TOKEN]
+```
+
+#### `api logout`
+
+Invalidate the current session token.
+
+```bash
+file-organizer api logout --token TOKEN --refresh-token TOKEN [--base-url URL]
+```
+
+#### `api files`
+
+List files via the API.
+
+```bash
+file-organizer api files PATH [OPTIONS]
+```
+
+Arguments:
+- `PATH` — Directory to list (required)
+
+#### `api system-status`
+
+Show system status from the API server.
+
+```bash
+file-organizer api system-status [--base-url URL]
+```
+
+#### `api system-stats`
+
+Show system statistics from the API server.
+
+```bash
+file-organizer api system-stats [--base-url URL]
+```
+
+**Default base URL:** `http://localhost:8000`
+
+**Examples:**
+```bash
+file-organizer api health
+file-organizer api health --base-url http://myserver:8000
+file-organizer api login
+file-organizer api system-status
+```
+
+---
+
+### `update` — Application Updates
+
 Manage application updates.
 
-**Subcommands:**
-- `check`: Check for new versions.
-- `install`: Install the latest version.
-- `rollback`: Revert to the previous version.
+#### `update check`
+
+Check for new versions.
+
+```bash
+file-organizer update check
+```
+
+#### `update install`
+
+Install the latest version.
+
+```bash
+file-organizer update install
+```
+
+#### `update rollback`
+
+Revert to the previous version.
+
+```bash
+file-organizer update rollback
+```
+
+---
+
+### `profile` — User Preference Profiles
+
+Manage user preference profiles (powered by the intelligence/learning system).
+
+#### `profile list`
+
+List all available profiles.
+
+```bash
+file-organizer profile list
+```
+
+#### `profile create`
+
+Create a new profile.
+
+```bash
+file-organizer profile create PROFILE_NAME [OPTIONS]
+```
+
+#### `profile activate`
+
+Activate a profile (make it the current active profile).
+
+```bash
+file-organizer profile activate PROFILE_NAME
+```
+
+#### `profile delete`
+
+Delete a profile.
+
+```bash
+file-organizer profile delete PROFILE_NAME
+```
+
+#### `profile export`
+
+Export a profile to a file.
+
+```bash
+file-organizer profile export PROFILE_NAME --output FILE [--selective]
+```
+
+Options:
+- `--output, -o FILE` — Output file path (required)
+- `--selective` — Select specific settings to export
+
+#### `profile import`
+
+Import a profile from a file.
+
+```bash
+file-organizer profile import FILE [OPTIONS]
+```
+
+#### `profile current`
+
+Show the currently active profile.
+
+```bash
+file-organizer profile current
+```
+
+#### `profile validate`
+
+Validate a profile's configuration.
+
+```bash
+file-organizer profile validate PROFILE_NAME
+```
+
+#### `profile merge`
+
+Merge multiple profiles into one.
+
+```bash
+file-organizer profile merge PROFILES... --output FILE [OPTIONS]
+```
+
+Options:
+- `--output FILE` — Output file for merged profile (required)
+- `--strategy TEXT` — Merge strategy
+- `--show-conflicts` — Display merge conflicts
+
+#### `profile migrate`
+
+Migrate a profile to a newer version format.
+
+```bash
+file-organizer profile migrate PROFILE_NAME --to-version VERSION [--no-backup]
+```
+
+Options:
+- `--to-version TEXT` — Target version (required)
+- `--no-backup` — Skip backup before migration
+
+#### `profile template list`
+
+List available profile templates.
+
+```bash
+file-organizer profile template list
+```
+
+#### `profile template preview`
+
+Preview a profile template.
+
+```bash
+file-organizer profile template preview TEMPLATE_NAME
+```
+
+#### `profile template apply`
+
+Apply a template to a profile.
+
+```bash
+file-organizer profile template apply TEMPLATE_NAME PROFILE_NAME [--activate]
+```
+
+**Examples:**
+```bash
+file-organizer profile list
+file-organizer profile create work --description "Work files config"
+file-organizer profile activate work
+file-organizer profile current
+file-organizer profile validate work
+file-organizer profile merge work personal --output combined.json
+file-organizer profile template list
+file-organizer profile template apply minimal my-profile --activate
+```
+
+> **Note:** The `profile` command requires the intelligence/learning optional dependencies (`pip install -e ".[all]"`). It degrades gracefully if not installed.
+
+---
+
+## Auto-Tagging (Legacy Interface)
+
+The auto-tagging system uses a separate legacy argument parser. Its commands are accessible via the `autotag` subparser in the underlying Python interface:
+
+| Subcommand | Description |
+|------------|-------------|
+| `autotag suggest FILE...` | Suggest tags for one or more files |
+| `autotag apply FILE TAG...` | Apply tags to a file and record for learning |
+| `autotag popular [--limit N]` | Show the most popular tags |
+| `autotag recent [--days N]` | Show recently used tags |
+| `autotag analyze FILE` | Analyze file content for tag candidates |
+| `autotag batch DIRECTORY` | Batch tag suggestion for a directory |
+
+> The auto-tagging interface will be migrated to a Typer sub-app in a future release.
+
+---
+
+## Short Alias
+
+Use `fo` as a short alias for `file-organizer`:
+
+```bash
+fo organize ~/Downloads ~/Organized
+fo tui
+fo copilot chat
+fo dedupe scan ~/Pictures
+```
+
+---
+
+## Getting Help
+
+```bash
+file-organizer --help
+file-organizer COMMAND --help
+file-organizer COMMAND SUBCOMMAND --help
+```
+
+For example:
+```bash
+file-organizer rules --help
+file-organizer rules add --help
+file-organizer suggest --help
+```

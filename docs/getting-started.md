@@ -43,7 +43,9 @@ See [Deployment Guide](admin/deployment.md) for detailed Docker setup.
 
 ```bash
 pip install file-organizer
-file-organizer serve
+
+# Start the API server
+uvicorn file_organizer.api.main:app --host 0.0.0.0 --port 8000
 ```
 
 **Access**: Open browser to `http://localhost:8000/ui/`
@@ -73,8 +75,8 @@ pip install -e .
 ollama pull qwen2.5:3b-instruct-q4_K_M      # Text model
 ollama pull qwen2.5vl:7b-q4_K_M             # Vision model
 
-# Start the web server
-file-organizer serve
+# Start the API server
+uvicorn file_organizer.api.main:app --host 0.0.0.0 --port 8000
 ```
 
 **Access**: Open browser to `http://localhost:8000/ui/`
@@ -199,22 +201,22 @@ File Organizer also provides a command-line interface:
 # Organize files
 file-organizer organize ./Downloads ./Organized
 
-# Preview without moving
+# Preview without moving (dry run)
 file-organizer organize ./Downloads ./Organized --dry-run
 
-# Find files
-file-organizer search "*.pdf"
+# Preview organisation plan
+file-organizer preview ./Downloads
 
 # Detect duplicates
 file-organizer dedupe scan ./Documents
 
 # Analyze storage
-file-organizer analyze ./Documents
+file-organizer analytics ./Documents
 
-# Start web server
-file-organizer serve
+# View operation history
+file-organizer history
 
-# Interactive mode
+# Interactive AI assistant
 file-organizer copilot chat
 ```
 
@@ -224,7 +226,9 @@ Use `fo` instead of `file-organizer`:
 
 ```bash
 fo organize ./Downloads ./Organized
-fo search "report"
+fo preview ./Downloads
+fo dedupe scan ./Documents
+fo analytics ./Documents
 ```
 
 See [CLI Reference](cli-reference.md) for all commands.
@@ -334,11 +338,13 @@ curl http://localhost:11434/api/version
 **Solution**:
 
 ```bash
-# Use different port
-file-organizer serve --port 8001
-
-# Or find process using port 8000
+# Find process using port 8000
 lsof -i :8000
+
+# Use a different port when starting the server
+uvicorn file_organizer.api.main:app --port 8001
+
+# Or with Docker Compose, edit .env: APP_PORT=8001
 ```
 
 ### Models Not Found
