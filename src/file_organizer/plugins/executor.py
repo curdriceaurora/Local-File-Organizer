@@ -90,7 +90,7 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
         resource.setrlimit(resource.RLIMIT_CPU, (60, 60))
     except (ImportError, ValueError):
         pass  # Windows or kernel limit already tighter — silently skip
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     # ------------------------------------------------------------------
@@ -105,7 +105,7 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
     module = types.ModuleType(path.stem)
     try:
         spec.loader.exec_module(module)  # type: ignore[union-attr]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         sys.stderr.write(f"Error loading plugin module '{plugin_path}': {exc}\n")
         sys.exit(1)
 
@@ -124,7 +124,7 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
         ):
             try:
                 plugin_instance = obj()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 sys.stderr.write(
                     f"Error instantiating plugin class '{_attr_name}': {exc}\n"
                 )
@@ -160,7 +160,7 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
             method = getattr(plugin_instance, call.method)
             ret = method(*call.args, **call.kwargs)
             result = PluginResult(success=True, return_value=ret)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             result = PluginResult(
                 success=False,
                 error=f"{type(exc).__name__}: {exc}",

@@ -44,6 +44,20 @@ fi
 echo "✓ No build artifacts found"
 echo ""
 
+# 3.5. Check for absolute paths in all file types
+echo "🔍 Checking for absolute paths..."
+ABSOLUTE_PATHS=$(git diff --cached | grep -E '^\+.*(/Users/|/home/|C:\\Users\\)' | grep -v '.claude/rules/' || true)
+if [[ -n "$ABSOLUTE_PATHS" ]]; then
+  echo "❌ Found hardcoded absolute paths:"
+  echo "$ABSOLUTE_PATHS" | sed 's/^/  /'
+  echo ""
+  echo "Fix: Use relative paths (e.g., ../project-name/file.py or ./path/to/file)"
+  echo "     instead of absolute paths like /Users/username/..."
+  exit 1
+fi
+echo "✓ No absolute paths found"
+echo ""
+
 # 4. Pattern checks on Python files
 PY_FILES=$(git diff --name-only --cached -- '*.py' || true)
 if [[ -n "$PY_FILES" ]]; then
@@ -111,13 +125,12 @@ if [[ -n "$PY_FILES" ]]; then
   # 6. Type checking
   echo "📋 Type checking Python files..."
   if command -v mypy &> /dev/null; then
-    MYPY_OUTPUT=$(echo "$PY_FILES" | xargs mypy --config-file=pyproject.toml 2>&1 | head -20 || true)
-    if [[ -n "$MYPY_OUTPUT" ]]; then
-      echo "$MYPY_OUTPUT"
-      echo "⚠️  Type checking found issues (non-blocking)"
-      echo "Review mypy output above"
+    if ! echo "$PY_FILES" | xargs mypy --config-file=pyproject.toml; then
+      echo "❌ Type checking failed (blocking)"
+      echo "Fix type errors above, then re-stage files"
+      exit 1
     fi
-    echo "✓ Type checking completed"
+    echo "✓ Type checking passed"
   else
     echo "⚠️  mypy not found, skipping type checking"
   fi

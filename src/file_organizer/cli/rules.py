@@ -78,8 +78,8 @@ def rules_add(
     name: str = typer.Argument(..., help="Rule name."),
     extension: Optional[str] = typer.Option(
         None, "--ext", help="File extension filter (e.g. '.pdf,.docx')."
-    ),  # noqa: UP045
-    pattern: Optional[str] = typer.Option(None, "--pattern", help="Filename glob pattern."),  # noqa: UP045
+    ),
+    pattern: Optional[str] = typer.Option(None, "--pattern", help="Filename glob pattern."),
     action: str = typer.Option(
         "move",
         "--action",
@@ -205,7 +205,7 @@ def rules_preview(
 @rules_app.command(name="export")
 def rules_export(
     rule_set: str = typer.Option("default", "--set", "-s", help="Rule set to export."),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file path."),  # noqa: UP045
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file path."),
 ) -> None:
     """Export a rule set to YAML."""
     import yaml
@@ -226,7 +226,7 @@ def rules_export(
 @rules_app.command(name="import")
 def rules_import(
     file: Path = typer.Argument(..., help="YAML file to import."),
-    rule_set: Optional[str] = typer.Option(None, "--set", "-s", help="Override rule set name."),  # noqa: UP045
+    rule_set: Optional[str] = typer.Option(None, "--set", "-s", help="Override rule set name."),
 ) -> None:
     """Import a rule set from a YAML file."""
     import yaml

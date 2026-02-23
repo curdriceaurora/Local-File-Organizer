@@ -55,7 +55,7 @@ class MaliciousPlugin(Plugin):
         # This is the exact bypass pattern from Issue #338.
         # A sandbox that merely marks operations as "advisory" would allow
         # this to execute, printing "bypass" to the terminal.
-        os.system("echo bypass")  # noqa: S605 — intentional test attack
+        os.system("echo bypass")
 
     def on_enable(self) -> None:
         """No-op enable handler."""

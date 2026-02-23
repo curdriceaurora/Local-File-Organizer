@@ -172,7 +172,7 @@ def search(
     directory: Path = typer.Argument(
         ".", help="Directory to search in.", exists=False
     ),
-    type_filter: Optional[str] = typer.Option(  # noqa: UP045
+    type_filter: Optional[str] = typer.Option(
         None,
         "--type",
         "-t",
@@ -442,13 +442,13 @@ def config_list() -> None:
 @config_app.command(name="edit")
 def config_edit(
     profile: str = typer.Option("default", help="Profile name to edit."),
-    text_model: Optional[str] = typer.Option(None, help="Set text model name."),  # noqa: UP045
-    vision_model: Optional[str] = typer.Option(None, help="Set vision model name."),  # noqa: UP045
-    temperature: Optional[float] = typer.Option(None, help="Set temperature (0.0-1.0)."),  # noqa: UP045
-    device: Optional[str] = typer.Option(None, help="Set device (auto, cpu, cuda, mps, metal)."),  # noqa: UP045
+    text_model: Optional[str] = typer.Option(None, help="Set text model name."),
+    vision_model: Optional[str] = typer.Option(None, help="Set vision model name."),
+    temperature: Optional[float] = typer.Option(None, help="Set temperature (0.0-1.0)."),
+    device: Optional[str] = typer.Option(None, help="Set device (auto, cpu, cuda, mps, metal)."),
     methodology: Optional[str] = typer.Option(
         None, help="Set default methodology (none, para, jd)."
-    ),  # noqa: UP045
+    ),
 ) -> None:
     """Edit a configuration profile."""
     from file_organizer.config import ConfigManager
@@ -481,7 +481,7 @@ app.add_typer(model_app, name="model")
 
 @model_app.command(name="list")
 def model_list(
-    type_filter: Optional[str] = typer.Option(  # noqa: UP045
+    type_filter: Optional[str] = typer.Option(
         None, "--type", help="Filter by model type (text, vision, audio)."
     ),
 ) -> None:
@@ -543,8 +543,8 @@ app.add_typer(update_app, name="update")
 
 @app.command()
 def undo(
-    operation_id: Optional[int] = typer.Option(None, help="Specific operation ID to undo."),  # noqa: UP045
-    transaction_id: Optional[str] = typer.Option(None, help="Transaction ID to undo."),  # noqa: UP045
+    operation_id: Optional[int] = typer.Option(None, help="Specific operation ID to undo."),
+    transaction_id: Optional[str] = typer.Option(None, help="Transaction ID to undo."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without executing."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
 ) -> None:
@@ -562,7 +562,7 @@ def undo(
 
 @app.command()
 def redo(
-    operation_id: Optional[int] = typer.Option(None, help="Specific operation ID to redo."),  # noqa: UP045
+    operation_id: Optional[int] = typer.Option(None, help="Specific operation ID to redo."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without executing."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
 ) -> None:
@@ -580,8 +580,8 @@ def redo(
 @app.command()
 def history(
     limit: int = typer.Option(10, help="Maximum number of operations to show."),
-    operation_type: Optional[str] = typer.Option(None, "--type", help="Filter by type."),  # noqa: UP045
-    status: Optional[str] = typer.Option(None, help="Filter by status."),  # noqa: UP045
+    operation_type: Optional[str] = typer.Option(None, "--type", help="Filter by type."),
+    status: Optional[str] = typer.Option(None, help="Filter by status."),
     stats: bool = typer.Option(False, help="Show statistics."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
 ) -> None:
@@ -600,7 +600,7 @@ def history(
 
 @app.command()
 def analytics(
-    directory: Optional[Path] = typer.Argument(None, help="Directory to analyze."),  # noqa: UP045
+    directory: Optional[Path] = typer.Argument(None, help="Directory to analyze."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
 ) -> None:
     """Display storage analytics dashboard."""

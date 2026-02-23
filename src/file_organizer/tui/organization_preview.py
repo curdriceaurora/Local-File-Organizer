@@ -77,7 +77,7 @@ class OrganizationSummary(Static):
         skipped: int = 0,
         failed: int = 0,
         folders: int = 0,
-        errors: Optional[list[tuple[str, str]]] = None,  # noqa: UP045
+        errors: Optional[list[tuple[str, str]]] = None,
     ) -> None:
         """Update the summary display.
 

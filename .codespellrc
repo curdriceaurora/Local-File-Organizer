@@ -1,0 +1,5 @@
+[codespell]
+skip = ./.*,*.pyc,node_modules,*.egg-info,__pycache__,.git,build,dist,.venv,venv
+ignore-words-list = analyse,organisor,organizser,opne,wron,thier
+# Project-specific terms that shouldn't be flagged as spelling errors
+exclude-lines = ^.*# noqa.*$

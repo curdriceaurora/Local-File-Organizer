@@ -85,7 +85,7 @@ class MethodologyPreviewPanel(Static):
 
     def show_para_preview(
         self,
-        distribution: Optional[dict[str, int]] = None,  # noqa: UP045
+        distribution: Optional[dict[str, int]] = None,
     ) -> None:
         """Show PARA category distribution.
 
@@ -106,8 +106,8 @@ class MethodologyPreviewPanel(Static):
 
     def show_jd_preview(
         self,
-        areas: Optional[dict[int, str]] = None,  # noqa: UP045
-        categories: Optional[dict[str, str]] = None,  # noqa: UP045
+        areas: Optional[dict[int, str]] = None,
+        categories: Optional[dict[str, str]] = None,
     ) -> None:
         """Show Johnny Decimal scheme overview.
 

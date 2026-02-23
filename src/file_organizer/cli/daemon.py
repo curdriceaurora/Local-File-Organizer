@@ -31,10 +31,10 @@ _DEFAULT_PID_FILE = _DEFAULT_PID_DIR / "daemon.pid"
 
 @daemon_app.command()
 def start(
-    watch_dir: Optional[Path] = typer.Option(  # noqa: UP045
+    watch_dir: Optional[Path] = typer.Option(
         None, "--watch-dir", "-w", help="Directory to watch for new files."
     ),
-    output_dir: Optional[Path] = typer.Option(  # noqa: UP045
+    output_dir: Optional[Path] = typer.Option(
         None, "--output-dir", "-o", help="Destination directory for organized files."
     ),
     foreground: bool = typer.Option(

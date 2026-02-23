@@ -21,7 +21,7 @@ def __getattr__(name: str) -> object:
     accessed breaks the cycle.
     """
     if name in {"app", "create_app"}:
-        from file_organizer.api.main import app, create_app  # noqa: PLC0415
+        from file_organizer.api.main import app, create_app
 
         globals()["app"] = app
         globals()["create_app"] = create_app

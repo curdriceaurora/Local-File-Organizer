@@ -100,6 +100,7 @@ dev = [
     "black>=23.12.0",
     "isort>=5.13.0",
     "pre-commit>=3.6.0",
+    "codespell>=2.2.0",
 ]
 
 gui = [
@@ -194,6 +195,7 @@ select = [
     "B",   # flake8-bugbear
     "C4",  # flake8-comprehensions
     "UP",  # pyupgrade
+    "RUF100",  # stale noqa comments
 ]
 ignore = [
     "E501",  # line too long (handled by formatter)

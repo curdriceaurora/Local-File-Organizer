@@ -317,7 +317,7 @@ class TestBroadcast:
     def test_broadcast_partial_failure(self, bus: ServiceBus) -> None:
         """Broadcast collects both successes and failures."""
         bus.register_service("ok", lambda req: {"status": "ok"})
-        bus.register_service("fail", lambda req: (_ for _ in ()).throw(RuntimeError("boom")))  # noqa: E501
+        bus.register_service("fail", lambda req: (_ for _ in ()).throw(RuntimeError("boom")))
         results = bus.broadcast("check")
         assert results["ok"].success is True
         assert results["fail"].success is False

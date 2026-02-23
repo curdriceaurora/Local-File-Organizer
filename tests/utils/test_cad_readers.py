@@ -22,7 +22,7 @@ from file_organizer.utils.file_readers import (
 def sample_dxf_file(tmp_path: Path) -> Path:
     """Create a minimal valid DXF file for testing."""
     try:
-        import ezdxf  # noqa: F401
+        import ezdxf
     except ImportError:
         pytest.skip("ezdxf not installed")
 

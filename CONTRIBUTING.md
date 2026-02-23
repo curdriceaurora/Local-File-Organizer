@@ -36,6 +36,49 @@ pip install -e ".[dev]"
 file-organizer --version
 ```
 
+### Pre-Commit Hooks (Automatic Validation)
+
+This project uses automated pre-commit validation to catch common issues before commits:
+
+```bash
+# Install git pre-commit hooks (one-time setup after first time)
+pre-commit install
+
+# Now on every commit, these hooks automatically run:
+```
+
+**What Gets Checked**:
+
+| Check | Purpose | Catches |
+|-------|---------|---------|
+| **ruff-check** | Python linting (strict) | Style, imports, common bugs |
+| **ruff-check (RUF100)** | Stale `# noqa` comments | Unused suppression directives |
+| **codespell** | Spelling consistency | Typos, spelling inconsistencies |
+| **absolute-path-check** | Hardcoded absolute paths | `/Users/`, `/home/`, `C:\Users\` paths |
+| **mypy** | Type safety (strict mode) | Type errors block commit |
+| **pytest** | Modified module tests | Test failures block commit |
+| **broken-link-check** | Documentation links | Broken references to files |
+
+**Manual Validation** (runs hooks without committing):
+
+```bash
+# Test all hooks on entire codebase
+pre-commit run --all-files
+
+# Test specific hook
+pre-commit run ruff-check --all-files
+pre-commit run codespell --all-files
+```
+
+**Skipping Hooks** (only if necessary):
+
+```bash
+# Commit bypassing pre-commit (NOT recommended)
+git commit --no-verify
+
+# But hooks will still run in CI, so issues will be caught there
+```
+
 ---
 
 ## Pre-Push Checklist

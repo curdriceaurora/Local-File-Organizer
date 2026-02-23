@@ -293,7 +293,7 @@ class PluginRegistry:
         for plugin_name in list(self._records):
             try:
                 self.unload_plugin(plugin_name)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning("Error while unloading plugin '%s': %s", plugin_name, exc)
 
     # ------------------------------------------------------------------

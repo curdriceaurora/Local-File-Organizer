@@ -35,9 +35,9 @@ def _build_scan_options(
     algorithm: str,
     recursive: bool,
     min_size: int,
-    max_size: Optional[int],  # noqa: UP045
-    include: Optional[str],  # noqa: UP045
-    exclude: Optional[str],  # noqa: UP045
+    max_size: Optional[int],
+    include: Optional[str],
+    exclude: Optional[str],
 ):  # type: ignore[no-untyped-def]
     """Build ``ScanOptions`` from CLI flags."""
     from file_organizer.services.deduplication.detector import ScanOptions
@@ -111,11 +111,11 @@ def scan(
     algorithm: str = typer.Option("sha256", help="Hash algorithm (md5, sha256)."),
     recursive: bool = typer.Option(True, help="Scan subdirectories."),
     min_size: int = typer.Option(0, help="Minimum file size in bytes."),
-    max_size: Optional[int] = typer.Option(None, help="Maximum file size in bytes."),  # noqa: UP045
-    include: Optional[str] = typer.Option(  # noqa: UP045
+    max_size: Optional[int] = typer.Option(None, help="Maximum file size in bytes."),
+    include: Optional[str] = typer.Option(
         None, help="Comma-separated glob include patterns."
     ),
-    exclude: Optional[str] = typer.Option(  # noqa: UP045
+    exclude: Optional[str] = typer.Option(
         None, help="Comma-separated glob exclude patterns."
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
@@ -149,9 +149,9 @@ def resolve(
     recursive: bool = typer.Option(True, help="Scan subdirectories."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without deleting."),
     min_size: int = typer.Option(0, help="Minimum file size in bytes."),
-    max_size: Optional[int] = typer.Option(None, help="Maximum file size in bytes."),  # noqa: UP045
-    include: Optional[str] = typer.Option(None, help="Comma-separated include patterns."),  # noqa: UP045
-    exclude: Optional[str] = typer.Option(None, help="Comma-separated exclude patterns."),  # noqa: UP045
+    max_size: Optional[int] = typer.Option(None, help="Maximum file size in bytes."),
+    include: Optional[str] = typer.Option(None, help="Comma-separated include patterns."),
+    exclude: Optional[str] = typer.Option(None, help="Comma-separated exclude patterns."),
 ) -> None:
     """Scan and resolve duplicates using a strategy."""
     detector = _get_detector()

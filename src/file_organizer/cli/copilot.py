@@ -24,11 +24,11 @@ console = Console()
 
 @copilot_app.command(name="chat")
 def copilot_chat(
-    message: Optional[str] = typer.Argument(  # noqa: UP045
+    message: Optional[str] = typer.Argument(
         None,
         help="Single message to send (omit for interactive REPL).",
     ),
-    directory: Optional[str] = typer.Option(  # noqa: UP045
+    directory: Optional[str] = typer.Option(
         None,
         "--dir",
         "-d",

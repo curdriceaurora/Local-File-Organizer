@@ -188,7 +188,7 @@ class TestBypassAttempts:
 
             def on_load(self) -> None:
                 # Attempt bypass via subprocess — must be blocked.
-                subprocess.run(["id"], check=True)  # noqa: S603,S607
+                subprocess.run(["id"], check=True)
 
             def on_enable(self) -> None:
                 pass
@@ -232,7 +232,7 @@ class TestBypassAttempts:
 
             def on_load(self) -> None:
                 # Attempt to read a path outside allowed_paths.
-                with open(forbidden_path) as fh:  # noqa: PTH123
+                with open(forbidden_path) as fh:
                     _ = fh.read()
 
             def on_enable(self) -> None:
@@ -248,7 +248,7 @@ class TestBypassAttempts:
 
         # Intercept the builtin open() call and raise PermissionError.
         # Stream A will enforce this via filesystem namespace isolation.
-        original_open = open  # noqa: PTH123
+        original_open = open
 
         def _guarded_open(path: Any, *args: Any, **kwargs: Any) -> Any:
             resolved = Path(str(path)).resolve()
