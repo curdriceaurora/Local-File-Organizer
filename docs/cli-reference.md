@@ -833,12 +833,12 @@ Create a new profile.
 file-organizer profile create PROFILE_NAME [OPTIONS]
 ```
 
-#### `profile load`
+#### `profile activate`
 
 Load and activate a profile.
 
 ```bash
-file-organizer profile load PROFILE_NAME
+file-organizer profile activate PROFILE_NAME
 ```
 
 #### `profile delete`
@@ -869,7 +869,7 @@ file-organizer profile import FILE [OPTIONS]
 ```bash
 file-organizer profile list
 file-organizer profile create work --description "Work files config"
-file-organizer profile load work
+file-organizer profile activate work
 ```
 
 > **Note:** The `profile` command requires the intelligence/learning optional dependencies (`pip install -e ".[all]"`). It degrades gracefully if not installed.

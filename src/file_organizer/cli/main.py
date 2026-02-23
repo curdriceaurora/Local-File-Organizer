@@ -291,7 +291,7 @@ def search(
             })
         typer.echo(json_mod.dumps(records, indent=2))
     else:
-        console.print(f"[bold]Found {len(matches)} file(s):[/bold]")
+        typer.echo(f"Found {len(matches)} file(s):")
         for p in matches:
             stat = p.stat()
             size = stat.st_size
@@ -303,10 +303,7 @@ def search(
                 size_str = f"{size / (1024 * 1024):.1f} MB"
 
             mtime = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)  # noqa: UP017
-            console.print(
-                f"  [cyan]{p}[/cyan]  [green]{size_str}[/green]  "
-                f"[yellow]{mtime.strftime('%Y-%m-%d %H:%M')}[/yellow]"
-            )
+            typer.echo(f"  {p}  {size_str}  {mtime.strftime('%Y-%m-%d %H:%M')}")
 
 
 @app.command()

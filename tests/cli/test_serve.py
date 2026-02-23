@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
@@ -10,14 +11,22 @@ from file_organizer.cli.main import app
 
 runner = CliRunner()
 
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from *text* for portable string assertions."""
+    return _ANSI_RE.sub("", text)
+
 
 def test_serve_help():
     """``serve --help`` exits 0 and documents host/port/reload options."""
     result = runner.invoke(app, ["serve", "--help"])
     assert result.exit_code == 0
-    assert "--host" in result.stdout
-    assert "--port" in result.stdout
-    assert "--reload" in result.stdout
+    plain = _strip_ansi(result.output)
+    assert "--host" in plain
+    assert "--port" in plain
+    assert "--reload" in plain
 
 
 def test_serve_registers_in_app():

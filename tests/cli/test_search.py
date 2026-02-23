@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -11,14 +12,22 @@ from file_organizer.cli.main import app
 
 runner = CliRunner()
 
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from *text* for portable string assertions."""
+    return _ANSI_RE.sub("", text)
+
 
 def test_search_help():
     """``search --help`` exits 0 and documents query, directory, --type options."""
     result = runner.invoke(app, ["search", "--help"])
     assert result.exit_code == 0
-    assert "query" in result.stdout.lower()
-    assert "directory" in result.stdout.lower()
-    assert "--type" in result.stdout
+    plain = _strip_ansi(result.output)
+    assert "query" in plain.lower()
+    assert "directory" in plain.lower()
+    assert "--type" in plain
 
 
 def test_search_finds_files_by_name(tmp_path: Path):
