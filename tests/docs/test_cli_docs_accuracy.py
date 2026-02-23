@@ -42,6 +42,7 @@ class _Param(NamedTuple):
 
     name: str
     kind: str  # "argument" or "option"
+    metavar: str | None = None  # Click's rendered metavar (e.g., PROFILE_NAME)
 
 
 class _Command(NamedTuple):
@@ -88,7 +89,9 @@ def _collect_commands(
                 if p.name == "help":
                     continue
                 kind = "argument" if isinstance(p, click.Argument) else "option"
-                params.append(_Param(name=p.name, kind=kind))
+                # Get Click's rendered metavar (e.g., PROFILE_NAME vs NAME)
+                metavar = p.metavar if hasattr(p, "metavar") else None
+                params.append(_Param(name=p.name, kind=kind, metavar=metavar))
             results.append(_Command(path=full, required_params=params))
 
     return results
@@ -216,9 +219,16 @@ def _param_name_variants(param: _Param) -> list[str]:
       --refresh-token, --refresh_token, REFRESH_TOKEN
     For an argument named ``input_dir``, we check:
       INPUT_DIR, input_dir, input-dir
+
+    Also includes Click's explicit metavar if set (e.g., PROFILE_NAME vs NAME).
     """
     base = param.name
     variants = [base, base.replace("_", "-"), base.upper(), base.replace("_", "-").upper()]
+
+    # Add Click's explicit metavar if set (takes precedence in docs)
+    if param.metavar:
+        variants.insert(0, param.metavar)
+
     if param.kind == "option":
         variants.extend([f"--{base}", f"--{base.replace('_', '-')}"])
     return list(dict.fromkeys(variants))  # dedupe, preserve order
@@ -229,22 +239,30 @@ def _param_is_documented(section: str, param: _Param) -> bool:
 
     Prefers backticked tokens (e.g., `--option`, `ARGUMENT`) over plain text
     to avoid false positives from prose containing parameter names.
+
+    For backticked matches, allows trailing type info (e.g., `--option TEXT`,
+    `FILE_PATH`) since docs often document options with their expected type.
     """
     variants = _param_name_variants(param)
 
     # First pass: look for backticked variants (higher confidence)
+    # Allow trailing type info like `--user TEXT` or `FILE_PATH`
     for variant in variants:
         escaped = re.escape(variant)
-        # Match backticked token (e.g., `--user`, `FILE_PATH`)
-        if re.search(rf"`{escaped}`", section):
+        # Match backticked token with optional trailing content (e.g., `--user TEXT`)
+        # Stop at space or backtick to avoid matching unrelated content
+        if re.search(rf"`{escaped}(?:\s+[A-Z_]+)?`", section):
             return True
 
     # Second pass: look for word-boundary matches (lower confidence, but still valid)
+    # Only use for non-generic terms to avoid matching English words (e.g., "name" in prose)
     for variant in variants:
         escaped = re.escape(variant)
-        # Match with word boundaries to avoid false positives
-        if re.search(rf"\b{escaped}\b", section):
-            return True
+        # Prefer multi-word or option-format variants (PROFILE_NAME, --option)
+        # to avoid matching generic single-word names (NAME, FILE) in prose
+        if len(variant) > 4 or variant.startswith("--") or "_" in variant:
+            if re.search(rf"\b{escaped}\b", section):
+                return True
 
     return False
 

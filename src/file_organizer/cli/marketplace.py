@@ -194,7 +194,7 @@ def available_updates() -> None:
 
 @marketplace_app.command("review")
 def add_review(
-    name: str = typer.Argument(..., help="Plugin name."),
+    name: str = typer.Argument(..., help="Plugin name.", metavar="PLUGIN_NAME"),
     user: str = typer.Option(..., "--user", help="Reviewer ID."),
     rating: int = typer.Option(..., "--rating", min=1, max=5, help="Rating from 1 to 5."),
     title: str = typer.Option(..., "--title", help="Review title."),

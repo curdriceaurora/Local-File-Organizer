@@ -383,7 +383,7 @@ def list_templates():
 
 
 @template_commands.command(name="preview")
-@click.argument("name")
+@click.argument("name", metavar="TEMPLATE_NAME")
 def preview_template(name: str):
     """Preview a template."""
     try:
@@ -454,7 +454,7 @@ def apply_template(template_name: str, profile_name: str, activate: bool):
 
 
 @profile_command.command(name="migrate")
-@click.argument("name")
+@click.argument("name", metavar="PROFILE_NAME")
 @click.option("--to-version", required=True, help="Target version")
 @click.option("--no-backup", is_flag=True, help="Skip backup before migration")
 def migrate_profile(name: str, to_version: str, no_backup: bool):
@@ -479,7 +479,7 @@ def migrate_profile(name: str, to_version: str, no_backup: bool):
 
 
 @profile_command.command(name="validate")
-@click.argument("name")
+@click.argument("name", metavar="PROFILE_NAME")
 def validate_profile(name: str):
     """Validate a profile."""
     try:
