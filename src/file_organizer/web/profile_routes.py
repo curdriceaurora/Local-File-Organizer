@@ -231,6 +231,7 @@ def _make_profile_context(
 
 @profile_router.get("/profile", response_class=HTMLResponse)
 def profile_page(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+    """Render the user profile page."""
     user = get_current_web_user(request, settings)
     if user is None:
         context = _make_profile_context(request, settings, None)
@@ -256,6 +257,7 @@ def profile_page(request: Request, settings: ApiSettings = Depends(get_settings)
 
 @profile_router.get("/profile/login", response_class=HTMLResponse)
 def login_form(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+    """Render the login form."""
     context = _make_profile_context(request, settings, None, extras={"error": None})
     return templates.TemplateResponse("profile/login.html", context)
 
@@ -267,6 +269,7 @@ def login_submit(
     password: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse | RedirectResponse:
+    """Handle login form submission."""
     db = _get_db(settings)
     try:
         user = db.query(User).filter(or_(User.username == username, User.email == username)).first()
@@ -308,6 +311,7 @@ def login_submit(
 
 @profile_router.get("/profile/register", response_class=HTMLResponse)
 def register_form(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+    """Render the registration form."""
     context = _make_profile_context(request, settings, None, extras={"error": None})
     return templates.TemplateResponse("profile/register.html", context)
 
@@ -321,6 +325,7 @@ def register_submit(
     full_name: str = Form(""),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse | RedirectResponse:
+    """Handle registration form submission."""
     db = _get_db(settings)
     try:
         valid, reason = validate_password(password, settings)
@@ -363,6 +368,7 @@ def register_submit(
 def forgot_password_form(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
+    """Render the forgot-password form."""
     context = _make_profile_context(
         request,
         settings,
@@ -378,6 +384,7 @@ def forgot_password_submit(
     email: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Handle forgot-password form submission."""
     db = _get_db(settings)
     try:
         user = db.query(User).filter(User.email == email).first()
@@ -406,6 +413,7 @@ def reset_password_form(
     token: str = Query(""),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Render the reset-password form."""
     _cleanup_expired_reset_tokens()
     valid = token in _PASSWORD_RESET_TOKENS
     context = _make_profile_context(
@@ -425,6 +433,7 @@ def reset_password_submit(
     confirm_password: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Handle reset-password form submission."""
     _cleanup_expired_reset_tokens()
     reset_info = _PASSWORD_RESET_TOKENS.get(token)
     if reset_info is None:
@@ -504,6 +513,7 @@ def reset_password_submit(
 
 @profile_router.get("/profile/avatar/{user_id}")
 def profile_avatar(user_id: str) -> Response:
+    """Return the avatar image for a user."""
     path = _avatar_path(user_id)
     if not path.exists():
         return HTMLResponse(status_code=404, content="Avatar not found")
@@ -516,6 +526,7 @@ async def profile_avatar_upload(
     avatar: UploadFile = File(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Handle avatar image upload."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -533,6 +544,7 @@ async def profile_avatar_upload(
 def profile_edit_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
+    """Render the profile edit partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -553,6 +565,7 @@ def profile_edit_submit(
     email: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Handle profile edit form submission."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -598,6 +611,7 @@ def profile_edit_submit(
 def workspaces_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
+    """Render the workspaces partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -624,6 +638,7 @@ def workspace_create(
     description: str = Form(""),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Handle workspace creation."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -653,6 +668,7 @@ def workspace_switch(
     workspace_id: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Handle workspace switch."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -673,6 +689,7 @@ def workspace_switch(
 
 @profile_router.get("/profile/team", response_class=HTMLResponse)
 def team_partial(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+    """Render the team management partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -698,6 +715,7 @@ def team_invite(
     role: str = Form("viewer"),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Send a team invitation."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -734,6 +752,7 @@ def team_update_role(
     role: str = Form("viewer"),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Update a team member's role."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -762,6 +781,7 @@ def team_update_role(
 
 @profile_router.get("/profile/shared", response_class=HTMLResponse)
 def shared_partial(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+    """Render the shared folders partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -787,6 +807,7 @@ def shared_add(
     permission: str = Form("view"),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Add a shared folder."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -822,6 +843,7 @@ def shared_remove(
     folder_id: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Remove a shared folder."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -848,6 +870,7 @@ def shared_remove(
 def activity_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
+    """Render the activity log partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -870,6 +893,7 @@ def activity_partial(
 def notifications_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
+    """Render the notifications partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -894,6 +918,7 @@ def notification_mark_read(
     notification_id: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Mark a notification as read."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -918,6 +943,7 @@ def notification_mark_read(
 def account_settings_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
+    """Render the account settings partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -948,6 +974,7 @@ def account_settings_change_password(
     confirm_password: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Handle change-password form submission."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1018,6 +1045,7 @@ def account_settings_toggle_2fa(
     enabled: Optional[str] = Form(None),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Toggle two-factor authentication."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1051,6 +1079,7 @@ def account_settings_toggle_2fa(
 def api_keys_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
+    """Render the API keys partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1080,6 +1109,7 @@ def api_key_generate(
     label: str = Form("default"),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Generate a new API key."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1131,6 +1161,7 @@ def api_key_revoke(
     key_id: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
+    """Revoke an API key."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1173,6 +1204,7 @@ def api_key_revoke(
 
 @profile_router.post("/profile/logout")
 def logout(request: Request, settings: ApiSettings = Depends(get_settings)) -> RedirectResponse:
+    """Log the current user out and redirect."""
     _ = (request, settings)
     response = RedirectResponse(url="/ui/profile", status_code=303)
     response.delete_cookie(key=_SESSION_COOKIE, path="/")

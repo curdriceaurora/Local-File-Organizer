@@ -90,6 +90,7 @@ def marketplace_home(
     page: int = Query(1, ge=1),
     per_page: int = Query(24, ge=1, le=100),
 ) -> HTMLResponse:
+    """Render the plugin marketplace home page."""
     return _render_marketplace_page(
         request,
         settings,
@@ -110,6 +111,7 @@ def install_plugin(
     category: str = Form(""),
     tag_csv: str = Form(""),
 ) -> HTMLResponse:
+    """Install a plugin by name."""
     tags = _normalize_tags([tag_csv])
     try:
         installed = _service().install(name)
@@ -138,6 +140,7 @@ def uninstall_plugin(
     category: str = Form(""),
     tag_csv: str = Form(""),
 ) -> HTMLResponse:
+    """Uninstall a plugin by name."""
     tags = _normalize_tags([tag_csv])
     try:
         _service().uninstall(name)
@@ -166,6 +169,7 @@ def update_plugin(
     category: str = Form(""),
     tag_csv: str = Form(""),
 ) -> HTMLResponse:
+    """Update a plugin to the latest version."""
     tags = _normalize_tags([tag_csv])
     try:
         updated = _service().update(name)

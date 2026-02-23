@@ -314,6 +314,7 @@ def files_browser(
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     limit: int = Query(PAGE_SIZE, ge=1, le=500),
 ) -> HTMLResponse:
+    """Render the files browser page."""
     from file_organizer.web._helpers import base_context
 
     context = base_context(request, settings, active="files", title="Files")
@@ -346,6 +347,7 @@ def files_list(
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     limit: int = Query(PAGE_SIZE, ge=1, le=500),
 ) -> HTMLResponse:
+    """Return paginated file listing as HTML fragment."""
     context = _build_file_results_context(
         request,
         settings,
@@ -368,6 +370,7 @@ def files_tree(
     depth: int = Query(0, ge=0, le=MAX_NAV_DEPTH),
     active: Optional[str] = Query(None),
 ) -> HTMLResponse:
+    """Return directory tree as JSON."""
     roots = allowed_roots(settings)
     active_path = unquote(active) if active else ""
     active_path_param = quote(active_path) if active_path else ""
@@ -426,6 +429,7 @@ def files_thumbnail(
     path: str = Query(...),
     kind: str = Query("file"),
 ) -> Response:
+    """Return thumbnail image for a file."""
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists() or not target.is_file():
         raise ApiError(status_code=404, error="not_found", message="File not found")
@@ -459,6 +463,7 @@ def files_raw(
     path: str = Query(...),
     download: bool = Query(False),
 ) -> FileResponse:
+    """Return raw file content."""
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists() or not target.is_file():
         raise ApiError(status_code=404, error="not_found", message="File not found")
@@ -474,6 +479,7 @@ def files_preview(
     settings: ApiSettings = Depends(get_settings),
     path: str = Query(...),
 ) -> HTMLResponse:
+    """Render file preview partial."""
     error_message: Optional[str] = None
     preview_kind = "file"
     preview_text: Optional[str] = None
@@ -534,6 +540,7 @@ def files_upload(
     limit: int = Form(PAGE_SIZE),
     files: list[UploadFile] = File(default=[]),
 ) -> HTMLResponse:
+    """Handle file upload."""
     info_message: Optional[str] = None
     error_message: Optional[str] = None
     errors: list[str] = []
