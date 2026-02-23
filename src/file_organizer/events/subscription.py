@@ -82,6 +82,7 @@ class Subscription:
             return False
 
     def __repr__(self) -> str:
+        """Return a string representation of this subscription."""
         filtered = "filtered" if self.filter_fn is not None else "unfiltered"
         status = "active" if self.active else "inactive"
         return f"Subscription(topic={self.topic!r}, {filtered}, {status})"
@@ -95,6 +96,7 @@ class SubscriptionRegistry:
     """
 
     def __init__(self) -> None:
+        """Initialize the subscription registry."""
         self._subscriptions: list[Subscription] = []
 
     # ------------------------------------------------------------------
@@ -235,9 +237,11 @@ class SubscriptionRegistry:
         return sum(1 for sub in self._subscriptions if sub.active)
 
     def __len__(self) -> int:
+        """Return the number of subscriptions."""
         return len(self._subscriptions)
 
     def __repr__(self) -> str:
+        """Return a string representation of this registry."""
         return f"SubscriptionRegistry(total={self.count}, active={self.active_count})"
 
 

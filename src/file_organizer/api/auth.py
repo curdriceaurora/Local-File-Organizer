@@ -24,6 +24,7 @@ class TokenError(Exception):
 
 @dataclass(frozen=True)
 class TokenBundle:
+    """Bundle of access and refresh tokens."""
     access_token: str
     refresh_token: str
     access_jti: str
@@ -33,10 +34,12 @@ class TokenBundle:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Return True if plain_password matches hashed_password."""
     return _PWD_CONTEXT.verify(plain_password, hashed_password)
 
 
 def hash_password(password: str) -> str:
+    """Return the bcrypt hash of password."""
     return _PWD_CONTEXT.hash(password)
 
 
@@ -97,6 +100,7 @@ def _build_token(
 
 
 def create_token_bundle(user_id: str, username: str, settings: ApiSettings) -> TokenBundle:
+    """Create a new access and refresh token bundle for a user."""
     payload = {"sub": username, "user_id": user_id}
     access_token, access_jti, access_exp = _build_token(
         payload,
@@ -121,6 +125,7 @@ def create_token_bundle(user_id: str, username: str, settings: ApiSettings) -> T
 
 
 def decode_token(token: str, settings: ApiSettings) -> dict[str, Any]:
+    """Decode and return the JWT payload, raising TokenError if invalid."""
     try:
         return jwt.decode(token, settings.auth_jwt_secret.get_secret_value(), algorithms=[settings.auth_jwt_algorithm])
     except JWTError as exc:
@@ -128,8 +133,10 @@ def decode_token(token: str, settings: ApiSettings) -> dict[str, Any]:
 
 
 def is_access_token(payload: dict[str, Any]) -> bool:
+    """Return True if payload represents an access token."""
     return payload.get("type") == _ACCESS_TOKEN_TYPE
 
 
 def is_refresh_token(payload: dict[str, Any]) -> bool:
+    """Return True if payload represents a refresh token."""
     return payload.get("type") == _REFRESH_TOKEN_TYPE

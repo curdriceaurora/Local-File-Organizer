@@ -27,4 +27,5 @@ class User(Base):
     last_login = Column(DateTime(timezone=True), nullable=True)
 
     def __repr__(self) -> str:
+        """Return string representation of User."""
         return f"<User {self.username}>"

@@ -66,6 +66,7 @@ class PubSubManager:
         stream_manager: RedisStreamManager | None = None,
         pipeline: MiddlewarePipeline | None = None,
     ) -> None:
+        """Initialize the PubSubManager with optional config and backends."""
         self._config = config or EventConfig()
         self._manager = stream_manager or RedisStreamManager(self._config)
         self._registry = SubscriptionRegistry()
@@ -256,6 +257,7 @@ class PubSubManager:
         return self._registry.get_for_topic(topic)
 
     def __enter__(self) -> PubSubManager:
+        """Connect and return self for use as a context manager."""
         self.connect()
         return self
 
@@ -265,9 +267,11 @@ class PubSubManager:
         exc_val: BaseException | None,
         exc_tb: Any,
     ) -> None:
+        """Disconnect when exiting the context manager."""
         self.disconnect()
 
     def __repr__(self) -> str:
+        """Return a string representation of this manager."""
         return (
             f"PubSubManager(connected={self.is_connected}, "
             f"subscriptions={self._registry.count}, "

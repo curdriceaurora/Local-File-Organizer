@@ -22,6 +22,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """Apply rate limiting based on endpoint and client identity."""
 
     def __init__(self, app: FastAPI, settings: ApiSettings, limiter: RateLimiter) -> None:
+        """Initialize RateLimitMiddleware with app, settings, and limiter."""
         super().__init__(app)
         self._settings = settings
         self._limiter = limiter
@@ -80,6 +81,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
+        """Process an HTTP request through the rate limiter."""
         if not self._settings.rate_limit_enabled or request.scope.get("type") != "http":
             return await call_next(request)
 
@@ -115,6 +117,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Attach security headers to API responses."""
 
     def __init__(self, app: FastAPI, settings: ApiSettings) -> None:
+        """Initialize SecurityHeadersMiddleware with app and settings."""
         super().__init__(app)
         self._settings = settings
 
@@ -123,6 +126,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
+        """Process an HTTP request and attach security headers to the response."""
         response = await call_next(request)
         if not self._settings.security_headers_enabled:
             return response

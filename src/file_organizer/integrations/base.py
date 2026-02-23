@@ -48,6 +48,7 @@ class Integration(ABC):
     """Base contract all integrations must satisfy."""
 
     def __init__(self, config: IntegrationConfig) -> None:
+        """Initialize the integration with the given config."""
         self.config = config
         self.connected = False
 

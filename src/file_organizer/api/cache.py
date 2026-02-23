@@ -53,9 +53,11 @@ class InMemoryCache:
     """In-process TTL cache implementation."""
 
     def __init__(self) -> None:
+        """Initialize InMemoryCache with empty entries dict."""
         self._entries: dict[str, _MemoryEntry] = {}
 
     def get(self, key: str) -> Optional[str]:
+        """Return the cached value for key, or None if absent or expired."""
         entry = self._entries.get(key)
         if entry is None:
             return None
@@ -65,13 +67,16 @@ class InMemoryCache:
         return entry.value
 
     def set(self, key: str, value: str, *, ttl_seconds: int) -> None:
+        """Store value for key with the given TTL."""
         expires_at = time.time() + max(1, ttl_seconds)
         self._entries[key] = _MemoryEntry(value=value, expires_at=expires_at)
 
     def delete(self, key: str) -> None:
+        """Delete key from the cache if present."""
         self._entries.pop(key, None)
 
     def close(self) -> None:
+        """Clear all cache entries."""
         self._entries.clear()
 
 
@@ -79,11 +84,13 @@ class RedisCache:
     """Redis-backed cache implementation."""
 
     def __init__(self, redis_url: str) -> None:
+        """Initialize RedisCache with a connection to redis_url."""
         if Redis is None:
             raise RuntimeError("redis package not installed")
         self._redis = Redis.from_url(redis_url, decode_responses=True)
 
     def get(self, key: str) -> Optional[str]:
+        """Return the cached value for key, or None on miss or error."""
         try:
             value = self._redis.get(key)
         except RedisError as exc:
@@ -92,18 +99,21 @@ class RedisCache:
         return value if isinstance(value, str) else None
 
     def set(self, key: str, value: str, *, ttl_seconds: int) -> None:
+        """Store value for key with the given TTL in Redis."""
         try:
             self._redis.setex(key, max(1, ttl_seconds), value)
         except RedisError as exc:
             logger.warning("Redis cache set failed for {}: {}", key, exc)
 
     def delete(self, key: str) -> None:
+        """Delete key from Redis if present."""
         try:
             self._redis.delete(key)
         except RedisError as exc:
             logger.warning("Redis cache delete failed for {}: {}", key, exc)
 
     def close(self) -> None:
+        """Close the Redis connection."""
         try:
             self._redis.close()
         except RedisError:

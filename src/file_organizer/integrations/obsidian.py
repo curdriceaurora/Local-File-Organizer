@@ -21,6 +21,7 @@ class ObsidianIntegration(Integration):
     """Export files and metadata into an Obsidian vault layout."""
 
     def __init__(self, config: IntegrationConfig) -> None:
+        """Initialize the Obsidian integration with the given config."""
         if config.integration_type is not IntegrationType.DESKTOP_APP:
             config.integration_type = IntegrationType.DESKTOP_APP
         super().__init__(config)
@@ -30,14 +31,17 @@ class ObsidianIntegration(Integration):
         return Path(raw).expanduser()
 
     async def connect(self) -> bool:
+        """Connect to the Obsidian vault and verify it exists."""
         vault = self._vault_path()
         self.connected = bool(vault.exists() and vault.is_dir())
         return self.connected
 
     async def disconnect(self) -> None:
+        """Disconnect from the Obsidian vault."""
         self.connected = False
 
     async def validate_auth(self) -> bool:
+        """Validate the configured authentication method."""
         if self.config.auth_method == "none":
             return True
         if self.config.auth_method == "api_key":
@@ -45,6 +49,7 @@ class ObsidianIntegration(Integration):
         return False
 
     async def send_file(self, file_path: str, metadata: dict[str, Any] | None = None) -> bool:
+        """Copy a file and create a linked note in the Obsidian vault."""
         if not self.connected and not await self.connect():
             return False
         if not await self.validate_auth():
@@ -75,6 +80,7 @@ class ObsidianIntegration(Integration):
         return True
 
     async def get_status(self) -> IntegrationStatus:
+        """Return the current connection status for this integration."""
         vault = self._vault_path()
         return IntegrationStatus(
             name=self.config.name,

@@ -41,6 +41,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=F
 
 @dataclass(frozen=True)
 class AnonymousUser:
+    """Anonymous user identity used when auth is disabled."""
     id: str = "anonymous"
     username: str = "anonymous"
     email: str = "anonymous@example.com"
@@ -53,6 +54,7 @@ class AnonymousUser:
 
 @dataclass(frozen=True)
 class ApiKeyIdentity:
+    """API key-based user identity."""
     id: str
     username: str
     email: str = "api-key@example.com"
@@ -82,6 +84,7 @@ def _token_store_cached(redis_url: Optional[str]) -> TokenStore:
 
 
 def get_token_store(settings: ApiSettings = Depends(get_settings)) -> TokenStore:
+    """Return the token store for the current settings."""
     return _token_store_cached(settings.auth_redis_url)
 
 
@@ -95,6 +98,7 @@ def _login_rate_limiter_cached(
 
 
 def get_login_rate_limiter(settings: ApiSettings = Depends(get_settings)) -> LoginRateLimiter:
+    """Return the login rate limiter for the current settings."""
     return _login_rate_limiter_cached(
         settings.auth_redis_url,
         settings.auth_login_max_attempts,
@@ -109,6 +113,7 @@ def get_current_user(
     db: Session = Depends(get_db),
     token_store: TokenStore = Depends(get_token_store),
 ) -> UserLike:
+    """Resolve and return the current authenticated user."""
     if not settings.auth_enabled:
         return AnonymousUser()
     if not token:
@@ -174,6 +179,7 @@ def get_current_active_user(
     user: UserLike = Depends(get_current_user),
     settings: ApiSettings = Depends(get_settings),
 ) -> UserLike:
+    """Return the current user, raising 400 if inactive."""
     if not settings.auth_enabled:
         return user
     if not user.is_active:
@@ -185,6 +191,7 @@ def require_admin_user(
     user: UserLike = Depends(get_current_active_user),
     settings: ApiSettings = Depends(get_settings),
 ) -> UserLike:
+    """Return the current user, raising 403 if not an admin."""
     if not settings.auth_enabled:
         return user
     if not user.is_admin:

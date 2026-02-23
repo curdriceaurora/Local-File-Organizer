@@ -263,6 +263,7 @@ class HealthChecker:
             entries.pop(0)
 
     def __repr__(self) -> str:
+        """Return a string representation of this health checker."""
         checked = len(self._history)
         return (
             f"HealthChecker(checked_services={checked}, "

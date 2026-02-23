@@ -19,6 +19,7 @@ class VSCodeIntegration(Integration):
     """Generate VS Code open-file commands for companion tooling."""
 
     def __init__(self, config: IntegrationConfig) -> None:
+        """Initialize the VS Code integration with the given config."""
         if config.integration_type is not IntegrationType.EDITOR:
             config.integration_type = IntegrationType.EDITOR
         super().__init__(config)
@@ -36,18 +37,22 @@ class VSCodeIntegration(Integration):
         return Path.home() / ".config" / "file-organizer" / "integrations" / "vscode-commands.jsonl"
 
     async def connect(self) -> bool:
+        """Connect to VS Code by verifying the workspace path."""
         workspace = self._workspace_path()
         self.connected = workspace is None or (workspace.exists() and workspace.is_dir())
         return self.connected
 
     async def disconnect(self) -> None:
+        """Disconnect from the VS Code integration."""
         self.connected = False
 
     async def validate_auth(self) -> bool:
+        """Validate auth; VS Code uses local relay and requires no credentials."""
         # VS Code integration uses local command relay and does not require auth.
         return True
 
     async def send_file(self, file_path: str, metadata: dict[str, Any] | None = None) -> bool:
+        """Append a VS Code open-file command to the command output file."""
         if not self.connected and not await self.connect():
             return False
 
@@ -71,6 +76,7 @@ class VSCodeIntegration(Integration):
         return True
 
     async def get_status(self) -> IntegrationStatus:
+        """Return the current connection status for this integration."""
         workspace = self._workspace_path()
         command_output = self._command_output_path()
         return IntegrationStatus(
