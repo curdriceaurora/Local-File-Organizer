@@ -45,7 +45,7 @@ See [Deployment Guide](admin/deployment.md) for detailed Docker setup.
 pip install file-organizer
 
 # Start the API server
-uvicorn file_organizer.api.main:app --host 0.0.0.0 --port 8000
+uvicorn file_organizer.api.main:app --host 127.0.0.1 --port 8000
 ```
 
 **Access**: Open browser to `http://localhost:8000/ui/`
@@ -76,7 +76,7 @@ ollama pull qwen2.5:3b-instruct-q4_K_M      # Text model
 ollama pull qwen2.5vl:7b-q4_K_M             # Vision model
 
 # Start the API server
-uvicorn file_organizer.api.main:app --host 0.0.0.0 --port 8000
+uvicorn file_organizer.api.main:app --host 127.0.0.1 --port 8000
 ```
 
 **Access**: Open browser to `http://localhost:8000/ui/`
@@ -204,7 +204,7 @@ file-organizer organize ./Downloads ./Organized
 # Preview without moving (dry run)
 file-organizer organize ./Downloads ./Organized --dry-run
 
-# Preview organisation plan
+# Preview organization plan
 file-organizer preview ./Downloads
 
 # Detect duplicates

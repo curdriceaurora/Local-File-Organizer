@@ -4,16 +4,18 @@ All commands are available via `file-organizer` or the short alias `fo`.
 
 ## Global Options
 
-These options apply to every command and may be passed before or after the command name:
+These options are accepted by every command and must be passed **before** the command name (e.g., `file-organizer --verbose organize ...`):
 
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--verbose` | `-v` | Enable verbose output |
-| `--dry-run` | | Preview changes without executing |
-| `--json` | | Output results as JSON |
+| `--dry-run` | | Preview changes without executing (where supported) |
+| `--json` | | Output results as JSON (for commands that support it) |
 | `--yes` | `-y` | Auto-confirm all prompts |
 | `--no-interactive` | | Disable interactive prompts |
 | `--help` | | Show help and exit |
+
+> **Note:** Not all commands honor `--dry-run` and `--json` at the global level. Many commands provide their own `--dry-run` or `--json` flags. When in doubt, pass the flag after the command name.
 
 ---
 
@@ -165,18 +167,17 @@ Display storage analytics dashboard.
 
 **Usage:**
 ```bash
-file-organizer analytics [DIRECTORY] [OPTIONS]
+file-organizer analytics DIRECTORY [OPTIONS]
 ```
 
 **Arguments:**
-- `DIRECTORY` — Directory to analyze (optional; defaults to configured workspace)
+- `DIRECTORY` — Directory to analyze (required)
 
 **Options:**
 - `--verbose, -v` — Verbose output
 
 **Examples:**
 ```bash
-file-organizer analytics
 file-organizer analytics ~/Documents
 ```
 
@@ -341,10 +342,10 @@ file-organizer daemon status
 
 #### `daemon watch`
 
-Run in foreground mode (useful for debugging).
+Run in foreground mode (useful for debugging). Requires a directory to watch.
 
 ```bash
-file-organizer daemon watch
+file-organizer daemon watch WATCH_DIR [--poll-interval SECONDS]
 ```
 
 #### `daemon process`
@@ -381,7 +382,7 @@ file-organizer dedupe scan DIRECTORY [OPTIONS]
 Generate a duplication report.
 
 ```bash
-file-organizer dedupe report [OPTIONS]
+file-organizer dedupe report DIRECTORY [OPTIONS]
 ```
 
 #### `dedupe resolve`
@@ -389,14 +390,14 @@ file-organizer dedupe report [OPTIONS]
 Interactively or automatically resolve duplicates.
 
 ```bash
-file-organizer dedupe resolve [OPTIONS]
+file-organizer dedupe resolve DIRECTORY [OPTIONS]
 ```
 
 **Examples:**
 ```bash
 file-organizer dedupe scan ~/Images
-file-organizer dedupe report
-file-organizer dedupe resolve
+file-organizer dedupe report ~/Images
+file-organizer dedupe resolve ~/Images
 ```
 
 ---
@@ -661,7 +662,7 @@ file-organizer api login [--base-url URL] [--save-token PATH]
 Show current authenticated user.
 
 ```bash
-file-organizer api me [--base-url URL] [--token TOKEN]
+file-organizer api me --token TOKEN [--base-url URL]
 ```
 
 #### `api logout`
@@ -677,18 +678,21 @@ file-organizer api logout --token TOKEN --refresh-token TOKEN [--base-url URL]
 List files via the API.
 
 ```bash
-file-organizer api files PATH [OPTIONS]
+file-organizer api files PATH --token TOKEN [--base-url URL]
 ```
 
 Arguments:
 - `PATH` — Directory to list (required)
+
+Options:
+- `--token TOKEN` — Bearer token (required)
 
 #### `api system-status`
 
 Show system status from the API server.
 
 ```bash
-file-organizer api system-status [--base-url URL]
+file-organizer api system-status --token TOKEN [--base-url URL]
 ```
 
 #### `api system-stats`
@@ -696,7 +700,7 @@ file-organizer api system-status [--base-url URL]
 Show system statistics from the API server.
 
 ```bash
-file-organizer api system-stats [--base-url URL]
+file-organizer api system-stats --token TOKEN [--base-url URL]
 ```
 
 **Default base URL:** `http://localhost:8000`
@@ -706,7 +710,8 @@ file-organizer api system-stats [--base-url URL]
 file-organizer api health
 file-organizer api health --base-url http://myserver:8000
 file-organizer api login
-file-organizer api system-status
+file-organizer api me --token YOUR_TOKEN
+file-organizer api system-status --token YOUR_TOKEN
 ```
 
 ---
@@ -782,12 +787,12 @@ file-organizer profile delete PROFILE_NAME
 Export a profile to a file.
 
 ```bash
-file-organizer profile export PROFILE_NAME --output FILE [--selective]
+file-organizer profile export PROFILE_NAME --output FILE [--selective KEY ...]
 ```
 
 Options:
 - `--output, -o FILE` — Output file path (required)
-- `--selective` — Select specific settings to export
+- `--selective, -s KEY` — Select specific preferences to export (repeatable, e.g. `--selective naming --selective folders`)
 
 #### `profile import`
 
@@ -818,11 +823,11 @@ file-organizer profile validate PROFILE_NAME
 Merge multiple profiles into one.
 
 ```bash
-file-organizer profile merge PROFILES... --output FILE [OPTIONS]
+file-organizer profile merge PROFILES... --output NAME [OPTIONS]
 ```
 
 Options:
-- `--output FILE` — Output file for merged profile (required)
+- `--output, -o NAME` — Name for the merged profile (required)
 - `--strategy TEXT` — Merge strategy
 - `--show-conflicts` — Display merge conflicts
 
@@ -869,7 +874,7 @@ file-organizer profile create work --description "Work files config"
 file-organizer profile activate work
 file-organizer profile current
 file-organizer profile validate work
-file-organizer profile merge work personal --output combined.json
+file-organizer profile merge work personal --output combined
 file-organizer profile template list
 file-organizer profile template apply minimal my-profile --activate
 ```
@@ -878,9 +883,9 @@ file-organizer profile template apply minimal my-profile --activate
 
 ---
 
-## Auto-Tagging (Legacy Interface)
+## Auto-Tagging (Internal / Not Yet Exposed)
 
-The auto-tagging system uses a separate legacy argument parser. Its commands are accessible via the `autotag` subparser in the underlying Python interface:
+The auto-tagging system has an internal argparse-based interface that is **not currently registered** in the `file-organizer` CLI. The following commands are defined in the source but cannot be invoked via `file-organizer autotag ...`:
 
 | Subcommand | Description |
 |------------|-------------|
@@ -891,7 +896,7 @@ The auto-tagging system uses a separate legacy argument parser. Its commands are
 | `autotag analyze FILE` | Analyze file content for tag candidates |
 | `autotag batch DIRECTORY` | Batch tag suggestion for a directory |
 
-> The auto-tagging interface will be migrated to a Typer sub-app in a future release.
+> These commands will be migrated to a Typer sub-app and exposed via the CLI in a future release.
 
 ---
 
