@@ -78,7 +78,7 @@ def list_profiles():
 
 
 @profile_command.command(name="create")
-@click.argument("name")
+@click.argument("name", metavar="PROFILE_NAME")
 @click.option("--description", "-d", default="", help="Profile description")
 @click.option("--activate", "-a", is_flag=True, help="Activate profile after creation")
 def create_profile(name: str, description: str, activate: bool):
@@ -108,7 +108,7 @@ def create_profile(name: str, description: str, activate: bool):
 
 
 @profile_command.command(name="activate")
-@click.argument("name")
+@click.argument("name", metavar="PROFILE_NAME")
 def activate_profile(name: str):
     """Activate a profile (make it the current active profile)."""
     try:
@@ -126,7 +126,7 @@ def activate_profile(name: str):
 
 
 @profile_command.command(name="delete")
-@click.argument("name")
+@click.argument("name", metavar="PROFILE_NAME")
 @click.option("--force", "-", is_flag=True, help="Force delete even if active")
 def delete_profile(name: str, force: bool):
     """Delete a profile."""
@@ -192,7 +192,7 @@ def show_current():
 
 
 @profile_command.command(name="export")
-@click.argument("name")
+@click.argument("name", metavar="PROFILE_NAME")
 @click.option("--output", "-o", type=click.Path(), required=True, help="Output file path")
 @click.option("--selective", "-s", multiple=True, help="Select specific preferences to export")
 def export_profile(name: str, output: str, selective: tuple):
