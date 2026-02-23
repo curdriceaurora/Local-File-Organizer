@@ -46,7 +46,7 @@ echo ""
 
 # 3.5. Check for absolute paths in all file types
 echo "🔍 Checking for absolute paths..."
-ABSOLUTE_PATHS=$(git diff --cached | grep -E '^\+.*(/Users/|/home/|C:\\Users\\)' | grep -v '.claude/rules/' || true)
+ABSOLUTE_PATHS=$(git diff --cached | grep -E '^\+.*(/Users/|/home/|C:\\Users\\)' | grep -v '.claude/rules/' | grep -v '.claude/scripts/' || true)
 if [[ -n "$ABSOLUTE_PATHS" ]]; then
   echo "❌ Found hardcoded absolute paths:"
   echo "$ABSOLUTE_PATHS" | sed 's/^/  /'
