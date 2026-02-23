@@ -166,16 +166,10 @@ def _command_is_documented(doc_content: str, command_path: str) -> bool:
     # Pattern 2: command in a markdown table row (for legacy sections only)
     # Only accept if in an explicitly legacy/reference table context
     # e.g. | `autotag suggest FILE...` |
-    table_pattern = rf"\|\s*`{escaped}\b"
+    # Use multiline mode to check if the line starts with |
+    table_pattern = rf"(?m)^\s*\|\s*`{escaped}\b"
     if re.search(table_pattern, doc_content):
-        # Verify this is in a reference table, not a usage example
-        table_match = re.search(rf"\|\s*`{escaped}\b", doc_content)
-        if table_match:
-            # Check if this line is inside a markdown table (preceded by | on same line)
-            start = max(0, table_match.start() - 100)
-            context = doc_content[start:table_match.start()]
-            if context.rfind("\n|") > context.rfind("\n"):
-                return True
+        return True
 
     # Pattern 3: in a code block as a usage line
     # e.g. file-organizer organize INPUT_DIR OUTPUT_DIR
@@ -231,10 +225,27 @@ def _param_name_variants(param: _Param) -> list[str]:
 
 
 def _param_is_documented(section: str, param: _Param) -> bool:
-    """Check whether a required parameter appears in the command's doc section."""
-    for variant in _param_name_variants(param):
-        if variant in section:
+    """Check whether a required parameter appears in the command's doc section.
+
+    Prefers backticked tokens (e.g., `--option`, `ARGUMENT`) over plain text
+    to avoid false positives from prose containing parameter names.
+    """
+    variants = _param_name_variants(param)
+
+    # First pass: look for backticked variants (higher confidence)
+    for variant in variants:
+        escaped = re.escape(variant)
+        # Match backticked token (e.g., `--user`, `FILE_PATH`)
+        if re.search(rf"`{escaped}`", section):
             return True
+
+    # Second pass: look for word-boundary matches (lower confidence, but still valid)
+    for variant in variants:
+        escaped = re.escape(variant)
+        # Match with word boundaries to avoid false positives
+        if re.search(rf"\b{escaped}\b", section):
+            return True
+
     return False
 
 
@@ -266,10 +277,14 @@ class TestAllCommandsDocumented:
 
 
 class TestRequiredArgsDocumented:
-    """Required arguments for each command must appear in its doc section."""
+    """Required arguments and options for each command must be documented.
+
+    This test checks that all required parameters (both arguments and options)
+    appear in the command's documentation section.
+    """
 
     def test_required_arguments(self) -> None:
-        """Verify all required arguments are mentioned in docs."""
+        """Verify all required arguments and options are mentioned in docs."""
         doc_content = _read_docs()
         commands = _get_commands()
 
