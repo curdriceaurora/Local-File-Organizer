@@ -162,7 +162,7 @@ file-organizer analyze FILE [OPTIONS]
 ```
 
 **Arguments:**
-- `FILE` — Path to the file to analyze
+- `FILE_PATH` — Path to the file to analyze
 
 **Options:**
 - `--verbose, -v` — Show additional details (model name, processing time, content length)
@@ -362,6 +362,9 @@ Download a model via Ollama.
 file-organizer model pull MODEL_NAME
 ```
 
+**Arguments:**
+- `NAME` — Model name to download (e.g. `qwen2.5:3b-instruct-q4_K_M`)
+
 #### `model cache`
 
 Show model cache statistics.
@@ -528,16 +531,22 @@ file-organizer dedupe scan DIRECTORY [OPTIONS]
 Generate a duplication report.
 
 ```bash
-file-organizer dedupe report [OPTIONS]
+file-organizer dedupe report DIRECTORY [OPTIONS]
 ```
+
+**Arguments:**
+- `DIRECTORY` — Directory to scan
 
 #### `dedupe resolve`
 
 Interactively or automatically resolve duplicates.
 
 ```bash
-file-organizer dedupe resolve [OPTIONS]
+file-organizer dedupe resolve DIRECTORY [OPTIONS]
 ```
+
+**Arguments:**
+- `DIRECTORY` — Directory to scan for duplicates
 
 **Examples:**
 ```bash
@@ -576,7 +585,10 @@ Add a new rule to a rule set.
 file-organizer rules add RULE_NAME [OPTIONS]
 ```
 
-Options:
+**Arguments:**
+- `NAME` — Rule name
+
+**Options:**
 - `--ext TEXT` — File extension filter (e.g. `.pdf,.docx`)
 - `--pattern TEXT` — Filename glob pattern
 - `--action, -a TEXT` — Action type: `move`, `rename`, `tag`, `categorize`, `archive`, `copy`, `delete` (default: `move`)
@@ -592,6 +604,9 @@ Remove a rule from a rule set.
 file-organizer rules remove RULE_NAME [--set RULE_SET]
 ```
 
+**Arguments:**
+- `NAME` — Rule name to remove
+
 #### `rules toggle`
 
 Enable or disable a rule.
@@ -599,6 +614,9 @@ Enable or disable a rule.
 ```bash
 file-organizer rules toggle RULE_NAME [--set RULE_SET]
 ```
+
+**Arguments:**
+- `NAME` — Rule name to toggle
 
 #### `rules preview`
 
@@ -628,6 +646,9 @@ Import a rule set from a YAML file.
 ```bash
 file-organizer rules import FILE [--set RULE_SET]
 ```
+
+**Arguments:**
+- `FILE` — YAML file to import
 
 **Examples:**
 ```bash
@@ -673,8 +694,11 @@ Options:
 Apply accepted suggestions.
 
 ```bash
-file-organizer suggest apply [OPTIONS]
+file-organizer suggest apply DIRECTORY [OPTIONS]
 ```
+
+**Arguments:**
+- `DIRECTORY` — Directory to organize
 
 #### `suggest patterns`
 
@@ -727,6 +751,9 @@ Show details for a specific plugin.
 file-organizer marketplace info PLUGIN_NAME
 ```
 
+**Arguments:**
+- `NAME` — Plugin name
+
 #### `marketplace install`
 
 Install a plugin.
@@ -735,6 +762,9 @@ Install a plugin.
 file-organizer marketplace install PLUGIN_NAME [--version VERSION]
 ```
 
+**Arguments:**
+- `NAME` — Plugin to install
+
 #### `marketplace uninstall`
 
 Remove an installed plugin.
@@ -742,6 +772,9 @@ Remove an installed plugin.
 ```bash
 file-organizer marketplace uninstall PLUGIN_NAME
 ```
+
+**Arguments:**
+- `NAME` — Plugin to uninstall
 
 #### `marketplace review`
 
@@ -793,6 +826,9 @@ Update a specific plugin.
 file-organizer marketplace update PLUGIN_NAME
 ```
 
+**Arguments:**
+- `NAME` — Plugin to update
+
 ---
 
 ### `api` — Remote API Client
@@ -815,6 +851,10 @@ Authenticate and store access tokens.
 file-organizer api login [--base-url URL] [--save-token PATH]
 ```
 
+**Options:**
+- `--username` — Login username (prompted if not provided)
+- `--password` — Login password (prompted securely if not provided)
+
 #### `api me`
 
 Show current authenticated user.
@@ -831,13 +871,23 @@ Invalidate the current session token.
 file-organizer api logout [--base-url URL] [--token TOKEN]
 ```
 
+**Options:**
+- `--token` — Bearer token
+- `--refresh-token` — Refresh token to revoke
+
 #### `api files`
 
 List files via the API.
 
 ```bash
-file-organizer api files [OPTIONS]
+file-organizer api files PATH [OPTIONS]
 ```
+
+**Arguments:**
+- `PATH` — Directory to list
+
+**Options:**
+- `--token` — Bearer token
 
 #### `api system-status`
 
@@ -847,6 +897,9 @@ Show system status from the API server.
 file-organizer api system-status [--base-url URL]
 ```
 
+**Options:**
+- `--token` — Bearer token
+
 #### `api system-stats`
 
 Show system statistics from the API server.
@@ -854,6 +907,9 @@ Show system statistics from the API server.
 ```bash
 file-organizer api system-stats [--base-url URL]
 ```
+
+**Options:**
+- `--token` — Bearer token
 
 **Default base URL:** `http://localhost:8000`
 
@@ -948,6 +1004,9 @@ Import a profile from a file.
 ```bash
 file-organizer profile import FILE [OPTIONS]
 ```
+
+**Arguments:**
+- `FILE` — Profile file to import
 
 #### `profile current`
 
@@ -1122,8 +1181,12 @@ Options:
 Apply tags to a file and record for learning.
 
 ```bash
-file-organizer autotag apply FILE TAG...
+file-organizer autotag apply FILE_PATH TAG...
 ```
+
+**Arguments:**
+- `FILE_PATH` — File to tag
+- `TAGS` — One or more tags to apply
 
 #### `autotag popular`
 
