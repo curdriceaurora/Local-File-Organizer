@@ -219,13 +219,16 @@ def _param_name_variants(param: _Param) -> list[str]:
     For an argument named ``input_dir``, we check:
       INPUT_DIR, input_dir, input-dir
 
-    Also includes Click's explicit metavar if set (e.g., PROFILE_NAME vs NAME).
+    For arguments only: includes Click's explicit metavar if set (e.g., PROFILE_NAME vs NAME).
+    For options: omits metavar to avoid false positives from generic Click defaults (TEXT, INTEGER, etc.)
+    which may appear in docs without the option itself being documented.
     """
     base = param.name
     variants = [base, base.replace("_", "-"), base.upper(), base.replace("_", "-").upper()]
 
-    # Add Click's explicit metavar if set (takes precedence in docs)
-    if param.metavar:
+    # Add Click's explicit metavar ONLY for arguments (not options)
+    # Options often have generic metvars (TEXT, INTEGER) that appear in docs unrelated to this option
+    if param.kind == "argument" and param.metavar:
         variants.insert(0, param.metavar)
 
     if param.kind == "option":
