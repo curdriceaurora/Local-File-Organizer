@@ -106,12 +106,17 @@ def _all_registered_commands() -> list[_Command]:
     # Collect commands from the main Typer app
     commands = _collect_commands(click_app)
 
-    # The profile group is added via Click interop and may not appear
-    # in the Typer-resolved group.  Add it manually if missing.
+    # Note: "profile" prefix commands are already included in `registered`
+    # via `_all_registered_commands()`, which manually adds them if needed.
     profile_paths = {c.path for c in commands if c.path.startswith("profile")}
     if not profile_paths:
-        profile_group = _get_profile_group()
-        commands.extend(_collect_commands(profile_group, prefix="profile"))
+        try:
+            profile_group = _get_profile_group()
+            commands.extend(_collect_commands(profile_group, prefix="profile"))
+        except Exception:
+            # Profile module may fail to import if optional dependencies
+            # (e.g., intelligence services) are not installed; degrade gracefully.
+            pass
 
     return commands
 
