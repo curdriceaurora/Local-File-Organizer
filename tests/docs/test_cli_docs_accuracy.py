@@ -166,8 +166,7 @@ def _command_is_documented(doc_content: str, command_path: str) -> bool:
     if re.search(header_pattern, doc_content):
         return True
 
-    # Pattern 2: command in a markdown table row (for legacy sections only)
-    # Only accept if in an explicitly legacy/reference table context
+    # Pattern 2: command in a markdown table row (e.g., command reference tables)
     # e.g. | `autotag suggest FILE...` |
     # Use multiline mode to check if the line starts with |
     table_pattern = rf"(?m)^\s*\|\s*`{escaped}\b"
@@ -240,18 +239,20 @@ def _param_is_documented(section: str, param: _Param) -> bool:
     Prefers backticked tokens (e.g., `--option`, `ARGUMENT`) over plain text
     to avoid false positives from prose containing parameter names.
 
-    For backticked matches, allows trailing type info (e.g., `--option TEXT`,
-    `FILE_PATH`) since docs often document options with their expected type.
+    For backticked matches, allows any trailing content within the backticks
+    (e.g., `--option TEXT`, `--verbose, -v`, `--output, -o TEXT`) since docs
+    may include type info, short-flag aliases, or other annotations.
     """
     variants = _param_name_variants(param)
 
     # First pass: look for backticked variants (higher confidence)
-    # Allow trailing type info like `--user TEXT` or `FILE_PATH`
+    # Allow trailing content like types, commas, short flags, e.g.
+    # `--user TEXT`, `--verbose, -v`, `FILE_PATH`
     for variant in variants:
         escaped = re.escape(variant)
-        # Match backticked token with optional trailing content (e.g., `--user TEXT`)
-        # Stop at space or backtick to avoid matching unrelated content
-        if re.search(rf"`{escaped}(?:\s+[A-Z_]+)?`", section):
+        # Match a backticked chunk that starts with the variant and may include
+        # additional non-backtick characters (types, commas, short flags, etc.)
+        if re.search(rf"`{escaped}[^`]*`", section):
             return True
 
     # Second pass: look for word-boundary matches (lower confidence, but still valid)
@@ -261,7 +262,14 @@ def _param_is_documented(section: str, param: _Param) -> bool:
         # Prefer multi-word or option-format variants (PROFILE_NAME, --option)
         # to avoid matching generic single-word names (NAME, FILE) in prose
         if len(variant) > 4 or variant.startswith("--") or "_" in variant:
-            if re.search(rf"\b{escaped}\b", section):
+            if variant.startswith("--"):
+                # \b does not work for leading hyphens (- is \W, so \b before --
+                # requires a \w char which is absent at whitespace/SOL).  Use
+                # whitespace/start boundary and whitespace/punctuation/end boundary.
+                pattern = rf"(?<!\S){escaped}(?=$|\s|[,.)\]])"
+            else:
+                pattern = rf"\b{escaped}\b"
+            if re.search(pattern, section):
                 return True
 
     return False
