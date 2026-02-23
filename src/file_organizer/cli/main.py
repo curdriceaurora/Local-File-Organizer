@@ -184,7 +184,7 @@ def search(
 ) -> None:
     """Search for files by name pattern with optional type filtering."""
     import json as json_mod
-    from datetime import datetime, timezone
+    from datetime import UTC, datetime
 
     # File type extension mappings
     type_extensions: dict[str, set[str]] = {
@@ -286,7 +286,7 @@ def search(
                 "path": str(p),
                 "size": stat.st_size,
                 "modified": datetime.fromtimestamp(
-                    stat.st_mtime, tz=timezone.utc  # noqa: UP017
+                    stat.st_mtime, tz=UTC
                 ).isoformat(),
             })
         typer.echo(json_mod.dumps(records, indent=2))
@@ -302,7 +302,7 @@ def search(
             else:
                 size_str = f"{size / (1024 * 1024):.1f} MB"
 
-            mtime = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)  # noqa: UP017
+            mtime = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
             typer.echo(f"  {p}  {size_str}  {mtime.strftime('%Y-%m-%d %H:%M')}")
 
 

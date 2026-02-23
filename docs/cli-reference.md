@@ -620,7 +620,7 @@ file-organizer suggest apply [OPTIONS]
 
 #### `suggest patterns`
 
-Analyse naming patterns in a directory.
+Analyze naming patterns in a directory.
 
 ```bash
 file-organizer suggest patterns DIRECTORY [OPTIONS]
