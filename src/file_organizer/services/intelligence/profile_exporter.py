@@ -1,4 +1,4 @@
-"""Profile Export Module
+"""Profile Export Module.
 
 Provides comprehensive profile export functionality with validation,
 selective export, and optional compression.

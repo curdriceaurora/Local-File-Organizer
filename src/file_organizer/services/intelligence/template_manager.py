@@ -1,4 +1,4 @@
-"""Template Manager Module
+"""Template Manager Module.
 
 Provides default profile templates and template management.
 

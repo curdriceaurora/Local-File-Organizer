@@ -1,4 +1,4 @@
-"""Naming Analyzer - Advanced Filename Analysis
+"""Naming Analyzer - Advanced Filename Analysis.
 
 This module provides advanced analysis of filename patterns, including
 semantic analysis, structure comparison, and pattern matching utilities.

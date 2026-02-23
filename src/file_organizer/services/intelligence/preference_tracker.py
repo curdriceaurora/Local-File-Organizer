@@ -1,4 +1,4 @@
-"""Preference Tracking System - Core Module
+"""Preference Tracking System - Core Module.
 
 This module implements the core preference tracking engine that learns from user
 corrections and changes. It tracks user behavior, stores preferences with metadata,

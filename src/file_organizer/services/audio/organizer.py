@@ -1,4 +1,4 @@
-"""Audio Organization Rule Engine
+"""Audio Organization Rule Engine.
 
 Generates organized folder structures for audio files based on their
 classification type and metadata. Supports customizable path templates,
@@ -79,10 +79,12 @@ class OrganizationPlan:
 
     @property
     def total_planned(self) -> int:
+        """Return the total number of planned moves."""
         return len(self.planned_moves)
 
     @property
     def total_skipped(self) -> int:
+        """Return the total number of skipped files."""
         return len(self.skipped_files)
 
     def summary(self) -> str:
@@ -107,14 +109,17 @@ class OrganizationResult:
 
     @property
     def total_moved(self) -> int:
+        """Return the total number of moved files."""
         return len(self.moved_files)
 
     @property
     def total_failed(self) -> int:
+        """Return the total number of failed moves."""
         return len(self.failed_files)
 
     @property
     def total_skipped(self) -> int:
+        """Return the total number of skipped files."""
         return len(self.skipped_files)
 
     def report(self) -> str:

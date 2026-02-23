@@ -1,4 +1,4 @@
-"""Pattern Analyzer Service
+"""Pattern Analyzer Service.
 
 Analyzes file organization patterns including directory structures,
 naming conventions, and content-based clustering.
@@ -69,8 +69,9 @@ class PatternAnalysis:
 
 
 class PatternAnalyzer:
-    """Analyzes file organization patterns to detect structure, naming conventions,
-    and content-based clusters.
+    """Analyzes file organization patterns.
+
+    Detects structure, naming conventions, and content-based clusters.
     """
 
     def __init__(self, min_pattern_count: int = 3, max_depth: int = 10):

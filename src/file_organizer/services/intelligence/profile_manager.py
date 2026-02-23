@@ -1,4 +1,4 @@
-"""Profile Management System - Core Module
+"""Profile Management System - Core Module.
 
 Provides comprehensive profile management with CRUD operations, activation,
 and atomic profile switching capabilities.

@@ -24,6 +24,7 @@ class RuleManager:
     """
 
     def __init__(self, rules_dir: str | Path | None = None) -> None:
+        """Initialize RuleManager."""
         self._rules_dir = Path(rules_dir) if rules_dir else _DEFAULT_RULES_DIR
 
     @property

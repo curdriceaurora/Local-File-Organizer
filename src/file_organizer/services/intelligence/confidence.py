@@ -1,4 +1,4 @@
-"""Confidence Engine - Pattern Reliability Scoring
+"""Confidence Engine - Pattern Reliability Scoring.
 
 This module implements the confidence calculation engine for learned patterns.
 It provides multi-factor confidence scoring based on frequency, recency, and

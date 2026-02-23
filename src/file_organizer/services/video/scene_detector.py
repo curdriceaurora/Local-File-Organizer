@@ -1,4 +1,4 @@
-"""Video Scene Detection Service
+"""Video Scene Detection Service.
 
 Detects scene changes in video files using content-aware and threshold-based algorithms.
 Supports multiple detection methods and provides detailed scene metadata.

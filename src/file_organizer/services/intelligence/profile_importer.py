@@ -1,4 +1,4 @@
-"""Profile Import Module
+"""Profile Import Module.
 
 Provides comprehensive profile import functionality with validation,
 selective import, and preview capabilities.

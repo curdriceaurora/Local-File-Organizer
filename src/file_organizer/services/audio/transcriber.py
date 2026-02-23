@@ -1,4 +1,4 @@
-"""Audio Transcription Service
+"""Audio Transcription Service.
 
 Provides audio transcription capabilities using Faster-Whisper models.
 Supports multiple model sizes, languages, and advanced transcription options.

@@ -1,4 +1,4 @@
-"""Suggestion Feedback System
+"""Suggestion Feedback System.
 
 Tracks user actions on suggestions and provides continuous learning
 through pattern refinement.
@@ -82,8 +82,7 @@ class LearningStats:
 
 
 class SuggestionFeedback:
-    """Manages feedback collection and learning from user actions.
-    """
+    """Manages feedback collection and learning from user actions."""
 
     def __init__(self, feedback_file: Path | None = None):
         """Initialize the feedback system.

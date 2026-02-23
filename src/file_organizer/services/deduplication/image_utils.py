@@ -46,6 +46,7 @@ class ImageMetadata:
     def __init__(
         self, path: Path, width: int, height: int, image_format: str, mode: str, size_bytes: int
     ):
+        """Initialize ImageMetadata."""
         self.path = path
         self.width = width
         self.height = height
@@ -55,6 +56,7 @@ class ImageMetadata:
         self.resolution = width * height
 
     def __repr__(self) -> str:
+        """Return string representation of ImageMetadata."""
         return (
             f"ImageMetadata(path={self.path.name}, "
             f"size={self.width}x{self.height}, "

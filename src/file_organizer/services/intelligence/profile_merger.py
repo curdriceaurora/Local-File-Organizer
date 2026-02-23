@@ -1,4 +1,4 @@
-"""Profile Merger Module
+"""Profile Merger Module.
 
 Provides profile merging capabilities with conflict resolution strategies.
 

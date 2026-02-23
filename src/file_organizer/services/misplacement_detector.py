@@ -1,4 +1,4 @@
-"""Misplacement Detector Service
+"""Misplacement Detector Service.
 
 Detects files that are in the wrong location based on content-location
 mismatch analysis.
@@ -74,8 +74,9 @@ class ContextAnalysis:
 
 
 class MisplacementDetector:
-    """Detects files that are in incorrect locations based on content
-    and organizational patterns.
+    """Detects files that are in incorrect locations.
+
+    Detection is based on content and organizational patterns.
     """
 
     def __init__(self, min_mismatch_score: float = 60.0, similarity_threshold: float = 0.7):

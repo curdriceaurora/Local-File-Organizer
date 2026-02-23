@@ -1,5 +1,4 @@
-"""Metrics calculation module for quality scoring and efficiency analysis.
-"""
+"""Metrics calculation module for quality scoring and efficiency analysis."""
 
 from __future__ import annotations
 

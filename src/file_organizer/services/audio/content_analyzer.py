@@ -1,4 +1,4 @@
-"""Audio Content Analysis Service
+"""Audio Content Analysis Service.
 
 Extracts topics, keywords, speaker information, and sentiment indicators
 from audio metadata and transcription data.  Uses lightweight NLP
@@ -31,14 +31,17 @@ class ContentAnalysis:
 
     @property
     def topic_count(self) -> int:
+        """Return the number of topics."""
         return len(self.topics)
 
     @property
     def keyword_count(self) -> int:
+        """Return the number of keywords."""
         return len(self.keywords)
 
     @property
     def speaker_count(self) -> int:
+        """Return the number of speakers."""
         return len(self.speakers)
 
 
@@ -480,9 +483,9 @@ def _tokenize(text: str) -> list[str]:
 
 
 class AudioContentAnalyzer:
-    """Analyses audio content by extracting topics, keywords, speakers,
-    and sentiment indicators from metadata and transcription data.
+    """Analyses audio content by extracting topics, keywords, speakers.
 
+    Extracts and sentiment indicators from metadata and transcription data.
     Uses lightweight rule-based NLP rather than external AI models.
 
     Example:
@@ -563,8 +566,9 @@ class AudioContentAnalyzer:
         return analysis
 
     def extract_topics(self, text: str) -> list[str]:
-        """Extract topic categories from text by matching against known
-        topic keyword dictionaries.
+        """Extract topic categories from text.
+
+        Matches text against known topic keyword dictionaries.
 
         Args:
             text: The text to analyse.
@@ -585,8 +589,9 @@ class AudioContentAnalyzer:
         return [cat for cat, _ in ranked[: self.max_topics]]
 
     def extract_keywords(self, text: str) -> list[str]:
-        """Extract significant keywords from text using frequency analysis
-        with stop-word filtering.
+        """Extract significant keywords from text.
+
+        Uses frequency analysis with stop-word filtering.
 
         Args:
             text: The text to analyse.

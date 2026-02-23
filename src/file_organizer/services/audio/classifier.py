@@ -1,4 +1,4 @@
-"""Audio Type Classification Service
+"""Audio Type Classification Service.
 
 Classifies audio files into content types (music, podcast, audiobook, etc.)
 using rule-based heuristics from metadata and optional transcription data.

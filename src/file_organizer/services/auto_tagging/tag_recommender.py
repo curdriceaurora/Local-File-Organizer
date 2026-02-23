@@ -1,4 +1,4 @@
-"""Tag Recommendation Engine
+"""Tag Recommendation Engine.
 
 Combines content analysis and learning insights to generate ranked tag suggestions.
 Integrates with smart suggestions infrastructure.

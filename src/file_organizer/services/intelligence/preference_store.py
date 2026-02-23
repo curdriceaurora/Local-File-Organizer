@@ -1,4 +1,4 @@
-"""Preference Storage & Persistence Module
+"""Preference Storage & Persistence Module.
 
 Provides JSON-based preference storage with atomic writes, schema validation,
 backup/restore functionality, and migration support.
@@ -19,14 +19,14 @@ from typing import Any
 
 
 class SchemaVersion(Enum):
-    """Supported schema versions"""
+    """Supported schema versions."""
 
     V1_0 = "1.0"
 
 
 @dataclass
 class DirectoryPreference:
-    """Preference data for a specific directory"""
+    """Preference data for a specific directory."""
 
     folder_mappings: dict[str, str]
     naming_patterns: dict[str, str]
@@ -37,12 +37,12 @@ class DirectoryPreference:
     correction_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary"""
+        """Convert to dictionary."""
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DirectoryPreference:
-        """Create from dictionary"""
+        """Create from dictionary."""
         now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         return cls(
             folder_mappings=data.get("folder_mappings", {}),
@@ -94,11 +94,11 @@ class PreferenceStore:
         self._loaded = False
 
     def _get_current_timestamp(self) -> str:
-        """Get current UTC timestamp in ISO format"""
+        """Get current UTC timestamp in ISO format."""
         return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     def _create_empty_preferences(self) -> dict[str, Any]:
-        """Create empty preference structure"""
+        """Create empty preference structure."""
         return {
             "version": self.SCHEMA_VERSION,
             "user_id": "default",
@@ -231,7 +231,7 @@ class PreferenceStore:
                 return False
 
     def _try_load_backup(self) -> bool:
-        """Try loading from backup file"""
+        """Try loading from backup file."""
         try:
             if not self.backup_file.exists():
                 print("Backup file not found, using defaults...")
@@ -559,7 +559,7 @@ class PreferenceStore:
             return stats
 
     def clear_preferences(self) -> None:
-        """Clear all preferences (reset to empty state)"""
+        """Clear all preferences (reset to empty state)."""
         with self._lock:
             self._preferences = self._create_empty_preferences()
             self._loaded = True

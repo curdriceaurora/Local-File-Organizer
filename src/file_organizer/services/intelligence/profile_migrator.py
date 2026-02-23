@@ -1,4 +1,4 @@
-"""Profile Migration Module
+"""Profile Migration Module.
 
 Provides profile version migration with backup and rollback capabilities.
 

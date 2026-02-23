@@ -1,4 +1,4 @@
-"""Audio Utility Functions
+"""Audio Utility Functions.
 
 Common utility functions for audio file processing and analysis.
 """

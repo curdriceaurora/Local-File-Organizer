@@ -1,4 +1,4 @@
-"""Audio Preprocessing Service
+"""Audio Preprocessing Service.
 
 Provides audio format conversion, normalization, and preprocessing
 capabilities to prepare audio files for transcription and analysis.

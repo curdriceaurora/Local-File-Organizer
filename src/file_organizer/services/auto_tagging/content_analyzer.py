@@ -1,4 +1,4 @@
-"""Content Tag Analyzer
+"""Content Tag Analyzer.
 
 Analyzes file content to extract relevant tags using multiple techniques:
 - Keyword extraction (TF-IDF)

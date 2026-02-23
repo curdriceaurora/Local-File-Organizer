@@ -1,4 +1,4 @@
-"""Smart Suggestions Service
+"""Smart Suggestions Service.
 
 Generates intelligent file organization suggestions using AI models
 and pattern analysis.
@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class ConfidenceScorer:
-    """Calculates confidence scores for suggestions using multiple factors.
-    """
+    """Calculates confidence scores for suggestions using multiple factors."""
 
     def __init__(self):
         """Initialize the confidence scorer."""
@@ -233,8 +232,7 @@ class ConfidenceScorer:
 
 
 class SuggestionEngine:
-    """Generates intelligent file organization suggestions.
-    """
+    """Generates intelligent file organization suggestions."""
 
     def __init__(self, text_model: TextModel | None = None, min_confidence: float = 40.0):
         """Initialize the suggestion engine.

@@ -1,4 +1,4 @@
-"""Audio Metadata Extraction Service
+"""Audio Metadata Extraction Service.
 
 Extracts comprehensive metadata from audio files including:
 - Basic properties (duration, bitrate, sample rate)

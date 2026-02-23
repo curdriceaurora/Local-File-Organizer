@@ -1,4 +1,4 @@
-"""Tag Learning Engine
+"""Tag Learning Engine.
 
 Learns from user tagging patterns to improve tag suggestions over time.
 Tracks tag usage, co-occurrences, and builds personalized tag models.

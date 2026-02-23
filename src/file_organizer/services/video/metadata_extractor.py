@@ -1,4 +1,4 @@
-"""Video Metadata Extraction Service
+"""Video Metadata Extraction Service.
 
 Extracts metadata from video files using ffprobe (primary),
 OpenCV (fallback), or filesystem-only (final fallback).

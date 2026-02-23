@@ -1,4 +1,4 @@
-"""Scoring Module - Confidence Scoring Utilities
+"""Scoring Module - Confidence Scoring Utilities.
 
 This module provides utility functions and classes for confidence scoring,
 including score normalization, ranking, and comparison operations.
@@ -23,6 +23,7 @@ class ScoredPattern:
     metadata: dict = None
 
     def __post_init__(self):
+        """Initialize default metadata."""
         if self.metadata is None:
             self.metadata = {}
 
@@ -237,8 +238,7 @@ class PatternScorer:
 
 
 class ScoreAnalyzer:
-    """Analyzer for pattern score distributions and statistics.
-    """
+    """Analyzer for pattern score distributions and statistics."""
 
     @staticmethod
     def analyze_score_distribution(patterns: list[ScoredPattern]) -> dict[str, Any]:

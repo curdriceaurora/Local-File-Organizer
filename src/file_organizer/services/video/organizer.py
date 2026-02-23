@@ -1,4 +1,4 @@
-"""Video Organization Service
+"""Video Organization Service.
 
 Generates organized folder structures for video files based on their
 metadata. Supports screen recording detection, short clip routing,

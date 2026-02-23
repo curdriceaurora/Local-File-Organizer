@@ -1,4 +1,4 @@
-"""Auto-Tagging Service
+"""Auto-Tagging Service.
 
 Intelligent tag suggestion system that learns from user behavior.
 """

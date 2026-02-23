@@ -1,4 +1,4 @@
-"""Pattern Extraction Engine
+"""Pattern Extraction Engine.
 
 This module implements pattern extraction from user corrections and file operations.
 It analyzes naming patterns, identifies common structures, and generates reusable
