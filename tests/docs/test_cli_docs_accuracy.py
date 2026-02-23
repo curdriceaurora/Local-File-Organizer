@@ -106,8 +106,9 @@ def _all_registered_commands() -> list[_Command]:
     # Collect commands from the main Typer app
     commands = _collect_commands(click_app)
 
-    # Note: "profile" prefix commands are already included in `registered`
-    # via `_all_registered_commands()`, which manually adds them if needed.
+    # Note: "profile" prefix commands are typically auto-registered via Click
+    # interop in main.py, but if they're missing (e.g., due to import errors),
+    # manually add them here.
     profile_paths = {c.path for c in commands if c.path.startswith("profile")}
     if not profile_paths:
         try:
@@ -301,9 +302,6 @@ class TestNoPhantomCommands:
         doc_content = _read_docs()
         commands = _get_commands()
         registered = {c.path for c in commands}
-
-        # Note: "profile" prefix commands are already included in `registered`
-        # via `_all_registered_commands()`, which manually adds them if needed.
 
         # Extract all documented command paths from headers
         # Pattern: ### `cmd` or #### `parent sub`

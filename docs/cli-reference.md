@@ -457,10 +457,20 @@ file-organizer daemon status
 
 #### `daemon watch`
 
-Run in foreground mode (useful for debugging).
+Watch a directory for file events and stream them in real-time.
 
+**Usage:** file-organizer daemon watch WATCH_DIR [OPTIONS]
+
+Arguments:
+- `WATCH_DIR` — Directory to watch for file events
+
+Options:
+- `--poll-interval FLOAT` — Seconds between polls (default: 1.0)
+
+**Examples:**
 ```bash
-file-organizer daemon watch
+file-organizer daemon watch ~/Inbox
+file-organizer daemon watch ~/Documents --poll-interval 2.0
 ```
 
 #### `daemon process`
@@ -1079,7 +1089,7 @@ file-organizer profile template apply minimal myprofile --activate
 
 ---
 
-**Examples:**
+**General Profile Examples:**
 ```bash
 file-organizer profile list
 file-organizer profile create work --description "Work files config"
