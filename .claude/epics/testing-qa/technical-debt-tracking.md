@@ -33,3 +33,12 @@ status: active
 ## Tracking Updates
 
 - **2026-02-17**: Issue #330 created; code-rabbit removal tracked as low-priority tech debt under testing-qa epic
+
+**Issue #444: chore: add semantic validation for test logic and docstring accuracy**
+- **Priority**: Medium
+- **Epic**: testing-qa
+- **Status**: Open
+- **Created**: 2026-02-23
+- **GitHub**: https://github.com/curdriceaurora/Local-File-Organizer/issues/444
+- **Effort**: 4-6 hours
+- **Related**: #442 (complementary - tooling enforcement vs semantic validation)
