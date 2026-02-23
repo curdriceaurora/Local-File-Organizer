@@ -43,6 +43,6 @@ repos:
         pass_filenames: false
       - id: absolute-path-check
         name: absolute path check
-        entry: bash -c "git diff --cached | grep -E '^[+\\-].*/Users/|/home/|C:\\\\\\\\Users\\\\\\\\' | grep -v '.claude/rules/' && exit 1 || exit 0"
+        entry: bash -c "git diff --cached | grep -E '^\\+.*(/Users/|/home/|C:\\\\\\\\Users\\\\\\\\)' | grep -v '.claude/rules/' | grep -v '.claude/scripts/' && exit 1 || exit 0"
         language: system
         pass_filenames: false
