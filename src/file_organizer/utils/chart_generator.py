@@ -1,5 +1,4 @@
-"""Chart generation module for terminal-based visualizations.
-"""
+"""Chart generation module for terminal-based visualizations."""
 
 from __future__ import annotations
 

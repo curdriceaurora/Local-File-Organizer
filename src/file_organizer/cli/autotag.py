@@ -1,4 +1,4 @@
-"""Auto-Tagging CLI Commands
+"""Auto-Tagging CLI Commands.
 
 Command-line interface for the auto-tagging system.
 """
