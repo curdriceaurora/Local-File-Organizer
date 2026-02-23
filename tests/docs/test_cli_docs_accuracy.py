@@ -298,8 +298,8 @@ class TestNoPhantomCommands:
         commands = _get_commands()
         registered = {c.path for c in commands}
 
-        # Also add the "profile" prefix commands from the Click group
-        # (they might not be in the Typer group if interop is absent)
+        # Note: "profile" prefix commands are already included in `registered`
+        # via `_all_registered_commands()`, which manually adds them if needed.
 
         # Extract all documented command paths from headers
         # Pattern: ### `cmd` or #### `parent sub`
