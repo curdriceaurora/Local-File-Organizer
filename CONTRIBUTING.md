@@ -47,27 +47,36 @@ pre-commit install
 # Now on every commit, these hooks automatically run:
 ```
 
-**What Gets Checked**:
+**Pre-Commit Hooks** (run automatically on `git commit`):
+
+| Hook | Purpose | Catches |
+|------|---------|---------|
+| **ruff-check** | Python linting (strict, includes RUF100) | Style, imports, stale `# noqa` comments |
+| **codespell** | Spelling consistency | Typos, spelling inconsistencies |
+| **absolute-path-check** | Hardcoded absolute paths | `/Users/`, `/home/`, `C:\Users\` paths |
+| **pytest** (multiple) | CI guardrails, web UI, websocket tests | Test failures block commit |
+
+**Additional Checks** (via `bash .claude/scripts/pre-commit-validation.sh`):
 
 | Check | Purpose | Catches |
 |-------|---------|---------|
-| **ruff-check** | Python linting (strict) | Style, imports, common bugs |
-| **ruff-check (RUF100)** | Stale `# noqa` comments | Unused suppression directives |
-| **codespell** | Spelling consistency | Typos, spelling inconsistencies |
-| **absolute-path-check** | Hardcoded absolute paths | `/Users/`, `/home/`, `C:\Users\` paths |
 | **mypy** | Type safety (strict mode) | Type errors block commit |
-| **pytest** | Modified module tests | Test failures block commit |
 | **broken-link-check** | Documentation links | Broken references to files |
+| **dict-style access** | Dataclass pattern validation | Dict-style access on dataclasses |
+| **mock target validation** | Mock patch targets | Invalid `@patch()` targets |
 
-**Manual Validation** (runs hooks without committing):
+**Manual Validation**:
 
 ```bash
-# Test all hooks on entire codebase
+# Run all pre-commit hooks on entire codebase
 pre-commit run --all-files
 
-# Test specific hook
+# Run specific hook
 pre-commit run ruff-check --all-files
 pre-commit run codespell --all-files
+
+# Run full validation script (includes hooks + additional checks)
+bash .claude/scripts/pre-commit-validation.sh
 ```
 
 **Skipping Hooks** (only if necessary):
