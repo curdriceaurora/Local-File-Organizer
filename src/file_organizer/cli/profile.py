@@ -127,7 +127,7 @@ def activate_profile(name: str):
 
 @profile_command.command(name="delete")
 @click.argument("name", metavar="PROFILE_NAME")
-@click.option("--force", "-", is_flag=True, help="Force delete even if active")
+@click.option("--force", "-f", is_flag=True, help="Force delete even if active")
 def delete_profile(name: str, force: bool):
     """Delete a profile."""
     try:
