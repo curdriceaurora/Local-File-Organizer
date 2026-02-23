@@ -410,6 +410,25 @@ file-organizer copilot chat "Help me organize my photos"
 file-organizer copilot chat --dir ~/Documents "What duplicates do I have?"
 ```
 
+#### `copilot status`
+
+Show the status of the AI copilot engine and available models.
+
+```bash
+file-organizer copilot status
+```
+
+Displays:
+- Number of available Ollama models
+- Model names (first 5)
+- Copilot readiness status
+
+**Examples:**
+```bash
+file-organizer copilot status
+fo copilot status
+```
+
 ---
 
 ### `daemon` — Background File Watcher
@@ -443,6 +462,35 @@ Run in foreground mode (useful for debugging).
 ```bash
 file-organizer daemon watch
 ```
+
+#### `daemon process`
+
+One-shot: organize files in a directory and display a summary.
+
+```bash
+file-organizer daemon process INPUT_DIR OUTPUT_DIR [OPTIONS]
+```
+
+Arguments:
+- `INPUT_DIR` — Directory containing files to process
+- `OUTPUT_DIR` — Destination directory for organized files
+
+Options:
+- `--dry-run` — Preview changes without moving files
+
+**Examples:**
+```bash
+file-organizer daemon process ~/Inbox ~/Organized
+
+# Preview without moving
+file-organizer daemon process ~/Downloads ~/Organized --dry-run
+```
+
+Displays a summary table with:
+- Total files processed
+- Number of files organized
+- Skipped and failed counts
+- Folder structure created
 
 **Examples:**
 ```bash
@@ -685,6 +733,32 @@ Remove an installed plugin.
 file-organizer marketplace uninstall PLUGIN_NAME
 ```
 
+#### `marketplace review`
+
+Add or update a review for a plugin.
+
+```bash
+file-organizer marketplace review PLUGIN_NAME [OPTIONS]
+```
+
+Arguments:
+- `PLUGIN_NAME` — Name of the plugin to review
+
+Options:
+- `--user TEXT` — Reviewer ID (required)
+- `--rating INTEGER` — Rating from 1 to 5 (required)
+- `--title TEXT` — Review title (required)
+- `--content TEXT` — Review text (required)
+
+**Examples:**
+```bash
+file-organizer marketplace review awesome-plugin \
+  --user john_doe \
+  --rating 5 \
+  --title "Great plugin!" \
+  --content "This plugin has saved me hours of work!"
+```
+
 #### `marketplace installed`
 
 List installed plugins.
@@ -864,6 +938,146 @@ Import a profile from a file.
 ```bash
 file-organizer profile import FILE [OPTIONS]
 ```
+
+#### `profile current`
+
+Show the currently active profile and its statistics.
+
+```bash
+file-organizer profile current
+```
+
+Displays:
+- Active profile name
+- Description and version
+- Creation and update timestamps
+- Statistics (global preferences, directory-specific settings, learned patterns, confidence data)
+
+#### `profile merge`
+
+Merge multiple profiles into one.
+
+```bash
+file-organizer profile merge PROFILE1 PROFILE2 [PROFILE3...] [OPTIONS]
+```
+
+Arguments:
+- `PROFILE1 PROFILE2 ...` — Profile names to merge (requires at least 2)
+
+Options:
+- `--output, -o TEXT` — Name for merged profile (required)
+- `--strategy, -s TEXT` — Merge strategy for conflicts: `recent`, `frequent`, `confident`, `first`, `last` (default: `confident`)
+- `--show-conflicts` — Show conflicts before merging
+
+**Examples:**
+```bash
+file-organizer profile merge work personal --output merged --strategy confident
+
+# Show conflicts before merging
+file-organizer profile merge work personal --output merged --show-conflicts
+```
+
+#### `profile migrate`
+
+Migrate a profile to a different version.
+
+```bash
+file-organizer profile migrate PROFILE_NAME [OPTIONS]
+```
+
+Arguments:
+- `PROFILE_NAME` — Name of the profile to migrate
+
+Options:
+- `--to-version TEXT` — Target version (required)
+- `--no-backup` — Skip backup before migration
+
+**Examples:**
+```bash
+file-organizer profile migrate work --to-version 2.0
+
+# Migrate without creating backup
+file-organizer profile migrate work --to-version 2.0 --no-backup
+```
+
+#### `profile validate`
+
+Validate a profile for integrity and compatibility.
+
+```bash
+file-organizer profile validate PROFILE_NAME
+```
+
+Arguments:
+- `PROFILE_NAME` — Name of the profile to validate
+
+**Examples:**
+```bash
+file-organizer profile validate work
+```
+
+---
+
+### `profile template` — Profile Templates
+
+Manage profile templates for common configurations.
+
+#### `profile template list`
+
+List all available templates.
+
+```bash
+file-organizer profile template list
+```
+
+Displays all available templates with their descriptions.
+
+#### `profile template preview`
+
+Preview a template before applying it.
+
+```bash
+file-organizer profile template preview TEMPLATE_NAME
+```
+
+Arguments:
+- `TEMPLATE_NAME` — Name of the template to preview
+
+Displays:
+- Template description
+- Preferences summary (naming patterns, folder mappings, category overrides)
+- Learned patterns and confidence levels
+
+**Examples:**
+```bash
+file-organizer profile template preview default
+file-organizer profile template preview minimal
+```
+
+#### `profile template apply`
+
+Create a profile from a template.
+
+```bash
+file-organizer profile template apply TEMPLATE_NAME PROFILE_NAME [OPTIONS]
+```
+
+Arguments:
+- `TEMPLATE_NAME` — Name of the template to apply
+- `PROFILE_NAME` — Name for the new profile
+
+Options:
+- `--activate, -a` — Activate the profile immediately after creation
+
+**Examples:**
+```bash
+file-organizer profile template apply default myprofile
+
+# Apply template and activate it
+file-organizer profile template apply minimal myprofile --activate
+```
+
+---
 
 **Examples:**
 ```bash
