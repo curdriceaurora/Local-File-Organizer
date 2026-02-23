@@ -1,4 +1,4 @@
-"""Johnny Decimal PARA Compatibility Layer
+"""Johnny Decimal PARA Compatibility Layer.
 
 Integrates Johnny Decimal methodology with PARA (Projects/Areas/Resources/Archive)
 organizational system, allowing hybrid setups and smooth migrations.

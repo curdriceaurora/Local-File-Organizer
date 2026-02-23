@@ -1,4 +1,4 @@
-"""Johnny Decimal Migration Scanner
+"""Johnny Decimal Migration Scanner.
 
 Scans existing folder structures to prepare for migration to Johnny Decimal system.
 Detects current organization patterns and suggests appropriate JD mappings.

@@ -1,4 +1,4 @@
-"""Johnny Decimal Number Generation
+"""Johnny Decimal Number Generation.
 
 This module provides number generation logic for the Johnny Decimal system,
 including automatic number assignment, validation, and conflict detection.
@@ -32,8 +32,9 @@ class InvalidNumberError(Exception):
 
 
 class JohnnyDecimalGenerator:
-    """Generator for Johnny Decimal numbers with automatic assignment
-    and conflict resolution.
+    """Generator for Johnny Decimal numbers with automatic assignment.
+
+    Assigns and resolves conflicts in Johnny Decimal number sequences.
     """
 
     def __init__(self, scheme: NumberingScheme):

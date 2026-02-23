@@ -1,4 +1,4 @@
-"""Johnny Decimal Migration Manager
+"""Johnny Decimal Migration Manager.
 
 Orchestrates the complete migration process from existing folder structures
 to Johnny Decimal organization. Provides dry-run, rollback, and detailed reporting.

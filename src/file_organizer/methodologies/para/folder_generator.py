@@ -1,4 +1,4 @@
-"""PARA Folder Structure Generator
+"""PARA Folder Structure Generator.
 
 Creates and manages PARA (Projects, Areas, Resources, Archive) folder structures
 with support for custom templates and nested organizations.

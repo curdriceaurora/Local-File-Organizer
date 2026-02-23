@@ -1,4 +1,4 @@
-"""PARA Category Definitions and Data Models
+"""PARA Category Definitions and Data Models.
 
 This module defines the core PARA (Projects, Areas, Resources, Archive) categories
 and their associated data structures for automated categorization.

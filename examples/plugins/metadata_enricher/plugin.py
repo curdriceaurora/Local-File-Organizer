@@ -18,9 +18,11 @@ class MetadataEnricherPlugin(Plugin):
     allowed_paths: list = []
 
     def on_load(self) -> None:
+        """Handle plugin load event."""
         return None
 
     def on_enable(self) -> None:
+        """Handle plugin enable event and configure default tags."""
         default_tags = self.config.get("default_tags", ["organized"])
         if isinstance(default_tags, list):
             self.default_tags = [str(tag) for tag in default_tags]
@@ -28,12 +30,15 @@ class MetadataEnricherPlugin(Plugin):
             self.default_tags = ["organized"]
 
     def on_disable(self) -> None:
+        """Handle plugin disable event."""
         return None
 
     def on_unload(self) -> None:
+        """Handle plugin unload event."""
         return None
 
     def get_metadata(self) -> PluginMetadata:
+        """Return plugin metadata."""
         return PluginMetadata(
             name="metadata_enricher",
             version="1.0.0",
@@ -43,6 +48,7 @@ class MetadataEnricherPlugin(Plugin):
 
     @hook("file.organized", priority=15)
     def on_file_organized(self, payload: dict[str, Any]) -> dict[str, object]:
+        """Create a JSON sidecar metadata file for each organized file."""
         destination = payload.get("destination_path")
         if not isinstance(destination, str) or not destination:
             return {"enriched": False, "reason": "missing destination_path"}

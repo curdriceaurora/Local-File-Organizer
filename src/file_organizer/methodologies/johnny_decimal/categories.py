@@ -1,4 +1,4 @@
-"""Johnny Decimal Category Definitions and Data Models
+"""Johnny Decimal Category Definitions and Data Models.
 
 This module defines the core data structures for the Johnny Decimal numbering
 system, which uses a hierarchical decimal-based organization scheme.

@@ -1,4 +1,4 @@
-"""Johnny Decimal Methodology Adapters
+"""Johnny Decimal Methodology Adapters.
 
 Adapter pattern implementation for bridging Johnny Decimal with other
 organizational methodologies and file management systems.

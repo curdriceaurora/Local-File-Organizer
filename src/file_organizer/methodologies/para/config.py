@@ -1,4 +1,4 @@
-"""PARA Configuration
+"""PARA Configuration.
 
 Configuration management for PARA methodology including:
 - Category thresholds

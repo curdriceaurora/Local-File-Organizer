@@ -1,4 +1,4 @@
-"""Johnny Decimal System Core
+"""Johnny Decimal System Core.
 
 This module provides the main system orchestration for Johnny Decimal
 file organization, including number assignment, validation, and management.

@@ -1,4 +1,4 @@
-"""Johnny Decimal Folder Transformer
+"""Johnny Decimal Folder Transformer.
 
 Transforms existing folder structures to Johnny Decimal naming convention.
 Handles renaming, restructuring, and maintains file integrity.

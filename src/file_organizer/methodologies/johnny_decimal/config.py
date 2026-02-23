@@ -1,4 +1,4 @@
-"""Johnny Decimal Configuration Management
+"""Johnny Decimal Configuration Management.
 
 Manages configuration for Johnny Decimal methodology including hybrid setups
 with PARA and other organizational systems.

@@ -19,6 +19,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Apply the initial web storage schema migration."""
     op.create_table(
         "users",
         sa.Column("id", sa.String(), nullable=False),
@@ -156,6 +157,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Revert the initial web storage schema migration."""
     op.drop_index(op.f("ix_file_metadata_workspace_id"), table_name="file_metadata")
     op.drop_index(op.f("ix_file_metadata_checksum_sha256"), table_name="file_metadata")
     op.drop_table("file_metadata")

@@ -1,4 +1,4 @@
-"""PARA Heuristics Engine
+"""PARA Heuristics Engine.
 
 Multi-factor heuristic detection system for automatic PARA categorization.
 Uses temporal, content, structural, and AI-based heuristics.
@@ -256,10 +256,10 @@ class ContentHeuristic(Heuristic):
 
     @staticmethod
     def _matches_keyword(keyword: str, text: str) -> bool:
-        """Check if keyword matches in text using word boundaries.
+        r"""Check if keyword matches in text using word boundaries.
 
         Prevents false positives like "project" matching "projection".
-        Uses regex word boundaries (\\b) for accurate matching.
+        Uses regex word boundaries (\b) for accurate matching.
 
         Args:
             keyword: The keyword to search for

@@ -1,4 +1,4 @@
-"""Johnny Decimal Migration Validator
+"""Johnny Decimal Migration Validator.
 
 Validates transformation plans before execution to prevent errors and data loss.
 Checks for conflicts, invalid numbers, and potential issues.

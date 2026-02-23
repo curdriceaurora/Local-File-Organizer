@@ -17,21 +17,26 @@ class AutoBackupPlugin(Plugin):
     allowed_paths: list = []
 
     def on_load(self) -> None:
+        """Handle plugin load event."""
         return None
 
     def on_enable(self) -> None:
+        """Handle plugin enable event and configure backup directory."""
         configured = str(self.config.get("backup_dir", "")).strip()
         self.backup_dir = Path(configured) if configured else None
         if self.backup_dir is not None:
             self.backup_dir.mkdir(parents=True, exist_ok=True)
 
     def on_disable(self) -> None:
+        """Handle plugin disable event."""
         return None
 
     def on_unload(self) -> None:
+        """Handle plugin unload event."""
         return None
 
     def get_metadata(self) -> PluginMetadata:
+        """Return plugin metadata."""
         return PluginMetadata(
             name="auto_backup",
             version="1.0.0",
@@ -41,6 +46,7 @@ class AutoBackupPlugin(Plugin):
 
     @hook("file.organized", priority=5)
     def on_file_organized(self, payload: dict[str, object]) -> dict[str, object]:
+        """Back up organized files to the configured backup directory."""
         if self.backup_dir is None:
             return {"backed_up": False, "reason": "backup_dir not configured"}
 
