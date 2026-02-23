@@ -968,11 +968,11 @@ Displays:
 Merge multiple profiles into one.
 
 ```bash
-file-organizer profile merge PROFILE1 PROFILE2 [PROFILE3...] [OPTIONS]
+file-organizer profile merge PROFILES... [OPTIONS]
 ```
 
 Arguments:
-- `PROFILE1 PROFILE2 ...` — Profile names to merge (requires at least 2)
+- `PROFILES...` — Profile names to merge (requires at least 2)
 
 Options:
 - `--output, -o TEXT` — Name for merged profile (required)

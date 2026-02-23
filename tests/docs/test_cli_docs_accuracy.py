@@ -114,7 +114,7 @@ def _all_registered_commands() -> list[_Command]:
         try:
             profile_group = _get_profile_group()
             commands.extend(_collect_commands(profile_group, prefix="profile"))
-        except Exception:
+        except ImportError:
             # Profile module may fail to import if optional dependencies
             # (e.g., intelligence services) are not installed; degrade gracefully.
             pass
@@ -157,23 +157,28 @@ def _command_is_documented(doc_content: str, command_path: str) -> bool:
     # Escape for regex
     escaped = re.escape(command_path)
 
-    # Pattern 1: markdown header with backtick-quoted command
+    # Pattern 1: markdown header with backtick-quoted command (primary requirement)
     # e.g. ### `organize`  or  #### `config show`
     header_pattern = rf"#{2,4}\s+`{escaped}`"
     if re.search(header_pattern, doc_content):
         return True
 
-    # Pattern 2: command in a markdown table row (for legacy interfaces)
+    # Pattern 2: command in a markdown table row (for legacy sections only)
+    # Only accept if in an explicitly legacy/reference table context
     # e.g. | `autotag suggest FILE...` |
     table_pattern = rf"\|\s*`{escaped}\b"
     if re.search(table_pattern, doc_content):
-        return True
+        # Verify this is in a reference table, not a usage example
+        table_match = re.search(rf"\|\s*`{escaped}\b", doc_content)
+        if table_match:
+            # Check if this line is inside a markdown table (preceded by | on same line)
+            start = max(0, table_match.start() - 100)
+            context = doc_content[start:table_match.start()]
+            if context.rfind("\n|") > context.rfind("\n"):
+                return True
 
-    # Pattern 3: in a code block as a usage line
-    # e.g. file-organizer organize INPUT_DIR OUTPUT_DIR
-    usage_pattern = rf"file-organizer\s+{escaped}\b"
-    if re.search(usage_pattern, doc_content):
-        return True
+    # Do NOT accept Pattern 3 (usage line in code blocks)
+    # as it's too permissive and masks missing dedicated sections
 
     return False
 
@@ -198,7 +203,7 @@ def _get_command_section(doc_content: str, command_path: str) -> str:
 
     # Find the next header of equal or higher level
     rest = doc_content[header_match.end() :]
-    next_header = re.search(rf"^#{{{1},{level}}}\s", rest, re.MULTILINE)
+    next_header = re.search(rf"^#{{{2},{level}}}\s", rest, re.MULTILINE)
     if next_header:
         end = header_match.end() + next_header.start()
     else:
@@ -302,6 +307,12 @@ class TestNoPhantomCommands:
         doc_content = _read_docs()
         commands = _get_commands()
         registered = {c.path for c in commands}
+
+        # Also add command groups (e.g., "config" from "config show")
+        for cmd_path in list(registered):
+            parts = cmd_path.split()
+            for i in range(1, len(parts)):
+                registered.add(" ".join(parts[:i]))
 
         # Extract all documented command paths from headers
         # Pattern: ### `cmd` or #### `parent sub`
