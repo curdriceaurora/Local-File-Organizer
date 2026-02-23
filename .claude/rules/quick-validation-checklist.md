@@ -93,6 +93,13 @@ git commit -m "message"
 - [ ] No dict-style access on dataclasses
 - [ ] Tests actually run and pass locally
 
+### Test Logic Review (issue #444)
+
+- [ ] Test helper regex patterns tested in isolation (`tests/docs/test_cli_docs_helpers.py`)
+- [ ] Edge cases covered (substring matching, missing sections, extractability gaps)
+- [ ] Helper function docstrings match actual return types
+- [ ] Cross-module dependencies trigger correct test suites (CLI changes run docs tests)
+
 ## 🗑️ Repository Checklist
 
 - [ ] No build artifacts (`.coverage`, `*.bak`, `*.pyc`)

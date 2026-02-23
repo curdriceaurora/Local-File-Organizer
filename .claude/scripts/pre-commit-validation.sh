@@ -343,6 +343,21 @@ if [[ -n "$PY_FILES" ]]; then
     echo ""
   fi
 
+  echo "🧪 Checking if CLI docs accuracy tests are needed..."
+  CLI_FILES_REGEX="src/file_organizer/cli/.*\\.py"
+  if echo "$MODIFIED" | grep -Eq "$CLI_FILES_REGEX"; then
+    echo "🧪 Running CLI docs accuracy tests..."
+    if ! pytest tests/docs/test_cli_docs_accuracy.py -q --override-ini="addopts="; then
+      echo "❌ CLI docs accuracy tests failed"
+      exit 1
+    fi
+    echo "✓ CLI docs accuracy tests passed"
+    echo ""
+  else
+    echo "✓ No CLI changes detected"
+    echo ""
+  fi
+
   echo "🧪 Running CI-focused test suite..."
   if ! pytest tests/ci -q --override-ini="addopts="; then
     echo "❌ CI-focused tests failed"
