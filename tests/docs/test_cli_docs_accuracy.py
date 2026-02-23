@@ -11,7 +11,6 @@ comments across two rounds).  See GitHub issue #440 for context.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import NamedTuple
 
 import click
