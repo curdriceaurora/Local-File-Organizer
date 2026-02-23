@@ -177,8 +177,11 @@ def _command_is_documented(doc_content: str, command_path: str) -> bool:
             if context.rfind("\n|") > context.rfind("\n"):
                 return True
 
-    # Do NOT accept Pattern 3 (usage line in code blocks)
-    # as it's too permissive and masks missing dedicated sections
+    # Pattern 3: in a code block as a usage line
+    # e.g. file-organizer organize INPUT_DIR OUTPUT_DIR
+    usage_pattern = rf"file-organizer\s+{escaped}\b"
+    if re.search(usage_pattern, doc_content):
+        return True
 
     return False
 
