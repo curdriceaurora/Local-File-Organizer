@@ -1,5 +1,4 @@
-"""
-Image deduplication module using perceptual hashing.
+"""Image deduplication module using perceptual hashing.
 
 Provides ImageDeduplicator class with support for pHash, dHash, and aHash
 algorithms for detecting visually similar images. Uses the imagededup library
@@ -25,8 +24,7 @@ HashMethod = Literal["phash", "dhash", "ahash"]
 
 
 class ImageDeduplicator:
-    """
-    Detects duplicate and visually similar images using perceptual hashing.
+    """Detects duplicate and visually similar images using perceptual hashing.
 
     Uses imagededup library for computing perceptual hashes and comparing
     images based on visual similarity rather than exact byte matches.
@@ -43,8 +41,7 @@ class ImageDeduplicator:
     """
 
     def __init__(self, hash_method: HashMethod = "phash", threshold: int = 10):
-        """
-        Initialize the ImageDeduplicator.
+        """Initialize the ImageDeduplicator.
 
         Args:
             hash_method: Hash algorithm ("phash", "dhash", or "ahash")
@@ -79,8 +76,7 @@ class ImageDeduplicator:
             self.hasher = AHash()
 
     def get_image_hash(self, image_path: Path) -> str | None:
-        """
-        Compute perceptual hash for a single image.
+        """Compute perceptual hash for a single image.
 
         Args:
             image_path: Path to image file
@@ -115,8 +111,7 @@ class ImageDeduplicator:
             return None
 
     def compute_hamming_distance(self, hash1: str, hash2: str) -> int:
-        """
-        Calculate Hamming distance between two perceptual hashes.
+        """Calculate Hamming distance between two perceptual hashes.
 
         Hamming distance is the number of bit positions where the two
         hashes differ. Lower distance = more similar images.
@@ -147,8 +142,7 @@ class ImageDeduplicator:
             raise ValueError(f"Invalid hash format: {e}") from e
 
     def compute_similarity(self, img1: Path, img2: Path) -> float | None:
-        """
-        Compute similarity score between two images.
+        """Compute similarity score between two images.
 
         Args:
             img1: Path to first image
@@ -179,8 +173,7 @@ class ImageDeduplicator:
         recursive: bool = True,
         progress_callback: Callable[[int, int], None] | None = None,
     ) -> dict[str, list[Path]]:
-        """
-        Find duplicate and similar images in a directory.
+        """Find duplicate and similar images in a directory.
 
         Groups images by similarity, with each group containing one representative
         image and all its duplicates/similar images.
@@ -194,7 +187,8 @@ class ImageDeduplicator:
         Returns:
             Dictionary mapping representative image hash to list of similar image paths.
             Only groups with 2+ images are included.
-            Example:
+
+        Example:
             {
                 "abc123...": [Path("img1.jpg"), Path("img2.jpg")],
                 "def456...": [Path("img3.png"), Path("img4.png"), Path("img5.png")]
@@ -268,8 +262,7 @@ class ImageDeduplicator:
     def cluster_by_similarity(
         self, images: list[Path], progress_callback: Callable[[int, int], None] | None = None
     ) -> list[list[Path]]:
-        """
-        Cluster images into groups of similar images.
+        """Cluster images into groups of similar images.
 
         Uses single-linkage clustering: if any image in a cluster is similar
         to a new image, the new image joins that cluster.
@@ -330,8 +323,7 @@ class ImageDeduplicator:
     def batch_compute_hashes(
         self, image_paths: list[Path], progress_callback: Callable[[int, int], None] | None = None
     ) -> dict[Path, str]:
-        """
-        Compute perceptual hashes for multiple images.
+        """Compute perceptual hashes for multiple images.
 
         Processes images sequentially but returns all results together.
         Failed images are logged but don't stop batch processing.
@@ -357,8 +349,7 @@ class ImageDeduplicator:
         return results
 
     def _find_image_files(self, directory: Path, recursive: bool = True) -> list[Path]:
-        """
-        Find all supported image files in a directory.
+        """Find all supported image files in a directory.
 
         Args:
             directory: Directory to search
@@ -381,8 +372,7 @@ class ImageDeduplicator:
         return image_files
 
     def validate_image(self, image_path: Path) -> tuple[bool, str | None]:
-        """
-        Validate that an image can be processed.
+        """Validate that an image can be processed.
 
         Checks:
         - File exists and is readable

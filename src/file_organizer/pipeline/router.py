@@ -1,5 +1,4 @@
-"""
-File routing for the auto-organization pipeline.
+"""File routing for the auto-organization pipeline.
 
 Routes files to the appropriate processor based on file extension,
 with support for custom routing rules.
@@ -82,8 +81,7 @@ _DEFAULT_AUDIO_EXTENSIONS: frozenset[str] = frozenset(
 
 
 class FileRouter:
-    """
-    Routes files to the appropriate processor type based on extension.
+    """Routes files to the appropriate processor type based on extension.
 
     Uses a configurable mapping from file extensions to processor types,
     with sensible defaults for common file formats. Supports custom
@@ -116,8 +114,7 @@ class FileRouter:
         self._custom_rules: list[tuple[Callable[[Path], bool], ProcessorType]] = []
 
     def route(self, file_path: Path) -> ProcessorType:
-        """
-        Determine which processor type should handle a file.
+        """Determine which processor type should handle a file.
 
         Custom rules are checked first (in registration order), then
         extension-based mapping, then falls back to UNKNOWN.
@@ -155,8 +152,7 @@ class FileRouter:
         return processor_type
 
     def add_extension(self, extension: str, processor_type: ProcessorType) -> None:
-        """
-        Register or override the processor type for a file extension.
+        """Register or override the processor type for a file extension.
 
         Args:
             extension: File extension (with or without leading dot).
@@ -168,8 +164,7 @@ class FileRouter:
         logger.debug("Registered extension %s -> %s", ext, processor_type.value)
 
     def remove_extension(self, extension: str) -> None:
-        """
-        Remove a file extension mapping.
+        """Remove a file extension mapping.
 
         Args:
             extension: File extension to remove (with or without leading dot).
@@ -186,8 +181,7 @@ class FileRouter:
         predicate: Callable[[Path], bool],
         processor_type: ProcessorType,
     ) -> None:
-        """
-        Add a custom routing rule.
+        """Add a custom routing rule.
 
         Custom rules are evaluated before extension-based routing,
         in the order they were added. The first matching rule wins.
@@ -210,8 +204,7 @@ class FileRouter:
         self._custom_rules.clear()
 
     def get_extension_map(self) -> dict[str, ProcessorType]:
-        """
-        Return a copy of the current extension-to-processor mapping.
+        """Return a copy of the current extension-to-processor mapping.
 
         Returns:
             Dictionary mapping extensions to processor types.

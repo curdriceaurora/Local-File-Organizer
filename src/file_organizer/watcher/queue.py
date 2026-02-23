@@ -1,5 +1,4 @@
-"""
-Event queue for batching file system events.
+"""Event queue for batching file system events.
 
 Provides a thread-safe queue that collects FileEvent instances and
 supports batch dequeuing for efficient processing.
@@ -27,8 +26,7 @@ class EventType(StrEnum):
 
 @dataclass(frozen=True)
 class FileEvent:
-    """
-    Represents a single file system event.
+    """Represents a single file system event.
 
     Attributes:
         event_type: The type of file system event.
@@ -46,8 +44,7 @@ class FileEvent:
 
 
 class EventQueue:
-    """
-    Thread-safe queue for file system events with batch dequeue support.
+    """Thread-safe queue for file system events with batch dequeue support.
 
     Events are enqueued individually and can be dequeued in configurable
     batch sizes for efficient downstream processing.
@@ -58,8 +55,7 @@ class EventQueue:
     """
 
     def __init__(self, max_size: int = 0) -> None:
-        """
-        Initialize the event queue.
+        """Initialize the event queue.
 
         Args:
             max_size: Maximum queue capacity. 0 means unlimited.
@@ -69,8 +65,7 @@ class EventQueue:
         self._not_empty = threading.Condition(self._lock)
 
     def enqueue(self, event: FileEvent) -> None:
-        """
-        Add an event to the queue.
+        """Add an event to the queue.
 
         Thread-safe. If the queue is at max capacity, the oldest event
         is silently dropped.
@@ -83,8 +78,7 @@ class EventQueue:
             self._not_empty.notify()
 
     def dequeue_batch(self, max_size: int = 10) -> list[FileEvent]:
-        """
-        Remove and return up to max_size events from the queue.
+        """Remove and return up to max_size events from the queue.
 
         Returns immediately with whatever events are available (may be
         fewer than max_size, or an empty list if the queue is empty).
@@ -105,8 +99,7 @@ class EventQueue:
     def dequeue_batch_blocking(
         self, max_size: int = 10, timeout: float | None = None
     ) -> list[FileEvent]:
-        """
-        Remove and return up to max_size events, blocking if empty.
+        """Remove and return up to max_size events, blocking if empty.
 
         Waits until at least one event is available (or timeout expires),
         then returns up to max_size events.
@@ -130,8 +123,7 @@ class EventQueue:
             return batch
 
     def peek(self) -> FileEvent | None:
-        """
-        Return the next event without removing it.
+        """Return the next event without removing it.
 
         Returns:
             The next FileEvent, or None if the queue is empty.
@@ -142,8 +134,7 @@ class EventQueue:
             return None
 
     def clear(self) -> int:
-        """
-        Remove all events from the queue.
+        """Remove all events from the queue.
 
         Returns:
             The number of events that were removed.

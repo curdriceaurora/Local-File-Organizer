@@ -1,5 +1,4 @@
-"""
-Auto-organization pipeline package.
+"""Auto-organization pipeline package.
 
 Connects file system monitoring to file processing and organization,
 providing a cohesive pipeline for automatically categorizing and

@@ -1,5 +1,4 @@
-"""
-Backup and restore functionality for safe file operations.
+"""Backup and restore functionality for safe file operations.
 
 This module provides safe backup management for file operations, including:
 - Creating backups before deletion
@@ -27,8 +26,7 @@ except ImportError:
 
 
 class BackupManager:
-    """
-    Manages file backups for safe duplicate removal operations.
+    """Manages file backups for safe duplicate removal operations.
 
     The BackupManager creates backups in a dedicated directory before any
     file deletion operations, maintains a manifest of all backups with
@@ -43,8 +41,7 @@ class BackupManager:
     MANIFEST_FILE = "manifest.json"
 
     def __init__(self, base_dir: Path | None = None):
-        """
-        Initialize the BackupManager.
+        """Initialize the BackupManager.
 
         Args:
             base_dir: Base directory for backups. If None, uses current working directory.
@@ -63,8 +60,7 @@ class BackupManager:
             self._save_manifest({})
 
     def create_backup(self, file_path: Path) -> Path:
-        """
-        Create a backup of the specified file.
+        """Create a backup of the specified file.
 
         Args:
             file_path: Path to the file to backup
@@ -110,8 +106,7 @@ class BackupManager:
         return backup_path
 
     def restore_backup(self, backup_path: Path, target_path: Path | None = None) -> Path:
-        """
-        Restore a file from backup.
+        """Restore a file from backup.
 
         Args:
             backup_path: Path to the backup file
@@ -155,8 +150,7 @@ class BackupManager:
         return target_path
 
     def cleanup_old_backups(self, max_age_days: int = 30) -> list[Path]:
-        """
-        Remove backups older than the specified age.
+        """Remove backups older than the specified age.
 
         Args:
             max_age_days: Maximum age in days for backups to keep
@@ -196,8 +190,7 @@ class BackupManager:
         return removed_backups
 
     def get_backup_info(self, backup_path: Path) -> dict | None:
-        """
-        Get metadata for a specific backup.
+        """Get metadata for a specific backup.
 
         Args:
             backup_path: Path to the backup file
@@ -210,8 +203,7 @@ class BackupManager:
         return manifest.get(backup_key)
 
     def list_backups(self) -> list[dict]:
-        """
-        List all backups with their metadata.
+        """List all backups with their metadata.
 
         Returns:
             List of dictionaries containing backup information
@@ -230,8 +222,7 @@ class BackupManager:
         return backups
 
     def get_statistics(self) -> dict:
-        """
-        Get statistics about the backup system.
+        """Get statistics about the backup system.
 
         Returns:
             Dictionary containing backup statistics
@@ -258,8 +249,7 @@ class BackupManager:
         }
 
     def verify_backups(self) -> list[str]:
-        """
-        Verify integrity of all backups.
+        """Verify integrity of all backups.
 
         Returns:
             List of backup paths that are missing or corrupted
@@ -282,8 +272,7 @@ class BackupManager:
         return issues
 
     def _load_manifest(self) -> dict:
-        """
-        Load the backup manifest from disk with file locking.
+        """Load the backup manifest from disk with file locking.
 
         Returns:
             Dictionary containing manifest data
@@ -308,8 +297,7 @@ class BackupManager:
             return {}
 
     def _save_manifest(self, manifest: dict) -> None:
-        """
-        Save the backup manifest to disk atomically.
+        """Save the backup manifest to disk atomically.
 
         Writes to a temp file in the same directory, then uses os.replace()
         for an atomic rename. This prevents manifest corruption on crash and

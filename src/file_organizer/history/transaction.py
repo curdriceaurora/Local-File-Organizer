@@ -1,5 +1,4 @@
-"""
-Transaction context manager for batch operations.
+"""Transaction context manager for batch operations.
 
 This module provides a context manager for grouping related file operations
 into atomic transactions that can be committed or rolled back.
@@ -18,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class OperationTransaction:
-    """
-    Context manager for batch file operations.
+    """Context manager for batch file operations.
 
     This class provides transaction support for grouping related operations
     together. All operations within a transaction share the same transaction ID
@@ -34,8 +32,7 @@ class OperationTransaction:
     """
 
     def __init__(self, history: OperationHistory, metadata: dict[str, Any] | None = None):
-        """
-        Initialize transaction context manager.
+        """Initialize transaction context manager.
 
         Args:
             history: OperationHistory instance to use for logging
@@ -48,8 +45,7 @@ class OperationTransaction:
         self._rolled_back = False
 
     def __enter__(self) -> OperationTransaction:
-        """
-        Enter transaction context.
+        """Enter transaction context.
 
         Returns:
             Self for method chaining
@@ -59,8 +55,7 @@ class OperationTransaction:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        Exit transaction context.
+        """Exit transaction context.
 
         Automatically commits on success or rolls back on exception.
 
@@ -92,8 +87,7 @@ class OperationTransaction:
         status: OperationStatus = OperationStatus.COMPLETED,
         error_message: str | None = None,
     ) -> int:
-        """
-        Log an operation within this transaction.
+        """Log an operation within this transaction.
 
         Args:
             operation_type: Type of operation
@@ -122,8 +116,7 @@ class OperationTransaction:
     def log_move(
         self, source_path: Path, destination_path: Path, metadata: dict[str, Any] | None = None
     ) -> int:
-        """
-        Log a move operation.
+        """Log a move operation.
 
         Args:
             source_path: Source file path
@@ -143,8 +136,7 @@ class OperationTransaction:
     def log_rename(
         self, source_path: Path, destination_path: Path, metadata: dict[str, Any] | None = None
     ) -> int:
-        """
-        Log a rename operation.
+        """Log a rename operation.
 
         Args:
             source_path: Source file path
@@ -162,8 +154,7 @@ class OperationTransaction:
         )
 
     def log_delete(self, source_path: Path, metadata: dict[str, Any] | None = None) -> int:
-        """
-        Log a delete operation.
+        """Log a delete operation.
 
         Args:
             source_path: Source file path
@@ -179,8 +170,7 @@ class OperationTransaction:
     def log_copy(
         self, source_path: Path, destination_path: Path, metadata: dict[str, Any] | None = None
     ) -> int:
-        """
-        Log a copy operation.
+        """Log a copy operation.
 
         Args:
             source_path: Source file path
@@ -198,8 +188,7 @@ class OperationTransaction:
         )
 
     def log_create(self, source_path: Path, metadata: dict[str, Any] | None = None) -> int:
-        """
-        Log a create operation.
+        """Log a create operation.
 
         Args:
             source_path: Source file path
@@ -220,8 +209,7 @@ class OperationTransaction:
         destination_path: Path | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> int:
-        """
-        Log a failed operation.
+        """Log a failed operation.
 
         Args:
             operation_type: Type of operation
@@ -243,8 +231,7 @@ class OperationTransaction:
         )
 
     def commit(self) -> bool:
-        """
-        Commit the transaction, marking it as completed.
+        """Commit the transaction, marking it as completed.
 
         Returns:
             True if successful, False otherwise
@@ -268,8 +255,7 @@ class OperationTransaction:
         return success
 
     def rollback(self) -> bool:
-        """
-        Rollback the transaction, marking all operations as rolled back.
+        """Rollback the transaction, marking all operations as rolled back.
 
         Returns:
             True if successful, False otherwise
@@ -293,8 +279,7 @@ class OperationTransaction:
         return success
 
     def get_transaction_id(self) -> str | None:
-        """
-        Get the current transaction ID.
+        """Get the current transaction ID.
 
         Returns:
             Transaction ID or None if outside context

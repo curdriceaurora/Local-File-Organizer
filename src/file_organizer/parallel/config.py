@@ -1,5 +1,4 @@
-"""
-Configuration for parallel file processing.
+"""Configuration for parallel file processing.
 
 This module defines the configuration dataclass controlling parallelism,
 timeouts, retry behavior, and progress reporting.
@@ -23,8 +22,7 @@ class ExecutorType(StrEnum):
 
 @dataclass
 class ParallelConfig:
-    """
-    Configuration for the parallel processor.
+    """Configuration for the parallel processor.
 
     Attributes:
         max_workers: Maximum number of worker threads/processes.

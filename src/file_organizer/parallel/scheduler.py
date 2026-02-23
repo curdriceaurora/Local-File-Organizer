@@ -1,5 +1,4 @@
-"""
-Task scheduling for parallel file processing.
+"""Task scheduling for parallel file processing.
 
 This module provides file ordering strategies to optimize batch throughput,
 such as processing small files first or grouping files by type.
@@ -23,8 +22,7 @@ class PriorityStrategy(StrEnum):
 
 
 class TaskScheduler:
-    """
-    Schedules files for parallel processing based on a priority strategy.
+    """Schedules files for parallel processing based on a priority strategy.
 
     The scheduler reorders a list of file paths to improve throughput.
     For example, processing small files first reduces average latency,
@@ -37,8 +35,7 @@ class TaskScheduler:
         strategy: PriorityStrategy = PriorityStrategy.SIZE_ASC,
         priority_fn: Callable[[Path], int | float] | None = None,
     ) -> list[Path]:
-        """
-        Order files according to the given priority strategy.
+        """Order files according to the given priority strategy.
 
         Args:
             files: List of file paths to schedule.
@@ -74,8 +71,7 @@ class TaskScheduler:
 
     @staticmethod
     def _sort_by_size(files: list[Path], *, reverse: bool) -> list[Path]:
-        """
-        Sort files by size.
+        """Sort files by size.
 
         Non-existent files are assigned size 0 so they sort to the front
         (ascending) and can fail fast during processing.
@@ -98,8 +94,7 @@ class TaskScheduler:
 
     @staticmethod
     def _group_by_type(files: list[Path]) -> list[Path]:
-        """
-        Group files by their suffix, then sort within each group by name.
+        """Group files by their suffix, then sort within each group by name.
 
         Files without a suffix are grouped under the empty string and placed
         last.

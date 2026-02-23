@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Example usage of ImageDeduplicator for finding duplicate images.
+"""Example usage of ImageDeduplicator for finding duplicate images.
 
 This script demonstrates:
 1. Basic duplicate detection

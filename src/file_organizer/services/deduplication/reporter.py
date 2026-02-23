@@ -1,5 +1,4 @@
-"""
-Storage reclamation reporter.
+"""Storage reclamation reporter.
 
 Generates reports on duplicate detection and storage savings.
 """
@@ -22,8 +21,7 @@ class StorageReporter:
         pass
 
     def calculate_reclamation(self, duplicate_groups: list[dict]) -> dict:
-        """
-        Calculate storage reclamation metrics.
+        """Calculate storage reclamation metrics.
 
         Args:
             duplicate_groups: list of duplicate groups
@@ -50,8 +48,7 @@ class StorageReporter:
         return metrics
 
     def generate_report(self, duplicate_results: dict, output_format: str = "text") -> str:
-        """
-        Generate duplicate detection report.
+        """Generate duplicate detection report.
 
         Args:
             duplicate_results: Results from DocumentDeduplicator
@@ -92,8 +89,7 @@ class StorageReporter:
         return "\n".join(lines)
 
     def export_to_csv(self, duplicate_groups: list[dict], output_path: Path) -> None:
-        """
-        Export duplicate groups to CSV.
+        """Export duplicate groups to CSV.
 
         Args:
             duplicate_groups: list of duplicate groups
@@ -135,8 +131,7 @@ class StorageReporter:
             raise
 
     def export_to_json(self, duplicate_results: dict, output_path: Path) -> None:
-        """
-        Export results to JSON.
+        """Export results to JSON.
 
         Args:
             duplicate_results: Results dictionary

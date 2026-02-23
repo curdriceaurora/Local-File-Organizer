@@ -1,5 +1,4 @@
-"""
-Preference Storage & Persistence Module
+"""Preference Storage & Persistence Module
 
 Provides JSON-based preference storage with atomic writes, schema validation,
 backup/restore functionality, and migration support.
@@ -57,8 +56,7 @@ class DirectoryPreference:
 
 
 class PreferenceStore:
-    """
-    JSON-based preference store with atomic writes and schema validation.
+    """JSON-based preference store with atomic writes and schema validation.
 
     Features:
     - Atomic file writes using temporary files
@@ -74,8 +72,7 @@ class PreferenceStore:
     BACKUP_EXTENSION = ".backup"
 
     def __init__(self, storage_path: Path | None = None):
-        """
-        Initialize preference store.
+        """Initialize preference store.
 
         Args:
             storage_path: Path to store preferences. If None, uses default location.
@@ -114,8 +111,7 @@ class PreferenceStore:
         }
 
     def _validate_schema(self, data: dict[str, Any]) -> bool:
-        """
-        Validate preference schema.
+        """Validate preference schema.
 
         Args:
             data: Preference data to validate
@@ -165,8 +161,7 @@ class PreferenceStore:
             return False
 
     def _migrate_schema(self, data: dict[str, Any], from_version: str) -> dict[str, Any]:
-        """
-        Migrate preference data from older schema version.
+        """Migrate preference data from older schema version.
 
         Args:
             data: Preference data to migrate
@@ -187,8 +182,7 @@ class PreferenceStore:
         return data
 
     def load_preferences(self) -> bool:
-        """
-        Load preferences from disk with error recovery.
+        """Load preferences from disk with error recovery.
 
         Returns:
             True if loaded successfully, False if using defaults
@@ -269,8 +263,7 @@ class PreferenceStore:
             return False
 
     def save_preferences(self) -> bool:
-        """
-        Save preferences to disk using atomic writes.
+        """Save preferences to disk using atomic writes.
 
         Returns:
             True if saved successfully, False otherwise
@@ -303,8 +296,7 @@ class PreferenceStore:
                 return False
 
     def add_preference(self, path: Path, preference_data: dict[str, Any]) -> None:
-        """
-        Add or update preference for a directory.
+        """Add or update preference for a directory.
 
         Args:
             path: Directory path
@@ -341,8 +333,7 @@ class PreferenceStore:
                 self._preferences["directory_preferences"][path_str] = dir_pref.to_dict()
 
     def get_preference(self, path: Path, fallback_to_parent: bool = True) -> dict[str, Any] | None:
-        """
-        Get preference for a directory with optional parent fallback.
+        """Get preference for a directory with optional parent fallback.
 
         Args:
             path: Directory path
@@ -375,8 +366,7 @@ class PreferenceStore:
             return self._preferences["global_preferences"].copy()
 
     def update_confidence(self, path: Path, success: bool) -> None:
-        """
-        Update confidence score for a directory based on success/failure.
+        """Update confidence score for a directory based on success/failure.
 
         Args:
             path: Directory path
@@ -404,8 +394,7 @@ class PreferenceStore:
                 pref["updated"] = self._get_current_timestamp()
 
     def resolve_conflicts(self, preference_list: list[dict[str, Any]]) -> dict[str, Any]:
-        """
-        Resolve conflicting preferences using recency and frequency weighting.
+        """Resolve conflicting preferences using recency and frequency weighting.
 
         Args:
             preference_list: List of conflicting preference dictionaries
@@ -432,8 +421,7 @@ class PreferenceStore:
         return scored_prefs[0][1].copy()
 
     def _score_preference(self, pref: dict[str, Any]) -> float:
-        """
-        Calculate score for a preference based on multiple factors.
+        """Calculate score for a preference based on multiple factors.
 
         Args:
             pref: Preference dictionary
@@ -466,8 +454,7 @@ class PreferenceStore:
         return score
 
     def export_json(self, output_path: Path) -> bool:
-        """
-        Export preferences to a JSON file.
+        """Export preferences to a JSON file.
 
         Args:
             output_path: Path to export file
@@ -494,8 +481,7 @@ class PreferenceStore:
                 return False
 
     def import_json(self, input_path: Path) -> bool:
-        """
-        Import preferences from a JSON file.
+        """Import preferences from a JSON file.
 
         Args:
             input_path: Path to import file
@@ -547,8 +533,7 @@ class PreferenceStore:
                 return False
 
     def get_statistics(self) -> dict[str, Any]:
-        """
-        Get statistics about stored preferences.
+        """Get statistics about stored preferences.
 
         Returns:
             Dictionary with statistics
@@ -581,8 +566,7 @@ class PreferenceStore:
             self.save_preferences()
 
     def list_directory_preferences(self) -> list[tuple[str, dict[str, Any]]]:
-        """
-        List all directory preferences.
+        """List all directory preferences.
 
         Returns:
             List of (path, preference) tuples

@@ -1,5 +1,4 @@
-"""
-Thread-safe connection pool for SQLite.
+"""Thread-safe connection pool for SQLite.
 
 This module provides a connection pool that manages a fixed number of SQLite
 connections, handing them out to callers and returning them when done.  It is

@@ -1,5 +1,4 @@
-"""
-Pipeline configuration for auto-organization.
+"""Pipeline configuration for auto-organization.
 
 Defines the PipelineConfig dataclass that controls how the auto-organization
 pipeline behaves, including watch integration, output paths, concurrency,
@@ -64,8 +63,7 @@ DEFAULT_SUPPORTED_EXTENSIONS: frozenset[str] = frozenset(
 
 @dataclass
 class PipelineConfig:
-    """
-    Configuration for the auto-organization pipeline.
+    """Configuration for the auto-organization pipeline.
 
     Controls how files are discovered, processed, and organized. Defaults to
     safe operation: dry-run enabled, auto-organize disabled.

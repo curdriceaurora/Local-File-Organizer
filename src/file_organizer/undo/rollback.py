@@ -1,5 +1,4 @@
-"""
-Rollback executor for file operations.
+"""Rollback executor for file operations.
 
 This module executes rollback operations for undo/redo,
 handling all operation types and transaction management.
@@ -19,16 +18,14 @@ logger = logging.getLogger(__name__)
 
 
 class RollbackExecutor:
-    """
-    Executes rollback operations for undo/redo.
+    """Executes rollback operations for undo/redo.
 
     This class handles the actual file system operations required
     to undo or redo file operations.
     """
 
     def __init__(self, validator: OperationValidator | None = None):
-        """
-        Initialize rollback executor.
+        """Initialize rollback executor.
 
         Args:
             validator: Operation validator
@@ -37,8 +34,7 @@ class RollbackExecutor:
         self.trash_dir = self.validator.trash_dir
 
     def rollback_operation(self, operation: Operation) -> bool:
-        """
-        Rollback a single operation (undo).
+        """Rollback a single operation (undo).
 
         Args:
             operation: Operation to rollback
@@ -65,8 +61,7 @@ class RollbackExecutor:
             return False
 
     def redo_operation(self, operation: Operation) -> bool:
-        """
-        Redo an operation (forward execution).
+        """Redo an operation (forward execution).
 
         Args:
             operation: Operation to redo
@@ -93,8 +88,7 @@ class RollbackExecutor:
             return False
 
     def rollback_move(self, operation: Operation) -> bool:
-        """
-        Rollback a move operation (move file back to source).
+        """Rollback a move operation (move file back to source).
 
         Args:
             operation: Move operation to rollback
@@ -121,8 +115,7 @@ class RollbackExecutor:
             return False
 
     def rollback_rename(self, operation: Operation) -> bool:
-        """
-        Rollback a rename operation (rename back to original).
+        """Rollback a rename operation (rename back to original).
 
         Args:
             operation: Rename operation to rollback
@@ -146,8 +139,7 @@ class RollbackExecutor:
             return False
 
     def rollback_delete(self, operation: Operation) -> bool:
-        """
-        Rollback a delete operation (restore from trash).
+        """Rollback a delete operation (restore from trash).
 
         Args:
             operation: Delete operation to rollback
@@ -185,8 +177,7 @@ class RollbackExecutor:
             return False
 
     def rollback_copy(self, operation: Operation) -> bool:
-        """
-        Rollback a copy operation (delete the copy).
+        """Rollback a copy operation (delete the copy).
 
         Args:
             operation: Copy operation to rollback
@@ -209,8 +200,7 @@ class RollbackExecutor:
             return False
 
     def rollback_create(self, operation: Operation) -> bool:
-        """
-        Rollback a create operation (delete the created file).
+        """Rollback a create operation (delete the created file).
 
         Args:
             operation: Create operation to rollback
@@ -233,8 +223,7 @@ class RollbackExecutor:
             return False
 
     def redo_move(self, operation: Operation) -> bool:
-        """
-        Redo a move operation (move file to destination again).
+        """Redo a move operation (move file to destination again).
 
         Args:
             operation: Move operation to redo
@@ -261,8 +250,7 @@ class RollbackExecutor:
             return False
 
     def redo_rename(self, operation: Operation) -> bool:
-        """
-        Redo a rename operation.
+        """Redo a rename operation.
 
         Args:
             operation: Rename operation to redo
@@ -286,8 +274,7 @@ class RollbackExecutor:
             return False
 
     def redo_delete(self, operation: Operation) -> bool:
-        """
-        Redo a delete operation (delete file again).
+        """Redo a delete operation (delete file again).
 
         Args:
             operation: Delete operation to redo
@@ -310,8 +297,7 @@ class RollbackExecutor:
             return False
 
     def redo_copy(self, operation: Operation) -> bool:
-        """
-        Redo a copy operation (create copy again).
+        """Redo a copy operation (create copy again).
 
         Args:
             operation: Copy operation to redo
@@ -344,8 +330,7 @@ class RollbackExecutor:
             return False
 
     def redo_create(self, operation: Operation) -> bool:
-        """
-        Redo a create operation (create file again).
+        """Redo a create operation (create file again).
 
         Args:
             operation: Create operation to redo
@@ -376,8 +361,7 @@ class RollbackExecutor:
     def rollback_transaction(
         self, transaction_id: str, operations: list[Operation]
     ) -> RollbackResult:
-        """
-        Rollback an entire transaction atomically.
+        """Rollback an entire transaction atomically.
 
         Args:
             transaction_id: Transaction ID
@@ -438,8 +422,7 @@ class RollbackExecutor:
         return result
 
     def _move_to_trash(self, file_path: Path, operation_id: int | None = None) -> Path:
-        """
-        Move a file to trash.
+        """Move a file to trash.
 
         Args:
             file_path: File to move to trash

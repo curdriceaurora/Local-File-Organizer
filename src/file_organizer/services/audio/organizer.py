@@ -1,5 +1,4 @@
-"""
-Audio Organization Rule Engine
+"""Audio Organization Rule Engine
 
 Generates organized folder structures for audio files based on their
 classification type and metadata. Supports customizable path templates,
@@ -141,8 +140,7 @@ _MULTIPLE_SPACES = re.compile(r"\s+")
 
 
 def sanitize_path_component(value: str) -> str:
-    """
-    Sanitise a single path component for filesystem compatibility.
+    """Sanitise a single path component for filesystem compatibility.
 
     Removes illegal characters, collapses whitespace, strips leading/trailing
     dots and spaces, and truncates to 255 characters.
@@ -176,8 +174,7 @@ def _safe_value(value: str | None, fallback: str = "Unknown") -> str:
 
 
 class AudioOrganizer:
-    """
-    Organises audio files into directory structures based on type and metadata.
+    """Organises audio files into directory structures based on type and metadata.
 
     Supports customisable templates, dry-run previews, and safe file moves
     with conflict resolution.
@@ -194,8 +191,7 @@ class AudioOrganizer:
         rules: OrganizationRules | None = None,
         classifier_fn: object | None = None,
     ) -> None:
-        """
-        Initialise the audio organiser.
+        """Initialise the audio organiser.
 
         Args:
             rules: Organisation rules / templates.  Defaults used if None.
@@ -213,8 +209,7 @@ class AudioOrganizer:
         audio_type: AudioType,
         metadata: AudioMetadata,
     ) -> Path:
-        """
-        Generate an organised relative path for a single audio file.
+        """Generate an organised relative path for a single audio file.
 
         Args:
             audio_type: The classified audio type.
@@ -234,8 +229,7 @@ class AudioOrganizer:
         files: list[tuple[Path, AudioType, AudioMetadata]],
         base_path: Path,
     ) -> OrganizationPlan:
-        """
-        Preview organisation without moving any files.
+        """Preview organisation without moving any files.
 
         Args:
             files: List of (source_path, audio_type, metadata) tuples.
@@ -268,8 +262,7 @@ class AudioOrganizer:
         base_path: Path,
         dry_run: bool = True,
     ) -> OrganizationResult:
-        """
-        Organise audio files into the target directory structure.
+        """Organise audio files into the target directory structure.
 
         Args:
             files: List of (source_path, audio_type, metadata) tuples.
@@ -389,8 +382,7 @@ class AudioOrganizer:
 
 
 def _resolve_conflict(dest: Path) -> Path:
-    """
-    Resolve filename conflicts by appending a numeric suffix.
+    """Resolve filename conflicts by appending a numeric suffix.
 
     e.g. song.mp3 -> song (1).mp3 -> song (2).mp3
     """

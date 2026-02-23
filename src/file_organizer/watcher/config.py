@@ -1,5 +1,4 @@
-"""
-Configuration for the file system watcher.
+"""Configuration for the file system watcher.
 
 Defines the WatcherConfig dataclass for controlling monitoring behavior
 including directory selection, filtering, debouncing, and batching.
@@ -33,8 +32,7 @@ DEFAULT_EXCLUDE_PATTERNS: list[str] = [
 
 @dataclass
 class WatcherConfig:
-    """
-    Configuration for the file system monitor.
+    """Configuration for the file system monitor.
 
     Controls which directories to watch, how events are filtered,
     debounce timing, and batch processing parameters.
@@ -75,8 +73,7 @@ class WatcherConfig:
             raise ValueError(f"batch_size must be at least 1, got {self.batch_size}")
 
     def should_include_file(self, path: Path) -> bool:
-        """
-        Check whether a file path passes the configured filters.
+        """Check whether a file path passes the configured filters.
 
         Applies both exclude pattern matching and file type filtering.
 
@@ -102,8 +99,7 @@ class WatcherConfig:
 
 
 def _matches_pattern(path_str: str, pattern: str) -> bool:
-    """
-    Check if a path string matches a glob-like exclude pattern.
+    """Check if a path string matches a glob-like exclude pattern.
 
     Supports simple glob matching with '*' wildcards. This is a lightweight
     implementation that handles the most common patterns without pulling in

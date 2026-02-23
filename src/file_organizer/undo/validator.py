@@ -1,5 +1,4 @@
-"""
-Operation validator for undo/redo operations.
+"""Operation validator for undo/redo operations.
 
 This module provides validation logic to ensure undo/redo operations
 can be safely executed without conflicts.
@@ -18,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class OperationValidator:
-    """
-    Validates operations before undo/redo execution.
+    """Validates operations before undo/redo execution.
 
     This class performs comprehensive checks to ensure operations
     can be safely executed, including file integrity, path availability,
@@ -27,8 +25,7 @@ class OperationValidator:
     """
 
     def __init__(self, trash_dir: Path | None = None):
-        """
-        Initialize the validator.
+        """Initialize the validator.
 
         Args:
             trash_dir: Directory for deleted files. Defaults to ~/.file_organizer/trash/
@@ -39,8 +36,7 @@ class OperationValidator:
         self.trash_dir.mkdir(parents=True, exist_ok=True)
 
     def validate_undo(self, operation: Operation) -> ValidationResult:
-        """
-        Validate an undo operation.
+        """Validate an undo operation.
 
         Args:
             operation: Operation to validate
@@ -89,8 +85,7 @@ class OperationValidator:
         )
 
     def validate_redo(self, operation: Operation) -> ValidationResult:
-        """
-        Validate a redo operation.
+        """Validate a redo operation.
 
         Args:
             operation: Operation to validate
@@ -443,8 +438,7 @@ class OperationValidator:
         return conflicts
 
     def check_file_integrity(self, path: Path, expected_hash: str) -> bool:
-        """
-        Check if file hash matches expected value.
+        """Check if file hash matches expected value.
 
         Args:
             path: Path to file
@@ -469,8 +463,7 @@ class OperationValidator:
             return False
 
     def check_path_exists(self, path: Path) -> bool:
-        """
-        Check if path exists.
+        """Check if path exists.
 
         Args:
             path: Path to check
@@ -481,8 +474,7 @@ class OperationValidator:
         return path.exists()
 
     def check_path_available(self, path: Path) -> bool:
-        """
-        Check if path is available (doesn't exist).
+        """Check if path is available (doesn't exist).
 
         Args:
             path: Path to check
@@ -493,8 +485,7 @@ class OperationValidator:
         return not path.exists()
 
     def check_conflicts(self, operation: Operation, is_undo: bool = True) -> list[Conflict]:
-        """
-        Check for conflicts in an operation.
+        """Check for conflicts in an operation.
 
         Args:
             operation: Operation to check
@@ -510,8 +501,7 @@ class OperationValidator:
         return result.conflicts
 
     def _get_trash_path(self, operation: Operation) -> Path | None:
-        """
-        Get the trash path for a deleted file.
+        """Get the trash path for a deleted file.
 
         Args:
             operation: Delete operation

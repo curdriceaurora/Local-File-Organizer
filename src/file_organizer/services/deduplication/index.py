@@ -1,5 +1,4 @@
-"""
-Duplicate file index module.
+"""Duplicate file index module.
 
 Maintains an efficient hash-to-files mapping for quick duplicate detection
 and provides statistics about duplicates and potential space savings.
@@ -58,8 +57,7 @@ class DuplicateGroup:
 
 
 class DuplicateIndex:
-    """
-    Maintains an index of file hashes for duplicate detection.
+    """Maintains an index of file hashes for duplicate detection.
 
     Uses a dictionary with hash as key and list of file metadata as value.
     Provides O(1) lookup for duplicate detection and various statistics.
@@ -71,8 +69,7 @@ class DuplicateIndex:
         self._size_index: dict[int, list[Path]] = {}
 
     def add_file(self, file_path: Path, file_hash: str, metadata: dict | None = None) -> None:
-        """
-        Add a file to the index.
+        """Add a file to the index.
 
         Args:
             file_path: Path to the file
@@ -110,8 +107,7 @@ class DuplicateIndex:
         self._size_index[size].append(file_path)
 
     def get_duplicates(self) -> dict[str, DuplicateGroup]:
-        """
-        Get all duplicate file groups.
+        """Get all duplicate file groups.
 
         Returns:
             Dictionary mapping hash values to DuplicateGroup objects.
@@ -126,8 +122,7 @@ class DuplicateIndex:
         return duplicates
 
     def get_files_by_hash(self, file_hash: str) -> list[FileMetadata]:
-        """
-        Get all files with a specific hash.
+        """Get all files with a specific hash.
 
         Args:
             file_hash: Hash value to look up
@@ -138,8 +133,7 @@ class DuplicateIndex:
         return self._index.get(file_hash, [])
 
     def get_files_by_size(self, size: int) -> list[Path]:
-        """
-        Get all files with a specific size.
+        """Get all files with a specific size.
 
         This is useful for pre-filtering before hashing.
 
@@ -152,8 +146,7 @@ class DuplicateIndex:
         return self._size_index.get(size, [])
 
     def has_duplicates(self) -> bool:
-        """
-        Check if there are any duplicates in the index.
+        """Check if there are any duplicates in the index.
 
         Returns:
             True if there are files with duplicate hashes
@@ -161,8 +154,7 @@ class DuplicateIndex:
         return any(len(files) > 1 for files in self._index.values())
 
     def get_statistics(self) -> dict:
-        """
-        Get statistics about the index.
+        """Get statistics about the index.
 
         Returns:
             Dictionary with statistics including:

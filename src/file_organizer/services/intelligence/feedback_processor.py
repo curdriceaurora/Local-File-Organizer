@@ -1,5 +1,4 @@
-"""
-Feedback processing module.
+"""Feedback processing module.
 
 Processes user corrections and feedback to update pattern learning models in real-time.
 Supports both individual corrections and batch history analysis.
@@ -15,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class FeedbackProcessor:
-    """
-    Processes user feedback and corrections to improve pattern learning.
+    """Processes user feedback and corrections to improve pattern learning.
 
     Features:
     - Real-time correction processing
@@ -34,8 +32,7 @@ class FeedbackProcessor:
     def process_correction(
         self, original: Path, corrected: Path, context: dict | None = None
     ) -> dict:
-        """
-        Process a single user correction in real-time.
+        """Process a single user correction in real-time.
 
         Args:
             original: Original file path (before correction)
@@ -82,8 +79,7 @@ class FeedbackProcessor:
     def batch_process_history(
         self, corrections: list[dict], max_age_days: int | None = None
     ) -> dict:
-        """
-        Process historical corrections in batch to extract patterns.
+        """Process historical corrections in batch to extract patterns.
 
         Args:
             corrections: List of correction records
@@ -142,8 +138,7 @@ class FeedbackProcessor:
         return insights
 
     def update_learning_model(self, insights: dict) -> bool:
-        """
-        Update the learning model with new insights.
+        """Update the learning model with new insights.
 
         Args:
             insights: Learning insights from correction processing
@@ -163,8 +158,7 @@ class FeedbackProcessor:
         return True
 
     def trigger_retraining(self) -> dict:
-        """
-        Trigger a full model retraining.
+        """Trigger a full model retraining.
 
         Returns:
             Retraining status and metrics
@@ -183,8 +177,7 @@ class FeedbackProcessor:
         return status
 
     def _analyze_name_correction(self, original_name: str, corrected_name: str) -> dict:
-        """
-        Analyze a filename correction to extract patterns.
+        """Analyze a filename correction to extract patterns.
 
         Args:
             original_name: Original filename
@@ -235,8 +228,7 @@ class FeedbackProcessor:
     def _analyze_folder_correction(
         self, original: Path, corrected: Path, context: dict | None
     ) -> dict:
-        """
-        Analyze a folder correction.
+        """Analyze a folder correction.
 
         Args:
             original: Original path
@@ -284,8 +276,7 @@ class FeedbackProcessor:
         return insight
 
     def _extract_context_patterns(self, context: dict) -> dict | None:
-        """
-        Extract patterns from context information.
+        """Extract patterns from context information.
 
         Args:
             context: Context dictionary
@@ -319,8 +310,7 @@ class FeedbackProcessor:
         return None
 
     def _extract_batch_name_patterns(self, name_changes: list[tuple]) -> list[dict]:
-        """
-        Extract common naming patterns from batch changes.
+        """Extract common naming patterns from batch changes.
 
         Args:
             name_changes: List of (original, corrected) name tuples
@@ -366,8 +356,7 @@ class FeedbackProcessor:
         return patterns
 
     def _extract_batch_folder_patterns(self, folder_changes: list[tuple]) -> list[dict]:
-        """
-        Extract common folder patterns from batch changes.
+        """Extract common folder patterns from batch changes.
 
         Args:
             folder_changes: List of (from_folder, to_folder, file_type) tuples
@@ -402,8 +391,7 @@ class FeedbackProcessor:
         return patterns
 
     def _identify_common_operations(self, corrections: list[dict]) -> dict:
-        """
-        Identify common correction operations.
+        """Identify common correction operations.
 
         Args:
             corrections: List of correction records

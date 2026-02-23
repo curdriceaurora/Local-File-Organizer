@@ -1,5 +1,4 @@
-"""
-SQLite database manager for preference tracking.
+"""SQLite database manager for preference tracking.
 
 This module provides database connection management, schema creation,
 and migration support for the intelligent preference tracking system.
@@ -120,8 +119,7 @@ class PreferenceDatabaseManager:
     """
 
     def __init__(self, db_path: Path | None = None):
-        """
-        Initialize database manager.
+        """Initialize database manager.
 
         Args:
             db_path: Path to SQLite database file.
@@ -189,8 +187,7 @@ class PreferenceDatabaseManager:
                 raise
 
     def _migrate(self, from_version: int, to_version: int, conn: sqlite3.Connection) -> None:
-        """
-        Perform database migration from one version to another.
+        """Perform database migration from one version to another.
 
         Args:
             from_version: Current schema version
@@ -208,8 +205,7 @@ class PreferenceDatabaseManager:
         logger.info(f"Migration to version {to_version} complete")
 
     def get_connection(self) -> sqlite3.Connection:
-        """
-        Get or create database connection.
+        """Get or create database connection.
 
         Returns:
             SQLite database connection
@@ -227,8 +223,7 @@ class PreferenceDatabaseManager:
 
     @contextmanager
     def transaction(self):
-        """
-        Context manager for database transactions.
+        """Context manager for database transactions.
 
         Yields:
             Database connection with active transaction
@@ -273,8 +268,7 @@ class PreferenceDatabaseManager:
         source: str = "user_correction",
         context: dict[str, Any] | None = None,
     ) -> int:
-        """
-        Add or update a preference.
+        """Add or update a preference.
 
         Args:
             preference_type: Type of preference (folder_mapping, naming_pattern, etc.)
@@ -332,8 +326,7 @@ class PreferenceDatabaseManager:
                 raise
 
     def get_preference(self, preference_type: str, key: str) -> dict[str, Any] | None:
-        """
-        Get a preference by type and key.
+        """Get a preference by type and key.
 
         Args:
             preference_type: Type of preference
@@ -362,8 +355,7 @@ class PreferenceDatabaseManager:
             return None
 
     def get_preferences_by_type(self, preference_type: str) -> list[dict[str, Any]]:
-        """
-        Get all preferences of a specific type.
+        """Get all preferences of a specific type.
 
         Args:
             preference_type: Type of preferences to retrieve
@@ -394,8 +386,7 @@ class PreferenceDatabaseManager:
             return results
 
     def update_preference_confidence(self, preference_id: int, confidence: float) -> None:
-        """
-        Update preference confidence score.
+        """Update preference confidence score.
 
         Args:
             preference_id: Preference ID
@@ -415,8 +406,7 @@ class PreferenceDatabaseManager:
             )
 
     def increment_preference_usage(self, preference_id: int) -> None:
-        """
-        Increment preference usage frequency.
+        """Increment preference usage frequency.
 
         Args:
             preference_id: Preference ID
@@ -437,8 +427,7 @@ class PreferenceDatabaseManager:
             )
 
     def delete_preference(self, preference_id: int) -> None:
-        """
-        Delete a preference.
+        """Delete a preference.
 
         Args:
             preference_id: Preference ID to delete
@@ -461,8 +450,7 @@ class PreferenceDatabaseManager:
         confidence_after: float | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> int:
-        """
-        Add a user correction to the database.
+        """Add a user correction to the database.
 
         Args:
             correction_type: Type of correction (file_move, file_rename, category_change, etc.)
@@ -507,8 +495,7 @@ class PreferenceDatabaseManager:
     def get_corrections(
         self, correction_type: str | None = None, limit: int = 100
     ) -> list[dict[str, Any]]:
-        """
-        Get corrections from the database.
+        """Get corrections from the database.
 
         Args:
             correction_type: Filter by correction type (optional)
@@ -553,8 +540,7 @@ class PreferenceDatabaseManager:
     # Statistics
 
     def get_preference_stats(self) -> dict[str, Any]:
-        """
-        Get statistics about stored preferences.
+        """Get statistics about stored preferences.
 
         Returns:
             Dictionary with preference statistics

@@ -212,13 +212,6 @@ convention = "google"
 "__init__.py" = ["F401"]
 "tests/**/*.py" = ["D"]
 "scripts/**/*.py" = ["D"]
-# D rules enabled but pre-existing violations not yet fixed — see issue #449.
-# Remove these entries once all docstrings are cleaned up.
-"src/**/*.py" = ["D"]
-"examples/**/*.py" = ["D"]
-"plugins/**/*.py" = ["D"]
-"alembic/**/*.py" = ["D"]
-"demo.py" = ["D"]
 
 # MyPy configuration (type checking)
 [tool.mypy]

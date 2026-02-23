@@ -1,5 +1,4 @@
-"""
-Parallel file processor using concurrent.futures.
+"""Parallel file processor using concurrent.futures.
 
 This module provides the main ParallelProcessor class that orchestrates
 batch file processing across thread or process pools with timeout handling,
@@ -29,8 +28,7 @@ def _execute_with_timing(
     path: Path,
     process_fn: Callable[[Path], Any],
 ) -> FileResult:
-    """
-    Execute a processing function on a single file, measuring elapsed time.
+    """Execute a processing function on a single file, measuring elapsed time.
 
     This is a module-level function so it can be pickled for use with
     ProcessPoolExecutor.
@@ -63,8 +61,7 @@ def _execute_with_timing(
 
 
 class ParallelProcessor:
-    """
-    Orchestrates parallel file processing using concurrent.futures executors.
+    """Orchestrates parallel file processing using concurrent.futures executors.
 
     Supports both thread pools (for IO-bound work) and process pools
     (for CPU-bound work), with per-file timeouts, automatic retries,
@@ -75,8 +72,7 @@ class ParallelProcessor:
     """
 
     def __init__(self, config: ParallelConfig | None = None) -> None:
-        """
-        Initialize the parallel processor.
+        """Initialize the parallel processor.
 
         Args:
             config: Processing configuration. Uses defaults if None.
@@ -93,8 +89,7 @@ class ParallelProcessor:
         files: list[Path],
         process_fn: Callable[[Path], Any],
     ) -> BatchResult:
-        """
-        Process a batch of files in parallel.
+        """Process a batch of files in parallel.
 
         Submits files to the configured executor pool and collects results.
         Failed files are retried up to config.retry_count times.
@@ -160,8 +155,7 @@ class ParallelProcessor:
         process_fn: Callable[[Path], Any],
         executor: ThreadPoolExecutor | ProcessPoolExecutor | None = None,
     ) -> Iterator[FileResult]:
-        """
-        Process a batch of files, yielding results as they complete.
+        """Process a batch of files, yielding results as they complete.
 
         Unlike process_batch, this returns results incrementally via an
         iterator, which is useful for streaming progress updates.
@@ -349,8 +343,7 @@ class ParallelProcessor:
     def _get_executor_class(
         self,
     ) -> type[ThreadPoolExecutor] | type[ProcessPoolExecutor]:
-        """
-        Return the executor class based on configuration.
+        """Return the executor class based on configuration.
 
         Returns:
             ThreadPoolExecutor or ProcessPoolExecutor class.
@@ -367,8 +360,7 @@ class ParallelProcessor:
         process_fn: Callable[[Path], Any],
         executor: ThreadPoolExecutor | ProcessPoolExecutor | None = None,
     ) -> list[FileResult]:
-        """
-        Submit files to the executor and collect all results.
+        """Submit files to the executor and collect all results.
 
         Wrapper around process_batch_iter.
 
@@ -386,8 +378,7 @@ class ParallelProcessor:
         return list(self.process_batch_iter(files, process_fn, executor=executor))
 
     def shutdown(self) -> None:
-        """
-        Clean up any resources.
+        """Clean up any resources.
 
         Currently a no-op since executors are used as context managers,
         but provided for forward compatibility.

@@ -1,5 +1,4 @@
-"""
-Processor pool for lazy-loading and managing file processors.
+"""Processor pool for lazy-loading and managing file processors.
 
 Provides centralized access to processor instances with lazy initialization
 and proper resource cleanup.
@@ -34,8 +33,7 @@ class BaseProcessor(Protocol):
 
 
 class ProcessorPool:
-    """
-    Manages a pool of file processors with lazy initialization.
+    """Manages a pool of file processors with lazy initialization.
 
     Processors are created on first access and reused for subsequent
     requests. Supports proper cleanup of all initialized processors.
@@ -58,8 +56,7 @@ class ProcessorPool:
         processor_type: ProcessorType,
         factory: callable,
     ) -> None:
-        """
-        Register a factory function for a processor type.
+        """Register a factory function for a processor type.
 
         The factory is called lazily when get_processor is first
         invoked for this type. The factory should return an
@@ -73,8 +70,7 @@ class ProcessorPool:
         logger.debug("Registered factory for %s", processor_type.value)
 
     def get_processor(self, processor_type: ProcessorType) -> BaseProcessor | None:
-        """
-        Get a processor instance for the given type.
+        """Get a processor instance for the given type.
 
         Returns a cached instance if available, otherwise creates one
         using the registered factory and initializes it.
@@ -110,8 +106,7 @@ class ProcessorPool:
             return None
 
     def has_processor(self, processor_type: ProcessorType) -> bool:
-        """
-        Check if a processor is available (registered or initialized).
+        """Check if a processor is available (registered or initialized).
 
         Args:
             processor_type: The processor type to check.
@@ -122,8 +117,7 @@ class ProcessorPool:
         return processor_type in self._processors or processor_type in self._factories
 
     def is_initialized(self, processor_type: ProcessorType) -> bool:
-        """
-        Check if a processor has been initialized.
+        """Check if a processor has been initialized.
 
         Args:
             processor_type: The processor type to check.
@@ -134,8 +128,7 @@ class ProcessorPool:
         return processor_type in self._processors
 
     def cleanup(self) -> None:
-        """
-        Clean up all initialized processors.
+        """Clean up all initialized processors.
 
         Calls cleanup() on each processor and removes it from the cache.
         Errors during cleanup are logged but do not prevent other

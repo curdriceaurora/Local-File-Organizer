@@ -1,5 +1,4 @@
-"""
-Document text extraction module.
+"""Document text extraction module.
 
 Extracts text content from various document formats for semantic analysis.
 Supports PDF, DOCX, TXT, RTF, ODT, and Markdown document formats.
@@ -14,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentExtractor:
-    """
-    Extracts text content from various document formats.
+    """Extracts text content from various document formats.
 
     Supported formats:
     - PDF (.pdf)
@@ -31,8 +29,7 @@ class DocumentExtractor:
         self._check_dependencies()
 
     def extract_text(self, file_path: Path) -> str:
-        """
-        Extract text from a single document.
+        """Extract text from a single document.
 
         Args:
             file_path: Path to document file
@@ -72,8 +69,7 @@ class DocumentExtractor:
             return ""
 
     def extract_batch(self, file_paths: list[Path]) -> dict[Path, str]:
-        """
-        Extract text from multiple documents in batch.
+        """Extract text from multiple documents in batch.
 
         Args:
             file_paths: List of document paths
@@ -97,8 +93,7 @@ class DocumentExtractor:
         return results
 
     def supports_format(self, file_path: Path) -> bool:
-        """
-        Check if a file format is supported.
+        """Check if a file format is supported.
 
         Args:
             file_path: Path to file
@@ -109,8 +104,7 @@ class DocumentExtractor:
         return file_path.suffix.lower() in self.supported_extensions
 
     def get_supported_formats(self) -> list[str]:
-        """
-        Get list of supported file formats.
+        """Get list of supported file formats.
 
         Returns:
             List of supported extensions
@@ -118,8 +112,7 @@ class DocumentExtractor:
         return sorted(self.supported_extensions)
 
     def _extract_pdf(self, file_path: Path) -> str:
-        """
-        Extract text from PDF file.
+        """Extract text from PDF file.
 
         Args:
             file_path: Path to PDF file
@@ -155,8 +148,7 @@ class DocumentExtractor:
             return ""
 
     def _extract_docx(self, file_path: Path) -> str:
-        """
-        Extract text from DOCX file.
+        """Extract text from DOCX file.
 
         Args:
             file_path: Path to DOCX file
@@ -191,8 +183,7 @@ class DocumentExtractor:
             return ""
 
     def _extract_text(self, file_path: Path) -> str:
-        """
-        Extract text from plain text file.
+        """Extract text from plain text file.
 
         Args:
             file_path: Path to text file
@@ -224,8 +215,7 @@ class DocumentExtractor:
             return ""
 
     def _extract_rtf(self, file_path: Path) -> str:
-        """
-        Extract text from RTF file.
+        """Extract text from RTF file.
 
         Args:
             file_path: Path to RTF file
@@ -267,8 +257,7 @@ class DocumentExtractor:
             return ""
 
     def _extract_odt(self, file_path: Path) -> str:
-        """
-        Extract text from ODT file.
+        """Extract text from ODT file.
 
         Args:
             file_path: Path to ODT file

@@ -1,5 +1,4 @@
-"""
-Configuration for the background daemon.
+"""Configuration for the background daemon.
 
 Defines the DaemonConfig dataclass that controls daemon behavior
 including watch directories, output paths, PID management, logging,
@@ -14,8 +13,7 @@ from pathlib import Path
 
 @dataclass
 class DaemonConfig:
-    """
-    Configuration for the background daemon service.
+    """Configuration for the background daemon service.
 
     Controls which directories to watch, where organized files are placed,
     daemon lifecycle settings, and processing behavior.

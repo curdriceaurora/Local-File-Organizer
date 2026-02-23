@@ -1,5 +1,4 @@
-"""
-Database optimizer for SQLite operations.
+"""Database optimizer for SQLite operations.
 
 This module provides index management, table analysis, vacuuming, query plan
 inspection, and pragma optimization for SQLite databases used by the file

@@ -1,5 +1,4 @@
-"""
-Analytics service - orchestrates all analytics components.
+"""Analytics service - orchestrates all analytics components.
 
 Main service that coordinates storage analysis, metrics calculation,
 chart generation, and dashboard creation.
@@ -25,8 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class AnalyticsService:
-    """
-    Main analytics service that orchestrates all analytics components.
+    """Main analytics service that orchestrates all analytics components.
 
     Coordinates:
     - Storage analysis
@@ -41,8 +39,7 @@ class AnalyticsService:
         storage_analyzer: StorageAnalyzer | None = None,
         metrics_calculator: MetricsCalculator | None = None,
     ):
-        """
-        Initialize analytics service.
+        """Initialize analytics service.
 
         Args:
             storage_analyzer: Storage analyzer instance (creates new if None)
@@ -57,8 +54,7 @@ class AnalyticsService:
         duplicate_groups: list[dict] | None = None,
         max_depth: int | None = None,
     ) -> AnalyticsDashboard:
-        """
-        Generate complete analytics dashboard.
+        """Generate complete analytics dashboard.
 
         Args:
             directory: Directory to analyze
@@ -102,8 +98,7 @@ class AnalyticsService:
         return dashboard
 
     def get_storage_stats(self, directory: Path, max_depth: int | None = None) -> StorageStats:
-        """
-        Get storage usage statistics.
+        """Get storage usage statistics.
 
         Args:
             directory: Directory to analyze
@@ -117,8 +112,7 @@ class AnalyticsService:
         return stats
 
     def get_duplicate_stats(self, duplicate_groups: list[dict], total_size: int) -> DuplicateStats:
-        """
-        Get duplication statistics.
+        """Get duplication statistics.
 
         Args:
             duplicate_groups: List of duplicate groups
@@ -187,8 +181,7 @@ class AnalyticsService:
     def get_quality_metrics(
         self, directory: Path, total_files: int, organized_size: int
     ) -> QualityMetrics:
-        """
-        Calculate organization quality metrics.
+        """Calculate organization quality metrics.
 
         Args:
             directory: Directory to analyze
@@ -237,8 +230,7 @@ class AnalyticsService:
         )
 
     def calculate_time_saved(self, total_files: int, duplicates_removed: int) -> TimeSavings:
-        """
-        Calculate time saved through automation.
+        """Calculate time saved through automation.
 
         Args:
             total_files: Total number of files processed
@@ -281,8 +273,7 @@ class AnalyticsService:
     def export_dashboard(
         self, dashboard: AnalyticsDashboard, output_path: Path, format: str = "json"
     ) -> None:
-        """
-        Export dashboard to file.
+        """Export dashboard to file.
 
         Args:
             dashboard: Dashboard to export
@@ -307,8 +298,7 @@ class AnalyticsService:
         logger.info(f"Dashboard exported to {output_path}")
 
     def _format_dashboard_text(self, dashboard: AnalyticsDashboard) -> str:
-        """
-        Format dashboard as plain text.
+        """Format dashboard as plain text.
 
         Args:
             dashboard: Dashboard to format

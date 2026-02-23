@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Deduplication CLI - Interactive duplicate file detection and removal.
+"""Deduplication CLI - Interactive duplicate file detection and removal.
 
 This module provides a user-friendly command-line interface for finding and
 removing duplicate files using hash-based detection.

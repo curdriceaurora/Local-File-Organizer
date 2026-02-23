@@ -1,5 +1,4 @@
-"""
-Compatibility shim module.
+"""Compatibility shim module.
 
 Provides re-exports used across the codebase for consistent imports.
 Requires Python 3.11+.

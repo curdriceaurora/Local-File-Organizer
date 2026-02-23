@@ -1,5 +1,4 @@
-"""
-History viewer for displaying operation history.
+"""History viewer for displaying operation history.
 
 This module provides CLI-friendly formatting and filtering
 for viewing operation history.
@@ -18,16 +17,14 @@ logger = logging.getLogger(__name__)
 
 
 class HistoryViewer:
-    """
-    CLI viewer for operation history.
+    """CLI viewer for operation history.
 
     This class provides methods to display operation history with
     various filters and formatting options.
     """
 
     def __init__(self, history: OperationHistory | None = None):
-        """
-        Initialize history viewer.
+        """Initialize history viewer.
 
         Args:
             history: Operation history tracker
@@ -35,8 +32,7 @@ class HistoryViewer:
         self.history = history or OperationHistory()
 
     def show_recent_operations(self, limit: int = 10) -> None:
-        """
-        Display recent operations.
+        """Display recent operations.
 
         Args:
             limit: Maximum number of operations to show
@@ -51,8 +47,7 @@ class HistoryViewer:
         self._print_operations_table(operations)
 
     def show_transaction_details(self, transaction_id: str) -> None:
-        """
-        Display details of a specific transaction.
+        """Display details of a specific transaction.
 
         Args:
             transaction_id: Transaction ID
@@ -82,8 +77,7 @@ class HistoryViewer:
             self._print_operations_table(operations)
 
     def show_operation_details(self, operation_id: int) -> None:
-        """
-        Display details of a specific operation.
+        """Display details of a specific operation.
 
         Args:
             operation_id: Operation ID
@@ -123,8 +117,7 @@ class HistoryViewer:
         until: str | None = None,
         limit: int = 100,
     ) -> list[Operation]:
-        """
-        Filter operations with various criteria.
+        """Filter operations with various criteria.
 
         Args:
             operation_type: Filter by operation type (move, rename, delete, copy, create)
@@ -170,8 +163,7 @@ class HistoryViewer:
         return operations
 
     def search_by_path(self, path: str) -> list[Operation]:
-        """
-        Search for operations affecting a specific path.
+        """Search for operations affecting a specific path.
 
         Args:
             path: Path to search for (can be partial)
@@ -201,8 +193,7 @@ class HistoryViewer:
         search: str | None = None,
         limit: int = 100,
     ) -> None:
-        """
-        Display filtered operations.
+        """Display filtered operations.
 
         Args:
             operation_type: Filter by operation type
@@ -231,8 +222,7 @@ class HistoryViewer:
         self._print_operations_table(operations)
 
     def _print_operations_table(self, operations: list[Operation]) -> None:
-        """
-        Print operations in a formatted table.
+        """Print operations in a formatted table.
 
         Args:
             operations: List of operations to display
@@ -283,8 +273,7 @@ class HistoryViewer:
         return dt.strftime("%Y-%m-%d %H:%M:%S")
 
     def _parse_date(self, date_str: str) -> datetime | None:
-        """
-        Parse date string to datetime.
+        """Parse date string to datetime.
 
         Args:
             date_str: Date string (ISO format or common formats)
@@ -318,8 +307,7 @@ class HistoryViewer:
         return None
 
     def get_statistics(self) -> dict[str, Any]:
-        """
-        Get statistics about operation history.
+        """Get statistics about operation history.
 
         Returns:
             Dictionary with statistics

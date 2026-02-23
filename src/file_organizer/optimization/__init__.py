@@ -1,5 +1,4 @@
-"""
-Optimization module for the file organizer system.
+"""Optimization module for the file organizer system.
 
 This module provides database indexing, query optimization, connection pooling,
 query caching, lazy model loading, model caching, resource monitoring,

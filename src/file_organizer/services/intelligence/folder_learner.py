@@ -1,5 +1,4 @@
-"""
-Folder preference learning module.
+"""Folder preference learning module.
 
 Learns user folder preferences based on file type, naming patterns, and user corrections.
 Maps file types to preferred folders and detects organization workflows.
@@ -17,8 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class FolderPreferenceLearner:
-    """
-    Learns and tracks user folder preferences for file organization.
+    """Learns and tracks user folder preferences for file organization.
 
     Tracks:
     - File type to folder mappings
@@ -28,8 +26,7 @@ class FolderPreferenceLearner:
     """
 
     def __init__(self, storage_path: Path | None = None):
-        """
-        Initialize the folder preference learner.
+        """Initialize the folder preference learner.
 
         Args:
             storage_path: Path to store learned preferences (default: ~/.file_organizer/folder_prefs.json)
@@ -57,8 +54,7 @@ class FolderPreferenceLearner:
     def track_folder_choice(
         self, file_type: str, folder: Path, context: dict | None = None
     ) -> None:
-        """
-        Track a user's folder choice for a file type.
+        """Track a user's folder choice for a file type.
 
         Args:
             file_type: File extension (e.g., 'pdf', 'jpg')
@@ -98,8 +94,7 @@ class FolderPreferenceLearner:
     def get_preferred_folder(
         self, file_type: str, confidence_threshold: float = 0.6
     ) -> Path | None:
-        """
-        Get the preferred folder for a file type.
+        """Get the preferred folder for a file type.
 
         Args:
             file_type: File extension
@@ -135,8 +130,7 @@ class FolderPreferenceLearner:
         return None
 
     def get_folder_confidence(self, file_type: str, folder: Path) -> float:
-        """
-        Get confidence score for a specific file type -> folder mapping.
+        """Get confidence score for a specific file type -> folder mapping.
 
         Args:
             file_type: File extension
@@ -160,8 +154,7 @@ class FolderPreferenceLearner:
         return folder_counts.get(folder_str, 0) / total_for_type
 
     def analyze_organization_patterns(self) -> dict:
-        """
-        Analyze overall organization patterns.
+        """Analyze overall organization patterns.
 
         Returns:
             Dictionary with pattern analysis
@@ -197,8 +190,7 @@ class FolderPreferenceLearner:
         return analysis
 
     def suggest_folder_structure(self, file_info: dict, min_confidence: float = 0.5) -> Path | None:
-        """
-        Suggest a folder based on file information and learned patterns.
+        """Suggest a folder based on file information and learned patterns.
 
         Args:
             file_info: Dictionary with file metadata (type, name, etc.)
@@ -229,8 +221,7 @@ class FolderPreferenceLearner:
         return None
 
     def get_folder_stats(self, folder: Path) -> dict:
-        """
-        Get statistics for a specific folder.
+        """Get statistics for a specific folder.
 
         Args:
             folder: Folder path
@@ -253,8 +244,7 @@ class FolderPreferenceLearner:
         }
 
     def clear_old_preferences(self, days: int = 90) -> int:
-        """
-        Clear preferences older than specified days.
+        """Clear preferences older than specified days.
 
         Args:
             days: Number of days to keep

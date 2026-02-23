@@ -1,5 +1,4 @@
-"""
-File hashing module for duplicate detection.
+"""File hashing module for duplicate detection.
 
 Provides FileHasher class with MD5 and SHA256 support, chunked reading
 for large files, and batch processing capabilities.
@@ -18,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class FileHasher:
-    """
-    Computes cryptographic hashes of files for duplicate detection.
+    """Computes cryptographic hashes of files for duplicate detection.
 
     Supports MD5 (faster) and SHA256 (more secure) algorithms.
     Uses chunked reading for memory efficiency with large files.
@@ -33,8 +31,7 @@ class FileHasher:
     MAX_CHUNK_SIZE = 10 * 1024 * 1024
 
     def __init__(self, chunk_size: int = DEFAULT_CHUNK_SIZE):
-        """
-        Initialize the FileHasher.
+        """Initialize the FileHasher.
 
         Args:
             chunk_size: Size of chunks to read at a time (in bytes).
@@ -64,8 +61,7 @@ class FileHasher:
         self.chunk_size = chunk_size
 
     def compute_hash(self, file_path: Path, algorithm: HashAlgorithm = "sha256") -> str:
-        """
-        Compute hash of a single file.
+        """Compute hash of a single file.
 
         Args:
             file_path: Path to the file to hash
@@ -109,8 +105,7 @@ class FileHasher:
     def compute_batch(
         self, file_paths: list[Path], algorithm: HashAlgorithm = "sha256"
     ) -> dict[Path, str]:
-        """
-        Compute hashes for multiple files.
+        """Compute hashes for multiple files.
 
         This method processes files sequentially but returns all results
         together. Errors for individual files are logged but don't stop
@@ -138,8 +133,7 @@ class FileHasher:
         return results
 
     def get_file_size(self, file_path: Path) -> int:
-        """
-        Get file size in bytes.
+        """Get file size in bytes.
 
         This is a quick pre-filter before hashing - files of different
         sizes cannot be duplicates.
@@ -160,8 +154,7 @@ class FileHasher:
 
     @staticmethod
     def validate_algorithm(algorithm: str) -> HashAlgorithm:
-        """
-        Validate that the algorithm is supported.
+        """Validate that the algorithm is supported.
 
         Args:
             algorithm: Algorithm name to validate

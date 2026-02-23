@@ -1,5 +1,4 @@
-"""
-File system monitor for real-time directory watching.
+"""File system monitor for real-time directory watching.
 
 Provides the FileMonitor class that manages watchdog observers,
 coordinates event handling, and supports dynamic directory management.
@@ -21,8 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class FileMonitor:
-    """
-    Real-time file system monitor using watchdog.
+    """Real-time file system monitor using watchdog.
 
     Manages one or more watched directories, applies filtering and
     debouncing through FileEventHandler, and queues events for
@@ -45,8 +43,7 @@ class FileMonitor:
         config: WatcherConfig | None = None,
         queue: EventQueue | None = None,
     ) -> None:
-        """
-        Initialize the file monitor.
+        """Initialize the file monitor.
 
         Args:
             config: Watcher configuration. Uses defaults if None.
@@ -62,8 +59,7 @@ class FileMonitor:
         self._running = False
 
     def start(self) -> None:
-        """
-        Start monitoring all configured directories.
+        """Start monitoring all configured directories.
 
         Creates and starts the watchdog observer, scheduling watches
         for each directory in the configuration.
@@ -91,8 +87,7 @@ class FileMonitor:
             )
 
     def stop(self) -> None:
-        """
-        Stop monitoring and clean up resources.
+        """Stop monitoring and clean up resources.
 
         Stops the watchdog observer and clears all watch state.
         Safe to call even if the monitor is not running.
@@ -109,8 +104,7 @@ class FileMonitor:
             logger.info("FileMonitor stopped")
 
     def add_directory(self, path: Path, recursive: bool = True) -> None:
-        """
-        Add a directory to be monitored.
+        """Add a directory to be monitored.
 
         Can be called while the monitor is running to dynamically
         add new directories.
@@ -140,8 +134,7 @@ class FileMonitor:
             logger.info("Added watch directory: %s (recursive=%s)", path, recursive)
 
     def remove_directory(self, path: Path) -> None:
-        """
-        Remove a directory from monitoring.
+        """Remove a directory from monitoring.
 
         Args:
             path: Directory path to stop monitoring.
@@ -171,8 +164,7 @@ class FileMonitor:
             logger.info("Removed watch directory: %s", path)
 
     def get_events(self, max_size: int | None = None) -> list[FileEvent]:
-        """
-        Retrieve queued events in a batch.
+        """Retrieve queued events in a batch.
 
         Args:
             max_size: Maximum number of events to return.
@@ -189,8 +181,7 @@ class FileMonitor:
         max_size: int | None = None,
         timeout: float | None = None,
     ) -> list[FileEvent]:
-        """
-        Retrieve queued events, blocking until at least one is available.
+        """Retrieve queued events, blocking until at least one is available.
 
         Args:
             max_size: Maximum number of events to return.
@@ -204,8 +195,7 @@ class FileMonitor:
         return self.queue.dequeue_batch_blocking(batch_size, timeout=timeout)
 
     def on_created(self, callback: callable) -> None:
-        """
-        Register a callback for file creation events.
+        """Register a callback for file creation events.
 
         Args:
             callback: Callable accepting a FileEvent argument.
@@ -213,8 +203,7 @@ class FileMonitor:
         self.handler.register_callback(EventType.CREATED, callback)
 
     def on_modified(self, callback: callable) -> None:
-        """
-        Register a callback for file modification events.
+        """Register a callback for file modification events.
 
         Args:
             callback: Callable accepting a FileEvent argument.
@@ -222,8 +211,7 @@ class FileMonitor:
         self.handler.register_callback(EventType.MODIFIED, callback)
 
     def on_deleted(self, callback: callable) -> None:
-        """
-        Register a callback for file deletion events.
+        """Register a callback for file deletion events.
 
         Args:
             callback: Callable accepting a FileEvent argument.
@@ -231,8 +219,7 @@ class FileMonitor:
         self.handler.register_callback(EventType.DELETED, callback)
 
     def on_moved(self, callback: callable) -> None:
-        """
-        Register a callback for file move events.
+        """Register a callback for file move events.
 
         Args:
             callback: Callable accepting a FileEvent argument.
@@ -256,8 +243,7 @@ class FileMonitor:
         return self.queue.size
 
     def _schedule_directory(self, path: Path, recursive: bool) -> None:
-        """
-        Schedule a directory watch with the observer.
+        """Schedule a directory watch with the observer.
 
         Must be called while holding self._lock.
 

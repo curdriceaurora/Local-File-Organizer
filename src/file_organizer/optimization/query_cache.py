@@ -1,5 +1,4 @@
-"""
-In-memory query result cache with TTL-based expiration.
+"""In-memory query result cache with TTL-based expiration.
 
 This module provides a thread-safe, LRU-style cache for query results.  It
 supports per-table invalidation so that write operations can selectively
