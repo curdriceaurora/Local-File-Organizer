@@ -107,6 +107,7 @@ def scan_directory(
     request: ScanRequest,
     settings: ApiSettings = Depends(get_settings),
 ) -> ScanResponse:
+    """Scan a directory and return file counts by type."""
     path = resolve_path(request.input_dir, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Input path not found")
@@ -125,6 +126,7 @@ def preview_organization(
     request: OrganizeRequest,
     settings: ApiSettings = Depends(get_settings),
 ) -> OrganizationResultResponse:
+    """Preview organization results without moving files."""
     path = resolve_path(request.input_dir, settings.allowed_paths)
     output = resolve_path(request.output_dir, settings.allowed_paths)
     if not path.exists():
@@ -145,6 +147,7 @@ def execute_organization(
     background_tasks: BackgroundTasks,
     settings: ApiSettings = Depends(get_settings),
 ) -> OrganizeExecuteResponse:
+    """Execute file organization, optionally in the background."""
     path = resolve_path(request.input_dir, settings.allowed_paths)
     output = resolve_path(request.output_dir, settings.allowed_paths)
     if not path.exists():
@@ -178,6 +181,7 @@ def execute_organization(
 
 @router.get("/organize/status/{job_id}", response_model=JobStatusResponse)
 def get_job_status(job_id: str) -> JobStatusResponse:
+    """Retrieve the status of an organization job."""
     job = get_job(job_id)
     if not job:
         raise ApiError(status_code=404, error="not_found", message="Job not found")

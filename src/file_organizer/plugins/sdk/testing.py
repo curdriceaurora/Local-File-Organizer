@@ -11,11 +11,13 @@ class PluginTestCase(unittest.TestCase):
     """Base unittest test case with isolated filesystem helpers."""
 
     def setUp(self) -> None:
+        """Set up a temporary directory for the test."""
         super().setUp()
         self._tmp_dir = tempfile.TemporaryDirectory(prefix="fo-plugin-test-")
         self.test_dir = Path(self._tmp_dir.name)
 
     def tearDown(self) -> None:
+        """Tear down and clean up the temporary directory."""
         self._tmp_dir.cleanup()
         super().tearDown()
 
@@ -27,7 +29,9 @@ class PluginTestCase(unittest.TestCase):
         return destination
 
     def assert_file_exists(self, path: Path) -> None:
+        """Assert that the given path exists on the filesystem."""
         self.assertTrue(path.exists(), f"Expected file to exist: {path}")
 
     def assert_file_not_exists(self, path: Path) -> None:
+        """Assert that the given path does not exist on the filesystem."""
         self.assertFalse(path.exists(), f"Expected file to be absent: {path}")

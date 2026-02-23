@@ -112,6 +112,7 @@ async def websocket_endpoint(
     db: Session = Depends(get_db),
     token_store: TokenStore = Depends(get_token_store),
 ) -> None:
+    """Handle WebSocket connections for real-time event streaming."""
     provided_token = _extract_token(websocket, token)
     if not _token_valid(provided_token, settings, db, token_store):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
