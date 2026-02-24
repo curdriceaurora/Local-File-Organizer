@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from file_organizer.plugins.base import PluginError, PluginLoadError, load_manifest
+from file_organizer.plugins.base import PluginLoadError, load_manifest
 from file_organizer.plugins.errors import PluginNotLoadedError
 from file_organizer.plugins.executor import PluginExecutor
 from file_organizer.plugins.security import PluginSecurityPolicy
@@ -174,12 +174,12 @@ class PluginRegistry:
             plugin_name=plugin_name,
             policy=effective_policy,
         )
-        executor.start()
-
         try:
+            executor.start()
             executor.call("on_load")
-        except PluginError:
-            # Ensure the child process is cleaned up if on_load fails
+        except Exception:
+            # Any failure after start() must stop the child process to avoid
+            # subprocess leaks (covers PluginError, IPC errors, timeouts, etc.)
             executor.stop()
             raise
 
@@ -297,7 +297,7 @@ class PluginRegistry:
         for name, record in self._records.items():
             try:
                 results[name] = record.executor.call(method, *args, **kwargs)
-            except PluginError as exc:
+            except Exception as exc:
                 logger.warning("Plugin '%s' raised an error in '%s': %s", name, method, exc)
                 results[name] = exc
         return results
