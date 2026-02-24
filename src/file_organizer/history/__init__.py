@@ -1,5 +1,4 @@
-"""
-Operation history tracking module.
+"""Operation history tracking module.
 
 This module provides comprehensive operation history tracking for file operations,
 including database management, transaction support, cleanup, and export functionality.

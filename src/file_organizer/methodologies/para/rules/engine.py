@@ -1,5 +1,4 @@
-"""
-PARA Rule Engine Implementation
+"""PARA Rule Engine Implementation.
 
 Provides interfaces and data structures for the PARA categorization rule engine.
 This is a design specification - actual implementation will be in subsequent tasks.
@@ -64,8 +63,7 @@ class ConflictResolutionStrategy(Enum):
 
 @dataclass
 class RuleCondition:
-    """
-    Represents a single condition in a rule.
+    """Represents a single condition in a rule.
 
     Attributes:
         type: The type of condition to evaluate
@@ -97,8 +95,7 @@ class RuleCondition:
 
 @dataclass
 class RuleAction:
-    """
-    Represents an action to be taken when a rule matches.
+    """Represents an action to be taken when a rule matches.
 
     Attributes:
         type: The type of action to execute
@@ -134,8 +131,7 @@ class RuleAction:
 
 @dataclass
 class Rule:
-    """
-    Represents a complete rule for PARA categorization.
+    """Represents a complete rule for PARA categorization.
 
     Attributes:
         name: Unique identifier for the rule
@@ -167,8 +163,7 @@ class Rule:
 
 @dataclass
 class EvaluationContext:
-    """
-    Context information for evaluating rules against a file.
+    """Context information for evaluating rules against a file.
 
     Attributes:
         file_path: Path to the file being evaluated
@@ -209,8 +204,7 @@ class EvaluationContext:
 
 @dataclass
 class RuleMatchResult:
-    """
-    Result of evaluating a rule against a file.
+    """Result of evaluating a rule against a file.
 
     Attributes:
         rule: The rule that was evaluated
@@ -232,8 +226,7 @@ class RuleMatchResult:
 
 
 class RuleParser(ABC):
-    """
-    Abstract interface for parsing rule definitions from various formats.
+    """Abstract interface for parsing rule definitions from various formats.
 
     The parser converts external rule definitions (YAML, JSON, etc.) into
     internal Rule objects that can be evaluated by the engine.
@@ -241,8 +234,7 @@ class RuleParser(ABC):
 
     @abstractmethod
     def parse_file(self, file_path: Path) -> list[Rule]:
-        """
-        Parse rules from a file.
+        """Parse rules from a file.
 
         Args:
             file_path: Path to the rule definition file
@@ -258,8 +250,7 @@ class RuleParser(ABC):
 
     @abstractmethod
     def parse_string(self, content: str) -> list[Rule]:
-        """
-        Parse rules from a string.
+        """Parse rules from a string.
 
         Args:
             content: Rule definition as a string
@@ -274,8 +265,7 @@ class RuleParser(ABC):
 
     @abstractmethod
     def validate_rule(self, rule: Rule) -> bool:
-        """
-        Validate that a rule is properly configured.
+        """Validate that a rule is properly configured.
 
         Args:
             rule: Rule to validate
@@ -290,16 +280,14 @@ class RuleParser(ABC):
 
 
 class ConditionEvaluator(ABC):
-    """
-    Abstract interface for evaluating rule conditions.
+    """Abstract interface for evaluating rule conditions.
 
     The evaluator checks whether a file meets the conditions specified in a rule.
     """
 
     @abstractmethod
     def evaluate_condition(self, condition: RuleCondition, context: EvaluationContext) -> bool:
-        """
-        Evaluate a single condition against a file.
+        """Evaluate a single condition against a file.
 
         Args:
             condition: The condition to evaluate
@@ -314,8 +302,7 @@ class ConditionEvaluator(ABC):
     def evaluate_composite(
         self, conditions: list[RuleCondition], operator: LogicalOperator, context: EvaluationContext
     ) -> bool:
-        """
-        Evaluate multiple conditions with a logical operator.
+        """Evaluate multiple conditions with a logical operator.
 
         Args:
             conditions: List of conditions to evaluate
@@ -329,8 +316,7 @@ class ConditionEvaluator(ABC):
 
     @abstractmethod
     def get_match_score(self, condition: RuleCondition, context: EvaluationContext) -> float:
-        """
-        Get a numeric score for how well a condition matches (0.0-1.0).
+        """Get a numeric score for how well a condition matches (0.0-1.0).
 
         This is useful for confidence scoring and partial matching.
 
@@ -345,16 +331,14 @@ class ConditionEvaluator(ABC):
 
 
 class ActionExecutor(ABC):
-    """
-    Abstract interface for executing rule actions.
+    """Abstract interface for executing rule actions.
 
     The executor performs the actions specified by matched rules.
     """
 
     @abstractmethod
     def execute_action(self, action: RuleAction, context: EvaluationContext) -> dict[str, Any]:
-        """
-        Execute a single action.
+        """Execute a single action.
 
         Args:
             action: The action to execute
@@ -367,8 +351,7 @@ class ActionExecutor(ABC):
 
     @abstractmethod
     def can_execute(self, action: RuleAction, context: EvaluationContext) -> bool:
-        """
-        Check if an action can be executed in the current context.
+        """Check if an action can be executed in the current context.
 
         Args:
             action: The action to check
@@ -381,8 +364,7 @@ class ActionExecutor(ABC):
 
 
 class ConflictResolver(ABC):
-    """
-    Abstract interface for resolving conflicts when multiple rules match.
+    """Abstract interface for resolving conflicts when multiple rules match.
 
     The resolver determines which category to assign when multiple rules
     suggest different categories.
@@ -395,8 +377,7 @@ class ConflictResolver(ABC):
         strategy: ConflictResolutionStrategy,
         context: EvaluationContext,
     ) -> RuleMatchResult:
-        """
-        Resolve conflicts between multiple matching rules.
+        """Resolve conflicts between multiple matching rules.
 
         Args:
             matches: List of rules that matched
@@ -410,8 +391,7 @@ class ConflictResolver(ABC):
 
     @abstractmethod
     def should_flag_for_review(self, matches: list[RuleMatchResult], threshold: float) -> bool:
-        """
-        Determine if the categorization should be flagged for manual review.
+        """Determine if the categorization should be flagged for manual review.
 
         Args:
             matches: List of rules that matched
@@ -424,8 +404,7 @@ class ConflictResolver(ABC):
 
 
 class CategoryScorer(ABC):
-    """
-    Abstract interface for calculating confidence scores for categories.
+    """Abstract interface for calculating confidence scores for categories.
 
     The scorer combines multiple signals (heuristics, rules, AI) to produce
     a final confidence score for each category.
@@ -435,8 +414,7 @@ class CategoryScorer(ABC):
     def calculate_category_scores(
         self, matches: list[RuleMatchResult], context: EvaluationContext
     ) -> dict[str, float]:
-        """
-        Calculate confidence scores for all categories.
+        """Calculate confidence scores for all categories.
 
         Args:
             matches: List of rules that matched
@@ -449,8 +427,7 @@ class CategoryScorer(ABC):
 
     @abstractmethod
     def get_best_category(self, scores: dict[str, float], threshold: float) -> str | None:
-        """
-        Get the best category based on scores.
+        """Get the best category based on scores.
 
         Args:
             scores: Category confidence scores
@@ -465,8 +442,7 @@ class CategoryScorer(ABC):
     def calculate_overall_confidence(
         self, matches: list[RuleMatchResult], heuristic_scores: dict[str, float] | None = None
     ) -> float:
-        """
-        Calculate an overall confidence score for the categorization.
+        """Calculate an overall confidence score for the categorization.
 
         Args:
             matches: List of rules that matched
@@ -479,8 +455,7 @@ class CategoryScorer(ABC):
 
 
 class RuleEngine:
-    """
-    Main rule engine orchestrator.
+    """Main rule engine orchestrator.
 
     Coordinates rule parsing, condition evaluation, action execution,
     and conflict resolution to categorize files using the PARA methodology.
@@ -494,8 +469,7 @@ class RuleEngine:
         resolver: ConflictResolver,
         scorer: CategoryScorer,
     ):
-        """
-        Initialize the rule engine with its components.
+        """Initialize the rule engine with its components.
 
         Args:
             parser: Rule parser implementation
@@ -512,8 +486,7 @@ class RuleEngine:
         self.rules: list[Rule] = []
 
     def load_rules(self, rule_file: Path) -> int:
-        """
-        Load rules from a file.
+        """Load rules from a file.
 
         Args:
             rule_file: Path to the rule definition file
@@ -525,8 +498,7 @@ class RuleEngine:
         return len(self.rules)
 
     def add_rule(self, rule: Rule) -> None:
-        """
-        Add a single rule to the engine.
+        """Add a single rule to the engine.
 
         Args:
             rule: Rule to add
@@ -539,8 +511,7 @@ class RuleEngine:
         context: EvaluationContext,
         strategy: ConflictResolutionStrategy = ConflictResolutionStrategy.HIGHEST_CONFIDENCE,
     ) -> RuleMatchResult | None:
-        """
-        Evaluate all rules against a file and return the best match.
+        """Evaluate all rules against a file and return the best match.
 
         Args:
             context: Context information about the file
@@ -587,8 +558,7 @@ class RuleEngine:
         return self.resolver.resolve(matches, strategy, context)
 
     def get_category_scores(self, context: EvaluationContext) -> dict[str, float]:
-        """
-        Get confidence scores for all categories.
+        """Get confidence scores for all categories.
 
         Args:
             context: Context information about the file

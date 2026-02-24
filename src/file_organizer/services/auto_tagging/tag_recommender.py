@@ -1,5 +1,4 @@
-"""
-Tag Recommendation Engine
+"""Tag Recommendation Engine.
 
 Combines content analysis and learning insights to generate ranked tag suggestions.
 Integrates with smart suggestions infrastructure.
@@ -80,8 +79,7 @@ class TagRecommendation:
 
 
 class TagRecommender:
-    """
-    Generates and ranks tag recommendations by combining multiple signals.
+    """Generates and ranks tag recommendations by combining multiple signals.
 
     Features:
     - Content-based tagging
@@ -97,8 +95,7 @@ class TagRecommender:
         learning_engine: TagLearningEngine | None = None,
         min_confidence: float = 40.0,
     ):
-        """
-        Initialize the tag recommender.
+        """Initialize the tag recommender.
 
         Args:
             content_analyzer: Content analysis component
@@ -117,8 +114,7 @@ class TagRecommender:
     def recommend_tags(
         self, file_path: Path, existing_tags: list[str] | None = None, top_n: int = 10
     ) -> TagRecommendation:
-        """
-        Generate tag recommendations for a file.
+        """Generate tag recommendations for a file.
 
         Args:
             file_path: Path to the file
@@ -208,8 +204,7 @@ class TagRecommender:
         )
 
     def batch_recommend(self, files: list[Path], top_n: int = 10) -> dict[Path, TagRecommendation]:
-        """
-        Generate recommendations for multiple files.
+        """Generate recommendations for multiple files.
 
         Args:
             files: list of file paths
@@ -232,8 +227,7 @@ class TagRecommender:
         return results
 
     def calculate_confidence(self, tag: str, file_path: Path) -> float:
-        """
-        Calculate confidence score for a specific tag.
+        """Calculate confidence score for a specific tag.
 
         Args:
             tag: The tag to score
@@ -263,8 +257,7 @@ class TagRecommender:
         return sum(confidence_scores) / len(confidence_scores)
 
     def explain_tag(self, tag: str, file_path: Path, existing_tags: list[str] | None = None) -> str:
-        """
-        Generate detailed explanation for why a tag was suggested.
+        """Generate detailed explanation for why a tag was suggested.
 
         Args:
             tag: The tag to explain

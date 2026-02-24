@@ -120,6 +120,7 @@ class AutoScaler:
         resource_monitor: ResourceMonitor | None = None,
         clock: object | None = None,
     ) -> None:
+        """Set up the auto-scaler with the given config and resource monitor."""
         self._config = config
         self._monitor = resource_monitor or ResourceMonitor()
         self._clock = clock  # injectable for testing

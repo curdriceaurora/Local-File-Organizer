@@ -1,5 +1,4 @@
-"""
-Audio Utility Functions
+"""Audio Utility Functions.
 
 Common utility functions for audio file processing and analysis.
 """
@@ -13,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_audio_duration(audio_path: str | Path) -> float:
-    """
-    Get audio file duration in seconds.
+    """Get audio file duration in seconds.
 
     Args:
         audio_path: Path to audio file
@@ -48,8 +46,7 @@ def get_audio_duration(audio_path: str | Path) -> float:
 def normalize_audio(
     audio_path: str | Path, output_path: str | Path | None = None, target_db: float = -20.0
 ) -> Path:
-    """
-    Normalize audio to target dB level.
+    """Normalize audio to target dB level.
 
     Args:
         audio_path: Input audio file path
@@ -86,8 +83,7 @@ def split_audio(
     chunk_length_ms: int = 60000,  # 1 minute
     output_dir: str | Path | None = None,
 ) -> list[Path]:
-    """
-    Split audio file into chunks.
+    """Split audio file into chunks.
 
     Args:
         audio_path: Input audio file path
@@ -130,8 +126,7 @@ def convert_audio_format(
     output_path: str | Path | None = None,
     bitrate: str = "128k",
 ) -> Path:
-    """
-    Convert audio to different format.
+    """Convert audio to different format.
 
     Args:
         audio_path: Input audio file path
@@ -163,8 +158,7 @@ def convert_audio_format(
 
 
 def validate_audio_file(audio_path: str | Path) -> tuple[bool, str | None]:
-    """
-    Validate if file is a readable audio file.
+    """Validate if file is a readable audio file.
 
     Args:
         audio_path: Path to audio file
@@ -202,8 +196,7 @@ def detect_silence_segments(
     silence_thresh: int = -40,  # dB
     min_silence_len: int = 1000,  # ms
 ) -> list[tuple[int, int]]:
-    """
-    Detect silence segments in audio file.
+    """Detect silence segments in audio file.
 
     Args:
         audio_path: Path to audio file
@@ -236,8 +229,7 @@ def trim_audio(
     end_ms: int | None = None,
     output_path: str | Path | None = None,
 ) -> Path:
-    """
-    Trim audio file to specified time range.
+    """Trim audio file to specified time range.
 
     Args:
         audio_path: Input audio file path
@@ -274,8 +266,7 @@ def merge_audio_files(
     output_path: str | Path,
     crossfade_ms: int = 0,
 ) -> Path:
-    """
-    Merge multiple audio files into one.
+    """Merge multiple audio files into one.
 
     Args:
         audio_paths: List of input audio file paths
@@ -313,8 +304,7 @@ def merge_audio_files(
 
 
 def calculate_audio_checksum(audio_path: str | Path, algorithm: str = "sha256") -> str:
-    """
-    Calculate checksum of audio file.
+    """Calculate checksum of audio file.
 
     Args:
         audio_path: Path to audio file
@@ -336,8 +326,7 @@ def calculate_audio_checksum(audio_path: str | Path, algorithm: str = "sha256") 
 
 
 def get_audio_peak_amplitude(audio_path: str | Path) -> float:
-    """
-    Get peak amplitude of audio file.
+    """Get peak amplitude of audio file.
 
     Args:
         audio_path: Path to audio file
@@ -357,8 +346,7 @@ def get_audio_peak_amplitude(audio_path: str | Path) -> float:
 
 
 def is_audio_file(file_path: str | Path) -> bool:
-    """
-    Check if file is an audio file based on extension.
+    """Check if file is an audio file based on extension.
 
     Args:
         file_path: Path to file

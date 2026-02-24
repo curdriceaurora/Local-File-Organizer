@@ -1,5 +1,4 @@
-"""
-Video Processing Services
+"""Video Processing Services.
 
 This module provides video file processing capabilities including:
 - Scene detection and analysis

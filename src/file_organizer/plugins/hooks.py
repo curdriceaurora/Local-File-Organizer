@@ -22,6 +22,7 @@ class HookExecutionResult:
 
     @property
     def succeeded(self) -> bool:
+        """Return True if the hook invocation completed without error."""
         return self.error is None
 
 
@@ -29,6 +30,7 @@ class HookRegistry:
     """Thread-safe hook registration and trigger orchestration."""
 
     def __init__(self) -> None:
+        """Create an empty hook registry."""
         self._hooks: dict[str, list[HookCallback]] = {}
         self._lock = RLock()
 

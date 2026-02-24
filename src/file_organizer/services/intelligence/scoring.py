@@ -1,5 +1,4 @@
-"""
-Scoring Module - Confidence Scoring Utilities
+"""Scoring Module - Confidence Scoring Utilities.
 
 This module provides utility functions and classes for confidence scoring,
 including score normalization, ranking, and comparison operations.
@@ -24,13 +23,13 @@ class ScoredPattern:
     metadata: dict = None
 
     def __post_init__(self):
+        """Initialize default metadata."""
         if self.metadata is None:
             self.metadata = {}
 
 
 class PatternScorer:
-    """
-    Utility class for scoring and ranking patterns.
+    """Utility class for scoring and ranking patterns.
 
     Provides methods for normalizing scores, ranking patterns,
     and comparing pattern confidence levels.
@@ -38,8 +37,7 @@ class PatternScorer:
 
     @staticmethod
     def normalize_score(score: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
-        """
-        Normalize a score to a given range.
+        """Normalize a score to a given range.
 
         Args:
             score: Score to normalize
@@ -55,8 +53,7 @@ class PatternScorer:
     def rank_patterns(
         patterns: list[ScoredPattern], key: str = "confidence", reverse: bool = True
     ) -> list[ScoredPattern]:
-        """
-        Rank patterns by a given score attribute.
+        """Rank patterns by a given score attribute.
 
         Args:
             patterns: List of scored patterns
@@ -72,8 +69,7 @@ class PatternScorer:
     def filter_by_confidence(
         patterns: list[ScoredPattern], min_confidence: float, max_confidence: float | None = None
     ) -> list[ScoredPattern]:
-        """
-        Filter patterns by confidence threshold.
+        """Filter patterns by confidence threshold.
 
         Args:
             patterns: List of scored patterns
@@ -94,8 +90,7 @@ class PatternScorer:
     def get_top_patterns(
         patterns: list[ScoredPattern], n: int = 5, min_confidence: float | None = None
     ) -> list[ScoredPattern]:
-        """
-        Get top N patterns by confidence.
+        """Get top N patterns by confidence.
 
         Args:
             patterns: List of scored patterns
@@ -113,8 +108,7 @@ class PatternScorer:
 
     @staticmethod
     def calculate_weighted_score(scores: dict[str, float], weights: dict[str, float]) -> float:
-        """
-        Calculate weighted score from multiple factors.
+        """Calculate weighted score from multiple factors.
 
         Args:
             scores: Dictionary of score name to value
@@ -135,8 +129,7 @@ class PatternScorer:
     def compare_patterns(
         pattern1: ScoredPattern, pattern2: ScoredPattern, comparison_key: str = "confidence"
     ) -> int:
-        """
-        Compare two patterns by a given attribute.
+        """Compare two patterns by a given attribute.
 
         Args:
             pattern1: First pattern
@@ -160,8 +153,7 @@ class PatternScorer:
     def aggregate_scores(
         patterns: list[ScoredPattern], aggregation: str = "mean"
     ) -> dict[str, float]:
-        """
-        Aggregate scores across patterns.
+        """Aggregate scores across patterns.
 
         Args:
             patterns: List of scored patterns
@@ -210,8 +202,7 @@ class PatternScorer:
     def calculate_confidence_interval(
         patterns: list[ScoredPattern], confidence_level: float = 0.95
     ) -> tuple[float, float]:
-        """
-        Calculate confidence interval for pattern scores.
+        """Calculate confidence interval for pattern scores.
 
         Args:
             patterns: List of scored patterns
@@ -247,14 +238,11 @@ class PatternScorer:
 
 
 class ScoreAnalyzer:
-    """
-    Analyzer for pattern score distributions and statistics.
-    """
+    """Analyzer for pattern score distributions and statistics."""
 
     @staticmethod
     def analyze_score_distribution(patterns: list[ScoredPattern]) -> dict[str, Any]:
-        """
-        Analyze the distribution of confidence scores.
+        """Analyze the distribution of confidence scores.
 
         Args:
             patterns: List of scored patterns
@@ -311,8 +299,7 @@ class ScoreAnalyzer:
     def identify_outliers(
         patterns: list[ScoredPattern], method: str = "iqr", threshold: float = 1.5
     ) -> tuple[list[ScoredPattern], list[ScoredPattern]]:
-        """
-        Identify outlier patterns based on confidence scores.
+        """Identify outlier patterns based on confidence scores.
 
         Args:
             patterns: List of scored patterns
@@ -372,8 +359,7 @@ class ScoreAnalyzer:
     def calculate_score_variance(
         patterns: list[ScoredPattern], score_type: str = "confidence"
     ) -> float:
-        """
-        Calculate variance for a specific score type.
+        """Calculate variance for a specific score type.
 
         Args:
             patterns: List of scored patterns
@@ -394,8 +380,7 @@ class ScoreAnalyzer:
     def compare_score_groups(
         group1: list[ScoredPattern], group2: list[ScoredPattern]
     ) -> dict[str, Any]:
-        """
-        Compare two groups of patterns statistically.
+        """Compare two groups of patterns statistically.
 
         Args:
             group1: First group of patterns

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Demo script for ComparisonViewer.
+"""Demo script for ComparisonViewer.
 
 This script demonstrates the terminal-based UI for reviewing duplicate images.
 """

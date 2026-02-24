@@ -1,5 +1,4 @@
-"""
-Johnny Decimal Configuration Management
+"""Johnny Decimal Configuration Management.
 
 Manages configuration for Johnny Decimal methodology including hybrid setups
 with PARA and other organizational systems.
@@ -52,8 +51,7 @@ class CompatibilityConfig:
 
 @dataclass
 class JohnnyDecimalConfig:
-    """
-    Complete configuration for Johnny Decimal system.
+    """Complete configuration for Johnny Decimal system.
 
     Manages all aspects of JD setup including numbering scheme,
     migration settings, and compatibility options.
@@ -182,8 +180,7 @@ class JohnnyDecimalConfig:
         )
 
     def save_to_file(self, path: Path) -> None:
-        """
-        Save configuration to JSON file.
+        """Save configuration to JSON file.
 
         Args:
             path: File path to save to
@@ -200,8 +197,7 @@ class JohnnyDecimalConfig:
 
     @classmethod
     def load_from_file(cls, path: Path) -> JohnnyDecimalConfig:
-        """
-        Load configuration from JSON file.
+        """Load configuration from JSON file.
 
         Args:
             path: File path to load from
@@ -224,16 +220,14 @@ class JohnnyDecimalConfig:
 
 
 class ConfigBuilder:
-    """
-    Builder for creating JohnnyDecimalConfig with fluent API.
+    """Builder for creating JohnnyDecimalConfig with fluent API.
 
     Provides convenient methods for constructing configurations
     programmatically.
     """
 
     def __init__(self, scheme_name: str = "default"):
-        """
-        Initialize builder.
+        """Initialize builder.
 
         Args:
             scheme_name: Name for the numbering scheme
@@ -246,8 +240,7 @@ class ConfigBuilder:
         self._custom_mappings: dict[str, int] = {}
 
     def add_area(self, area_number: int, title: str, description: str = "") -> ConfigBuilder:
-        """
-        Add an area to the scheme.
+        """Add an area to the scheme.
 
         Args:
             area_number: Area number (10-99)
@@ -270,8 +263,7 @@ class ConfigBuilder:
     def add_category(
         self, area_number: int, category_number: int, title: str, description: str = ""
     ) -> ConfigBuilder:
-        """
-        Add a category to the scheme.
+        """Add a category to the scheme.
 
         Args:
             area_number: Parent area number
@@ -298,8 +290,7 @@ class ConfigBuilder:
         create_backups: bool = True,
         max_depth: int = 10,
     ) -> ConfigBuilder:
-        """
-        Configure migration settings.
+        """Configure migration settings.
 
         Args:
             preserve_names: Keep original folder names
@@ -324,8 +315,7 @@ class ConfigBuilder:
         resources_area: int = 30,
         archive_area: int = 40,
     ) -> ConfigBuilder:
-        """
-        Enable and configure PARA integration.
+        """Enable and configure PARA integration.
 
         Args:
             enabled: Enable PARA integration
@@ -347,8 +337,7 @@ class ConfigBuilder:
         return self
 
     def add_custom_mapping(self, folder_name: str, area_number: int) -> ConfigBuilder:
-        """
-        Add custom folder-to-area mapping.
+        """Add custom folder-to-area mapping.
 
         Args:
             folder_name: Folder name to map
@@ -361,8 +350,7 @@ class ConfigBuilder:
         return self
 
     def build(self) -> JohnnyDecimalConfig:
-        """
-        Build the configuration.
+        """Build the configuration.
 
         Returns:
             JohnnyDecimalConfig instance
@@ -390,8 +378,7 @@ class ConfigBuilder:
 
 
 def create_default_config() -> JohnnyDecimalConfig:
-    """
-    Create default Johnny Decimal configuration.
+    """Create default Johnny Decimal configuration.
 
     Returns:
         JohnnyDecimalConfig with sensible defaults
@@ -406,8 +393,7 @@ def create_default_config() -> JohnnyDecimalConfig:
 
 
 def create_para_compatible_config() -> JohnnyDecimalConfig:
-    """
-    Create configuration optimized for PARA compatibility.
+    """Create configuration optimized for PARA compatibility.
 
     Returns:
         JohnnyDecimalConfig with PARA integration enabled

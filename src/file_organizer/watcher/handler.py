@@ -1,5 +1,4 @@
-"""
-File system event handler with debouncing and filtering.
+"""File system event handler with debouncing and filtering.
 
 Extends watchdog's FileSystemEventHandler to add debounce logic,
 configurable pattern filtering, and event queuing for batch processing.
@@ -28,8 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class FileEventHandler(FileSystemEventHandler):
-    """
-    Watchdog event handler with debouncing, filtering, and queue integration.
+    """Watchdog event handler with debouncing, filtering, and queue integration.
 
     Receives raw file system events from watchdog observers, applies
     configurable filtering (exclude patterns, file type whitelist),
@@ -42,8 +40,7 @@ class FileEventHandler(FileSystemEventHandler):
     """
 
     def __init__(self, config: WatcherConfig, queue: EventQueue) -> None:
-        """
-        Initialize the event handler.
+        """Initialize the event handler.
 
         Args:
             config: Watcher configuration for filtering and debouncing.
@@ -64,8 +61,7 @@ class FileEventHandler(FileSystemEventHandler):
         self._on_moved_callbacks: list[callable] = []
 
     def on_created(self, event: FileSystemEvent) -> None:
-        """
-        Handle file/directory creation events.
+        """Handle file/directory creation events.
 
         Args:
             event: The watchdog creation event.
@@ -73,8 +69,7 @@ class FileEventHandler(FileSystemEventHandler):
         self._handle_event(event, EventType.CREATED)
 
     def on_modified(self, event: FileSystemEvent) -> None:
-        """
-        Handle file modification events.
+        """Handle file modification events.
 
         Args:
             event: The watchdog modification event.
@@ -82,8 +77,7 @@ class FileEventHandler(FileSystemEventHandler):
         self._handle_event(event, EventType.MODIFIED)
 
     def on_deleted(self, event: FileSystemEvent) -> None:
-        """
-        Handle file/directory deletion events.
+        """Handle file/directory deletion events.
 
         Args:
             event: The watchdog deletion event.
@@ -91,8 +85,7 @@ class FileEventHandler(FileSystemEventHandler):
         self._handle_event(event, EventType.DELETED)
 
     def on_moved(self, event: FileSystemEvent) -> None:
-        """
-        Handle file/directory move events.
+        """Handle file/directory move events.
 
         Args:
             event: The watchdog move event.
@@ -107,8 +100,7 @@ class FileEventHandler(FileSystemEventHandler):
         event_type: EventType,
         callback: callable,
     ) -> None:
-        """
-        Register a callback for a specific event type.
+        """Register a callback for a specific event type.
 
         Callbacks are invoked after filtering and debouncing, in addition
         to the event being placed on the queue.
@@ -131,8 +123,7 @@ class FileEventHandler(FileSystemEventHandler):
         event_type: EventType,
         dest_path: Path | None = None,
     ) -> None:
-        """
-        Central event processing pipeline: filter, debounce, enqueue.
+        """Central event processing pipeline: filter, debounce, enqueue.
 
         Args:
             event: The raw watchdog event.
@@ -170,8 +161,7 @@ class FileEventHandler(FileSystemEventHandler):
         self._fire_callbacks(event_type, file_event)
 
     def _should_process(self, path_key: str) -> bool:
-        """
-        Check if an event for this path should be processed based on debounce timing.
+        """Check if an event for this path should be processed based on debounce timing.
 
         Uses monotonic time for reliable interval measurement regardless
         of system clock adjustments.
@@ -196,8 +186,7 @@ class FileEventHandler(FileSystemEventHandler):
             return True
 
     def _fire_callbacks(self, event_type: EventType, file_event: FileEvent) -> None:
-        """
-        Invoke registered callbacks for the given event type.
+        """Invoke registered callbacks for the given event type.
 
         Args:
             event_type: The type of event that occurred.

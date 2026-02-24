@@ -1,5 +1,4 @@
-"""
-SQLite database manager for operation history tracking.
+"""SQLite database manager for operation history tracking.
 
 This module provides database connection management, schema creation,
 and migration support for the operation history system.
@@ -60,8 +59,7 @@ class DatabaseManager:
     """
 
     def __init__(self, db_path: Path | None = None):
-        """
-        Initialize database manager.
+        """Initialize database manager.
 
         Args:
             db_path: Path to SQLite database file.
@@ -129,8 +127,7 @@ class DatabaseManager:
                 raise
 
     def _migrate(self, from_version: int, to_version: int, conn: sqlite3.Connection) -> None:
-        """
-        Perform database migration from one version to another.
+        """Perform database migration from one version to another.
 
         Args:
             from_version: Current schema version
@@ -146,8 +143,7 @@ class DatabaseManager:
         logger.info(f"Migration to version {to_version} complete")
 
     def get_connection(self) -> sqlite3.Connection:
-        """
-        Get or create database connection.
+        """Get or create database connection.
 
         Returns:
             SQLite database connection
@@ -163,8 +159,7 @@ class DatabaseManager:
 
     @contextmanager
     def transaction(self):
-        """
-        Context manager for database transactions.
+        """Context manager for database transactions.
 
         Yields:
             Database connection
@@ -184,8 +179,7 @@ class DatabaseManager:
                 raise
 
     def execute_query(self, query: str, params: tuple | None = None) -> sqlite3.Cursor:
-        """
-        Execute a SQL query with optional parameters.
+        """Execute a SQL query with optional parameters.
 
         Args:
             query: SQL query string
@@ -202,8 +196,7 @@ class DatabaseManager:
                 return conn.execute(query, params)
 
     def execute_many(self, query: str, params_list: list[tuple]) -> None:
-        """
-        Execute a SQL query with multiple parameter sets (batch insert).
+        """Execute a SQL query with multiple parameter sets (batch insert).
 
         Args:
             query: SQL query string
@@ -213,8 +206,7 @@ class DatabaseManager:
             conn.executemany(query, params_list)
 
     def fetch_one(self, query: str, params: tuple | None = None) -> sqlite3.Row | None:
-        """
-        Execute query and fetch one result.
+        """Execute query and fetch one result.
 
         Args:
             query: SQL query string
@@ -227,8 +219,7 @@ class DatabaseManager:
         return cursor.fetchone()
 
     def fetch_all(self, query: str, params: tuple | None = None) -> list[sqlite3.Row]:
-        """
-        Execute query and fetch all results.
+        """Execute query and fetch all results.
 
         Args:
             query: SQL query string
@@ -241,8 +232,7 @@ class DatabaseManager:
         return cursor.fetchall()
 
     def get_database_size(self) -> int:
-        """
-        Get current database file size in bytes.
+        """Get current database file size in bytes.
 
         Returns:
             Database size in bytes
@@ -252,8 +242,7 @@ class DatabaseManager:
         return 0
 
     def get_operation_count(self) -> int:
-        """
-        Get total number of operations in database.
+        """Get total number of operations in database.
 
         Returns:
             Total operation count
@@ -262,9 +251,7 @@ class DatabaseManager:
         return result["count"] if result else 0
 
     def vacuum(self) -> None:
-        """
-        Vacuum the database to reclaim space and optimize performance.
-        """
+        """Vacuum the database to reclaim space and optimize performance."""
         logger.info("Vacuuming database...")
         conn = self.get_connection()
         conn.execute("VACUUM")

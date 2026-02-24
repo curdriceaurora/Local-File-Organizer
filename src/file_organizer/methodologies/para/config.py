@@ -1,5 +1,4 @@
-"""
-PARA Configuration
+"""PARA Configuration.
 
 Configuration management for PARA methodology including:
 - Category thresholds
@@ -134,8 +133,7 @@ class PARAConfig:
 
     @classmethod
     def load_from_yaml(cls, config_path: Path) -> PARAConfig:
-        """
-        Load configuration from YAML file.
+        """Load configuration from YAML file.
 
         Args:
             config_path: Path to YAML configuration file
@@ -196,8 +194,7 @@ class PARAConfig:
             return cls()
 
     def save_to_yaml(self, config_path: Path):
-        """
-        Save configuration to YAML file.
+        """Save configuration to YAML file.
 
         Args:
             config_path: Path to save YAML configuration
@@ -289,8 +286,7 @@ DEFAULT_CONFIG = PARAConfig()
 
 
 def load_config(config_path: Path | None = None) -> PARAConfig:
-    """
-    Load PARA configuration.
+    """Load PARA configuration.
 
     Args:
         config_path: Path to config file (None = use default)

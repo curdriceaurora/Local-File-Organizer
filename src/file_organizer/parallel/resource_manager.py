@@ -1,5 +1,4 @@
-"""
-Resource manager for parallel file processing.
+"""Resource manager for parallel file processing.
 
 This module provides thread-safe resource tracking and allocation to
 prevent the file processing system from exceeding CPU, memory, IO, or
@@ -26,8 +25,7 @@ class ResourceType(StrEnum):
 
 @dataclass
 class ResourceConfig:
-    """
-    Configuration for resource limits.
+    """Configuration for resource limits.
 
     Attributes:
         max_cpu_percent: Maximum aggregate CPU usage allowed (0-100+).
@@ -56,8 +54,7 @@ class ResourceConfig:
 
 
 class ResourceManager:
-    """
-    Thread-safe resource allocation manager.
+    """Thread-safe resource allocation manager.
 
     Tracks resource usage across resource types and provides acquire/release
     semantics. ``acquire`` checks whether sufficient resources are available
@@ -65,6 +62,7 @@ class ResourceManager:
     """
 
     def __init__(self, config: ResourceConfig) -> None:
+        """Set up resource limits from the given configuration."""
         self._config = config
         self._lock = threading.Lock()
         self._limits: dict[str, float] = {
@@ -86,8 +84,7 @@ class ResourceManager:
         return self._config
 
     def acquire(self, resource_type: str, amount: float) -> bool:
-        """
-        Try to acquire a resource allocation.
+        """Try to acquire a resource allocation.
 
         Args:
             resource_type: The type of resource to acquire (use
@@ -116,8 +113,7 @@ class ResourceManager:
             return True
 
     def release(self, resource_type: str, amount: float) -> None:
-        """
-        Release a previously acquired resource allocation.
+        """Release a previously acquired resource allocation.
 
         The used amount is clamped to zero to prevent underflow in case
         of mismatched acquire/release calls.
@@ -139,8 +135,7 @@ class ResourceManager:
             self._used[resource_type] = max(0.0, self._used[resource_type] - amount)
 
     def get_available(self, resource_type: str) -> float:
-        """
-        Return the amount of a resource currently available.
+        """Return the amount of a resource currently available.
 
         Args:
             resource_type: The type of resource to query.
@@ -157,8 +152,7 @@ class ResourceManager:
             return self._limits[resource_type] - self._used[resource_type]
 
     def get_used(self, resource_type: str) -> float:
-        """
-        Return the amount of a resource currently in use.
+        """Return the amount of a resource currently in use.
 
         Args:
             resource_type: The type of resource to query.
@@ -175,8 +169,7 @@ class ResourceManager:
             return self._used[resource_type]
 
     def get_utilization(self, resource_type: str) -> float:
-        """
-        Return the utilization ratio of a resource (0.0 to 1.0).
+        """Return the utilization ratio of a resource (0.0 to 1.0).
 
         Args:
             resource_type: The type of resource to query.

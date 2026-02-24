@@ -1,5 +1,4 @@
-"""
-Video Scene Detection Service
+"""Video Scene Detection Service.
 
 Detects scene changes in video files using content-aware and threshold-based algorithms.
 Supports multiple detection methods and provides detailed scene metadata.
@@ -53,8 +52,7 @@ class SceneDetectionResult:
 
 
 class SceneDetector:
-    """
-    Video scene detection service.
+    """Video scene detection service.
 
     Detects scene changes in video files using various algorithms:
     - Content-aware detection: Analyzes visual content changes
@@ -82,8 +80,7 @@ class SceneDetector:
         threshold: float = 27.0,
         min_scene_length: float = 1.0,  # seconds
     ):
-        """
-        Initialize scene detector.
+        """Initialize scene detector.
 
         Args:
             method: Detection method to use
@@ -116,8 +113,7 @@ class SceneDetector:
         method: DetectionMethod | None = None,
         threshold: float | None = None,
     ) -> SceneDetectionResult:
-        """
-        Detect scenes in a video file.
+        """Detect scenes in a video file.
 
         Args:
             video_path: Path to video file
@@ -323,8 +319,7 @@ class SceneDetector:
         video_paths: list[str | Path],
         method: DetectionMethod | None = None,
     ) -> list[SceneDetectionResult]:
-        """
-        Detect scenes in multiple video files.
+        """Detect scenes in multiple video files.
 
         Args:
             video_paths: List of video file paths
@@ -346,8 +341,7 @@ class SceneDetector:
 
     @staticmethod
     def save_scene_list(result: SceneDetectionResult, output_path: str | Path):
-        """
-        Save scene detection result to a file.
+        """Save scene detection result to a file.
 
         Args:
             result: SceneDetectionResult to save
@@ -395,8 +389,7 @@ class SceneDetector:
         output_dir: str | Path,
         frame_offset: float = 0.5,  # Extract frame at 0.5s into scene
     ):
-        """
-        Extract thumbnail for each detected scene.
+        """Extract thumbnail for each detected scene.
 
         Args:
             video_path: Path to video file

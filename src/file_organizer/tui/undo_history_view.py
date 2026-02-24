@@ -196,6 +196,7 @@ class UndoHistoryView(Vertical):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
+        """Set up the undo history view with the given Textual widget parameters."""
         super().__init__(name=name, id=id, classes=classes)
 
     def compose(self):  # type: ignore[override]

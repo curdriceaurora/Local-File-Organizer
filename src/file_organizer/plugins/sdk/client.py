@@ -29,6 +29,7 @@ class PluginClient:
         timeout_seconds: float = 10.0,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
+        """Set up a plugin client targeting the given API base URL."""
         cleaned_url = base_url.rstrip("/")
         if not cleaned_url.startswith(("http://", "https://")):
             raise ValueError("base_url must use http:// or https://")
@@ -43,12 +44,15 @@ class PluginClient:
         )
 
     def close(self) -> None:
+        """Close the HTTP client."""
         self._client.close()
 
     def __enter__(self) -> PluginClient:
+        """Enter the context manager."""
         return self
 
     def __exit__(self, *_: object) -> None:
+        """Exit the context manager and close the client."""
         self.close()
 
     def _request(
@@ -90,6 +94,7 @@ class PluginClient:
         include_hidden: bool = False,
         max_items: int = 200,
     ) -> list[dict[str, Any]]:
+        """List files accessible to this plugin."""
         payload = self._request(
             "GET",
             "/api/v1/plugins/files/list",
@@ -108,6 +113,7 @@ class PluginClient:
         return [item for item in items if isinstance(item, dict)]
 
     def get_metadata(self, *, path: str) -> dict[str, Any]:
+        """Get metadata for a file accessible to this plugin."""
         payload = self._request(
             "GET",
             "/api/v1/plugins/files/metadata",
@@ -125,6 +131,7 @@ class PluginClient:
         overwrite: bool = False,
         dry_run: bool = False,
     ) -> dict[str, Any]:
+        """Organize a file using the plugin API."""
         payload = self._request(
             "POST",
             "/api/v1/plugins/files/organize",
@@ -140,6 +147,7 @@ class PluginClient:
         return payload
 
     def get_config(self, *, key: str, profile: str = "default") -> Any:
+        """Retrieve a configuration value for this plugin."""
         payload = self._request(
             "GET",
             "/api/v1/plugins/config/get",
@@ -156,6 +164,7 @@ class PluginClient:
         callback_url: str,
         secret: str | None = None,
     ) -> dict[str, Any]:
+        """Register a webhook callback for a hook event."""
         event_name = event.value if isinstance(event, HookEvent) else str(event)
         payload = self._request(
             "POST",
@@ -171,6 +180,7 @@ class PluginClient:
         return payload
 
     def unregister_hook(self, *, event: HookEvent | str, callback_url: str) -> bool:
+        """Unregister a webhook callback for a hook event."""
         event_name = event.value if isinstance(event, HookEvent) else str(event)
         payload = self._request(
             "POST",
@@ -182,6 +192,7 @@ class PluginClient:
         return bool(payload.get("removed"))
 
     def list_hooks(self, *, event: HookEvent | str | None = None) -> list[dict[str, Any]]:
+        """List registered webhooks for this plugin."""
         event_name: str | None
         if isinstance(event, HookEvent):
             event_name = event.value
@@ -199,6 +210,7 @@ class PluginClient:
     def trigger_event(
         self, *, event: HookEvent | str, payload: Mapping[str, Any]
     ) -> dict[str, Any]:
+        """Trigger a hook event and deliver to registered callbacks."""
         event_name = event.value if isinstance(event, HookEvent) else str(event)
         response_payload = self._request(
             "POST",

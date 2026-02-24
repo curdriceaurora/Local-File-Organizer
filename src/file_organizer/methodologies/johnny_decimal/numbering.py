@@ -1,5 +1,4 @@
-"""
-Johnny Decimal Number Generation
+"""Johnny Decimal Number Generation.
 
 This module provides number generation logic for the Johnny Decimal system,
 including automatic number assignment, validation, and conflict detection.
@@ -33,14 +32,13 @@ class InvalidNumberError(Exception):
 
 
 class JohnnyDecimalGenerator:
-    """
-    Generator for Johnny Decimal numbers with automatic assignment
-    and conflict resolution.
+    """Generator for Johnny Decimal numbers with automatic assignment.
+
+    Assigns and resolves conflicts in Johnny Decimal number sequences.
     """
 
     def __init__(self, scheme: NumberingScheme):
-        """
-        Initialize the generator with a numbering scheme.
+        """Initialize the generator with a numbering scheme.
 
         Args:
             scheme: The Johnny Decimal numbering scheme to use
@@ -50,8 +48,7 @@ class JohnnyDecimalGenerator:
         self._number_mappings: dict[str, Path] = {}
 
     def register_existing_number(self, number: JohnnyDecimalNumber, file_path: Path) -> None:
-        """
-        Register an existing number to track usage and prevent conflicts.
+        """Register an existing number to track usage and prevent conflicts.
 
         Args:
             number: The Johnny Decimal number to register
@@ -73,8 +70,7 @@ class JohnnyDecimalGenerator:
         logger.debug(f"Registered number {number_str} for {file_path}")
 
     def is_number_available(self, number: JohnnyDecimalNumber) -> bool:
-        """
-        Check if a number is available for assignment.
+        """Check if a number is available for assignment.
 
         Args:
             number: The number to check
@@ -95,8 +91,7 @@ class JohnnyDecimalGenerator:
         return True
 
     def get_next_available_area(self, preferred_area: int | None = None) -> int:
-        """
-        Get the next available area number.
+        """Get the next available area number.
 
         Args:
             preferred_area: Preferred area number to try first
@@ -130,8 +125,7 @@ class JohnnyDecimalGenerator:
         raise InvalidNumberError("No available area numbers")
 
     def get_next_available_category(self, area: int) -> int:
-        """
-        Get the next available category number in an area.
+        """Get the next available category number in an area.
 
         Args:
             area: The area number
@@ -150,8 +144,7 @@ class JohnnyDecimalGenerator:
         raise InvalidNumberError(f"No available category numbers in area {area}")
 
     def get_next_available_id(self, area: int, category: int) -> int:
-        """
-        Get the next available ID number in a category.
+        """Get the next available ID number in a category.
 
         Args:
             area: The area number
@@ -176,8 +169,7 @@ class JohnnyDecimalGenerator:
         description: str = "",
         preferred_area: int | None = None,
     ) -> JohnnyDecimalNumber:
-        """
-        Generate a new area number.
+        """Generate a new area number.
 
         Args:
             name: Name for this area
@@ -206,8 +198,7 @@ class JohnnyDecimalGenerator:
         description: str = "",
         preferred_category: int | None = None,
     ) -> JohnnyDecimalNumber:
-        """
-        Generate a new category number within an area.
+        """Generate a new category number within an area.
 
         Args:
             area: The area number
@@ -243,8 +234,7 @@ class JohnnyDecimalGenerator:
         description: str = "",
         preferred_id: int | None = None,
     ) -> JohnnyDecimalNumber:
-        """
-        Generate a new ID number within a category.
+        """Generate a new ID number within a category.
 
         Args:
             area: The area number
@@ -286,8 +276,7 @@ class JohnnyDecimalGenerator:
         filename: str = "",
         prefer_category: bool = True,
     ) -> tuple[JohnnyDecimalNumber, float, list[str]]:
-        """
-        Suggest a Johnny Decimal number based on content analysis.
+        """Suggest a Johnny Decimal number based on content analysis.
 
         Args:
             content: The file content to analyze
@@ -368,8 +357,7 @@ class JohnnyDecimalGenerator:
         return number, confidence, reasons
 
     def validate_number(self, number: JohnnyDecimalNumber) -> tuple[bool, list[str]]:
-        """
-        Validate a Johnny Decimal number against the scheme.
+        """Validate a Johnny Decimal number against the scheme.
 
         Args:
             number: The number to validate
@@ -403,8 +391,7 @@ class JohnnyDecimalGenerator:
         return len(errors) == 0, errors
 
     def find_conflicts(self, number: JohnnyDecimalNumber) -> list[tuple[str, Path]]:
-        """
-        Find all numbers that conflict with the given number.
+        """Find all numbers that conflict with the given number.
 
         Args:
             number: The number to check for conflicts
@@ -439,8 +426,7 @@ class JohnnyDecimalGenerator:
     def resolve_conflict(
         self, number: JohnnyDecimalNumber, strategy: str = "increment"
     ) -> JohnnyDecimalNumber:
-        """
-        Resolve a number conflict by finding an alternative.
+        """Resolve a number conflict by finding an alternative.
 
         Args:
             number: The conflicting number
@@ -513,8 +499,7 @@ class JohnnyDecimalGenerator:
             )
 
     def get_usage_statistics(self) -> dict[str, Any]:
-        """
-        Get statistics about number usage.
+        """Get statistics about number usage.
 
         Returns:
             Dictionary with usage statistics

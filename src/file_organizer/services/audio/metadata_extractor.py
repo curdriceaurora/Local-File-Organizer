@@ -1,5 +1,4 @@
-"""
-Audio Metadata Extraction Service
+"""Audio Metadata Extraction Service.
 
 Extracts comprehensive metadata from audio files including:
 - Basic properties (duration, bitrate, sample rate)
@@ -57,8 +56,7 @@ class AudioMetadata:
 
 
 class AudioMetadataExtractor:
-    """
-    Audio metadata extraction service.
+    """Audio metadata extraction service.
 
     Supports multiple audio formats and tag types:
     - MP3 (ID3v1, ID3v2)
@@ -72,8 +70,7 @@ class AudioMetadataExtractor:
     """
 
     def __init__(self, use_fallback: bool = True):
-        """
-        Initialize metadata extractor.
+        """Initialize metadata extractor.
 
         Args:
             use_fallback: Use tinytag as fallback if mutagen fails
@@ -81,8 +78,7 @@ class AudioMetadataExtractor:
         self.use_fallback = use_fallback
 
     def extract(self, audio_path: str | Path) -> AudioMetadata:
-        """
-        Extract metadata from audio file.
+        """Extract metadata from audio file.
 
         Args:
             audio_path: Path to audio file
@@ -347,8 +343,7 @@ class AudioMetadataExtractor:
         return metadata
 
     def extract_batch(self, audio_paths: list[str | Path]) -> list[AudioMetadata]:
-        """
-        Extract metadata from multiple audio files.
+        """Extract metadata from multiple audio files.
 
         Args:
             audio_paths: List of audio file paths

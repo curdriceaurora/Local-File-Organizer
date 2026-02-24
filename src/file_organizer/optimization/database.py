@@ -1,5 +1,4 @@
-"""
-Database optimizer for SQLite operations.
+"""Database optimizer for SQLite operations.
 
 This module provides index management, table analysis, vacuuming, query plan
 inspection, and pragma optimization for SQLite databases used by the file
@@ -124,6 +123,7 @@ class DatabaseOptimizer:
     """
 
     def __init__(self, db_path: Path | str) -> None:
+        """Set up the database optimizer for the given SQLite database path."""
         self._db_path = str(db_path)
         self._conn: sqlite3.Connection | None = None
         logger.info("DatabaseOptimizer initialised for %s", self._db_path)

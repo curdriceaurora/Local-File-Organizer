@@ -1,6 +1,4 @@
-"""
-Chart generation module for terminal-based visualizations.
-"""
+"""Chart generation module for terminal-based visualizations."""
 
 from __future__ import annotations
 
@@ -13,8 +11,7 @@ class ChartGenerator:
     """Generates ASCII/Unicode charts for terminal display."""
 
     def __init__(self, use_unicode: bool = True):
-        """
-        Initialize chart generator.
+        """Initialize chart generator.
 
         Args:
             use_unicode: Use Unicode characters for better visuals
@@ -22,8 +19,7 @@ class ChartGenerator:
         self.use_unicode = use_unicode
 
     def create_pie_chart(self, data: dict[str, float], title: str, width: int = 40) -> str:
-        """
-        Create ASCII pie chart.
+        """Create ASCII pie chart.
 
         Args:
             data: Dictionary of labels to values
@@ -51,8 +47,7 @@ class ChartGenerator:
         return "\n".join(lines)
 
     def create_bar_chart(self, data: dict[str, int], title: str, width: int = 50) -> str:
-        """
-        Create ASCII bar chart.
+        """Create ASCII bar chart.
 
         Args:
             data: Dictionary of labels to counts
@@ -79,8 +74,7 @@ class ChartGenerator:
         return "\n".join(lines)
 
     def create_trend_line(self, data: list[tuple[str, float]], title: str, height: int = 10) -> str:
-        """
-        Create ASCII trend line.
+        """Create ASCII trend line.
 
         Args:
             data: List of (label, value) tuples
@@ -124,8 +118,7 @@ class ChartGenerator:
         return "\n".join(lines)
 
     def create_sparkline(self, values: list[float]) -> str:
-        """
-        Create compact sparkline.
+        """Create compact sparkline.
 
         Args:
             values: List of numeric values

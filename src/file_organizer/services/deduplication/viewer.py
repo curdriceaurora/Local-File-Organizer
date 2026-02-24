@@ -1,5 +1,4 @@
-"""
-Interactive comparison viewer for reviewing duplicate images.
+"""Interactive comparison viewer for reviewing duplicate images.
 
 Provides a terminal-based UI for reviewing duplicate images with:
 - Side-by-side image preview
@@ -81,8 +80,7 @@ class DuplicateReview:
 
 
 class ComparisonViewer:
-    """
-    Terminal-based UI for reviewing duplicate images.
+    """Terminal-based UI for reviewing duplicate images.
 
     Provides interactive comparison with image previews, metadata display,
     and user decision recording.
@@ -91,8 +89,7 @@ class ComparisonViewer:
     def __init__(
         self, console: Console | None = None, preview_width: int = 40, preview_height: int = 20
     ):
-        """
-        Initialize the ComparisonViewer.
+        """Initialize the ComparisonViewer.
 
         Args:
             console: Rich console instance (creates new if None)
@@ -107,8 +104,7 @@ class ComparisonViewer:
     def show_comparison(
         self, images: list[Path], similarity_score: float | None = None
     ) -> DuplicateReview:
-        """
-        Show comparison for a group of duplicate images.
+        """Show comparison for a group of duplicate images.
 
         Displays side-by-side comparison and prompts user for action.
 
@@ -147,8 +143,7 @@ class ComparisonViewer:
     def batch_review(
         self, duplicate_groups: dict[str, list[Path]], auto_select_best: bool = False
     ) -> dict[Path, str]:
-        """
-        Review multiple groups of duplicates in batch.
+        """Review multiple groups of duplicates in batch.
 
         Args:
             duplicate_groups: Dictionary mapping group IDs to lists of duplicate images
@@ -193,8 +188,7 @@ class ComparisonViewer:
         return decisions
 
     def _get_image_metadata(self, image_path: Path) -> ImageMetadata:
-        """
-        Extract metadata from an image file.
+        """Extract metadata from an image file.
 
         Args:
             image_path: Path to image file
@@ -233,8 +227,7 @@ class ComparisonViewer:
         self.console.print(Panel(header_text, style="bold cyan", box=box.DOUBLE))
 
     def _display_images_side_by_side(self, metadata_list: list[ImageMetadata]) -> None:
-        """
-        Display images side by side with metadata.
+        """Display images side by side with metadata.
 
         Args:
             metadata_list: List of ImageMetadata objects
@@ -256,8 +249,7 @@ class ComparisonViewer:
                 self.console.print()
 
     def _create_image_info_table(self, index: int, metadata: ImageMetadata) -> Table:
-        """
-        Create a table displaying image information.
+        """Create a table displaying image information.
 
         Args:
             index: Image number in comparison
@@ -296,8 +288,7 @@ class ComparisonViewer:
     def _generate_ascii_preview(
         self, image_path: Path, max_width: int = 40, max_height: int = 15
     ) -> str | None:
-        """
-        Generate ASCII art preview of image.
+        """Generate ASCII art preview of image.
 
         Args:
             image_path: Path to image
@@ -343,8 +334,7 @@ class ComparisonViewer:
             return None
 
     def _prompt_user_action(self, image_count: int) -> UserAction:
-        """
-        Prompt user for action on duplicate group.
+        """Prompt user for action on duplicate group.
 
         Args:
             image_count: Number of images in group
@@ -387,8 +377,7 @@ class ComparisonViewer:
     def _process_user_action(
         self, action: UserAction, metadata_list: list[ImageMetadata]
     ) -> DuplicateReview:
-        """
-        Process user action and return review result.
+        """Process user action and return review result.
 
         Args:
             action: UserAction enum value
@@ -438,8 +427,7 @@ class ComparisonViewer:
         return DuplicateReview([], [], skipped=True)
 
     def _auto_select_best(self, images: list[Path]) -> DuplicateReview:
-        """
-        Automatically select the best quality image.
+        """Automatically select the best quality image.
 
         Chooses based on:
         1. Highest resolution
@@ -485,8 +473,7 @@ class ComparisonViewer:
         return DuplicateReview([keep_path], delete_paths)
 
     def _calculate_quality_score(self, metadata: ImageMetadata) -> float:
-        """
-        Calculate quality score for an image.
+        """Calculate quality score for an image.
 
         Args:
             metadata: ImageMetadata object
@@ -518,8 +505,7 @@ class ComparisonViewer:
         return total_score
 
     def _display_review_summary(self, decisions: dict[Path, str]) -> None:
-        """
-        Display summary of review decisions.
+        """Display summary of review decisions.
 
         Args:
             decisions: Dictionary mapping paths to actions
@@ -550,8 +536,7 @@ class ComparisonViewer:
             self.console.print(f"\n[green]Potential space savings: {delete_size_mb:.2f} MB[/green]")
 
     def display_metadata(self, image_path: Path) -> None:
-        """
-        Display metadata for a single image.
+        """Display metadata for a single image.
 
         Args:
             image_path: Path to image file
@@ -566,8 +551,7 @@ class ComparisonViewer:
     def interactive_select(
         self, images: list[Path], prompt: str = "Select images to keep"
     ) -> list[Path]:
-        """
-        Interactive selection of images from a list.
+        """Interactive selection of images from a list.
 
         Args:
             images: List of image paths

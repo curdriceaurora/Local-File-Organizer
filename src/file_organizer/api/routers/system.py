@@ -35,6 +35,7 @@ def system_status(
     settings: ApiSettings = Depends(get_settings),
     path: str = Query(".", description="Path for disk usage"),
 ) -> SystemStatusResponse:
+    """Return system status including disk usage and active job count."""
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
@@ -57,6 +58,7 @@ def get_config(
     profile: str = Query("default"),
     manager: ConfigManager = Depends(get_config_manager),
 ) -> ConfigResponse:
+    """Retrieve the current configuration for a named profile."""
     config = manager.load(profile)
     payload = manager.config_to_dict(config)
     return ConfigResponse(profile=profile, config=payload, profiles=manager.list_profiles())
@@ -68,6 +70,7 @@ def update_config(
     manager: ConfigManager = Depends(get_config_manager),
     _admin: object = Depends(require_admin_user),
 ) -> ConfigResponse:
+    """Apply partial updates to the configuration for a named profile."""
     config = manager.load(request.profile)
 
     if request.default_methodology is not None:
@@ -104,6 +107,7 @@ def get_stats(
     use_cache: bool = Query(True),
     settings: ApiSettings = Depends(get_settings),
 ) -> StorageStatsResponse:
+    """Return storage statistics for the specified directory."""
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")

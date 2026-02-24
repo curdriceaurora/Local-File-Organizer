@@ -1,5 +1,4 @@
-"""
-Undo/redo manager for file operations.
+"""Undo/redo manager for file operations.
 
 This module provides the main interface for undoing and redoing file operations,
 managing undo/redo stacks, and coordinating validation and rollback.
@@ -18,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class UndoManager:
-    """
-    Main interface for undo/redo operations.
+    """Main interface for undo/redo operations.
 
     This class manages undo/redo stacks, coordinates validation and rollback,
     and provides high-level methods for undoing and redoing operations.
@@ -32,8 +30,7 @@ class UndoManager:
         executor: RollbackExecutor | None = None,
         max_stack_size: int = 1000,
     ) -> None:
-        """
-        Initialize undo manager.
+        """Initialize undo manager.
 
         Args:
             history: Operation history tracker
@@ -48,8 +45,7 @@ class UndoManager:
         logger.info("Undo manager initialized")
 
     def undo_last_operation(self) -> bool:
-        """
-        Undo the last completed operation.
+        """Undo the last completed operation.
 
         Returns:
             True if successful, False otherwise
@@ -66,8 +62,7 @@ class UndoManager:
         return self.undo_operation(operation.id)
 
     def undo_operation(self, operation_id: int) -> bool:
-        """
-        Undo a specific operation by ID.
+        """Undo a specific operation by ID.
 
         Args:
             operation_id: ID of operation to undo
@@ -119,8 +114,7 @@ class UndoManager:
         return success
 
     def undo_transaction(self, transaction_id: str) -> bool:
-        """
-        Undo an entire transaction atomically.
+        """Undo an entire transaction atomically.
 
         Args:
             transaction_id: ID of transaction to undo
@@ -183,8 +177,7 @@ class UndoManager:
         return result.success
 
     def redo_transaction(self, transaction_id: str) -> bool:
-        """
-        Redo an entire transaction (re-apply all rolled-back operations).
+        """Redo an entire transaction (re-apply all rolled-back operations).
 
         Args:
             transaction_id: ID of transaction to redo
@@ -247,8 +240,7 @@ class UndoManager:
         return True
 
     def redo_last_operation(self) -> bool:
-        """
-        Redo the last rolled back operation.
+        """Redo the last rolled back operation.
 
         Returns:
             True if successful, False otherwise
@@ -265,8 +257,7 @@ class UndoManager:
         return self.redo_operation(operation.id)
 
     def redo_operation(self, operation_id: int) -> bool:
-        """
-        Redo a specific operation by ID.
+        """Redo a specific operation by ID.
 
         Args:
             operation_id: ID of operation to redo
@@ -315,8 +306,7 @@ class UndoManager:
         return success
 
     def can_undo(self, operation_id: int) -> tuple[bool, str]:
-        """
-        Check if an operation can be undone.
+        """Check if an operation can be undone.
 
         Args:
             operation_id: ID of operation to check
@@ -342,8 +332,7 @@ class UndoManager:
             return (False, validation.error_message or "Validation failed")
 
     def can_redo(self, operation_id: int) -> tuple[bool, str]:
-        """
-        Check if an operation can be redone.
+        """Check if an operation can be redone.
 
         Args:
             operation_id: ID of operation to check
@@ -369,8 +358,7 @@ class UndoManager:
             return (False, validation.error_message or "Validation failed")
 
     def get_undo_stack(self) -> list[Operation]:
-        """
-        Get list of operations that can be undone.
+        """Get list of operations that can be undone.
 
         Returns:
             List of completed operations (undo stack)
@@ -380,8 +368,7 @@ class UndoManager:
         )
 
     def get_redo_stack(self) -> list[Operation]:
-        """
-        Get list of operations that can be redone.
+        """Get list of operations that can be redone.
 
         Returns:
             List of rolled back operations (redo stack)
@@ -391,8 +378,7 @@ class UndoManager:
         )
 
     def clear_redo_stack(self) -> None:
-        """
-        Clear the redo stack.
+        """Clear the redo stack.
 
         This is typically called after a new operation or undo,
         as they invalidate the redo timeline.

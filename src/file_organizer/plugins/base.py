@@ -175,6 +175,7 @@ class Plugin(ABC):
         *,
         sandbox: PluginSandbox | None = None,
     ) -> None:
+        """Set up the plugin with the given configuration and sandbox."""
         self.config: dict[str, Any] = dict(config or {})
         self.sandbox = sandbox or PluginSandbox(plugin_name=self.__class__.__name__)
         self._enabled = False

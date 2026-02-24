@@ -1,5 +1,4 @@
-"""
-Analytics service package.
+"""Analytics service package.
 
 Provides comprehensive analytics for file organization, storage usage,
 and system efficiency.

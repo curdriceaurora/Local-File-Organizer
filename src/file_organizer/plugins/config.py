@@ -32,6 +32,7 @@ class PluginConfig:
     permissions: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize this config to a plain dictionary."""
         return {
             "name": self.name,
             "enabled": self.enabled,
@@ -41,6 +42,7 @@ class PluginConfig:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> PluginConfig:
+        """Deserialize a plugin config from a dictionary payload."""
         if not isinstance(payload, dict):
             raise PluginConfigError("Plugin config payload must be a mapping.")
         raw_name = payload.get("name")
@@ -63,13 +65,16 @@ class PluginConfigManager:
     """Read/write plugin configuration files."""
 
     def __init__(self, config_dir: str | Path) -> None:
+        """Set up the plugin config manager with the given configuration directory."""
         self._config_dir = Path(config_dir)
 
     @property
     def config_dir(self) -> Path:
+        """Return the directory where plugin configs are stored."""
         return self._config_dir
 
     def config_path(self, name: str) -> Path:
+        """Return the configuration file path for the named plugin."""
         validated_name = _validate_plugin_name(name)
         return self._config_dir / f"{validated_name}.json"
 

@@ -1,5 +1,4 @@
-"""
-Misplacement Detector Service
+"""Misplacement Detector Service.
 
 Detects files that are in the wrong location based on content-location
 mismatch analysis.
@@ -75,14 +74,13 @@ class ContextAnalysis:
 
 
 class MisplacementDetector:
-    """
-    Detects files that are in incorrect locations based on content
-    and organizational patterns.
+    """Detects files that are in incorrect locations.
+
+    Detection is based on content and organizational patterns.
     """
 
     def __init__(self, min_mismatch_score: float = 60.0, similarity_threshold: float = 0.7):
-        """
-        Initialize the misplacement detector.
+        """Initialize the misplacement detector.
 
         Args:
             min_mismatch_score: Minimum score to consider a file misplaced
@@ -107,8 +105,7 @@ class MisplacementDetector:
     def detect_misplaced(
         self, directory: Path, pattern_analysis: PatternAnalysis | None = None
     ) -> list[MisplacedFile]:
-        """
-        Detect misplaced files in a directory.
+        """Detect misplaced files in a directory.
 
         Args:
             directory: Directory to analyze
@@ -176,8 +173,7 @@ class MisplacementDetector:
         return misplaced_files
 
     def analyze_context(self, file_path: Path) -> ContextAnalysis:
-        """
-        Analyze the context of a file.
+        """Analyze the context of a file.
 
         Args:
             file_path: File to analyze
@@ -222,8 +218,7 @@ class MisplacementDetector:
     def calculate_mismatch_score(
         self, file_path: Path, context: ContextAnalysis, pattern_analysis: PatternAnalysis
     ) -> float:
-        """
-        Calculate how misplaced a file is.
+        """Calculate how misplaced a file is.
 
         Args:
             file_path: File to check
@@ -255,8 +250,7 @@ class MisplacementDetector:
         return min(max(total_score, 0.0), 100.0)
 
     def find_correct_location(self, file_path: Path, pattern_analysis: PatternAnalysis) -> Path:
-        """
-        Find the correct location for a misplaced file.
+        """Find the correct location for a misplaced file.
 
         Args:
             file_path: Misplaced file
@@ -302,8 +296,7 @@ class MisplacementDetector:
     def find_similar_files(
         self, file_path: Path, target_location: Path, pattern_analysis: PatternAnalysis
     ) -> list[Path]:
-        """
-        Find files similar to the given file.
+        """Find files similar to the given file.
 
         Args:
             file_path: Reference file

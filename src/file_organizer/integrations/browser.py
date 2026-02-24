@@ -23,6 +23,7 @@ class BrowserExtensionManager:
     """In-memory token issuer/validator for browser extension API access."""
 
     def __init__(self, *, allowed_origins: list[str], token_ttl_seconds: int = 3600) -> None:
+        """Initialize the browser extension manager with allowed origins and TTL."""
         self._allowed_origins = list(dict.fromkeys(allowed_origins))
         self._token_ttl_seconds = token_ttl_seconds
         self._tokens: dict[str, BrowserTokenRecord] = {}

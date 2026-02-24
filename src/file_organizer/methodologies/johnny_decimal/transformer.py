@@ -1,5 +1,4 @@
-"""
-Johnny Decimal Folder Transformer
+"""Johnny Decimal Folder Transformer.
 
 Transforms existing folder structures to Johnny Decimal naming convention.
 Handles renaming, restructuring, and maintains file integrity.
@@ -42,8 +41,7 @@ class TransformationPlan:
 
 
 class FolderTransformer:
-    """
-    Transforms existing folder structures to Johnny Decimal format.
+    """Transforms existing folder structures to Johnny Decimal format.
 
     Creates transformation plans that map existing folders to
     appropriate Johnny Decimal numbers while preserving content.
@@ -55,8 +53,7 @@ class FolderTransformer:
         generator: JohnnyDecimalGenerator,
         preserve_original_names: bool = True,
     ):
-        """
-        Initialize the folder transformer.
+        """Initialize the folder transformer.
 
         Args:
             scheme: Johnny Decimal numbering scheme
@@ -72,8 +69,7 @@ class FolderTransformer:
         folder_tree: list[FolderInfo],
         root_path: Path,
     ) -> TransformationPlan:
-        """
-        Create a transformation plan for a folder structure.
+        """Create a transformation plan for a folder structure.
 
         Args:
             folder_tree: Scanned folder tree from FolderScanner
@@ -123,8 +119,7 @@ class FolderTransformer:
         return plan
 
     def _create_area_rule(self, folder: FolderInfo, suggested_index: int) -> TransformationRule:
-        """
-        Create transformation rule for an area-level folder.
+        """Create transformation rule for an area-level folder.
 
         Args:
             folder: Folder information
@@ -164,8 +159,7 @@ class FolderTransformer:
         children: list[FolderInfo],
         parent_number: JohnnyDecimalNumber,
     ) -> list[TransformationRule]:
-        """
-        Create transformation rules for category-level folders.
+        """Create transformation rules for category-level folders.
 
         Args:
             children: Child folders to transform
@@ -216,8 +210,7 @@ class FolderTransformer:
         children: list[FolderInfo],
         parent_number: JohnnyDecimalNumber,
     ) -> list[TransformationRule]:
-        """
-        Create transformation rules for ID-level folders.
+        """Create transformation rules for ID-level folders.
 
         Args:
             children: Child folders to transform
@@ -265,8 +258,7 @@ class FolderTransformer:
         return rules
 
     def _suggest_area_number(self, folder: FolderInfo, index: int) -> int:
-        """
-        Suggest an area number based on folder characteristics.
+        """Suggest an area number based on folder characteristics.
 
         Args:
             folder: Folder information
@@ -293,8 +285,7 @@ class FolderTransformer:
         return min(base_area + index, 99)
 
     def _suggest_category_number(self, folder: FolderInfo, area: int, index: int) -> int:
-        """
-        Suggest a category number based on folder characteristics.
+        """Suggest a category number based on folder characteristics.
 
         Args:
             folder: Folder information
@@ -321,8 +312,7 @@ class FolderTransformer:
         return min(index + 1, 99)
 
     def generate_preview(self, plan: TransformationPlan) -> str:
-        """
-        Generate human-readable preview of transformation plan.
+        """Generate human-readable preview of transformation plan.
 
         Args:
             plan: Transformation plan

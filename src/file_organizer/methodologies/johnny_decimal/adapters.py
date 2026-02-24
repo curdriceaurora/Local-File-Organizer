@@ -1,5 +1,4 @@
-"""
-Johnny Decimal Methodology Adapters
+"""Johnny Decimal Methodology Adapters.
 
 Adapter pattern implementation for bridging Johnny Decimal with other
 organizational methodologies and file management systems.
@@ -44,8 +43,7 @@ class OrganizationMethodology(Protocol):
 
 
 class MethodologyAdapter(ABC):
-    """
-    Base adapter for methodology integration.
+    """Base adapter for methodology integration.
 
     Provides common interface for adapting different organizational
     methodologies to work with Johnny Decimal.
@@ -53,8 +51,7 @@ class MethodologyAdapter(ABC):
 
     @abstractmethod
     def adapt_to_jd(self, item: OrganizationItem) -> JohnnyDecimalNumber:
-        """
-        Adapt item to Johnny Decimal number.
+        """Adapt item to Johnny Decimal number.
 
         Args:
             item: Item from source methodology
@@ -66,8 +63,7 @@ class MethodologyAdapter(ABC):
 
     @abstractmethod
     def adapt_from_jd(self, jd_number: JohnnyDecimalNumber, item_name: str) -> OrganizationItem:
-        """
-        Adapt JD number to source methodology item.
+        """Adapt JD number to source methodology item.
 
         Args:
             jd_number: Johnny Decimal number
@@ -80,8 +76,7 @@ class MethodologyAdapter(ABC):
 
     @abstractmethod
     def can_adapt(self, item: OrganizationItem) -> bool:
-        """
-        Check if item can be adapted.
+        """Check if item can be adapted.
 
         Args:
             item: Item to check
@@ -93,16 +88,14 @@ class MethodologyAdapter(ABC):
 
 
 class PARAAdapter(MethodologyAdapter):
-    """
-    Adapter for PARA methodology integration.
+    """Adapter for PARA methodology integration.
 
     Translates between PARA (Projects/Areas/Resources/Archive)
     and Johnny Decimal structures.
     """
 
     def __init__(self, config: JohnnyDecimalConfig):
-        """
-        Initialize PARA adapter.
+        """Initialize PARA adapter.
 
         Args:
             config: Johnny Decimal configuration with PARA integration
@@ -111,8 +104,7 @@ class PARAAdapter(MethodologyAdapter):
         self.bridge = PARAJohnnyDecimalBridge(config.compatibility.para_integration)
 
     def adapt_to_jd(self, item: OrganizationItem) -> JohnnyDecimalNumber:
-        """
-        Convert PARA item to JD number.
+        """Convert PARA item to JD number.
 
         Args:
             item: PARA item
@@ -149,8 +141,7 @@ class PARAAdapter(MethodologyAdapter):
         )
 
     def adapt_from_jd(self, jd_number: JohnnyDecimalNumber, item_name: str) -> OrganizationItem:
-        """
-        Convert JD number to PARA item.
+        """Convert JD number to PARA item.
 
         Args:
             jd_number: JD number
@@ -189,16 +180,14 @@ class PARAAdapter(MethodologyAdapter):
 
 
 class FileSystemAdapter(MethodologyAdapter):
-    """
-    Adapter for generic filesystem organization.
+    """Adapter for generic filesystem organization.
 
     Maps filesystem folders to JD numbers based on heuristics
     and naming patterns.
     """
 
     def __init__(self, config: JohnnyDecimalConfig):
-        """
-        Initialize filesystem adapter.
+        """Initialize filesystem adapter.
 
         Args:
             config: Johnny Decimal configuration
@@ -206,8 +195,7 @@ class FileSystemAdapter(MethodologyAdapter):
         self.config = config
 
     def adapt_to_jd(self, item: OrganizationItem) -> JohnnyDecimalNumber:
-        """
-        Convert filesystem item to JD number.
+        """Convert filesystem item to JD number.
 
         Uses custom mappings or sequential assignment.
 
@@ -243,8 +231,7 @@ class FileSystemAdapter(MethodologyAdapter):
             return JohnnyDecimalNumber(area=area, category=category, item_id=id_num)
 
     def adapt_from_jd(self, jd_number: JohnnyDecimalNumber, item_name: str) -> OrganizationItem:
-        """
-        Convert JD number to filesystem item.
+        """Convert JD number to filesystem item.
 
         Args:
             jd_number: JD number
@@ -313,8 +300,7 @@ class FileSystemAdapter(MethodologyAdapter):
 
 
 class AdapterRegistry:
-    """
-    Registry for methodology adapters.
+    """Registry for methodology adapters.
 
     Manages multiple adapters and routes items to appropriate adapter.
     """
@@ -324,8 +310,7 @@ class AdapterRegistry:
         self._adapters: list[MethodologyAdapter] = []
 
     def register(self, adapter: MethodologyAdapter) -> None:
-        """
-        Register an adapter.
+        """Register an adapter.
 
         Args:
             adapter: Adapter to register
@@ -334,8 +319,7 @@ class AdapterRegistry:
         logger.info(f"Registered adapter: {adapter.__class__.__name__}")
 
     def get_adapter(self, item: OrganizationItem) -> MethodologyAdapter | None:
-        """
-        Get appropriate adapter for item.
+        """Get appropriate adapter for item.
 
         Args:
             item: Item to adapt
@@ -349,8 +333,7 @@ class AdapterRegistry:
         return None
 
     def adapt_to_jd(self, item: OrganizationItem) -> JohnnyDecimalNumber | None:
-        """
-        Adapt item to JD using registered adapters.
+        """Adapt item to JD using registered adapters.
 
         Args:
             item: Item to adapt
@@ -366,8 +349,7 @@ class AdapterRegistry:
     def adapt_from_jd(
         self, jd_number: JohnnyDecimalNumber, item_name: str, methodology: str = "para"
     ) -> OrganizationItem | None:
-        """
-        Adapt JD number to specified methodology.
+        """Adapt JD number to specified methodology.
 
         Args:
             jd_number: JD number to adapt
@@ -388,8 +370,7 @@ class AdapterRegistry:
 
 
 def create_default_registry(config: JohnnyDecimalConfig) -> AdapterRegistry:
-    """
-    Create adapter registry with default adapters.
+    """Create adapter registry with default adapters.
 
     Args:
         config: Johnny Decimal configuration

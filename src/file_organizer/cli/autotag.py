@@ -1,5 +1,4 @@
-"""
-Auto-Tagging CLI Commands
+"""Auto-Tagging CLI Commands.
 
 Command-line interface for the auto-tagging system.
 """
@@ -14,8 +13,7 @@ from ..services.auto_tagging import AutoTaggingService
 
 
 def setup_autotag_parser(subparsers):
-    """
-    Set up the autotag command parser.
+    """Set up the autotag command parser.
 
     Args:
         subparsers: Argument parser subparsers object
@@ -82,8 +80,7 @@ def setup_autotag_parser(subparsers):
 
 
 def handle_autotag_command(args):
-    """
-    Handle autotag commands.
+    """Handle autotag commands.
 
     Args:
         args: Parsed command-line arguments

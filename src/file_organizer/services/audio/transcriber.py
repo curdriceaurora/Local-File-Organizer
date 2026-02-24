@@ -1,5 +1,4 @@
-"""
-Audio Transcription Service
+"""Audio Transcription Service.
 
 Provides audio transcription capabilities using Faster-Whisper models.
 Supports multiple model sizes, languages, and advanced transcription options.
@@ -91,8 +90,7 @@ class TranscriptionResult:
 
 
 class AudioTranscriber:
-    """
-    Audio transcription service using Faster-Whisper.
+    """Audio transcription service using Faster-Whisper.
 
     Features:
     - Multiple Whisper model sizes (tiny to large-v3)
@@ -117,8 +115,7 @@ class AudioTranscriber:
         cache_dir: Path | None = None,
         num_workers: int = 1,
     ):
-        """
-        Initialize the audio transcriber.
+        """Initialize the audio transcriber.
 
         Args:
             model_size: Whisper model size to use
@@ -189,8 +186,7 @@ class AudioTranscriber:
         audio_path: str | Path,
         options: TranscriptionOptions | None = None,
     ) -> TranscriptionResult:
-        """
-        Transcribe an audio file.
+        """Transcribe an audio file.
 
         Args:
             audio_path: Path to the audio file
@@ -294,8 +290,7 @@ class AudioTranscriber:
         audio_paths: list[str | Path],
         options: TranscriptionOptions | None = None,
     ) -> list[TranscriptionResult]:
-        """
-        Transcribe multiple audio files.
+        """Transcribe multiple audio files.
 
         Args:
             audio_paths: List of paths to audio files

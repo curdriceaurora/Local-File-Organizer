@@ -31,6 +31,7 @@ class AdaptiveBatchSizer:
     """
 
     def __init__(self, target_memory_percent: float = 70.0) -> None:
+        """Set up the batch sizer targeting the given memory usage percentage."""
         if not 0.0 < target_memory_percent <= 100.0:
             raise ValueError(
                 f"target_memory_percent must be between 0 and 100 "

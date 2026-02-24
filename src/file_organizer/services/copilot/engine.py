@@ -45,8 +45,9 @@ _MAX_HISTORY_TURNS = 6
 
 
 class CopilotEngine:
-    """High-level copilot engine that ties together conversation, intent
-    parsing, and command execution.
+    """High-level copilot engine.
+
+    Ties together conversation, intent parsing, and command execution.
 
     Usage::
 
@@ -62,6 +63,7 @@ class CopilotEngine:
         system_prompt: str | None = None,
         max_history_turns: int = _MAX_HISTORY_TURNS,
     ) -> None:
+        """Initialize CopilotEngine."""
         self._system_prompt = system_prompt or _SYSTEM_PROMPT
         self._max_history_turns = max_history_turns
 

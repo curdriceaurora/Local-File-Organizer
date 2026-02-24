@@ -1,5 +1,4 @@
-"""
-Pattern Extraction Engine
+"""Pattern Extraction Engine.
 
 This module implements pattern extraction from user corrections and file operations.
 It analyzes naming patterns, identifies common structures, and generates reusable
@@ -76,8 +75,7 @@ class NamingPattern:
 
 
 class NamingPatternExtractor:
-    """
-    Extracts naming patterns from filenames.
+    """Extracts naming patterns from filenames.
 
     This class analyzes filenames to identify structure, delimiters,
     date formats, and other patterns that can be learned and applied.
@@ -103,8 +101,7 @@ class NamingPatternExtractor:
         self._pattern_cache: dict[str, NamingPattern] = {}
 
     def analyze_filename(self, filename: str) -> dict[str, Any]:
-        """
-        Analyze a single filename and extract its structure.
+        """Analyze a single filename and extract its structure.
 
         Args:
             filename: Filename to analyze (without path)
@@ -137,8 +134,7 @@ class NamingPatternExtractor:
         return analysis
 
     def extract_delimiters(self, filename: str) -> list[str]:
-        """
-        Extract delimiters used in a filename.
+        """Extract delimiters used in a filename.
 
         Args:
             filename: Filename to analyze
@@ -162,8 +158,7 @@ class NamingPatternExtractor:
         return [delim for delim, _ in delimiter_counts.most_common()]
 
     def detect_date_format(self, filename: str) -> dict[str, Any] | None:
-        """
-        Detect date format in filename.
+        """Detect date format in filename.
 
         Args:
             filename: Filename to analyze
@@ -183,8 +178,7 @@ class NamingPatternExtractor:
         return None
 
     def extract_common_elements(self, filenames: list[str]) -> list[str]:
-        """
-        Extract common elements across multiple filenames.
+        """Extract common elements across multiple filenames.
 
         Args:
             filenames: List of filenames to analyze
@@ -214,8 +208,7 @@ class NamingPatternExtractor:
         return sorted(common)
 
     def identify_structure_pattern(self, filenames: list[str]) -> NamingPattern | None:
-        """
-        Identify common structural pattern across filenames.
+        """Identify common structural pattern across filenames.
 
         Args:
             filenames: List of filenames to analyze
@@ -280,8 +273,7 @@ class NamingPatternExtractor:
         return pattern
 
     def suggest_naming_convention(self, file_info: dict[str, Any]) -> str | None:
-        """
-        Suggest a naming convention based on file info.
+        """Suggest a naming convention based on file info.
 
         Args:
             file_info: Dictionary with file information
@@ -328,8 +320,7 @@ class NamingPatternExtractor:
         return filename
 
     def calculate_similarity(self, filename1: str, filename2: str) -> float:
-        """
-        Calculate similarity score between two filenames.
+        """Calculate similarity score between two filenames.
 
         Args:
             filename1: First filename
@@ -373,8 +364,7 @@ class NamingPatternExtractor:
         return sum(similarity_factors) / len(similarity_factors) if similarity_factors else 0.0
 
     def generate_regex_pattern(self, filenames: list[str]) -> str | None:
-        """
-        Generate a regex pattern that matches the given filenames.
+        """Generate a regex pattern that matches the given filenames.
 
         Args:
             filenames: List of example filenames

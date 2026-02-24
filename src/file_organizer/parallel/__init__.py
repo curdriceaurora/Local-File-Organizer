@@ -1,5 +1,4 @@
-"""
-Parallel file processing system.
+"""Parallel file processing system.
 
 This module provides concurrent file processing capabilities using
 concurrent.futures, with configurable thread/process pools, scheduling

@@ -1,6 +1,4 @@
-"""
-Metrics calculation module for quality scoring and efficiency analysis.
-"""
+"""Metrics calculation module for quality scoring and efficiency analysis."""
 
 from __future__ import annotations
 
@@ -24,8 +22,7 @@ class MetricsCalculator:
         naming_compliance: float,
         structure_consistency: float,
     ) -> float:
-        """
-        Calculate overall organization quality score (0-100).
+        """Calculate overall organization quality score (0-100).
 
         Args:
             total_files: Total number of files
@@ -52,8 +49,7 @@ class MetricsCalculator:
         self,
         files: list[Path],
     ) -> float:
-        """
-        Measure naming convention compliance.
+        """Measure naming convention compliance.
 
         Checks files against simple heuristics: lowercase names,
         proper delimiters (underscore/hyphen), and no spaces.
@@ -79,8 +75,7 @@ class MetricsCalculator:
         return compliant / len(files)
 
     def calculate_efficiency_gain(self, before_operations: int, after_operations: int) -> float:
-        """
-        Calculate efficiency gain percentage.
+        """Calculate efficiency gain percentage.
 
         Args:
             before_operations: Operations before optimization
@@ -96,8 +91,7 @@ class MetricsCalculator:
         return max(0.0, gain)
 
     def estimate_time_saved(self, automated_ops: int, avg_manual_time_per_op: int = 30) -> int:
-        """
-        Estimate time saved through automation.
+        """Estimate time saved through automation.
 
         Args:
             automated_ops: Number of automated operations
@@ -111,8 +105,7 @@ class MetricsCalculator:
     def calculate_improvement_metrics(
         self, current_score: float, previous_score: float | None = None
     ) -> dict:
-        """
-        Calculate improvement metrics.
+        """Calculate improvement metrics.
 
         Args:
             current_score: Current quality score

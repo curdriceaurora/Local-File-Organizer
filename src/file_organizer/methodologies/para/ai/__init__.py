@@ -1,5 +1,4 @@
-"""
-PARA AI Module
+"""PARA AI Module.
 
 AI-powered smart suggestions for PARA categorization including:
 - Feature extraction from files and content

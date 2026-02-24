@@ -1,5 +1,4 @@
-"""
-Johnny Decimal System Core
+"""Johnny Decimal System Core.
 
 This module provides the main system orchestration for Johnny Decimal
 file organization, including number assignment, validation, and management.
@@ -31,8 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class JohnnyDecimalSystem:
-    """
-    Main system for Johnny Decimal file organization.
+    """Main system for Johnny Decimal file organization.
 
     Orchestrates number generation, validation, conflict resolution,
     and persistence of the numbering scheme.
@@ -43,8 +41,7 @@ class JohnnyDecimalSystem:
         scheme: NumberingScheme | None = None,
         config_path: Path | None = None,
     ):
-        """
-        Initialize the Johnny Decimal system.
+        """Initialize the Johnny Decimal system.
 
         Args:
             scheme: Custom numbering scheme (uses default if None)
@@ -59,8 +56,7 @@ class JohnnyDecimalSystem:
             self.load_configuration(config_path)
 
     def initialize_from_directory(self, directory: Path) -> None:
-        """
-        Scan a directory to detect existing Johnny Decimal numbers.
+        """Scan a directory to detect existing Johnny Decimal numbers.
 
         Args:
             directory: Directory to scan for existing numbers
@@ -90,8 +86,7 @@ class JohnnyDecimalSystem:
         self._initialized = True
 
     def _extract_number_from_path(self, path: Path) -> JohnnyDecimalNumber | None:
-        """
-        Extract Johnny Decimal number from a file or directory path.
+        """Extract Johnny Decimal number from a file or directory path.
 
         Looks for patterns like:
         - "10 Finance"
@@ -135,8 +130,7 @@ class JohnnyDecimalSystem:
         preferred_number: JohnnyDecimalNumber | None = None,
         auto_register: bool = True,
     ) -> NumberingResult:
-        """
-        Assign a Johnny Decimal number to a file.
+        """Assign a Johnny Decimal number to a file.
 
         Args:
             file_path: Path to the file
@@ -234,8 +228,7 @@ class JohnnyDecimalSystem:
     def validate_number_assignment(
         self, number: JohnnyDecimalNumber, file_path: Path
     ) -> NumberingResult:
-        """
-        Validate a proposed number assignment without registering it.
+        """Validate a proposed number assignment without registering it.
 
         Args:
             number: The number to validate
@@ -270,8 +263,7 @@ class JohnnyDecimalSystem:
         new_number: JohnnyDecimalNumber,
         file_path: Path,
     ) -> NumberingResult:
-        """
-        Renumber an existing file to a new Johnny Decimal number.
+        """Renumber an existing file to a new Johnny Decimal number.
 
         Args:
             old_number: Current number
@@ -335,8 +327,7 @@ class JohnnyDecimalSystem:
             raise
 
     def get_area_summary(self, area: int) -> dict[str, Any]:
-        """
-        Get summary information about an area.
+        """Get summary information about an area.
 
         Args:
             area: Area number
@@ -361,8 +352,7 @@ class JohnnyDecimalSystem:
         }
 
     def get_all_areas_summary(self) -> list[dict[str, Any]]:
-        """
-        Get summary of all defined areas.
+        """Get summary of all defined areas.
 
         Returns:
             list of area summaries
@@ -371,8 +361,7 @@ class JohnnyDecimalSystem:
         return [self.get_area_summary(area) for area in areas]
 
     def get_usage_report(self) -> dict[str, Any]:
-        """
-        Generate a comprehensive usage report.
+        """Generate a comprehensive usage report.
 
         Returns:
             Dictionary with usage statistics and details
@@ -389,8 +378,7 @@ class JohnnyDecimalSystem:
         }
 
     def save_configuration(self, path: Path | None = None) -> None:
-        """
-        Save the current configuration to a file.
+        """Save the current configuration to a file.
 
         Args:
             path: Path to save configuration (uses self.config_path if None)
@@ -425,8 +413,7 @@ class JohnnyDecimalSystem:
         logger.info(f"Saved configuration to {save_path}")
 
     def load_configuration(self, path: Path | None = None) -> None:
-        """
-        Load configuration from a file.
+        """Load configuration from a file.
 
         Args:
             path: Path to load configuration from (uses self.config_path if None)
@@ -465,8 +452,7 @@ class JohnnyDecimalSystem:
         self._initialized = True
 
     def add_custom_area(self, area_def: AreaDefinition) -> None:
-        """
-        Add a custom area definition to the scheme.
+        """Add a custom area definition to the scheme.
 
         Args:
             area_def: The area definition to add
@@ -478,8 +464,7 @@ class JohnnyDecimalSystem:
         )
 
     def add_custom_category(self, category_def: CategoryDefinition) -> None:
-        """
-        Add a custom category definition to the scheme.
+        """Add a custom category definition to the scheme.
 
         Args:
             category_def: The category definition to add
@@ -488,8 +473,7 @@ class JohnnyDecimalSystem:
         logger.info(f"Added custom category: {category_def.formatted_number} {category_def.name}")
 
     def reserve_number_range(self, start: JohnnyDecimalNumber, end: JohnnyDecimalNumber) -> None:
-        """
-        Reserve a range of numbers to prevent automatic assignment.
+        """Reserve a range of numbers to prevent automatic assignment.
 
         Args:
             start: Start of range (inclusive)
@@ -530,8 +514,7 @@ class JohnnyDecimalSystem:
     def create_area(
         self, area_number: int, name: str, description: str = ""
     ) -> JohnnyDecimalNumber:
-        """
-        Create a new area and return its JD number.
+        """Create a new area and return its JD number.
 
         Args:
             area_number: Area number (10-99)
@@ -555,8 +538,7 @@ class JohnnyDecimalSystem:
     def create_category(
         self, area_number: int, category_number: int, name: str, description: str = ""
     ) -> JohnnyDecimalNumber:
-        """
-        Create a new category and return its JD number.
+        """Create a new category and return its JD number.
 
         Args:
             area_number: Parent area number

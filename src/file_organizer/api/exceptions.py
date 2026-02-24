@@ -21,6 +21,7 @@ class ApiError(Exception):
     details: Optional[Any] = None
 
     def __post_init__(self) -> None:
+        """Initialize ApiError and set exception message from fields."""
         summary = f"{self.status_code} {self.error}: {self.message}"
         super().__init__(summary)
 

@@ -65,6 +65,7 @@ class AsyncFileOrganizerClient:
         token: Optional[str] = None,
         timeout: float = 30.0,
     ) -> None:
+        """Initialize the async client with connection parameters."""
         headers: dict[str, str] = {}
         if token:
             headers["Authorization"] = f"Bearer {token}"
@@ -628,9 +629,11 @@ class AsyncFileOrganizerClient:
     # -- context manager -----------------------------------------------------
 
     async def __aenter__(self) -> AsyncFileOrganizerClient:
+        """Enter the async context manager."""
         return self
 
     async def __aexit__(self, *args: object) -> None:
+        """Exit the async context manager and close the client."""
         await self.aclose()
 
     async def aclose(self) -> None:

@@ -38,6 +38,7 @@ class MarketplaceService:
         home_dir: Optional[Path] = None,
         repo_url: Optional[str] = None,
     ) -> None:
+        """Set up the marketplace service using the given home directory."""
         self.home_dir = (home_dir or default_marketplace_home()).resolve()
         self.home_dir.mkdir(parents=True, exist_ok=True)
 

@@ -1,5 +1,4 @@
-"""
-Document embedding module using TF-IDF vectorization.
+"""Document embedding module using TF-IDF vectorization.
 
 Converts text documents into numerical vectors for similarity comparison.
 """
@@ -16,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentEmbedder:
-    """
-    Embeds documents using TF-IDF vectorization.
+    """Embeds documents using TF-IDF vectorization.
 
     Uses scikit-learn's TfidfVectorizer for efficient text vectorization.
     Supports caching for performance optimization.
@@ -31,8 +29,7 @@ class DocumentEmbedder:
         max_df: float = 0.95,
         cache_path: Path | None = None,
     ):
-        """
-        Initialize the document embedder.
+        """Initialize the document embedder.
 
         Args:
             max_features: Maximum number of features (vocabulary size)
@@ -77,8 +74,7 @@ class DocumentEmbedder:
         )
 
     def fit_transform(self, documents: list[str]) -> np.ndarray:
-        """
-        Fit the vectorizer and transform documents to embeddings.
+        """Fit the vectorizer and transform documents to embeddings.
 
         Args:
             documents: List of document texts
@@ -112,8 +108,7 @@ class DocumentEmbedder:
             raise
 
     def transform(self, document: str) -> np.ndarray:
-        """
-        Transform a single document to embedding.
+        """Transform a single document to embedding.
 
         Args:
             document: Document text
@@ -142,8 +137,7 @@ class DocumentEmbedder:
         return embedding
 
     def transform_batch(self, documents: list[str]) -> np.ndarray:
-        """
-        Transform multiple documents to embeddings.
+        """Transform multiple documents to embeddings.
 
         Args:
             documents: List of document texts
@@ -161,8 +155,7 @@ class DocumentEmbedder:
         return embeddings
 
     def get_feature_names(self) -> list[str]:
-        """
-        Get the feature names (vocabulary terms).
+        """Get the feature names (vocabulary terms).
 
         Returns:
             List of vocabulary terms
@@ -181,8 +174,7 @@ class DocumentEmbedder:
             return self.vectorizer.get_feature_names()
 
     def get_vocabulary(self) -> dict[str, int]:
-        """
-        Get the vocabulary dictionary.
+        """Get the vocabulary dictionary.
 
         Returns:
             Dictionary mapping terms to indices
@@ -193,8 +185,7 @@ class DocumentEmbedder:
         return self.vectorizer.vocabulary_
 
     def get_top_terms(self, embedding: np.ndarray, top_n: int = 10) -> list[tuple[str, float]]:
-        """
-        Get top N terms from an embedding by weight.
+        """Get top N terms from an embedding by weight.
 
         Args:
             embedding: Document embedding vector
@@ -218,8 +209,7 @@ class DocumentEmbedder:
         return top_terms
 
     def save_model(self, path: Path) -> None:
-        """
-        Save the fitted vectorizer to disk.
+        """Save the fitted vectorizer to disk.
 
         Args:
             path: Path to save the model
@@ -238,8 +228,7 @@ class DocumentEmbedder:
             logger.error(f"Error saving vectorizer: {e}")
 
     def load_model(self, path: Path) -> None:
-        """
-        Load a fitted vectorizer from disk.
+        """Load a fitted vectorizer from disk.
 
         Args:
             path: Path to load the model from

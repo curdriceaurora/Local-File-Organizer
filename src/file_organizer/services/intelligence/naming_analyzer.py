@@ -1,5 +1,4 @@
-"""
-Naming Analyzer - Advanced Filename Analysis
+"""Naming Analyzer - Advanced Filename Analysis.
 
 This module provides advanced analysis of filename patterns, including
 semantic analysis, structure comparison, and pattern matching utilities.
@@ -44,8 +43,7 @@ class NameStructure:
 
 
 class NamingAnalyzer:
-    """
-    Advanced filename analyzer for pattern detection and comparison.
+    """Advanced filename analyzer for pattern detection and comparison.
 
     Provides utilities for analyzing filename structures, comparing patterns,
     and identifying naming conventions.
@@ -72,8 +70,7 @@ class NamingAnalyzer:
         self._structure_cache: dict[str, NameStructure] = {}
 
     def analyze_structure(self, filename: str) -> NameStructure:
-        """
-        Analyze the structure of a filename.
+        """Analyze the structure of a filename.
 
         Args:
             filename: Filename to analyze
@@ -111,8 +108,7 @@ class NamingAnalyzer:
         return structure
 
     def compare_structures(self, filename1: str, filename2: str) -> dict[str, Any]:
-        """
-        Compare structures of two filenames.
+        """Compare structures of two filenames.
 
         Args:
             filename1: First filename
@@ -146,8 +142,7 @@ class NamingAnalyzer:
         }
 
     def find_common_pattern(self, filenames: list[str]) -> dict[str, Any] | None:
-        """
-        Find common pattern across multiple filenames.
+        """Find common pattern across multiple filenames.
 
         Args:
             filenames: List of filenames to analyze
@@ -193,8 +188,7 @@ class NamingAnalyzer:
         return pattern
 
     def extract_pattern_differences(self, original: str, corrected: str) -> dict[str, Any]:
-        """
-        Extract differences between original and corrected filenames.
+        """Extract differences between original and corrected filenames.
 
         Args:
             original: Original filename
@@ -235,8 +229,7 @@ class NamingAnalyzer:
         return differences
 
     def identify_naming_style(self, filename: str) -> str:
-        """
-        Identify the naming style used in a filename.
+        """Identify the naming style used in a filename.
 
         Args:
             filename: Filename to analyze
@@ -260,8 +253,7 @@ class NamingAnalyzer:
             return "mixed"
 
     def normalize_filename(self, filename: str, target_style: str = "snake_case") -> str:
-        """
-        Normalize filename to a specific naming style.
+        """Normalize filename to a specific naming style.
 
         Args:
             filename: Filename to normalize
@@ -294,8 +286,7 @@ class NamingAnalyzer:
         return normalized + extension
 
     def extract_semantic_components(self, filename: str) -> dict[str, Any]:
-        """
-        Extract semantic components from a filename.
+        """Extract semantic components from a filename.
 
         Args:
             filename: Filename to analyze

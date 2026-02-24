@@ -1,5 +1,4 @@
-"""
-Pipeline orchestrator for auto-organization.
+"""Pipeline orchestrator for auto-organization.
 
 Coordinates file discovery (via watcher or batch), routing, processing,
 and organization into a cohesive pipeline.
@@ -23,8 +22,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class ProcessingResult:
-    """
-    Result of processing a single file through the pipeline.
+    """Result of processing a single file through the pipeline.
 
     Attributes:
         file_path: Original path of the processed file.
@@ -49,8 +47,7 @@ class ProcessingResult:
 
 @dataclass
 class PipelineStats:
-    """
-    Cumulative statistics for pipeline operations.
+    """Cumulative statistics for pipeline operations.
 
     Attributes:
         total_processed: Total files that went through the pipeline.
@@ -68,8 +65,7 @@ class PipelineStats:
 
 
 class PipelineOrchestrator:
-    """
-    Orchestrates the auto-organization pipeline.
+    """Orchestrates the auto-organization pipeline.
 
     Connects file discovery to processing and organization. Supports
     both batch mode (process a list of files) and watch mode (react
@@ -89,8 +85,7 @@ class PipelineOrchestrator:
     """
 
     def __init__(self, config: PipelineConfig | None = None) -> None:
-        """
-        Initialize the pipeline orchestrator.
+        """Initialize the pipeline orchestrator.
 
         Args:
             config: Pipeline configuration. Uses safe defaults if None.
@@ -106,8 +101,7 @@ class PipelineOrchestrator:
         self._watch_thread: threading.Thread | None = None
 
     def start(self) -> None:
-        """
-        Start the pipeline, including watch mode if configured.
+        """Start the pipeline, including watch mode if configured.
 
         When watch_config is set, starts a background thread that
         polls the file monitor for events and processes them.
@@ -132,8 +126,7 @@ class PipelineOrchestrator:
             )
 
     def stop(self) -> None:
-        """
-        Stop the pipeline and clean up resources.
+        """Stop the pipeline and clean up resources.
 
         Stops the file monitor (if running), cleans up processors,
         and resets pipeline state. Safe to call even if not running.
@@ -160,8 +153,7 @@ class PipelineOrchestrator:
             logger.info("Pipeline stopped")
 
     def process_file(self, file_path: Path) -> ProcessingResult:
-        """
-        Process a single file through the pipeline.
+        """Process a single file through the pipeline.
 
         Routes the file to the appropriate processor, processes it,
         and optionally organizes it into the output directory.
@@ -297,8 +289,7 @@ class PipelineOrchestrator:
             )
 
     def process_batch(self, files: list[Path]) -> list[ProcessingResult]:
-        """
-        Process a batch of files through the pipeline.
+        """Process a batch of files through the pipeline.
 
         Files are processed sequentially. Each file is routed, processed,
         and optionally organized independently.
@@ -328,8 +319,7 @@ class PipelineOrchestrator:
         processor: BaseProcessor,
         processor_type: ProcessorType,
     ) -> dict[str, str]:
-        """
-        Process a file using the given processor.
+        """Process a file using the given processor.
 
         Adapts the processor's output into a standardized dictionary
         with 'category' and 'filename' keys.
@@ -365,8 +355,7 @@ class PipelineOrchestrator:
         return {"category": category, "filename": filename}
 
     def _organize_file(self, source: Path, destination: Path) -> None:
-        """
-        Move or copy a file to its destination.
+        """Move or copy a file to its destination.
 
         Creates the destination directory if needed.
 

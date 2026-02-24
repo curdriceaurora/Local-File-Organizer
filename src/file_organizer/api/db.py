@@ -42,6 +42,11 @@ def init_db(
 
     Args:
         database: SQLite path/``:memory:`` or SQLAlchemy URL.
+        pool_size: Number of connections to keep in the pool.
+        max_overflow: Extra connections beyond pool_size allowed.
+        pool_pre_ping: Test connections for liveness before use.
+        pool_recycle_seconds: Recycle connections after this many seconds.
+        echo: Log SQL statements when True.
     """
     engine: Engine = get_db_engine(
         database,

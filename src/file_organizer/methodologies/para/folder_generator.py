@@ -1,5 +1,4 @@
-"""
-PARA Folder Structure Generator
+"""PARA Folder Structure Generator.
 
 Creates and manages PARA (Projects, Areas, Resources, Archive) folder structures
 with support for custom templates and nested organizations.
@@ -28,16 +27,14 @@ class FolderCreationResult:
 
 
 class PARAFolderGenerator:
-    """
-    Generates PARA folder structures.
+    """Generates PARA folder structures.
 
     Creates the standard Projects/Areas/Resources/Archive structure
     with support for custom naming and nested subfolders.
     """
 
     def __init__(self, config: PARAConfig | None = None):
-        """
-        Initialize the PARA folder generator.
+        """Initialize the PARA folder generator.
 
         Args:
             config: PARA configuration (uses default if None)
@@ -47,8 +44,7 @@ class PARAFolderGenerator:
     def generate_structure(
         self, root_path: Path, create_subdirs: bool = True, dry_run: bool = False
     ) -> FolderCreationResult:
-        """
-        Generate standard PARA folder structure.
+        """Generate standard PARA folder structure.
 
         Args:
             root_path: Root directory for PARA structure
@@ -125,8 +121,7 @@ class PARAFolderGenerator:
         return FolderCreationResult(created, skipped, errors, success)
 
     def _get_standard_subdirs(self, root_path: Path) -> list[Path]:
-        """
-        Get standard subdirectories for PARA structure.
+        """Get standard subdirectories for PARA structure.
 
         Args:
             root_path: Root directory
@@ -179,8 +174,7 @@ class PARAFolderGenerator:
     def create_category_folder(
         self, category: PARACategory, subfolder: str | None = None, root_path: Path | None = None
     ) -> Path:
-        """
-        Create a specific category folder.
+        """Create a specific category folder.
 
         Args:
             category: PARA category
@@ -222,8 +216,7 @@ class PARAFolderGenerator:
         return folder_path
 
     def validate_structure(self, root_path: Path) -> bool:
-        """
-        Validate that PARA structure exists and is complete.
+        """Validate that PARA structure exists and is complete.
 
         Args:
             root_path: Root directory to validate
@@ -247,8 +240,7 @@ class PARAFolderGenerator:
         return True
 
     def get_category_path(self, category: PARACategory, root_path: Path | None = None) -> Path:
-        """
-        Get the path for a PARA category.
+        """Get the path for a PARA category.
 
         Args:
             category: PARA category

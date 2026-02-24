@@ -1,5 +1,4 @@
-"""
-Thread-safe connection pool for SQLite.
+"""Thread-safe connection pool for SQLite.
 
 This module provides a connection pool that manages a fixed number of SQLite
 connections, handing them out to callers and returning them when done.  It is
@@ -74,6 +73,7 @@ class ConnectionPool:
         pool_size: int = 5,
         timeout: float = 30.0,
     ) -> None:
+        """Set up the connection pool with the given size and connection factory."""
         if pool_size < 1:
             raise ValueError("pool_size must be >= 1")
 

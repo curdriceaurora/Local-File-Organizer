@@ -1,5 +1,4 @@
-"""
-Periodic task scheduler for the daemon.
+"""Periodic task scheduler for the daemon.
 
 Provides the DaemonScheduler class that runs named tasks at fixed
 intervals in a single background thread, supporting dynamic task
@@ -28,8 +27,7 @@ class _ScheduledTask:
 
 
 class DaemonScheduler:
-    """
-    Schedules and runs periodic tasks in a background thread.
+    """Schedules and runs periodic tasks in a background thread.
 
     Tasks are registered with a name, interval, and callback.
     The scheduler runs a single event loop that fires each task
@@ -56,8 +54,7 @@ class DaemonScheduler:
         interval: float,
         callback: Callable[[], None],
     ) -> None:
-        """
-        Register a periodic task.
+        """Register a periodic task.
 
         If a task with the same name already exists, it is replaced.
 
@@ -81,8 +78,7 @@ class DaemonScheduler:
             logger.debug("Scheduled task '%s' every %.1fs", name, interval)
 
     def cancel_task(self, name: str) -> bool:
-        """
-        Cancel a previously scheduled task.
+        """Cancel a previously scheduled task.
 
         Args:
             name: The name of the task to cancel.
@@ -99,8 +95,7 @@ class DaemonScheduler:
             return False
 
     def run(self) -> None:
-        """
-        Run the scheduler event loop (blocking).
+        """Run the scheduler event loop (blocking).
 
         Processes all registered tasks, firing each one when its
         interval has elapsed. Blocks until ``stop()`` is called
@@ -120,8 +115,7 @@ class DaemonScheduler:
             logger.info("Scheduler stopped")
 
     def run_in_background(self) -> None:
-        """
-        Start the scheduler in a background daemon thread.
+        """Start the scheduler in a background daemon thread.
 
         Returns immediately. The scheduler can be stopped by calling
         ``stop()``.
@@ -140,8 +134,7 @@ class DaemonScheduler:
         self._thread.start()
 
     def stop(self) -> None:
-        """
-        Stop the scheduler event loop.
+        """Stop the scheduler event loop.
 
         Safe to call even if the scheduler is not running. If the
         scheduler was started in background mode, waits for the
@@ -173,8 +166,7 @@ class DaemonScheduler:
             return len(self._tasks)
 
     def _tick(self) -> None:
-        """
-        Execute one scheduler tick.
+        """Execute one scheduler tick.
 
         Checks every registered task and fires it if enough time
         has elapsed since its last invocation.

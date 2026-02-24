@@ -1,5 +1,4 @@
-"""
-Profile Merger Module
+"""Profile Merger Module.
 
 Provides profile merging capabilities with conflict resolution strategies.
 
@@ -31,8 +30,7 @@ class MergeStrategy(Enum):
 
 
 class ProfileMerger:
-    """
-    Profile merging system with conflict resolution.
+    """Profile merging system with conflict resolution.
 
     Features:
     - Merge multiple profiles into a single profile
@@ -43,8 +41,7 @@ class ProfileMerger:
     """
 
     def __init__(self, profile_manager: ProfileManager):
-        """
-        Initialize profile merger.
+        """Initialize profile merger.
 
         Args:
             profile_manager: ProfileManager instance
@@ -61,8 +58,7 @@ class ProfileMerger:
         merge_strategy: str = "confident",
         output_name: str | None = None,
     ) -> Profile | None:
-        """
-        Merge multiple profiles into a single profile.
+        """Merge multiple profiles into a single profile.
 
         Args:
             profile_list: List of profile names to merge
@@ -146,8 +142,7 @@ class ProfileMerger:
     def _merge_preferences(
         self, profiles: list[Profile], strategy: MergeStrategy
     ) -> dict[str, Any]:
-        """
-        Merge preferences from multiple profiles.
+        """Merge preferences from multiple profiles.
 
         Args:
             profiles: List of Profile objects
@@ -211,8 +206,7 @@ class ProfileMerger:
     def _merge_learned_patterns(
         self, profiles: list[Profile], strategy: MergeStrategy
     ) -> dict[str, Any]:
-        """
-        Merge learned patterns from multiple profiles.
+        """Merge learned patterns from multiple profiles.
 
         Args:
             profiles: List of Profile objects
@@ -252,8 +246,7 @@ class ProfileMerger:
     def _merge_confidence_data(
         self, profiles: list[Profile], strategy: MergeStrategy
     ) -> dict[str, Any]:
-        """
-        Merge confidence data from multiple profiles.
+        """Merge confidence data from multiple profiles.
 
         Args:
             profiles: List of Profile objects
@@ -292,8 +285,7 @@ class ProfileMerger:
     def resolve_conflicts(
         self, conflicting_prefs: list[dict[str, Any]], strategy: MergeStrategy
     ) -> Any:
-        """
-        Resolve conflicts between preferences using specified strategy.
+        """Resolve conflicts between preferences using specified strategy.
 
         Args:
             conflicting_prefs: List of conflicting preference values with metadata
@@ -352,8 +344,7 @@ class ProfileMerger:
         source_profiles: list[Profile],
         confidence_threshold: float = 0.8,
     ) -> None:
-        """
-        Ensure high-confidence preferences from source profiles are preserved.
+        """Ensure high-confidence preferences from source profiles are preserved.
 
         Args:
             merged_profile: The merged profile to update
@@ -394,8 +385,7 @@ class ProfileMerger:
                 merged_profile.confidence_data[key] = data["confidence"]
 
     def create_merged_profile(self, name: str, merged_data: dict[str, Any]) -> Profile | None:
-        """
-        Create a new profile from merged data.
+        """Create a new profile from merged data.
 
         Args:
             name: Name for the merged profile
@@ -431,8 +421,7 @@ class ProfileMerger:
             return None
 
     def get_merge_conflicts(self, profile_list: list[str]) -> dict[str, list[Any]]:
-        """
-        Identify conflicts between profiles before merging.
+        """Identify conflicts between profiles before merging.
 
         Args:
             profile_list: List of profile names to check

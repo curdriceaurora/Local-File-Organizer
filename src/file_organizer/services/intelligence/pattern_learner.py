@@ -1,5 +1,4 @@
-"""
-Pattern learning orchestrator module.
+"""Pattern learning orchestrator module.
 
 Coordinates pattern extraction, confidence scoring, folder learning, and feedback processing
 to provide a unified pattern learning system.
@@ -21,8 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class PatternLearner:
-    """
-    Main orchestrator for pattern learning from user feedback.
+    """Main orchestrator for pattern learning from user feedback.
 
     Integrates:
     - Pattern extraction (naming patterns, delimiters, structures)
@@ -33,8 +31,7 @@ class PatternLearner:
     """
 
     def __init__(self, storage_path: Path | None = None):
-        """
-        Initialize the pattern learner.
+        """Initialize the pattern learner.
 
         Args:
             storage_path: Base path for storing learned data
@@ -63,8 +60,7 @@ class PatternLearner:
     def learn_from_correction(
         self, original: Path, corrected: Path, context: dict | None = None
     ) -> dict:
-        """
-        Learn from a user correction.
+        """Learn from a user correction.
 
         This is the main entry point for real-time learning.
 
@@ -117,8 +113,7 @@ class PatternLearner:
         return results
 
     def extract_naming_pattern(self, filenames: list[str]) -> dict:
-        """
-        Extract common naming patterns from a list of filenames.
+        """Extract common naming patterns from a list of filenames.
 
         Args:
             filenames: List of filenames to analyze
@@ -166,8 +161,7 @@ class PatternLearner:
     def identify_folder_preference(
         self, file_type: str, chosen_folder: Path, context: dict | None = None
     ) -> None:
-        """
-        Record a folder choice for learning.
+        """Record a folder choice for learning.
 
         Args:
             file_type: File extension
@@ -179,8 +173,7 @@ class PatternLearner:
         logger.debug(f"Tracked folder preference: {file_type} -> {chosen_folder}")
 
     def update_confidence(self, pattern_id: str, success: bool) -> None:
-        """
-        Update confidence score for a pattern based on success/failure.
+        """Update confidence score for a pattern based on success/failure.
 
         Args:
             pattern_id: Pattern identifier
@@ -193,8 +186,7 @@ class PatternLearner:
     def get_pattern_suggestion(
         self, file_info: dict, min_confidence: float | None = None
     ) -> dict | None:
-        """
-        Get pattern-based suggestions for a file.
+        """Get pattern-based suggestions for a file.
 
         Args:
             file_info: File information (name, type, etc.)
@@ -238,8 +230,7 @@ class PatternLearner:
         return None
 
     def get_learning_stats(self) -> dict:
-        """
-        Get statistics about learned patterns.
+        """Get statistics about learned patterns.
 
         Returns:
             Dictionary with learning statistics
@@ -257,8 +248,7 @@ class PatternLearner:
     def batch_learn_from_history(
         self, corrections: list[dict], max_age_days: int | None = None
     ) -> dict:
-        """
-        Learn from historical corrections in batch.
+        """Learn from historical corrections in batch.
 
         Args:
             corrections: List of correction records
@@ -288,8 +278,7 @@ class PatternLearner:
         return results
 
     def clear_old_patterns(self, days: int = 90) -> dict:
-        """
-        Clear patterns older than specified days.
+        """Clear patterns older than specified days.
 
         Args:
             days: Age threshold in days
@@ -320,8 +309,7 @@ class PatternLearner:
         logger.info("Pattern learning disabled")
 
     def _learn_naming_pattern(self, original_name: str, corrected_name: str) -> dict:
-        """
-        Learn from a naming correction.
+        """Learn from a naming correction.
 
         Args:
             original_name: Original filename
@@ -359,8 +347,7 @@ class PatternLearner:
     def _learn_folder_preference(
         self, original: Path, corrected: Path, context: dict | None
     ) -> dict:
-        """
-        Learn from a folder correction.
+        """Learn from a folder correction.
 
         Args:
             original: Original path
@@ -388,8 +375,7 @@ class PatternLearner:
         return result
 
     def _get_naming_suggestions(self, filename: str) -> dict | None:
-        """
-        Get naming pattern suggestions for a filename.
+        """Get naming pattern suggestions for a filename.
 
         Args:
             filename: Current filename

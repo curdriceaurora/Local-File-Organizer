@@ -1,5 +1,4 @@
-"""
-Export utilities for operation history.
+"""Export utilities for operation history.
 
 This module provides functionality to export operation history
 to various formats (JSON, CSV).
@@ -20,16 +19,14 @@ logger = logging.getLogger(__name__)
 
 
 class HistoryExporter:
-    """
-    Exports operation history to various formats.
+    """Exports operation history to various formats.
 
     This class provides methods to export operations and transactions
     to JSON and CSV formats.
     """
 
     def __init__(self, db: DatabaseManager):
-        """
-        Initialize history exporter.
+        """Initialize history exporter.
 
         Args:
             db: Database manager instance
@@ -45,8 +42,7 @@ class HistoryExporter:
         end_date: datetime | None = None,
         include_transactions: bool = True,
     ) -> dict[str, int]:
-        """
-        Export operations to JSON file.
+        """Export operations to JSON file.
 
         Args:
             output_path: Path to output JSON file
@@ -126,8 +122,7 @@ class HistoryExporter:
         start_date: datetime | None = None,
         end_date: datetime | None = None,
     ) -> int:
-        """
-        Export operations to CSV file.
+        """Export operations to CSV file.
 
         Args:
             output_path: Path to output CSV file
@@ -231,8 +226,7 @@ class HistoryExporter:
         return len(rows)
 
     def export_transactions_to_csv(self, output_path: Path) -> int:
-        """
-        Export transactions to CSV file.
+        """Export transactions to CSV file.
 
         Args:
             output_path: Path to output CSV file
@@ -280,8 +274,7 @@ class HistoryExporter:
         return len(rows)
 
     def export_statistics(self, output_path: Path) -> bool:
-        """
-        Export database statistics to JSON file.
+        """Export database statistics to JSON file.
 
         Args:
             output_path: Path to output JSON file

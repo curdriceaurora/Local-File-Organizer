@@ -1,5 +1,4 @@
-"""
-PARA Detection Module
+"""PARA Detection Module.
 
 Heuristic-based detection algorithms for automatically categorizing files
 into PARA categories (Projects, Areas, Resources, Archive).

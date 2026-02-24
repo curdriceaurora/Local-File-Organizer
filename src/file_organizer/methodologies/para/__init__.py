@@ -1,5 +1,4 @@
-"""
-PARA Methodology Implementation
+"""PARA Methodology Implementation.
 
 The PARA method is a universal system for organizing digital information and life.
 PARA stands for Projects, Areas, Resources, and Archive.

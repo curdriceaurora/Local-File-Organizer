@@ -1,5 +1,4 @@
-"""
-Profile Management System - Core Module
+"""Profile Management System - Core Module.
 
 Provides comprehensive profile management with CRUD operations, activation,
 and atomic profile switching capabilities.
@@ -69,8 +68,7 @@ class Profile:
         )
 
     def validate(self) -> bool:
-        """
-        Validate profile structure and data.
+        """Validate profile structure and data.
 
         Returns:
             True if valid, False otherwise
@@ -101,8 +99,7 @@ class Profile:
 
 
 class ProfileManager:
-    """
-    Core profile management system with CRUD operations and atomic switching.
+    """Core profile management system with CRUD operations and atomic switching.
 
     Features:
     - Create and manage multiple preference profiles
@@ -117,8 +114,7 @@ class ProfileManager:
     PROFILE_EXTENSION = ".json"
 
     def __init__(self, storage_path: Path | None = None):
-        """
-        Initialize profile manager.
+        """Initialize profile manager.
 
         Args:
             storage_path: Path to store profiles. If None, uses default location.
@@ -142,8 +138,7 @@ class ProfileManager:
         return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     def _sanitize_profile_name(self, name: str) -> str:
-        """
-        Sanitize profile name to be filesystem-safe.
+        """Sanitize profile name to be filesystem-safe.
 
         Args:
             name: Profile name to sanitize
@@ -186,8 +181,7 @@ class ProfileManager:
             self._set_active_profile_name("default")
 
     def _save_profile_to_disk(self, profile: Profile) -> bool:
-        """
-        Save profile to disk using atomic writes.
+        """Save profile to disk using atomic writes.
 
         Args:
             profile: Profile to save
@@ -213,8 +207,7 @@ class ProfileManager:
             return False
 
     def _load_profile_from_disk(self, profile_name: str) -> Profile | None:
-        """
-        Load profile from disk.
+        """Load profile from disk.
 
         Args:
             profile_name: Name of profile to load
@@ -259,8 +252,7 @@ class ProfileManager:
         return "default"
 
     def _set_active_profile_name(self, profile_name: str) -> bool:
-        """
-        Set active profile name.
+        """Set active profile name.
 
         Args:
             profile_name: Name of profile to activate
@@ -284,8 +276,7 @@ class ProfileManager:
             return False
 
     def create_profile(self, name: str, description: str) -> Profile | None:
-        """
-        Create a new profile.
+        """Create a new profile.
 
         Args:
             name: Profile name (must be unique)
@@ -315,8 +306,7 @@ class ProfileManager:
             return profile
 
     def activate_profile(self, profile_name: str) -> bool:
-        """
-        Activate a profile (make it the current active profile).
+        """Activate a profile (make it the current active profile).
 
         Args:
             profile_name: Name of profile to activate
@@ -348,8 +338,7 @@ class ProfileManager:
             return True
 
     def list_profiles(self) -> list[Profile]:
-        """
-        List all available profiles.
+        """List all available profiles.
 
         Returns:
             List of Profile objects
@@ -369,8 +358,7 @@ class ProfileManager:
             return profiles
 
     def delete_profile(self, profile_name: str, force: bool = False) -> bool:
-        """
-        Delete a profile.
+        """Delete a profile.
 
         Args:
             profile_name: Name of profile to delete
@@ -421,8 +409,7 @@ class ProfileManager:
                 return False
 
     def get_active_profile(self) -> Profile | None:
-        """
-        Get currently active profile.
+        """Get currently active profile.
 
         Returns:
             Active Profile object or None on failure
@@ -432,8 +419,7 @@ class ProfileManager:
             return self._load_profile_from_disk(active_name)
 
     def update_profile(self, profile_name: str, **updates) -> bool:
-        """
-        Update profile fields.
+        """Update profile fields.
 
         Args:
             profile_name: Name of profile to update
@@ -471,8 +457,7 @@ class ProfileManager:
             return self._save_profile_to_disk(profile)
 
     def get_profile(self, profile_name: str) -> Profile | None:
-        """
-        Get a specific profile by name.
+        """Get a specific profile by name.
 
         Args:
             profile_name: Name of profile to retrieve
@@ -484,8 +469,7 @@ class ProfileManager:
             return self._load_profile_from_disk(profile_name)
 
     def profile_exists(self, profile_name: str) -> bool:
-        """
-        Check if a profile exists.
+        """Check if a profile exists.
 
         Args:
             profile_name: Name of profile to check
@@ -496,8 +480,7 @@ class ProfileManager:
         return self._get_profile_path(profile_name).exists()
 
     def get_profile_count(self) -> int:
-        """
-        Get total number of profiles.
+        """Get total number of profiles.
 
         Returns:
             Count of profiles

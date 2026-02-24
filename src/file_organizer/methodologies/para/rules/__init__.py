@@ -1,5 +1,4 @@
-"""
-PARA Rule Engine Module
+"""PARA Rule Engine Module.
 
 This module provides the rule-based categorization engine for the PARA methodology.
 It includes rule parsing, condition evaluation, action execution, and conflict resolution.

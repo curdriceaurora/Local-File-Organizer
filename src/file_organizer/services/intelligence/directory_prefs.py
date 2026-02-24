@@ -1,5 +1,4 @@
-"""
-Directory-level preference management with hierarchical inheritance.
+"""Directory-level preference management with hierarchical inheritance.
 
 This module provides directory-scoped preferences with parent directory
 inheritance, allowing fine-grained control over file organization behavior
@@ -15,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class DirectoryPrefs:
-    """
-    Manages directory-level preferences with hierarchical inheritance.
+    """Manages directory-level preferences with hierarchical inheritance.
 
     Supports:
     - Per-directory preference scoping
@@ -31,8 +29,7 @@ class DirectoryPrefs:
         logger.debug("DirectoryPrefs initialized")
 
     def set_preference(self, path: Path, pref: dict, override_parent: bool = False) -> None:
-        """
-        Set a preference for a specific directory.
+        """Set a preference for a specific directory.
 
         Args:
             path: Directory path for the preference
@@ -56,8 +53,7 @@ class DirectoryPrefs:
         logger.debug(f"Set preference for {normalized_path}, override_parent={override_parent}")
 
     def get_preference_with_inheritance(self, path: Path) -> dict | None:
-        """
-        Get preference for a path, with inheritance from parent directories.
+        """Get preference for a path, with inheritance from parent directories.
 
         Walks up the directory tree and merges preferences from parent
         directories, with child preferences taking precedence. If a
@@ -122,8 +118,7 @@ class DirectoryPrefs:
         return result
 
     def _merge_preferences(self, preferences_chain: list[dict]) -> dict:
-        """
-        Merge a chain of preferences from parent to child.
+        """Merge a chain of preferences from parent to child.
 
         Args:
             preferences_chain: List of preference dicts, ordered from parent to child
@@ -142,8 +137,7 @@ class DirectoryPrefs:
         return merged
 
     def _deep_merge(self, base: dict, overlay: dict) -> dict:
-        """
-        Deep merge two dictionaries, with overlay taking precedence.
+        """Deep merge two dictionaries, with overlay taking precedence.
 
         Args:
             base: Base dictionary
@@ -165,8 +159,7 @@ class DirectoryPrefs:
         return result
 
     def list_directory_preferences(self) -> list[tuple[Path, dict]]:
-        """
-        List all directory preferences without inheritance resolution.
+        """List all directory preferences without inheritance resolution.
 
         Returns:
             List of (path, preference) tuples
@@ -191,8 +184,7 @@ class DirectoryPrefs:
         return result
 
     def remove_preference(self, path: Path) -> bool:
-        """
-        Remove preference for a specific directory.
+        """Remove preference for a specific directory.
 
         Args:
             path: Directory path to remove preference for
@@ -219,8 +211,7 @@ class DirectoryPrefs:
         return False
 
     def clear_all(self) -> None:
-        """
-        Clear all directory preferences.
+        """Clear all directory preferences.
 
         Example:
             >>> dp = DirectoryPrefs()
@@ -234,8 +225,7 @@ class DirectoryPrefs:
         logger.info(f"Cleared all directory preferences ({count} entries)")
 
     def get_statistics(self) -> dict:
-        """
-        Get statistics about stored preferences.
+        """Get statistics about stored preferences.
 
         Returns:
             Dictionary containing statistics

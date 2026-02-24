@@ -1,5 +1,4 @@
-"""
-PARA-Aware File Mover
+"""PARA-Aware File Mover.
 
 Organizes files into PARA directory structures based on AI suggestions.
 All file operations support dry-run mode for safety. Designed for local,

@@ -1,5 +1,4 @@
-"""
-Rate throttling for parallel file processing.
+"""Rate throttling for parallel file processing.
 
 This module implements a token-bucket rate limiter that controls the
 throughput of file processing operations. It is thread-safe and supports
@@ -15,8 +14,7 @@ from dataclasses import dataclass
 
 @dataclass
 class ThrottleStats:
-    """
-    Statistics for a :class:`RateThrottler` instance.
+    """Statistics for a :class:`RateThrottler` instance.
 
     Attributes:
         allowed: Total number of requests that were allowed.
@@ -34,8 +32,7 @@ class ThrottleStats:
 
 
 class RateThrottler:
-    """
-    Token-bucket rate limiter for controlling processing throughput.
+    """Token-bucket rate limiter for controlling processing throughput.
 
     Tokens are added to the bucket at a steady rate of ``max_rate`` tokens
     per ``window_seconds``. Each :meth:`acquire` or :meth:`wait` call
@@ -52,6 +49,7 @@ class RateThrottler:
     """
 
     def __init__(self, max_rate: float, window_seconds: float = 1.0) -> None:
+        """Configure the throttler with the given rate and time window."""
         if max_rate <= 0:
             raise ValueError(f"max_rate must be > 0, got {max_rate}")
         if window_seconds <= 0:
@@ -83,8 +81,7 @@ class RateThrottler:
         self._last_refill = now
 
     def acquire(self) -> bool:
-        """
-        Try to acquire a token without blocking.
+        """Try to acquire a token without blocking.
 
         Returns:
             ``True`` if a token was acquired, ``False`` if the rate
@@ -102,8 +99,7 @@ class RateThrottler:
             return False
 
     def wait(self) -> None:
-        """
-        Block until a token is available, then consume it.
+        """Block until a token is available, then consume it.
 
         This method sleeps in small increments until the bucket has
         enough tokens. It is safe to call from multiple threads.
@@ -125,8 +121,7 @@ class RateThrottler:
             time.sleep(max(wait_time, 0.001))
 
     def stats(self) -> ThrottleStats:
-        """
-        Return current throttle statistics.
+        """Return current throttle statistics.
 
         Returns:
             A :class:`ThrottleStats` snapshot.

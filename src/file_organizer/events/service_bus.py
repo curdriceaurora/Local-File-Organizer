@@ -365,6 +365,7 @@ class ServiceBus:
         return sorted(self._services.keys())
 
     def __repr__(self) -> str:
+        """Return a string representation of this service bus."""
         return (
             f"ServiceBus(name={self._name!r}, "
             f"services={len(self._services)}, "

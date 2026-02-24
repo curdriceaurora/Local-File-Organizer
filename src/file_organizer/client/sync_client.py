@@ -65,6 +65,7 @@ class FileOrganizerClient:
         token: Optional[str] = None,
         timeout: float = 30.0,
     ) -> None:
+        """Initialize the sync client with connection parameters."""
         headers: dict[str, str] = {}
         if token:
             headers["Authorization"] = f"Bearer {token}"
@@ -631,9 +632,11 @@ class FileOrganizerClient:
     # -- context manager -----------------------------------------------------
 
     def __enter__(self) -> FileOrganizerClient:
+        """Enter the context manager."""
         return self
 
     def __exit__(self, *args: object) -> None:
+        """Exit the context manager and close the client."""
         self.close()
 
     def close(self) -> None:

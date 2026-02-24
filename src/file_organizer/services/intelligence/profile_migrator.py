@@ -1,5 +1,4 @@
-"""
-Profile Migration Module
+"""Profile Migration Module.
 
 Provides profile version migration with backup and rollback capabilities.
 
@@ -23,8 +22,7 @@ from file_organizer.services.intelligence.profile_manager import Profile, Profil
 
 
 class ProfileMigrator:
-    """
-    Profile migration system with backup and rollback support.
+    """Profile migration system with backup and rollback support.
 
     Features:
     - Migrate profiles from older versions to current
@@ -38,8 +36,7 @@ class ProfileMigrator:
     CURRENT_VERSION = "1.0"
 
     def __init__(self, profile_manager: ProfileManager):
-        """
-        Initialize profile migrator.
+        """Initialize profile migrator.
 
         Args:
             profile_manager: ProfileManager instance
@@ -55,8 +52,7 @@ class ProfileMigrator:
         return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     def migrate_version(self, profile_name: str, target_version: str, backup: bool = True) -> bool:
-        """
-        Migrate a profile to a target version.
+        """Migrate a profile to a target version.
 
         Args:
             profile_name: Name of profile to migrate
@@ -161,8 +157,7 @@ class ProfileMigrator:
             return False
 
     def _find_migration_path(self, from_version: str, to_version: str) -> list | None:
-        """
-        Find migration path between versions.
+        """Find migration path between versions.
 
         Args:
             from_version: Source version
@@ -186,8 +181,7 @@ class ProfileMigrator:
         return None  # No migration path available yet
 
     def backup_before_migration(self, profile: Profile) -> Path | None:
-        """
-        Create backup of profile before migration.
+        """Create backup of profile before migration.
 
         Args:
             profile: Profile to backup
@@ -216,8 +210,7 @@ class ProfileMigrator:
             return None
 
     def rollback_migration(self, profile_name: str, backup_path: Path) -> bool:
-        """
-        Rollback a failed migration using backup.
+        """Rollback a failed migration using backup.
 
         Args:
             profile_name: Name of profile to rollback
@@ -267,8 +260,7 @@ class ProfileMigrator:
             return False
 
     def validate_migration(self, profile_name: str) -> bool:
-        """
-        Validate that a profile is properly migrated and functional.
+        """Validate that a profile is properly migrated and functional.
 
         Args:
             profile_name: Name of profile to validate
@@ -314,8 +306,7 @@ class ProfileMigrator:
             return False
 
     def get_migration_history(self, profile_name: str) -> list | None:
-        """
-        Get migration history for a profile.
+        """Get migration history for a profile.
 
         Args:
             profile_name: Name of profile
@@ -338,8 +329,7 @@ class ProfileMigrator:
             return None
 
     def list_backups(self, profile_name: str | None = None) -> list:
-        """
-        List available migration backups.
+        """List available migration backups.
 
         Args:
             profile_name: Optional profile name to filter by
@@ -371,8 +361,7 @@ class ProfileMigrator:
     # Migration functions for future versions
 
     def _migrate_v1_to_v2(self, data: dict[str, Any]) -> dict[str, Any]:
-        """
-        Migrate profile from version 1.0 to 2.0.
+        """Migrate profile from version 1.0 to 2.0.
 
         This is a placeholder for future migration.
 
@@ -392,8 +381,7 @@ class ProfileMigrator:
     def register_migration(
         self, from_version: str, to_version: str, migration_func: Callable
     ) -> None:
-        """
-        Register a custom migration function.
+        """Register a custom migration function.
 
         Args:
             from_version: Source version

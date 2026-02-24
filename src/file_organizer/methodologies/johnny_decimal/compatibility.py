@@ -1,5 +1,4 @@
-"""
-Johnny Decimal PARA Compatibility Layer
+"""Johnny Decimal PARA Compatibility Layer.
 
 Integrates Johnny Decimal methodology with PARA (Projects/Areas/Resources/Archive)
 organizational system, allowing hybrid setups and smooth migrations.
@@ -39,16 +38,14 @@ class PARAMapping:
 
 
 class PARAJohnnyDecimalBridge:
-    """
-    Bridge between PARA and Johnny Decimal methodologies.
+    """Bridge between PARA and Johnny Decimal methodologies.
 
     Provides bidirectional mapping and translation between the two systems,
     enabling hybrid organizational structures.
     """
 
     def __init__(self, config: PARAIntegrationConfig):
-        """
-        Initialize the bridge.
+        """Initialize the bridge.
 
         Args:
             config: PARA integration configuration
@@ -86,8 +83,7 @@ class PARAJohnnyDecimalBridge:
         }
 
     def para_to_jd_area(self, para_category: PARACategory, index: int = 0) -> int:
-        """
-        Convert PARA category to JD area number.
+        """Convert PARA category to JD area number.
 
         Args:
             para_category: PARA category
@@ -106,8 +102,7 @@ class PARAJohnnyDecimalBridge:
         return mapping.jd_area_start + index
 
     def jd_area_to_para(self, area_number: int) -> PARACategory | None:
-        """
-        Convert JD area number to PARA category.
+        """Convert JD area number to PARA category.
 
         Args:
             area_number: JD area number
@@ -121,8 +116,7 @@ class PARAJohnnyDecimalBridge:
         return None
 
     def is_para_area(self, area_number: int) -> bool:
-        """
-        Check if JD area corresponds to PARA category.
+        """Check if JD area corresponds to PARA category.
 
         Args:
             area_number: JD area number
@@ -133,8 +127,7 @@ class PARAJohnnyDecimalBridge:
         return self.jd_area_to_para(area_number) is not None
 
     def get_para_path_suggestion(self, para_category: PARACategory, item_name: str) -> str:
-        """
-        Suggest JD path for PARA item.
+        """Suggest JD path for PARA item.
 
         Args:
             para_category: PARA category
@@ -147,8 +140,7 @@ class PARAJohnnyDecimalBridge:
         return f"{base_area:02d} {para_category.value.title()} / {base_area:02d}.01 {item_name}"
 
     def create_para_structure(self, root_path: Path) -> dict[PARACategory, Path]:
-        """
-        Create PARA-compatible JD structure.
+        """Create PARA-compatible JD structure.
 
         Args:
             root_path: Root directory
@@ -174,15 +166,13 @@ class PARAJohnnyDecimalBridge:
 
 
 class CompatibilityAnalyzer:
-    """
-    Analyzes folder structures for PARA patterns and JD compatibility.
+    """Analyzes folder structures for PARA patterns and JD compatibility.
 
     Helps identify existing PARA structures and suggest migration paths.
     """
 
     def __init__(self, config: JohnnyDecimalConfig):
-        """
-        Initialize analyzer.
+        """Initialize analyzer.
 
         Args:
             config: Johnny Decimal configuration
@@ -193,8 +183,7 @@ class CompatibilityAnalyzer:
             self.bridge = PARAJohnnyDecimalBridge(config.compatibility.para_integration)
 
     def detect_para_structure(self, root_path: Path) -> dict[PARACategory, Path | None]:
-        """
-        Detect existing PARA structure.
+        """Detect existing PARA structure.
 
         Args:
             root_path: Root directory to analyze
@@ -224,8 +213,7 @@ class CompatibilityAnalyzer:
         return detected
 
     def is_mixed_structure(self, root_path: Path) -> bool:
-        """
-        Check if structure mixes PARA and JD.
+        """Check if structure mixes PARA and JD.
 
         Args:
             root_path: Root directory
@@ -265,8 +253,7 @@ class CompatibilityAnalyzer:
         return False
 
     def suggest_migration_strategy(self, root_path: Path) -> dict[str, Any]:
-        """
-        Suggest migration strategy for existing structure.
+        """Suggest migration strategy for existing structure.
 
         Args:
             root_path: Root directory
@@ -322,16 +309,14 @@ class CompatibilityAnalyzer:
 
 
 class HybridOrganizer:
-    """
-    Manages hybrid PARA + JD organizational structures.
+    """Manages hybrid PARA + JD organizational structures.
 
     Allows maintaining PARA at top level with JD within each category,
     or other hybrid approaches.
     """
 
     def __init__(self, config: JohnnyDecimalConfig):
-        """
-        Initialize hybrid organizer.
+        """Initialize hybrid organizer.
 
         Args:
             config: Johnny Decimal configuration
@@ -341,8 +326,7 @@ class HybridOrganizer:
         self.analyzer = CompatibilityAnalyzer(config)
 
     def create_hybrid_structure(self, root_path: Path) -> dict[str, Path]:
-        """
-        Create hybrid PARA + JD structure.
+        """Create hybrid PARA + JD structure.
 
         Top level: PARA categories
         Within each: JD areas/categories
@@ -383,8 +367,7 @@ class HybridOrganizer:
         return created
 
     def categorize_item(self, item_name: str, para_category: PARACategory) -> JohnnyDecimalNumber:
-        """
-        Categorize item into hybrid structure.
+        """Categorize item into hybrid structure.
 
         Args:
             item_name: Item to categorize
@@ -410,8 +393,7 @@ class HybridOrganizer:
         jd_number: JohnnyDecimalNumber,
         item_name: str = "",
     ) -> Path:
-        """
-        Get full path for item in hybrid structure.
+        """Get full path for item in hybrid structure.
 
         Args:
             root_path: Root directory

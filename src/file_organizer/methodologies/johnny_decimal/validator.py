@@ -1,5 +1,4 @@
-"""
-Johnny Decimal Migration Validator
+"""Johnny Decimal Migration Validator.
 
 Validates transformation plans before execution to prevent errors and data loss.
 Checks for conflicts, invalid numbers, and potential issues.
@@ -50,16 +49,14 @@ class ValidationResult:
 
 
 class MigrationValidator:
-    """
-    Validates Johnny Decimal transformation plans.
+    """Validates Johnny Decimal transformation plans.
 
     Checks for number conflicts, invalid paths, naming issues,
     and potential data loss scenarios.
     """
 
     def __init__(self, generator: JohnnyDecimalGenerator):
-        """
-        Initialize the validator.
+        """Initialize the validator.
 
         Args:
             generator: JD number generator with existing numbers registered
@@ -67,8 +64,7 @@ class MigrationValidator:
         self.generator = generator
 
     def validate_plan(self, plan: TransformationPlan) -> ValidationResult:
-        """
-        Validate a transformation plan.
+        """Validate a transformation plan.
 
         Args:
             plan: Transformation plan to validate
@@ -298,8 +294,7 @@ class MigrationValidator:
                         pass
 
     def generate_report(self, result: ValidationResult) -> str:
-        """
-        Generate human-readable validation report.
+        """Generate human-readable validation report.
 
         Args:
             result: Validation result

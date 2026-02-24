@@ -1,5 +1,4 @@
-"""
-Pattern Analyzer Service
+"""Pattern Analyzer Service.
 
 Analyzes file organization patterns including directory structures,
 naming conventions, and content-based clustering.
@@ -70,14 +69,13 @@ class PatternAnalysis:
 
 
 class PatternAnalyzer:
-    """
-    Analyzes file organization patterns to detect structure, naming conventions,
-    and content-based clusters.
+    """Analyzes file organization patterns.
+
+    Detects structure, naming conventions, and content-based clusters.
     """
 
     def __init__(self, min_pattern_count: int = 3, max_depth: int = 10):
-        """
-        Initialize the pattern analyzer.
+        """Initialize the pattern analyzer.
 
         Args:
             min_pattern_count: Minimum number of files to form a pattern
@@ -100,8 +98,7 @@ class PatternAnalyzer:
         ]
 
     def analyze_directory(self, directory: Path) -> PatternAnalysis:
-        """
-        Perform complete pattern analysis on a directory.
+        """Perform complete pattern analysis on a directory.
 
         Args:
             directory: Directory to analyze
@@ -150,8 +147,7 @@ class PatternAnalyzer:
         )
 
     def _collect_files(self, directory: Path, current_depth: int = 0) -> list[Path]:
-        """
-        Recursively collect all files up to max_depth.
+        """Recursively collect all files up to max_depth.
 
         Args:
             directory: Directory to scan
@@ -176,8 +172,7 @@ class PatternAnalyzer:
         return files
 
     def detect_naming_patterns(self, files: list[Path]) -> list[NamingPattern]:
-        """
-        Detect naming patterns across files.
+        """Detect naming patterns across files.
 
         Args:
             files: List of file paths to analyze
@@ -224,8 +219,7 @@ class PatternAnalyzer:
         return detected_patterns
 
     def get_location_patterns(self, directory: Path) -> list[LocationPattern]:
-        """
-        Analyze location-based organizational patterns.
+        """Analyze location-based organizational patterns.
 
         Args:
             directory: Root directory to analyze
@@ -285,8 +279,7 @@ class PatternAnalyzer:
         return location_patterns
 
     def cluster_by_content(self, files: list[Path]) -> list[ContentCluster]:
-        """
-        Group files into clusters based on content characteristics.
+        """Group files into clusters based on content characteristics.
 
         Args:
             files: List of file paths to cluster

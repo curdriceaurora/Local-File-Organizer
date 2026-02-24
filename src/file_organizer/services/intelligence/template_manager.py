@@ -1,5 +1,4 @@
-"""
-Template Manager Module
+"""Template Manager Module.
 
 Provides default profile templates and template management.
 
@@ -20,8 +19,7 @@ from file_organizer.services.intelligence.profile_manager import Profile, Profil
 
 
 class TemplateManager:
-    """
-    Template management system with default templates.
+    """Template management system with default templates.
 
     Features:
     - Predefined templates for common workflows
@@ -243,8 +241,7 @@ class TemplateManager:
     }
 
     def __init__(self, profile_manager: ProfileManager):
-        """
-        Initialize template manager.
+        """Initialize template manager.
 
         Args:
             profile_manager: ProfileManager instance
@@ -253,8 +250,7 @@ class TemplateManager:
         self._templates = copy.deepcopy(self.TEMPLATES)
 
     def list_templates(self) -> list[str]:
-        """
-        List all available template names.
+        """List all available template names.
 
         Returns:
             List of template names
@@ -262,8 +258,7 @@ class TemplateManager:
         return list(self._templates.keys())
 
     def get_template(self, template_name: str) -> dict[str, Any] | None:
-        """
-        Get template data by name.
+        """Get template data by name.
 
         Args:
             template_name: Name of template to retrieve
@@ -277,8 +272,7 @@ class TemplateManager:
         return None
 
     def preview_template(self, template_name: str) -> dict[str, Any] | None:
-        """
-        Preview template details before applying.
+        """Preview template details before applying.
 
         Args:
             template_name: Name of template to preview
@@ -315,8 +309,7 @@ class TemplateManager:
     def create_profile_from_template(
         self, template_name: str, profile_name: str, customize: dict[str, Any] | None = None
     ) -> Profile | None:
-        """
-        Create a new profile from a template.
+        """Create a new profile from a template.
 
         Args:
             template_name: Name of template to use
@@ -370,8 +363,7 @@ class TemplateManager:
     def _apply_customizations(
         self, template: dict[str, Any], customize: dict[str, Any]
     ) -> dict[str, Any]:
-        """
-        Apply customizations to a template.
+        """Apply customizations to a template.
 
         Args:
             template: Template data to customize
@@ -408,8 +400,7 @@ class TemplateManager:
         return customized
 
     def create_custom_template(self, from_profile: str, template_name: str) -> bool:
-        """
-        Create a custom template from an existing profile.
+        """Create a custom template from an existing profile.
 
         Args:
             from_profile: Name of profile to create template from
@@ -455,8 +446,7 @@ class TemplateManager:
     def get_template_recommendations(
         self, file_types: list[str] | None = None, use_case: str | None = None
     ) -> list[str]:
-        """
-        Get template recommendations based on file types or use case.
+        """Get template recommendations based on file types or use case.
 
         Args:
             file_types: List of file extensions (e.g., ['.py', '.js'])
@@ -519,8 +509,7 @@ class TemplateManager:
         return unique_recommendations
 
     def compare_templates(self, template_names: list[str]) -> dict[str, Any] | None:
-        """
-        Compare multiple templates side by side.
+        """Compare multiple templates side by side.
 
         Args:
             template_names: List of template names to compare

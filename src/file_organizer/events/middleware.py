@@ -98,6 +98,7 @@ class MiddlewarePipeline:
     """
 
     def __init__(self) -> None:
+        """Initialize the middleware pipeline."""
         self._middleware: list[Middleware] = []
 
     def add(self, mw: Middleware) -> None:
@@ -240,9 +241,11 @@ class MiddlewarePipeline:
                     )
 
     def __len__(self) -> int:
+        """Return the number of registered middleware."""
         return len(self._middleware)
 
     def __repr__(self) -> str:
+        """Return a string representation of this pipeline."""
         names = [type(mw).__name__ for mw in self._middleware]
         return f"MiddlewarePipeline({names})"
 
@@ -260,9 +263,11 @@ class LoggingMiddleware:
     """
 
     def __init__(self, logger_name: str = "file_organizer.events.pubsub") -> None:
+        """Initialize the logging middleware with the given logger name."""
         self._logger = logging.getLogger(logger_name)
 
     def before_publish(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
+        """Log event data before publishing to topic."""
         self._logger.info("Publishing to '%s': %s", topic, data)
         return data
 
@@ -272,12 +277,14 @@ class LoggingMiddleware:
         data: dict[str, Any],
         message_id: str | None,
     ) -> None:
+        """Log the outcome after publishing to topic."""
         if message_id is not None:
             self._logger.info("Published to '%s' (ID: %s)", topic, message_id)
         else:
             self._logger.warning("Failed to publish to '%s'", topic)
 
     def before_consume(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
+        """Log event data before dispatching to handlers."""
         self._logger.info("Consuming from '%s': %s", topic, data)
         return data
 
@@ -287,6 +294,7 @@ class LoggingMiddleware:
         data: dict[str, Any],
         error: Exception | None,
     ) -> None:
+        """Log outcome after handlers have consumed the event."""
         if error is not None:
             self._logger.warning("Handler error on '%s': %s", topic, error)
         else:
@@ -317,6 +325,7 @@ class MetricsMiddleware:
     topic_consume_counts: dict[str, int] = field(default_factory=dict)
 
     def before_publish(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
+        """Track event data before publishing; return data unchanged."""
         return data
 
     def after_publish(
@@ -325,6 +334,7 @@ class MetricsMiddleware:
         data: dict[str, Any],
         message_id: str | None,
     ) -> None:
+        """Record publish count or error after publishing."""
         if message_id is not None:
             self.publish_count += 1
             self.topic_publish_counts[topic] = self.topic_publish_counts.get(topic, 0) + 1
@@ -332,6 +342,7 @@ class MetricsMiddleware:
             self.publish_errors += 1
 
     def before_consume(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
+        """Record start time before dispatching to handlers."""
         self._consume_start = time.monotonic()
         return data
 
@@ -341,6 +352,7 @@ class MetricsMiddleware:
         data: dict[str, Any],
         error: Exception | None,
     ) -> None:
+        """Record latency and update consume counters after handlers run."""
         elapsed = (time.monotonic() - self._consume_start) * 1000.0
         self.total_consume_time_ms += elapsed
         if error is not None:
@@ -387,12 +399,14 @@ class RetryMiddleware:
         max_retries: int = 3,
         retry_delay: float = 0.1,
     ) -> None:
+        """Initialize the retry middleware with retry limits."""
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self._attempt_counts: dict[str, int] = {}
         self._total_retries: int = 0
 
     def before_publish(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
+        """Pass through event data before publishing."""
         return data
 
     def after_publish(
@@ -401,9 +415,11 @@ class RetryMiddleware:
         data: dict[str, Any],
         message_id: str | None,
     ) -> None:
+        """No-op after publish; retry logic applies only to consume."""
         pass
 
     def before_consume(self, topic: str, data: dict[str, Any]) -> dict[str, Any]:
+        """Reset the attempt counter for this event before dispatching."""
         # Reset attempt counter for this event
         event_key = f"{topic}:{id(data)}"
         self._attempt_counts[event_key] = 0
@@ -415,6 +431,7 @@ class RetryMiddleware:
         data: dict[str, Any],
         error: Exception | None,
     ) -> None:
+        """Increment the attempt counter on handler error."""
         if error is not None:
             event_key = f"{topic}:{id(data)}"
             self._attempt_counts[event_key] = self._attempt_counts.get(event_key, 0) + 1

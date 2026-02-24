@@ -12,6 +12,7 @@ class IntegrationManager:
     """Thread-safe integration registry used by API and CLI workflows."""
 
     def __init__(self) -> None:
+        """Initialize the integration manager."""
         self._integrations: dict[str, Integration] = {}
         self._lock = RLock()
 

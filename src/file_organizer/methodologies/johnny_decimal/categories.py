@@ -1,5 +1,4 @@
-"""
-Johnny Decimal Category Definitions and Data Models
+"""Johnny Decimal Category Definitions and Data Models.
 
 This module defines the core data structures for the Johnny Decimal numbering
 system, which uses a hierarchical decimal-based organization scheme.
@@ -22,8 +21,7 @@ from file_organizer._compat import StrEnum
 
 
 class NumberLevel(StrEnum):
-    """
-    Hierarchy levels in Johnny Decimal system.
+    """Hierarchy levels in Johnny Decimal system.
 
     - AREA: Top level (10-19, 20-29, etc.) representing broad areas
     - CATEGORY: Second level (11.01, 11.02) representing categories within areas
@@ -41,8 +39,7 @@ class NumberLevel(StrEnum):
 
 @dataclass
 class JohnnyDecimalNumber:
-    """
-    Represents a Johnny Decimal number with validation and formatting.
+    """Represents a Johnny Decimal number with validation and formatting.
 
     Examples:
         - Area: 10 (Finance)
@@ -86,8 +83,7 @@ class JohnnyDecimalNumber:
 
     @property
     def formatted_number(self) -> str:
-        """
-        Return the formatted Johnny Decimal number.
+        """Return the formatted Johnny Decimal number.
 
         Examples:
             - Area: "10"
@@ -146,8 +142,7 @@ class JohnnyDecimalNumber:
 
     @classmethod
     def from_string(cls, number_str: str) -> JohnnyDecimalNumber:
-        """
-        Parse a Johnny Decimal number from string.
+        """Parse a Johnny Decimal number from string.
 
         Args:
             number_str: String like "10", "11.01", or "11.01.001"
@@ -178,8 +173,7 @@ class JohnnyDecimalNumber:
 
 @dataclass
 class AreaDefinition:
-    """
-    Definition of a Johnny Decimal area (10-19, 20-29, etc.).
+    """Definition of a Johnny Decimal area (10-19, 20-29, etc.).
 
     Areas represent the broadest organizational divisions in the system.
     """
@@ -216,8 +210,7 @@ class AreaDefinition:
 
 @dataclass
 class CategoryDefinition:
-    """
-    Definition of a category within a Johnny Decimal area.
+    """Definition of a category within a Johnny Decimal area.
 
     Categories are second-level divisions (e.g., 11.01, 11.02) within an area.
     """
@@ -259,8 +252,7 @@ class CategoryDefinition:
 
 @dataclass
 class NumberingResult:
-    """
-    Result of Johnny Decimal number assignment for a file.
+    """Result of Johnny Decimal number assignment for a file.
 
     Contains the assigned number, confidence score, reasoning,
     and alternative possibilities.
@@ -323,8 +315,7 @@ class NumberingResult:
 
 @dataclass
 class NumberingScheme:
-    """
-    Complete Johnny Decimal numbering scheme configuration.
+    """Complete Johnny Decimal numbering scheme configuration.
 
     Contains all area definitions, category definitions, and rules
     for automatic number assignment.
@@ -480,8 +471,7 @@ DEFAULT_AREAS: list[AreaDefinition] = [
 
 
 def get_default_scheme() -> NumberingScheme:
-    """
-    Get the default Johnny Decimal numbering scheme.
+    """Get the default Johnny Decimal numbering scheme.
 
     Returns:
         NumberingScheme with default areas configured

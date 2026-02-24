@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Analytics CLI - Display comprehensive analytics dashboard.
+"""Analytics CLI - Display comprehensive analytics dashboard.
 
 This module provides a command-line interface for viewing storage analytics,
 quality metrics, and organization insights.
@@ -231,8 +230,7 @@ def display_file_distribution(distribution, chart_gen: ChartGenerator | None) ->
 
 
 def analytics_command(args: list[str] | None = None) -> int:
-    """
-    Execute the analytics command.
+    """Execute the analytics command.
 
     Args:
         args: Command-line arguments (None to use sys.argv)

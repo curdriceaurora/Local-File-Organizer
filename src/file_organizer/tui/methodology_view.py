@@ -175,6 +175,7 @@ class MethodologyView(Vertical):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
+        """Set up the methodology view to scan the given directory."""
         super().__init__(name=name, id=id, classes=classes)
         self._scan_dir = Path(scan_dir)
         self._methodology = "none"

@@ -1,5 +1,4 @@
-"""
-Profile Import Module
+"""Profile Import Module.
 
 Provides comprehensive profile import functionality with validation,
 selective import, and preview capabilities.
@@ -43,8 +42,7 @@ class ValidationResult:
 
 
 class ProfileImporter:
-    """
-    Profile import system with validation and selective import capabilities.
+    """Profile import system with validation and selective import capabilities.
 
     Features:
     - Import profiles from JSON files
@@ -56,8 +54,7 @@ class ProfileImporter:
     """
 
     def __init__(self, profile_manager: ProfileManager):
-        """
-        Initialize profile importer.
+        """Initialize profile importer.
 
         Args:
             profile_manager: ProfileManager instance to import into
@@ -69,8 +66,7 @@ class ProfileImporter:
         return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     def validate_import_file(self, file_path: Path) -> ValidationResult:
-        """
-        Validate an import file before importing.
+        """Validate an import file before importing.
 
         Args:
             file_path: Path to import file
@@ -171,8 +167,7 @@ class ProfileImporter:
             return ValidationResult(False, errors, warnings)
 
     def preview_import(self, file_path: Path) -> dict[str, Any] | None:
-        """
-        Preview what would be imported from a file.
+        """Preview what would be imported from a file.
 
         Args:
             file_path: Path to import file
@@ -233,8 +228,7 @@ class ProfileImporter:
             return None
 
     def import_profile(self, file_path: Path, new_name: str | None = None) -> Profile | None:
-        """
-        Import a profile from a JSON file.
+        """Import a profile from a JSON file.
 
         Args:
             file_path: Path to import file
@@ -327,8 +321,7 @@ class ProfileImporter:
             return None
 
     def _import_selective_profile(self, data: dict[str, Any], profile_name: str) -> Profile | None:
-        """
-        Import selective preferences and merge with existing profile.
+        """Import selective preferences and merge with existing profile.
 
         Args:
             data: Import data with selective preferences
@@ -382,8 +375,7 @@ class ProfileImporter:
         return self.profile_manager.get_profile(profile_name)
 
     def _backup_profile(self, profile: Profile) -> None:
-        """
-        Create backup of a profile before overwriting.
+        """Create backup of a profile before overwriting.
 
         Args:
             profile: Profile to backup
@@ -411,8 +403,7 @@ class ProfileImporter:
     def import_selective(
         self, file_path: Path, preferences_list: list[str], target_profile: str | None = None
     ) -> Profile | None:
-        """
-        Import only selected preferences from a file.
+        """Import only selected preferences from a file.
 
         Args:
             file_path: Path to import file

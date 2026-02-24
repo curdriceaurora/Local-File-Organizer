@@ -1,5 +1,4 @@
-"""
-Johnny Decimal Migration Scanner
+"""Johnny Decimal Migration Scanner.
 
 Scans existing folder structures to prepare for migration to Johnny Decimal system.
 Detects current organization patterns and suggests appropriate JD mappings.
@@ -46,8 +45,7 @@ class ScanResult:
 
 
 class FolderScanner:
-    """
-    Scans existing folder structures for migration to Johnny Decimal.
+    """Scans existing folder structures for migration to Johnny Decimal.
 
     Analyzes hierarchy, naming patterns, and content to suggest
     appropriate Johnny Decimal number assignments.
@@ -59,8 +57,7 @@ class FolderScanner:
         max_depth: int = 10,
         skip_hidden: bool = True,
     ):
-        """
-        Initialize the folder scanner.
+        """Initialize the folder scanner.
 
         Args:
             scheme: Johnny Decimal numbering scheme for suggestions
@@ -74,8 +71,7 @@ class FolderScanner:
         self._total_size = 0
 
     def scan_directory(self, root_path: Path) -> ScanResult:
-        """
-        Scan a directory structure and analyze for migration.
+        """Scan a directory structure and analyze for migration.
 
         Args:
             root_path: Root directory to scan
@@ -128,8 +124,7 @@ class FolderScanner:
         return result
 
     def _scan_folder(self, path: Path, depth: int) -> list[FolderInfo]:
-        """
-        Recursively scan a folder and its children.
+        """Recursively scan a folder and its children.
 
         Args:
             path: Folder path to scan
@@ -171,8 +166,7 @@ class FolderScanner:
         return folders
 
     def _create_folder_info(self, path: Path, depth: int) -> FolderInfo:
-        """
-        Create FolderInfo object for a folder.
+        """Create FolderInfo object for a folder.
 
         Args:
             path: Folder path
@@ -207,8 +201,7 @@ class FolderScanner:
         return folder_info
 
     def _detect_patterns(self, folder_tree: list[FolderInfo]) -> list[str]:
-        """
-        Detect organizational patterns in the folder structure.
+        """Detect organizational patterns in the folder structure.
 
         Args:
             folder_tree: Scanned folder tree
@@ -255,8 +248,7 @@ class FolderScanner:
         return patterns if patterns else ["No specific pattern detected"]
 
     def _looks_like_jd_number(self, name: str) -> bool:
-        """
-        Check if a folder name looks like it contains a JD number.
+        """Check if a folder name looks like it contains a JD number.
 
         Args:
             name: Folder name
@@ -293,8 +285,7 @@ class FolderScanner:
         return False
 
     def _find_max_depth(self, folder_tree: list[FolderInfo]) -> int:
-        """
-        Find maximum depth in folder tree.
+        """Find maximum depth in folder tree.
 
         Args:
             folder_tree: Folder tree to analyze
@@ -316,8 +307,7 @@ class FolderScanner:
         return max_depth
 
     def _count_folders(self, folder_tree: list[FolderInfo]) -> int:
-        """
-        Count total number of folders in tree.
+        """Count total number of folders in tree.
 
         Args:
             folder_tree: Folder tree
@@ -331,8 +321,7 @@ class FolderScanner:
         return count
 
     def _generate_warnings(self, folder_tree: list[FolderInfo], max_depth: int) -> list[str]:
-        """
-        Generate warnings about potential migration issues.
+        """Generate warnings about potential migration issues.
 
         Args:
             folder_tree: Scanned folder tree

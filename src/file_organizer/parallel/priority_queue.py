@@ -1,5 +1,4 @@
-"""
-Priority queue for ordered file processing.
+"""Priority queue for ordered file processing.
 
 This module provides a thread-safe priority queue that orders items by
 priority level (higher number = higher priority). It uses a min-heap
@@ -19,8 +18,7 @@ from typing import Any
 
 @dataclass
 class QueueItem:
-    """
-    An item in the priority queue.
+    """An item in the priority queue.
 
     Attributes:
         id: Unique identifier for the queue item.
@@ -38,8 +36,7 @@ class QueueItem:
 
 
 class PriorityQueue:
-    """
-    Thread-safe priority queue for file processing tasks.
+    """Thread-safe priority queue for file processing tasks.
 
     Items with higher priority numbers are dequeued first. Among items
     with equal priority, earlier-enqueued items are dequeued first (FIFO).
@@ -49,6 +46,7 @@ class PriorityQueue:
     """
 
     def __init__(self) -> None:
+        """Create an empty thread-safe priority queue."""
         self._heap: list[tuple[int, int, QueueItem]] = []
         self._lock = threading.Lock()
         self._counter = 0
@@ -66,8 +64,7 @@ class PriorityQueue:
         return self.size == 0
 
     def enqueue(self, item: QueueItem, priority: int | None = None) -> None:
-        """
-        Add an item to the queue.
+        """Add an item to the queue.
 
         If *priority* is provided it overrides ``item.priority``.
         If an item with the same id already exists, it is replaced with
@@ -88,8 +85,7 @@ class PriorityQueue:
             self._item_map[item.id] = entry
 
     def dequeue(self) -> QueueItem | None:
-        """
-        Remove and return the highest-priority item.
+        """Remove and return the highest-priority item.
 
         Returns:
             The highest-priority :class:`QueueItem`, or ``None`` if the
@@ -114,8 +110,7 @@ class PriorityQueue:
         return None
 
     def peek(self) -> QueueItem | None:
-        """
-        Return the highest-priority item without removing it.
+        """Return the highest-priority item without removing it.
 
         Returns:
             The highest-priority :class:`QueueItem`, or ``None`` if the
@@ -136,8 +131,7 @@ class PriorityQueue:
             return None
 
     def reorder(self, item_id: str, new_priority: int) -> bool:
-        """
-        Change the priority of an existing item.
+        """Change the priority of an existing item.
 
         The item is logically removed and re-inserted with the new priority.
 
@@ -165,8 +159,7 @@ class PriorityQueue:
             return True
 
     def remove(self, item_id: str) -> bool:
-        """
-        Remove an item from the queue by id.
+        """Remove an item from the queue by id.
 
         Args:
             item_id: The id of the item to remove.
@@ -188,8 +181,7 @@ class PriorityQueue:
             self._counter = 0
 
     def items(self) -> list[QueueItem]:
-        """
-        Return all active items sorted by priority (highest first).
+        """Return all active items sorted by priority (highest first).
 
         Returns:
             List of :class:`QueueItem` sorted by descending priority.

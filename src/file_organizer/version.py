@@ -56,16 +56,19 @@ class VersionInfo:
         return str(self.pre_release) < str(other.pre_release)
 
     def __le__(self, other: object) -> bool:
+        """Return True if this version is less than or equal to other."""
         if not isinstance(other, VersionInfo):
             return NotImplemented
         return self == other or self < other
 
     def __gt__(self, other: object) -> bool:
+        """Return True if this version is greater than other."""
         if not isinstance(other, VersionInfo):
             return NotImplemented
         return not self <= other
 
     def __ge__(self, other: object) -> bool:
+        """Return True if this version is greater than or equal to other."""
         if not isinstance(other, VersionInfo):
             return NotImplemented
         return not self < other

@@ -1,5 +1,4 @@
-"""
-Suggestion Types and Data Models
+"""Suggestion Types and Data Models.
 
 Defines the data structures for smart suggestions.
 """
@@ -35,9 +34,7 @@ class ConfidenceLevel(Enum):
 
 @dataclass
 class Suggestion:
-    """
-    Represents a single organizational suggestion.
-    """
+    """Represents a single organizational suggestion."""
 
     suggestion_id: str
     suggestion_type: SuggestionType
@@ -122,9 +119,7 @@ class SuggestionBatch:
 
 @dataclass
 class ConfidenceFactors:
-    """
-    Factors contributing to confidence score.
-    """
+    """Factors contributing to confidence score."""
 
     pattern_strength: float = 0.0  # How strong the detected pattern is
     content_similarity: float = 0.0  # Similarity to target location content

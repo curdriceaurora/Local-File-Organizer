@@ -1,5 +1,4 @@
-"""
-PARA Suggestion Engine
+"""PARA Suggestion Engine.
 
 Combines heuristic analysis, feature extraction, and optional AI models
 to produce intelligent PARA categorization suggestions. Designed to work

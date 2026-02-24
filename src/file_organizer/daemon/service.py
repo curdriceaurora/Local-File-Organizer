@@ -1,5 +1,4 @@
-"""
-Background daemon service.
+"""Background daemon service.
 
 Provides the DaemonService class that combines file watching with
 auto-organization, managing the full lifecycle including signal
@@ -22,8 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class DaemonService:
-    """
-    Long-running daemon that watches directories and organizes files.
+    """Long-running daemon that watches directories and organizes files.
 
     Combines file monitoring, pipeline processing, PID management,
     signal handling, and periodic scheduling into a single service
@@ -42,8 +40,7 @@ class DaemonService:
     """
 
     def __init__(self, config: DaemonConfig) -> None:
-        """
-        Initialize the daemon service.
+        """Initialize the daemon service.
 
         Args:
             config: Daemon configuration controlling behavior.
@@ -66,8 +63,7 @@ class DaemonService:
         self._on_stop_callback: Callable[[], None] | None = None
 
     def start(self) -> None:
-        """
-        Start the daemon in the foreground (blocking).
+        """Start the daemon in the foreground (blocking).
 
         Installs signal handlers, writes the PID file, starts the
         scheduler and event loop. Blocks until ``stop()`` is called
@@ -117,8 +113,7 @@ class DaemonService:
             self._cleanup()
 
     def start_background(self) -> None:
-        """
-        Start the daemon in a background thread.
+        """Start the daemon in a background thread.
 
         Returns once the daemon has fully initialized. The daemon
         can be stopped by calling ``stop()``.
@@ -144,8 +139,7 @@ class DaemonService:
         self._started_event.wait(timeout=5.0)
 
     def stop(self) -> None:
-        """
-        Request a graceful shutdown of the daemon.
+        """Request a graceful shutdown of the daemon.
 
         Signals the event loop to stop, waits for the background
         thread to finish, cleans up the PID file, and restores
@@ -163,8 +157,7 @@ class DaemonService:
         self._stopped_event.wait(timeout=5.0)
 
     def restart(self) -> None:
-        """
-        Restart the daemon by stopping and starting in background.
+        """Restart the daemon by stopping and starting in background.
 
         Performs a full stop followed by a background start.
         """
@@ -199,8 +192,7 @@ class DaemonService:
         return self._scheduler
 
     def on_start(self, callback: Callable[[], None]) -> None:
-        """
-        Register a callback to be invoked when the daemon starts.
+        """Register a callback to be invoked when the daemon starts.
 
         Args:
             callback: Zero-argument callable.
@@ -208,8 +200,7 @@ class DaemonService:
         self._on_start_callback = callback
 
     def on_stop(self, callback: Callable[[], None]) -> None:
-        """
-        Register a callback to be invoked when the daemon stops.
+        """Register a callback to be invoked when the daemon stops.
 
         Args:
             callback: Zero-argument callable.
@@ -255,8 +246,7 @@ class DaemonService:
             self._cleanup()
 
     def _run_loop(self) -> None:
-        """
-        Main daemon event loop.
+        """Main daemon event loop.
 
         Polls for file events and processes them at the configured
         interval. Exits when the stop event is set.
@@ -265,8 +255,7 @@ class DaemonService:
             self._stop_event.wait(timeout=self.config.poll_interval)
 
     def _cleanup(self) -> None:
-        """
-        Clean up daemon resources on shutdown.
+        """Clean up daemon resources on shutdown.
 
         Stops the scheduler, removes the PID file, restores signal
         handlers, and fires the on_stop callback.
@@ -296,8 +285,7 @@ class DaemonService:
         logger.info("Daemon service stopped")
 
     def _install_signal_handlers(self) -> None:
-        """
-        Install signal handlers for graceful shutdown.
+        """Install signal handlers for graceful shutdown.
 
         Only installs handlers when running in the main thread.
         Saves original handlers so they can be restored later.
@@ -332,8 +320,7 @@ class DaemonService:
             logger.warning("Could not restore signal handlers: %s", exc)
 
     def _handle_signal(self, signum: int, frame: object) -> None:
-        """
-        Handle a termination signal by requesting graceful shutdown.
+        """Handle a termination signal by requesting graceful shutdown.
 
         Args:
             signum: The signal number received.

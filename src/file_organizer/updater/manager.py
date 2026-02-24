@@ -67,6 +67,7 @@ class UpdateManager:
         install_dir: str | Path | None = None,
         include_prereleases: bool = False,
     ) -> None:
+        """Set up the update manager for the given repository and current version."""
         self._checker = UpdateChecker(
             repo=repo,
             current_version=current_version,

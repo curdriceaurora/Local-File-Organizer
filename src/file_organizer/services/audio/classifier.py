@@ -1,5 +1,4 @@
-"""
-Audio Type Classification Service
+"""Audio Type Classification Service.
 
 Classifies audio files into content types (music, podcast, audiobook, etc.)
 using rule-based heuristics from metadata and optional transcription data.
@@ -229,8 +228,7 @@ def _has_audiobook_metadata(metadata: AudioMetadata) -> bool:
 
 
 def _estimate_speaker_count(segments: list[Segment]) -> int:
-    """
-    Estimate speaker diversity from segment patterns.
+    """Estimate speaker diversity from segment patterns.
 
     Uses pause-gap heuristics: large gaps between segments and varying
     segment lengths suggest multiple speakers.  This is a rough proxy
@@ -259,8 +257,7 @@ def _estimate_speaker_count(segments: list[Segment]) -> int:
 
 
 class AudioClassifier:
-    """
-    Rule-based audio type classifier.
+    """Rule-based audio type classifier.
 
     Uses metadata tags, duration heuristics, and optional transcription
     content to classify audio files without requiring external AI models.
@@ -284,8 +281,7 @@ class AudioClassifier:
         metadata: AudioMetadata,
         transcription: TranscriptionResult | None = None,
     ) -> ClassificationResult:
-        """
-        Classify an audio file by content type.
+        """Classify an audio file by content type.
 
         Args:
             metadata: Audio file metadata (required).

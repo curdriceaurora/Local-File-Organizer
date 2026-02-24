@@ -29,6 +29,7 @@ class CommandExecutor:
     """
 
     def __init__(self, *, working_directory: str | None = None) -> None:
+        """Initialize CommandExecutor."""
         self._working_dir = Path(working_directory) if working_directory else Path.cwd()
 
     def execute(self, intent: Intent) -> ExecutionResult:

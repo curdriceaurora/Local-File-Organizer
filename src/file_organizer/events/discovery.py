@@ -45,6 +45,7 @@ class ServiceInfo:
     last_heartbeat: str = ""
 
     def __post_init__(self) -> None:
+        """Initialize default timestamps if not provided."""
         now = datetime.now(UTC).isoformat()
         if not self.registered_at:
             self.registered_at = now
@@ -259,4 +260,5 @@ class ServiceDiscovery:
         return count
 
     def __repr__(self) -> str:
+        """Return a string representation of this service discovery."""
         return f"ServiceDiscovery(services={len(self._services)}, path={self._path!r})"

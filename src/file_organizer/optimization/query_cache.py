@@ -1,5 +1,4 @@
-"""
-In-memory query result cache with TTL-based expiration.
+"""In-memory query result cache with TTL-based expiration.
 
 This module provides a thread-safe, LRU-style cache for query results.  It
 supports per-table invalidation so that write operations can selectively
@@ -58,6 +57,7 @@ class QueryCache:
     """
 
     def __init__(self, max_size: int = 1000, ttl_seconds: float = 60.0) -> None:
+        """Create a query cache with the given capacity and TTL."""
         if max_size < 1:
             raise ValueError("max_size must be >= 1")
         if ttl_seconds <= 0:

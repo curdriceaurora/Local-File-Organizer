@@ -1,6 +1,4 @@
-"""
-Command-line interface modules for File Organizer.
-"""
+"""Command-line interface modules for File Organizer."""
 
 from __future__ import annotations
 

@@ -1,5 +1,4 @@
-"""
-Undo/redo functionality for file operations.
+"""Undo/redo functionality for file operations.
 
 This module provides comprehensive undo/redo capabilities for file operations,
 including validation, rollback execution, and history viewing.

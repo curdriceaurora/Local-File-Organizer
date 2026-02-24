@@ -46,6 +46,7 @@ class PluginRepository:
         timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
         cache_ttl_seconds: int = _DEFAULT_CACHE_TTL_SECONDS,
     ) -> None:
+        """Set up the repository connection to the given URL."""
         self.repo_url = self._normalize_repo_url(repo_url)
         self.timeout_seconds = timeout_seconds
         self.cache_ttl_seconds = cache_ttl_seconds

@@ -1,5 +1,4 @@
-"""
-Audio Processing Services
+"""Audio Processing Services.
 
 This module provides audio file processing capabilities including:
 - Audio transcription using Whisper models

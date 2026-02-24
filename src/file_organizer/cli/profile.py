@@ -1,5 +1,4 @@
-"""
-Profile Management CLI Commands
+"""Profile Management CLI Commands.
 
 Provides command-line interface for all profile management operations including:
 - Profile CRUD operations

@@ -16,6 +16,7 @@ JobStateStatus = Literal["queued", "running", "completed", "failed"]
 
 @dataclass
 class JobState:
+    """State record for a background API job."""
     job_id: str
     job_type: str
     status: JobStateStatus
@@ -47,6 +48,7 @@ def _prune_jobs(now: datetime) -> None:
 
 
 def create_job(job_type: str) -> JobState:
+    """Create a new background job and return its initial state."""
     job_id = uuid4().hex
     ts = _now()
     job = JobState(
@@ -66,6 +68,7 @@ def create_job(job_type: str) -> JobState:
 
 
 def get_job(job_id: str) -> Optional[JobState]:
+    """Return the job state for job_id, or None if not found."""
     with _JOB_STORE_LOCK:
         _prune_jobs(_now())
         job = _JOB_STORE.get(job_id)
@@ -75,6 +78,7 @@ def get_job(job_id: str) -> Optional[JobState]:
 
 
 def update_job(job_id: str, **updates: Any) -> Optional[JobState]:
+    """Apply keyword updates to a job and return the updated state."""
     with _JOB_STORE_LOCK:
         job = _JOB_STORE.get(job_id)
         if not job:
@@ -112,6 +116,7 @@ def list_jobs(
 
 
 def job_count() -> int:
+    """Return the count of currently active (queued or running) jobs."""
     with _JOB_STORE_LOCK:
         _prune_jobs(_now())
         return sum(1 for job in _JOB_STORE.values() if job.status in _ACTIVE_STATUSES)

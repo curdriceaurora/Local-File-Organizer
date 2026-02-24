@@ -1,5 +1,4 @@
-"""
-Preference Tracking System - Core Module
+"""Preference Tracking System - Core Module.
 
 This module implements the core preference tracking engine that learns from user
 corrections and changes. It tracks user behavior, stores preferences with metadata,
@@ -142,8 +141,7 @@ class Correction:
 
 
 class PreferenceTracker:
-    """
-    Core preference tracking engine that learns from user corrections.
+    """Core preference tracking engine that learns from user corrections.
 
     This class manages in-memory preferences with thread-safe operations,
     tracks user corrections, and maintains preference metadata including
@@ -169,8 +167,7 @@ class PreferenceTracker:
         correction_type: CorrectionType,
         context: dict[str, Any] | None = None,
     ) -> None:
-        """
-        Track a user correction and update preferences accordingly.
+        """Track a user correction and update preferences accordingly.
 
         Args:
             source: Original file path
@@ -197,8 +194,7 @@ class PreferenceTracker:
             self._extract_preferences_from_correction(correction)
 
     def _extract_preferences_from_correction(self, correction: Correction) -> None:
-        """
-        Extract and update preferences from a correction.
+        """Extract and update preferences from a correction.
 
         This method analyzes the correction and updates relevant preferences.
         Must be called within a lock.
@@ -280,8 +276,7 @@ class PreferenceTracker:
             self._statistics["total_preferences"] += 1
 
     def _find_preference(self, preference_type: PreferenceType, key: str) -> Preference | None:
-        """
-        Find an existing preference by type and key.
+        """Find an existing preference by type and key.
 
         Must be called within a lock.
         """
@@ -304,8 +299,7 @@ class PreferenceTracker:
         preference_type: PreferenceType,
         context: dict[str, Any] | None = None,
     ) -> Preference | None:
-        """
-        Get a preference for a given file path and type.
+        """Get a preference for a given file path and type.
 
         Args:
             file_path: Path to the file
@@ -365,8 +359,7 @@ class PreferenceTracker:
     def get_all_preferences(
         self, preference_type: PreferenceType | None = None
     ) -> list[Preference]:
-        """
-        Get all preferences, optionally filtered by type.
+        """Get all preferences, optionally filtered by type.
 
         Args:
             preference_type: Optional type filter
@@ -385,8 +378,7 @@ class PreferenceTracker:
             return all_prefs
 
     def update_preference_confidence(self, preference: Preference, success: bool) -> None:
-        """
-        Update preference confidence based on application success.
+        """Update preference confidence based on application success.
 
         Args:
             preference: The preference that was applied
@@ -408,8 +400,7 @@ class PreferenceTracker:
             preference.metadata.updated = now
 
     def get_statistics(self) -> dict:
-        """
-        Get statistics about tracked preferences.
+        """Get statistics about tracked preferences.
 
         Returns:
             Dictionary with statistics
@@ -430,8 +421,7 @@ class PreferenceTracker:
             return stats
 
     def clear_preferences(self, preference_type: PreferenceType | None = None) -> int:
-        """
-        Clear preferences, optionally filtered by type.
+        """Clear preferences, optionally filtered by type.
 
         Args:
             preference_type: Optional type filter
@@ -468,8 +458,7 @@ class PreferenceTracker:
                 return count
 
     def export_data(self) -> dict:
-        """
-        Export all preference data for persistence.
+        """Export all preference data for persistence.
 
         Returns:
             Dictionary with all preferences and metadata
@@ -485,8 +474,7 @@ class PreferenceTracker:
             }
 
     def import_data(self, data: dict) -> None:
-        """
-        Import preference data from persistence.
+        """Import preference data from persistence.
 
         Args:
             data: Dictionary with preference data
@@ -516,8 +504,7 @@ class PreferenceTracker:
                 self._statistics.update(data["statistics"])
 
     def get_corrections_for_file(self, file_path: Path) -> list[Correction]:
-        """
-        Get all corrections related to a specific file.
+        """Get all corrections related to a specific file.
 
         Args:
             file_path: Path to the file
@@ -531,8 +518,7 @@ class PreferenceTracker:
             ]
 
     def get_recent_corrections(self, limit: int = 10) -> list[Correction]:
-        """
-        Get the most recent corrections.
+        """Get the most recent corrections.
 
         Args:
             limit: Maximum number of corrections to return
@@ -559,8 +545,7 @@ def track_file_move(
     destination: Path,
     context: dict[str, Any] | None = None,
 ) -> None:
-    """
-    Convenience function to track a file move correction.
+    """Convenience function to track a file move correction.
 
     Args:
         tracker: PreferenceTracker instance
@@ -582,8 +567,7 @@ def track_file_rename(
     destination: Path,
     context: dict[str, Any] | None = None,
 ) -> None:
-    """
-    Convenience function to track a file rename correction.
+    """Convenience function to track a file rename correction.
 
     Args:
         tracker: PreferenceTracker instance
@@ -606,8 +590,7 @@ def track_category_change(
     new_category: str,
     context: dict[str, Any] | None = None,
 ) -> None:
-    """
-    Convenience function to track a category change correction.
+    """Convenience function to track a category change correction.
 
     Args:
         tracker: PreferenceTracker instance

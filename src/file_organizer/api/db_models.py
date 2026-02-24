@@ -45,6 +45,7 @@ class Workspace(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     def __repr__(self) -> str:
+        """Return string representation of Workspace."""
         return f"<Workspace {self.name!r} owner={self.owner_id}>"
 
 
@@ -72,6 +73,7 @@ class OrganizationJob(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     def __repr__(self) -> str:
+        """Return string representation of OrganizationJob."""
         return f"<OrganizationJob {self.id} status={self.status}>"
 
 
@@ -91,6 +93,7 @@ class UserSession(Base):
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 
     def __repr__(self) -> str:
+        """Return string representation of UserSession."""
         return f"<UserSession {self.id} user={self.user_id}>"
 
 
@@ -109,6 +112,7 @@ class SettingsStore(Base):
     __table_args__ = (UniqueConstraint("user_id", "key", name="uq_settings_user_key"),)
 
     def __repr__(self) -> str:
+        """Return string representation of SettingsStore."""
         return f"<SettingsStore key={self.key!r} user={self.user_id}>"
 
 
@@ -127,6 +131,7 @@ class PluginInstallation(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     def __repr__(self) -> str:
+        """Return string representation of PluginInstallation."""
         return f"<PluginInstallation {self.plugin_name!r} v={self.version}>"
 
 
@@ -153,4 +158,5 @@ class FileMetadata(Base):
     )
 
     def __repr__(self) -> str:
+        """Return string representation of FileMetadata."""
         return f"<FileMetadata {self.relative_path!r} workspace={self.workspace_id}>"

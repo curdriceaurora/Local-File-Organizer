@@ -1,5 +1,4 @@
-"""
-Deduplication service for detecting and managing duplicate files.
+"""Deduplication service for detecting and managing duplicate files.
 
 This module provides:
 - Hash-based duplicate detection using MD5 or SHA256 algorithms

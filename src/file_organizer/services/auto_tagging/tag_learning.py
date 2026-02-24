@@ -1,5 +1,4 @@
-"""
-Tag Learning Engine
+"""Tag Learning Engine.
 
 Learns from user tagging patterns to improve tag suggestions over time.
 Tracks tag usage, co-occurrences, and builds personalized tag models.
@@ -81,8 +80,7 @@ class TagUsage:
 
 
 class TagLearningEngine:
-    """
-    Learns from user tagging behavior to improve suggestions.
+    """Learns from user tagging behavior to improve suggestions.
 
     Tracks:
     - Tag usage frequency
@@ -93,8 +91,7 @@ class TagLearningEngine:
     """
 
     def __init__(self, storage_path: Path | None = None):
-        """
-        Initialize the tag learning engine.
+        """Initialize the tag learning engine.
 
         Args:
             storage_path: Path to store learning data
@@ -119,8 +116,7 @@ class TagLearningEngine:
     def record_tag_application(
         self, file_path: Path, tags: list[str], context: dict | None = None
     ) -> None:
-        """
-        Record when a user applies tags to a file.
+        """Record when a user applies tags to a file.
 
         Args:
             file_path: Path to the tagged file
@@ -168,8 +164,7 @@ class TagLearningEngine:
         self._save_data()
 
     def get_tag_patterns(self, file_type: str | None = None) -> list[TagPattern]:
-        """
-        Get learned tag patterns.
+        """Get learned tag patterns.
 
         Args:
             file_type: Optional filter by file type
@@ -220,8 +215,7 @@ class TagLearningEngine:
         return patterns
 
     def predict_tags(self, file_path: Path, max_predictions: int = 5) -> list[tuple[str, float]]:
-        """
-        Predict tags for a file based on learned patterns.
+        """Predict tags for a file based on learned patterns.
 
         Args:
             file_path: Path to the file
@@ -256,8 +250,7 @@ class TagLearningEngine:
         return sorted_predictions[:max_predictions]
 
     def get_related_tags(self, tag: str, max_related: int = 5) -> list[str]:
-        """
-        Get tags that are frequently used with the given tag.
+        """Get tags that are frequently used with the given tag.
 
         Args:
             tag: The tag to find related tags for
@@ -273,8 +266,7 @@ class TagLearningEngine:
         return [t for t, _ in related]
 
     def update_model(self, feedback: list[dict]) -> None:
-        """
-        Update the learning model based on user feedback.
+        """Update the learning model based on user feedback.
 
         Args:
             feedback: List of feedback items with structure:
@@ -306,8 +298,7 @@ class TagLearningEngine:
         self._save_data()
 
     def get_popular_tags(self, limit: int = 20) -> list[tuple[str, int]]:
-        """
-        Get most popular tags by usage count.
+        """Get most popular tags by usage count.
 
         Args:
             limit: Maximum number of tags to return
@@ -321,8 +312,7 @@ class TagLearningEngine:
         return tag_counts[:limit]
 
     def get_recent_tags(self, days: int = 30, limit: int = 20) -> list[str]:
-        """
-        Get recently used tags.
+        """Get recently used tags.
 
         Args:
             days: Number of days to look back
@@ -349,8 +339,7 @@ class TagLearningEngine:
         existing_tags: list[str] | None = None,
         limit: int = 10,
     ) -> list[tuple[str, float]]:
-        """
-        Get tag suggestions based on context.
+        """Get tag suggestions based on context.
 
         Args:
             file_type: File extension
@@ -397,8 +386,7 @@ class TagLearningEngine:
         return sorted_suggestions[:limit]
 
     def _calculate_tag_confidence(self, usage: TagUsage) -> float:
-        """
-        Calculate confidence score for a tag based on usage.
+        """Calculate confidence score for a tag based on usage.
 
         Factors:
         - Frequency (how often used)

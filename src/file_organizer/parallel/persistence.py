@@ -1,5 +1,4 @@
-"""
-JSON file-based job persistence for batch processing.
+"""JSON file-based job persistence for batch processing.
 
 This module provides the JobPersistence class for saving, loading,
 listing, and deleting job state files stored as JSON on the local
@@ -20,8 +19,7 @@ _DEFAULT_JOBS_DIR = Path.home() / ".file-organizer" / "jobs"
 
 
 class JobPersistence:
-    """
-    Manages persistent storage of batch job state as JSON files.
+    """Manages persistent storage of batch job state as JSON files.
 
     Each job is stored as a separate JSON file named ``{job_id}.json``
     inside the configured jobs directory.
@@ -32,6 +30,7 @@ class JobPersistence:
     """
 
     def __init__(self, jobs_dir: Path | None = None) -> None:
+        """Set up job persistence with the given storage directory."""
         self._jobs_dir = jobs_dir or _DEFAULT_JOBS_DIR
 
     @property
@@ -48,8 +47,7 @@ class JobPersistence:
         return self._jobs_dir / f"{job_id}.json"
 
     def save_job(self, job: JobState) -> None:
-        """
-        Save a job state to disk as JSON.
+        """Save a job state to disk as JSON.
 
         Creates or overwrites the JSON file for the given job.
         Uses an atomic write strategy (write to temp file then rename) so that
@@ -75,8 +73,7 @@ class JobPersistence:
             raise
 
     def load_job(self, job_id: str) -> JobState | None:
-        """
-        Load a job state from disk.
+        """Load a job state from disk.
 
         Args:
             job_id: The unique identifier of the job to load.
@@ -98,8 +95,7 @@ class JobPersistence:
             return None
 
     def list_jobs(self, status: JobStatus | None = None) -> list[JobSummary]:
-        """
-        List all persisted jobs, optionally filtering by status.
+        """List all persisted jobs, optionally filtering by status.
 
         Args:
             status: If provided, only return jobs with this status.
@@ -127,8 +123,7 @@ class JobPersistence:
         return summaries
 
     def delete_job(self, job_id: str) -> bool:
-        """
-        Delete a persisted job file.
+        """Delete a persisted job file.
 
         Args:
             job_id: The unique identifier of the job to delete.
@@ -145,8 +140,7 @@ class JobPersistence:
         return False
 
     def job_exists(self, job_id: str) -> bool:
-        """
-        Check whether a job file exists on disk.
+        """Check whether a job file exists on disk.
 
         Args:
             job_id: The unique identifier of the job.

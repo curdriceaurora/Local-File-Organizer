@@ -33,6 +33,7 @@ def _validate_text(value: str, field_name: str, max_length: int) -> str:
 
 
 class FileInfo(BaseModel):
+    """File metadata for API responses."""
     path: str
     name: str
     size: int
@@ -43,6 +44,7 @@ class FileInfo(BaseModel):
 
 
 class FileListResponse(BaseModel):
+    """Paginated list of files."""
     items: list[FileInfo]
     total: int
     skip: int
@@ -56,6 +58,7 @@ class FileListResponse(BaseModel):
 
 
 class FileContentResponse(BaseModel):
+    """Response containing file content and metadata."""
     path: str
     content: str
     encoding: str
@@ -65,6 +68,7 @@ class FileContentResponse(BaseModel):
 
 
 class MoveFileRequest(BaseModel):
+    """Request body for moving a file."""
     source: str
     destination: str
     overwrite: bool = False
@@ -74,10 +78,12 @@ class MoveFileRequest(BaseModel):
     @field_validator("source", "destination")
     @classmethod
     def validate_paths(cls, value: str) -> str:
+        """Validate and return source or destination path."""
         return _validate_path(value)
 
 
 class MoveFileResponse(BaseModel):
+    """Response for file move operation."""
     source: str
     destination: str
     moved: bool
@@ -85,6 +91,7 @@ class MoveFileResponse(BaseModel):
 
 
 class DeleteFileRequest(BaseModel):
+    """Request body for deleting a file."""
     path: str
     permanent: bool = False
     dry_run: bool = False
@@ -92,10 +99,12 @@ class DeleteFileRequest(BaseModel):
     @field_validator("path")
     @classmethod
     def validate_path(cls, value: str) -> str:
+        """Validate and return the file path."""
         return _validate_path(value)
 
 
 class DeleteFileResponse(BaseModel):
+    """Response for file delete operation."""
     path: str
     deleted: bool
     dry_run: bool
@@ -103,6 +112,7 @@ class DeleteFileResponse(BaseModel):
 
 
 class ScanRequest(BaseModel):
+    """Request body for directory scanning."""
     input_dir: str
     recursive: bool = True
     include_hidden: bool = False
@@ -110,16 +120,19 @@ class ScanRequest(BaseModel):
     @field_validator("input_dir")
     @classmethod
     def validate_input_dir(cls, value: str) -> str:
+        """Validate and return the input directory path."""
         return _validate_path(value)
 
 
 class ScanResponse(BaseModel):
+    """Response for directory scan with file counts by type."""
     input_dir: str
     total_files: int
     counts: dict[str, int]
 
 
 class OrganizeRequest(BaseModel):
+    """Request body for file organization."""
     input_dir: str
     output_dir: str
     skip_existing: bool = True
@@ -130,15 +143,18 @@ class OrganizeRequest(BaseModel):
     @field_validator("input_dir", "output_dir")
     @classmethod
     def validate_paths(cls, value: str) -> str:
+        """Validate and return input or output directory paths."""
         return _validate_path(value)
 
 
 class OrganizationError(BaseModel):
+    """A single file organization error record."""
     file: str
     error: str
 
 
 class OrganizationResultResponse(BaseModel):
+    """Result of a file organization run."""
     total_files: int
     processed_files: int
     skipped_files: int
@@ -149,6 +165,7 @@ class OrganizationResultResponse(BaseModel):
 
 
 class OrganizeExecuteResponse(BaseModel):
+    """Response for an organization execute request."""
     status: Literal["queued", "completed", "failed"]
     job_id: Optional[str] = None
     result: Optional[OrganizationResultResponse] = None
@@ -156,6 +173,7 @@ class OrganizeExecuteResponse(BaseModel):
 
 
 class JobStatusResponse(BaseModel):
+    """Status of a background organization job."""
     job_id: str
     status: Literal["queued", "running", "completed", "failed"]
     created_at: datetime
@@ -165,6 +183,7 @@ class JobStatusResponse(BaseModel):
 
 
 class DedupeScanRequest(BaseModel):
+    """Request body for duplicate file scanning."""
     path: str
     recursive: bool = True
     algorithm: Literal["md5", "sha256"] = "sha256"
@@ -176,10 +195,12 @@ class DedupeScanRequest(BaseModel):
     @field_validator("path")
     @classmethod
     def validate_path(cls, value: str) -> str:
+        """Validate and return the scan path."""
         return _validate_path(value)
 
 
 class DedupeFileInfo(BaseModel):
+    """File info within a duplicate group."""
     path: str
     size: int
     modified: datetime
@@ -187,6 +208,7 @@ class DedupeFileInfo(BaseModel):
 
 
 class DedupeGroup(BaseModel):
+    """A group of duplicate files sharing the same hash."""
     hash_value: str
     files: list[DedupeFileInfo]
     total_size: int
@@ -194,24 +216,28 @@ class DedupeGroup(BaseModel):
 
 
 class DedupeScanResponse(BaseModel):
+    """Response for duplicate file scan."""
     path: str
     duplicates: list[DedupeGroup]
     stats: dict[str, int]
 
 
 class DedupePreviewGroup(BaseModel):
+    """Preview of which file to keep and which to remove from a group."""
     hash_value: str
     keep: str
     remove: list[str]
 
 
 class DedupePreviewResponse(BaseModel):
+    """Response for duplicate file preview."""
     path: str
     preview: list[DedupePreviewGroup]
     stats: dict[str, int]
 
 
 class DedupeExecuteRequest(BaseModel):
+    """Request body for duplicate file removal."""
     path: str
     recursive: bool = True
     algorithm: Literal["md5", "sha256"] = "sha256"
@@ -225,10 +251,12 @@ class DedupeExecuteRequest(BaseModel):
     @field_validator("path")
     @classmethod
     def validate_path(cls, value: str) -> str:
+        """Validate and return the path for deduplication."""
         return _validate_path(value)
 
 
 class DedupeExecuteResponse(BaseModel):
+    """Response for duplicate file removal."""
     path: str
     removed: list[str]
     dry_run: bool
@@ -236,6 +264,7 @@ class DedupeExecuteResponse(BaseModel):
 
 
 class SystemStatusResponse(BaseModel):
+    """Response for system status endpoint."""
     app: str
     version: str
     environment: str
@@ -246,12 +275,14 @@ class SystemStatusResponse(BaseModel):
 
 
 class ConfigResponse(BaseModel):
+    """Response for configuration endpoint."""
     profile: str
     config: dict[str, Any]
     profiles: list[str] = Field(default_factory=list)
 
 
 class UserCreateRequest(BaseModel):
+    """Request body for creating a new user."""
     username: str
     email: EmailStr
     password: str
@@ -260,6 +291,7 @@ class UserCreateRequest(BaseModel):
     @field_validator("username")
     @classmethod
     def validate_username(cls, value: str) -> str:
+        """Validate and return the username."""
         value = _validate_text(value, "Username", 32)
         if not _USERNAME_PATTERN.match(value):
             raise ValueError(
@@ -270,12 +302,14 @@ class UserCreateRequest(BaseModel):
     @field_validator("full_name")
     @classmethod
     def validate_full_name(cls, value: Optional[str]) -> Optional[str]:
+        """Validate and return the full name."""
         if value is None:
             return value
         return _validate_text(value, "Full name", 120)
 
 
 class UserResponse(BaseModel):
+    """Response model for a user resource."""
     id: str
     username: str
     email: EmailStr
@@ -289,20 +323,24 @@ class UserResponse(BaseModel):
 
 
 class TokenResponse(BaseModel):
+    """Response containing JWT access and refresh tokens."""
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
 
 
 class TokenRefreshRequest(BaseModel):
+    """Request body for token refresh."""
     refresh_token: str
 
 
 class TokenRevokeRequest(BaseModel):
+    """Request body for token revocation."""
     refresh_token: str
 
 
 class ModelPresetUpdate(BaseModel):
+    """Partial update fields for the AI model preset."""
     text_model: Optional[str] = None
     vision_model: Optional[str] = None
     temperature: Optional[float] = None
@@ -312,6 +350,7 @@ class ModelPresetUpdate(BaseModel):
 
 
 class UpdateSettingsUpdate(BaseModel):
+    """Partial update fields for auto-update settings."""
     check_on_startup: Optional[bool] = None
     interval_hours: Optional[int] = None
     include_prereleases: Optional[bool] = None
@@ -319,6 +358,7 @@ class UpdateSettingsUpdate(BaseModel):
 
 
 class ConfigUpdateRequest(BaseModel):
+    """Request body for updating application configuration."""
     profile: str = "default"
     default_methodology: Optional[str] = None
     models: Optional[ModelPresetUpdate] = None
@@ -334,6 +374,7 @@ class ConfigUpdateRequest(BaseModel):
 
 
 class StorageStatsResponse(BaseModel):
+    """Response for storage statistics endpoint."""
     total_size: int
     organized_size: int
     saved_size: int
@@ -344,6 +385,7 @@ class StorageStatsResponse(BaseModel):
 
 
 class ApiErrorResponse(BaseModel):
+    """Standard error response body."""
     error: str
     message: str
     details: Optional[Any] = None

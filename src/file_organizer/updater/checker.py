@@ -91,6 +91,7 @@ class UpdateChecker:
         current_version: str = "",
         include_prereleases: bool = False,
     ) -> None:
+        """Set up the update checker for the given repository and current version."""
         self._repo = repo
         self._current_version = current_version or self._detect_version()
         self._include_prereleases = include_prereleases

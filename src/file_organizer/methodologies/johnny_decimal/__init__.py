@@ -1,5 +1,4 @@
-"""
-Johnny Decimal Methodology Implementation
+"""Johnny Decimal Methodology Implementation.
 
 The Johnny Decimal system is a decimal-based numbering scheme for organizing files
 and folders hierarchically. It uses a three-level hierarchy:

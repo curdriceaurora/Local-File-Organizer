@@ -1,5 +1,4 @@
-"""
-Feedback Collection and Pattern Learning for PARA Suggestions
+"""Feedback Collection and Pattern Learning for PARA Suggestions.
 
 Provides a privacy-first feedback loop: user acceptances and rejections
 are stored locally in JSON and used to learn patterns that improve future

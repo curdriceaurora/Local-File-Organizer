@@ -17,6 +17,7 @@ class ClientError(Exception):
         status_code: int = 0,
         detail: str = "",
     ) -> None:
+        """Initialize the client error with message, status code, and detail."""
         super().__init__(message)
         self.status_code = status_code
         self.detail = detail

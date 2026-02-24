@@ -1,5 +1,4 @@
-"""
-Johnny Decimal Migration Manager
+"""Johnny Decimal Migration Manager.
 
 Orchestrates the complete migration process from existing folder structures
 to Johnny Decimal organization. Provides dry-run, rollback, and detailed reporting.
@@ -49,8 +48,7 @@ class RollbackInfo:
 
 
 class JohnnyDecimalMigrator:
-    """
-    Manages migration of existing folder structures to Johnny Decimal format.
+    """Manages migration of existing folder structures to Johnny Decimal format.
 
     Provides complete workflow: scan → transform → validate → execute
     with dry-run preview and rollback capabilities.
@@ -61,8 +59,7 @@ class JohnnyDecimalMigrator:
         scheme: NumberingScheme | None = None,
         preserve_original_names: bool = True,
     ):
-        """
-        Initialize the migrator.
+        """Initialize the migrator.
 
         Args:
             scheme: Johnny Decimal numbering scheme (uses default if None)
@@ -76,8 +73,7 @@ class JohnnyDecimalMigrator:
         self._rollback_history: list[RollbackInfo] = []
 
     def create_migration_plan(self, root_path: Path) -> tuple[TransformationPlan, ScanResult]:
-        """
-        Create a complete migration plan for a directory.
+        """Create a complete migration plan for a directory.
 
         Args:
             root_path: Root directory to migrate
@@ -105,8 +101,7 @@ class JohnnyDecimalMigrator:
         return plan, scan_result
 
     def validate_plan(self, plan: TransformationPlan) -> ValidationResult:
-        """
-        Validate a transformation plan.
+        """Validate a transformation plan.
 
         Args:
             plan: Transformation plan to validate
@@ -122,8 +117,7 @@ class JohnnyDecimalMigrator:
         dry_run: bool = True,
         create_backup: bool = True,
     ) -> MigrationResult:
-        """
-        Execute a transformation plan.
+        """Execute a transformation plan.
 
         Args:
             plan: Transformation plan to execute
@@ -237,8 +231,7 @@ class JohnnyDecimalMigrator:
         return result
 
     def rollback(self, migration_id: str | None = None) -> bool:
-        """
-        Rollback a migration to original state.
+        """Rollback a migration to original state.
 
         Args:
             migration_id: Specific migration to rollback (latest if None)
@@ -288,8 +281,7 @@ class JohnnyDecimalMigrator:
             return False
 
     def _create_backup(self, root_path: Path) -> Path:
-        """
-        Create backup of directory before migration.
+        """Create backup of directory before migration.
 
         Args:
             root_path: Directory to backup
@@ -309,8 +301,7 @@ class JohnnyDecimalMigrator:
         return backup_path
 
     def _save_rollback_info(self, rollback_info: RollbackInfo) -> None:
-        """
-        Save rollback information to disk.
+        """Save rollback information to disk.
 
         Args:
             rollback_info: Rollback information to save
@@ -338,8 +329,7 @@ class JohnnyDecimalMigrator:
         scan_result: ScanResult,
         validation: ValidationResult | None = None,
     ) -> str:
-        """
-        Generate comprehensive preview of migration.
+        """Generate comprehensive preview of migration.
 
         Args:
             plan: Transformation plan
@@ -401,8 +391,7 @@ class JohnnyDecimalMigrator:
         return "\n".join(lines)
 
     def generate_report(self, result: MigrationResult) -> str:
-        """
-        Generate human-readable migration report.
+        """Generate human-readable migration report.
 
         Args:
             result: Migration result

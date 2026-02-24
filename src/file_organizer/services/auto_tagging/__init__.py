@@ -1,5 +1,4 @@
-"""
-Auto-Tagging Service
+"""Auto-Tagging Service.
 
 Intelligent tag suggestion system that learns from user behavior.
 """
@@ -23,15 +22,13 @@ __all__ = [
 
 
 class AutoTaggingService:
-    """
-    Main auto-tagging service orchestrator.
+    """Main auto-tagging service orchestrator.
 
     Coordinates content analysis, learning, and recommendation.
     """
 
     def __init__(self, storage_path=None):
-        """
-        Initialize the auto-tagging service.
+        """Initialize the auto-tagging service.
 
         Args:
             storage_path: Optional path for storing learning data
@@ -43,8 +40,7 @@ class AutoTaggingService:
         )
 
     def suggest_tags(self, file_path, existing_tags=None, top_n=10):
-        """
-        Suggest tags for a file.
+        """Suggest tags for a file.
 
         Args:
             file_path: Path to the file
@@ -57,8 +53,7 @@ class AutoTaggingService:
         return self.recommender.recommend_tags(file_path, existing_tags=existing_tags, top_n=top_n)
 
     def record_tag_usage(self, file_path, tags, context=None):
-        """
-        Record when user applies tags.
+        """Record when user applies tags.
 
         Args:
             file_path: Path to the file
@@ -68,8 +63,7 @@ class AutoTaggingService:
         self.learning_engine.record_tag_application(file_path, tags, context=context)
 
     def provide_feedback(self, feedback_items):
-        """
-        Update learning model with user feedback.
+        """Update learning model with user feedback.
 
         Args:
             feedback_items: List of feedback dicts

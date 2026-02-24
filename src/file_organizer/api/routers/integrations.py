@@ -104,6 +104,7 @@ def build_browser_extension_manager(settings: ApiSettings) -> BrowserExtensionMa
 def get_integration_manager(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> IntegrationManager:
+    """Return or create cached integration manager for this request."""
     manager = getattr(request.app.state, "integration_manager", None)
     if manager is None:
         manager = build_integration_manager(settings)
@@ -115,6 +116,7 @@ def get_browser_extension_manager(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
 ) -> BrowserExtensionManager:
+    """Return or create cached browser extension manager for this request."""
     manager = getattr(request.app.state, "browser_extension_manager", None)
     if manager is None:
         manager = build_browser_extension_manager(settings)
@@ -165,6 +167,7 @@ def _require_integration(manager: IntegrationManager, integration_name: str) -> 
 async def list_integrations(
     manager: IntegrationManager = Depends(get_integration_manager),
 ) -> IntegrationStatusListResponse:
+    """List all registered integrations and their connection statuses."""
     statuses = await manager.list_statuses()
     return IntegrationStatusListResponse(
         items=[
@@ -187,6 +190,7 @@ async def update_integration_settings(
     manager: IntegrationManager = Depends(get_integration_manager),
     settings: ApiSettings = Depends(get_settings),
 ) -> IntegrationConnectResponse:
+    """Update settings for the specified integration."""
     _require_integration(manager, integration_name)
 
     normalized_settings = _validate_setting_paths(request.settings, settings)
@@ -199,6 +203,7 @@ async def connect_integration(
     integration_name: str,
     manager: IntegrationManager = Depends(get_integration_manager),
 ) -> IntegrationConnectResponse:
+    """Connect the specified integration."""
     _require_integration(manager, integration_name)
     connected = await manager.connect(integration_name)
     return IntegrationConnectResponse(integration=integration_name, connected=connected)
@@ -211,6 +216,7 @@ async def disconnect_integration(
     integration_name: str,
     manager: IntegrationManager = Depends(get_integration_manager),
 ) -> IntegrationConnectResponse:
+    """Disconnect the specified integration."""
     _require_integration(manager, integration_name)
     disconnected = await manager.disconnect(integration_name)
     return IntegrationConnectResponse(integration=integration_name, connected=not disconnected)
@@ -223,6 +229,7 @@ async def send_file_to_integration(
     manager: IntegrationManager = Depends(get_integration_manager),
     settings: ApiSettings = Depends(get_settings),
 ) -> IntegrationFileSendResponse:
+    """Send a file to the specified integration."""
     _require_integration(manager, integration_name)
 
     safe_path = resolve_path(request.path, settings.allowed_paths)
@@ -234,6 +241,7 @@ async def send_file_to_integration(
 def browser_extension_config(
     manager: BrowserExtensionManager = Depends(get_browser_extension_manager),
 ) -> BrowserConfigResponse:
+    """Return browser extension configuration."""
     payload = manager.get_config()
     return BrowserConfigResponse(**payload)
 
@@ -243,6 +251,7 @@ def issue_browser_extension_token(
     request: BrowserTokenIssueRequest,
     manager: BrowserExtensionManager = Depends(get_browser_extension_manager),
 ) -> BrowserTokenIssueResponse:
+    """Issue an authentication token for a browser extension."""
     record = manager.issue_token(request.extension_id)
     return BrowserTokenIssueResponse(token=record.token, expires_at=record.expires_at)
 
@@ -252,4 +261,5 @@ def verify_browser_extension_token(
     request: BrowserTokenVerifyRequest,
     manager: BrowserExtensionManager = Depends(get_browser_extension_manager),
 ) -> BrowserTokenVerifyResponse:
+    """Verify a browser extension authentication token."""
     return BrowserTokenVerifyResponse(valid=manager.verify_token(request.token))

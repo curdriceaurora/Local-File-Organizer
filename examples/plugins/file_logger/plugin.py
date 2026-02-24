@@ -16,21 +16,26 @@ class FileLoggerPlugin(Plugin):
     allowed_paths: list = []
 
     def on_load(self) -> None:
+        """Handle plugin load event."""
         return None
 
     def on_enable(self) -> None:
+        """Handle plugin enable event and configure log file."""
         log_name = (
             str(self.config.get("log_file", "plugin-events.log")).strip() or "plugin-events.log"
         )
         self.log_file = Path(log_name)
 
     def on_disable(self) -> None:
+        """Handle plugin disable event."""
         return None
 
     def on_unload(self) -> None:
+        """Handle plugin unload event."""
         return None
 
     def get_metadata(self) -> PluginMetadata:
+        """Return plugin metadata."""
         return PluginMetadata(
             name="file_logger",
             version="1.0.0",
@@ -40,6 +45,7 @@ class FileLoggerPlugin(Plugin):
 
     @hook("file.organized", priority=10)
     def on_file_organized(self, payload: dict[str, object]) -> dict[str, object]:
+        """Log each organized file event to the configured log file."""
         line = f"organized:{payload.get('source_path')}->{payload.get('destination_path')}\n"
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
         with self.log_file.open("a", encoding="utf-8") as log_fp:

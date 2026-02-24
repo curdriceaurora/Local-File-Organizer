@@ -1,5 +1,4 @@
-"""
-Content Tag Analyzer
+"""Content Tag Analyzer.
 
 Analyzes file content to extract relevant tags using multiple techniques:
 - Keyword extraction (TF-IDF)
@@ -19,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class ContentTagAnalyzer:
-    """
-    Analyzes file content to suggest relevant tags.
+    """Analyzes file content to suggest relevant tags.
 
     Uses multiple techniques:
     1. Keyword extraction from text content
@@ -35,8 +33,7 @@ class ContentTagAnalyzer:
         max_keywords: int = 20,
         stop_words: set[str] | None = None,
     ):
-        """
-        Initialize the content tag analyzer.
+        """Initialize the content tag analyzer.
 
         Args:
             min_keyword_length: Minimum length for extracted keywords
@@ -110,8 +107,7 @@ class ContentTagAnalyzer:
         logger.info("ContentTagAnalyzer initialized")
 
     def analyze_file(self, file_path: Path) -> list[str]:
-        """
-        Analyze a file and return suggested tags.
+        """Analyze a file and return suggested tags.
 
         Args:
             file_path: Path to the file to analyze
@@ -148,8 +144,7 @@ class ContentTagAnalyzer:
         return cleaned_tags[: self.max_keywords]
 
     def extract_keywords(self, file_path: Path, top_n: int = 10) -> list[tuple[str, float]]:
-        """
-        Extract keywords with confidence scores using TF-IDF.
+        """Extract keywords with confidence scores using TF-IDF.
 
         Args:
             file_path: Path to the file
@@ -197,8 +192,7 @@ class ContentTagAnalyzer:
             return []
 
     def extract_entities(self, file_path: Path) -> list[str]:
-        """
-        Extract named entities from file content.
+        """Extract named entities from file content.
 
         This is a simplified version. A full implementation would use
         an NLP model like spaCy or a LLM for better entity recognition.
@@ -241,8 +235,7 @@ class ContentTagAnalyzer:
             return []
 
     def batch_analyze(self, files: list[Path]) -> dict[Path, list[str]]:
-        """
-        Analyze multiple files in batch.
+        """Analyze multiple files in batch.
 
         Args:
             files: List of file paths to analyze

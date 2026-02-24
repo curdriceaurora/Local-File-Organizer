@@ -1,5 +1,4 @@
-"""
-Document deduplication orchestrator.
+"""Document deduplication orchestrator.
 
 Integrates text extraction, embedding, and semantic similarity analysis
 for finding duplicate and similar documents.
@@ -18,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentDeduplicator:
-    """
-    Orchestrates document deduplication using semantic similarity.
+    """Orchestrates document deduplication using semantic similarity.
 
     Workflow:
     1. Extract text from documents
@@ -29,8 +27,7 @@ class DocumentDeduplicator:
     """
 
     def __init__(self, similarity_threshold: float = 0.85, max_features: int = 5000):
-        """
-        Initialize document deduplicator.
+        """Initialize document deduplicator.
 
         Args:
             similarity_threshold: Minimum similarity to consider duplicates
@@ -46,8 +43,7 @@ class DocumentDeduplicator:
         )
 
     def find_duplicates(self, file_paths: list[Path], min_text_length: int = 100) -> dict:
-        """
-        Find duplicate and similar documents.
+        """Find duplicate and similar documents.
 
         Args:
             file_paths: List of document paths to analyze
@@ -114,8 +110,7 @@ class DocumentDeduplicator:
         return results
 
     def compare_documents(self, doc1_path: Path, doc2_path: Path) -> float | None:
-        """
-        Compare two documents for similarity.
+        """Compare two documents for similarity.
 
         Args:
             doc1_path: First document path

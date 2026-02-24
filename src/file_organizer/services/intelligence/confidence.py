@@ -1,5 +1,4 @@
-"""
-Confidence Engine - Pattern Reliability Scoring
+"""Confidence Engine - Pattern Reliability Scoring.
 
 This module implements the confidence calculation engine for learned patterns.
 It provides multi-factor confidence scoring based on frequency, recency, and
@@ -55,8 +54,7 @@ class PatternUsageData:
 
 
 class ConfidenceEngine:
-    """
-    Confidence calculation engine for learned patterns.
+    """Confidence calculation engine for learned patterns.
 
     This class implements multi-factor confidence scoring that considers:
     - Frequency: How often the pattern has been used (40% weight)
@@ -85,8 +83,7 @@ class ConfidenceEngine:
         decay_half_life_days: int = DECAY_HALF_LIFE_DAYS,
         old_pattern_threshold_days: int = OLD_PATTERN_THRESHOLD_DAYS,
     ):
-        """
-        Initialize the confidence engine.
+        """Initialize the confidence engine.
 
         Args:
             decay_half_life_days: Days for confidence to decay by half
@@ -102,8 +99,7 @@ class ConfidenceEngine:
         usage_data: PatternUsageData | None = None,
         current_time: datetime | None = None,
     ) -> float:
-        """
-        Calculate confidence score for a pattern.
+        """Calculate confidence score for a pattern.
 
         The confidence is calculated as:
         confidence = (frequency * 0.4) + (recency * 0.3) + (consistency * 0.3)
@@ -141,8 +137,7 @@ class ConfidenceEngine:
         return max(self.MIN_CONFIDENCE, min(self.MAX_CONFIDENCE, confidence))
 
     def _calculate_frequency_score(self, usage_data: PatternUsageData) -> float:
-        """
-        Calculate frequency score based on usage count.
+        """Calculate frequency score based on usage count.
 
         Uses logarithmic scaling to normalize frequency:
         - 1 use: ~0.0
@@ -170,8 +165,7 @@ class ConfidenceEngine:
     def _calculate_recency_score(
         self, usage_data: PatternUsageData, current_time: datetime
     ) -> float:
-        """
-        Calculate recency score with exponential time decay.
+        """Calculate recency score with exponential time decay.
 
         Uses exponential decay formula:
         score = exp(-λ * days_since_last_use)
@@ -203,8 +197,7 @@ class ConfidenceEngine:
         return score
 
     def _calculate_consistency_score(self, usage_data: PatternUsageData) -> float:
-        """
-        Calculate consistency score based on success rate variance.
+        """Calculate consistency score based on success rate variance.
 
         Consistency = 1 - variance, where variance is calculated as the
         standard deviation of success/failure outcomes.
@@ -249,8 +242,7 @@ class ConfidenceEngine:
         time_threshold: int | None = None,
         current_time: datetime | None = None,
     ) -> list[dict]:
-        """
-        Apply time decay to old patterns.
+        """Apply time decay to old patterns.
 
         Patterns older than the threshold have their confidence reduced
         according to the exponential decay function.
@@ -314,8 +306,7 @@ class ConfidenceEngine:
         boost_factor: float = 1.15,
         current_time: datetime | None = None,
     ) -> list[dict]:
-        """
-        Boost confidence for recently used patterns.
+        """Boost confidence for recently used patterns.
 
         Patterns used within the threshold get a confidence boost to
         encourage continued use of recently successful patterns.
@@ -365,8 +356,7 @@ class ConfidenceEngine:
         return boosted_patterns
 
     def validate_confidence_threshold(self, confidence: float, threshold: float) -> bool:
-        """
-        Validate if confidence meets the threshold.
+        """Validate if confidence meets the threshold.
 
         Args:
             confidence: Confidence score to validate
@@ -378,8 +368,7 @@ class ConfidenceEngine:
         return confidence >= threshold
 
     def get_confidence_level(self, confidence: float) -> str:
-        """
-        Get human-readable confidence level.
+        """Get human-readable confidence level.
 
         Args:
             confidence: Confidence score
@@ -399,8 +388,7 @@ class ConfidenceEngine:
     def get_confidence_trend(
         self, pattern_id: str, lookback_days: int = 30, current_time: datetime | None = None
     ) -> dict[str, Any]:
-        """
-        Analyze confidence trend for a pattern over time.
+        """Analyze confidence trend for a pattern over time.
 
         Args:
             pattern_id: Pattern identifier
@@ -467,8 +455,7 @@ class ConfidenceEngine:
     def track_usage(
         self, pattern_id: str, timestamp: datetime, success: bool, context: dict | None = None
     ) -> None:
-        """
-        Track a pattern usage for confidence calculations.
+        """Track a pattern usage for confidence calculations.
 
         Args:
             pattern_id: Pattern identifier
@@ -482,8 +469,7 @@ class ConfidenceEngine:
         self._usage_data[pattern_id].add_usage(timestamp, success, context)
 
     def get_usage_data(self, pattern_id: str) -> PatternUsageData | None:
-        """
-        Get usage data for a pattern.
+        """Get usage data for a pattern.
 
         Args:
             pattern_id: Pattern identifier
@@ -494,8 +480,7 @@ class ConfidenceEngine:
         return self._usage_data.get(pattern_id)
 
     def clear_usage_data(self, pattern_id: str | None = None) -> None:
-        """
-        Clear usage data for a specific pattern or all patterns.
+        """Clear usage data for a specific pattern or all patterns.
 
         Args:
             pattern_id: Optional pattern identifier (if None, clears all)

@@ -418,6 +418,7 @@ def _job_report_payload(job: dict[str, Any]) -> dict[str, Any]:
 def organize_dashboard(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
+    """Render the organize dashboard page."""
     from file_organizer.web._helpers import base_context
 
     roots = allowed_roots(settings)
@@ -452,6 +453,7 @@ def organize_scan(
     skip_existing: str = Form("1"),
     use_hardlinks: str = Form("1"),
 ) -> HTMLResponse:
+    """Scan directories and build an organization plan."""
     error_message: Optional[str] = None
     info_message: Optional[str] = None
     plan: Optional[dict[str, Any]] = None
@@ -540,6 +542,7 @@ def organize_clear_plan(
     request: Request,
     plan_id: str = Form(""),
 ) -> HTMLResponse:
+    """Clear a pending organization plan."""
     if plan_id:
         _delete_organize_plan(plan_id)
     return templates.TemplateResponse(
@@ -563,6 +566,7 @@ def organize_execute(
     dry_run: str = Form("0"),
     schedule_delay_minutes: str = Form(str(ORGANIZE_DEFAULT_DELAY_MIN)),
 ) -> HTMLResponse:
+    """Execute an organization plan in the background."""
     info_message: Optional[str] = None
     error_message: Optional[str] = None
     job_view: Optional[dict[str, Any]] = None
@@ -645,6 +649,7 @@ def organize_job_status(
     job_id: str,
     format: str = Query("html", pattern="^(html|json)$"),
 ) -> Response:
+    """Return job status as HTML fragment."""
     job = _build_job_view(job_id)
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
@@ -664,6 +669,7 @@ def organize_job_status(
 
 @organize_router.get("/organize/jobs/{job_id}/events")
 async def organize_job_events(job_id: str) -> StreamingResponse:
+    """Stream server-sent events for a job."""
     if _build_job_view(job_id) is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
 
@@ -700,6 +706,7 @@ async def organize_job_events(job_id: str) -> StreamingResponse:
 
 @organize_router.post("/organize/jobs/{job_id}/cancel", response_class=HTMLResponse)
 def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
+    """Cancel a running organization job."""
     job = _build_job_view(job_id)
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
@@ -725,6 +732,7 @@ def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
 
 @organize_router.post("/organize/jobs/{job_id}/rollback", response_class=HTMLResponse)
 def organize_job_rollback(request: Request, job_id: str) -> HTMLResponse:
+    """Roll back a completed organization job."""
     job = _build_job_view(job_id)
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
@@ -769,6 +777,7 @@ def organize_history(
     status_filter: str = Query("all", pattern="^(all|queued|running|completed|failed)$"),
     limit: int = Query(ORGANIZE_HISTORY_LIMIT, ge=1, le=200),
 ) -> HTMLResponse:
+    """Return organization job history as HTML fragment."""
     rows = _list_organize_jobs(status_filter=status_filter, limit=limit)
     return templates.TemplateResponse(
         "organize/_history.html",
@@ -783,6 +792,7 @@ def organize_history(
 
 @organize_router.get("/organize/stats", response_class=HTMLResponse)
 def organize_stats(request: Request) -> HTMLResponse:
+    """Return organization statistics as HTML fragment."""
     return templates.TemplateResponse(
         "organize/_stats.html",
         {
@@ -796,6 +806,7 @@ def organize_stats(request: Request) -> HTMLResponse:
 def organize_report(
     job_id: str, format: str = Query("json", pattern="^(json|csv|txt)$")
 ) -> Response:
+    """Return a job report in the requested format."""
     job = _build_job_view(job_id)
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")

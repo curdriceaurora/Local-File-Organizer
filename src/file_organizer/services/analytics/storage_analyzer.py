@@ -1,5 +1,4 @@
-"""
-Storage analysis module.
+"""Storage analysis module.
 
 Analyzes storage usage, file distributions, and identifies optimization opportunities.
 """
@@ -16,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class StorageAnalyzer:
-    """
-    Analyzes storage usage and file organization patterns.
+    """Analyzes storage usage and file organization patterns.
 
     Features:
     - Directory size analysis
@@ -34,8 +32,7 @@ class StorageAnalyzer:
     def analyze_directory(
         self, path: Path, max_depth: int | None = None, use_cache: bool = True
     ) -> StorageStats:
-        """
-        Analyze storage usage in a directory.
+        """Analyze storage usage in a directory.
 
         Args:
             path: Directory path to analyze
@@ -111,8 +108,7 @@ class StorageAnalyzer:
         return stats
 
     def calculate_size_distribution(self, path: Path) -> FileDistribution:
-        """
-        Calculate file distribution by type and size ranges.
+        """Calculate file distribution by type and size ranges.
 
         Args:
             path: Directory path
@@ -160,8 +156,7 @@ class StorageAnalyzer:
         threshold: int = 100 * 1024 * 1024,  # 100MB
         top_n: int = 50,
     ) -> list[FileInfo]:
-        """
-        Identify large files above threshold.
+        """Identify large files above threshold.
 
         Args:
             path: Directory path
@@ -194,8 +189,7 @@ class StorageAnalyzer:
         return large_files[:top_n]
 
     def get_duplicate_space(self, duplicate_groups: list[dict]) -> int:
-        """
-        Calculate space wasted by duplicates.
+        """Calculate space wasted by duplicates.
 
         Args:
             duplicate_groups: List of duplicate groups from deduplication
@@ -218,8 +212,7 @@ class StorageAnalyzer:
         return wasted
 
     def _walk_directory(self, path: Path, max_depth: int | None = None, current_depth: int = 0):
-        """
-        Walk directory with depth limit.
+        """Walk directory with depth limit.
 
         Args:
             path: Directory path

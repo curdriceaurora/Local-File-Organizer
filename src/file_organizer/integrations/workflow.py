@@ -19,6 +19,7 @@ class WorkflowIntegration(Integration):
     """Export workflow payloads consumable by launcher tools."""
 
     def __init__(self, config: IntegrationConfig) -> None:
+        """Initialize the workflow integration with the given config."""
         if config.integration_type is not IntegrationType.WORKFLOW:
             config.integration_type = IntegrationType.WORKFLOW
         super().__init__(config)
@@ -30,18 +31,22 @@ class WorkflowIntegration(Integration):
         return Path.home() / ".config" / "file-organizer" / "integrations" / "workflow"
 
     async def connect(self) -> bool:
+        """Connect to the workflow output directory, creating it if needed."""
         output_dir = self._output_dir()
         output_dir.mkdir(parents=True, exist_ok=True)
         self.connected = output_dir.exists() and output_dir.is_dir()
         return self.connected
 
     async def disconnect(self) -> None:
+        """Disconnect from the workflow integration."""
         self.connected = False
 
     async def validate_auth(self) -> bool:
+        """Validate auth; workflow integration requires no credentials."""
         return True
 
     async def send_file(self, file_path: str, metadata: dict[str, Any] | None = None) -> bool:
+        """Export Alfred and Raycast workflow payloads for the given file."""
         if not self.connected and not await self.connect():
             return False
 
@@ -84,6 +89,7 @@ class WorkflowIntegration(Integration):
         return True
 
     async def get_status(self) -> IntegrationStatus:
+        """Return the current connection status for this integration."""
         output_dir = self._output_dir()
         return IntegrationStatus(
             name=self.config.name,

@@ -1,5 +1,4 @@
-"""
-Data models for undo/redo operations.
+"""Data models for undo/redo operations.
 
 This module defines data structures for validation results, rollback results,
 and conflict detection.
@@ -26,8 +25,7 @@ class ConflictType(StrEnum):
 
 @dataclass
 class Conflict:
-    """
-    Represents a conflict detected during validation.
+    """Represents a conflict detected during validation.
 
     Attributes:
         conflict_type: Type of conflict
@@ -53,8 +51,7 @@ class Conflict:
 
 @dataclass
 class ValidationResult:
-    """
-    Result of validating an undo/redo operation.
+    """Result of validating an undo/redo operation.
 
     Attributes:
         can_proceed: Whether the operation can safely proceed
@@ -91,8 +88,7 @@ class ValidationResult:
 
 @dataclass
 class RollbackResult:
-    """
-    Result of executing a rollback operation.
+    """Result of executing a rollback operation.
 
     Attributes:
         success: Whether the overall rollback succeeded

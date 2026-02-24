@@ -1,5 +1,4 @@
-"""
-Image utility functions for deduplication operations.
+"""Image utility functions for deduplication operations.
 
 Provides helper functions for image validation, metadata extraction,
 format conversion, and batch processing operations.
@@ -32,8 +31,7 @@ FORMAT_QUALITY_RANK = {
 
 
 class ImageMetadata:
-    """
-    Container for image metadata.
+    """Container for image metadata.
 
     Attributes:
         path: Path to image file
@@ -48,6 +46,7 @@ class ImageMetadata:
     def __init__(
         self, path: Path, width: int, height: int, image_format: str, mode: str, size_bytes: int
     ):
+        """Initialize ImageMetadata."""
         self.path = path
         self.width = width
         self.height = height
@@ -57,6 +56,7 @@ class ImageMetadata:
         self.resolution = width * height
 
     def __repr__(self) -> str:
+        """Return string representation of ImageMetadata."""
         return (
             f"ImageMetadata(path={self.path.name}, "
             f"size={self.width}x{self.height}, "
@@ -78,8 +78,7 @@ class ImageMetadata:
 
 
 def get_image_metadata(image_path: Path) -> ImageMetadata | None:
-    """
-    Extract metadata from an image file.
+    """Extract metadata from an image file.
 
     Args:
         image_path: Path to image file
@@ -117,8 +116,7 @@ def get_image_metadata(image_path: Path) -> ImageMetadata | None:
 
 
 def get_image_dimensions(image_path: Path) -> tuple[int, int] | None:
-    """
-    Get image dimensions without loading full image data.
+    """Get image dimensions without loading full image data.
 
     Args:
         image_path: Path to image file
@@ -135,8 +133,7 @@ def get_image_dimensions(image_path: Path) -> tuple[int, int] | None:
 
 
 def get_image_format(image_path: Path) -> str | None:
-    """
-    Get image format (JPEG, PNG, etc.).
+    """Get image format (JPEG, PNG, etc.).
 
     Args:
         image_path: Path to image file
@@ -153,8 +150,7 @@ def get_image_format(image_path: Path) -> str | None:
 
 
 def is_supported_format(file_path: Path) -> bool:
-    """
-    Check if file has a supported image format.
+    """Check if file has a supported image format.
 
     Args:
         file_path: Path to file
@@ -166,8 +162,7 @@ def is_supported_format(file_path: Path) -> bool:
 
 
 def validate_image_file(image_path: Path) -> tuple[bool, str | None]:
-    """
-    Validate that a file is a readable image.
+    """Validate that a file is a readable image.
 
     Performs comprehensive validation:
     - File exists and is readable
@@ -212,8 +207,7 @@ def validate_image_file(image_path: Path) -> tuple[bool, str | None]:
 
 
 def filter_valid_images(file_paths: list[Path]) -> list[Path]:
-    """
-    Filter list to only include valid image files.
+    """Filter list to only include valid image files.
 
     Args:
         file_paths: List of file paths to check
@@ -234,8 +228,7 @@ def filter_valid_images(file_paths: list[Path]) -> list[Path]:
 def find_images_in_directory(
     directory: Path, recursive: bool = True, extensions: list[str] | None = None
 ) -> list[Path]:
-    """
-    Find all image files in a directory.
+    """Find all image files in a directory.
 
     Args:
         directory: Directory to search
@@ -276,8 +269,7 @@ def find_images_in_directory(
 
 
 def group_images_by_format(images: list[Path]) -> dict[str, list[Path]]:
-    """
-    Group images by their file format.
+    """Group images by their file format.
 
     Args:
         images: List of image paths
@@ -297,8 +289,7 @@ def group_images_by_format(images: list[Path]) -> dict[str, list[Path]]:
 
 
 def get_format_quality_score(file_path: Path) -> int:
-    """
-    Get quality score for image format.
+    """Get quality score for image format.
 
     Higher score indicates better quality format (e.g., PNG > JPEG).
 
@@ -313,8 +304,7 @@ def get_format_quality_score(file_path: Path) -> int:
 
 
 def compare_image_quality(img1: Path, img2: Path) -> int:
-    """
-    Compare quality of two images based on resolution and format.
+    """Compare quality of two images based on resolution and format.
 
     Args:
         img1: Path to first image
@@ -357,8 +347,7 @@ def compare_image_quality(img1: Path, img2: Path) -> int:
 
 
 def get_best_quality_image(images: list[Path]) -> Path | None:
-    """
-    Select the best quality image from a list.
+    """Select the best quality image from a list.
 
     Selection criteria (in order):
     1. Highest resolution (width * height)
@@ -402,8 +391,7 @@ def get_best_quality_image(images: list[Path]) -> Path | None:
 
 
 def format_file_size(size_bytes: int) -> str:
-    """
-    Format file size in human-readable format.
+    """Format file size in human-readable format.
 
     Args:
         size_bytes: File size in bytes
@@ -419,8 +407,7 @@ def format_file_size(size_bytes: int) -> str:
 
 
 def get_image_info_string(image_path: Path) -> str:
-    """
-    Get formatted information string for an image.
+    """Get formatted information string for an image.
 
     Args:
         image_path: Path to image file

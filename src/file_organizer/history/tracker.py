@@ -1,5 +1,4 @@
-"""
-Operation tracker for logging file operations.
+"""Operation tracker for logging file operations.
 
 This module provides the main interface for tracking file operations
 and managing operation history.
@@ -21,16 +20,14 @@ logger = logging.getLogger(__name__)
 
 
 class OperationHistory:
-    """
-    Main interface for operation history tracking.
+    """Main interface for operation history tracking.
 
     This class provides methods to log file operations, manage transactions,
     and query operation history.
     """
 
     def __init__(self, db_path: Path | None = None):
-        """
-        Initialize operation history tracker.
+        """Initialize operation history tracker.
 
         Args:
             db_path: Path to SQLite database file.
@@ -50,8 +47,7 @@ class OperationHistory:
         status: OperationStatus = OperationStatus.COMPLETED,
         error_message: str | None = None,
     ) -> int:
-        """
-        Log a file operation to the database.
+        """Log a file operation to the database.
 
         Args:
             operation_type: Type of operation (move, rename, delete, copy)
@@ -133,8 +129,7 @@ class OperationHistory:
         return operation_id
 
     def start_transaction(self, metadata: dict[str, Any] | None = None) -> str:
-        """
-        Start a new transaction for batch operations.
+        """Start a new transaction for batch operations.
 
         Args:
             metadata: Additional metadata about the transaction
@@ -168,8 +163,7 @@ class OperationHistory:
         return transaction_id
 
     def commit_transaction(self, transaction_id: str) -> bool:
-        """
-        Commit a transaction, marking it as completed.
+        """Commit a transaction, marking it as completed.
 
         Args:
             transaction_id: Transaction ID to commit
@@ -197,8 +191,7 @@ class OperationHistory:
             return False
 
     def rollback_transaction(self, transaction_id: str) -> bool:
-        """
-        Rollback a transaction, marking all its operations as rolled back.
+        """Rollback a transaction, marking all its operations as rolled back.
 
         Args:
             transaction_id: Transaction ID to rollback
@@ -239,8 +232,7 @@ class OperationHistory:
         end_date: datetime | None = None,
         limit: int | None = None,
     ) -> list[Operation]:
-        """
-        Query operations with optional filters.
+        """Query operations with optional filters.
 
         Args:
             operation_type: Filter by operation type
@@ -294,8 +286,7 @@ class OperationHistory:
         return [Operation.from_row(row) for row in rows]
 
     def get_transaction(self, transaction_id: str) -> Transaction | None:
-        """
-        Get transaction by ID.
+        """Get transaction by ID.
 
         Args:
             transaction_id: Transaction ID
@@ -311,8 +302,7 @@ class OperationHistory:
         return None
 
     def get_recent_operations(self, limit: int = 100) -> list[Operation]:
-        """
-        Get most recent operations.
+        """Get most recent operations.
 
         Args:
             limit: Maximum number of operations to return
@@ -323,8 +313,7 @@ class OperationHistory:
         return self.get_operations(limit=limit)
 
     def _calculate_file_hash(self, file_path: Path) -> str:
-        """
-        Calculate SHA256 hash of a file.
+        """Calculate SHA256 hash of a file.
 
         Args:
             file_path: Path to file

@@ -1,5 +1,4 @@
-"""
-Feature Extraction for PARA Smart Suggestions
+"""Feature Extraction for PARA Smart Suggestions.
 
 Extracts text, metadata, and structural features from files to support
 intelligent PARA categorization. All analysis is performed locally

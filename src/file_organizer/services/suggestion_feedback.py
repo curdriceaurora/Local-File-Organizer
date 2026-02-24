@@ -1,5 +1,4 @@
-"""
-Suggestion Feedback System
+"""Suggestion Feedback System.
 
 Tracks user actions on suggestions and provides continuous learning
 through pattern refinement.
@@ -83,13 +82,10 @@ class LearningStats:
 
 
 class SuggestionFeedback:
-    """
-    Manages feedback collection and learning from user actions.
-    """
+    """Manages feedback collection and learning from user actions."""
 
     def __init__(self, feedback_file: Path | None = None):
-        """
-        Initialize the feedback system.
+        """Initialize the feedback system.
 
         Args:
             feedback_file: Path to store feedback data
@@ -109,8 +105,7 @@ class SuggestionFeedback:
     def record_action(
         self, suggestion: Suggestion, action: str, metadata: dict | None = None
     ) -> None:
-        """
-        Record user action on a suggestion.
+        """Record user action on a suggestion.
 
         Args:
             suggestion: The suggestion acted upon
@@ -136,8 +131,7 @@ class SuggestionFeedback:
         self._update_patterns(entry)
 
     def get_acceptance_rate(self, suggestion_type: str | None = None) -> float:
-        """
-        Get acceptance rate for suggestions.
+        """Get acceptance rate for suggestions.
 
         Args:
             suggestion_type: Optional filter by suggestion type
@@ -157,8 +151,7 @@ class SuggestionFeedback:
         return (accepted / len(entries)) * 100
 
     def get_rejection_rate(self, suggestion_type: str | None = None) -> float:
-        """
-        Get rejection rate for suggestions.
+        """Get rejection rate for suggestions.
 
         Args:
             suggestion_type: Optional filter by suggestion type
@@ -178,8 +171,7 @@ class SuggestionFeedback:
         return (rejected / len(entries)) * 100
 
     def get_learning_stats(self) -> LearningStats:
-        """
-        Get comprehensive learning statistics.
+        """Get comprehensive learning statistics.
 
         Returns:
             LearningStats with all metrics
@@ -237,8 +229,7 @@ class SuggestionFeedback:
         return stats
 
     def update_patterns(self, feedback: list[FeedbackEntry]) -> None:
-        """
-        Update patterns based on feedback.
+        """Update patterns based on feedback.
 
         Args:
             feedback: List of feedback entries to learn from
@@ -249,8 +240,7 @@ class SuggestionFeedback:
             self._update_patterns(entry)
 
     def get_confidence_adjustment(self, suggestion_type: SuggestionType, file_type: str) -> float:
-        """
-        Get confidence adjustment factor based on learning.
+        """Get confidence adjustment factor based on learning.
 
         Args:
             suggestion_type: Type of suggestion
@@ -268,8 +258,7 @@ class SuggestionFeedback:
         return 0.0
 
     def get_user_history(self) -> dict:
-        """
-        Get user action history for pattern matching.
+        """Get user action history for pattern matching.
 
         Returns:
             Dictionary with move history and preferences
@@ -294,8 +283,7 @@ class SuggestionFeedback:
         return dict(history)
 
     def clear_old_feedback(self, days: int = 90) -> int:
-        """
-        Clear feedback older than specified days.
+        """Clear feedback older than specified days.
 
         Args:
             days: Number of days to keep
@@ -378,8 +366,7 @@ class SuggestionFeedback:
             logger.error(f"Failed to save feedback: {e}")
 
     def export_feedback(self, output_file: Path) -> None:
-        """
-        Export feedback to a file for analysis.
+        """Export feedback to a file for analysis.
 
         Args:
             output_file: Path to export file

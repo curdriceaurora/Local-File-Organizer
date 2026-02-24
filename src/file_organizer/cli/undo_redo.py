@@ -1,5 +1,4 @@
-"""
-CLI commands for undo/redo operations.
+"""CLI commands for undo/redo operations.
 
 This module provides command-line interface for undoing and redoing
 file operations.
@@ -23,8 +22,7 @@ def undo_command(
     dry_run: bool = False,
     verbose: bool = False,
 ) -> int:
-    """
-    Undo file operations.
+    """Undo file operations.
 
     Args:
         operation_id: Specific operation ID to undo
@@ -124,8 +122,7 @@ def undo_command(
 def redo_command(
     operation_id: int | None = None, dry_run: bool = False, verbose: bool = False
 ) -> int:
-    """
-    Redo file operations.
+    """Redo file operations.
 
     Args:
         operation_id: Specific operation ID to redo
@@ -217,8 +214,7 @@ def history_command(
     stats: bool = False,
     verbose: bool = False,
 ) -> int:
-    """
-    View operation history.
+    """View operation history.
 
     Args:
         limit: Maximum number of operations to show

@@ -1,5 +1,4 @@
-"""
-Video Metadata Extraction Service
+"""Video Metadata Extraction Service.
 
 Extracts metadata from video files using ffprobe (primary),
 OpenCV (fallback), or filesystem-only (final fallback).
@@ -66,8 +65,7 @@ def resolution_label(width: int | None, height: int | None) -> str:
 
 
 class VideoMetadataExtractor:
-    """
-    Video metadata extraction service.
+    """Video metadata extraction service.
 
     Uses a fallback chain:
     1. ffprobe (via ffmpeg-python / subprocess) — richest metadata

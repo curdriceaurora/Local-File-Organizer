@@ -194,6 +194,7 @@ class InstalledPlugin:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> InstalledPlugin:
+        """Deserialize an InstalledPlugin from a dictionary payload."""
         try:
             name = normalize_plugin_name(str(payload.get("name", "")))
         except ValueError as exc:
@@ -209,6 +210,7 @@ class InstalledPlugin:
         return cls(name=name, version=version, source_url=source_url, installed_at=installed_at)
 
     def to_dict(self) -> dict[str, str]:
+        """Serialize this installed plugin entry to a dictionary."""
         return {
             "name": self.name,
             "version": self.version,
@@ -231,6 +233,7 @@ class PluginReview:
     helpful_count: int = 0
 
     def __post_init__(self) -> None:
+        """Validate review fields after initialization."""
         if not self.plugin_name.strip():
             raise MarketplaceSchemaError("plugin_name cannot be empty.")
         if not self.user_id.strip():
@@ -246,6 +249,7 @@ class PluginReview:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> PluginReview:
+        """Deserialize a PluginReview from a dictionary payload."""
         try:
             rating = int(payload.get("rating", 0))
             helpful_count = int(payload.get("helpful_count", 0))
@@ -263,6 +267,7 @@ class PluginReview:
         )
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize this plugin review to a dictionary."""
         return {
             "plugin_name": self.plugin_name,
             "user_id": self.user_id,

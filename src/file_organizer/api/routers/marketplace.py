@@ -24,6 +24,7 @@ router = APIRouter(
 
 
 class MarketplacePluginResponse(BaseModel):
+    """Marketplace plugin details response model."""
     name: str
     version: str
     author: str
@@ -40,6 +41,7 @@ class MarketplacePluginResponse(BaseModel):
 
 
 class MarketplacePluginListResponse(BaseModel):
+    """Paginated list of marketplace plugins."""
     items: list[MarketplacePluginResponse]
     page: int
     per_page: int
@@ -47,6 +49,7 @@ class MarketplacePluginListResponse(BaseModel):
 
 
 class MarketplaceInstalledResponse(BaseModel):
+    """Details of an installed marketplace plugin."""
     name: str
     version: str
     source_url: str
@@ -54,17 +57,20 @@ class MarketplaceInstalledResponse(BaseModel):
 
 
 class MarketplaceUpdateResponse(BaseModel):
+    """Result of a plugin update operation."""
     updated: bool
     plugin: Optional[MarketplaceInstalledResponse] = None
 
 
 class MarketplaceReviewRequest(BaseModel):
+    """Request body for submitting a plugin review."""
     rating: int = Field(..., ge=1, le=5)
     title: str = Field(..., min_length=1, max_length=120)
     content: str = Field(..., min_length=1, max_length=2000)
 
 
 class MarketplaceReviewResponse(BaseModel):
+    """Plugin review details response model."""
     plugin_name: str
     user_id: str
     rating: int
@@ -137,6 +143,7 @@ def list_plugins(
     tags: Optional[list[str]] = Query(None),
     category: Optional[str] = Query(None, max_length=60),
 ) -> MarketplacePluginListResponse:
+    """List plugins from the marketplace with optional filters."""
     try:
         items, total = _service().list_plugins(
             page=page,
@@ -157,6 +164,7 @@ def list_plugins(
 
 @router.get("/marketplace/plugins/{name}", response_model=MarketplacePluginResponse)
 def get_plugin(name: str) -> MarketplacePluginResponse:
+    """Retrieve details for a single marketplace plugin by name."""
     try:
         package = _service().get_plugin(name)
     except MarketplaceError as exc:
@@ -166,6 +174,7 @@ def get_plugin(name: str) -> MarketplacePluginResponse:
 
 @router.get("/marketplace/installed", response_model=list[MarketplaceInstalledResponse])
 def list_installed_plugins() -> list[MarketplaceInstalledResponse]:
+    """List all currently installed plugins."""
     try:
         items = _service().list_installed()
     except MarketplaceError as exc:
@@ -175,6 +184,7 @@ def list_installed_plugins() -> list[MarketplaceInstalledResponse]:
 
 @router.get("/marketplace/updates", response_model=list[str])
 def list_available_updates() -> list[str]:
+    """List plugin names that have available updates."""
     try:
         return _service().check_updates()
     except MarketplaceError as exc:
@@ -186,6 +196,7 @@ def install_plugin(
     name: str,
     version: Optional[str] = Query(None),
 ) -> MarketplaceInstalledResponse:
+    """Install a marketplace plugin by name and optional version."""
     try:
         installed = _service().install(name, version=version)
     except MarketplaceError as exc:
@@ -195,6 +206,7 @@ def install_plugin(
 
 @router.delete("/marketplace/plugins/{name}")
 def uninstall_plugin(name: str) -> dict[str, bool]:
+    """Uninstall a marketplace plugin by name."""
     try:
         _service().uninstall(name)
     except MarketplaceError as exc:
@@ -204,6 +216,7 @@ def uninstall_plugin(name: str) -> dict[str, bool]:
 
 @router.post("/marketplace/plugins/{name}/update", response_model=MarketplaceUpdateResponse)
 def update_plugin(name: str) -> MarketplaceUpdateResponse:
+    """Update an installed plugin to the latest version."""
     try:
         updated = _service().update(name)
     except MarketplaceError as exc:
@@ -218,6 +231,7 @@ def list_reviews(
     name: str,
     limit: int = Query(10, ge=1, le=100),
 ) -> list[MarketplaceReviewResponse]:
+    """List reviews for a marketplace plugin."""
     try:
         reviews = _service().get_reviews(name, limit=limit)
     except MarketplaceError as exc:
@@ -231,6 +245,7 @@ def add_review(
     request: MarketplaceReviewRequest,
     user: UserLike = Depends(get_current_active_user),
 ) -> MarketplaceReviewResponse:
+    """Submit a review for a marketplace plugin."""
     raw_user = getattr(user, "id", None)
     if not isinstance(raw_user, str) or not raw_user:
         raw_user = getattr(user, "username", "anonymous")

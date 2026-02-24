@@ -1,5 +1,4 @@
-"""
-Profile Export Module
+"""Profile Export Module.
 
 Provides comprehensive profile export functionality with validation,
 selective export, and optional compression.
@@ -23,8 +22,7 @@ from file_organizer.services.intelligence.profile_manager import Profile, Profil
 
 
 class ProfileExporter:
-    """
-    Profile export system with validation and selective export capabilities.
+    """Profile export system with validation and selective export capabilities.
 
     Features:
     - Export full profile to JSON file
@@ -35,8 +33,7 @@ class ProfileExporter:
     """
 
     def __init__(self, profile_manager: ProfileManager):
-        """
-        Initialize profile exporter.
+        """Initialize profile exporter.
 
         Args:
             profile_manager: ProfileManager instance to export from
@@ -48,8 +45,7 @@ class ProfileExporter:
         return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     def export_profile(self, profile_name: str, file_path: Path) -> bool:
-        """
-        Export a complete profile to JSON file.
+        """Export a complete profile to JSON file.
 
         Args:
             profile_name: Name of profile to export
@@ -102,8 +98,7 @@ class ProfileExporter:
     def export_selective(
         self, profile_name: str, file_path: Path, preferences_list: list[str]
     ) -> bool:
-        """
-        Export selected preferences from a profile.
+        """Export selected preferences from a profile.
 
         Args:
             profile_name: Name of profile to export from
@@ -182,8 +177,7 @@ class ProfileExporter:
             return False
 
     def validate_export(self, file_path: Path) -> bool:
-        """
-        Validate an exported profile file.
+        """Validate an exported profile file.
 
         Args:
             file_path: Path to export file to validate
@@ -251,8 +245,7 @@ class ProfileExporter:
             return False
 
     def preview_export(self, profile_name: str) -> dict[str, Any] | None:
-        """
-        Preview what would be exported for a profile.
+        """Preview what would be exported for a profile.
 
         Args:
             profile_name: Name of profile to preview
@@ -291,8 +284,7 @@ class ProfileExporter:
             return None
 
     def _estimate_export_size(self, profile: Profile) -> str:
-        """
-        Estimate export file size.
+        """Estimate export file size.
 
         Args:
             profile: Profile to estimate size for
@@ -317,8 +309,7 @@ class ProfileExporter:
             return "Unknown"
 
     def export_multiple(self, profile_names: list[str], output_dir: Path) -> dict[str, bool]:
-        """
-        Export multiple profiles to a directory.
+        """Export multiple profiles to a directory.
 
         Args:
             profile_names: List of profile names to export

@@ -42,6 +42,7 @@ class ConversationManager:
         max_turns: int = 6,
         token_budget: int = 3800,
     ) -> None:
+        """Initialize ConversationManager."""
         self._max_messages = max_turns * 2  # user + assistant per turn
         self._token_budget = token_budget
         self._messages: list[CopilotMessage] = []

@@ -1,5 +1,4 @@
-"""
-PARA Category Folder Mapper
+"""PARA Category Folder Mapper.
 
 Maps files to PARA folders based on categorization results from heuristics
 and rules. Provides flexible mapping strategies and subfolder organization.
@@ -54,8 +53,7 @@ class MappingStrategy:
 
 
 class CategoryFolderMapper:
-    """
-    Maps files to appropriate PARA folders based on categorization.
+    """Maps files to appropriate PARA folders based on categorization.
 
     Integrates with HeuristicEngine and RuleEngine to determine the best
     PARA category for each file, then generates the target folder path
@@ -70,8 +68,7 @@ class CategoryFolderMapper:
         folder_generator: PARAFolderGenerator | None = None,
         strategy: MappingStrategy | None = None,
     ):
-        """
-        Initialize the category folder mapper.
+        """Initialize the category folder mapper.
 
         Args:
             config: PARA configuration
@@ -99,8 +96,7 @@ class CategoryFolderMapper:
         self.strategy = strategy or MappingStrategy()
 
     def map_file(self, file_path: Path, root_path: Path, use_rules: bool = True) -> MappingResult:
-        """
-        Map a file to its target PARA folder.
+        """Map a file to its target PARA folder.
 
         Args:
             file_path: Path to the file to map
@@ -153,8 +149,7 @@ class CategoryFolderMapper:
     def map_batch(
         self, file_paths: list[Path], root_path: Path, use_rules: bool = True
     ) -> list[MappingResult]:
-        """
-        Map multiple files to PARA folders.
+        """Map multiple files to PARA folders.
 
         Args:
             file_paths: List of file paths to map
@@ -183,8 +178,7 @@ class CategoryFolderMapper:
         return results
 
     def _evaluate_rules(self, file_path: Path) -> RuleMatchResult | None:
-        """
-        Evaluate file using rule engine.
+        """Evaluate file using rule engine.
 
         Args:
             file_path: Path to evaluate
@@ -209,8 +203,7 @@ class CategoryFolderMapper:
     def _extract_reasoning(
         self, result: HeuristicResult, category: PARACategory | None
     ) -> list[str]:
-        """
-        Extract reasoning from heuristic result.
+        """Extract reasoning from heuristic result.
 
         Args:
             result: Heuristic evaluation result
@@ -232,8 +225,7 @@ class CategoryFolderMapper:
         return reasoning
 
     def _determine_subfolder(self, file_path: Path, category: PARACategory) -> str | None:
-        """
-        Determine subfolder path based on mapping strategy.
+        """Determine subfolder path based on mapping strategy.
 
         Args:
             file_path: File being mapped
@@ -276,8 +268,7 @@ class CategoryFolderMapper:
         return None
 
     def _get_date_folder(self, file_path: Path) -> str | None:
-        """
-        Get date-based subfolder from file modification time.
+        """Get date-based subfolder from file modification time.
 
         Args:
             file_path: File path
@@ -296,8 +287,7 @@ class CategoryFolderMapper:
             return None
 
     def _match_keyword_folder(self, file_path: Path) -> str | None:
-        """
-        Match file to keyword-based subfolder.
+        """Match file to keyword-based subfolder.
 
         Args:
             file_path: File path
@@ -320,8 +310,7 @@ class CategoryFolderMapper:
     def create_target_folders(
         self, results: list[MappingResult], dry_run: bool = False
     ) -> dict[Path, bool]:
-        """
-        Create target folders for mapped files.
+        """Create target folders for mapped files.
 
         Args:
             results: List of mapping results
@@ -349,8 +338,7 @@ class CategoryFolderMapper:
         return folder_status
 
     def generate_mapping_report(self, results: list[MappingResult]) -> str:
-        """
-        Generate human-readable report of mapping results.
+        """Generate human-readable report of mapping results.
 
         Args:
             results: List of mapping results

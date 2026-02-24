@@ -1,5 +1,4 @@
-"""
-PARA Migration Manager
+"""PARA Migration Manager.
 
 Handles migration of files from flat or hierarchical structures to PARA organization.
 Supports dry-run, rollback, and detailed reporting.
@@ -57,8 +56,7 @@ class MigrationReport:
 
 
 class PARAMigrationManager:
-    """
-    Manages migration of files to PARA structure.
+    """Manages migration of files to PARA structure.
 
     Analyzes existing directory structure, categorizes files,
     and migrates them to appropriate PARA folders with rollback support.
@@ -67,8 +65,7 @@ class PARAMigrationManager:
     def __init__(
         self, config: PARAConfig | None = None, heuristic_engine: HeuristicEngine | None = None
     ):
-        """
-        Initialize migration manager.
+        """Initialize migration manager.
 
         Args:
             config: PARA configuration
@@ -95,8 +92,7 @@ class PARAMigrationManager:
         recursive: bool = True,
         file_extensions: list[str] | None = None,
     ) -> MigrationPlan:
-        """
-        Analyze source directory and create migration plan.
+        """Analyze source directory and create migration plan.
 
         Args:
             source_path: Source directory to migrate from
@@ -183,8 +179,7 @@ class PARAMigrationManager:
         create_backup: bool = True,
         preserve_timestamps: bool = True,
     ) -> MigrationReport:
-        """
-        Execute migration according to plan.
+        """Execute migration according to plan.
 
         Args:
             plan: Migration plan to execute
@@ -270,8 +265,7 @@ class PARAMigrationManager:
         return report
 
     def _create_backup(self, plan: MigrationPlan) -> str:
-        """
-        Create backup of source files before migration.
+        """Create backup of source files before migration.
 
         Args:
             plan: Migration plan
@@ -285,8 +279,7 @@ class PARAMigrationManager:
         return backup_id
 
     def rollback(self, migration_id: str) -> bool:
-        """
-        Rollback a completed migration.
+        """Rollback a completed migration.
 
         Args:
             migration_id: Migration identifier to rollback
@@ -299,8 +292,7 @@ class PARAMigrationManager:
         return False
 
     def generate_preview(self, plan: MigrationPlan) -> str:
-        """
-        Generate human-readable preview of migration plan.
+        """Generate human-readable preview of migration plan.
 
         Args:
             plan: Migration plan

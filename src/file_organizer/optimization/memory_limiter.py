@@ -60,6 +60,7 @@ class MemoryLimiter:
         max_memory_mb: int,
         action: LimitAction = LimitAction.WARN,
     ) -> None:
+        """Configure the memory limiter with the given cap and enforcement action."""
         if max_memory_mb <= 0:
             raise ValueError(f"max_memory_mb must be > 0, got {max_memory_mb}")
         self._max_memory_bytes = max_memory_mb * 1024 * 1024

@@ -36,11 +36,13 @@ def _validate_callback_url(value: str) -> str:
 
 
 class PluginFileListResponse(BaseModel):
+    """Response containing a paginated list of files."""
     items: list[FileInfo]
     total: int
 
 
 class PluginOrganizeFileRequest(BaseModel):
+    """Request body for organizing a file via the plugin API."""
     source_path: str
     destination_path: str
     overwrite: bool = False
@@ -49,10 +51,12 @@ class PluginOrganizeFileRequest(BaseModel):
     @field_validator("source_path", "destination_path")
     @classmethod
     def validate_paths(cls, value: str) -> str:
+        """Validate that source and destination paths are non-empty."""
         return _validate_path(value)
 
 
 class PluginOrganizeFileResponse(BaseModel):
+    """Response from a plugin file organization request."""
     source_path: str
     destination_path: str
     moved: bool
@@ -60,11 +64,13 @@ class PluginOrganizeFileResponse(BaseModel):
 
 
 class PluginConfigValueResponse(BaseModel):
+    """Response containing a single plugin configuration value."""
     key: str
     value: Any
 
 
 class PluginHookRegistrationRequest(BaseModel):
+    """Request body for registering a webhook for a plugin hook event."""
     event: HookEvent
     callback_url: str
     secret: Optional[str] = Field(default=None, max_length=256)
@@ -72,20 +78,24 @@ class PluginHookRegistrationRequest(BaseModel):
     @field_validator("callback_url")
     @classmethod
     def validate_callback_url(cls, value: str) -> str:
+        """Validate and normalize the callback URL."""
         return _validate_callback_url(value)
 
 
 class PluginHookUnregisterRequest(BaseModel):
+    """Request body for unregistering a plugin webhook."""
     event: HookEvent
     callback_url: str
 
     @field_validator("callback_url")
     @classmethod
     def validate_callback_url(cls, value: str) -> str:
+        """Validate and normalize the callback URL."""
         return _validate_callback_url(value)
 
 
 class PluginHookRegistrationResponse(BaseModel):
+    """Response confirming webhook registration for a plugin."""
     plugin_id: str
     event: HookEvent
     callback_url: str
@@ -94,10 +104,12 @@ class PluginHookRegistrationResponse(BaseModel):
 
 
 class PluginHookListResponse(BaseModel):
+    """Response listing all registered webhooks for a plugin."""
     items: list[PluginHookRegistrationResponse]
 
 
 class PluginHookUnregisterResponse(BaseModel):
+    """Response confirming webhook unregistration for a plugin."""
     plugin_id: str
     event: HookEvent
     callback_url: str
@@ -105,11 +117,13 @@ class PluginHookUnregisterResponse(BaseModel):
 
 
 class PluginHookTriggerRequest(BaseModel):
+    """Request body for triggering a plugin hook event."""
     event: HookEvent
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
 class PluginHookTriggerResult(BaseModel):
+    """Individual result for a single webhook delivery attempt."""
     plugin_id: str
     event: HookEvent
     callback_url: str
@@ -119,6 +133,7 @@ class PluginHookTriggerResult(BaseModel):
 
 
 class PluginHookTriggerResponse(BaseModel):
+    """Response summarizing the outcomes of triggering a plugin hook."""
     event: HookEvent
     delivered: int
     failed: int

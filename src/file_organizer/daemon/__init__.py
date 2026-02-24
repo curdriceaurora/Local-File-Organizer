@@ -1,5 +1,4 @@
-"""
-Background daemon package.
+"""Background daemon package.
 
 Provides a long-running daemon service that combines file watching
 with auto-organization, including PID file management, signal handling,

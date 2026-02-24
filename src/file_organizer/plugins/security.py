@@ -57,6 +57,7 @@ class PluginSandbox:
         plugin_name: str,
         policy: PluginSecurityPolicy | None = None,
     ) -> None:
+        """Set up a sandbox for the named plugin with the given security policy."""
         self.plugin_name = plugin_name
         self.policy = policy or PluginSecurityPolicy.unrestricted()
 

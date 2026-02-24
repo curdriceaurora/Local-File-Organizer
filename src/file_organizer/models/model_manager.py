@@ -27,6 +27,7 @@ class ModelManager:
     """
 
     def __init__(self, console: Console | None = None) -> None:
+        """Initialize ModelManager with optional Rich console."""
         self._console = console or Console()
 
     # ------------------------------------------------------------------

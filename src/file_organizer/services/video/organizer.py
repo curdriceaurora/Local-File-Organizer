@@ -1,5 +1,4 @@
-"""
-Video Organization Service
+"""Video Organization Service.
 
 Generates organized folder structures for video files based on their
 metadata. Supports screen recording detection, short clip routing,
@@ -80,8 +79,7 @@ def is_screen_recording(filename: str) -> bool:
 
 
 class VideoOrganizer:
-    """
-    Organizes video files into directory structures based on metadata.
+    """Organizes video files into directory structures based on metadata.
 
     Organization priority (title/date primary, not resolution):
     1. Screen recordings → Screen_Recordings/{Year}/

@@ -1,5 +1,4 @@
-"""
-PARA Category Definitions and Data Models
+"""PARA Category Definitions and Data Models.
 
 This module defines the core PARA (Projects, Areas, Resources, Archive) categories
 and their associated data structures for automated categorization.
@@ -17,8 +16,7 @@ from file_organizer._compat import StrEnum
 
 
 class PARACategory(StrEnum):
-    """
-    PARA methodology categories.
+    """PARA methodology categories.
 
     The PARA system organizes information into four categories based on
     actionability and time-sensitivity:
@@ -52,8 +50,7 @@ class PARACategory(StrEnum):
 
 @dataclass
 class CategoryDefinition:
-    """
-    Complete definition of a PARA category including its criteria and patterns.
+    """Complete definition of a PARA category including its criteria and patterns.
 
     This class encapsulates all the information needed to identify and
     categorize files according to the PARA methodology.
@@ -91,8 +88,7 @@ class CategoryDefinition:
 
 @dataclass
 class CategorizationResult:
-    """
-    Result of PARA categorization for a file.
+    """Result of PARA categorization for a file.
 
     Contains the determined category, confidence score, reasoning,
     and alternative possibilities.
@@ -360,8 +356,7 @@ CATEGORY_DEFINITIONS: dict[PARACategory, CategoryDefinition] = {
 
 
 def get_category_definition(category: PARACategory) -> CategoryDefinition:
-    """
-    Get the standard definition for a PARA category.
+    """Get the standard definition for a PARA category.
 
     Args:
         category: The PARA category
@@ -376,8 +371,7 @@ def get_category_definition(category: PARACategory) -> CategoryDefinition:
 
 
 def get_all_category_definitions() -> dict[PARACategory, CategoryDefinition]:
-    """
-    Get all standard PARA category definitions.
+    """Get all standard PARA category definitions.
 
     Returns:
         Dictionary mapping categories to their definitions

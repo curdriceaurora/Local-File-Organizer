@@ -1,5 +1,4 @@
-"""
-Data models for operation history tracking.
+"""Data models for operation history tracking.
 
 This module defines the data structures for operations and transactions.
 """
@@ -45,8 +44,7 @@ class TransactionStatus(StrEnum):
 
 @dataclass
 class Operation:
-    """
-    Represents a single file operation.
+    """Represents a single file operation.
 
     Attributes:
         id: Unique operation ID (database primary key)
@@ -75,8 +73,7 @@ class Operation:
     created_at: datetime | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """
-        Convert operation to dictionary.
+        """Convert operation to dictionary.
 
         Returns:
             Dictionary representation of the operation
@@ -105,8 +102,7 @@ class Operation:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Operation:
-        """
-        Create operation from dictionary.
+        """Create operation from dictionary.
 
         Args:
             data: Dictionary containing operation data
@@ -159,8 +155,7 @@ class Operation:
 
     @classmethod
     def from_row(cls, row) -> Operation:
-        """
-        Create operation from database row.
+        """Create operation from database row.
 
         Args:
             row: sqlite3.Row object
@@ -174,8 +169,7 @@ class Operation:
 
 @dataclass
 class Transaction:
-    """
-    Represents a batch of related operations.
+    """Represents a batch of related operations.
 
     Attributes:
         transaction_id: Unique transaction ID (UUID)
@@ -194,8 +188,7 @@ class Transaction:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        """
-        Convert transaction to dictionary.
+        """Convert transaction to dictionary.
 
         Returns:
             Dictionary representation of the transaction
@@ -217,8 +210,7 @@ class Transaction:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Transaction:
-        """
-        Create transaction from dictionary.
+        """Create transaction from dictionary.
 
         Args:
             data: Dictionary containing transaction data
@@ -256,8 +248,7 @@ class Transaction:
 
     @classmethod
     def from_row(cls, row) -> Transaction:
-        """
-        Create transaction from database row.
+        """Create transaction from database row.
 
         Args:
             row: sqlite3.Row object

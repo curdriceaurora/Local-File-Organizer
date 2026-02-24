@@ -1,5 +1,4 @@
-"""
-Smart Suggestions Service
+"""Smart Suggestions Service.
 
 Generates intelligent file organization suggestions using AI models
 and pattern analysis.
@@ -20,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class ConfidenceScorer:
-    """
-    Calculates confidence scores for suggestions using multiple factors.
-    """
+    """Calculates confidence scores for suggestions using multiple factors."""
 
     def __init__(self):
         """Initialize the confidence scorer."""
@@ -36,8 +33,7 @@ class ConfidenceScorer:
         pattern_analysis: PatternAnalysis | None = None,
         user_history: dict | None = None,
     ) -> ConfidenceFactors:
-        """
-        Calculate confidence score for a suggestion.
+        """Calculate confidence score for a suggestion.
 
         Args:
             file_path: Source file path
@@ -236,13 +232,10 @@ class ConfidenceScorer:
 
 
 class SuggestionEngine:
-    """
-    Generates intelligent file organization suggestions.
-    """
+    """Generates intelligent file organization suggestions."""
 
     def __init__(self, text_model: TextModel | None = None, min_confidence: float = 40.0):
-        """
-        Initialize the suggestion engine.
+        """Initialize the suggestion engine.
 
         Args:
             text_model: AI text model for generating explanations
@@ -260,8 +253,7 @@ class SuggestionEngine:
         user_history: dict | None = None,
         max_suggestions: int = 50,
     ) -> list[Suggestion]:
-        """
-        Generate suggestions for organizing files.
+        """Generate suggestions for organizing files.
 
         Args:
             files: List of files to analyze
@@ -405,8 +397,7 @@ class SuggestionEngine:
         return suggestions
 
     def rank_suggestions(self, suggestions: list[Suggestion]) -> list[Suggestion]:
-        """
-        Rank suggestions by confidence and importance.
+        """Rank suggestions by confidence and importance.
 
         Args:
             suggestions: List of suggestions to rank
@@ -431,8 +422,7 @@ class SuggestionEngine:
         )
 
     def explain_suggestion(self, suggestion: Suggestion) -> str:
-        """
-        Generate detailed explanation for a suggestion.
+        """Generate detailed explanation for a suggestion.
 
         Args:
             suggestion: Suggestion to explain

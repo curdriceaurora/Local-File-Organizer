@@ -1,5 +1,4 @@
-"""
-Resumable batch processing with checkpoint support.
+"""Resumable batch processing with checkpoint support.
 
 This module provides the ResumableProcessor class that wraps ParallelProcessor
 with automatic checkpointing and resume capabilities. Interrupted batch jobs
@@ -28,8 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class ResumableProcessor:
-    """
-    Wraps ParallelProcessor with checkpoint and resume logic.
+    """Wraps ParallelProcessor with checkpoint and resume logic.
 
     Tracks job state via JobPersistence and file-level progress via
     CheckpointManager. When processing is interrupted, a subsequent
@@ -48,6 +46,7 @@ class ResumableProcessor:
         persistence: JobPersistence | None = None,
         checkpoint_mgr: CheckpointManager | None = None,
     ) -> None:
+        """Set up a resumable processor with the given config and persistence backend."""
         self._config = config or ParallelConfig()
         self._processor = ParallelProcessor(config=self._config)
         self._persistence = persistence or JobPersistence()
@@ -59,8 +58,7 @@ class ResumableProcessor:
         process_fn: Callable[[Path], Any],
         job_id: str | None = None,
     ) -> BatchResult:
-        """
-        Process a batch of files with automatic checkpointing.
+        """Process a batch of files with automatic checkpointing.
 
         Creates a new job (or uses the provided job_id), then processes
         files in parallel. After each file completes, the checkpoint is
@@ -109,8 +107,7 @@ class ResumableProcessor:
         job_id: str,
         process_fn: Callable[[Path], Any],
     ) -> BatchResult:
-        """
-        Resume an interrupted job from its last checkpoint.
+        """Resume an interrupted job from its last checkpoint.
 
         Loads the job state and checkpoint, filters out already-completed
         files (verifying their hashes have not changed), and processes
@@ -202,8 +199,7 @@ class ResumableProcessor:
         process_fn: Callable[[Path], Any],
         checkpoint: Checkpoint | None = None,
     ) -> BatchResult:
-        """
-        Process files using the parallel processor, checkpointing each result.
+        """Process files using the parallel processor, checkpointing each result.
 
         Updates the job state and checkpoint after each file completes.
         On completion, marks the job as COMPLETED or FAILED depending on results.

@@ -54,6 +54,7 @@ def is_hidden(path: Path) -> bool:
 
 
 def file_info_from_path(path: Path) -> FileInfo:
+    """Build FileInfo from a filesystem path, raising ApiError on failure."""
     try:
         stat = path.stat()
     except OSError as exc:

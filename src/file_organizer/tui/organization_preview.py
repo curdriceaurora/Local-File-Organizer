@@ -140,6 +140,7 @@ class OrganizationPreviewView(Vertical):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
+        """Set up the preview view for the given input and output directories."""
         super().__init__(name=name, id=id, classes=classes)
         self._input_dir = Path(input_dir)
         self._output_dir = Path(output_dir)

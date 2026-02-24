@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-File Organizer v2 - End-to-End Demo
+"""File Organizer v2 - End-to-End Demo.
 
 This demo showcases the 100% quality text processing with real files.
 

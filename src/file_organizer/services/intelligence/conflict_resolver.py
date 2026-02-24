@@ -1,5 +1,4 @@
-"""
-Conflict resolution for contradictory preferences.
+"""Conflict resolution for contradictory preferences.
 
 This module provides deterministic conflict resolution using multiple
 weighting strategies including recency, frequency, and confidence scoring.
@@ -15,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class ConflictResolver:
-    """
-    Resolves conflicts between contradictory preferences.
+    """Resolves conflicts between contradictory preferences.
 
     Uses multiple weighted factors:
     - Recency: More recent preferences are weighted higher
@@ -32,8 +30,7 @@ class ConflictResolver:
         frequency_weight: float = 0.35,
         confidence_weight: float = 0.25,
     ):
-        """
-        Initialize the conflict resolver with weighting factors.
+        """Initialize the conflict resolver with weighting factors.
 
         Args:
             recency_weight: Weight for recency factor (0.0 to 1.0)
@@ -68,8 +65,7 @@ class ConflictResolver:
         )
 
     def resolve(self, conflicting_preferences: list[dict]) -> dict:
-        """
-        Resolve conflicts between multiple preferences.
+        """Resolve conflicts between multiple preferences.
 
         Uses weighted scoring to determine the best preference. If preferences
         have equal scores, the most recent one is chosen for determinism.
@@ -157,8 +153,7 @@ class ConflictResolver:
         return resolved
 
     def weight_by_recency(self, preferences: list[dict]) -> list[float]:
-        """
-        Calculate recency weights for preferences.
+        """Calculate recency weights for preferences.
 
         Uses exponential decay: weight = exp(-days_old / decay_factor)
 
@@ -213,8 +208,7 @@ class ConflictResolver:
         return weights
 
     def weight_by_frequency(self, preferences: list[dict]) -> list[float]:
-        """
-        Calculate frequency weights for preferences.
+        """Calculate frequency weights for preferences.
 
         Uses correction_count as a proxy for frequency of use.
 
@@ -263,8 +257,7 @@ class ConflictResolver:
         return weights
 
     def score_confidence(self, preference: dict) -> float:
-        """
-        Calculate confidence score for a preference.
+        """Calculate confidence score for a preference.
 
         Confidence is a value between 0.0 and 1.0 indicating how
         confident we are that this preference is correct.
@@ -294,8 +287,7 @@ class ConflictResolver:
         return confidence
 
     def _parse_timestamp(self, timestamp: str | None) -> datetime:
-        """
-        Parse ISO 8601 timestamp string to datetime.
+        """Parse ISO 8601 timestamp string to datetime.
 
         Args:
             timestamp: ISO 8601 formatted timestamp string
@@ -327,8 +319,7 @@ class ConflictResolver:
             return datetime(1970, 1, 1)
 
     def get_ambiguity_score(self, conflicting_preferences: list[dict]) -> float:
-        """
-        Calculate ambiguity score for a set of conflicting preferences.
+        """Calculate ambiguity score for a set of conflicting preferences.
 
         A score of 0.0 means clear winner, 1.0 means complete ambiguity.
 
@@ -390,8 +381,7 @@ class ConflictResolver:
     def needs_user_input(
         self, conflicting_preferences: list[dict], ambiguity_threshold: float = 0.7
     ) -> bool:
-        """
-        Determine if user input is needed to resolve conflict.
+        """Determine if user input is needed to resolve conflict.
 
         Args:
             conflicting_preferences: List of preference dictionaries

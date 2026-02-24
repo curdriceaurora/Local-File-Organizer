@@ -81,6 +81,7 @@ def scan_duplicates(
     request: DedupeScanRequest,
     settings: ApiSettings = Depends(get_settings),
 ) -> DedupeScanResponse:
+    """Scan a directory for duplicate files and return groups."""
     path = resolve_path(request.path, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
@@ -96,6 +97,7 @@ def preview_duplicates(
     request: DedupeScanRequest,
     settings: ApiSettings = Depends(get_settings),
 ) -> DedupePreviewResponse:
+    """Preview which duplicates would be kept and removed."""
     path = resolve_path(request.path, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")
@@ -112,6 +114,7 @@ def execute_deduplication(
     request: DedupeExecuteRequest,
     settings: ApiSettings = Depends(get_settings),
 ) -> DedupeExecuteResponse:
+    """Remove duplicate files, optionally moving them to trash."""
     path = resolve_path(request.path, settings.allowed_paths)
     if not path.exists():
         raise ApiError(status_code=404, error="not_found", message="Path not found")

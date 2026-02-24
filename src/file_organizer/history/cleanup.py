@@ -1,5 +1,4 @@
-"""
-History cleanup and maintenance utilities.
+"""History cleanup and maintenance utilities.
 
 This module provides functionality for managing operation history size,
 including automatic cleanup, manual purging, and database maintenance.
@@ -18,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class HistoryCleanupConfig:
-    """
-    Configuration for history cleanup policies.
+    """Configuration for history cleanup policies.
 
     Attributes:
         max_operations: Maximum number of operations to keep (default: 10,000)
@@ -37,6 +35,7 @@ class HistoryCleanupConfig:
         auto_cleanup_enabled: bool = True,
         cleanup_batch_size: int = 1000,
     ):
+        """Initialize cleanup configuration with retention policy settings."""
         self.max_operations = max_operations
         self.max_age_days = max_age_days
         self.max_size_mb = max_size_mb
@@ -45,16 +44,14 @@ class HistoryCleanupConfig:
 
 
 class HistoryCleanup:
-    """
-    Manages cleanup and maintenance of operation history.
+    """Manages cleanup and maintenance of operation history.
 
     This class provides methods to automatically clean up old operations,
     manage database size, and perform maintenance tasks.
     """
 
     def __init__(self, db: DatabaseManager, config: HistoryCleanupConfig | None = None):
-        """
-        Initialize history cleanup manager.
+        """Initialize history cleanup manager.
 
         Args:
             db: Database manager instance
@@ -65,8 +62,7 @@ class HistoryCleanup:
         logger.info("History cleanup manager initialized")
 
     def should_cleanup(self) -> bool:
-        """
-        Check if cleanup should be performed based on current state.
+        """Check if cleanup should be performed based on current state.
 
         Returns:
             True if cleanup is needed, False otherwise
@@ -93,8 +89,7 @@ class HistoryCleanup:
         return False
 
     def cleanup_old_operations(self, max_age_days: int | None = None) -> int:
-        """
-        Delete operations older than the specified age.
+        """Delete operations older than the specified age.
 
         Args:
             max_age_days: Maximum age in days. Uses config default if not specified.
@@ -123,8 +118,7 @@ class HistoryCleanup:
         return deleted_count
 
     def cleanup_by_count(self, max_operations: int | None = None) -> int:
-        """
-        Keep only the most recent N operations, delete older ones.
+        """Keep only the most recent N operations, delete older ones.
 
         Args:
             max_operations: Maximum number of operations to keep.
@@ -189,8 +183,7 @@ class HistoryCleanup:
         return deleted_count
 
     def cleanup_by_size(self, max_size_mb: int | None = None) -> int:
-        """
-        Delete old operations until database is under size limit.
+        """Delete old operations until database is under size limit.
 
         Args:
             max_size_mb: Maximum database size in MB. Uses config default if not specified.
@@ -255,8 +248,7 @@ class HistoryCleanup:
         return total_deleted
 
     def cleanup_failed_operations(self, older_than_days: int = 7) -> int:
-        """
-        Delete failed operations older than specified days.
+        """Delete failed operations older than specified days.
 
         Args:
             older_than_days: Only delete failed operations older than this many days
@@ -278,8 +270,7 @@ class HistoryCleanup:
         return deleted_count
 
     def cleanup_rolled_back_operations(self, older_than_days: int = 7) -> int:
-        """
-        Delete rolled back operations older than specified days.
+        """Delete rolled back operations older than specified days.
 
         Args:
             older_than_days: Only delete rolled back operations older than this many days
@@ -301,8 +292,7 @@ class HistoryCleanup:
         return deleted_count
 
     def _cleanup_orphaned_transactions(self) -> int:
-        """
-        Delete transactions that have no associated operations.
+        """Delete transactions that have no associated operations.
 
         Returns:
             Number of transactions deleted
@@ -323,8 +313,7 @@ class HistoryCleanup:
         return deleted_count
 
     def auto_cleanup(self) -> dict[str, int]:
-        """
-        Perform automatic cleanup based on configuration.
+        """Perform automatic cleanup based on configuration.
 
         This method checks if cleanup is needed and performs the necessary
         cleanup operations to maintain configured limits.
@@ -366,8 +355,7 @@ class HistoryCleanup:
         return stats
 
     def clear_all(self, confirm: bool = False) -> bool:
-        """
-        Delete all operations and transactions from the database.
+        """Delete all operations and transactions from the database.
 
         Args:
             confirm: Must be True to actually delete data
@@ -392,8 +380,7 @@ class HistoryCleanup:
         return True
 
     def get_statistics(self) -> dict[str, Any]:
-        """
-        Get statistics about the current history database.
+        """Get statistics about the current history database.
 
         Returns:
             Dictionary with various statistics

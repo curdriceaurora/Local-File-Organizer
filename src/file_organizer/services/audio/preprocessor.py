@@ -1,5 +1,4 @@
-"""
-Audio Preprocessing Service
+"""Audio Preprocessing Service.
 
 Provides audio format conversion, normalization, and preprocessing
 capabilities to prepare audio files for transcription and analysis.
@@ -41,8 +40,7 @@ class AudioConfig:
 
 
 class AudioPreprocessor:
-    """
-    Audio preprocessing service for format conversion and normalization.
+    """Audio preprocessing service for format conversion and normalization.
 
     Handles:
     - Format conversion (mp3, m4a, flac, etc. -> wav)
@@ -53,8 +51,7 @@ class AudioPreprocessor:
     """
 
     def __init__(self, config: AudioConfig | None = None):
-        """
-        Initialize the audio preprocessor.
+        """Initialize the audio preprocessor.
 
         Args:
             config: Audio configuration (uses defaults if None)
@@ -85,8 +82,7 @@ class AudioPreprocessor:
         sample_rate: int | None = None,
         channels: int | None = None,
     ) -> Path:
-        """
-        Convert audio file to WAV format optimized for transcription.
+        """Convert audio file to WAV format optimized for transcription.
 
         Args:
             audio_path: Input audio file path
@@ -197,8 +193,7 @@ class AudioPreprocessor:
         output_path: str | Path | None = None,
         target_db: float = -20.0,
     ) -> Path:
-        """
-        Normalize audio levels.
+        """Normalize audio levels.
 
         Args:
             audio_path: Input audio file path
@@ -239,8 +234,7 @@ class AudioPreprocessor:
         silence_thresh: int = -40,  # dB
         min_silence_len: int = 1000,  # ms
     ) -> Path:
-        """
-        Remove silence from audio file.
+        """Remove silence from audio file.
 
         Args:
             audio_path: Input audio file path
@@ -295,8 +289,7 @@ class AudioPreprocessor:
         normalize: bool = True,
         remove_silence: bool = False,
     ) -> Path:
-        """
-        Complete preprocessing pipeline.
+        """Complete preprocessing pipeline.
 
         Args:
             audio_path: Input audio file path
@@ -346,8 +339,7 @@ class AudioPreprocessor:
 
     @staticmethod
     def get_audio_info(audio_path: str | Path) -> dict:
-        """
-        Get audio file information.
+        """Get audio file information.
 
         Args:
             audio_path: Audio file path

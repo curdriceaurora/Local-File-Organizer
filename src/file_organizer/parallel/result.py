@@ -1,5 +1,4 @@
-"""
-Result dataclasses for parallel file processing.
+"""Result dataclasses for parallel file processing.
 
 This module defines data structures for tracking individual file processing
 results and aggregated batch results.
@@ -14,8 +13,7 @@ from typing import Any
 
 @dataclass
 class FileResult:
-    """
-    Result of processing a single file.
+    """Result of processing a single file.
 
     Attributes:
         path: Path to the file that was processed.
@@ -40,8 +38,7 @@ class FileResult:
 
 @dataclass
 class BatchResult:
-    """
-    Aggregated result of processing a batch of files.
+    """Aggregated result of processing a batch of files.
 
     Attributes:
         total: Total number of files in the batch.
@@ -60,8 +57,7 @@ class BatchResult:
     files_per_second: float = 0.0
 
     def summary(self) -> str:
-        """
-        Generate a human-readable summary of the batch result.
+        """Generate a human-readable summary of the batch result.
 
         Returns:
             Multi-line summary string with counts, timing, and failure details.

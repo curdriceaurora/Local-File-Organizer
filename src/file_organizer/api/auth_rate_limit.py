@@ -25,10 +25,12 @@ class LoginRateLimiter(Protocol):
 
 @dataclass
 class RateLimitState:
+    """Track rate limit count and expiry for a key."""
     count: int
     expires_at: float
 
     def remaining(self, now: float) -> int:
+        """Return remaining seconds until window expiry."""
         return max(0, int(self.expires_at - now))
 
 
@@ -50,6 +52,7 @@ class InMemoryLoginRateLimiter:
         return state
 
     def is_blocked(self, key: str) -> tuple[bool, int]:
+        """Return whether the key is currently blocked and retry-after seconds."""
         now = time.time()
         state = self._get_state(key, now)
         if state is None:
@@ -59,6 +62,7 @@ class InMemoryLoginRateLimiter:
         return False, 0
 
     def record_failure(self, key: str) -> tuple[bool, int]:
+        """Record a failed attempt and return blocked status and retry-after seconds."""
         now = time.time()
         state = self._get_state(key, now)
         if state is None:
@@ -70,6 +74,7 @@ class InMemoryLoginRateLimiter:
         return blocked, state.remaining(now)
 
     def reset(self, key: str) -> None:
+        """Clear rate limit state for the given key."""
         self._state.pop(key, None)
 
 
@@ -92,6 +97,7 @@ class RedisLoginRateLimiter:
         return int(ttl)
 
     def is_blocked(self, key: str) -> tuple[bool, int]:
+        """Return whether the key is currently blocked and retry-after seconds."""
         redis_key = self._key(key)
         value = self.redis.get(redis_key)
         if value is None:
@@ -106,6 +112,7 @@ class RedisLoginRateLimiter:
         return False, 0
 
     def record_failure(self, key: str) -> tuple[bool, int]:
+        """Record a failed attempt and return blocked status and retry-after seconds."""
         redis_key = self._key(key)
         pipe = self.redis.pipeline()
         pipe.incr(redis_key)
@@ -118,6 +125,7 @@ class RedisLoginRateLimiter:
         return blocked, int(ttl)
 
     def reset(self, key: str) -> None:
+        """Clear rate limit state for the given key."""
         self.redis.delete(self._key(key))
 
 

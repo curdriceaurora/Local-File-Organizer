@@ -1,5 +1,4 @@
-"""
-Data models for progress persistence and job resumption.
+"""Data models for progress persistence and job resumption.
 
 This module defines the core data structures for tracking batch job state,
 checkpoints, and job summaries used by the persistence and resume system.
@@ -26,8 +25,7 @@ class JobStatus(StrEnum):
 
 @dataclass
 class JobState:
-    """
-    Full state of a batch processing job.
+    """Full state of a batch processing job.
 
     Attributes:
         id: Unique identifier for the job.
@@ -83,8 +81,7 @@ class JobState:
 
 @dataclass
 class JobSummary:
-    """
-    Lightweight summary of a job for listing purposes.
+    """Lightweight summary of a job for listing purposes.
 
     Attributes:
         id: Unique identifier for the job.
@@ -115,8 +112,7 @@ class JobSummary:
 
 @dataclass
 class Checkpoint:
-    """
-    Checkpoint state for resumable batch processing.
+    """Checkpoint state for resumable batch processing.
 
     Stores which files have been completed, which are still pending,
     and file hashes for detecting modifications between runs.

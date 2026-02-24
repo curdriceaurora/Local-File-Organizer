@@ -1,5 +1,4 @@
-"""
-PARA Heuristics Engine
+"""PARA Heuristics Engine.
 
 Multi-factor heuristic detection system for automatic PARA categorization.
 Uses temporal, content, structural, and AI-based heuristics.
@@ -57,8 +56,7 @@ class Heuristic(ABC):
     """Base class for all heuristics."""
 
     def __init__(self, weight: float = 1.0):
-        """
-        Initialize heuristic.
+        """Initialize heuristic.
 
         Args:
             weight: Weight of this heuristic in final scoring (0.0 to 1.0)
@@ -67,8 +65,7 @@ class Heuristic(ABC):
 
     @abstractmethod
     def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
-        """
-        Evaluate file and return category scores.
+        """Evaluate file and return category scores.
 
         Args:
             file_path: Path to file to evaluate
@@ -81,8 +78,7 @@ class Heuristic(ABC):
 
 
 class TemporalHeuristic(Heuristic):
-    """
-    Temporal heuristic using file timestamps and patterns.
+    """Temporal heuristic using file timestamps and patterns.
 
     Signals:
     - Recent activity (last 30 days) → PROJECT
@@ -94,8 +90,7 @@ class TemporalHeuristic(Heuristic):
 
     @staticmethod
     def _contains_old_year(path_str: str, current_year: int, threshold_years: int = 3) -> bool:
-        """
-        Check if path contains old year patterns (folders named like "2020").
+        """Check if path contains old year patterns (folders named like "2020").
 
         Args:
             path_str: Path string to check
@@ -191,8 +186,7 @@ class TemporalHeuristic(Heuristic):
 
 
 class ContentHeuristic(Heuristic):
-    """
-    Content-based heuristic using filename and path patterns.
+    """Content-based heuristic using filename and path patterns.
 
     Signals:
     - Deadline/date patterns → PROJECT
@@ -262,11 +256,10 @@ class ContentHeuristic(Heuristic):
 
     @staticmethod
     def _matches_keyword(keyword: str, text: str) -> bool:
-        """
-        Check if keyword matches in text using word boundaries.
+        r"""Check if keyword matches in text using word boundaries.
 
         Prevents false positives like "project" matching "projection".
-        Uses regex word boundaries (\\b) for accurate matching.
+        Uses regex word boundaries (\b) for accurate matching.
 
         Args:
             keyword: The keyword to search for
@@ -348,8 +341,7 @@ class ContentHeuristic(Heuristic):
 
 
 class StructuralHeuristic(Heuristic):
-    """
-    Structural heuristic using directory hierarchy and organization.
+    """Structural heuristic using directory hierarchy and organization.
 
     Signals:
     - Deep nesting in project folders → PROJECT
@@ -413,8 +405,7 @@ class StructuralHeuristic(Heuristic):
 
 
 class AIHeuristic(Heuristic):
-    """
-    AI-powered heuristic using semantic analysis.
+    """AI-powered heuristic using semantic analysis.
 
     This is a placeholder for future AI integration.
     Can use local LLMs via Ollama for semantic understanding.
@@ -443,8 +434,7 @@ class AIHeuristic(Heuristic):
 
 
 class HeuristicEngine:
-    """
-    Main heuristic engine that combines multiple heuristics.
+    """Main heuristic engine that combines multiple heuristics.
 
     Scoring methodology:
     1. Each heuristic provides category scores (0-1)
@@ -464,8 +454,7 @@ class HeuristicEngine:
         enable_ai: bool = False,
         thresholds: CategoryThresholds | None = None,
     ):
-        """
-        Initialize heuristic engine.
+        """Initialize heuristic engine.
 
         Args:
             enable_temporal: Enable temporal heuristic
@@ -505,8 +494,7 @@ class HeuristicEngine:
         }
 
     def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
-        """
-        Evaluate file using all enabled heuristics.
+        """Evaluate file using all enabled heuristics.
 
         Args:
             file_path: Path to file

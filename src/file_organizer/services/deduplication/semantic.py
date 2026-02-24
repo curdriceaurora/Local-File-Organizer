@@ -1,5 +1,4 @@
-"""
-Semantic similarity analysis module.
+"""Semantic similarity analysis module.
 
 Computes cosine similarity between document embeddings and identifies similar documents.
 """
@@ -15,16 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 class SemanticAnalyzer:
-    """
-    Analyzes semantic similarity between documents.
+    """Analyzes semantic similarity between documents.
 
     Uses cosine similarity on TF-IDF embeddings to find similar documents.
     Supports clustering and efficient pairwise comparisons.
     """
 
     def __init__(self, threshold: float = 0.85):
-        """
-        Initialize the semantic analyzer.
+        """Initialize the semantic analyzer.
 
         Args:
             threshold: Minimum similarity score to consider documents similar (0-1)
@@ -36,8 +33,7 @@ class SemanticAnalyzer:
         logger.info(f"SemanticAnalyzer initialized with threshold={threshold}")
 
     def compute_similarity(self, doc1_vector: np.ndarray, doc2_vector: np.ndarray) -> float:
-        """
-        Compute cosine similarity between two document vectors.
+        """Compute cosine similarity between two document vectors.
 
         Args:
             doc1_vector: First document embedding
@@ -63,8 +59,7 @@ class SemanticAnalyzer:
     def find_similar_documents(
         self, embeddings: np.ndarray, paths: list[Path], min_similarity: float | None = None
     ) -> dict[Path, list[tuple[Path, float]]]:
-        """
-        Find similar documents based on embeddings.
+        """Find similar documents based on embeddings.
 
         Args:
             embeddings: Matrix of document embeddings (n_documents x n_features)
@@ -116,8 +111,7 @@ class SemanticAnalyzer:
         top_k: int | None = None,
         min_similarity: float | None = None,
     ) -> list[tuple[Path, float]]:
-        """
-        Find documents similar to a query document.
+        """Find documents similar to a query document.
 
         Args:
             query_embedding: Query document embedding
@@ -154,8 +148,7 @@ class SemanticAnalyzer:
     def cluster_by_similarity(
         self, similar_docs: dict[Path, list[tuple[Path, float]]]
     ) -> list[list[Path]]:
-        """
-        Cluster documents by similarity into groups.
+        """Cluster documents by similarity into groups.
 
         Uses a simple greedy clustering approach: documents are clustered if they
         share similar documents.
@@ -193,8 +186,7 @@ class SemanticAnalyzer:
         return clusters
 
     def compute_similarity_matrix(self, embeddings: np.ndarray) -> np.ndarray:
-        """
-        Compute full pairwise similarity matrix.
+        """Compute full pairwise similarity matrix.
 
         Args:
             embeddings: Matrix of document embeddings
@@ -220,8 +212,7 @@ class SemanticAnalyzer:
     def get_duplicate_groups(
         self, embeddings: np.ndarray, paths: list[Path], min_similarity: float | None = None
     ) -> list[dict]:
-        """
-        Get groups of duplicate/similar documents with metadata.
+        """Get groups of duplicate/similar documents with metadata.
 
         Args:
             embeddings: Document embeddings
@@ -274,8 +265,7 @@ class SemanticAnalyzer:
         return groups
 
     def set_threshold(self, threshold: float) -> None:
-        """
-        Update the similarity threshold.
+        """Update the similarity threshold.
 
         Args:
             threshold: New threshold value (0-1)
@@ -287,8 +277,7 @@ class SemanticAnalyzer:
         logger.info(f"Updated similarity threshold to {threshold}")
 
     def get_statistics(self, similarity_matrix: np.ndarray) -> dict:
-        """
-        Compute statistics from similarity matrix.
+        """Compute statistics from similarity matrix.
 
         Args:
             similarity_matrix: Pairwise similarity matrix

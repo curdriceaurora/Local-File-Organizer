@@ -1,5 +1,4 @@
-"""
-Checkpoint management for resumable batch processing.
+"""Checkpoint management for resumable batch processing.
 
 This module provides the CheckpointManager class for creating, loading,
 and updating checkpoints that track which files have been processed and
@@ -24,8 +23,7 @@ _HASH_CHUNK_SIZE = 8192
 
 
 def compute_file_hash(path: Path) -> str:
-    """
-    Compute the SHA-256 hash of a file's contents.
+    """Compute the SHA-256 hash of a file's contents.
 
     Reads the file in chunks to handle large files efficiently.
 
@@ -49,8 +47,7 @@ def compute_file_hash(path: Path) -> str:
 
 
 class CheckpointManager:
-    """
-    Manages checkpoint files for resumable batch processing.
+    """Manages checkpoint files for resumable batch processing.
 
     Each checkpoint is stored as a JSON file named ``{job_id}.checkpoint.json``
     in the configured checkpoints directory.
@@ -61,6 +58,7 @@ class CheckpointManager:
     """
 
     def __init__(self, checkpoints_dir: Path | None = None) -> None:
+        """Set up the checkpoint manager with the given directory."""
         self._checkpoints_dir = checkpoints_dir or _DEFAULT_CHECKPOINTS_DIR
 
     @property
@@ -82,8 +80,7 @@ class CheckpointManager:
         completed_files: list[Path],
         pending_files: list[Path],
     ) -> Checkpoint:
-        """
-        Create a new checkpoint for a job.
+        """Create a new checkpoint for a job.
 
         Computes file hashes for all completed and pending files that exist
         on disk, then persists the checkpoint to a JSON file.
@@ -115,8 +112,7 @@ class CheckpointManager:
         return checkpoint
 
     def load_checkpoint(self, job_id: str) -> Checkpoint | None:
-        """
-        Load a checkpoint from disk.
+        """Load a checkpoint from disk.
 
         Args:
             job_id: Identifier of the job whose checkpoint to load.
@@ -138,8 +134,7 @@ class CheckpointManager:
             return None
 
     def save_checkpoint(self, checkpoint: Checkpoint) -> None:
-        """
-        Save a checkpoint to disk using atomic write.
+        """Save a checkpoint to disk using atomic write.
 
         Args:
             checkpoint: The checkpoint to save.
@@ -164,8 +159,7 @@ class CheckpointManager:
         checkpoint: Checkpoint,
         completed_file: Path,
     ) -> None:
-        """
-        Update the checkpoint object in-memory to mark a file as completed.
+        """Update the checkpoint object in-memory to mark a file as completed.
 
         This moves the file from pending to completed and updates its content hash.
         It does NOT persist the change to disk.
@@ -197,8 +191,7 @@ class CheckpointManager:
         job_id: str,
         completed_file: Path,
     ) -> Checkpoint | None:
-        """
-        Mark a single file as completed and immediately persist to disk.
+        """Mark a single file as completed and immediately persist to disk.
 
         WARNING: This performs a full disk read/write cycle. For batch processing,
         use update_checkpoint_state() and save_checkpoint() manually.
@@ -220,8 +213,7 @@ class CheckpointManager:
         return checkpoint
 
     def delete_checkpoint(self, job_id: str) -> bool:
-        """
-        Delete a checkpoint file.
+        """Delete a checkpoint file.
 
         Args:
             job_id: Identifier of the job whose checkpoint to delete.
@@ -237,8 +229,7 @@ class CheckpointManager:
         return False
 
     def has_file_changed(self, checkpoint: Checkpoint, path: Path) -> bool:
-        """
-        Check whether a file has been modified since the checkpoint was created.
+        """Check whether a file has been modified since the checkpoint was created.
 
         Compares the current file hash against the stored hash. If no stored
         hash exists or the file cannot be read, the file is considered changed.
