@@ -42,6 +42,7 @@ class PluginInstaller:
         *,
         installed_plugins_file: Optional[Path] = None,
     ) -> None:
+        """Initialize this instance."""
         self.plugin_dir = plugin_dir
         self.repository = repository
         self.installed_plugins_file = installed_plugins_file or (plugin_dir / "installed.json")

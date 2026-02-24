@@ -24,6 +24,7 @@ class PluginLifecycleManager:
     """Manage plugin lifecycle transitions consistently."""
 
     def __init__(self, registry: PluginRegistry) -> None:
+        """Initialize this instance."""
         self.registry = registry
         self._states: dict[str, PluginState] = {}
         self._lock = RLock()

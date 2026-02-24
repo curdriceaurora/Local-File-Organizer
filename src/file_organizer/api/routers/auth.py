@@ -71,6 +71,7 @@ def register_user(
     db: Session = Depends(get_db),
     settings: ApiSettings = Depends(get_settings),
 ) -> UserResponse:
+    """Register a new user account."""
     valid, reason = validate_password(request.password, settings)
     if not valid:
         raise HTTPException(status_code=400, detail=reason)
@@ -110,6 +111,7 @@ def login(
     settings: ApiSettings = Depends(get_settings),
     rate_limiter: LoginRateLimiter = Depends(get_login_rate_limiter),
 ) -> TokenResponse:
+    """Authenticate user credentials and return JWT tokens."""
     rate_limit_key = _rate_limit_key(request, form_data.username)
     if settings.auth_login_rate_limit_enabled:
         blocked, retry_after = rate_limiter.is_blocked(rate_limit_key)
@@ -161,6 +163,7 @@ def refresh(
     token_store: TokenStore = Depends(get_token_store),
     settings: ApiSettings = Depends(get_settings),
 ) -> TokenResponse:
+    """Refresh an access token using a valid refresh token."""
     try:
         payload = decode_token(request.refresh_token, settings)
     except TokenError as exc:
@@ -203,6 +206,7 @@ def logout(
     token_store: TokenStore = Depends(get_token_store),
     settings: ApiSettings = Depends(get_settings),
 ) -> None:
+    """Revoke the current access and refresh tokens."""
     if not settings.auth_enabled:
         return None
 
@@ -238,4 +242,5 @@ def logout(
 
 @router.get("/me", response_model=UserResponse)
 def me(current_user: User = Depends(get_current_active_user)) -> UserResponse:
+    """Return the currently authenticated user."""
     return current_user

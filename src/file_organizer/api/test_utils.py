@@ -18,6 +18,7 @@ def build_test_settings(
     websocket_token: Optional[str] = None,
     auth_overrides: Optional[dict[str, Any]] = None,
 ) -> ApiSettings:
+    """Build ApiSettings configured for testing."""
     data: dict[str, Any] = {
         "environment": "test",
         "enable_docs": False,
@@ -43,6 +44,7 @@ def create_auth_client(
     admin: bool = False,
     auth_overrides: Optional[dict[str, Any]] = None,
 ) -> tuple[TestClient, dict[str, str], dict[str, str]]:
+    """Create a TestClient with a registered and logged-in user."""
     overrides = dict(auth_overrides or {})
     if admin:
         overrides.setdefault("auth_bootstrap_admin", True)

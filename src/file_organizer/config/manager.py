@@ -34,6 +34,7 @@ class ConfigManager:
     """
 
     def __init__(self, config_dir: str | Path | None = None) -> None:
+        """Initialize this instance."""
         self._config_dir = Path(config_dir) if config_dir else DEFAULT_CONFIG_DIR
 
     @property

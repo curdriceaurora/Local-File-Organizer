@@ -118,6 +118,7 @@ class DeploymentMonitor:
         resource_monitor: ResourceMonitor | None = None,
         disk_usage_func: object | None = None,
     ) -> None:
+        """Initialize this instance."""
         self._monitor = resource_monitor or ResourceMonitor()
         # disk_usage_func can be injected for testing; defaults to
         # a stub returning 0.0 when no real implementation is available.

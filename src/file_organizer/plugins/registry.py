@@ -94,6 +94,7 @@ class PluginRegistry:
     """
 
     def __init__(self) -> None:
+        """Initialize this instance."""
         self._records: dict[str, PluginRecord] = {}
 
     # ------------------------------------------------------------------

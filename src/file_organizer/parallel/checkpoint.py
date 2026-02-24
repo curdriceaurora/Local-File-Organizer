@@ -58,6 +58,7 @@ class CheckpointManager:
     """
 
     def __init__(self, checkpoints_dir: Path | None = None) -> None:
+        """Initialize this instance."""
         self._checkpoints_dir = checkpoints_dir or _DEFAULT_CHECKPOINTS_DIR
 
     @property

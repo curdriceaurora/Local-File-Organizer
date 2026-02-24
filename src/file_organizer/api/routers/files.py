@@ -87,6 +87,7 @@ def list_files(
     limit: int = Query(100, ge=1, le=1000),
     settings: ApiSettings = Depends(get_settings),
 ) -> FileListResponse:
+    """List files in a directory with optional filtering and sorting."""
     # Use home directory if path not provided
     if path is None:
         path = str(Path.home())
@@ -130,6 +131,7 @@ def get_file_info(
     path: str = Query(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> FileInfo:
+    """Return metadata for a single file."""
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="File not found")
@@ -145,6 +147,7 @@ def read_file_content(
     encoding: str = Query("utf-8"),
     settings: ApiSettings = Depends(get_settings),
 ) -> FileContentResponse:
+    """Return the text content of a file, optionally truncated."""
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="File not found")
@@ -193,6 +196,7 @@ def move_file(
     request: MoveFileRequest,
     settings: ApiSettings = Depends(get_settings),
 ) -> MoveFileResponse:
+    """Move or rename a file."""
     source = resolve_path(request.source, settings.allowed_paths)
     destination = resolve_path(request.destination, settings.allowed_paths)
 
@@ -252,6 +256,7 @@ def delete_file(
     request: DeleteFileRequest,
     settings: ApiSettings = Depends(get_settings),
 ) -> DeleteFileResponse:
+    """Delete or trash a file."""
     target = resolve_path(request.path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="File not found")

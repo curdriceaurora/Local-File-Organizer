@@ -251,8 +251,7 @@ class DatabaseManager:
         return result["count"] if result else 0
 
     def vacuum(self) -> None:
-        """Vacuum the database to reclaim space and optimize performance.
-        """
+        """Vacuum the database to reclaim space and optimize performance."""
         logger.info("Vacuuming database...")
         conn = self.get_connection()
         conn.execute("VACUUM")

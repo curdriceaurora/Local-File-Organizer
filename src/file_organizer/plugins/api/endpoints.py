@@ -102,6 +102,7 @@ def list_files_for_plugins(
     max_items: int = Query(200, ge=1, le=1000),
     settings: ApiSettings = Depends(get_settings),
 ) -> PluginFileListResponse:
+    """List files accessible to plugins."""
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="Path does not exist")
@@ -116,6 +117,7 @@ def get_file_metadata_for_plugins(
     path: str = Query(..., description="File path"),
     settings: ApiSettings = Depends(get_settings),
 ) -> FileInfo:
+    """Get metadata for a file accessible to plugins."""
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="File not found")
@@ -129,6 +131,7 @@ def organize_file_for_plugins(
     request: PluginOrganizeFileRequest,
     settings: ApiSettings = Depends(get_settings),
 ) -> PluginOrganizeFileResponse:
+    """Organize a file using the plugin API."""
     source = resolve_path(request.source_path, settings.allowed_paths)
     destination = resolve_path(request.destination_path, settings.allowed_paths)
 
@@ -168,6 +171,7 @@ def get_config_for_plugins(
     profile: str = Query("default"),
     manager: ConfigManager = Depends(get_config_manager),
 ) -> PluginConfigValueResponse:
+    """Retrieve a configuration value accessible to plugins."""
     value = _read_config_key(manager, profile, key)
     return PluginConfigValueResponse(key=key, value=value)
 
@@ -178,6 +182,7 @@ def register_plugin_hook(
     user: UserLike = Depends(get_current_active_user),
     hook_manager: PluginHookManager = Depends(get_hook_manager),
 ) -> PluginHookRegistrationResponse:
+    """Register a webhook callback for a plugin hook event."""
     plugin_id = _plugin_identity(user)
     try:
         registration, created = hook_manager.register_webhook(
@@ -207,6 +212,7 @@ def unregister_plugin_hook(
     user: UserLike = Depends(get_current_active_user),
     hook_manager: PluginHookManager = Depends(get_hook_manager),
 ) -> PluginHookUnregisterResponse:
+    """Register a webhook callback for a plugin hook event."""
     plugin_id = _plugin_identity(user)
     try:
         removed = hook_manager.unregister_webhook(
@@ -234,6 +240,7 @@ def list_plugin_hooks(
     user: UserLike = Depends(get_current_active_user),
     hook_manager: PluginHookManager = Depends(get_hook_manager),
 ) -> PluginHookListResponse:
+    """List all registered webhooks for a plugin."""
     plugin_id = _plugin_identity(user)
     webhooks = hook_manager.list_webhooks(plugin_id=plugin_id, event=event)
     items = [
@@ -255,6 +262,7 @@ def trigger_plugin_hook_event(
     user: UserLike = Depends(get_current_active_user),
     hook_manager: PluginHookManager = Depends(get_hook_manager),
 ) -> PluginHookTriggerResponse:
+    """Trigger a plugin hook event and deliver to registered callbacks."""
     plugin_id = _plugin_identity(user)
     local_payload = dict(request.payload)
     local_payload["triggered_by"] = plugin_id

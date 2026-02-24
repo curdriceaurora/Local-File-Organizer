@@ -56,6 +56,7 @@ class FileBrowserTree(DirectoryTree):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
+        """Initialize this instance."""
         super().__init__(path, name=name, id=id, classes=classes)
         self._extension_filter: set[str] = set()
 
@@ -161,6 +162,7 @@ class FilterInput(Input):
         """Posted when the user submits a filter value."""
 
         def __init__(self, value: str) -> None:
+            """Initialize this instance."""
             super().__init__()
             self.value = value
 
@@ -200,6 +202,7 @@ class FileBrowserView(Vertical):
         """Posted when a file is highlighted in the tree."""
 
         def __init__(self, path: Path) -> None:
+            """Initialize this instance."""
             super().__init__()
             self.path = path
 
@@ -211,6 +214,7 @@ class FileBrowserView(Vertical):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
+        """Initialize this instance."""
         super().__init__(name=name, id=id, classes=classes)
         self._root_path = Path(path)
 

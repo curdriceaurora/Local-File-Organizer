@@ -196,6 +196,7 @@ class UndoHistoryView(Vertical):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
+        """Initialize this instance."""
         super().__init__(name=name, id=id, classes=classes)
 
     def compose(self):  # type: ignore[override]

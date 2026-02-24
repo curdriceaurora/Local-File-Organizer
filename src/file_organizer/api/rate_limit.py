@@ -12,6 +12,7 @@ from redis import Redis
 
 @dataclass(frozen=True)
 class RateLimitResult:
+    """Result of a rate limit check."""
     allowed: bool
     remaining: int
     reset_at: int
@@ -26,6 +27,7 @@ class RateLimiter(Protocol):
 
 @dataclass
 class RateLimitState:
+    """Mutable rate limit state for a single key."""
     count: int
     reset_at: int
 
@@ -38,6 +40,8 @@ class InMemoryRateLimiter:
         max_entries: int = 10000,
         sweep_interval_seconds: int = 60,
     ) -> None:
+        """Initialize InMemoryRateLimiter with given capacity and sweep interval."""
+        self._state: dict[str, RateLimitState] = {}
         self._state: dict[str, RateLimitState] = {}
         self._last_sweep: int = 0
         self._max_entries = max_entries
@@ -50,6 +54,7 @@ class InMemoryRateLimiter:
         self._last_sweep = now
 
     def check(self, key: str, limit: int, window_seconds: int) -> RateLimitResult:
+        """Check rate limit for key and return the result."""
         now = int(time.time())
         if now - self._last_sweep >= self._sweep_interval_seconds:
             self._sweep(now)
@@ -72,6 +77,7 @@ class RedisRateLimiter:
     """Redis-backed fixed-window rate limiter."""
 
     def __init__(self, redis: Redis, prefix: str = "ratelimit:") -> None:
+        """Initialize RedisRateLimiter with a Redis client and key prefix."""
         self._redis = redis
         self._prefix = prefix
 
@@ -79,6 +85,7 @@ class RedisRateLimiter:
         return f"{self._prefix}{key}"
 
     def check(self, key: str, limit: int, window_seconds: int) -> RateLimitResult:
+        """Check rate limit for key against Redis and return the result."""
         now = int(time.time())
         redis_key = self._key(key)
         script = """

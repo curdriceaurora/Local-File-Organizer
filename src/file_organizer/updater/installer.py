@@ -44,6 +44,7 @@ class UpdateInstaller:
     """
 
     def __init__(self, install_dir: str | Path | None = None) -> None:
+        """Initialize this instance."""
         self._install_dir = Path(install_dir) if install_dir else self._detect_install_dir()
         appimage = os.environ.get("APPIMAGE")
         self._appimage_path = Path(appimage) if appimage else None

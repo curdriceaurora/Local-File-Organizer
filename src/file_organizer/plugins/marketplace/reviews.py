@@ -16,6 +16,7 @@ class ReviewManager:
     """Manage plugin reviews in a local JSON store."""
 
     def __init__(self, db_path: Path) -> None:
+        """Initialize this instance."""
         self.db_path = db_path
 
     def add_review(self, review: PluginReview) -> None:

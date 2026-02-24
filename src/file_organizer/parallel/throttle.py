@@ -49,6 +49,7 @@ class RateThrottler:
     """
 
     def __init__(self, max_rate: float, window_seconds: float = 1.0) -> None:
+        """Initialize this instance."""
         if max_rate <= 0:
             raise ValueError(f"max_rate must be > 0, got {max_rate}")
         if window_seconds <= 0:

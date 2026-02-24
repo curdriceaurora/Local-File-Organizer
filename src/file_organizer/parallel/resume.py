@@ -46,6 +46,7 @@ class ResumableProcessor:
         persistence: JobPersistence | None = None,
         checkpoint_mgr: CheckpointManager | None = None,
     ) -> None:
+        """Initialize this instance."""
         self._config = config or ParallelConfig()
         self._processor = ParallelProcessor(config=self._config)
         self._persistence = persistence or JobPersistence()

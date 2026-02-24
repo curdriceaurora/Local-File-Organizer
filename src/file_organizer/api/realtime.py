@@ -13,6 +13,7 @@ from starlette.websockets import WebSocketState
 
 @dataclass(frozen=True)
 class BroadcastEvent:
+    """A broadcast event with channel and payload."""
     channel: str
     payload: dict[str, Any]
 
@@ -21,6 +22,7 @@ class ConnectionManager:
     """Manage WebSocket connections and broadcast events."""
 
     def __init__(self) -> None:
+        """Initialize ConnectionManager with empty connections and subscriptions."""
         self._connections: set[WebSocket] = set()
         self._subscriptions: dict[WebSocket, set[str]] = {}
         self._lock: Optional[asyncio.Lock] = None
@@ -34,6 +36,7 @@ class ConnectionManager:
         return self._lock
 
     async def connect(self, websocket: WebSocket, client_id: str) -> None:
+        """Accept a WebSocket connection and register it."""
         await websocket.accept()
         current_loop = asyncio.get_running_loop()
         if self._loop is None or self._loop.is_closed() or self._loop is not current_loop:
@@ -55,11 +58,13 @@ class ConnectionManager:
         )
 
     async def disconnect(self, websocket: WebSocket) -> None:
+        """Remove a WebSocket connection from the manager."""
         async with self._ensure_lock():
             self._connections.discard(websocket)
             self._subscriptions.pop(websocket, None)
 
     def reset(self) -> None:
+        """Cancel the queue consumer and clear all connections."""
         task = self._queue_task
         loop = self._loop
         self._queue_task = None
@@ -95,11 +100,13 @@ class ConnectionManager:
             logger.exception("WebSocket queue task failed during reset")
 
     async def send_personal_message(self, message: dict[str, Any], websocket: WebSocket) -> None:
+        """Send a message directly to a single WebSocket connection."""
         if websocket.client_state != WebSocketState.CONNECTED:
             return
         await websocket.send_json(message)
 
     async def broadcast(self, message: dict[str, Any], channel: str = "global") -> None:
+        """Broadcast a message to all connections subscribed to channel."""
         async with self._ensure_lock():
             if channel == "global":
                 targets = list(self._connections)
@@ -117,21 +124,25 @@ class ConnectionManager:
                 await self.disconnect(websocket)
 
     async def subscribe(self, websocket: WebSocket, channel: str) -> None:
+        """Subscribe a WebSocket to receive events on channel."""
         async with self._ensure_lock():
             if websocket in self._subscriptions:
                 self._subscriptions[websocket].add(channel)
 
     async def unsubscribe(self, websocket: WebSocket, channel: str) -> None:
+        """Unsubscribe a WebSocket from events on channel."""
         async with self._ensure_lock():
             if websocket in self._subscriptions:
                 self._subscriptions[websocket].discard(channel)
 
     async def publish_event(self, payload: dict[str, Any], channel: str = "global") -> None:
+        """Enqueue a broadcast event for async delivery."""
         if self._queue is None:
             return
         await self._queue.put(BroadcastEvent(channel=channel, payload=payload))
 
     def enqueue_event(self, payload: dict[str, Any], channel: str = "global") -> bool:
+        """Enqueue an event from a synchronous context using run_coroutine_threadsafe."""
         if self._loop is None or self._queue is None:
             return False
         try:

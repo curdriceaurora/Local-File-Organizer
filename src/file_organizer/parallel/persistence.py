@@ -30,6 +30,7 @@ class JobPersistence:
     """
 
     def __init__(self, jobs_dir: Path | None = None) -> None:
+        """Initialize this instance."""
         self._jobs_dir = jobs_dir or _DEFAULT_JOBS_DIR
 
     @property

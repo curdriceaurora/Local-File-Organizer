@@ -62,6 +62,7 @@ class ResourceManager:
     """
 
     def __init__(self, config: ResourceConfig) -> None:
+        """Initialize this instance."""
         self._config = config
         self._lock = threading.Lock()
         self._limits: dict[str, float] = {

@@ -57,6 +57,7 @@ class PluginSandbox:
         plugin_name: str,
         policy: PluginSecurityPolicy | None = None,
     ) -> None:
+        """Initialize this instance."""
         self.plugin_name = plugin_name
         self.policy = policy or PluginSecurityPolicy.unrestricted()
 

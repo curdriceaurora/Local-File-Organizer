@@ -35,6 +35,7 @@ class HistoryCleanupConfig:
         auto_cleanup_enabled: bool = True,
         cleanup_batch_size: int = 1000,
     ):
+        """Initialize cleanup configuration with retention policy settings."""
         self.max_operations = max_operations
         self.max_age_days = max_age_days
         self.max_size_mb = max_size_mb

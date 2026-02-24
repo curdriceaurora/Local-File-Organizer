@@ -67,6 +67,7 @@ class UpdateManager:
         install_dir: str | Path | None = None,
         include_prereleases: bool = False,
     ) -> None:
+        """Initialize this instance."""
         self._checker = UpdateChecker(
             repo=repo,
             current_version=current_version,

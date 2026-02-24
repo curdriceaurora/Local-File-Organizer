@@ -140,6 +140,7 @@ class OrganizationPreviewView(Vertical):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
+        """Initialize this instance."""
         super().__init__(name=name, id=id, classes=classes)
         self._input_dir = Path(input_dir)
         self._output_dir = Path(output_dir)

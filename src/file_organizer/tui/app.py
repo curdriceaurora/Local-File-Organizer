@@ -32,6 +32,7 @@ class StatusBar(Static):
     """
 
     def __init__(self, message: str = "Ready") -> None:
+        """Initialize the status bar with an initial message."""
         super().__init__(message)
         self._message = message
 
@@ -58,6 +59,7 @@ class Sidebar(Static):
     """
 
     def compose(self) -> ComposeResult:
+        """Compose the sidebar navigation content."""
         yield Static(
             "[b]Navigation[/b]\n\n"
             "[1] Files\n"
@@ -132,6 +134,7 @@ class FileOrganizerApp(App[None]):
     ]
 
     def __init__(self) -> None:
+        """Initialize the file organizer application."""
         super().__init__()
         self._current_view = "files"
 
@@ -141,6 +144,7 @@ class FileOrganizerApp(App[None]):
         thread.start()
 
     def compose(self) -> ComposeResult:
+        """Compose the main application layout."""
         yield Header()
         with Horizontal():
             yield Sidebar()
