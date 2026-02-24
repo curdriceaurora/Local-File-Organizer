@@ -97,10 +97,11 @@ def load_manifest(plugin_dir: Path) -> dict[str, Any]:
 
     validate_manifest(manifest, manifest_path)
 
-    # Apply defaults for missing optional fields
+    # Apply defaults for missing optional fields (copy mutable defaults
+    # to prevent shared-state bugs across callers).
     for field_name, (_ftype, default) in MANIFEST_OPTIONAL_FIELDS.items():
         if field_name not in manifest:
-            manifest[field_name] = default
+            manifest[field_name] = list(default) if isinstance(default, list) else default
 
     return manifest
 

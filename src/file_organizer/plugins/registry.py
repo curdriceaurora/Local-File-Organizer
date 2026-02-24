@@ -144,8 +144,12 @@ class PluginRegistry:
                 "Unload the existing plugin before loading a new version."
             )
 
-        # Resolve entry-point
-        entry_point = plugin_dir / manifest["entry_point"]
+        # Resolve entry-point (reject path traversal outside plugin_dir)
+        entry_point = (plugin_dir / manifest["entry_point"]).resolve()
+        if not str(entry_point).startswith(str(plugin_dir.resolve())):
+            raise PluginLoadError(
+                f"Entry-point '{manifest['entry_point']}' escapes plugin directory."
+            )
         if not entry_point.exists():
             raise PluginLoadError(
                 f"Entry-point '{manifest['entry_point']}' not found in {plugin_dir}."

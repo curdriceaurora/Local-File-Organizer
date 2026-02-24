@@ -174,6 +174,25 @@ def test_plugin_registry_load_error_on_missing_required_field(tmp_path: Path) ->
         registry.load_plugin(plugin_dir)
 
 
+def test_plugin_registry_load_error_on_entry_point_traversal(tmp_path: Path) -> None:
+    """load_plugin raises PluginLoadError when entry_point escapes plugin dir."""
+    registry = PluginRegistry()
+    plugin_dir = tmp_path / "traversal"
+    plugin_dir.mkdir()
+    # Entry point that tries to escape via path traversal
+    manifest = {
+        "name": "traversal",
+        "version": "1.0.0",
+        "author": "test",
+        "description": "path traversal attempt",
+        "entry_point": "../../etc/passwd",
+    }
+    (plugin_dir / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(PluginLoadError, match="escapes plugin directory"):
+        registry.load_plugin(plugin_dir)
+
+
 def test_plugin_config_manager_roundtrip(tmp_path: Path) -> None:
     manager = PluginConfigManager(tmp_path / "config")
     saved = PluginConfig(

@@ -8,7 +8,12 @@ from file_organizer.plugins.api.hooks import (
     WebhookDeliveryResult,
     WebhookRegistration,
 )
-from file_organizer.plugins.base import Plugin, PluginMetadata
+from file_organizer.plugins.base import (
+    Plugin,
+    PluginMetadata,
+    load_manifest,
+    validate_manifest,
+)
 from file_organizer.plugins.config import PluginConfig, PluginConfigManager
 from file_organizer.plugins.errors import (
     HookExecutionError,
@@ -87,5 +92,7 @@ __all__ = [
     "command",
     "get_command_metadata",
     "get_hook_metadata",
+    "load_manifest",
     "hook",
+    "validate_manifest",
 ]
