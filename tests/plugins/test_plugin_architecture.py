@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -22,12 +23,34 @@ from file_organizer.plugins import (
 )
 
 
-def _write_plugin(plugin_root: Path, plugin_name: str, source: str) -> Path:
+def _write_plugin(
+    plugin_root: Path,
+    plugin_name: str,
+    source: str,
+    *,
+    manifest: dict | None = None,
+) -> Path:
+    """Create a plugin directory with ``plugin.py`` and ``plugin.json``.
+
+    Returns the **directory** path (not the ``.py`` file).
+    """
     plugin_dir = plugin_root / plugin_name
     plugin_dir.mkdir(parents=True, exist_ok=True)
     plugin_file = plugin_dir / "plugin.py"
     plugin_file.write_text(source, encoding="utf-8")
-    return plugin_file
+
+    # Write manifest — use sensible defaults when not provided.
+    manifest_data = manifest or {
+        "name": plugin_name,
+        "version": "1.0.0",
+        "author": "test",
+        "description": f"{plugin_name} plugin",
+        "entry_point": "plugin.py",
+    }
+    manifest_path = plugin_dir / "plugin.json"
+    manifest_path.write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
+
+    return plugin_dir
 
 
 def test_plugin_registry_load_and_unload(tmp_path: Path) -> None:
@@ -62,21 +85,21 @@ class ExamplePlugin(Plugin):
     def on_unload(self) -> None:
         pass
 """
-    plugin_file = _write_plugin(plugin_root, "example", source)
+    plugin_dir = _write_plugin(plugin_root, "example", source)
 
     registry = PluginRegistry()
     assert registry.list_plugins() == []
 
-    record = registry.load_plugin(plugin_file)
+    record = registry.load_plugin(plugin_dir)
     assert isinstance(record, PluginRecord)
     assert record.name == "example"
     assert record.version == "1.0.0"
-    assert record.plugin_path == plugin_file
+    assert record.plugin_dir == plugin_dir
     assert registry.list_plugins() == ["example"]
 
     # Attempting to load the same plugin again raises PluginLoadError
     with pytest.raises(PluginLoadError, match="already loaded"):
-        registry.load_plugin(plugin_file)
+        registry.load_plugin(plugin_dir)
 
     # Retrieve the record by name
     fetched = registry.get_plugin("example")
@@ -91,23 +114,64 @@ class ExamplePlugin(Plugin):
         registry.get_plugin("example")
 
 
-def test_plugin_registry_load_error_on_missing_file(tmp_path: Path) -> None:
-    """load_plugin raises PluginLoadError when the path does not exist."""
+def test_plugin_registry_load_error_on_missing_manifest(tmp_path: Path) -> None:
+    """load_plugin raises PluginLoadError when plugin.json is missing."""
     registry = PluginRegistry()
-    missing = tmp_path / "nonexistent_plugin.py"
+    # Directory exists but has no plugin.json
+    empty_dir = tmp_path / "no_manifest"
+    empty_dir.mkdir()
+    (empty_dir / "plugin.py").write_text("# empty\n", encoding="utf-8")
 
-    with pytest.raises(PluginLoadError):
-        registry.load_plugin(missing)
+    with pytest.raises(PluginLoadError, match="plugin.json"):
+        registry.load_plugin(empty_dir)
 
 
-def test_plugin_registry_load_error_on_no_plugin_class(tmp_path: Path) -> None:
-    """load_plugin raises PluginLoadError when file has no Plugin subclass."""
-    plugin_file = tmp_path / "empty_plugin.py"
-    plugin_file.write_text("# This file has no Plugin subclass\nx = 1\n", encoding="utf-8")
-
+def test_plugin_registry_load_error_on_missing_entry_point(tmp_path: Path) -> None:
+    """load_plugin raises PluginLoadError when the entry-point file is missing."""
     registry = PluginRegistry()
-    with pytest.raises(PluginLoadError):
-        registry.load_plugin(plugin_file)
+    plugin_dir = tmp_path / "bad_entry"
+    plugin_dir.mkdir()
+    manifest = {
+        "name": "bad-entry",
+        "version": "1.0.0",
+        "author": "test",
+        "description": "bad entry point",
+        "entry_point": "nonexistent.py",
+    }
+    (plugin_dir / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(PluginLoadError, match="Entry-point"):
+        registry.load_plugin(plugin_dir)
+
+
+def test_plugin_registry_load_error_on_invalid_manifest(tmp_path: Path) -> None:
+    """load_plugin raises PluginLoadError when plugin.json has bad JSON."""
+    registry = PluginRegistry()
+    plugin_dir = tmp_path / "bad_json"
+    plugin_dir.mkdir()
+    (plugin_dir / "plugin.json").write_text("{bad json}", encoding="utf-8")
+
+    with pytest.raises(PluginLoadError, match="Invalid JSON"):
+        registry.load_plugin(plugin_dir)
+
+
+def test_plugin_registry_load_error_on_missing_required_field(tmp_path: Path) -> None:
+    """load_plugin raises PluginLoadError when a required field is missing."""
+    registry = PluginRegistry()
+    plugin_dir = tmp_path / "missing_field"
+    plugin_dir.mkdir()
+    # Missing "author" required field
+    manifest = {
+        "name": "incomplete",
+        "version": "1.0.0",
+        "description": "missing author",
+        "entry_point": "plugin.py",
+    }
+    (plugin_dir / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (plugin_dir / "plugin.py").write_text("# empty\n", encoding="utf-8")
+
+    with pytest.raises(PluginLoadError, match="author"):
+        registry.load_plugin(plugin_dir)
 
 
 def test_plugin_config_manager_roundtrip(tmp_path: Path) -> None:

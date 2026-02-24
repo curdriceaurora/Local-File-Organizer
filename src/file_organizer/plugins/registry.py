@@ -1,17 +1,13 @@
 """Plugin registry with subprocess-isolated lifecycle management.
 
-Each plugin is loaded in two phases:
+Plugin metadata is read from a static ``plugin.json`` manifest file — **no
+plugin code is ever executed inside the host process**.  The manifest provides
+the plugin's identity (name, version, author, …) and declares filesystem
+permissions via ``allowed_paths``.
 
-1. **In-process metadata extraction** — the plugin module is imported inside
-   the host process *once*, solely to read :attr:`Plugin.name`,
-   :attr:`Plugin.version`, and :attr:`Plugin.allowed_paths`.  This phase also
-   validates inter-plugin dependencies before committing resources.
-
-2. **Subprocess isolation** — a :class:`~file_organizer.plugins.executor.PluginExecutor`
-   is created and started.  All subsequent lifecycle calls (``on_load``,
-   ``on_file``, ``on_unload``) are routed through the executor's JSON-IPC
-   channel so that plugin code never runs inside the host process after
-   initial metadata extraction.
+After reading the manifest the registry spawns a
+:class:`~file_organizer.plugins.executor.PluginExecutor` subprocess which
+imports and runs the plugin module in an isolated child process.
 
 Example::
 
@@ -21,7 +17,7 @@ Example::
 
     registry = PluginRegistry()
     registry.load_plugin(
-        Path("my_plugin.py"),
+        Path("plugins/my-plugin"),
         policy=PluginSecurityPolicy.unrestricted(),
     )
     registry.unload_plugin("my-plugin")
@@ -29,14 +25,12 @@ Example::
 
 from __future__ import annotations
 
-import importlib.util
 import logging
-import types
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from file_organizer.plugins.base import Plugin, PluginError, PluginLoadError
+from file_organizer.plugins.base import PluginError, PluginLoadError, load_manifest
 from file_organizer.plugins.errors import PluginNotLoadedError
 from file_organizer.plugins.executor import PluginExecutor
 from file_organizer.plugins.security import PluginSecurityPolicy
@@ -54,22 +48,21 @@ class PluginRecord:
     """Metadata and runtime handles for a single loaded plugin.
 
     Attributes:
-        name: The plugin's canonical name (from :attr:`Plugin.name`).
-        version: The plugin's version string (from :attr:`Plugin.version`).
-        plugin_path: Filesystem path to the plugin ``.py`` source file.
+        name: The plugin's canonical name (from ``plugin.json``).
+        version: The plugin's version string (from ``plugin.json``).
+        plugin_dir: Directory containing the plugin's ``plugin.json`` and
+            entry-point source file.
         policy: The security policy applied to this plugin's subprocess.
-        plugin: In-process plugin instance retained for metadata access and
-            dependency validation.  Lifecycle hooks are *not* called on this
-            instance after initial loading; all calls go through ``executor``.
+        manifest: The parsed ``plugin.json`` dictionary.
         executor: The :class:`~file_organizer.plugins.executor.PluginExecutor`
             that owns the plugin's sandboxed child process.
     """
 
     name: str
     version: str
-    plugin_path: Path
+    plugin_dir: Path
     policy: PluginSecurityPolicy
-    plugin: Plugin
+    manifest: dict[str, Any]
     executor: PluginExecutor
 
 
@@ -81,11 +74,12 @@ class PluginRecord:
 class PluginRegistry:
     """Central registry for loading, tracking, and unloading plugins.
 
-    Plugins are registered by filesystem path.  The registry ensures each
-    plugin name is unique — attempting to load two plugins with the same
-    :attr:`Plugin.name` raises :class:`~file_organizer.plugins.base.PluginLoadError`.
+    Plugins are registered by directory path (which must contain a
+    ``plugin.json`` manifest).  The registry ensures each plugin name is
+    unique — attempting to load two plugins with the same name raises
+    :class:`~file_organizer.plugins.base.PluginLoadError`.
 
-    All lifecycle calls after initial loading are routed through each plugin's
+    All lifecycle calls are routed through each plugin's
     :class:`~file_organizer.plugins.executor.PluginExecutor` so that plugin
     code is isolated in a sandboxed child process.
 
@@ -102,44 +96,46 @@ class PluginRegistry:
 
     def load_plugin(
         self,
-        plugin_path: Path,
+        plugin_dir: Path,
         *,
         policy: PluginSecurityPolicy | None = None,
     ) -> PluginRecord:
-        """Load a plugin from *plugin_path* into the registry.
+        """Load a plugin from *plugin_dir* into the registry.
 
         The loading process is as follows:
 
-        1. Import the plugin module in-process to extract metadata and
-           validate dependencies (see :meth:`_load_module` and
-           :meth:`_instantiate_plugin`).
+        1. Read and validate ``plugin.json`` from *plugin_dir* — **no code
+           is executed** in the host process.
         2. Check that no plugin with the same name is already registered.
-        3. Build the sandbox policy if one was not provided.
-        4. Create a :class:`~file_organizer.plugins.executor.PluginExecutor`,
-           start it, and invoke ``on_load`` through the IPC channel.
+        3. Build the sandbox policy from the manifest if one was not
+           explicitly provided.
+        4. Resolve the entry-point path and create a
+           :class:`~file_organizer.plugins.executor.PluginExecutor`, start
+           it, and invoke ``on_load`` through the IPC channel.
         5. Store a :class:`PluginRecord` in the registry and return it.
 
         Args:
-            plugin_path: Path to the plugin ``.py`` file.
+            plugin_dir: Path to the plugin directory containing
+                ``plugin.json``.
             policy: Security policy for the plugin's subprocess.  Defaults to
-                :meth:`~file_organizer.plugins.security.PluginSecurityPolicy.unrestricted`
-                when *None*.
+                a policy derived from the manifest's ``allowed_paths``.
 
         Returns:
             The newly created :class:`PluginRecord`.
 
         Raises:
-            PluginLoadError: If the module cannot be imported, contains no
-                :class:`~file_organizer.plugins.base.Plugin` subclass, a
-                plugin with the same name is already loaded, or the
-                subprocess ``on_load`` call raises an error.
+            PluginLoadError: If the manifest is missing/invalid, the
+                entry-point source file does not exist, a plugin with the
+                same name is already loaded, or the subprocess ``on_load``
+                call raises an error.
         """
-        # Phase 1: In-process import for metadata extraction + dependency check
-        module = self._load_module(plugin_path)
-        plugin_instance = self._instantiate_plugin(module, plugin_path)
+        plugin_dir = Path(plugin_dir)
 
-        plugin_name = plugin_instance.name
-        plugin_version = plugin_instance.version
+        # Phase 1: Static manifest read — zero code execution
+        manifest = load_manifest(plugin_dir)
+
+        plugin_name: str = manifest["name"]
+        plugin_version: str = manifest["version"]
 
         # Guard against duplicate registrations
         if plugin_name in self._records:
@@ -148,11 +144,22 @@ class PluginRegistry:
                 "Unload the existing plugin before loading a new version."
             )
 
+        # Resolve entry-point
+        entry_point = plugin_dir / manifest["entry_point"]
+        if not entry_point.exists():
+            raise PluginLoadError(
+                f"Entry-point '{manifest['entry_point']}' not found in {plugin_dir}."
+            )
+
         # Phase 2: Build sandbox policy and spawn isolated subprocess
-        effective_policy = policy if policy is not None else self._build_sandbox(plugin_instance)
+        effective_policy = (
+            policy
+            if policy is not None
+            else self._build_sandbox_from_manifest(manifest)
+        )
 
         executor = PluginExecutor(
-            plugin_path=plugin_path,
+            plugin_path=entry_point,
             plugin_name=plugin_name,
             policy=effective_policy,
         )
@@ -168,13 +175,15 @@ class PluginRegistry:
         record = PluginRecord(
             name=plugin_name,
             version=plugin_version,
-            plugin_path=plugin_path,
+            plugin_dir=plugin_dir,
             policy=effective_policy,
-            plugin=plugin_instance,
+            manifest=manifest,
             executor=executor,
         )
         self._records[plugin_name] = record
-        logger.info("Loaded plugin '%s' v%s from %s", plugin_name, plugin_version, plugin_path)
+        logger.info(
+            "Loaded plugin '%s' v%s from %s", plugin_name, plugin_version, plugin_dir
+        )
         return record
 
     def unload_plugin(self, plugin_name: str) -> None:
@@ -202,37 +211,36 @@ class PluginRegistry:
         logger.info("Unloaded plugin '%s'", plugin_name)
 
     def enable_plugin(self, plugin_name: str) -> None:
-        """Enable a registered plugin (no-op stub; plugins are active on load).
+        """Enable a registered plugin via its executor.
 
-        This method is provided for API symmetry with :meth:`disable_plugin`.
-        All routing of lifecycle calls is handled by the executor; there is no
-        separate "enabled" flag maintained by the registry.
+        Calls ``on_enable`` in the plugin's subprocess through the executor.
 
         Args:
             plugin_name: The canonical name of the plugin to enable.
 
         Raises:
             PluginNotLoadedError: If no plugin with *plugin_name* is registered.
+            PluginError: If ``on_enable`` raises in the child process.
         """
-        if plugin_name not in self._records:
-            raise PluginNotLoadedError(f"Plugin '{plugin_name}' is not loaded.")
-        logger.debug("Plugin '%s' is already active (enabled on load).", plugin_name)
+        record = self.get_plugin(plugin_name)
+        record.executor.call("on_enable")
+        logger.debug("Plugin '%s' enabled.", plugin_name)
 
     def disable_plugin(self, plugin_name: str) -> None:
-        """Disable a registered plugin by unloading it from the registry.
+        """Disable a registered plugin via its executor.
 
-        Because subprocess isolation means the plugin runs in its own process,
-        "disabling" is equivalent to calling :meth:`unload_plugin`.  The
-        plugin can be re-enabled by calling :meth:`load_plugin` again.
+        Calls ``on_disable`` in the plugin's subprocess through the executor.
 
         Args:
             plugin_name: The canonical name of the plugin to disable.
 
         Raises:
             PluginNotLoadedError: If no plugin with *plugin_name* is registered.
-            PluginError: If ``on_unload`` raises during teardown.
+            PluginError: If ``on_disable`` raises in the child process.
         """
-        self.unload_plugin(plugin_name)
+        record = self.get_plugin(plugin_name)
+        record.executor.call("on_disable")
+        logger.debug("Plugin '%s' disabled.", plugin_name)
 
     def get_plugin(self, plugin_name: str) -> PluginRecord:
         """Return the :class:`PluginRecord` for a registered plugin.
@@ -300,96 +308,23 @@ class PluginRegistry:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _load_module(self, plugin_path: Path) -> types.ModuleType:
-        """Import a plugin module from *plugin_path* in-process.
+    @staticmethod
+    def _build_sandbox_from_manifest(
+        manifest: dict[str, Any],
+    ) -> PluginSecurityPolicy:
+        """Construct a :class:`PluginSecurityPolicy` from a manifest dict.
 
-        This method is used exclusively for metadata extraction before the
-        subprocess executor is started.  It does *not* invoke any plugin
-        lifecycle hooks.
-
-        Args:
-            plugin_path: Filesystem path to the plugin ``.py`` source file.
-
-        Returns:
-            The imported :class:`types.ModuleType`.
-
-        Raises:
-            PluginLoadError: If the path does not exist or the module cannot
-                be imported.
-        """
-        if not plugin_path.exists():
-            raise PluginLoadError(f"Plugin file not found: {plugin_path}")
-
-        spec = importlib.util.spec_from_file_location(plugin_path.stem, plugin_path)
-        if spec is None or spec.loader is None:
-            raise PluginLoadError(
-                f"Cannot create an import spec for plugin: {plugin_path}"
-            )
-
-        module = importlib.util.module_from_spec(spec)
-        try:
-            spec.loader.exec_module(module)  # type: ignore[union-attr]
-        except Exception as exc:
-            raise PluginLoadError(
-                f"Error importing plugin module '{plugin_path}': {exc}"
-            ) from exc
-
-        return module
-
-    def _instantiate_plugin(
-        self, module: types.ModuleType, plugin_path: Path
-    ) -> Plugin:
-        """Find and instantiate the first :class:`Plugin` subclass in *module*.
-
-        This is used in-process solely to read :attr:`Plugin.name`,
-        :attr:`Plugin.version`, and :attr:`Plugin.allowed_paths` for metadata
-        extraction and dependency validation.  No lifecycle hooks are called
-        on the returned instance.
+        Uses the manifest's ``allowed_paths`` list to build a policy that
+        restricts filesystem access to the declared paths.
 
         Args:
-            module: A module object produced by :meth:`_load_module`.
-            plugin_path: Path used in error messages.
+            manifest: Validated manifest dictionary.
 
         Returns:
-            An instantiated :class:`Plugin` subclass.
-
-        Raises:
-            PluginLoadError: If no :class:`Plugin` subclass is found or
-                instantiation raises an exception.
-        """
-        for attr_name in dir(module):
-            obj = getattr(module, attr_name)
-            if (
-                isinstance(obj, type)
-                and issubclass(obj, Plugin)
-                and obj is not Plugin
-            ):
-                try:
-                    return obj()
-                except Exception as exc:
-                    raise PluginLoadError(
-                        f"Error instantiating plugin class '{attr_name}' "
-                        f"from '{plugin_path}': {exc}"
-                    ) from exc
-
-        raise PluginLoadError(
-            f"No Plugin subclass found in: {plugin_path}"
-        )
-
-    def _build_sandbox(self, plugin: Plugin) -> PluginSecurityPolicy:
-        """Construct a :class:`PluginSecurityPolicy` from a plugin's declarations.
-
-        Uses the plugin's :attr:`~Plugin.allowed_paths` class attribute to
-        build a policy that restricts filesystem access to the declared paths.
-
-        Args:
-            plugin: In-process plugin instance used to read ``allowed_paths``.
-
-        Returns:
-            A :class:`PluginSecurityPolicy` scoped to the plugin's declared
+            A :class:`PluginSecurityPolicy` scoped to the manifest's declared
             allowed paths, with no operation restrictions.
         """
         return PluginSecurityPolicy.from_permissions(
-            allowed_paths=list(plugin.allowed_paths),
+            allowed_paths=list(manifest.get("allowed_paths", [])),
             allow_all_operations=True,
         )

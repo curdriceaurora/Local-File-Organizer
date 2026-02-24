@@ -1,0 +1,7 @@
+{
+    "name": "malicious-os-system",
+    "version": "0.0.1",
+    "author": "test",
+    "description": "Malicious test fixture",
+    "entry_point": "plugin.py"
+}

@@ -1,0 +1,7 @@
+{
+    "name": "auto_backup",
+    "version": "1.0.0",
+    "author": "File Organizer Team",
+    "description": "Backs up files after organization.",
+    "entry_point": "plugin.py"
+}

@@ -7,7 +7,6 @@ from pathlib import Path
 from file_organizer.plugins import (
     PluginRecord,
     PluginRegistry,
-    get_hook_metadata,
 )
 
 EXAMPLE_ROOT = Path(__file__).resolve().parents[2] / "examples" / "plugins"
@@ -20,11 +19,13 @@ EXPECTED_EXAMPLES = {
 
 
 def test_example_plugins_are_discoverable() -> None:
-    """All expected example plugin directories exist with a plugin.py file."""
+    """All expected example plugin directories exist with plugin.py and plugin.json."""
     found = {
         d.name
         for d in EXAMPLE_ROOT.iterdir()
-        if d.is_dir() and (d / "plugin.py").exists()
+        if d.is_dir()
+        and (d / "plugin.py").exists()
+        and (d / "plugin.json").exists()
     }
     assert found == EXPECTED_EXAMPLES
 
@@ -34,14 +35,16 @@ def test_example_plugins_load_and_lifecycle() -> None:
     registry = PluginRegistry()
 
     for plugin_name in sorted(EXPECTED_EXAMPLES):
-        plugin_file = EXAMPLE_ROOT / plugin_name / "plugin.py"
-        record = registry.load_plugin(plugin_file)
+        plugin_dir = EXAMPLE_ROOT / plugin_name
+        record = registry.load_plugin(plugin_dir)
 
         assert isinstance(record, PluginRecord)
         assert record.name == plugin_name
 
-        metadata = record.plugin.get_metadata()
-        assert metadata.name == plugin_name
+        # Metadata comes from the manifest (plugin.json), not an in-process instance.
+        assert record.manifest["name"] == plugin_name
+        assert record.manifest["version"] == "1.0.0"
+        assert record.manifest["author"] == "File Organizer Team"
 
         # Clean up — unload after each so names don't collide across iterations.
         registry.unload_plugin(plugin_name)
@@ -49,18 +52,15 @@ def test_example_plugins_load_and_lifecycle() -> None:
     assert registry.list_plugins() == []
 
 
-def test_file_logger_example_has_hook() -> None:
-    """The file_logger plugin exposes a hook-annotated method."""
+def test_example_plugins_enable_disable_via_executor() -> None:
+    """Enable/disable lifecycle calls go through the executor without error."""
     registry = PluginRegistry()
-    plugin_file = EXAMPLE_ROOT / "file_logger" / "plugin.py"
-    record = registry.load_plugin(plugin_file)
+    plugin_dir = EXAMPLE_ROOT / "hello_world"
+    record = registry.load_plugin(plugin_dir)
 
     try:
-        plugin_instance = record.plugin
-        if hasattr(plugin_instance, "on_file_organized"):
-            callback = plugin_instance.on_file_organized  # type: ignore[attr-defined]
-            hook_meta = get_hook_metadata(callback)
-            assert hook_meta is not None
-            assert hook_meta[0] == "file.organized"
+        # on_enable and on_disable routed through subprocess executor.
+        record.executor.call("on_enable")
+        record.executor.call("on_disable")
     finally:
-        registry.unload_plugin("file_logger")
+        registry.unload_plugin("hello_world")
