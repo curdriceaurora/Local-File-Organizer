@@ -22,6 +22,7 @@ from __future__ import annotations
 import time
 import uuid
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -302,7 +303,7 @@ class TestPipelineTiming:
     @pytest.mark.benchmark
     def test_benchmark_organize(
         self,
-        benchmark: object,
+        benchmark: Any,
         tmp_path: Path,
         complex_file_tree: Path,
         mock_text_processor: MagicMock,
@@ -323,6 +324,6 @@ class TestPipelineTiming:
             dest = out_dir / str(uuid.uuid4())
             return organizer.organize(complex_file_tree, dest)
 
-        result = benchmark(run_organize)  # type: ignore[operator]
+        result = benchmark(run_organize)
         assert result.total_files >= _EXPECTED_MIN_FILES
         assert result.processed_files > 0

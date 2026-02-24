@@ -62,9 +62,14 @@ class PluginLifecycleManager:
             return record
 
     def enable(self, name: str) -> None:
-        """Enable a loaded plugin via its subprocess executor."""
+        """Enable a loaded plugin via its subprocess executor.
+
+        No-op if the plugin is already ENABLED (mirrors ``disable()``'s guard).
+        """
         with self._lock:
             record = self._ensure_loaded(name)
+            if self._states.get(name) == PluginState.ENABLED:
+                return
             try:
                 record.executor.call("on_enable")
             except Exception as exc:

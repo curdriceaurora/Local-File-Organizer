@@ -44,12 +44,14 @@ MANIFEST_REQUIRED_FIELDS: dict[str, type] = {
 
 MANIFEST_OPTIONAL_FIELDS: dict[str, tuple[type | None, Any]] = {
     # field_name -> (expected_type_or_None, default_value)
+    # Defaults are tuples/strings/None — intentionally immutable so that callers
+    # who read this schema directly cannot accidentally mutate shared state.
     "license": (str, "MIT"),
     "homepage": (str, None),  # nullable
-    "dependencies": (list, []),
+    "dependencies": (list, ()),
     "min_organizer_version": (str, "2.0.0"),
     "max_organizer_version": (str, None),  # nullable
-    "allowed_paths": (list, []),
+    "allowed_paths": (list, ()),
 }
 
 
@@ -97,11 +99,12 @@ def load_manifest(plugin_dir: Path) -> dict[str, Any]:
 
     validate_manifest(manifest, manifest_path)
 
-    # Apply defaults for missing optional fields (copy mutable defaults
-    # to prevent shared-state bugs across callers).
+    # Apply defaults for missing optional fields.  Schema defaults are
+    # immutable (tuples/strings/None); convert sequence defaults to lists
+    # so downstream code gets the mutable type it expects.
     for field_name, (_ftype, default) in MANIFEST_OPTIONAL_FIELDS.items():
         if field_name not in manifest:
-            manifest[field_name] = list(default) if isinstance(default, list) else default
+            manifest[field_name] = list(default) if isinstance(default, (list, tuple)) else default
 
     return manifest
 
