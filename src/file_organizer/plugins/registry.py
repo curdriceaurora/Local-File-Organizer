@@ -83,6 +83,11 @@ class PluginRegistry:
     :class:`~file_organizer.plugins.executor.PluginExecutor` so that plugin
     code is isolated in a sandboxed child process.
 
+    **Thread safety:** This class is *not* internally synchronized.
+    :class:`~file_organizer.plugins.lifecycle.PluginLifecycleManager` wraps
+    all public methods with an ``RLock``; callers that bypass the lifecycle
+    manager must provide their own external synchronization.
+
     Attributes:
         _records: Mapping from plugin name to :class:`PluginRecord`.
     """
