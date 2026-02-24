@@ -179,8 +179,12 @@ class PluginRegistry:
             executor.call("on_load")
         except Exception:
             # Any failure after start() must stop the child process to avoid
-            # subprocess leaks (covers PluginError, IPC errors, timeouts, etc.)
-            executor.stop()
+            # subprocess leaks (covers PluginError, IPC errors, timeouts, etc.).
+            # Guard stop() so a cleanup failure doesn't mask the original error.
+            try:
+                executor.stop()
+            except Exception:
+                logger.debug("Cleanup of '%s' executor failed", plugin_name, exc_info=True)
             raise
 
         record = PluginRecord(
