@@ -145,8 +145,9 @@ class PluginRegistry:
             )
 
         # Resolve entry-point (reject path traversal outside plugin_dir)
+        resolved_plugin_dir = plugin_dir.resolve()
         entry_point = (plugin_dir / manifest["entry_point"]).resolve()
-        if not str(entry_point).startswith(str(plugin_dir.resolve())):
+        if not entry_point.is_relative_to(resolved_plugin_dir):
             raise PluginLoadError(
                 f"Entry-point '{manifest['entry_point']}' escapes plugin directory."
             )
@@ -328,6 +329,9 @@ class PluginRegistry:
             A :class:`PluginSecurityPolicy` scoped to the manifest's declared
             allowed paths, with no operation restrictions.
         """
+        # TODO: Operation-level restrictions are deferred to a follow-up PR.
+        # Currently only filesystem paths are sandboxed; all operation types
+        # (network, subprocess, etc.) are permitted within the child process.
         return PluginSecurityPolicy.from_permissions(
             allowed_paths=list(manifest.get("allowed_paths", [])),
             allow_all_operations=True,

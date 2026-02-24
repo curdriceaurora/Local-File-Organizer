@@ -30,6 +30,7 @@ from __future__ import annotations
 import shutil
 from collections.abc import Callable, Generator
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -75,8 +76,14 @@ def _write_bytes(path: Path, data: bytes) -> None:
 
 def _copy_sample(name: str, dest: Path) -> None:
     """Copy a committed sample file to *dest*."""
+    src = _SAMPLES_DIR / name
+    if not src.exists():
+        raise FileNotFoundError(
+            f"Sample file '{name}' not found at {src}. "
+            "Run 'python scripts/generate_e2e_samples.py' to generate test fixtures."
+        )
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(_SAMPLES_DIR / name, dest)
+    shutil.copy2(src, dest)
 
 
 def _csv_content(rows: int = 5) -> str:
@@ -247,7 +254,7 @@ def _make_mock_process_file(
 ) -> Callable[[Path], ProcessedFile]:
     """Return a deterministic ``process_file`` side_effect for a given extension→folder map."""
 
-    def _process_file(file_path: Path) -> ProcessedFile:
+    def _process_file(file_path: Path, **kwargs: Any) -> ProcessedFile:
         ext = file_path.suffix.lower()
         folder = folder_map.get(ext, "general")
         return ProcessedFile(

@@ -133,17 +133,21 @@ def validate_manifest(
             )
 
     # Optional fields — only type-check if present
-    for field_name, (expected_type, _default) in MANIFEST_OPTIONAL_FIELDS.items():
+    for field_name, (expected_type, default) in MANIFEST_OPTIONAL_FIELDS.items():
         if field_name not in manifest:
             continue
         value = manifest[field_name]
-        # Allow None for nullable fields (homepage, max_organizer_version)
-        if value is None:
+        # Allow None only for explicitly nullable fields (those whose default is None)
+        if value is None and default is None:
             continue
+        if value is None:
+            raise PluginLoadError(
+                f"Manifest {source}: field '{field_name}' must not be null."
+            )
         if expected_type is not None and not isinstance(value, expected_type):
             raise PluginLoadError(
                 f"Manifest {source}: field '{field_name}' must be "
-                f"{expected_type.__name__} or null, got {type(value).__name__}."
+                f"{expected_type.__name__}, got {type(value).__name__}."
             )
 
 

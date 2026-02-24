@@ -98,11 +98,15 @@ class PluginLifecycleManager:
             try:
                 self.registry.unload_plugin(name)
             except Exception as exc:
-                self._states[name] = PluginState.ERROR
+                # unload_plugin pops the record before calling on_unload, so on
+                # failure the plugin is already removed from the registry.
+                # Clean up the state entry to avoid a stale ERROR leak.
+                self._states.pop(name, None)
                 raise PluginLifecycleError(
                     f"Failed to unload plugin '{name}'."
                 ) from exc
-            self._states[name] = PluginState.UNLOADED
+            # Plugin fully unloaded — remove state entry (no orphaned UNLOADED).
+            self._states.pop(name, None)
 
     def get_state(self, name: str) -> PluginState:
         """Return tracked plugin state."""
