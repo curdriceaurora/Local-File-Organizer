@@ -17,7 +17,7 @@ class PluginMetadataStore:
     """Persist and query marketplace metadata locally."""
 
     def __init__(self, db_path: Path) -> None:
-        """Initialize this instance."""
+        """Set up the metadata store backed by the given database path."""
         self.db_path = db_path
 
     def sync(self, packages: list[PluginPackage]) -> None:

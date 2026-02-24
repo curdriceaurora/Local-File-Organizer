@@ -46,7 +46,7 @@ class PriorityQueue:
     """
 
     def __init__(self) -> None:
-        """Initialize this instance."""
+        """Create an empty thread-safe priority queue."""
         self._heap: list[tuple[int, int, QueueItem]] = []
         self._lock = threading.Lock()
         self._counter = 0

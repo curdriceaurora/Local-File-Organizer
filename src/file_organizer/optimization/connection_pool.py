@@ -73,7 +73,7 @@ class ConnectionPool:
         pool_size: int = 5,
         timeout: float = 30.0,
     ) -> None:
-        """Initialize this instance."""
+        """Set up the connection pool with the given size and connection factory."""
         if pool_size < 1:
             raise ValueError("pool_size must be >= 1")
 

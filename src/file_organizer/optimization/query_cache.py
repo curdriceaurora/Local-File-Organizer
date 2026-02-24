@@ -57,7 +57,7 @@ class QueryCache:
     """
 
     def __init__(self, max_size: int = 1000, ttl_seconds: float = 60.0) -> None:
-        """Initialize this instance."""
+        """Create a query cache with the given capacity and TTL."""
         if max_size < 1:
             raise ValueError("max_size must be >= 1")
         if ttl_seconds <= 0:

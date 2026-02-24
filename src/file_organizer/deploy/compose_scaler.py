@@ -38,7 +38,7 @@ class ComposeScaler:
         compose_file: str = "docker-compose.yml",
         project_name: str | None = None,
     ) -> None:
-        """Initialize this instance."""
+        """Set up the Compose scaler for the given compose file and project."""
         self._compose_file = compose_file
         self._project_name = project_name
 

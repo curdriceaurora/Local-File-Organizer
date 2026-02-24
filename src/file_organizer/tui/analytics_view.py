@@ -194,7 +194,7 @@ class AnalyticsView(Vertical):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
-        """Initialize this instance."""
+        """Set up the analytics view for the given directory."""
         super().__init__(name=name, id=id, classes=classes)
         self._directory = Path(directory)
 

@@ -210,7 +210,7 @@ class PluginExecutor:
         plugin_name: str | None = None,
         policy: PluginSecurityPolicy | None = None,
     ) -> None:
-        """Initialize this instance."""
+        """Set up the executor for the plugin at the given path."""
         self._plugin_path = Path(plugin_path)
         self._plugin_name = plugin_name or self._plugin_path.stem
         self._policy = policy or PluginSecurityPolicy.unrestricted()

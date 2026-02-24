@@ -197,7 +197,7 @@ class AudioView(Vertical):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
-        """Initialize this instance."""
+        """Set up the audio view to scan the given directory."""
         super().__init__(name=name, id=id, classes=classes)
         self._scan_dir = Path(scan_dir)
         self._files: list[tuple[Path, object, object]] = []  # (path, metadata, classification)

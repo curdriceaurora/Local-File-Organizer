@@ -77,7 +77,7 @@ class PluginHookManager:
         *,
         http_client_factory: Callable[[], httpx.Client] | None = None,
     ) -> None:
-        """Initialize this instance."""
+        """Set up the plugin hook manager."""
         self._lock = RLock()
         self._hook_registry = HookRegistry()
         self._webhooks: dict[HookEvent, list[WebhookRegistration]] = {}

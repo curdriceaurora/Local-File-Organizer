@@ -29,7 +29,7 @@ class PluginClient:
         timeout_seconds: float = 10.0,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
-        """Initialize this instance."""
+        """Set up a plugin client targeting the given API base URL."""
         cleaned_url = base_url.rstrip("/")
         if not cleaned_url.startswith(("http://", "https://")):
             raise ValueError("base_url must use http:// or https://")

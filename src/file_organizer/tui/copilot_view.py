@@ -89,7 +89,7 @@ class CopilotView(Vertical):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
-        """Initialize this instance."""
+        """Set up the copilot view with the given Textual widget parameters."""
         super().__init__(name=name, id=id, classes=classes)
         self._engine: object | None = None
 

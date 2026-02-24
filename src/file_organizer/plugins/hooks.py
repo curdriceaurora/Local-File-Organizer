@@ -30,7 +30,7 @@ class HookRegistry:
     """Thread-safe hook registration and trigger orchestration."""
 
     def __init__(self) -> None:
-        """Initialize this instance."""
+        """Create an empty hook registry."""
         self._hooks: dict[str, list[HookCallback]] = {}
         self._lock = RLock()
 

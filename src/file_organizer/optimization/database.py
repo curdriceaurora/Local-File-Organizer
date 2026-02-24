@@ -123,7 +123,7 @@ class DatabaseOptimizer:
     """
 
     def __init__(self, db_path: Path | str) -> None:
-        """Initialize this instance."""
+        """Set up the database optimizer for the given SQLite database path."""
         self._db_path = str(db_path)
         self._conn: sqlite3.Connection | None = None
         logger.info("DatabaseOptimizer initialised for %s", self._db_path)

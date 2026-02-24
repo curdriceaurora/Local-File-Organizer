@@ -81,7 +81,7 @@ class MemoryProfiler:
     """
 
     def __init__(self) -> None:
-        """Initialize this instance."""
+        """Create a memory profiler with an empty snapshot history."""
         self._tracking: bool = False
         self._snapshots: list[MemorySnapshot] = []
         self._interval: float = 0.1

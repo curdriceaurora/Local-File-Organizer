@@ -24,7 +24,7 @@ class FileSelectionManager:
     """
 
     def __init__(self) -> None:
-        """Initialize this instance."""
+        """Create an empty file selection manager."""
         self._selected: set[Path] = set()
 
     def toggle(self, path: Path) -> bool:
@@ -267,7 +267,7 @@ class FilePreviewView(Horizontal):
         """Posted when the selection set changes."""
 
         def __init__(self, count: int) -> None:
-            """Initialize this instance."""
+            """Create a message with the new selection count."""
             super().__init__()
             self.count = count
 
@@ -279,7 +279,7 @@ class FilePreviewView(Horizontal):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
-        """Initialize this instance."""
+        """Set up the file preview view rooted at the given path."""
         super().__init__(name=name, id=id, classes=classes)
         self._root_path = Path(path)
         self.selection = FileSelectionManager()

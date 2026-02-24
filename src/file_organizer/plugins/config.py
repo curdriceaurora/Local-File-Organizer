@@ -65,7 +65,7 @@ class PluginConfigManager:
     """Read/write plugin configuration files."""
 
     def __init__(self, config_dir: str | Path) -> None:
-        """Initialize this instance."""
+        """Set up the plugin config manager with the given configuration directory."""
         self._config_dir = Path(config_dir)
 
     @property
