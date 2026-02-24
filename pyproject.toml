@@ -267,13 +267,8 @@ markers = [
     "e2e: end-to-end tests against real file trees (no Ollama required)",
     "benchmark: performance benchmark tests (use --benchmark-only to run)",
 ]
-
-[tool.pytest.benchmark]
-min_rounds = 3
-max_time = 30.0
-timer = "time.perf_counter"
-disable_gc = true
-warmup = false
+# pytest-benchmark settings (pass via CLI: --benchmark-min-rounds=3 --benchmark-max-time=30.0)
+# benchmark_ prefix keys are NOT supported as ini_options in pytest-benchmark 5.x
 
 # Coverage configuration
 [tool.coverage.run]

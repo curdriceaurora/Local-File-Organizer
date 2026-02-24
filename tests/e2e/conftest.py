@@ -28,8 +28,8 @@ and does not require additional mocks.
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable, Generator
 from pathlib import Path
-from typing import Callable, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest

@@ -86,7 +86,7 @@ def generate_wav(path: Path) -> None:
         wf.writeframes(bytes(num_samples * 2))
 
 
-def main() -> None:  # noqa: D103
+def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     generators = [
