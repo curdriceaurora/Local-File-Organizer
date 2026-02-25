@@ -9,9 +9,11 @@ import pytest
 from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.models.text_model import TextModel
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.fixture
-def text_model_config():
+def text_model_config() -> ModelConfig:
     return ModelConfig(
         name="qwen2.5:3b-instruct-q4_K_M",
         model_type=ModelType.TEXT,
@@ -21,7 +23,7 @@ def text_model_config():
 class TestTextModel:
     """Tests for TextModel class."""
 
-    def test_initialization(self, text_model_config):
+    def test_initialization(self, text_model_config: ModelConfig) -> None:
         """Test TextModel initialization."""
         # Mock OLLAMA_AVAILABLE to True for this test
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
@@ -29,7 +31,7 @@ class TestTextModel:
             assert model.config == text_model_config
             assert model.config.model_type == ModelType.TEXT
 
-    def test_generate_text(self, text_model_config):
+    def test_generate_text(self, text_model_config: ModelConfig) -> None:
         """Test text generation."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
@@ -51,7 +53,7 @@ class TestTextModel:
                 assert kwargs["model"] == text_model_config.name
                 assert kwargs["prompt"] == "Process this file"
 
-    def test_generate_text_error(self, text_model_config):
+    def test_generate_text_error(self, text_model_config: ModelConfig) -> None:
         """Test text generation error handling."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
@@ -68,13 +70,13 @@ class TestTextModel:
                     excinfo.value
                 )
 
-    def test_init_missing_ollama(self, text_model_config):
+    def test_init_missing_ollama(self, text_model_config: ModelConfig) -> None:
         """Test initialization fails when Ollama is unavailable."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", False):
             with pytest.raises(ImportError, match="Ollama is not installed"):
                 TextModel(text_model_config)
 
-    def test_init_wrong_model_type(self):
+    def test_init_wrong_model_type(self) -> None:
         """Test initialization fails when passing non-TEXT model type."""
         config = ModelConfig(name="vision-model", model_type=ModelType.VISION)
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
@@ -82,13 +84,16 @@ class TestTextModel:
                 TextModel(config)
 
     @patch("file_organizer.models.text_model.ollama.Client")
-    def test_initialize_pulls_model_if_missing(self, mock_client_cls, text_model_config):
+    def test_initialize_pulls_model_if_missing(
+        self, mock_client_cls: MagicMock, text_model_config: ModelConfig
+    ) -> None:
         """Test TextModel pulls model if it's not found locally."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
 
             mock_client = MagicMock()
             import ollama
+
             # Raise an error on show() to simulate missing model
             mock_client.show.side_effect = ollama.ResponseError("model not found")
             mock_client_cls.return_value = mock_client
@@ -100,7 +105,9 @@ class TestTextModel:
             assert model._initialized is True
 
     @patch("file_organizer.models.text_model.ollama.Client")
-    def test_initialize_already_initialized(self, mock_client_cls, text_model_config):
+    def test_initialize_already_initialized(
+        self, mock_client_cls: MagicMock, text_model_config: ModelConfig
+    ) -> None:
         """Test initialize is a no-op if already initialized."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
@@ -111,7 +118,9 @@ class TestTextModel:
             mock_client_cls.assert_not_called()
 
     @patch("file_organizer.models.text_model.ollama.Client")
-    def test_initialize_error(self, mock_client_cls, text_model_config):
+    def test_initialize_error(
+        self, mock_client_cls: MagicMock, text_model_config: ModelConfig
+    ) -> None:
         """Test initialization propagating errors."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
@@ -121,14 +130,14 @@ class TestTextModel:
             with pytest.raises(Exception, match="init error"):
                 model.initialize()
 
-    def test_generate_uninitialized(self, text_model_config):
+    def test_generate_uninitialized(self, text_model_config: ModelConfig) -> None:
         """Test generating before initializing raises error."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
             with pytest.raises(RuntimeError, match="Model not initialized"):
                 model.generate("test")
 
-    def test_generate_streaming_success(self, text_model_config):
+    def test_generate_streaming_success(self, text_model_config: ModelConfig) -> None:
         """Test text generation with streaming."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
@@ -150,7 +159,7 @@ class TestTextModel:
                 args, kwargs = mock_client.generate.call_args
                 assert kwargs["stream"] is True
 
-    def test_generate_streaming_uninitialized(self, text_model_config):
+    def test_generate_streaming_uninitialized(self, text_model_config: ModelConfig) -> None:
         """Test streaming generation before initialization raises error."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
@@ -158,7 +167,7 @@ class TestTextModel:
                 # Consuming the generator via list() surfaces the error on first iteration
                 list(model.generate_streaming("test"))
 
-    def test_cleanup(self, text_model_config):
+    def test_cleanup(self, text_model_config: ModelConfig) -> None:
         """Test cleanup execution resets client and initialized state."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
@@ -171,7 +180,9 @@ class TestTextModel:
             assert model._initialized is False
 
     @patch("file_organizer.models.text_model.ollama.Client")
-    def test_test_connection_success(self, mock_client_cls, text_model_config):
+    def test_test_connection_success(
+        self, mock_client_cls: MagicMock, text_model_config: ModelConfig
+    ) -> None:
         """Test connection status lookup succeeds."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
@@ -188,7 +199,7 @@ class TestTextModel:
             assert info["size"] == "3GB"
             assert info["quantization"] == text_model_config.quantization
 
-    def test_test_connection_uninitialized(self, text_model_config):
+    def test_test_connection_uninitialized(self, text_model_config: ModelConfig) -> None:
         """Test connection check fails when uninitialized."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
@@ -196,7 +207,9 @@ class TestTextModel:
                 model.test_connection()
 
     @patch("file_organizer.models.text_model.ollama.Client")
-    def test_test_connection_error(self, mock_client_cls, text_model_config):
+    def test_test_connection_error(
+        self, mock_client_cls: MagicMock, text_model_config: ModelConfig
+    ) -> None:
         """Test connection error handling."""
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = TextModel(text_model_config)
@@ -212,7 +225,7 @@ class TestTextModel:
             assert info["status"] == "error"
             assert "connection lost" in info["error"]
 
-    def test_get_default_config(self):
+    def test_get_default_config(self) -> None:
         """Test retrieving the default configuration."""
         config = TextModel.get_default_config("custom-model")
         assert config.name == "custom-model"
