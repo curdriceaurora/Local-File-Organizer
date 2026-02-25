@@ -21,7 +21,7 @@ from file_organizer.utils.file_readers import (
     read_text_file,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit]
 
 
 class TestFileReaders:

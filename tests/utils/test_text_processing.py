@@ -15,7 +15,7 @@ from file_organizer.utils.text_processing import (
     truncate_text,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit]
 
 
 class TestTextProcessing:

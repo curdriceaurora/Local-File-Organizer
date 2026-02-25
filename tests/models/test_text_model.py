@@ -9,7 +9,7 @@ import pytest
 from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.models.text_model import TextModel
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit]
 
 
 @pytest.fixture

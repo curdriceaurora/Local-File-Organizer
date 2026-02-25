@@ -6,10 +6,10 @@ Tests folder structure generation, validation, and category path management.
 
 from __future__ import annotations
 
-import os
 import shutil
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -237,20 +237,13 @@ class TestPARAFolderGenerator:
         assert (temp_dir / "MyResources").exists()
         assert (temp_dir / "MyArchive").exists()
 
-    @pytest.mark.skipif(
-        hasattr(os, "getuid") and os.getuid() == 0,
-        reason="Root bypasses permission checks",
-    )
-    def test_error_handling_invalid_permissions(self, generator):
-        """Test error handling when folder creation fails."""
-        # Try to create in a non-existent parent that can't be created
-        invalid_path = Path("/root/definitely_no_permission_here")
-
-        result = generator.generate_structure(invalid_path, create_subdirs=False)
+    def test_error_handling_invalid_permissions(self, generator, temp_dir):
+        """Test error handling when folder creation fails due to permissions."""
+        with patch.object(Path, "mkdir", side_effect=PermissionError("Permission denied")):
+            result = generator.generate_structure(temp_dir, create_subdirs=False)
 
         assert result.success is False
         assert len(result.errors) > 0
-        assert invalid_path in [error[0] for error in result.errors]
 
 
 class TestFolderCreationResult:

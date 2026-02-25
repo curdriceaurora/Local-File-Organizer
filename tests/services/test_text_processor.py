@@ -10,7 +10,7 @@ from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.services.text_processor import ProcessedFile, TextProcessor
 from file_organizer.utils.file_readers import FileReadError
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit]
 
 
 @pytest.fixture
