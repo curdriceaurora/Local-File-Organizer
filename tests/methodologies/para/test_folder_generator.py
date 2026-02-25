@@ -6,6 +6,7 @@ Tests folder structure generation, validation, and category path management.
 
 from __future__ import annotations
 
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -236,6 +237,7 @@ class TestPARAFolderGenerator:
         assert (temp_dir / "MyResources").exists()
         assert (temp_dir / "MyArchive").exists()
 
+    @pytest.mark.skipif(os.getuid() == 0, reason="Root bypasses permission checks")
     def test_error_handling_invalid_permissions(self, generator):
         """Test error handling when folder creation fails."""
         # Try to create in a non-existent parent that can't be created

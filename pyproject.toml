@@ -82,6 +82,9 @@ dependencies = [
 
     # Logging
     "loguru>=0.7.0",
+
+    # Cryptography backend (required by python-jose → cryptography)
+    "cffi>=1.16.0",
 ]
 
 
