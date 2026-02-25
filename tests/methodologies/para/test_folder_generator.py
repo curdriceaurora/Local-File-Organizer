@@ -20,6 +20,8 @@ from file_organizer.methodologies.para.folder_generator import (
     PARAFolderGenerator,
 )
 
+pytestmark = [pytest.mark.unit]
+
 
 class TestPARAFolderGenerator:
     """Test PARA folder structure generation."""
@@ -239,7 +241,10 @@ class TestPARAFolderGenerator:
 
     def test_error_handling_invalid_permissions(self, generator, temp_dir):
         """Test error handling when folder creation fails due to permissions."""
-        with patch.object(Path, "mkdir", side_effect=PermissionError("Permission denied")):
+        with patch(
+            "file_organizer.methodologies.para.folder_generator.Path.mkdir",
+            side_effect=PermissionError("Permission denied"),
+        ):
             result = generator.generate_structure(temp_dir, create_subdirs=False)
 
         assert result.success is False
