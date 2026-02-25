@@ -237,7 +237,10 @@ class TestPARAFolderGenerator:
         assert (temp_dir / "MyResources").exists()
         assert (temp_dir / "MyArchive").exists()
 
-    @pytest.mark.skipif(os.getuid() == 0, reason="Root bypasses permission checks")
+    @pytest.mark.skipif(
+        hasattr(os, "getuid") and os.getuid() == 0,
+        reason="Root bypasses permission checks",
+    )
     def test_error_handling_invalid_permissions(self, generator):
         """Test error handling when folder creation fails."""
         # Try to create in a non-existent parent that can't be created
