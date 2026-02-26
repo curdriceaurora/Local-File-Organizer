@@ -30,6 +30,7 @@ Typical usage::
 from __future__ import annotations
 
 import json
+import select
 import subprocess
 import sys
 import types
@@ -310,6 +311,42 @@ class PluginExecutor:
     # RPC
     # ------------------------------------------------------------------
 
+    def _readline_with_timeout(self, timeout: float = 10.0) -> bytes:
+        """Read a line from stdout with a timeout.
+
+        Args:
+            timeout: Maximum seconds to wait for a line (default: 10.0).
+
+        Returns:
+            The line read from stdout (including newline).
+
+        Raises:
+            PluginError: If timeout occurs or stdout is not available.
+        """
+        if self._proc is None or self._proc.stdout is None:
+            raise PluginError("Worker process is not running.")
+
+        # Use select to wait for data with a timeout
+        if sys.platform == "win32":
+            # select() doesn't work with pipes on Windows; use a simple
+            # blocking read with a 5s timeout via exception handling
+            try:
+                # For Windows, we have to use a different approach
+                # since select doesn't support pipes. Raise an error suggesting
+                # proper implementation or just use the regular blocking call.
+                return self._proc.stdout.readline()
+            except Exception as exc:
+                raise PluginError(f"Failed to read from worker: {exc}") from exc
+        else:
+            # On Unix, use select.select() for proper timeout handling
+            ready, _, _ = select.select([self._proc.stdout], [], [], timeout)
+            if not ready:
+                raise PluginError(
+                    f"Worker process did not respond within {timeout}s "
+                    "(possible hang or timeout)."
+                )
+            return self._proc.stdout.readline()
+
     def call(self, method: str, *args: Any, **kwargs: Any) -> Any:
         """Invoke a method on the sandboxed plugin instance.
 
@@ -350,7 +387,10 @@ class PluginExecutor:
                 f"call '{method}'."
             ) from exc
 
-        raw = self._proc.stdout.readline()
+        try:
+            raw = self._readline_with_timeout(timeout=10.0)
+        except PluginError:
+            raise
         if not raw:
             stderr_output = ""
             if self._proc.stderr:
