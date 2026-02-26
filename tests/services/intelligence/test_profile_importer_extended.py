@@ -168,21 +168,16 @@ class TestValidateImportFileEdgeCases:
         _write_json(big_file, data)
 
         # Patch stat to report a large file size
-        original_stat = Path.stat
+        mock_stat_result = MagicMock()
+        mock_stat_result.st_size = 15 * 1024 * 1024  # 15 MB
 
-        def fake_stat(self_path):
-            result = original_stat(self_path)
-            if self_path == big_file:
-                # Create a mock stat result with large st_size
-                mock_result = MagicMock(wraps=result)
-                mock_result.st_size = 15 * 1024 * 1024  # 15 MB
-                return mock_result
-            return result
-
-        with patch.object(Path, "stat", fake_stat):
+        with patch.object(Path, "stat", return_value=mock_stat_result):
             result = importer.validate_import_file(big_file)
 
-        assert any("large file" in w.lower() for w in result.warnings)
+        assert result.warnings, f"Expected warnings, got: {result.warnings}"
+        assert any("large file" in w.lower() for w in result.warnings), (
+            f"Expected 'large file' in warnings, got: {result.warnings}"
+        )
 
     def test_unknown_version_warning(self, importer, temp_storage):
         """Test warning when profile version is unknown."""

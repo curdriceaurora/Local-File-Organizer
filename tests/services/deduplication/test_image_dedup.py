@@ -414,8 +414,16 @@ class TestFindDuplicates:
         bad.write_bytes(b"\xff\xd8bad")
 
         dedup = _make_dedup()
-        # encode_image returns hash for good, None for bad
-        dedup.hasher.encode_image.side_effect = ["good_hash", None]
+
+        # encode_image should return hash for good, None for bad (order-independent)
+        def encode_image_side_effect(path: str) -> str | None:
+            if path == str(good):
+                return "good_hash"
+            elif path == str(bad):
+                return None
+            return None
+
+        dedup.hasher.encode_image.side_effect = encode_image_side_effect
         dedup.hasher.find_duplicates.return_value = {str(good): []}
 
         dedup.find_duplicates(tmp_path)
