@@ -334,3 +334,172 @@ class TestFileEventHandlerCallbacks:
 
         handler.clear_debounce_state()
         assert handler.pending_paths == 0
+
+
+class TestFileEventHandlerMovedEdgeCases:
+    """Tests for edge cases in on_moved handling."""
+
+    def test_moved_event_without_dest_path_attr(
+        self, default_config: WatcherConfig, queue: EventQueue
+    ) -> None:
+        """Test move event when dest_path attribute is absent."""
+        handler = FileEventHandler(default_config, queue)
+        # Simulate a move event where dest_path is missing
+        event = MagicMock(spec=FileMovedEvent)
+        event.src_path = "/tmp/old.txt"
+        # Remove dest_path attribute entirely
+        del event.dest_path
+        handler.on_moved(event)
+
+        events = queue.dequeue_batch(1)
+        assert len(events) == 1
+        assert events[0].event_type == EventType.MOVED
+        assert events[0].dest_path is None
+
+    def test_moved_event_with_none_dest_path(
+        self, default_config: WatcherConfig, queue: EventQueue
+    ) -> None:
+        """Test move event when dest_path is explicitly None."""
+        handler = FileEventHandler(default_config, queue)
+        event = MagicMock(spec=FileMovedEvent)
+        event.src_path = "/tmp/old.txt"
+        event.dest_path = None
+        handler.on_moved(event)
+
+        events = queue.dequeue_batch(1)
+        assert len(events) == 1
+        assert events[0].dest_path is None
+
+    def test_moved_directory_event(
+        self, default_config: WatcherConfig, queue: EventQueue
+    ) -> None:
+        """Test that directory move events are classified correctly."""
+        from watchdog.events import DirMovedEvent
+
+        handler = FileEventHandler(default_config, queue)
+        event = DirMovedEvent(src_path="/tmp/olddir", dest_path="/tmp/newdir")
+        handler.on_moved(event)
+
+        events = queue.dequeue_batch(1)
+        assert len(events) == 1
+        assert events[0].is_directory is True
+        assert events[0].event_type == EventType.MOVED
+        assert events[0].dest_path == Path("/tmp/newdir")
+
+
+class TestFileEventHandlerDebounceThreadSafety:
+    """Tests for debounce behavior under concurrent access."""
+
+    def test_concurrent_debounce_same_file(self, queue: EventQueue) -> None:
+        """Test that debouncing is thread-safe for the same file path."""
+        config = WatcherConfig(debounce_seconds=1.0, exclude_patterns=[])
+        handler = FileEventHandler(config, queue)
+        errors: list[Exception] = []
+
+        def fire_event() -> None:
+            try:
+                handler.on_modified(FileModifiedEvent(src_path="/tmp/shared.txt"))
+            except Exception as e:
+                errors.append(e)
+
+        import threading
+
+        threads = [threading.Thread(target=fire_event) for _ in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert len(errors) == 0
+        # Only one event should get through due to debouncing
+        assert queue.size == 1
+
+    def test_concurrent_debounce_different_files(self, queue: EventQueue) -> None:
+        """Test debouncing with different files from concurrent threads."""
+        config = WatcherConfig(debounce_seconds=1.0, exclude_patterns=[])
+        handler = FileEventHandler(config, queue)
+
+        import threading
+
+        def fire_event(file_id: int) -> None:
+            handler.on_created(FileCreatedEvent(src_path=f"/tmp/file_{file_id}.txt"))
+
+        threads = [threading.Thread(target=fire_event, args=(i,)) for i in range(10)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # Each file should get through exactly once
+        assert queue.size == 10
+
+
+class TestFileEventHandlerEventTimestamps:
+    """Tests for event timestamp correctness."""
+
+    def test_queued_event_has_utc_timestamp(
+        self, default_config: WatcherConfig, queue: EventQueue
+    ) -> None:
+        """Test that queued events have UTC timestamps."""
+        from datetime import UTC
+
+        handler = FileEventHandler(default_config, queue)
+        handler.on_created(FileCreatedEvent(src_path="/tmp/test.txt"))
+
+        events = queue.dequeue_batch(1)
+        assert events[0].timestamp.tzinfo is not None
+        assert events[0].timestamp.tzinfo in (UTC, UTC)
+
+    def test_queued_event_path_is_pathlib(
+        self, default_config: WatcherConfig, queue: EventQueue
+    ) -> None:
+        """Test that queued events have Path objects, not strings."""
+        handler = FileEventHandler(default_config, queue)
+        handler.on_created(FileCreatedEvent(src_path="/tmp/test.txt"))
+
+        events = queue.dequeue_batch(1)
+        assert isinstance(events[0].path, Path)
+
+
+class TestFileEventHandlerCallbackEdgeCases:
+    """Tests for callback dispatch edge cases."""
+
+    def test_callback_receives_correct_dest_path_on_move(
+        self, default_config: WatcherConfig, queue: EventQueue
+    ) -> None:
+        """Test that move callbacks receive the correct destination path."""
+        handler = FileEventHandler(default_config, queue)
+        received_events: list[FileEvent] = []
+        handler.register_callback(EventType.MOVED, received_events.append)
+
+        event = FileMovedEvent(src_path="/tmp/old.txt", dest_path="/tmp/new.txt")
+        handler.on_moved(event)
+
+        assert len(received_events) == 1
+        assert received_events[0].dest_path == Path("/tmp/new.txt")
+
+    def test_second_callback_runs_when_first_fails(
+        self, default_config: WatcherConfig, queue: EventQueue
+    ) -> None:
+        """Test that subsequent callbacks fire even if an earlier one raises."""
+        handler = FileEventHandler(default_config, queue)
+        second_called = MagicMock()
+
+        def bad_callback(event: FileEvent) -> None:
+            raise ValueError("intentional error")
+
+        handler.register_callback(EventType.CREATED, bad_callback)
+        handler.register_callback(EventType.CREATED, second_called)
+
+        handler.on_created(FileCreatedEvent(src_path="/tmp/file.txt"))
+
+        second_called.assert_called_once()
+
+    def test_no_callbacks_registered_no_error(
+        self, default_config: WatcherConfig, queue: EventQueue
+    ) -> None:
+        """Test that events process cleanly when no callbacks are registered."""
+        handler = FileEventHandler(default_config, queue)
+        # No callbacks registered, should not raise
+        handler.on_created(FileCreatedEvent(src_path="/tmp/file.txt"))
+        assert queue.size == 1

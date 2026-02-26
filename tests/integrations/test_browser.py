@@ -53,3 +53,53 @@ def test_verify_token_prunes_expired_records(monkeypatch: pytest.MonkeyPatch) ->
 
     assert manager.verify_token("missing-token") is False
     assert token not in manager._tokens
+
+
+def test_get_config_returns_bootstrap_dict() -> None:
+    """get_config should return allowed_origins and token_ttl_seconds."""
+    manager = BrowserExtensionManager(
+        allowed_origins=["https://example.com", "https://other.com"],
+        token_ttl_seconds=7200,
+    )
+    config = manager.get_config()
+    assert config["allowed_origins"] == ["https://example.com", "https://other.com"]
+    assert config["token_ttl_seconds"] == 7200
+
+
+def test_get_config_deduplicates_origins() -> None:
+    """Duplicate allowed_origins should be deduplicated in the constructor."""
+    manager = BrowserExtensionManager(
+        allowed_origins=["https://a.com", "https://a.com", "https://b.com"],
+    )
+    config = manager.get_config()
+    assert config["allowed_origins"] == ["https://a.com", "https://b.com"]
+
+
+def test_verify_token_valid() -> None:
+    """verify_token should return True for a valid, non-expired token."""
+    manager = BrowserExtensionManager(
+        allowed_origins=["https://example.com"],
+        token_ttl_seconds=3600,
+    )
+    record = manager.issue_token("ext-test")
+    assert manager.verify_token(record.token) is True
+
+
+def test_verify_token_invalid() -> None:
+    """verify_token should return False for an unknown token."""
+    manager = BrowserExtensionManager(
+        allowed_origins=["https://example.com"],
+    )
+    assert manager.verify_token("nonexistent-token") is False
+
+
+def test_issue_token_record_fields() -> None:
+    """Issued token record should have correct fields."""
+    manager = BrowserExtensionManager(
+        allowed_origins=["https://example.com"],
+        token_ttl_seconds=600,
+    )
+    record = manager.issue_token("my-ext")
+    assert record.extension_id == "my-ext"
+    assert len(record.token) > 0
+    assert record.expires_at > record.created_at

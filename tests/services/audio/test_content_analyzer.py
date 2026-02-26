@@ -336,3 +336,30 @@ class TestAnalyzeIntegration:
         assert analysis.topic_count == 2
         assert analysis.keyword_count == 2
         assert analysis.speaker_count == 2
+
+    def test_metadata_with_artist_and_album(self, analyzer: AudioContentAnalyzer) -> None:
+        """Artist and album metadata fields should be included in analysis text."""
+        metadata = _make_metadata(
+            title="Live Performance",
+            artist="DJ Software Engineer",
+            album="Cloud Computing Sessions",
+        )
+        analysis = analyzer.analyze(metadata)
+        # "software" and "cloud" + "computing" should trigger Technology topic
+        assert "Technology" in analysis.topics
+        assert analysis.keyword_count > 0
+
+    def test_metadata_artist_only(self, analyzer: AudioContentAnalyzer) -> None:
+        """Artist field alone should contribute to combined text."""
+        metadata = _make_metadata(artist="Amazing Orchestra")
+        analysis = analyzer.analyze(metadata)
+        # Should produce a non-empty analysis since artist text is present
+        assert isinstance(analysis, ContentAnalysis)
+        assert analysis.sentiment_indicators.get("positive", 0) > 0  # "amazing"
+
+    def test_metadata_album_only(self, analyzer: AudioContentAnalyzer) -> None:
+        """Album field alone should contribute to combined text."""
+        metadata = _make_metadata(album="Greatest Scientific Discoveries")
+        analysis = analyzer.analyze(metadata)
+        assert isinstance(analysis, ContentAnalysis)
+        assert "Science" in analysis.topics

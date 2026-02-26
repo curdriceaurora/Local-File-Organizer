@@ -223,3 +223,92 @@ class TestFileRouterCustomRules:
         )
         assert router.route(Path("screenshots/data.csv")) == ProcessorType.IMAGE
         assert router.route(Path("documents/data.csv")) == ProcessorType.TEXT
+
+
+class TestFileRouterEdgeCases:
+    """Additional edge case tests for FileRouter."""
+
+    @pytest.fixture()
+    def router(self) -> FileRouter:
+        return FileRouter()
+
+    def test_remove_extension_without_dot(self, router: FileRouter) -> None:
+        """remove_extension normalizes extensions without leading dot."""
+        assert router.route(Path("file.txt")) == ProcessorType.TEXT
+        router.remove_extension("txt")
+        assert router.route(Path("file.txt")) == ProcessorType.UNKNOWN
+
+    def test_add_extension_case_normalized(self, router: FileRouter) -> None:
+        """add_extension lowercases extensions."""
+        router.add_extension(".FOO", ProcessorType.VIDEO)
+        assert router.route(Path("file.foo")) == ProcessorType.VIDEO
+        assert router.route(Path("file.FOO")) == ProcessorType.VIDEO
+
+    def test_compound_extension_only_last_part_used(self, router: FileRouter) -> None:
+        """Path.suffix returns only the last dot-segment."""
+        # .tar.gz has suffix .gz, which is unknown by default
+        assert router.route(Path("archive.tar.gz")) == ProcessorType.UNKNOWN
+
+    def test_hidden_file_with_extension(self, router: FileRouter) -> None:
+        """Hidden files (dotfiles) with known extensions are routed correctly."""
+        assert router.route(Path(".hidden.txt")) == ProcessorType.TEXT
+
+    def test_custom_rule_false_falls_through(self, router: FileRouter) -> None:
+        """Custom rules returning False fall through to the next rule or extensions."""
+        router.add_custom_rule(lambda p: False, ProcessorType.AUDIO)
+        router.add_custom_rule(lambda p: p.suffix == ".txt", ProcessorType.VIDEO)
+        # First rule returns False, second matches
+        assert router.route(Path("file.txt")) == ProcessorType.VIDEO
+        # Neither custom rule matches .pdf
+        assert router.route(Path("file.pdf")) == ProcessorType.TEXT
+
+    def test_custom_rule_error_continues_to_next_rule(self, router: FileRouter) -> None:
+        """When a custom rule errors, the next custom rule is still checked."""
+
+        def bad_rule(path: Path) -> bool:
+            raise RuntimeError("broken")
+
+        router.add_custom_rule(bad_rule, ProcessorType.AUDIO)
+        router.add_custom_rule(lambda p: True, ProcessorType.VIDEO)
+        # bad_rule errors out, second rule matches
+        assert router.route(Path("file.txt")) == ProcessorType.VIDEO
+
+    def test_get_extension_map_contains_all_defaults(self, router: FileRouter) -> None:
+        """Extension map includes all default extensions."""
+        ext_map = router.get_extension_map()
+        # Spot-check a few from each category
+        assert ext_map[".txt"] == ProcessorType.TEXT
+        assert ext_map[".jpg"] == ProcessorType.IMAGE
+        assert ext_map[".mp4"] == ProcessorType.VIDEO
+        assert ext_map[".mp3"] == ProcessorType.AUDIO
+
+    def test_processor_type_is_str_enum(self) -> None:
+        """ProcessorType values are strings usable in string contexts."""
+        assert f"type={ProcessorType.TEXT}" == "type=text"
+        assert str(ProcessorType.IMAGE) == "image"
+
+    def test_empty_filename(self, router: FileRouter) -> None:
+        """Empty-string path has no suffix, routes to UNKNOWN."""
+        assert router.route(Path("")) == ProcessorType.UNKNOWN
+
+    def test_dotfile_without_extension(self, router: FileRouter) -> None:
+        """A dotfile like '.txt' has no suffix on Python 3.14, routes to UNKNOWN."""
+        # Path(".txt").suffix is "" on Python 3.14 (dotfile, no extension)
+        assert router.route(Path(".txt")) == ProcessorType.UNKNOWN
+
+    def test_add_then_remove_custom_extension(self, router: FileRouter) -> None:
+        """Adding then removing a custom extension restores UNKNOWN routing."""
+        router.add_extension(".xyz", ProcessorType.AUDIO)
+        assert router.route(Path("file.xyz")) == ProcessorType.AUDIO
+        router.remove_extension(".xyz")
+        assert router.route(Path("file.xyz")) == ProcessorType.UNKNOWN
+
+    def test_multiple_routers_are_independent(self) -> None:
+        """Multiple FileRouter instances don't share state."""
+        r1 = FileRouter()
+        r2 = FileRouter()
+        r1.add_extension(".custom", ProcessorType.TEXT)
+        r1.add_custom_rule(lambda p: True, ProcessorType.AUDIO)
+        # r2 should be unaffected
+        assert r2.route(Path("file.custom")) == ProcessorType.UNKNOWN
+        assert r2.custom_rule_count == 0

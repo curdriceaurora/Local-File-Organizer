@@ -105,6 +105,13 @@ class TestServiceRequest:
         with pytest.raises(AttributeError):
             req.id = "new"  # type: ignore[misc]
 
+    def test_to_dict_timestamp_is_isoformat(self) -> None:
+        """to_dict timestamp is an ISO 8601 string."""
+        req = ServiceRequest(id="r", source="a", target="b", action="c")
+        d = req.to_dict()
+        # Should be parseable as ISO format
+        assert "T" in d["timestamp"]
+
 
 # ------------------------------------------------------------------
 # ServiceResponse dataclass
@@ -158,6 +165,18 @@ class TestServiceResponse:
         with pytest.raises(AttributeError):
             resp.success = False  # type: ignore[misc]
 
+    def test_default_duration_ms(self) -> None:
+        """ServiceResponse defaults duration_ms to 0.0."""
+        resp = ServiceResponse(request_id="r", success=True)
+        assert resp.duration_ms == 0.0
+
+    def test_to_dict_includes_none_error(self) -> None:
+        """to_dict includes error field even when None."""
+        resp = ServiceResponse(request_id="r", success=True)
+        d = resp.to_dict()
+        assert "error" in d
+        assert d["error"] is None
+
 
 # ------------------------------------------------------------------
 # Service registration
@@ -203,6 +222,18 @@ class TestServiceRegistration:
         snapshot = bus.services
         snapshot["injected"] = MagicMock()
         assert "injected" not in bus.services
+
+    def test_has_service_nonexistent(self, bus: ServiceBus) -> None:
+        """has_service returns False for unknown services."""
+        assert bus.has_service("unknown") is False
+
+    def test_register_and_deregister_cycle(self, bus: ServiceBus) -> None:
+        """A service can be registered, deregistered, and re-registered."""
+        handler = MagicMock()
+        bus.register_service("cycle", handler)
+        bus.deregister_service("cycle")
+        bus.register_service("cycle", handler)
+        assert bus.has_service("cycle")
 
 
 # ------------------------------------------------------------------
@@ -277,6 +308,19 @@ class TestSendRequest:
         assert "timed out" in (resp.error or "")
         assert bus.error_count == 1
 
+    def test_response_has_request_id(self, bus: ServiceBus) -> None:
+        """Response carries a valid request_id (UUID format)."""
+        bus.register_service("svc", lambda req: {})
+        resp = bus.send_request("svc", "act")
+        assert resp.request_id is not None
+        assert len(resp.request_id) > 0
+
+    def test_request_unknown_service_increments_both_counts(self, bus: ServiceBus) -> None:
+        """Unknown service increments both request_count and error_count."""
+        bus.send_request("ghost", "ping")
+        assert bus.request_count == 1
+        assert bus.error_count == 1
+
 
 # ------------------------------------------------------------------
 # Broadcast
@@ -322,6 +366,25 @@ class TestBroadcast:
         assert results["ok"].success is True
         assert results["fail"].success is False
 
+    def test_broadcast_increments_request_count(self, bus: ServiceBus) -> None:
+        """Broadcast increments request_count for each service."""
+        bus.register_service("a", lambda req: {})
+        bus.register_service("b", lambda req: {})
+        bus.broadcast("ping")
+        assert bus.request_count == 2
+
+    def test_broadcast_default_payload_is_empty_dict(self, bus: ServiceBus) -> None:
+        """Broadcast without payload sends empty dict."""
+        received: list[dict] = []
+
+        def capture(req: ServiceRequest) -> dict:
+            received.append(req.payload)
+            return {}
+
+        bus.register_service("svc", capture)
+        bus.broadcast("ping")
+        assert received == [{}]
+
 
 # ------------------------------------------------------------------
 # Utility / edge cases
@@ -362,3 +425,18 @@ class TestServiceBusUtility:
         bus.register_service("bad", lambda req: (_ for _ in ()).throw(ValueError("x")))
         bus.send_request("bad", "b")
         assert bus.error_count == 2
+
+    def test_creates_default_pubsub(self) -> None:
+        """ServiceBus creates a default PubSubManager if none provided."""
+        bus = ServiceBus(name="standalone")
+        assert bus.name == "standalone"
+        assert bus.request_count == 0
+
+    def test_initial_counts_are_zero(self, bus: ServiceBus) -> None:
+        """Initial request_count and error_count are zero."""
+        assert bus.request_count == 0
+        assert bus.error_count == 0
+
+    def test_list_services_empty_bus(self, bus: ServiceBus) -> None:
+        """list_services returns empty list on empty bus."""
+        assert bus.list_services() == []

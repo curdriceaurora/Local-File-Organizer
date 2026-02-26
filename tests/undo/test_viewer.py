@@ -217,5 +217,209 @@ class TestHistoryViewer(unittest.TestCase):
         self.assertGreater(len(operations), 0)
 
 
+    # --- Extended coverage tests ---
+
+    def test_show_recent_operations_empty(self):
+        """Test show_recent_operations with no operations."""
+        empty_dir = self.test_dir / "empty_db"
+        empty_dir.mkdir()
+        empty_history = OperationHistory(db_path=empty_dir / "empty.db")
+        empty_viewer = HistoryViewer(history=empty_history)
+
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        empty_viewer.show_recent_operations()
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        self.assertIn("No operations found", output)
+        empty_viewer.close()
+
+    def test_show_operation_details_not_found(self):
+        """Test show_operation_details with non-existent operation."""
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        self.viewer.show_operation_details(999999)
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        self.assertIn("999999", output)
+        self.assertIn("not found", output)
+
+    def test_show_operation_details_with_metadata(self):
+        """Test show_operation_details displays metadata."""
+        file4 = self.test_dir / "file4.txt"
+        dest4 = self.test_dir / "dest4.txt"
+        file4.write_text("content4")
+        shutil.move(str(file4), str(dest4))
+        op_id = self.history.log_operation(
+            operation_type=OperationType.MOVE,
+            source_path=file4,
+            destination_path=dest4,
+            metadata={"reason": "organize", "priority": "high"},
+        )
+
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        self.viewer.show_operation_details(op_id)
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        self.assertIn("Metadata", output)
+        self.assertIn("reason", output)
+        self.assertIn("organize", output)
+
+    def test_show_transaction_details_not_found(self):
+        """Test show_transaction_details with non-existent transaction."""
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        self.viewer.show_transaction_details("nonexistent-txn-id")
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        self.assertIn("nonexistent-txn-id", output)
+        self.assertIn("not found", output)
+
+    def test_filter_operations_invalid_type(self):
+        """Test filter_operations with invalid operation type."""
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        operations = self.viewer.filter_operations(operation_type="invalid_type")
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        self.assertEqual(operations, [])
+        self.assertIn("Invalid operation type", output)
+
+    def test_filter_operations_invalid_status(self):
+        """Test filter_operations with invalid status."""
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        operations = self.viewer.filter_operations(status="invalid_status")
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        self.assertEqual(operations, [])
+        self.assertIn("Invalid status", output)
+
+    def test_display_filtered_operations_with_search(self):
+        """Test display_filtered_operations with search parameter."""
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        self.viewer.display_filtered_operations(search="file1.txt")
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        self.assertIn("file1.txt", output)
+        self.assertIn("operations found affecting path", output)
+
+    def test_display_filtered_operations_search_no_results(self):
+        """Test display_filtered_operations with search that returns nothing."""
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        self.viewer.display_filtered_operations(search="nonexistent_file.xyz")
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        self.assertIn("No operations found affecting path", output)
+
+    def test_display_filtered_operations_no_matching_filters(self):
+        """Test display_filtered_operations with no matching results."""
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        self.viewer.display_filtered_operations(operation_type="create")
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        self.assertIn("No operations found matching the filters", output)
+
+    def test_parse_date_slash_format(self):
+        """Test parsing date with Y/m/d format."""
+        parsed = self.viewer._parse_date("2024/06/15")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.year, 2024)
+        self.assertEqual(parsed.month, 6)
+        self.assertEqual(parsed.day, 15)
+
+    def test_parse_date_dmy_dash_format(self):
+        """Test parsing date with d-m-Y format."""
+        parsed = self.viewer._parse_date("15-06-2024")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.year, 2024)
+        self.assertEqual(parsed.month, 6)
+        self.assertEqual(parsed.day, 15)
+
+    def test_parse_date_dmy_slash_format(self):
+        """Test parsing date with d/m/Y format."""
+        parsed = self.viewer._parse_date("15/06/2024")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.year, 2024)
+        self.assertEqual(parsed.month, 6)
+        self.assertEqual(parsed.day, 15)
+
+    def test_parse_date_datetime_with_seconds(self):
+        """Test parsing date with Y-m-d H:M:S format."""
+        parsed = self.viewer._parse_date("2024-01-15 14:30:45")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.hour, 14)
+        self.assertEqual(parsed.minute, 30)
+        self.assertEqual(parsed.second, 45)
+
+    def test_parse_date_datetime_without_seconds(self):
+        """Test parsing date with Y-m-d H:M format."""
+        parsed = self.viewer._parse_date("2024-01-15 14:30")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.hour, 14)
+        self.assertEqual(parsed.minute, 30)
+
+    def test_parse_date_invalid_format(self):
+        """Test parsing date with unparseable format."""
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        parsed = self.viewer._parse_date("not-a-date")
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        self.assertIsNone(parsed)
+        self.assertIn("Warning", output)
+        self.assertIn("Could not parse date", output)
+
+    def test_format_path_with_destination(self):
+        """Test _format_path with destination path."""
+        operations = self.history.get_operations(limit=10)
+        move_op = next(
+            (op for op in operations if op.destination_path is not None), None
+        )
+        self.assertIsNotNone(move_op)
+
+        formatted = self.viewer._format_path(move_op)
+        self.assertIn("→", formatted)
+
+    def test_format_path_without_destination(self):
+        """Test _format_path without destination (e.g., delete)."""
+        from unittest.mock import MagicMock
+
+        mock_op = MagicMock()
+        mock_op.source_path = Path("/some/dir/file.txt")
+        mock_op.destination_path = None
+
+        formatted = self.viewer._format_path(mock_op)
+        self.assertEqual(formatted, "file.txt")
+        self.assertNotIn("→", formatted)
+
+    def test_context_manager(self):
+        """Test HistoryViewer context manager."""
+        db_path = self.test_dir / "ctx_test.db"
+        history = OperationHistory(db_path=db_path)
+        with HistoryViewer(history=history) as viewer:
+            self.assertIsNotNone(viewer)
+
+    def test_format_datetime_short(self):
+        """Test short datetime formatting."""
+        dt = datetime(2024, 3, 20, 10, 5, 30)
+        formatted = self.viewer._format_datetime_short(dt)
+        self.assertEqual(formatted, "2024-03-20 10:05:30")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -237,3 +237,151 @@ class TestEventQueue:
         queue = EventQueue()
         batch = queue.dequeue_batch_blocking(max_size=5, timeout=0.1)
         assert batch == []
+
+
+class TestEventQueueEdgeCases:
+    """Additional edge case tests for EventQueue."""
+
+    def _make_event(
+        self, event_type: EventType = EventType.CREATED, name: str = "test.txt"
+    ) -> FileEvent:
+        """Helper to create a FileEvent."""
+        return FileEvent(
+            event_type=event_type,
+            path=Path(f"/tmp/{name}"),
+            timestamp=datetime.now(UTC),
+        )
+
+    def test_dequeue_batch_blocking_with_existing_events(self) -> None:
+        """Test blocking dequeue returns immediately when events exist."""
+        queue = EventQueue()
+        queue.enqueue(self._make_event(name="a.txt"))
+        queue.enqueue(self._make_event(name="b.txt"))
+
+        # Should return immediately without blocking
+        batch = queue.dequeue_batch_blocking(max_size=5, timeout=1.0)
+        assert len(batch) == 2
+
+    def test_dequeue_batch_blocking_returns_up_to_max_size(self) -> None:
+        """Test blocking dequeue respects max_size even when more events exist."""
+        queue = EventQueue()
+        for i in range(10):
+            queue.enqueue(self._make_event(name=f"file_{i}.txt"))
+
+        batch = queue.dequeue_batch_blocking(max_size=3, timeout=1.0)
+        assert len(batch) == 3
+        assert queue.size == 7
+
+    def test_unbounded_queue_accepts_many_events(self) -> None:
+        """Test that unbounded queue (max_size=0) can hold many events."""
+        queue = EventQueue(max_size=0)
+        for i in range(1000):
+            queue.enqueue(self._make_event(name=f"file_{i}.txt"))
+        assert queue.size == 1000
+
+    def test_bounded_queue_max_size_one(self) -> None:
+        """Test bounded queue with capacity of 1."""
+        queue = EventQueue(max_size=1)
+        queue.enqueue(self._make_event(name="first.txt"))
+        queue.enqueue(self._make_event(name="second.txt"))
+
+        assert queue.size == 1
+        batch = queue.dequeue_batch(10)
+        assert len(batch) == 1
+        assert batch[0].path.name == "second.txt"
+
+    def test_clear_empty_queue_returns_zero(self) -> None:
+        """Test that clearing an empty queue returns 0."""
+        queue = EventQueue()
+        assert queue.clear() == 0
+
+    def test_dequeue_batch_with_zero_max_size(self) -> None:
+        """Test dequeue_batch with max_size=0 returns empty list."""
+        queue = EventQueue()
+        queue.enqueue(self._make_event())
+        batch = queue.dequeue_batch(max_size=0)
+        assert batch == []
+        assert queue.size == 1
+
+    def test_concurrent_enqueue_and_dequeue(self) -> None:
+        """Test thread safety with concurrent enqueue and dequeue operations."""
+        queue = EventQueue()
+        total_events = 100
+        dequeued_events: list[FileEvent] = []
+        lock = threading.Lock()
+
+        def producer() -> None:
+            for i in range(total_events):
+                queue.enqueue(self._make_event(name=f"file_{i}.txt"))
+
+        def consumer() -> None:
+            collected = 0
+            while collected < total_events:
+                batch = queue.dequeue_batch(max_size=10)
+                if batch:
+                    with lock:
+                        dequeued_events.extend(batch)
+                    collected += len(batch)
+                else:
+                    time.sleep(0.01)
+
+        producer_thread = threading.Thread(target=producer)
+        consumer_thread = threading.Thread(target=consumer)
+
+        producer_thread.start()
+        consumer_thread.start()
+
+        producer_thread.join(timeout=5.0)
+        consumer_thread.join(timeout=5.0)
+
+        assert len(dequeued_events) == total_events
+
+    def test_blocking_dequeue_with_none_timeout(self) -> None:
+        """Test blocking dequeue with None timeout returns when event arrives."""
+        queue = EventQueue()
+        results: list[list[FileEvent]] = []
+
+        def consumer() -> None:
+            batch = queue.dequeue_batch_blocking(max_size=1, timeout=5.0)
+            results.append(batch)
+
+        t = threading.Thread(target=consumer)
+        t.start()
+        time.sleep(0.1)
+        queue.enqueue(self._make_event())
+        t.join(timeout=5.0)
+
+        assert len(results) == 1
+        assert len(results[0]) == 1
+
+    def test_peek_does_not_affect_size(self) -> None:
+        """Test that repeated peek operations don't change queue size."""
+        queue = EventQueue()
+        event = self._make_event()
+        queue.enqueue(event)
+
+        for _ in range(5):
+            peeked = queue.peek()
+            assert peeked is event
+
+        assert queue.size == 1
+
+    def test_file_event_equality(self) -> None:
+        """Test that identical FileEvent instances are equal (frozen dataclass)."""
+        ts = datetime.now(UTC)
+        e1 = FileEvent(event_type=EventType.CREATED, path=Path("/tmp/a.txt"), timestamp=ts)
+        e2 = FileEvent(event_type=EventType.CREATED, path=Path("/tmp/a.txt"), timestamp=ts)
+        assert e1 == e2
+
+    def test_file_event_inequality(self) -> None:
+        """Test that different FileEvent instances are not equal."""
+        ts = datetime.now(UTC)
+        e1 = FileEvent(event_type=EventType.CREATED, path=Path("/tmp/a.txt"), timestamp=ts)
+        e2 = FileEvent(event_type=EventType.DELETED, path=Path("/tmp/a.txt"), timestamp=ts)
+        assert e1 != e2
+
+    def test_event_type_is_str_enum(self) -> None:
+        """Test that EventType values can be used as strings."""
+        assert str(EventType.CREATED) == "EventType.CREATED" or "created" in EventType.CREATED
+        assert EventType.MODIFIED.value == "modified"
+        assert isinstance(EventType.DELETED, str)

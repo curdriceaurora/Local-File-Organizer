@@ -122,6 +122,23 @@ class TestEventConsumerHandlerRegistration:
         consumer.unregister_handler(EventType.FILE_CREATED, handler1)
         assert consumer.registered_handlers == {"file.created": 1}
 
+    def test_unregister_wrong_type(self, consumer: EventConsumer):
+        """Test unregistering handler from a type it was not registered for."""
+        handler = MagicMock()
+        consumer.register_handler(EventType.FILE_CREATED, handler)
+        result = consumer.unregister_handler(EventType.FILE_DELETED, handler)
+        assert result is False
+        assert consumer.registered_handlers == {"file.created": 1}
+
+    def test_unregister_different_handler_same_type(self, consumer: EventConsumer):
+        """Test unregistering a different handler of the same type."""
+        handler1 = MagicMock()
+        handler2 = MagicMock()
+        consumer.register_handler(EventType.FILE_CREATED, handler1)
+        result = consumer.unregister_handler(EventType.FILE_CREATED, handler2)
+        assert result is False
+        assert consumer.registered_handlers == {"file.created": 1}
+
 
 class TestEventConsumerDispatch:
     """Tests for event dispatching to handlers."""
@@ -217,6 +234,30 @@ class TestEventConsumerDispatch:
         handler2.assert_called_once()
         mock_manager.acknowledge.assert_not_called()
 
+    def test_dispatch_empty_event_type(self, consumer: EventConsumer, mock_manager: MagicMock):
+        """Test dispatching an event with empty event_type acknowledges it."""
+        event = Event(
+            id="2-0",
+            stream="fileorg:file-events",
+            data={"file_path": "/a.txt"},
+        )
+        consumer._dispatch_event(event, "file-events", "file-organizer")
+        mock_manager.acknowledge.assert_called_once_with("file-events", "file-organizer", "2-0")
+
+    def test_dispatch_unknown_event_type_acknowledges(
+        self, consumer: EventConsumer, mock_manager: MagicMock
+    ):
+        """Test dispatching an event with an unregistered type acknowledges it."""
+        consumer.register_handler(EventType.FILE_CREATED, MagicMock())
+        event = Event(
+            id="3-0",
+            stream="fileorg:file-events",
+            data={"event_type": "some.other.type"},
+        )
+        consumer._dispatch_event(event, "file-events", "file-organizer")
+        mock_manager.acknowledge.assert_called_once()
+        assert consumer.events_processed == 0
+
 
 class TestEventConsumerStartStop:
     """Tests for start/stop consuming lifecycle."""
@@ -281,6 +322,71 @@ class TestEventConsumerStartStop:
         handler.assert_called_once_with(event)
         assert consumer.events_processed == 1
 
+    @pytest.mark.asyncio
+    async def test_start_consuming_uses_custom_group(self, mock_manager: MagicMock):
+        """Test that start_consuming uses a custom group name."""
+        mock_manager.read_group.return_value = []
+
+        consumer = EventConsumer(stream_manager=mock_manager)
+
+        async def stop_quickly():
+            await asyncio.sleep(0.02)
+            consumer.stop()
+
+        await asyncio.gather(
+            consumer.start_consuming("file-events", group_name="custom-grp"),
+            stop_quickly(),
+        )
+
+        mock_manager.create_consumer_group.assert_called_once_with(
+            "file-events", "custom-grp"
+        )
+
+    @pytest.mark.asyncio
+    async def test_start_consuming_uses_default_group(self, mock_manager: MagicMock):
+        """Test that start_consuming uses the config default group."""
+        mock_manager.read_group.return_value = []
+
+        config = EventConfig(consumer_group="my-default-group")
+        consumer = EventConsumer(config=config, stream_manager=mock_manager)
+
+        async def stop_quickly():
+            await asyncio.sleep(0.02)
+            consumer.stop()
+
+        await asyncio.gather(
+            consumer.start_consuming("file-events"),
+            stop_quickly(),
+        )
+
+        mock_manager.create_consumer_group.assert_called_once_with(
+            "file-events", "my-default-group"
+        )
+
+
+class TestEventConsumerConnectionLifecycle:
+    """Tests for connect/disconnect methods."""
+
+    def test_connect_delegates_to_manager(self, consumer: EventConsumer, mock_manager: MagicMock):
+        """Test that connect delegates to the stream manager."""
+        result = consumer.connect()
+        assert result is True
+        mock_manager.connect.assert_called_once_with(None)
+
+    def test_connect_with_url(self, consumer: EventConsumer, mock_manager: MagicMock):
+        """Test connect passes URL to stream manager."""
+        consumer.connect("redis://custom:6380")
+        mock_manager.connect.assert_called_once_with("redis://custom:6380")
+
+    def test_disconnect_stops_and_disconnects(self, mock_manager: MagicMock):
+        """Test that disconnect stops consuming and disconnects."""
+        consumer = EventConsumer(stream_manager=mock_manager)
+        consumer._running = True
+        consumer.disconnect()
+
+        assert consumer.is_running is False
+        mock_manager.disconnect.assert_called_once()
+
 
 class TestEventConsumerContextManager:
     """Tests for context manager protocol."""
@@ -300,3 +406,9 @@ class TestEventConsumerContextManager:
 
         assert consumer.is_running is False
         mock_manager.disconnect.assert_called_once()
+
+    def test_repr_after_processing(self, consumer: EventConsumer, mock_manager: MagicMock):
+        """Test repr reflects handler and processed counts."""
+        consumer.register_handler(EventType.FILE_CREATED, MagicMock())
+        result = repr(consumer)
+        assert "handlers=1" in result

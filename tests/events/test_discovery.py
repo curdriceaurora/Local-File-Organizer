@@ -84,6 +84,28 @@ class TestServiceInfo:
         assert restored.metadata == original.metadata
         assert restored.registered_at == original.registered_at
 
+    def test_from_dict_with_minimal_data(self) -> None:
+        """from_dict handles minimal data with missing optional fields."""
+        data = {"name": "minimal", "endpoint": "local://min:1000"}
+        info = ServiceInfo.from_dict(data)
+        assert info.name == "minimal"
+        assert info.endpoint == "local://min:1000"
+        assert info.metadata == {}
+        # registered_at and last_heartbeat will be set by __post_init__
+        assert info.registered_at != ""
+        assert info.last_heartbeat != ""
+
+    def test_creation_with_explicit_timestamps(self) -> None:
+        """ServiceInfo respects explicitly provided timestamps."""
+        info = ServiceInfo(
+            name="svc",
+            endpoint="local://svc:8000",
+            registered_at="2024-01-01T00:00:00+00:00",
+            last_heartbeat="2024-01-01T00:00:00+00:00",
+        )
+        assert info.registered_at == "2024-01-01T00:00:00+00:00"
+        assert info.last_heartbeat == "2024-01-01T00:00:00+00:00"
+
 
 # ------------------------------------------------------------------
 # Registration
@@ -123,6 +145,18 @@ class TestRegistration:
     def test_deregister_nonexistent(self, discovery: ServiceDiscovery) -> None:
         """deregister() returns False for unknown services."""
         assert discovery.deregister("ghost") is False
+
+    def test_register_with_none_metadata(self, discovery: ServiceDiscovery) -> None:
+        """register() treats None metadata as empty dict."""
+        info = discovery.register("svc", "local://svc:9000", None)
+        assert info.metadata == {}
+
+    def test_register_multiple_services(self, discovery: ServiceDiscovery) -> None:
+        """Multiple services can be registered."""
+        discovery.register("a", "a://a")
+        discovery.register("b", "b://b")
+        discovery.register("c", "c://c")
+        assert discovery.count == 3
 
 
 # ------------------------------------------------------------------
@@ -182,6 +216,18 @@ class TestHeartbeat:
         """heartbeat() returns False for unknown services."""
         assert discovery.heartbeat("ghost") is False
 
+    def test_heartbeat_persists_to_disk(
+        self, discovery: ServiceDiscovery, registry_path: Path
+    ) -> None:
+        """heartbeat() persists the updated timestamp to disk."""
+        discovery.register("hb-persist", "local://hb:6000")
+        discovery.heartbeat("hb-persist")
+
+        reloaded = ServiceDiscovery(registry_path=registry_path)
+        info = reloaded.discover("hb-persist")
+        assert info is not None
+        assert info.last_heartbeat != ""
+
 
 # ------------------------------------------------------------------
 # Persistence
@@ -224,6 +270,38 @@ class TestPersistence:
         disc = ServiceDiscovery(registry_path=tmp_path / "nonexistent" / "registry.json")
         assert disc.count == 0
 
+    def test_registry_json_is_valid(self, registry_path: Path) -> None:
+        """Registry file contains valid, pretty-printed JSON."""
+        disc = ServiceDiscovery(registry_path=registry_path)
+        disc.register("svc-a", "a://a", {"key": "value"})
+        disc.register("svc-b", "b://b")
+
+        content = registry_path.read_text()
+        data = json.loads(content)
+        assert "svc-a" in data
+        assert "svc-b" in data
+        # JSON should be sorted and indented
+        assert content == json.dumps(data, indent=2, sort_keys=True)
+
+    def test_deregister_persists(self, registry_path: Path) -> None:
+        """Deregistration is persisted to disk."""
+        disc = ServiceDiscovery(registry_path=registry_path)
+        disc.register("to-remove", "local://remove:1000")
+        disc.deregister("to-remove")
+
+        reloaded = ServiceDiscovery(registry_path=registry_path)
+        assert reloaded.count == 0
+
+    def test_clear_persists(self, registry_path: Path) -> None:
+        """clear() is persisted to disk."""
+        disc = ServiceDiscovery(registry_path=registry_path)
+        disc.register("a", "a://a")
+        disc.register("b", "b://b")
+        disc.clear()
+
+        reloaded = ServiceDiscovery(registry_path=registry_path)
+        assert reloaded.count == 0
+
 
 # ------------------------------------------------------------------
 # Utility / edge cases
@@ -241,6 +319,11 @@ class TestDiscoveryUtility:
         assert removed == 2
         assert discovery.count == 0
 
+    def test_clear_empty(self, discovery: ServiceDiscovery) -> None:
+        """clear() on empty registry returns 0."""
+        removed = discovery.clear()
+        assert removed == 0
+
     def test_registry_path_property(self, discovery: ServiceDiscovery, registry_path: Path) -> None:
         """registry_path property returns the configured path."""
         assert discovery.registry_path == registry_path
@@ -250,3 +333,13 @@ class TestDiscoveryUtility:
         r = repr(discovery)
         assert "services=" in r
         assert "path=" in r
+
+    def test_count_reflects_registrations(self, discovery: ServiceDiscovery) -> None:
+        """count property reflects the number of registered services."""
+        assert discovery.count == 0
+        discovery.register("a", "a://a")
+        assert discovery.count == 1
+        discovery.register("b", "b://b")
+        assert discovery.count == 2
+        discovery.deregister("a")
+        assert discovery.count == 1

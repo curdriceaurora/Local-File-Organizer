@@ -130,3 +130,100 @@ class TestPipelineConfigProperties:
         config = PipelineConfig()
         assert config.is_supported(Path("DOCUMENT.PDF")) is True
         assert config.is_supported(Path("image.JPG")) is True
+
+
+class TestPipelineConfigEdgeCases:
+    """Additional edge case tests for PipelineConfig."""
+
+    def test_max_concurrent_boundary_value_one(self) -> None:
+        """max_concurrent=1 is the minimum valid value."""
+        config = PipelineConfig(max_concurrent=1)
+        assert config.max_concurrent == 1
+
+    def test_max_concurrent_large_value(self) -> None:
+        """Large max_concurrent values are accepted."""
+        config = PipelineConfig(max_concurrent=1000)
+        assert config.max_concurrent == 1000
+
+    def test_should_move_files_both_false(self) -> None:
+        """should_move_files is False when both dry_run=True and auto_organize=False."""
+        config = PipelineConfig(dry_run=True, auto_organize=False)
+        assert config.should_move_files is False
+
+    def test_notification_callback_stored(self) -> None:
+        """notification_callback is stored as provided."""
+
+        def callback(path, success):
+            return None
+
+        config = PipelineConfig(notification_callback=callback)
+        assert config.notification_callback is callback
+
+    def test_output_directory_string_coercion(self) -> None:
+        """String output_directory is coerced to Path."""
+        config = PipelineConfig(output_directory="/some/path")
+        assert isinstance(config.output_directory, Path)
+        assert config.output_directory == Path("/some/path")
+
+    def test_empty_supported_extensions(self) -> None:
+        """Empty set of supported extensions means nothing is supported."""
+        config = PipelineConfig(supported_extensions=set())
+        assert config.effective_extensions == frozenset()
+        assert config.is_supported(Path("document.pdf")) is False
+        assert config.is_supported(Path("image.jpg")) is False
+
+    def test_is_supported_no_extension(self) -> None:
+        """Files without extensions are not supported."""
+        config = PipelineConfig()
+        assert config.is_supported(Path("Makefile")) is False
+        assert config.is_supported(Path("README")) is False
+
+    def test_effective_extensions_returns_frozenset(self) -> None:
+        """effective_extensions always returns a frozenset (immutable)."""
+        config = PipelineConfig()
+        result = config.effective_extensions
+        assert isinstance(result, frozenset)
+
+        config2 = PipelineConfig(supported_extensions={".txt"})
+        result2 = config2.effective_extensions
+        assert isinstance(result2, frozenset)
+
+    def test_supported_extensions_all_normalized(self) -> None:
+        """All extensions in supported_extensions get dot-prefixed."""
+        config = PipelineConfig(supported_extensions={"txt", "pdf", "jpg"})
+        for ext in config.supported_extensions:
+            assert ext.startswith("."), f"Extension {ext!r} missing leading dot"
+
+    def test_default_supported_extensions_constant(self) -> None:
+        """DEFAULT_SUPPORTED_EXTENSIONS contains expected categories."""
+        from file_organizer.pipeline.config import DEFAULT_SUPPORTED_EXTENSIONS
+
+        # Text
+        assert ".txt" in DEFAULT_SUPPORTED_EXTENSIONS
+        assert ".pdf" in DEFAULT_SUPPORTED_EXTENSIONS
+        # Image
+        assert ".jpg" in DEFAULT_SUPPORTED_EXTENSIONS
+        assert ".png" in DEFAULT_SUPPORTED_EXTENSIONS
+        # Video
+        assert ".mp4" in DEFAULT_SUPPORTED_EXTENSIONS
+        # Audio
+        assert ".mp3" in DEFAULT_SUPPORTED_EXTENSIONS
+        # CAD
+        assert ".dwg" in DEFAULT_SUPPORTED_EXTENSIONS
+
+    def test_watch_config_can_be_set(self) -> None:
+        """watch_config accepts arbitrary values (type-checked at usage)."""
+        # We use a mock since WatcherConfig is only imported for TYPE_CHECKING
+        from unittest.mock import MagicMock
+
+        mock_watcher = MagicMock()
+        config = PipelineConfig(watch_config=mock_watcher)
+        assert config.watch_config is mock_watcher
+
+    def test_multiple_configs_independent(self) -> None:
+        """Multiple PipelineConfig instances don't share mutable state."""
+        c1 = PipelineConfig(supported_extensions={".txt"})
+        c2 = PipelineConfig(supported_extensions={".pdf"})
+        assert c1.supported_extensions != c2.supported_extensions
+        assert ".txt" in c1.supported_extensions
+        assert ".pdf" in c2.supported_extensions
