@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -170,15 +170,8 @@ async def test_switch_to_history_view() -> None:
 @pytest.mark.asyncio
 async def test_update_notification() -> None:
     """When update is available, notification should be shown."""
-    # Mock the maybe_check_for_updates to return an available status
-    mock_status = MagicMock()
-    mock_status.available = True
-    mock_status.latest_version = "2.0.1"
-
     app = FileOrganizerApp()
     async with app.run_test() as pilot:
-        # Manually call _notify_update to test it (simulating what would happen
-        # if _check_for_updates found an update)
         app._notify_update("2.0.1")
         await pilot.pause()
 

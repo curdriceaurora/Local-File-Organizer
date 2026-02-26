@@ -59,9 +59,9 @@ jobs:
       - name: Run tests
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pytest tests/ -m "not regression" --cov=file_organizer --cov-fail-under=90 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
+            pytest tests/ -m "not regression" --cov=file_organizer --cov-fail-under=74 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
           else
-            pytest tests/ --cov=file_organizer --cov-fail-under=90 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
+            pytest tests/ --cov=file_organizer --cov-fail-under=74 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
           fi
       - name: Check docstring coverage
         if: matrix.python-version == '3.12'

@@ -322,18 +322,19 @@ class PluginExecutor:
 
         Raises:
             PluginError: If timeout occurs or stdout is not available.
+
+        Note:
+            On Windows, ``select.select()`` does not support pipes, so the
+            *timeout* parameter is ignored and the read blocks indefinitely.
         """
         if self._proc is None or self._proc.stdout is None:
             raise PluginError("Worker process is not running.")
 
         # Use select to wait for data with a timeout
         if sys.platform == "win32":
-            # select() doesn't work with pipes on Windows; use a simple
-            # blocking read with a 5s timeout via exception handling
+            # select() doesn't work with pipes on Windows; fall back to a
+            # blocking readline (the timeout parameter is ignored on Windows).
             try:
-                # For Windows, we have to use a different approach
-                # since select doesn't support pipes. Raise an error suggesting
-                # proper implementation or just use the regular blocking call.
                 return self._proc.stdout.readline()
             except Exception as exc:
                 raise PluginError(f"Failed to read from worker: {exc}") from exc
@@ -387,10 +388,7 @@ class PluginExecutor:
                 f"call '{method}'."
             ) from exc
 
-        try:
-            raw = self._readline_with_timeout(timeout=10.0)
-        except PluginError:
-            raise
+        raw = self._readline_with_timeout(timeout=10.0)
         if not raw:
             stderr_output = ""
             if self._proc.stderr:
