@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.tui.analytics_view import AnalyticsView
-from file_organizer.tui.app import FileOrganizerApp, PlaceholderView, StatusBar
+from file_organizer.tui.app import FileOrganizerApp, PlaceholderView, StatusBar, run_tui
 from file_organizer.tui.audio_view import AudioView
 from file_organizer.tui.methodology_view import MethodologyView
 from file_organizer.tui.organization_preview import OrganizationPreviewView
@@ -165,3 +165,29 @@ async def test_switch_to_history_view() -> None:
             await pilot.pause()
             assert app._current_view == "history"
             assert app.query_one("#view", UndoHistoryView) is not None
+
+
+@pytest.mark.asyncio
+async def test_update_notification() -> None:
+    """When update is available, notification should be shown."""
+    # Mock the maybe_check_for_updates to return an available status
+    mock_status = MagicMock()
+    mock_status.available = True
+    mock_status.latest_version = "2.0.1"
+
+    app = FileOrganizerApp()
+    async with app.run_test() as pilot:
+        # Manually call _notify_update to test it (simulating what would happen
+        # if _check_for_updates found an update)
+        app._notify_update("2.0.1")
+        await pilot.pause()
+
+        status_bar = app.query_one(StatusBar)
+        assert "2.0.1" in status_bar._message
+
+
+def test_run_tui_entry_point() -> None:
+    """run_tui should create and run the application."""
+    with patch.object(FileOrganizerApp, "run") as mock_run:
+        run_tui()
+        mock_run.assert_called_once()
