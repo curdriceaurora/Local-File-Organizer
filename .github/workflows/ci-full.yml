@@ -28,7 +28,10 @@ jobs:
         # punkt_tab required by NLTK 3.9+ — word_tokenize() loads it internally
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
-        run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts="
+        run: pytest tests/ --cov=file_organizer --cov-fail-under=90 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
+      - name: Check docstring coverage
+        if: matrix.python-version == '3.12'
+        run: pipx run interrogate -v src/ --fail-under 90
 
   test-macos:
     name: Test macOS (Python 3.12)

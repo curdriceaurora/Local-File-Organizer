@@ -107,6 +107,7 @@ dev = [
     "codespell>=2.2.0",
     "faker>=26.0",
     "pytest-benchmark>=4.0",
+    "interrogate>=1.5.0",  # Docstring coverage measurement
 ]
 
 gui = [
@@ -251,7 +252,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
-    "--cov-fail-under=45",
+    "--cov-fail-under=90",
     "--timeout=30",
     "-n=auto",
 ]
@@ -286,3 +287,16 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
+
+# Interrogate configuration (docstring coverage)
+[tool.interrogate]
+ignore-init-method = true
+ignore-init-module = true
+ignore-semiprivate = false
+ignore-private = false
+ignore-property-decorators = false
+fail-under = 90
+exclude = ["tests", "setup.py", "docs"]
+verbose = 1
+quiet = false
+whitelist-regex = ""
