@@ -312,3 +312,27 @@ def mock_vision_processor() -> Generator[MagicMock, None, None]:
         mock_cls.return_value = mock_instance
         mock_instance.process_file.side_effect = _make_mock_process_file(_IMAGE_FOLDER_MAP)
         yield mock_instance
+
+
+@pytest.fixture
+def benchmark(request: Any) -> Callable[[Callable[[], Any]], Any]:
+    """Provide a simple benchmark fixture for tests marked with @pytest.mark.benchmark.
+
+    When pytest-benchmark is not in use (normal test runs), this provides a mock
+    that just executes the function and returns the result. When pytest-benchmark
+    is available (--benchmark-only), the real fixture from pytest-benchmark is used.
+
+    This allows benchmark tests to work in both contexts:
+    - Normal test runs: functions execute once and return
+    - Benchmark runs: functions are timed across multiple rounds
+    """
+    # Try to get the real pytest-benchmark fixture if available
+    try:
+        return request.getfixturevalue("benchmark")
+    except (pytest.FixtureLookupError, LookupError):
+        # Provide a mock benchmark that just runs the function once
+        def mock_benchmark(func: Callable[[], Any]) -> Any:
+            """Execute the function once and return the result."""
+            return func()
+
+        return mock_benchmark
