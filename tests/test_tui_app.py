@@ -91,6 +91,7 @@ async def test_help_action_updates_status() -> None:
         assert "quit" in status._message.lower()
 
 
+@pytest.mark.unit
 class TestStatusBarUnit:
     """Unit tests for StatusBar widget (no app context needed)."""
 

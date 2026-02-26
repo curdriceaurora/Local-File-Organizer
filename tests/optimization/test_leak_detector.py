@@ -12,6 +12,7 @@ from file_organizer.optimization.leak_detector import (
 )
 
 
+@pytest.mark.unit
 class TestLeakSuspect:
     """Tests for the LeakSuspect dataclass."""
 
@@ -39,6 +40,7 @@ class TestLeakSuspect:
         assert s1 == s2
 
 
+@pytest.mark.unit
 class TestLeakDetectorInit:
     """Tests for LeakDetector initialization."""
 
@@ -70,6 +72,7 @@ class TestLeakDetectorInit:
             LeakDetector(min_count_delta=-5)
 
 
+@pytest.mark.unit
 class TestLeakDetectorStartStop:
     """Tests for start/stop lifecycle."""
 
@@ -97,6 +100,7 @@ class TestLeakDetectorStartStop:
         assert detector.check_count == 0
 
 
+@pytest.mark.unit
 class TestLeakDetectorCheck:
     """Tests for check() leak detection."""
 
@@ -214,6 +218,7 @@ class TestLeakDetectorCheck:
         assert suspects[2].type_name == "TypeA"  # delta=20
 
 
+@pytest.mark.unit
 class TestLeakDetectorResetBaseline:
     """Tests for reset_baseline method."""
 

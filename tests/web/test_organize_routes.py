@@ -35,6 +35,7 @@ pytestmark = [pytest.mark.unit]
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestParseDelayMinutes:
     """Test the _parse_delay_minutes helper."""
 
@@ -82,6 +83,7 @@ class TestParseDelayMinutes:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestNormalizeMethodology:
     """Test the _normalize_methodology helper."""
 
@@ -111,6 +113,7 @@ class TestNormalizeMethodology:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScanDirectory:
     """Test the _scan_directory helper."""
 
@@ -181,6 +184,7 @@ class TestScanDirectory:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCountsByType:
     """Test the _counts_by_type helper."""
 
@@ -229,6 +233,7 @@ class TestCountsByType:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestStatusProgress:
     """Test the _status_progress helper."""
 
@@ -256,6 +261,7 @@ class TestStatusProgress:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestJobReportPayload:
     """Test the _job_report_payload helper."""
 
@@ -291,6 +297,7 @@ class TestJobReportPayload:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPlanStore:
     """Test _store_organize_plan, _get_organize_plan, _delete_organize_plan."""
 
@@ -347,6 +354,7 @@ class TestPlanStore:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestJobMetadata:
     """Test _set_job_metadata, _get_job_metadata."""
 
@@ -395,6 +403,7 @@ class TestJobMetadata:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPruneJobMetadata:
     """Test _prune_job_metadata."""
 
@@ -433,6 +442,7 @@ class TestPruneJobMetadata:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBuildJobView:
     """Test _build_job_view."""
 
@@ -528,6 +538,7 @@ class TestBuildJobView:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestListOrganizeJobs:
     """Test _list_organize_jobs."""
 
@@ -575,6 +586,7 @@ class TestListOrganizeJobs:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBuildOrganizeStats:
     """Test _build_organize_stats."""
 
@@ -613,6 +625,7 @@ class TestBuildOrganizeStats:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCancelScheduledJob:
     """Test _cancel_scheduled_job."""
 
@@ -639,6 +652,7 @@ class TestCancelScheduledJob:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModuleConstants:
     """Verify module-level constants are sensible."""
 

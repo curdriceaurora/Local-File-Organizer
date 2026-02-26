@@ -21,6 +21,7 @@ from file_organizer.events.stream import (
 )
 
 
+@pytest.mark.unit
 class TestEvent:
     """Tests for the Event dataclass."""
 
@@ -52,6 +53,7 @@ class TestEvent:
             event.id = "2-0"  # type: ignore[misc]
 
 
+@pytest.mark.unit
 class TestParseTimestampFromId:
     """Tests for the _parse_timestamp_from_id helper."""
 
@@ -81,6 +83,7 @@ class TestParseTimestampFromId:
         assert result.tzinfo == UTC
 
 
+@pytest.mark.unit
 class TestRedisStreamManagerInit:
     """Tests for RedisStreamManager initialization."""
 
@@ -108,6 +111,7 @@ class TestRedisStreamManagerInit:
         assert "redis://localhost:6379/0" in result
 
 
+@pytest.mark.unit
 class TestRedisStreamManagerConnect:
     """Tests for connect/disconnect lifecycle."""
 
@@ -187,6 +191,7 @@ class TestRedisStreamManagerConnect:
         assert manager.is_connected is False
 
 
+@pytest.mark.unit
 class TestRedisStreamManagerPublish:
     """Tests for publishing events to streams."""
 
@@ -286,6 +291,7 @@ class TestRedisStreamManagerPublish:
         assert result is None
 
 
+@pytest.mark.unit
 class TestRedisStreamManagerConsumerGroup:
     """Tests for consumer group operations."""
 
@@ -366,6 +372,7 @@ class TestRedisStreamManagerConsumerGroup:
         assert result is False
 
 
+@pytest.mark.unit
 class TestRedisStreamManagerReadGroup:
     """Tests for reading from consumer groups."""
 
@@ -465,6 +472,7 @@ class TestRedisStreamManagerReadGroup:
         )
 
 
+@pytest.mark.unit
 class TestRedisStreamManagerAcknowledge:
     """Tests for acknowledging messages."""
 
@@ -517,6 +525,7 @@ class TestRedisStreamManagerAcknowledge:
         assert result is False
 
 
+@pytest.mark.unit
 class TestRedisStreamManagerStreamInfo:
     """Tests for stream information queries."""
 
@@ -557,6 +566,7 @@ class TestRedisStreamManagerStreamInfo:
         assert manager.get_pending_count("events") == 0
 
 
+@pytest.mark.unit
 class TestRedisStreamManagerContextManager:
     """Tests for context manager protocol."""
 

@@ -68,6 +68,7 @@ def mock_recommendation(mock_suggestion):
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestSetupAutotagParser:
     """Tests for setup_autotag_parser."""
 
@@ -89,6 +90,7 @@ class TestSetupAutotagParser:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestHandleAutotagCommand:
     """Tests for handle_autotag_command router."""
 
@@ -148,6 +150,7 @@ class TestHandleAutotagCommand:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestHandleSuggest:
     """Tests for handle_suggest."""
 
@@ -247,6 +250,7 @@ class TestHandleSuggest:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestHandleApply:
     """Tests for handle_apply."""
 
@@ -273,6 +277,7 @@ class TestHandleApply:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestHandlePopular:
     """Tests for handle_popular."""
 
@@ -297,6 +302,7 @@ class TestHandlePopular:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestHandleRecent:
     """Tests for handle_recent."""
 
@@ -321,6 +327,7 @@ class TestHandleRecent:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestHandleAnalyze:
     """Tests for handle_analyze."""
 
@@ -402,6 +409,7 @@ class TestHandleAnalyze:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestHandleBatch:
     """Tests for handle_batch."""
 

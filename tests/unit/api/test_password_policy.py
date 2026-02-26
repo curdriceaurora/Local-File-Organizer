@@ -32,6 +32,7 @@ def _settings(**overrides: object) -> ApiSettings:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPasswordMinLength:
     """Passwords shorter than min_length should be rejected."""
 
@@ -69,6 +70,7 @@ class TestPasswordMinLength:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPasswordRequireLetter:
     """Passwords without any letter should be rejected when configured."""
 
@@ -101,6 +103,7 @@ class TestPasswordRequireLetter:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPasswordRequireNumber:
     """Passwords without any digit should be rejected when configured."""
 
@@ -130,6 +133,7 @@ class TestPasswordRequireNumber:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPasswordRequireUppercase:
     """Passwords without any uppercase letter should be rejected when configured."""
 
@@ -155,6 +159,7 @@ class TestPasswordRequireUppercase:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPasswordRequireSpecial:
     """Passwords without a special character should be rejected when configured."""
 
@@ -190,6 +195,7 @@ class TestPasswordRequireSpecial:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCommonPasswords:
     """Common passwords should be rejected even if they meet other criteria."""
 
@@ -239,6 +245,7 @@ class TestCommonPasswords:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestStrongPassword:
     """A well-formed password should pass all checks with default settings."""
 

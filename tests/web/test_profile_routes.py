@@ -54,6 +54,7 @@ def fake_user():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDefaultProfileState:
     """Test the _default_profile_state helper."""
 
@@ -84,6 +85,7 @@ class TestDefaultProfileState:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSanitizeProfileState:
     """Test _sanitize_profile_state normalisation."""
 
@@ -157,6 +159,7 @@ class TestSanitizeProfileState:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAppendActivity:
     """Test the _append_activity helper."""
 
@@ -194,6 +197,7 @@ class TestAppendActivity:
         assert len(log) == 1
 
 
+@pytest.mark.unit
 class TestAppendNotification:
     """Test the _append_notification helper."""
 
@@ -235,6 +239,7 @@ class TestAppendNotification:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAvatarPath:
     """Test _avatar_path returns a Path under the avatar directory."""
 
@@ -258,6 +263,7 @@ class TestAvatarPath:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCleanupExpiredResetTokens:
     """Test the _cleanup_expired_reset_tokens helper."""
 
@@ -298,6 +304,7 @@ class TestCleanupExpiredResetTokens:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetCurrentWebUser:
     """Test the get_current_web_user dependency."""
 
@@ -396,6 +403,7 @@ class TestGetCurrentWebUser:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRequireWebUser:
     """Test the _require_web_user helper."""
 
@@ -429,6 +437,7 @@ class TestRequireWebUser:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestWorkspaceContext:
     """Test the _workspace_context helper."""
 
@@ -476,6 +485,7 @@ class TestWorkspaceContext:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMakeProfileContext:
     """Test the _make_profile_context helper."""
 
@@ -523,6 +533,7 @@ class TestMakeProfileContext:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUserApiKeyModel:
     """Test the UserApiKey SQLAlchemy model declaration."""
 
@@ -546,6 +557,7 @@ class TestUserApiKeyModel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModuleConstants:
     """Verify module-level constants are sensible."""
 

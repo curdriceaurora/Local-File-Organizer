@@ -7,6 +7,7 @@ import pytest
 # Phase 3 placeholder tests for audio metadata
 
 
+@pytest.mark.unit
 class TestAudioMetadataPlaceholder:
     """Test audio metadata extraction Phase 3 functionality."""
 

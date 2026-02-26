@@ -36,6 +36,7 @@ def small_cache() -> QueryCache:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBasicOperations:
     """Tests for get() and put()."""
 
@@ -81,6 +82,7 @@ class TestBasicOperations:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTTLExpiration:
     """Tests for time-to-live based expiry."""
 
@@ -114,6 +116,7 @@ class TestTTLExpiration:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLRUEviction:
     """Tests for least-recently-used eviction."""
 
@@ -146,6 +149,7 @@ class TestLRUEviction:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInvalidation:
     """Tests for invalidate() and clear()."""
 
@@ -183,6 +187,7 @@ class TestInvalidation:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHitRate:
     """Tests for hit_rate property."""
 
@@ -210,6 +215,7 @@ class TestHitRate:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMakeHash:
     """Tests for the static make_hash() helper."""
 
@@ -244,6 +250,7 @@ class TestMakeHash:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCacheThreadSafety:
     """Tests for concurrent access."""
 
@@ -284,6 +291,7 @@ class TestCacheThreadSafety:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestValidation:
     """Tests for constructor validation."""
 

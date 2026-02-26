@@ -6,6 +6,7 @@ interruption, hash mismatch detection, and error handling.
 """
 
 from __future__ import annotations
+import pytest
 
 import unittest
 from pathlib import Path
@@ -27,6 +28,7 @@ def _always_fail(path: Path) -> None:
     raise ValueError(f"Simulated failure for {path}")
 
 
+@pytest.mark.unit
 class TestProcessWithResume(unittest.TestCase):
     """Test ResumableProcessor.process_with_resume."""
 
@@ -136,6 +138,7 @@ class TestProcessWithResume(unittest.TestCase):
         self.assertEqual(job.status, JobStatus.COMPLETED)
 
 
+@pytest.mark.unit
 class TestResumeJob(unittest.TestCase):
     """Test ResumableProcessor.resume_job."""
 

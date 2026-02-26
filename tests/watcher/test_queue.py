@@ -20,6 +20,7 @@ from file_organizer.watcher.queue import EventQueue, EventType, FileEvent
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFileEvent:
     """Tests for the FileEvent dataclass."""
 
@@ -80,6 +81,7 @@ class TestFileEvent:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestEventQueue:
     """Tests for the EventQueue class."""
 
@@ -239,6 +241,7 @@ class TestEventQueue:
         assert batch == []
 
 
+@pytest.mark.unit
 class TestEventQueueEdgeCases:
     """Additional edge case tests for EventQueue."""
 

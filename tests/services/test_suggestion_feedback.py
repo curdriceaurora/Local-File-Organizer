@@ -49,6 +49,7 @@ def _make_suggestion(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFeedbackEntry:
     """Test FeedbackEntry serialization."""
 
@@ -80,6 +81,7 @@ class TestFeedbackEntry:
         assert entry.action == "rejected"
 
 
+@pytest.mark.unit
 class TestLearningStats:
     """Test LearningStats."""
 
@@ -95,6 +97,7 @@ class TestLearningStats:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSuggestionFeedbackInit:
     """Test initialization and loading."""
 
@@ -141,6 +144,7 @@ class TestSuggestionFeedbackInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRecordAction:
     """Test recording user actions."""
 
@@ -177,6 +181,7 @@ class TestRecordAction:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAcceptanceRejectionRates:
     """Test acceptance and rejection rate calculations."""
 
@@ -219,6 +224,7 @@ class TestAcceptanceRejectionRates:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLearningStatsComputation:
     """Test get_learning_stats."""
 
@@ -255,6 +261,7 @@ class TestLearningStatsComputation:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPatternUpdates:
     """Test pattern adjustment logic."""
 
@@ -297,6 +304,7 @@ class TestPatternUpdates:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUserHistory:
     """Test get_user_history."""
 
@@ -320,6 +328,7 @@ class TestUserHistory:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestClearOldFeedback:
     """Test clearing old feedback entries."""
 
@@ -354,6 +363,7 @@ class TestClearOldFeedback:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExportFeedback:
     """Test exporting feedback."""
 
@@ -374,6 +384,7 @@ class TestExportFeedback:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSaveFeedbackError:
     """Test save error handling."""
 

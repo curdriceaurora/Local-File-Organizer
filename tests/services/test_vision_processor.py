@@ -28,6 +28,7 @@ def vision_processor(mock_vision_model: MagicMock) -> VisionProcessor:
     return processor
 
 
+@pytest.mark.unit
 class TestProcessedImage:
     """Tests for ProcessedImage dataclass."""
 
@@ -61,6 +62,7 @@ class TestProcessedImage:
         assert result.processing_time == 1.5
 
 
+@pytest.mark.unit
 class TestVisionProcessorInit:
     """Tests for VisionProcessor initialization."""
 
@@ -100,6 +102,7 @@ class TestVisionProcessorInit:
         mock_vision_model.initialize.assert_not_called()
 
 
+@pytest.mark.unit
 class TestVisionProcessorProcessFile:
     """Tests for VisionProcessor.process_file()."""
 
@@ -250,6 +253,7 @@ class TestVisionProcessorProcessFile:
         assert len(result.extracted_text) == 500
 
 
+@pytest.mark.unit
 class TestVisionProcessorCleanName:
     """Tests for VisionProcessor._clean_ai_generated_name()."""
 
@@ -292,6 +296,7 @@ class TestVisionProcessorCleanName:
         assert result == "nature_landscape_view"
 
 
+@pytest.mark.unit
 class TestVisionProcessorDescriptionAndOCR:
     """Tests for _generate_description and _extract_text methods."""
 
@@ -380,6 +385,7 @@ class TestVisionProcessorDescriptionAndOCR:
         assert result is None
 
 
+@pytest.mark.unit
 class TestVisionProcessorFolderAndFilename:
     """Tests for _generate_folder_name and _generate_filename methods."""
 
@@ -482,6 +488,7 @@ class TestVisionProcessorFolderAndFilename:
         assert result == "test"
 
 
+@pytest.mark.unit
 class TestVisionProcessorLifecycle:
     """Tests for VisionProcessor cleanup and context manager."""
 

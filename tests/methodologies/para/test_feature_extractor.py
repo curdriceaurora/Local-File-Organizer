@@ -45,6 +45,7 @@ def tmp_project_dir(tmp_path: Path) -> Path:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestExtractTextFeatures:
     """Tests for extract_text_features method."""
 
@@ -159,6 +160,7 @@ class TestExtractTextFeatures:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestExtractMetadataFeatures:
     """Tests for extract_metadata_features method."""
 
@@ -225,6 +227,7 @@ class TestExtractMetadataFeatures:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestExtractStructuralFeatures:
     """Tests for extract_structural_features method."""
 

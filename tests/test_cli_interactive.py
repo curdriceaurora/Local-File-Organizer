@@ -1,11 +1,13 @@
 """Tests for CLI interactive prompts and completion helpers."""
 
 from __future__ import annotations
+import pytest
 
 from pathlib import Path
 from unittest.mock import patch
 
 
+@pytest.mark.unit
 class TestCompletion:
     """Tests for path completion callbacks."""
 
@@ -52,6 +54,7 @@ class TestCompletion:
         assert any("file.py" in p for p in paths)
 
 
+@pytest.mark.unit
 class TestInteractiveFlags:
     """Tests for interactive module flag management."""
 
@@ -70,6 +73,7 @@ class TestInteractiveFlags:
         interactive.set_flags(yes=False, no_interactive=False)
 
 
+@pytest.mark.unit
 class TestConfirmAction:
     """Tests for confirm_action."""
 
@@ -99,6 +103,7 @@ class TestConfirmAction:
             mock_confirm.ask.assert_called_once()
 
 
+@pytest.mark.unit
 class TestPromptChoice:
     """Tests for prompt_choice."""
 
@@ -111,6 +116,7 @@ class TestPromptChoice:
         interactive.set_flags(no_interactive=False)
 
 
+@pytest.mark.unit
 class TestCreateProgress:
     """Tests for create_progress."""
 
@@ -123,6 +129,7 @@ class TestCreateProgress:
         assert isinstance(prog, Progress)
 
 
+@pytest.mark.unit
 class TestMainCallbackFlags:
     """Test that global flags are wired into main.py."""
 

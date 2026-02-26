@@ -141,6 +141,7 @@ def learner(temp_storage):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInit:
     """Tests for PatternLearner initialization."""
 
@@ -186,6 +187,7 @@ class TestInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLearnFromCorrection:
     """Tests for learn_from_correction method."""
 
@@ -279,6 +281,7 @@ class TestLearnFromCorrection:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractNamingPattern:
     """Tests for extract_naming_pattern method."""
 
@@ -322,6 +325,7 @@ class TestExtractNamingPattern:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIdentifyFolderPreference:
     """Tests for identify_folder_preference method."""
 
@@ -354,6 +358,7 @@ class TestIdentifyFolderPreference:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateConfidence:
     """Tests for update_confidence method."""
 
@@ -379,6 +384,7 @@ class TestUpdateConfidence:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetPatternSuggestion:
     """Tests for get_pattern_suggestion method."""
 
@@ -454,6 +460,7 @@ class TestGetPatternSuggestion:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetLearningStats:
     """Tests for get_learning_stats method."""
 
@@ -485,6 +492,7 @@ class TestGetLearningStats:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBatchLearnFromHistory:
     """Tests for batch_learn_from_history method."""
 
@@ -545,6 +553,7 @@ class TestBatchLearnFromHistory:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestClearOldPatterns:
     """Tests for clear_old_patterns method."""
 
@@ -577,6 +586,7 @@ class TestClearOldPatterns:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLearningToggle:
     """Tests for enable/disable learning methods."""
 
@@ -619,6 +629,7 @@ class TestLearningToggle:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLearnNamingPattern:
     """Tests for _learn_naming_pattern private method."""
 
@@ -711,6 +722,7 @@ class TestLearnNamingPattern:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLearnFolderPreference:
     """Tests for _learn_folder_preference private method."""
 
@@ -751,6 +763,7 @@ class TestLearnFolderPreference:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetNamingSuggestions:
     """Tests for _get_naming_suggestions private method."""
 

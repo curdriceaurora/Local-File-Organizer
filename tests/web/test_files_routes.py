@@ -54,6 +54,7 @@ def settings(tree):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBuildBreadcrumbs:
     """Test breadcrumb generation."""
 
@@ -89,6 +90,7 @@ class TestBuildBreadcrumbs:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestListTreeNodes:
     """Test sidebar tree node listing."""
 
@@ -134,6 +136,7 @@ class TestListTreeNodes:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCollectEntries:
     """Test directory entry collection, filtering, and sorting."""
 
@@ -268,6 +271,7 @@ class TestCollectEntries:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBuildFileResultsContext:
     """Test the full context builder."""
 

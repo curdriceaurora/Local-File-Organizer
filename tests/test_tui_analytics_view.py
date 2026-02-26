@@ -21,6 +21,7 @@ def _get_content(widget: object) -> str:
     return str(getattr(widget, "_Static__content", ""))
 
 
+@pytest.mark.unit
 class TestFormatBytes:
     """Unit tests for the _format_bytes helper."""
 
@@ -43,6 +44,7 @@ class TestFormatBytes:
         assert "GB" in result
 
 
+@pytest.mark.unit
 class TestStorageOverviewPanel:
     """Unit tests for StorageOverviewPanel."""
 
@@ -61,6 +63,7 @@ class TestStorageOverviewPanel:
         assert "300 MB" in content
 
 
+@pytest.mark.unit
 class TestFileDistributionPanel:
     """Unit tests for FileDistributionPanel."""
 
@@ -83,6 +86,7 @@ class TestFileDistributionPanel:
         assert ".jpg" in content
 
 
+@pytest.mark.unit
 class TestQualityScorePanel:
     """Unit tests for QualityScorePanel."""
 
@@ -101,6 +105,7 @@ class TestQualityScorePanel:
         assert "90%" in content
 
 
+@pytest.mark.unit
 class TestDuplicateStatsPanel:
     """Unit tests for DuplicateStatsPanel."""
 
@@ -113,6 +118,7 @@ class TestDuplicateStatsPanel:
         assert "200 MB" in content
 
 
+@pytest.mark.unit
 class TestAnalyticsView:
     """Tests for AnalyticsView."""
 

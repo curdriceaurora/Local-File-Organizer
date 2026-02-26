@@ -63,6 +63,7 @@ def populated_learner(learner, temp_storage):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInit:
     """Tests for FolderPreferenceLearner initialization."""
 
@@ -124,6 +125,7 @@ class TestInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTrackFolderChoice:
     """Tests for track_folder_choice method."""
 
@@ -227,6 +229,7 @@ class TestTrackFolderChoice:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetPreferredFolder:
     """Tests for get_preferred_folder method."""
 
@@ -276,6 +279,7 @@ class TestGetPreferredFolder:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetFolderConfidence:
     """Tests for get_folder_confidence method."""
 
@@ -310,6 +314,7 @@ class TestGetFolderConfidence:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAnalyzeOrganizationPatterns:
     """Tests for analyze_organization_patterns method."""
 
@@ -346,6 +351,7 @@ class TestAnalyzeOrganizationPatterns:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSuggestFolderStructure:
     """Tests for suggest_folder_structure method."""
 
@@ -407,6 +413,7 @@ class TestSuggestFolderStructure:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetFolderStats:
     """Tests for get_folder_stats method."""
 
@@ -439,6 +446,7 @@ class TestGetFolderStats:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestClearOldPreferences:
     """Tests for clear_old_preferences method."""
 
@@ -484,6 +492,7 @@ class TestClearOldPreferences:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPersistence:
     """Tests for save/load persistence."""
 

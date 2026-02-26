@@ -1,6 +1,7 @@
 """Tests for build configuration and build script utilities."""
 
 from __future__ import annotations
+import pytest
 
 import sys
 from pathlib import Path
@@ -20,6 +21,7 @@ from build_config import (
 )
 
 
+@pytest.mark.unit
 class TestCurrentPlatform:
     def test_macos(self) -> None:
         with patch("platform.system", return_value="Darwin"):
@@ -38,6 +40,7 @@ class TestCurrentPlatform:
             assert current_platform() == "linux"
 
 
+@pytest.mark.unit
 class TestCurrentArch:
     def test_x86_64(self) -> None:
         with patch("platform.machine", return_value="x86_64"):
@@ -56,6 +59,7 @@ class TestCurrentArch:
             assert current_arch() == "arm64"
 
 
+@pytest.mark.unit
 class TestBuildConfig:
     def test_defaults(self) -> None:
         cfg = BuildConfig()
@@ -85,6 +89,7 @@ class TestBuildConfig:
         assert cfg.build_dir == Path("build")
 
 
+@pytest.mark.unit
 class TestHiddenImports:
     def test_contains_core_modules(self) -> None:
         assert "ollama" in HIDDEN_IMPORTS
@@ -97,6 +102,7 @@ class TestHiddenImports:
         assert len(HIDDEN_IMPORTS) == len(set(HIDDEN_IMPORTS))
 
 
+@pytest.mark.unit
 class TestExcludes:
     def test_excludes_test_frameworks(self) -> None:
         assert "tkinter" in EXCLUDES
@@ -107,6 +113,7 @@ class TestExcludes:
         assert len(EXCLUDES) == len(set(EXCLUDES))
 
 
+@pytest.mark.unit
 class TestConstants:
     def test_app_name(self) -> None:
         assert APP_NAME == "file-organizer"

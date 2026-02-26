@@ -75,6 +75,7 @@ def suggestion_engine(config: PARAConfig, mock_heuristic_engine: MagicMock) -> P
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestPARASuggestion:
     """Tests for the PARASuggestion dataclass."""
 
@@ -154,6 +155,7 @@ class TestPARASuggestion:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestConfidenceLabel:
     """Tests for the _confidence_label helper function."""
 
@@ -179,6 +181,7 @@ class TestConfidenceLabel:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestSuggest:
     """Tests for the suggest method."""
 
@@ -313,6 +316,7 @@ class TestSuggest:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestSuggestBatch:
     """Tests for the suggest_batch method."""
 
@@ -363,6 +367,7 @@ class TestSuggestBatch:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestExplain:
     """Tests for the explain method."""
 

@@ -5,6 +5,7 @@ and meet minimum version requirements.
 """
 
 import sys
+import pytest
 
 # ---------------------------------------------------------------------------
 # Version helpers
@@ -30,6 +31,7 @@ def _version_gte(installed: str, minimum: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPhase2Imports:
     """Verify Phase 2 dependencies are importable."""
 
@@ -51,6 +53,7 @@ class TestPhase2Imports:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPhase2Versions:
     """Verify Phase 2 dependencies meet minimum version requirements."""
 
@@ -76,6 +79,7 @@ class TestPhase2Versions:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPhase2Functionality:
     """Light functionality checks for Phase 2 dependencies."""
 

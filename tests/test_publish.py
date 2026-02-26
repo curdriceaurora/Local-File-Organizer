@@ -30,6 +30,7 @@ publish_pypi = publish_mod.publish_pypi
 get_dist_files = publish_mod.get_dist_files
 
 
+@pytest.mark.unit
 class TestPublishConfig:
     """Tests for PublishConfig dataclass."""
 
@@ -72,6 +73,7 @@ class TestPublishConfig:
         assert config.dist_dir == "dist"
 
 
+@pytest.mark.unit
 class TestBuildPackage:
     """Tests for build_package function."""
 
@@ -134,6 +136,7 @@ class TestBuildPackage:
             assert not old_file.exists()
 
 
+@pytest.mark.unit
 class TestCheckPackage:
     """Tests for check_package function."""
 
@@ -170,6 +173,7 @@ class TestCheckPackage:
         assert check_package(dist) is False
 
 
+@pytest.mark.unit
 class TestPublishPypi:
     """Tests for publish_pypi function."""
 
@@ -245,6 +249,7 @@ class TestPublishPypi:
         assert any("test.custom.pypi" in str(arg) for arg in call_args)
 
 
+@pytest.mark.unit
 class TestGetDistFiles:
     """Tests for get_dist_files function."""
 

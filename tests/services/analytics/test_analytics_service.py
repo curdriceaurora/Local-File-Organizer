@@ -81,6 +81,7 @@ def mock_service(mock_storage_analyzer, mock_metrics_calculator):
     )
 
 
+@pytest.mark.unit
 class TestAnalyticsServiceInit:
     """Test AnalyticsService initialization."""
 
@@ -114,6 +115,7 @@ class TestAnalyticsServiceInit:
         assert service.metrics_calculator is mock_metrics_calculator
 
 
+@pytest.mark.unit
 class TestGetStorageStats:
     """Test get_storage_stats method."""
 
@@ -144,6 +146,7 @@ class TestGetStorageStats:
         assert stats.total_size > 0
 
 
+@pytest.mark.unit
 class TestGetDuplicateStats:
     """Test get_duplicate_stats method."""
 
@@ -306,6 +309,7 @@ class TestGetDuplicateStats:
         assert stats.total_duplicates == 0
 
 
+@pytest.mark.unit
 class TestGetQualityMetrics:
     """Test get_quality_metrics method."""
 
@@ -355,6 +359,7 @@ class TestGetQualityMetrics:
             assert isinstance(metrics, QualityMetrics)
 
 
+@pytest.mark.unit
 class TestCalculateTimeSaved:
     """Test calculate_time_saved method."""
 
@@ -410,6 +415,7 @@ class TestCalculateTimeSaved:
         assert savings.automation_percentage == 100.0
 
 
+@pytest.mark.unit
 class TestGenerateDashboard:
     """Test generate_dashboard method."""
 
@@ -475,6 +481,7 @@ class TestGenerateDashboard:
         assert before <= dashboard.generated_at <= after
 
 
+@pytest.mark.unit
 class TestExportDashboard:
     """Test export_dashboard method."""
 
@@ -548,6 +555,7 @@ class TestExportDashboard:
             )
 
 
+@pytest.mark.unit
 class TestFormatDashboardText:
     """Test _format_dashboard_text private method."""
 
@@ -655,6 +663,7 @@ class TestFormatDashboardText:
         assert "Generated:" in text
 
 
+@pytest.mark.unit
 class TestDashboardToDict:
     """Test dashboard.to_dict() serialization."""
 
@@ -682,6 +691,7 @@ class TestDashboardToDict:
         assert len(json_str) > 0
 
 
+@pytest.mark.unit
 class TestEmptyDirectoryHandling:
     """Test handling of empty directories."""
 
@@ -707,6 +717,7 @@ class TestEmptyDirectoryHandling:
             assert dashboard.time_savings.total_operations == 0
 
 
+@pytest.mark.unit
 class TestLargeFilesIdentification:
     """Test identification of large files in storage stats."""
 

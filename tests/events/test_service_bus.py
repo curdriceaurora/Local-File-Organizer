@@ -53,6 +53,7 @@ def bus(mock_pubsub: PubSubManager) -> ServiceBus:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestServiceRequest:
     """Tests for the ServiceRequest dataclass."""
 
@@ -118,6 +119,7 @@ class TestServiceRequest:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestServiceResponse:
     """Tests for the ServiceResponse dataclass."""
 
@@ -183,6 +185,7 @@ class TestServiceResponse:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestServiceRegistration:
     """Tests for service registration on the bus."""
 
@@ -241,6 +244,7 @@ class TestServiceRegistration:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSendRequest:
     """Tests for send_request."""
 
@@ -327,6 +331,7 @@ class TestSendRequest:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBroadcast:
     """Tests for broadcast."""
 
@@ -391,6 +396,7 @@ class TestBroadcast:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestServiceBusUtility:
     """Tests for utility methods and edge cases."""
 

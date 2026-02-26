@@ -85,6 +85,7 @@ def _make_png(tmp_path: Path, name: str = "img.png", size: tuple[int, int] = (10
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestUserAction:
     """Test UserAction enum values exist and are distinct."""
 
@@ -106,6 +107,7 @@ class TestUserAction:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestImageMetadata:
     """Test ImageMetadata dataclass and computed properties."""
 
@@ -133,6 +135,7 @@ class TestImageMetadata:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestDuplicateReview:
     """Test DuplicateReview dataclass defaults."""
 
@@ -157,6 +160,7 @@ class TestDuplicateReview:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestComparisonViewerInit:
     """Test ComparisonViewer initialisation."""
 
@@ -179,6 +183,7 @@ class TestComparisonViewerInit:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestShowComparison:
     """Test ComparisonViewer.show_comparison."""
 
@@ -242,6 +247,7 @@ class TestShowComparison:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestBatchReview:
     """Test ComparisonViewer.batch_review."""
 
@@ -321,6 +327,7 @@ class TestBatchReview:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestGetImageMetadata:
     """Test _get_image_metadata using real tiny images via tmp_path."""
 
@@ -346,6 +353,7 @@ class TestGetImageMetadata:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestDisplayComparisonHeader:
     """Test _display_comparison_header prints without error."""
 
@@ -361,6 +369,7 @@ class TestDisplayComparisonHeader:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestDisplayImagesSideBySide:
     """Test _display_images_side_by_side layout branches."""
 
@@ -402,6 +411,7 @@ class TestDisplayImagesSideBySide:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestCreateImageInfoTable:
     """Test _create_image_info_table returns a Table."""
 
@@ -421,6 +431,7 @@ class TestCreateImageInfoTable:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestGenerateAsciiPreview:
     """Test _generate_ascii_preview with real and mocked images.
 
@@ -539,6 +550,7 @@ class TestGenerateAsciiPreview:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestPromptUserAction:
     """Test _prompt_user_action for all valid input choices."""
 
@@ -587,6 +599,7 @@ class TestPromptUserAction:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestProcessUserAction:
     """Test _process_user_action for every UserAction branch."""
 
@@ -680,6 +693,7 @@ class TestProcessUserAction:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestAutoSelectBest:
     """Test _auto_select_best quality-based selection."""
 
@@ -708,6 +722,7 @@ class TestAutoSelectBest:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestCalculateQualityScore:
     """Test _calculate_quality_score scoring logic."""
 
@@ -787,6 +802,7 @@ class TestCalculateQualityScore:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestDisplayReviewSummary:
     """Test _display_review_summary output."""
 
@@ -819,6 +835,7 @@ class TestDisplayReviewSummary:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestDisplayMetadata:
     """Test display_metadata public method."""
 
@@ -835,6 +852,7 @@ class TestDisplayMetadata:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestInteractiveSelect:
     """Test interactive_select method."""
 

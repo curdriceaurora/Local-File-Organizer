@@ -20,6 +20,7 @@ runner = CliRunner()
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConfigShow:
     """Tests for ``file-organizer config show``."""
 
@@ -45,6 +46,7 @@ class TestConfigShow:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConfigList:
     """Tests for ``file-organizer config list``."""
 
@@ -65,6 +67,7 @@ class TestConfigList:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConfigEdit:
     """Tests for ``file-organizer config edit``."""
 
@@ -94,6 +97,7 @@ class TestConfigEdit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProfileCRUD:
     """Round-trip profile creation and retrieval."""
 
@@ -136,6 +140,7 @@ class TestProfileCRUD:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConfigManagerUnit:
     """Unit tests for ConfigManager without CLI overhead."""
 

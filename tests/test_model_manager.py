@@ -1,6 +1,7 @@
 """Tests for ModelManager and model registry."""
 
 from __future__ import annotations
+import pytest
 
 from unittest.mock import MagicMock, patch
 
@@ -12,6 +13,7 @@ from file_organizer.models.registry import AVAILABLE_MODELS, ModelInfo
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelRegistry:
     """Tests for the static AVAILABLE_MODELS catalogue."""
 
@@ -41,6 +43,7 @@ class TestModelRegistry:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelManagerList:
     """Tests for ModelManager.list_models()."""
 
@@ -83,6 +86,7 @@ class TestModelManagerList:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelManagerDisplay:
     """Tests for ModelManager.display_models()."""
 
@@ -106,6 +110,7 @@ class TestModelManagerDisplay:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCheckInstalled:
     """Tests for Ollama integration."""
 
@@ -142,6 +147,7 @@ class TestCheckInstalled:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelPull:
     """Tests for pull_model()."""
 
@@ -176,6 +182,7 @@ class TestModelPull:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCacheInfo:
     """Tests for cache_info()."""
 
@@ -190,6 +197,7 @@ class TestCacheInfo:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIsInstalled:
     """Tests for _is_installed prefix matching."""
 

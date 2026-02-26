@@ -5,6 +5,7 @@ RuleSet including serialization/deserialization round-trips and edge cases.
 """
 
 from __future__ import annotations
+import pytest
 
 from datetime import datetime
 from typing import Any
@@ -22,6 +23,7 @@ from file_organizer.services.copilot.rules.models import (
 # Enum coverage
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestConditionType:
     """Tests for the ConditionType enum."""
 
@@ -37,6 +39,7 @@ class TestConditionType:
         assert ConditionType("extension") is ConditionType.EXTENSION
 
 
+@pytest.mark.unit
 class TestActionType:
     """Tests for the ActionType enum."""
 
@@ -55,6 +58,7 @@ class TestActionType:
 # RuleCondition
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestRuleCondition:
     """Tests for RuleCondition dataclass."""
 
@@ -123,6 +127,7 @@ class TestRuleCondition:
 # RuleAction
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestRuleAction:
     """Tests for RuleAction dataclass."""
 
@@ -218,6 +223,7 @@ class TestRuleAction:
 # Rule
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestRule:
     """Tests for Rule dataclass."""
 
@@ -342,6 +348,7 @@ class TestRule:
 # RuleSet
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestRuleSet:
     """Tests for RuleSet dataclass."""
 

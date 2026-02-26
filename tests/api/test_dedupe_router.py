@@ -1,6 +1,7 @@
 """Tests for the dedupe API router."""
 
 from __future__ import annotations
+import pytest
 
 from datetime import UTC, datetime
 from pathlib import Path
@@ -78,6 +79,7 @@ def _make_mock_index(groups: dict | None = None, stats: dict | None = None):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScanDuplicates:
     """Tests for POST /api/v1/dedupe/scan."""
 
@@ -172,6 +174,7 @@ class TestScanDuplicates:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPreviewDuplicates:
     """Tests for POST /api/v1/dedupe/preview."""
 
@@ -244,6 +247,7 @@ class TestPreviewDuplicates:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExecuteDeduplication:
     """Tests for POST /api/v1/dedupe/execute."""
 

@@ -23,6 +23,7 @@ REAL_WEB_UI_PREFIX = "/ui"
 WRONG_WEB_UI_ROOT = "localhost:8000/"  # accessing root directly without /ui/
 
 
+@pytest.mark.unit
 class TestWebUIPaths:
     """Validate web UI access path documentation."""
 
@@ -93,6 +94,7 @@ class TestWebUIPaths:
                     )
 
 
+@pytest.mark.unit
 class TestHomePageRedirect:
     """Validate root URL behavior documentation."""
 

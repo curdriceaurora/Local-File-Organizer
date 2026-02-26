@@ -20,6 +20,7 @@ def text_model_config() -> ModelConfig:
     )
 
 
+@pytest.mark.unit
 class TestTextModel:
     """Tests for TextModel class."""
 

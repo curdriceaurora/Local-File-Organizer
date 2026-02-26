@@ -26,6 +26,7 @@ pytestmark = [pytest.mark.unit]
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRead7zFile:
     """Test read_7z_file with mocked py7zr."""
 
@@ -80,6 +81,7 @@ class TestRead7zFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReadRarFile:
     """Test read_rar_file with mocked rarfile."""
 
@@ -121,6 +123,7 @@ class TestReadRarFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReadHdf5File:
     """Test read_hdf5_file with mocked h5py."""
 
@@ -170,6 +173,7 @@ class TestReadHdf5File:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReadNetcdfFile:
     """Test read_netcdf_file with mocked netCDF4."""
 
@@ -220,6 +224,7 @@ class TestReadNetcdfFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReadMatFile:
     """Test read_mat_file with mocked scipy."""
 
@@ -262,6 +267,7 @@ class TestReadMatFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReadDxfFile:
     """Test read_dxf_file with mocked ezdxf."""
 
@@ -317,6 +323,7 @@ class TestReadDxfFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReadDwgFile:
     """Test read_dwg_file fallback path when ezdxf cannot parse."""
 
@@ -359,6 +366,7 @@ class TestReadDwgFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReadFileDispatch:
     """Test read_file dispatches correctly for additional extensions."""
 
@@ -493,6 +501,7 @@ class TestReadFileDispatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReadCadFileDispatch:
     """Test the read_cad_file dispatch function."""
 

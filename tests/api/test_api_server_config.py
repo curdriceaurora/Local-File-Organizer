@@ -15,6 +15,7 @@ from file_organizer.api.config import (
 )
 
 
+@pytest.mark.unit
 class TestParseList:
     """Tests for _parse_list helper."""
 
@@ -48,6 +49,7 @@ class TestParseList:
         assert result == ["a", "b"]
 
 
+@pytest.mark.unit
 class TestLoadYaml:
     """Tests for _load_yaml helper."""
 
@@ -75,6 +77,7 @@ class TestLoadYaml:
         assert isinstance(result, dict)
 
 
+@pytest.mark.unit
 class TestApiSettings:
     """Tests for ApiSettings defaults."""
 
@@ -115,6 +118,7 @@ class TestApiSettings:
         assert "/api/v1/auth/login" in settings.rate_limit_rules
 
 
+@pytest.mark.unit
 class TestLoadSettings:
     """Tests for load_settings."""
 

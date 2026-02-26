@@ -50,6 +50,7 @@ def monitor(connected_manager: RedisStreamManager) -> EventMonitor:
 # --- Dataclass Tests ---
 
 
+@pytest.mark.unit
 class TestStreamStats:
     """Tests for the StreamStats dataclass."""
 
@@ -75,6 +76,7 @@ class TestStreamStats:
         assert stats.oldest_event == now
 
 
+@pytest.mark.unit
 class TestConsumerLag:
     """Tests for the ConsumerLag dataclass."""
 
@@ -96,6 +98,7 @@ class TestConsumerLag:
 # --- Helper Function Tests ---
 
 
+@pytest.mark.unit
 class TestParseEntryTimestamp:
     """Tests for the _parse_entry_timestamp helper."""
 
@@ -140,6 +143,7 @@ class TestParseEntryTimestamp:
 # --- EventMonitor Tests ---
 
 
+@pytest.mark.unit
 class TestEventMonitorInit:
     """Tests for EventMonitor initialization."""
 
@@ -155,6 +159,7 @@ class TestEventMonitorInit:
         assert "connected=False" in repr(monitor)
 
 
+@pytest.mark.unit
 class TestGetStreamStats:
     """Tests for the get_stream_stats method."""
 
@@ -252,6 +257,7 @@ class TestGetStreamStats:
         assert stats.newest_event is None
 
 
+@pytest.mark.unit
 class TestGetConsumerLag:
     """Tests for the get_consumer_lag method."""
 
@@ -344,6 +350,7 @@ class TestGetConsumerLag:
         assert lag.idle_time == 2000
 
 
+@pytest.mark.unit
 class TestGetEventRate:
     """Tests for the get_event_rate method."""
 

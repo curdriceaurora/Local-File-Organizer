@@ -36,6 +36,7 @@ pytestmark = [pytest.mark.unit]
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFileMatch:
     """Test the FileMatch dataclass."""
 
@@ -65,6 +66,7 @@ class TestFileMatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPreviewResult:
     """Test the PreviewResult dataclass."""
 
@@ -96,6 +98,7 @@ class TestPreviewResult:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConditionSizeGreater:
     """Test SIZE_GREATER condition."""
 
@@ -128,6 +131,7 @@ class TestConditionSizeGreater:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConditionSizeLess:
     """Test SIZE_LESS condition."""
 
@@ -149,6 +153,7 @@ class TestConditionSizeLess:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConditionContentContains:
     """Test CONTENT_CONTAINS condition."""
 
@@ -181,6 +186,7 @@ class TestConditionContentContains:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConditionModifiedBefore:
     """Test MODIFIED_BEFORE condition."""
 
@@ -206,6 +212,7 @@ class TestConditionModifiedBefore:
         assert PreviewEngine._evaluate_condition(f, cond) is False
 
 
+@pytest.mark.unit
 class TestConditionModifiedAfter:
     """Test MODIFIED_AFTER condition."""
 
@@ -235,6 +242,7 @@ class TestConditionModifiedAfter:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConditionPathMatches:
     """Test PATH_MATCHES condition."""
 
@@ -258,6 +266,7 @@ class TestConditionPathMatches:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConditionUnknownType:
     """Test that an unrecognized condition type returns False."""
 
@@ -275,6 +284,7 @@ class TestConditionUnknownType:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPreviewEngine:
     """Test PreviewEngine.preview high-level behaviour."""
 
@@ -338,6 +348,7 @@ class TestPreviewEngine:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestResolveDestination:
     """Test destination template resolution."""
 
@@ -364,6 +375,7 @@ class TestResolveDestination:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMatchesRuleNegation:
     """Test negated conditions."""
 

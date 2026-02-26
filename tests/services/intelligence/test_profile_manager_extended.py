@@ -22,6 +22,7 @@ pytestmark = [pytest.mark.unit]
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProfileValidation:
     """Test Profile.validate edge cases."""
 
@@ -73,6 +74,7 @@ class TestProfileValidation:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSanitizeProfileName:
     """Test _sanitize_profile_name."""
 
@@ -104,6 +106,7 @@ class TestSanitizeProfileName:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProfileManagerCRUD:
     """Test ProfileManager CRUD operations."""
 
@@ -180,6 +183,7 @@ class TestProfileManagerCRUD:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProfileManagerOperations:
     """Test update, get, list, count operations."""
 
@@ -242,6 +246,7 @@ class TestProfileManagerOperations:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProfileManagerErrors:
     """Test error handling paths."""
 

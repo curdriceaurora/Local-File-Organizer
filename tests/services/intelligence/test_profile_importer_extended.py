@@ -82,6 +82,7 @@ def _make_valid_export(name: str = "test_profile", **overrides) -> dict:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestValidationResultStr:
     """Tests for ValidationResult __str__ method."""
 
@@ -126,6 +127,7 @@ class TestValidationResultStr:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetCurrentTimestamp:
     """Tests for _get_current_timestamp method."""
 
@@ -142,6 +144,7 @@ class TestGetCurrentTimestamp:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestValidateImportFileEdgeCases:
     """Edge-case tests for validate_import_file."""
 
@@ -333,6 +336,7 @@ class TestValidateImportFileEdgeCases:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPreviewImportExtended:
     """Extended tests for preview_import method."""
 
@@ -405,6 +409,7 @@ class TestPreviewImportExtended:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestImportProfileExtended:
     """Extended tests for import_profile method."""
 
@@ -549,6 +554,7 @@ class TestImportProfileExtended:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestImportSelectiveProfile:
     """Tests for _import_selective_profile method."""
 
@@ -652,6 +658,7 @@ class TestImportSelectiveProfile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBackupProfile:
     """Tests for _backup_profile method."""
 
@@ -690,6 +697,7 @@ class TestBackupProfile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestImportSelective:
     """Tests for import_selective method."""
 

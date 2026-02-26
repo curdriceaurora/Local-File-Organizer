@@ -7,10 +7,12 @@ and string representations.
 
 import unittest
 from pathlib import Path
+import pytest
 
 from file_organizer.parallel.result import BatchResult, FileResult
 
 
+@pytest.mark.unit
 class TestFileResult(unittest.TestCase):
     """Test cases for FileResult dataclass."""
 
@@ -113,6 +115,7 @@ class TestFileResult(unittest.TestCase):
         self.assertIsNone(result.error)
 
 
+@pytest.mark.unit
 class TestBatchResult(unittest.TestCase):
     """Test cases for BatchResult dataclass."""
 

@@ -59,6 +59,7 @@ def wav_file(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioFormat:
     """Tests for AudioFormat enum."""
 
@@ -78,6 +79,7 @@ class TestAudioFormat:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioConfig:
     """Tests for AudioConfig dataclass."""
 
@@ -98,6 +100,7 @@ class TestAudioConfig:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPreprocessorInit:
     """Tests for AudioPreprocessor initialization."""
 
@@ -144,6 +147,7 @@ class TestPreprocessorInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConvertToWav:
     """Tests for convert_to_wav."""
 
@@ -209,6 +213,7 @@ class TestConvertToWav:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConvertWithPydub:
     """Tests for _convert_with_pydub fallback."""
 
@@ -241,6 +246,7 @@ class TestConvertWithPydub:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestNormalizeAudio:
     """Tests for normalize_audio method."""
 
@@ -283,6 +289,7 @@ class TestNormalizeAudio:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRemoveSilence:
     """Tests for remove_silence."""
 
@@ -334,6 +341,7 @@ class TestRemoveSilence:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPreprocess:
     """Tests for the complete preprocessing pipeline."""
 
@@ -394,6 +402,7 @@ class TestPreprocess:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetAudioInfo:
     """Tests for get_audio_info static method."""
 
@@ -431,6 +440,7 @@ class TestGetAudioInfo:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIsSupportedFormat:
     """Tests for is_supported_format static method."""
 

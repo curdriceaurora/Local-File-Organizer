@@ -5,6 +5,7 @@ Tests history viewing and filtering functionality.
 """
 
 from __future__ import annotations
+import pytest
 
 import shutil
 import sys
@@ -19,6 +20,7 @@ from file_organizer.history.tracker import OperationHistory
 from file_organizer.undo.viewer import HistoryViewer
 
 
+@pytest.mark.unit
 class TestHistoryViewer(unittest.TestCase):
     """Test cases for HistoryViewer."""
 

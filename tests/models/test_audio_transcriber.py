@@ -118,6 +118,7 @@ def _make_transcribe_info(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelSize:
     """Tests for ModelSize enum."""
 
@@ -129,6 +130,7 @@ class TestModelSize:
         assert ModelSize.LARGE_V3.value == "large-v3"
 
 
+@pytest.mark.unit
 class TestComputeType:
     """Tests for ComputeType enum."""
 
@@ -150,6 +152,7 @@ class TestComputeType:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTranscriptionSegment:
     """Tests for TranscriptionSegment dataclass."""
 
@@ -167,6 +170,7 @@ class TestTranscriptionSegment:
         assert seg.words == words
 
 
+@pytest.mark.unit
 class TestLanguageDetection:
     """Tests for LanguageDetection dataclass."""
 
@@ -177,6 +181,7 @@ class TestLanguageDetection:
         assert ld.confidence == 0.99
 
 
+@pytest.mark.unit
 class TestTranscriptionResult:
     """Tests for TranscriptionResult dataclass."""
 
@@ -208,6 +213,7 @@ class TestTranscriptionResult:
         assert result.error == "something went wrong"
 
 
+@pytest.mark.unit
 class TestTranscriptionOptions:
     """Tests for TranscriptionOptions dataclass."""
 
@@ -233,6 +239,7 @@ class TestTranscriptionOptions:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioTranscriberInit:
     """Tests for AudioTranscriber.__init__."""
 
@@ -272,6 +279,7 @@ class TestAudioTranscriberInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDetectDevice:
     """Tests for AudioTranscriber._detect_device."""
 
@@ -323,6 +331,7 @@ class TestDetectDevice:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLoadModel:
     """Tests for AudioTranscriber._load_model."""
 
@@ -379,6 +388,7 @@ class TestLoadModel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDetectLanguage:
     """Tests for AudioTranscriber.detect_language."""
 
@@ -478,6 +488,7 @@ class TestDetectLanguage:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTranscribe:
     """Tests for AudioTranscriber.transcribe."""
 
@@ -686,6 +697,7 @@ class TestTranscribe:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestStaticMethods:
     """Tests for static and class methods."""
 

@@ -33,6 +33,7 @@ pytestmark = [pytest.mark.unit]
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestFormatBytes:
     """Tests for _format_bytes helper."""
 
@@ -63,6 +64,7 @@ class TestFormatBytes:
         assert "PB" in result
 
 
+@pytest.mark.unit
 class TestFormatDuration:
     """Tests for _format_duration helper."""
 
@@ -88,6 +90,7 @@ class TestFormatDuration:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestDisplayStorageStats:
     """Tests for display_storage_stats."""
 
@@ -158,6 +161,7 @@ class TestDisplayStorageStats:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestDisplayQualityMetrics:
     """Tests for display_quality_metrics."""
 
@@ -200,6 +204,7 @@ class TestDisplayQualityMetrics:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestDisplayDuplicateStats:
     """Tests for display_duplicate_stats."""
 
@@ -235,6 +240,7 @@ class TestDisplayDuplicateStats:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestDisplayTimeSavings:
     """Tests for display_time_savings."""
 
@@ -255,6 +261,7 @@ class TestDisplayTimeSavings:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestDisplayFileDistribution:
     """Tests for display_file_distribution."""
 
@@ -301,6 +308,7 @@ class TestDisplayFileDistribution:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestAnalyticsCommand:
     """Tests for the main analytics_command function."""
 

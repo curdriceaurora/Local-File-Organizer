@@ -7,6 +7,7 @@ and RetryMiddleware.
 """
 
 from __future__ import annotations
+import pytest
 
 from typing import Any
 
@@ -91,6 +92,7 @@ class _ErrorMiddleware:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMiddlewarePipeline:
     """Tests for the MiddlewarePipeline."""
 
@@ -212,6 +214,7 @@ class TestMiddlewarePipeline:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLoggingMiddleware:
     """Tests for the LoggingMiddleware."""
 
@@ -265,6 +268,7 @@ class TestLoggingMiddleware:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMetricsMiddleware:
     """Tests for the MetricsMiddleware."""
 
@@ -359,6 +363,7 @@ class TestMetricsMiddleware:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRetryMiddleware:
     """Tests for the RetryMiddleware."""
 

@@ -11,6 +11,7 @@ from starlette.websockets import WebSocketState
 from file_organizer.api.realtime import BroadcastEvent, ConnectionManager
 
 
+@pytest.mark.unit
 class TestBroadcastEvent:
     """Tests for BroadcastEvent dataclass."""
 
@@ -25,6 +26,7 @@ class TestBroadcastEvent:
             event.channel = "other"  # type: ignore[misc]
 
 
+@pytest.mark.unit
 class TestConnectionManager:
     """Tests for ConnectionManager."""
 

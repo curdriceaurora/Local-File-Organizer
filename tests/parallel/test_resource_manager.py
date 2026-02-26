@@ -6,6 +6,7 @@ across CPU, memory, IO, and GPU resource types.
 """
 
 from __future__ import annotations
+import pytest
 
 import threading
 import unittest
@@ -17,6 +18,7 @@ from file_organizer.parallel.resource_manager import (
 )
 
 
+@pytest.mark.unit
 class TestResourceConfig(unittest.TestCase):
     """Test cases for ResourceConfig dataclass."""
 
@@ -66,6 +68,7 @@ class TestResourceConfig(unittest.TestCase):
             ResourceConfig(max_gpu_percent=-1.0)
 
 
+@pytest.mark.unit
 class TestResourceType(unittest.TestCase):
     """Test cases for ResourceType enum."""
 
@@ -82,6 +85,7 @@ class TestResourceType(unittest.TestCase):
         self.assertEqual(str(ResourceType.MEMORY), "memory")
 
 
+@pytest.mark.unit
 class TestResourceManager(unittest.TestCase):
     """Test cases for ResourceManager."""
 

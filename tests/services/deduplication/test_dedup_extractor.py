@@ -52,6 +52,7 @@ def tmp_md(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDocumentExtractorInit:
     """Tests for DocumentExtractor initialization."""
 
@@ -98,6 +99,7 @@ class TestDocumentExtractorInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFormatSupport:
     """Tests for format checking."""
 
@@ -136,6 +138,7 @@ class TestFormatSupport:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractText:
     """Tests for _extract_text (txt, md)."""
 
@@ -172,6 +175,7 @@ class TestExtractText:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractPdf:
     """Tests for _extract_pdf."""
 
@@ -217,6 +221,7 @@ class TestExtractPdf:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractDocx:
     """Tests for _extract_docx."""
 
@@ -264,6 +269,7 @@ class TestExtractDocx:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractRtf:
     """Tests for _extract_rtf."""
 
@@ -304,6 +310,7 @@ class TestExtractRtf:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractOdt:
     """Tests for _extract_odt."""
 
@@ -342,6 +349,7 @@ class TestExtractOdt:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractBatch:
     """Tests for batch extraction."""
 
@@ -376,6 +384,7 @@ class TestExtractBatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestEdgeCases:
     """Tests for edge cases."""
 

@@ -57,6 +57,7 @@ def _op(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRollbackOperationDispatch:
     """Test rollback_operation routes to correct handler."""
 
@@ -91,6 +92,7 @@ class TestRollbackOperationDispatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRedoOperationDispatch:
     """Test redo_operation routes to correct handler."""
 
@@ -123,6 +125,7 @@ class TestRedoOperationDispatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRedoCreate:
     """Test redo_create handler."""
 
@@ -159,6 +162,7 @@ class TestRedoCreate:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRedoCopy:
     """Test redo_copy handler."""
 
@@ -197,6 +201,7 @@ class TestRedoCopy:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRedoDelete:
     """Test redo_delete handler."""
 
@@ -221,6 +226,7 @@ class TestRedoDelete:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMoveToTrash:
     """Test the _move_to_trash helper."""
 
@@ -249,6 +255,7 @@ class TestMoveToTrash:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRollbackDeleteEdgeCases:
     """Test rollback_delete with trash path issues."""
 
@@ -275,6 +282,7 @@ class TestRollbackDeleteEdgeCases:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRollbackTransactionEdges:
     """Test rollback_transaction with exception in operation."""
 
@@ -303,6 +311,7 @@ class TestRollbackTransactionEdges:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDefaultValidator:
     """Test that executor creates a default validator when none given."""
 
@@ -317,6 +326,7 @@ class TestDefaultValidator:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRollbackExceptionPaths:
     """Test exception handling in rollback methods."""
 

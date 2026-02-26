@@ -5,6 +5,7 @@ Tests high-level undo/redo management functionality.
 """
 
 from __future__ import annotations
+import pytest
 
 import shutil
 import tempfile
@@ -18,6 +19,7 @@ from file_organizer.undo.undo_manager import UndoManager
 from file_organizer.undo.validator import OperationValidator
 
 
+@pytest.mark.unit
 class TestUndoManager(unittest.TestCase):
     """Test cases for UndoManager."""
 

@@ -16,6 +16,7 @@ from file_organizer.services.intelligence.pattern_extractor import (
 )
 
 
+@pytest.mark.unit
 class TestNamingPatternExtractor:
     """Tests for NamingPatternExtractor class."""
 
@@ -228,6 +229,7 @@ class TestNamingPatternExtractor:
         assert regex is None
 
 
+@pytest.mark.unit
 class TestNamingPattern:
     """Tests for NamingPattern dataclass."""
 
@@ -300,6 +302,7 @@ class TestNamingPattern:
         assert template == "report_{date}"
 
 
+@pytest.mark.unit
 class TestPatternElement:
     """Tests for PatternElement dataclass."""
 
@@ -327,6 +330,7 @@ class TestPatternElement:
         assert element.pattern == r"\d{4}-\d{2}-\d{2}"
 
 
+@pytest.mark.unit
 class TestPatternExtractionIntegration:
     """Integration tests for pattern extraction."""
 

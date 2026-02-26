@@ -95,6 +95,7 @@ def _make_mock_mutagen_audio(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioMetadata:
     """Tests for AudioMetadata dataclass."""
 
@@ -167,6 +168,7 @@ class TestAudioMetadata:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioMetadataExtractorInit:
     """Tests for AudioMetadataExtractor initialization."""
 
@@ -184,6 +186,7 @@ class TestAudioMetadataExtractorInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtract:
     """Tests for extract method."""
 
@@ -241,6 +244,7 @@ class TestExtract:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractWithMutagen:
     """Tests for _extract_with_mutagen."""
 
@@ -298,6 +302,7 @@ class TestExtractWithMutagen:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractTagsMutagen:
     """Tests for _extract_tags_mutagen."""
 
@@ -430,6 +435,7 @@ class TestExtractTagsMutagen:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCheckArtworkMutagen:
     """Tests for _check_artwork_mutagen."""
 
@@ -496,6 +502,7 @@ class TestCheckArtworkMutagen:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractWithTinytag:
     """Tests for _extract_with_tinytag fallback."""
 
@@ -675,6 +682,7 @@ class TestExtractWithTinytag:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractBatch:
     """Tests for extract_batch."""
 
@@ -735,6 +743,7 @@ class TestExtractBatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFormatDuration:
     """Tests for format_duration static method."""
 
@@ -759,6 +768,7 @@ class TestFormatDuration:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFormatBitrate:
     """Tests for format_bitrate static method."""
 

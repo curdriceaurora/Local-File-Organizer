@@ -15,6 +15,7 @@ from file_organizer.optimization.resource_monitor import (
 )
 
 
+@pytest.mark.unit
 class TestMemoryInfo:
     """Tests for the MemoryInfo dataclass."""
 
@@ -38,6 +39,7 @@ class TestMemoryInfo:
         assert info1 == info2
 
 
+@pytest.mark.unit
 class TestGpuMemoryInfo:
     """Tests for the GpuMemoryInfo dataclass."""
 
@@ -61,6 +63,7 @@ class TestGpuMemoryInfo:
             info.total = 999  # type: ignore[misc]
 
 
+@pytest.mark.unit
 class TestResourceMonitorMemory:
     """Tests for get_memory_usage with mocked psutil."""
 
@@ -118,6 +121,7 @@ class TestResourceMonitorMemory:
         assert abs(result.percent - expected_percent) < 0.01
 
 
+@pytest.mark.unit
 class TestResourceMonitorGPU:
     """Tests for GPU memory monitoring with mocked subprocess calls."""
 
@@ -181,6 +185,7 @@ class TestResourceMonitorGPU:
         assert result is None
 
 
+@pytest.mark.unit
 class TestResourceMonitorShouldEvict:
     """Tests for the should_evict decision method."""
 

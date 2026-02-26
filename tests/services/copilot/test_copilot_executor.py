@@ -46,6 +46,7 @@ def _intent(intent_type: IntentType, **params) -> Intent:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCommandExecutorInit:
     """Test CommandExecutor.__init__."""
 
@@ -63,6 +64,7 @@ class TestCommandExecutorInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExecuteDispatch:
     """Test the execute() dispatch logic."""
 
@@ -87,6 +89,7 @@ class TestExecuteDispatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHandleOrganize:
     """Test the organize handler."""
 
@@ -175,6 +178,7 @@ class TestHandleOrganize:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHandleMove:
     """Test the move handler."""
 
@@ -223,6 +227,7 @@ class TestHandleMove:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHandleRename:
     """Test the rename handler."""
 
@@ -267,6 +272,7 @@ class TestHandleRename:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHandleFind:
     """Test the find handler."""
 
@@ -318,6 +324,7 @@ class TestHandleFind:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHandleUndoRedo:
     """Test undo and redo handlers."""
 
@@ -385,6 +392,7 @@ class TestHandleUndoRedo:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHandlePreview:
     """Test the preview handler."""
 
@@ -411,6 +419,7 @@ class TestHandlePreview:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHandleSuggest:
     """Test the suggest handler."""
 
@@ -453,6 +462,7 @@ class TestHandleSuggest:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestResolvePath:
     """Test the _resolve_path helper."""
 

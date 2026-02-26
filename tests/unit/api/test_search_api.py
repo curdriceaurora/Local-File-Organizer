@@ -13,6 +13,7 @@ def client():
     return TestClient(app)
 
 
+@pytest.mark.unit
 class TestSearchEndpoint:
     """Tests for the /search endpoint."""
 

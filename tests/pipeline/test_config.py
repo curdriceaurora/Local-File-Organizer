@@ -12,6 +12,7 @@ from file_organizer.pipeline.config import (
 )
 
 
+@pytest.mark.unit
 class TestPipelineConfigDefaults:
     """Test default configuration values."""
 
@@ -51,6 +52,7 @@ class TestPipelineConfigDefaults:
         assert config.notification_callback is None
 
 
+@pytest.mark.unit
 class TestPipelineConfigValidation:
     """Test configuration validation logic."""
 
@@ -78,6 +80,7 @@ class TestPipelineConfigValidation:
         assert ".jpg" in config.supported_extensions
 
 
+@pytest.mark.unit
 class TestPipelineConfigProperties:
     """Test computed properties."""
 
@@ -132,6 +135,7 @@ class TestPipelineConfigProperties:
         assert config.is_supported(Path("image.JPG")) is True
 
 
+@pytest.mark.unit
 class TestPipelineConfigEdgeCases:
     """Additional edge case tests for PipelineConfig."""
 

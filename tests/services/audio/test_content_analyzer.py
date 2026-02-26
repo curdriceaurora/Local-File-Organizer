@@ -90,6 +90,7 @@ def analyzer() -> AudioContentAnalyzer:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTokenize:
     """Tests for the _tokenize helper."""
 
@@ -116,6 +117,7 @@ class TestTokenize:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTopicExtraction:
     """Tests for topic category matching."""
 
@@ -156,6 +158,7 @@ class TestTopicExtraction:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestKeywordExtraction:
     """Tests for keyword frequency extraction."""
 
@@ -198,6 +201,7 @@ class TestKeywordExtraction:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSpeakerExtraction:
     """Tests for speaker estimation from segments."""
 
@@ -241,6 +245,7 @@ class TestSpeakerExtraction:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSentimentAnalysis:
     """Tests for sentiment indicator extraction."""
 
@@ -272,6 +277,7 @@ class TestSentimentAnalysis:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAnalyzeIntegration:
     """Tests for the full analyze() method."""
 

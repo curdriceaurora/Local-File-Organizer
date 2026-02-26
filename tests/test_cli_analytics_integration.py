@@ -10,6 +10,7 @@ from file_organizer.cli.main import app
 runner = CliRunner()
 
 
+@pytest.mark.unit
 class TestAnalyticsCommand:
     """Tests for ``file-organizer analytics``."""
 

@@ -30,6 +30,7 @@ def _make_initialized_model(config: ModelConfig) -> tuple[VisionModel, MagicMock
     return model, mock_client
 
 
+@pytest.mark.unit
 class TestVisionModel:
     """Tests for VisionModel basic initialization and generation."""
 
@@ -89,6 +90,7 @@ class TestVisionModel:
                     )
 
 
+@pytest.mark.unit
 class TestVisionModelInit:
     """Tests for VisionModel constructor validation."""
 
@@ -113,6 +115,7 @@ class TestVisionModelInit:
             assert model.config.model_type == ModelType.VIDEO
 
 
+@pytest.mark.unit
 class TestVisionModelInitialize:
     """Tests for VisionModel.initialize() method."""
 
@@ -161,6 +164,7 @@ class TestVisionModelInitialize:
                 model.initialize()
 
 
+@pytest.mark.unit
 class TestVisionModelGenerate:
     """Tests for VisionModel.generate() edge cases."""
 
@@ -205,6 +209,7 @@ class TestVisionModelGenerate:
         assert call_kwargs["images"] == [b"\x89PNG\r\n"]
 
 
+@pytest.mark.unit
 class TestVisionModelAnalyze:
     """Tests for analyze_image and analyze_video_frame convenience methods."""
 
@@ -269,6 +274,7 @@ class TestVisionModelAnalyze:
         assert prompt == "my prompt"
 
 
+@pytest.mark.unit
 class TestVisionModelMisc:
     """Tests for cleanup, get_default_config, and test_connection."""
 

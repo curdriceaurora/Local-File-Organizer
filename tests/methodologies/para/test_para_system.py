@@ -26,6 +26,7 @@ from file_organizer.methodologies.para.detection.heuristics import (
 )
 
 
+@pytest.mark.unit
 class TestPARACategory:
     """Test PARA category enum."""
 
@@ -51,6 +52,7 @@ class TestPARACategory:
         assert "inactive" in PARACategory.ARCHIVE.description.lower()
 
 
+@pytest.mark.unit
 class TestCategoryDefinition:
     """Test category definition data structure."""
 
@@ -126,6 +128,7 @@ class TestCategoryDefinition:
         assert not definition.matches_pattern("regular-file.txt")
 
 
+@pytest.mark.unit
 class TestCategorizationResult:
     """Test categorization result data structure."""
 
@@ -220,6 +223,7 @@ class TestCategorizationResult:
         assert result_dict["is_confident"]
 
 
+@pytest.mark.unit
 class TestTemporalHeuristic:
     """Test temporal heuristic for PARA categorization."""
 
@@ -286,6 +290,7 @@ class TestTemporalHeuristic:
         assert result.needs_manual_review
 
 
+@pytest.mark.unit
 class TestContentHeuristic:
     """Test content-based heuristic for PARA categorization."""
 
@@ -360,6 +365,7 @@ class TestContentHeuristic:
         assert heuristic._matches_keyword("project", "project-analysis")
 
 
+@pytest.mark.unit
 class TestStructuralHeuristic:
     """Test structural heuristic for PARA categorization."""
 
@@ -416,6 +422,7 @@ class TestStructuralHeuristic:
         assert "archive_directory" in archive_score.signals
 
 
+@pytest.mark.unit
 class TestHeuristicEngine:
     """Test heuristic engine combining multiple heuristics."""
 
@@ -558,6 +565,7 @@ class TestHeuristicEngine:
             assert result.needs_manual_review
 
 
+@pytest.mark.unit
 class TestStandardCategoryDefinitions:
     """Test standard PARA category definitions."""
 

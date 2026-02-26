@@ -20,6 +20,7 @@ from file_organizer.optimization.resource_monitor import MemoryInfo
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScalingConfig:
     """Tests for ScalingConfig dataclass validation."""
 
@@ -91,6 +92,7 @@ class TestScalingConfig:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScalingMetrics:
     """Tests for ScalingMetrics dataclass."""
 
@@ -125,6 +127,7 @@ class TestScalingMetrics:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScalingDecision:
     """Tests for ScalingDecision dataclass."""
 
@@ -169,6 +172,7 @@ class _FakeClock:
         self._time += seconds
 
 
+@pytest.mark.unit
 class TestAutoScalerEvaluate:
     """Tests for the AutoScaler.evaluate method."""
 

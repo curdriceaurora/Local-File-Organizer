@@ -56,6 +56,7 @@ def wav_file(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetAudioDuration:
     """Tests for get_audio_duration."""
 
@@ -112,6 +113,7 @@ class TestGetAudioDuration:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestNormalizeAudio:
     """Tests for normalize_audio."""
 
@@ -161,6 +163,7 @@ class TestNormalizeAudio:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSplitAudio:
     """Tests for split_audio."""
 
@@ -208,6 +211,7 @@ class TestSplitAudio:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConvertAudioFormat:
     """Tests for convert_audio_format."""
 
@@ -243,6 +247,7 @@ class TestConvertAudioFormat:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestValidateAudioFile:
     """Tests for validate_audio_file."""
 
@@ -294,6 +299,7 @@ class TestValidateAudioFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDetectSilenceSegments:
     """Tests for detect_silence_segments."""
 
@@ -325,6 +331,7 @@ class TestDetectSilenceSegments:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTrimAudio:
     """Tests for trim_audio."""
 
@@ -367,6 +374,7 @@ class TestTrimAudio:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMergeAudioFiles:
     """Tests for merge_audio_files."""
 
@@ -407,6 +415,7 @@ class TestMergeAudioFiles:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCalculateAudioChecksum:
     """Tests for calculate_audio_checksum."""
 
@@ -431,6 +440,7 @@ class TestCalculateAudioChecksum:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetAudioPeakAmplitude:
     """Tests for get_audio_peak_amplitude."""
 
@@ -461,6 +471,7 @@ class TestGetAudioPeakAmplitude:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIsAudioFile:
     """Tests for is_audio_file."""
 

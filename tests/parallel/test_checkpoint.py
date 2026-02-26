@@ -6,6 +6,7 @@ and file change detection.
 """
 
 from __future__ import annotations
+import pytest
 
 import hashlib
 import unittest
@@ -19,6 +20,7 @@ from file_organizer.parallel.checkpoint import (
 from file_organizer.parallel.models import Checkpoint
 
 
+@pytest.mark.unit
 class TestComputeFileHash(unittest.TestCase):
     """Test the compute_file_hash utility function."""
 
@@ -64,6 +66,7 @@ class TestComputeFileHash(unittest.TestCase):
         self.assertEqual(compute_file_hash(f), expected)
 
 
+@pytest.mark.unit
 class TestCheckpointManagerInit(unittest.TestCase):
     """Test CheckpointManager initialization."""
 
@@ -82,6 +85,7 @@ class TestCheckpointManagerInit(unittest.TestCase):
         self.assertEqual(mgr.checkpoints_dir, custom)
 
 
+@pytest.mark.unit
 class TestCreateCheckpoint(unittest.TestCase):
     """Test checkpoint creation."""
 
@@ -148,6 +152,7 @@ class TestCreateCheckpoint(unittest.TestCase):
         self.assertEqual(len(ckpt.pending_paths), 1)
 
 
+@pytest.mark.unit
 class TestLoadCheckpoint(unittest.TestCase):
     """Test checkpoint loading."""
 
@@ -195,6 +200,7 @@ class TestLoadCheckpoint(unittest.TestCase):
         self.assertIsNone(self.mgr.load_checkpoint("bad"))
 
 
+@pytest.mark.unit
 class TestUpdateCheckpoint(unittest.TestCase):
     """Test checkpoint updates."""
 
@@ -254,6 +260,7 @@ class TestUpdateCheckpoint(unittest.TestCase):
         self.assertEqual(count, 1)
 
 
+@pytest.mark.unit
 class TestCheckpointAtomicWrites(unittest.TestCase):
     """Test atomic write behavior for checkpoint persistence."""
 
@@ -327,6 +334,7 @@ class TestCheckpointAtomicWrites(unittest.TestCase):
         self.assertFalse(checkpoint_path.with_suffix(".tmp").exists())
 
 
+@pytest.mark.unit
 class TestDeleteCheckpoint(unittest.TestCase):
     """Test checkpoint deletion."""
 
@@ -357,6 +365,7 @@ class TestDeleteCheckpoint(unittest.TestCase):
         self.assertFalse(self.mgr.delete_checkpoint("nope"))
 
 
+@pytest.mark.unit
 class TestHasFileChanged(unittest.TestCase):
     """Test file change detection."""
 

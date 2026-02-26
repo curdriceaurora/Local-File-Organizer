@@ -19,6 +19,7 @@ def _get_content(widget: object) -> str:
     return str(getattr(widget, "_Static__content", ""))
 
 
+@pytest.mark.unit
 class TestBeforeAfterPanel:
     """Unit tests for BeforeAfterPanel."""
 
@@ -46,6 +47,7 @@ class TestBeforeAfterPanel:
         assert "more" in _get_content(panel)
 
 
+@pytest.mark.unit
 class TestOrganizationSummary:
     """Unit tests for OrganizationSummary."""
 
@@ -77,6 +79,7 @@ class TestOrganizationSummary:
         assert "more" in _get_content(summary)
 
 
+@pytest.mark.unit
 class TestOrganizationPreviewView:
     """Tests for OrganizationPreviewView composition."""
 

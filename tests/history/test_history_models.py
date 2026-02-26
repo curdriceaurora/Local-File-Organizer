@@ -26,6 +26,7 @@ from file_organizer.history.models import (
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOperationType:
     """Tests for OperationType enum."""
 
@@ -58,6 +59,7 @@ class TestOperationType:
             OperationType("invalid")
 
 
+@pytest.mark.unit
 class TestOperationStatus:
     """Tests for OperationStatus enum."""
 
@@ -80,6 +82,7 @@ class TestOperationStatus:
         assert OperationStatus("rolled_back") is OperationStatus.ROLLED_BACK
 
 
+@pytest.mark.unit
 class TestTransactionStatus:
     """Tests for TransactionStatus enum."""
 
@@ -103,6 +106,7 @@ class TestTransactionStatus:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOperation:
     """Tests for the Operation dataclass."""
 
@@ -439,6 +443,7 @@ class TestOperation:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTransaction:
     """Tests for the Transaction dataclass."""
 

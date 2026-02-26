@@ -26,6 +26,7 @@ from file_organizer.methodologies.para.detection.heuristics import (
 )
 
 
+@pytest.mark.unit
 class TestCategoryScoreValidation:
     """Test CategoryScore validates score and confidence ranges."""
 
@@ -62,6 +63,7 @@ class TestCategoryScoreValidation:
             CategoryScore(PARACategory.PROJECT, 0.5, 1.1)
 
 
+@pytest.mark.unit
 class TestPARAKeywordMatching:
     """Test PARA keyword matching uses word boundaries."""
 
@@ -112,6 +114,7 @@ class TestPARAKeywordMatching:
         assert not any("keyword:project" in s for s in project_signals)
 
 
+@pytest.mark.unit
 class TestTemporalHeuristicOldYearDetection:
     """Test temporal heuristic detects old years in paths."""
 
@@ -195,6 +198,7 @@ class TestTemporalHeuristicOldYearDetection:
             )
 
 
+@pytest.mark.unit
 class TestAudioMetadataTagParsing:
     """Test audio metadata tag parsing improvements."""
 
@@ -236,6 +240,7 @@ class TestAudioMetadataTagParsing:
         assert track_number == 1
 
 
+@pytest.mark.unit
 class TestAudioPreprocessingOutputPath:
     """Test audio preprocessing output_path handling."""
 

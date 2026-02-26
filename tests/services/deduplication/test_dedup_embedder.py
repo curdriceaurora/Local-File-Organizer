@@ -65,6 +65,7 @@ def embedder(mock_vectorizer):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDocumentEmbedderInit:
     """Tests for DocumentEmbedder initialization."""
 
@@ -94,6 +95,7 @@ class TestDocumentEmbedderInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFitTransform:
     """Tests for fit_transform."""
 
@@ -125,6 +127,7 @@ class TestFitTransform:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTransform:
     """Tests for transform."""
 
@@ -157,6 +160,7 @@ class TestTransform:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTransformBatch:
     """Tests for transform_batch."""
 
@@ -179,6 +183,7 @@ class TestTransformBatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFeatureAccess:
     """Tests for get_feature_names and get_vocabulary."""
 
@@ -213,6 +218,7 @@ class TestFeatureAccess:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetTopTerms:
     """Tests for get_top_terms."""
 
@@ -241,6 +247,7 @@ class TestGetTopTerms:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelPersistence:
     """Tests for save_model and load_model."""
 
@@ -279,6 +286,7 @@ class TestModelPersistence:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCacheOperations:
     """Tests for cache operations."""
 

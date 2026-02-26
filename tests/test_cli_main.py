@@ -10,6 +10,7 @@ from file_organizer.cli.main import app
 runner = CliRunner()
 
 
+@pytest.mark.unit
 class TestVersionCommand:
     """Tests for the version command."""
 
@@ -20,6 +21,7 @@ class TestVersionCommand:
         assert "2.0.0" in result.output
 
 
+@pytest.mark.unit
 class TestConfigCommands:
     """Tests for the config sub-app."""
 
@@ -44,6 +46,7 @@ class TestConfigCommands:
         assert "Saved" in result.output
 
 
+@pytest.mark.unit
 class TestHelpOutputs:
     """All sub-commands should produce help text."""
 
@@ -99,6 +102,7 @@ class TestHelpOutputs:
         assert "Usage" in result.output or "usage" in result.output.lower()
 
 
+@pytest.mark.unit
 class TestModelListPlaceholder:
     """Model list placeholder should work."""
 
@@ -107,6 +111,7 @@ class TestModelListPlaceholder:
         assert result.exit_code == 0
 
 
+@pytest.mark.unit
 class TestGlobalOptions:
     """Global --verbose, --dry-run, --json flags should be accepted."""
 

@@ -21,6 +21,7 @@ def parser() -> IntentParser:
 # Empty / fallback
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestParseEdgeCases:
     """Edge cases for the parse method."""
 
@@ -54,6 +55,7 @@ class TestParseEdgeCases:
 # Undo / Redo (highest confidence)
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestUndoRedo:
     """Tests for undo/redo intent detection."""
 
@@ -80,6 +82,7 @@ class TestUndoRedo:
 # Organize
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestOrganize:
     """Tests for organize intent detection and parameter extraction."""
 
@@ -120,6 +123,7 @@ class TestOrganize:
 # Move
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestMove:
     """Tests for move intent detection and parameter extraction."""
 
@@ -148,6 +152,7 @@ class TestMove:
 # Rename
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestRename:
     """Tests for rename intent detection and parameter extraction."""
 
@@ -173,6 +178,7 @@ class TestRename:
 # Find
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestFind:
     """Tests for find intent detection and parameter extraction."""
 
@@ -201,6 +207,7 @@ class TestFind:
 # Preview
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestPreview:
     """Tests for preview intent detection."""
 
@@ -236,6 +243,7 @@ class TestPreview:
 # Suggest
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestSuggest:
     """Tests for suggest intent detection."""
 
@@ -254,6 +262,7 @@ class TestSuggest:
 # Status
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestStatus:
     """Tests for status intent detection."""
 
@@ -272,6 +281,7 @@ class TestStatus:
 # Help
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestHelp:
     """Tests for help intent detection."""
 
@@ -290,6 +300,7 @@ class TestHelp:
 # Parameter extraction helpers
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestParameterExtraction:
     """Tests for _extract_parameters static method and quoted args."""
 
@@ -321,6 +332,7 @@ class TestParameterExtraction:
 # Confidence precedence
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestConfidencePrecedence:
     """Verify that higher-confidence intents win over lower ones."""
 

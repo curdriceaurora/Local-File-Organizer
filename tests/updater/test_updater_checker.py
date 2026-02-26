@@ -25,6 +25,7 @@ pytestmark = [pytest.mark.unit]
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestParseVersion:
     """Test _parse_version function."""
 
@@ -55,6 +56,7 @@ class TestParseVersion:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDataclasses:
     """Test data model dataclasses."""
 
@@ -77,6 +79,7 @@ class TestDataclasses:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateCheckerCheck:
     """Test UpdateChecker.check method."""
 
@@ -151,6 +154,7 @@ class TestUpdateCheckerCheck:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetLatestRelease:
     """Test get_latest_release method."""
 
@@ -195,6 +199,7 @@ class TestGetLatestRelease:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFetchLatestReleasePrerelease:
     """Test _fetch_latest_release with include_prereleases."""
 
@@ -299,6 +304,7 @@ class TestFetchLatestReleasePrerelease:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestParseRelease:
     """Test _parse_release static method."""
 
@@ -337,6 +343,7 @@ class TestParseRelease:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDetectVersion:
     """Test _detect_version static method."""
 

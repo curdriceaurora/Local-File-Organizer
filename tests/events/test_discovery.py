@@ -36,6 +36,7 @@ def discovery(registry_path: Path) -> ServiceDiscovery:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestServiceInfo:
     """Tests for the ServiceInfo dataclass."""
 
@@ -112,6 +113,7 @@ class TestServiceInfo:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRegistration:
     """Tests for service registration and deregistration."""
 
@@ -164,6 +166,7 @@ class TestRegistration:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLookup:
     """Tests for service lookup / discovery."""
 
@@ -196,6 +199,7 @@ class TestLookup:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHeartbeat:
     """Tests for the heartbeat mechanism."""
 
@@ -234,6 +238,7 @@ class TestHeartbeat:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPersistence:
     """Tests for JSON file-based persistence."""
 
@@ -308,6 +313,7 @@ class TestPersistence:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDiscoveryUtility:
     """Tests for utility methods and edge cases."""
 

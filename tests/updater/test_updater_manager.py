@@ -21,6 +21,7 @@ pytestmark = [pytest.mark.unit]
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateStatus:
     """Test UpdateStatus dataclass and message property."""
 
@@ -55,6 +56,7 @@ class TestUpdateStatus:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateManagerCheck:
     """Test UpdateManager.check method."""
 
@@ -94,6 +96,7 @@ class TestUpdateManagerCheck:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateManagerUpdate:
     """Test UpdateManager.update method."""
 
@@ -210,6 +213,7 @@ class TestUpdateManagerUpdate:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateManagerRollback:
     """Test UpdateManager.rollback method."""
 

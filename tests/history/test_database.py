@@ -12,6 +12,7 @@ import pytest
 from file_organizer.history.database import DatabaseManager
 
 
+@pytest.mark.unit
 class TestDatabaseManager:
     """Test suite for DatabaseManager."""
 

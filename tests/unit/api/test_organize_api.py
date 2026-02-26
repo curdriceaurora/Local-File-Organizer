@@ -13,6 +13,7 @@ def client():
     return TestClient(app)
 
 
+@pytest.mark.unit
 class TestOrganizeEndpoint:
     """Tests for the /organize POST endpoint."""
 

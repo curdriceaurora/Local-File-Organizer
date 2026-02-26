@@ -23,6 +23,7 @@ pytestmark = [pytest.mark.unit]
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInstallResult:
     """Test InstallResult dataclass."""
 
@@ -49,6 +50,7 @@ class TestInstallResult:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInstallerInit:
     """Test UpdateInstaller init."""
 
@@ -66,6 +68,7 @@ class TestInstallerInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDownloadAsset:
     """Test download_asset method."""
 
@@ -137,6 +140,7 @@ class TestDownloadAsset:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInstall:
     """Test install method."""
 
@@ -191,6 +195,7 @@ class TestInstall:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRollback:
     """Test rollback method."""
 
@@ -219,6 +224,7 @@ class TestRollback:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSelectAsset:
     """Test select_asset platform detection."""
 
@@ -289,6 +295,7 @@ class TestSelectAsset:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFindChecksum:
     """Test find_checksum."""
 
@@ -340,6 +347,7 @@ class TestFindChecksum:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestResolveTarget:
     """Test _resolve_target method."""
 
@@ -367,6 +375,7 @@ class TestResolveTarget:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFileSha256:
     """Test _file_sha256 static method."""
 
@@ -382,6 +391,7 @@ class TestFileSha256:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDownloadText:
     """Test _download_text static method."""
 

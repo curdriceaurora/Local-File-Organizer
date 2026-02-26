@@ -10,6 +10,7 @@ import pytest
 from file_organizer.api.jobs import create_job, get_job, list_jobs, update_job
 
 
+@pytest.mark.unit
 class TestAPIJobs:
     """Tests for API jobs."""
 

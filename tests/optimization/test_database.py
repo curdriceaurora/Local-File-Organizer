@@ -111,6 +111,7 @@ def optimizer_with_data(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDatabaseOptimizerInit:
     """Tests for basic lifecycle."""
 
@@ -141,6 +142,7 @@ class TestDatabaseOptimizerInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCreateIndexes:
     """Tests for create_indexes()."""
 
@@ -190,6 +192,7 @@ class TestCreateIndexes:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAnalyzeTables:
     """Tests for analyze_tables()."""
 
@@ -244,6 +247,7 @@ class TestAnalyzeTables:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestVacuum:
     """Tests for vacuum()."""
 
@@ -261,6 +265,7 @@ class TestVacuum:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetQueryPlan:
     """Tests for get_query_plan()."""
 
@@ -307,6 +312,7 @@ class TestGetQueryPlan:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOptimizePragmas:
     """Tests for optimize_pragmas()."""
 

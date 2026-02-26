@@ -41,6 +41,7 @@ def _make_operation(op_id=1, op_type="move", src="/a/file.txt", dst="/b/file.txt
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestUndoCommand:
     """Tests for undo_command."""
 
@@ -212,6 +213,7 @@ class TestUndoCommand:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestRedoCommand:
     """Tests for redo_command."""
 
@@ -333,6 +335,7 @@ class TestRedoCommand:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestHistoryCommand:
     """Tests for history_command."""
 
@@ -454,6 +457,7 @@ class TestHistoryCommand:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestMainUndo:
     """Tests for main_undo entry point."""
 
@@ -497,6 +501,7 @@ class TestMainUndo:
         )
 
 
+@pytest.mark.unit
 class TestMainRedo:
     """Tests for main_redo entry point."""
 
@@ -527,6 +532,7 @@ class TestMainRedo:
         )
 
 
+@pytest.mark.unit
 class TestMainHistory:
     """Tests for main_history entry point."""
 

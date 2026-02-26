@@ -71,6 +71,7 @@ def _wait_for_event_matching(
     return all_events
 
 
+@pytest.mark.unit
 class TestFileMonitorLifecycle:
     """Tests for start/stop lifecycle."""
 
@@ -111,6 +112,7 @@ class TestFileMonitorLifecycle:
         assert dirs[0] == watch_dir.resolve()
 
 
+@pytest.mark.unit
 class TestFileMonitorFileDetection:
     """Tests for detecting real file system changes."""
 
@@ -285,6 +287,7 @@ class TestFileMonitorFileDetection:
         assert events == []
 
 
+@pytest.mark.unit
 class TestFileMonitorDynamicDirectories:
     """Tests for dynamically adding/removing watch directories."""
 
@@ -351,6 +354,7 @@ class TestFileMonitorDynamicDirectories:
             monitor.remove_directory(tmp_path / "unknown")
 
 
+@pytest.mark.unit
 class TestFileMonitorCallbacks:
     """Tests for callback registration via monitor interface."""
 

@@ -42,6 +42,7 @@ def text_processor(mock_text_model: MagicMock) -> TextProcessor:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProcessedFile:
     """Tests for ProcessedFile dataclass defaults and fields."""
 
@@ -82,6 +83,7 @@ class TestProcessedFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTextProcessor:
     """Tests for TextProcessor class."""
 
@@ -181,6 +183,7 @@ class TestTextProcessor:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTextProcessorFileProcessing:
     """Tests for file processing logic."""
 
@@ -346,6 +349,7 @@ class TestTextProcessorFileProcessing:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCleanAiGeneratedName:
     """Tests for _clean_ai_generated_name helper."""
 
@@ -403,6 +407,7 @@ class TestCleanAiGeneratedName:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGenerateDescription:
     """Tests for _generate_description."""
 
@@ -475,6 +480,7 @@ class TestGenerateDescription:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGenerateFolderName:
     """Tests for _generate_folder_name."""
 
@@ -598,6 +604,7 @@ class TestGenerateFolderName:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGenerateFilename:
     """Tests for _generate_filename."""
 

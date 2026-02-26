@@ -53,6 +53,7 @@ class FakeOperation:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFormatTimestamp:
     """Test _format_timestamp helper."""
 
@@ -70,6 +71,7 @@ class TestFormatTimestamp:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTruncate:
     """Test _truncate helper."""
 
@@ -90,6 +92,7 @@ class TestTruncate:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOperationHistoryPanel:
     """Test OperationHistoryPanel rendering."""
 
@@ -134,6 +137,7 @@ class TestOperationHistoryPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUndoRedoStackPanel:
     """Test UndoRedoStackPanel rendering."""
 
@@ -176,6 +180,7 @@ class TestUndoRedoStackPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHistoryStatsPanel:
     """Test HistoryStatsPanel rendering."""
 
@@ -251,6 +256,7 @@ class TestHistoryStatsPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUndoHistoryViewInit:
     """Test UndoHistoryView initialization."""
 
@@ -291,6 +297,7 @@ class TestUndoHistoryViewInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUndoHistoryViewSetStatus:
     """Test _set_status helper."""
 

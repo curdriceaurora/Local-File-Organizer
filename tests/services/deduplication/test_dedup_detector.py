@@ -5,6 +5,7 @@ find_duplicates_of_file, and statistics.
 """
 
 from __future__ import annotations
+import pytest
 
 import shutil
 import tempfile
@@ -18,6 +19,7 @@ from file_organizer.services.deduplication.detector import (
 )
 
 
+@pytest.mark.unit
 class TestScanOptions(unittest.TestCase):
     """Test ScanOptions dataclass."""
 
@@ -53,6 +55,7 @@ class TestScanOptions(unittest.TestCase):
         self.assertEqual(opts.max_file_size, 1000000)
 
 
+@pytest.mark.unit
 class TestDuplicateDetector(unittest.TestCase):
     """Test cases for DuplicateDetector."""
 

@@ -24,6 +24,7 @@ from file_organizer.tui.copilot_view import (
 pytestmark = [pytest.mark.unit]
 
 
+@pytest.mark.unit
 class TestEscapeFunction:
     """Tests for the _escape helper function."""
 
@@ -53,6 +54,7 @@ class TestEscapeFunction:
         assert result == "Hello \\[world], how \\[are] you?"
 
 
+@pytest.mark.unit
 class TestCopilotMessageLog:
     """Tests for CopilotMessageLog class attributes and structure."""
 
@@ -69,6 +71,7 @@ class TestCopilotMessageLog:
         assert "CopilotMessageLog" in CopilotMessageLog.DEFAULT_CSS
 
 
+@pytest.mark.unit
 class TestCopilotMessageLogAddMessage:
     """Test CopilotMessageLog.add_message role branching (lines 36-45)."""
 
@@ -138,6 +141,7 @@ class TestCopilotMessageLogAddMessage:
         assert "dim italic" in markup
 
 
+@pytest.mark.unit
 class TestCopilotInput:
     """Tests for CopilotInput class attributes and structure."""
 
@@ -148,6 +152,7 @@ class TestCopilotInput:
         assert "CopilotInput" in CopilotInput.DEFAULT_CSS
 
 
+@pytest.mark.unit
 class TestCopilotView:
     """Tests for CopilotView class attributes and structure."""
 
@@ -181,6 +186,7 @@ class TestCopilotView:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCopilotViewInputSubmitted:
     """Test on_input_submitted handler."""
 
@@ -225,6 +231,7 @@ class TestCopilotViewInputSubmitted:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCopilotViewClearInput:
     """Test action_clear_input."""
 
@@ -242,6 +249,7 @@ class TestCopilotViewClearInput:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCopilotViewProcessMessage:
     """Test _process_message worker."""
 
@@ -298,6 +306,7 @@ class TestCopilotViewProcessMessage:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCopilotViewGetEngine:
     """Test _get_engine lazy initializer."""
 
@@ -328,6 +337,7 @@ class TestCopilotViewGetEngine:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCopilotViewSetStatus:
     """Test _set_status helper."""
 

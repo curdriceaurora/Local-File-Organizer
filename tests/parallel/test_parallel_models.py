@@ -5,6 +5,7 @@ including serialization (to_dict) and deserialization (from_dict).
 """
 
 from __future__ import annotations
+import pytest
 
 import unittest
 from datetime import UTC, datetime
@@ -18,6 +19,7 @@ from file_organizer.parallel.models import (
 )
 
 
+@pytest.mark.unit
 class TestJobStatus(unittest.TestCase):
     """Test cases for JobStatus enum."""
 
@@ -51,6 +53,7 @@ class TestJobStatus(unittest.TestCase):
             JobStatus("invalid")
 
 
+@pytest.mark.unit
 class TestJobState(unittest.TestCase):
     """Test cases for JobState dataclass."""
 
@@ -212,6 +215,7 @@ class TestJobState(unittest.TestCase):
             })
 
 
+@pytest.mark.unit
 class TestJobSummary(unittest.TestCase):
     """Test cases for JobSummary dataclass."""
 
@@ -265,6 +269,7 @@ class TestJobSummary(unittest.TestCase):
         self.assertAlmostEqual(summary.progress_percent, 33.3, places=1)
 
 
+@pytest.mark.unit
 class TestCheckpoint(unittest.TestCase):
     """Test cases for Checkpoint dataclass."""
 

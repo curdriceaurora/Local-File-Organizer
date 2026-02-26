@@ -18,6 +18,7 @@ from file_organizer.tui.app import (
 pytestmark = [pytest.mark.unit]
 
 
+@pytest.mark.unit
 class TestStatusBar:
     """Tests for the StatusBar widget."""
 
@@ -41,6 +42,7 @@ class TestStatusBar:
         assert "StatusBar" in StatusBar.DEFAULT_CSS
 
 
+@pytest.mark.unit
 class TestSidebar:
     """Tests for the Sidebar widget."""
 
@@ -54,6 +56,7 @@ class TestSidebar:
         assert "Sidebar" in Sidebar.DEFAULT_CSS
 
 
+@pytest.mark.unit
 class TestPlaceholderView:
     """Tests for the PlaceholderView widget."""
 
@@ -64,6 +67,7 @@ class TestPlaceholderView:
         assert "PlaceholderView" in PlaceholderView.DEFAULT_CSS
 
 
+@pytest.mark.unit
 class TestFileOrganizerApp:
     """Tests for the FileOrganizerApp."""
 
@@ -111,6 +115,7 @@ class TestFileOrganizerApp:
         assert widget.id == "view"
 
 
+@pytest.mark.unit
 class TestRunTui:
     """Tests for the run_tui function."""
 

@@ -63,6 +63,7 @@ def sample_paths():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSemanticAnalyzerInit:
     """Tests for SemanticAnalyzer initialization."""
 
@@ -93,6 +94,7 @@ class TestSemanticAnalyzerInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestComputeSimilarity:
     """Tests for compute_similarity."""
 
@@ -136,6 +138,7 @@ class TestComputeSimilarity:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestComputeSimilarityMatrix:
     """Tests for compute_similarity_matrix."""
 
@@ -170,6 +173,7 @@ class TestComputeSimilarityMatrix:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFindSimilarDocuments:
     """Tests for find_similar_documents."""
 
@@ -210,6 +214,7 @@ class TestFindSimilarDocuments:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFindSimilarToQuery:
     """Tests for find_similar_to_query."""
 
@@ -249,6 +254,7 @@ class TestFindSimilarToQuery:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestClusterBySimilarity:
     """Tests for cluster_by_similarity."""
 
@@ -291,6 +297,7 @@ class TestClusterBySimilarity:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetDuplicateGroups:
     """Tests for get_duplicate_groups."""
 
@@ -331,6 +338,7 @@ class TestGetDuplicateGroups:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSetThreshold:
     """Tests for set_threshold."""
 
@@ -351,6 +359,7 @@ class TestSetThreshold:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetStatistics:
     """Tests for get_statistics."""
 

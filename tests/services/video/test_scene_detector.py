@@ -74,6 +74,7 @@ def _make_result(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDetectionMethod:
     """Tests for the DetectionMethod enum."""
 
@@ -92,6 +93,7 @@ class TestDetectionMethod:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScene:
     """Tests for the Scene dataclass."""
 
@@ -112,6 +114,7 @@ class TestScene:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSceneDetectionResult:
     """Tests for the SceneDetectionResult dataclass."""
 
@@ -147,6 +150,7 @@ class TestSceneDetectionResult:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSceneDetectorInit:
     """Tests for SceneDetector initialization."""
 
@@ -199,6 +203,7 @@ class TestSceneDetectorInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDetectScenes:
     """Tests for SceneDetector.detect_scenes."""
 
@@ -273,6 +278,7 @@ class TestDetectScenes:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDetectWithScenedetect:
     """Tests for the scenedetect backend."""
 
@@ -317,6 +323,7 @@ class TestDetectWithScenedetect:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDetectWithOpencv:
     """Tests for the OpenCV fallback backend."""
 
@@ -361,6 +368,7 @@ class TestDetectWithOpencv:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDetectScenesBatch:
     """Tests for batch scene detection."""
 
@@ -419,6 +427,7 @@ class TestDetectScenesBatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSaveSceneList:
     """Tests for saving scene lists to CSV."""
 
@@ -464,6 +473,7 @@ class TestSaveSceneList:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractSceneThumbnails:
     """Tests for thumbnail extraction."""
 

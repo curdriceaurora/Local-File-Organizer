@@ -82,6 +82,7 @@ def mock_rule_manager(sample_rule_set):
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestRulesList:
     """Tests for the 'list' subcommand."""
 
@@ -110,6 +111,7 @@ class TestRulesList:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestRulesSets:
     """Tests for the 'sets' subcommand."""
 
@@ -134,6 +136,7 @@ class TestRulesSets:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestRulesAdd:
     """Tests for the 'add' subcommand."""
 
@@ -198,6 +201,7 @@ class TestRulesAdd:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestRulesRemove:
     """Tests for the 'remove' subcommand."""
 
@@ -220,6 +224,7 @@ class TestRulesRemove:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestRulesToggle:
     """Tests for the 'toggle' subcommand."""
 
@@ -250,6 +255,7 @@ class TestRulesToggle:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestRulesPreview:
     """Tests for the 'preview' subcommand."""
 
@@ -314,6 +320,7 @@ class TestRulesPreview:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestRulesExport:
     """Tests for the 'export' subcommand."""
 
@@ -335,6 +342,7 @@ class TestRulesExport:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestRulesImport:
     """Tests for the 'import' subcommand."""
 

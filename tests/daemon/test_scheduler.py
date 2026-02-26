@@ -31,6 +31,7 @@ def scheduler() -> DaemonScheduler:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScheduledTask:
     """Tests for the _ScheduledTask internal dataclass."""
 
@@ -58,6 +59,7 @@ class TestScheduledTask:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInit:
     """Tests for DaemonScheduler initialization."""
 
@@ -75,6 +77,7 @@ class TestInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScheduleTask:
     """Tests for DaemonScheduler.schedule_task."""
 
@@ -130,6 +133,7 @@ class TestScheduleTask:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCancelTask:
     """Tests for DaemonScheduler.cancel_task."""
 
@@ -171,6 +175,7 @@ class TestCancelTask:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProperties:
     """Tests for scheduler properties."""
 
@@ -201,6 +206,7 @@ class TestProperties:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTick:
     """Tests for DaemonScheduler._tick (internal scheduling tick)."""
 
@@ -334,6 +340,7 @@ def _make_run_terminate_after(scheduler: DaemonScheduler, iterations: int):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRun:
     """Tests for DaemonScheduler.run (blocking event loop)."""
 
@@ -415,6 +422,7 @@ class TestRun:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRunInBackground:
     """Tests for DaemonScheduler.run_in_background."""
 
@@ -460,6 +468,7 @@ class TestRunInBackground:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestStop:
     """Tests for DaemonScheduler.stop."""
 
@@ -511,6 +520,7 @@ class TestStop:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIntegration:
     """Higher-level tests that exercise multiple components together."""
 

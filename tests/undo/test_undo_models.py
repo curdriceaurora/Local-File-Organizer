@@ -5,6 +5,7 @@ and boolean behaviors.
 """
 
 from __future__ import annotations
+import pytest
 
 import unittest
 
@@ -16,6 +17,7 @@ from file_organizer.undo.models import (
 )
 
 
+@pytest.mark.unit
 class TestConflictType(unittest.TestCase):
     """Test ConflictType enum."""
 
@@ -29,6 +31,7 @@ class TestConflictType(unittest.TestCase):
         self.assertEqual(ConflictType.HASH_MISMATCH, "hash_mismatch")
 
 
+@pytest.mark.unit
 class TestConflict(unittest.TestCase):
     """Test Conflict dataclass."""
 
@@ -65,6 +68,7 @@ class TestConflict(unittest.TestCase):
         self.assertNotIn("expected:", s)
 
 
+@pytest.mark.unit
 class TestValidationResult(unittest.TestCase):
     """Test ValidationResult dataclass."""
 
@@ -120,6 +124,7 @@ class TestValidationResult(unittest.TestCase):
         self.assertIn("and 2 more", s)
 
 
+@pytest.mark.unit
 class TestRollbackResult(unittest.TestCase):
     """Test RollbackResult dataclass."""
 

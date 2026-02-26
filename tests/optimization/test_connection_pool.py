@@ -50,6 +50,7 @@ def pool_with_table(pool: ConnectionPool, db_path: Path) -> ConnectionPool:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPoolInit:
     """Tests for pool creation and configuration."""
 
@@ -80,6 +81,7 @@ class TestPoolInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAcquireRelease:
     """Tests for connection checkout and return."""
 
@@ -133,6 +135,7 @@ class TestAcquireRelease:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPoolStats:
     """Tests for stats reporting."""
 
@@ -167,6 +170,7 @@ class TestPoolStats:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestThreadSafety:
     """Tests verifying thread-safe access."""
 
@@ -253,6 +257,7 @@ class TestThreadSafety:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPoolClose:
     """Tests for pool shutdown."""
 
@@ -282,6 +287,7 @@ class TestPoolClose:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestWALMode:
     """Tests for connection configuration."""
 

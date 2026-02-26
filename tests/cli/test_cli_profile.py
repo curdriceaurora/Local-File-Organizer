@@ -60,6 +60,7 @@ def mock_manager(mock_profile):
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestListProfiles:
     """Tests for the 'list' subcommand."""
 
@@ -99,6 +100,7 @@ class TestListProfiles:
         assert "0 directory-specific" in result.output
 
 
+@pytest.mark.unit
 class TestCreateProfile:
     """Tests for the 'create' subcommand."""
 
@@ -144,6 +146,7 @@ class TestCreateProfile:
         assert "Error creating profile" in result.output
 
 
+@pytest.mark.unit
 class TestActivateProfile:
     """Tests for the 'activate' subcommand."""
 
@@ -168,6 +171,7 @@ class TestActivateProfile:
         assert "Error activating" in result.output
 
 
+@pytest.mark.unit
 class TestDeleteProfile:
     """Tests for the 'delete' subcommand."""
 
@@ -197,6 +201,7 @@ class TestDeleteProfile:
         assert "Failed to delete" in result.output
 
 
+@pytest.mark.unit
 class TestShowCurrent:
     """Tests for the 'current' subcommand."""
 
@@ -221,6 +226,7 @@ class TestShowCurrent:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestExportProfile:
     """Tests for the 'export' subcommand."""
 
@@ -268,6 +274,7 @@ class TestExportProfile:
         assert "Failed to export" in result.output
 
 
+@pytest.mark.unit
 class TestImportProfile:
     """Tests for the 'import' subcommand."""
 
@@ -373,6 +380,7 @@ class TestImportProfile:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestMergeProfiles:
     """Tests for the 'merge' subcommand."""
 
@@ -480,6 +488,7 @@ class TestMergeProfiles:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestTemplateCommands:
     """Tests for the 'template' subcommand group."""
 
@@ -577,6 +586,7 @@ class TestTemplateCommands:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestMigrateProfile:
     """Tests for the 'migrate' subcommand."""
 
@@ -621,6 +631,7 @@ class TestMigrateProfile:
         assert "Failed to migrate" in result.output
 
 
+@pytest.mark.unit
 class TestValidateProfile:
     """Tests for the 'validate' subcommand."""
 

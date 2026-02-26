@@ -21,6 +21,7 @@ from file_organizer.methodologies.johnny_decimal.system import (
 )
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalWorkflows:
     """Test complete Johnny Decimal workflows."""
 
@@ -137,6 +138,7 @@ class TestJohnnyDecimalWorkflows:
         assert renumber_result.confidence == 1.0
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalEdgeCases:
     """Test edge cases and error handling."""
 
@@ -233,6 +235,7 @@ class TestJohnnyDecimalEdgeCases:
         assert result is not None
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalConfiguration:
     """Test configuration management."""
 
@@ -320,6 +323,7 @@ class TestJohnnyDecimalConfiguration:
             pass
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalReporting:
     """Test reporting and analysis features."""
 
@@ -372,6 +376,7 @@ class TestJohnnyDecimalReporting:
         assert 20 in area_numbers
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalScalability:
     """Test system scalability and performance."""
 
@@ -441,6 +446,7 @@ class TestJohnnyDecimalScalability:
         assert len(numbers) == len(set(numbers))  # All unique
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalMigrationScenarios:
     """Test scenarios for migrating to Johnny Decimal system."""
 
@@ -514,6 +520,7 @@ class TestJohnnyDecimalMigrationScenarios:
         assert "10.01.001" in system.generator._used_numbers
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalValidation:
     """Test number validation and conflict detection."""
 
@@ -567,6 +574,7 @@ class TestJohnnyDecimalValidation:
         assert result.confidence < 1.0 or "reserved" in str(result.metadata)
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalCustomization:
     """Test customization and extensibility."""
 

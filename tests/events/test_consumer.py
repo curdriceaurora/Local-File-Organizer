@@ -36,6 +36,7 @@ def consumer(mock_manager: MagicMock) -> EventConsumer:
     return EventConsumer(stream_manager=mock_manager)
 
 
+@pytest.mark.unit
 class TestEventConsumerInit:
     """Tests for EventConsumer initialization."""
 
@@ -66,6 +67,7 @@ class TestEventConsumerInit:
         assert "processed=0" in result
 
 
+@pytest.mark.unit
 class TestEventConsumerHandlerRegistration:
     """Tests for handler registration and unregistration."""
 
@@ -140,6 +142,7 @@ class TestEventConsumerHandlerRegistration:
         assert consumer.registered_handlers == {"file.created": 1}
 
 
+@pytest.mark.unit
 class TestEventConsumerDispatch:
     """Tests for event dispatching to handlers."""
 
@@ -259,6 +262,7 @@ class TestEventConsumerDispatch:
         assert consumer.events_processed == 0
 
 
+@pytest.mark.unit
 class TestEventConsumerStartStop:
     """Tests for start/stop consuming lifecycle."""
 
@@ -364,6 +368,7 @@ class TestEventConsumerStartStop:
         )
 
 
+@pytest.mark.unit
 class TestEventConsumerConnectionLifecycle:
     """Tests for connect/disconnect methods."""
 
@@ -388,6 +393,7 @@ class TestEventConsumerConnectionLifecycle:
         mock_manager.disconnect.assert_called_once()
 
 
+@pytest.mark.unit
 class TestEventConsumerContextManager:
     """Tests for context manager protocol."""
 

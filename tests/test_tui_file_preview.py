@@ -1,10 +1,12 @@
 """Tests for the TUI file preview and selection widgets."""
 
 from __future__ import annotations
+import pytest
 
 from pathlib import Path
 
 
+@pytest.mark.unit
 class TestFileSelectionManager:
     """Tests for the FileSelectionManager logic."""
 
@@ -64,6 +66,7 @@ class TestFileSelectionManager:
         assert mgr.count == 1
 
 
+@pytest.mark.unit
 class TestFilePreviewPanel:
     """Tests for FilePreviewPanel preview strategies."""
 
@@ -131,6 +134,7 @@ class TestFilePreviewPanel:
         assert "Cannot stat" in content
 
 
+@pytest.mark.unit
 class TestFilePreviewView:
     """Tests for FilePreviewView."""
 
@@ -161,6 +165,7 @@ class TestFilePreviewView:
         assert "ctrl+d" in keys
 
 
+@pytest.mark.unit
 class TestTuiPreviewExports:
     """Test that the tui __init__ exports are correct."""
 

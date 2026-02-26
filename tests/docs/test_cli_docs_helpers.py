@@ -26,6 +26,7 @@ from tests.docs.test_cli_docs_accuracy import (
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCommandIsDocumented:
     """Verify _command_is_documented matches the right patterns."""
 
@@ -89,6 +90,7 @@ class TestCommandIsDocumented:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetCommandSection:
     """Verify _get_command_section extracts the right text range."""
 
@@ -141,6 +143,7 @@ class TestGetCommandSection:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestParamNameVariants:
     """Verify _param_name_variants generates the right representations."""
 
@@ -183,6 +186,7 @@ class TestParamNameVariants:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestParamIsDocumented:
     """Verify _param_is_documented matching logic."""
 
@@ -238,6 +242,7 @@ class TestParamIsDocumented:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCollectCommands:
     """Verify _collect_commands recursive Click introspection."""
 
@@ -307,6 +312,7 @@ class TestCollectCommands:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractabilityGap:
     """Detect the gap where _command_is_documented returns True via table row
     but _get_command_section returns empty because it only matches headers.

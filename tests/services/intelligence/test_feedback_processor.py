@@ -32,6 +32,7 @@ def processor():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInit:
     """Tests for FeedbackProcessor initialization."""
 
@@ -47,6 +48,7 @@ class TestInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProcessCorrection:
     """Tests for process_correction method."""
 
@@ -173,6 +175,7 @@ class TestProcessCorrection:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBatchProcessHistory:
     """Tests for batch_process_history method."""
 
@@ -310,6 +313,7 @@ class TestBatchProcessHistory:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateLearningModel:
     """Tests for update_learning_model method."""
 
@@ -354,6 +358,7 @@ class TestUpdateLearningModel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTriggerRetraining:
     """Tests for trigger_retraining method."""
 
@@ -381,6 +386,7 @@ class TestTriggerRetraining:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAnalyzeNameCorrection:
     """Tests for _analyze_name_correction method."""
 
@@ -431,6 +437,7 @@ class TestAnalyzeNameCorrection:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAnalyzeFolderCorrection:
     """Tests for _analyze_folder_correction method."""
 
@@ -489,6 +496,7 @@ class TestAnalyzeFolderCorrection:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractContextPatterns:
     """Tests for _extract_context_patterns method."""
 
@@ -548,6 +556,7 @@ class TestExtractContextPatterns:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractBatchNamePatterns:
     """Tests for _extract_batch_name_patterns method."""
 
@@ -592,6 +601,7 @@ class TestExtractBatchNamePatterns:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractBatchFolderPatterns:
     """Tests for _extract_batch_folder_patterns method."""
 
@@ -635,6 +645,7 @@ class TestExtractBatchFolderPatterns:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIdentifyCommonOperations:
     """Tests for _identify_common_operations method."""
 
@@ -664,6 +675,7 @@ class TestIdentifyCommonOperations:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestStaticHelpers:
     """Tests for static helper methods."""
 

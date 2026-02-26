@@ -17,6 +17,7 @@ from file_organizer.version import (
 )
 
 
+@pytest.mark.unit
 class TestParseVersion:
     """Tests for parse_version function."""
 
@@ -88,6 +89,7 @@ class TestParseVersion:
             parse_version("-1.0.0")
 
 
+@pytest.mark.unit
 class TestVersionInfo:
     """Tests for VersionInfo dataclass."""
 
@@ -135,6 +137,7 @@ class TestVersionInfo:
         assert a != b
 
 
+@pytest.mark.unit
 class TestVersionComparison:
     """Tests for version comparison operators."""
 
@@ -181,6 +184,7 @@ class TestVersionComparison:
         assert v.__ge__("1.0.0") is NotImplemented
 
 
+@pytest.mark.unit
 class TestBumpVersion:
     """Tests for bump_version function."""
 
@@ -206,6 +210,7 @@ class TestBumpVersion:
             bump_version("1.0.0", "invalid")
 
 
+@pytest.mark.unit
 class TestGetVersion:
     """Tests for get_version and get_version_info."""
 

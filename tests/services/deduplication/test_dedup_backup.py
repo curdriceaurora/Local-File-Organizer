@@ -49,6 +49,7 @@ def sample_file(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBackupManagerInit:
     """Tests for BackupManager initialization."""
 
@@ -94,6 +95,7 @@ class TestBackupManagerInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCreateBackup:
     """Tests for create_backup."""
 
@@ -142,6 +144,7 @@ class TestCreateBackup:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRestoreBackup:
     """Tests for restore_backup."""
 
@@ -181,6 +184,7 @@ class TestRestoreBackup:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCleanupOldBackups:
     """Tests for cleanup_old_backups."""
 
@@ -226,6 +230,7 @@ class TestCleanupOldBackups:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetBackupInfo:
     """Tests for get_backup_info."""
 
@@ -245,6 +250,7 @@ class TestGetBackupInfo:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestListBackups:
     """Tests for list_backups."""
 
@@ -281,6 +287,7 @@ class TestListBackups:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetStatistics:
     """Tests for get_statistics."""
 
@@ -314,6 +321,7 @@ class TestGetStatistics:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestVerifyBackups:
     """Tests for verify_backups."""
 
@@ -345,6 +353,7 @@ class TestVerifyBackups:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestManifestOperations:
     """Tests for _load_manifest and _save_manifest."""
 

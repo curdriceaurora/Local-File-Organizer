@@ -75,6 +75,7 @@ def mock_analyzer_with_patterns():
     return analyzer
 
 
+@pytest.mark.unit
 class TestSuggestImports:
     """Test that the module imports correctly."""
 
@@ -84,6 +85,7 @@ class TestSuggestImports:
         assert suggest_app is not None
 
 
+@pytest.mark.unit
 class TestSuggestFiles:
     """Tests for the files command."""
 
@@ -156,6 +158,7 @@ class TestSuggestFiles:
         assert "no files" in result.output.lower()
 
 
+@pytest.mark.unit
 class TestSuggestPatterns:
     """Tests for the patterns command."""
 
@@ -191,6 +194,7 @@ class TestSuggestPatterns:
         assert "DATE_PREFIX" in result.output
 
 
+@pytest.mark.unit
 class TestSuggestApply:
     """Tests for the apply command."""
 

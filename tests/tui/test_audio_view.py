@@ -73,6 +73,7 @@ class FakeAltClassification:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTruncate:
     """Test the _truncate utility function."""
 
@@ -100,6 +101,7 @@ class TestTruncate:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioFileListPanel:
     """Test AudioFileListPanel rendering."""
 
@@ -138,6 +140,7 @@ class TestAudioFileListPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioMetadataPanel:
     """Test AudioMetadataPanel rendering."""
 
@@ -203,6 +206,7 @@ class TestAudioMetadataPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioClassificationPanel:
     """Test AudioClassificationPanel rendering."""
 
@@ -265,6 +269,7 @@ class TestAudioClassificationPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioViewInit:
     """Test AudioView initialization."""
 
@@ -283,6 +288,7 @@ class TestAudioViewInit:
         assert view._scan_dir == Path("/tmp")
 
 
+@pytest.mark.unit
 class TestAudioViewNavigation:
     """Test AudioView navigation actions."""
 
@@ -332,6 +338,7 @@ class TestAudioViewNavigation:
         assert view._current_index == 0
 
 
+@pytest.mark.unit
 class TestAudioViewShowFileDetails:
     """Test _show_file_details bounds checking."""
 
@@ -369,6 +376,7 @@ class TestAudioViewShowFileDetails:
         mock_cls_panel.set_classification.assert_called_once_with(cls_mock)
 
 
+@pytest.mark.unit
 class TestAudioViewSetStatus:
     """Test _set_status helper."""
 
@@ -387,6 +395,7 @@ class TestAudioViewSetStatus:
         view._set_status("loaded")
 
 
+@pytest.mark.unit
 class TestAudioViewRefresh:
     """Test action_refresh_audio method (lines 217-224)."""
 
@@ -424,6 +433,7 @@ class TestAudioViewRefresh:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScanAudioFiles:
     """Test _scan_audio_files worker method."""
 
@@ -597,6 +607,7 @@ class TestScanAudioFiles:
         assert mock_panel.update.call_count >= 1
 
 
+@pytest.mark.unit
 class TestAudioViewBindings:
     """Test that AudioView has correct bindings."""
 

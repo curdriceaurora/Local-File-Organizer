@@ -5,6 +5,7 @@ Tests validation logic for undo/redo operations.
 """
 
 from __future__ import annotations
+import pytest
 
 import shutil
 import tempfile
@@ -17,6 +18,7 @@ from file_organizer.undo.models import ConflictType
 from file_organizer.undo.validator import OperationValidator
 
 
+@pytest.mark.unit
 class TestOperationValidator(unittest.TestCase):
     """Test cases for OperationValidator."""
 

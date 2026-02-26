@@ -9,6 +9,7 @@ import pytest
 from file_organizer.optimization.batch_sizer import AdaptiveBatchSizer
 
 
+@pytest.mark.unit
 class TestAdaptiveBatchSizerInit:
     """Tests for AdaptiveBatchSizer initialization."""
 
@@ -45,6 +46,7 @@ class TestAdaptiveBatchSizerInit:
         assert sizer.target_memory_percent == 100.0
 
 
+@pytest.mark.unit
 class TestAdaptiveBatchSizerBounds:
     """Tests for set_bounds method."""
 
@@ -68,6 +70,7 @@ class TestAdaptiveBatchSizerBounds:
             sizer.set_bounds(min_size=10, max_size=5)
 
 
+@pytest.mark.unit
 class TestAdaptiveBatchSizerCalculate:
     """Tests for calculate_batch_size method."""
 
@@ -183,6 +186,7 @@ class TestAdaptiveBatchSizerCalculate:
         assert batch_size == 100
 
 
+@pytest.mark.unit
 class TestAdaptiveBatchSizerFeedback:
     """Tests for adjust_from_feedback method."""
 

@@ -1,6 +1,7 @@
 """Tests for ConfigManager and AppConfig."""
 
 from __future__ import annotations
+import pytest
 
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from file_organizer.models.base import DeviceType, ModelType
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAppConfigDefaults:
     """AppConfig should be constructable with zero arguments."""
 
@@ -52,6 +54,7 @@ class TestAppConfigDefaults:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConfigManagerLoadSave:
     """ConfigManager persistence round-trip."""
 
@@ -118,6 +121,7 @@ class TestConfigManagerLoadSave:
         assert config.profile_name == "default"
 
 
+@pytest.mark.unit
 class TestConfigManagerProfiles:
     """Profile listing and deletion."""
 
@@ -148,6 +152,7 @@ class TestConfigManagerProfiles:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelConfigDelegation:
     """ConfigManager.to_*_model_config() methods."""
 
@@ -169,6 +174,7 @@ class TestModelConfigDelegation:
         assert mc.device == DeviceType.MPS
 
 
+@pytest.mark.unit
 class TestModuleOverridesSerialization:
     """Module override dicts survive save/load."""
 

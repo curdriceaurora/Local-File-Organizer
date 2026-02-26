@@ -21,6 +21,7 @@ from file_organizer.optimization.resource_monitor import MemoryInfo
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMetricsSnapshot:
     """Tests for the MetricsSnapshot dataclass."""
 
@@ -61,6 +62,7 @@ class TestMetricsSnapshot:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAlert:
     """Tests for the Alert dataclass."""
 
@@ -102,6 +104,7 @@ class TestAlert:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAlertThresholds:
     """Tests for the AlertThresholds dataclass."""
 
@@ -142,6 +145,7 @@ class TestAlertThresholds:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDeploymentMonitorCollectMetrics:
     """Tests for the collect_metrics method."""
 
@@ -182,6 +186,7 @@ class TestDeploymentMonitorCollectMetrics:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDeploymentMonitorGetAlerts:
     """Tests for the get_alerts method."""
 

@@ -19,6 +19,7 @@ from file_organizer.deploy.config import (
 )
 
 
+@pytest.mark.unit
 class TestDeploymentConfigDefaults:
     """Tests for DeploymentConfig default values."""
 
@@ -58,6 +59,7 @@ class TestDeploymentConfigDefaults:
         assert config.port == 8000
 
 
+@pytest.mark.unit
 class TestDeploymentConfigValidation:
     """Tests for DeploymentConfig validation logic."""
 
@@ -115,6 +117,7 @@ class TestDeploymentConfigValidation:
             assert config.log_level == level
 
 
+@pytest.mark.unit
 class TestDeploymentConfigFromEnv:
     """Tests for DeploymentConfig.from_env() class method."""
 
@@ -202,6 +205,7 @@ class TestDeploymentConfigFromEnv:
             assert config.max_workers == 1
 
 
+@pytest.mark.unit
 class TestDeploymentConfigProperties:
     """Tests for DeploymentConfig computed properties."""
 

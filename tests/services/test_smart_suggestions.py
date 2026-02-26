@@ -85,6 +85,7 @@ class FakePatternAnalysis:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConfidenceScorerUserHistory:
     """Test _calculate_user_history_score."""
 
@@ -128,6 +129,7 @@ class TestConfidenceScorerUserHistory:
         assert result == 100.0
 
 
+@pytest.mark.unit
 class TestConfidenceScorerContentSimilarity:
     """Test _calculate_content_similarity."""
 
@@ -161,6 +163,7 @@ class TestConfidenceScorerContentSimilarity:
         assert result >= 50.0
 
 
+@pytest.mark.unit
 class TestConfidenceScorerNamingMatch:
     """Test _calculate_naming_match."""
 
@@ -194,6 +197,7 @@ class TestConfidenceScorerNamingMatch:
         assert result == 70.0
 
 
+@pytest.mark.unit
 class TestConfidenceScorerFileTypeMatch:
     """Test _calculate_file_type_match."""
 
@@ -255,6 +259,7 @@ class TestConfidenceScorerFileTypeMatch:
         assert result == 25.0
 
 
+@pytest.mark.unit
 class TestConfidenceScorerRecency:
     """Test _calculate_recency_score."""
 
@@ -282,6 +287,7 @@ class TestConfidenceScorerRecency:
         assert result == 50.0
 
 
+@pytest.mark.unit
 class TestConfidenceScorerSizeScore:
     """Test _calculate_size_score."""
 
@@ -327,6 +333,7 @@ class TestConfidenceScorerSizeScore:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSuggestionEngineGenerateSuggestions:
     """Test generate_suggestions."""
 
@@ -354,6 +361,7 @@ class TestSuggestionEngineGenerateSuggestions:
         assert isinstance(result, list)
 
 
+@pytest.mark.unit
 class TestSuggestionEngineExplain:
     """Test explain_suggestion."""
 
@@ -387,6 +395,7 @@ class TestSuggestionEngineExplain:
         assert "RENAME" in explanation
 
 
+@pytest.mark.unit
 class TestSuggestionEngineMoveReasoning:
     """Test _generate_move_reasoning."""
 
@@ -431,6 +440,7 @@ class TestSuggestionEngineMoveReasoning:
         assert "improve organization" in result
 
 
+@pytest.mark.unit
 class TestSuggestionEngineCommonRoot:
     """Test _get_common_root."""
 
@@ -462,6 +472,7 @@ class TestSuggestionEngineCommonRoot:
         assert isinstance(result, Path)
 
 
+@pytest.mark.unit
 class TestSuggestionEngineFindBestLocation:
     """Test _find_best_location."""
 
@@ -486,6 +497,7 @@ class TestSuggestionEngineFindBestLocation:
         assert result == target
 
 
+@pytest.mark.unit
 class TestSuggestionEngineRank:
     """Test rank_suggestions."""
 

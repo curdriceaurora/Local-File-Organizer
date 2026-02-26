@@ -103,6 +103,7 @@ def classifier() -> AudioClassifier:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMusicClassification:
     """Tests for music type detection."""
 
@@ -163,6 +164,7 @@ class TestMusicClassification:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPodcastClassification:
     """Tests for podcast type detection."""
 
@@ -219,6 +221,7 @@ class TestPodcastClassification:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudiobookClassification:
     """Tests for audiobook type detection."""
 
@@ -268,6 +271,7 @@ class TestAudiobookClassification:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRecordingClassification:
     """Tests for recording/voice memo type detection."""
 
@@ -303,6 +307,7 @@ class TestRecordingClassification:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInterviewClassification:
     """Tests for interview type detection."""
 
@@ -349,6 +354,7 @@ class TestInterviewClassification:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLectureClassification:
     """Tests for lecture type detection."""
 
@@ -387,6 +393,7 @@ class TestLectureClassification:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUnknownClassification:
     """Tests for edge cases and unknown classification."""
 
@@ -437,6 +444,7 @@ class TestUnknownClassification:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHelperFunctions:
     """Tests for internal helper functions."""
 

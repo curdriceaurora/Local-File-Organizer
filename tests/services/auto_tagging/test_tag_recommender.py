@@ -73,6 +73,7 @@ def trained_recommender(recommender, temp_dir):
     return recommender
 
 
+@pytest.mark.unit
 class TestTagSuggestion:
     """Tests for TagSuggestion dataclass."""
 
@@ -121,6 +122,7 @@ class TestTagSuggestion:
         assert suggestion.source == "behavior"
 
 
+@pytest.mark.unit
 class TestTagRecommendation:
     """Tests for TagRecommendation dataclass."""
 
@@ -187,6 +189,7 @@ class TestTagRecommendation:
         assert len(data["suggestions"]) == 1
 
 
+@pytest.mark.unit
 class TestTagRecommender:
     """Tests for TagRecommender class."""
 

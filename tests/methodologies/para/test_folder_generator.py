@@ -23,6 +23,7 @@ from file_organizer.methodologies.para.folder_generator import (
 pytestmark = [pytest.mark.unit]
 
 
+@pytest.mark.unit
 class TestPARAFolderGenerator:
     """Test PARA folder structure generation."""
 
@@ -251,6 +252,7 @@ class TestPARAFolderGenerator:
         assert len(result.errors) > 0
 
 
+@pytest.mark.unit
 class TestFolderCreationResult:
     """Test FolderCreationResult dataclass."""
 

@@ -21,6 +21,7 @@ from file_organizer.methodologies.johnny_decimal.categories import (
 )
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalNumber:
     """Test JohnnyDecimalNumber data class."""
 
@@ -146,6 +147,7 @@ class TestJohnnyDecimalNumber:
         assert len(number_set) == 1
 
 
+@pytest.mark.unit
 class TestAreaDefinition:
     """Test AreaDefinition class."""
 
@@ -221,6 +223,7 @@ class TestAreaDefinition:
         assert not area.matches_keyword("Marketing plan")
 
 
+@pytest.mark.unit
 class TestCategoryDefinition:
     """Test CategoryDefinition class."""
 
@@ -287,6 +290,7 @@ class TestCategoryDefinition:
         assert not category.matches_pattern("invoice-123.pdf")
 
 
+@pytest.mark.unit
 class TestNumberingResult:
     """Test NumberingResult class."""
 
@@ -386,6 +390,7 @@ class TestNumberingResult:
         assert "Conflict 1" in result_dict["conflicts"]
 
 
+@pytest.mark.unit
 class TestNumberingScheme:
     """Test NumberingScheme class."""
 
@@ -478,6 +483,7 @@ class TestNumberingScheme:
         assert len(area20_cats) == 1
 
 
+@pytest.mark.unit
 class TestDefaultScheme:
     """Test default scheme configuration."""
 

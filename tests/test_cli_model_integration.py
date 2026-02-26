@@ -4,6 +4,7 @@ Exercises model list/pull/cache with mocked Ollama responses.
 """
 
 from __future__ import annotations
+import pytest
 
 from typer.testing import CliRunner
 
@@ -17,6 +18,7 @@ runner = CliRunner()
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelList:
     """Tests for ``file-organizer model list``."""
 
@@ -41,6 +43,7 @@ class TestModelList:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelPull:
     """Tests for ``file-organizer model pull``."""
 
@@ -60,6 +63,7 @@ class TestModelPull:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelCache:
     """Tests for ``file-organizer model cache``."""
 

@@ -25,6 +25,7 @@ def _make_mock_model(name: str = "test-model") -> MagicMock:
     return mock
 
 
+@pytest.mark.unit
 class TestLazyModelLoaderInit:
     """Tests for LazyModelLoader initialization."""
 
@@ -51,6 +52,7 @@ class TestLazyModelLoaderInit:
         assert "not loaded" in repr_str
 
 
+@pytest.mark.unit
 class TestLazyModelLoaderLoading:
     """Tests for the model loading behavior."""
 
@@ -124,6 +126,7 @@ class TestLazyModelLoaderLoading:
         assert "not loaded" not in repr_str
 
 
+@pytest.mark.unit
 class TestLazyModelLoaderUnload:
     """Tests for unloading models."""
 
@@ -188,6 +191,7 @@ class TestLazyModelLoaderUnload:
         assert lazy.is_loaded is False
 
 
+@pytest.mark.unit
 class TestLazyModelLoaderThreadSafety:
     """Tests for thread-safe loading."""
 

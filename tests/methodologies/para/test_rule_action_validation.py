@@ -12,6 +12,7 @@ import pytest
 from file_organizer.methodologies.para.rules.engine import ActionType, RuleAction
 
 
+@pytest.mark.unit
 class TestRuleActionCategoryValidation:
     """RuleAction validates category strings for CATEGORIZE and SUGGEST actions."""
 

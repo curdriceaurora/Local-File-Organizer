@@ -51,6 +51,7 @@ def _reset_model_side_effect(mock_text_model, folder_resp="healthcare", filename
 # Tests: INFO-level logs must NOT contain generated folder/file names
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestInfoLevelDoesNotLeakContent:
     """Verify that INFO log messages never contain the actual generated strings."""
 
@@ -102,6 +103,7 @@ class TestInfoLevelDoesNotLeakContent:
 # Tests: WARNING-level logs must NOT contain generated folder/file names
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestWarningLevelDoesNotLeakContent:
     """Verify that WARNING log messages never contain user-generated content."""
 
@@ -170,6 +172,7 @@ class TestWarningLevelDoesNotLeakContent:
 # Tests: DEBUG-level logs must NOT contain raw AI response content
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestDebugLevelDoesNotLeakAiResponses:
     """Verify that DEBUG logs for AI responses only emit lengths, not content."""
 
@@ -240,6 +243,7 @@ class TestDebugLevelDoesNotLeakAiResponses:
 # Tests: Verify specific log messages format (regression guards)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestLogMessageFormats:
     """Guard the exact format of safe log messages."""
 

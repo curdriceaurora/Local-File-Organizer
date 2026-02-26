@@ -58,6 +58,7 @@ def sample_files(temp_dir):
     return files
 
 
+@pytest.mark.unit
 class TestAutoTaggingIntegration:
     """Integration tests for the complete auto-tagging system."""
 

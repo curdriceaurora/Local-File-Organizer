@@ -15,6 +15,7 @@ from file_organizer.api.cache import (
 )
 
 
+@pytest.mark.unit
 class TestInMemoryCache:
     """Tests for InMemoryCache."""
 
@@ -68,6 +69,7 @@ class TestInMemoryCache:
         assert cache.get("key1") == "second"
 
 
+@pytest.mark.unit
 class TestRedisCache:
     """Tests for RedisCache."""
 
@@ -178,6 +180,7 @@ class TestRedisCache:
         assert cache.get("key1") is None
 
 
+@pytest.mark.unit
 class TestIsValidRedisUrl:
     """Tests for _is_valid_redis_url."""
 
@@ -200,6 +203,7 @@ class TestIsValidRedisUrl:
         assert _is_valid_redis_url("localhost:6379") is False
 
 
+@pytest.mark.unit
 class TestBuildCacheBackend:
     """Tests for build_cache_backend."""
 

@@ -55,6 +55,7 @@ def _make_dedup(hash_method: str = "phash", threshold: int = 10) -> ImageDedupli
 # ---------------------------------------------------------------------------
 # Initialization
 # ---------------------------------------------------------------------------
+@pytest.mark.unit
 class TestImageDeduplicatorInit:
     """Test ImageDeduplicator initialization and validation."""
 
@@ -111,6 +112,7 @@ class TestImageDeduplicatorInit:
 # ---------------------------------------------------------------------------
 # get_image_hash
 # ---------------------------------------------------------------------------
+@pytest.mark.unit
 class TestGetImageHash:
     """Test single-image hash computation."""
 
@@ -181,6 +183,7 @@ class TestGetImageHash:
 # ---------------------------------------------------------------------------
 # compute_hamming_distance
 # ---------------------------------------------------------------------------
+@pytest.mark.unit
 class TestComputeHammingDistance:
     """Test Hamming distance calculation between hashes."""
 
@@ -229,6 +232,7 @@ class TestComputeHammingDistance:
 # ---------------------------------------------------------------------------
 # compute_similarity
 # ---------------------------------------------------------------------------
+@pytest.mark.unit
 class TestComputeSimilarity:
     """Test image similarity scoring."""
 
@@ -302,6 +306,7 @@ class TestComputeSimilarity:
 # ---------------------------------------------------------------------------
 # find_duplicates
 # ---------------------------------------------------------------------------
+@pytest.mark.unit
 class TestFindDuplicates:
     """Test directory-level duplicate detection."""
 
@@ -438,6 +443,7 @@ class TestFindDuplicates:
 # ---------------------------------------------------------------------------
 # cluster_by_similarity
 # ---------------------------------------------------------------------------
+@pytest.mark.unit
 class TestClusterBySimilarity:
     """Test image clustering."""
 
@@ -539,6 +545,7 @@ class TestClusterBySimilarity:
 # ---------------------------------------------------------------------------
 # batch_compute_hashes
 # ---------------------------------------------------------------------------
+@pytest.mark.unit
 class TestBatchComputeHashes:
     """Test batch hash computation."""
 
@@ -606,6 +613,7 @@ class TestBatchComputeHashes:
 # ---------------------------------------------------------------------------
 # _find_image_files
 # ---------------------------------------------------------------------------
+@pytest.mark.unit
 class TestFindImageFiles:
     """Test internal image file discovery."""
 
@@ -677,6 +685,7 @@ class TestFindImageFiles:
 # ---------------------------------------------------------------------------
 # validate_image
 # ---------------------------------------------------------------------------
+@pytest.mark.unit
 class TestValidateImage:
     """Test image validation checks."""
 

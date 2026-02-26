@@ -28,6 +28,7 @@ def temp_directory():
         yield tmp_path
 
 
+@pytest.mark.unit
 class TestStorageAnalyzer:
     """Test suite for StorageAnalyzer."""
 

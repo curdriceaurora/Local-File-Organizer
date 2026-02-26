@@ -20,6 +20,7 @@ def _make_mock_model(name: str = "test-model") -> MagicMock:
     return mock
 
 
+@pytest.mark.unit
 class TestWarmupResult:
     """Tests for the WarmupResult dataclass."""
 
@@ -63,6 +64,7 @@ class TestWarmupResult:
         assert result.success_rate == 0.0
 
 
+@pytest.mark.unit
 class TestModelWarmupInit:
     """Tests for ModelWarmup initialization."""
 
@@ -87,6 +89,7 @@ class TestModelWarmupInit:
             )
 
 
+@pytest.mark.unit
 class TestModelWarmupSync:
     """Tests for synchronous warmup."""
 
@@ -217,6 +220,7 @@ class TestModelWarmupSync:
         assert result.duration_ms >= 15  # Allow some margin
 
 
+@pytest.mark.unit
 class TestModelWarmupAsync:
     """Tests for asynchronous warmup."""
 

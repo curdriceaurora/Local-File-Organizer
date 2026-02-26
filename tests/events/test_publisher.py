@@ -33,6 +33,7 @@ def publisher(mock_manager: MagicMock) -> EventPublisher:
     return EventPublisher(stream_manager=mock_manager)
 
 
+@pytest.mark.unit
 class TestEventPublisherInit:
     """Tests for EventPublisher initialization."""
 
@@ -60,6 +61,7 @@ class TestEventPublisherInit:
         assert "events_published=0" in result
 
 
+@pytest.mark.unit
 class TestEventPublisherConnect:
     """Tests for connect/disconnect lifecycle."""
 
@@ -80,6 +82,7 @@ class TestEventPublisherConnect:
         mock_manager.disconnect.assert_called_once()
 
 
+@pytest.mark.unit
 class TestEventPublisherFileEvents:
     """Tests for publishing file events."""
 
@@ -168,6 +171,7 @@ class TestEventPublisherFileEvents:
         assert "timestamp" in event_data
 
 
+@pytest.mark.unit
 class TestEventPublisherScanEvents:
     """Tests for publishing scan events."""
 
@@ -233,6 +237,7 @@ class TestEventPublisherScanEvents:
         assert "timestamp" in event_data
 
 
+@pytest.mark.unit
 class TestEventPublisherContextManager:
     """Tests for context manager protocol."""
 
@@ -245,6 +250,7 @@ class TestEventPublisherContextManager:
         mock_manager.disconnect.assert_called_once()
 
 
+@pytest.mark.unit
 class TestEventPublisherEdgeCases:
     """Additional edge case tests for EventPublisher."""
 

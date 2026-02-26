@@ -74,6 +74,7 @@ def _make_classification(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioFileListPanel:
     """Unit tests for AudioFileListPanel."""
 
@@ -101,6 +102,7 @@ class TestAudioFileListPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioMetadataPanel:
     """Unit tests for AudioMetadataPanel."""
 
@@ -129,6 +131,7 @@ class TestAudioMetadataPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioClassificationPanel:
     """Unit tests for AudioClassificationPanel."""
 
@@ -164,6 +167,7 @@ class TestAudioClassificationPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHelpers:
     """Unit tests for module-level helpers."""
 

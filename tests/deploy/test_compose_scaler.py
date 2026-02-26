@@ -10,6 +10,7 @@ import pytest
 from file_organizer.deploy.compose_scaler import ComposeScaler
 
 
+@pytest.mark.unit
 class TestComposeScalerInit:
     """Tests for ComposeScaler initialisation."""
 
@@ -29,6 +30,7 @@ class TestComposeScalerInit:
         assert scaler._project_name == "myproject"
 
 
+@pytest.mark.unit
 class TestComposeScalerScaleService:
     """Tests for the scale_service method."""
 
@@ -75,6 +77,7 @@ class TestComposeScalerScaleService:
         assert "myproj" in cmd
 
 
+@pytest.mark.unit
 class TestComposeScalerGetServiceCount:
     """Tests for the get_service_count method."""
 
@@ -106,6 +109,7 @@ class TestComposeScalerGetServiceCount:
         assert count == 0
 
 
+@pytest.mark.unit
 class TestComposeScalerSubprocess:
     """Tests for the internal subprocess execution methods."""
 

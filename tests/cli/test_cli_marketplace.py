@@ -57,6 +57,7 @@ def mock_service(sample_plugin):
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestListPlugins:
     """Tests for the 'list' subcommand."""
 
@@ -106,6 +107,7 @@ class TestListPlugins:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestSearchPlugins:
     """Tests for the 'search' subcommand."""
 
@@ -140,6 +142,7 @@ class TestSearchPlugins:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestPluginInfo:
     """Tests for the 'info' subcommand."""
 
@@ -196,6 +199,7 @@ class TestPluginInfo:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestInstallPlugin:
     """Tests for the 'install' subcommand."""
 
@@ -238,6 +242,7 @@ class TestInstallPlugin:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestUninstallPlugin:
     """Tests for the 'uninstall' subcommand."""
 
@@ -262,6 +267,7 @@ class TestUninstallPlugin:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestUpdatePlugin:
     """Tests for the 'update' subcommand."""
 
@@ -298,6 +304,7 @@ class TestUpdatePlugin:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestListInstalled:
     """Tests for the 'installed' subcommand."""
 
@@ -335,6 +342,7 @@ class TestListInstalled:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestAvailableUpdates:
     """Tests for the 'updates' subcommand."""
 
@@ -369,6 +377,7 @@ class TestAvailableUpdates:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestAddReview:
     """Tests for the 'review' subcommand."""
 

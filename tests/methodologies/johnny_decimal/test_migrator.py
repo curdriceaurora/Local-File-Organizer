@@ -74,6 +74,7 @@ def migrator():
     return JohnnyDecimalMigrator()
 
 
+@pytest.mark.unit
 class TestFolderScanner:
     """Tests for FolderScanner."""
 
@@ -139,6 +140,7 @@ class TestFolderScanner:
             assert isinstance(folder.total_size, int)
 
 
+@pytest.mark.unit
 class TestFolderTransformer:
     """Tests for FolderTransformer."""
 
@@ -200,6 +202,7 @@ class TestFolderTransformer:
         assert temp_structure.name in preview
 
 
+@pytest.mark.unit
 class TestMigrationValidator:
     """Tests for MigrationValidator."""
 
@@ -256,6 +259,7 @@ class TestMigrationValidator:
         assert "Validation Report" in report
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalMigrator:
     """Tests for JohnnyDecimalMigrator."""
 
@@ -330,6 +334,7 @@ class TestJohnnyDecimalMigrator:
         assert not success
 
 
+@pytest.mark.unit
 class TestMigrationIntegration:
     """Integration tests for full migration workflow."""
 
@@ -408,6 +413,7 @@ class TestMigrationIntegration:
         assert result.failed_count == 0
 
 
+@pytest.mark.unit
 class TestEdgeCases:
     """Tests for edge cases and error conditions."""
 

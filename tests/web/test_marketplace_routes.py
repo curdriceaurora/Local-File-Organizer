@@ -28,6 +28,7 @@ pytestmark = [pytest.mark.unit]
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestNormalizeTags:
     """Test the _normalize_tags helper."""
 
@@ -62,6 +63,7 @@ class TestNormalizeTags:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestService:
     """Test _service factory."""
 
@@ -114,6 +116,7 @@ def mock_deps():
         p.stop()
 
 
+@pytest.mark.unit
 class TestMarketplaceHome:
     """Test marketplace_home route."""
 
@@ -159,6 +162,7 @@ class TestMarketplaceHome:
         )
 
 
+@pytest.mark.unit
 class TestInstallPlugin:
     """Test install_plugin route."""
 
@@ -207,6 +211,7 @@ class TestInstallPlugin:
         )
 
 
+@pytest.mark.unit
 class TestUninstallPlugin:
     """Test uninstall_plugin route."""
 
@@ -239,6 +244,7 @@ class TestUninstallPlugin:
         )
 
 
+@pytest.mark.unit
 class TestUpdatePlugin:
     """Test update_plugin route."""
 

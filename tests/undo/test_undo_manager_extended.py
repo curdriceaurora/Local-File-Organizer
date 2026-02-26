@@ -5,6 +5,7 @@ stack management, and context manager.
 """
 
 from __future__ import annotations
+import pytest
 
 import unittest
 from datetime import datetime
@@ -14,6 +15,7 @@ from file_organizer.history.models import Operation, OperationStatus, OperationT
 from file_organizer.undo.models import RollbackResult, ValidationResult
 
 
+@pytest.mark.unit
 class TestUndoManager(unittest.TestCase):
     """Test cases for UndoManager."""
 

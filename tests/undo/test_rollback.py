@@ -5,6 +5,7 @@ Tests rollback execution for all operation types.
 """
 
 from __future__ import annotations
+import pytest
 
 import shutil
 import tempfile
@@ -17,6 +18,7 @@ from file_organizer.undo.rollback import RollbackExecutor
 from file_organizer.undo.validator import OperationValidator
 
 
+@pytest.mark.unit
 class TestRollbackExecutor(unittest.TestCase):
     """Test cases for RollbackExecutor."""
 

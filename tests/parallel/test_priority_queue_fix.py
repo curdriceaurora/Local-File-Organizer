@@ -1,9 +1,11 @@
 import unittest
 from pathlib import Path
+import pytest
 
 from file_organizer.parallel.priority_queue import PriorityQueue, QueueItem
 
 
+@pytest.mark.unit
 class TestPriorityQueueFix(unittest.TestCase):
     def test_reorder_duplicate_processing_bug(self):
         """

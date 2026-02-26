@@ -47,6 +47,7 @@ def pubsub(mock_manager: MagicMock) -> PubSubManager:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPubSubConnection:
     """Tests for connect/disconnect lifecycle."""
 
@@ -81,6 +82,7 @@ class TestPubSubConnection:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPubSubSubscribe:
     """Tests for subscribe and unsubscribe."""
 
@@ -126,6 +128,7 @@ class TestPubSubSubscribe:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPubSubPublish:
     """Tests for publish and dispatch."""
 
@@ -245,6 +248,7 @@ class TestPubSubPublish:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPubSubMiddleware:
     """Tests for middleware integration in PubSubManager."""
 
@@ -307,6 +311,7 @@ class TestPubSubMiddleware:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPubSubUtility:
     """Tests for utility methods and edge cases."""
 
@@ -340,6 +345,7 @@ class TestPubSubUtility:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHelpers:
     """Tests for module-level helper functions."""
 

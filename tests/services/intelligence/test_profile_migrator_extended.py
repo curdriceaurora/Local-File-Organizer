@@ -61,6 +61,7 @@ def _set_profile_version(profile_manager, profile_name, version):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetCurrentTimestamp:
     """Tests for _get_current_timestamp method."""
 
@@ -81,6 +82,7 @@ class TestGetCurrentTimestamp:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMigrateVersionWithRegisteredFunction:
     """Tests covering the full successful migration path."""
 
@@ -242,6 +244,7 @@ class TestMigrateVersionWithRegisteredFunction:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestValidateMigrationExtended:
     """Additional validate_migration tests for coverage."""
 
@@ -306,6 +309,7 @@ class TestValidateMigrationExtended:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRollbackMigrationExtended:
     """Additional rollback_migration tests for coverage."""
 
@@ -360,6 +364,7 @@ class TestRollbackMigrationExtended:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBackupExtended:
     """Additional backup_before_migration tests."""
 
@@ -377,6 +382,7 @@ class TestBackupExtended:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetMigrationHistoryExtended:
     """Additional get_migration_history tests."""
 
@@ -394,6 +400,7 @@ class TestGetMigrationHistoryExtended:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestListBackupsExtended:
     """Additional list_backups tests."""
 
@@ -414,6 +421,7 @@ class TestListBackupsExtended:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMigrateV1ToV2:
     """Tests for the _migrate_v1_to_v2 placeholder method."""
 
@@ -428,6 +436,7 @@ class TestMigrateV1ToV2:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRegisterMigrationExtended:
     """Additional register_migration tests."""
 

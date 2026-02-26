@@ -4,6 +4,7 @@ Covers reclamation calculation, text/JSON report generation, CSV/JSON export.
 """
 
 from __future__ import annotations
+import pytest
 
 import csv
 import json
@@ -15,6 +16,7 @@ from pathlib import Path
 from file_organizer.services.deduplication.reporter import StorageReporter
 
 
+@pytest.mark.unit
 class TestStorageReporter(unittest.TestCase):
     """Test cases for StorageReporter."""
 

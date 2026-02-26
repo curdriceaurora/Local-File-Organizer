@@ -50,6 +50,7 @@ def queue() -> EventQueue:
     return EventQueue()
 
 
+@pytest.mark.unit
 class TestFileEventHandlerFiltering:
     """Tests for event filtering by pattern and file type."""
 
@@ -124,6 +125,7 @@ class TestFileEventHandlerFiltering:
         assert queued[0].is_directory is True
 
 
+@pytest.mark.unit
 class TestFileEventHandlerDebounce:
     """Tests for debouncing behavior."""
 
@@ -195,6 +197,7 @@ class TestFileEventHandlerDebounce:
         assert queue.size == 2
 
 
+@pytest.mark.unit
 class TestFileEventHandlerEventTypes:
     """Tests for correct handling of different event types."""
 
@@ -244,6 +247,7 @@ class TestFileEventHandlerEventTypes:
         assert events[0].event_type == EventType.DELETED
 
 
+@pytest.mark.unit
 class TestFileEventHandlerCallbacks:
     """Tests for callback registration and dispatch."""
 
@@ -336,6 +340,7 @@ class TestFileEventHandlerCallbacks:
         assert handler.pending_paths == 0
 
 
+@pytest.mark.unit
 class TestFileEventHandlerMovedEdgeCases:
     """Tests for edge cases in on_moved handling."""
 
@@ -387,6 +392,7 @@ class TestFileEventHandlerMovedEdgeCases:
         assert events[0].dest_path == Path("/tmp/newdir")
 
 
+@pytest.mark.unit
 class TestFileEventHandlerDebounceThreadSafety:
     """Tests for debounce behavior under concurrent access."""
 
@@ -434,6 +440,7 @@ class TestFileEventHandlerDebounceThreadSafety:
         assert queue.size == 10
 
 
+@pytest.mark.unit
 class TestFileEventHandlerEventTimestamps:
     """Tests for event timestamp correctness."""
 
@@ -461,6 +468,7 @@ class TestFileEventHandlerEventTimestamps:
         assert isinstance(events[0].path, Path)
 
 
+@pytest.mark.unit
 class TestFileEventHandlerCallbackEdgeCases:
     """Tests for callback dispatch edge cases."""
 

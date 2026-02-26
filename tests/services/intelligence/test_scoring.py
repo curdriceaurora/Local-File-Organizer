@@ -15,6 +15,7 @@ from file_organizer.services.intelligence.scoring import (
 )
 
 
+@pytest.mark.unit
 class TestScoredPattern:
     """Tests for ScoredPattern dataclass."""
 
@@ -48,6 +49,7 @@ class TestScoredPattern:
         assert pattern.metadata["source"] == "test"
 
 
+@pytest.mark.unit
 class TestPatternScorer:
     """Tests for PatternScorer class."""
 
@@ -250,6 +252,7 @@ class TestPatternScorer:
         assert upper == 0.7
 
 
+@pytest.mark.unit
 class TestScoreAnalyzer:
     """Tests for ScoreAnalyzer class."""
 
@@ -368,6 +371,7 @@ class TestScoreAnalyzer:
         assert comparison["valid"] is False
 
 
+@pytest.mark.unit
 class TestScoringIntegration:
     """Integration tests for scoring module."""
 

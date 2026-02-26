@@ -75,6 +75,7 @@ def _make_mock_info(language="en", language_probability=0.95, duration=10.0):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelSize:
     """Tests for ModelSize enum."""
 
@@ -87,6 +88,7 @@ class TestModelSize:
         assert ModelSize.LARGE_V3 == "large-v3"
 
 
+@pytest.mark.unit
 class TestComputeType:
     """Tests for ComputeType enum."""
 
@@ -102,6 +104,7 @@ class TestComputeType:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTranscriptionOptions:
     """Tests for TranscriptionOptions dataclass."""
 
@@ -129,6 +132,7 @@ class TestTranscriptionOptions:
         assert opts.vad_filter is False
 
 
+@pytest.mark.unit
 class TestWordTiming:
     """Tests for WordTiming dataclass."""
 
@@ -140,6 +144,7 @@ class TestWordTiming:
         assert wt.probability == 0.95
 
 
+@pytest.mark.unit
 class TestSegmentDataclass:
     """Tests for Segment dataclass."""
 
@@ -155,6 +160,7 @@ class TestSegmentDataclass:
         assert len(seg.words) == 1
 
 
+@pytest.mark.unit
 class TestTranscriptionResult:
     """Tests for TranscriptionResult dataclass."""
 
@@ -178,6 +184,7 @@ class TestTranscriptionResult:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAudioTranscriberInit:
     """Tests for AudioTranscriber initialization."""
 
@@ -209,6 +216,7 @@ class TestAudioTranscriberInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDetectDevice:
     """Tests for _detect_device."""
 
@@ -267,6 +275,7 @@ class TestDetectDevice:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLoadModel:
     """Tests for _load_model."""
 
@@ -330,6 +339,7 @@ class TestLoadModel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTranscribe:
     """Tests for transcribe method."""
 
@@ -462,6 +472,7 @@ class TestTranscribe:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTranscribeBatch:
     """Tests for transcribe_batch."""
 
@@ -538,6 +549,7 @@ class TestTranscribeBatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUnloadModel:
     """Tests for unload_model."""
 

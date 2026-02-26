@@ -10,6 +10,7 @@ import time
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
+import pytest
 
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor, _execute_with_timing
@@ -55,6 +56,7 @@ def _fail_then_succeed_factory() -> tuple[MagicMock, object]:
     return MagicMock(wraps=fn), call_counts
 
 
+@pytest.mark.unit
 class TestExecuteWithTiming(unittest.TestCase):
     """Test the _execute_with_timing helper function."""
 
@@ -80,6 +82,7 @@ class TestExecuteWithTiming(unittest.TestCase):
         self.assertGreater(result.duration_ms, 10.0)
 
 
+@pytest.mark.unit
 class TestParallelProcessorInit(unittest.TestCase):
     """Test ParallelProcessor initialization."""
 
@@ -105,6 +108,7 @@ class TestParallelProcessorInit(unittest.TestCase):
         self.assertEqual(processor.config.chunk_size, 5)
 
 
+@pytest.mark.unit
 class TestProcessBatch(unittest.TestCase):
     """Test ParallelProcessor.process_batch."""
 
@@ -209,6 +213,7 @@ class TestProcessBatch(unittest.TestCase):
         self.assertEqual(result.succeeded, 3)
 
 
+@pytest.mark.unit
 class TestProcessBatchRetry(unittest.TestCase):
     """Test retry behavior in process_batch."""
 
@@ -260,6 +265,7 @@ class TestProcessBatchRetry(unittest.TestCase):
         self.assertEqual(result.failed, 1)
 
 
+@pytest.mark.unit
 class TestProgressCallback(unittest.TestCase):
     """Test progress callback invocation."""
 
@@ -316,6 +322,7 @@ class TestProgressCallback(unittest.TestCase):
         self.assertEqual(sorted(completed_values), [1, 2, 3])
 
 
+@pytest.mark.unit
 class TestProcessBatchIter(unittest.TestCase):
     """Test ParallelProcessor.process_batch_iter."""
 
@@ -366,6 +373,7 @@ class TestProcessBatchIter(unittest.TestCase):
         self.assertEqual(callback.call_count, 2)
 
 
+@pytest.mark.unit
 class TestShutdown(unittest.TestCase):
     """Test ParallelProcessor.shutdown."""
 

@@ -43,6 +43,7 @@ def get_triggers(workflow: dict[str, Any]) -> dict[str, Any]:
     return triggers
 
 
+@pytest.mark.unit
 class TestWorkflowDirectory:
     """Tests for the workflows directory structure."""
 
@@ -68,6 +69,7 @@ class TestWorkflowDirectory:
                 pytest.fail(f"{workflow_file.name} is not valid YAML: {e}")
 
 
+@pytest.mark.unit
 class TestCIWorkflow:
     """Tests for the CI workflow (ci.yml)."""
 
@@ -189,6 +191,7 @@ class TestCIWorkflow:
         assert has_test_step, "Test job should run pytest which includes documentation tests"
 
 
+@pytest.mark.unit
 class TestCIFullWorkflow:
     """Tests for the CI Full Matrix workflow (ci-full.yml)."""
 
@@ -371,6 +374,7 @@ class TestCIFullWorkflow:
         )
 
 
+@pytest.mark.unit
 class TestReleaseWorkflow:
     """Tests for the Release workflow (release.yml)."""
 
@@ -411,6 +415,7 @@ class TestReleaseWorkflow:
         )
 
 
+@pytest.mark.unit
 class TestDockerWorkflow:
     """Tests for the Docker workflow (docker.yml)."""
 
@@ -457,6 +462,7 @@ class TestDockerWorkflow:
         assert "cache" in workflow_text.lower(), "Docker workflow should use build caching"
 
 
+@pytest.mark.unit
 class TestSecurityWorkflow:
     """Tests for the Security workflow (security.yml)."""
 
@@ -493,6 +499,7 @@ class TestSecurityWorkflow:
         assert "pull_request" in triggers, "Security workflow should trigger on pull requests"
 
 
+@pytest.mark.unit
 class TestDependabotConfig:
     """Tests for the Dependabot configuration."""
 

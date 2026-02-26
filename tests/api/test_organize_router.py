@@ -1,6 +1,7 @@
 """Tests for the organize API router."""
 
 from __future__ import annotations
+import pytest
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -55,6 +56,7 @@ def _make_result(**overrides) -> OrganizationResult:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScanDirectory:
     """Tests for POST /api/v1/organize/scan."""
 
@@ -168,6 +170,7 @@ class TestScanDirectory:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPreviewOrganization:
     """Tests for POST /api/v1/organize/preview."""
 
@@ -238,6 +241,7 @@ class TestPreviewOrganization:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExecuteOrganization:
     """Tests for POST /api/v1/organize/execute."""
 
@@ -373,6 +377,7 @@ class TestExecuteOrganization:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetJobStatus:
     """Tests for GET /api/v1/organize/status/{job_id}."""
 
@@ -458,6 +463,7 @@ class TestGetJobStatus:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSimpleOrganize:
     """Tests for POST /api/v1/organize."""
 
@@ -570,6 +576,7 @@ class TestSimpleOrganize:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRunOrganizeJob:
     """Tests for _run_organize_job background function."""
 
@@ -625,6 +632,7 @@ class TestRunOrganizeJob:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScanDirectoryHelper:
     """Tests for _scan_directory helper function."""
 
@@ -653,6 +661,7 @@ class TestScanDirectoryHelper:
         assert len(result) == 1
 
 
+@pytest.mark.unit
 class TestCountsByType:
     """Tests for _counts_by_type helper function."""
 
@@ -677,6 +686,7 @@ class TestCountsByType:
         assert counts["other"] == 1
 
 
+@pytest.mark.unit
 class TestResultToResponse:
     """Tests for _result_to_response helper function."""
 

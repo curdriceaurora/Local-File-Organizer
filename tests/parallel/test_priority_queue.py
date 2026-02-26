@@ -6,6 +6,7 @@ peek, reorder, and concurrent access patterns.
 """
 
 from __future__ import annotations
+import pytest
 
 import threading
 import time
@@ -15,6 +16,7 @@ from pathlib import Path
 from file_organizer.parallel.priority_queue import PriorityQueue, QueueItem
 
 
+@pytest.mark.unit
 class TestQueueItem(unittest.TestCase):
     """Test cases for QueueItem dataclass."""
 
@@ -48,6 +50,7 @@ class TestQueueItem(unittest.TestCase):
         self.assertNotIn("key", item2.metadata)
 
 
+@pytest.mark.unit
 class TestPriorityQueue(unittest.TestCase):
     """Test cases for PriorityQueue."""
 

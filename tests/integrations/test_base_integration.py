@@ -18,6 +18,7 @@ from file_organizer.integrations.base import (
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIntegrationType:
     """Test suite for IntegrationType enum."""
 
@@ -40,6 +41,7 @@ class TestIntegrationType:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIntegrationConfig:
     """Test suite for IntegrationConfig dataclass."""
 
@@ -111,6 +113,7 @@ class TestIntegrationConfig:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIntegrationStatus:
     """Test suite for IntegrationStatus dataclass."""
 
@@ -181,6 +184,7 @@ class _StubIntegration(Integration):
         )
 
 
+@pytest.mark.unit
 class TestIntegrationABC:
     """Test suite for Integration abstract base class."""
 

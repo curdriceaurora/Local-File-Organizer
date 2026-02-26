@@ -1,6 +1,7 @@
 """Tests for daemon CLI commands."""
 
 from __future__ import annotations
+import pytest
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -12,6 +13,7 @@ from file_organizer.cli.daemon import daemon_app
 runner = CliRunner()
 
 
+@pytest.mark.unit
 class TestDaemonStart:
     """Tests for 'daemon start' command."""
 
@@ -59,6 +61,7 @@ class TestDaemonStart:
         assert "Dry-run" in result.output
 
 
+@pytest.mark.unit
 class TestDaemonStop:
     """Tests for 'daemon stop' command."""
 
@@ -86,6 +89,7 @@ class TestDaemonStop:
         assert "stopped" in result.output.lower()
 
 
+@pytest.mark.unit
 class TestDaemonStatus:
     """Tests for 'daemon status' command."""
 
@@ -115,6 +119,7 @@ class TestDaemonStatus:
         assert "Running" in result.output
 
 
+@pytest.mark.unit
 class TestDaemonProcess:
     """Tests for 'daemon process' command."""
 
@@ -155,6 +160,7 @@ class TestDaemonProcess:
         assert "Dry-run" in result.output
 
 
+@pytest.mark.unit
 class TestDaemonHelp:
     """Verify help text renders."""
 

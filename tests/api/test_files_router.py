@@ -1,6 +1,7 @@
 """Tests for the files API router."""
 
 from __future__ import annotations
+import pytest
 
 import os
 from pathlib import Path
@@ -40,6 +41,7 @@ def _build_app(tmp_path: Path) -> tuple[FastAPI, TestClient, ApiSettings]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestListFiles:
     """Tests for GET /api/v1/files."""
 
@@ -267,6 +269,7 @@ class TestListFiles:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetFileInfo:
     """Tests for GET /api/v1/files/info."""
 
@@ -303,6 +306,7 @@ class TestGetFileInfo:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReadFileContent:
     """Tests for GET /api/v1/files/content."""
 
@@ -377,6 +381,7 @@ class TestReadFileContent:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetFileById:
     """Tests for GET /api/v1/files/{file_id}."""
 
@@ -418,6 +423,7 @@ class TestGetFileById:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMoveFile:
     """Tests for POST /api/v1/files/move."""
 
@@ -557,6 +563,7 @@ class TestMoveFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDeleteFile:
     """Tests for DELETE /api/v1/files."""
 
@@ -637,6 +644,7 @@ class TestDeleteFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDeleteFileById:
     """Tests for DELETE /api/v1/files/{file_id}."""
 
@@ -689,6 +697,7 @@ class TestDeleteFileById:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUploadFiles:
     """Tests for POST /api/v1/files/upload."""
 
@@ -732,6 +741,7 @@ class TestUploadFiles:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestParseFileTypes:
     """Tests for _parse_file_types helper function."""
 
@@ -783,6 +793,7 @@ class TestParseFileTypes:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTrashTarget:
     """Tests for _trash_target helper function."""
 
@@ -814,6 +825,7 @@ class TestTrashTarget:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCollectFiles:
     """Tests for _collect_files helper function."""
 

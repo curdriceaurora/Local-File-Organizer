@@ -69,6 +69,7 @@ def _org_result_data(**overrides):
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestHealthResponse:
     def test_valid_construction(self):
         resp = HealthResponse(
@@ -103,6 +104,7 @@ class TestHealthResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestFileInfo:
     def test_valid_construction(self):
         fi = FileInfo(**_file_info_data())
@@ -142,6 +144,7 @@ class TestFileInfo:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestFileListResponse:
     def test_valid_construction(self):
         resp = FileListResponse(
@@ -180,6 +183,7 @@ class TestFileListResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestFileContentResponse:
     def test_valid_construction(self):
         resp = FileContentResponse(
@@ -214,6 +218,7 @@ class TestFileContentResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestMoveFileResponse:
     def test_valid_construction(self):
         resp = MoveFileResponse(
@@ -240,6 +245,7 @@ class TestMoveFileResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestDeleteFileResponse:
     def test_valid_construction(self):
         resp = DeleteFileResponse(path="/x", deleted=True, dry_run=False)
@@ -265,6 +271,7 @@ class TestDeleteFileResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestScanResponse:
     def test_valid_construction(self):
         resp = ScanResponse(
@@ -286,6 +293,7 @@ class TestScanResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestOrganizationError:
     def test_valid_construction(self):
         err = OrganizationError(file="bad.bin", error="unsupported format")
@@ -302,6 +310,7 @@ class TestOrganizationError:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestOrganizationResultResponse:
     def test_valid_construction(self):
         resp = OrganizationResultResponse(**_org_result_data())
@@ -328,6 +337,7 @@ class TestOrganizationResultResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestOrganizeExecuteResponse:
     def test_minimal(self):
         resp = OrganizeExecuteResponse(status="completed")
@@ -359,6 +369,7 @@ class TestOrganizeExecuteResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestJobStatusResponse:
     def test_valid_construction(self):
         resp = JobStatusResponse(
@@ -392,6 +403,7 @@ class TestJobStatusResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestTokenResponse:
     def test_valid_construction(self):
         resp = TokenResponse(
@@ -418,6 +430,7 @@ class TestTokenResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestUserResponse:
     def test_valid_construction(self):
         resp = UserResponse(
@@ -458,6 +471,7 @@ class TestUserResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestSystemStatusResponse:
     def test_valid_construction(self):
         resp = SystemStatusResponse(
@@ -481,6 +495,7 @@ class TestSystemStatusResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestConfigResponse:
     def test_valid_construction(self):
         resp = ConfigResponse(
@@ -503,6 +518,7 @@ class TestConfigResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestStorageStatsResponse:
     def test_valid_construction(self):
         fi_data = _file_info_data(size=999_999)
@@ -543,6 +559,7 @@ class TestStorageStatsResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestDedupeScanResponse:
     def test_valid_construction(self):
         resp = DedupeScanResponse(
@@ -564,6 +581,7 @@ class TestDedupeScanResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestDedupePreviewResponse:
     def test_valid_construction(self):
         resp = DedupePreviewResponse(
@@ -581,6 +599,7 @@ class TestDedupePreviewResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestDedupeExecuteResponse:
     def test_valid_construction(self):
         resp = DedupeExecuteResponse(
@@ -607,6 +626,7 @@ class TestDedupeExecuteResponse:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestSerializationRoundtrips:
     """Ensure every model can roundtrip through model_dump / model_validate."""
 

@@ -39,6 +39,7 @@ def output_dir(tmp_path: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOrganizationResult:
     """Tests for the OrganizationResult dataclass."""
 
@@ -69,6 +70,7 @@ class TestOrganizationResult:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFileOrganizerInit:
     """Tests for FileOrganizer construction."""
 
@@ -98,6 +100,7 @@ class TestFileOrganizerInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDryRunOrganize:
     """Test organise in dry-run mode with mocked models."""
 
@@ -121,6 +124,7 @@ class TestDryRunOrganize:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOrganizerErrors:
     """Test error resilience."""
 

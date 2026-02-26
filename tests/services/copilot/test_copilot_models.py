@@ -23,6 +23,7 @@ from file_organizer.services.copilot.models import (
 # MessageRole enum
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestMessageRole:
     """Tests for the MessageRole enum."""
 
@@ -50,6 +51,7 @@ class TestMessageRole:
 # IntentType enum
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestIntentType:
     """Tests for the IntentType enum."""
 
@@ -73,6 +75,7 @@ class TestIntentType:
 # CopilotMessage
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestCopilotMessage:
     """Tests for CopilotMessage dataclass."""
 
@@ -124,6 +127,7 @@ class TestCopilotMessage:
 # Intent
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestIntent:
     """Tests for Intent dataclass."""
 
@@ -169,6 +173,7 @@ class TestIntent:
 # ExecutionResult
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestExecutionResult:
     """Tests for ExecutionResult dataclass."""
 
@@ -201,6 +206,7 @@ class TestExecutionResult:
 # CopilotSession
 # ------------------------------------------------------------------ #
 
+@pytest.mark.unit
 class TestCopilotSession:
     """Tests for CopilotSession dataclass."""
 

@@ -23,6 +23,7 @@ from file_organizer.methodologies.para.migration_manager import (
 )
 
 
+@pytest.mark.unit
 class TestPARAMigrationManager:
     """Test PARA migration functionality."""
 
@@ -258,6 +259,7 @@ class TestPARAMigrationManager:
             assert migration_file.source_path.name in preview
 
 
+@pytest.mark.unit
 class TestMigrationFile:
     """Test MigrationFile dataclass."""
 
@@ -277,6 +279,7 @@ class TestMigrationFile:
         assert len(migration_file.reasoning) == 2
 
 
+@pytest.mark.unit
 class TestMigrationPlan:
     """Test MigrationPlan dataclass."""
 
@@ -320,6 +323,7 @@ class TestMigrationPlan:
         assert plan.estimated_size == 1024
 
 
+@pytest.mark.unit
 class TestMigrationReport:
     """Test MigrationReport dataclass."""
 

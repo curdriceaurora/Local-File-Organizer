@@ -53,6 +53,7 @@ pytestmark = [pytest.mark.unit]
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestImageMetadata:
     """Tests for ImageMetadata container."""
 
@@ -108,6 +109,7 @@ class TestImageMetadata:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConstants:
     """Tests for module-level constants."""
 
@@ -126,6 +128,7 @@ class TestConstants:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIsSupportedFormat:
     """Tests for is_supported_format."""
 
@@ -143,6 +146,7 @@ class TestIsSupportedFormat:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetFormatQualityScore:
     """Tests for get_format_quality_score."""
 
@@ -160,6 +164,7 @@ class TestGetFormatQualityScore:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFormatFileSize:
     """Tests for format_file_size."""
 
@@ -187,6 +192,7 @@ class TestFormatFileSize:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetImageMetadata:
     """Tests for get_image_metadata."""
 
@@ -243,6 +249,7 @@ class TestGetImageMetadata:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetImageDimensions:
     """Tests for get_image_dimensions."""
 
@@ -278,6 +285,7 @@ class TestGetImageDimensions:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetImageFormat:
     """Tests for get_image_format."""
 
@@ -313,6 +321,7 @@ class TestGetImageFormat:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestValidateImageFile:
     """Tests for validate_image_file."""
 
@@ -374,6 +383,7 @@ class TestValidateImageFile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFilterValidImages:
     """Tests for filter_valid_images."""
 
@@ -398,6 +408,7 @@ class TestFilterValidImages:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFindImagesInDirectory:
     """Tests for find_images_in_directory."""
 
@@ -463,6 +474,7 @@ class TestFindImagesInDirectory:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGroupImagesByFormat:
     """Tests for group_images_by_format."""
 
@@ -482,6 +494,7 @@ class TestGroupImagesByFormat:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCompareImageQuality:
     """Tests for compare_image_quality."""
 
@@ -569,6 +582,7 @@ class TestCompareImageQuality:
         assert result == 0
 
 
+@pytest.mark.unit
 class TestGetBestQualityImage:
     """Tests for get_best_quality_image."""
 
@@ -588,6 +602,7 @@ class TestGetBestQualityImage:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetImageInfoString:
     """Tests for get_image_info_string."""
 

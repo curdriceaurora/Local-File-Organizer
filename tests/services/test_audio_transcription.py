@@ -7,6 +7,7 @@ import pytest
 # Phase 3 placeholder tests for audio transcription
 
 
+@pytest.mark.unit
 class TestAudioTranscriptionPlaceholder:
     """Test audio transcription Phase 3 functionality."""
 

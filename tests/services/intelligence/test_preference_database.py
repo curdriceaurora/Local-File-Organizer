@@ -29,6 +29,7 @@ def db_manager(temp_db):
     manager.close()
 
 
+@pytest.mark.unit
 class TestDatabaseInitialization:
     """Test database initialization and schema creation."""
 
@@ -89,6 +90,7 @@ class TestDatabaseInitialization:
         db_manager.initialize()
 
 
+@pytest.mark.unit
 class TestPreferenceCRUD:
     """Test CRUD operations for preferences."""
 
@@ -212,6 +214,7 @@ class TestPreferenceCRUD:
         assert pref is None
 
 
+@pytest.mark.unit
 class TestCorrectionTracking:
     """Test correction tracking functionality."""
 
@@ -308,6 +311,7 @@ class TestCorrectionTracking:
         assert corrections[2]["source_path"] == "/src1.txt"
 
 
+@pytest.mark.unit
 class TestStatistics:
     """Test statistics functionality."""
 
@@ -337,6 +341,7 @@ class TestStatistics:
         assert stats["by_type"]["naming_pattern"]["count"] == 1
 
 
+@pytest.mark.unit
 class TestConcurrency:
     """Test thread-safety of database operations."""
 
@@ -366,6 +371,7 @@ class TestConcurrency:
         assert len(prefs) == 30  # 3 threads * 10 prefs each
 
 
+@pytest.mark.unit
 class TestContextManager:
     """Test context manager functionality."""
 

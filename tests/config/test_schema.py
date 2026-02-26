@@ -1,10 +1,12 @@
 """Tests for configuration schema dataclasses."""
 
 from __future__ import annotations
+import pytest
 
 from file_organizer.config.schema import AppConfig, ModelPreset, UpdateSettings
 
 
+@pytest.mark.unit
 class TestModelPreset:
     """Test suite for ModelPreset dataclass."""
 
@@ -43,6 +45,7 @@ class TestModelPreset:
         assert preset.device == "auto"
 
 
+@pytest.mark.unit
 class TestUpdateSettings:
     """Test suite for UpdateSettings dataclass."""
 
@@ -68,6 +71,7 @@ class TestUpdateSettings:
         assert settings.repo == "myuser/myrepo"
 
 
+@pytest.mark.unit
 class TestAppConfig:
     """Test suite for AppConfig dataclass."""
 

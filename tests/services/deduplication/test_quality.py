@@ -20,6 +20,7 @@ from file_organizer.services.deduplication.quality import (
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestImageFormat:
     """Test the ImageFormat IntEnum ranking."""
 
@@ -43,6 +44,7 @@ class TestImageFormat:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestQualityMetrics:
     """Test QualityMetrics dataclass and its to_dict method."""
 
@@ -97,6 +99,7 @@ class TestQualityMetrics:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestImageQualityAnalyzerInit:
     """Test analyzer initialization and weight validation."""
 
@@ -150,6 +153,7 @@ class TestImageQualityAnalyzerInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetFormatFromExtension:
     """Test format detection from file extensions."""
 
@@ -186,6 +190,7 @@ class TestGetFormatFromExtension:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractMetricsBasic:
     """Test the fallback metrics extraction without PIL."""
 
@@ -264,6 +269,7 @@ class TestExtractMetricsBasic:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestExtractMetricsWithPil:
     """Test PIL-based metrics extraction using mocked PIL Image."""
 
@@ -457,6 +463,7 @@ class TestExtractMetricsWithPil:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetQualityMetrics:
     """Test the public quality metrics entry point."""
 
@@ -506,6 +513,7 @@ class TestGetQualityMetrics:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestScoring:
     """Test quality scoring logic."""
 
@@ -602,6 +610,7 @@ class TestScoring:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCompareQuality:
     """Test pairwise quality comparison."""
 
@@ -656,6 +665,7 @@ class TestCompareQuality:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetBestQuality:
     """Test selecting the best quality image from a list."""
 
@@ -715,6 +725,7 @@ class TestGetBestQuality:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIsLikelyCropped:
     """Test crop detection heuristic."""
 
@@ -867,6 +878,7 @@ class TestIsLikelyCropped:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetRankedImages:
     """Test image ranking functionality."""
 

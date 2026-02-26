@@ -1,6 +1,7 @@
 """Tests for the web profile UI routes."""
 
 from __future__ import annotations
+import pytest
 
 import html
 from pathlib import Path
@@ -67,6 +68,7 @@ def _login(client: TestClient, username: str = "alice", password: str = "P@sswor
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProfilePage:
     """Tests for the main /ui/profile page."""
 
@@ -102,6 +104,7 @@ class TestProfilePage:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLoginForm:
     """Tests for login form rendering and submission."""
 
@@ -142,6 +145,7 @@ class TestLoginForm:
         assert "fo_session" in response.cookies
 
 
+@pytest.mark.unit
 class TestRegisterForm:
     """Tests for registration form rendering and submission."""
 
@@ -205,6 +209,7 @@ class TestRegisterForm:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFullAuthFlow:
     """Test the complete registration, login, profile view cycle."""
 
@@ -243,6 +248,7 @@ class TestFullAuthFlow:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProfileEdit:
     """Tests for profile editing."""
 
@@ -285,6 +291,7 @@ class TestProfileEdit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestLogout:
     """Tests for logout."""
 
@@ -314,6 +321,7 @@ class TestLogout:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestApiKeys:
     """Tests for API key generation and revocation."""
 
@@ -381,6 +389,7 @@ class TestApiKeys:
         assert "No active API keys" in revoke.text
 
 
+@pytest.mark.unit
 class TestPasswordResetFlow:
     """Tests for forgot/reset password routes."""
 
@@ -425,6 +434,7 @@ class TestPasswordResetFlow:
         assert login.status_code == 303
 
 
+@pytest.mark.unit
 class TestWorkspaceAndTeamUi:
     """Tests for workspace/team/sharing partials."""
 
@@ -509,6 +519,7 @@ class TestWorkspaceAndTeamUi:
         assert "/tmp/shared" not in remove.text
 
 
+@pytest.mark.unit
 class TestAccountSettingsAndFeeds:
     """Tests for account settings, activity log, and notifications."""
 

@@ -63,6 +63,7 @@ def _create_profile_with_data(pm, name, desc, prefs=None, patterns=None, confide
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetCurrentTimestamp:
     """Tests for _get_current_timestamp helper method."""
 
@@ -78,6 +79,7 @@ class TestGetCurrentTimestamp:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestResolveConflicts:
     """Tests for resolve_conflicts method."""
 
@@ -155,6 +157,7 @@ class TestResolveConflicts:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMergeConfidenceData:
     """Tests for _merge_confidence_data with different strategies."""
 
@@ -215,6 +218,7 @@ class TestMergeConfidenceData:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMergePreferences:
     """Tests for _merge_preferences including directory-specific merging."""
 
@@ -268,6 +272,7 @@ class TestMergePreferences:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMergeLearnedPatterns:
     """Tests for _merge_learned_patterns."""
 
@@ -310,6 +315,7 @@ class TestMergeLearnedPatterns:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPreserveHighConfidence:
     """Tests for preserve_high_confidence method."""
 
@@ -420,6 +426,7 @@ class TestPreserveHighConfidence:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCreateMergedProfile:
     """Tests for create_merged_profile method."""
 
@@ -474,6 +481,7 @@ class TestCreateMergedProfile:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMergeProfilesExtended:
     """Additional tests for merge_profiles method."""
 
@@ -535,6 +543,7 @@ class TestMergeProfilesExtended:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetMergeConflictsExtended:
     """Additional tests for get_merge_conflicts."""
 
@@ -587,6 +596,7 @@ class TestGetMergeConflictsExtended:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMergeStrategy:
     """Tests for MergeStrategy enum values."""
 

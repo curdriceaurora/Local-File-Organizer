@@ -13,6 +13,7 @@ from file_organizer.optimization.memory_limiter import (
 )
 
 
+@pytest.mark.unit
 class TestLimitAction:
     """Tests for the LimitAction enum."""
 
@@ -33,6 +34,7 @@ class TestLimitAction:
         assert LimitAction.RAISE.value == "raise"
 
 
+@pytest.mark.unit
 class TestMemoryLimiterInit:
     """Tests for MemoryLimiter initialization."""
 
@@ -67,6 +69,7 @@ class TestMemoryLimiterInit:
         assert limiter.violation_count == 0
 
 
+@pytest.mark.unit
 class TestMemoryLimiterCheck:
     """Tests for the check() method."""
 
@@ -89,6 +92,7 @@ class TestMemoryLimiterCheck:
         assert limiter.check() is False
 
 
+@pytest.mark.unit
 class TestMemoryLimiterEnforce:
     """Tests for the enforce() method with different actions."""
 
@@ -149,6 +153,7 @@ class TestMemoryLimiterEnforce:
         assert limiter.violation_count == 3
 
 
+@pytest.mark.unit
 class TestMemoryLimiterGuarded:
     """Tests for the guarded() context manager."""
 
@@ -186,6 +191,7 @@ class TestMemoryLimiterGuarded:
                     pass  # Memory grows during execution
 
 
+@pytest.mark.unit
 class TestMemoryLimiterGetCurrentMemory:
     """Tests for get_current_memory_mb method."""
 

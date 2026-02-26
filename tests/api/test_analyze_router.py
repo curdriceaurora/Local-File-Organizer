@@ -1,6 +1,7 @@
 """Tests for the analyze API router."""
 
 from __future__ import annotations
+import pytest
 
 from unittest.mock import MagicMock, patch
 
@@ -39,6 +40,7 @@ def _build_app() -> tuple[FastAPI, TestClient]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAnalyze:
     """Tests for POST /api/v1/analyze."""
 
@@ -330,6 +332,7 @@ class TestAnalyze:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGetTextModel:
     """Tests for the get_text_model singleton."""
 

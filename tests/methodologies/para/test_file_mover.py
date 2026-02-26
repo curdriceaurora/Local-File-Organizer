@@ -80,6 +80,7 @@ def mover(
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestMoveSuggestion:
     """Tests for MoveSuggestion dataclass."""
 
@@ -109,6 +110,7 @@ class TestMoveSuggestion:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestSuggestMove:
     """Tests for the suggest_move method."""
 
@@ -177,6 +179,7 @@ class TestSuggestMove:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestMoveFile:
     """Tests for the move_file method."""
 
@@ -305,6 +308,7 @@ class TestMoveFile:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestBulkOrganize:
     """Tests for the bulk_organize method."""
 
@@ -398,6 +402,7 @@ class TestBulkOrganize:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestSuggestArchive:
     """Tests for the suggest_archive method."""
 

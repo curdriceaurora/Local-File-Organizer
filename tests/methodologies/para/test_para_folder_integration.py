@@ -22,6 +22,7 @@ from file_organizer.methodologies.para.folder_mapper import (
 from file_organizer.methodologies.para.migration_manager import PARAMigrationManager
 
 
+@pytest.mark.unit
 class TestPARAFolderIntegration:
     """Test complete PARA folder generation workflow."""
 

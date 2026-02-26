@@ -1,6 +1,7 @@
 """Tests for API key helpers."""
 
 from __future__ import annotations
+import pytest
 
 import stat
 
@@ -15,6 +16,7 @@ from file_organizer.api.api_keys import (
 )
 
 
+@pytest.mark.unit
 class TestGenerateApiKey:
     """Tests for generate_api_key."""
 
@@ -40,6 +42,7 @@ class TestGenerateApiKey:
         assert len(keys) == 10
 
 
+@pytest.mark.unit
 class TestHashApiKey:
     """Tests for hash_api_key."""
 
@@ -57,6 +60,7 @@ class TestHashApiKey:
         assert h1 != h2
 
 
+@pytest.mark.unit
 class TestMatchApiKeyHash:
     """Tests for match_api_key_hash."""
 
@@ -92,6 +96,7 @@ class TestMatchApiKeyHash:
         assert result == h2
 
 
+@pytest.mark.unit
 class TestVerifyApiKey:
     """Tests for verify_api_key."""
 
@@ -106,6 +111,7 @@ class TestVerifyApiKey:
         assert verify_api_key(key, [other_hash]) is False
 
 
+@pytest.mark.unit
 class TestApiKeyIdentifier:
     """Tests for api_key_identifier."""
 
@@ -138,6 +144,7 @@ class TestApiKeyIdentifier:
         assert ident == hashed[-12:]
 
 
+@pytest.mark.unit
 class TestWriteKey:
     """Tests for _write_key."""
 
@@ -154,6 +161,7 @@ class TestWriteKey:
         assert stat.S_IMODE(mode) == 0o600
 
 
+@pytest.mark.unit
 class TestMain:
     """Tests for _main CLI entrypoint."""
 

@@ -82,6 +82,7 @@ _ensure_dedup_modules_loaded()
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestDedupeConfig:
     """Tests for the DedupeConfig dataclass."""
 
@@ -130,6 +131,7 @@ class TestDedupeConfig:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestFormatSize:
     """Tests for format_size helper."""
 
@@ -156,6 +158,7 @@ class TestFormatSize:
         assert format_size(0) == "0.0 B"
 
 
+@pytest.mark.unit
 class TestFormatDatetime:
     """Tests for format_datetime helper."""
 
@@ -169,6 +172,7 @@ class TestFormatDatetime:
         assert isinstance(result, str)
 
 
+@pytest.mark.unit
 class TestSelectFilesToKeep:
     """Tests for select_files_to_keep."""
 
@@ -207,6 +211,7 @@ class TestSelectFilesToKeep:
             assert f.get("keep", False) is False
 
 
+@pytest.mark.unit
 class TestGetUserSelection:
     """Tests for get_user_selection."""
 
@@ -233,6 +238,7 @@ class TestGetUserSelection:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestDedupeCommand:
     """Tests for the main dedupe_command function."""
 
@@ -419,6 +425,7 @@ class TestDedupeCommand:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestDisplaySummary:
     """Tests for display_summary output."""
 
@@ -448,6 +455,7 @@ class TestDisplaySummary:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestDisplayDuplicateGroup:
     """Tests for display_duplicate_group output."""
 
@@ -483,6 +491,7 @@ class TestDisplayDuplicateGroup:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestGetUserSelectionInteractive:
     """Tests for get_user_selection with manual strategy (interactive prompts)."""
 
@@ -550,6 +559,7 @@ class TestGetUserSelectionInteractive:
                 get_user_selection(files, "manual", batch=False)
 
 
+@pytest.mark.unit
 class TestGetUserSelectionConfirm:
     """Tests for get_user_selection with automatic strategy + non-batch (confirmation)."""
 
@@ -599,6 +609,7 @@ class TestGetUserSelectionConfirm:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestDedupeCommandDuplicates:
     """Tests for dedupe_command when duplicates ARE found."""
 
@@ -796,6 +807,7 @@ class TestDedupeCommandDuplicates:
 # ============================================================================
 
 
+@pytest.mark.unit
 class TestMain:
     """Tests for the main() entry point."""
 
