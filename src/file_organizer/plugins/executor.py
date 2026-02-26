@@ -30,9 +30,11 @@ Typical usage::
 from __future__ import annotations
 
 import json
+import queue
 import select
 import subprocess
 import sys
+import threading
 import types
 from pathlib import Path
 from typing import Any
@@ -322,22 +324,35 @@ class PluginExecutor:
 
         Raises:
             PluginError: If timeout occurs or stdout is not available.
-
-        Note:
-            On Windows, ``select.select()`` does not support pipes, so the
-            *timeout* parameter is ignored and the read blocks indefinitely.
         """
         if self._proc is None or self._proc.stdout is None:
             raise PluginError("Worker process is not running.")
 
-        # Use select to wait for data with a timeout
         if sys.platform == "win32":
-            # select() doesn't work with pipes on Windows; fall back to a
-            # blocking readline (the timeout parameter is ignored on Windows).
+            # select() doesn't work with pipes on Windows; use a daemon
+            # thread to perform the blocking read and a queue to enforce
+            # the timeout.
+            result_queue: queue.Queue[bytes | Exception] = queue.Queue()
+            stdout = self._proc.stdout
+
+            def _reader() -> None:
+                try:
+                    result_queue.put(stdout.readline())
+                except Exception as exc:
+                    result_queue.put(exc)
+
+            thread = threading.Thread(target=_reader, daemon=True)
+            thread.start()
             try:
-                return self._proc.stdout.readline()
-            except Exception as exc:
-                raise PluginError(f"Failed to read from worker: {exc}") from exc
+                value = result_queue.get(timeout=timeout)
+            except queue.Empty:
+                raise PluginError(
+                    f"Worker process did not respond within {timeout}s "
+                    "(possible hang or timeout)."
+                )
+            if isinstance(value, Exception):
+                raise PluginError(f"Failed to read from worker: {value}") from value
+            return value
         else:
             # On Unix, use select.select() for proper timeout handling
             ready, _, _ = select.select([self._proc.stdout], [], [], timeout)

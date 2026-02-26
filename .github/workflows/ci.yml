@@ -65,7 +65,7 @@ jobs:
           fi
       - name: Check docstring coverage
         if: matrix.python-version == '3.12'
-        run: pipx run interrogate -v src/ --fail-under 90
+        run: interrogate -v src/ --fail-under 90
       - name: Upload coverage
         if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4

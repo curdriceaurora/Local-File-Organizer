@@ -157,8 +157,8 @@ class TestTextProcessing:
         mock_lemmatizer_cls.return_value = mock_lemmatizer
 
         result = clean_text("hello world", lemmatize=True, remove_unwanted=False)
-        # Should continue even if lemmatization fails
-        assert "hello" in result or "world" in result
+        # Should continue even if lemmatization fails — both tokens retained
+        assert "hello" in result and "world" in result
         mock_logger.debug.assert_called()
 
     def test_sanitize_filename_basic(self) -> None:

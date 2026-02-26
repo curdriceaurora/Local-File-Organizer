@@ -82,10 +82,6 @@ dependencies = [
 
     # Logging
     "loguru>=0.7.0",
-
-    # Transitive dep of cryptography (used by python-jose); pinned to ensure
-    # a wheel compatible with the running Python version is installed.
-    "cffi>=1.16.0",
 ]
 
 
