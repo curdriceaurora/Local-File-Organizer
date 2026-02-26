@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import tarfile
+import zipfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -12,13 +13,18 @@ from file_organizer.utils.file_readers import (
     FileReadError,
     FileTooLargeError,
     _check_file_size,
+    read_cad_file,
     read_docx_file,
     read_ebook_file,
     read_file,
+    read_iges_file,
     read_pdf_file,
     read_presentation_file,
     read_spreadsheet_file,
+    read_step_file,
+    read_tar_file,
     read_text_file,
+    read_zip_file,
 )
 
 pytestmark = [pytest.mark.unit]
@@ -274,3 +280,294 @@ class TestReadFileGeneric:
         test_file = tmp_path / "unknown.xyz123"
         test_file.touch()
         assert read_file(test_file) is None
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# New tests below: archive, scientific (optional-dep), CAD, and read_file dispatch
+# ────────────────────────────────────────────────────────────────────────────
+
+
+class TestArchiveReaders:
+    """Tests for ZIP and TAR archive readers."""
+
+    def test_read_zip_file(self, tmp_path):
+        """Create a real zip with temp files and verify metadata extraction."""
+        # Create files to zip
+        (tmp_path / "hello.txt").write_text("Hello, world!")
+        (tmp_path / "data.csv").write_text("a,b,c\n1,2,3")
+
+        zip_path = tmp_path / "archive.zip"
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.write(tmp_path / "hello.txt", "hello.txt")
+            zf.write(tmp_path / "data.csv", "data.csv")
+
+        content = read_zip_file(zip_path)
+        assert "ZIP Archive: archive.zip" in content
+        assert "Total files: 2" in content
+        assert "hello.txt" in content
+        assert "data.csv" in content
+        assert "Encrypted: No" in content
+
+    def test_read_zip_empty_archive(self, tmp_path):
+        """Test reading an empty zip archive."""
+        zip_path = tmp_path / "empty.zip"
+        with zipfile.ZipFile(zip_path, "w"):
+            pass  # empty archive
+
+        content = read_zip_file(zip_path)
+        assert "Total files: 0" in content
+        assert "ZIP Archive: empty.zip" in content
+
+    def test_read_tar_file(self, tmp_path):
+        """Create a real tar.gz with temp files and verify metadata."""
+        (tmp_path / "readme.md").write_text("# README")
+        (tmp_path / "notes.txt").write_text("some notes")
+
+        tar_path = tmp_path / "archive.tar.gz"
+        with tarfile.open(tar_path, "w:gz") as tf:
+            tf.add(tmp_path / "readme.md", arcname="readme.md")
+            tf.add(tmp_path / "notes.txt", arcname="notes.txt")
+
+        content = read_tar_file(tar_path)
+        assert "TAR Archive: archive.tar.gz" in content
+        assert "Compression: GZ" in content
+        assert "Total files: 2" in content
+        assert "readme.md" in content
+        assert "notes.txt" in content
+
+    def test_read_tar_bz2(self, tmp_path):
+        """Test reading a tar.bz2 archive."""
+        (tmp_path / "file.txt").write_text("bz2 content")
+
+        tar_path = tmp_path / "archive.tar.bz2"
+        with tarfile.open(tar_path, "w:bz2") as tf:
+            tf.add(tmp_path / "file.txt", arcname="file.txt")
+
+        content = read_tar_file(tar_path)
+        assert "TAR Archive: archive.tar.bz2" in content
+        assert "Total files: 1" in content
+        assert "file.txt" in content
+
+    def test_read_tar_plain(self, tmp_path):
+        """Test reading a plain .tar archive (no compression)."""
+        (tmp_path / "plain.txt").write_text("plain tar content")
+
+        tar_path = tmp_path / "archive.tar"
+        with tarfile.open(tar_path, "w") as tf:
+            tf.add(tmp_path / "plain.txt", arcname="plain.txt")
+
+        content = read_tar_file(tar_path)
+        assert "TAR Archive: archive.tar" in content
+        assert "Compression: None" in content
+        assert "Total files: 1" in content
+        assert "plain.txt" in content
+
+    def test_read_zip_error(self, tmp_path):
+        """Corrupt zip raises FileReadError."""
+        corrupt_zip = tmp_path / "corrupt.zip"
+        corrupt_zip.write_bytes(b"this is not a zip file at all")
+
+        with pytest.raises(FileReadError, match="Failed to read ZIP file"):
+            read_zip_file(corrupt_zip)
+
+    def test_read_tar_error(self, tmp_path):
+        """Corrupt tar raises FileReadError."""
+        corrupt_tar = tmp_path / "corrupt.tar.gz"
+        corrupt_tar.write_bytes(b"this is not a tar file at all")
+
+        with pytest.raises(FileReadError, match="Failed to read TAR file"):
+            read_tar_file(corrupt_tar)
+
+
+class TestScientificReaders:
+    """Tests for optional-dependency scientific format readers (unavailable paths)."""
+
+    @patch("file_organizer.utils.file_readers.PY7ZR_AVAILABLE", False)
+    def test_read_7z_not_installed(self):
+        """py7zr not installed raises ImportError."""
+        from file_organizer.utils.file_readers import read_7z_file
+
+        with pytest.raises(ImportError, match="py7zr is not installed"):
+            read_7z_file("test.7z")
+
+    @patch("file_organizer.utils.file_readers.RARFILE_AVAILABLE", False)
+    def test_read_rar_not_installed(self):
+        """rarfile not installed raises ImportError."""
+        from file_organizer.utils.file_readers import read_rar_file
+
+        with pytest.raises(ImportError, match="rarfile is not installed"):
+            read_rar_file("test.rar")
+
+    @patch("file_organizer.utils.file_readers.H5PY_AVAILABLE", False)
+    def test_read_hdf5_not_installed(self):
+        """h5py not installed raises ImportError."""
+        from file_organizer.utils.file_readers import read_hdf5_file
+
+        with pytest.raises(ImportError, match="h5py is not installed"):
+            read_hdf5_file("test.hdf5")
+
+    @patch("file_organizer.utils.file_readers.NETCDF4_AVAILABLE", False)
+    def test_read_netcdf_not_installed(self):
+        """netCDF4 not installed raises ImportError."""
+        from file_organizer.utils.file_readers import read_netcdf_file
+
+        with pytest.raises(ImportError, match="netCDF4 is not installed"):
+            read_netcdf_file("test.nc")
+
+    @patch("file_organizer.utils.file_readers.SCIPY_AVAILABLE", False)
+    def test_read_mat_not_installed(self):
+        """scipy not installed raises ImportError."""
+        from file_organizer.utils.file_readers import read_mat_file
+
+        with pytest.raises(ImportError, match="scipy is not installed"):
+            read_mat_file("test.mat")
+
+    @patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", False)
+    def test_read_dxf_not_installed(self):
+        """ezdxf not installed raises ImportError for DXF."""
+        from file_organizer.utils.file_readers import read_dxf_file
+
+        with pytest.raises(ImportError, match="ezdxf is not installed"):
+            read_dxf_file("test.dxf")
+
+    @patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", False)
+    def test_read_dwg_not_installed(self):
+        """ezdxf not installed raises ImportError for DWG."""
+        from file_organizer.utils.file_readers import read_dwg_file
+
+        with pytest.raises(ImportError, match="ezdxf is not installed"):
+            read_dwg_file("test.dwg")
+
+
+class TestCADReaders:
+    """Tests for text-based CAD readers (STEP, IGES) and CAD dispatch."""
+
+    def test_read_step_file(self, tmp_path):
+        """Create a minimal STEP file and verify header extraction."""
+        step_content = (
+            "ISO-10303-21;\n"
+            "HEADER;\n"
+            "FILE_DESCRIPTION(('Test'),'2;1');\n"
+            "FILE_NAME('test.step','2024-01-01',('Author'),('Org'),'','','');\n"
+            "FILE_SCHEMA(('AUTOMOTIVE_DESIGN'));\n"
+            "ENDSEC;\n"
+            "DATA;\n"
+            "#1=SHAPE_REPRESENTATION('test',(#2),#3);\n"
+            "ENDSEC;\n"
+            "END-ISO-10303-21;\n"
+        )
+        step_path = tmp_path / "model.step"
+        step_path.write_text(step_content)
+
+        content = read_step_file(step_path)
+        assert "STEP File Information" in content
+        assert "model.step" in content
+        assert "FILE_DESCRIPTION" in content
+        assert "FILE_NAME" in content
+        assert "FILE_SCHEMA" in content
+        assert "AUTOMOTIVE_DESIGN" in content
+
+    def test_read_step_file_no_header(self, tmp_path):
+        """STEP file without proper header returns basic info only."""
+        step_path = tmp_path / "noheader.step"
+        step_path.write_text("ISO-10303-21;\nDATA;\nENDSEC;\nEND-ISO-10303-21;\n")
+
+        content = read_step_file(step_path)
+        assert "STEP File Information" in content
+        assert "noheader.step" in content
+        # Should not crash, but no header fields extracted
+        assert "FILE_DESCRIPTION" not in content
+
+    def test_read_iges_file(self, tmp_path):
+        """Create a minimal IGES file with proper column structure."""
+        # IGES format: 80-char lines with section type at column 73
+        start_line = "{:<72}S{:>7d}\n".format("Test IGES file", 1)
+        global_line = "{:<72}G{:>7d}\n".format(
+            "1H,,1H;,4Htest,8Htest.igs,8Htest.igs", 1
+        )
+        term_line = "{:<72}T{:>7d}\n".format(
+            "S      1G      1D      0P      0", 1
+        )
+
+        iges_path = tmp_path / "model.igs"
+        iges_path.write_text(start_line + global_line + term_line)
+
+        content = read_iges_file(iges_path)
+        assert "IGES File Information" in content
+        assert "model.igs" in content
+        assert "Start Section" in content
+        assert "Test IGES file" in content
+
+    def test_read_iges_file_empty(self, tmp_path):
+        """IGES file with no valid sections returns basic info."""
+        iges_path = tmp_path / "empty.igs"
+        iges_path.write_text("Short line\nAnother short line\n")
+
+        content = read_iges_file(iges_path)
+        assert "IGES File Information" in content
+        assert "empty.igs" in content
+        # No sections parsed
+        assert "Start Section" not in content
+
+    def test_read_cad_file_unsupported(self, tmp_path):
+        """Unsupported CAD extension raises ValueError."""
+        cad_path = tmp_path / "model.obj"
+        cad_path.touch()
+
+        with pytest.raises(ValueError, match="Unsupported CAD file format"):
+            read_cad_file(cad_path)
+
+
+class TestReadFileExpanded:
+    """Expanded tests for the read_file dispatch function."""
+
+    def test_read_file_zip(self, tmp_path):
+        """Verify read_file routes .zip to read_zip_file."""
+        (tmp_path / "f.txt").write_text("data")
+        zip_path = tmp_path / "test.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.write(tmp_path / "f.txt", "f.txt")
+
+        content = read_file(zip_path)
+        assert content is not None
+        assert "ZIP Archive" in content
+        assert "f.txt" in content
+
+    def test_read_file_tar_gz(self, tmp_path):
+        """Verify compound extension .tar.gz routes correctly."""
+        (tmp_path / "data.txt").write_text("tar content")
+        tar_path = tmp_path / "test.tar.gz"
+        with tarfile.open(tar_path, "w:gz") as tf:
+            tf.add(tmp_path / "data.txt", arcname="data.txt")
+
+        content = read_file(tar_path)
+        assert content is not None
+        assert "TAR Archive" in content
+        assert "data.txt" in content
+
+    def test_read_file_step(self, tmp_path):
+        """Verify .step routes to read_cad_file -> read_step_file."""
+        step_content = (
+            "ISO-10303-21;\n"
+            "HEADER;\n"
+            "FILE_DESCRIPTION(('Test'),'2;1');\n"
+            "ENDSEC;\n"
+            "DATA;\n"
+            "ENDSEC;\n"
+            "END-ISO-10303-21;\n"
+        )
+        step_path = tmp_path / "model.step"
+        step_path.write_text(step_content)
+
+        content = read_file(step_path)
+        assert content is not None
+        assert "STEP File Information" in content
+
+    @patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", False)
+    def test_read_file_dxf(self, tmp_path):
+        """Verify .dxf routes to read_cad_file -> read_dxf_file (raises when unavailable)."""
+        dxf_path = tmp_path / "drawing.dxf"
+        dxf_path.touch()
+
+        with pytest.raises(ImportError, match="ezdxf is not installed"):
+            read_file(dxf_path)

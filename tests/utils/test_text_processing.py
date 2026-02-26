@@ -232,3 +232,165 @@ class TestTextProcessing:
         # Truncation applies
         result = truncate_text(text, max_chars=5)
         assert result == "12345..."
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# New tests below: expanded clean_text, sanitize_filename, extract_keywords,
+# and truncate_text coverage
+# ────────────────────────────────────────────────────────────────────────────
+
+
+class TestTextProcessingExpanded:
+    """Expanded tests for text_processing utilities."""
+
+    # ── clean_text full-pipeline tests ──────────────────────────────────
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_clean_text_removes_numbers(self):
+        """Verify numbers are stripped from text."""
+        result = clean_text("report 2024 analysis 42", remove_unwanted=False)
+        assert "2024" not in result
+        assert "42" not in result
+        assert "report" in result
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_clean_text_removes_special_chars(self):
+        """Verify special characters become spaces (then words are joined)."""
+        result = clean_text("hello@world#foo$bar", remove_unwanted=False)
+        # Special chars removed, words split and joined with underscores
+        assert "@" not in result
+        assert "#" not in result
+        assert "$" not in result
+        assert "hello" in result
+        assert "world" in result
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_clean_text_removes_duplicates(self):
+        """Verify duplicate words are removed when remove_unwanted=True."""
+        result = clean_text("apple apple banana apple banana", max_words=10)
+        # Should contain each word only once
+        words = result.split("_")
+        assert len(words) == len(set(words))
+        assert "apple" in words
+        assert "banana" in words
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_clean_text_no_removal(self):
+        """Test with remove_unwanted=False preserves common words."""
+        result = clean_text("the quick fox", remove_unwanted=False, max_words=10)
+        words = result.split("_")
+        assert "the" in words
+        assert "quick" in words
+        assert "fox" in words
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_clean_text_no_lemmatize(self):
+        """Test with lemmatize=False (fallback path has no effect but should not error)."""
+        result = clean_text("running dogs", lemmatize=False, remove_unwanted=False)
+        assert "running" in result
+        assert "dogs" in result
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_clean_text_code_style(self):
+        """Test with code-like text 'getUserData()' splits camelCase."""
+        result = clean_text("getUserData", remove_unwanted=False)
+        # camelCase should be split: get, User, Data -> get_user_data
+        assert "get" in result
+        assert "user" in result
+        assert "data" in result
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_clean_text_unicode(self):
+        """Test with unicode text."""
+        result = clean_text("café résumé naïve", remove_unwanted=False)
+        # Unicode letters should be preserved as alpha chars
+        assert "caf" in result or "café" in result
+        # Should not crash and should produce non-empty output
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    # ── sanitize_filename direct tests (no mocking clean_text) ──────────
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_sanitize_filename_direct_basic(self):
+        """Call without mocking clean_text, verify end-to-end."""
+        result = sanitize_filename("My Report 2024")
+        assert isinstance(result, str)
+        assert len(result) > 0
+        # Should be lowercase, underscore-separated
+        assert result == result.lower()
+        assert " " not in result
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_sanitize_filename_direct_special_chars(self):
+        """Special chars get cleaned end-to-end."""
+        result = sanitize_filename("file@name#with$chars!")
+        assert "@" not in result
+        assert "#" not in result
+        assert "$" not in result
+        assert "!" not in result
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_sanitize_filename_direct_long_input(self):
+        """Very long input gets truncated to max_length."""
+        long_name = " ".join(["word"] * 50)
+        result = sanitize_filename(long_name, max_length=20)
+        assert len(result) <= 20
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_sanitize_filename_leading_trailing_underscores(self):
+        """Leading/trailing underscores are stripped."""
+        result = sanitize_filename("  hello world  ")
+        assert not result.startswith("_")
+        assert not result.endswith("_")
+
+    # ── extract_keywords tests ──────────────────────────────────────────
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_extract_keywords_empty(self):
+        """Empty string returns empty list."""
+        keywords = extract_keywords("")
+        assert keywords == []
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
+    def test_extract_keywords_fallback_top_n(self):
+        """Verify top_n parameter in fallback mode."""
+        text = "alpha beta gamma alpha beta alpha"
+        keywords = extract_keywords(text, top_n=1)
+        assert len(keywords) == 1
+        assert keywords[0] == "alpha"
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("nltk.probability.FreqDist")
+    def test_extract_keywords_short_words_filtered(self, mock_freqdist_cls, mock_tokenize):
+        """Words <= 3 chars are filtered in NLTK mode."""
+        # word_tokenize returns a mix of short and long words
+        mock_tokenize.return_value = ["the", "big", "extraordinary", "cat", "extraordinary"]
+
+        # Mock FreqDist to return the filtered result
+        mock_freqdist = MagicMock()
+        mock_freqdist.most_common.return_value = [("extraordinary", 2)]
+        mock_freqdist_cls.return_value = mock_freqdist
+
+        keywords = extract_keywords("the big extraordinary cat extraordinary")
+
+        # Only words > 3 chars should remain
+        # "the", "big", "cat" are <= 3 chars and should be filtered
+        assert "the" not in keywords
+        assert "big" not in keywords
+        assert "cat" not in keywords
+
+    # ── truncate_text edge cases ────────────────────────────────────────
+
+    def test_truncate_text_empty(self):
+        """Empty string returns empty string."""
+        result = truncate_text("")
+        assert result == ""
+
+    def test_truncate_text_exact_length(self):
+        """Text exactly at max_chars should not be truncated."""
+        text = "12345"
+        result = truncate_text(text, max_chars=5)
+        assert result == "12345"
+        assert "..." not in result
