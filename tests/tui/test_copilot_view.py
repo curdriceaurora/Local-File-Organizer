@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Input

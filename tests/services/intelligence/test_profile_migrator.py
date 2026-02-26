@@ -15,9 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from file_organizer.services.intelligence.profile_manager import Profile, ProfileManager
+from file_organizer.services.intelligence.profile_manager import ProfileManager
 from file_organizer.services.intelligence.profile_migrator import ProfileMigrator
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
