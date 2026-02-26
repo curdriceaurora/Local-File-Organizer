@@ -351,7 +351,7 @@ class PluginExecutor:
                 raise PluginError(
                     f"Worker process did not respond within {timeout}s "
                     "(possible hang or timeout)."
-                )
+                ) from None
             if isinstance(value, Exception):
                 raise PluginError(f"Failed to read from worker: {value}") from value
             return value
