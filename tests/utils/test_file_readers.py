@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tarfile
 import zipfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
