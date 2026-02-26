@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from file_organizer.plugins import (
     PluginRecord,
     PluginRegistry,
@@ -30,6 +32,7 @@ def test_example_plugins_are_discoverable() -> None:
     assert found == EXPECTED_EXAMPLES
 
 
+@pytest.mark.timeout(120)
 def test_example_plugins_load_and_lifecycle() -> None:
     """Each example plugin loads successfully through PluginRegistry."""
     registry = PluginRegistry()
@@ -52,6 +55,7 @@ def test_example_plugins_load_and_lifecycle() -> None:
     assert registry.list_plugins() == []
 
 
+@pytest.mark.timeout(120)
 def test_example_plugins_enable_disable_via_executor() -> None:
     """Enable/disable lifecycle calls go through the executor without error."""
     registry = PluginRegistry()
