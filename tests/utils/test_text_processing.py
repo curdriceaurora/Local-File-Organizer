@@ -54,6 +54,22 @@ class TestTextProcessing:
             mock_download.assert_any_call("wordnet", quiet=True)
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.nltk.download")
+    @patch("file_organizer.utils.text_processing.stopwords")
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_ensure_nltk_data_download_fails(
+        self, mock_logger: MagicMock, mock_stopwords: MagicMock, mock_download: MagicMock
+    ) -> None:
+        """Test ensure_nltk_data when download fails."""
+        mock_stopwords.words.side_effect = LookupError()
+        mock_download.side_effect = Exception("Download failed")
+
+        with patch("nltk.corpus.wordnet"):
+            ensure_nltk_data()
+
+        mock_logger.warning.assert_called()
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.stopwords")
     def test_get_unwanted_words_with_nltk(self, mock_stopwords: MagicMock) -> None:
         """Test getting unwanted words including NLTK stopwords."""
@@ -67,6 +83,21 @@ class TestTextProcessing:
         # NLTK words
         assert "nltkword1" in unwanted
         assert "nltkword2" in unwanted
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.stopwords")
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_get_unwanted_words_nltk_fails(
+        self, mock_logger: MagicMock, mock_stopwords: MagicMock
+    ) -> None:
+        """Test getting unwanted words when stopwords fails."""
+        mock_stopwords.words.side_effect = LookupError()
+
+        unwanted = get_unwanted_words()
+
+        # Should still return built-in words
+        assert "the" in unwanted
+        mock_logger.warning.assert_called()
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
     def test_get_unwanted_words_without_nltk(self) -> None:
@@ -101,6 +132,34 @@ class TestTextProcessing:
         with patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False):
             result = clean_text("camelCaseFileName", remove_unwanted=False)
             assert result == "camel_case_file_name"
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    def test_clean_text_nltk_tokenize_fails(self, mock_tokenize: MagicMock) -> None:
+        """Test clean_text fallback when word_tokenize fails."""
+        mock_tokenize.side_effect = LookupError()
+
+        result = clean_text("Hello world test", remove_unwanted=False)
+        # Should fall back to simple split
+        assert result == "hello_world_test"
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("file_organizer.utils.text_processing.WordNetLemmatizer")
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_clean_text_lemmatization_fails(
+        self, mock_logger: MagicMock, mock_lemmatizer_cls: MagicMock, mock_tokenize: MagicMock
+    ) -> None:
+        """Test clean_text when lemmatization fails."""
+        mock_tokenize.return_value = ["hello", "world"]
+        mock_lemmatizer = MagicMock()
+        mock_lemmatizer.lemmatize.side_effect = Exception("Lemmatization error")
+        mock_lemmatizer_cls.return_value = mock_lemmatizer
+
+        result = clean_text("hello world", lemmatize=True, remove_unwanted=False)
+        # Should continue even if lemmatization fails
+        assert "hello" in result or "world" in result
+        mock_logger.debug.assert_called()
 
     def test_sanitize_filename_basic(self) -> None:
         """Test simple filename sanitization."""
