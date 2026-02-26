@@ -16,10 +16,19 @@ marketplace_router = APIRouter(tags=["web"])
 
 
 def _service() -> MarketplaceService:
+    """Return a fresh ``MarketplaceService`` instance."""
     return MarketplaceService()
 
 
 def _normalize_tags(raw_tags: Optional[list[str]]) -> list[str]:
+    """Flatten and clean a list of possibly comma-separated tag strings.
+
+    Args:
+        raw_tags: Raw tag tokens that may contain comma-separated values.
+
+    Returns:
+        Stripped list of individual tag strings.
+    """
     tags: list[str] = []
     for token in raw_tags or []:
         for part in token.split(","):
@@ -41,6 +50,11 @@ def _render_marketplace_page(
     message: Optional[str] = None,
     message_kind: str = "info",
 ) -> HTMLResponse:
+    """Build the marketplace HTML page with plugin listing and optional flash message.
+
+    Returns:
+        Rendered marketplace index page.
+    """
     error_message: Optional[str] = None
     plugins = []
     total = 0
@@ -90,7 +104,11 @@ def marketplace_home(
     page: int = Query(1, ge=1),
     per_page: int = Query(24, ge=1, le=100),
 ) -> HTMLResponse:
-    """Render the plugin marketplace home page."""
+    """Display the plugin marketplace with optional search, category, and tag filters.
+
+    Returns:
+        Rendered marketplace page.
+    """
     return _render_marketplace_page(
         request,
         settings,
@@ -111,7 +129,14 @@ def install_plugin(
     category: str = Form(""),
     tag_csv: str = Form(""),
 ) -> HTMLResponse:
-    """Install a plugin by name."""
+    """Install a marketplace plugin by name and re-render the marketplace page.
+
+    Args:
+        name: Plugin identifier from the URL path.
+
+    Returns:
+        Marketplace page with a success or error flash message.
+    """
     tags = _normalize_tags([tag_csv])
     try:
         installed = _service().install(name)
@@ -140,7 +165,14 @@ def uninstall_plugin(
     category: str = Form(""),
     tag_csv: str = Form(""),
 ) -> HTMLResponse:
-    """Uninstall a plugin by name."""
+    """Uninstall a previously installed plugin and re-render the marketplace page.
+
+    Args:
+        name: Plugin identifier from the URL path.
+
+    Returns:
+        Marketplace page with a success or error flash message.
+    """
     tags = _normalize_tags([tag_csv])
     try:
         _service().uninstall(name)
@@ -169,7 +201,14 @@ def update_plugin(
     category: str = Form(""),
     tag_csv: str = Form(""),
 ) -> HTMLResponse:
-    """Update a plugin to the latest version."""
+    """Update an installed plugin to the latest version.
+
+    Args:
+        name: Plugin identifier from the URL path.
+
+    Returns:
+        Marketplace page with an update status flash message.
+    """
     tags = _normalize_tags([tag_csv])
     try:
         updated = _service().update(name)

@@ -50,6 +50,15 @@ files_router = APIRouter(tags=["web"])
 
 
 def _build_breadcrumbs(path: Path, roots: list[Path]) -> list[dict[str, str]]:
+    """Build navigation breadcrumbs from *path* back to its closest allowed root.
+
+    Args:
+        path: Absolute directory path to create breadcrumbs for.
+        roots: Allowed root directories.
+
+    Returns:
+        Ordered list of breadcrumb dicts with *label*, *path*, and *path_param*.
+    """
     root_match = select_root_for_path(path, roots)
     crumbs: list[dict[str, str]] = []
     label = root_match.name or root_match.as_posix()
@@ -78,6 +87,15 @@ def _build_breadcrumbs(path: Path, roots: list[Path]) -> list[dict[str, str]]:
 
 
 def _list_tree_nodes(path: Path, include_hidden: bool) -> list[dict[str, Any]]:
+    """List immediate child directories of *path* as sidebar tree nodes.
+
+    Args:
+        path: Directory to list children of.
+        include_hidden: Whether to include hidden directories.
+
+    Returns:
+        List of node dicts suitable for the sidebar tree template.
+    """
     nodes: list[dict[str, Any]] = []
     try:
         entries = sorted(
@@ -111,6 +129,20 @@ def _collect_entries(
     include_hidden: bool,
     limit: int,
 ) -> tuple[list[dict[str, Any]], int]:
+    """Collect, filter, and sort directory entries for the file browser.
+
+    Args:
+        path: Directory to scan.
+        query: Optional name substring filter.
+        file_type: Optional file-type filter (e.g. ``"image"``).
+        sort_by: Column to sort by (``name``, ``size``, ``created``, etc.).
+        sort_order: ``"asc"`` or ``"desc"``.
+        include_hidden: Whether to include hidden entries.
+        limit: Maximum number of entries to return.
+
+    Returns:
+        Tuple of ``(entries, total)`` where *entries* is the page slice.
+    """
     entries: list[dict[str, Any]] = []
     try:
         children = list(path.iterdir())
@@ -236,6 +268,11 @@ def _build_file_results_context(
     sort_order: str,
     limit: int,
 ) -> dict[str, Any]:
+    """Assemble the full template context for file-browser result views.
+
+    Returns:
+        Dict suitable for passing directly to a Jinja template.
+    """
     limit = clamp_limit(limit)
     roots = allowed_roots(settings)
     error_message: Optional[str] = None
@@ -314,7 +351,11 @@ def files_browser(
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     limit: int = Query(PAGE_SIZE, ge=1, le=500),
 ) -> HTMLResponse:
-    """Render the files browser page."""
+    """Render the full-page file browser with sidebar tree and file grid/list.
+
+    Returns:
+        Full HTML page for the file browser.
+    """
     from file_organizer.web._helpers import base_context
 
     context = base_context(request, settings, active="files", title="Files")
@@ -347,7 +388,11 @@ def files_list(
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     limit: int = Query(PAGE_SIZE, ge=1, le=500),
 ) -> HTMLResponse:
-    """Return paginated file listing as HTML fragment."""
+    """Return an HTMX partial with file-browser results (grid or list view).
+
+    Returns:
+        HTML fragment of the file results panel.
+    """
     context = _build_file_results_context(
         request,
         settings,
@@ -370,7 +415,16 @@ def files_tree(
     depth: int = Query(0, ge=0, le=MAX_NAV_DEPTH),
     active: Optional[str] = Query(None),
 ) -> HTMLResponse:
-    """Return directory tree as JSON."""
+    """Return an HTMX partial with sidebar tree nodes for the given path.
+
+    Args:
+        path: Directory to expand in the tree.
+        depth: Current nesting depth for indentation.
+        active: Currently selected path, used for highlighting.
+
+    Returns:
+        HTML fragment of tree nodes.
+    """
     roots = allowed_roots(settings)
     active_path = unquote(active) if active else ""
     active_path_param = quote(active_path) if active_path else ""
@@ -429,7 +483,15 @@ def files_thumbnail(
     path: str = Query(...),
     kind: str = Query("file"),
 ) -> Response:
-    """Return thumbnail image for a file."""
+    """Generate a small PNG thumbnail for an image, PDF, or video file.
+
+    Args:
+        path: Absolute file path.
+        kind: File kind hint (``image``, ``pdf``, ``video``, or ``file``).
+
+    Returns:
+        PNG image response.
+    """
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists() or not target.is_file():
         raise ApiError(status_code=404, error="not_found", message="File not found")
@@ -463,7 +525,15 @@ def files_raw(
     path: str = Query(...),
     download: bool = Query(False),
 ) -> FileResponse:
-    """Return raw file content."""
+    """Serve a raw file for inline viewing or as a download attachment.
+
+    Args:
+        path: Absolute file path.
+        download: When true, set Content-Disposition to attachment.
+
+    Returns:
+        The raw file response.
+    """
     target = resolve_path(path, settings.allowed_paths)
     if not target.exists() or not target.is_file():
         raise ApiError(status_code=404, error="not_found", message="File not found")
@@ -479,7 +549,13 @@ def files_preview(
     settings: ApiSettings = Depends(get_settings),
     path: str = Query(...),
 ) -> HTMLResponse:
-    """Render file preview partial."""
+    """Return an HTMX partial with a file preview panel.
+
+    Supports inline text preview, image thumbnails, and download links.
+
+    Returns:
+        HTML fragment for the preview sidebar.
+    """
     error_message: Optional[str] = None
     preview_kind = "file"
     preview_text: Optional[str] = None
@@ -540,7 +616,11 @@ def files_upload(
     limit: int = Form(PAGE_SIZE),
     files: list[UploadFile] = File(default=[]),
 ) -> HTMLResponse:
-    """Handle file upload."""
+    """Handle multi-file upload to a target directory and refresh the listing.
+
+    Returns:
+        Updated file results HTML fragment with upload status messages.
+    """
     info_message: Optional[str] = None
     error_message: Optional[str] = None
     errors: list[str] = []

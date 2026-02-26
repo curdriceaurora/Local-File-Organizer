@@ -59,10 +59,12 @@ class UserApiKey(Base):
 
 
 def _now() -> datetime:
+    """Return the current UTC datetime."""
     return datetime.now(UTC)
 
 
 def _ensure_api_key_table(db_path: str) -> None:
+    """Create the ``user_api_keys`` table if it does not yet exist."""
     from file_organizer.api.auth_db import get_engine
 
     engine = get_engine(db_path)
@@ -70,6 +72,7 @@ def _ensure_api_key_table(db_path: str) -> None:
 
 
 def _get_db(settings: ApiSettings) -> Session:
+    """Open a SQLAlchemy session for the auth database."""
     return create_session(settings.auth_db_path)
 
 
@@ -98,6 +101,7 @@ def get_current_web_user(request: Request, settings: ApiSettings) -> Optional[Us
 
 
 def _require_web_user(request: Request, settings: ApiSettings) -> User | HTMLResponse:
+    """Return the authenticated user or a redirect to the login page."""
     user = get_current_web_user(request, settings)
     if user is None:
         return HTMLResponse('<p class="error-text">Not authenticated.</p>')
@@ -105,6 +109,7 @@ def _require_web_user(request: Request, settings: ApiSettings) -> User | HTMLRes
 
 
 def _default_profile_state() -> dict[str, object]:
+    """Return the initial empty profile state dict."""
     return {
         "active_workspace_id": "",
         "team_members": [],
@@ -116,6 +121,7 @@ def _default_profile_state() -> dict[str, object]:
 
 
 def _sanitize_profile_state(raw: object) -> dict[str, object]:
+    """Normalize raw profile state data, filling in missing keys with defaults."""
     state = _default_profile_state()
     if not isinstance(raw, dict):
         return state
@@ -135,6 +141,7 @@ def _sanitize_profile_state(raw: object) -> dict[str, object]:
 
 
 def _load_profile_state(db: Session, user_id: str) -> dict[str, object]:
+    """Load the profile state for *user_id* from the settings repository."""
     raw = SettingsRepository.get(db, _STATE_KEY, user_id=user_id)
     if raw is None:
         return _default_profile_state()
@@ -145,10 +152,12 @@ def _load_profile_state(db: Session, user_id: str) -> dict[str, object]:
 
 
 def _save_profile_state(db: Session, user_id: str, state: dict[str, object]) -> None:
+    """Persist the profile *state* dict for *user_id*."""
     SettingsRepository.set(db, _STATE_KEY, json.dumps(state), user_id=user_id)
 
 
 def _append_activity(state: dict[str, object], message: str) -> None:
+    """Add a timestamped activity entry to the profile state."""
     log = state.get("activity_log")
     if not isinstance(log, list):
         log = []
@@ -165,6 +174,7 @@ def _append_activity(state: dict[str, object], message: str) -> None:
 
 
 def _append_notification(state: dict[str, object], message: str) -> None:
+    """Add a timestamped notification to the profile state."""
     notifications = state.get("notifications")
     if not isinstance(notifications, list):
         notifications = []
@@ -182,6 +192,11 @@ def _append_notification(state: dict[str, object], message: str) -> None:
 
 
 def _workspace_context(db: Session, user_id: str) -> tuple[list[object], str]:
+    """Return the user's workspaces and their active workspace ID.
+
+    Returns:
+        Tuple of ``(workspaces, active_workspace_id)``.
+    """
     workspaces = WorkspaceRepository.list_by_owner(db, user_id)
     state = _load_profile_state(db, user_id)
     active_workspace_id = state.get("active_workspace_id")
@@ -200,10 +215,12 @@ def _workspace_context(db: Session, user_id: str) -> tuple[list[object], str]:
 
 
 def _avatar_path(user_id: str) -> Path:
+    """Return the filesystem path where the user's avatar is stored."""
     return _AVATAR_DIR / f"{user_id}.png"
 
 
 def _cleanup_expired_reset_tokens() -> None:
+    """Remove expired password-reset tokens from the in-memory store."""
     now = _now()
     stale = [token for token, (_, expires) in _PASSWORD_RESET_TOKENS.items() if expires <= now]
     for token in stale:
@@ -217,6 +234,7 @@ def _make_profile_context(
     *,
     extras: Optional[dict[str, object]] = None,
 ) -> dict[str, object]:
+    """Build the full template context dict for the profile page."""
     context_extras: dict[str, object] = {"user": user, "auth_enabled": settings.auth_enabled}
     if extras:
         context_extras.update(extras)
@@ -231,7 +249,11 @@ def _make_profile_context(
 
 @profile_router.get("/profile", response_class=HTMLResponse)
 def profile_page(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
-    """Render the user profile page."""
+    """Render the user profile page or redirect to login if unauthenticated.
+
+    Returns:
+        Profile HTML page or a redirect response.
+    """
     user = get_current_web_user(request, settings)
     if user is None:
         context = _make_profile_context(request, settings, None)
@@ -257,7 +279,7 @@ def profile_page(request: Request, settings: ApiSettings = Depends(get_settings)
 
 @profile_router.get("/profile/login", response_class=HTMLResponse)
 def login_form(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
-    """Render the login form."""
+    """Render the login page."""
     context = _make_profile_context(request, settings, None, extras={"error": None})
     return templates.TemplateResponse("profile/login.html", context)
 
@@ -269,7 +291,11 @@ def login_submit(
     password: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse | RedirectResponse:
-    """Handle login form submission."""
+    """Authenticate the user and set a session cookie on success.
+
+    Returns:
+        Redirect to the profile page on success, or the login form with an error.
+    """
     db = _get_db(settings)
     try:
         user = db.query(User).filter(or_(User.username == username, User.email == username)).first()
@@ -311,7 +337,7 @@ def login_submit(
 
 @profile_router.get("/profile/register", response_class=HTMLResponse)
 def register_form(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
-    """Render the registration form."""
+    """Render the registration page."""
     context = _make_profile_context(request, settings, None, extras={"error": None})
     return templates.TemplateResponse("profile/register.html", context)
 
@@ -325,7 +351,11 @@ def register_submit(
     full_name: str = Form(""),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse | RedirectResponse:
-    """Handle registration form submission."""
+    """Create a new user account and redirect to login on success.
+
+    Returns:
+        Redirect to login or re-rendered form with validation errors.
+    """
     db = _get_db(settings)
     try:
         valid, reason = validate_password(password, settings)
@@ -384,7 +414,11 @@ def forgot_password_submit(
     email: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Handle forgot-password form submission."""
+    """Generate a password-reset token and display it to the user.
+
+    Returns:
+        Forgot-password page with a reset link or a generic confirmation.
+    """
     db = _get_db(settings)
     try:
         user = db.query(User).filter(User.email == email).first()
@@ -413,7 +447,11 @@ def reset_password_form(
     token: str = Query(""),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Render the reset-password form."""
+    """Render the password-reset form for a given token.
+
+    Returns:
+        Reset form page or a redirect if the token is invalid.
+    """
     _cleanup_expired_reset_tokens()
     valid = token in _PASSWORD_RESET_TOKENS
     context = _make_profile_context(
@@ -433,7 +471,11 @@ def reset_password_submit(
     confirm_password: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Handle reset-password form submission."""
+    """Validate the reset token and update the user's password.
+
+    Returns:
+        Redirect to login on success, or the reset form with errors.
+    """
     _cleanup_expired_reset_tokens()
     reset_info = _PASSWORD_RESET_TOKENS.get(token)
     if reset_info is None:
@@ -513,7 +555,7 @@ def reset_password_submit(
 
 @profile_router.get("/profile/avatar/{user_id}")
 def profile_avatar(user_id: str) -> Response:
-    """Return the avatar image for a user."""
+    """Serve the avatar image for *user_id*, or a placeholder PNG."""
     path = _avatar_path(user_id)
     if not path.exists():
         return HTMLResponse(status_code=404, content="Avatar not found")
@@ -526,7 +568,7 @@ async def profile_avatar_upload(
     avatar: UploadFile = File(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Handle avatar image upload."""
+    """Upload a new avatar image for the authenticated user."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -544,7 +586,7 @@ async def profile_avatar_upload(
 def profile_edit_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
-    """Render the profile edit partial."""
+    """Return the HTMX partial for the profile-edit form."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -565,7 +607,7 @@ def profile_edit_submit(
     email: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Handle profile edit form submission."""
+    """Save profile edits (display name and email) and re-render the partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -611,7 +653,7 @@ def profile_edit_submit(
 def workspaces_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
-    """Render the workspaces partial."""
+    """Return the HTMX partial listing the user's workspaces."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -638,7 +680,7 @@ def workspace_create(
     description: str = Form(""),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Handle workspace creation."""
+    """Create a new workspace and re-render the workspaces partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -668,7 +710,7 @@ def workspace_switch(
     workspace_id: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Handle workspace switch."""
+    """Switch the active workspace and re-render the workspaces partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -689,7 +731,7 @@ def workspace_switch(
 
 @profile_router.get("/profile/team", response_class=HTMLResponse)
 def team_partial(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
-    """Render the team management partial."""
+    """Return the HTMX partial listing team members."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -715,7 +757,7 @@ def team_invite(
     role: str = Form("viewer"),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Send a team invitation."""
+    """Invite a user to the team by email and re-render the team partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -752,7 +794,7 @@ def team_update_role(
     role: str = Form("viewer"),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Update a team member's role."""
+    """Update a team member's role and re-render the team partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -781,7 +823,7 @@ def team_update_role(
 
 @profile_router.get("/profile/shared", response_class=HTMLResponse)
 def shared_partial(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
-    """Render the shared folders partial."""
+    """Return the HTMX partial listing shared folders."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -807,7 +849,7 @@ def shared_add(
     permission: str = Form("view"),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Add a shared folder."""
+    """Share a folder with the team and re-render the shared-folders partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -843,7 +885,7 @@ def shared_remove(
     folder_id: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Remove a shared folder."""
+    """Unshare a folder and re-render the shared-folders partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -870,7 +912,7 @@ def shared_remove(
 def activity_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
-    """Render the activity log partial."""
+    """Return the HTMX partial with the user's recent activity log."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -893,7 +935,7 @@ def activity_partial(
 def notifications_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
-    """Render the notifications partial."""
+    """Return the HTMX partial listing the user's notifications."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -918,7 +960,7 @@ def notification_mark_read(
     notification_id: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Mark a notification as read."""
+    """Mark a notification as read and re-render the notifications partial."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -943,7 +985,7 @@ def notification_mark_read(
 def account_settings_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
-    """Render the account settings partial."""
+    """Return the HTMX partial for account-level settings."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -974,7 +1016,11 @@ def account_settings_change_password(
     confirm_password: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Handle change-password form submission."""
+    """Change the authenticated user's password.
+
+    Returns:
+        Account settings partial with a success or error message.
+    """
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1045,7 +1091,11 @@ def account_settings_toggle_2fa(
     enabled: Optional[str] = Form(None),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Toggle two-factor authentication."""
+    """Toggle two-factor authentication for the authenticated user.
+
+    Returns:
+        Account settings partial with updated 2FA status.
+    """
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1079,7 +1129,7 @@ def account_settings_toggle_2fa(
 def api_keys_partial(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
-    """Render the API keys partial."""
+    """Return the HTMX partial listing the user's API keys."""
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1109,7 +1159,11 @@ def api_key_generate(
     label: str = Form("default"),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Generate a new API key."""
+    """Generate a new API key for the authenticated user.
+
+    Returns:
+        API keys partial showing the newly created key.
+    """
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1161,7 +1215,11 @@ def api_key_revoke(
     key_id: str = Form(...),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
-    """Revoke an API key."""
+    """Revoke an existing API key.
+
+    Returns:
+        API keys partial confirming the revocation.
+    """
     user = _require_web_user(request, settings)
     if isinstance(user, HTMLResponse):
         return user
@@ -1204,7 +1262,7 @@ def api_key_revoke(
 
 @profile_router.post("/profile/logout")
 def logout(request: Request, settings: ApiSettings = Depends(get_settings)) -> RedirectResponse:
-    """Log the current user out and redirect."""
+    """Clear the session cookie and redirect to the login page."""
     _ = (request, settings)
     response = RedirectResponse(url="/ui/profile", status_code=303)
     response.delete_cookie(key=_SESSION_COOKIE, path="/")

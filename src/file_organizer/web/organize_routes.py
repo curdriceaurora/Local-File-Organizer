@@ -65,6 +65,17 @@ _LAST_JOB_METADATA_PRUNE_MONOTONIC = 0.0
 
 
 def _parse_delay_minutes(value: Optional[str]) -> int:
+    """Parse and validate a schedule delay value in minutes.
+
+    Args:
+        value: Raw string from the form field.
+
+    Returns:
+        Validated delay in minutes.
+
+    Raises:
+        ApiError: If the value is not a valid non-negative integer within bounds.
+    """
     if value is None or value.strip() == "":
         return ORGANIZE_DEFAULT_DELAY_MIN
     try:
@@ -85,6 +96,7 @@ def _parse_delay_minutes(value: Optional[str]) -> int:
 
 
 def _normalize_methodology(value: Optional[str]) -> str:
+    """Normalize a methodology string, defaulting to ``content_based``."""
     token = (value or "").strip().lower()
     if token in ORGANIZE_METHODOLOGIES:
         return token
@@ -92,6 +104,11 @@ def _normalize_methodology(value: Optional[str]) -> str:
 
 
 def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:
+    """Collect files from *path*, optionally recursing and including hidden items.
+
+    Returns:
+        List of file ``Path`` objects found under *path*.
+    """
     files: list[Path] = []
     if path.is_file():
         if include_hidden or not is_hidden(path):
@@ -109,6 +126,11 @@ def _scan_directory(path: Path, recursive: bool, include_hidden: bool) -> list[P
 
 
 def _counts_by_type(files: list[Path]) -> dict[str, int]:
+    """Tally files by broad type category (text, image, video, etc.).
+
+    Returns:
+        Dict mapping category names to counts.
+    """
     counts = {
         "text": 0,
         "image": 0,
@@ -135,6 +157,7 @@ def _counts_by_type(files: list[Path]) -> dict[str, int]:
 
 
 def _result_to_response(result: OrganizationResult) -> OrganizationResultResponse:
+    """Convert an ``OrganizationResult`` to the API response model."""
     return OrganizationResultResponse(
         total_files=result.total_files,
         processed_files=result.processed_files,
@@ -153,6 +176,11 @@ def _build_plan_movements(
     output_dir: Path,
     preview: OrganizationResultResponse,
 ) -> list[dict[str, str]]:
+    """Build a list of planned source-to-destination movements from a dry-run preview.
+
+    Returns:
+        List of dicts with *file_name*, *source*, *destination*, and *reason*.
+    """
     source_lookup: dict[str, list[str]] = {}
     for file_path in sorted(files, key=lambda item: item.as_posix().lower()):
         source_lookup.setdefault(file_path.name, []).append(str(file_path))
@@ -177,12 +205,14 @@ def _build_plan_movements(
 
 
 def _prune_plan_store() -> None:
+    """Evict the oldest plans when the in-memory store exceeds its limit."""
     while len(_ORGANIZE_PLAN_STORE) > ORGANIZE_PLAN_LIMIT:
         oldest_plan_id = next(iter(_ORGANIZE_PLAN_STORE))
         _ORGANIZE_PLAN_STORE.pop(oldest_plan_id, None)
 
 
 def _store_organize_plan(plan_data: dict[str, Any]) -> dict[str, Any]:
+    """Persist *plan_data* in the in-memory plan store and return the stored record."""
     plan_id = uuid4().hex
     created_at = datetime.now(UTC)
     record = {
@@ -198,6 +228,7 @@ def _store_organize_plan(plan_data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _get_organize_plan(plan_id: str) -> Optional[dict[str, Any]]:
+    """Retrieve a stored plan by *plan_id*, or ``None`` if expired/missing."""
     with _ORGANIZE_PLAN_LOCK:
         plan = _ORGANIZE_PLAN_STORE.get(plan_id)
         if plan is None:
@@ -207,11 +238,13 @@ def _get_organize_plan(plan_id: str) -> Optional[dict[str, Any]]:
 
 
 def _delete_organize_plan(plan_id: str) -> None:
+    """Remove a plan from the in-memory store."""
     with _ORGANIZE_PLAN_LOCK:
         _ORGANIZE_PLAN_STORE.pop(plan_id, None)
 
 
 def _prune_job_metadata(*, force: bool = False) -> None:
+    """Remove metadata for jobs that no longer exist in the job store."""
     global _LAST_JOB_METADATA_PRUNE_MONOTONIC
     now = monotonic()
     with _JOB_METADATA_LOCK:
@@ -231,17 +264,20 @@ def _prune_job_metadata(*, force: bool = False) -> None:
 
 
 def _set_job_metadata(job_id: str, data: dict[str, Any]) -> None:
+    """Store supplementary metadata for *job_id*."""
     with _JOB_METADATA_LOCK:
         _JOB_METADATA[job_id] = data
     _prune_job_metadata()
 
 
 def _get_job_metadata(job_id: str) -> dict[str, Any]:
+    """Return a copy of the stored metadata for *job_id* (empty dict if absent)."""
     with _JOB_METADATA_LOCK:
         return dict(_JOB_METADATA.get(job_id, {}))
 
 
 def _status_progress(status: str) -> int:
+    """Map a job status string to an approximate progress percentage."""
     if status == "queued":
         return 5
     if status == "running":
@@ -252,6 +288,11 @@ def _status_progress(status: str) -> int:
 
 
 def _build_job_view(job_id: str) -> Optional[dict[str, Any]]:
+    """Build a rich view dict for a job, merging job state with metadata.
+
+    Returns:
+        Job view dict suitable for templates, or ``None`` if the job is missing.
+    """
     job = get_job(job_id)
     if job is None:
         return None
@@ -305,6 +346,11 @@ def _list_organize_jobs(
     status_filter: Optional[str] = None,
     limit: int = ORGANIZE_HISTORY_LIMIT,
 ) -> list[dict[str, Any]]:
+    """List recent organize jobs, optionally filtered by status.
+
+    Returns:
+        List of job view dicts.
+    """
     jobs = list_jobs(job_type=ORGANIZE_JOB_TYPE, limit=limit)
     rows: list[dict[str, Any]] = []
     for job in jobs:
@@ -317,6 +363,11 @@ def _list_organize_jobs(
 
 
 def _build_organize_stats() -> dict[str, Any]:
+    """Compute aggregate statistics across all organize jobs.
+
+    Returns:
+        Dict with totals, success rate, and methodology breakdowns.
+    """
     jobs = _list_organize_jobs(limit=500)
     total_jobs = len(jobs)
     completed_jobs = sum(1 for job in jobs if job["status"] == "completed")
@@ -344,6 +395,7 @@ def _build_organize_stats() -> dict[str, Any]:
 
 
 def _run_organize_job(job_id: str, organize_request: OrganizeRequest) -> None:
+    """Execute an organization job synchronously, updating job state on completion."""
     update_job(job_id, status="running", error=None)
     try:
         organizer = FileOrganizer(
@@ -362,6 +414,10 @@ def _run_organize_job(job_id: str, organize_request: OrganizeRequest) -> None:
 
 
 def _schedule_job(job_id: str, organize_request: OrganizeRequest, delay_minutes: int) -> None:
+    """Schedule an organization job to run after *delay_minutes*.
+
+    If *delay_minutes* is zero or negative the job runs immediately.
+    """
     delay_seconds = delay_minutes * 60
 
     def _runner() -> None:
@@ -381,6 +437,11 @@ def _schedule_job(job_id: str, organize_request: OrganizeRequest, delay_minutes:
 
 
 def _cancel_scheduled_job(job_id: str) -> bool:
+    """Cancel a scheduled job timer if it exists.
+
+    Returns:
+        ``True`` if the job was successfully cancelled, ``False`` otherwise.
+    """
     with _SCHEDULED_TIMERS_LOCK:
         timer = _SCHEDULED_TIMERS.pop(job_id, None)
     if timer is None:
@@ -391,6 +452,7 @@ def _cancel_scheduled_job(job_id: str) -> bool:
 
 
 def _job_report_payload(job: dict[str, Any]) -> dict[str, Any]:
+    """Extract a serializable report payload from a job view dict."""
     return {
         "job_id": job["job_id"],
         "status": job["status"],
@@ -418,7 +480,11 @@ def _job_report_payload(job: dict[str, Any]) -> dict[str, Any]:
 def organize_dashboard(
     request: Request, settings: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
-    """Render the organize dashboard page."""
+    """Render the organization dashboard with defaults and aggregate stats.
+
+    Returns:
+        Full HTML page for the organize dashboard.
+    """
     from file_organizer.web._helpers import base_context
 
     roots = allowed_roots(settings)
@@ -453,7 +519,11 @@ def organize_scan(
     skip_existing: str = Form("1"),
     use_hardlinks: str = Form("1"),
 ) -> HTMLResponse:
-    """Scan directories and build an organization plan."""
+    """Scan the input directory and generate a dry-run organization plan.
+
+    Returns:
+        HTMX partial showing the generated plan or an error message.
+    """
     error_message: Optional[str] = None
     info_message: Optional[str] = None
     plan: Optional[dict[str, Any]] = None
@@ -542,7 +612,11 @@ def organize_clear_plan(
     request: Request,
     plan_id: str = Form(""),
 ) -> HTMLResponse:
-    """Clear a pending organization plan."""
+    """Dismiss a previously generated organization plan.
+
+    Returns:
+        Empty plan partial with a dismissal confirmation.
+    """
     if plan_id:
         _delete_organize_plan(plan_id)
     return templates.TemplateResponse(
@@ -566,7 +640,11 @@ def organize_execute(
     dry_run: str = Form("0"),
     schedule_delay_minutes: str = Form(str(ORGANIZE_DEFAULT_DELAY_MIN)),
 ) -> HTMLResponse:
-    """Execute an organization plan in the background."""
+    """Execute or schedule an organization plan as a background job.
+
+    Returns:
+        Job status HTMX partial with progress information.
+    """
     info_message: Optional[str] = None
     error_message: Optional[str] = None
     job_view: Optional[dict[str, Any]] = None
@@ -649,7 +727,15 @@ def organize_job_status(
     job_id: str,
     format: str = Query("html", pattern="^(html|json)$"),
 ) -> Response:
-    """Return job status as HTML fragment."""
+    """Return the current status of an organization job.
+
+    Args:
+        job_id: Unique job identifier.
+        format: Response format (``html`` or ``json``).
+
+    Returns:
+        Job status as an HTML partial or JSON payload.
+    """
     job = _build_job_view(job_id)
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
@@ -669,7 +755,14 @@ def organize_job_status(
 
 @organize_router.get("/organize/jobs/{job_id}/events")
 async def organize_job_events(job_id: str) -> StreamingResponse:
-    """Stream server-sent events for a job."""
+    """Stream server-sent events for real-time job progress updates.
+
+    Args:
+        job_id: Unique job identifier.
+
+    Returns:
+        SSE stream that terminates when the job reaches a terminal state.
+    """
     if _build_job_view(job_id) is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
 
@@ -706,7 +799,11 @@ async def organize_job_events(job_id: str) -> StreamingResponse:
 
 @organize_router.post("/organize/jobs/{job_id}/cancel", response_class=HTMLResponse)
 def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
-    """Cancel a running organization job."""
+    """Cancel a scheduled organization job.
+
+    Returns:
+        Updated job status partial.
+    """
     job = _build_job_view(job_id)
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
@@ -732,7 +829,11 @@ def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
 
 @organize_router.post("/organize/jobs/{job_id}/rollback", response_class=HTMLResponse)
 def organize_job_rollback(request: Request, job_id: str) -> HTMLResponse:
-    """Roll back a completed organization job."""
+    """Rollback a completed organization job using the undo manager.
+
+    Returns:
+        Updated job status partial with rollback result.
+    """
     job = _build_job_view(job_id)
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
@@ -777,7 +878,11 @@ def organize_history(
     status_filter: str = Query("all", pattern="^(all|queued|running|completed|failed)$"),
     limit: int = Query(ORGANIZE_HISTORY_LIMIT, ge=1, le=200),
 ) -> HTMLResponse:
-    """Return organization job history as HTML fragment."""
+    """Return an HTMX partial listing recent organization jobs.
+
+    Returns:
+        HTML fragment with the job history table.
+    """
     rows = _list_organize_jobs(status_filter=status_filter, limit=limit)
     return templates.TemplateResponse(
         "organize/_history.html",
@@ -792,7 +897,7 @@ def organize_history(
 
 @organize_router.get("/organize/stats", response_class=HTMLResponse)
 def organize_stats(request: Request) -> HTMLResponse:
-    """Return organization statistics as HTML fragment."""
+    """Return an HTMX partial with aggregate organization statistics."""
     return templates.TemplateResponse(
         "organize/_stats.html",
         {
@@ -806,7 +911,15 @@ def organize_stats(request: Request) -> HTMLResponse:
 def organize_report(
     job_id: str, format: str = Query("json", pattern="^(json|csv|txt)$")
 ) -> Response:
-    """Return a job report in the requested format."""
+    """Download a job report in JSON, CSV, or plain-text format.
+
+    Args:
+        job_id: Unique job identifier.
+        format: Output format (``json``, ``csv``, or ``txt``).
+
+    Returns:
+        Formatted report response.
+    """
     job = _build_job_view(job_id)
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")

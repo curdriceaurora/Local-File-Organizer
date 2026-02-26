@@ -118,12 +118,14 @@ class WebSettings:
 
 
 def _as_form_bool(value: Optional[str]) -> bool:
+    """Convert an HTML form checkbox value to ``bool``."""
     if value is None:
         return False
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _coerce_bool(value: object, default: bool) -> bool:
+    """Coerce an arbitrary value to ``bool``, falling back to *default*."""
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
@@ -132,16 +134,26 @@ def _coerce_bool(value: object, default: bool) -> bool:
 
 
 def _validate_choice(value: str, allowed: list[str], fallback: str) -> str:
+    """Return *value* if it is in *allowed*, otherwise return *fallback*."""
     candidate = value.strip()
     return candidate if candidate in allowed else fallback
 
 
 def _validate_methodology(value: str) -> str:
+    """Validate and normalize a methodology identifier."""
     candidate = value.strip().lower()
     return candidate if candidate in METHODOLOGY_OPTIONS else "content_based"
 
 
 def _validate_rules(rules: str) -> tuple[bool, str]:
+    """Validate organization rule text.
+
+    Args:
+        rules: Newline-separated ``pattern -> destination`` rules.
+
+    Returns:
+        Tuple of ``(is_valid, message)``.
+    """
     lines = [line.strip() for line in rules.splitlines() if line.strip()]
     if not lines:
         return False, "Rules cannot be empty."
@@ -157,6 +169,7 @@ def _validate_rules(rules: str) -> tuple[bool, str]:
 
 
 def _load_web_settings() -> WebSettings:
+    """Load persisted ``WebSettings`` from disk, returning defaults on failure."""
     if not _SETTINGS_FILE.exists():
         return WebSettings()
 
@@ -188,6 +201,7 @@ def _load_web_settings() -> WebSettings:
 
 
 def _save_web_settings(ws: WebSettings) -> None:
+    """Persist *ws* to the JSON settings file on disk."""
     try:
         _SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
         _SETTINGS_FILE.write_text(json.dumps(asdict(ws), indent=2) + "\n", encoding="utf-8")
@@ -196,6 +210,7 @@ def _save_web_settings(ws: WebSettings) -> None:
 
 
 def _update_web_settings(**kwargs: object) -> WebSettings:
+    """Load settings, apply *kwargs* overrides, save, and return the result."""
     ws = _load_web_settings()
     known_fields = {f.name for f in fields(WebSettings)}
     for key, value in kwargs.items():
@@ -213,6 +228,7 @@ def _section_context(
     success_message: str = "",
     error_message: str = "",
 ) -> dict[str, object]:
+    """Build the base template context dict for a settings section partial."""
     return {
         "request": request,
         "ws": ws,
@@ -236,6 +252,16 @@ def _render_section(
     success_message: str = "",
     error_message: str = "",
 ) -> HTMLResponse:
+    """Render a single settings section HTMX partial.
+
+    Args:
+        section: Section name (e.g. ``"general"``, ``"models"``).
+        success_message: Optional success flash.
+        error_message: Optional error flash.
+
+    Returns:
+        Rendered HTML partial for the requested section.
+    """
     context = _section_context(
         request,
         ws,
@@ -250,7 +276,11 @@ def _render_section(
 def settings_page(
     request: Request, settings_obj: ApiSettings = Depends(get_settings)
 ) -> HTMLResponse:
-    """Render the settings page."""
+    """Render the full settings page with all sections.
+
+    Returns:
+        Full HTML page for settings.
+    """
     ws = _load_web_settings()
     context = base_context(
         request,
@@ -272,7 +302,11 @@ def settings_page(
 
 @settings_router.get("/settings/search", response_class=HTMLResponse)
 def settings_search(query: str = Query("", alias="q")) -> HTMLResponse:
-    """Return search results for settings as HTML fragment."""
+    """Search settings sections by keyword and return matching nav buttons.
+
+    Returns:
+        HTML fragment with section shortcut buttons, or an empty hint.
+    """
     needle = query.strip().lower()
     if not needle:
         return HTMLResponse("")
@@ -298,7 +332,7 @@ def settings_search(query: str = Query("", alias="q")) -> HTMLResponse:
 
 @settings_router.get("/settings/export")
 def settings_export() -> Response:
-    """Export current settings as a JSON file."""
+    """Export current web settings as a downloadable JSON file."""
     ws = _load_web_settings()
     payload = json.dumps(asdict(ws), indent=2) + "\n"
     return Response(
@@ -314,7 +348,11 @@ async def settings_import(
     section: str = Form("general"),
     settings_file: UploadFile = File(...),
 ) -> HTMLResponse:
-    """Import settings from an uploaded JSON file."""
+    """Import web settings from an uploaded JSON file.
+
+    Returns:
+        Re-rendered section partial with a success or error flash.
+    """
     valid_sections = {"general", "models", "organization", "appearance", "advanced"}
     target_section = section if section in valid_sections else "general"
 
@@ -360,7 +398,11 @@ async def settings_import(
 
 @settings_router.post("/settings/reset", response_class=HTMLResponse)
 def settings_reset(request: Request, section: str = Form("general")) -> HTMLResponse:
-    """Reset a settings section to defaults."""
+    """Reset all web settings to their defaults.
+
+    Returns:
+        Re-rendered section partial confirming the reset.
+    """
     valid_sections = {"general", "models", "organization", "appearance", "advanced"}
     target_section = section if section in valid_sections else "general"
     ws = WebSettings()
@@ -375,7 +417,7 @@ def settings_reset(request: Request, section: str = Form("general")) -> HTMLResp
 
 @settings_router.get("/settings/general", response_class=HTMLResponse)
 def settings_general_get(request: Request) -> HTMLResponse:
-    """Render the general settings section."""
+    """Render the General settings section partial."""
     return _render_section(request, _load_web_settings(), section="general")
 
 
@@ -387,7 +429,7 @@ def settings_general_post(
     default_input_dir: str = Form(""),
     default_output_dir: str = Form(""),
 ) -> HTMLResponse:
-    """Handle general settings form submission."""
+    """Save General settings and re-render the section partial."""
     try:
         ws = _update_web_settings(
             language=_validate_choice(language, LANGUAGE_OPTIONS, "en"),
@@ -413,7 +455,7 @@ def settings_general_post(
 
 @settings_router.get("/settings/models", response_class=HTMLResponse)
 def settings_models_get(request: Request) -> HTMLResponse:
-    """Render the models settings section."""
+    """Render the Models settings section partial."""
     return _render_section(request, _load_web_settings(), section="models")
 
 
@@ -424,7 +466,7 @@ def settings_models_post(
     vision_model: str = Form(""),
     ollama_url: str = Form(""),
 ) -> HTMLResponse:
-    """Handle models settings form submission."""
+    """Save Models settings and re-render the section partial."""
     try:
         ws = _update_web_settings(
             text_model=text_model.strip() or "qwen2.5:3b-instruct-q4_K_M",
@@ -452,7 +494,7 @@ def settings_models_test(
     request: Request,
     ollama_url: str = Form(""),
 ) -> HTMLResponse:
-    """Test connectivity to the configured Ollama instance."""
+    """Test Ollama connectivity and re-render the Models section partial."""
     ws = _load_web_settings()
     target = ollama_url.strip() or ws.ollama_url
     try:
@@ -477,7 +519,7 @@ def settings_models_test(
 
 @settings_router.get("/settings/organization", response_class=HTMLResponse)
 def settings_organization_get(request: Request) -> HTMLResponse:
-    """Render the organization settings section."""
+    """Render the Organization settings section partial."""
     return _render_section(request, _load_web_settings(), section="organization")
 
 
@@ -486,7 +528,7 @@ def settings_organization_validate(
     request: Request,
     organization_rules: str = Form(""),
 ) -> HTMLResponse:
-    """Validate organization rules."""
+    """Validate organization rules and re-render the section partial."""
     ws = _load_web_settings()
     candidate_rules = organization_rules or ws.organization_rules
     valid, message = _validate_rules(candidate_rules)
@@ -517,7 +559,7 @@ def settings_organization_post(
     file_filter_glob: str = Form("*"),
     organization_rules: str = Form(""),
 ) -> HTMLResponse:
-    """Handle organization settings form submission."""
+    """Save Organization settings and re-render the section partial."""
     existing = _load_web_settings()
     candidate_rules = organization_rules or existing.organization_rules
     valid, message = _validate_rules(candidate_rules)
@@ -556,7 +598,7 @@ def settings_organization_post(
 
 @settings_router.get("/settings/appearance", response_class=HTMLResponse)
 def settings_appearance_get(request: Request) -> HTMLResponse:
-    """Render the appearance settings section."""
+    """Render the Appearance settings section partial."""
     return _render_section(request, _load_web_settings(), section="appearance")
 
 
@@ -566,7 +608,7 @@ def settings_appearance_post(
     theme: str = Form("light"),
     custom_theme_name: str = Form(""),
 ) -> HTMLResponse:
-    """Handle appearance settings form submission."""
+    """Save Appearance settings and re-render the section partial."""
     try:
         ws = _update_web_settings(
             theme=_validate_choice(theme.lower(), THEME_OPTIONS, "light"),
@@ -590,7 +632,7 @@ def settings_appearance_post(
 
 @settings_router.get("/settings/advanced", response_class=HTMLResponse)
 def settings_advanced_get(request: Request) -> HTMLResponse:
-    """Render the advanced settings section."""
+    """Render the Advanced settings section partial."""
     return _render_section(request, _load_web_settings(), section="advanced")
 
 
@@ -602,7 +644,7 @@ def settings_advanced_post(
     debug_mode: Optional[str] = Form(None),
     performance_mode: str = Form("balanced"),
 ) -> HTMLResponse:
-    """Handle advanced settings form submission."""
+    """Save Advanced settings and re-render the section partial."""
     try:
         ws = _update_web_settings(
             log_level=_validate_choice(log_level.strip().upper(), LOG_LEVEL_OPTIONS, "INFO"),
