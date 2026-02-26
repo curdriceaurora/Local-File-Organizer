@@ -299,4 +299,4 @@ fail-under = 90
 exclude = ["tests", "setup.py", "docs"]
 verbose = 1
 quiet = false
-whitelist-regex = ""
+whitelist-regex = []
