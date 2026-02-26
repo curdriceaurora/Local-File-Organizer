@@ -1,9 +1,10 @@
 """Tests for API key helpers."""
 
 from __future__ import annotations
-import pytest
 
 import stat
+
+import pytest
 
 from file_organizer.api.api_keys import (
     _main,

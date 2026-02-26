@@ -6,9 +6,10 @@ filter evaluation, and registry CRUD operations.
 """
 
 from __future__ import annotations
-import pytest
 
 from unittest.mock import MagicMock
+
+import pytest
 
 from file_organizer.events.subscription import (
     Subscription,

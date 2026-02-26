@@ -7,10 +7,11 @@ Validates:
 """
 
 from __future__ import annotations
-import pytest
 
 import re
 from pathlib import Path
+
+import pytest
 
 from tests.docs.conftest import DOCS_DIR, MKDOCS_FILE
 

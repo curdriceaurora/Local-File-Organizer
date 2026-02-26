@@ -5,12 +5,13 @@ Tests high-level undo/redo management functionality.
 """
 
 from __future__ import annotations
-import pytest
 
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+
+import pytest
 
 from file_organizer.history.models import OperationStatus, OperationType
 from file_organizer.history.tracker import OperationHistory

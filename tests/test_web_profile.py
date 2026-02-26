@@ -1,11 +1,11 @@
 """Tests for the web profile UI routes."""
 
 from __future__ import annotations
-import pytest
 
 import html
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from file_organizer.api.auth import hash_password

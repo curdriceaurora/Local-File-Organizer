@@ -5,13 +5,14 @@ find_duplicates_of_file, and statistics.
 """
 
 from __future__ import annotations
-import pytest
 
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
+
+import pytest
 
 from file_organizer.services.deduplication.detector import (
     DuplicateDetector,

@@ -6,11 +6,12 @@ and concurrent access from multiple threads.
 """
 
 from __future__ import annotations
-import pytest
 
 import threading
 import time
 import unittest
+
+import pytest
 
 from file_organizer.parallel.throttle import RateThrottler, ThrottleStats
 

@@ -1,12 +1,12 @@
 """Tests for the dedupe API router."""
 
 from __future__ import annotations
-import pytest
 
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 

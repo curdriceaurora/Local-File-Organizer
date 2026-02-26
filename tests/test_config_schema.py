@@ -1,6 +1,7 @@
 """Tests for AppConfig/ModelPreset schema validation and round-trips."""
 
 from __future__ import annotations
+
 import pytest
 
 from file_organizer.config.schema import AppConfig, ModelPreset, UpdateSettings

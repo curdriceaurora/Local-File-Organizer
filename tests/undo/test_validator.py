@@ -5,13 +5,14 @@ Tests validation logic for undo/redo operations.
 """
 
 from __future__ import annotations
-import pytest
 
 import shutil
 import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+
+import pytest
 
 from file_organizer.history.models import Operation, OperationStatus, OperationType
 from file_organizer.undo.models import ConflictType

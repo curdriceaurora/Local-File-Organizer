@@ -5,9 +5,10 @@ and boolean behaviors.
 """
 
 from __future__ import annotations
-import pytest
 
 import unittest
+
+import pytest
 
 from file_organizer.undo.models import (
     Conflict,

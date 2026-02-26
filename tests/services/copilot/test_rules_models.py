@@ -5,10 +5,11 @@ RuleSet including serialization/deserialization round-trips and edge cases.
 """
 
 from __future__ import annotations
-import pytest
 
 from datetime import datetime
 from typing import Any
+
+import pytest
 
 from file_organizer.services.copilot.rules.models import (
     ActionType,

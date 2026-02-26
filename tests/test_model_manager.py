@@ -1,9 +1,10 @@
 """Tests for ModelManager and model registry."""
 
 from __future__ import annotations
-import pytest
 
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from file_organizer.models.model_manager import ModelManager
 from file_organizer.models.registry import AVAILABLE_MODELS, ModelInfo

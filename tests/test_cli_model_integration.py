@@ -4,8 +4,8 @@ Exercises model list/pull/cache with mocked Ollama responses.
 """
 
 from __future__ import annotations
-import pytest
 
+import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app

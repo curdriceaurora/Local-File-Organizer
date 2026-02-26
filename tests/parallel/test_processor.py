@@ -10,6 +10,7 @@ import time
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
+
 import pytest
 
 from file_organizer.parallel.config import ExecutorType, ParallelConfig

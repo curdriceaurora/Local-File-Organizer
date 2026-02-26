@@ -1,12 +1,12 @@
 """Tests for the files API router."""
 
 from __future__ import annotations
-import pytest
 
 import os
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 

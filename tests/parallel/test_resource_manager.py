@@ -6,10 +6,11 @@ across CPU, memory, IO, and GPU resource types.
 """
 
 from __future__ import annotations
-import pytest
 
 import threading
 import unittest
+
+import pytest
 
 from file_organizer.parallel.resource_manager import (
     ResourceConfig,

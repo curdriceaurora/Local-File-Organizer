@@ -6,13 +6,14 @@ save, load, list, delete, filtering, and error handling.
 """
 
 from __future__ import annotations
-import pytest
 
 import json
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from file_organizer.parallel.models import JobState, JobStatus, JobSummary
 from file_organizer.parallel.persistence import JobPersistence

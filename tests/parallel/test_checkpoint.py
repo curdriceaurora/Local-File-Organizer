@@ -6,12 +6,13 @@ and file change detection.
 """
 
 from __future__ import annotations
-import pytest
 
 import hashlib
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from file_organizer.parallel.checkpoint import (
     CheckpointManager,

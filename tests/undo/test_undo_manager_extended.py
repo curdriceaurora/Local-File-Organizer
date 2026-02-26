@@ -5,11 +5,12 @@ stack management, and context manager.
 """
 
 from __future__ import annotations
-import pytest
 
 import unittest
 from datetime import datetime
 from unittest.mock import MagicMock
+
+import pytest
 
 from file_organizer.history.models import Operation, OperationStatus, OperationType
 from file_organizer.undo.models import RollbackResult, ValidationResult

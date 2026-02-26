@@ -5,7 +5,6 @@ Tests history viewing and filtering functionality.
 """
 
 from __future__ import annotations
-import pytest
 
 import shutil
 import sys
@@ -14,6 +13,8 @@ import unittest
 from datetime import datetime, timedelta
 from io import StringIO
 from pathlib import Path
+
+import pytest
 
 from file_organizer.history.models import OperationStatus, OperationType
 from file_organizer.history.tracker import OperationHistory

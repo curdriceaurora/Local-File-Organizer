@@ -6,12 +6,13 @@ peek, reorder, and concurrent access patterns.
 """
 
 from __future__ import annotations
-import pytest
 
 import threading
 import time
 import unittest
 from pathlib import Path
+
+import pytest
 
 from file_organizer.parallel.priority_queue import PriorityQueue, QueueItem
 

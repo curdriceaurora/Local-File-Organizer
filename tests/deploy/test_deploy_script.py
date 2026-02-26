@@ -5,13 +5,14 @@ functions with mocked subprocess and network calls.
 """
 
 from __future__ import annotations
-import pytest
 
 import subprocess
 import sys
 import urllib.error
 from pathlib import Path
 from unittest import mock
+
+import pytest
 
 # Add scripts directory to path for import
 SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "scripts"

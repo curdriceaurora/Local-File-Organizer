@@ -4,11 +4,12 @@ Covers initialization, find_duplicates, compare_documents, and space calculation
 """
 
 from __future__ import annotations
-import pytest
 
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 @pytest.mark.unit

@@ -6,10 +6,11 @@ interruption, hash mismatch detection, and error handling.
 """
 
 from __future__ import annotations
-import pytest
 
 import unittest
 from pathlib import Path
+
+import pytest
 
 from file_organizer.parallel.checkpoint import CheckpointManager
 from file_organizer.parallel.config import ExecutorType, ParallelConfig

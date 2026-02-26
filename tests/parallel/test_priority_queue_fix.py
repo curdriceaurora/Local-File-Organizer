@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+
 import pytest
 
 from file_organizer.parallel.priority_queue import PriorityQueue, QueueItem

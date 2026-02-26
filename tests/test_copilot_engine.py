@@ -1,10 +1,11 @@
 """Tests for copilot engine, conversation manager, intent parser, and executor."""
 
 from __future__ import annotations
-import pytest
 
 from pathlib import Path
 from unittest.mock import MagicMock
+
+import pytest
 
 from file_organizer.services.copilot.conversation import ConversationManager
 from file_organizer.services.copilot.engine import CopilotEngine

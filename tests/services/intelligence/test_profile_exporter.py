@@ -5,7 +5,6 @@ and multi-profile export.
 """
 
 from __future__ import annotations
-import pytest
 
 import json
 import shutil
@@ -13,6 +12,8 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
+
+import pytest
 
 
 @pytest.mark.unit

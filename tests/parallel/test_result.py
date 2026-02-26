@@ -7,6 +7,7 @@ and string representations.
 
 import unittest
 from pathlib import Path
+
 import pytest
 
 from file_organizer.parallel.result import BatchResult, FileResult

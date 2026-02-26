@@ -5,11 +5,12 @@ including serialization (to_dict) and deserialization (from_dict).
 """
 
 from __future__ import annotations
-import pytest
 
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+
+import pytest
 
 from file_organizer.parallel.models import (
     Checkpoint,

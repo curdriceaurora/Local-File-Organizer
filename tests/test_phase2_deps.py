@@ -5,6 +5,7 @@ and meet minimum version requirements.
 """
 
 import sys
+
 import pytest
 
 # ---------------------------------------------------------------------------

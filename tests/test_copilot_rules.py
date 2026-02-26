@@ -1,9 +1,10 @@
 """Tests for the copilot rule management and preview system."""
 
 from __future__ import annotations
-import pytest
 
 from pathlib import Path
+
+import pytest
 
 from file_organizer.services.copilot.rules.models import (
     ActionType,

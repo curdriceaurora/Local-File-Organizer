@@ -1,11 +1,11 @@
 """Tests for the organize API router."""
 
 from __future__ import annotations
-import pytest
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
