@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from textual.app import App
 from textual.binding import Binding
 from textual.widgets import Static
@@ -13,6 +14,8 @@ from file_organizer.tui.app import (
     StatusBar,
     run_tui,
 )
+
+pytestmark = [pytest.mark.unit]
 
 
 class TestStatusBar:

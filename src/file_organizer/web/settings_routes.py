@@ -255,6 +255,8 @@ def _render_section(
     """Render a single settings section HTMX partial.
 
     Args:
+        request: Incoming FastAPI request.
+        ws: Current persisted web settings.
         section: Section name (e.g. ``"general"``, ``"models"``).
         success_message: Optional success flash.
         error_message: Optional error flash.

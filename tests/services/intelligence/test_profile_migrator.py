@@ -18,6 +18,8 @@ import pytest
 from file_organizer.services.intelligence.profile_manager import ProfileManager
 from file_organizer.services.intelligence.profile_migrator import ProfileMigrator
 
+pytestmark = [pytest.mark.unit]
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

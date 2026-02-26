@@ -418,6 +418,8 @@ def files_tree(
     """Return an HTMX partial with sidebar tree nodes for the given path.
 
     Args:
+        request: Incoming FastAPI request.
+        settings: Application settings with allowed paths.
         path: Directory to expand in the tree.
         depth: Current nesting depth for indentation.
         active: Currently selected path, used for highlighting.
@@ -486,6 +488,7 @@ def files_thumbnail(
     """Generate a small PNG thumbnail for an image, PDF, or video file.
 
     Args:
+        settings: Application settings with allowed paths.
         path: Absolute file path.
         kind: File kind hint (``image``, ``pdf``, ``video``, or ``file``).
 
@@ -528,6 +531,7 @@ def files_raw(
     """Serve a raw file for inline viewing or as a download attachment.
 
     Args:
+        settings: Application settings with allowed paths.
         path: Absolute file path.
         download: When true, set Content-Disposition to attachment.
 

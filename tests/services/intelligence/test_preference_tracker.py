@@ -25,6 +25,8 @@ from file_organizer.services.intelligence.preference_tracker import (
     track_file_rename,
 )
 
+pytestmark = [pytest.mark.unit]
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

@@ -730,6 +730,7 @@ def organize_job_status(
     """Return the current status of an organization job.
 
     Args:
+        request: Incoming FastAPI request.
         job_id: Unique job identifier.
         format: Response format (``html`` or ``json``).
 

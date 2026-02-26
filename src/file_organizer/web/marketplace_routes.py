@@ -132,7 +132,12 @@ def install_plugin(
     """Install a marketplace plugin by name and re-render the marketplace page.
 
     Args:
+        request: Incoming FastAPI request.
         name: Plugin identifier from the URL path.
+        settings: Application settings with allowed paths.
+        q: Current search query to preserve across actions.
+        category: Active category filter to preserve.
+        tag_csv: Comma-separated tag filters to preserve.
 
     Returns:
         Marketplace page with a success or error flash message.
@@ -168,7 +173,12 @@ def uninstall_plugin(
     """Uninstall a previously installed plugin and re-render the marketplace page.
 
     Args:
+        request: Incoming FastAPI request.
         name: Plugin identifier from the URL path.
+        settings: Application settings with allowed paths.
+        q: Current search query to preserve across actions.
+        category: Active category filter to preserve.
+        tag_csv: Comma-separated tag filters to preserve.
 
     Returns:
         Marketplace page with a success or error flash message.
@@ -204,7 +214,12 @@ def update_plugin(
     """Update an installed plugin to the latest version.
 
     Args:
+        request: Incoming FastAPI request.
         name: Plugin identifier from the URL path.
+        settings: Application settings with allowed paths.
+        q: Current search query to preserve across actions.
+        category: Active category filter to preserve.
+        tag_csv: Comma-separated tag filters to preserve.
 
     Returns:
         Marketplace page with an update status flash message.
