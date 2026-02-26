@@ -346,6 +346,8 @@ class PluginExecutor:
             try:
                 value = result_queue.get(timeout=timeout)
             except queue.Empty:
+                # The daemon reader thread is still blocked on readline().
+                # It will be cleaned up when stop() kills the subprocess.
                 raise PluginError(
                     f"Worker process did not respond within {timeout}s "
                     "(possible hang or timeout)."
