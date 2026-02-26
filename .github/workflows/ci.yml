@@ -72,3 +72,9 @@ jobs:
         with:
           file: coverage.xml
           fail_ci_if_error: false
+      - name: Check docstring coverage
+        if: matrix.python-version == '3.12'
+        continue-on-error: true
+        run: |
+          pip install interrogate
+          interrogate src/file_organizer/ -v
