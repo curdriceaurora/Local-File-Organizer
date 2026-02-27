@@ -1,4 +1,4 @@
-"""Benchmark command for performance measurement.
+"""Benchmark command for performance measurement and optimization analysis.
 
 Provides performance benchmarking capabilities to measure file processing
 speed, memory usage, and other performance metrics.
