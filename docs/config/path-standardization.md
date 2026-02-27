@@ -56,7 +56,7 @@ File Organizer v2.0 automatically migrates from legacy paths:
 
 1. **First Run**: The application detects legacy paths and creates a backup
 2. **Migration**: Files are copied to new XDG-compliant locations
-3. **Backup**: Original files are preserved with timestamp suffix (e.g., `.backup.20260227_143022`)
+3. **Backup**: Original files are preserved with timestamp suffix (e.g., `.backup.20260227_143022_123456`)
 
 To manually trigger migration:
 
