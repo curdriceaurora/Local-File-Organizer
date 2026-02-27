@@ -55,7 +55,8 @@ class PathMigrator:
         Returns:
             Path to backup directory
         """
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # Use microseconds to ensure uniqueness for rapid successive migrations
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
         backup = self.legacy_path.parent / f'{self.legacy_path.name}.backup.{timestamp}'
         shutil.copytree(self.legacy_path, backup)
         self.backup_path = backup
@@ -95,10 +96,15 @@ class PathMigrator:
         }
 
     def finalize_migration(self) -> None:
-        """Finalize migration after verification."""
+        """Finalize migration after verification, persisting audit trail."""
         log = self.create_migration_log()
         log['status'] = 'completed'
         self.migration_log = log
+
+        # Persist log to audit trail for data integrity and compliance
+        self.canonical_path.mkdir(parents=True, exist_ok=True)
+        audit_file = self.canonical_path / '.migration-audit.json'
+        audit_file.write_text(json.dumps(log, indent=2, default=str))
 
         # Could optionally remove legacy path here
         # For now, leave it with backup created for safety
