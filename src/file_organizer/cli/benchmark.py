@@ -11,8 +11,6 @@ import time
 from pathlib import Path
 
 import typer
-from rich.console import Console
-from rich.table import Table
 
 from file_organizer.optimization.memory_profiler import MemoryProfiler
 from file_organizer.optimization.resource_monitor import ResourceMonitor
@@ -48,6 +46,10 @@ def run(
     Measures processing speed, memory usage, and timing statistics
     for file organization operations.
     """
+    # Import Rich here to avoid affecting Typer's help text rendering
+    from rich.console import Console
+    from rich.table import Table
+
     # Initialize console for output
     console = Console()
 
