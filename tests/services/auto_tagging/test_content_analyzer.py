@@ -54,6 +54,7 @@ def process_data(input_file):
     return file_path
 
 
+@pytest.mark.unit
 class TestContentTagAnalyzer:
     """Tests for ContentTagAnalyzer class."""
 

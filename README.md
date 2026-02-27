@@ -1,7 +1,7 @@
 # File Organizer v2.0
 
 [![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-local%20report-blue)](../htmlcov/index.html)
+[![Docs](https://img.shields.io/badge/docs-user%20guide-blue)](docs/USER_GUIDE.md)
 
 > AI-powered local file management. Privacy-first -- runs 100% on your device.
 
@@ -56,10 +56,10 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 ## Documentation
 
 - [User Guide](docs/USER_GUIDE.md)
-- [CLI Reference](docs/CLI_REFERENCE.md)
+- [CLI Reference](docs/cli-reference.md)
 - [Configuration Guide](docs/CONFIGURATION.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
-- [Tutorials](docs/tutorials/README.md)
+- [Getting Started](docs/getting-started.md)
 
 ## Optional Feature Packs
 

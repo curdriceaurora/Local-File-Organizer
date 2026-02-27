@@ -11,6 +11,7 @@ import pytest
 from file_organizer.services.deduplication.hasher import FileHasher
 
 
+@pytest.mark.unit
 class TestFileHasherInit:
     """Test FileHasher initialization and chunk_size validation."""
 
@@ -66,6 +67,7 @@ class TestFileHasherInit:
             FileHasher(chunk_size="8192")  # type: ignore
 
 
+@pytest.mark.unit
 class TestFileHasherComputeHash:
     """Test hash computation functionality."""
 
@@ -148,6 +150,7 @@ class TestFileHasherComputeHash:
             hasher.compute_hash(test_file, algorithm="sha512")  # type: ignore
 
 
+@pytest.mark.unit
 class TestFileHasherChunkSizes:
     """Test that different chunk sizes produce same hash."""
 
@@ -171,6 +174,7 @@ class TestFileHasherChunkSizes:
         assert hash_small == hash_default == hash_large
 
 
+@pytest.mark.unit
 class TestFileHasherBatch:
     """Test batch processing functionality."""
 
@@ -208,6 +212,7 @@ class TestFileHasherBatch:
         assert file2 not in results
 
 
+@pytest.mark.unit
 class TestFileHasherGetFileSize:
     """Test file size retrieval."""
 
@@ -229,6 +234,7 @@ class TestFileHasherGetFileSize:
             hasher.get_file_size(Path("/nonexistent/file.txt"))
 
 
+@pytest.mark.unit
 class TestFileHasherValidateAlgorithm:
     """Test algorithm validation."""
 

@@ -13,6 +13,7 @@ import pytest
 from file_organizer.services.intelligence.directory_prefs import DirectoryPrefs
 
 
+@pytest.mark.unit
 class TestDirectoryPrefs:
     """Test suite for DirectoryPrefs class."""
 

@@ -154,3 +154,137 @@ def sample_files_dir(tmp_path: Path) -> Path:
     (d / "notes.md").write_text("# Notes\n\n- Item 1\n- Item 2\n")
     (d / "data.csv").write_text("col1,col2\nval1,val2\n")
     return d
+
+
+# ---------------------------------------------------------------------------
+# NLTK test fixtures for hermeticity (Issue #470)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_nltk_tokenizer() -> MagicMock:
+    """Create a mock NLTK word_tokenize function.
+
+    Returns a list of tokens that mimics NLTK tokenization behavior.
+    """
+    tokenizer_mock = MagicMock()
+
+    def tokenize_text(text: str) -> list[str]:
+        """Simple tokenizer that splits on whitespace and punctuation."""
+        import re
+        # Simple regex-based tokenization
+        tokens = re.findall(r'\b\w+\b', text.lower())
+        return tokens
+
+    tokenizer_mock.side_effect = tokenize_text
+    return tokenizer_mock
+
+
+@pytest.fixture
+def mock_nltk_stopwords() -> MagicMock:
+    """Create a mock NLTK stopwords corpus.
+
+    Returns a mock that provides English stopwords without requiring downloads.
+    """
+    stopwords_mock = MagicMock()
+
+    # Minimal English stopwords set
+    english_stopwords = {
+        'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for',
+        'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'or',
+        'that', 'the', 'to', 'was', 'will', 'with', 'i', 'you', 'we',
+        'they', 'she', 'him', 'her', 'me', 'us', 'can', 'could', 'would',
+        'should', 'do', 'does', 'did', 'have', 'having', 'not',
+        'no', 'nor', 'so', 'than', 'too', 'very', 'just', 'own', 'same',
+    }
+
+    def get_stopwords(language: str = 'english') -> set[str]:
+        """Return a minimal set of stopwords."""
+        if language == 'english':
+            return english_stopwords
+        return set()
+
+    stopwords_mock.words.side_effect = get_stopwords
+    return stopwords_mock
+
+
+@pytest.fixture
+def mock_nltk_lemmatizer() -> MagicMock:
+    """Create a mock NLTK WordNetLemmatizer.
+
+    Returns a mock lemmatizer that performs basic lemmatization.
+    """
+    lemmatizer_class = MagicMock()
+    lemmatizer_instance = MagicMock()
+
+    def lemmatize(word: str, pos: str = 'n') -> str:
+        """Simple lemmatization - just return the word."""
+        # In real lemmatization, this would transform words to their base form
+        # For testing, we just return the word as-is
+        return word.lower()
+
+    lemmatizer_instance.lemmatize.side_effect = lemmatize
+    lemmatizer_class.return_value = lemmatizer_instance
+    return lemmatizer_class
+
+
+@pytest.fixture
+def mock_nltk_freqdist() -> MagicMock:
+    """Create a mock NLTK FreqDist class.
+
+    Returns a mock frequency distribution that supports most_common().
+    """
+    freqdist_class = MagicMock()
+
+    def create_freq_dist(words: list[str]) -> MagicMock:
+        """Create a mock FreqDist instance."""
+        from collections import Counter
+
+        freq_dist_instance = MagicMock()
+        word_counts = Counter(words)
+
+        def most_common(n: int | None = None) -> list[tuple[str, int]]:
+            """Return the most common words."""
+            return word_counts.most_common(n)
+
+        freq_dist_instance.most_common.side_effect = most_common
+        return freq_dist_instance
+
+    freqdist_class.side_effect = create_freq_dist
+    return freqdist_class
+
+
+@pytest.fixture
+def mock_nltk_ensure_data_no_op() -> None:
+    """Fixture that ensures ensure_nltk_data() doesn't create directories.
+
+    When used, mocks ensure_nltk_data() to be a no-op, preventing any
+    filesystem operations during test setup.
+
+    Usage:
+        def test_something(mock_nltk_ensure_data_no_op):
+            # ensure_nltk_data() is mocked as a no-op
+            ...
+    """
+    from unittest.mock import patch
+    with patch('file_organizer.utils.text_processing.ensure_nltk_data'):
+        yield
+
+
+@pytest.fixture
+def isolated_nltk_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fixture that simulates a clean container without NLTK corpus.
+
+    Sets NLTK_AVAILABLE to False to test fallback behavior in isolated
+    environments where NLTK data is not pre-installed.
+
+    Usage:
+        def test_something_without_nltk(isolated_nltk_environment):
+            # Tests run as if NLTK is not available
+            ...
+    """
+    # Mock NLTK_AVAILABLE as False
+    monkeypatch.setattr(
+        'file_organizer.utils.text_processing.NLTK_AVAILABLE',
+        False
+    )

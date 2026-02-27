@@ -52,6 +52,7 @@ REAL_MODULES_CHECK = [
 ]
 
 
+@pytest.mark.unit
 class TestPythonCodeExamples:
     """Validate Python code blocks in documentation parse without syntax errors."""
 
@@ -135,6 +136,7 @@ class TestPythonCodeExamples:
         )
 
 
+@pytest.mark.unit
 class TestCurlExamples:
     """Validate cURL examples in documentation reference real API endpoints."""
 
@@ -195,6 +197,7 @@ class TestCurlExamples:
         assert not violations, "cURL examples use wrong auth header:\n" + "\n".join(violations)
 
 
+@pytest.mark.unit
 class TestImportPathsInExamples:
     """Validate that import statements in examples reference real modules."""
 
@@ -238,6 +241,7 @@ class TestImportPathsInExamples:
         )
 
 
+@pytest.mark.unit
 class TestApiKeyFormatInExamples:
     """Validate API key format used in examples matches real format."""
 

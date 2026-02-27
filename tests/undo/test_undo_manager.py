@@ -11,6 +11,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from file_organizer.history.models import OperationStatus, OperationType
 from file_organizer.history.tracker import OperationHistory
 from file_organizer.undo.rollback import RollbackExecutor
@@ -18,6 +20,7 @@ from file_organizer.undo.undo_manager import UndoManager
 from file_organizer.undo.validator import OperationValidator
 
 
+@pytest.mark.unit
 class TestUndoManager(unittest.TestCase):
     """Test cases for UndoManager."""
 

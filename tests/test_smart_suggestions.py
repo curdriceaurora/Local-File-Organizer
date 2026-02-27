@@ -22,6 +22,7 @@ from file_organizer.services.smart_suggestions import ConfidenceScorer, Suggesti
 from file_organizer.services.suggestion_feedback import SuggestionFeedback
 
 
+@pytest.mark.unit
 class TestPatternAnalyzer:
     """Tests for PatternAnalyzer."""
 
@@ -134,6 +135,7 @@ class TestPatternAnalyzer:
         assert len(analysis.naming_patterns) == 0
 
 
+@pytest.mark.unit
 class TestSuggestionEngine:
     """Tests for SuggestionEngine."""
 
@@ -252,6 +254,7 @@ class TestSuggestionEngine:
         assert "File type matches target location" in explanation
 
 
+@pytest.mark.unit
 class TestMisplacementDetector:
     """Tests for MisplacementDetector."""
 
@@ -338,6 +341,7 @@ class TestMisplacementDetector:
         assert suggested.name == "images" or "image" in str(suggested).lower()
 
 
+@pytest.mark.unit
 class TestSuggestionFeedback:
     """Tests for SuggestionFeedback."""
 
@@ -478,6 +482,7 @@ class TestSuggestionFeedback:
         assert len(feedback.feedback_entries) == initial_count
 
 
+@pytest.mark.unit
 class TestIntegration:
     """Integration tests for the complete smart suggestions system."""
 

@@ -11,9 +11,12 @@ import threading
 import time
 import unittest
 
+import pytest
+
 from file_organizer.parallel.throttle import RateThrottler, ThrottleStats
 
 
+@pytest.mark.unit
 class TestThrottleStats(unittest.TestCase):
     """Test cases for ThrottleStats dataclass."""
 
@@ -33,6 +36,7 @@ class TestThrottleStats(unittest.TestCase):
         self.assertEqual(stats.window_seconds, 1.0)
 
 
+@pytest.mark.unit
 class TestRateThrottler(unittest.TestCase):
     """Test cases for RateThrottler."""
 

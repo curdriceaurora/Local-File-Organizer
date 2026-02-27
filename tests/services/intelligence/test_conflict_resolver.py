@@ -13,6 +13,7 @@ import pytest
 from file_organizer.services.intelligence.conflict_resolver import ConflictResolver
 
 
+@pytest.mark.unit
 class TestConflictResolver:
     """Test suite for ConflictResolver class."""
 

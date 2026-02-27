@@ -71,6 +71,7 @@ def para_structure(tmp_path):
     return tmp_path
 
 
+@pytest.mark.unit
 class TestCompleteWorkflows:
     """Tests for complete end-to-end workflows."""
 
@@ -234,6 +235,7 @@ class TestCompleteWorkflows:
             assert restored is not None
 
 
+@pytest.mark.unit
 class TestCrossComponentIntegration:
     """Tests for integration between components."""
 
@@ -330,6 +332,7 @@ class TestCrossComponentIntegration:
         assert jd_number is not None
 
 
+@pytest.mark.unit
 class TestRealWorldScenarios:
     """Tests for real-world usage scenarios."""
 
@@ -440,6 +443,7 @@ class TestRealWorldScenarios:
         assert result.transformed_count > 0 or result.skipped_count > 0
 
 
+@pytest.mark.unit
 class TestPerformance:
     """Performance-related integration tests."""
 
@@ -477,6 +481,7 @@ class TestPerformance:
         assert result.transformed_count > 0
 
 
+@pytest.mark.unit
 class TestErrorHandling:
     """Tests for error handling in integrated workflows."""
 
@@ -531,6 +536,7 @@ class TestErrorHandling:
             pass
 
 
+@pytest.mark.unit
 class TestBackwardCompatibility:
     """Tests for backward compatibility and migration paths."""
 

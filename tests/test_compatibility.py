@@ -31,6 +31,7 @@ import pytest
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestFutureAnnotations:
     """Verify that PEP 563 postponed evaluation works for all type hint patterns."""
 
@@ -136,6 +137,7 @@ class TestFutureAnnotations:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestStrEnumBackport:
     """Verify the StrEnum backport works identically to the 3.11+ stdlib version."""
 
@@ -310,6 +312,7 @@ class TestStrEnumBackport:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestDataclassCompatibility:
     """Verify dataclass patterns work correctly with future annotations."""
 
@@ -416,6 +419,7 @@ class TestDataclassCompatibility:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestIsinstanceTupleForm:
     """Validate that isinstance() uses the 3.9-safe tuple form throughout."""
 
@@ -460,6 +464,7 @@ class TestIsinstanceTupleForm:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestImportPaths:
     """Verify that all critical import paths resolve correctly."""
 
@@ -507,6 +512,7 @@ class TestImportPaths:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestDatetimeCompatibility:
     """Ensure datetime.UTC (Python 3.11+) is used throughout the codebase."""
 
@@ -562,6 +568,7 @@ class TestDatetimeCompatibility:
 # ===================================================================
 
 
+@pytest.mark.unit
 class TestVersionDetection:
     """Test runtime version detection utilities."""
 

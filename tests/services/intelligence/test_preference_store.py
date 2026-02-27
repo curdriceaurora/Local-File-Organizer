@@ -42,6 +42,7 @@ def store(temp_storage):
     return PreferenceStore(storage_path=temp_storage)
 
 
+@pytest.mark.unit
 class TestDirectoryPreference:
     """Tests for DirectoryPreference dataclass"""
 
@@ -90,6 +91,7 @@ class TestDirectoryPreference:
         assert pref.updated is not None
 
 
+@pytest.mark.unit
 class TestPreferenceStoreInit:
     """Tests for PreferenceStore initialization"""
 
@@ -112,6 +114,7 @@ class TestPreferenceStoreInit:
         assert store._preferences == {}
 
 
+@pytest.mark.unit
 class TestSchemaValidation:
     """Tests for schema validation"""
 
@@ -195,6 +198,7 @@ class TestSchemaValidation:
         assert store._validate_schema(data) is False
 
 
+@pytest.mark.unit
 class TestLoadSave:
     """Tests for loading and saving preferences"""
 
@@ -287,6 +291,7 @@ class TestLoadSave:
         assert store._preferences["version"] == "1.0"
 
 
+@pytest.mark.unit
 class TestPreferenceOperations:
     """Tests for preference CRUD operations"""
 
@@ -400,6 +405,7 @@ class TestPreferenceOperations:
         assert 0.0 <= pref["confidence"] <= 1.0
 
 
+@pytest.mark.unit
 class TestConflictResolution:
     """Tests for conflict resolution"""
 
@@ -478,6 +484,7 @@ class TestConflictResolution:
         assert 0.0 <= score <= 1.0
 
 
+@pytest.mark.unit
 class TestImportExport:
     """Tests for import/export functionality"""
 
@@ -575,6 +582,7 @@ class TestImportExport:
         assert len(backup_files) > 0
 
 
+@pytest.mark.unit
 class TestStatistics:
     """Tests for statistics functionality"""
 
@@ -618,6 +626,7 @@ class TestStatistics:
             assert Path(path_str) in [p.resolve() for p in paths]
 
 
+@pytest.mark.unit
 class TestThreadSafety:
     """Tests for thread-safe operations"""
 
@@ -699,6 +708,7 @@ class TestThreadSafety:
         assert new_store._loaded is True
 
 
+@pytest.mark.unit
 class TestPerformance:
     """Performance benchmark tests"""
 
@@ -761,6 +771,7 @@ class TestPerformance:
         assert elapsed < 0.05, f"Resolution took {elapsed * 1000:.2f}ms, expected < 50ms"
 
 
+@pytest.mark.unit
 class TestClearPreferences:
     """Tests for clearing preferences"""
 

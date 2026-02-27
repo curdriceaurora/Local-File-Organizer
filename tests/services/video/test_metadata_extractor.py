@@ -74,6 +74,7 @@ def _ffprobe_output(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestResolutionLabel:
     def test_4k(self) -> None:
         assert resolution_label(3840, 2160) == "4k"
@@ -105,6 +106,7 @@ class TestResolutionLabel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFfprobeExtraction:
     @patch("subprocess.run")
     def test_extracts_all_fields(
@@ -166,6 +168,7 @@ class TestFfprobeExtraction:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOpencvFallback:
     @patch("subprocess.run", side_effect=FileNotFoundError)
     def test_falls_back_to_opencv(
@@ -200,6 +203,7 @@ class TestOpencvFallback:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFilesystemFallback:
     @patch("subprocess.run", side_effect=FileNotFoundError)
     def test_filesystem_only_when_no_deps(
@@ -225,6 +229,7 @@ class TestFilesystemFallback:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBatchExtraction:
     @patch("subprocess.run", side_effect=FileNotFoundError)
     def test_batch_returns_list(
@@ -250,6 +255,7 @@ class TestBatchExtraction:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestParseDatetime:
     def test_iso_with_z(self) -> None:
         result = _parse_datetime("2025-06-15T10:30:00Z")

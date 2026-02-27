@@ -4,12 +4,15 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from file_organizer.parallel.checkpoint import Checkpoint
 from file_organizer.parallel.config import ParallelConfig
 from file_organizer.parallel.processor import FileResult, ParallelProcessor
 from file_organizer.parallel.resume import ResumableProcessor
 
 
+@pytest.mark.unit
 class TestConcurrencyFixes(unittest.TestCase):
     def test_checkpoint_batching_overhead(self) -> None:
         """Test that checkpoint saving is batched (Issue #292)."""

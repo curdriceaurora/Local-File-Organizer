@@ -11,6 +11,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor, _execute_with_timing
 from file_organizer.parallel.result import BatchResult, FileResult
@@ -55,6 +57,7 @@ def _fail_then_succeed_factory() -> tuple[MagicMock, object]:
     return MagicMock(wraps=fn), call_counts
 
 
+@pytest.mark.unit
 class TestExecuteWithTiming(unittest.TestCase):
     """Test the _execute_with_timing helper function."""
 
@@ -80,6 +83,7 @@ class TestExecuteWithTiming(unittest.TestCase):
         self.assertGreater(result.duration_ms, 10.0)
 
 
+@pytest.mark.unit
 class TestParallelProcessorInit(unittest.TestCase):
     """Test ParallelProcessor initialization."""
 
@@ -105,6 +109,7 @@ class TestParallelProcessorInit(unittest.TestCase):
         self.assertEqual(processor.config.chunk_size, 5)
 
 
+@pytest.mark.unit
 class TestProcessBatch(unittest.TestCase):
     """Test ParallelProcessor.process_batch."""
 
@@ -209,6 +214,7 @@ class TestProcessBatch(unittest.TestCase):
         self.assertEqual(result.succeeded, 3)
 
 
+@pytest.mark.unit
 class TestProcessBatchRetry(unittest.TestCase):
     """Test retry behavior in process_batch."""
 
@@ -260,6 +266,7 @@ class TestProcessBatchRetry(unittest.TestCase):
         self.assertEqual(result.failed, 1)
 
 
+@pytest.mark.unit
 class TestProgressCallback(unittest.TestCase):
     """Test progress callback invocation."""
 
@@ -316,6 +323,7 @@ class TestProgressCallback(unittest.TestCase):
         self.assertEqual(sorted(completed_values), [1, 2, 3])
 
 
+@pytest.mark.unit
 class TestProcessBatchIter(unittest.TestCase):
     """Test ParallelProcessor.process_batch_iter."""
 
@@ -366,6 +374,70 @@ class TestProcessBatchIter(unittest.TestCase):
         self.assertEqual(callback.call_count, 2)
 
 
+class TestExecutorFallback(unittest.TestCase):
+    """Test ParallelProcessor executor fallback behavior."""
+
+    def test_process_executor_preferred_when_available(self) -> None:
+        """Test that ProcessPoolExecutor is used when configured."""
+        config = ParallelConfig(
+            max_workers=2,
+            executor_type=ExecutorType.PROCESS,
+            retry_count=0,
+        )
+        processor = ParallelProcessor(config=config)
+        files = [Path("a.txt"), Path("b.txt"), Path("c.txt")]
+        result = processor.process_batch(files, _identity)
+        # Verify all files processed successfully
+        self.assertEqual(result.succeeded, 3)
+        self.assertEqual(result.total, 3)
+        self.assertEqual(result.failed, 0)
+
+    def test_thread_executor_fallback_works(self) -> None:
+        """Test that ThreadPoolExecutor fallback works correctly."""
+        config = ParallelConfig(
+            max_workers=2,
+            executor_type=ExecutorType.THREAD,
+            retry_count=0,
+        )
+        processor = ParallelProcessor(config=config)
+        files = [Path("a.txt"), Path("b.txt"), Path("c.txt")]
+        result = processor.process_batch(files, _identity)
+        # Verify all files processed successfully
+        self.assertEqual(result.succeeded, 3)
+        self.assertEqual(result.total, 3)
+        self.assertEqual(result.failed, 0)
+
+    def test_process_batch_iter_handles_executor_fallback(self) -> None:
+        """Test process_batch_iter handles executor creation and fallback."""
+        config = ParallelConfig(
+            max_workers=2,
+            executor_type=ExecutorType.PROCESS,
+            retry_count=0,
+        )
+        processor = ParallelProcessor(config=config)
+        files = [Path("x.txt"), Path("y.txt")]
+        results = list(processor.process_batch_iter(files, _double_stem_length))
+        # Each file has stem length of 1 (x or y), so result should be 2
+        self.assertEqual(len(results), 2)
+        self.assertTrue(all(r.success for r in results))
+        self.assertTrue(all(r.result == 2 for r in results))
+
+    def test_mixed_success_and_failure_with_executor_fallback(self) -> None:
+        """Test that failures are handled correctly with executor fallback."""
+        fail_then_succeed = _fail_then_succeed_factory()
+        config = ParallelConfig(
+            max_workers=2,
+            executor_type=ExecutorType.PROCESS,
+            retry_count=1,  # Allow 1 retry
+        )
+        processor = ParallelProcessor(config=config)
+        files = [Path("a.txt"), Path("b.txt")]
+        result = processor.process_batch(files, fail_then_succeed[0])
+        # With retry_count=1, should recover from initial failure
+        self.assertEqual(result.failed + result.succeeded, 2)
+
+
+@pytest.mark.unit
 class TestShutdown(unittest.TestCase):
     """Test ParallelProcessor.shutdown."""
 

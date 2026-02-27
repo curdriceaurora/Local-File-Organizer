@@ -13,6 +13,7 @@ def client():
     return TestClient(app)
 
 
+@pytest.mark.unit
 class TestFilesListEndpoint:
     """Tests for GET /files endpoint."""
 
@@ -67,6 +68,7 @@ class TestFilesListEndpoint:
         assert response.status_code in (200, 400, 401, 422)
 
 
+@pytest.mark.unit
 class TestFileDetailEndpoint:
     """Tests for GET /files/{file_id} endpoint."""
 
@@ -100,6 +102,7 @@ class TestFileDetailEndpoint:
             assert "id" in data or "name" in data
 
 
+@pytest.mark.unit
 class TestFileUploadEndpoint:
     """Tests for POST /files/upload endpoint."""
 
@@ -137,6 +140,7 @@ class TestFileUploadEndpoint:
         assert response.status_code in (200, 201, 400, 401, 422)
 
 
+@pytest.mark.unit
 class TestFileDeleteEndpoint:
     """Tests for DELETE /files/{file_id} endpoint."""
 

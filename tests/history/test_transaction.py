@@ -14,6 +14,7 @@ from file_organizer.history.tracker import OperationHistory
 from file_organizer.history.transaction import OperationTransaction
 
 
+@pytest.mark.unit
 class TestOperationTransaction:
     """Test suite for OperationTransaction."""
 

@@ -38,6 +38,7 @@ def _optimizer_with_table(table_name: str = "items") -> DatabaseOptimizer:
 # TestIdentifierValidation
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestIdentifierValidation:
     """_validate_identifier must accept safe names and reject dangerous ones."""
 
@@ -95,6 +96,7 @@ class TestIdentifierValidation:
 # TestPragmaValueValidation
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestPragmaValueValidation:
     """_validate_pragma_value must accept known-safe values and reject injections."""
 
@@ -157,6 +159,7 @@ class TestPragmaValueValidation:
 # TestCreateIndexesSafe
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestCreateIndexesSafe:
     """create_indexes must work for valid indexes and block malicious ones."""
 
@@ -223,6 +226,7 @@ class TestCreateIndexesSafe:
 # TestOptimizePragmasSafe
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestOptimizePragmasSafe:
     """optimize_pragmas must accept valid settings and reject injections."""
 
@@ -270,6 +274,7 @@ class TestOptimizePragmasSafe:
 # TestCountRowsSafe
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestCountRowsSafe:
     """_count_rows must validate the table name before building SQL."""
 
@@ -303,6 +308,7 @@ class TestCountRowsSafe:
 # TestGetPragmaIntSafe
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestGetPragmaIntSafe:
     """_get_pragma_int must validate the pragma name before building SQL."""
 

@@ -31,6 +31,7 @@ bump_version = release_mod.bump_version
 _read_current_version_from_pyproject = release_mod._read_current_version_from_pyproject
 
 
+@pytest.mark.unit
 class TestGenerateChangelog:
     """Tests for changelog generation from git log."""
 
@@ -134,6 +135,7 @@ class TestGenerateChangelog:
         assert "feature B" in result
 
 
+@pytest.mark.unit
 class TestCreateReleaseNotes:
     """Tests for release notes creation."""
 
@@ -165,6 +167,7 @@ class TestCreateReleaseNotes:
         assert "CHANGELOG.md" in notes
 
 
+@pytest.mark.unit
 class TestValidateRelease:
     """Tests for release validation."""
 
@@ -231,6 +234,7 @@ class TestValidateRelease:
         assert not any("Not on a release branch" in e for e in errors)
 
 
+@pytest.mark.unit
 class TestBumpVersionIntegration:
     """Tests for the release module's bump_version function."""
 
@@ -292,6 +296,7 @@ class TestBumpVersionIntegration:
         assert "alpha" not in result
 
 
+@pytest.mark.unit
 class TestReadCurrentVersion:
     """Tests for reading version from pyproject.toml."""
 

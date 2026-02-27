@@ -21,6 +21,7 @@ from file_organizer.methodologies.para.folder_mapper import (
 )
 
 
+@pytest.mark.unit
 class TestCategoryFolderMapper:
     """Test category-based folder mapping."""
 
@@ -325,6 +326,7 @@ class TestCategoryFolderMapper:
                 assert result.source_path.name in report
 
 
+@pytest.mark.unit
 class TestMappingResult:
     """Test MappingResult dataclass."""
 
@@ -359,6 +361,7 @@ class TestMappingResult:
         assert result.target_folder == Path("/target/Areas")
 
 
+@pytest.mark.unit
 class TestMappingStrategy:
     """Test MappingStrategy dataclass."""
 

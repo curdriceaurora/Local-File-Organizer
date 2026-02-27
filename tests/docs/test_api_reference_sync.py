@@ -62,6 +62,7 @@ def _get_api_router_paths() -> set[str]:
     return paths
 
 
+@pytest.mark.unit
 class TestAuthDocumentation:
     """Validate authentication documentation accuracy."""
 
@@ -112,6 +113,7 @@ class TestAuthDocumentation:
         )
 
 
+@pytest.mark.unit
 class TestOrganizeEndpoints:
     """Validate organization endpoint documentation accuracy."""
 
@@ -139,6 +141,7 @@ class TestOrganizeEndpoints:
             )
 
 
+@pytest.mark.unit
 class TestDeduplicationEndpoints:
     """Validate deduplication endpoint documentation accuracy."""
 
@@ -162,6 +165,7 @@ class TestDeduplicationEndpoints:
         )
 
 
+@pytest.mark.unit
 class TestDocumentedRoutesExistInCode:
     """Validate that routes documented in API docs actually exist in the codebase."""
 

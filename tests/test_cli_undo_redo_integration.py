@@ -6,6 +6,7 @@ without real database operations.
 
 from __future__ import annotations
 
+import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
@@ -18,6 +19,7 @@ runner = CliRunner()
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUndoCommand:
     """Tests for ``file-organizer undo``."""
 
@@ -53,6 +55,7 @@ class TestUndoCommand:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRedoCommand:
     """Tests for ``file-organizer redo``."""
 
@@ -76,6 +79,7 @@ class TestRedoCommand:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHistoryCommand:
     """Tests for ``file-organizer history``."""
 

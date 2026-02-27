@@ -15,6 +15,7 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.mark.unit
 class TestDockerfile:
     """Tests for Dockerfile validity and best practices."""
 
@@ -101,6 +102,7 @@ class TestDockerfile:
         )
 
 
+@pytest.mark.unit
 class TestDockerCompose:
     """Tests for docker-compose.yml validity."""
 
@@ -176,6 +178,7 @@ class TestDockerCompose:
             )
 
 
+@pytest.mark.unit
 class TestDockerignore:
     """Tests for .dockerignore file."""
 

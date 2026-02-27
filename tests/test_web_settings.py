@@ -39,6 +39,7 @@ def _patch_settings_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSettingsFullPage:
     """Test the full settings page renders correctly."""
 
@@ -69,6 +70,7 @@ class TestSettingsFullPage:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSettingsSectionPartials:
     """Test each section partial loads correctly."""
 
@@ -137,6 +139,7 @@ class TestSettingsSectionPartials:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSettingsSectionSaves:
     """Test saving settings via POST returns updated partials."""
 
@@ -230,6 +233,7 @@ class TestSettingsSectionSaves:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSettingsValidation:
     """Test handling of invalid inputs and edge cases."""
 
@@ -338,6 +342,7 @@ class TestSettingsValidation:
         assert "General settings" in response.text
 
 
+@pytest.mark.unit
 class TestSettingsUtilities:
     """Tests for search/import/export/reset and validation helpers."""
 

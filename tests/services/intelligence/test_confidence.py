@@ -18,6 +18,7 @@ from file_organizer.services.intelligence.confidence import (
 )
 
 
+@pytest.mark.unit
 class TestUsageRecord:
     """Tests for UsageRecord dataclass."""
 
@@ -40,6 +41,7 @@ class TestUsageRecord:
         assert record.context == {}
 
 
+@pytest.mark.unit
 class TestPatternUsageData:
     """Tests for PatternUsageData dataclass."""
 
@@ -82,6 +84,7 @@ class TestPatternUsageData:
         assert data.last_seen == now
 
 
+@pytest.mark.unit
 class TestConfidenceEngine:
     """Tests for ConfidenceEngine class."""
 

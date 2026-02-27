@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from file_organizer.events.subscription import (
     Subscription,
     SubscriptionRegistry,
@@ -20,6 +22,7 @@ from file_organizer.events.subscription import (
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSubscription:
     """Tests for the Subscription dataclass."""
 
@@ -119,6 +122,7 @@ class TestSubscription:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSubscriptionRegistry:
     """Tests for the SubscriptionRegistry."""
 
@@ -227,6 +231,7 @@ class TestSubscriptionRegistry:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTopicToRegex:
     """Tests for the _topic_to_regex helper."""
 

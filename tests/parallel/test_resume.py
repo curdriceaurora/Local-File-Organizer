@@ -10,6 +10,8 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+import pytest
+
 from file_organizer.parallel.checkpoint import CheckpointManager
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.models import JobState, JobStatus
@@ -27,6 +29,7 @@ def _always_fail(path: Path) -> None:
     raise ValueError(f"Simulated failure for {path}")
 
 
+@pytest.mark.unit
 class TestProcessWithResume(unittest.TestCase):
     """Test ResumableProcessor.process_with_resume."""
 
@@ -136,6 +139,7 @@ class TestProcessWithResume(unittest.TestCase):
         self.assertEqual(job.status, JobStatus.COMPLETED)
 
 
+@pytest.mark.unit
 class TestResumeJob(unittest.TestCase):
     """Test ResumableProcessor.resume_job."""
 

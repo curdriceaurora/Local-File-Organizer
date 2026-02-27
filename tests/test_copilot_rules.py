@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from file_organizer.services.copilot.rules.models import (
     ActionType,
     ConditionType,
@@ -20,6 +22,7 @@ from file_organizer.services.copilot.rules.rule_manager import RuleManager
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRuleCondition:
     def test_extension_roundtrip(self) -> None:
         c = RuleCondition(condition_type=ConditionType.EXTENSION, value=".pdf,.docx")
@@ -37,6 +40,7 @@ class TestRuleCondition:
         assert c2.negate is True
 
 
+@pytest.mark.unit
 class TestRuleAction:
     def test_move_roundtrip(self) -> None:
         a = RuleAction(action_type=ActionType.MOVE, destination="~/Documents/{ext}")
@@ -51,6 +55,7 @@ class TestRuleAction:
         assert d["parameters"]["tags"] == ["important"]
 
 
+@pytest.mark.unit
 class TestRule:
     def test_full_roundtrip(self) -> None:
         rule = Rule(
@@ -77,6 +82,7 @@ class TestRule:
         assert rule.conditions == []
 
 
+@pytest.mark.unit
 class TestRuleSet:
     def test_enabled_rules_sorted_by_priority(self) -> None:
         rs = RuleSet(
@@ -109,6 +115,7 @@ class TestRuleSet:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRuleManager:
     def test_list_empty(self, tmp_path: Path) -> None:
         mgr = RuleManager(rules_dir=tmp_path / "rules")
@@ -195,6 +202,7 @@ class TestRuleManager:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPreviewEngine:
     def test_preview_empty_rules(self, tmp_path: Path) -> None:
         engine = PreviewEngine()
@@ -310,6 +318,7 @@ class TestPreviewEngine:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRulesCLI:
     def test_rules_help(self) -> None:
         from typer.testing import CliRunner

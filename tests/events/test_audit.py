@@ -45,6 +45,7 @@ def sample_event() -> Event:
 # --- AuditEntry Tests ---
 
 
+@pytest.mark.unit
 class TestAuditEntry:
     """Tests for the AuditEntry dataclass."""
 
@@ -118,6 +119,7 @@ class TestAuditEntry:
 # --- AuditLogger Tests ---
 
 
+@pytest.mark.unit
 class TestAuditLoggerInit:
     """Tests for AuditLogger initialization."""
 
@@ -133,6 +135,7 @@ class TestAuditLoggerInit:
         assert "events.jsonl" in result
 
 
+@pytest.mark.unit
 class TestLogEvent:
     """Tests for the log_event method."""
 
@@ -191,6 +194,7 @@ class TestLogEvent:
         assert logged_actions == actions
 
 
+@pytest.mark.unit
 class TestQueryAuditLog:
     """Tests for the query_audit_log method."""
 
@@ -343,6 +347,7 @@ class TestQueryAuditLog:
         assert entries[0].action == "consumed"
 
 
+@pytest.mark.unit
 class TestAuditLoggerUtilities:
     """Tests for utility methods."""
 

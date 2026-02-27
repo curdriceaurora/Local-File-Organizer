@@ -23,6 +23,7 @@ REAL_WS_PATTERN = r"/api/v\d+/ws/\{client_id\}"
 WRONG_WS_PATH = "/api/v1/ws"  # Missing {client_id}
 
 
+@pytest.mark.unit
 class TestWebSocketPathDocumentation:
     """Validate WebSocket path is documented correctly."""
 

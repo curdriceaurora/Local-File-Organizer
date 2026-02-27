@@ -133,6 +133,7 @@ def tmp_forbidden_file(tmp_path: Path) -> Path:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestBypassAttempts:
     """Verify that the sandbox blocks common escape vectors.
 
@@ -273,6 +274,7 @@ class TestBypassAttempts:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestExecutorInterface:
     """Tests for PluginExecutor lifecycle and RPC.
 
@@ -410,6 +412,7 @@ class TestExecutorInterface:
 # ===========================================================================
 
 
+@pytest.mark.unit
 class TestIPCProtocol:
     """Unit tests for the IPC dataclasses and encoding/decoding helpers.
 

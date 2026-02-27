@@ -50,6 +50,7 @@ def monitor(connected_manager: RedisStreamManager) -> EventMonitor:
 # --- Dataclass Tests ---
 
 
+@pytest.mark.unit
 class TestStreamStats:
     """Tests for the StreamStats dataclass."""
 
@@ -75,6 +76,7 @@ class TestStreamStats:
         assert stats.oldest_event == now
 
 
+@pytest.mark.unit
 class TestConsumerLag:
     """Tests for the ConsumerLag dataclass."""
 
@@ -96,6 +98,7 @@ class TestConsumerLag:
 # --- Helper Function Tests ---
 
 
+@pytest.mark.unit
 class TestParseEntryTimestamp:
     """Tests for the _parse_entry_timestamp helper."""
 
@@ -122,10 +125,25 @@ class TestParseEntryTimestamp:
         """Test that an invalid entry returns None."""
         assert _parse_entry_timestamp(("invalid-id", {})) is None
 
+    def test_parse_empty_tuple(self):
+        """Test that an empty tuple returns None."""
+        assert _parse_entry_timestamp(()) is None
+
+    def test_parse_string_message_id(self):
+        """Test parsing when entry is a bare string (non-list, non-tuple)."""
+        result = _parse_entry_timestamp("1700000000000-0")
+        assert result is not None
+        assert result.year == 2023
+
+    def test_parse_non_numeric_message_id(self):
+        """Test parsing when message_id has non-numeric ms part."""
+        assert _parse_entry_timestamp(("abc-0", {})) is None
+
 
 # --- EventMonitor Tests ---
 
 
+@pytest.mark.unit
 class TestEventMonitorInit:
     """Tests for EventMonitor initialization."""
 
@@ -141,6 +159,7 @@ class TestEventMonitorInit:
         assert "connected=False" in repr(monitor)
 
 
+@pytest.mark.unit
 class TestGetStreamStats:
     """Tests for the get_stream_stats method."""
 
@@ -223,7 +242,22 @@ class TestGetStreamStats:
 
         mock_redis_client.xinfo_stream.assert_called_once_with("fileorg:file-events")
 
+    def test_get_stream_stats_missing_keys_in_response(
+        self,
+        monitor: EventMonitor,
+        mock_redis_client: MagicMock,
+    ):
+        """Test stats handles missing keys in xinfo_stream response."""
+        mock_redis_client.xinfo_stream.return_value = {}
 
+        stats = monitor.get_stream_stats("file-events")
+        assert stats.length == 0
+        assert stats.groups == 0
+        assert stats.oldest_event is None
+        assert stats.newest_event is None
+
+
+@pytest.mark.unit
 class TestGetConsumerLag:
     """Tests for the get_consumer_lag method."""
 
@@ -281,7 +315,42 @@ class TestGetConsumerLag:
         lag = monitor.get_consumer_lag("file-events", "my-group")
         assert lag.pending == 0
 
+    def test_get_consumer_lag_xpending_returns_none(
+        self,
+        monitor: EventMonitor,
+        mock_redis_client: MagicMock,
+    ):
+        """Test lag when xpending returns None."""
+        mock_redis_client.xpending.return_value = None
+        mock_redis_client.xinfo_groups.return_value = [
+            {"name": "my-group", "consumers": 2, "idle": 500},
+        ]
 
+        lag = monitor.get_consumer_lag("file-events", "my-group")
+        assert lag.pending == 0
+        assert lag.consumers == 2
+
+    def test_get_consumer_lag_multiple_groups(
+        self,
+        monitor: EventMonitor,
+        mock_redis_client: MagicMock,
+    ):
+        """Test lag correctly finds the target group among multiple."""
+        mock_redis_client.xpending.return_value = {"pending": 3}
+        mock_redis_client.xinfo_groups.return_value = [
+            {"name": "group-a", "consumers": 1, "idle": 100},
+            {"name": "target-group", "consumers": 5, "idle": 2000},
+            {"name": "group-c", "consumers": 2, "idle": 300},
+        ]
+
+        lag = monitor.get_consumer_lag("file-events", "target-group")
+
+        assert lag.pending == 3
+        assert lag.consumers == 5
+        assert lag.idle_time == 2000
+
+
+@pytest.mark.unit
 class TestGetEventRate:
     """Tests for the get_event_rate method."""
 
@@ -345,3 +414,40 @@ class TestGetEventRate:
 
         rate = monitor.get_event_rate("file-events")
         assert rate == 0.0
+
+    def test_get_event_rate_xrange_returns_none(
+        self,
+        monitor: EventMonitor,
+        mock_redis_client: MagicMock,
+    ):
+        """Test rate when xrange returns None."""
+        mock_redis_client.xrange.return_value = None
+
+        rate = monitor.get_event_rate("file-events", window_seconds=30)
+        assert rate == 0.0
+
+    def test_get_event_rate_single_event(
+        self,
+        monitor: EventMonitor,
+        mock_redis_client: MagicMock,
+    ):
+        """Test rate with a single event in the window."""
+        mock_redis_client.xrange.return_value = [
+            ("1700000000000-0", {"key": "value"})
+        ]
+
+        rate = monitor.get_event_rate("file-events", window_seconds=10)
+        assert abs(rate - 0.1) < 0.01
+
+    def test_get_event_rate_uses_prefixed_stream(
+        self,
+        monitor: EventMonitor,
+        mock_redis_client: MagicMock,
+    ):
+        """Test that event rate uses the prefixed stream name."""
+        mock_redis_client.xrange.return_value = []
+
+        monitor.get_event_rate("my-stream", window_seconds=60)
+
+        call_args = mock_redis_client.xrange.call_args
+        assert call_args.args[0] == "fileorg:my-stream"

@@ -7,6 +7,7 @@ import pytest
 # Phase 3 placeholder tests for video metadata
 
 
+@pytest.mark.unit
 class TestVideoMetadataPlaceholder:
     """Test video metadata extraction Phase 3 functionality."""
 

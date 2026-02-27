@@ -12,9 +12,12 @@ import time
 import unittest
 from pathlib import Path
 
+import pytest
+
 from file_organizer.parallel.priority_queue import PriorityQueue, QueueItem
 
 
+@pytest.mark.unit
 class TestQueueItem(unittest.TestCase):
     """Test cases for QueueItem dataclass."""
 
@@ -48,6 +51,7 @@ class TestQueueItem(unittest.TestCase):
         self.assertNotIn("key", item2.metadata)
 
 
+@pytest.mark.unit
 class TestPriorityQueue(unittest.TestCase):
     """Test cases for PriorityQueue."""
 

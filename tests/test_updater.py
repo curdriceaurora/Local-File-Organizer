@@ -22,6 +22,7 @@ from file_organizer.updater.manager import UpdateManager, UpdateStatus
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestParseVersion:
     def test_simple(self) -> None:
         assert _parse_version("2.0.0") == (2, 0, 0)
@@ -49,6 +50,7 @@ class TestParseVersion:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReleaseInfo:
     def test_default_values(self) -> None:
         r = ReleaseInfo()
@@ -71,6 +73,7 @@ class TestReleaseInfo:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateChecker:
     def test_no_update_when_current(self) -> None:
         checker = UpdateChecker(current_version="99.99.99")
@@ -122,6 +125,7 @@ class TestUpdateChecker:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateInstaller:
     def test_select_asset_linux(self) -> None:
         installer = UpdateInstaller()
@@ -283,6 +287,7 @@ class TestUpdateInstaller:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateManager:
     def test_check_no_update(self) -> None:
         mgr = UpdateManager(current_version="99.99.99")
@@ -318,6 +323,7 @@ class TestUpdateManager:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateCLI:
     def test_update_help(self) -> None:
         from typer.testing import CliRunner

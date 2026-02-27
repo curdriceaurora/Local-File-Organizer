@@ -54,6 +54,7 @@ def _make_stat(size: int) -> os.stat_result:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCheckFileSizeHelper:
     """Unit tests for the _check_file_size() helper introduced by Stream A."""
 
@@ -111,6 +112,7 @@ class TestCheckFileSizeHelper:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestReadFileDispatcherSizeGate:
     """Tests that read_file() rejects oversized paths before dispatching."""
 
@@ -157,6 +159,7 @@ _READER_PARAMS = [
 ]
 
 
+@pytest.mark.unit
 class TestUnboundedReadersSizeGate:
     """Each previously-unbounded reader must gate on file size before I/O."""
 

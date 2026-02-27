@@ -77,6 +77,7 @@ def generator(test_scheme):
     return JohnnyDecimalGenerator(test_scheme)
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalGenerator:
     """Test JohnnyDecimalGenerator class."""
 
@@ -355,6 +356,7 @@ class TestJohnnyDecimalGenerator:
         assert len(generator._number_mappings) == 0
 
 
+@pytest.mark.unit
 class TestAdvancedScenarios:
     """Test advanced numbering scenarios."""
 

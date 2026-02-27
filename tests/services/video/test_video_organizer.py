@@ -52,6 +52,7 @@ def _make_metadata(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIsScreenRecording:
     def test_macos_quicktime(self) -> None:
         assert is_screen_recording("Screen Recording 2025-01-15 at 3.45.22 PM.mov")
@@ -103,6 +104,7 @@ class TestIsScreenRecording:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGeneratePath:
     def test_screen_recording_with_date(self, organizer: VideoOrganizer) -> None:
         metadata = _make_metadata(
@@ -192,6 +194,7 @@ class TestGeneratePath:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGenerateDescription:
     def test_full_description(self, organizer: VideoOrganizer) -> None:
         metadata = _make_metadata(

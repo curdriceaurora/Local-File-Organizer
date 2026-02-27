@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from file_organizer.services.copilot.conversation import ConversationManager
 from file_organizer.services.copilot.engine import CopilotEngine
 from file_organizer.services.copilot.executor import CommandExecutor
@@ -23,6 +25,7 @@ from file_organizer.services.copilot.models import (
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestIntentParser:
     def setup_method(self) -> None:
         self.parser = IntentParser()
@@ -98,6 +101,7 @@ class TestIntentParser:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestConversationManager:
     def test_add_and_retrieve(self) -> None:
         mgr = ConversationManager(max_turns=3)
@@ -144,6 +148,7 @@ class TestConversationManager:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCommandExecutor:
     def test_find_files(self, tmp_path: Path) -> None:
         (tmp_path / "report.pdf").write_text("content")
@@ -209,6 +214,7 @@ class TestCommandExecutor:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCopilotEngine:
     def test_chat_help(self) -> None:
         engine = CopilotEngine()
@@ -255,6 +261,7 @@ class TestCopilotEngine:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCopilotModels:
     def test_message_is_user(self) -> None:
         msg = CopilotMessage(role=MessageRole.USER, content="hi")

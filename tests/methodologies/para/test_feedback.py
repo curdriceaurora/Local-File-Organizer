@@ -38,6 +38,7 @@ def _make_suggestion(
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestFeedbackEvent:
     """Tests for FeedbackEvent dataclass."""
 
@@ -102,6 +103,7 @@ class TestFeedbackEvent:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestFeedbackCollector:
     """Tests for FeedbackCollector."""
 
@@ -266,6 +268,7 @@ class TestFeedbackCollector:
 # =========================================================================
 
 
+@pytest.mark.unit
 class TestPatternLearner:
     """Tests for PatternLearner."""
 

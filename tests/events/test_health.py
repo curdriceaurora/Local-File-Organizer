@@ -67,6 +67,7 @@ def checker(bus: ServiceBus, discovery: ServiceDiscovery) -> HealthChecker:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHealthStatus:
     """Tests for the HealthStatus enum."""
 
@@ -83,6 +84,7 @@ class TestHealthStatus:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestServiceHealth:
     """Tests for the ServiceHealth dataclass."""
 
@@ -116,6 +118,7 @@ class TestServiceHealth:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCheckService:
     """Tests for checking a single service."""
 
@@ -157,6 +160,7 @@ class TestCheckService:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCheckAll:
     """Tests for checking all services."""
 
@@ -190,6 +194,7 @@ class TestCheckAll:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHistory:
     """Tests for health check history."""
 
@@ -223,6 +228,7 @@ class TestHistory:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestThresholds:
     """Tests for latency threshold resolution."""
 
@@ -257,6 +263,7 @@ class TestThresholds:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHealthCheckerUtility:
     """Tests for utility methods and edge cases."""
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -39,6 +40,8 @@ from file_organizer.web import STATIC_DIR
 from file_organizer.web import router as web_router
 
 _LOGGING_CONFIGURED = False
+_app: Optional[FastAPI] = None
+_app_lock = threading.Lock()
 
 
 def configure_logging(settings: ApiSettings) -> None:
@@ -122,4 +125,33 @@ def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
     return app
 
 
-app = create_app()
+def get_app() -> FastAPI:
+    """Get or create the FastAPI application instance (thread-safe).
+
+    This function implements lazy initialization with thread safety to avoid:
+    - Import-time side effects (creating .config directories)
+    - Multiple app instances due to race conditions in multi-threaded contexts
+    - Test isolation issues in concurrent test environments
+
+    The first call to this function will trigger app creation via create_app().
+    Subsequent calls return the cached instance. Thread-safe via lock protection.
+
+    Intended for: Test infrastructure, application startup hooks, ASGI servers
+    with multiple worker threads
+
+    Returns:
+        The initialized and cached FastAPI application instance.
+    """
+    global _app
+
+    # Quick check without lock for performance (reading stale value is acceptable)
+    if _app is not None:
+        return _app
+
+    # Double-checked locking pattern for thread-safe lazy initialization
+    with _app_lock:
+        # Re-check after acquiring lock (another thread may have initialized)
+        if _app is None:
+            _app = create_app()
+
+        return _app

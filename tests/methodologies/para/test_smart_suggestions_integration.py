@@ -53,6 +53,7 @@ def collector(tmp_path: Path) -> FeedbackCollector:
     return FeedbackCollector(storage_dir=tmp_path / "feedback")
 
 
+@pytest.mark.unit
 class TestFullPipeline:
     """End-to-end integration tests for the suggestion pipeline."""
 

@@ -69,6 +69,7 @@ def para_structure(tmp_path):
     return tmp_path
 
 
+@pytest.mark.unit
 class TestPARAJohnnyDecimalBridge:
     """Tests for PARAJohnnyDecimalBridge."""
 
@@ -170,6 +171,7 @@ class TestPARAJohnnyDecimalBridge:
             assert path.is_dir()
 
 
+@pytest.mark.unit
 class TestCompatibilityAnalyzer:
     """Tests for CompatibilityAnalyzer."""
 
@@ -235,6 +237,7 @@ class TestCompatibilityAnalyzer:
         assert len(strategy["recommendations"]) > 0
 
 
+@pytest.mark.unit
 class TestHybridOrganizer:
     """Tests for HybridOrganizer."""
 
@@ -294,6 +297,7 @@ class TestHybridOrganizer:
         assert "10.01.001 Design Phase" in str(path)
 
 
+@pytest.mark.unit
 class TestPARAAdapter:
     """Tests for PARAAdapter."""
 
@@ -399,6 +403,7 @@ class TestPARAAdapter:
         assert not para_adapter.can_adapt(non_para_item)
 
 
+@pytest.mark.unit
 class TestPARAIntegration:
     """Integration tests for PARA compatibility."""
 
@@ -456,6 +461,7 @@ class TestPARAIntegration:
         assert restored.category == original.category
 
 
+@pytest.mark.unit
 class TestEdgeCases:
     """Tests for edge cases in PARA compatibility."""
 

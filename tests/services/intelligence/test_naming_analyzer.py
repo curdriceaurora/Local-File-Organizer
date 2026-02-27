@@ -15,6 +15,7 @@ from file_organizer.services.intelligence.naming_analyzer import (
 )
 
 
+@pytest.mark.unit
 class TestNameStructure:
     """Tests for NameStructure dataclass."""
 
@@ -43,6 +44,7 @@ class TestNameStructure:
         assert data["word_count"] == 1
 
 
+@pytest.mark.unit
 class TestNamingAnalyzer:
     """Tests for NamingAnalyzer class."""
 
@@ -251,6 +253,7 @@ class TestNamingAnalyzer:
         assert components["date"] is not None
 
 
+@pytest.mark.unit
 class TestNamingAnalyzerIntegration:
     """Integration tests for naming analyzer."""
 

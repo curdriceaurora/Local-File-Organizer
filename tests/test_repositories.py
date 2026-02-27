@@ -76,6 +76,7 @@ def second_user(db_session: Session) -> User:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestWorkspaceRepository:
     """Tests for WorkspaceRepository CRUD operations."""
 
@@ -168,6 +169,7 @@ class TestWorkspaceRepository:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestJobRepository:
     """Tests for JobRepository CRUD operations."""
 
@@ -293,6 +295,7 @@ class TestJobRepository:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSettingsRepository:
     """Tests for SettingsRepository CRUD operations."""
 
@@ -375,6 +378,7 @@ class TestSettingsRepository:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInitDb:
     """Test the init_db convenience function."""
 
@@ -404,6 +408,7 @@ class TestInitDb:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSessionRepository:
     """Tests for SessionRepository lifecycle behavior."""
 
@@ -488,6 +493,7 @@ class TestSessionRepository:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFileMetadataRepository:
     """Tests for file metadata persistence and caching behavior."""
 

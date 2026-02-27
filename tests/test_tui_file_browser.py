@@ -5,7 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
 
+
+@pytest.mark.unit
 class TestFormatSize:
     """Unit tests for the _format_size helper."""
 
@@ -32,6 +35,7 @@ class TestFormatSize:
         assert _format_size(0) == "0 B"
 
 
+@pytest.mark.unit
 class TestFileBrowserTree:
     """Tests for FileBrowserTree."""
 
@@ -105,6 +109,7 @@ class TestFileBrowserTree:
         assert "l" in binding_keys
 
 
+@pytest.mark.unit
 class TestFileMetadataPanel:
     """Tests for FileMetadataPanel."""
 
@@ -147,6 +152,7 @@ class TestFileMetadataPanel:
         assert "Directory" in rendered
 
 
+@pytest.mark.unit
 class TestFilterInput:
     """Tests for FilterInput."""
 
@@ -162,6 +168,7 @@ class TestFilterInput:
         assert msg.value == ".py .txt"
 
 
+@pytest.mark.unit
 class TestFileBrowserView:
     """Tests for FileBrowserView."""
 
@@ -189,6 +196,7 @@ class TestFileBrowserView:
         assert "slash" in binding_keys
 
 
+@pytest.mark.unit
 class TestTuiExports:
     """Test that the tui __init__ exports are correct."""
 

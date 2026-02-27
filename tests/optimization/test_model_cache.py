@@ -28,6 +28,7 @@ def _make_loader(model: BaseModel | None = None) -> MagicMock:
     return loader
 
 
+@pytest.mark.unit
 class TestModelCacheInit:
     """Tests for ModelCache initialization and validation."""
 
@@ -65,6 +66,7 @@ class TestModelCacheInit:
             ModelCache(ttl_seconds=-1)
 
 
+@pytest.mark.unit
 class TestModelCacheGetOrLoad:
     """Tests for the get_or_load method."""
 
@@ -122,6 +124,7 @@ class TestModelCacheGetOrLoad:
         assert stats.hits == 2
 
 
+@pytest.mark.unit
 class TestModelCacheLRUEviction:
     """Tests for LRU eviction policy."""
 
@@ -187,6 +190,7 @@ class TestModelCacheLRUEviction:
         assert cache.contains("model-4")
 
 
+@pytest.mark.unit
 class TestModelCacheTTL:
     """Tests for TTL-based expiration."""
 
@@ -218,6 +222,7 @@ class TestModelCacheTTL:
         loader.assert_called_once()
 
 
+@pytest.mark.unit
 class TestModelCacheExplicitEviction:
     """Tests for explicit eviction and clear."""
 
@@ -283,6 +288,7 @@ class TestModelCacheExplicitEviction:
         assert cache.size == 0
 
 
+@pytest.mark.unit
 class TestModelCacheStats:
     """Tests for cache statistics."""
 
@@ -329,6 +335,7 @@ class TestModelCacheStats:
         assert stats.memory_usage_bytes == 1024
 
 
+@pytest.mark.unit
 class TestModelCacheContains:
     """Tests for the contains method."""
 
@@ -351,6 +358,7 @@ class TestModelCacheContains:
         assert cache.contains("model") is False
 
 
+@pytest.mark.unit
 class TestModelCacheThreadSafety:
     """Tests for thread-safe operation."""
 

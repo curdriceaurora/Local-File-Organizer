@@ -19,6 +19,7 @@ def model_manager():
     return ModelManager(console=console)
 
 
+@pytest.mark.unit
 class TestModelManager:
     """Tests for ModelManager class."""
 

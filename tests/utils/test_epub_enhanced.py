@@ -96,6 +96,7 @@ def mock_epub_chapter():
     return item
 
 
+@pytest.mark.unit
 class TestEPUBMetadata:
     """Tests for EPUBMetadata dataclass."""
 
@@ -131,6 +132,7 @@ class TestEPUBMetadata:
         assert "uuid" in metadata.identifiers
 
 
+@pytest.mark.unit
 class TestEPUBChapter:
     """Tests for EPUBChapter dataclass."""
 
@@ -145,6 +147,7 @@ class TestEPUBChapter:
         assert chapter.word_count == 4
 
 
+@pytest.mark.unit
 class TestEnhancedEPUBReader:
     """Tests for EnhancedEPUBReader class."""
 
@@ -390,6 +393,7 @@ class TestEnhancedEPUBReader:
         assert reader._detect_epub_version(mock_book) == "2.0"
 
 
+@pytest.mark.unit
 class TestHelperFunctions:
     """Tests for module-level helper functions."""
 
@@ -426,6 +430,7 @@ class TestHelperFunctions:
         assert len(metadata.authors) == 2
 
 
+@pytest.mark.unit
 class TestIntegration:
     """Integration tests with real EPUB creation."""
 

@@ -40,6 +40,41 @@ jobs:
       - run: pip install ruff
       - run: ruff check src/
 
+  link-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check documentation links
+        run: |
+          echo "Checking for broken documentation links..."
+
+          # Extract markdown links from README and docs
+          links=$(grep -r -h "\[.*\](.*)" README.md docs/*.md 2>/dev/null | sed -E 's/.*\(([^)]+)\).*/\1/' | grep -E "^\/" | sort -u)
+
+          failed=0
+          for link in $links; do
+            # Skip external links and anchors
+            if [[ "$link" == http* ]]; then
+              continue
+            fi
+
+            # Remove anchor parts
+            filepath=${link%#*}
+
+            # Check if file exists
+            if [[ ! -f "$filepath" ]]; then
+              echo "❌ Broken link: $link"
+              failed=1
+            fi
+          done
+
+          if [ $failed -eq 1 ]; then
+            echo "Some documentation links are broken!"
+            exit 1
+          fi
+
+          echo "✅ All documentation links are valid"
+
   test:
     runs-on: ubuntu-latest
     strategy:

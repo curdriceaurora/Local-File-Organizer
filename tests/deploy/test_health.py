@@ -35,6 +35,7 @@ def health_endpoint(dev_config: DeploymentConfig) -> HealthEndpoint:
     )
 
 
+@pytest.mark.unit
 class TestComponentStatus:
     """Tests for the ComponentStatus dataclass."""
 
@@ -57,6 +58,7 @@ class TestComponentStatus:
         assert status.response_time_ms == 1.5
 
 
+@pytest.mark.unit
 class TestHealthEndpointGetHealth:
     """Tests for HealthEndpoint.get_health() method."""
 
@@ -281,6 +283,7 @@ class TestHealthEndpointGetHealth:
                 assert "response_time_ms" in comp  # type: ignore[operator]
 
 
+@pytest.mark.unit
 class TestHealthEndpointRedisCheck:
     """Tests for Redis health check."""
 
@@ -311,6 +314,7 @@ class TestHealthEndpointRedisCheck:
         assert status.response_time_ms >= 0
 
 
+@pytest.mark.unit
 class TestHealthEndpointDiskCheck:
     """Tests for disk space health check."""
 
@@ -350,6 +354,7 @@ class TestHealthEndpointDiskCheck:
         assert "MB" in status.message
 
 
+@pytest.mark.unit
 class TestHealthEndpointModelCheck:
     """Tests for model availability health check."""
 

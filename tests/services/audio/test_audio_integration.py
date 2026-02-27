@@ -119,6 +119,7 @@ def organizer() -> AudioOrganizer:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFullPipeline:
     """Tests for the complete classify -> analyze -> organize pipeline."""
 
@@ -266,6 +267,7 @@ class TestFullPipeline:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCrossComponent:
     """Tests to verify components work correctly together."""
 
@@ -351,6 +353,7 @@ class TestCrossComponent:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCustomRulesIntegration:
     """Tests for custom OrganizationRules with the full pipeline."""
 
@@ -391,6 +394,7 @@ class TestCustomRulesIntegration:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestEdgeCases:
     """Integration tests for edge cases."""
 

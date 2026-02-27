@@ -7,6 +7,7 @@ import pytest
 # Phase 3 placeholder tests for video processing
 
 
+@pytest.mark.unit
 class TestVideoProcessingPlaceholder:
     """Test video processing Phase 3 functionality."""
 

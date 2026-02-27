@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
+from file_organizer.parallel.executor import create_executor
 from file_organizer.parallel.result import BatchResult, FileResult
 
 
@@ -78,6 +79,7 @@ class ParallelProcessor:
             config: Processing configuration. Uses defaults if None.
         """
         self._config = config or ParallelConfig()
+        self._executor_type_used: str = "thread"  # Track which executor type is in use
 
     @property
     def config(self) -> ParallelConfig:
@@ -108,16 +110,13 @@ class ParallelProcessor:
         results: list[FileResult] = []
         remaining = list(files)
 
-        max_workers = self._config.max_workers or os.cpu_count() or 1
-        executor_cls = self._get_executor_class()
-
         for attempt in range(1 + self._config.retry_count):
             if not remaining:
                 break
 
             attempt_results = self._run_batch(
-                executor_cls=executor_cls,
-                max_workers=max_workers,
+                executor_cls=None,
+                max_workers=0,
                 files=remaining,
                 process_fn=process_fn,
                 executor=None,
@@ -179,8 +178,8 @@ class ParallelProcessor:
         max_workers = self._config.max_workers or os.cpu_count() or 1
         owns_executor = executor is None
         if owns_executor:
-            executor_cls = self._get_executor_class()
-            exec_instance = executor_cls(max_workers=max_workers)
+            executor_type = "process" if self._config.executor_type == ExecutorType.PROCESS else "thread"
+            exec_instance, self._executor_type_used = create_executor(executor_type, max_workers)
         else:
             assert executor is not None
             exec_instance = executor
@@ -340,21 +339,9 @@ class ParallelProcessor:
                     cancel_futures=force_nonblocking_shutdown,
                 )
 
-    def _get_executor_class(
-        self,
-    ) -> type[ThreadPoolExecutor] | type[ProcessPoolExecutor]:
-        """Return the executor class based on configuration.
-
-        Returns:
-            ThreadPoolExecutor or ProcessPoolExecutor class.
-        """
-        if self._config.executor_type == ExecutorType.PROCESS:
-            return ProcessPoolExecutor
-        return ThreadPoolExecutor
-
     def _run_batch(
         self,
-        executor_cls: type[ThreadPoolExecutor] | type[ProcessPoolExecutor],
+        executor_cls: type[ThreadPoolExecutor] | type[ProcessPoolExecutor] | None,
         max_workers: int,
         files: list[Path],
         process_fn: Callable[[Path], Any],
@@ -365,8 +352,8 @@ class ParallelProcessor:
         Wrapper around process_batch_iter.
 
         Args:
-            executor_cls: Ignored (uses config).
-            max_workers: Ignored (uses config).
+            executor_cls: Deprecated - parameter is not used. See create_executor().
+            max_workers: Deprecated - parameter is not used. See create_executor().
             files: Files to process in this batch.
             process_fn: Processing function.
             executor: Optional executor to use.

@@ -51,6 +51,7 @@ def _make_op(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOperationHistoryPanel:
     """Unit tests for OperationHistoryPanel."""
 
@@ -81,6 +82,7 @@ class TestOperationHistoryPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUndoRedoStackPanel:
     """Unit tests for UndoRedoStackPanel."""
 
@@ -114,6 +116,7 @@ class TestUndoRedoStackPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHistoryStatsPanel:
     """Unit tests for HistoryStatsPanel."""
 
@@ -142,6 +145,7 @@ class TestHistoryStatsPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHelpers:
     """Unit tests for module-level helpers."""
 

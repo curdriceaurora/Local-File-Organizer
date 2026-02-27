@@ -16,6 +16,7 @@ from file_organizer.methodologies.para.detection.heuristics import (
 )
 
 
+@pytest.mark.unit
 class TestPARAWorkflow:
     """Test complete PARA categorization workflows."""
 
@@ -147,6 +148,7 @@ class TestPARAWorkflow:
         assert project_score > 0 or archive_score > 0
 
 
+@pytest.mark.unit
 class TestPARAMigrationScenarios:
     """Test scenarios for migrating files to PARA system."""
 
@@ -233,6 +235,7 @@ class TestPARAMigrationScenarios:
                 assert category_score > 0  # Should have some score for expected category
 
 
+@pytest.mark.unit
 class TestPARAEdgeCases:
     """Test edge cases and error handling."""
 
@@ -306,6 +309,7 @@ class TestPARAEdgeCases:
         assert result is not None
 
 
+@pytest.mark.unit
 class TestPARACategoryTransitions:
     """Test scenarios for files transitioning between categories."""
 
@@ -363,6 +367,7 @@ class TestPARACategoryTransitions:
         assert resource_score > 0 or project_score > 0
 
 
+@pytest.mark.unit
 class TestPARACustomRules:
     """Test custom categorization rules and patterns."""
 
@@ -429,6 +434,7 @@ class TestPARACustomRules:
         assert any(score > 0 for score in archive_scores)
 
 
+@pytest.mark.unit
 class TestPARAPerformance:
     """Test performance characteristics of PARA categorization."""
 

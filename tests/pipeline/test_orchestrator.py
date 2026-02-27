@@ -145,6 +145,7 @@ def pipeline_with_mock(
 # --- ProcessingResult tests ---
 
 
+@pytest.mark.unit
 class TestProcessingResult:
     """Test the ProcessingResult dataclass."""
 
@@ -189,6 +190,7 @@ class TestProcessingResult:
 # --- PipelineStats tests ---
 
 
+@pytest.mark.unit
 class TestPipelineStats:
     """Test the PipelineStats dataclass."""
 
@@ -204,6 +206,7 @@ class TestPipelineStats:
 # --- PipelineOrchestrator core tests ---
 
 
+@pytest.mark.unit
 class TestPipelineOrchestratorInit:
     """Test pipeline initialization."""
 
@@ -223,6 +226,7 @@ class TestPipelineOrchestratorInit:
         assert pipeline.config.auto_organize is True
 
 
+@pytest.mark.unit
 class TestPipelineOrchestratorStartStop:
     """Test pipeline start/stop lifecycle."""
 
@@ -254,6 +258,7 @@ class TestPipelineOrchestratorStartStop:
         pipeline.stop()  # Should not raise
 
 
+@pytest.mark.unit
 class TestPipelineProcessFile:
     """Test single file processing."""
 
@@ -330,6 +335,7 @@ class TestPipelineProcessFile:
         assert "not a file" in result.error.lower()
 
 
+@pytest.mark.unit
 class TestPipelineDryRun:
     """Test dry-run behavior."""
 
@@ -387,6 +393,7 @@ class TestPipelineDryRun:
         assert result.destination.exists()
 
 
+@pytest.mark.unit
 class TestPipelineErrorHandling:
     """Test error handling in the pipeline."""
 
@@ -453,6 +460,7 @@ class TestPipelineErrorHandling:
         assert pipeline.stats.total_processed == 1
 
 
+@pytest.mark.unit
 class TestPipelineBatchProcessing:
     """Test batch processing of multiple files."""
 
@@ -515,6 +523,7 @@ class TestPipelineBatchProcessing:
         assert pipeline_with_mock.stats.successful == 2
 
 
+@pytest.mark.unit
 class TestPipelineNotificationCallback:
     """Test notification callback integration."""
 
@@ -579,6 +588,7 @@ class TestPipelineNotificationCallback:
         assert result.success is True
 
 
+@pytest.mark.unit
 class TestPipelineFileOrganization:
     """Test actual file organization (non-dry-run)."""
 
@@ -646,6 +656,7 @@ class TestPipelineFileOrganization:
         assert result1.destination != result2.destination
 
 
+@pytest.mark.unit
 class TestPipelineStatsAccumulation:
     """Test cumulative statistics tracking."""
 

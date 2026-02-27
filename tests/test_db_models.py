@@ -64,6 +64,7 @@ def user(db_session: Session) -> User:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTableCreation:
     """Verify that all expected tables are created."""
 
@@ -87,6 +88,7 @@ class TestTableCreation:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestWorkspaceModel:
     """Tests for the Workspace model."""
 
@@ -160,6 +162,7 @@ class TestWorkspaceModel:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOrganizationJobModel:
     """Tests for the OrganizationJob model."""
 
@@ -252,6 +255,7 @@ class TestOrganizationJobModel:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSettingsStoreModel:
     """Tests for the SettingsStore model."""
 
@@ -323,6 +327,7 @@ class TestSettingsStoreModel:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPluginInstallationModel:
     """Tests for the PluginInstallation model."""
 
@@ -370,6 +375,7 @@ class TestPluginInstallationModel:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUserSessionModel:
     """Tests for the UserSession model."""
 
@@ -403,6 +409,7 @@ class TestUserSessionModel:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestFileMetadataModel:
     """Tests for the FileMetadata model."""
 
@@ -473,6 +480,7 @@ class TestFileMetadataModel:
 # ------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDefaultValues:
     """Verify that column defaults are applied correctly."""
 

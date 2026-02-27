@@ -32,6 +32,7 @@ def _make_video_file(tmp_path: Path, name: str = "clip.mp4") -> Path:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProcessAudioFiles:
     def test_returns_processed_file_list(self, tmp_path: Path) -> None:
         """Audio pipeline returns ProcessedFile instances."""
@@ -105,6 +106,7 @@ class TestProcessAudioFiles:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestProcessVideoFiles:
     def test_returns_processed_file_list(self, tmp_path: Path) -> None:
         """Video pipeline returns ProcessedFile instances."""
@@ -171,6 +173,7 @@ class TestProcessVideoFiles:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOrganizeRouting:
     """Verify audio and video files are routed through metadata pipelines, not skipped."""
 

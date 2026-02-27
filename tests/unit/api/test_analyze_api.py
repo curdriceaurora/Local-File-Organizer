@@ -25,6 +25,7 @@ def mock_text_model(mocker):
     return mock_model
 
 
+@pytest.mark.unit
 class TestAnalyzeEndpoint:
     """Tests for the /analyze endpoint."""
 

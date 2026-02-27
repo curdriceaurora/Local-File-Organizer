@@ -52,6 +52,7 @@ def replay_manager(connected_manager: RedisStreamManager) -> EventReplayManager:
 # --- ReplayConfig Tests ---
 
 
+@pytest.mark.unit
 class TestReplayConfig:
     """Tests for the ReplayConfig dataclass."""
 
@@ -77,6 +78,7 @@ class TestReplayConfig:
 # --- Helper Function Tests ---
 
 
+@pytest.mark.unit
 class TestDatetimeToRedisMs:
     """Tests for the _datetime_to_redis_ms helper."""
 
@@ -95,6 +97,7 @@ class TestDatetimeToRedisMs:
         assert result == str(expected_ms)
 
 
+@pytest.mark.unit
 class TestParseTimestampFromId:
     """Tests for the _parse_timestamp_from_id helper."""
 
@@ -112,6 +115,7 @@ class TestParseTimestampFromId:
         assert before <= result <= after
 
 
+@pytest.mark.unit
 class TestIncrementId:
     """Tests for the _increment_id helper."""
 
@@ -129,6 +133,7 @@ class TestIncrementId:
 # --- EventReplayManager Tests ---
 
 
+@pytest.mark.unit
 class TestEventReplayManagerInit:
     """Tests for EventReplayManager initialization."""
 
@@ -153,6 +158,7 @@ class TestEventReplayManagerInit:
         assert "batch_size=100" in result
 
 
+@pytest.mark.unit
 class TestReplayRange:
     """Tests for the replay_range method."""
 
@@ -261,6 +267,7 @@ class TestReplayRange:
         assert call_args[0][0] == "fileorg:file-events"
 
 
+@pytest.mark.unit
 class TestReplayById:
     """Tests for the replay_by_id method."""
 
@@ -330,6 +337,7 @@ class TestReplayById:
         assert events == []
 
 
+@pytest.mark.unit
 class TestReplayToConsumer:
     """Tests for the replay_to_consumer method."""
 

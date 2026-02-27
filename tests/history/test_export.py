@@ -17,6 +17,7 @@ from file_organizer.history.models import OperationType
 from file_organizer.history.tracker import OperationHistory
 
 
+@pytest.mark.unit
 class TestHistoryExporter:
     """Test suite for HistoryExporter."""
 

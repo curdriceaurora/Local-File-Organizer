@@ -31,6 +31,7 @@ from file_organizer.utils.file_readers import (
 pytestmark = [pytest.mark.unit]
 
 
+@pytest.mark.unit
 class TestFileReaders:
     """Tests for individual file readers in utils/file_readers.py."""
 
@@ -244,6 +245,7 @@ class TestFileReaders:
             read_ebook_file(test_file)
 
 
+@pytest.mark.unit
 class TestReadFileGeneric:
     """Test the read_file routing function."""
 
@@ -288,6 +290,7 @@ class TestReadFileGeneric:
 # ────────────────────────────────────────────────────────────────────────────
 
 
+@pytest.mark.unit
 class TestArchiveReaders:
     """Tests for ZIP and TAR archive readers."""
 
@@ -380,6 +383,7 @@ class TestArchiveReaders:
             read_tar_file(corrupt_tar)
 
 
+@pytest.mark.unit
 class TestScientificReaders:
     """Tests for optional-dependency scientific format readers (unavailable paths)."""
 
@@ -440,6 +444,7 @@ class TestScientificReaders:
             read_dwg_file("test.dwg")
 
 
+@pytest.mark.unit
 class TestCADReaders:
     """Tests for text-based CAD readers (STEP, IGES) and CAD dispatch."""
 
@@ -519,6 +524,7 @@ class TestCADReaders:
             read_cad_file(cad_path)
 
 
+@pytest.mark.unit
 class TestReadFileExpanded:
     """Expanded tests for the read_file dispatch function."""
 

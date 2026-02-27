@@ -130,6 +130,7 @@ def sample_mat_file(tmp_path: Path) -> Path:
     return mat_path
 
 
+@pytest.mark.unit
 class TestArchiveReaders:
     """Tests for archive format readers."""
 
@@ -231,6 +232,7 @@ class TestArchiveReaders:
             readers.RARFILE_AVAILABLE = original
 
 
+@pytest.mark.unit
 class TestScientificReaders:
     """Tests for scientific format readers."""
 
@@ -343,6 +345,7 @@ class TestScientificReaders:
             readers.SCIPY_AVAILABLE = original
 
 
+@pytest.mark.unit
 class TestReadFileDispatcher:
     """Tests for read_file() dispatcher with new formats."""
 
@@ -407,6 +410,7 @@ class TestReadFileDispatcher:
         assert "HDF5 File" in result
 
 
+@pytest.mark.unit
 class TestErrorHandling:
     """Tests for error handling in readers."""
 

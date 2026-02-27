@@ -10,9 +10,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from file_organizer.parallel.scheduler import PriorityStrategy, TaskScheduler
 
 
+@pytest.mark.unit
 class TestTaskScheduler(unittest.TestCase):
     """Test cases for TaskScheduler."""
 

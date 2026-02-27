@@ -65,6 +65,7 @@ def temp_dir(tmp_path):
     return test_dir
 
 
+@pytest.mark.unit
 class TestJohnnyDecimalSystem:
     """Test JohnnyDecimalSystem class."""
 
@@ -351,6 +352,7 @@ class TestJohnnyDecimalSystem:
         assert not system._initialized
 
 
+@pytest.mark.unit
 class TestConfiguration:
     """Test configuration save/load."""
 
@@ -440,6 +442,7 @@ class TestConfiguration:
             system.load_configuration(Path("/nonexistent/config.json"))
 
 
+@pytest.mark.unit
 class TestIntegrationScenarios:
     """Test complete integration scenarios."""
 

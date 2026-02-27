@@ -33,6 +33,7 @@ def organizer(text_config, vision_config):
     )
 
 
+@pytest.mark.unit
 class TestFileOrganizer:
     """Tests for FileOrganizer class."""
 

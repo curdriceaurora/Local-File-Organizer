@@ -33,6 +33,7 @@ def publisher(mock_manager: MagicMock) -> EventPublisher:
     return EventPublisher(stream_manager=mock_manager)
 
 
+@pytest.mark.unit
 class TestEventPublisherInit:
     """Tests for EventPublisher initialization."""
 
@@ -60,6 +61,7 @@ class TestEventPublisherInit:
         assert "events_published=0" in result
 
 
+@pytest.mark.unit
 class TestEventPublisherConnect:
     """Tests for connect/disconnect lifecycle."""
 
@@ -80,6 +82,7 @@ class TestEventPublisherConnect:
         mock_manager.disconnect.assert_called_once()
 
 
+@pytest.mark.unit
 class TestEventPublisherFileEvents:
     """Tests for publishing file events."""
 
@@ -147,7 +150,28 @@ class TestEventPublisherFileEvents:
 
         assert publisher.event_count == 3
 
+    def test_publish_file_event_default_metadata(
+        self, publisher: EventPublisher, mock_manager: MagicMock
+    ):
+        """Test that default metadata is an empty dict when not provided."""
+        publisher.publish_file_event(EventType.FILE_CREATED, "/test.txt")
 
+        call_args = mock_manager.publish.call_args
+        event_data = call_args.kwargs["event_data"]
+        assert event_data["metadata"] == "{}"
+
+    def test_publish_file_event_contains_timestamp(
+        self, publisher: EventPublisher, mock_manager: MagicMock
+    ):
+        """Test that published file events contain a timestamp."""
+        publisher.publish_file_event(EventType.FILE_CREATED, "/test.txt")
+
+        call_args = mock_manager.publish.call_args
+        event_data = call_args.kwargs["event_data"]
+        assert "timestamp" in event_data
+
+
+@pytest.mark.unit
 class TestEventPublisherScanEvents:
     """Tests for publishing scan events."""
 
@@ -182,7 +206,38 @@ class TestEventPublisherScanEvents:
         result = publisher.publish_scan_event("scan-003", "failed", stats)
         assert result is not None
 
+    def test_publish_scan_event_when_disconnected(self, mock_manager: MagicMock):
+        """Test that publishing a scan event when Redis returns None does not increment count."""
+        mock_manager.publish.return_value = None
+        publisher = EventPublisher(stream_manager=mock_manager)
 
+        result = publisher.publish_scan_event("scan-x", "started")
+
+        assert result is None
+        assert publisher.event_count == 0
+
+    def test_publish_scan_event_default_stats(
+        self, publisher: EventPublisher, mock_manager: MagicMock
+    ):
+        """Test that default stats is an empty dict when not provided."""
+        publisher.publish_scan_event("scan-y", "completed")
+
+        call_args = mock_manager.publish.call_args
+        event_data = call_args.kwargs["event_data"]
+        assert event_data["stats"] == "{}"
+
+    def test_publish_scan_event_contains_timestamp(
+        self, publisher: EventPublisher, mock_manager: MagicMock
+    ):
+        """Test that published scan events contain a timestamp."""
+        publisher.publish_scan_event("s1", "started")
+
+        call_args = mock_manager.publish.call_args
+        event_data = call_args.kwargs["event_data"]
+        assert "timestamp" in event_data
+
+
+@pytest.mark.unit
 class TestEventPublisherContextManager:
     """Tests for context manager protocol."""
 
@@ -193,3 +248,29 @@ class TestEventPublisherContextManager:
             pub.publish_file_event(EventType.FILE_CREATED, "/a.txt")
 
         mock_manager.disconnect.assert_called_once()
+
+
+@pytest.mark.unit
+class TestEventPublisherEdgeCases:
+    """Additional edge case tests for EventPublisher."""
+
+    def test_repr_after_publishing(self, publisher: EventPublisher, mock_manager: MagicMock):
+        """Test repr reflects updated event count."""
+        publisher.publish_file_event(EventType.FILE_CREATED, "/a.txt")
+        result = repr(publisher)
+        assert "events_published=1" in result
+
+    def test_stream_constants(self):
+        """Test that file and scan stream names are defined."""
+        assert EventPublisher.FILE_STREAM == "file-events"
+        assert EventPublisher.SCAN_STREAM == "scan-events"
+
+    def test_mixed_event_types_increment_count(
+        self, publisher: EventPublisher, mock_manager: MagicMock
+    ):
+        """Test that file and scan events both increment the same counter."""
+        publisher.publish_file_event(EventType.FILE_CREATED, "/a.txt")
+        publisher.publish_scan_event("scan-1", "started")
+        publisher.publish_file_event(EventType.FILE_DELETED, "/b.txt")
+
+        assert publisher.event_count == 3

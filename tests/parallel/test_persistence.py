@@ -13,10 +13,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from file_organizer.parallel.models import JobState, JobStatus, JobSummary
 from file_organizer.parallel.persistence import JobPersistence
 
 
+@pytest.mark.unit
 class TestJobPersistenceInit(unittest.TestCase):
     """Test JobPersistence initialization."""
 
@@ -32,6 +35,7 @@ class TestJobPersistenceInit(unittest.TestCase):
         self.assertEqual(persistence.jobs_dir, custom)
 
 
+@pytest.mark.unit
 class TestSaveAndLoadJob(unittest.TestCase):
     """Test saving and loading job state."""
 
@@ -144,6 +148,7 @@ class TestSaveAndLoadJob(unittest.TestCase):
         self.assertIsNone(loaded.error)
 
 
+@pytest.mark.unit
 class TestListJobs(unittest.TestCase):
     """Test listing persisted jobs."""
 
@@ -227,6 +232,7 @@ class TestListJobs(unittest.TestCase):
         self.assertEqual(ids, ["sorted-2", "sorted-1", "sorted-0"])
 
 
+@pytest.mark.unit
 class TestDeleteJob(unittest.TestCase):
     """Test deleting persisted jobs."""
 
@@ -265,6 +271,7 @@ class TestDeleteJob(unittest.TestCase):
         self.assertIsNone(self.persistence.load_job("gone"))
 
 
+@pytest.mark.unit
 class TestJobExists(unittest.TestCase):
     """Test job existence checks."""
 
@@ -293,6 +300,7 @@ class TestJobExists(unittest.TestCase):
         self.assertFalse(self.persistence.job_exists("phantom"))
 
 
+@pytest.mark.unit
 class TestJobPersistenceAtomicWrites(unittest.TestCase):
     """Test atomic write behavior for job persistence."""
 

@@ -12,6 +12,7 @@ from file_organizer.core.organizer import FileOrganizer
 from file_organizer.services import ProcessedFile
 
 
+@pytest.mark.unit
 class TestParallelExecution:
     """Tests for parallel execution in FileOrganizer."""
 

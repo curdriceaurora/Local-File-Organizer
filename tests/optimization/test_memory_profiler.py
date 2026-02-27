@@ -15,6 +15,7 @@ from file_organizer.optimization.memory_profiler import (
 )
 
 
+@pytest.mark.unit
 class TestMemorySnapshot:
     """Tests for the MemorySnapshot dataclass."""
 
@@ -50,6 +51,7 @@ class TestMemorySnapshot:
         assert snapshot.objects_by_type == ()
 
 
+@pytest.mark.unit
 class TestProfileResult:
     """Tests for the ProfileResult dataclass."""
 
@@ -75,6 +77,7 @@ class TestProfileResult:
             result.peak_memory = 999  # type: ignore[misc]
 
 
+@pytest.mark.unit
 class TestMemoryTimeline:
     """Tests for the MemoryTimeline dataclass."""
 
@@ -102,6 +105,7 @@ class TestMemoryTimeline:
         assert len(timeline.snapshots) == 1
 
 
+@pytest.mark.unit
 class TestMemoryProfilerInit:
     """Tests for MemoryProfiler initialization."""
 
@@ -116,6 +120,7 @@ class TestMemoryProfilerInit:
         assert profiler._tracking is False
 
 
+@pytest.mark.unit
 class TestMemoryProfilerProfile:
     """Tests for the profile decorator."""
 
@@ -276,6 +281,7 @@ class TestMemoryProfilerProfile:
         assert profiler.last_result.func_name == "func_b"
 
 
+@pytest.mark.unit
 class TestMemoryProfilerSnapshot:
     """Tests for get_snapshot method."""
 
@@ -320,6 +326,7 @@ class TestMemoryProfilerSnapshot:
         assert snapshot.vms == 0
 
 
+@pytest.mark.unit
 class TestMemoryProfilerTracking:
     """Tests for start_tracking/stop_tracking/add_snapshot."""
 
@@ -418,6 +425,7 @@ class TestMemoryProfilerTracking:
         assert len(timeline.snapshots) == 0
 
 
+@pytest.mark.unit
 class TestMemoryProfilerTopObjects:
     """Tests for _get_top_objects static method."""
 

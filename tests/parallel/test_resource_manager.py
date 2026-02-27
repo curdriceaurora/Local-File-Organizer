@@ -10,6 +10,8 @@ from __future__ import annotations
 import threading
 import unittest
 
+import pytest
+
 from file_organizer.parallel.resource_manager import (
     ResourceConfig,
     ResourceManager,
@@ -17,6 +19,7 @@ from file_organizer.parallel.resource_manager import (
 )
 
 
+@pytest.mark.unit
 class TestResourceConfig(unittest.TestCase):
     """Test cases for ResourceConfig dataclass."""
 
@@ -66,6 +69,7 @@ class TestResourceConfig(unittest.TestCase):
             ResourceConfig(max_gpu_percent=-1.0)
 
 
+@pytest.mark.unit
 class TestResourceType(unittest.TestCase):
     """Test cases for ResourceType enum."""
 
@@ -82,6 +86,7 @@ class TestResourceType(unittest.TestCase):
         self.assertEqual(str(ResourceType.MEMORY), "memory")
 
 
+@pytest.mark.unit
 class TestResourceManager(unittest.TestCase):
     """Test cases for ResourceManager."""
 

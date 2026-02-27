@@ -27,6 +27,7 @@ def pid_file(tmp_path: Path) -> Path:
     return tmp_path / "test_daemon.pid"
 
 
+@pytest.mark.unit
 class TestWritePid:
     """Tests for PidFileManager.write_pid."""
 
@@ -62,6 +63,7 @@ class TestWritePid:
         assert pid_manager.read_pid(pid_file) == 222
 
 
+@pytest.mark.unit
 class TestReadPid:
     """Tests for PidFileManager.read_pid."""
 
@@ -96,6 +98,7 @@ class TestReadPid:
         assert pid_manager.read_pid(pid_file) == 99
 
 
+@pytest.mark.unit
 class TestRemovePid:
     """Tests for PidFileManager.remove_pid."""
 
@@ -112,6 +115,7 @@ class TestRemovePid:
         assert pid_manager.remove_pid(pid_file) is False
 
 
+@pytest.mark.unit
 class TestIsRunning:
     """Tests for PidFileManager.is_running."""
 

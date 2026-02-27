@@ -44,6 +44,7 @@ def sample_file(temp_dir):
     return file_path
 
 
+@pytest.mark.unit
 class TestTagUsage:
     """Tests for TagUsage dataclass."""
 
@@ -92,6 +93,7 @@ class TestTagUsage:
         assert len(usage.file_types) == 2
 
 
+@pytest.mark.unit
 class TestTagPattern:
     """Tests for TagPattern dataclass."""
 
@@ -125,6 +127,7 @@ class TestTagPattern:
         assert restored.frequency == pattern.frequency
 
 
+@pytest.mark.unit
 class TestTagLearningEngine:
     """Tests for TagLearningEngine class."""
 

@@ -31,6 +31,7 @@ validate_dockerfile = docker_utils.validate_dockerfile
 # =============================================================================
 
 
+@pytest.mark.unit
 class TestDockerfileStructure:
     """Tests for Dockerfile structural validity and best practices."""
 
@@ -172,6 +173,7 @@ class TestDockerfileStructure:
 # =============================================================================
 
 
+@pytest.mark.unit
 class TestDockerfileDev:
     """Tests for development Dockerfile."""
 
@@ -225,6 +227,7 @@ class TestDockerfileDev:
 # =============================================================================
 
 
+@pytest.mark.unit
 class TestDockerCompose:
     """Tests for docker-compose.yml validity and structure."""
 
@@ -320,6 +323,7 @@ class TestDockerCompose:
 # =============================================================================
 
 
+@pytest.mark.unit
 class TestDockerComposeDev:
     """Tests for docker-compose.dev.yml override file."""
 
@@ -379,6 +383,7 @@ class TestDockerComposeDev:
 # =============================================================================
 
 
+@pytest.mark.unit
 class TestDockerignore:
     """Tests for .dockerignore file completeness."""
 
@@ -432,6 +437,7 @@ class TestDockerignore:
 # =============================================================================
 
 
+@pytest.mark.unit
 class TestValidateDockerfile:
     """Tests for the validate_dockerfile utility function."""
 
@@ -483,6 +489,7 @@ class TestValidateDockerfile:
         assert any("apt" in i.lower() and "cleanup" in i.lower() for i in issues)
 
 
+@pytest.mark.unit
 class TestParseDockerCompose:
     """Tests for the parse_docker_compose utility function."""
 
@@ -515,6 +522,7 @@ class TestParseDockerCompose:
         assert isinstance(data, dict)
 
 
+@pytest.mark.unit
 class TestGetImageSizeEstimate:
     """Tests for the get_image_size_estimate utility function."""
 

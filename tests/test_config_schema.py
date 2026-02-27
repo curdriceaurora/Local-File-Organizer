@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from file_organizer.config.schema import AppConfig, ModelPreset, UpdateSettings
 
 # ---------------------------------------------------------------------------
@@ -9,6 +11,7 @@ from file_organizer.config.schema import AppConfig, ModelPreset, UpdateSettings
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestModelPreset:
     """Tests for the ModelPreset dataclass."""
 
@@ -50,6 +53,7 @@ class TestModelPreset:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAppConfig:
     """Tests for the AppConfig dataclass."""
 
@@ -115,6 +119,7 @@ class TestAppConfig:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSchemaEdgeCases:
     """Edge cases and boundary conditions."""
 
@@ -148,6 +153,7 @@ class TestSchemaEdgeCases:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestUpdateSettings:
     def test_defaults(self) -> None:
         updates = UpdateSettings()

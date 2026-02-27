@@ -18,6 +18,7 @@ def _get_content(widget: object) -> str:
     return str(getattr(widget, "_Static__content", ""))
 
 
+@pytest.mark.unit
 class TestMethodologySelectorPanel:
     """Unit tests for MethodologySelectorPanel."""
 
@@ -36,6 +37,7 @@ class TestMethodologySelectorPanel:
         assert panel._current == "jd"
 
 
+@pytest.mark.unit
 class TestMethodologyPreviewPanel:
     """Unit tests for MethodologyPreviewPanel."""
 
@@ -85,6 +87,7 @@ class TestMethodologyPreviewPanel:
         assert "Connection failed" in _get_content(panel)
 
 
+@pytest.mark.unit
 class TestMethodologyView:
     """Unit tests for MethodologyView."""
 

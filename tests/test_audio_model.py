@@ -8,6 +8,7 @@ import pytest
 # Tests document expected behavior for when implemented
 
 
+@pytest.mark.unit
 class TestAudioModelPlaceholder:
     """Test AudioModel Phase 3 placeholder."""
 

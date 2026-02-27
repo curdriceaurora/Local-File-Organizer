@@ -286,6 +286,7 @@ def _param_is_documented(section: str, param: _Param) -> bool:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestAllCommandsDocumented:
     """Every registered CLI command must have a section in cli-reference.md."""
 
@@ -308,6 +309,7 @@ class TestAllCommandsDocumented:
         )
 
 
+@pytest.mark.unit
 class TestRequiredArgsDocumented:
     """Required arguments and options for each command must be documented.
 
@@ -349,6 +351,7 @@ class TestRequiredArgsDocumented:
         )
 
 
+@pytest.mark.unit
 class TestNoPhantomCommands:
     """Documented commands should correspond to real registered commands.
 
@@ -396,6 +399,7 @@ class TestNoPhantomCommands:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCLIDocsCoverage:
     """Print a coverage summary of CLI docs vs registered commands."""
 
@@ -435,6 +439,7 @@ class TestCLIDocsCoverage:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMetavarAlignment:
     """Click argument metavars must appear in the corresponding docs section.
 

@@ -67,23 +67,3 @@ jobs:
       - name: Run tests
         run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts="
 
-  frontend-compat:
-    name: Frontend Compatibility (placeholder)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Frontend compatibility placeholder
-        run: |
-          echo "Frontend compatibility tests are not yet implemented."
-          echo "This job is a placeholder pending addition of a JS build system (package.json)."
-          echo "Re-enable Node setup and npm steps once a frontend build system is introduced."
-
-  frontend-e2e:
-    name: Frontend E2E (placeholder — not yet implemented)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: E2E placeholder
-        run: |
-          echo "E2E tests are not yet implemented."
-          echo "This job is a placeholder for future Playwright/Cypress tests."
-

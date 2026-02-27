@@ -47,6 +47,7 @@ def mock_detector_with_groups():
     return detector
 
 
+@pytest.mark.unit
 class TestDedupeImports:
     """Test that the module imports correctly."""
 
@@ -62,6 +63,7 @@ class TestDedupeImports:
         assert app is not None
 
 
+@pytest.mark.unit
 class TestDedupeScan:
     """Tests for the scan command."""
 
@@ -102,6 +104,7 @@ class TestDedupeScan:
         assert "abc123" in result.output
 
 
+@pytest.mark.unit
 class TestDedupeResolve:
     """Tests for the resolve command."""
 
@@ -131,6 +134,7 @@ class TestDedupeResolve:
         assert "dry run" in result.output.lower()
 
 
+@pytest.mark.unit
 class TestDedupeReport:
     """Tests for the report command."""
 
@@ -155,6 +159,7 @@ class TestDedupeReport:
         assert result.exit_code == 0
 
 
+@pytest.mark.unit
 class TestFormatSize:
     """Test _format_size helper."""
 

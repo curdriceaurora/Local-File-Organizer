@@ -12,6 +12,8 @@ import urllib.error
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 # Add scripts directory to path for import
 SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
@@ -26,6 +28,7 @@ from deploy import (  # noqa: E402
 )
 
 
+@pytest.mark.unit
 class TestDeployConfig:
     """Tests for the DeployConfig dataclass."""
 
@@ -61,6 +64,7 @@ class TestDeployConfig:
         assert config.env_file is None
 
 
+@pytest.mark.unit
 class TestHealthCheckResult:
     """Tests for the HealthCheckResult dataclass."""
 
@@ -89,6 +93,7 @@ class TestHealthCheckResult:
         assert result.details == {"error": "Service unavailable"}
 
 
+@pytest.mark.unit
 class TestBuildImage:
     """Tests for the build_image function."""
 
@@ -131,6 +136,7 @@ class TestBuildImage:
         assert result is False
 
 
+@pytest.mark.unit
 class TestPushImage:
     """Tests for the push_image function."""
 
@@ -167,6 +173,7 @@ class TestPushImage:
         assert result is False
 
 
+@pytest.mark.unit
 class TestValidateDeployment:
     """Tests for the validate_deployment function."""
 
@@ -221,6 +228,7 @@ class TestValidateDeployment:
         assert result.status_code == 503
 
 
+@pytest.mark.unit
 class TestRollback:
     """Tests for the rollback function."""
 

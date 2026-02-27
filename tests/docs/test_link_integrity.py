@@ -11,9 +11,12 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 from tests.docs.conftest import DOCS_DIR, MKDOCS_FILE
 
 
+@pytest.mark.unit
 class TestMkdocsNavIntegrity:
     """Validate that mkdocs.yml nav entries exist as files."""
 
@@ -73,6 +76,7 @@ class TestMkdocsNavIntegrity:
         assert not mismatched, "Case mismatches found in mkdocs.yml nav:\n" + "\n".join(mismatched)
 
 
+@pytest.mark.unit
 class TestInternalLinkIntegrity:
     """Validate that internal links in markdown files resolve to existing files."""
 

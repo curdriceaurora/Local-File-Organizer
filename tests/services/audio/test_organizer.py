@@ -94,6 +94,7 @@ def tmp_dir():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestSanitizePathComponent:
     """Tests for path component sanitisation."""
 
@@ -118,6 +119,7 @@ class TestSanitizePathComponent:
         assert sanitize_path_component("...") == "Unknown"
 
 
+@pytest.mark.unit
 class TestSafeValue:
     """Tests for _safe_value helper."""
 
@@ -135,6 +137,7 @@ class TestSafeValue:
         assert ":" not in result
 
 
+@pytest.mark.unit
 class TestFormatTrackNumber:
     """Tests for track number formatting."""
 
@@ -153,6 +156,7 @@ class TestFormatTrackNumber:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOrganizationRules:
     """Tests for OrganizationRules configuration."""
 
@@ -180,6 +184,7 @@ class TestOrganizationRules:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestGeneratePath:
     """Tests for path generation from templates."""
 
@@ -274,6 +279,7 @@ class TestGeneratePath:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestPreviewOrganization:
     """Tests for dry-run preview."""
 
@@ -312,6 +318,7 @@ class TestPreviewOrganization:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOrganizeDryRun:
     """Tests for organization in dry-run mode."""
 
@@ -341,6 +348,7 @@ class TestOrganizeDryRun:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestOrganizeActual:
     """Tests for actual file organisation."""
 
@@ -423,6 +431,7 @@ class TestOrganizeActual:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestResolveConflict:
     """Tests for filename conflict resolution."""
 
@@ -451,6 +460,7 @@ class TestResolveConflict:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMultipleFiles:
     """Tests for organising multiple files at once."""
 

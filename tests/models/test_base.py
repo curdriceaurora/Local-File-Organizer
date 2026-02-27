@@ -36,6 +36,7 @@ def text_config() -> ModelConfig:
     return ModelConfig(name="test-model", model_type=ModelType.TEXT)
 
 
+@pytest.mark.unit
 class TestModelType:
     """Tests for ModelType enum."""
 
@@ -61,6 +62,7 @@ class TestModelType:
             ModelType("invalid")
 
 
+@pytest.mark.unit
 class TestDeviceType:
     """Tests for DeviceType enum."""
 
@@ -81,6 +83,7 @@ class TestDeviceType:
         assert DeviceType("cuda") == DeviceType.CUDA
 
 
+@pytest.mark.unit
 class TestModelConfig:
     """Tests for ModelConfig dataclass."""
 
@@ -141,6 +144,7 @@ class TestModelConfig:
         assert config.local_path == "/local/custom"
 
 
+@pytest.mark.unit
 class TestBaseModel:
     """Tests for BaseModel abstract class via StubModel."""
 
