@@ -2,6 +2,16 @@
 
 Handles loading, saving, and profile management for the unified
 application configuration.
+
+.. deprecated:: 2.0
+    Use PathManager for path resolution instead of hardcoded paths.
+    For new code, pass config_dir from PathManager.config_dir:
+
+        from file_organizer.config.path_manager import PathManager
+        path_manager = PathManager()
+        config_manager = ConfigManager(config_dir=path_manager.config_dir)
+
+See: docs/config/path-standardization.md
 """
 
 from __future__ import annotations
