@@ -136,5 +136,5 @@ If you encounter issues with path migration:
 ## See Also
 
 - [Path Standardization Guide](./path-standardization.md)
-- [PathManager Documentation](../api/path_manager.rst)
+- [PathManager Guide](./path-standardization.md)
 - [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)

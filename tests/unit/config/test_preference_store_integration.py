@@ -1,10 +1,9 @@
 """Tests for PreferenceStore integration with PathManager."""
 
 import os
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
-import pytest
-import tempfile
 
 from file_organizer.config.path_manager import PathManager
 from file_organizer.services.intelligence.preference_store import PreferenceStore
@@ -89,7 +88,7 @@ def test_preference_store_default_dir_vs_path_manager():
 
         with patch.dict(os.environ, {'HOME': str(tmp_path)}):
             # Default PreferenceStore uses legacy path
-            default_pref = PreferenceStore()
+            PreferenceStore()
 
             # PathManager uses XDG path
             path_manager = PathManager()

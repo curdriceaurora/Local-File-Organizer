@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 from unittest.mock import patch
-import pytest
+
 from file_organizer.config.path_manager import PathManager, get_canonical_paths
 
 

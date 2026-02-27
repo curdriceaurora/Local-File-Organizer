@@ -1,11 +1,10 @@
 """Centralized path management following XDG Base Directory specification."""
 
-from pathlib import Path
-from typing import Dict
 import os
+from pathlib import Path
 
 
-def get_canonical_paths() -> Dict[str, Path]:
+def get_canonical_paths() -> dict[str, Path]:
     """Get canonical paths for config, data, and state directories.
 
     Uses XDG Base Directory specification with fallbacks for Windows/macOS.

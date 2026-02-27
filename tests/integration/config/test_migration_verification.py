@@ -1,15 +1,14 @@
 """Verification tests for path migration and backwards compatibility."""
 
-import os
 import json
+import os
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
-import pytest
-import tempfile
 
+from file_organizer.config.manager import ConfigManager
 from file_organizer.config.path_manager import PathManager
 from file_organizer.config.path_migration import PathMigrator, detect_legacy_paths
-from file_organizer.config.manager import ConfigManager
 from file_organizer.config.schema import AppConfig
 from file_organizer.services.intelligence.preference_store import PreferenceStore
 
@@ -134,13 +133,19 @@ def test_new_and_legacy_paths_coexist():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
-            # Create config in legacy path
+        # Set XDG_CONFIG_HOME to a custom location so PathManager uses
+        # a different path from ConfigManager's hardcoded default
+        custom_xdg = tmp_path / "custom-xdg-config"
+        with patch.dict(os.environ, {
+            'HOME': str(tmp_path),
+            'XDG_CONFIG_HOME': str(custom_xdg),
+        }):
+            # Create config in legacy path (hardcoded default)
             legacy_cm = ConfigManager()
             legacy_config = AppConfig(profile_name="legacy")
             legacy_cm.save(legacy_config, profile="legacy")
 
-            # Create config in new XDG path
+            # Create config in new XDG path (respects XDG_CONFIG_HOME)
             path_manager = PathManager()
             path_manager.ensure_directories()
             xdg_cm = ConfigManager(config_dir=path_manager.config_dir)
@@ -151,7 +156,7 @@ def test_new_and_legacy_paths_coexist():
             assert legacy_cm.load(profile="legacy").profile_name == "legacy"
             assert xdg_cm.load(profile="xdg").profile_name == "xdg"
 
-            # Paths should be different
+            # Paths should be different when XDG_CONFIG_HOME is customized
             assert legacy_cm.config_dir != xdg_cm.config_dir
 
 

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from unittest.mock import patch
+
 import pytest
 
 from file_organizer.config.path_manager import PathManager
@@ -18,7 +19,12 @@ def test_path_manager_initialization():
 
 def test_path_manager_directory_creation(tmp_path):
     """PathManager should create all required directories"""
-    with patch.dict('os.environ', {'HOME': str(tmp_path)}):
+    with patch.dict('os.environ', {
+        'HOME': str(tmp_path),
+        'XDG_CONFIG_HOME': str(tmp_path / '.config'),
+        'XDG_DATA_HOME': str(tmp_path / '.local' / 'share'),
+        'XDG_STATE_HOME': str(tmp_path / '.local' / 'state'),
+    }):
         path_manager = PathManager()
         path_manager.ensure_directories()
 
@@ -34,7 +40,18 @@ def test_path_manager_directory_creation(tmp_path):
 
 def test_all_paths_follow_xdg_structure(tmp_path):
     """All paths should follow XDG Base Directory structure"""
-    with patch.dict('os.environ', {'HOME': str(tmp_path)}):
+    # Explicitly set XDG vars to ensure paths resolve under tmp_path,
+    # since Path.home() may not respect patched HOME in all environments.
+    xdg_config = str(tmp_path / '.config')
+    xdg_data = str(tmp_path / '.local' / 'share')
+    xdg_state = str(tmp_path / '.local' / 'state')
+
+    with patch.dict('os.environ', {
+        'HOME': str(tmp_path),
+        'XDG_CONFIG_HOME': xdg_config,
+        'XDG_DATA_HOME': xdg_data,
+        'XDG_STATE_HOME': xdg_state,
+    }):
         path_manager = PathManager()
         path_manager.ensure_directories()
 

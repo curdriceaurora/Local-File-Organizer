@@ -1,13 +1,12 @@
 """Tests for ConfigManager integration with PathManager."""
 
 import os
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
-import pytest
-import tempfile
 
-from file_organizer.config.path_manager import PathManager
 from file_organizer.config.manager import ConfigManager
+from file_organizer.config.path_manager import PathManager
 from file_organizer.config.schema import AppConfig
 
 
@@ -72,19 +71,25 @@ def test_config_manager_loads_from_path_manager_dir():
 
 
 def test_config_manager_default_dir_vs_path_manager():
-    """ConfigManager default dir should match legacy path, PathManager should use XDG"""
+    """ConfigManager default dir differs from PathManager when XDG is customized"""
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
-            # Default ConfigManager uses legacy path
+        # Set XDG_CONFIG_HOME to a custom location so PathManager differs
+        # from ConfigManager's hardcoded default (~/.config/file-organizer)
+        custom_xdg = tmp_path / "custom-xdg-config"
+        with patch.dict(os.environ, {
+            'HOME': str(tmp_path),
+            'XDG_CONFIG_HOME': str(custom_xdg),
+        }):
+            # Default ConfigManager uses hardcoded legacy path
             default_cm = ConfigManager()
 
-            # PathManager uses XDG path
+            # PathManager respects XDG_CONFIG_HOME
             path_manager = PathManager()
             path_manager.ensure_directories()
 
-            # They should be different
+            # They should be different when XDG_CONFIG_HOME is customized
             assert default_cm.config_dir != path_manager.config_dir
 
             # When created with PathManager, ConfigManager uses XDG path

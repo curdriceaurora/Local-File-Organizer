@@ -1,17 +1,17 @@
 """Migration support for legacy path locations to canonical XDG structure."""
 
-import shutil
-from pathlib import Path
-from typing import List, Dict, Optional
-from datetime import datetime
 import json
+import shutil
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
 
 
 def detect_legacy_paths(
     home: Path,
     config_home: Path,
     data_home: Path
-) -> List[Path]:
+) -> list[Path]:
     """Detect legacy path locations that need migration.
 
     Checks for:
@@ -47,7 +47,7 @@ class PathMigrator:
         self.legacy_path = legacy_path
         self.canonical_path = canonical_path
         self.backup_path: Optional[Path] = None
-        self.migration_log: Dict = {}
+        self.migration_log: dict = {}
 
     def backup_legacy_path(self) -> Path:
         """Create backup of legacy path before migration.
@@ -81,7 +81,7 @@ class PathMigrator:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(item, target)
 
-    def create_migration_log(self) -> Dict:
+    def create_migration_log(self) -> dict:
         """Create migration log entry for audit trail.
 
         Returns:

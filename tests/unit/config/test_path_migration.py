@@ -1,8 +1,5 @@
 """Tests for path migration from legacy locations."""
 
-from pathlib import Path
-from unittest.mock import patch, MagicMock
-import pytest
 from file_organizer.config.path_migration import PathMigrator, detect_legacy_paths
 
 
