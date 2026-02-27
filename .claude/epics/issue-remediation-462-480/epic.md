@@ -2,9 +2,10 @@
 name: issue-remediation-462-480
 title: "Issue Remediation Plan: #462-480"
 status: open
+github_issue: 483
 priority: critical
 created: 2026-02-27T16:27:55Z
-updated: 2026-02-27T16:27:55Z
+updated: 2026-02-27T16:33:03Z
 progress: 0%
 estimated_duration: "16-25 weeks"
 critical_path_duration: "8-12 weeks"
