@@ -17,8 +17,6 @@ from rich.table import Table
 from file_organizer.optimization.memory_profiler import MemoryProfiler
 from file_organizer.optimization.resource_monitor import ResourceMonitor
 
-console = Console()
-
 benchmark_app = typer.Typer(
     name="benchmark",
     help="Benchmark file processing performance.",
@@ -50,6 +48,9 @@ def run(
     Measures processing speed, memory usage, and timing statistics
     for file organization operations.
     """
+    # Initialize console for output
+    console = Console()
+
     # Resolve path
     input_path = input_path.resolve()
 
