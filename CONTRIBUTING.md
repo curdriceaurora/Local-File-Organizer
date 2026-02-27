@@ -121,6 +121,50 @@ ruff check src/
 mypy src/file_organizer/ --strict
 ```
 
+### Full CI in Docker with `act` (ubuntu-latest parity)
+
+[`act`](https://github.com/nektos/act) runs the actual `.github/workflows/*.yml` files inside
+Docker containers that mirror `ubuntu-latest`. This catches platform-specific bugs that
+`test-local-matrix.sh` misses (e.g., `st_birthtime` on macOS vs `st_mtime` on Linux).
+
+**Prerequisites**: Docker Desktop running locally (~2 GB disk for the ubuntu-latest image on
+first run).
+
+```bash
+# Install act
+brew install act            # macOS
+curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash  # Linux
+choco install act-cli       # Windows
+```
+
+**Usage**:
+
+```bash
+# Run the full ci-full.yml matrix (simulates a daily/manual dispatch)
+act schedule
+
+# Run just the Python test matrix
+act schedule -j test-matrix
+
+# Run the fast CI (ci.yml — simulates a push to main)
+act push
+
+# Run CI as if a PR was opened
+act pull_request
+```
+
+The `.actrc` file in the project root pins the Docker image and architecture automatically.
+
+**`act` vs `test-local-matrix.sh`**:
+
+| | `act` | `test-local-matrix.sh` |
+|--|-------|------------------------|
+| OS parity | ubuntu-latest in Docker | Host OS (macOS/Windows) |
+| Workflow sync | Uses actual YAML — stays in sync | Must be updated manually |
+| Speed | Slower (Docker overhead) | Faster (native execution) |
+| Dependencies | Docker Desktop required | pyenv only |
+| Offline | Needs Docker images cached | Works fully offline |
+
 ---
 
 ## What the CI Runs
@@ -129,10 +173,11 @@ Our CI has two workflows triggered on PRs to `main`:
 
 | Workflow | File | What it runs |
 |----------|------|-------------|
-| **CI** | `.github/workflows/ci.yml` | Lint + Python 3.11/3.12 tests |
-| **CI Full Matrix** | `.github/workflows/ci-full.yml` | Python 3.11/3.12 |
+| **CI** | `.github/workflows/ci.yml` | Lint + Python 3.11/3.12 tests + coverage |
+| **CI Full Matrix** | `.github/workflows/ci-full.yml` | Python 3.11/3.12 + macOS + Windows |
 
-`scripts/test-local-matrix.sh` mirrors the Full Matrix workflow locally.
+`scripts/test-local-matrix.sh` mirrors the Python matrix locally on the host OS.
+`act` mirrors the full workflow inside Docker for ubuntu-latest parity.
 
 ---
 
