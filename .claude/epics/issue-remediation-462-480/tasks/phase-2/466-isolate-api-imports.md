@@ -1,12 +1,13 @@
 ---
 name: 466-isolate-api-imports
 title: "Isolate API import-time side effects"
-status: open
+status: in-progress
 priority: P1
 effort_estimate: "12-16 hours"
 phase: 2
 created: 2026-02-27T16:27:55Z
-updated: 2026-02-27T16:27:55Z
+updated: 2026-02-27T17:20:00Z
+started: 2026-02-27T17:20:00Z
 github_issue: 466
 epic: issue-remediation-462-480
 ---

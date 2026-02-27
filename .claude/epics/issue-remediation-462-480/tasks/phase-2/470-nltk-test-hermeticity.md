@@ -1,12 +1,13 @@
 ---
 name: 470-nltk-test-hermeticity
 title: "Fix NLTK test hermeticity"
-status: open
+status: in-progress
 priority: P1
 effort_estimate: "8-12 hours"
 phase: 2
 created: 2026-02-27T16:27:55Z
-updated: 2026-02-27T16:27:55Z
+updated: 2026-02-27T17:20:00Z
+started: 2026-02-27T17:20:00Z
 github_issue: 470
 epic: issue-remediation-462-480
 ---
