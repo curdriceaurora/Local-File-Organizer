@@ -140,8 +140,11 @@ choco install act-cli       # Windows
 **Usage**:
 
 ```bash
-# Run the full ci-full.yml matrix (simulates a daily/manual dispatch)
+# Run the full ci-full.yml matrix (simulates the daily cron schedule)
 act schedule
+
+# Same, but simulate a manual workflow_dispatch trigger
+act workflow_dispatch
 
 # Run just the Python test matrix
 act schedule -j test-matrix
