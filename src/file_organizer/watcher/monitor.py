@@ -85,7 +85,7 @@ class FileMonitor:
                     "Using native file system observer "
                     "(FSEvents/Inotify/Windows)"
                 )
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:  # Intentional: catch any observer initialization failure
                 logger.warning(
                     "Native observer failed to initialize: %s. "
                     "Falling back to polling observer.",
