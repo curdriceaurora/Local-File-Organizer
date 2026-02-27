@@ -52,7 +52,20 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          # Install core package with dev dependencies
+          pip install -e ".[dev]"
+
+          # Explicitly install pytest-asyncio and faker to ensure they're available
+          # This fixes installation order issues on Python 3.11 where pytest might load before pytest-asyncio
+          pip install pytest-asyncio>=0.23.0 faker --no-cache-dir
+      - name: Verify test dependencies
+        run: |
+          # Verify pytest-asyncio is properly installed and can be imported
+          python -c "import pytest_asyncio; print(f'pytest-asyncio {pytest_asyncio.__version__} loaded successfully')"
+          python -c "import faker; print(f'faker loaded successfully')"
+          # List installed pytest plugins to verify asyncio plugin is registered
+          pytest --co -q --co-ignore=tests/e2e 2>&1 | head -20 || true
       - name: Download NLTK data
         # punkt_tab required by NLTK 3.9+ — word_tokenize() loads it internally
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
