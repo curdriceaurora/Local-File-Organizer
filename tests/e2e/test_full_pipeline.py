@@ -27,6 +27,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
+try:
+    import pytest_benchmark  # noqa: F401
+    HAS_PYTEST_BENCHMARK = True
+except ImportError:
+    HAS_PYTEST_BENCHMARK = False
+
 from file_organizer.core.organizer import FileOrganizer, OrganizationResult
 
 # ---------------------------------------------------------------------------
@@ -301,6 +307,7 @@ class TestPipelineTiming:
         assert elapsed < 1.0, f"_collect_files too slow: {elapsed:.3f}s"
 
     @pytest.mark.benchmark
+    @pytest.mark.skipif(not HAS_PYTEST_BENCHMARK, reason="pytest-benchmark not installed")
     def test_benchmark_organize(
         self,
         benchmark: Any,
