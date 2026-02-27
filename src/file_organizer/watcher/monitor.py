@@ -11,6 +11,8 @@ import threading
 from pathlib import Path
 
 from watchdog.observers import Observer
+from watchdog.observers.api import BaseObserver
+from watchdog.observers.polling import PollingObserver
 
 from .config import WatcherConfig
 from .handler import FileEventHandler
@@ -53,16 +55,19 @@ class FileMonitor:
         self.queue = queue or EventQueue()
         self.handler = FileEventHandler(self.config, self.queue)
 
-        self._observer: Observer | None = None
+        self._observer: BaseObserver | None = None
         self._watches: dict[str, object] = {}
         self._lock = threading.Lock()
         self._running = False
+        self._observer_type: str = "none"  # Track which observer is in use
 
     def start(self) -> None:
         """Start monitoring all configured directories.
 
         Creates and starts the watchdog observer, scheduling watches
-        for each directory in the configuration.
+        for each directory in the configuration. Implements graceful fallback
+        from native observers (FSEvents, Inotify, etc.) to PollingObserver
+        when the platform-specific observer fails to initialize.
 
         Raises:
             RuntimeError: If the monitor is already running.
@@ -72,7 +77,24 @@ class FileMonitor:
             if self._running:
                 raise RuntimeError("FileMonitor is already running")
 
-            self._observer = Observer()
+            # Try native observer first, fallback to polling if it fails
+            try:
+                self._observer = Observer()
+                self._observer_type = "native"
+                logger.info(
+                    "Using native file system observer "
+                    "(FSEvents/Inotify/Windows)"
+                )
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    "Native observer failed to initialize: %s. "
+                    "Falling back to polling observer.",
+                    e,
+                )
+                self._observer = PollingObserver(timeout=1.0)
+                self._observer_type = "polling"
+                logger.info("Using polling observer for file system monitoring")
+
             self._observer.daemon = True
 
             # Schedule all configured directories
@@ -82,7 +104,8 @@ class FileMonitor:
             self._observer.start()
             self._running = True
             logger.info(
-                "FileMonitor started, watching %d directories",
+                "FileMonitor started (%s observer), watching %d directories",
+                self._observer_type,
                 len(self._watches),
             )
 
@@ -241,6 +264,17 @@ class FileMonitor:
     def event_count(self) -> int:
         """Return the number of events currently in the queue."""
         return self.queue.size
+
+    @property
+    def observer_type(self) -> str:
+        """Return the type of observer currently in use.
+
+        Possible values:
+            - 'none': Observer not yet initialized
+            - 'native': Platform-native observer (FSEvents, Inotify, etc.)
+            - 'polling': Polling-based observer (fallback)
+        """
+        return self._observer_type
 
     def _schedule_directory(self, path: Path, recursive: bool) -> None:
         """Schedule a directory watch with the observer.

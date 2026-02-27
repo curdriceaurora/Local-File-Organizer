@@ -414,3 +414,102 @@ class TestFileMonitorCallbacks:
             time.sleep(0.05)
 
         assert len(received_events) >= 1
+
+
+class TestFileMonitorObserverFallback:
+    """Tests for FSEvents fallback to PollingObserver."""
+
+    def test_observer_type_property(self, monitor: FileMonitor) -> None:
+        """Test that observer_type property reports correct observer type."""
+        assert monitor.observer_type == "none"
+        monitor.start()
+        # Should be either 'native' or 'polling' depending on platform
+        assert monitor.observer_type in ("native", "polling")
+        monitor.stop()
+        # Type is preserved after stop
+        assert monitor.observer_type in ("native", "polling")
+
+    def test_fallback_to_polling_observer(
+        self, watch_dir: Path
+    ) -> None:
+        """Test that monitor falls back to PollingObserver when native fails.
+
+        This test mocks Observer.__init__ to raise an exception to simulate
+        FSEvents/Inotify unavailability, then verifies fallback to polling.
+        """
+        from unittest.mock import patch
+
+        from watchdog.observers.polling import PollingObserver
+
+        config = WatcherConfig(
+            watch_directories=[watch_dir],
+            recursive=True,
+            debounce_seconds=0.0,
+        )
+        mon = FileMonitor(config)
+
+        # Mock Observer to raise an exception (simulating FSEvents failure)
+        with patch(
+            "file_organizer.watcher.monitor.Observer",
+            side_effect=OSError("FSEvents unavailable"),
+        ):
+            mon.start()
+            # Should have fallen back to polling
+            assert mon.observer_type == "polling"
+            assert isinstance(mon._observer, PollingObserver)
+            # Monitor should still be running
+            assert mon.is_running is True
+            mon.stop()
+
+    def test_polling_observer_detects_files(
+        self, watch_dir: Path
+    ) -> None:
+        """Test that PollingObserver detects file changes.
+
+        This test forces use of PollingObserver and verifies it can still
+        detect file system events, albeit with polling delays.
+        """
+        from unittest.mock import patch
+
+        config = WatcherConfig(
+            watch_directories=[watch_dir],
+            recursive=True,
+            debounce_seconds=0.0,
+            batch_size=10,
+        )
+        mon = FileMonitor(config)
+
+        # Force use of polling observer
+        with patch(
+            "file_organizer.watcher.monitor.Observer",
+            side_effect=OSError("FSEvents unavailable"),
+        ):
+            mon.start()
+            assert mon.observer_type == "polling"
+
+            # Drain any startup events
+            time.sleep(0.2)
+            mon.get_events(max_size=100)
+
+            # Create a file
+            test_file = watch_dir / "polling_test.txt"
+            test_file.write_text("test content")
+
+            # Wait for event (polling takes a bit longer)
+            events = _wait_for_event_matching(
+                mon,
+                lambda evts: any(
+                    e.event_type == EventType.CREATED
+                    and e.path.name == "polling_test.txt"
+                    for e in evts
+                ),
+                timeout=5.0,  # Give polling observer more time
+            )
+            created = [
+                e
+                for e in events
+                if e.event_type == EventType.CREATED
+                and e.path.name == "polling_test.txt"
+            ]
+            assert len(created) >= 1
+            mon.stop()
