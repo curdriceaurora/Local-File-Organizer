@@ -264,72 +264,19 @@ class TestCIFullWorkflow:
                 "test-matrix job should not collect coverage (no '--cov' in commands)"
             )
 
-    def test_ci_full_has_frontend_compat_job(self, workflow: dict[str, Any]) -> None:
-        """Verify CI Full workflow includes a frontend-compat placeholder job.
+    def test_ci_full_no_frontend_placeholder_jobs(self, workflow: dict[str, Any]) -> None:
+        """Verify frontend placeholder jobs were removed (#369).
 
-        The frontend-compat job is currently a no-op placeholder because this repo
-        has no JS build system (package.json). Once a frontend build system is
-        introduced the job should be updated to run real Node/npm steps.
+        Node.js infrastructure was removed in #372 and E2E tests are deferred (#393).
+        The frontend-compat and frontend-e2e placeholder jobs wasted CI minutes
+        doing nothing, so they were removed.
         """
         jobs = workflow.get("jobs", {})
-        assert "frontend-compat" in jobs, "CI Full workflow should have a 'frontend-compat' job"
-        frontend_compat_job = jobs.get("frontend-compat", {})
-        steps = frontend_compat_job.get("steps", [])
-        assert steps, "Frontend-compat job should define at least one step"
-
-        # The job must NOT install Node (no package.json exists — that would fail CI).
-        node_setup_steps = [
-            step
-            for step in steps
-            if isinstance(step, dict)
-            and isinstance(step.get("uses"), str)
-            and step["uses"].startswith("actions/setup-node")
-        ]
-        assert not node_setup_steps, (
-            "Frontend-compat is a placeholder — it must not use actions/setup-node "
-            "until a JS build system (package.json) is added to the repo"
+        assert "frontend-compat" not in jobs, (
+            "frontend-compat placeholder was removed in #369 (Node.js infra removed in #372)"
         )
-
-    def test_ci_full_has_e2e_placeholder_job(self, workflow: dict[str, Any]) -> None:
-        """Verify CI Full workflow includes a disabled E2E placeholder job."""
-        jobs = workflow.get("jobs", {})
-        assert "frontend-e2e" in jobs, (
-            "CI Full workflow should have a 'frontend-e2e' placeholder job"
-        )
-        e2e_job = jobs["frontend-e2e"]
-
-        # The E2E job should remain a placeholder and must not run real E2E tests
-        steps = e2e_job.get("steps", [])
-        for step in steps:
-            if not isinstance(step, dict):
-                continue
-            # Check that no step uses setup-node action
-            uses = step.get("uses", "")
-            assert "setup-node" not in uses, "Frontend E2E placeholder job must not set up Node.js"
-            # Check run commands for actual E2E test execution (not just mentions in echo)
-            run_cmd = step.get("run", "")
-            # Only check non-echo lines for actual commands
-            for line in run_cmd.split("\n"):
-                line_stripped = line.strip()
-                # Skip echo statements and comments
-                if line_stripped.startswith("echo") or line_stripped.startswith("#"):
-                    continue
-                # Check for actual playwright or E2E test commands
-                assert "playwright install" not in line_stripped.lower(), (
-                    "Frontend E2E placeholder job must not install Playwright"
-                )
-                assert "npm run test:e2e" not in line_stripped.lower(), (
-                    "Frontend E2E placeholder job must not run E2E tests"
-                )
-                assert "npx playwright test" not in line_stripped.lower(), (
-                    "Frontend E2E placeholder job must not execute Playwright tests"
-                )
-
-        # Verify the job only has echo/informational steps
-        run_steps = [step for step in steps if isinstance(step, dict) and "run" in step]
-        assert run_steps, (
-            "Frontend E2E placeholder job should have run steps that document "
-            "that E2E tests are disabled"
+        assert "frontend-e2e" not in jobs, (
+            "frontend-e2e placeholder was removed in #369 (E2E deferred in #393)"
         )
 
     def test_ci_full_has_macos_job(self, workflow: dict[str, Any]) -> None:
