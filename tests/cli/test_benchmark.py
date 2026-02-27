@@ -14,6 +14,7 @@ from file_organizer.cli.main import app
 runner = CliRunner()
 
 
+@pytest.mark.unit
 def test_benchmark_command_exists() -> None:
     """Test that benchmark command exists in CLI."""
     result = runner.invoke(app, ["benchmark", "run", "--help"])
@@ -21,16 +22,12 @@ def test_benchmark_command_exists() -> None:
     assert "benchmark" in result.stdout.lower() or "run" in result.stdout.lower()
 
     # Test that the options are documented in help (case-insensitive to handle formatting variations)
-    # The help output may contain ANSI codes or different formatting on different environments
     help_text = result.stdout.lower()
     assert "iterations" in help_text, "Help should document --iterations parameter"
     assert "json" in help_text, "Help should document --json parameter"
 
-    # Verify the command actually accepts these parameters by running with them
-    test_result = runner.invoke(app, ["benchmark", "run", "--help"])
-    assert test_result.exit_code == 0, "benchmark run --help should work"
 
-
+@pytest.mark.integration
 def test_benchmark_runs_with_fixtures(tmp_path: Path) -> None:
     """Test benchmark command runs with fixture directory."""
     # Create test fixtures
@@ -72,6 +69,7 @@ def test_benchmark_runs_with_fixtures(tmp_path: Path) -> None:
         assert "Benchmark completed" in result.stdout or "files processed" in result.stdout.lower()
 
 
+@pytest.mark.unit
 def test_benchmark_json_output(tmp_path: Path) -> None:
     """Test benchmark command JSON output."""
     # Create test fixtures
@@ -119,6 +117,7 @@ def test_benchmark_json_output(tmp_path: Path) -> None:
             pytest.fail(f"JSON output is not valid JSON: {result.stdout}")
 
 
+@pytest.mark.unit
 def test_benchmark_tracks_cache_hits(tmp_path: Path) -> None:
     """Test that benchmark tracks cache hits metric."""
     fixtures_dir = tmp_path / "fixtures"
@@ -154,6 +153,7 @@ def test_benchmark_tracks_cache_hits(tmp_path: Path) -> None:
         assert output_json["cache_hits"] >= 0
 
 
+@pytest.mark.unit
 def test_benchmark_json_includes_cache_metrics(tmp_path: Path) -> None:
     """Test that JSON output includes cache and LLM metrics."""
     fixtures_dir = tmp_path / "fixtures"
@@ -192,6 +192,7 @@ def test_benchmark_json_includes_cache_metrics(tmp_path: Path) -> None:
         assert isinstance(output_json["llm_calls"], int)
 
 
+@pytest.mark.unit
 def test_benchmark_llm_call_count(tmp_path: Path) -> None:
     """Test that benchmark tracks LLM call count metric."""
     fixtures_dir = tmp_path / "fixtures"

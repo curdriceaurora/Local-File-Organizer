@@ -298,6 +298,7 @@ Measure file processing speed, memory usage, and performance metrics.
 Run a performance benchmark on a directory of files.
 
 **Usage:**
+
 ```bash
 file-organizer benchmark run [INPUT_PATH] [OPTIONS]
 ```
@@ -320,6 +321,7 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
 - `llm_calls` — Number of LLM API calls
 
 **Examples:**
+
 ```bash
 # Benchmark files in Downloads
 file-organizer benchmark run ~/Downloads

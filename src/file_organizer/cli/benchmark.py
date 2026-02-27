@@ -41,10 +41,12 @@ def run(
         help="Output results as JSON.",
     ),
 ) -> None:
-    """Run a performance benchmark.
+    """Run a baseline I/O performance benchmark.
 
-    Measures processing speed, memory usage, and timing statistics
-    for file organization operations.
+    Measures file stat access speed, memory usage, and timing statistics.
+    This benchmarks simple I/O overhead (file discovery and stat calls), not
+    the full file-organization pipeline. To measure real processing speed,
+    run the actual organization routine or add a --process flag.
     """
     # Import Rich here to avoid affecting Typer's help text rendering
     from rich.console import Console
@@ -106,15 +108,13 @@ def run(
         if not json_output:
             console.print(f"[dim]Iteration {iteration + 1}/{iterations}...[/dim]")
 
-        # Simple iteration through files to simulate processing
+        # Baseline I/O benchmark: measures file stat access overhead only
         start_time = time.monotonic()
 
         for file_path in files:
             try:
-                # Simulate processing by reading file stats
                 _ = file_path.stat()
             except Exception:
-                # Skip files we can't access
                 pass
 
         end_time = time.monotonic()
@@ -127,7 +127,15 @@ def run(
 
     # Calculate statistics
     avg_time = total_time / iterations if iterations > 0 else 0.0
-    median_time = sorted(times)[len(times) // 2] if times else 0.0
+    if not times:
+        median_time = 0.0
+    else:
+        sorted_times = sorted(times)
+        n = len(sorted_times)
+        if n % 2 == 1:
+            median_time = sorted_times[n // 2]
+        else:
+            median_time = (sorted_times[n // 2 - 1] + sorted_times[n // 2]) / 2
 
     # Get peak memory from both monitor and profiler
     memory_info = monitor.get_memory_usage()
@@ -138,13 +146,14 @@ def run(
         timeline_peak = max(s.rss for s in timeline.snapshots) / (1024 * 1024)
         peak_memory_mb = max(peak_memory_mb, timeline_peak)
 
-    # Prepare results with cache and LLM metrics
+    # Prepare results
     results = {
         "files_processed": len(files),
         "total_time_seconds": round(total_time, 4),
         "median_time": round(median_time, 4),
         "avg_time": round(avg_time, 4),
         "peak_memory_mb": round(peak_memory_mb, 2),
+        # TODO: compute real cache/LLM metrics when full processing pipeline is used
         "cache_hits": 0,
         "cache_misses": 0,
         "llm_calls": 0,
