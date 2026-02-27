@@ -13,6 +13,7 @@ from rich.console import Console
 
 from file_organizer.cli.api import api_app
 from file_organizer.cli.autotag_v2 import autotag_app
+from file_organizer.cli.benchmark import benchmark_app
 from file_organizer.cli.copilot import copilot_app
 from file_organizer.cli.daemon import daemon_app
 from file_organizer.cli.dedupe_v2 import dedupe_app
@@ -531,6 +532,7 @@ def model_cache() -> None:
 # ---------------------------------------------------------------------------
 
 app.add_typer(autotag_app, name="autotag")
+app.add_typer(benchmark_app, name="benchmark")
 app.add_typer(copilot_app, name="copilot")
 app.add_typer(daemon_app, name="daemon")
 app.add_typer(dedupe_app, name="dedupe")
