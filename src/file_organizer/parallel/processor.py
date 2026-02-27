@@ -115,7 +115,7 @@ class ParallelProcessor:
                 break
 
             attempt_results = self._run_batch(
-                executor_cls=None,  # type: ignore[arg-type]
+                executor_cls=None,
                 max_workers=0,
                 files=remaining,
                 process_fn=process_fn,
@@ -341,7 +341,7 @@ class ParallelProcessor:
 
     def _run_batch(
         self,
-        executor_cls: type[ThreadPoolExecutor] | type[ProcessPoolExecutor],
+        executor_cls: type[ThreadPoolExecutor] | type[ProcessPoolExecutor] | None,
         max_workers: int,
         files: list[Path],
         process_fn: Callable[[Path], Any],
@@ -352,8 +352,8 @@ class ParallelProcessor:
         Wrapper around process_batch_iter.
 
         Args:
-            executor_cls: Ignored (uses config).
-            max_workers: Ignored (uses config).
+            executor_cls: Deprecated - parameter is not used. See create_executor().
+            max_workers: Deprecated - parameter is not used. See create_executor().
             files: Files to process in this batch.
             process_fn: Processing function.
             executor: Optional executor to use.
