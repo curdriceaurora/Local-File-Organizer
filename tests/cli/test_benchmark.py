@@ -45,12 +45,14 @@ def test_benchmark_runs_with_fixtures(tmp_path: Path) -> None:
         mock_monitor.get_memory_usage.return_value.percent = 10.0
         mock_monitor_cls.return_value = mock_monitor
 
-        # Mock the profiler
+        # Mock the profiler with timeline snapshots
         mock_profiler = MagicMock()
-        mock_profile_result = MagicMock()
-        mock_profile_result.peak_memory = 1500000
-        mock_profile_result.duration_ms = 100.0
-        mock_profiler.last_result = mock_profile_result
+        mock_timeline = MagicMock()
+        # Create mock snapshots with rss values
+        mock_snapshot = MagicMock()
+        mock_snapshot.rss = 1500000
+        mock_timeline.snapshots = [mock_snapshot]
+        mock_profiler.stop_tracking.return_value = mock_timeline
         mock_profiler_cls.return_value = mock_profiler
 
         result = runner.invoke(
@@ -82,12 +84,13 @@ def test_benchmark_json_output(tmp_path: Path) -> None:
         mock_monitor.get_memory_usage.return_value.percent = 10.0
         mock_monitor_cls.return_value = mock_monitor
 
-        # Mock the profiler
+        # Mock the profiler with timeline snapshots
         mock_profiler = MagicMock()
-        mock_profile_result = MagicMock()
-        mock_profile_result.peak_memory = 1500000
-        mock_profile_result.duration_ms = 100.0
-        mock_profiler.last_result = mock_profile_result
+        mock_timeline = MagicMock()
+        mock_snapshot = MagicMock()
+        mock_snapshot.rss = 1500000
+        mock_timeline.snapshots = [mock_snapshot]
+        mock_profiler.stop_tracking.return_value = mock_timeline
         mock_profiler_cls.return_value = mock_profiler
 
         result = runner.invoke(
@@ -124,9 +127,11 @@ def test_benchmark_tracks_cache_hits(tmp_path: Path) -> None:
         mock_monitor.get_memory_usage.return_value.rss = 1000000
         mock_monitor_cls.return_value = mock_monitor
 
-        # Mock the profiler
+        # Mock the profiler with timeline snapshots
         mock_profiler = MagicMock()
-        mock_profiler.last_result = None
+        mock_timeline = MagicMock()
+        mock_timeline.snapshots = []  # Empty snapshots list for this test
+        mock_profiler.stop_tracking.return_value = mock_timeline
         mock_profiler_cls.return_value = mock_profiler
 
         result = runner.invoke(
@@ -157,9 +162,11 @@ def test_benchmark_json_includes_cache_metrics(tmp_path: Path) -> None:
         mock_monitor.get_memory_usage.return_value.rss = 1000000
         mock_monitor_cls.return_value = mock_monitor
 
-        # Mock the profiler
+        # Mock the profiler with timeline snapshots
         mock_profiler = MagicMock()
-        mock_profiler.last_result = None
+        mock_timeline = MagicMock()
+        mock_timeline.snapshots = []  # Empty snapshots list for this test
+        mock_profiler.stop_tracking.return_value = mock_timeline
         mock_profiler_cls.return_value = mock_profiler
 
         result = runner.invoke(
@@ -193,9 +200,11 @@ def test_benchmark_llm_call_count(tmp_path: Path) -> None:
         mock_monitor.get_memory_usage.return_value.rss = 1000000
         mock_monitor_cls.return_value = mock_monitor
 
-        # Mock the profiler
+        # Mock the profiler with timeline snapshots
         mock_profiler = MagicMock()
-        mock_profiler.last_result = None
+        mock_timeline = MagicMock()
+        mock_timeline.snapshots = []  # Empty snapshots list for this test
+        mock_profiler.stop_tracking.return_value = mock_timeline
         mock_profiler_cls.return_value = mock_profiler
 
         result = runner.invoke(

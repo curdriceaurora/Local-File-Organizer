@@ -289,6 +289,50 @@ file-organizer analytics ~/Documents
 
 ## Sub-Commands
 
+### `benchmark` — Performance Benchmarking
+
+Measure file processing speed, memory usage, and performance metrics.
+
+#### `benchmark run`
+
+Run a performance benchmark on a directory of files.
+
+**Usage:**
+```bash
+file-organizer benchmark run [INPUT_PATH] [OPTIONS]
+```
+
+**Arguments:**
+- `INPUT_PATH` — Path to files to benchmark (default: `tests/fixtures/`)
+
+**Options:**
+- `--iterations INTEGER, -i INTEGER` — Number of iterations to run (default: `1`)
+- `--json` — Output results as JSON instead of a table
+
+**Output Metrics:**
+- `files_processed` — Number of files processed
+- `total_time_seconds` — Total execution time in seconds
+- `avg_time` — Average time per iteration
+- `median_time` — Median time across iterations
+- `peak_memory_mb` — Peak memory usage in megabytes
+- `cache_hits` — Number of cache hits
+- `cache_misses` — Number of cache misses
+- `llm_calls` — Number of LLM API calls
+
+**Examples:**
+```bash
+# Benchmark files in Downloads
+file-organizer benchmark run ~/Downloads
+
+# Run with 5 iterations and JSON output
+file-organizer benchmark run ~/Documents --iterations 5 --json
+
+# Benchmark test fixtures
+file-organizer benchmark run tests/fixtures/
+```
+
+---
+
 ### `config` — Configuration Management
 
 Manage configuration profiles.
