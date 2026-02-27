@@ -11,7 +11,8 @@ def test_path_manager_initialization():
     """PathManager should initialize with canonical paths"""
     path_manager = PathManager()
 
-    assert path_manager.config_dir.exists() or True  # May create if not
+    # Config dir may not exist until ensure_directories() is called
+    assert isinstance(path_manager.config_dir, Path)
     assert path_manager.config_file.name == 'config.json'
 
 
