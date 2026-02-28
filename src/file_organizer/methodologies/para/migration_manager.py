@@ -399,13 +399,13 @@ class PARAMigrationManager:
                 manifest_data = {
                     "backup_id": manifest.backup_id,
                     "migration_id": manifest.migration_id,
-                    "created_at": manifest.created_at.isoformat(),
+                    "created_at": manifest.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "files_backed_up": manifest.files_backed_up,
                     "total_size": manifest.total_size,
                     "checksum": manifest.checksum,
                     "source_root": str(manifest.source_root),
                     "status": manifest.status,
-                    "restored_at": manifest.restored_at.isoformat() if manifest.restored_at else None,
+                    "restored_at": manifest.restored_at.strftime("%Y-%m-%dT%H:%M:%SZ") if manifest.restored_at else None,
                     "file_entries": manifest.file_entries,
                 }
                 json.dump(manifest_data, f, indent=2)
@@ -509,7 +509,7 @@ class PARAMigrationManager:
 
             # Update manifest status
             manifest_data["status"] = "restored"
-            manifest_data["restored_at"] = datetime.now(UTC).isoformat()
+            manifest_data["restored_at"] = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
             with open(manifest_file, "w") as f:
                 json.dump(manifest_data, f, indent=2)
@@ -519,6 +519,8 @@ class PARAMigrationManager:
 
         except Exception as e:
             logger.error(f"Rollback failed: {e}")
+            if isinstance(e, RollbackError):
+                raise
             raise RollbackError(f"Rollback operation failed: {e}") from e
 
     def list_backups(self) -> list[dict[str, Any]]:

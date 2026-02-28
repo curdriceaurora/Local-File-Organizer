@@ -634,7 +634,7 @@ def _register_profile_command() -> None:
 
         typer_click_object = typer.main.get_group(app)
         typer_click_object.add_command(_profile_click_group, "profile")
-    except Exception:
+    except ImportError:
         # Profile module may fail to import if intelligence services
         # are not installed; we degrade gracefully.
         pass
