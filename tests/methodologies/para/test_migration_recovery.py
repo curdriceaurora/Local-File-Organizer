@@ -80,10 +80,16 @@ class TestMigrationBackupSystem:
 
         # Cleanup backup directory after tests
         if manager.backup_root.exists():
-            shutil.rmtree(manager.backup_root)
+            try:
+                shutil.rmtree(manager.backup_root)
+            except Exception as e:
+                # Ignore cleanup errors in tests due to parallel execution
+                import warnings
+                warnings.warn(f"Failed to cleanup backup directory: {e}")
 
     def test_backup_creation(self, migration_manager, temp_source, temp_target):
         """Test backup creation for migration files."""
+        # Keep temp_source alive during backup by storing a reference
         plan = migration_manager.analyze_source(temp_source, temp_target, recursive=True)
 
         # Create backup
@@ -99,6 +105,11 @@ class TestMigrationBackupSystem:
         # Verify manifest file exists
         manifest_file = backup_dir / "manifest.json"
         assert manifest_file.exists()
+
+        # Verify at least some files were backed up
+        with open(manifest_file, "r") as f:
+            manifest = json.load(f)
+        assert manifest["files_backed_up"] > 0
 
     def test_backup_integrity_verification(self, migration_manager, temp_source, temp_target):
         """Test backup integrity verification."""

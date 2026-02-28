@@ -408,8 +408,11 @@ class PARAMigrationManager:
                 }
                 json.dump(manifest_data, f, indent=2)
 
-            # Verify backup integrity
-            self._verify_backup(backup_dir, manifest)
+            # Verify backup integrity (only check files that were actually backed up)
+            if file_entries:
+                self._verify_backup(backup_dir, manifest)
+            else:
+                logger.warning("No files were backed up")
 
             logger.info(f"Backup created successfully: {backup_id}")
             logger.info(f"  Files: {len(file_entries)}")
