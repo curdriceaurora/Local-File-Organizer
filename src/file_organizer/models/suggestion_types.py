@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 
 class SuggestionType(Enum):
@@ -42,7 +43,7 @@ class Suggestion:
     target_path: Path | None = None
     confidence: float = 0.0  # 0-100
     reasoning: str = ""
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
 
     # Additional attributes for specific suggestion types
@@ -64,7 +65,7 @@ class Suggestion:
         else:
             return ConfidenceLevel.VERY_LOW
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert suggestion to dictionary."""
         return {
             "suggestion_id": self.suggestion_id,
@@ -104,7 +105,7 @@ class SuggestionBatch:
         """Total number of suggestions in batch."""
         return len(self.suggestions)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert batch to dictionary."""
         return {
             "batch_id": self.batch_id,
@@ -155,7 +156,7 @@ class ConfidenceFactors:
         )
         return min(max(score, 0.0), 100.0)  # Clamp to 0-100
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "pattern_strength": self.pattern_strength,

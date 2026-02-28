@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 
 @dataclass
@@ -54,11 +55,12 @@ class StorageStats:
     @staticmethod
     def _format_size(size: int) -> str:
         """Format size in human-readable format."""
+        fsize: float = float(size)
         for unit in ["B", "KB", "MB", "GB", "TB"]:
-            if size < 1024.0:
-                return f"{size:.2f} {unit}"
-            size /= 1024.0
-        return f"{size:.2f} PB"
+            if fsize < 1024.0:
+                return f"{fsize:.2f} {unit}"
+            fsize /= 1024.0
+        return f"{fsize:.2f} PB"
 
 
 @dataclass
@@ -86,7 +88,7 @@ class DuplicateStats:
     space_wasted: int
     space_recoverable: int
     by_type: dict[str, int] = field(default_factory=dict)
-    largest_duplicate_group: dict | None = None
+    largest_duplicate_group: dict[str, Any] | None = None
 
     @property
     def formatted_space_wasted(self) -> str:
@@ -224,7 +226,7 @@ class AnalyticsDashboard:
     trends: dict[str, TrendData] = field(default_factory=dict)
     generated_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert dashboard to dictionary for serialization."""
         return {
             "storage_stats": {

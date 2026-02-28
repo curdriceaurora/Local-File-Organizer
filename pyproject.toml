@@ -205,9 +205,11 @@ select = [
 ignore = [
     "E501",  # line too long (handled by formatter)
     "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
     "UP045", # type hint upgrades handled project-wide
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -216,6 +218,21 @@ convention = "google"
 "__init__.py" = ["F401"]
 "tests/**/*.py" = ["D"]
 "scripts/**/*.py" = ["D"]
+# C901 ratchet baseline — functions exceeding complexity 15 (2026-02-28)
+# Each entry allows existing complex functions; new ones must stay under 15.
+"src/file_organizer/api/config.py" = ["C901"]
+"src/file_organizer/cli/dedupe.py" = ["C901"]
+"src/file_organizer/cli/undo_redo.py" = ["C901"]
+"src/file_organizer/cli/utilities.py" = ["C901"]
+"src/file_organizer/core/organizer.py" = ["C901"]
+"src/file_organizer/methodologies/para/ai/suggestion_engine.py" = ["C901"]
+"src/file_organizer/parallel/processor.py" = ["C901"]
+"src/file_organizer/services/copilot/intent_parser.py" = ["C901"]
+"src/file_organizer/services/intelligence/profile_importer.py" = ["C901"]
+"src/file_organizer/services/intelligence/profile_merger.py" = ["C901"]
+"src/file_organizer/services/intelligence/profile_migrator.py" = ["C901"]
+"src/file_organizer/updater/installer.py" = ["C901"]
+"src/file_organizer/web/files_routes.py" = ["C901"]
 
 # MyPy configuration (type checking)
 [tool.mypy]

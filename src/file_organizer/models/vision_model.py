@@ -123,7 +123,8 @@ class VisionModel(BaseModel):
             "top_p": kwargs.get("top_p", self.config.top_p),
             "num_predict": kwargs.get("max_tokens", self.config.max_tokens),
         }
-        options.update(self.config.extra_params)
+        if self.config.extra_params:
+            options.update(self.config.extra_params)
 
         try:
             logger.debug(f"Analyzing image with model {self.config.name}")
@@ -135,7 +136,7 @@ class VisionModel(BaseModel):
                 stream=False,
             )
 
-            generated_text = response["response"]
+            generated_text = str(response["response"])
             logger.debug(
                 f"Generated {len(generated_text)} characters "
                 f"in {response.get('total_duration', 0) / 1e9:.2f}s"

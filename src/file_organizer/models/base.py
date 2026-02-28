@@ -50,7 +50,7 @@ class ModelConfig:
     local_path: str | None = None
 
     # Additional parameters
-    extra_params: dict[str, Any] = None
+    extra_params: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Initialize extra params if None."""
