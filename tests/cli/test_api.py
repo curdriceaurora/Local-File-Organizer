@@ -16,8 +16,12 @@ runner = CliRunner()
 
 @pytest.fixture
 def mock_client_cls():
-    """Mock the FileOrganizerClient class."""
-    with patch("file_organizer.cli.api.FileOrganizerClient") as mock:
+    """Mock the FileOrganizerClient class.
+
+    Patches at the source module since the import is deferred inside _build_client()
+    to reduce startup latency (Issue #472).
+    """
+    with patch("file_organizer.client.sync_client.FileOrganizerClient") as mock:
         yield mock
 
 
