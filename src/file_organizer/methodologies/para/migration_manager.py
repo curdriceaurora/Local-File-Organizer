@@ -12,7 +12,7 @@ import logging
 import os
 import shutil
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -79,13 +79,9 @@ class BackupMetadata:
 class BackupIntegrityError(Exception):
     """Raised when backup integrity check fails."""
 
-    pass
-
 
 class RollbackError(Exception):
     """Raised when rollback operation fails."""
-
-    pass
 
 
 class PARAMigrationManager:
@@ -323,7 +319,8 @@ class PARAMigrationManager:
         Raises:
             Exception: If backup creation fails
         """
-        migration_id = f"migration_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:-3]}"
+        now_utc = datetime.now(UTC)
+        migration_id = f"migration_{now_utc.strftime('%Y%m%dT%H%M%S%f')}Z"
         backup_id = f"backup_{migration_id}"
 
         logger.info(f"Creating backup: {backup_id}")
@@ -344,9 +341,14 @@ class PARAMigrationManager:
                     continue
 
                 try:
-                    # Create relative path structure in backup preserving directory hierarchy
-                    # Use a unique subdirectory to avoid conflicts when organizing files
-                    rel_path = source.relative_to(plan.files[0].source_path.parent if plan.files else source.parent)
+                    # Create relative path structure in backup preserving directory hierarchy.
+                    # Compute a common base for all source files; fall back to source.name
+                    # when source is not relative to that base (avoids ValueError from relative_to).
+                    common_base = plan.files[0].source_path.parent if plan.files else source.parent
+                    try:
+                        rel_path = source.relative_to(common_base)
+                    except ValueError:
+                        rel_path = Path(source.name)
                     backup_file = backup_dir / rel_path
                     backup_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -377,7 +379,7 @@ class PARAMigrationManager:
             manifest = BackupMetadata(
                 backup_id=backup_id,
                 migration_id=migration_id,
-                created_at=datetime.now(),
+                created_at=now_utc,
                 files_backed_up=len(file_entries),
                 total_size=total_size,
                 checksum="",  # Will be calculated after adding entries
@@ -454,7 +456,7 @@ class PARAMigrationManager:
             if not manifest_file.exists():
                 raise RollbackError(f"Backup manifest not found: {manifest_file}")
 
-            with open(manifest_file, "r") as f:
+            with open(manifest_file) as f:
                 manifest_data = json.load(f)
 
             # Verify integrity before restoring
@@ -475,8 +477,12 @@ class PARAMigrationManager:
 
                     # Restore file
                     if original_path.exists():
-                        # Backup the current file (which was migrated)
-                        migrated_backup = original_path.with_suffix(original_path.suffix + ".migrated")
+                        # Backup the current file (which was migrated) using a unique name
+                        # to prevent collisions on repeated rollbacks.
+                        ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")+"Z"
+                        migrated_backup = original_path.with_name(
+                            f"{original_path.stem}.{ts}.migrated{original_path.suffix}"
+                        )
                         shutil.copy2(str(original_path), str(migrated_backup))
                         logger.debug(f"Saved migrated file: {migrated_backup}")
 
@@ -503,7 +509,7 @@ class PARAMigrationManager:
 
             # Update manifest status
             manifest_data["status"] = "restored"
-            manifest_data["restored_at"] = datetime.now().isoformat()
+            manifest_data["restored_at"] = datetime.now(UTC).isoformat()
 
             with open(manifest_file, "w") as f:
                 json.dump(manifest_data, f, indent=2)
@@ -533,7 +539,7 @@ class PARAMigrationManager:
             manifest_file = backup_dir / "manifest.json"
             if manifest_file.exists():
                 try:
-                    with open(manifest_file, "r") as f:
+                    with open(manifest_file) as f:
                         manifest = json.load(f)
                     backups.append(manifest)
                 except Exception as e:
@@ -562,7 +568,7 @@ class PARAMigrationManager:
             raise BackupIntegrityError(f"Backup manifest not found: {backup_id}")
 
         try:
-            with open(manifest_file, "r") as f:
+            with open(manifest_file) as f:
                 manifest_data = json.load(f)
 
             self._verify_backup_integrity(backup_dir, manifest_data)
@@ -613,7 +619,7 @@ class PARAMigrationManager:
         Raises:
             BackupIntegrityError: If verification fails
         """
-        logger.info(f"Verifying backup integrity from manifest")
+        logger.info("Verifying backup integrity from manifest")
 
         # Verify manifest checksum
         file_entries = manifest_data.get("file_entries", [])

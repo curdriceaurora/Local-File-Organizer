@@ -6,21 +6,16 @@ Tests backup creation, integrity verification, and rollback mechanisms.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import shutil
 import tempfile
-from datetime import datetime
 from pathlib import Path
 
 import pytest
 
-from file_organizer.methodologies.para.categories import PARACategory
 from file_organizer.methodologies.para.config import PARAConfig
 from file_organizer.methodologies.para.migration_manager import (
     BackupIntegrityError,
-    MigrationFile,
-    MigrationPlan,
     PARAMigrationManager,
     RollbackError,
 )
@@ -85,7 +80,7 @@ class TestMigrationBackupSystem:
             except Exception as e:
                 # Ignore cleanup errors in tests due to parallel execution
                 import warnings
-                warnings.warn(f"Failed to cleanup backup directory: {e}")
+                warnings.warn(f"Failed to cleanup backup directory: {e}", stacklevel=2)
 
     def test_backup_creation(self, migration_manager, temp_source, temp_target):
         """Test backup creation for migration files."""
@@ -107,7 +102,7 @@ class TestMigrationBackupSystem:
         assert manifest_file.exists()
 
         # Verify at least some files were backed up
-        with open(manifest_file, "r") as f:
+        with open(manifest_file) as f:
             manifest = json.load(f)
         assert manifest["files_backed_up"] > 0
 
@@ -127,7 +122,7 @@ class TestMigrationBackupSystem:
         backup_dir = migration_manager.backup_root / backup_id
         manifest_file = backup_dir / "manifest.json"
 
-        with open(manifest_file, "r") as f:
+        with open(manifest_file) as f:
             manifest = json.load(f)
 
         # Verify manifest structure
@@ -154,7 +149,7 @@ class TestMigrationBackupSystem:
         backup_dir = migration_manager.backup_root / backup_id
         manifest_file = backup_dir / "manifest.json"
 
-        with open(manifest_file, "r") as f:
+        with open(manifest_file) as f:
             manifest = json.load(f)
 
         # Verify hashes for each backed-up file
@@ -209,7 +204,7 @@ class TestMigrationBackupSystem:
         manifest_file = backup_dir / "manifest.json"
 
         # Load manifest and verify checksum
-        with open(manifest_file, "r") as f:
+        with open(manifest_file) as f:
             manifest_data = json.load(f)
 
         stored_checksum = manifest_data["checksum"]
@@ -258,8 +253,8 @@ class TestMigrationBackupSystem:
         # Perform rollback
         assert migration_manager.rollback(backup_id)
 
-        # Verify all files are restored with correct content
-        for original_file in (temp_source / "subdir").glob("*.txt"):
+        # Verify the root-level .txt files (the ones that were moved) are restored
+        for original_file in temp_source.glob("*.txt"):
             content = original_file.read_text()
             assert "content" in content.lower()
 
@@ -281,7 +276,7 @@ class TestMigrationBackupSystem:
         backup_dir = migration_manager.backup_root / backup_id
         manifest_file = backup_dir / "manifest.json"
 
-        with open(manifest_file, "r") as f:
+        with open(manifest_file) as f:
             manifest = json.load(f)
 
         assert manifest["status"] == "restored"
@@ -293,7 +288,7 @@ class TestMigrationBackupSystem:
             migration_manager.rollback("backup_nonexistent")
 
     def test_rollback_partial_failure_handling(self, migration_manager, temp_source, temp_target):
-        """Test rollback handles partial failures gracefully."""
+        """Test rollback collects per-file failures and raises RollbackError at the end."""
         plan = migration_manager.analyze_source(temp_source, temp_target, recursive=True)
         backup_id = migration_manager._create_backup(plan)
 
@@ -303,16 +298,23 @@ class TestMigrationBackupSystem:
             target_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(source_file), str(target_file))
 
-        # Make one of the original paths read-only to cause failure
+        # Corrupt one entry's original_path to an impossible restore location so that
+        # the per-file copy step fails.  The backup files themselves are untouched, so
+        # the manifest integrity-verification step still passes; only the copy fails.
         backup_dir = migration_manager.backup_root / backup_id
         manifest_file = backup_dir / "manifest.json"
 
-        with open(manifest_file, "r") as f:
+        with open(manifest_file) as f:
             manifest_data = json.load(f)
 
-        # Rollback should still work even with issues
-        result = migration_manager.rollback(backup_id)
-        assert result is True
+        if manifest_data.get("file_entries"):
+            manifest_data["file_entries"][0]["original_path"] = "/dev/null/impossible/path.txt"
+            with open(manifest_file, "w") as f:
+                json.dump(manifest_data, f, indent=2)
+
+        # Rollback must raise because one entry cannot be restored
+        with pytest.raises(RollbackError):
+            migration_manager.rollback(backup_id)
 
     def test_hash_consistency(self, migration_manager, temp_source):
         """Test file hash calculations are consistent."""
