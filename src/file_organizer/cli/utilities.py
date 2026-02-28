@@ -179,7 +179,22 @@ def analyze(
         console.print(f"[red]Error: File '{file_path}' not found.[/red]")
         raise typer.Exit(code=1)
 
-    # Read file content
+    # Detect binary files before reading as text
+    _BINARY_PEEK = 8192
+    try:
+        _header = file_path.read_bytes()[:_BINARY_PEEK]
+    except OSError as exc:
+        console.print(f"[red]Error: Could not read '{file_path}': {exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    if b"\x00" in _header:
+        console.print(
+            f"[yellow]Warning: '{file_path}' appears to be a binary file "
+            "and cannot be analyzed as text.[/yellow]"
+        )
+        raise typer.Exit(code=1)
+
+    # Read full text content (binary check passed)
     try:
         content = file_path.read_text(errors="ignore")
     except OSError as exc:

@@ -153,7 +153,7 @@ def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
         elif file_path.suffix.lower() in (".xlsx", ".xls"):
             df = pd.read_excel(file_path, nrows=max_rows)
         else:
-            raise ValueError(f"Unsupported spreadsheet format: {file_path.suffix}")
+            raise FileReadError(f"Unsupported spreadsheet format: {file_path.suffix}")
 
         # Convert to string, limiting size
         text = str(df.to_string(max_rows=max_rows))

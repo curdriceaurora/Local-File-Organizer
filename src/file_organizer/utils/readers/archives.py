@@ -22,7 +22,7 @@ except ImportError:
 
 from loguru import logger
 
-from file_organizer.utils.readers._base import FileReadError, _check_file_size
+from file_organizer.utils.readers._base import FileReadError
 
 
 def read_zip_file(file_path: str | Path, max_files: int = 50) -> str:
@@ -170,7 +170,6 @@ def read_tar_file(file_path: str | Path, max_files: int = 50) -> str:
     """
     max_files = max(0, int(max_files))
     file_path = Path(file_path)
-    _check_file_size(file_path)
     try:
         with tarfile.open(file_path, "r:*") as tf:
             members = tf.getmembers()
@@ -180,13 +179,14 @@ def read_tar_file(file_path: str | Path, max_files: int = 50) -> str:
             total_dirs = len([m for m in members if m.isdir()])
             total_size = sum(m.size for m in members if m.isfile())
 
-            # Determine compression type
+            # Determine compression type using name.endswith for compound extensions
+            _name = file_path.name.lower()
             compression_type = "None"
-            if file_path.suffix in (".gz", ".tgz"):
+            if _name.endswith(".tar.gz") or _name.endswith(".tgz"):
                 compression_type = "GZ"
-            elif file_path.suffix in (".bz2", ".tbz2"):
+            elif _name.endswith(".tar.bz2") or _name.endswith(".tbz2"):
                 compression_type = "BZ2"
-            elif file_path.suffix == ".xz":
+            elif _name.endswith(".tar.xz") or _name.endswith(".xz"):
                 compression_type = "XZ"
 
             # Build metadata string

@@ -28,7 +28,6 @@ from file_organizer.utils.file_readers import (
     read_ebook_file,  # noqa: F401 — verified via importlib in TestUnboundedReadersSizeGate
     read_file,
     read_presentation_file,  # noqa: F401 — verified via importlib in TestUnboundedReadersSizeGate
-    read_tar_file,  # noqa: F401 — verified via importlib in TestUnboundedReadersSizeGate
 )
 from file_organizer.utils.readers._base import _check_file_size
 
@@ -155,7 +154,8 @@ _READER_PARAMS = [
     ("read_docx_file", "docx"),
     ("read_presentation_file", "pptx"),
     ("read_ebook_file", "epub"),
-    ("read_tar_file", "tar"),
+    # read_tar_file no longer calls _check_file_size directly; the read_file
+    # dispatcher handles the size gate. This matches read_zip/7z/rar behaviour.
 ]
 
 
