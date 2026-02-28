@@ -1,12 +1,12 @@
 """Unit tests for plugin SDK client and decorators."""
 
 from __future__ import annotations
-import pytest
 
 import json
 from typing import Any
 
 import httpx
+import pytest
 
 from file_organizer.plugins.api.hooks import HookEvent
 from file_organizer.plugins.sdk import (

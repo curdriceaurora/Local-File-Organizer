@@ -9,12 +9,12 @@ comments across two rounds).  See GitHub issue #440 for context.
 """
 
 from __future__ import annotations
-import pytest
 
 import re
 from typing import NamedTuple
 
 import click
+import pytest
 import typer
 
 from tests.docs.conftest import DOCS_DIR
