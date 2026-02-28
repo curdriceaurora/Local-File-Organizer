@@ -77,8 +77,8 @@ def read_docx_file(file_path: str | Path) -> str:
     if not DOCX_AVAILABLE:
         raise ImportError("python-docx is not installed. Install with: pip install python-docx")
 
-    _check_file_size(Path(file_path))
     file_path = Path(file_path)
+    _check_file_size(file_path)
     try:
         doc = docx.Document(str(file_path))
         paragraphs = [para.text for para in doc.paragraphs if para.text.strip()]
@@ -109,16 +109,15 @@ def read_pdf_file(file_path: str | Path, max_pages: int = 5) -> str:
     file_path = Path(file_path)
     _check_file_size(file_path)
     try:
-        doc = fitz.open(file_path)
-        num_pages = min(max_pages, len(doc))
+        with fitz.open(file_path) as doc:
+            num_pages = min(max_pages, len(doc))
 
-        pages_text = []
-        for page_num in range(num_pages):
-            page = doc.load_page(page_num)
-            pages_text.append(page.get_text())
+            pages_text = []
+            for page_num in range(num_pages):
+                page = doc.load_page(page_num)
+                pages_text.append(page.get_text())
 
-        text = "\n".join(pages_text)
-        doc.close()
+            text = "\n".join(pages_text)
 
         logger.debug(
             f"Extracted {len(text)} characters from {num_pages} pages of {file_path.name}"
@@ -181,8 +180,8 @@ def read_presentation_file(file_path: str | Path) -> str:
     if not PPTX_AVAILABLE:
         raise ImportError("python-pptx is not installed. Install with: pip install python-pptx")
 
-    _check_file_size(Path(file_path))
     file_path = Path(file_path)
+    _check_file_size(file_path)
     try:
         prs = Presentation(str(file_path))
 

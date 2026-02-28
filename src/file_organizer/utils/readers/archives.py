@@ -38,6 +38,7 @@ def read_zip_file(file_path: str | Path, max_files: int = 50) -> str:
     Raises:
         FileReadError: If file cannot be read
     """
+    max_files = max(0, int(max_files))
     file_path = Path(file_path)
     try:
         with zipfile.ZipFile(file_path, "r") as zf:
@@ -103,6 +104,7 @@ def read_7z_file(file_path: str | Path, max_files: int = 50) -> str:
     if not PY7ZR_AVAILABLE:
         raise ImportError("py7zr is not installed. Install with: pip install py7zr")
 
+    max_files = max(0, int(max_files))
     file_path = Path(file_path)
     try:
         with py7zr.SevenZipFile(file_path, "r") as archive:
@@ -133,7 +135,7 @@ def read_7z_file(file_path: str | Path, max_files: int = 50) -> str:
             ]
 
             # List files
-            for _idx, file_info in enumerate(all_files[:max_files]):
+            for file_info in all_files[:max_files]:
                 size_kb = file_info.uncompressed / 1024
                 compressed_kb = file_info.compressed / 1024
                 lines.append(
@@ -166,6 +168,7 @@ def read_tar_file(file_path: str | Path, max_files: int = 50) -> str:
     Raises:
         FileReadError: If file cannot be read
     """
+    max_files = max(0, int(max_files))
     file_path = Path(file_path)
     _check_file_size(file_path)
     try:
@@ -235,6 +238,7 @@ def read_rar_file(file_path: str | Path, max_files: int = 50) -> str:
             "Note: RAR support also requires unrar command-line tool to be installed."
         )
 
+    max_files = max(0, int(max_files))
     file_path = Path(file_path)
     try:
         with rarfile.RarFile(file_path, "r") as rf:

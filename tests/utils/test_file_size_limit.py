@@ -24,13 +24,13 @@ import pytest
 from file_organizer.utils.file_readers import (
     MAX_FILE_SIZE_BYTES,
     FileTooLargeError,
-    _check_file_size,
     read_docx_file,  # noqa: F401 — verified via importlib in TestUnboundedReadersSizeGate
     read_ebook_file,  # noqa: F401 — verified via importlib in TestUnboundedReadersSizeGate
     read_file,
     read_presentation_file,  # noqa: F401 — verified via importlib in TestUnboundedReadersSizeGate
     read_tar_file,  # noqa: F401 — verified via importlib in TestUnboundedReadersSizeGate
 )
+from file_organizer.utils.readers._base import _check_file_size
 
 # Marker kept for any tests that remain genuinely optional (none currently).
 _needs_stream_a = pytest.mark.usefixtures()

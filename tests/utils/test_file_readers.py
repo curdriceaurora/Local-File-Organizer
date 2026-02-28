@@ -14,7 +14,6 @@ try:
 except ImportError:
     ebooklib = None  # type: ignore[assignment]
 
-from file_organizer.utils.readers._base import _check_file_size
 from file_organizer.utils.file_readers import (
     FileReadError,
     FileTooLargeError,
@@ -31,6 +30,8 @@ from file_organizer.utils.file_readers import (
     read_text_file,
     read_zip_file,
 )
+from file_organizer.utils.readers._base import _check_file_size
+from file_organizer.utils.readers.ebook import EBOOKLIB_AVAILABLE
 
 pytestmark = [pytest.mark.unit]
 
@@ -127,7 +128,8 @@ class TestFileReaders:
         mock_page2 = MagicMock()
         mock_page2.get_text.return_value = "Page 2 content"
         mock_doc.load_page.side_effect = [mock_page1, mock_page2]
-        mock_fitz_open.return_value = mock_doc
+        # fitz.open() is used as a context manager; __enter__ must return mock_doc
+        mock_fitz_open.return_value.__enter__.return_value = mock_doc
 
         test_file = tmp_path / "test.pdf"
         test_file.touch()
@@ -135,7 +137,6 @@ class TestFileReaders:
         content = read_pdf_file(test_file)
         assert "Page 1 content" in content
         assert "Page 2 content" in content
-        mock_doc.close.assert_called_once()
 
     @patch("file_organizer.utils.readers.documents.PYMUPDF_AVAILABLE", False)
     def test_read_pdf_not_installed(self) -> None:
@@ -219,6 +220,7 @@ class TestFileReaders:
         with pytest.raises(ImportError, match="python-pptx is not installed"):
             read_presentation_file("test.pptx")
 
+    @pytest.mark.skipif(not EBOOKLIB_AVAILABLE, reason="ebooklib not installed")
     @patch("file_organizer.utils.readers.ebook.EBOOKLIB_AVAILABLE", True)
     @patch("file_organizer.utils.readers.ebook.epub.read_epub")
     def test_read_ebook_file(self, mock_read_epub: MagicMock, tmp_path: Path) -> None:

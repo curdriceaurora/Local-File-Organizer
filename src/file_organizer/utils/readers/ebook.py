@@ -35,8 +35,8 @@ def read_ebook_file(file_path: str | Path, max_chars: int = 10000) -> str:
     if not EBOOKLIB_AVAILABLE:
         raise ImportError("ebooklib is not installed. Install with: pip install ebooklib")
 
-    _check_file_size(Path(file_path))
     file_path = Path(file_path)
+    _check_file_size(file_path)
 
     try:
         # Only support EPUB for now

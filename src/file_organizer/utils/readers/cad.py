@@ -14,7 +14,7 @@ except ImportError:
 
 from loguru import logger
 
-from file_organizer.utils.readers._base import FileReadError
+from file_organizer.utils.readers._base import FileReadError, _check_file_size
 
 
 def _process_dxf_doc(doc: Any, file_path: Path, max_layers: int = 20) -> str:
@@ -115,6 +115,7 @@ def read_dxf_file(file_path: str | Path, max_layers: int = 20) -> str:
         raise ImportError("ezdxf is not installed. Install with: pip install ezdxf")
 
     file_path = Path(file_path)
+    _check_file_size(file_path)
     try:
         doc = ezdxf.readfile(file_path)
         return _process_dxf_doc(doc, file_path, max_layers)
@@ -143,6 +144,7 @@ def read_dwg_file(file_path: str | Path) -> str:
         raise ImportError("ezdxf is not installed. Install with: pip install ezdxf")
 
     file_path = Path(file_path)
+    _check_file_size(file_path)
     try:
         # Try to read with ezdxf (limited support).
         # Capture the returned document and pass it through to avoid re-opening the file.
@@ -185,6 +187,7 @@ def read_step_file(file_path: str | Path, max_lines: int = 100) -> str:
         FileReadError: If file cannot be read
     """
     file_path = Path(file_path)
+    _check_file_size(file_path)
     try:
         with open(file_path, encoding="utf-8", errors="ignore") as f:
             content = f.read(10000)  # Read first 10KB
@@ -256,6 +259,7 @@ def read_iges_file(file_path: str | Path, max_lines: int = 50) -> str:
         FileReadError: If file cannot be read
     """
     file_path = Path(file_path)
+    _check_file_size(file_path)
     try:
         with open(file_path, encoding="utf-8", errors="ignore") as f:
             lines = [f.readline() for _ in range(max_lines)]
@@ -301,7 +305,7 @@ def read_iges_file(file_path: str | Path, max_lines: int = 50) -> str:
                 "Native system ID",
             ]
 
-            for _i, (name, value) in enumerate(zip(param_names, params, strict=False)):
+            for name, value in zip(param_names, params, strict=False):
                 if value.strip():
                     metadata_parts.append(f"{name}: {value.strip()}")
 

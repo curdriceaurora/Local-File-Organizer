@@ -158,7 +158,7 @@ def search(
                 size_str = f"{size / (1024 * 1024):.1f} MB"
 
             mtime = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
-            typer.echo(f"  {p}  {size_str}  {mtime.strftime('%Y-%m-%d %H:%M')}")
+            typer.echo(f"  {p}  {size_str}  {mtime.strftime('%Y-%m-%dT%H:%M:%SZ')}")
 
 
 def analyze(

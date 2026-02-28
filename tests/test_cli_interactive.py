@@ -137,6 +137,6 @@ class TestMainCallbackFlags:
     def test_main_module_has_yes_flag(self) -> None:
         import importlib
 
-        main_mod = importlib.import_module("file_organizer.cli.main")
-        assert hasattr(main_mod, "_yes")
-        assert hasattr(main_mod, "_no_interactive")
+        g = importlib.import_module("file_organizer.cli._globals")
+        assert hasattr(g, "yes")
+        assert hasattr(g, "no_interactive")
