@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -120,14 +119,16 @@ def test_analyze_large_file(tmp_path: Path):
 
 
 def test_analyze_binary_file(tmp_path: Path):
-    """Binary files don't crash the command (read_text with errors='ignore')."""
+    """Binary files are detected and rejected with a warning (exit code 1)."""
     f = tmp_path / "data.bin"
-    f.write_bytes(os.urandom(256))
+    # Write explicit NUL bytes to guarantee binary detection triggers.
+    f.write_bytes(b"\x00" * 256)
 
     with _patch_text_model():
         result = runner.invoke(app, ["analyze", str(f)])
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
+    assert "binary" in result.output.lower()
 
 
 def test_analyze_json_output(tmp_path: Path):
