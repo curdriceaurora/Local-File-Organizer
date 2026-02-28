@@ -206,30 +206,30 @@ class TestArchiveReaders:
         file_path.write_bytes(b"dummy")
 
         # Mock py7zr as unavailable
-        import file_organizer.utils.file_readers as readers
+        import file_organizer.utils.readers.archives as _arc
 
-        original = readers.PY7ZR_AVAILABLE
+        original = _arc.PY7ZR_AVAILABLE
         try:
-            readers.PY7ZR_AVAILABLE = False
+            _arc.PY7ZR_AVAILABLE = False
             with pytest.raises(ImportError, match="py7zr is not installed"):
                 read_7z_file(file_path)
         finally:
-            readers.PY7ZR_AVAILABLE = original
+            _arc.PY7ZR_AVAILABLE = original
 
     def test_read_rar_file_not_installed(self, tmp_path: Path) -> None:
         """Test that missing rarfile raises appropriate error."""
         file_path = tmp_path / "test.rar"
         file_path.write_bytes(b"dummy")
 
-        import file_organizer.utils.file_readers as readers
+        import file_organizer.utils.readers.archives as _arc
 
-        original = readers.RARFILE_AVAILABLE
+        original = _arc.RARFILE_AVAILABLE
         try:
-            readers.RARFILE_AVAILABLE = False
+            _arc.RARFILE_AVAILABLE = False
             with pytest.raises(ImportError, match="rarfile is not installed"):
                 read_rar_file(file_path)
         finally:
-            readers.RARFILE_AVAILABLE = original
+            _arc.RARFILE_AVAILABLE = original
 
 
 @pytest.mark.unit
@@ -275,15 +275,15 @@ class TestScientificReaders:
         file_path = tmp_path / "test.h5"
         file_path.write_bytes(b"dummy")
 
-        import file_organizer.utils.file_readers as readers
+        import file_organizer.utils.readers.scientific as _sci
 
-        original = readers.H5PY_AVAILABLE
+        original = _sci.H5PY_AVAILABLE
         try:
-            readers.H5PY_AVAILABLE = False
+            _sci.H5PY_AVAILABLE = False
             with pytest.raises(ImportError, match="h5py is not installed"):
                 read_hdf5_file(file_path)
         finally:
-            readers.H5PY_AVAILABLE = original
+            _sci.H5PY_AVAILABLE = original
 
     def test_read_netcdf_file_success(self, sample_netcdf_file: Path) -> None:
         """Test reading a NetCDF file successfully."""
@@ -309,15 +309,15 @@ class TestScientificReaders:
         file_path = tmp_path / "test.nc"
         file_path.write_bytes(b"dummy")
 
-        import file_organizer.utils.file_readers as readers
+        import file_organizer.utils.readers.scientific as _sci
 
-        original = readers.NETCDF4_AVAILABLE
+        original = _sci.NETCDF4_AVAILABLE
         try:
-            readers.NETCDF4_AVAILABLE = False
+            _sci.NETCDF4_AVAILABLE = False
             with pytest.raises(ImportError, match="netCDF4 is not installed"):
                 read_netcdf_file(file_path)
         finally:
-            readers.NETCDF4_AVAILABLE = original
+            _sci.NETCDF4_AVAILABLE = original
 
     def test_read_mat_file_success(self, sample_mat_file: Path) -> None:
         """Test reading a MATLAB .mat file successfully."""
@@ -334,15 +334,15 @@ class TestScientificReaders:
         file_path = tmp_path / "test.mat"
         file_path.write_bytes(b"dummy")
 
-        import file_organizer.utils.file_readers as readers
+        import file_organizer.utils.readers.scientific as _sci
 
-        original = readers.SCIPY_AVAILABLE
+        original = _sci.SCIPY_AVAILABLE
         try:
-            readers.SCIPY_AVAILABLE = False
+            _sci.SCIPY_AVAILABLE = False
             with pytest.raises(ImportError, match="scipy is not installed"):
                 read_mat_file(file_path)
         finally:
-            readers.SCIPY_AVAILABLE = original
+            _sci.SCIPY_AVAILABLE = original
 
 
 @pytest.mark.unit

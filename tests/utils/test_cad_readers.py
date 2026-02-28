@@ -311,7 +311,7 @@ def test_read_cad_file_unsupported(tmp_path: Path) -> None:
     unsupported = tmp_path / "file.xyz"
     unsupported.write_text("test")
 
-    with pytest.raises(ValueError, match="Unsupported CAD file format"):
+    with pytest.raises(FileReadError, match="Unsupported CAD file format"):
         read_cad_file(unsupported)
 
 
@@ -398,10 +398,10 @@ def test_read_file_igs_extension(tmp_path: Path) -> None:
 
 def test_read_dxf_without_ezdxf(tmp_path: Path, monkeypatch) -> None:
     """Test DXF reading when ezdxf is not available."""
-    # Temporarily make ezdxf unavailable
-    import file_organizer.utils.file_readers as readers
+    # Temporarily make ezdxf unavailable in the module that checks the flag
+    import file_organizer.utils.readers.cad as cad_module
 
-    monkeypatch.setattr(readers, "EZDXF_AVAILABLE", False)
+    monkeypatch.setattr(cad_module, "EZDXF_AVAILABLE", False)
 
     dxf_path = tmp_path / "test.dxf"
     dxf_path.write_text("fake dxf content")

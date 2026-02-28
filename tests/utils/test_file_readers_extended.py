@@ -47,8 +47,8 @@ class TestRead7zFile:
         mock_archive.__enter__ = MagicMock(return_value=mock_archive)
         mock_archive.__exit__ = MagicMock(return_value=False)
 
-        with patch("file_organizer.utils.file_readers.PY7ZR_AVAILABLE", True), \
-             patch("file_organizer.utils.file_readers.py7zr", create=True) as mock_py7zr:
+        with patch("file_organizer.utils.readers.archives.PY7ZR_AVAILABLE", True), \
+             patch("file_organizer.utils.readers.archives.py7zr", create=True) as mock_py7zr:
             mock_py7zr.SevenZipFile.return_value = mock_archive
             result = read_7z_file(archive_path)
 
@@ -59,7 +59,7 @@ class TestRead7zFile:
     def test_not_installed(self, tmp_path):
         from file_organizer.utils.file_readers import read_7z_file
 
-        with patch("file_organizer.utils.file_readers.PY7ZR_AVAILABLE", False):
+        with patch("file_organizer.utils.readers.archives.PY7ZR_AVAILABLE", False):
             with pytest.raises(ImportError, match="py7zr"):
                 read_7z_file(tmp_path / "test.7z")
 
@@ -69,8 +69,8 @@ class TestRead7zFile:
         archive_path = tmp_path / "bad.7z"
         archive_path.touch()
 
-        with patch("file_organizer.utils.file_readers.PY7ZR_AVAILABLE", True), \
-             patch("file_organizer.utils.file_readers.py7zr", create=True) as mock_py7zr:
+        with patch("file_organizer.utils.readers.archives.PY7ZR_AVAILABLE", True), \
+             patch("file_organizer.utils.readers.archives.py7zr", create=True) as mock_py7zr:
             mock_py7zr.SevenZipFile.side_effect = Exception("corrupt archive")
             with pytest.raises(FileReadError, match="Failed to read 7Z"):
                 read_7z_file(archive_path)
@@ -102,8 +102,8 @@ class TestReadRarFile:
         mock_rf.__enter__ = MagicMock(return_value=mock_rf)
         mock_rf.__exit__ = MagicMock(return_value=False)
 
-        with patch("file_organizer.utils.file_readers.RARFILE_AVAILABLE", True), \
-             patch("file_organizer.utils.file_readers.rarfile", create=True) as mock_rarfile:
+        with patch("file_organizer.utils.readers.archives.RARFILE_AVAILABLE", True), \
+             patch("file_organizer.utils.readers.archives.rarfile", create=True) as mock_rarfile:
             mock_rarfile.RarFile.return_value = mock_rf
             result = read_rar_file(rar_path)
 
@@ -113,7 +113,7 @@ class TestReadRarFile:
     def test_not_installed(self, tmp_path):
         from file_organizer.utils.file_readers import read_rar_file
 
-        with patch("file_organizer.utils.file_readers.RARFILE_AVAILABLE", False):
+        with patch("file_organizer.utils.readers.archives.RARFILE_AVAILABLE", False):
             with pytest.raises(ImportError, match="rarfile"):
                 read_rar_file(tmp_path / "test.rar")
 
@@ -150,8 +150,8 @@ class TestReadHdf5File:
         mock_hf.__enter__ = MagicMock(return_value=mock_hf)
         mock_hf.__exit__ = MagicMock(return_value=False)
 
-        with patch("file_organizer.utils.file_readers.H5PY_AVAILABLE", True), \
-             patch("file_organizer.utils.file_readers.h5py", create=True) as mock_h5py:
+        with patch("file_organizer.utils.readers.scientific.H5PY_AVAILABLE", True), \
+             patch("file_organizer.utils.readers.scientific.h5py", create=True) as mock_h5py:
             mock_h5py.File.return_value = mock_hf
             mock_h5py.Dataset = type(mock_hf)  # For isinstance checks
             mock_h5py.Group = type(None)  # Won't match
@@ -163,7 +163,7 @@ class TestReadHdf5File:
     def test_not_installed(self, tmp_path):
         from file_organizer.utils.file_readers import read_hdf5_file
 
-        with patch("file_organizer.utils.file_readers.H5PY_AVAILABLE", False):
+        with patch("file_organizer.utils.readers.scientific.H5PY_AVAILABLE", False):
             with pytest.raises(ImportError, match="h5py"):
                 read_hdf5_file(tmp_path / "test.hdf5")
 
@@ -202,8 +202,8 @@ class TestReadNetcdfFile:
         mock_nc.__enter__ = MagicMock(return_value=mock_nc)
         mock_nc.__exit__ = MagicMock(return_value=False)
 
-        with patch("file_organizer.utils.file_readers.NETCDF4_AVAILABLE", True), \
-             patch("file_organizer.utils.file_readers.netCDF4", create=True) as mock_netcdf4:
+        with patch("file_organizer.utils.readers.scientific.NETCDF4_AVAILABLE", True), \
+             patch("file_organizer.utils.readers.scientific.netCDF4", create=True) as mock_netcdf4:
             mock_netcdf4.Dataset.return_value = mock_nc
             result = read_netcdf_file(nc_path)
 
@@ -214,7 +214,7 @@ class TestReadNetcdfFile:
     def test_not_installed(self, tmp_path):
         from file_organizer.utils.file_readers import read_netcdf_file
 
-        with patch("file_organizer.utils.file_readers.NETCDF4_AVAILABLE", False):
+        with patch("file_organizer.utils.readers.scientific.NETCDF4_AVAILABLE", False):
             with pytest.raises(ImportError, match="netCDF4"):
                 read_netcdf_file(tmp_path / "test.nc")
 
@@ -244,8 +244,8 @@ class TestReadMatFile:
             "scalar_val": 42,
         }
 
-        with patch("file_organizer.utils.file_readers.SCIPY_AVAILABLE", True), \
-             patch("file_organizer.utils.file_readers.loadmat", create=True, return_value=mock_contents):
+        with patch("file_organizer.utils.readers.scientific.SCIPY_AVAILABLE", True), \
+             patch("file_organizer.utils.readers.scientific.loadmat", create=True, return_value=mock_contents):
             result = read_mat_file(mat_path)
 
         assert "MATLAB File" in result
@@ -257,7 +257,7 @@ class TestReadMatFile:
     def test_not_installed(self, tmp_path):
         from file_organizer.utils.file_readers import read_mat_file
 
-        with patch("file_organizer.utils.file_readers.SCIPY_AVAILABLE", False):
+        with patch("file_organizer.utils.readers.scientific.SCIPY_AVAILABLE", False):
             with pytest.raises(ImportError, match="scipy"):
                 read_mat_file(tmp_path / "test.mat")
 
@@ -300,8 +300,8 @@ class TestReadDxfFile:
         mock_doc.modelspace.return_value = mock_modelspace
         mock_doc.blocks = [mock_block]
 
-        with patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", True), \
-             patch("file_organizer.utils.file_readers.ezdxf", create=True) as mock_ezdxf:
+        with patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True), \
+             patch("file_organizer.utils.readers.cad.ezdxf", create=True) as mock_ezdxf:
             mock_ezdxf.readfile.return_value = mock_doc
             result = read_dxf_file(dxf_path)
 
@@ -313,7 +313,7 @@ class TestReadDxfFile:
     def test_not_installed(self, tmp_path):
         from file_organizer.utils.file_readers import read_dxf_file
 
-        with patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", False):
+        with patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", False):
             with pytest.raises(ImportError, match="ezdxf"):
                 read_dxf_file(tmp_path / "test.dxf")
 
@@ -333,8 +333,8 @@ class TestReadDwgFile:
         dwg_path = tmp_path / "test.dwg"
         dwg_path.write_bytes(b"DWG binary data")
 
-        with patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", True), \
-             patch("file_organizer.utils.file_readers.ezdxf", create=True) as mock_ezdxf:
+        with patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True), \
+             patch("file_organizer.utils.readers.cad.ezdxf", create=True) as mock_ezdxf:
             mock_ezdxf.readfile.side_effect = Exception("cannot parse DWG")
             result = read_dwg_file(dwg_path)
 
@@ -347,8 +347,8 @@ class TestReadDwgFile:
 
         dwg_path = tmp_path / "missing.dwg"
 
-        with patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", True), \
-             patch("file_organizer.utils.file_readers.ezdxf", create=True) as mock_ezdxf:
+        with patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True), \
+             patch("file_organizer.utils.readers.cad.ezdxf", create=True) as mock_ezdxf:
             mock_ezdxf.readfile.side_effect = Exception("not found")
             with pytest.raises(FileReadError, match="File not found"):
                 read_dwg_file(dwg_path)
@@ -356,7 +356,7 @@ class TestReadDwgFile:
     def test_not_installed(self, tmp_path):
         from file_organizer.utils.file_readers import read_dwg_file
 
-        with patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", False):
+        with patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", False):
             with pytest.raises(ImportError, match="ezdxf"):
                 read_dwg_file(tmp_path / "test.dwg")
 
@@ -380,7 +380,7 @@ class TestReadFileDispatch:
         f = tmp_path / "archive.7z"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_7z_file", return_value="7z content") as mock:
+        with patch("file_organizer.utils.readers.read_7z_file", return_value="7z content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "7z content"
@@ -389,7 +389,7 @@ class TestReadFileDispatch:
         f = tmp_path / "archive.rar"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_rar_file", return_value="rar content") as mock:
+        with patch("file_organizer.utils.readers.read_rar_file", return_value="rar content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "rar content"
@@ -398,7 +398,7 @@ class TestReadFileDispatch:
         f = tmp_path / "data.hdf5"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_hdf5_file", return_value="hdf5 content") as mock:
+        with patch("file_organizer.utils.readers.read_hdf5_file", return_value="hdf5 content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "hdf5 content"
@@ -407,7 +407,7 @@ class TestReadFileDispatch:
         f = tmp_path / "data.h5"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_hdf5_file", return_value="h5 content") as mock:
+        with patch("file_organizer.utils.readers.read_hdf5_file", return_value="h5 content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "h5 content"
@@ -416,7 +416,7 @@ class TestReadFileDispatch:
         f = tmp_path / "data.nc"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_netcdf_file", return_value="nc content") as mock:
+        with patch("file_organizer.utils.readers.read_netcdf_file", return_value="nc content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "nc content"
@@ -425,7 +425,7 @@ class TestReadFileDispatch:
         f = tmp_path / "data.mat"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_mat_file", return_value="mat content") as mock:
+        with patch("file_organizer.utils.readers.read_mat_file", return_value="mat content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "mat content"
@@ -434,7 +434,7 @@ class TestReadFileDispatch:
         f = tmp_path / "book.epub"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_ebook_file", return_value="epub content") as mock:
+        with patch("file_organizer.utils.readers.read_ebook_file", return_value="epub content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "epub content"
@@ -443,7 +443,7 @@ class TestReadFileDispatch:
         f = tmp_path / "slides.pptx"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_presentation_file", return_value="pptx content") as mock:
+        with patch("file_organizer.utils.readers.read_presentation_file", return_value="pptx content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "pptx content"
@@ -452,7 +452,7 @@ class TestReadFileDispatch:
         f = tmp_path / "drawing.dwg"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_cad_file", return_value="dwg content") as mock:
+        with patch("file_organizer.utils.readers.read_cad_file", return_value="dwg content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "dwg content"
@@ -461,7 +461,7 @@ class TestReadFileDispatch:
         f = tmp_path / "model.igs"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_cad_file", return_value="igs content") as mock:
+        with patch("file_organizer.utils.readers.read_cad_file", return_value="igs content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "igs content"
@@ -470,7 +470,7 @@ class TestReadFileDispatch:
         f = tmp_path / "archive.tar.bz2"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_tar_file", return_value="tar content") as mock:
+        with patch("file_organizer.utils.readers.read_tar_file", return_value="tar content") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "tar content"
@@ -479,7 +479,7 @@ class TestReadFileDispatch:
         f = tmp_path / "archive.tar.xz"
         f.touch()
 
-        with patch("file_organizer.utils.file_readers.read_tar_file", return_value="tar xz") as mock:
+        with patch("file_organizer.utils.readers.read_tar_file", return_value="tar xz") as mock:
             result = read_file(f)
         mock.assert_called_once()
         assert result == "tar xz"
@@ -489,7 +489,7 @@ class TestReadFileDispatch:
         f.touch()
 
         with patch(
-            "file_organizer.utils.file_readers.read_hdf5_file",
+            "file_organizer.utils.readers.read_hdf5_file",
             side_effect=FileReadError("corrupt"),
         ):
             with pytest.raises(FileReadError, match="corrupt"):
@@ -508,7 +508,7 @@ class TestReadCadFileDispatch:
     def test_dxf_dispatch(self, tmp_path):
         f = tmp_path / "test.dxf"
         f.touch()
-        with patch("file_organizer.utils.file_readers.read_dxf_file", return_value="dxf") as mock:
+        with patch("file_organizer.utils.readers.cad.read_dxf_file", return_value="dxf") as mock:
             result = read_cad_file(f)
         mock.assert_called_once()
         assert result == "dxf"
@@ -516,7 +516,7 @@ class TestReadCadFileDispatch:
     def test_dwg_dispatch(self, tmp_path):
         f = tmp_path / "test.dwg"
         f.touch()
-        with patch("file_organizer.utils.file_readers.read_dwg_file", return_value="dwg") as mock:
+        with patch("file_organizer.utils.readers.cad.read_dwg_file", return_value="dwg") as mock:
             result = read_cad_file(f)
         mock.assert_called_once()
         assert result == "dwg"
@@ -524,7 +524,7 @@ class TestReadCadFileDispatch:
     def test_step_dispatch(self, tmp_path):
         f = tmp_path / "test.step"
         f.touch()
-        with patch("file_organizer.utils.file_readers.read_step_file", return_value="step") as mock:
+        with patch("file_organizer.utils.readers.cad.read_step_file", return_value="step") as mock:
             result = read_cad_file(f)
         mock.assert_called_once()
         assert result == "step"
@@ -532,7 +532,7 @@ class TestReadCadFileDispatch:
     def test_stp_dispatch(self, tmp_path):
         f = tmp_path / "test.stp"
         f.touch()
-        with patch("file_organizer.utils.file_readers.read_step_file", return_value="stp") as mock:
+        with patch("file_organizer.utils.readers.cad.read_step_file", return_value="stp") as mock:
             result = read_cad_file(f)
         mock.assert_called_once()
         assert result == "stp"
@@ -540,7 +540,7 @@ class TestReadCadFileDispatch:
     def test_iges_dispatch(self, tmp_path):
         f = tmp_path / "test.iges"
         f.touch()
-        with patch("file_organizer.utils.file_readers.read_iges_file", return_value="iges") as mock:
+        with patch("file_organizer.utils.readers.cad.read_iges_file", return_value="iges") as mock:
             result = read_cad_file(f)
         mock.assert_called_once()
         assert result == "iges"
@@ -548,5 +548,5 @@ class TestReadCadFileDispatch:
     def test_unsupported_cad(self, tmp_path):
         f = tmp_path / "test.obj"
         f.touch()
-        with pytest.raises(ValueError, match="Unsupported CAD"):
+        with pytest.raises(FileReadError, match="Unsupported CAD"):
             read_cad_file(f)
