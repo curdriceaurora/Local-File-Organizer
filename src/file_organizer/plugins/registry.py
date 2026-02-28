@@ -329,20 +329,31 @@ class PluginRegistry:
     ) -> PluginSecurityPolicy:
         """Construct a :class:`PluginSecurityPolicy` from a manifest dict.
 
-        Uses the manifest's ``allowed_paths`` list to build a policy that
-        restricts filesystem access to the declared paths.
+        Uses the manifest's ``allowed_paths`` and ``allowed_operations`` lists
+        to build a policy that restricts both filesystem and operation access.
+
+        Operation-level restrictions:
+        - Common operations: "read", "write", "delete", "execute", "network"
+        - Dangerous operations: blocked by default unless explicitly allowed
+        - Custom operations: supported via manifest configuration
 
         Args:
             manifest: Validated manifest dictionary.
 
         Returns:
             A :class:`PluginSecurityPolicy` scoped to the manifest's declared
-            allowed paths, with no operation restrictions.
+            allowed paths and operations.
         """
-        # TODO: Operation-level restrictions are deferred to a follow-up PR.
-        # Currently only filesystem paths are sandboxed; all operation types
-        # (network, subprocess, etc.) are permitted within the child process.
+        # Extract operation restrictions from manifest
+        allowed_operations = list(manifest.get("allowed_operations", []))
+        allow_all_ops = manifest.get("allow_all_operations", False)
+
+        # If no operations specified, use safe defaults (read-only)
+        if not allowed_operations and not allow_all_ops:
+            allowed_operations = ["read"]
+
         return PluginSecurityPolicy.from_permissions(
             allowed_paths=list(manifest.get("allowed_paths", [])),
-            allow_all_operations=True,
+            allowed_operations=allowed_operations,
+            allow_all_operations=allow_all_ops,
         )
