@@ -164,10 +164,11 @@ file-organizer = "file_organizer.cli:main"
 fo = "file_organizer.cli:main"  # Short alias
 
 [project.urls]
-Homepage = "https://github.com/yourusername/file-organizer-v2"
-Documentation = "https://file-organizer.readthedocs.io"
-Repository = "https://github.com/yourusername/file-organizer-v2"
-Issues = "https://github.com/yourusername/file-organizer-v2/issues"
+Homepage = "https://github.com/curdriceaurora/Local-File-Organizer"
+Documentation = "https://github.com/curdriceaurora/Local-File-Organizer#readme"
+Repository = "https://github.com/curdriceaurora/Local-File-Organizer"
+Issues = "https://github.com/curdriceaurora/Local-File-Organizer/issues"
+Changelog = "https://github.com/curdriceaurora/Local-File-Organizer/releases"
 
 [tool.setuptools.packages.find]
 where = ["src"]
