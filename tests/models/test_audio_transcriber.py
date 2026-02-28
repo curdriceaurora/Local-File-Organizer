@@ -747,6 +747,7 @@ class TestStaticMethods:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMissingFasterWhisper:
     """AudioTranscriber raises ImportError with an actionable message when
     faster-whisper is not installed."""

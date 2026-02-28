@@ -206,7 +206,7 @@ class PARAMigrationManager:
             total_count=len(files_to_migrate),
             by_category=by_category,
             estimated_size=total_size,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
 
         logger.info(f"Migration plan created: {plan.total_count} files")
@@ -230,7 +230,7 @@ class PARAMigrationManager:
         Returns:
             MigrationReport with results
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
         logger.info(f"Executing migration (dry_run={dry_run})")
 
         migrated: list[Path] = []
@@ -286,7 +286,7 @@ class PARAMigrationManager:
                 failed.append((migration_file.source_path, str(e)))
 
         # Calculate duration
-        duration = (datetime.now() - start_time).total_seconds()
+        duration = (datetime.now(UTC) - start_time).total_seconds()
 
         # Create report
         success = len(failed) == 0

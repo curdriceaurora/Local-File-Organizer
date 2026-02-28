@@ -784,6 +784,7 @@ class TestValidateImage:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestMissingImagededupDep:
     """ImageDeduplicator raises ImportError with an actionable message when
     imagededup is not installed."""

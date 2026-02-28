@@ -61,6 +61,8 @@ class ImageDeduplicator:
                       - 21+: Potentially different images
 
         Raises:
+            ImportError: If imagededup is not installed.
+                Install with: ``pip install 'file-organizer[dedup]'``
             ValueError: If hash_method is not supported or threshold is invalid
         """
         if not _IMAGEDEDUP_AVAILABLE:

@@ -86,17 +86,20 @@ Parallel track:
 #479 (Metadata) [4-8h]    ⏳ Standalone
 ```
 
-### Issue #474: Remove CI workflow duplication 🚀 START NOW
+### Issue #474: Remove CI workflow duplication ✅ COMPLETE
 
-- **Status**: Open — no dependencies, start immediately
+- **Status**: ✅ Complete — merged via PR #511 (2026-02-28)
 - **Effort**: 4-6 hours (quickest Phase 4 task)
 - **Priority**: P2
-- **Scope**: Consolidate 3+ duplicate workflow definitions into single parameterized workflow
+- **Scope**: Deduplicate CI ownership while maintaining separate fast-path (`ci.yml`) and
+  breadth (`ci-full.yml`) workflows — removed `test-matrix` job from `ci-full.yml` (duplicate
+  of Linux 3.11/3.12 already covered by `ci.yml`), removed duplicate docstring step and
+  schedule trigger from `ci.yml`, added explicit ownership table to CONTRIBUTING.md
 - **GitHub Issue**: <https://github.com/curdriceaurora/Local-File-Organizer/issues/474>
 
-### Issue #475: Decouple optional feature dependencies 🚀 START NOW
+### Issue #475: Decouple optional feature dependencies ✅ COMPLETE
 
-- **Status**: Open — no dependencies, can run parallel to #474
+- **Status**: ✅ Complete — merged via PR #511 (2026-02-28)
 - **Effort**: 8-12 hours
 - **Priority**: P2
 - **Scope**: Guard optional imports (audio, video, dedup extras) to prevent import errors when optional packages are absent

@@ -246,7 +246,11 @@ class TestCIFullWorkflow:
         """
         jobs = workflow.get("jobs", {})
         for job_name in ("test-macos", "test-windows"):
-            job = jobs.get(job_name, {})
+            assert job_name in jobs, (
+                f"Expected '{job_name}' job in CI Full workflow — "
+                "platform jobs must be present for cross-OS coverage"
+            )
+            job = jobs[job_name]
             steps = job.get("steps", [])
             for step in steps:
                 if not isinstance(step, dict):

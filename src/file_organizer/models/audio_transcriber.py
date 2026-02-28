@@ -139,6 +139,8 @@ class AudioTranscriber:
             num_workers: Number of workers for CPU inference
 
         Raises:
+            ImportError: If faster-whisper is not installed.
+                Install with: ``pip install 'file-organizer[audio]'``
             ValueError: If model size or device is invalid
             RuntimeError: If model loading fails
         """
