@@ -619,21 +619,25 @@ def analytics(
 
 
 # ---------------------------------------------------------------------------
-# Profile sub-app — Click interop
+# Profile sub-app — Click interop (deferred to reduce startup latency)
 # ---------------------------------------------------------------------------
 
-# The existing profile module uses Click. Typer is built on Click,
-# so we can attach the Click group directly as a sub-command.
+# NOTE: profile_command registration is deferred to main() to avoid loading
+# file_organizer.cli.profile (and its heavy intelligence service chain) at
+# module import time.  Typer wraps Click, so we register it just before app().
 
-try:
-    from file_organizer.cli.profile import profile_command as _profile_click_group
 
-    typer_click_object = typer.main.get_group(app)
-    typer_click_object.add_command(_profile_click_group, "profile")
-except Exception:
-    # Profile module may fail to import if intelligence services
-    # are not installed; we degrade gracefully.
-    pass
+def _register_profile_command() -> None:
+    """Lazily register the Click-based profile sub-command."""
+    try:
+        from file_organizer.cli.profile import profile_command as _profile_click_group
+
+        typer_click_object = typer.main.get_group(app)
+        typer_click_object.add_command(_profile_click_group, "profile")
+    except Exception:
+        # Profile module may fail to import if intelligence services
+        # are not installed; we degrade gracefully.
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -643,4 +647,5 @@ except Exception:
 
 def main() -> None:
     """Entry point for ``file-organizer`` / ``fo`` console scripts."""
+    _register_profile_command()
     app()

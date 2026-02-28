@@ -2,24 +2,23 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from file_organizer.plugins.marketplace import MarketplaceService, PluginPackage
 
 import typer
 from rich.console import Console
 from rich.table import Table
-
-from file_organizer.plugins.marketplace import (
-    MarketplaceError,
-    MarketplaceService,
-    PluginPackage,
-    PluginReview,
-)
 
 marketplace_app = typer.Typer(help="Browse and manage marketplace plugins.")
 console = Console()
 
 
 def _service() -> MarketplaceService:
+    # Imported lazily to reduce startup latency
+    from file_organizer.plugins.marketplace import MarketplaceService
+
     return MarketplaceService()
 
 
@@ -51,6 +50,8 @@ def list_plugins(
     tags: Optional[list[str]] = typer.Option(None, "--tag", "-t", help="Filter by tags."),
 ) -> None:
     """List available plugins."""
+    from file_organizer.plugins.marketplace import MarketplaceError
+
     try:
         items, total = _service().list_plugins(
             page=page,
@@ -72,6 +73,8 @@ def search_plugins(
     tags: Optional[list[str]] = typer.Option(None, "--tag", "-t", help="Filter by tags."),
 ) -> None:
     """Search marketplace plugins."""
+    from file_organizer.plugins.marketplace import MarketplaceError
+
     try:
         items, total = _service().list_plugins(
             query=query,
@@ -93,6 +96,8 @@ def plugin_info(
     version: Optional[str] = typer.Option(None, "--version", "-v", help="Specific version."),
 ) -> None:
     """Show detailed plugin metadata."""
+    from file_organizer.plugins.marketplace import MarketplaceError
+
     try:
         package = _service().get_plugin(name, version=version)
         avg_rating = _service().get_average_rating(package.name)
@@ -120,6 +125,8 @@ def install_plugin(
     version: Optional[str] = typer.Option(None, "--version", "-v", help="Specific version."),
 ) -> None:
     """Install a plugin from marketplace."""
+    from file_organizer.plugins.marketplace import MarketplaceError
+
     try:
         installed = _service().install(name, version=version)
     except MarketplaceError as exc:
@@ -133,6 +140,8 @@ def uninstall_plugin(
     name: str = typer.Argument(..., help="Plugin name."),
 ) -> None:
     """Uninstall a marketplace plugin."""
+    from file_organizer.plugins.marketplace import MarketplaceError
+
     try:
         _service().uninstall(name)
     except MarketplaceError as exc:
@@ -146,6 +155,8 @@ def update_plugin(
     name: str = typer.Argument(..., help="Plugin name."),
 ) -> None:
     """Update an installed plugin."""
+    from file_organizer.plugins.marketplace import MarketplaceError
+
     try:
         result = _service().update(name)
     except MarketplaceError as exc:
@@ -160,6 +171,8 @@ def update_plugin(
 @marketplace_app.command("installed")
 def list_installed() -> None:
     """List locally installed marketplace plugins."""
+    from file_organizer.plugins.marketplace import MarketplaceError
+
     try:
         items = _service().list_installed()
     except MarketplaceError as exc:
@@ -179,6 +192,8 @@ def list_installed() -> None:
 @marketplace_app.command("updates")
 def available_updates() -> None:
     """List installed plugins with updates available."""
+    from file_organizer.plugins.marketplace import MarketplaceError
+
     try:
         updates = _service().check_updates()
     except MarketplaceError as exc:
@@ -201,6 +216,8 @@ def add_review(
     content: str = typer.Option(..., "--content", help="Review text."),
 ) -> None:
     """Add or update a plugin review."""
+    from file_organizer.plugins.marketplace import MarketplaceError, PluginReview
+
     try:
         _service().add_review(
             PluginReview(

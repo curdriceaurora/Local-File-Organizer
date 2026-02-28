@@ -12,9 +12,6 @@ from pathlib import Path
 
 import typer
 
-from file_organizer.optimization.memory_profiler import MemoryProfiler
-from file_organizer.optimization.resource_monitor import ResourceMonitor
-
 benchmark_app = typer.Typer(
     name="benchmark",
     help="Benchmark file processing performance.",
@@ -88,7 +85,10 @@ def run(
             console.print("[yellow]No files found in the specified path.[/yellow]")
         return
 
-    # Initialize monitoring
+    # Initialize monitoring (imported lazily to reduce startup latency)
+    from file_organizer.optimization.memory_profiler import MemoryProfiler
+    from file_organizer.optimization.resource_monitor import ResourceMonitor
+
     monitor = ResourceMonitor()
     profiler = MemoryProfiler()
 
