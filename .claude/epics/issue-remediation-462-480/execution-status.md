@@ -1,125 +1,158 @@
 ---
 name: execution-status
-title: "Phase 3 Execution Status"
+title: "Phase 4 Execution Status"
 epic: issue-remediation-462-480
 status: in-progress
 branch: epic/issue-remediation-462-480
 phase_1_completed: 2026-02-27
 phase_2_completed: 2026-02-27
 phase_3_task_471_completed: 2026-02-27T19:13:48Z
-phase_3_started: 2026-02-27T23:50:00Z
+phase_3_task_472_476_completed: 2026-02-28T03:47:24Z
+phase_3_completed: 2026-02-28T03:47:24Z
+phase_4_started: 2026-02-28T03:54:23Z
+updated: 2026-02-28T03:54:23Z
 ---
 
-# Phase 3 Execution Status
+# Execution Status
 
 ## Summary
 
 - **Phase 1**: ✅ Complete (3 issues merged via PR #500)
 - **Phase 2**: ✅ Complete (merged PR #501)
-- **Phase 3**: 🚀 In Progress (1 of 3 tasks complete, 2 ready to launch)
-  - **#471**: ✅ **COMPLETE** (PR #502 merged 2026-02-27T19:13:48Z)
-  - **#472**: 🚀 Ready to start (no dependencies)
-  - **#476**: 🚀 Now unblocked - ready to start!
+- **Phase 3**: ✅ **COMPLETE** (all 3 tasks merged via PRs #502, #510)
+  - **#471**: ✅ MERGED (PR #502, 2026-02-27T19:13:48Z)
+  - **#472**: ✅ MERGED (PR #510, 2026-02-28T03:47:24Z)
+  - **#476**: ✅ MERGED (PR #510, 2026-02-28T03:47:24Z)
+- **Phase 4**: 🚀 In Progress (0 of 5 tasks complete)
+  - **#474**: 🚀 Start now — CI workflow dedup (4-6h, no deps)
+  - **#475**: 🚀 Start now — Decouple optional deps (8-12h, no deps)
+  - **#473**: ⏳ Pending — Refactor oversized modules (40-60h, no deps)
+  - **#478**: ⏳ Pending — Consolidate test suites (20-32h, no deps)
+  - **#480**: ⏳ Pending — Tighten type strictness (24-40h, after #473)
+- **Phase 5** (parallel track): ⏳ Pending
+  - **#477**: ⏳ Deprecation debt cleanup (8-16h)
+  - **#479**: ⏳ Package metadata cleanup (4-8h)
 
-## Critical Path
+## Phase 3 Completed Tasks
 
-```text
-#471 (Paths) [24-32h] ✅ COMPLETE
-    ↓
-#476 (Migration) [16-24h] 🚀 NOW READY!
+### Issue #471: Standardize storage/config/state paths ✅ MERGED
 
-#472 (Startup) [20-28h] 🚀 READY NOW!
-```
-
-## Completed Tasks
-
-### Issue #471: Standardize storage/config/state paths ✅ COMPLETE
-
-- **Status**: ✅ MERGED (PR #502)
-- **Merged Date**: 2026-02-27T19:13:48Z
 - **PR**: <https://github.com/curdriceaurora/Local-File-Organizer/pull/502>
+- **Merged**: 2026-02-27T19:13:48Z
 - **Effort**: 24-32 hours
-- **Completion**: Full implementation with 29 integration tests, 100% coverage
 - **Key Changes**:
   - PathManager class for XDG-compliant path resolution
   - PathMigrator class for safe migration with timestamped backups
   - ConfigManager and PreferenceStore integration
-  - Comprehensive migration guide and deprecation notices
-- **Result**: #476 is now unblocked! 🎉
+  - 29 integration tests, 100% coverage
 
-## Ready to Launch (No Dependencies)
+### Issue #472: Reduce CLI/API startup latency ✅ MERGED
 
-### Issue #472: Reduce CLI/API startup latency 🚀 START NOW
-
-- **Status**: Ready to start (after Phase 2 ✅)
+- **PR**: <https://github.com/curdriceaurora/Local-File-Organizer/pull/510>
+- **Merged**: 2026-02-28T03:47:24Z
 - **Effort**: 20-28 hours
-- **Priority**: P1 (User-facing performance)
-- **Scope**: Import profiling, lazy loading for commands/services
-- **Dependencies**: #466 (✅ complete)
-- **Files**: `CLI/__init__.py`, `API/__init__.py`, multiple service modules
-- **Target**: 2-3s → ~1s startup time
-- **GitHub Issue**: <https://github.com/curdriceaurora/Local-File-Organizer/issues/472>
+- **Key Changes**:
+  - Lazy imports for all heavy services (ResourceMonitor, MemoryProfiler, model loaders)
+  - `benchmark run` CLI command with JSON output, cache/LLM metrics
+  - `tests/performance/test_startup_latency.py` with subprocess timing
+  - `scripts/benchmark_startup.py` for CI baseline tracking
+  - 37 tests passing on Python 3.11 + 3.12
 
-### Issue #476: Migration recovery + plugin restrictions 🚀 NOW UNBLOCKED
+### Issue #476: Migration recovery + plugin restrictions ✅ MERGED
 
-- **Status**: ✅ Unblocked! (was waiting for #471, now complete)
+- **PR**: <https://github.com/curdriceaurora/Local-File-Organizer/pull/510>
+- **Merged**: 2026-02-28T03:47:24Z
 - **Effort**: 16-24 hours
-- **Priority**: P1 (Production data safety + security)
-- **Scope**: Backup/rollback system, plugin policy enforcement at operation level
-- **Previously Blocked By**: Task #471 ✅ (now complete)
-- **Files**:
-  - `migration_manager.py` (backup/rollback system)
-  - `plugins/registry.py` (operation-level restrictions)
-- **GitHub Issue**: <https://github.com/curdriceaurora/Local-File-Organizer/issues/476>
-- **Ready**: Yes! Can start immediately
+- **Key Changes**:
+  - Full backup/rollback system in `migration_manager.py`
+  - Plugin operation-level restriction enforcement in `plugins/registry.py`
+  - 17 unit + integration tests
+  - CodeRabbit review comments addressed (UTC timestamps, RollbackError guard)
 
-## Parallel Execution Plan (UPDATED)
+## Phase 4 Task Overview
 
-### ✅ Work Stream Complete: Issue #471 (Path Standardization)
+### Critical Path
 
-- **Status**: ✅ MERGED
-- **Duration**: 24-32 hours
-- **Result**: Architectural foundation established, #476 unblocked
-- **PR**: <https://github.com/curdriceaurora/Local-File-Organizer/pull/502>
+```text
+#474 (CI dedup) [4-6h]    🚀 START NOW (standalone)
+#475 (Opt deps) [8-12h]   🚀 START NOW (standalone)
+#473 (Refactor) [40-60h]  ⏳ Pending (standalone, but large)
+    ↓ unblocks
+#480 (Types)    [24-40h]  ⏳ Blocked by #473
+#478 (Tests)    [20-32h]  ⏳ Standalone (start anytime)
 
-### 🚀 Work Stream B: Issue #472 (Startup Optimization) - START NOW
+Parallel track:
+#477 (Deprec)   [8-16h]   ⏳ Standalone
+#479 (Metadata) [4-8h]    ⏳ Standalone
+```
 
-- **Duration**: 20-28 hours
-- **Responsibility**: Import chain optimization, lazy loading
-- **Scope**: Independent (no dependencies, can start immediately)
-- **Branch**: `epic/issue-remediation-462-480`
+### Issue #474: Remove CI workflow duplication 🚀 START NOW
 
-### 🚀 Work Stream C: Issue #476 (Migration Recovery) - START NOW
+- **Status**: Open — no dependencies, start immediately
+- **Effort**: 4-6 hours (quickest Phase 4 task)
+- **Priority**: P2
+- **Scope**: Consolidate 3+ duplicate workflow definitions into single parameterized workflow
+- **GitHub Issue**: <https://github.com/curdriceaurora/Local-File-Organizer/issues/474>
 
-- **Duration**: 16-24 hours
-- **Responsibility**: Backup/rollback system, security enforcement
-- **Status**: ✅ Unblocked! (dependency #471 complete)
-- **Can now start**: Immediately in parallel with #472
-- **Branch**: `epic/issue-remediation-462-480`
+### Issue #475: Decouple optional feature dependencies 🚀 START NOW
 
-## Total Effort Estimate (REVISED)
+- **Status**: Open — no dependencies, can run parallel to #474
+- **Effort**: 8-12 hours
+- **Priority**: P2
+- **Scope**: Guard optional imports (audio, video, dedup extras) to prevent import errors when optional packages are absent
+- **GitHub Issue**: <https://github.com/curdriceaurora/Local-File-Organizer/issues/475>
 
-**Previous Estimate** (when #471 was blocking):
+### Issue #473: Refactor oversized low-cohesion modules ⏳
 
-- Parallel #471+#472: 44-60 hours
-- Sequential #476: 16-24 hours
-- Total: ~60-84 hours
+- **Status**: Open — standalone but largest task
+- **Effort**: 40-60 hours
+- **Priority**: P2
+- **Scope**: Split modules >500 LOC with multiple responsibilities
+- **GitHub Issue**: <https://github.com/curdriceaurora/Local-File-Organizer/issues/473>
 
-**Current Reality** (with #471 complete):
+### Issue #478: Consolidate test suites and enforce conventions ⏳
 
-- Parallel #472+#476: 36-52 hours (concurrent!)
-- **Total Remaining**: ~36-52 hours (~1 week for full-time team)
+- **Status**: Open — standalone
+- **Effort**: 20-32 hours
+- **Priority**: P2
+- **Scope**: Standardize test structure, naming, fixtures, coverage gates
+- **GitHub Issue**: <https://github.com/curdriceaurora/Local-File-Organizer/issues/478>
 
-## Next Steps (IMMEDIATE)
+### Issue #480: Tighten lint/type strictness ⏳
 
-1. ✅ #471 Complete - already merged
-2. 🚀 Launch Stream B (Issue #472) now
-3. 🚀 Launch Stream C (Issue #476) now (parallel with B)
-4. Monitor both streams concurrently
+- **Status**: Blocked by #473 (types must be stable before tightening)
+- **Effort**: 24-40 hours
+- **Priority**: P2
+- **Scope**: Enable mypy strict mode, zero ruff warnings, type coverage gates
+- **GitHub Issue**: <https://github.com/curdriceaurora/Local-File-Organizer/issues/480>
 
-## Execution Timeline (ACCELERATED)
+## Execution Plan
 
-- **Now**: Launch #472, #476 in parallel
-- **+3-5 days (est)**: Both #472 and #476 complete
-- **Total Phase 3**: ~5-6 days (down from 2 weeks!)
-- **Then**: Ready for Phase 4: Code Quality & Maintainability
+### Start Now (Parallel)
+
+1. 🚀 **Issue #474** — CI workflow dedup (4-6h, quickest win)
+2. 🚀 **Issue #475** — Decouple optional deps (8-12h, can run parallel)
+
+### Next Wave
+
+3. ⏳ **Issue #473** — Refactor modules (40-60h, unblocks #480)
+4. ⏳ **Issue #478** — Test consolidation (20-32h, can start anytime)
+
+### Final Phase 4
+
+5. ⏳ **Issue #480** — Type strictness (24-40h, after #473)
+
+### Phase 5 (parallel to Phase 4)
+
+- ⏳ **Issue #477** — Deprecation debt (8-16h)
+- ⏳ **Issue #479** — Package metadata (4-8h)
+
+## Effort Summary
+
+| Phase | Tasks | Effort | Status |
+|-------|-------|--------|--------|
+| Phase 1 | #462, #463, #466 | ~60-80h | ✅ Complete |
+| Phase 2 | #464, #465, #467, #469, #470 | ~40-60h | ✅ Complete |
+| Phase 3 | #471, #472, #476 | ~60-84h | ✅ Complete |
+| Phase 4 | #473, #474, #475, #478, #480 | ~96-150h | 🚀 In Progress |
+| Phase 5 | #477, #479 | ~12-24h | ⏳ Pending |
