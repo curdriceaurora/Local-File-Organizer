@@ -31,7 +31,6 @@ from file_organizer.utils.readers import (
     read_text_file,
     read_zip_file,
 )
-from file_organizer.utils.readers._base import _check_file_size
 
 # Explicit __all__ so that mypy and other static analysers recognise these
 # re-exports as part of this module's public API.
