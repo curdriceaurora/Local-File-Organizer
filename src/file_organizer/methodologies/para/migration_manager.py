@@ -1,17 +1,22 @@
 """PARA Migration Manager.
 
 Handles migration of files from flat or hierarchical structures to PARA organization.
-Supports dry-run, rollback, and detailed reporting.
+Supports dry-run, rollback, and detailed reporting with full backup/recovery capabilities.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import os
 import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
+
+from file_organizer.config.path_manager import PathManager
 
 from .categories import PARACategory
 from .config import PARAConfig
@@ -55,11 +60,45 @@ class MigrationReport:
     success: bool
 
 
+@dataclass
+class BackupMetadata:
+    """Metadata for a migration backup."""
+
+    backup_id: str
+    migration_id: str
+    created_at: datetime
+    files_backed_up: int
+    total_size: int
+    checksum: str  # SHA256 of file manifest
+    source_root: Path
+    status: str  # "created", "verified", "restored"
+    restored_at: datetime | None = None
+    file_entries: list[dict[str, Any]] = field(default_factory=list)
+
+
+class BackupIntegrityError(Exception):
+    """Raised when backup integrity check fails."""
+
+    pass
+
+
+class RollbackError(Exception):
+    """Raised when rollback operation fails."""
+
+    pass
+
+
 class PARAMigrationManager:
     """Manages migration of files to PARA structure.
 
     Analyzes existing directory structure, categorizes files,
     and migrates them to appropriate PARA folders with rollback support.
+
+    Backup/Recovery Features:
+    - Creates full file backups before migration
+    - Maintains backup metadata with integrity checksums
+    - Supports rollback to pre-migration state
+    - Verifies integrity of backups and restored files
     """
 
     def __init__(
@@ -84,6 +123,11 @@ class PARAMigrationManager:
         else:
             self.heuristic_engine = heuristic_engine
         self.folder_generator = PARAFolderGenerator(self.config)
+
+        # Initialize backup directory
+        self.path_manager = PathManager()
+        self.backup_root = self.path_manager.data_dir / "migration-backups"
+        self.backup_root.mkdir(parents=True, exist_ok=True)
 
     def analyze_source(
         self,
@@ -267,29 +311,358 @@ class PARAMigrationManager:
     def _create_backup(self, plan: MigrationPlan) -> str:
         """Create backup of source files before migration.
 
+        Creates a complete backup of all files to be migrated with metadata,
+        integrity checksums, and recovery information.
+
         Args:
             plan: Migration plan
 
         Returns:
             Backup identifier
-        """
-        backup_id = f"migration_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        # TODO: Implement actual backup logic
-        logger.info(f"Backup ID: {backup_id}")
-        return backup_id
 
-    def rollback(self, migration_id: str) -> bool:
-        """Rollback a completed migration.
+        Raises:
+            Exception: If backup creation fails
+        """
+        migration_id = f"migration_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:-3]}"
+        backup_id = f"backup_{migration_id}"
+
+        logger.info(f"Creating backup: {backup_id}")
+
+        # Create backup directory
+        backup_dir = self.backup_root / backup_id
+        backup_dir.mkdir(parents=True, exist_ok=True)
+
+        file_entries = []
+        total_size = 0
+
+        try:
+            # Backup each file with metadata
+            for migration_file in plan.files:
+                source = migration_file.source_path
+                if not source.exists():
+                    logger.warning(f"Source file missing during backup: {source}")
+                    continue
+
+                # Create relative path structure in backup
+                rel_path = source.relative_to(source.parent.parent)
+                backup_file = backup_dir / rel_path
+                backup_file.parent.mkdir(parents=True, exist_ok=True)
+
+                # Copy file with metadata
+                shutil.copy2(str(source), str(backup_file))
+                file_size = backup_file.stat().st_size
+
+                # Calculate file hash for integrity verification
+                file_hash = self._calculate_file_hash(backup_file)
+
+                # Record entry
+                file_entries.append({
+                    "original_path": str(source),
+                    "backup_path": str(backup_file),
+                    "size": file_size,
+                    "hash": file_hash,
+                    "category": migration_file.target_category.value,
+                    "confidence": migration_file.confidence,
+                })
+
+                total_size += file_size
+
+            # Create manifest file
+            manifest = BackupMetadata(
+                backup_id=backup_id,
+                migration_id=migration_id,
+                created_at=datetime.now(),
+                files_backed_up=len(file_entries),
+                total_size=total_size,
+                checksum="",  # Will be calculated after adding entries
+                source_root=plan.files[0].source_path.parent if plan.files else Path.home(),
+                status="created",
+                file_entries=file_entries,
+            )
+
+            # Calculate manifest checksum (across all file hashes)
+            manifest_checksum = self._calculate_manifest_checksum(file_entries)
+            manifest.checksum = manifest_checksum
+
+            # Save manifest
+            manifest_file = backup_dir / "manifest.json"
+            with open(manifest_file, "w") as f:
+                # Serialize with custom JSON encoder for datetime and Path
+                manifest_data = {
+                    "backup_id": manifest.backup_id,
+                    "migration_id": manifest.migration_id,
+                    "created_at": manifest.created_at.isoformat(),
+                    "files_backed_up": manifest.files_backed_up,
+                    "total_size": manifest.total_size,
+                    "checksum": manifest.checksum,
+                    "source_root": str(manifest.source_root),
+                    "status": manifest.status,
+                    "restored_at": manifest.restored_at.isoformat() if manifest.restored_at else None,
+                    "file_entries": manifest.file_entries,
+                }
+                json.dump(manifest_data, f, indent=2)
+
+            # Verify backup integrity
+            self._verify_backup(backup_dir, manifest)
+
+            logger.info(f"Backup created successfully: {backup_id}")
+            logger.info(f"  Files: {len(file_entries)}")
+            logger.info(f"  Total size: {total_size / (1024 * 1024):.2f} MB")
+
+            return backup_id
+
+        except Exception as e:
+            logger.error(f"Backup creation failed: {e}")
+            # Clean up partial backup
+            if backup_dir.exists():
+                shutil.rmtree(backup_dir)
+            raise
+
+    def rollback(self, backup_id: str) -> bool:
+        """Rollback a completed migration using backup data.
+
+        Restores all files from backup to their original locations,
+        verifies integrity, and cleans up the backup.
 
         Args:
-            migration_id: Migration identifier to rollback
+            backup_id: Backup identifier to rollback
 
         Returns:
             True if rollback succeeded
+
+        Raises:
+            RollbackError: If rollback fails with details
         """
-        # TODO: Implement rollback logic
-        logger.warning("Rollback not yet implemented")
-        return False
+        logger.info(f"Starting rollback from backup: {backup_id}")
+
+        backup_dir = self.backup_root / backup_id
+        if not backup_dir.exists():
+            raise RollbackError(f"Backup directory not found: {backup_dir}")
+
+        try:
+            # Load and verify manifest
+            manifest_file = backup_dir / "manifest.json"
+            if not manifest_file.exists():
+                raise RollbackError(f"Backup manifest not found: {manifest_file}")
+
+            with open(manifest_file, "r") as f:
+                manifest_data = json.load(f)
+
+            # Verify integrity before restoring
+            self._verify_backup_integrity(backup_dir, manifest_data)
+
+            # Restore files
+            restored_count = 0
+            failed_restores = []
+
+            for entry in manifest_data.get("file_entries", []):
+                original_path = Path(entry["original_path"])
+                backup_path = Path(entry["backup_path"])
+                expected_hash = entry["hash"]
+
+                try:
+                    # Create target directory
+                    original_path.parent.mkdir(parents=True, exist_ok=True)
+
+                    # Restore file
+                    if original_path.exists():
+                        # Backup the current file (which was migrated)
+                        migrated_backup = original_path.with_suffix(original_path.suffix + ".migrated")
+                        shutil.copy2(str(original_path), str(migrated_backup))
+                        logger.debug(f"Saved migrated file: {migrated_backup}")
+
+                    shutil.copy2(str(backup_path), str(original_path))
+
+                    # Verify restored file
+                    restored_hash = self._calculate_file_hash(original_path)
+                    if restored_hash != expected_hash:
+                        raise RollbackError(
+                            f"File integrity check failed after restore: {original_path}"
+                        )
+
+                    restored_count += 1
+                    logger.debug(f"Restored: {original_path}")
+
+                except Exception as e:
+                    logger.error(f"Failed to restore {original_path}: {e}")
+                    failed_restores.append((str(original_path), str(e)))
+
+            if failed_restores:
+                raise RollbackError(
+                    f"Rollback completed with {len(failed_restores)} failures: {failed_restores}"
+                )
+
+            # Update manifest status
+            manifest_data["status"] = "restored"
+            manifest_data["restored_at"] = datetime.now().isoformat()
+
+            with open(manifest_file, "w") as f:
+                json.dump(manifest_data, f, indent=2)
+
+            logger.info(f"Rollback completed successfully: {restored_count} files restored")
+            return True
+
+        except Exception as e:
+            logger.error(f"Rollback failed: {e}")
+            raise RollbackError(f"Rollback operation failed: {e}") from e
+
+    def list_backups(self) -> list[dict[str, Any]]:
+        """List all available backups.
+
+        Returns:
+            List of backup metadata dictionaries
+        """
+        backups = []
+
+        if not self.backup_root.exists():
+            return backups
+
+        for backup_dir in sorted(self.backup_root.iterdir(), reverse=True):
+            if not backup_dir.is_dir():
+                continue
+
+            manifest_file = backup_dir / "manifest.json"
+            if manifest_file.exists():
+                try:
+                    with open(manifest_file, "r") as f:
+                        manifest = json.load(f)
+                    backups.append(manifest)
+                except Exception as e:
+                    logger.warning(f"Failed to read backup manifest {manifest_file}: {e}")
+
+        return backups
+
+    def verify_backup(self, backup_id: str) -> bool:
+        """Verify integrity of a backup.
+
+        Args:
+            backup_id: Backup identifier
+
+        Returns:
+            True if backup is valid
+
+        Raises:
+            BackupIntegrityError: If backup is corrupted
+        """
+        backup_dir = self.backup_root / backup_id
+        if not backup_dir.exists():
+            raise BackupIntegrityError(f"Backup not found: {backup_id}")
+
+        manifest_file = backup_dir / "manifest.json"
+        if not manifest_file.exists():
+            raise BackupIntegrityError(f"Backup manifest not found: {backup_id}")
+
+        try:
+            with open(manifest_file, "r") as f:
+                manifest_data = json.load(f)
+
+            self._verify_backup_integrity(backup_dir, manifest_data)
+            logger.info(f"Backup verification passed: {backup_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Backup verification failed: {e}")
+            raise BackupIntegrityError(f"Backup integrity check failed: {e}") from e
+
+    def _verify_backup(self, backup_dir: Path, manifest: BackupMetadata) -> None:
+        """Verify backup integrity.
+
+        Args:
+            backup_dir: Backup directory
+            manifest: Backup metadata
+
+        Raises:
+            BackupIntegrityError: If verification fails
+        """
+        logger.info(f"Verifying backup integrity: {manifest.backup_id}")
+
+        # Check all files exist and match hashes
+        for entry in manifest.file_entries:
+            backup_path = Path(entry["backup_path"])
+
+            if not backup_path.exists():
+                raise BackupIntegrityError(f"Backup file missing: {backup_path}")
+
+            actual_hash = self._calculate_file_hash(backup_path)
+            expected_hash = entry["hash"]
+
+            if actual_hash != expected_hash:
+                raise BackupIntegrityError(
+                    f"File hash mismatch: {backup_path} "
+                    f"(expected {expected_hash}, got {actual_hash})"
+                )
+
+        logger.info(f"Backup verification passed: {len(manifest.file_entries)} files verified")
+
+    def _verify_backup_integrity(self, backup_dir: Path, manifest_data: dict[str, Any]) -> None:
+        """Verify backup integrity from manifest data.
+
+        Args:
+            backup_dir: Backup directory
+            manifest_data: Parsed manifest JSON
+
+        Raises:
+            BackupIntegrityError: If verification fails
+        """
+        logger.info(f"Verifying backup integrity from manifest")
+
+        # Verify manifest checksum
+        file_entries = manifest_data.get("file_entries", [])
+        stored_checksum = manifest_data.get("checksum", "")
+        calculated_checksum = self._calculate_manifest_checksum(file_entries)
+
+        if stored_checksum != calculated_checksum:
+            raise BackupIntegrityError(
+                f"Manifest checksum mismatch "
+                f"(expected {stored_checksum}, got {calculated_checksum})"
+            )
+
+        # Verify each file
+        for entry in file_entries:
+            backup_path = Path(entry["backup_path"])
+
+            if not backup_path.exists():
+                raise BackupIntegrityError(f"Backup file missing: {backup_path}")
+
+            actual_hash = self._calculate_file_hash(backup_path)
+            expected_hash = entry["hash"]
+
+            if actual_hash != expected_hash:
+                raise BackupIntegrityError(
+                    f"File hash mismatch: {backup_path} "
+                    f"(expected {expected_hash}, got {actual_hash})"
+                )
+
+    @staticmethod
+    def _calculate_file_hash(file_path: Path) -> str:
+        """Calculate SHA256 hash of a file.
+
+        Args:
+            file_path: Path to file
+
+        Returns:
+            Hex-encoded SHA256 hash
+        """
+        sha256_hash = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
+
+    @staticmethod
+    def _calculate_manifest_checksum(file_entries: list[dict[str, Any]]) -> str:
+        """Calculate checksum of all file hashes.
+
+        Args:
+            file_entries: List of file entries with hashes
+
+        Returns:
+            Hex-encoded SHA256 checksum
+        """
+        sha256_hash = hashlib.sha256()
+        for entry in sorted(file_entries, key=lambda x: x["original_path"]):
+            sha256_hash.update(entry["hash"].encode())
+        return sha256_hash.hexdigest()
 
     def generate_preview(self, plan: MigrationPlan) -> str:
         """Generate human-readable preview of migration plan.
