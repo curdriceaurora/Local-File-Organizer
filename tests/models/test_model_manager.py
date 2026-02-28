@@ -10,6 +10,7 @@ import pytest
 
 from file_organizer.models.base import ModelType
 from file_organizer.models.model_manager import ModelManager
+from file_organizer.models.registry import AVAILABLE_MODELS, ModelInfo
 
 
 @pytest.fixture
@@ -150,3 +151,72 @@ class TestModelManager:
     def test_is_installed_not_found(self):
         """Test installed check for missing models."""
         assert ModelManager._is_installed("llama3", {"qwen2.5:3b"}) is False
+
+
+# ---------------------------------------------------------------------------
+# Registry
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestModelRegistry:
+    """Tests for the static AVAILABLE_MODELS catalogue."""
+
+    def test_registry_not_empty(self) -> None:
+        assert len(AVAILABLE_MODELS) > 0
+
+    def test_all_entries_are_model_info(self) -> None:
+        for m in AVAILABLE_MODELS:
+            assert isinstance(m, ModelInfo)
+
+    def test_default_text_model_present(self) -> None:
+        names = [m.name for m in AVAILABLE_MODELS]
+        assert "qwen2.5:3b-instruct-q4_K_M" in names
+
+    def test_default_vision_model_present(self) -> None:
+        names = [m.name for m in AVAILABLE_MODELS]
+        assert "qwen2.5vl:7b-q4_K_M" in names
+
+    def test_model_types_are_valid(self) -> None:
+        valid_types = {"text", "vision", "audio"}
+        for m in AVAILABLE_MODELS:
+            assert m.model_type in valid_types, f"{m.name} has invalid type {m.model_type}"
+
+
+# ---------------------------------------------------------------------------
+# ModelManager — display
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestModelManagerDisplay:
+    """Tests for ModelManager.display_models()."""
+
+    def test_display_does_not_raise(self) -> None:
+        mock_console = MagicMock()
+        mgr = ModelManager(console=mock_console)
+        with patch.object(mgr, "check_installed", return_value=set()):
+            mgr.display_models()
+        mock_console.print.assert_called()
+
+    def test_display_with_filter(self) -> None:
+        mock_console = MagicMock()
+        mgr = ModelManager(console=mock_console)
+        with patch.object(mgr, "check_installed", return_value=set()):
+            mgr.display_models(type_filter="audio")
+        mock_console.print.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# ModelManager — cache_info
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestCacheInfo:
+    """Tests for cache_info()."""
+
+    def test_cache_info_returns_dict(self) -> None:
+        mgr = ModelManager()
+        result = mgr.cache_info()
+        assert isinstance(result, dict)
