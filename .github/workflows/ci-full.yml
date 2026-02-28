@@ -10,30 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-matrix:
-    name: Test Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12"]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-      - name: Install dependencies
-        run: pip install -e ".[dev]"
-      - name: Download NLTK data
-        # punkt_tab required by NLTK 3.9+ — word_tokenize() loads it internally
-        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
-      - name: Run tests
-        # Coverage is collected in ci.yml only; this matrix validates correctness
-        # across Python versions without the coverage overhead.
-        run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts="
-      - name: Check docstring coverage
-        if: matrix.python-version == '3.12'
-        run: interrogate -v src/ --fail-under 90
+  # Linux Python 3.11/3.12 matrix is owned by ci.yml (runs on push + PR).
+  # ci-full.yml covers the extended platform matrix: macOS and Windows.
 
   test-macos:
     name: Test macOS (Python 3.12)

@@ -172,12 +172,21 @@ The `.actrc` file in the project root pins the Docker image and architecture aut
 
 ## What the CI Runs
 
-Our CI has two workflows triggered on PRs to `main`:
+### Workflow ownership
 
-| Workflow | File | What it runs |
-|----------|------|-------------|
-| **CI** | `.github/workflows/ci.yml` | Lint + Python 3.11/3.12 tests + coverage |
-| **CI Full Matrix** | `.github/workflows/ci-full.yml` | Python 3.11/3.12 + macOS + Windows |
+| Workflow | File | Triggers | What it runs |
+|----------|------|----------|-------------|
+| **CI** | `.github/workflows/ci.yml` | push to `main`, PRs | Lint + test (Linux 3.11/3.12) + docstring coverage gate |
+| **CI Full Matrix** | `.github/workflows/ci-full.yml` | daily (06:00 UTC), manual | Extended platform: macOS + Windows (Python 3.12) |
+| **Security** | `.github/workflows/security.yml` | weekly (Monday), PRs | pip-audit + bandit + CodeQL |
+
+**Rule**: each check lives in exactly one workflow.
+
+- `ci.yml` is the *fast-path gate*: runs on every push and PR, covers the primary
+  Linux matrix. Coverage, lint, and docstring thresholds live here.
+- `ci-full.yml` is the *breadth gate*: runs daily to catch platform-specific regressions
+  on macOS and Windows. It does **not** duplicate the Linux matrix.
+- `security.yml` owns all security tooling.
 
 `scripts/test-local-matrix.sh` mirrors the Python matrix locally on the host OS.
 `act` mirrors the full workflow inside Docker for ubuntu-latest parity.
