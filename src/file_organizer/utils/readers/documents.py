@@ -1,0 +1,202 @@
+"""Readers for document formats: plain text, DOCX, PDF, spreadsheets, presentations."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+try:
+    import fitz  # PyMuPDF
+
+    PYMUPDF_AVAILABLE = True
+except ImportError:
+    PYMUPDF_AVAILABLE = False
+
+try:
+    import docx
+
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
+
+try:
+    import pandas as pd
+
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+
+try:
+    from pptx import Presentation
+
+    PPTX_AVAILABLE = True
+except ImportError:
+    PPTX_AVAILABLE = False
+
+from loguru import logger
+
+from file_organizer.utils.readers._base import FileReadError, _check_file_size
+
+
+def read_text_file(file_path: str | Path, max_chars: int = 5000) -> str:
+    """Read text content from a plain text file.
+
+    Args:
+        file_path: Path to text file
+        max_chars: Maximum characters to read
+
+    Returns:
+        Text content
+
+    Raises:
+        FileReadError: If file cannot be read
+    """
+    file_path = Path(file_path)
+    try:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
+            text = f.read(max_chars)
+        logger.debug(f"Read {len(text)} characters from {file_path.name}")
+        return text
+    except Exception as e:
+        raise FileReadError(f"Failed to read text file {file_path}: {e}") from e
+
+
+def read_docx_file(file_path: str | Path) -> str:
+    """Read text content from a .docx file.
+
+    Args:
+        file_path: Path to DOCX file
+
+    Returns:
+        Extracted text content
+
+    Raises:
+        FileReadError: If file cannot be read
+        ImportError: If python-docx is not installed
+    """
+    if not DOCX_AVAILABLE:
+        raise ImportError("python-docx is not installed. Install with: pip install python-docx")
+
+    _check_file_size(Path(file_path))
+    file_path = Path(file_path)
+    try:
+        doc = docx.Document(file_path)
+        paragraphs = [para.text for para in doc.paragraphs if para.text.strip()]
+        text = "\n".join(paragraphs)
+        logger.debug(f"Extracted {len(text)} characters from {file_path.name}")
+        return text
+    except Exception as e:
+        raise FileReadError(f"Failed to read DOCX file {file_path}: {e}") from e
+
+
+def read_pdf_file(file_path: str | Path, max_pages: int = 5) -> str:
+    """Read text content from a PDF file.
+
+    Args:
+        file_path: Path to PDF file
+        max_pages: Maximum pages to read
+
+    Returns:
+        Extracted text content
+
+    Raises:
+        FileReadError: If file cannot be read
+        ImportError: If PyMuPDF is not installed
+    """
+    if not PYMUPDF_AVAILABLE:
+        raise ImportError("PyMuPDF is not installed. Install with: pip install PyMuPDF")
+
+    file_path = Path(file_path)
+    try:
+        doc = fitz.open(file_path)
+        num_pages = min(max_pages, len(doc))
+
+        pages_text = []
+        for page_num in range(num_pages):
+            page = doc.load_page(page_num)
+            pages_text.append(page.get_text())
+
+        text = "\n".join(pages_text)
+        doc.close()
+
+        logger.debug(
+            f"Extracted {len(text)} characters from {num_pages} pages of {file_path.name}"
+        )
+        return text
+    except Exception as e:
+        raise FileReadError(f"Failed to read PDF file {file_path}: {e}") from e
+
+
+def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
+    """Read content from Excel or CSV file.
+
+    Args:
+        file_path: Path to spreadsheet file
+        max_rows: Maximum rows to read
+
+    Returns:
+        String representation of data
+
+    Raises:
+        FileReadError: If file cannot be read
+        ImportError: If pandas is not installed
+    """
+    if not PANDAS_AVAILABLE:
+        raise ImportError("pandas is not installed. Install with: pip install pandas openpyxl")
+
+    file_path = Path(file_path)
+    try:
+        # Determine file type and read
+        if file_path.suffix.lower() == ".csv":
+            df = pd.read_csv(file_path, nrows=max_rows)
+        elif file_path.suffix.lower() in (".xlsx", ".xls"):
+            df = pd.read_excel(file_path, nrows=max_rows)
+        else:
+            raise ValueError(f"Unsupported spreadsheet format: {file_path.suffix}")
+
+        # Convert to string, limiting size
+        text = df.to_string(max_rows=max_rows)
+
+        logger.debug(f"Extracted {len(text)} characters from {len(df)} rows of {file_path.name}")
+        return text
+    except Exception as e:
+        raise FileReadError(f"Failed to read spreadsheet file {file_path}: {e}") from e
+
+
+def read_presentation_file(file_path: str | Path) -> str:
+    """Read text content from PowerPoint file.
+
+    Args:
+        file_path: Path to PPT/PPTX file
+
+    Returns:
+        Extracted text from all slides
+
+    Raises:
+        FileReadError: If file cannot be read
+        ImportError: If python-pptx is not installed
+    """
+    if not PPTX_AVAILABLE:
+        raise ImportError("python-pptx is not installed. Install with: pip install python-pptx")
+
+    _check_file_size(Path(file_path))
+    file_path = Path(file_path)
+    try:
+        prs = Presentation(file_path)
+
+        slides_text = []
+        for slide_num, slide in enumerate(prs.slides, 1):
+            slide_content = []
+            for shape in slide.shapes:
+                if hasattr(shape, "text") and shape.text.strip():
+                    slide_content.append(shape.text)
+
+            if slide_content:
+                slides_text.append(f"Slide {slide_num}: " + " | ".join(slide_content))
+
+        text = "\n".join(slides_text)
+        logger.debug(
+            f"Extracted {len(text)} characters from {len(slides_text)} slides of {file_path.name}"
+        )
+        return text
+    except Exception as e:
+        raise FileReadError(f"Failed to read presentation file {file_path}: {e}") from e
