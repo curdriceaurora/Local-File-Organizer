@@ -178,7 +178,7 @@ class TestModelRegistry:
         assert "qwen2.5vl:7b-q4_K_M" in names
 
     def test_model_types_are_valid(self) -> None:
-        valid_types = {"text", "vision", "audio"}
+        valid_types = {t.value for t in ModelType}
         for m in AVAILABLE_MODELS:
             assert m.model_type in valid_types, f"{m.name} has invalid type {m.model_type}"
 

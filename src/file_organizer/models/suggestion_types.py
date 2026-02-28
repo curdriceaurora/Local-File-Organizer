@@ -6,7 +6,7 @@ Defines the data structures for smart suggestions.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -44,7 +44,7 @@ class Suggestion:
     confidence: float = 0.0  # 0-100
     reasoning: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
     # Additional attributes for specific suggestion types
     tags: list[str] = field(default_factory=list)
@@ -91,7 +91,7 @@ class SuggestionBatch:
     suggestions: list[Suggestion]
     category: str
     description: str
-    created_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
     @property
     def avg_confidence(self) -> float:

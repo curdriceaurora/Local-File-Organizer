@@ -48,7 +48,7 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev]"
       - name: Run mypy on gated modules
-        run: mypy src/file_organizer/models/ --ignore-missing-imports
+        run: mypy src/file_organizer/models/
 
   link-integrity:
     runs-on: ubuntu-latest

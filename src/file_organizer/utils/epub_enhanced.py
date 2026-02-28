@@ -38,6 +38,11 @@ try:
 except ImportError:
     BS4_AVAILABLE = False
 
+try:
+    from bs4 import XMLParsedAsHTMLWarning
+except ImportError:
+    XMLParsedAsHTMLWarning = None  # type: ignore[assignment,misc]
+
 from loguru import logger
 
 
@@ -339,9 +344,8 @@ class EnhancedEPUBReader:
                 # Parse HTML content (epub XHTML triggers XMLParsedAsHTMLWarning)
                 content_bytes = item.get_content()
                 with warnings.catch_warnings():
-                    from bs4 import XMLParsedAsHTMLWarning
-
-                    warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+                    if XMLParsedAsHTMLWarning is not None:
+                        warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
                     soup = BeautifulSoup(content_bytes, "lxml")
 
                 # Extract title from heading tags or filename

@@ -5,12 +5,12 @@ so requests hit the actual API code without needing a running server.
 """
 
 from __future__ import annotations
+import pytest
 
 from pathlib import Path
 from uuid import uuid4
 
 import httpx
-import pytest
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app

@@ -8,9 +8,9 @@ Created for GitHub issue #444 (semantic validation for test logic).
 """
 
 from __future__ import annotations
+import pytest
 
 import click
-import pytest
 
 from tests.docs.test_cli_docs_accuracy import (
     _collect_commands,

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -78,7 +78,7 @@ class FakePatternAnalysis:
     content_clusters: list[FakeContentCluster] = field(default_factory=list)
     file_type_distribution: dict[str, int] = field(default_factory=dict)
     depth_distribution: dict[int, int] = field(default_factory=dict)
-    analyzed_at: datetime = field(default_factory=datetime.now)
+    analyzed_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     total_files: int = 20
     metadata: dict = field(default_factory=dict)
 

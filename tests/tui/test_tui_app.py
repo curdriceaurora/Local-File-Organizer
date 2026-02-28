@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 from textual.app import App
 from textual.binding import Binding
 from textual.widgets import Static
-
-from unittest.mock import patch
 
 from file_organizer.tui.analytics_view import AnalyticsView
 from file_organizer.tui.app import (
@@ -237,12 +237,13 @@ async def test_switch_to_analytics_view() -> None:
 @pytest.mark.asyncio
 async def test_switch_to_methodology_view() -> None:
     """Switching to methodology view should mount MethodologyView."""
-    app = FileOrganizerApp()
-    async with app.run_test() as pilot:
-        await app.action_switch_view("methodology")
-        await pilot.pause()
-        assert app._current_view == "methodology"
-        assert app.query_one("#view", MethodologyView) is not None
+    with patch.object(MethodologyView, "_update_preview"):
+        app = FileOrganizerApp()
+        async with app.run_test() as pilot:
+            await app.action_switch_view("methodology")
+            await pilot.pause()
+            assert app._current_view == "methodology"
+            assert app.query_one("#view", MethodologyView) is not None
 
 
 @pytest.mark.asyncio

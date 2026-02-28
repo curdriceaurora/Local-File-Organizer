@@ -198,6 +198,7 @@ select = [
     "I",   # isort
     "B",   # flake8-bugbear
     "C4",  # flake8-comprehensions
+    "C901", # mccabe complexity
     "UP",  # pyupgrade
     "D",   # pydocstyle (google convention)
     "RUF100",  # stale noqa comments

@@ -126,6 +126,20 @@ class TestReadFileDispatcherSizeGate:
                 read_file(str(fake_txt))
 
 
+    def test_read_file_rejects_oversized_tar(self, tmp_path: Path) -> None:
+        """read_file() must reject oversized .tar files via the dispatcher gate.
+
+        read_tar_file itself does not call _check_file_size; the dispatcher
+        handles the size check before routing to the archive reader.
+        """
+        fake_tar = tmp_path / "huge.tar"
+        fake_tar.write_bytes(b"\x00" * 16)
+
+        huge_stat = _make_stat(MAX_FILE_SIZE_BYTES + 1)
+        with patch.object(Path, "stat", return_value=huge_stat):
+            with pytest.raises(FileTooLargeError):
+                read_file(str(fake_tar))
+
     def test_read_file_passes_normal_size(self, tmp_path: Path) -> None:
         """read_file() must call through to the underlying reader when the file
         is within the size limit."""
