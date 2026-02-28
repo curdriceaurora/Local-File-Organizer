@@ -40,6 +40,13 @@ sys.modules.setdefault("imagededup.methods", _imagededup_methods_mod)
 # Now import the module under test – the mocked modules will satisfy the
 # ``from imagededup.methods import …`` statement.
 from file_organizer.services.deduplication.image_dedup import ImageDeduplicator  # noqa: E402
+import file_organizer.services.deduplication.image_dedup as _image_dedup_module  # noqa: E402
+
+# If the module was already cached in sys.modules (imported by another test
+# or by the deduplication __init__ before our sys.modules mock was in place),
+# _IMAGEDEDUP_AVAILABLE will be False because imagededup is not installed in CI.
+# Force it to True since we have fully mocked the dependency above.
+_image_dedup_module._IMAGEDEDUP_AVAILABLE = True
 
 
 # ---------------------------------------------------------------------------

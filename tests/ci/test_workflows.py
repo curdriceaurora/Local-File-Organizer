@@ -226,43 +226,35 @@ class TestCIFullWorkflow:
             "CI Full should support workflow_dispatch for manual triggers"
         )
 
-    def test_ci_full_has_test_matrix_job(self, workflow: dict[str, Any]) -> None:
-        """Verify CI Full workflow includes a test-matrix job."""
+    def test_ci_full_no_linux_matrix_duplication(self, workflow: dict[str, Any]) -> None:
+        """Verify ci-full.yml does NOT duplicate the Linux matrix from ci.yml.
+
+        Issue #474: ci.yml owns Linux 3.11/3.12 (push + PR). ci-full.yml covers
+        macOS and Windows only to avoid duplicate daily compute.
+        """
         jobs = workflow.get("jobs", {})
-        assert "test-matrix" in jobs, "CI Full workflow should have a 'test-matrix' job"
-
-    def test_ci_full_test_matrix_has_python_versions(self, workflow: dict[str, Any]) -> None:
-        """Verify test-matrix job tests Python 3.11 and 3.12."""
-        test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
-        strategy = test_matrix_job.get("strategy", {})
-        matrix = strategy.get("matrix", {})
-        python_versions = matrix.get("python-version", [])
-        assert len(python_versions) == 2, (
-            "Test-matrix job should test against 2 Python versions (3.11, 3.12)"
+        assert "test-matrix" not in jobs, (
+            "CI Full must NOT have a 'test-matrix' job — Linux matrix belongs to ci.yml. "
+            "See Issue #474."
         )
 
-    def test_ci_full_test_matrix_includes_versions(self, workflow: dict[str, Any]) -> None:
-        """Verify test matrix includes Python versions 3.11 and 3.12."""
-        test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
-        strategy = test_matrix_job.get("strategy", {})
-        matrix = strategy.get("matrix", {})
-        python_versions = matrix.get("python-version", [])
-        assert "3.11" in python_versions, "Test matrix should include Python 3.11"
-        assert "3.12" in python_versions, (
-            "Test matrix should include Python 3.12 for comprehensive coverage"
-        )
+    def test_ci_full_platform_jobs_do_not_collect_coverage(self, workflow: dict[str, Any]) -> None:
+        """Ensure macOS and Windows platform jobs do not collect coverage.
 
-    def test_ci_full_test_matrix_does_not_collect_coverage(self, workflow: dict[str, Any]) -> None:
-        """Ensure test-matrix job does not collect coverage."""
-        test_matrix_job = workflow.get("jobs", {}).get("test-matrix", {})
-        steps = test_matrix_job.get("steps", [])
-        for step in steps:
-            if not isinstance(step, dict):
-                continue
-            run_cmd = step.get("run", "")
-            assert "--cov" not in run_cmd, (
-                "test-matrix job should not collect coverage (no '--cov' in commands)"
-            )
+        Coverage reporting is owned by ci.yml (Linux 3.12 job) to keep
+        a single authoritative source.
+        """
+        jobs = workflow.get("jobs", {})
+        for job_name in ("test-macos", "test-windows"):
+            job = jobs.get(job_name, {})
+            steps = job.get("steps", [])
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                run_cmd = step.get("run", "")
+                assert "--cov" not in run_cmd, (
+                    f"{job_name} must not collect coverage — coverage owned by ci.yml"
+                )
 
     def test_ci_full_no_frontend_placeholder_jobs(self, workflow: dict[str, Any]) -> None:
         """Verify frontend placeholder jobs were removed (#369).
