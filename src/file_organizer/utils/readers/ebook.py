@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 try:
@@ -52,8 +53,6 @@ def read_ebook_file(file_path: str | Path, max_chars: int = 10000) -> str:
             if item.get_type() == ebooklib.ITEM_DOCUMENT:
                 content = item.get_content().decode("utf-8", errors="ignore")
                 # Basic HTML stripping (simple approach)
-                import re
-
                 content = re.sub(r"<[^>]+>", " ", content)
                 content = re.sub(r"\s+", " ", content).strip()
 

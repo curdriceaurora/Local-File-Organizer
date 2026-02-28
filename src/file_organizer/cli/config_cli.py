@@ -65,6 +65,27 @@ def config_edit(
     """Edit a configuration profile."""
     from file_organizer.config import ConfigManager
 
+    _VALID_DEVICES = {"auto", "cpu", "cuda", "mps", "metal"}
+    _VALID_METHODOLOGIES = {"none", "para", "jd"}
+
+    # Validate constrained inputs before touching the config file.
+    if temperature is not None and not (0.0 <= temperature <= 1.0):
+        console.print(
+            f"[red]Error: temperature must be between 0.0 and 1.0 (got {temperature}).[/red]"
+        )
+        raise typer.Exit(code=1)
+    if device is not None and device not in _VALID_DEVICES:
+        console.print(
+            f"[red]Error: device must be one of {sorted(_VALID_DEVICES)} (got '{device}').[/red]"
+        )
+        raise typer.Exit(code=1)
+    if methodology is not None and methodology not in _VALID_METHODOLOGIES:
+        console.print(
+            f"[red]Error: methodology must be one of "
+            f"{sorted(_VALID_METHODOLOGIES)} (got '{methodology}').[/red]"
+        )
+        raise typer.Exit(code=1)
+
     mgr = ConfigManager()
     cfg = mgr.load(profile=profile)
 

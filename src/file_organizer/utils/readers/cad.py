@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 try:
     import ezdxf
@@ -14,6 +15,86 @@ except ImportError:
 from loguru import logger
 
 from file_organizer.utils.readers._base import FileReadError
+
+
+def _process_dxf_doc(doc: Any, file_path: Path, max_layers: int = 20) -> str:
+    """Extract metadata from an already-loaded ezdxf document.
+
+    Shared by :func:`read_dxf_file` and :func:`read_dwg_file` so the file is
+    opened only once even when a DWG read falls back to the DXF path.
+
+    Args:
+        doc: An ezdxf document object returned by ``ezdxf.readfile()``.
+        file_path: Original file path (used only for the log message).
+        max_layers: Maximum number of layers to list.
+
+    Returns:
+        Extracted metadata and layer information as a string.
+    """
+    metadata_parts: list[str] = []
+
+    # Header variables
+    if hasattr(doc, "header"):
+        metadata_parts.append("=== DXF Document Metadata ===")
+
+        try:
+            title = doc.header.get("$TITLE", "Untitled")
+            if title:
+                metadata_parts.append(f"Title: {title}")
+        except Exception:
+            pass
+
+        try:
+            author = doc.header.get("$AUTHOR", "")
+            if not author:
+                author = doc.header.get("$LASTSAVEDBY", "Unknown")
+            metadata_parts.append(f"Author: {author}")
+        except Exception:
+            pass
+
+    # DXF version
+    metadata_parts.append(f"DXF Version: {doc.dxfversion}")
+
+    # Layer information
+    if doc.layers:
+        layer_count = len(doc.layers)
+        metadata_parts.append(f"\n=== Layers ({layer_count} total) ===")
+
+        for idx, layer in enumerate(doc.layers):
+            if idx >= max_layers:
+                metadata_parts.append(f"... and {layer_count - max_layers} more layers")
+                break
+
+            layer_info = f"Layer: {layer.dxf.name}"
+            if hasattr(layer.dxf, "color"):
+                layer_info += f" (Color: {layer.dxf.color})"
+            metadata_parts.append(layer_info)
+
+    # Entity statistics
+    modelspace = doc.modelspace()
+    entity_types: dict[str, int] = {}
+
+    for entity in modelspace:
+        entity_type = entity.dxftype()
+        entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
+
+    if entity_types:
+        metadata_parts.append("\n=== Entities ===")
+        metadata_parts.append(f"Total entities: {sum(entity_types.values())}")
+
+        for entity_type, count in sorted(entity_types.items()):
+            metadata_parts.append(f"  {entity_type}: {count}")
+
+    # Blocks
+    if doc.blocks:
+        block_count = len([b for b in doc.blocks if not b.name.startswith("*")])
+        if block_count > 0:
+            metadata_parts.append("\n=== Blocks ===")
+            metadata_parts.append(f"Block definitions: {block_count}")
+
+    text = "\n".join(metadata_parts)
+    logger.debug(f"Extracted {len(text)} characters from DXF file {file_path.name}")
+    return text
 
 
 def read_dxf_file(file_path: str | Path, max_layers: int = 20) -> str:
@@ -36,75 +117,7 @@ def read_dxf_file(file_path: str | Path, max_layers: int = 20) -> str:
     file_path = Path(file_path)
     try:
         doc = ezdxf.readfile(file_path)
-
-        # Extract document information
-        metadata_parts = []
-
-        # Header variables
-        if hasattr(doc, "header"):
-            metadata_parts.append("=== DXF Document Metadata ===")
-
-            # Try to get common header variables safely
-            try:
-                title = doc.header.get("$TITLE", "Untitled")
-                if title:
-                    metadata_parts.append(f"Title: {title}")
-            except Exception:
-                pass
-
-            try:
-                author = doc.header.get("$AUTHOR", "")
-                if not author:
-                    author = doc.header.get("$LASTSAVEDBY", "Unknown")
-                metadata_parts.append(f"Author: {author}")
-            except Exception:
-                pass
-
-        # DXF version
-        metadata_parts.append(f"DXF Version: {doc.dxfversion}")
-
-        # Layer information
-        if doc.layers:
-            layer_count = len(doc.layers)
-            metadata_parts.append(f"\n=== Layers ({layer_count} total) ===")
-
-            for idx, layer in enumerate(doc.layers):
-                if idx >= max_layers:
-                    metadata_parts.append(f"... and {layer_count - max_layers} more layers")
-                    break
-
-                layer_info = f"Layer: {layer.dxf.name}"
-                if hasattr(layer.dxf, "color"):
-                    layer_info += f" (Color: {layer.dxf.color})"
-                metadata_parts.append(layer_info)
-
-        # Entity statistics
-        modelspace = doc.modelspace()
-        entity_types: dict[str, int] = {}
-
-        for entity in modelspace:
-            entity_type = entity.dxftype()
-            entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
-
-        if entity_types:
-            metadata_parts.append("\n=== Entities ===")
-            metadata_parts.append(f"Total entities: {sum(entity_types.values())}")
-
-            # List entity types
-            for entity_type, count in sorted(entity_types.items()):
-                metadata_parts.append(f"  {entity_type}: {count}")
-
-        # Blocks
-        if doc.blocks:
-            block_count = len([b for b in doc.blocks if not b.name.startswith("*")])
-            if block_count > 0:
-                metadata_parts.append("\n=== Blocks ===")
-                metadata_parts.append(f"Block definitions: {block_count}")
-
-        text = "\n".join(metadata_parts)
-        logger.debug(f"Extracted {len(text)} characters from DXF file {file_path.name}")
-        return text
-
+        return _process_dxf_doc(doc, file_path, max_layers)
     except Exception as e:
         raise FileReadError(f"Failed to read DXF file {file_path}: {e}") from e
 
@@ -131,9 +144,10 @@ def read_dwg_file(file_path: str | Path) -> str:
 
     file_path = Path(file_path)
     try:
-        # Try to read with ezdxf (limited support)
-        ezdxf.readfile(file_path)
-        return read_dxf_file(file_path)  # Process as DXF
+        # Try to read with ezdxf (limited support).
+        # Capture the returned document and pass it through to avoid re-opening the file.
+        doc = ezdxf.readfile(file_path)
+        return _process_dxf_doc(doc, file_path)
 
     except Exception as e:
         # If ezdxf can't read it, provide basic file info
@@ -333,6 +347,6 @@ def read_cad_file(file_path: str | Path, **kwargs: object) -> str:
 
     reader = cad_readers.get(ext)
     if reader:
-        return reader(file_path, **kwargs)  # type: ignore[arg-type]
+        return reader(file_path, **kwargs)  # type: ignore[no-any-return,operator]
     else:
-        raise ValueError(f"Unsupported CAD file format: {ext}")
+        raise FileReadError(f"Unsupported CAD file format: {ext}")

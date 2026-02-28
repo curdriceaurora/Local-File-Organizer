@@ -57,6 +57,14 @@ def search(
         },
     }
 
+    # Validate limit
+    if limit <= 0:
+        if json_out:
+            typer.echo("[]")
+        else:
+            console.print("[dim]No files found matching the query.[/dim]")
+        raise typer.Exit(code=0)
+
     # Validate directory exists
     search_dir = directory.resolve()
     if not search_dir.is_dir():
@@ -134,7 +142,7 @@ def search(
                 "size": stat.st_size,
                 "modified": datetime.fromtimestamp(
                     stat.st_mtime, tz=UTC
-                ).isoformat(),
+                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
             })
         typer.echo(json_mod.dumps(records, indent=2))
     else:
@@ -166,16 +174,17 @@ def analyze(
         truncate_content,
     )
 
-    # Check file exists
-    if not file_path.exists():
+    # Check file exists and is a regular file
+    if not file_path.is_file():
         console.print(f"[red]Error: File '{file_path}' not found.[/red]")
         raise typer.Exit(code=1)
 
     # Read file content
     try:
         content = file_path.read_text(errors="ignore")
-    except Exception:
-        content = ""
+    except OSError as exc:
+        console.print(f"[red]Error: Could not read '{file_path}': {exc}[/red]")
+        raise typer.Exit(code=1) from exc
 
     content_length = len(content)
     content = truncate_content(content)

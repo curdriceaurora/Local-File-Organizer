@@ -19,6 +19,10 @@ MAX_FILE_SIZE_BYTES: int = 500 * 1024 * 1024  # 500 MB
 def _check_file_size(file_path: Path, max_bytes: int = MAX_FILE_SIZE_BYTES) -> None:
     """Raise FileTooLargeError if file exceeds max_bytes.
 
+    .. note::
+        This is an **internal** helper for the ``readers`` sub-package.
+        It is not part of the public API and may change without notice.
+
     Args:
         file_path: Path to the file to check.
         max_bytes: Maximum allowed file size in bytes.

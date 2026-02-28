@@ -107,8 +107,8 @@ def read_file(file_path: str | Path, **kwargs: object) -> str | None:
         FileReadError: If file cannot be read
         FileTooLargeError: If file exceeds size limit
     """
-    _check_file_size(Path(file_path))
     file_path = Path(file_path)
+    _check_file_size(file_path)
 
     # Check for compound extensions (e.g., .tar.gz)
     name_lower = file_path.name.lower()
@@ -150,7 +150,7 @@ def read_file(file_path: str | Path, **kwargs: object) -> str | None:
         for extensions, reader in readers.items():
             if check_ext in extensions:
                 try:
-                    return reader(file_path, **kwargs)  # type: ignore[arg-type]
+                    return reader(file_path, **kwargs)  # type: ignore[no-any-return,operator]
                 except Exception as e:
                     logger.error(f"Error reading {file_path.name}: {e}")
                     raise

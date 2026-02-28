@@ -41,18 +41,20 @@ def read_zip_file(file_path: str | Path, max_files: int = 50) -> str:
     file_path = Path(file_path)
     try:
         with zipfile.ZipFile(file_path, "r") as zf:
-            info_list = zf.infolist()[:max_files]
+            # Cache infolist() so the archive is iterated only once
+            entries = zf.infolist()
+            info_list = entries[:max_files]
 
             # Calculate statistics
-            total_files = len(zf.infolist())
-            total_compressed = sum(info.compress_size for info in zf.infolist())
-            total_uncompressed = sum(info.file_size for info in zf.infolist())
+            total_files = len(entries)
+            total_compressed = sum(info.compress_size for info in entries)
+            total_uncompressed = sum(info.file_size for info in entries)
             compression_ratio = (
                 (1 - total_compressed / total_uncompressed) * 100 if total_uncompressed > 0 else 0
             )
 
             # Check for encryption
-            encrypted = any(info.flag_bits & 0x1 for info in zf.infolist())
+            encrypted = any(info.flag_bits & 0x1 for info in entries)
 
             # Build metadata string
             lines = [
@@ -164,8 +166,8 @@ def read_tar_file(file_path: str | Path, max_files: int = 50) -> str:
     Raises:
         FileReadError: If file cannot be read
     """
-    _check_file_size(Path(file_path))
     file_path = Path(file_path)
+    _check_file_size(file_path)
     try:
         with tarfile.open(file_path, "r:*") as tf:
             members = tf.getmembers()

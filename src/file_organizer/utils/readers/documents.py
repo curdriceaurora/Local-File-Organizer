@@ -51,6 +51,7 @@ def read_text_file(file_path: str | Path, max_chars: int = 5000) -> str:
         FileReadError: If file cannot be read
     """
     file_path = Path(file_path)
+    _check_file_size(file_path)
     try:
         with open(file_path, encoding="utf-8", errors="ignore") as f:
             text = f.read(max_chars)
@@ -79,7 +80,7 @@ def read_docx_file(file_path: str | Path) -> str:
     _check_file_size(Path(file_path))
     file_path = Path(file_path)
     try:
-        doc = docx.Document(file_path)
+        doc = docx.Document(str(file_path))
         paragraphs = [para.text for para in doc.paragraphs if para.text.strip()]
         text = "\n".join(paragraphs)
         logger.debug(f"Extracted {len(text)} characters from {file_path.name}")
@@ -106,6 +107,7 @@ def read_pdf_file(file_path: str | Path, max_pages: int = 5) -> str:
         raise ImportError("PyMuPDF is not installed. Install with: pip install PyMuPDF")
 
     file_path = Path(file_path)
+    _check_file_size(file_path)
     try:
         doc = fitz.open(file_path)
         num_pages = min(max_pages, len(doc))
@@ -144,6 +146,7 @@ def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
         raise ImportError("pandas is not installed. Install with: pip install pandas openpyxl")
 
     file_path = Path(file_path)
+    _check_file_size(file_path)
     try:
         # Determine file type and read
         if file_path.suffix.lower() == ".csv":
@@ -154,7 +157,7 @@ def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
             raise ValueError(f"Unsupported spreadsheet format: {file_path.suffix}")
 
         # Convert to string, limiting size
-        text = df.to_string(max_rows=max_rows)
+        text = str(df.to_string(max_rows=max_rows))
 
         logger.debug(f"Extracted {len(text)} characters from {len(df)} rows of {file_path.name}")
         return text
@@ -181,7 +184,7 @@ def read_presentation_file(file_path: str | Path) -> str:
     _check_file_size(Path(file_path))
     file_path = Path(file_path)
     try:
-        prs = Presentation(file_path)
+        prs = Presentation(str(file_path))
 
         slides_text = []
         for slide_num, slide in enumerate(prs.slides, 1):

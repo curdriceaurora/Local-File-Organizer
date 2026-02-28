@@ -10,7 +10,7 @@ phase_3_task_471_completed: 2026-02-27T19:13:48Z
 phase_3_task_472_476_completed: 2026-02-28T03:47:24Z
 phase_3_completed: 2026-02-28T03:47:24Z
 phase_4_started: 2026-02-28T03:54:23Z
-updated: 2026-02-28T03:54:23Z
+updated: 2026-02-28T17:34:40Z
 ---
 
 # Execution Status
@@ -23,9 +23,9 @@ updated: 2026-02-28T03:54:23Z
   - **#471**: ✅ MERGED (PR #502, 2026-02-27T19:13:48Z)
   - **#472**: ✅ MERGED (PR #510, 2026-02-28T03:47:24Z)
   - **#476**: ✅ MERGED (PR #510, 2026-02-28T03:47:24Z)
-- **Phase 4**: 🚀 In Progress (0 of 5 tasks complete)
-  - **#474**: 🚀 Start now — CI workflow dedup (4-6h, no deps)
-  - **#475**: 🚀 Start now — Decouple optional deps (8-12h, no deps)
+- **Phase 4**: 🚀 In Progress (2 of 5 tasks complete)
+  - **#474**: ✅ MERGED (PR #511, 2026-02-28) — CI workflow dedup
+  - **#475**: ✅ MERGED (PR #511, 2026-02-28) — Decouple optional deps
   - **#473**: ⏳ Pending — Refactor oversized modules (40-60h, no deps)
   - **#478**: ⏳ Pending — Consolidate test suites (20-32h, no deps)
   - **#480**: ⏳ Pending — Tighten type strictness (24-40h, after #473)
@@ -74,8 +74,8 @@ updated: 2026-02-28T03:54:23Z
 ### Critical Path
 
 ```text
-#474 (CI dedup) [4-6h]    🚀 START NOW (standalone)
-#475 (Opt deps) [8-12h]   🚀 START NOW (standalone)
+#474 (CI dedup) [4-6h]    ✅ MERGED (PR #511)
+#475 (Opt deps) [8-12h]   ✅ MERGED (PR #511)
 #473 (Refactor) [40-60h]  ⏳ Pending (standalone, but large)
     ↓ unblocks
 #480 (Types)    [24-40h]  ⏳ Blocked by #473
@@ -131,10 +131,10 @@ Parallel track:
 
 ## Execution Plan
 
-### Start Now (Parallel)
+### Completed
 
-1. 🚀 **Issue #474** — CI workflow dedup (4-6h, quickest win)
-2. 🚀 **Issue #475** — Decouple optional deps (8-12h, can run parallel)
+1. ✅ **Issue #474** — CI workflow dedup (merged PR #511)
+2. ✅ **Issue #475** — Decouple optional deps (merged PR #511)
 
 ### Next Wave
 
