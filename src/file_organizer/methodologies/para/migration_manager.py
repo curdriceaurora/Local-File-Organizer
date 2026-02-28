@@ -343,29 +343,35 @@ class PARAMigrationManager:
                     logger.warning(f"Source file missing during backup: {source}")
                     continue
 
-                # Create relative path structure in backup
-                rel_path = source.relative_to(source.parent.parent)
-                backup_file = backup_dir / rel_path
-                backup_file.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    # Create relative path structure in backup preserving directory hierarchy
+                    # Use a unique subdirectory to avoid conflicts when organizing files
+                    rel_path = source.relative_to(plan.files[0].source_path.parent if plan.files else source.parent)
+                    backup_file = backup_dir / rel_path
+                    backup_file.parent.mkdir(parents=True, exist_ok=True)
 
-                # Copy file with metadata
-                shutil.copy2(str(source), str(backup_file))
-                file_size = backup_file.stat().st_size
+                    # Copy file with metadata
+                    shutil.copy2(str(source), str(backup_file))
+                    file_size = backup_file.stat().st_size
 
-                # Calculate file hash for integrity verification
-                file_hash = self._calculate_file_hash(backup_file)
+                    # Calculate file hash for integrity verification
+                    file_hash = self._calculate_file_hash(backup_file)
 
-                # Record entry
-                file_entries.append({
-                    "original_path": str(source),
-                    "backup_path": str(backup_file),
-                    "size": file_size,
-                    "hash": file_hash,
-                    "category": migration_file.target_category.value,
-                    "confidence": migration_file.confidence,
-                })
+                    # Record entry
+                    file_entries.append({
+                        "original_path": str(source),
+                        "backup_path": str(backup_file),
+                        "size": file_size,
+                        "hash": file_hash,
+                        "category": migration_file.target_category.value,
+                        "confidence": migration_file.confidence,
+                    })
 
-                total_size += file_size
+                    total_size += file_size
+
+                except Exception as e:
+                    logger.warning(f"Failed to backup {source}: {e}")
+                    continue
 
             # Create manifest file
             manifest = BackupMetadata(
