@@ -8,8 +8,15 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from faster_whisper import WhisperModel
 from loguru import logger
+
+try:
+    from faster_whisper import WhisperModel
+
+    _FASTER_WHISPER_AVAILABLE = True
+except ImportError:
+    WhisperModel = None  # type: ignore[assignment,misc]
+    _FASTER_WHISPER_AVAILABLE = False
 
 
 class ModelSize(Enum):
@@ -135,6 +142,12 @@ class AudioTranscriber:
             ValueError: If model size or device is invalid
             RuntimeError: If model loading fails
         """
+        if not _FASTER_WHISPER_AVAILABLE:
+            raise ImportError(
+                "faster-whisper is required for audio transcription. "
+                "Install it with: pip install 'file-organizer[audio]'"
+            )
+
         # Convert enums to strings if needed
         self.model_size = model_size.value if isinstance(model_size, ModelSize) else model_size
         self.compute_type = (

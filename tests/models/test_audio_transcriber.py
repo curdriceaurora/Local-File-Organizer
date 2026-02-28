@@ -740,3 +740,25 @@ class TestStaticMethods:
         AudioTranscriber.clear_all_caches()
 
         assert len(AudioTranscriber._model_cache) == 0
+
+
+# ---------------------------------------------------------------------------
+# Optional dependency guard
+# ---------------------------------------------------------------------------
+
+
+class TestMissingFasterWhisper:
+    """AudioTranscriber raises ImportError with an actionable message when
+    faster-whisper is not installed."""
+
+    def test_init_raises_import_error_when_dep_missing(self) -> None:
+        """ImportError is raised with install hint when faster-whisper absent."""
+        import file_organizer.models.audio_transcriber as _mod
+
+        original = _mod._FASTER_WHISPER_AVAILABLE
+        try:
+            _mod._FASTER_WHISPER_AVAILABLE = False
+            with pytest.raises(ImportError, match="pip install 'file-organizer\\[audio\\]'"):
+                AudioTranscriber()
+        finally:
+            _mod._FASTER_WHISPER_AVAILABLE = original

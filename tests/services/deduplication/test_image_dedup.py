@@ -765,3 +765,25 @@ class TestValidateImage:
             is_valid, error = dedup.validate_image(img)
             assert is_valid is False
             assert "Corrupt or invalid image" in error
+
+
+# ---------------------------------------------------------------------------
+# Optional dependency guard
+# ---------------------------------------------------------------------------
+
+
+class TestMissingImagededupDep:
+    """ImageDeduplicator raises ImportError with an actionable message when
+    imagededup is not installed."""
+
+    def test_init_raises_import_error_when_dep_missing(self) -> None:
+        """ImportError is raised with install hint when imagededup is absent."""
+        import file_organizer.services.deduplication.image_dedup as _mod
+
+        original = _mod._IMAGEDEDUP_AVAILABLE
+        try:
+            _mod._IMAGEDEDUP_AVAILABLE = False
+            with pytest.raises(ImportError, match="pip install 'file-organizer\\[dedup\\]'"):
+                ImageDeduplicator()
+        finally:
+            _mod._IMAGEDEDUP_AVAILABLE = original

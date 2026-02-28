@@ -12,8 +12,15 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
 
-from imagededup.methods import AHash, DHash, PHash
 from PIL import Image
+
+try:
+    from imagededup.methods import AHash, DHash, PHash
+
+    _IMAGEDEDUP_AVAILABLE = True
+except ImportError:
+    AHash = DHash = PHash = None  # type: ignore[assignment,misc]
+    _IMAGEDEDUP_AVAILABLE = False
 
 from .image_utils import SUPPORTED_FORMATS
 
@@ -56,6 +63,12 @@ class ImageDeduplicator:
         Raises:
             ValueError: If hash_method is not supported or threshold is invalid
         """
+        if not _IMAGEDEDUP_AVAILABLE:
+            raise ImportError(
+                "imagededup is required for image deduplication. "
+                "Install it with: pip install 'file-organizer[dedup]'"
+            )
+
         if hash_method not in ("phash", "dhash", "ahash"):
             raise ValueError(
                 f"Unsupported hash method: {hash_method}. Use 'phash', 'dhash', or 'ahash'."
