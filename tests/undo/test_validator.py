@@ -9,7 +9,7 @@ from __future__ import annotations
 import shutil
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -44,7 +44,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -64,7 +64,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -81,7 +81,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -106,7 +106,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.RENAME,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -126,7 +126,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.DELETE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             status=OperationStatus.COMPLETED,
         )
@@ -147,7 +147,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.DELETE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             status=OperationStatus.COMPLETED,
         )
@@ -166,7 +166,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.COPY,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -183,7 +183,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.ROLLED_BACK,
@@ -199,7 +199,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.ROLLED_BACK,
@@ -219,7 +219,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -268,7 +268,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.FAILED,
@@ -284,7 +284,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.CREATE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             status=OperationStatus.COMPLETED,
         )
@@ -297,7 +297,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.CREATE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=missing,
             status=OperationStatus.COMPLETED,
         )
@@ -312,7 +312,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.RENAME,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.ROLLED_BACK,
@@ -325,7 +325,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.DELETE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             status=OperationStatus.ROLLED_BACK,
         )
@@ -338,7 +338,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.DELETE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=missing,
             status=OperationStatus.ROLLED_BACK,
         )
@@ -353,7 +353,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.COPY,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.ROLLED_BACK,
@@ -367,7 +367,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.COPY,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=missing,
             destination_path=self.dest_file,
             status=OperationStatus.ROLLED_BACK,
@@ -384,7 +384,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.COPY,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.ROLLED_BACK,
@@ -401,7 +401,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.CREATE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=new_file,
             status=OperationStatus.ROLLED_BACK,
         )
@@ -413,7 +413,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.CREATE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             status=OperationStatus.ROLLED_BACK,
         )
@@ -428,7 +428,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -442,7 +442,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.ROLLED_BACK,
@@ -461,7 +461,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=999,  # doesn't match the 'other' dir
             operation_type=OperationType.DELETE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             status=OperationStatus.COMPLETED,
         )
@@ -474,7 +474,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=999,
             operation_type=OperationType.DELETE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.test_dir / "nonexistent.txt",
             status=OperationStatus.COMPLETED,
         )
@@ -487,7 +487,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.test_dir / "original.txt",
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -505,7 +505,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=missing_parent,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -526,7 +526,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.DELETE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=missing_parent,
             status=OperationStatus.COMPLETED,
         )
@@ -553,7 +553,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.RENAME,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.test_dir / "original_name.txt",
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -572,7 +572,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.COPY,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -595,7 +595,7 @@ class TestOperationValidator(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.DELETE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.test_dir / "source.txt",
             status=OperationStatus.COMPLETED,
             file_hash="d" * 64,

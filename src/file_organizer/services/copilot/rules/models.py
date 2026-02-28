@@ -7,7 +7,7 @@ A ``RuleSet`` groups related rules with a shared scope and priority.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -128,7 +128,7 @@ class Rule:
     action: RuleAction = field(default_factory=lambda: RuleAction(action_type=ActionType.MOVE))
     enabled: bool = True
     priority: int = 0
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict for YAML output."""

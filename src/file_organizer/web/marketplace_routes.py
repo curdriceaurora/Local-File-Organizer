@@ -91,7 +91,7 @@ def _render_marketplace_page(
             "error_message": error_message,
         },
     )
-    return templates.TemplateResponse("marketplace/index.html", context)
+    return templates.TemplateResponse(request, "marketplace/index.html", context)
 
 
 @marketplace_router.get("/marketplace", response_class=HTMLResponse)

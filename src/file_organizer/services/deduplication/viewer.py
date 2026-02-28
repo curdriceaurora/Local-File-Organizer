@@ -317,7 +317,7 @@ class ComparisonViewer:
 
                 # Convert to ASCII
                 ascii_chars = " .:-=+*#%@"
-                pixels = img.getdata()
+                pixels = img.get_flattened_data()
 
                 ascii_lines = []
                 for i in range(0, len(pixels), new_width):

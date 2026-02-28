@@ -435,6 +435,7 @@ class TestPARACustomRules:
 
 
 @pytest.mark.unit
+@pytest.mark.filterwarnings("ignore::ResourceWarning")
 class TestPARAPerformance:
     """Test performance characteristics of PARA categorization."""
 

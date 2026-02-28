@@ -257,7 +257,7 @@ def profile_page(request: Request, settings: ApiSettings = Depends(get_settings)
     user = get_current_web_user(request, settings)
     if user is None:
         context = _make_profile_context(request, settings, None)
-        return templates.TemplateResponse("profile/index.html", context)
+        return templates.TemplateResponse(request, "profile/index.html", context)
 
     db = _get_db(settings)
     try:
@@ -272,7 +272,7 @@ def profile_page(request: Request, settings: ApiSettings = Depends(get_settings)
                 "avatar_url": f"/ui/profile/avatar/{user.id}",
             },
         )
-        return templates.TemplateResponse("profile/index.html", context)
+        return templates.TemplateResponse(request, "profile/index.html", context)
     finally:
         db.close()
 
@@ -281,7 +281,7 @@ def profile_page(request: Request, settings: ApiSettings = Depends(get_settings)
 def login_form(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
     """Render the login page."""
     context = _make_profile_context(request, settings, None, extras={"error": None})
-    return templates.TemplateResponse("profile/login.html", context)
+    return templates.TemplateResponse(request, "profile/login.html", context)
 
 
 @profile_router.post("/profile/login", response_class=HTMLResponse, response_model=None)
@@ -306,7 +306,7 @@ def login_submit(
                 None,
                 extras={"error": "Incorrect username or password"},
             )
-            return templates.TemplateResponse("profile/login.html", context)
+            return templates.TemplateResponse(request, "profile/login.html", context)
 
         if not user.is_active:
             context = _make_profile_context(
@@ -315,7 +315,7 @@ def login_submit(
                 None,
                 extras={"error": "Account is inactive"},
             )
-            return templates.TemplateResponse("profile/login.html", context)
+            return templates.TemplateResponse(request, "profile/login.html", context)
 
         user.last_login = _now()
         db.commit()
@@ -339,7 +339,7 @@ def login_submit(
 def register_form(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
     """Render the registration page."""
     context = _make_profile_context(request, settings, None, extras={"error": None})
-    return templates.TemplateResponse("profile/register.html", context)
+    return templates.TemplateResponse(request, "profile/register.html", context)
 
 
 @profile_router.post("/profile/register", response_class=HTMLResponse, response_model=None)
@@ -361,7 +361,7 @@ def register_submit(
         valid, reason = validate_password(password, settings)
         if not valid:
             context = _make_profile_context(request, settings, None, extras={"error": reason})
-            return templates.TemplateResponse("profile/register.html", context)
+            return templates.TemplateResponse(request, "profile/register.html", context)
 
         if db.query(User).filter(User.username == username).first():
             context = _make_profile_context(
@@ -370,7 +370,7 @@ def register_submit(
                 None,
                 extras={"error": "Username already taken"},
             )
-            return templates.TemplateResponse("profile/register.html", context)
+            return templates.TemplateResponse(request, "profile/register.html", context)
 
         if db.query(User).filter(User.email == email).first():
             context = _make_profile_context(
@@ -379,7 +379,7 @@ def register_submit(
                 None,
                 extras={"error": "Email already registered"},
             )
-            return templates.TemplateResponse("profile/register.html", context)
+            return templates.TemplateResponse(request, "profile/register.html", context)
 
         user = User(
             username=username,
@@ -405,7 +405,7 @@ def forgot_password_form(
         None,
         extras={"error": None, "success": None, "token_preview": None},
     )
-    return templates.TemplateResponse("profile/forgot_password.html", context)
+    return templates.TemplateResponse(request, "profile/forgot_password.html", context)
 
 
 @profile_router.post("/profile/forgot-password", response_class=HTMLResponse)
@@ -436,7 +436,7 @@ def forgot_password_submit(
             None,
             extras={"error": None, "success": success, "token_preview": token_preview},
         )
-        return templates.TemplateResponse("profile/forgot_password.html", context)
+        return templates.TemplateResponse(request, "profile/forgot_password.html", context)
     finally:
         db.close()
 
@@ -460,7 +460,7 @@ def reset_password_form(
         None,
         extras={"token": token, "valid_token": valid, "error": None, "success": None},
     )
-    return templates.TemplateResponse("profile/reset_password.html", context)
+    return templates.TemplateResponse(request, "profile/reset_password.html", context)
 
 
 @profile_router.post("/profile/reset-password", response_class=HTMLResponse)
@@ -490,7 +490,7 @@ def reset_password_submit(
                 "success": None,
             },
         )
-        return templates.TemplateResponse("profile/reset_password.html", context)
+        return templates.TemplateResponse(request, "profile/reset_password.html", context)
 
     if new_password != confirm_password:
         context = _make_profile_context(
@@ -504,7 +504,7 @@ def reset_password_submit(
                 "success": None,
             },
         )
-        return templates.TemplateResponse("profile/reset_password.html", context)
+        return templates.TemplateResponse(request, "profile/reset_password.html", context)
 
     valid, reason = validate_password(new_password, settings)
     if not valid:
@@ -514,7 +514,7 @@ def reset_password_submit(
             None,
             extras={"token": token, "valid_token": True, "error": reason, "success": None},
         )
-        return templates.TemplateResponse("profile/reset_password.html", context)
+        return templates.TemplateResponse(request, "profile/reset_password.html", context)
 
     user_id, _ = reset_info
     db = _get_db(settings)
@@ -532,7 +532,7 @@ def reset_password_submit(
                     "success": None,
                 },
             )
-            return templates.TemplateResponse("profile/reset_password.html", context)
+            return templates.TemplateResponse(request, "profile/reset_password.html", context)
         user.hashed_password = hash_password(new_password)
         db.commit()
     finally:
@@ -550,7 +550,7 @@ def reset_password_submit(
             "success": "Password reset complete. You can now log in.",
         },
     )
-    return templates.TemplateResponse("profile/reset_password.html", context)
+    return templates.TemplateResponse(request, "profile/reset_password.html", context)
 
 
 @profile_router.get("/profile/avatar/{user_id}")
@@ -597,7 +597,7 @@ def profile_edit_partial(
         user,
         extras={"success": None, "error": None, "avatar_url": f"/ui/profile/avatar/{user.id}"},
     )
-    return templates.TemplateResponse("profile/_edit.html", context)
+    return templates.TemplateResponse(request, "profile/_edit.html", context)
 
 
 @profile_router.post("/profile/edit", response_class=HTMLResponse)
@@ -627,7 +627,7 @@ def profile_edit_submit(
                     db_user,
                     extras={"success": None, "error": "Email already in use"},
                 )
-                return templates.TemplateResponse("profile/_edit.html", context)
+                return templates.TemplateResponse(request, "profile/_edit.html", context)
 
         db_user.full_name = full_name or None
         db_user.email = email
@@ -644,7 +644,7 @@ def profile_edit_submit(
             db_user,
             extras={"success": "Profile updated", "error": None},
         )
-        return templates.TemplateResponse("profile/_edit.html", context)
+        return templates.TemplateResponse(request, "profile/_edit.html", context)
     finally:
         db.close()
 
@@ -667,7 +667,7 @@ def workspaces_partial(
             user,
             extras={"workspaces": workspaces, "active_workspace_id": active_workspace_id},
         )
-        return templates.TemplateResponse("profile/_workspaces.html", context)
+        return templates.TemplateResponse(request, "profile/_workspaces.html", context)
     finally:
         db.close()
 
@@ -745,7 +745,7 @@ def team_partial(request: Request, settings: ApiSettings = Depends(get_settings)
             user,
             extras={"team_members": state["team_members"]},
         )
-        return templates.TemplateResponse("profile/_team.html", context)
+        return templates.TemplateResponse(request, "profile/_team.html", context)
     finally:
         db.close()
 
@@ -837,7 +837,7 @@ def shared_partial(request: Request, settings: ApiSettings = Depends(get_setting
             user,
             extras={"shared_folders": state["shared_folders"]},
         )
-        return templates.TemplateResponse("profile/_shared.html", context)
+        return templates.TemplateResponse(request, "profile/_shared.html", context)
     finally:
         db.close()
 
@@ -926,7 +926,7 @@ def activity_partial(
             user,
             extras={"activity_log": state["activity_log"]},
         )
-        return templates.TemplateResponse("profile/_activity.html", context)
+        return templates.TemplateResponse(request, "profile/_activity.html", context)
     finally:
         db.close()
 
@@ -949,7 +949,7 @@ def notifications_partial(
             user,
             extras={"notifications": state["notifications"]},
         )
-        return templates.TemplateResponse("profile/_notifications.html", context)
+        return templates.TemplateResponse(request, "profile/_notifications.html", context)
     finally:
         db.close()
 
@@ -1003,7 +1003,7 @@ def account_settings_partial(
                 "error": None,
             },
         )
-        return templates.TemplateResponse("profile/_account_settings.html", context)
+        return templates.TemplateResponse(request, "profile/_account_settings.html", context)
     finally:
         db.close()
 
@@ -1041,7 +1041,7 @@ def account_settings_change_password(
                     "error": "Current password is incorrect.",
                 },
             )
-            return templates.TemplateResponse("profile/_account_settings.html", context)
+            return templates.TemplateResponse(request, "profile/_account_settings.html", context)
         if new_password != confirm_password:
             context = _make_profile_context(
                 request,
@@ -1053,7 +1053,7 @@ def account_settings_change_password(
                     "error": "New password and confirmation do not match.",
                 },
             )
-            return templates.TemplateResponse("profile/_account_settings.html", context)
+            return templates.TemplateResponse(request, "profile/_account_settings.html", context)
         valid, reason = validate_password(new_password, settings)
         if not valid:
             context = _make_profile_context(
@@ -1062,7 +1062,7 @@ def account_settings_change_password(
                 db_user,
                 extras={"two_factor_enabled": False, "success": None, "error": reason},
             )
-            return templates.TemplateResponse("profile/_account_settings.html", context)
+            return templates.TemplateResponse(request, "profile/_account_settings.html", context)
 
         db_user.hashed_password = hash_password(new_password)
         state = _load_profile_state(db, db_user.id)
@@ -1080,7 +1080,7 @@ def account_settings_change_password(
                 "error": None,
             },
         )
-        return templates.TemplateResponse("profile/_account_settings.html", context)
+        return templates.TemplateResponse(request, "profile/_account_settings.html", context)
     finally:
         db.close()
 
@@ -1120,7 +1120,7 @@ def account_settings_toggle_2fa(
                 "error": None,
             },
         )
-        return templates.TemplateResponse("profile/_account_settings.html", context)
+        return templates.TemplateResponse(request, "profile/_account_settings.html", context)
     finally:
         db.close()
 
@@ -1148,7 +1148,7 @@ def api_keys_partial(
             user,
             extras={"api_keys": keys, "new_key": None},
         )
-        return templates.TemplateResponse("profile/_api_keys.html", context)
+        return templates.TemplateResponse(request, "profile/_api_keys.html", context)
     finally:
         db.close()
 
@@ -1204,7 +1204,7 @@ def api_key_generate(
             user,
             extras={"api_keys": keys, "new_key": raw_key},
         )
-        return templates.TemplateResponse("profile/_api_keys.html", context)
+        return templates.TemplateResponse(request, "profile/_api_keys.html", context)
     finally:
         db.close()
 
@@ -1255,7 +1255,7 @@ def api_key_revoke(
             user,
             extras={"api_keys": keys, "new_key": None},
         )
-        return templates.TemplateResponse("profile/_api_keys.html", context)
+        return templates.TemplateResponse(request, "profile/_api_keys.html", context)
     finally:
         db.close()
 

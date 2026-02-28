@@ -6,7 +6,7 @@ Tests conflict resolution with multiple weighting strategies.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -65,7 +65,7 @@ class TestConflictResolver:
 
     def test_resolve_by_recency(self, resolver):
         """Test conflict resolution favors more recent preferences."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
         old_date = (now - timedelta(days=30)).isoformat() + "Z"
         recent_date = now.isoformat() + "Z"
 
@@ -89,7 +89,7 @@ class TestConflictResolver:
 
     def test_resolve_by_frequency(self, resolver):
         """Test conflict resolution favors higher frequency preferences."""
-        now = datetime.utcnow().isoformat() + "Z"
+        now = datetime.now(tz=UTC).isoformat() + "Z"
 
         low_freq = {
             "folder_mappings": {"pdf": "Documents"},
@@ -111,7 +111,7 @@ class TestConflictResolver:
 
     def test_resolve_by_confidence(self, resolver):
         """Test conflict resolution favors higher confidence preferences."""
-        now = datetime.utcnow().isoformat() + "Z"
+        now = datetime.now(tz=UTC).isoformat() + "Z"
 
         low_conf = {
             "folder_mappings": {"pdf": "Documents"},
@@ -133,7 +133,7 @@ class TestConflictResolver:
 
     def test_resolve_combined_factors(self, resolver):
         """Test conflict resolution with multiple competing factors."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         # Recent but low frequency and confidence
         pref1 = {
@@ -157,7 +157,7 @@ class TestConflictResolver:
 
     def test_resolve_tie_breaks_by_recency(self, resolver):
         """Test that ties are broken by most recent preference."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         pref1 = {
             "value": "pref1",
@@ -179,7 +179,7 @@ class TestConflictResolver:
 
     def test_weight_by_recency(self, resolver):
         """Test recency weight calculation."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         prefs = [
             {"updated": (now - timedelta(days=60)).isoformat() + "Z"},
@@ -196,7 +196,7 @@ class TestConflictResolver:
 
     def test_weight_by_recency_missing_timestamps(self, resolver):
         """Test recency weighting with missing timestamps."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         prefs = [
             {},  # No timestamp
@@ -289,7 +289,7 @@ class TestConflictResolver:
 
     def test_get_ambiguity_score_clear_winner(self, resolver):
         """Test ambiguity score with clear winner."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         prefs = [
             {
@@ -307,7 +307,7 @@ class TestConflictResolver:
 
     def test_get_ambiguity_score_high_ambiguity(self, resolver):
         """Test ambiguity score with very similar preferences."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         prefs = [
             {"updated": now.isoformat() + "Z", "correction_count": 10, "confidence": 0.8},
@@ -321,7 +321,7 @@ class TestConflictResolver:
 
     def test_needs_user_input_low_ambiguity(self, resolver):
         """Test that low ambiguity doesn't require user input."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         prefs = [
             {
@@ -336,7 +336,7 @@ class TestConflictResolver:
 
     def test_needs_user_input_high_ambiguity(self, resolver):
         """Test that high ambiguity requires user input."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         prefs = [
             {"updated": now.isoformat() + "Z", "correction_count": 10, "confidence": 0.8},
@@ -413,7 +413,7 @@ class TestConflictResolver:
 
     def test_real_world_scenario(self, resolver):
         """Test a realistic conflict resolution scenario."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         # User has been moving PDFs to "Documents" folder for months
         old_habit = {

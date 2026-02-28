@@ -373,7 +373,7 @@ def files_browser(
     context.update(results)
     context["active_path"] = results.get("current_path", "")
     context["active_path_param"] = results.get("current_path_param", "")
-    return templates.TemplateResponse("files/browser.html", context)
+    return templates.TemplateResponse(request, "files/browser.html", context)
 
 
 @files_router.get("/files/list", response_class=HTMLResponse)
@@ -404,7 +404,7 @@ def files_list(
         sort_order=sort_order,
         limit=limit,
     )
-    return templates.TemplateResponse("files/_results.html", context)
+    return templates.TemplateResponse(request, "files/_results.html", context)
 
 
 @files_router.get("/files/tree", response_class=HTMLResponse)
@@ -439,6 +439,7 @@ def files_tree(
             nodes = _list_tree_nodes(current, include_hidden=False)
         except ApiError as exc:
             return templates.TemplateResponse(
+                request,
                 "files/_tree.html",
                 {
                     "request": request,
@@ -467,6 +468,7 @@ def files_tree(
         error_message = "No allowed paths configured. Add FO_API_ALLOWED_PATHS."
 
     return templates.TemplateResponse(
+        request,
         "files/_tree.html",
         {
             "request": request,
@@ -592,6 +594,7 @@ def files_preview(
         error_message = exc.message
 
     return templates.TemplateResponse(
+        request,
         "files/_preview.html",
         {
             "request": request,
@@ -719,4 +722,4 @@ def files_upload(
     )
     context["info_message"] = info_message
     context["error_message"] = error_message or context.get("error_message")
-    return templates.TemplateResponse("files/_results.html", context)
+    return templates.TemplateResponse(request, "files/_results.html", context)

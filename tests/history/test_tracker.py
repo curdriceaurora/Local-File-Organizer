@@ -5,7 +5,7 @@ Tests for operation tracker.
 from __future__ import annotations
 
 import tempfile
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -197,7 +197,7 @@ class TestOperationHistory:
     def test_get_operations_by_date_range(self, history):
         """Test filtering operations by date range."""
         # Log operations with different timestamps
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
         yesterday = now - timedelta(days=1)
         tomorrow = now + timedelta(days=1)
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 import csv
 import json
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -236,7 +236,7 @@ class TestHistoryExporter:
         # Export with date range that includes current time
         from datetime import timedelta
 
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
         yesterday = now - timedelta(days=1)
         tomorrow = now + timedelta(days=1)
 

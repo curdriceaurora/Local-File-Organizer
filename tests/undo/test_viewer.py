@@ -10,7 +10,7 @@ import shutil
 import sys
 import tempfile
 import unittest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from io import StringIO
 from pathlib import Path
 
@@ -207,8 +207,8 @@ class TestHistoryViewer(unittest.TestCase):
 
     def test_filter_operations_with_date_range(self):
         """Test filtering with date range."""
-        # Use UTC dates to match stored timestamps (which use utcnow)
-        today = datetime.utcnow()
+        # Use UTC dates to match stored timestamps
+        today = datetime.now(tz=UTC)
         yesterday = today - timedelta(days=2)
         tomorrow = today + timedelta(days=2)
 

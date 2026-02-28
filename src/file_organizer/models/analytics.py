@@ -6,7 +6,7 @@ Data classes for analytics dashboard, storage stats, and quality metrics.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -222,7 +222,7 @@ class AnalyticsDashboard:
     quality_metrics: QualityMetrics
     time_savings: TimeSavings
     trends: dict[str, TrendData] = field(default_factory=dict)
-    generated_at: datetime = field(default_factory=datetime.utcnow)
+    generated_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
     def to_dict(self) -> dict:
         """Convert dashboard to dictionary for serialization."""

@@ -39,4 +39,4 @@ router.include_router(profile_router)
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
     context = base_context(request, settings, active="home", title="Home")
-    return templates.TemplateResponse("index.html", context)
+    return templates.TemplateResponse(request, "index.html", context)

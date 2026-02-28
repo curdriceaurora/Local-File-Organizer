@@ -471,7 +471,7 @@ class TestGenerateAsciiPreview:
         pixel_data = list(range(256)) + list(range(256)) + list(range(88))
         assert len(pixel_data) == 600
 
-        fake_img.resize.return_value.getdata.return_value = pixel_data
+        fake_img.resize.return_value.get_flattened_data.return_value = pixel_data
         # Make sure the resized image's width is accessible for the loop
         type(fake_img.resize.return_value).width = 40
 
@@ -516,7 +516,7 @@ class TestGenerateAsciiPreview:
             resized.width = nw
             resized.height = nh
             type(resized).width = nw
-            resized.getdata.return_value = [128] * (nw * nh)
+            resized.get_flattened_data.return_value = [128] * (nw * nh)
             fake_img.resize.return_value = resized
             return fake_img
 

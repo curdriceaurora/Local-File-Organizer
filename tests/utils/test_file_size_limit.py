@@ -31,9 +31,6 @@ from file_organizer.utils.file_readers import (
 )
 from file_organizer.utils.readers._base import _check_file_size
 
-# Marker kept for any tests that remain genuinely optional (none currently).
-_needs_stream_a = pytest.mark.usefixtures()
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -57,19 +54,19 @@ def _make_stat(size: int) -> os.stat_result:
 class TestCheckFileSizeHelper:
     """Unit tests for the _check_file_size() helper introduced by Stream A."""
 
-    @_needs_stream_a
+
     def test_small_file_passes(self) -> None:
         """A 1 MB file is well below the limit; no exception should be raised."""
         with patch("pathlib.Path.stat", return_value=_make_stat(ONE_MB)):
             _check_file_size(Path("any_file.txt"))  # must not raise
 
-    @_needs_stream_a
+
     def test_file_at_limit_passes(self) -> None:
         """A file whose size equals exactly MAX_FILE_SIZE_BYTES is allowed."""
         with patch("pathlib.Path.stat", return_value=_make_stat(MAX_FILE_SIZE_BYTES)):
             _check_file_size(Path("boundary_file.txt"))  # must not raise
 
-    @_needs_stream_a
+
     def test_file_over_limit_raises(self) -> None:
         """A file one byte over the limit must raise FileTooLargeError."""
         oversized = MAX_FILE_SIZE_BYTES + 1
@@ -77,7 +74,7 @@ class TestCheckFileSizeHelper:
             with pytest.raises(FileTooLargeError):
                 _check_file_size(Path("oversized.txt"))
 
-    @_needs_stream_a
+
     def test_custom_limit(self) -> None:
         """Callers can pass a custom max_bytes; the helper must honour it."""
         custom_limit = 1024  # 1 KiB
@@ -86,7 +83,7 @@ class TestCheckFileSizeHelper:
             with pytest.raises(FileTooLargeError):
                 _check_file_size(Path("custom_limit.dat"), max_bytes=custom_limit)
 
-    @_needs_stream_a
+
     def test_stat_oserror_is_ignored(self) -> None:
         """If os.stat() raises OSError the helper must silently return.
 
@@ -96,7 +93,7 @@ class TestCheckFileSizeHelper:
         with patch("pathlib.Path.stat", side_effect=OSError("permission denied")):
             _check_file_size(Path("inaccessible.txt"))  # must not raise
 
-    @_needs_stream_a
+
     def test_error_message_contains_size_info(self) -> None:
         """FileTooLargeError message must mention the file size in MB so that
         users and log aggregators can diagnose the rejection at a glance."""
@@ -115,7 +112,7 @@ class TestCheckFileSizeHelper:
 class TestReadFileDispatcherSizeGate:
     """Tests that read_file() rejects oversized paths before dispatching."""
 
-    @_needs_stream_a
+
     def test_read_file_rejects_oversized(self, tmp_path: Path) -> None:
         """read_file() must raise FileTooLargeError without reading any content
         when the file exceeds MAX_FILE_SIZE_BYTES."""
@@ -128,7 +125,7 @@ class TestReadFileDispatcherSizeGate:
             with pytest.raises(FileTooLargeError):
                 read_file(str(fake_txt))
 
-    @_needs_stream_a
+
     def test_read_file_passes_normal_size(self, tmp_path: Path) -> None:
         """read_file() must call through to the underlying reader when the file
         is within the size limit."""
@@ -163,7 +160,7 @@ _READER_PARAMS = [
 class TestUnboundedReadersSizeGate:
     """Each previously-unbounded reader must gate on file size before I/O."""
 
-    @_needs_stream_a
+
     @pytest.mark.parametrize("reader_name,ext", _READER_PARAMS)
     def test_reader_rejects_oversized(
         self,

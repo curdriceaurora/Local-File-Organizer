@@ -7,7 +7,7 @@ components.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -43,7 +43,7 @@ class CopilotMessage:
 
     role: MessageRole
     content: str
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -109,8 +109,8 @@ class CopilotSession:
     session_id: str = ""
     messages: list[CopilotMessage] = field(default_factory=list)
     working_directory: str | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    last_active: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+    last_active: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
     @property
     def turn_count(self) -> int:

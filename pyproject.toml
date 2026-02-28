@@ -263,6 +263,13 @@ markers = [
     "e2e: end-to-end tests against real file trees (no Ollama required)",
     "benchmark: performance benchmark tests (use --benchmark-only to run)",
 ]
+filterwarnings = [
+    "error::DeprecationWarning:file_organizer",
+    "error::PendingDeprecationWarning:file_organizer",
+    "ignore::DeprecationWarning:pkg_resources",
+    "ignore::DeprecationWarning:google",
+    "ignore::DeprecationWarning:importlib",
+]
 # pytest-benchmark settings (pass via CLI: --benchmark-min-rounds=3 --benchmark-max-time=30.0)
 # benchmark_ prefix keys are NOT supported as ini_options in pytest-benchmark 5.x
 

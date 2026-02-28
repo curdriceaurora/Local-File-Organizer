@@ -271,7 +271,7 @@ def _render_section(
         success_message=success_message,
         error_message=error_message,
     )
-    return templates.TemplateResponse(f"settings/_{section}.html", context)
+    return templates.TemplateResponse(request, f"settings/_{section}.html", context)
 
 
 @settings_router.get("/settings", response_class=HTMLResponse)
@@ -299,7 +299,7 @@ def settings_page(
             "performance_modes": PERFORMANCE_MODES,
         },
     )
-    return templates.TemplateResponse("settings/index.html", context)
+    return templates.TemplateResponse(request, "settings/index.html", context)
 
 
 @settings_router.get("/settings/search", response_class=HTMLResponse)

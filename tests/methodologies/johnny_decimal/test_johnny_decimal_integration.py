@@ -377,6 +377,7 @@ class TestJohnnyDecimalReporting:
 
 
 @pytest.mark.unit
+@pytest.mark.filterwarnings("ignore::ResourceWarning")
 class TestJohnnyDecimalScalability:
     """Test system scalability and performance."""
 

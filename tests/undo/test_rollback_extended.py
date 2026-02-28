@@ -8,7 +8,7 @@ test_rollback.py.
 from __future__ import annotations
 
 import shutil
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -43,7 +43,7 @@ def _op(
     return Operation(
         id=op_id,
         operation_type=op_type,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(tz=UTC),
         source_path=source,
         destination_path=destination,
         status=status,

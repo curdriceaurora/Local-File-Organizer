@@ -504,7 +504,7 @@ def organize_dashboard(
             "stats": stats,
         },
     )
-    return templates.TemplateResponse("organize/dashboard.html", context)
+    return templates.TemplateResponse(request, "organize/dashboard.html", context)
 
 
 @organize_router.post("/organize/scan", response_class=HTMLResponse)
@@ -596,6 +596,7 @@ def organize_scan(
         error_message = "Failed to generate plan."
 
     return templates.TemplateResponse(
+        request,
         "organize/_plan.html",
         {
             "request": request,
@@ -620,6 +621,7 @@ def organize_clear_plan(
     if plan_id:
         _delete_organize_plan(plan_id)
     return templates.TemplateResponse(
+        request,
         "organize/_plan.html",
         {
             "request": request,
@@ -708,6 +710,7 @@ def organize_execute(
         error_message = "Failed to queue job."
 
     response = templates.TemplateResponse(
+        request,
         "organize/_job_status.html",
         {
             "request": request,
@@ -743,6 +746,7 @@ def organize_job_status(
     if format == "json":
         return JSONResponse(content=job)
     return templates.TemplateResponse(
+        request,
         "organize/_job_status.html",
         {
             "request": request,
@@ -817,6 +821,7 @@ def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
         error_message = "Only scheduled jobs can be cancelled."
     refreshed_job = _build_job_view(job_id)
     return templates.TemplateResponse(
+        request,
         "organize/_job_status.html",
         {
             "request": request,
@@ -860,6 +865,7 @@ def organize_job_rollback(request: Request, job_id: str) -> HTMLResponse:
 
     refreshed_job = _build_job_view(job_id)
     response = templates.TemplateResponse(
+        request,
         "organize/_job_status.html",
         {
             "request": request,
@@ -886,6 +892,7 @@ def organize_history(
     """
     rows = _list_organize_jobs(status_filter=status_filter, limit=limit)
     return templates.TemplateResponse(
+        request,
         "organize/_history.html",
         {
             "request": request,
@@ -900,6 +907,7 @@ def organize_history(
 def organize_stats(request: Request) -> HTMLResponse:
     """Return an HTMX partial with aggregate organization statistics."""
     return templates.TemplateResponse(
+        request,
         "organize/_stats.html",
         {
             "request": request,

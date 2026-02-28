@@ -9,7 +9,7 @@ from __future__ import annotations
 import shutil
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -45,7 +45,7 @@ class TestRollbackExecutor(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -66,7 +66,7 @@ class TestRollbackExecutor(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.RENAME,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -87,7 +87,7 @@ class TestRollbackExecutor(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.DELETE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             status=OperationStatus.COMPLETED,
         )
@@ -112,7 +112,7 @@ class TestRollbackExecutor(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.COPY,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.COMPLETED,
@@ -134,7 +134,7 @@ class TestRollbackExecutor(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.CREATE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=created_file,
             status=OperationStatus.COMPLETED,
         )
@@ -151,7 +151,7 @@ class TestRollbackExecutor(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.MOVE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.ROLLED_BACK,
@@ -170,7 +170,7 @@ class TestRollbackExecutor(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.RENAME,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.ROLLED_BACK,
@@ -189,7 +189,7 @@ class TestRollbackExecutor(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.DELETE,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             status=OperationStatus.ROLLED_BACK,
         )
@@ -207,7 +207,7 @@ class TestRollbackExecutor(unittest.TestCase):
         operation = Operation(
             id=1,
             operation_type=OperationType.COPY,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=self.source_file,
             destination_path=self.dest_file,
             status=OperationStatus.ROLLED_BACK,
@@ -235,7 +235,7 @@ class TestRollbackExecutor(unittest.TestCase):
             Operation(
                 id=1,
                 operation_type=OperationType.MOVE,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(tz=UTC),
                 source_path=file1,
                 destination_path=dest1,
                 transaction_id="txn1",
@@ -252,7 +252,7 @@ class TestRollbackExecutor(unittest.TestCase):
             Operation(
                 id=2,
                 operation_type=OperationType.RENAME,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(tz=UTC),
                 source_path=file2,
                 destination_path=dest2,
                 transaction_id="txn1",
@@ -286,7 +286,7 @@ class TestRollbackExecutor(unittest.TestCase):
             Operation(
                 id=1,
                 operation_type=OperationType.MOVE,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(tz=UTC),
                 source_path=file1,
                 destination_path=dest1,
                 transaction_id="txn1",
@@ -301,7 +301,7 @@ class TestRollbackExecutor(unittest.TestCase):
             Operation(
                 id=2,
                 operation_type=OperationType.MOVE,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(tz=UTC),
                 source_path=file2,
                 destination_path=dest2,
                 transaction_id="txn1",

@@ -7,7 +7,7 @@ stack management, and context manager.
 from __future__ import annotations
 
 import unittest
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -39,7 +39,7 @@ class TestUndoManager(unittest.TestCase):
         return Operation(
             id=op_id,
             operation_type=op_type,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=UTC),
             source_path=MagicMock(),
             destination_path=MagicMock(),
             status=status,

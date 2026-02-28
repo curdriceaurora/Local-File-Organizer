@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import io
 import re
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -335,9 +336,13 @@ class EnhancedEPUBReader:
                 break
 
             try:
-                # Parse HTML content
+                # Parse HTML content (epub XHTML triggers XMLParsedAsHTMLWarning)
                 content_bytes = item.get_content()
-                soup = BeautifulSoup(content_bytes, "lxml")
+                with warnings.catch_warnings():
+                    from bs4 import XMLParsedAsHTMLWarning
+
+                    warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+                    soup = BeautifulSoup(content_bytes, "lxml")
 
                 # Extract title from heading tags or filename
                 title = self._extract_chapter_title(soup, item)
