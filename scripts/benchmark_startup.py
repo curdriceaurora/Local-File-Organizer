@@ -24,7 +24,8 @@ def benchmark_cli_startup() -> float:
     )
     elapsed = time.perf_counter() - start
     if result.returncode != 0:
-        raise RuntimeError(f"CLI import failed: {result.stderr or result.stdout or 'unknown error'}")
+        detail = result.stderr or result.stdout or "unknown error"
+        raise RuntimeError(f"CLI import failed: {detail}")
     return elapsed
 
 
@@ -39,7 +40,8 @@ def benchmark_api_startup() -> float:
     )
     elapsed = time.perf_counter() - start
     if result.returncode != 0:
-        raise RuntimeError(f"API import failed: {result.stderr or result.stdout or 'unknown error'}")
+        detail = result.stderr or result.stdout or "unknown error"
+        raise RuntimeError(f"API import failed: {detail}")
     return elapsed
 
 
@@ -54,7 +56,8 @@ def benchmark_help_command() -> float:
     )
     elapsed = time.perf_counter() - start
     if result.returncode != 0:
-        raise RuntimeError(f"--help command failed: {result.stderr or result.stdout or 'unknown error'}")
+        detail = result.stderr or result.stdout or "unknown error"
+        raise RuntimeError(f"--help command failed: {detail}")
     return elapsed
 
 
