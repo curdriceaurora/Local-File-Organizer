@@ -130,3 +130,15 @@ jobs:
         with:
           file: coverage.xml
           fail_ci_if_error: false
+
+  verify-tui-shortcuts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Verify TUI shortcuts match documentation
+        run: python tests/ci/test_tui_shortcut_verification.py

@@ -1,5 +1,7 @@
 # Terminal User Interface (TUI)
 
+> **Version**: 2.0.0
+
 File Organizer includes a full-featured Terminal User Interface (TUI) built with [Textual](https://textual.textualize.io/). It provides an interactive, keyboard-driven experience for organizing files without leaving your terminal.
 
 ## Overview
@@ -116,11 +118,45 @@ Natural language interface for file organization:
 > Rename all meeting notes to include the date
 ```
 
+**Workflow Integration Payloads**
+
+When the copilot exports a file via workflow integration, it generates launcher-compatible JSON payloads (see `WorkflowIntegration` in `src/file_organizer/integrations/workflow.py`):
+
+*Alfred payload:*
+
+```json
+{
+  "items": [
+    {
+      "arg": "/home/user/Documents/report.pdf",
+      "subtitle": "Quarterly financial report",
+      "title": "report.pdf",
+      "uid": "report-20260301T120000Z"
+    }
+  ]
+}
+```
+
+*Raycast payload:*
+
+```json
+{
+  "generated_at": "2026-03-01T12:00:00Z",
+  "metadata": {
+    "summary": "Quarterly financial report"
+  },
+  "name": "Open report.pdf",
+  "path": "/home/user/Documents/report.pdf"
+}
+```
+
+Payloads are written to `~/.config/file-organizer/integrations/workflow/`.
+
 ### 7. Undo / Redo History
 
 Full undo and redo support for all file operations:
 
-- Step through every operation with `u` (undo) and `Ctrl+r` (redo)
+- Step through every operation with `u` (undo) and `y` (redo)
 - History persists across sessions
 - Filter history by date, file type, or operation type
 - Export history as a CSV or JSON log
@@ -136,9 +172,7 @@ Full undo and redo support for all file operations:
 | `q` / `Ctrl+c` | Quit |
 | `?` | Show help |
 | `Tab` | Switch panel focus |
-| `F1`–`F7` | Jump to view |
-| `Ctrl+z` | Undo last action |
-| `Ctrl+r` | Redo |
+| `1`–`8` | Jump to view |
 
 ### File Browser
 
