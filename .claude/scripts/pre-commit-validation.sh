@@ -175,6 +175,46 @@ if [[ -n "$MD_FILES" ]]; then
   echo ""
 fi
 
+# 7a-2. Docs format conformity checks (admin docs conventions)
+DOCS_FILES=$(echo "$MODIFIED" | grep '^docs/.*\.md$' || true)
+if [[ -n "$DOCS_FILES" ]]; then
+  echo "Checking docs format conformity..."
+  DOCS_ISSUES=0
+
+  for doc_file in $DOCS_FILES; do
+    if [[ ! -f "$doc_file" ]]; then
+      continue
+    fi
+
+    # Must start with "# Title" (no YAML frontmatter)
+    FIRST_LINE=$(head -1 "$doc_file")
+    if [[ "$FIRST_LINE" == "---" ]]; then
+      echo "❌ $doc_file: Has YAML frontmatter (docs/ files must start with # Title)"
+      DOCS_ISSUES=1
+    elif [[ "$FIRST_LINE" != "# "* ]]; then
+      echo "❌ $doc_file: First line must be a # heading, got: $FIRST_LINE"
+      DOCS_ISSUES=1
+    fi
+
+    # Opening code fences must have language annotation
+    # Track fence state: odd occurrences are openers, even are closers
+    BARE_OPENERS=$(awk '/^```/{count++; if(count%2==1 && $0=="```") print NR": "$0}' "$doc_file")
+    if [[ -n "$BARE_OPENERS" ]]; then
+      echo "❌ $doc_file: Opening code fences without language annotation found"
+      echo "$BARE_OPENERS" | sed 's/^/    /'
+      DOCS_ISSUES=1
+    fi
+  done
+
+  if [[ $DOCS_ISSUES -eq 1 ]]; then
+    echo ""
+    echo "❌ Docs format conformity checks failed"
+    exit 1
+  fi
+  echo "✓ Docs format conformity checks passed"
+  echo ""
+fi
+
 # 7b. Run ALL staged test files directly (catches new/modified tests even
 #     when no src/ file is staged — the blind spot that caused PR #415 failures)
 STAGED_TEST_FILES=$(git diff --name-only --cached -- 'tests/**/*.py' | grep -E '^tests/.*test_.*\.py$' || true)

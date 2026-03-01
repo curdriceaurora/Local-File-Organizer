@@ -90,6 +90,8 @@ nav:
       - Installation: admin/installation.md
       - Deployment: admin/deployment.md
       - Configuration: admin/configuration.md
+      - File Format Reference: admin/file-format-reference.md
+      - Performance Tuning: admin/performance-tuning.md
       - Monitoring & Maintenance: admin/monitoring.md
       - Troubleshooting: admin/troubleshooting.md
       - Security: admin/security.md
