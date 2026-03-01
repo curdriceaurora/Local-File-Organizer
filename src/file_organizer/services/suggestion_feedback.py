@@ -354,7 +354,7 @@ class SuggestionFeedback:
             data = {
                 "entries": [entry.to_dict() for entry in self.feedback_entries],
                 "pattern_adjustments": self.pattern_adjustments,
-                "last_updated": datetime.now(UTC).isoformat(),
+                "last_updated": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             }
 
             with open(self.feedback_file, "w") as f:
@@ -375,7 +375,7 @@ class SuggestionFeedback:
             "entries": [entry.to_dict() for entry in self.feedback_entries],
             "stats": self.get_learning_stats().to_dict(),
             "pattern_adjustments": self.pattern_adjustments,
-            "exported_at": datetime.now(UTC).isoformat(),
+            "exported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         }
 
         with open(output_file, "w") as f:

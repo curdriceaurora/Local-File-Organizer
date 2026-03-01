@@ -97,9 +97,9 @@ class BackupManager:
         manifest[str(backup_path)] = {
             "original_path": str(file_path),
             "backup_path": str(backup_path),
-            "backup_time": datetime.now(UTC).isoformat(),
+            "backup_time": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "file_size": file_path.stat().st_size,
-            "original_mtime": datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC).isoformat(),
+            "original_mtime": datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC).isoformat().replace("+00:00", "Z"),
         }
         self._save_manifest(manifest)
 
@@ -168,6 +168,8 @@ class BackupManager:
         # Find and remove old backups
         for backup_key, metadata in list(manifest.items()):
             backup_time = datetime.fromisoformat(metadata["backup_time"])
+            if backup_time.tzinfo is None:
+                backup_time = backup_time.replace(tzinfo=UTC)
 
             if backup_time < cutoff_date:
                 backup_path = Path(backup_key)

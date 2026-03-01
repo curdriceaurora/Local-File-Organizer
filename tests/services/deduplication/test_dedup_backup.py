@@ -7,7 +7,7 @@ verification, and statistics computation.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -191,7 +191,7 @@ class TestCleanupOldBackups:
 
         # Modify manifest to make backup old
         manifest = manager._load_manifest()
-        old_time = (datetime.now() - timedelta(days=60)).isoformat()
+        old_time = (datetime.now(UTC) - timedelta(days=60)).isoformat()
         key = str(backup_path)
         manifest[key]["backup_time"] = old_time
         manager._save_manifest(manifest)
@@ -214,7 +214,7 @@ class TestCleanupOldBackups:
         backup_path = manager.create_backup(sample_file)
 
         manifest = manager._load_manifest()
-        old_time = (datetime.now() - timedelta(days=60)).isoformat()
+        old_time = (datetime.now(UTC) - timedelta(days=60)).isoformat()
         manifest[str(backup_path)]["backup_time"] = old_time
         manager._save_manifest(manifest)
 

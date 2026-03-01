@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -50,7 +50,7 @@ class TestTagUsage:
 
     def test_initialization(self):
         """Test TagUsage initialization."""
-        now = datetime.now()
+        now = datetime.now(UTC)
         usage = TagUsage(tag="python", count=5, first_used=now, last_used=now)
 
         assert usage.tag == "python"
@@ -62,7 +62,7 @@ class TestTagUsage:
 
     def test_to_dict(self):
         """Test converting to dictionary."""
-        now = datetime.now()
+        now = datetime.now(UTC)
         usage = TagUsage(tag="python", count=3, first_used=now, last_used=now)
         usage.file_types.add(".py")
         usage.contexts.append('{"type": "code"}')
@@ -76,7 +76,7 @@ class TestTagUsage:
 
     def test_from_dict(self):
         """Test creating from dictionary."""
-        now = datetime.now()
+        now = datetime.now(UTC)
         data = {
             "tag": "python",
             "count": 5,
@@ -110,7 +110,7 @@ class TestTagPattern:
 
     def test_to_from_dict(self):
         """Test dictionary conversion."""
-        now = datetime.now()
+        now = datetime.now(UTC)
         pattern = TagPattern(
             pattern_type="co-occurrence",
             tags=["python", "ml"],
@@ -250,7 +250,7 @@ class TestTagLearningEngine:
                 "suggested_tags": ["python", "java"],
                 "accepted_tags": ["python"],
                 "rejected_tags": ["java"],
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
         ]
 
@@ -319,7 +319,7 @@ class TestTagLearningEngine:
 
     def test_calculate_tag_confidence(self, engine):
         """Test confidence calculation."""
-        now = datetime.now()
+        now = datetime.now(UTC)
 
         # Recent, frequent tag
         recent_usage = TagUsage(tag="python", count=10, first_used=now, last_used=now)

@@ -86,12 +86,18 @@ class DuplicateIndex:
                 "accessed_time": datetime.fromtimestamp(stat.st_atime, tz=UTC),
             }
 
-        # Create metadata object
+        # Create metadata object — normalize naive datetimes from callers
+        modified_time = metadata.get("modified_time", datetime.now(UTC))
+        if isinstance(modified_time, datetime) and modified_time.tzinfo is None:
+            modified_time = modified_time.replace(tzinfo=UTC)
+        accessed_time = metadata.get("accessed_time", datetime.now(UTC))
+        if isinstance(accessed_time, datetime) and accessed_time.tzinfo is None:
+            accessed_time = accessed_time.replace(tzinfo=UTC)
         file_metadata = FileMetadata(
             path=file_path,
             size=metadata.get("size", 0),
-            modified_time=metadata.get("modified_time", datetime.now(UTC)),
-            accessed_time=metadata.get("accessed_time", datetime.now(UTC)),
+            modified_time=modified_time,
+            accessed_time=accessed_time,
             hash_value=file_hash,
         )
 

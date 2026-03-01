@@ -207,16 +207,20 @@ class PreviewEngine:
             try:
                 mtime = datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC)
                 threshold = datetime.fromisoformat(value)
+                if threshold.tzinfo is None:
+                    threshold = threshold.replace(tzinfo=UTC)
                 return mtime < threshold
-            except (OSError, ValueError):
+            except (OSError, ValueError, TypeError):
                 return False
 
         if ct == ConditionType.MODIFIED_AFTER:
             try:
                 mtime = datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC)
                 threshold = datetime.fromisoformat(value)
+                if threshold.tzinfo is None:
+                    threshold = threshold.replace(tzinfo=UTC)
                 return mtime > threshold
-            except (OSError, ValueError):
+            except (OSError, ValueError, TypeError):
                 return False
 
         if ct == ConditionType.PATH_MATCHES:

@@ -69,10 +69,14 @@ class HistoryExporter:
             )
 
         if start_date:
+            if start_date.tzinfo is None:
+                start_date = start_date.replace(tzinfo=UTC)
             query += " AND timestamp >= ?"
             params.append(start_date.isoformat().replace("+00:00", "Z"))
 
         if end_date:
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=UTC)
             query += " AND timestamp <= ?"
             params.append(end_date.isoformat().replace("+00:00", "Z"))
 
@@ -148,10 +152,14 @@ class HistoryExporter:
             )
 
         if start_date:
+            if start_date.tzinfo is None:
+                start_date = start_date.replace(tzinfo=UTC)
             query += " AND timestamp >= ?"
             params.append(start_date.isoformat().replace("+00:00", "Z"))
 
         if end_date:
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=UTC)
             query += " AND timestamp <= ?"
             params.append(end_date.isoformat().replace("+00:00", "Z"))
 

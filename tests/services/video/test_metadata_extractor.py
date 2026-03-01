@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -124,7 +124,7 @@ class TestFfprobeExtraction:
         assert metadata.codec == "h264"
         assert metadata.duration == 120.5
         assert metadata.bitrate == 5000000
-        assert metadata.creation_date == datetime(2025, 6, 15, 10, 30, 0)
+        assert metadata.creation_date == datetime(2025, 6, 15, 10, 30, 0, tzinfo=UTC)
         assert metadata.file_size == 1024
         assert metadata.format == "mp4"
 
@@ -259,7 +259,7 @@ class TestBatchExtraction:
 class TestParseDatetime:
     def test_iso_with_z(self) -> None:
         result = _parse_datetime("2025-06-15T10:30:00Z")
-        assert result == datetime(2025, 6, 15, 10, 30, 0)
+        assert result == datetime(2025, 6, 15, 10, 30, 0, tzinfo=UTC)
 
     def test_iso_with_microseconds(self) -> None:
         result = _parse_datetime("2025-06-15T10:30:00.123456Z")
@@ -268,7 +268,7 @@ class TestParseDatetime:
 
     def test_date_only(self) -> None:
         result = _parse_datetime("2025-06-15")
-        assert result == datetime(2025, 6, 15)
+        assert result == datetime(2025, 6, 15, tzinfo=UTC)
 
     def test_year_only(self) -> None:
         result = _parse_datetime("2025")

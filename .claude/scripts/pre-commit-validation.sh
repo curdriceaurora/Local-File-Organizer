@@ -422,7 +422,7 @@ if [ -n "$STAGED_PY_FILES" ]; then
   echo "🕐 Datetime timezone safety checks..."
 
   # Check 1: Naive datetime.now() detection
-  NAIVE_NOW=$(echo "$STAGED_PY_FILES" | xargs grep -n 'datetime\.now()' 2>/dev/null | grep -v 'now(UTC\|now(timezone\|now(tz=' || true)
+  NAIVE_NOW=$(echo "$STAGED_PY_FILES" | while IFS= read -r f; do [ -n "$f" ] && grep -Hn 'datetime\.now()' "$f" 2>/dev/null; done | grep -v 'now(UTC\|now(timezone\|now(tz=' || true)
   if [ -n "$NAIVE_NOW" ]; then
     echo "  ❌ Found naive datetime.now() — use datetime.now(UTC) instead:"
     echo "$NAIVE_NOW" | sed 's/^/    /'
@@ -432,7 +432,7 @@ if [ -n "$STAGED_PY_FILES" ]; then
   fi
 
   # Check 2: Deprecated utcnow() detection
-  UTCNOW=$(echo "$STAGED_PY_FILES" | xargs grep -n 'datetime\.utcnow()' 2>/dev/null || true)
+  UTCNOW=$(echo "$STAGED_PY_FILES" | while IFS= read -r f; do [ -n "$f" ] && grep -Hn 'datetime\.utcnow()' "$f" 2>/dev/null; done || true)
   if [ -n "$UTCNOW" ]; then
     echo "  ❌ Found deprecated datetime.utcnow() — use datetime.now(UTC) instead:"
     echo "$UTCNOW" | sed 's/^/    /'
@@ -442,7 +442,7 @@ if [ -n "$STAGED_PY_FILES" ]; then
   fi
 
   # Check 3: Bare fromtimestamp() detection (warning only)
-  BARE_TS=$(echo "$STAGED_PY_FILES" | xargs grep -n 'fromtimestamp(' 2>/dev/null | grep -v 'tz=' || true)
+  BARE_TS=$(echo "$STAGED_PY_FILES" | while IFS= read -r f; do [ -n "$f" ] && grep -Hn 'fromtimestamp(' "$f" 2>/dev/null; done | grep -v 'tz=' || true)
   if [ -n "$BARE_TS" ]; then
     echo "  ⚠️  Found fromtimestamp() without tz= — consider adding tz=UTC:"
     echo "$BARE_TS" | sed 's/^/    /'
@@ -452,9 +452,10 @@ if [ -n "$STAGED_PY_FILES" ]; then
   fi
 
   # Check 4: isoformat()+"Z" trap detection
-  ISO_TRAP=$(echo "$STAGED_PY_FILES" | xargs grep -n 'isoformat().*+.*"Z"' 2>/dev/null || true)
+  # Only match literal concatenation like isoformat() + "Z", NOT safe .replace("+00:00", "Z")
+  ISO_TRAP=$(echo "$STAGED_PY_FILES" | while IFS= read -r f; do [ -n "$f" ] && grep -HnE 'isoformat\(\)\s*\+\s*['\''"]Z['\''"]' "$f" 2>/dev/null; done | grep -v '\.replace(' || true)
   if [ -n "$ISO_TRAP" ]; then
-    echo "  ❌ Found isoformat()+\"Z\" trap — use .isoformat() directly (aware datetimes include offset):"
+    echo "  ❌ Found isoformat()+\"Z\" trap — use .isoformat().replace('+00:00', 'Z') instead:"
     echo "$ISO_TRAP" | sed 's/^/    /'
     exit 1
   else

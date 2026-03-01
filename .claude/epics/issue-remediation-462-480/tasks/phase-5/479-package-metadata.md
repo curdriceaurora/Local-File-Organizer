@@ -1,12 +1,12 @@
 ---
 name: 479-package-metadata
 title: "Fix package metadata and add validation"
-status: open
+status: closed
 priority: P3
 effort_estimate: "4-8 hours"
 phase: 5
 created: 2026-02-27T16:27:55Z
-updated: 2026-02-27T16:27:55Z
+updated: 2026-03-01T03:55:42Z
 github_issue: 479
 epic: issue-remediation-462-480
 ---

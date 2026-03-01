@@ -1,12 +1,12 @@
 ---
 name: 475-decouple-optional-deps
 title: "Decouple optional feature dependencies"
-status: open
+status: closed
 priority: P2
 effort_estimate: "8-12 hours"
 phase: 4
 created: 2026-02-27T16:27:55Z
-updated: 2026-02-27T16:27:55Z
+updated: 2026-03-01T03:55:42Z
 github_issue: 475
 epic: issue-remediation-462-480
 ---

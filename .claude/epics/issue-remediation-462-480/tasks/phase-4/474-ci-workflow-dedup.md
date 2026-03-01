@@ -1,12 +1,12 @@
 ---
 name: 474-ci-workflow-dedup
 title: "Remove CI workflow duplication"
-status: open
+status: closed
 priority: P2
 effort_estimate: "4-6 hours"
 phase: 4
 created: 2026-02-27T16:27:55Z
-updated: 2026-02-27T16:27:55Z
+updated: 2026-03-01T03:55:42Z
 github_issue: 474
 epic: issue-remediation-462-480
 ---

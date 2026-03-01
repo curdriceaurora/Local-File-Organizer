@@ -133,7 +133,7 @@ class FileMetadataPanel(Static):
         try:
             stat = path.stat()
             size = _format_size(stat.st_size)
-            modified = datetime.fromtimestamp(stat.st_mtime, tz=UTC).strftime("%Y-%m-%d %H:%M")
+            modified = datetime.fromtimestamp(stat.st_mtime, tz=UTC).strftime("%Y-%m-%d %H:%M UTC")
             kind = "Directory" if path.is_dir() else (path.suffix or "File")
             self.update(f"[b]{path.name}[/b]\nType: {kind}  Size: {size}  Modified: {modified}")
         except OSError:

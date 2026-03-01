@@ -8,7 +8,7 @@ MODIFIED_BEFORE, MODIFIED_AFTER, and PATH_MATCHES.
 from __future__ import annotations
 
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -194,15 +194,15 @@ class TestConditionModifiedBefore:
         f = tmp_path / "old.txt"
         f.write_text("old")
         # Set mod time to 2020
-        old_ts = datetime(2020, 1, 1).timestamp()
+        old_ts = datetime(2020, 1, 1, tzinfo=UTC).timestamp()
         os.utime(f, (old_ts, old_ts))
-        cond = RuleCondition(ConditionType.MODIFIED_BEFORE, "2023-01-01")
+        cond = RuleCondition(ConditionType.MODIFIED_BEFORE, "2023-01-01T00:00:00+00:00")
         assert PreviewEngine._evaluate_condition(f, cond) is True
 
     def test_modified_before_false(self, tmp_path):
         f = tmp_path / "new.txt"
         f.write_text("new")
-        cond = RuleCondition(ConditionType.MODIFIED_BEFORE, "2000-01-01")
+        cond = RuleCondition(ConditionType.MODIFIED_BEFORE, "2000-01-01T00:00:00+00:00")
         assert PreviewEngine._evaluate_condition(f, cond) is False
 
     def test_modified_before_bad_value(self, tmp_path):
@@ -219,15 +219,15 @@ class TestConditionModifiedAfter:
     def test_modified_after_true(self, tmp_path):
         f = tmp_path / "recent.txt"
         f.write_text("recent")
-        cond = RuleCondition(ConditionType.MODIFIED_AFTER, "2000-01-01")
+        cond = RuleCondition(ConditionType.MODIFIED_AFTER, "2000-01-01T00:00:00+00:00")
         assert PreviewEngine._evaluate_condition(f, cond) is True
 
     def test_modified_after_false(self, tmp_path):
         f = tmp_path / "old.txt"
         f.write_text("old")
-        old_ts = datetime(1999, 6, 1).timestamp()
+        old_ts = datetime(1999, 6, 1, tzinfo=UTC).timestamp()
         os.utime(f, (old_ts, old_ts))
-        cond = RuleCondition(ConditionType.MODIFIED_AFTER, "2000-01-01")
+        cond = RuleCondition(ConditionType.MODIFIED_AFTER, "2000-01-01T00:00:00+00:00")
         assert PreviewEngine._evaluate_condition(f, cond) is False
 
     def test_modified_after_bad_value(self, tmp_path):

@@ -88,7 +88,7 @@ class PathMigrator:
             Dictionary with migration details
         """
         return {
-            'timestamp': datetime.now(UTC).isoformat(),
+            'timestamp': datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             'from': str(self.legacy_path),
             'to': str(self.canonical_path),
             'status': 'pending',

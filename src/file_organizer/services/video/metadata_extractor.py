@@ -264,6 +264,9 @@ def _parse_datetime(value: str) -> datetime | None:
     # Try datetime.fromisoformat first — handles Z and ±HH:MM offsets (Python 3.11+)
     try:
         dt = datetime.fromisoformat(stripped.replace("Z", "+00:00"))
+        # Normalize naive datetimes (e.g. date-only "2025-06-15") to UTC
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
         # Ensure UTC timezone for consistency with rest of codebase
         return dt.astimezone(UTC)
     except ValueError:

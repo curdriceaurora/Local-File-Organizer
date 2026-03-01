@@ -38,7 +38,10 @@ class TagPattern:
     def from_dict(data: dict) -> TagPattern:
         """Create from dictionary."""
         if "last_seen" in data and data["last_seen"]:
-            data["last_seen"] = datetime.fromisoformat(data["last_seen"])
+            dt = datetime.fromisoformat(data["last_seen"])
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=UTC)
+            data["last_seen"] = dt
         return TagPattern(**data)
 
 
@@ -67,13 +70,21 @@ class TagUsage:
     @staticmethod
     def from_dict(data: dict) -> TagUsage:
         """Create from dictionary."""
+        first_used = None
+        if data.get("first_used"):
+            first_used = datetime.fromisoformat(data["first_used"])
+            if first_used.tzinfo is None:
+                first_used = first_used.replace(tzinfo=UTC)
+        last_used = None
+        if data.get("last_used"):
+            last_used = datetime.fromisoformat(data["last_used"])
+            if last_used.tzinfo is None:
+                last_used = last_used.replace(tzinfo=UTC)
         return TagUsage(
             tag=data["tag"],
             count=data.get("count", 0),
-            first_used=datetime.fromisoformat(data["first_used"])
-            if data.get("first_used")
-            else None,
-            last_used=datetime.fromisoformat(data["last_used"]) if data.get("last_used") else None,
+            first_used=first_used,
+            last_used=last_used,
             file_types=set(data.get("file_types", [])),
             contexts=data.get("contexts", []),
         )
@@ -430,7 +441,7 @@ class TagLearningEngine:
                 "directory_tags": {
                     dir_: dict(counter) for dir_, counter in self.directory_tags.items()
                 },
-                "last_updated": datetime.now(UTC).isoformat(),
+                "last_updated": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             }
 
             with open(self.storage_path, "w") as f:

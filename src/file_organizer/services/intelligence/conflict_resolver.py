@@ -176,7 +176,7 @@ class ConflictResolver:
         if not preferences:
             return []
 
-        now = datetime.now(UTC).replace(tzinfo=None)  # Make timezone-naive
+        now = datetime.now(UTC)
         decay_factor = 30.0  # Days for weight to decay to ~37% (1/e)
 
         # Calculate days old for each preference
@@ -308,12 +308,12 @@ class ConflictResolver:
         try:
             # Handle both with and without 'Z' suffix
             if timestamp.endswith("Z"):
-                timestamp = timestamp[:-1]  # Remove Z for naive datetime
+                timestamp = timestamp[:-1] + "+00:00"
 
-            # Parse and remove timezone info to make it naive
             dt = datetime.fromisoformat(timestamp)
-            # Make timezone-naive
-            return dt.replace(tzinfo=None)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=UTC)
+            return dt
         except (ValueError, AttributeError) as e:
             logger.warning(f"Failed to parse timestamp '{timestamp}': {e}")
             return datetime(1970, 1, 1, tzinfo=UTC)

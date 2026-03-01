@@ -1,12 +1,12 @@
 ---
 name: 477-deprecation-debt
 title: "Burn down deprecation/warning debt"
-status: open
+status: closed
 priority: P3
 effort_estimate: "8-16 hours"
 phase: 5
 created: 2026-02-27T16:27:55Z
-updated: 2026-02-27T16:27:55Z
+updated: 2026-03-01T03:55:42Z
 github_issue: 477
 epic: issue-remediation-462-480
 ---

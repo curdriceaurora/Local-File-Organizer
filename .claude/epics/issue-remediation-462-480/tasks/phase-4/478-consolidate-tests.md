@@ -1,12 +1,12 @@
 ---
 name: 478-consolidate-tests
 title: "Consolidate test suites and enforce conventions"
-status: open
+status: closed
 priority: P2
 effort_estimate: "20-32 hours"
 phase: 4
 created: 2026-02-27T16:27:55Z
-updated: 2026-02-27T16:27:55Z
+updated: 2026-03-01T03:55:42Z
 github_issue: 478
 epic: issue-remediation-462-480
 ---
