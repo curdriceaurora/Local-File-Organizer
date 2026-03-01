@@ -2,7 +2,7 @@
 
 import json
 import shutil
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -56,7 +56,7 @@ class PathMigrator:
             Path to backup directory
         """
         # Use microseconds to ensure uniqueness for rapid successive migrations
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        timestamp = datetime.now(UTC).strftime('%Y%m%d_%H%M%S_%f')
         backup = self.legacy_path.parent / f'{self.legacy_path.name}.backup.{timestamp}'
         shutil.copytree(self.legacy_path, backup)
         self.backup_path = backup
@@ -88,7 +88,7 @@ class PathMigrator:
             Dictionary with migration details
         """
         return {
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'from': str(self.legacy_path),
             'to': str(self.canonical_path),
             'status': 'pending',

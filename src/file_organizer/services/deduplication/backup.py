@@ -14,7 +14,7 @@ import json
 import os
 import shutil
 import tempfile
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # fcntl is Unix-only, not available on Windows
@@ -82,7 +82,7 @@ class BackupManager:
             raise ValueError(f"Path is not a file: {file_path}")
 
         # Generate unique backup filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")
         backup_filename = f"{file_path.stem}_{timestamp}{file_path.suffix}"
         backup_path = (self.backup_dir / backup_filename).resolve()
 
@@ -97,9 +97,9 @@ class BackupManager:
         manifest[str(backup_path)] = {
             "original_path": str(file_path),
             "backup_path": str(backup_path),
-            "backup_time": datetime.now().isoformat(),
+            "backup_time": datetime.now(UTC).isoformat(),
             "file_size": file_path.stat().st_size,
-            "original_mtime": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat(),
+            "original_mtime": datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC).isoformat(),
         }
         self._save_manifest(manifest)
 
@@ -161,7 +161,7 @@ class BackupManager:
         if max_age_days < 0:
             raise ValueError("max_age_days must be non-negative")
 
-        cutoff_date = datetime.now() - timedelta(days=max_age_days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=max_age_days)
         manifest = self._load_manifest()
         removed_backups = []
 

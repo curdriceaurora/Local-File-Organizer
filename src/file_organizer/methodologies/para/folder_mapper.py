@@ -277,10 +277,10 @@ class CategoryFolderMapper:
             Date folder string or None
         """
         try:
-            from datetime import datetime
+            from datetime import UTC, datetime
 
             mtime = file_path.stat().st_mtime
-            date = datetime.fromtimestamp(mtime)
+            date = datetime.fromtimestamp(mtime, tz=UTC)
             return date.strftime(self.strategy.date_format)
         except Exception as e:
             logger.warning(f"Failed to get date folder for {file_path}: {e}")

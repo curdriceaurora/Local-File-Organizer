@@ -116,7 +116,7 @@ class TemporalHeuristic(Heuristic):
     def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
         """Evaluate based on temporal patterns."""
         import time
-        from datetime import datetime
+        from datetime import UTC, datetime
 
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -125,7 +125,7 @@ class TemporalHeuristic(Heuristic):
 
         stat = file_path.stat()
         now = time.time()
-        current_year = datetime.now().year
+        current_year = datetime.now(UTC).year
 
         # Calculate time differences
         days_since_modified = (now - stat.st_mtime) / 86400

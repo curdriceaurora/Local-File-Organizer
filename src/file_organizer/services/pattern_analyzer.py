@@ -10,7 +10,7 @@ import logging
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -123,7 +123,7 @@ class PatternAnalyzer:
                 content_clusters=[],
                 file_type_distribution={},
                 depth_distribution={},
-                analyzed_at=datetime.now(),
+                analyzed_at=datetime.now(UTC),
                 total_files=0,
             )
 
@@ -141,7 +141,7 @@ class PatternAnalyzer:
             content_clusters=content_clusters,
             file_type_distribution=file_type_dist,
             depth_distribution=depth_dist,
-            analyzed_at=datetime.now(),
+            analyzed_at=datetime.now(UTC),
             total_files=len(files),
             metadata={"min_pattern_count": self.min_pattern_count, "max_depth": self.max_depth},
         )

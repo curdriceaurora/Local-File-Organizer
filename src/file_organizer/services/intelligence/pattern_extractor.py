@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -295,7 +295,7 @@ class NamingPatternExtractor:
 
         # Add date if needed
         if file_info.get("include_date"):
-            date_str = datetime.now().strftime("%Y-%m-%d")
+            date_str = datetime.now(UTC).strftime("%Y-%m-%d")
             parts.append(date_str)
 
         # Add suffix if available

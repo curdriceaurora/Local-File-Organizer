@@ -11,7 +11,7 @@ import json
 import logging
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -264,8 +264,8 @@ def _parse_datetime(value: str) -> datetime | None:
     # Try datetime.fromisoformat first — handles Z and ±HH:MM offsets (Python 3.11+)
     try:
         dt = datetime.fromisoformat(stripped.replace("Z", "+00:00"))
-        # Return naive datetime (strip tzinfo) for consistency with rest of codebase
-        return dt.replace(tzinfo=None)
+        # Ensure UTC timezone for consistency with rest of codebase
+        return dt.astimezone(UTC)
     except ValueError:
         pass
 
@@ -279,7 +279,7 @@ def _parse_datetime(value: str) -> datetime | None:
     ]
     for fmt in formats:
         try:
-            return datetime.strptime(stripped, fmt)
+            return datetime.strptime(stripped, fmt).replace(tzinfo=UTC)
         except ValueError:
             continue
     return None

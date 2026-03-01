@@ -413,6 +413,58 @@ if [[ -n "$PY_FILES" ]]; then
   echo ""
 fi
 
+# ── 8c. Datetime Timezone Safety ──────────────────────────────────────────
+# These checks prevent naive datetime patterns from reaching main.
+
+STAGED_PY_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.py$' || true)
+
+if [ -n "$STAGED_PY_FILES" ]; then
+  echo "🕐 Datetime timezone safety checks..."
+
+  # Check 1: Naive datetime.now() detection
+  NAIVE_NOW=$(echo "$STAGED_PY_FILES" | xargs grep -n 'datetime\.now()' 2>/dev/null | grep -v 'now(UTC\|now(timezone\|now(tz=' || true)
+  if [ -n "$NAIVE_NOW" ]; then
+    echo "  ❌ Found naive datetime.now() — use datetime.now(UTC) instead:"
+    echo "$NAIVE_NOW" | sed 's/^/    /'
+    exit 1
+  else
+    echo "  ✓ No naive datetime.now() found"
+  fi
+
+  # Check 2: Deprecated utcnow() detection
+  UTCNOW=$(echo "$STAGED_PY_FILES" | xargs grep -n 'datetime\.utcnow()' 2>/dev/null || true)
+  if [ -n "$UTCNOW" ]; then
+    echo "  ❌ Found deprecated datetime.utcnow() — use datetime.now(UTC) instead:"
+    echo "$UTCNOW" | sed 's/^/    /'
+    exit 1
+  else
+    echo "  ✓ No deprecated utcnow() found"
+  fi
+
+  # Check 3: Bare fromtimestamp() detection (warning only)
+  BARE_TS=$(echo "$STAGED_PY_FILES" | xargs grep -n 'fromtimestamp(' 2>/dev/null | grep -v 'tz=' || true)
+  if [ -n "$BARE_TS" ]; then
+    echo "  ⚠️  Found fromtimestamp() without tz= — consider adding tz=UTC:"
+    echo "$BARE_TS" | sed 's/^/    /'
+    # Warning only — don't exit
+  else
+    echo "  ✓ No bare fromtimestamp() found"
+  fi
+
+  # Check 4: isoformat()+"Z" trap detection
+  ISO_TRAP=$(echo "$STAGED_PY_FILES" | xargs grep -n 'isoformat().*+.*"Z"' 2>/dev/null || true)
+  if [ -n "$ISO_TRAP" ]; then
+    echo "  ❌ Found isoformat()+\"Z\" trap — use .isoformat() directly (aware datetimes include offset):"
+    echo "$ISO_TRAP" | sed 's/^/    /'
+    exit 1
+  else
+    echo "  ✓ No isoformat()+\"Z\" trap found"
+  fi
+
+  echo "✓ Datetime timezone safety checks passed"
+  echo ""
+fi
+
 # 9. Summary
 echo "✅ All validations passed!"
 echo ""

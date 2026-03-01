@@ -8,7 +8,7 @@ filtering.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from textual import on
@@ -133,7 +133,7 @@ class FileMetadataPanel(Static):
         try:
             stat = path.stat()
             size = _format_size(stat.st_size)
-            modified = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
+            modified = datetime.fromtimestamp(stat.st_mtime, tz=UTC).strftime("%Y-%m-%d %H:%M")
             kind = "Directory" if path.is_dir() else (path.suffix or "File")
             self.update(f"[b]{path.name}[/b]\nType: {kind}  Size: {size}  Modified: {modified}")
         except OSError:

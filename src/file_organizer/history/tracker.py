@@ -83,7 +83,7 @@ class OperationHistory:
                     {
                         "size": stat.st_size,
                         "mode": stat.st_mode,
-                        "mtime": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                        "mtime": datetime.fromtimestamp(stat.st_mtime, tz=UTC).isoformat(),
                         "is_file": source_path.is_file(),
                         "is_dir": source_path.is_dir(),
                     }

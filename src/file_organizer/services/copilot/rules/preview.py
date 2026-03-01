@@ -9,7 +9,7 @@ from __future__ import annotations
 import fnmatch
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from loguru import logger
@@ -205,7 +205,7 @@ class PreviewEngine:
 
         if ct == ConditionType.MODIFIED_BEFORE:
             try:
-                mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                mtime = datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC)
                 threshold = datetime.fromisoformat(value)
                 return mtime < threshold
             except (OSError, ValueError):
@@ -213,7 +213,7 @@ class PreviewEngine:
 
         if ct == ConditionType.MODIFIED_AFTER:
             try:
-                mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                mtime = datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC)
                 threshold = datetime.fromisoformat(value)
                 return mtime > threshold
             except (OSError, ValueError):

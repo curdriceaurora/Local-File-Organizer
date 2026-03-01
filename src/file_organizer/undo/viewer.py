@@ -7,7 +7,7 @@ for viewing operation history.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from ..history.models import Operation, OperationStatus, OperationType
@@ -299,7 +299,7 @@ class HistoryViewer:
 
         for fmt in formats:
             try:
-                return datetime.strptime(date_str, fmt)
+                return datetime.strptime(date_str, fmt).replace(tzinfo=UTC)
             except ValueError:
                 continue
 

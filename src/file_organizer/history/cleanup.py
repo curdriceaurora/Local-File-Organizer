@@ -101,7 +101,7 @@ class HistoryCleanup:
             max_age_days = self.config.max_age_days
 
         cutoff_date = datetime.now(UTC) - timedelta(days=max_age_days)
-        cutoff_str = cutoff_date.isoformat() + "Z"
+        cutoff_str = cutoff_date.isoformat().replace("+00:00", "Z")
 
         logger.info(f"Cleaning up operations older than {max_age_days} days (before {cutoff_str})")
 
@@ -257,7 +257,7 @@ class HistoryCleanup:
             Number of operations deleted
         """
         cutoff_date = datetime.now(UTC) - timedelta(days=older_than_days)
-        cutoff_str = cutoff_date.isoformat() + "Z"
+        cutoff_str = cutoff_date.isoformat().replace("+00:00", "Z")
 
         logger.info(f"Cleaning up failed operations older than {older_than_days} days")
 
@@ -279,7 +279,7 @@ class HistoryCleanup:
             Number of operations deleted
         """
         cutoff_date = datetime.now(UTC) - timedelta(days=older_than_days)
-        cutoff_str = cutoff_date.isoformat() + "Z"
+        cutoff_str = cutoff_date.isoformat().replace("+00:00", "Z")
 
         logger.info(f"Cleaning up rolled back operations older than {older_than_days} days")
 

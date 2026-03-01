@@ -10,7 +10,7 @@ import json
 import logging
 import shutil
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .categories import NumberingScheme, get_default_scheme
@@ -127,7 +127,7 @@ class JohnnyDecimalMigrator:
         Returns:
             MigrationResult with execution details
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
 
         logger.info(
             f"{'[DRY RUN] ' if dry_run else ''}Executing migration with "
@@ -148,8 +148,8 @@ class JohnnyDecimalMigrator:
 
                 # Initialize rollback info
                 rollback_info = RollbackInfo(
-                    migration_id=datetime.now().strftime("%Y%m%d_%H%M%S"),
-                    timestamp=datetime.now(),
+                    migration_id=datetime.now(UTC).strftime("%Y%m%d_%H%M%S"),
+                    timestamp=datetime.now(UTC),
                     original_structure={},
                     backup_path=backup_path,
                 )
@@ -207,7 +207,7 @@ class JohnnyDecimalMigrator:
             self._save_rollback_info(rollback_info)
             self._rollback_history.append(rollback_info)
 
-        duration = (datetime.now() - start_time).total_seconds()
+        duration = (datetime.now(UTC) - start_time).total_seconds()
 
         result = MigrationResult(
             success=(len(failed_paths) == 0),
@@ -292,7 +292,7 @@ class JohnnyDecimalMigrator:
         Raises:
             OSError: If backup creation fails
         """
-        backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        backup_name = f"backup_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
         backup_path = root_path.parent / backup_name
 
         shutil.copytree(root_path, backup_path)

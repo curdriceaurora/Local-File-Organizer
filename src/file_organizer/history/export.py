@@ -70,11 +70,11 @@ class HistoryExporter:
 
         if start_date:
             query += " AND timestamp >= ?"
-            params.append(start_date.isoformat() + "Z")
+            params.append(start_date.isoformat().replace("+00:00", "Z"))
 
         if end_date:
             query += " AND timestamp <= ?"
-            params.append(end_date.isoformat() + "Z")
+            params.append(end_date.isoformat().replace("+00:00", "Z"))
 
         query += " ORDER BY timestamp DESC"
 
@@ -149,11 +149,11 @@ class HistoryExporter:
 
         if start_date:
             query += " AND timestamp >= ?"
-            params.append(start_date.isoformat() + "Z")
+            params.append(start_date.isoformat().replace("+00:00", "Z"))
 
         if end_date:
             query += " AND timestamp <= ?"
-            params.append(end_date.isoformat() + "Z")
+            params.append(end_date.isoformat().replace("+00:00", "Z"))
 
         query += " ORDER BY timestamp DESC"
 

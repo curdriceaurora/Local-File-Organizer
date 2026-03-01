@@ -76,7 +76,7 @@ class StorageAnalyzer:
                         path=item,
                         size=size,
                         type=file_type,
-                        modified=datetime.fromtimestamp(item.stat().st_mtime),
+                        modified=datetime.fromtimestamp(item.stat().st_mtime, tz=UTC),
                     )
                 )
 
@@ -177,7 +177,7 @@ class StorageAnalyzer:
                             path=file_path,
                             size=size,
                             type=file_path.suffix.lower(),
-                            modified=datetime.fromtimestamp(file_path.stat().st_mtime),
+                            modified=datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC),
                         )
                     )
 

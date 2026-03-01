@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ..models.suggestion_types import ConfidenceFactors, Suggestion, SuggestionType
@@ -190,7 +190,7 @@ class ConfidenceScorer:
         """Calculate score based on file recency."""
         try:
             mtime = file_path.stat().st_mtime
-            age_days = (datetime.now().timestamp() - mtime) / 86400
+            age_days = (datetime.now(UTC).timestamp() - mtime) / 86400
 
             # More recent files get slightly higher scores
             if age_days < 7:
@@ -498,7 +498,7 @@ class SuggestionEngine:
 
     def _generate_id(self, file_path: Path, target: Path | None) -> str:
         """Generate unique ID for suggestion."""
-        content = f"{file_path}{target}{datetime.now().isoformat()}"
+        content = f"{file_path}{target}{datetime.now(UTC).isoformat()}"
         return hashlib.md5(content.encode()).hexdigest()[:16]
 
     def _get_common_root(self, files: list[Path]) -> Path:

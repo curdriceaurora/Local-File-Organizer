@@ -11,7 +11,7 @@ import logging
 import re
 import shutil
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .classifier import AudioType
@@ -318,7 +318,7 @@ class AudioOrganizer:
         metadata: AudioMetadata,
     ) -> str:
         """Fill in a template string with metadata values."""
-        now = datetime.now()
+        now = datetime.now(UTC)
         file_year = metadata.year or now.year
 
         # Build substitution map

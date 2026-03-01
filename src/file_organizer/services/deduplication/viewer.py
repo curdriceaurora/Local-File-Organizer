@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import shutil
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -213,7 +213,7 @@ class ComparisonViewer:
             height=height,
             format=img_format,
             file_size=stat.st_size,
-            modified_time=datetime.fromtimestamp(stat.st_mtime),
+            modified_time=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
             mode=mode,
         )
 

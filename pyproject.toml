@@ -203,6 +203,7 @@ select = [
     "UP",  # pyupgrade
     "D",   # pydocstyle (google convention)
     "RUF100",  # stale noqa comments
+    "DTZ",  # datetime timezone rules (DTZ001-DTZ007, DTZ011-DTZ012)
 ]
 ignore = [
     "E501",  # line too long (handled by formatter)
