@@ -146,6 +146,7 @@ class TestRunTui:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_app_starts_and_quits() -> None:
     """App should start, render, and exit cleanly."""
@@ -156,6 +157,7 @@ async def test_app_starts_and_quits() -> None:
         await pilot.press("q")
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_initial_view_is_files() -> None:
     """Initial main content should show the Files view."""
@@ -164,6 +166,7 @@ async def test_initial_view_is_files() -> None:
         assert app._current_view == "files"
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_switch_to_organized_view() -> None:
     """Switching to organized view should mount OrganizationPreviewView."""
@@ -176,6 +179,7 @@ async def test_switch_to_organized_view() -> None:
             assert app.query_one("#view", OrganizationPreviewView) is not None
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_switch_to_settings_view() -> None:
     """Switching to settings view should mount a PlaceholderView."""
@@ -187,6 +191,7 @@ async def test_switch_to_settings_view() -> None:
         assert app.query_one("#view", PlaceholderView) is not None
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_switch_back_to_files_view() -> None:
     """Switching back to files should restore the FilePreviewView."""
@@ -199,6 +204,7 @@ async def test_switch_back_to_files_view() -> None:
         assert app._current_view == "files"
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_status_bar_updates_on_view_switch() -> None:
     """StatusBar should update its internal message when switching views."""
@@ -211,6 +217,7 @@ async def test_status_bar_updates_on_view_switch() -> None:
             assert "Organized" in status._message
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_help_action_updates_status() -> None:
     """Help action should update the status bar with help info."""
@@ -222,6 +229,7 @@ async def test_help_action_updates_status() -> None:
         assert "quit" in status._message.lower()
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_switch_to_analytics_view() -> None:
     """Switching to analytics view should mount AnalyticsView."""
@@ -234,6 +242,7 @@ async def test_switch_to_analytics_view() -> None:
             assert app.query_one("#view", AnalyticsView) is not None
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_switch_to_methodology_view() -> None:
     """Switching to methodology view should mount MethodologyView."""
@@ -246,6 +255,7 @@ async def test_switch_to_methodology_view() -> None:
             assert app.query_one("#view", MethodologyView) is not None
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_status_bar_updates_on_analytics_switch() -> None:
     """StatusBar should show 'Analytics' when switching to analytics view."""
@@ -258,6 +268,7 @@ async def test_status_bar_updates_on_analytics_switch() -> None:
             assert "Analytics" in status._message
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_switch_to_audio_view() -> None:
     """Switching to audio view should mount AudioView."""
@@ -270,6 +281,7 @@ async def test_switch_to_audio_view() -> None:
             assert app.query_one("#view", AudioView) is not None
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_switch_to_history_view() -> None:
     """Switching to history view should mount UndoHistoryView."""
@@ -282,6 +294,7 @@ async def test_switch_to_history_view() -> None:
             assert app.query_one("#view", UndoHistoryView) is not None
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_update_notification() -> None:
     """When update is available, notification should be shown."""

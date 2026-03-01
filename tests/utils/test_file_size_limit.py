@@ -136,9 +136,15 @@ class TestReadFileDispatcherSizeGate:
         fake_tar.write_bytes(b"\x00" * 16)
 
         huge_stat = _make_stat(MAX_FILE_SIZE_BYTES + 1)
-        with patch.object(Path, "stat", return_value=huge_stat):
+        with (
+            patch.object(Path, "stat", return_value=huge_stat),
+            patch(
+                "file_organizer.utils.readers.archives.read_tar_file"
+            ) as mock_tar,
+        ):
             with pytest.raises(FileTooLargeError):
                 read_file(str(fake_tar))
+            mock_tar.assert_not_called()
 
     def test_read_file_passes_normal_size(self, tmp_path: Path) -> None:
         """read_file() must call through to the underlying reader when the file

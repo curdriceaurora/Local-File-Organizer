@@ -287,7 +287,8 @@ class AudioTranscriber:
 
         try:
             # Detect language from first 30 seconds
-            assert self.model is not None  # ensured by _load_model above
+            if self.model is None:
+                raise RuntimeError("Model not loaded: call _load_model() before transcribing")
             segments, info = self.model.transcribe(str(audio_path), beam_size=5, language=None)
 
             # Get language from detected info
@@ -353,7 +354,8 @@ class AudioTranscriber:
 
         try:
             # Run transcription
-            assert self.model is not None  # ensured by _load_model above
+            if self.model is None:
+                raise RuntimeError("Model not loaded: call _load_model() before transcribing")
             segments, info = self.model.transcribe(
                 str(audio_path),
                 language=options.language,

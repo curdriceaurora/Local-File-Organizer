@@ -632,7 +632,7 @@ class TestPatternAnalyzer:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 class TestSuggestionEngineIntegration:
     """Integration-level tests for SuggestionEngine with real files."""
 
@@ -881,7 +881,7 @@ class TestSuggestionFeedback:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 class TestSmartSuggestionsIntegration:
     """End-to-end integration tests for the smart suggestions system."""
 

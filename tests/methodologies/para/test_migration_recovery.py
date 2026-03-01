@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import shutil
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -68,7 +69,9 @@ class TestMigrationBackupSystem:
         )
 
     @pytest.fixture
-    def migration_manager(self, config, tmp_path):
+    def migration_manager(
+        self, config: PARAConfig, tmp_path: Path
+    ) -> Generator[PARAMigrationManager, None, None]:
         """Create migration manager instance with isolated backup root."""
         manager = PARAMigrationManager(config)
         # Override backup_root to use tmp_path so parallel tests don't collide

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import tomllib
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 import pytest
@@ -22,7 +23,7 @@ PLACEHOLDER_PATTERNS = [
 ]
 
 
-def _load_pyproject() -> dict:
+def _load_pyproject() -> dict[str, Any]:
     with open(PYPROJECT, "rb") as f:
         return tomllib.load(f)
 

@@ -217,6 +217,6 @@ class TestCacheInfo:
     """Tests for cache_info()."""
 
     def test_cache_info_returns_dict(self) -> None:
-        mgr = ModelManager()
+        mgr = ModelManager(console=MagicMock())
         result = mgr.cache_info()
         assert isinstance(result, dict)

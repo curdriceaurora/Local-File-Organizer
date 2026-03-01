@@ -599,7 +599,6 @@ def organize_scan(
         request,
         "organize/_plan.html",
         {
-            "request": request,
             "plan": plan,
             "error_message": error_message,
             "info_message": info_message,
@@ -624,7 +623,6 @@ def organize_clear_plan(
         request,
         "organize/_plan.html",
         {
-            "request": request,
             "plan": None,
             "info_message": "Plan dismissed.",
             "error_message": None,
@@ -713,7 +711,7 @@ def organize_execute(
         request,
         "organize/_job_status.html",
         {
-            "request": request,
+
             "job": job_view,
             "info_message": info_message,
             "error_message": error_message,
@@ -749,7 +747,7 @@ def organize_job_status(
         request,
         "organize/_job_status.html",
         {
-            "request": request,
+
             "job": job,
             "info_message": None,
             "error_message": None,
@@ -824,7 +822,7 @@ def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
         request,
         "organize/_job_status.html",
         {
-            "request": request,
+
             "job": refreshed_job,
             "info_message": info_message,
             "error_message": error_message,
@@ -868,7 +866,7 @@ def organize_job_rollback(request: Request, job_id: str) -> HTMLResponse:
         request,
         "organize/_job_status.html",
         {
-            "request": request,
+
             "job": refreshed_job,
             "info_message": None,
             "error_message": error_message,
@@ -895,7 +893,7 @@ def organize_history(
         request,
         "organize/_history.html",
         {
-            "request": request,
+
             "rows": rows,
             "status_filter": status_filter,
             "limit": limit,
@@ -910,7 +908,7 @@ def organize_stats(request: Request) -> HTMLResponse:
         request,
         "organize/_stats.html",
         {
-            "request": request,
+
             "stats": _build_organize_stats(),
         },
     )

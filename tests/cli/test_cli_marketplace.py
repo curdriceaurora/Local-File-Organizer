@@ -494,6 +494,8 @@ def _prepare_repo(repo_dir: Path) -> None:
 class TestMarketplaceCIIntegration:
     """CI integration tests using real file archives (no mocks)."""
 
+    pytestmark = [pytest.mark.ci]
+
     def test_marketplace_help(self) -> None:
         from file_organizer.cli.main import app
 

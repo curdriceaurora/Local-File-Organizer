@@ -1,6 +1,6 @@
 # Quality Ratchet Baseline
 
-**Created**: 2026-02-28
+**Created**: 2026-02-28T00:00:00Z
 **Issue**: #480
 
 This document tracks the quality ratchet — lint and type strictness gates that

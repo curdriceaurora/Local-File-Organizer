@@ -12,6 +12,13 @@ import pytest
 
 from file_organizer.services.intelligence.conflict_resolver import ConflictResolver
 
+_TIMESTAMP_FMT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+def _format_utc(dt: datetime) -> str:
+    """Format a datetime as a canonical UTC timestamp string."""
+    return dt.strftime(_TIMESTAMP_FMT)
+
 
 @pytest.mark.unit
 class TestConflictResolver:
@@ -66,8 +73,8 @@ class TestConflictResolver:
     def test_resolve_by_recency(self, resolver):
         """Test conflict resolution favors more recent preferences."""
         now = datetime.now(tz=UTC)
-        old_date = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        recent_date = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        old_date = (now - timedelta(days=30)).strftime(_TIMESTAMP_FMT)
+        recent_date = now.strftime(_TIMESTAMP_FMT)
 
         old_pref = {
             "folder_mappings": {"pdf": "Documents"},
@@ -89,7 +96,7 @@ class TestConflictResolver:
 
     def test_resolve_by_frequency(self, resolver):
         """Test conflict resolution favors higher frequency preferences."""
-        now = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        now = datetime.now(tz=UTC).strftime(_TIMESTAMP_FMT)
 
         low_freq = {
             "folder_mappings": {"pdf": "Documents"},
@@ -111,7 +118,7 @@ class TestConflictResolver:
 
     def test_resolve_by_confidence(self, resolver):
         """Test conflict resolution favors higher confidence preferences."""
-        now = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        now = datetime.now(tz=UTC).strftime(_TIMESTAMP_FMT)
 
         low_conf = {
             "folder_mappings": {"pdf": "Documents"},
@@ -138,14 +145,14 @@ class TestConflictResolver:
         # Recent but low frequency and confidence
         pref1 = {
             "value": "pref1",
-            "updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "updated": now.strftime(_TIMESTAMP_FMT),
             "correction_count": 2,
             "confidence": 0.5,
         }
         # Old but high frequency and confidence
         pref2 = {
             "value": "pref2",
-            "updated": (now - timedelta(days=60)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "updated": (now - timedelta(days=60)).strftime(_TIMESTAMP_FMT),
             "correction_count": 50,
             "confidence": 0.95,
         }
@@ -161,13 +168,13 @@ class TestConflictResolver:
 
         pref1 = {
             "value": "pref1",
-            "updated": (now - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "updated": (now - timedelta(days=1)).strftime(_TIMESTAMP_FMT),
             "correction_count": 10,
             "confidence": 0.8,
         }
         pref2 = {
             "value": "pref2",
-            "updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "updated": now.strftime(_TIMESTAMP_FMT),
             "correction_count": 10,
             "confidence": 0.8,
         }
@@ -182,9 +189,9 @@ class TestConflictResolver:
         now = datetime.now(tz=UTC)
 
         prefs = [
-            {"updated": (now - timedelta(days=60)).strftime("%Y-%m-%dT%H:%M:%SZ")},
-            {"updated": (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")},
-            {"updated": now.strftime("%Y-%m-%dT%H:%M:%SZ")},
+            {"updated": (now - timedelta(days=60)).strftime(_TIMESTAMP_FMT)},
+            {"updated": (now - timedelta(days=30)).strftime(_TIMESTAMP_FMT)},
+            {"updated": now.strftime(_TIMESTAMP_FMT)},
         ]
 
         weights = resolver.weight_by_recency(prefs)
@@ -200,7 +207,7 @@ class TestConflictResolver:
 
         prefs = [
             {},  # No timestamp
-            {"updated": now.strftime("%Y-%m-%dT%H:%M:%SZ")},
+            {"updated": now.strftime(_TIMESTAMP_FMT)},
         ]
 
         weights = resolver.weight_by_recency(prefs)
@@ -293,11 +300,11 @@ class TestConflictResolver:
 
         prefs = [
             {
-                "updated": (now - timedelta(days=60)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "updated": (now - timedelta(days=60)).strftime(_TIMESTAMP_FMT),
                 "correction_count": 2,
                 "confidence": 0.5,
             },
-            {"updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "correction_count": 50, "confidence": 0.95},
+            {"updated": now.strftime(_TIMESTAMP_FMT), "correction_count": 50, "confidence": 0.95},
         ]
 
         ambiguity = resolver.get_ambiguity_score(prefs)
@@ -310,8 +317,8 @@ class TestConflictResolver:
         now = datetime.now(tz=UTC)
 
         prefs = [
-            {"updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "correction_count": 10, "confidence": 0.8},
-            {"updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "correction_count": 10, "confidence": 0.8},
+            {"updated": now.strftime(_TIMESTAMP_FMT), "correction_count": 10, "confidence": 0.8},
+            {"updated": now.strftime(_TIMESTAMP_FMT), "correction_count": 10, "confidence": 0.8},
         ]
 
         ambiguity = resolver.get_ambiguity_score(prefs)
@@ -325,11 +332,11 @@ class TestConflictResolver:
 
         prefs = [
             {
-                "updated": (now - timedelta(days=60)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "updated": (now - timedelta(days=60)).strftime(_TIMESTAMP_FMT),
                 "correction_count": 2,
                 "confidence": 0.5,
             },
-            {"updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "correction_count": 50, "confidence": 0.95},
+            {"updated": now.strftime(_TIMESTAMP_FMT), "correction_count": 50, "confidence": 0.95},
         ]
 
         assert not resolver.needs_user_input(prefs)
@@ -339,8 +346,8 @@ class TestConflictResolver:
         now = datetime.now(tz=UTC)
 
         prefs = [
-            {"updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "correction_count": 10, "confidence": 0.8},
-            {"updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "correction_count": 10, "confidence": 0.8},
+            {"updated": now.strftime(_TIMESTAMP_FMT), "correction_count": 10, "confidence": 0.8},
+            {"updated": now.strftime(_TIMESTAMP_FMT), "correction_count": 10, "confidence": 0.8},
         ]
 
         assert resolver.needs_user_input(prefs)
@@ -418,8 +425,8 @@ class TestConflictResolver:
         # User has been moving PDFs to "Documents" folder for months
         old_habit = {
             "folder_mappings": {"pdf": "Documents"},
-            "created": (now - timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "updated": (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "created": (now - timedelta(days=90)).strftime(_TIMESTAMP_FMT),
+            "updated": (now - timedelta(days=30)).strftime(_TIMESTAMP_FMT),
             "correction_count": 45,  # High frequency
             "confidence": 0.85,
         }
@@ -427,8 +434,8 @@ class TestConflictResolver:
         # Recently started moving PDFs to "PDFs" folder
         new_habit = {
             "folder_mappings": {"pdf": "PDFs"},
-            "created": (now - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "created": (now - timedelta(days=7)).strftime(_TIMESTAMP_FMT),
+            "updated": now.strftime(_TIMESTAMP_FMT),
             "correction_count": 8,  # Lower frequency but recent
             "confidence": 0.9,
         }

@@ -136,7 +136,12 @@ class VisionModel(BaseModel):
                 stream=False,
             )
 
-            generated_text = str(response["response"])
+            raw_response = response.get("response")
+            if not raw_response:
+                raise ValueError(
+                    f"Ollama returned empty response for model {self.config.name}"
+                )
+            generated_text = str(raw_response)
             logger.debug(
                 f"Generated {len(generated_text)} characters "
                 f"in {response.get('total_duration', 0) / 1e9:.2f}s"

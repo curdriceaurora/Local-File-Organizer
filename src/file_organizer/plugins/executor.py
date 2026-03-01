@@ -276,7 +276,10 @@ class PluginExecutor:
         try:
             for pipe in (self._proc.stdin, self._proc.stdout, self._proc.stderr):
                 if pipe:
-                    pipe.close()
+                    try:
+                        pipe.close()
+                    except Exception:
+                        pass
             self._proc.terminate()
             try:
                 self._proc.wait(timeout=5)

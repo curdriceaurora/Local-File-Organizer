@@ -435,7 +435,6 @@ class TestPARACustomRules:
 
 
 @pytest.mark.unit
-@pytest.mark.filterwarnings("ignore::ResourceWarning")
 class TestPARAPerformance:
     """Test performance characteristics of PARA categorization."""
 
@@ -444,6 +443,7 @@ class TestPARAPerformance:
         """Create heuristic engine."""
         return HeuristicEngine()
 
+    @pytest.mark.filterwarnings("ignore::ResourceWarning")
     def test_categorization_speed(self, engine, tmp_path):
         """Test that categorization completes quickly."""
         import time
@@ -459,6 +459,7 @@ class TestPARAPerformance:
         assert duration < 1.0
         assert result is not None
 
+    @pytest.mark.filterwarnings("ignore::ResourceWarning")
     def test_batch_categorization_efficiency(self, engine, tmp_path):
         """Test efficiency of categorizing multiple files."""
         import time
@@ -479,6 +480,7 @@ class TestPARAPerformance:
         assert len(results) == 20
         assert all(r is not None for r in results)
 
+    @pytest.mark.filterwarnings("ignore::ResourceWarning")
     def test_memory_efficiency(self, engine, tmp_path):
         """Test that categorization doesn't leak memory."""
         import gc
