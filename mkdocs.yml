@@ -36,6 +36,17 @@ plugins:
   - search:
       lang:
         - en
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            show_category_heading: true
+            members_order: source
+            docstring_style: google
+            merge_init_into_class: true
+            show_if_no_docstring: false
   - minify:
       minify_html: true
       minify_js: true
@@ -86,6 +97,7 @@ nav:
       - Analysis: api/analysis-endpoints.md
       - Search: api/search-endpoints.md
       - WebSocket Events: api/websocket-api.md
+      - Auto-Generated Reference: api/reference.md
   - Admin Guide:
       - Overview: admin/index.md
       - Installation: admin/installation.md

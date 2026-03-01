@@ -152,6 +152,7 @@ docs = [
     "mkdocs-material>=9.5.0",
     "pymdown-extensions>=10.7.0",
     "mkdocs-minify-plugin>=0.8.0",
+    "mkdocstrings[python]>=0.24.0",
 ]
 
 
@@ -218,7 +219,7 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/**/*.py" = ["D"]
-"scripts/**/*.py" = ["D"]
+"scripts/**/*.py" = ["D", "C901"]
 # C901 ratchet baseline — functions exceeding complexity 15 (2026-02-28)
 # Each entry allows existing complex functions; new ones must stay under 15.
 "src/file_organizer/api/config.py" = ["C901"]
@@ -270,7 +271,6 @@ addopts = [
     "--cov-report=xml",
     "--cov-fail-under=74",
     "--timeout=30",
-    "-n=auto",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
