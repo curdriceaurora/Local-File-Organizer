@@ -16,8 +16,6 @@ from typer.testing import CliRunner
 from file_organizer.cli.marketplace import marketplace_app
 from file_organizer.plugins.marketplace import MarketplaceError
 
-pytestmark = [pytest.mark.unit]
-
 
 @pytest.fixture
 def runner():
@@ -493,7 +491,7 @@ def _prepare_repo(repo_dir: Path) -> None:
 class TestMarketplaceCIIntegration:
     """CI integration tests using real file archives (no mocks)."""
 
-    pytestmark = [pytest.mark.ci]
+    pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
     def test_marketplace_help(self) -> None:
         from file_organizer.cli.main import app

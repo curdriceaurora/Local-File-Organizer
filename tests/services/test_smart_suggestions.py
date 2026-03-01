@@ -27,9 +27,6 @@ from file_organizer.services.smart_suggestions import (
 )
 from file_organizer.services.suggestion_feedback import SuggestionFeedback
 
-pytestmark = [pytest.mark.unit]
-
-
 # ---------------------------------------------------------------------------
 # Fake PatternAnalysis helpers
 # ---------------------------------------------------------------------------
@@ -928,6 +925,7 @@ class TestSmartSuggestionsIntegration:
         stats = feedback.get_learning_stats()
         assert stats.total_suggestions >= 1
 
+    @pytest.mark.slow
     def test_performance(self, tmp_path):
         """Test performance on larger dataset."""
         for i in range(100):
