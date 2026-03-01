@@ -140,7 +140,7 @@ file-organizer tui
 | Key | View |
 |-----|------|
 | `1` | File browser |
-| `2` | Organization queue |
+| `2` | Organized |
 | `3` | Storage analytics |
 | `4` | Methodology |
 | `5` | Audio |
@@ -309,8 +309,8 @@ file-organizer rules add my-rule --pattern "*.invoice.*" --action move --dest "D
 ### Previewing and Managing Rules
 
 ```bash
-# Preview what a rule would match
-file-organizer rules preview
+# Preview what a rule would match in a directory
+file-organizer rules preview ~/Documents
 
 # Remove a rule
 file-organizer rules remove my-rule
@@ -333,7 +333,7 @@ Get AI-powered suggestions for where to place files based on your existing direc
 file-organizer suggest files ~/Unsorted
 
 # View detected patterns
-file-organizer suggest patterns
+file-organizer suggest patterns ~/Unsorted
 ```
 
 ### Applying Suggestions
