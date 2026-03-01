@@ -100,6 +100,9 @@ Source module: `src/file_organizer/utils/readers/documents.py`
 - Formats output as `Slide N: text1 | text2 | ...`
 - Requires: `python-pptx` (included in core dependencies)
 
+!!! note "Legacy Format Limitation"
+    Only `.pptx` (Office Open XML) is supported. Legacy `.ppt` (binary format) files are not supported by python-pptx. If you need to process `.ppt` files, convert them to `.pptx` first using Microsoft Office or LibreOffice.
+
 ## Ebooks
 
 Source module: `src/file_organizer/utils/readers/ebook.py`

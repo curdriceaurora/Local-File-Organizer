@@ -502,13 +502,15 @@ file-organizer update install --dry-run
 
 | Category | Formats |
 |----------|---------|
-| Documents | `.txt`, `.md`, `.pdf`, `.docx`, `.doc`, `.csv`, `.xlsx`, `.xls`, `.ppt`, `.pptx`, `.epub` |
+| Documents | `.txt`, `.md`, `.pdf`, `.docx`, `.doc`*, `.csv`, `.xlsx`, `.xls`*, `.pptx` |
 | Images | `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.tiff`, `.tif` |
 | Video | `.mp4`, `.avi`, `.mkv`, `.mov`, `.wmv` |
 | Audio | `.mp3`, `.wav`, `.flac`, `.m4a`, `.ogg` |
 | Archives | `.zip`, `.7z`, `.tar`, `.tar.gz`, `.tgz`, `.tar.bz2`, `.rar` |
 | Scientific | `.hdf5`, `.h5`, `.hdf`, `.nc`, `.nc4`, `.netcdf`, `.mat` |
 | CAD | `.dxf`, `.dwg`, `.step`, `.stp`, `.iges`, `.igs` |
+
+*Legacy formats (`.doc`, `.xls`) have limited support and may return `None` or require additional dependencies. See the [File Format Reference](admin/file-format-reference.md) for details.
 
 !!! tip
     Some format categories require optional feature packs. See [Optional Feature Packs](#optional-feature-packs) above.
