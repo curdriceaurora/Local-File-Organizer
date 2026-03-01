@@ -180,7 +180,7 @@ class TestHistoryViewer(unittest.TestCase):
 
     def test_format_datetime(self):
         """Test datetime formatting."""
-        dt = datetime(2024, 1, 15, 14, 30, 45)
+        dt = datetime(2024, 1, 15, 14, 30, 45, tzinfo=UTC)
         formatted = self.viewer._format_datetime(dt)
 
         self.assertEqual(formatted, "2024-01-15 14:30:45")
@@ -419,7 +419,7 @@ class TestHistoryViewer(unittest.TestCase):
 
     def test_format_datetime_short(self):
         """Test short datetime formatting."""
-        dt = datetime(2024, 3, 20, 10, 5, 30)
+        dt = datetime(2024, 3, 20, 10, 5, 30, tzinfo=UTC)
         formatted = self.viewer._format_datetime_short(dt)
         self.assertEqual(formatted, "2024-03-20 10:05:30")
 

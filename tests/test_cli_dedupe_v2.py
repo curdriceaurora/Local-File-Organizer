@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -29,12 +29,12 @@ def mock_detector_with_groups():
     file_meta_1 = MagicMock()
     file_meta_1.path = Path("/tmp/a.txt")
     file_meta_1.size = 1024
-    file_meta_1.modified_time = datetime(2025, 1, 1, 12, 0)
+    file_meta_1.modified_time = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
 
     file_meta_2 = MagicMock()
     file_meta_2.path = Path("/tmp/b.txt")
     file_meta_2.size = 1024
-    file_meta_2.modified_time = datetime(2025, 1, 2, 12, 0)
+    file_meta_2.modified_time = datetime(2025, 1, 2, 12, 0, tzinfo=UTC)
 
     group = MagicMock()
     group.files = [file_meta_1, file_meta_2]

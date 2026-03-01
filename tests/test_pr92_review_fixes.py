@@ -13,7 +13,7 @@ Validates fixes for CodeRabbit and Copilot review comments:
 from __future__ import annotations
 
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -121,7 +121,7 @@ class TestTemporalHeuristicOldYearDetection:
     def setup_method(self):
         """Setup test instance."""
         self.heuristic = TemporalHeuristic()
-        self.current_year = datetime.now().year
+        self.current_year = datetime.now(UTC).year
 
     def test_contains_old_year_detects_old_paths(self):
         """Test _contains_old_year() detects old years."""

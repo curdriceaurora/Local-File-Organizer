@@ -1,6 +1,6 @@
 import time
 import unittest
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -26,7 +26,7 @@ class TestConcurrencyFixes(unittest.TestCase):
             completed_paths=[],
             pending_paths=[Path(f"file_{i}") for i in range(20)],
             file_hashes={},
-            last_updated=datetime.now(),
+            last_updated=datetime.now(UTC),
         )
         mock_checkpoint_mgr.create_checkpoint.return_value = initial_checkpoint
         mock_checkpoint_mgr.load_checkpoint.return_value = initial_checkpoint

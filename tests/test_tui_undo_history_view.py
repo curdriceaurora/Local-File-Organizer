@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -40,7 +40,7 @@ def _make_op(
     op.id = op_id
     op.operation_type = MagicMock(value=op_type)
     op.status = MagicMock(value=status)
-    op.timestamp = datetime(2026, 1, 15, 10, 30, 0)
+    op.timestamp = datetime(2026, 1, 15, 10, 30, 0, tzinfo=UTC)
     op.source_path = Path(source)
     op.destination_path = Path(dest) if dest else None
     return op
@@ -153,7 +153,7 @@ class TestHelpers:
         assert _format_timestamp(None) == "-"
 
     def test_format_timestamp_valid(self) -> None:
-        ts = datetime(2026, 2, 8, 14, 30, 0)
+        ts = datetime(2026, 2, 8, 14, 30, 0, tzinfo=UTC)
         assert _format_timestamp(ts) == "2026-02-08 14:30:00"
 
     def test_truncate_short(self) -> None:

@@ -6,7 +6,7 @@ and CopilotSession dataclasses including all properties and edge cases.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -102,7 +102,7 @@ class TestCopilotMessage:
         assert msg.is_assistant is False
 
     def test_custom_timestamp(self) -> None:
-        ts = datetime(2025, 1, 1, 12, 0, 0)
+        ts = datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC)
         msg = CopilotMessage(role=MessageRole.USER, content="x", timestamp=ts)
         assert msg.timestamp == ts
 

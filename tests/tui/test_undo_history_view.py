@@ -7,7 +7,7 @@ and the worker thread methods (_load_history, _run_undo, _run_redo).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -42,7 +42,7 @@ class FakeOperation:
         default_factory=lambda: SimpleNamespace(value="completed")
     )
     timestamp: datetime | None = field(
-        default_factory=lambda: datetime(2025, 1, 15, 10, 30, 0)
+        default_factory=lambda: datetime(2025, 1, 15, 10, 30, 0, tzinfo=UTC)
     )
     source_path: str = "/src/a.txt"
     destination_path: str | None = "/dest/a.txt"
@@ -61,7 +61,7 @@ class TestFormatTimestamp:
         assert _format_timestamp(None) == "-"
 
     def test_datetime_formatted(self):
-        dt = datetime(2025, 3, 15, 14, 30, 45)
+        dt = datetime(2025, 3, 15, 14, 30, 45, tzinfo=UTC)
         result = _format_timestamp(dt)
         assert result == "2025-03-15 14:30:45"
 

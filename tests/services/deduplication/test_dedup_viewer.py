@@ -11,7 +11,7 @@ Tests cover:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -52,7 +52,7 @@ def sample_metadata() -> ImageMetadata:
         height=1080,
         format="PNG",
         file_size=2 * 1024 * 1024,  # 2 MB
-        modified_time=datetime(2025, 6, 15, 12, 30, 0),
+        modified_time=datetime(2025, 6, 15, 12, 30, 0, tzinfo=UTC),
         mode="RGB",
     )
 
@@ -66,7 +66,7 @@ def sample_metadata_small() -> ImageMetadata:
         height=480,
         format="JPEG",
         file_size=512 * 1024,  # 0.5 MB
-        modified_time=datetime(2025, 1, 1, 0, 0, 0),
+        modified_time=datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC),
         mode="RGB",
     )
 
@@ -740,7 +740,7 @@ class TestCalculateQualityScore:
             height=100,
             format="PNG",
             file_size=1024,
-            modified_time=datetime.now(),
+            modified_time=datetime.now(UTC),
             mode="RGB",
         )
         gif_meta = ImageMetadata(
@@ -749,7 +749,7 @@ class TestCalculateQualityScore:
             height=100,
             format="GIF",
             file_size=1024,
-            modified_time=datetime.now(),
+            modified_time=datetime.now(UTC),
             mode="RGB",
         )
         assert viewer._calculate_quality_score(png_meta) > viewer._calculate_quality_score(
@@ -763,7 +763,7 @@ class TestCalculateQualityScore:
             height=100,
             format="XYZ",
             file_size=1024,
-            modified_time=datetime.now(),
+            modified_time=datetime.now(UTC),
             mode="RGB",
         )
         score = viewer._calculate_quality_score(meta)
@@ -789,7 +789,7 @@ class TestCalculateQualityScore:
             height=1000,
             format=fmt,
             file_size=1_000_000,
-            modified_time=datetime.now(),
+            modified_time=datetime.now(UTC),
             mode="RGB",
         )
         score = viewer._calculate_quality_score(meta)

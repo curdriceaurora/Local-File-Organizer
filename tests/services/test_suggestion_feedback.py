@@ -7,7 +7,7 @@ user history, old feedback cleanup, and export.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -342,7 +342,7 @@ class TestClearOldFeedback:
             file_path="/a.txt",
             target_path="/b.txt",
             confidence=80.0,
-            timestamp=datetime.now() - timedelta(days=200),
+            timestamp=datetime.now(UTC) - timedelta(days=200),
         )
         fb.feedback_entries.append(old_entry)
         fb.record_action(_make_suggestion(sid="new"), "accepted")

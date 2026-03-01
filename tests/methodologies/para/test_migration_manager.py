@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -314,7 +314,7 @@ class TestMigrationPlan:
             total_count=2,
             by_category=by_category,
             estimated_size=1024,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
 
         assert len(plan.files) == 2
@@ -334,7 +334,7 @@ class TestMigrationReport:
             total_count=0,
             by_category={},
             estimated_size=0,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
 
         report = MigrationReport(
@@ -358,7 +358,7 @@ class TestMigrationReport:
             total_count=0,
             by_category={},
             estimated_size=0,
-            created_at=datetime.now(),
+            created_at=datetime.now(UTC),
         )
 
         report = MigrationReport(

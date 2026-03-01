@@ -615,7 +615,7 @@ class TestDedupeCommandDuplicates:
 
     def _make_mock_group(self, paths, size=1024, mtime_start=1000):
         """Create a mock duplicate group with the given file paths."""
-        from datetime import datetime as dt
+        from datetime import UTC, datetime as dt
 
         group = MagicMock()
         group.count = len(paths)
@@ -624,7 +624,7 @@ class TestDedupeCommandDuplicates:
             fm = MagicMock()
             fm.path = Path(p)
             fm.size = size
-            fm.modified_time = dt.fromtimestamp(mtime_start + i * 1000)
+            fm.modified_time = dt.fromtimestamp(mtime_start + i * 1000, tz=UTC)
             group.files.append(fm)
         return group
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -109,7 +109,7 @@ class TestGeneratePath:
     def test_screen_recording_with_date(self, organizer: VideoOrganizer) -> None:
         metadata = _make_metadata(
             filename="Screen Recording 2025-01-15 at 3.45.22 PM.mov",
-            creation_date=datetime(2025, 1, 15),
+            creation_date=datetime(2025, 1, 15, tzinfo=UTC),
         )
         folder, name = organizer.generate_path(metadata)
         assert folder == "Screen_Recordings/2025"
@@ -140,7 +140,7 @@ class TestGeneratePath:
 
     def test_date_based_routing(self, organizer: VideoOrganizer) -> None:
         metadata = _make_metadata(
-            creation_date=datetime(2024, 7, 4),
+            creation_date=datetime(2024, 7, 4, tzinfo=UTC),
             duration=120.0,
         )
         folder, name = organizer.generate_path(metadata)
@@ -171,7 +171,7 @@ class TestGeneratePath:
         # When duration is None, should not route to Short_Clips
         metadata = _make_metadata(
             duration=None,
-            creation_date=datetime(2025, 3, 1),
+            creation_date=datetime(2025, 3, 1, tzinfo=UTC),
         )
         folder, _name = organizer.generate_path(metadata)
         assert folder == "Videos/2025"
@@ -183,7 +183,7 @@ class TestGeneratePath:
         metadata = _make_metadata(
             filename="Screen Recording 2025-01-15 at 3.45.22 PM.mov",
             duration=10.0,
-            creation_date=datetime(2025, 1, 15),
+            creation_date=datetime(2025, 1, 15, tzinfo=UTC),
         )
         folder, _name = organizer.generate_path(metadata)
         assert folder.startswith("Screen_Recordings")
