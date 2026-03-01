@@ -11,7 +11,7 @@ AI-based classification and organization.
 
 | Category | Formats | Optional Dependencies | Install Group |
 |----------|---------|----------------------|---------------|
-| Documents | `.txt`, `.md`, `.pdf`, `.docx`, `.csv`, `.xlsx`, `.ppt`, `.pptx` | PyMuPDF, python-docx, pandas, python-pptx | Core / none |
+| Documents | `.txt`, `.md`, `.pdf`, `.docx`, `.csv`, `.xlsx`, `.pptx` | PyMuPDF, python-docx, pandas, python-pptx | Core / none |
 | Ebooks | `.epub` | ebooklib | Core |
 | Archives | `.zip`, `.7z`, `.tar`, `.tar.gz`, `.tgz`, `.tar.bz2`, `.tbz2`, `.tar.xz`, `.rar` | py7zr, rarfile | `[archive]` |
 | Scientific | `.hdf5`, `.h5`, `.hdf`, `.nc`, `.nc4`, `.netcdf`, `.mat` | h5py, netCDF4, scipy | `[scientific]` |
@@ -94,7 +94,7 @@ Source module: `src/file_organizer/utils/readers/documents.py`
     fail at runtime because the required `xlrd` package is not included in
     project dependencies.
 
-### Presentations (`.ppt`, `.pptx`)
+### Presentations (`.pptx`)
 
 - Extracts text from all shapes on each slide
 - Formats output as `Slide N: text1 | text2 | ...`
