@@ -77,6 +77,16 @@ class InMemoryLoginRateLimiter:
         """Clear rate limit state for the given key."""
         self._state.pop(key, None)
 
+    def _advance_time(self, seconds: float) -> None:
+        """Shift all window expiries into the past by *seconds* (test helper)."""
+        for state in self._state.values():
+            state.expires_at -= seconds
+
+    def _expire_all(self) -> None:
+        """Immediately expire every tracked window (test helper)."""
+        for state in self._state.values():
+            state.expires_at = 0.0
+
 
 @dataclass(frozen=True)
 class RedisLoginRateLimiter:

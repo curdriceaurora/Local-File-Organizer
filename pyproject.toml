@@ -219,6 +219,9 @@ convention = "google"
 "__init__.py" = ["F401"]
 "tests/**/*.py" = ["D"]
 "scripts/**/*.py" = ["D"]
+# C901 ratchet for scripts — list only the specific files that exceed complexity 15.
+# Do NOT use a blanket scripts/**/*.py C901 exclusion; name files explicitly here.
+"scripts/docker_utils.py" = ["C901"]
 # C901 ratchet baseline — functions exceeding complexity 15 (2026-02-28)
 # Each entry allows existing complex functions; new ones must stay under 15.
 "src/file_organizer/api/config.py" = ["C901"]

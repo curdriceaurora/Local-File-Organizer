@@ -86,6 +86,7 @@ nav:
       - Analysis: api/analysis-endpoints.md
       - Search: api/search-endpoints.md
       - WebSocket Events: api/websocket-api.md
+      - Python Module Reference: api/reference.md
   - Admin Guide:
       - Overview: admin/index.md
       - Installation: admin/installation.md

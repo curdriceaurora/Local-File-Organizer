@@ -71,6 +71,18 @@ class InMemoryTokenStore:
         """Return True if the access token has been revoked."""
         return self._is_active(self._revoked, jti)
 
+    def _advance_time(self, seconds: float) -> None:
+        """Shift all token expiries into the past by *seconds* (test helper)."""
+        for bucket in (self._refresh, self._revoked):
+            for jti in list(bucket):
+                bucket[jti] -= seconds
+
+    def _expire_all(self) -> None:
+        """Immediately expire every tracked token (test helper)."""
+        for bucket in (self._refresh, self._revoked):
+            for jti in list(bucket):
+                bucket[jti] = 0.0
+
 
 @dataclass(frozen=True)
 class RedisTokenStore:
