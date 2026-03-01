@@ -139,7 +139,7 @@ class TestReadFileDispatcherSizeGate:
         with (
             patch.object(Path, "stat", return_value=huge_stat),
             patch(
-                "file_organizer.utils.readers.archives.read_tar_file"
+                "file_organizer.utils.readers.read_tar_file"
             ) as mock_tar,
         ):
             with pytest.raises(FileTooLargeError):

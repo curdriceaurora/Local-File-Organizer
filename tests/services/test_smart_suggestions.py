@@ -902,7 +902,7 @@ class TestSmartSuggestionsIntegration:
         (tmp_path / "lost_document.pdf").touch()
         return tmp_path
 
-    def test_end_to_end_workflow(self, complete_structure):
+    def test_end_to_end_workflow(self, complete_structure, tmp_path):
         """Test complete workflow from analysis to suggestions."""
         analyzer = PatternAnalyzer(min_pattern_count=2)
         analysis = analyzer.analyze_directory(complete_structure)
@@ -922,7 +922,7 @@ class TestSmartSuggestionsIntegration:
         misplaced = detector.detect_misplaced(complete_structure, pattern_analysis=analysis)
         assert len(misplaced) >= 1
 
-        feedback = SuggestionFeedback()
+        feedback = SuggestionFeedback(feedback_file=tmp_path / "feedback.json")
         if suggestions:
             feedback.record_action(suggestions[0], "accepted")
         stats = feedback.get_learning_stats()
@@ -937,12 +937,10 @@ class TestSmartSuggestionsIntegration:
             ext = {"docs": ".pdf", "images": ".jpg", "code": ".py"}[category]
             (cat_dir / f"file_{i:04d}{ext}").touch()
 
-        import time as time_mod
-
-        start = time_mod.time()
+        start = time.time()
         analyzer = PatternAnalyzer()
         analysis = analyzer.analyze_directory(tmp_path)
-        elapsed = time_mod.time() - start
+        elapsed = time.time() - start
 
         assert elapsed < 5.0
         assert analysis.total_files == 100

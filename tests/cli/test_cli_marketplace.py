@@ -490,7 +490,6 @@ def _prepare_repo(repo_dir: Path) -> None:
     (repo_dir / "index.json").write_text(json.dumps(payload), encoding="utf-8")
 
 
-@pytest.mark.ci
 class TestMarketplaceCIIntegration:
     """CI integration tests using real file archives (no mocks)."""
 
