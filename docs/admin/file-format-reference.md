@@ -11,7 +11,7 @@ AI-based classification and organization.
 
 | Category | Formats | Optional Dependencies | Install Group |
 |----------|---------|----------------------|---------------|
-| Documents | `.txt`, `.md`, `.pdf`, `.docx`, `.csv`, `.xlsx`, `.xls`, `.ppt`, `.pptx` | PyMuPDF, python-docx, pandas, python-pptx | Core / none |
+| Documents | `.txt`, `.md`, `.pdf`, `.docx`, `.csv`, `.xlsx`, `.ppt`, `.pptx` | PyMuPDF, python-docx, pandas, python-pptx | Core / none |
 | Ebooks | `.epub` | ebooklib | Core |
 | Archives | `.zip`, `.7z`, `.tar`, `.tar.gz`, `.tgz`, `.tar.bz2`, `.tbz2`, `.tar.xz`, `.rar` | py7zr, rarfile | `[archive]` |
 | Scientific | `.hdf5`, `.h5`, `.hdf`, `.nc`, `.nc4`, `.netcdf`, `.mat` | h5py, netCDF4, scipy | `[scientific]` |
@@ -77,7 +77,7 @@ Source module: `src/file_organizer/utils/readers/documents.py`
     Only `.docx` (Office Open XML) is supported. Legacy `.doc` (binary format)
     files are not supported and will return `None` from the reader dispatcher.
 
-### Spreadsheets (`.csv`, `.xlsx`, `.xls`)
+### Spreadsheets (`.csv`, `.xlsx`)
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -87,6 +87,12 @@ Source module: `src/file_organizer/utils/readers/documents.py`
 - Excel files read with `pandas.read_excel` (requires `openpyxl` for `.xlsx`)
 - Returns string representation of the DataFrame
 - Requires: `pandas`, `openpyxl` (included in core dependencies)
+
+!!! note
+    Only `.xlsx` (Office Open XML) is supported for Excel files. Legacy `.xls`
+    (binary format) files are registered in the reader dispatch table but will
+    fail at runtime because the required `xlrd` package is not included in
+    project dependencies.
 
 ### Presentations (`.ppt`, `.pptx`)
 
