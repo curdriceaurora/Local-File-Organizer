@@ -5,20 +5,23 @@
 
 > AI-powered local file management. Privacy-first -- runs 100% on your device.
 
-**3,146 tests** | **184 modules** | **43 file types** | Python 3.11+
+**307 tests** | **334 modules** | **48+ file types** | Python 3.11+
 
 ## Features
 
-- **AI-Powered Organisation**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama
-- **Copilot Chat**: Natural-language assistant -- "organise ./Downloads", "find report.pdf", "undo"
-- **Organisation Rules**: Automated sorting with conditions, preview, and YAML persistence
+- **AI-Powered Organization**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama
+- **Audio Transcription**: Local speech-to-text with faster-whisper (GPU-accelerated)
+- **Video Analysis**: Scene detection and keyframe extraction
+- **Copilot Chat**: Natural-language assistant -- "organize ./Downloads", "find report.pdf", "undo"
+- **Organization Rules**: Automated sorting with conditions, preview, and YAML persistence
 - **Terminal UI**: 8-view Textual TUI (Files, Analytics, Audio, History, Copilot, and more)
+- **Web UI**: Browser-based interface via FastAPI and HTMX
 - **Full CLI**: Organize, rules, suggest, dedupe, daemon, analytics, update, profiles
 - **Auto-Update**: GitHub Releases checks with verified downloads and rollback
 - **Intelligence**: Pattern learning, preference tracking, smart suggestions, auto-tagging
 - **Deduplication**: Hash and semantic duplicate detection
 - **Undo/Redo**: Full operation history
-- **PARA + Johnny Decimal**: Built-in organisational methodologies
+- **PARA + Johnny Decimal**: Built-in organizational methodologies
 - **Cross-Platform**: macOS (DMG), Windows (installer), Linux (AppImage) executables
 
 ## Screenshots
@@ -63,11 +66,18 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 
 ## Optional Feature Packs
 
-```bash
-pip install -e ".[audio]"
-pip install -e ".[dedup]"
-pip install -e ".[build]"
-```
+| Pack | Install Command | Features |
+|------|----------------|----------|
+| Audio | `pip install -e ".[audio]"` | Speech-to-text (faster-whisper, torch) |
+| Video | `pip install -e ".[video]"` | Scene detection (OpenCV, scenedetect) |
+| Dedup | `pip install -e ".[dedup]"` | Image deduplication (perceptual hashing) |
+| Archive | `pip install -e ".[archive]"` | 7z and RAR archive support |
+| Scientific | `pip install -e ".[scientific]"` | HDF5, NetCDF, MATLAB formats |
+| CAD | `pip install -e ".[cad]"` | DXF and CAD format support |
+| Build | `pip install -e ".[build]"` | Executable packaging (PyInstaller) |
+| All | `pip install -e ".[all]"` | Everything above |
+
+Audio processing requires additional system dependencies (FFmpeg, optionally CUDA). See the [Installation Guide](docs/admin/installation.md) for details.
 
 ## Development
 
@@ -85,4 +95,4 @@ Config lives in `config/file-organizer/config.yaml` relative to your config home
 
 ---
 
-**Status**: Alpha | **Version**: 2.0.0-alpha.1 | **Last Updated**: 2026-02-09
+**Status**: Alpha | **Version**: 2.0.0-alpha.1 | **Last Updated**: 2026-03-01
