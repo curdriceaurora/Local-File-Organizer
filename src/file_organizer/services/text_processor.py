@@ -114,19 +114,19 @@ class TextProcessor:
             description = ""
             if generate_description:
                 description = self._generate_description(content)
-                logger.debug(f"Generated description ({len(description)} chars)")
+                logger.debug("Generated description ({} chars)", len(description))
 
             # Generate folder name
             folder_name = ""
             if generate_folder:
                 folder_name = self._generate_folder_name(description or content)
-                logger.debug(f"Generated folder name ({len(folder_name)} chars)")
+                logger.debug("Generated folder name ({} chars)", len(folder_name))
 
             # Generate filename
             filename = ""
             if generate_filename:
                 filename = self._generate_filename(description or content)
-                logger.debug(f"Generated filename ({len(filename)} chars)")
+                logger.debug("Generated filename ({} chars)", len(filename))
 
             processing_time = time.time() - start_time
 

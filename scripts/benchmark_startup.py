@@ -15,13 +15,13 @@ from pathlib import Path
 
 def benchmark_cli_startup() -> float:
     """Measure time to import CLI module."""
-    start = time.time()
+    start = time.perf_counter()
     result = subprocess.run(
         [sys.executable, "-c", "from file_organizer.cli import main"],
         capture_output=True,
         timeout=10,
     )
-    elapsed = time.time() - start
+    elapsed = time.perf_counter() - start
     if result.returncode != 0:
         stderr = result.stderr.decode() if result.stderr else "unknown error"
         raise RuntimeError(f"CLI import failed: {stderr}")
@@ -30,13 +30,13 @@ def benchmark_cli_startup() -> float:
 
 def benchmark_api_startup() -> float:
     """Measure time to import API module."""
-    start = time.time()
+    start = time.perf_counter()
     result = subprocess.run(
         [sys.executable, "-c", "from file_organizer.api import main"],
         capture_output=True,
         timeout=10,
     )
-    elapsed = time.time() - start
+    elapsed = time.perf_counter() - start
     if result.returncode != 0:
         stderr = result.stderr.decode() if result.stderr else "unknown error"
         raise RuntimeError(f"API import failed: {stderr}")
@@ -44,14 +44,14 @@ def benchmark_api_startup() -> float:
 
 
 def benchmark_help_command() -> float:
-    """Measure time to run 'file-organizer --help'."""
-    start = time.time()
+    """Measure time to run '--help'."""
+    start = time.perf_counter()
     result = subprocess.run(
-        ["file-organizer", "--help"],
+        [sys.executable, "-m", "file_organizer.cli.main", "--help"],
         capture_output=True,
         timeout=10,
     )
-    elapsed = time.time() - start
+    elapsed = time.perf_counter() - start
     if result.returncode != 0:
         stderr = result.stderr.decode() if result.stderr else "unknown error"
         raise RuntimeError(f"--help command failed: {stderr}")
