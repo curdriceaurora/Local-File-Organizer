@@ -101,7 +101,7 @@ Source module: `src/file_organizer/utils/readers/documents.py`
 - Requires: `python-pptx` (included in core dependencies)
 
 !!! note "Legacy Format Limitation"
-    Only `.pptx` (Office Open XML) is supported. Legacy `.ppt` (binary format) files are not supported by python-pptx. If you need to process `.ppt` files, convert them to `.pptx` first using Microsoft Office or LibreOffice.
+    Only `.pptx` (Office Open XML) is fully supported. Legacy `.ppt` (binary format) files are detected by the reader dispatch table but will fail at runtime because `python-pptx` only supports `.pptx`. If you need to process `.ppt` files, convert them to `.pptx` first using Microsoft Office or LibreOffice.
 
 ## Ebooks
 

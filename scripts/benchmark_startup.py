@@ -19,12 +19,12 @@ def benchmark_cli_startup() -> float:
     result = subprocess.run(
         [sys.executable, "-c", "from file_organizer.cli import main"],
         capture_output=True,
+        text=True,
         timeout=10,
     )
     elapsed = time.perf_counter() - start
     if result.returncode != 0:
-        stderr = result.stderr.decode() if result.stderr else "unknown error"
-        raise RuntimeError(f"CLI import failed: {stderr}")
+        raise RuntimeError(f"CLI import failed: {result.stderr or result.stdout or 'unknown error'}")
     return elapsed
 
 
@@ -34,12 +34,12 @@ def benchmark_api_startup() -> float:
     result = subprocess.run(
         [sys.executable, "-c", "from file_organizer.api import main"],
         capture_output=True,
+        text=True,
         timeout=10,
     )
     elapsed = time.perf_counter() - start
     if result.returncode != 0:
-        stderr = result.stderr.decode() if result.stderr else "unknown error"
-        raise RuntimeError(f"API import failed: {stderr}")
+        raise RuntimeError(f"API import failed: {result.stderr or result.stdout or 'unknown error'}")
     return elapsed
 
 
@@ -49,12 +49,12 @@ def benchmark_help_command() -> float:
     result = subprocess.run(
         [sys.executable, "-m", "file_organizer.cli.main", "--help"],
         capture_output=True,
+        text=True,
         timeout=10,
     )
     elapsed = time.perf_counter() - start
     if result.returncode != 0:
-        stderr = result.stderr.decode() if result.stderr else "unknown error"
-        raise RuntimeError(f"--help command failed: {stderr}")
+        raise RuntimeError(f"--help command failed: {result.stderr or result.stdout or 'unknown error'}")
     return elapsed
 
 
