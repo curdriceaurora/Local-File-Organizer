@@ -95,7 +95,7 @@ class TextProcessor:
 
         try:
             # Read file content
-            logger.debug(f"Reading file: {file_path.name}")
+            logger.debug("Reading file: {}", file_path.name)
             content = read_file(file_path)
 
             if content is None:
@@ -114,19 +114,19 @@ class TextProcessor:
             description = ""
             if generate_description:
                 description = self._generate_description(content)
-                logger.debug(f"Generated description ({len(description)} chars)")
+                logger.debug("Generated description ({} chars)", len(description))
 
             # Generate folder name
             folder_name = ""
             if generate_folder:
                 folder_name = self._generate_folder_name(description or content)
-                logger.debug(f"Generated folder name ({len(folder_name)} chars)")
+                logger.debug("Generated folder name ({} chars)", len(folder_name))
 
             # Generate filename
             filename = ""
             if generate_filename:
                 filename = self._generate_filename(description or content)
-                logger.debug(f"Generated filename ({len(filename)} chars)")
+                logger.debug("Generated filename ({} chars)", len(filename))
 
             processing_time = time.time() - start_time
 
@@ -285,7 +285,7 @@ CATEGORY:"""
             response = self.text_model.generate(prompt, temperature=0.3, max_tokens=30)
 
             # Debug: Log raw AI response
-            logger.debug(f"AI folder response received ({len(response)} chars)")
+            logger.debug("AI folder response received ({} chars)", len(response))
 
             # Clean the response
             folder_name = response.strip().lower()
@@ -307,7 +307,7 @@ CATEGORY:"""
                 # Fallback to keyword extraction
                 logger.warning("Folder name empty or too short after AI generation, using keyword fallback")
                 folder_name = clean_text(text, max_words=2)
-                logger.debug(f"Fallback folder name ({len(folder_name)} chars)")
+                logger.debug("Fallback folder name ({} chars)", len(folder_name))
 
             # Skip sanitize_filename since we already cleaned it
             # Just do final safety check
@@ -356,7 +356,7 @@ FILENAME:"""
             response = self.text_model.generate(prompt, temperature=0.3, max_tokens=30)
 
             # Debug: Log raw AI response
-            logger.debug(f"AI filename response received ({len(response)} chars)")
+            logger.debug("AI filename response received ({} chars)", len(response))
 
             # Clean the response
             filename = response.strip().lower()
@@ -383,7 +383,7 @@ FILENAME:"""
                 # Fallback to keyword extraction
                 logger.warning("Filename empty or too short after AI generation, using keyword fallback")
                 filename = clean_text(text, max_words=3)
-                logger.debug(f"Fallback filename ({len(filename)} chars)")
+                logger.debug("Fallback filename ({} chars)", len(filename))
 
             # Skip sanitize_filename since we already cleaned it
             # Just do final safety check

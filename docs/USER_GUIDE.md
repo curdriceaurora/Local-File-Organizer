@@ -61,7 +61,7 @@ File Organizer provides two equivalent entrypoints: `file-organizer` and the sho
 |---------|-------------|
 | `organize` | Organize files from an input directory to an output directory |
 | `preview` | Preview organization changes without moving files |
-| `search` | Search organized files by content or metadata |
+| `search` | Search files by filename pattern/keyword with optional `--type` filter |
 | `analyze` | Analyze a file and display AI-generated metadata |
 | `tui` | Launch the Terminal User Interface |
 | `serve` | Start the web UI server |
@@ -111,10 +111,10 @@ file-organizer preview ~/Downloads
 
 ### Searching Files
 
-Search through organized files by content or metadata:
+Search through organized files by filename pattern or keyword:
 
 ```bash
-file-organizer search "quarterly report" --dir ~/Organized
+file-organizer search "quarterly report" ~/Organized
 ```
 
 ### Analyzing Individual Files
@@ -142,9 +142,9 @@ file-organizer tui
 | `1` | File browser |
 | `2` | Organization queue |
 | `3` | Storage analytics |
-| `4` | Deduplication results |
-| `5` | Tag management |
-| `6` | Rules editor |
+| `4` | Methodology |
+| `5` | Audio |
+| `6` | History |
 | `7` | Settings |
 | `8` | Copilot chat |
 
@@ -315,11 +315,11 @@ file-organizer rules preview
 # Remove a rule
 file-organizer rules remove my-rule
 
-# Export rules to a file
-file-organizer rules export rules-backup.json
+# Export rules to a YAML file
+file-organizer rules export --output rules-backup.yaml
 
-# Import rules from a file
-file-organizer rules import rules-backup.json
+# Import rules from a YAML file
+file-organizer rules import rules-backup.yaml
 ```
 
 ## Smart Suggestions
