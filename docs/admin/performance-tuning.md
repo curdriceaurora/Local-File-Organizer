@@ -295,7 +295,13 @@ with limiter.guarded():
 
 ## Benchmarking
 
-Measure per-file processing time using the CLI with `--dry-run`:
+Use the built-in startup benchmark to measure initialization time:
+
+```bash
+python scripts/benchmark_startup.py
+```
+
+For per-file processing benchmarks, use the CLI with `--dry-run`:
 
 ```bash
 file-organizer organize --input ~/test-files --dry-run
