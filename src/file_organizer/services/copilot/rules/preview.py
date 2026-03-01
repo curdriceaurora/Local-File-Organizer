@@ -164,6 +164,14 @@ class PreviewEngine:
         return True
 
     @staticmethod
+    def _parse_threshold(value: str) -> datetime:
+        """Parse a datetime threshold string, ensuring timezone awareness."""
+        threshold = datetime.fromisoformat(value)
+        if threshold.tzinfo is None:
+            threshold = threshold.replace(tzinfo=UTC)
+        return threshold
+
+    @staticmethod
     def _evaluate_condition(file_path: Path, condition: RuleCondition) -> bool:
         """Evaluate a single condition against a file.
 
@@ -206,20 +214,14 @@ class PreviewEngine:
         if ct == ConditionType.MODIFIED_BEFORE:
             try:
                 mtime = datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC)
-                threshold = datetime.fromisoformat(value)
-                if threshold.tzinfo is None:
-                    threshold = threshold.replace(tzinfo=UTC)
-                return mtime < threshold
+                return mtime < PreviewEngine._parse_threshold(value)
             except (OSError, ValueError, TypeError):
                 return False
 
         if ct == ConditionType.MODIFIED_AFTER:
             try:
                 mtime = datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC)
-                threshold = datetime.fromisoformat(value)
-                if threshold.tzinfo is None:
-                    threshold = threshold.replace(tzinfo=UTC)
-                return mtime > threshold
+                return mtime > PreviewEngine._parse_threshold(value)
             except (OSError, ValueError, TypeError):
                 return False
 
