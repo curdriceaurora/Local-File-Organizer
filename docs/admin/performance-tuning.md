@@ -304,11 +304,11 @@ python scripts/benchmark_startup.py
 For per-file processing benchmarks, use the CLI with `--dry-run`:
 
 ```bash
-file-organizer organize --input ~/test-files --dry-run
+file-organizer organize ~/test-files ~/organized-output --dry-run
 ```
 
 ## Environment Variables
 
-For environment-variable-based configuration (e.g., `FO_TEXT_MODEL`,
-`FO_DEVICE`, `FO_MAX_WORKERS`), see the
+For environment-variable-based configuration (e.g., `FO_CONFIG_DIR`,
+`FO_API_HOST`, `FO_API_PORT`), see the
 [Configuration Guide](configuration.md).

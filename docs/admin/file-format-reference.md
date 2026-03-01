@@ -5,7 +5,7 @@ extraction behavior, optional dependencies, and tunable parameters.
 
 ## Overview
 
-File Organizer supports 48+ file formats across 7 categories. Each format has a
+File Organizer supports 48+ file formats across 8 categories. Each format has a
 dedicated reader that extracts text, metadata, or structural information for
 AI-based classification and organization.
 
@@ -117,7 +117,8 @@ Source module: `src/file_organizer/utils/readers/ebook.py`
 
 !!! note
     Only `.epub` format is supported. Other ebook formats (`.mobi`, `.azw`)
-    are not currently supported and will raise `FileReadError`.
+    are not currently supported. The reader dispatcher returns `None` for
+    unrecognized extensions, causing the file to be skipped.
 
 ## Archives
 
