@@ -166,7 +166,7 @@ class PreviewEngine:
     @staticmethod
     def _parse_threshold(value: str) -> datetime:
         """Parse a datetime threshold string, ensuring timezone awareness."""
-        threshold = datetime.fromisoformat(value)
+        threshold = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if threshold.tzinfo is None:
             threshold = threshold.replace(tzinfo=UTC)
         return threshold

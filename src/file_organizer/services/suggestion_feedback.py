@@ -42,7 +42,7 @@ class FeedbackEntry:
             "file_path": self.file_path,
             "target_path": self.target_path,
             "confidence": self.confidence,
-            "timestamp": self.timestamp.isoformat(),
+            "timestamp": self.timestamp.isoformat().replace("+00:00", "Z"),
             "metadata": self.metadata,
         }
 

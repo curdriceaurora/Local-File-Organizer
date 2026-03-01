@@ -191,7 +191,7 @@ class TestCleanupOldBackups:
 
         # Modify manifest to make backup old
         manifest = manager._load_manifest()
-        old_time = (datetime.now(UTC) - timedelta(days=60)).isoformat()
+        old_time = (datetime.now(UTC) - timedelta(days=60)).isoformat().replace("+00:00", "Z")
         key = str(backup_path)
         manifest[key]["backup_time"] = old_time
         manager._save_manifest(manifest)
@@ -214,7 +214,7 @@ class TestCleanupOldBackups:
         backup_path = manager.create_backup(sample_file)
 
         manifest = manager._load_manifest()
-        old_time = (datetime.now(UTC) - timedelta(days=60)).isoformat()
+        old_time = (datetime.now(UTC) - timedelta(days=60)).isoformat().replace("+00:00", "Z")
         manifest[str(backup_path)]["backup_time"] = old_time
         manager._save_manifest(manifest)
 

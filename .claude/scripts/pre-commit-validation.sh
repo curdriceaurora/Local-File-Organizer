@@ -422,7 +422,7 @@ if [ -n "$STAGED_PY_FILES" ]; then
   echo "🕐 Datetime timezone safety checks..."
 
   # Check 1: Naive datetime.now() detection
-  NAIVE_NOW=$(echo "$STAGED_PY_FILES" | while IFS= read -r f; do [ -n "$f" ] && grep -Hn 'datetime\.now()' "$f" 2>/dev/null; done | grep -v 'now(UTC\|now(timezone\|now(tz=' || true)
+  NAIVE_NOW=$(echo "$STAGED_PY_FILES" | while IFS= read -r f; do [ -n "$f" ] && grep -Hn 'datetime\.now()' "$f" 2>/dev/null; done | grep -Ev 'now\((UTC|timezone|tz=)' || true)
   if [ -n "$NAIVE_NOW" ]; then
     echo "  ❌ Found naive datetime.now() — use datetime.now(UTC) instead:"
     echo "$NAIVE_NOW" | sed 's/^/    /'
