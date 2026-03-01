@@ -67,15 +67,13 @@ class TestBackupManagerInit:
         data = json.loads(mgr.manifest_path.read_text())
         assert data == {}
 
-    def test_default_base_dir(self):
+    def test_default_base_dir(self, tmp_path):
         """When base_dir is None, uses cwd."""
         with patch("file_organizer.services.deduplication.backup.Path.cwd") as mock_cwd:
-            mock_cwd.return_value = Path("/fake/cwd")
-            # We can't fully init because /fake/cwd doesn't exist,
-            # but we test that cwd is called
-            with pytest.raises(OSError):
-                BackupManager(base_dir=None)
+            mock_cwd.return_value = tmp_path
+            mgr = BackupManager(base_dir=None)
             mock_cwd.assert_called_once()
+            assert mgr.backup_dir == tmp_path / BackupManager.BACKUP_DIR_NAME
 
     def test_existing_manifest_preserved(self, backup_dir):
         """Existing manifest is not overwritten."""
