@@ -64,7 +64,7 @@ Ship distributable desktop binaries for macOS, Windows, and Linux. This covers t
 ## Success Criteria (Technical)
 
 - `tauri build` succeeds on all three platforms
-- Sidecar binary starts and responds to `/health` on all platforms
+- Sidecar binary starts and responds to `/api/v1/health` on all platforms
 - Code signing passes on macOS (notarization) and Windows (SmartScreen)
 - Bundle size < 170 MB per platform
 - CI builds complete in < 30 minutes per platform

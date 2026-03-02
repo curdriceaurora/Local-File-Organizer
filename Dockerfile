@@ -94,5 +94,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:${FO_API_PORT:-8000}/api/v1/health || exit 1
 
 # Default command: run the web API server (override port via FO_API_PORT env var)
-# Shell-form so ${FO_API_PORT} is expanded at runtime (matches HEALTHCHECK behavior)
-CMD python -m uvicorn file_organizer.api:app --host 0.0.0.0 --port ${FO_API_PORT:-8000}
+# Shell-form for env-var expansion; `exec` replaces sh so uvicorn is PID 1 (clean SIGTERM)
+CMD exec python -m uvicorn file_organizer.api:app --host 0.0.0.0 --port ${FO_API_PORT:-8000}
