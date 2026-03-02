@@ -521,8 +521,8 @@ File Organizer is designed to keep your data completely private:
 
 - All AI processing runs locally through Ollama -- no files or content are uploaded to any cloud service.
 - Network requests are limited to:
-    - Communicating with your local Ollama instance (localhost only)
-    - Checking for application updates (optional, can be disabled)
+  - Communicating with your local Ollama instance (localhost only)
+  - Checking for application updates (optional, can be disabled)
 - No telemetry, analytics, or usage tracking of any kind.
 
 ## Troubleshooting

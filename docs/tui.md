@@ -111,14 +111,14 @@ Natural language interface for file organization:
 
 **Example prompts**:
 
-```
+```text
 > Organize all invoices in ~/Downloads by year and month
 > Find duplicate images in ~/Photos
 > Move all files older than 2 years to the archive folder
 > Rename all meeting notes to include the date
 ```
 
-**Workflow Integration Payloads**
+#### Workflow Integration Payloads
 
 When the copilot exports a file via workflow integration, it generates launcher-compatible JSON payloads (see `WorkflowIntegration` in `src/file_organizer/integrations/workflow.py`):
 

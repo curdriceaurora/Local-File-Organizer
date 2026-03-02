@@ -8,7 +8,7 @@ Choose the installation method that best fits your needs:
 
 === "Docker (Recommended)"
 
-````
+````markdown
 **Best for**: Production deployments, consistent environments
 
 **Prerequisites**:
@@ -31,7 +31,7 @@ See [Deployment Guide](admin/deployment.md) for detailed Docker setup.
 
 === "Python Package"
 
-````
+````markdown
 **Best for**: Quick testing, simple deployments
 
 **Prerequisites**:
@@ -55,7 +55,7 @@ See [Installation Guide](admin/installation.md) for options.
 
 === "From Source"
 
-````
+````markdown
 **Best for**: Development, customization
 
 **Prerequisites**:
@@ -261,7 +261,7 @@ File Organizer supports multiple organization systems:
 
 **Structure**:
 
-```
+```text
 PARA/
 ├── Projects/        # Active projects with deadlines
 ├── Areas/           # Ongoing responsibilities
@@ -277,7 +277,7 @@ PARA/
 
 **Structure**:
 
-```
+```text
 JD/
 ├── 10-19 Area 1/
 │   ├── 11 Category A
