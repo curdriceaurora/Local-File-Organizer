@@ -34,6 +34,7 @@ def settings() -> ApiSettings:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestVerifyPassword:
     """Tests for verify_password."""
 
@@ -55,6 +56,7 @@ class TestVerifyPassword:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestHashPassword:
     """Tests for hash_password."""
 
@@ -78,6 +80,7 @@ class TestHashPassword:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestValidatePassword:
     """Tests for validate_password."""
 
@@ -143,6 +146,7 @@ class TestValidatePassword:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestCreateTokenBundle:
     """Tests for create_token_bundle."""
 
@@ -199,6 +203,7 @@ class TestCreateTokenBundle:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDecodeToken:
     """Tests for decode_token."""
 
@@ -238,6 +243,7 @@ class TestDecodeToken:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTokenTypeChecks:
     """Tests for is_access_token and is_refresh_token."""
 
@@ -267,6 +273,7 @@ class TestTokenTypeChecks:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestTokenError:
     """Tests for TokenError exception."""
 

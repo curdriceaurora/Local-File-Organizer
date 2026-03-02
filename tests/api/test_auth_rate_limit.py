@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import time
 
+import pytest
+
 from file_organizer.api.auth_rate_limit import (
     InMemoryLoginRateLimiter,
     RateLimitState,
@@ -15,6 +17,7 @@ from file_organizer.api.auth_rate_limit import (
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRateLimitState:
     """Tests for RateLimitState.remaining."""
 
@@ -44,6 +47,7 @@ class TestRateLimitState:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestInMemoryLoginRateLimiter:
     """Tests for InMemoryLoginRateLimiter."""
 
@@ -115,6 +119,7 @@ class TestInMemoryLoginRateLimiter:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestBuildLoginRateLimiter:
     """Tests for build_login_rate_limiter factory."""
 
