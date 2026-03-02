@@ -46,3 +46,8 @@ repos:
         entry: bash -c "git diff --cached | grep -E '^\\+.*(/Users/|/home/|C:\\\\\\\\Users\\\\\\\\)' | grep -v '.claude/rules/' | grep -v '.claude/scripts/' && exit 1 || exit 0"
         language: system
         pass_filenames: false
+  - repo: https://github.com/jackdewinter/pymarkdown
+    rev: v0.9.35
+    hooks:
+      - id: pymarkdown
+        args: ["-c", ".pymarkdown.json", "scan"]
