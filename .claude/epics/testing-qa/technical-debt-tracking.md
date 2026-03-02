@@ -3,7 +3,7 @@ name: technical-debt-tracking
 title: Technical Debt Tracking for testing-qa
 epic: testing-qa
 created: 2026-02-17T15:07:09Z
-updated: 2026-02-23T20:40:00Z
+updated: 2026-03-02T01:37:13Z
 status: active
 ---
 
@@ -35,6 +35,7 @@ status: active
 - **2026-02-17**: Issue #330 created; code-rabbit removal tracked as low-priority tech debt under testing-qa epic
 - **2026-02-23**: Issue #444 completed; semantic validation for test logic and docstring accuracy delivered
 - **2026-02-23**: Issue #449 created; tracks cleanup of ~1,600 pre-existing ruff D violations exposed by #444
+- **2026-03-02**: Issues #534 and #535 created from PR #533 code review; resolved in PR #536
 
 **Issue #444: chore: add semantic validation for test logic and docstring accuracy**
 - **Priority**: Medium
@@ -66,3 +67,23 @@ status: active
 - **Effort**: 2-3 hours
 - **Related**: #444 (regex fix exposed gaps), #449 (separate ruff D violations)
 - **Notes**: `KNOWN_PARAM_DOC_GAPS` in test_cli_docs_accuracy.py must be removed once all 23 params are documented
+
+**Issue #534: [Testing] Add missing pytest markers to API auth test files** ✅
+- **Priority**: Low
+- **Epic**: testing-qa
+- **Status**: Closed (PR #536, 2026-03-02)
+- **Created**: 2026-03-02
+- **GitHub**: https://github.com/curdriceaurora/Local-File-Organizer/issues/534
+- **Effort**: 0.5 hours
+- **Related**: #533 (code review finding)
+- **Notes**: Added `@pytest.mark.unit` to 12 test classes across 3 API auth test files
+
+**Issue #535: [Testing] Replace time.sleep with deterministic wait in test_auth_store** ✅
+- **Priority**: Medium
+- **Epic**: testing-qa
+- **Status**: Closed (PR #536, 2026-03-02)
+- **Created**: 2026-03-02
+- **GitHub**: https://github.com/curdriceaurora/Local-File-Organizer/issues/535
+- **Effort**: 0.5 hours
+- **Related**: #533 (code review finding)
+- **Notes**: Replaced `time.sleep(0.01)` with deterministic timestamp manipulation
