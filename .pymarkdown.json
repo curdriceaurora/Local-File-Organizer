@@ -1,14 +1,24 @@
 {
+  "extensions": {
+    "front-matter": {
+      "enabled": true
+    }
+  },
   "plugins": {
     "md001": { "enabled": true },
+    "md003": { "enabled": false },
+    "md004": { "enabled": false },
     "md009": { "enabled": true },
     "md012": { "enabled": true },
     "md013": { "enabled": false },
+    "md018": { "enabled": true },
     "md022": { "enabled": true },
     "md024": { "enabled": false },
     "md031": { "enabled": true },
     "md032": { "enabled": true },
     "md033": { "enabled": false },
+    "md034": { "enabled": false },
+    "md036": { "enabled": false },
     "md040": { "enabled": true },
     "md041": { "enabled": false },
     "md047": { "enabled": true }
