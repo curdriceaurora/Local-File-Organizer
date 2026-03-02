@@ -2,9 +2,10 @@
 name: desktopui-test-coverage
 status: backlog
 created: 2026-03-02T20:49:25Z
+updated: 2026-03-02T21:08:31Z
 progress: 0%
 prd: .claude/prds/desktopui-test-coverage.md
-github: TBD
+github: https://github.com/curdriceaurora/Local-File-Organizer/issues/571
 ---
 
 # Epic: Desktop UI Test Coverage (12% to 90%)
@@ -86,20 +87,20 @@ pytest --cov=file_organizer --cov-report=term-missing --cov-report=html --cov-fa
 ## Tasks Created
 
 **Phase A -- Reach 74% (P0)**
-- [ ] 001.md - API Router & Middleware Tests (parallel: true, XL, 40-60h)
-- [ ] 002.md - Plugin System & Marketplace Tests (parallel: true, L, 30-40h)
-- [ ] 003.md - CLI Command Tests (parallel: true, M, 20-30h)
-- [ ] 004.md - Web Route & HTMX Endpoint Tests (parallel: true, S, 8-12h)
-- [ ] 005.md - Services Intelligence Tests (parallel: true, XL, 40-50h)
+- [ ] #572 - API Router & Middleware Tests (parallel: true, XL, 40-60h)
+- [ ] #575 - Plugin System & Marketplace Tests (parallel: true, L, 30-40h)
+- [ ] #577 - CLI Command Tests (parallel: true, M, 20-30h)
+- [ ] #580 - Web Route & HTMX Endpoint Tests (parallel: true, S, 8-12h)
+- [ ] #581 - Services Intelligence Tests (parallel: true, XL, 40-50h)
 
 **Phase B -- Reach 90% (P1)**
-- [ ] 006.md - TUI View Tests (parallel: true, M, 15-20h)
-- [ ] 007.md - Models, Client & Config Tests (parallel: true, M, 20-25h)
-- [ ] 008.md - Updater & Watcher Tests (parallel: true, M, 20-25h)
-- [ ] 009.md - Integration & E2E Workflow Tests (parallel: false, depends on 001-005, L, 25-35h)
-- [ ] 010.md - Docstring Coverage via Interrogate (parallel: true, L, 20-30h)
+- [ ] #573 - TUI View Tests (parallel: true, M, 15-20h)
+- [ ] #574 - Models, Client & Config Tests (parallel: true, M, 20-25h)
+- [ ] #576 - Updater & Watcher Tests (parallel: true, M, 20-25h)
+- [ ] #578 - Integration & E2E Workflow Tests (parallel: false, depends on Phase A, L, 25-35h)
+- [ ] #579 - Docstring Coverage via Interrogate (parallel: true, L, 20-30h)
 
 Total tasks: 10
 Parallel tasks: 9
-Sequential tasks: 1 (009 depends on Phase A)
+Sequential tasks: 1 (#578 depends on Phase A)
 Estimated total effort: 238-327 hours
