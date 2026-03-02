@@ -82,3 +82,24 @@ pytest --cov=file_organizer --cov-report=term-missing --cov-report=html --cov-fa
 - **Total**: 14-20 weeks
 - **Critical path**: Tasks 1 and 2 (API + plugins) contribute the most coverage delta and should start first
 - **Parallelizable**: All tasks within a phase are independent and can run in parallel
+
+## Tasks Created
+
+**Phase A -- Reach 74% (P0)**
+- [ ] 001.md - API Router & Middleware Tests (parallel: true, XL, 40-60h)
+- [ ] 002.md - Plugin System & Marketplace Tests (parallel: true, L, 30-40h)
+- [ ] 003.md - CLI Command Tests (parallel: true, M, 20-30h)
+- [ ] 004.md - Web Route & HTMX Endpoint Tests (parallel: true, S, 8-12h)
+- [ ] 005.md - Services Intelligence Tests (parallel: true, XL, 40-50h)
+
+**Phase B -- Reach 90% (P1)**
+- [ ] 006.md - TUI View Tests (parallel: true, M, 15-20h)
+- [ ] 007.md - Models, Client & Config Tests (parallel: true, M, 20-25h)
+- [ ] 008.md - Updater & Watcher Tests (parallel: true, M, 20-25h)
+- [ ] 009.md - Integration & E2E Workflow Tests (parallel: false, depends on 001-005, L, 25-35h)
+- [ ] 010.md - Docstring Coverage via Interrogate (parallel: true, L, 20-30h)
+
+Total tasks: 10
+Parallel tasks: 9
+Sequential tasks: 1 (009 depends on Phase A)
+Estimated total effort: 238-327 hours
