@@ -10,7 +10,7 @@ updated: 2026-03-02T14:25:52Z
 
 ## Problem Statement
 
-The project has 12.24% test coverage measured via `pytest --cov`. The CI threshold is set at 74% (`--cov-fail-under=74`), which is currently failing. The project target is 90%. Additionally, docstring coverage via `interrogate` is configured at 90% in `pyproject.toml` but not enforced.
+The project has 12.24% test coverage measured via `pytest --cov`. The CI threshold is set at 74% (`--cov-fail-under=74`), which is currently failing. The project target is 90%. Additionally, docstring coverage via `interrogate` is configured at 90% in `pyproject.toml` and is enforced in CI (Python 3.12 job) via `interrogate -v src/ --fail-under 90`.
 
 With 314 Python modules and 237 test files, coverage is spread unevenly — some modules have 0% coverage while others are well-tested. A systematic approach is needed to reach 90%.
 
