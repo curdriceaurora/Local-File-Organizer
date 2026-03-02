@@ -30,11 +30,8 @@ Begin work on a GitHub issue with parallel agents based on work stream analysis.
 3. **Check for analysis:**
 
 ```bash
-test -f .claude/epics/*/$ARGUMENTS-analysis.md || echo "❌ No analysis found for issue #$ARGUMENTS
-  
-   Run: /pm:issue-analyze $ARGUMENTS first
-   Or: /pm:issue-start $ARGUMENTS --analyze to do both"
-
+test -f .claude/epics/*/$ARGUMENTS-analysis.md || \
+  echo "❌ No analysis found for issue #$ARGUMENTS. Run: /pm:issue-analyze $ARGUMENTS first"
 ```
 
 If no analysis exists and no --analyze flag, stop execution.

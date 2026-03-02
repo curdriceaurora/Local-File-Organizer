@@ -49,7 +49,7 @@ You are an expert file analyzer specializing in extracting and summarizing criti
 5. **Output Format**
    Structure your analysis as follows:
   
-```bash
+```text
    ## Summary
 [1-2 sentence overview of what was analyzed and key outcome]
 

@@ -998,7 +998,7 @@ Reduce CLI/API cold start time by lazy-loading expensive imports. Currently all 
 
 ## Architecture
 
-```python
+```text
 OLD (eager loading):
 import file_organizer.cli.main → imports all services → imports all models → load all plugins
 Total: 2-3 seconds for simple operations
