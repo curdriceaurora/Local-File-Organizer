@@ -17,7 +17,8 @@ Ship distributable desktop binaries for macOS, Windows, and Linux. This covers t
 ## Architecture Decisions
 
 - **PyInstaller `--onefile`** for sidecar binary — single executable, simplest distribution
-- **Tauri bundler** for platform packages — `.dmg`/`.app` (macOS), `.msi` (Windows), `.deb`/`.AppImage`/Flatpak (Linux)
+- **Tauri bundler** for platform packages — `.dmg`/`.app` (macOS), `.msi` (Windows), `.deb`/`.AppImage`/`.rpm` (Linux)
+- **Flatpak built separately** via `flatpak-builder` using an existing manifest (not produced by Tauri bundler)
 - **GitHub Actions matrix** for CI — native runners per platform, no cross-compilation for sidecar
 - **Code signing via CI secrets** — certificates stored as GitHub encrypted secrets, applied during build
 - **Existing build scripts** (`scripts/build_macos.sh`, `scripts/build_windows.ps1`, `scripts/build_linux.sh`) will be extended rather than rewritten
