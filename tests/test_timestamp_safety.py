@@ -10,9 +10,12 @@ import re
 import subprocess
 from pathlib import Path
 
+import pytest
+
 SRC_DIR = Path(__file__).parent.parent / "src" / "file_organizer"
 
 
+@pytest.mark.unit
 class TestDTZRuleCompliance:
     """Static analysis tests using ruff DTZ rules."""
 
@@ -38,6 +41,7 @@ class TestDTZRuleCompliance:
         )
 
 
+@pytest.mark.unit
 class TestPatternAbsence:
     """Pattern-based tests for issues ruff doesn't catch."""
 

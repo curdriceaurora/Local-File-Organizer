@@ -56,7 +56,9 @@ class FeedbackEntry:
             file_path=data["file_path"],
             target_path=data.get("target_path"),
             confidence=data["confidence"],
-            timestamp=datetime.fromisoformat(data["timestamp"]),
+            timestamp=datetime.fromisoformat(
+                data["timestamp"].replace("Z", "+00:00")
+            ),
             metadata=data.get("metadata", {}),
         )
 
