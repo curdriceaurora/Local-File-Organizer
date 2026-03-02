@@ -25,17 +25,20 @@ Ship distributable desktop binaries for macOS, Windows, and Linux. This covers t
 ## Technical Approach
 
 ### Sidecar Packaging
+
 - PyInstaller builds the Python backend as a standalone binary per platform
 - Binary is named `file-organizer-backend-{target_triple}` (Tauri sidecar convention)
 - Placed in `desktop/src-tauri/binaries/` before `tauri build`
 - Health check verification after build ensures sidecar is functional
 
 ### Platform Builds
+
 - **macOS**: `tauri build` → `.app` + `.dmg`, then `codesign` + `xcrun notarytool` for notarization
 - **Windows**: `tauri build` → `.msi` + `.exe`, then `signtool` for Authenticode signing
 - **Linux**: `tauri build` → `.deb` + `.AppImage`, plus Flatpak from existing manifest
 
 ### CI/CD Pipeline
+
 - GitHub Actions workflow triggered on release tags
 - Matrix: macOS (arm64, x86_64), Windows (x86_64), Linux (x86_64)
 - Steps: install deps → PyInstaller sidecar → `tauri build` → sign → upload artifacts → draft release

@@ -175,6 +175,76 @@ if [[ -n "$MD_FILES" ]]; then
   echo ""
 fi
 
+# 7a-1. Markdown heading spacing (MD022) — headings must have blank lines around them
+if [[ -n "$MD_FILES" ]]; then
+  echo "📝 Checking markdown heading spacing (MD022)..."
+  MD022_ISSUES=0
+
+  for md_file in $MD_FILES; do
+    if [[ ! -f "$md_file" ]]; then
+      continue
+    fi
+
+    # Check for headings that don't have a blank line before or after them
+    # Skip the very first line (which may be frontmatter --- or a heading)
+    PREV_LINE=""
+    LINE_NUM=0
+    IN_FRONTMATTER=0
+    IN_CODE_BLOCK=0
+
+    while IFS= read -r line; do
+      LINE_NUM=$((LINE_NUM + 1))
+
+      # Track frontmatter (between --- markers at start of file)
+      if [[ $LINE_NUM -eq 1 ]] && [[ "$line" == "---" ]]; then
+        IN_FRONTMATTER=1
+        PREV_LINE="$line"
+        continue
+      fi
+      if [[ $IN_FRONTMATTER -eq 1 ]] && [[ "$line" == "---" ]]; then
+        IN_FRONTMATTER=0
+        PREV_LINE="$line"
+        continue
+      fi
+      if [[ $IN_FRONTMATTER -eq 1 ]]; then
+        PREV_LINE="$line"
+        continue
+      fi
+
+      # Track code blocks
+      if [[ "$line" == '```'* ]]; then
+        IN_CODE_BLOCK=$(( 1 - IN_CODE_BLOCK ))
+        PREV_LINE="$line"
+        continue
+      fi
+      if [[ $IN_CODE_BLOCK -eq 1 ]]; then
+        PREV_LINE="$line"
+        continue
+      fi
+
+      # Check if current line is a heading (starts with #)
+      if [[ "$line" == '#'* ]] && [[ "$line" =~ ^#{1,6}[[:space:]] ]]; then
+        # Heading must have a blank line before it (unless it's the first content line after frontmatter)
+        if [[ -n "$PREV_LINE" ]] && [[ "$PREV_LINE" != "---" ]]; then
+          echo "❌ $md_file:$LINE_NUM: Heading needs blank line before it: $line"
+          MD022_ISSUES=1
+        fi
+      fi
+
+      PREV_LINE="$line"
+    done < "$md_file"
+  done
+
+  if [[ $MD022_ISSUES -eq 1 ]]; then
+    echo ""
+    echo "❌ Markdown heading spacing check failed (MD022)"
+    echo "Fix: Add a blank line before each heading"
+    exit 1
+  fi
+  echo "✓ Markdown heading spacing OK"
+  echo ""
+fi
+
 # 7a-2. Docs format conformity checks (admin docs conventions)
 DOCS_FILES=$(echo "$MODIFIED" | grep '^docs/.*\.md$' || true)
 if [[ -n "$DOCS_FILES" ]]; then

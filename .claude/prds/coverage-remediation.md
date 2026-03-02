@@ -110,11 +110,13 @@ Focus on high-LOC modules with lowest coverage for maximum impact.
 ## Pre-Commit Enforcement
 
 Add to `pre-commit-validation.sh`:
+
 ```bash
 pytest --cov=file_organizer --cov-fail-under=74 --tb=short -q
 ```
 
 After Phase B:
+
 ```bash
 pytest --cov=file_organizer --cov-fail-under=90 --tb=short -q
 interrogate -v src/file_organizer/ --fail-under 90

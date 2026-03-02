@@ -24,6 +24,7 @@ Complete the application icon set, integrate icon generation into build workflow
 ## Technical Approach
 
 ### Icon Set Completion
+
 - Update `scripts/generate_icons.py` to produce all required sizes:
   - Standard: 16, 32, 48, 64, 128, 256, 512 px
   - HiDPI (macOS): 32@2x (64px), 128@2x (256px), 256@2x (512px)
@@ -32,12 +33,14 @@ Complete the application icon set, integrate icon generation into build workflow
 - Single `python scripts/generate_icons.py` invocation produces everything
 
 ### Build Integration
+
 - Add npm script or Tauri `beforeBuildCommand` that copies `desktop/icons/*` → `desktop/src-tauri/icons/`
 - Update `tauri.conf.json` icon list to include all sizes
 - Update Linux `.desktop` file icon path
 - Update Flatpak manifest icon references
 
 ### CI Validation
+
 - `scripts/validate_icons.py`: checks each icon file for existence, valid header, correct dimensions, RGBA color type
 - Runs in CI before `tauri build`
 - Optional integration into `pre-commit-validation.sh`
