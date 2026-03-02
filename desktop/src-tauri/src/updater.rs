@@ -101,7 +101,7 @@ pub async fn install_update(app: AppHandle) -> Result<(), String> {
     let result = update
         .download_and_install(
             move |downloaded, total| {
-                let payload = DownloadProgressPayload { downloaded, total };
+                let payload = DownloadProgressPayload { downloaded: downloaded as u64, total };
                 // Best-effort emit; ignore send errors during progress.
                 let _ = app_for_progress.emit("update-downloading", payload);
             },

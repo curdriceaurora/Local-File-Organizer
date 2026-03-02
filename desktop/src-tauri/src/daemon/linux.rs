@@ -53,7 +53,7 @@ impl LinuxDaemonManager {
              \n\
              [Service]\n\
              Type=simple\n\
-             ExecStart="{}"\n\
+             ExecStart=\"{}\"\n\
              Restart=on-failure\n\
              RestartSec=5\n\
              \n\

@@ -61,7 +61,7 @@ pub fn run() {
                     if let Err(e) = mgr.wait_until_ready() {
                         eprintln!("Warning: sidecar health poll failed: {e}");
                     }
-                }
+                }; // Semicolon ensures MutexGuard temporary drops before `state`.
             });
 
             // Create tray with the dynamic sidecar port.

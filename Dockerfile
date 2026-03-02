@@ -89,9 +89,9 @@ EXPOSE 8000
 # Switch to non-root user
 USER organizer
 
-# Healthcheck using the API endpoint
+# Healthcheck using the API endpoint (respects FO_API_PORT override)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${FO_API_PORT:-8000}/health || exit 1
 
-# Default command: run the web API server
+# Default command: run the web API server (override port via FO_API_PORT env var)
 CMD ["python", "-m", "uvicorn", "file_organizer.api:app", "--host", "0.0.0.0", "--port", "8000"]

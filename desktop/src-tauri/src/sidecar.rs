@@ -121,8 +121,9 @@ impl SidecarManager {
             .as_secs()
     }
 
-    /// Spawn the sidecar binary with `--port <port>` argument.
+    /// Spawn the sidecar binary with `serve --port <port>` arguments.
     ///
+    /// The CLI requires the `serve` subcommand before the `--port` option.
     /// Transitions state to `Starting` and emits a `sidecar-state` event.
     pub fn start(&self) -> std::io::Result<()> {
         *self.state.lock().unwrap() = SidecarState::Starting;
@@ -134,6 +135,7 @@ impl SidecarManager {
         });
 
         let child = Command::new(&self.binary_path)
+            .arg("serve")
             .arg("--port")
             .arg(self.port.to_string())
             .spawn()?;

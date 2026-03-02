@@ -24,7 +24,9 @@ pub fn get_sidecar_state(app: tauri::AppHandle) -> serde_json::Value {
         });
     };
 
-    match mgr.lock() {
+    // Bind the match result to a local variable so that the `MutexGuard`
+    // temporary is dropped before `mgr`, avoiding a lifetime error.
+    let result = match mgr.lock() {
         Ok(sidecar) => {
             let state_str = match sidecar.state() {
                 crate::sidecar::SidecarState::Stopped => "stopped",
@@ -48,5 +50,6 @@ pub fn get_sidecar_state(app: tauri::AppHandle) -> serde_json::Value {
                 "message": format!("Internal error: failed to acquire sidecar lock: {}", e)
             })
         }
-    }
+    };
+    result
 }

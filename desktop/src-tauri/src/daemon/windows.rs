@@ -8,7 +8,7 @@
 //! `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 
 use std::io::{self, ErrorKind};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 use super::DaemonManager;
@@ -204,6 +204,7 @@ impl DaemonManager for WindowsDaemonManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     fn make_manager() -> WindowsDaemonManager {
         WindowsDaemonManager::new("FileOrganizerDaemon")
