@@ -62,6 +62,7 @@ git diff --name-only HEAD | grep '\.py$' | xargs mypy --strict
 ```
 
 ### 4. Pattern Validation
+
 Run pattern checks (see sections below)
 
 ### 5. Commit Only If All Pass
@@ -419,6 +420,7 @@ find tests/fixtures -type d -maxdepth 1
 **Problem**: Tests using wrong API that doesn't match implementation
 
 **Validation Workflow**:
+
 1. Read the actual service/model implementation
 2. Check method signatures and return types
 3. Write test using correct API
@@ -473,6 +475,7 @@ bash .claude/scripts/pre-commit-validation.sh
 ```
 
 **What it validates**:
+
 - ✅ Branch verification
 - ✅ Build artifact detection (`.coverage`, `*.bak`, `*.pyc`)
 - ✅ Pattern validation for dict-style dataclass access
@@ -486,6 +489,7 @@ See the full script for implementation details.
 ## Usage in Workflow
 
 ### When Writing Code
+
 1. Read actual implementation FIRST
 2. Verify method signatures and return types
 3. Test code example before documenting
@@ -504,7 +508,9 @@ git commit -m "message"
 ```
 
 ### When Reviewing Own Code
+
 Ask these questions:
+
 - Did I read the actual implementation?
 - Did I verify this import path exists?
 - Did I test this code example?
@@ -515,6 +521,7 @@ Ask these questions:
 ## Integration with PM Skills
 
 When using `/pm:issue-start` or working on issues:
+
 1. Run pre-commit validation before EVERY commit
 2. Don't wait for CI to catch issues
 3. Catch patterns locally before pushing
@@ -523,23 +530,27 @@ When using `/pm:issue-start` or working on issues:
 ## Severity Levels
 
 **P0 - Must Fix Before Commit**:
+
 - Dict-style dataclass access
 - Wrong return types in examples
 - Non-existent imports
 - Build artifacts
 
 **P1 - Must Fix Before Push**:
+
 - Broken links in docs
 - Untested code examples
 - Wrong CLI commands
 - Missing type hints
 
 **P2 - Must Fix Before PR**:
+
 - Inconsistent formatting
 - Missing docstrings
 - Incomplete test coverage
 
 **P3 - Nice to Have**:
+
 - Markdown formatting
 - Comment clarity
 - Variable naming

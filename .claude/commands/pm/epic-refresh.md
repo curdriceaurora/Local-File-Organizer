@@ -7,7 +7,8 @@ allowed-tools: Read, Write, LS
 Update epic progress based on task states.
 
 ## Usage
-```
+
+```text
 /pm:epic-refresh <epic_name>
 ```
 
@@ -16,6 +17,7 @@ Update epic progress based on task states.
 ### 1. Count Task Status
 
 Scan all task files in `.claude/epics/$ARGUMENTS/`:
+
 - Count total tasks
 - Count tasks with `status: closed`
 - Count tasks with `status: open`
@@ -23,7 +25,7 @@ Scan all task files in `.claude/epics/$ARGUMENTS/`:
 
 ### 2. Calculate Progress
 
-```
+```text
 progress = (closed_tasks / total_tasks) * 100
 ```
 
@@ -77,6 +79,7 @@ fi
 Get current datetime: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 
 Update epic.md frontmatter:
+
 ```yaml
 status: {calculated_status}
 progress: {calculated_progress}%
@@ -85,7 +88,7 @@ updated: {current_datetime}
 
 ### 6. Output
 
-```
+```yaml
 🔄 Epic refreshed: $ARGUMENTS
 
 Tasks:

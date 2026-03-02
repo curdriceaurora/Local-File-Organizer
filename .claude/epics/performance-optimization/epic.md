@@ -1,6 +1,6 @@
 ---
 name: performance-optimization
-title: Performance Optimization (Critical: Image Processing Speed)
+title: "Performance Optimization (Critical: Image Processing Speed)"
 github_issue: 8
 github_url: https://github.com/curdriceaurora/Local-File-Organizer/issues/8
 status: completed
@@ -26,11 +26,13 @@ Optimize processing speed, especially for image processing which currently takes
 ## Critical Issue 🚨 - RESOLVED
 
 **Original State:**
+
 - Text processing: ~7s per file ✅ (acceptable)
 - **Image processing: ~240s (4 minutes) per file** ❌ (needed optimization)
 - Target: <30s per image (8x improvement needed)
 
 **Status:** COMPLETED
+
 - Implemented benchmark command for performance measurements
 - Added comprehensive caching layer for file metadata
 - Integrated model warmup optimization
@@ -48,4 +50,3 @@ Optimize processing speed, especially for image processing which currently takes
 
 **Merged:** 2026-02-27
 **PR:** #481 - Performance Optimization Integration
-

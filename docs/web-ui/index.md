@@ -67,7 +67,7 @@ File Organizer works best on modern browsers:
 
 Open your browser and navigate to:
 
-```
+```text
 http://localhost:8000/ui/
 ```
 

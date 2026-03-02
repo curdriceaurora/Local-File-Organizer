@@ -9,6 +9,7 @@ This command updates the project context documentation in `.claude/context/` to 
 ## Required Rules
 
 **IMPORTANT:** Before executing this command, read and follow:
+
 - `.claude/rules/datetime.md` - For getting real current date/time
 
 ## Preflight Checklist
@@ -17,6 +18,7 @@ Before proceeding, complete these validation steps.
 Do not bother the user with preflight checks progress ("I'm not going to ..."). Just do them and move on.
 
 ### 1. Context Validation
+
 - Run: `ls -la .claude/context/ 2>/dev/null`
 - If directory doesn't exist or is empty:
   - Tell user: "❌ No context to update. Please run /context:create first."
@@ -29,15 +31,18 @@ Do not bother the user with preflight checks progress ("I'm not going to ..."). 
 Gather information about what has changed:
 
 **Git Changes:**
+
 - Run: `git status --short` to see uncommitted changes
 - Run: `git log --oneline -10` to see recent commits
 - Run: `git diff --stat HEAD~5..HEAD 2>/dev/null` to see files changed recently
 
 **File Modifications:**
+
 - Check context file ages: `find .claude/context -name "*.md" -type f -exec ls -lt {} + | head -5`
 - Note which context files are oldest and may need updates
 
 **Dependency Changes:**
+
 - Node.js: `git diff HEAD~5..HEAD package.json 2>/dev/null`
 - Python: `git diff HEAD~5..HEAD requirements.txt pyproject.toml 2>/dev/null`
 - Java: `git diff HEAD~5..HEAD pom.xml build.gradle build.gradle.kts 2>/dev/null`
@@ -52,6 +57,7 @@ Gather information about what has changed:
 - Check if new dependencies were added or versions changed across any build system
 
 ### 3. Get Current DateTime
+
 - Run: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 - Store for updating `last_updated` field in modified files
 
@@ -62,51 +68,62 @@ Gather information about what has changed:
 For each context file, determine if updates are needed:
 
 **Check each file systematically:**
+
 #### `progress.md` - **Always Update**
+
   - Check: Recent commits, current branch, uncommitted changes
   - Update: Latest completed work, current blockers, next steps
   - Run: `git log --oneline -5` to get recent commit messages
   - Include completion percentages if applicable
 
 #### `project-structure.md` - **Update if Changed**
+
   - Check: `git diff --name-status HEAD~10..HEAD | grep -E '^A'` for new files
   - Update: New directories, moved files, structural reorganization
   - Only update if significant structural changes occurred
 
 #### `tech-context.md` - **Update if Dependencies Changed**
+
   - Check: Package files for new dependencies or version changes
   - Update: New libraries, upgraded versions, new dev tools
   - Include security updates or breaking changes
 
 #### `system-patterns.md` - **Update if Architecture Changed**
+
   - Check: New design patterns, architectural decisions
   - Update: New patterns adopted, refactoring done
   - Only update for significant architectural changes
 
 #### `product-context.md` - **Update if Requirements Changed**
+
   - Check: New features implemented, user feedback incorporated
   - Update: New user stories, changed requirements
   - Include any pivot in product direction
 
 #### `project-brief.md` - **Rarely Update**
+
   - Check: Only if fundamental project goals changed
   - Update: Major scope changes, new objectives
   - Usually remains stable
 
 #### `project-overview.md` - **Update for Major Milestones**
+
   - Check: Major features completed, significant progress
   - Update: Feature status, capability changes
   - Update when reaching project milestones
 
 #### `project-vision.md` - **Rarely Update**
+
   - Check: Strategic direction changes
   - Update: Only for major vision shifts
   - Usually remains stable
 
 #### `project-style-guide.md` - **Update if Conventions Changed**
+
   - Check: New linting rules, style decisions
   - Update: Convention changes, new patterns adopted
   - Include examples of new patterns
+
 ### 2. Smart Update Strategy
 
 **For each file that needs updating:**
@@ -114,24 +131,29 @@ For each context file, determine if updates are needed:
 1. **Read existing file** to understand current content
 2. **Identify specific sections** that need updates
 3. **Preserve frontmatter** but update `last_updated` field:
-   ```yaml
-   ---
-   created: [preserve original]
-   last_updated: [Use REAL datetime from date command]
-   version: [increment if major update, e.g., 1.0 → 1.1]
-   author: Claude Code PM System
-   ---
-   ```
+
+```yaml
+---
+created: [preserve original]
+last_updated: [Use REAL datetime from date command]
+version: [increment if major update, e.g., 1.0 → 1.1]
+author: Claude Code PM System
+---
+
+```
+
 4. **Make targeted updates** - don't rewrite entire file
 5. **Add update notes** at the bottom if significant:
-   ```markdown
+
+```markdown
    ## Update History
    - {date}: {summary of what changed}
-   ```
+```
 
 ### 3. Update Validation
 
 After updating each file:
+
 - Verify file still has valid frontmatter
 - Check file size is reasonable (not corrupted)
 - Ensure markdown formatting is preserved
@@ -140,6 +162,7 @@ After updating each file:
 ### 4. Skip Optimization
 
 **Skip files that don't need updates:**
+
 - If no relevant changes detected, skip the file
 - Report skipped files in summary
 - Don't update timestamp if content unchanged
@@ -148,12 +171,14 @@ After updating each file:
 ### 5. Error Handling
 
 **Common Issues:**
+
 - **File locked:** "❌ Cannot update {file} - may be open in editor"
 - **Permission denied:** "❌ Cannot write to {file} - check permissions"
 - **Corrupted file:** "⚠️ {file} appears corrupted - skipping update"
 - **Disk space:** "❌ Insufficient disk space for updates"
 
 If update fails:
+
 - Report which files were successfully updated
 - Note which files failed and why
 - Preserve original files (don't leave corrupted state)
@@ -162,7 +187,7 @@ If update fails:
 
 Provide detailed summary of updates:
 
-```
+```sql
 🔄 Context Update Complete
 
 📊 Update Statistics:
@@ -192,6 +217,7 @@ Provide detailed summary of updates:
 ### 7. Incremental Update Tracking
 
 **Track what was updated:**
+
 - Note which sections of each file were modified
 - Keep changes focused and surgical
 - Don't regenerate unchanged content
@@ -200,6 +226,7 @@ Provide detailed summary of updates:
 ### 8. Performance Optimization
 
 For large projects:
+
 - Process files in parallel when possible
 - Show progress: "Updating context files... {current}/{total}"
 - Skip very large files with warning
@@ -208,6 +235,7 @@ For large projects:
 ## Context Gathering Commands
 
 Use these commands to detect changes:
+
 - Context directory: `.claude/context/`
 - Current git status: `git status --short`
 - Recent commits: `git log --oneline -10`

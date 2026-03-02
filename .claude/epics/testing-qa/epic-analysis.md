@@ -24,6 +24,7 @@ Comprehensive testing infrastructure for the File Organizer v2 project. This epi
 **Scope**: Test infrastructure, AI models, file processors, core orchestrator
 **Issues**: #148, #149, #150, #151, #152, #153, #154, #155, #156
 **Files**:
+
 - `tests/conftest.py` (test infrastructure)
 - `tests/models/test_base.py`
 - `tests/models/test_text_model.py`
@@ -45,6 +46,7 @@ Comprehensive testing infrastructure for the File Organizer v2 project. This epi
 **Scope**: Pattern detection, misplacement detection, suggestion feedback
 **Issues**: #157, #158, #159
 **Files**:
+
 - `tests/services/test_pattern_analyzer.py`
 - `tests/services/test_misplacement_detector.py`
 - `tests/services/test_smart_suggestions.py`
@@ -60,6 +62,7 @@ Comprehensive testing infrastructure for the File Organizer v2 project. This epi
 **Scope**: Duplicate detection for images and documents, quality assessment
 **Issues**: #160, #161, #162, #163
 **Files**:
+
 - `tests/services/deduplication/test_dedup_core.py`
 - `tests/services/deduplication/test_image_dedup.py`
 - `tests/services/deduplication/test_document_dedup.py`
@@ -77,6 +80,7 @@ Comprehensive testing infrastructure for the File Organizer v2 project. This epi
 **Scope**: User preference learning, feedback processing, profile management
 **Issues**: #164, #165, #166
 **Files**:
+
 - `tests/services/intelligence/test_preference_tracker.py`
 - `tests/services/intelligence/test_pattern_learner.py`
 - `tests/services/intelligence/test_feedback_processor.py`
@@ -94,6 +98,7 @@ Comprehensive testing infrastructure for the File Organizer v2 project. This epi
 **Scope**: CLI tests, end-to-end workflows, CI/CD pipeline, code quality
 **Issues**: #167, #168, #169, #170
 **Files**:
+
 - `tests/cli/test_dedupe.py`
 - `tests/cli/test_profile.py`
 - `tests/cli/test_analytics.py`
@@ -114,6 +119,7 @@ Comprehensive testing infrastructure for the File Organizer v2 project. This epi
 ### Shared Files
 
 Files that multiple streams may need to reference:
+
 - `tests/conftest.py` - Stream A creates, all others import fixtures
 - `pyproject.toml` - Stream E updates test dependencies
 - `.github/workflows/` - Stream E owns, others may reference
@@ -133,6 +139,7 @@ Files that multiple streams may need to reference:
 ## Conflict Risk Assessment
 
 **Low Risk**: Most streams work on different test directories
+
 - Stream A: `tests/models/`, `tests/services/` (text/vision only)
 - Stream B: `tests/services/` (pattern analysis)
 - Stream C: `tests/services/deduplication/`
@@ -140,6 +147,7 @@ Files that multiple streams may need to reference:
 - Stream E: `tests/cli/`, `tests/integration/`, `.github/`
 
 **Medium Risk**:
+
 - `tests/conftest.py` - Stream A creates, others import (coordinate early)
 - `pyproject.toml` - May need test dependency updates
 
@@ -159,6 +167,7 @@ All streams will import fixtures from `tests/conftest.py`, so Stream A must comp
 ### Phase 2: Parallel Core Work (Week 2-4)
 
 Launch 4 agents in parallel after #148:
+
 - **Agent A1**: Stream A remaining (#149-156) - 78-98h
 - **Agent B1**: Stream B (#157-159) - 34-40h
 - **Agent C1**: Stream C (#160-163) - 52-62h
@@ -190,7 +199,7 @@ All can work simultaneously on different test modules.
 
 ### Critical Path:
 
-```
+```text
 #148 (8-12h) →
   ├─ Stream A: #149-156 (78-98h) ──┐
   ├─ Stream B: #157-159 (34-40h) ──┤
@@ -258,6 +267,7 @@ Total Critical Path: 8-12h + max(78-98h) + 44-54h = 130-164h
 ### Step 3: Continue Parallel Work
 
 Each agent progresses through their stream independently:
+
 - **A1**: 149→150/151→154/155→156
 - **B1**: 157→158, 159 (parallel)
 - **C1**: 160→161/162/163 (three parallel after 160)

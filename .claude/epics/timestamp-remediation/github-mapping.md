@@ -3,6 +3,7 @@
 Epic: #526 - https://github.com/curdriceaurora/Local-File-Organizer/issues/526
 
 Tasks:
+
 - #527: Enable DTZ Ruff Rules - https://github.com/curdriceaurora/Local-File-Organizer/issues/527
 - #528: Fix 27 Naive datetime.now() Calls - https://github.com/curdriceaurora/Local-File-Organizer/issues/528
 - #529: Fix 11 Naive fromtimestamp() Calls - https://github.com/curdriceaurora/Local-File-Organizer/issues/529

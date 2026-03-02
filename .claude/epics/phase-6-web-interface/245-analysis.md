@@ -20,6 +20,7 @@ Implement comprehensive frontend test suite with component tests, E2E tests, bro
 **Files**: `tests/frontend/`, `package.json`, `jest.config.js`, `playwright.config.js`
 
 **Tasks**:
+
 - Set up Jest/Vitest for component testing
 - Install and configure Playwright or Cypress for E2E testing
 - Configure Testing Library for DOM queries
@@ -36,6 +37,7 @@ Implement comprehensive frontend test suite with component tests, E2E tests, bro
 **Files**: `tests/frontend/component/`
 
 **Tasks**:
+
 - Write tests for file upload component (drag-drop, file selection)
 - Write tests for progress bars and status indicators
 - Write tests for search interface (filters, sorting)
@@ -53,6 +55,7 @@ Implement comprehensive frontend test suite with component tests, E2E tests, bro
 **Files**: `tests/frontend/e2e/`
 
 **Tasks**:
+
 - Create organize workflow E2E test (Upload → Methodology → Organize → Results)
 - Create batch operations test (Multi-upload → Batch organize → Progress tracking)
 - Create methodology selection test (Switch methodologies → Verify categorization)
@@ -70,6 +73,7 @@ Implement comprehensive frontend test suite with component tests, E2E tests, bro
 **Files**: `tests/frontend/responsive/`, test configuration
 
 **Tasks**:
+
 - Set up browser compatibility testing (Chrome, Firefox, Safari, Edge)
 - Create responsive tests for mobile (320px - 480px)
 - Create responsive tests for tablet (481px - 768px)
@@ -86,6 +90,7 @@ Implement comprehensive frontend test suite with component tests, E2E tests, bro
 **Files**: `tests/frontend/README.md`, CI/CD config, documentation
 
 **Tasks**:
+
 - Document test structure and how to run tests
 - Document test patterns and best practices
 - Document browser compatibility matrix
@@ -100,14 +105,17 @@ Implement comprehensive frontend test suite with component tests, E2E tests, bro
 ## Parallel Execution Plan
 
 **Phase 1 (Start Immediately)**:
+
 - Stream A: Test infrastructure setup
 
 **Phase 2 (After A progresses)**:
+
 - Stream B: Component tests
 - Stream C: E2E scenarios
 - Stream D: Browser compatibility (can overlap with B & C)
 
 **Phase 3 (After B & C complete)**:
+
 - Stream E: Documentation and CI/CD integration
 
 ## Key Considerations

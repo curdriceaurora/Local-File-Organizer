@@ -77,7 +77,7 @@ See [Installation Guide](installation.md) for detailed setup.
 
 ## System Architecture
 
-```
+```text
 ┌─────────────┐
 │   Browser   │
 └──────┬──────┘

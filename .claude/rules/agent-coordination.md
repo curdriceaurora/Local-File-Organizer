@@ -12,6 +12,7 @@ Rules for multiple agents working in parallel within the same epic worktree.
 ## Work Stream Assignment
 
 Each agent is assigned a work stream from the issue analysis:
+
 ```yaml
 # From {issue}-analysis.md
 Stream A: Database Layer
@@ -28,7 +29,9 @@ Agents should only modify files in their assigned patterns.
 ## File Access Coordination
 
 ### Check Before Modify
+
 Before modifying a shared file:
+
 ```bash
 # Check if file is being modified
 git status {file}
@@ -42,7 +45,9 @@ fi
 ```
 
 ### Atomic Commits
+
 Make commits atomic and focused:
+
 ```bash
 # Good - Single purpose commit
 git add src/api/users.ts src/api/users.test.ts
@@ -56,7 +61,9 @@ git commit -m "Issue #1234: Multiple changes"
 ## Communication Between Agents
 
 ### Through Commits
+
 Agents see each other's work through commits:
+
 ```bash
 # Agent checks what others have done
 git log --oneline -10
@@ -66,7 +73,9 @@ git pull origin epic/{name}
 ```
 
 ### Through Progress Files
+
 Each stream maintains progress:
+
 ```markdown
 # .claude/epics/{epic}/updates/{issue}/stream-A.md
 ---
@@ -88,7 +97,9 @@ status: in_progress
 ```
 
 ### Through Analysis Files
+
 The analysis file is the contract:
+
 ```yaml
 # Agents read this to understand boundaries
 Stream A:
@@ -100,6 +111,7 @@ Stream B:
 ## Handling Conflicts
 
 ### Conflict Detection
+
 ```bash
 # If commit fails due to conflict
 git commit -m "Issue #1234: Update"
@@ -111,7 +123,9 @@ echo "Human intervention needed"
 ```
 
 ### Conflict Resolution
+
 Always defer to humans:
+
 1. Agent detects conflict
 2. Agent reports issue
 3. Agent pauses work
@@ -123,12 +137,14 @@ Never attempt automatic merge resolution.
 ## Synchronization Points
 
 ### Natural Sync Points
+
 - After each commit
 - Before starting new file
 - When switching work streams
 - Every 30 minutes of work
 
 ### Explicit Sync
+
 ```bash
 # Pull latest changes
 git pull --rebase origin epic/{name}
@@ -143,7 +159,9 @@ fi
 ## Agent Communication Protocol
 
 ### Status Updates
+
 Agents should update their status regularly:
+
 ```bash
 # Update progress file every significant step
 echo "✅ Completed: Database schema" >> stream-A.md
@@ -152,7 +170,9 @@ git commit -m "Progress: Stream A - schema complete"
 ```
 
 ### Coordination Requests
+
 When agents need to coordinate:
+
 ```markdown
 # In stream-A.md
 ## Coordination Needed
@@ -164,7 +184,9 @@ When agents need to coordinate:
 ## Parallel Commit Strategy
 
 ### No Conflicts Possible
+
 When working on completely different files:
+
 ```bash
 # These can happen simultaneously
 Agent-A: git commit -m "Issue #1234: Update database"
@@ -173,7 +195,9 @@ Agent-C: git commit -m "Issue #1236: Add tests"
 ```
 
 ### Sequential When Needed
+
 When touching shared resources:
+
 ```bash
 # Agent A commits first
 git add src/types/index.ts
@@ -198,6 +222,7 @@ git commit -m "Issue #1235: Use new types"
 ## Common Patterns
 
 ### Starting Work
+
 ```bash
 1. cd ../epic-{name}
 2. git pull
@@ -207,6 +232,7 @@ git commit -m "Issue #1235: Use new types"
 ```
 
 ### During Work
+
 ```bash
 1. Make changes to assigned files
 2. Commit with clear message
@@ -216,6 +242,7 @@ git commit -m "Issue #1235: Use new types"
 ```
 
 ### Completing Work
+
 ```bash
 1. Final commit for stream
 2. Update stream-{X}.md with "completed"

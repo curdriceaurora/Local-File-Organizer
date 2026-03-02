@@ -7,13 +7,15 @@ allowed-tools: Bash, Read, Write, LS
 Push local updates as GitHub issue comments for transparent audit trail.
 
 ## Usage
-```
+
+```text
 /pm:issue-sync <issue_number>
 ```
 
 ## Required Rules
 
 **IMPORTANT:** Before executing this command, read and follow:
+
 - `.claude/rules/datetime.md` - For getting real current date/time
 
 ## Preflight Checklist
@@ -23,6 +25,7 @@ Do not bother the user with preflight checks progress ("I'm not going to ..."). 
 
 0. **Repository Protection Check:**
    Follow `/rules/github-operations.md` - check remote origin:
+
    ```bash
    remote_url=$(git remote get-url origin 2>/dev/null || echo "")
    if [[ "$remote_url" == *"automazeio/ccpm"* ]]; then
@@ -62,7 +65,9 @@ Do not bother the user with preflight checks progress ("I'm not going to ..."). 
 You are synchronizing local development progress to GitHub as issue comments for: **Issue #$ARGUMENTS**
 
 ### 1. Gather Local Updates
+
 Collect all local updates for the issue:
+
 - Read from `.claude/epics/{epic_name}/updates/$ARGUMENTS/`
 - Check for new content in:
   - `progress.md` - Development progress
@@ -71,9 +76,11 @@ Collect all local updates for the issue:
   - Any other update files
 
 ### 2. Update Progress Tracking Frontmatter
+
 Get current datetime: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 
 Update the progress.md file frontmatter:
+
 ```yaml
 ---
 issue: $ARGUMENTS
@@ -84,12 +91,15 @@ completion: [calculated percentage 0-100%]
 ```
 
 ### 3. Determine What's New
+
 Compare against previous sync to identify new content:
+
 - Look for sync timestamp markers
 - Identify new sections or updates
 - Gather only incremental changes since last sync
 
 ### 4. Format Update Comment
+
 Create comprehensive update comment:
 
 ```markdown
@@ -124,15 +134,19 @@ Create comprehensive update comment:
 ```
 
 ### 5. Post to GitHub
+
 Use GitHub CLI to add comment:
+
 ```bash
 gh issue comment #$ARGUMENTS --body-file {temp_comment_file}
 ```
 
 ### 6. Update Local Task File
+
 Get current datetime: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 
 Update the task file frontmatter with sync information:
+
 ```yaml
 ---
 name: [Task Title]
@@ -144,9 +158,11 @@ github: https://github.com/{org}/{repo}/issues/$ARGUMENTS
 ```
 
 ### 7. Handle Completion
+
 If task is complete, update all relevant frontmatter:
 
 **Task file frontmatter**:
+
 ```yaml
 ---
 name: [Task Title]
@@ -158,6 +174,7 @@ github: https://github.com/{org}/{repo}/issues/$ARGUMENTS
 ```
 
 **Progress file frontmatter**:
+
 ```yaml
 ---
 issue: $ARGUMENTS
@@ -168,6 +185,7 @@ completion: 100%
 ```
 
 **Epic progress update**: Recalculate epic progress based on completed tasks and update epic frontmatter:
+
 ```yaml
 ---
 name: [Epic Name]
@@ -180,7 +198,9 @@ github: [existing URL]
 ```
 
 ### 8. Completion Comment
+
 If task is complete:
+
 ```markdown
 ## ✅ Task Completed - {current_date}
 
@@ -209,7 +229,8 @@ This task is ready for review and can be closed.
 ```
 
 ### 9. Output Summary
-```
+
+```sql
 ☁️ Synced updates to GitHub Issue #$ARGUMENTS
 
 📝 Update summary:
@@ -226,6 +247,7 @@ This task is ready for review and can be closed.
 ```
 
 ### 10. Frontmatter Maintenance
+
 - Always update task file frontmatter with current timestamp
 - Track completion percentages in progress files
 - Update epic progress when tasks complete
@@ -234,16 +256,20 @@ This task is ready for review and can be closed.
 ### 11. Incremental Sync Detection
 
 **Prevent Duplicate Comments:**
+
 1. Add sync markers to local files after each sync:
+
    ```markdown
    <!-- SYNCED: 2024-01-15T10:30:00Z -->
    ```
+
 2. Only sync content added after the last marker
 3. If no new content, skip sync with message: "No updates since last sync"
 
 ### 12. Comment Size Management
 
 **Handle GitHub's Comment Limits:**
+
 - Max comment size: 65,536 characters
 - If update exceeds limit:
   1. Split into multiple comments
@@ -275,6 +301,7 @@ This task is ready for review and can be closed.
 ### 14. Epic Progress Calculation
 
 When updating epic progress:
+
 1. Count total tasks in epic directory
 2. Count tasks with `status: closed` in frontmatter
 3. Calculate: `progress = (closed_tasks / total_tasks) * 100`
@@ -284,6 +311,7 @@ When updating epic progress:
 ### 15. Post-Sync Validation
 
 After successful sync:
+
 - [ ] Verify comment posted on GitHub
 - [ ] Confirm frontmatter updated with sync timestamp
 - [ ] Check epic progress updated if task completed

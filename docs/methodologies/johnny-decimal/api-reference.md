@@ -48,6 +48,7 @@ print(number.level)             # NumberLevel.CATEGORY
 ```
 
 **Attributes:**
+
 - `area` (int): Area number (10-99)
 - `category` (Optional[int]): Category number (01-99)
 - `id_number` (Optional[int]): ID number (001-999)
@@ -55,6 +56,7 @@ print(number.level)             # NumberLevel.CATEGORY
 - `formatted_number` (str): Formatted string representation
 
 **Properties:**
+
 - `is_area() -> bool`: Check if this is an area-level number
 - `is_category() -> bool`: Check if this is a category-level number
 - `is_id() -> bool`: Check if this is an ID-level number
@@ -96,18 +98,22 @@ id_num = system.create_id(10, 1, 1, "2024 Budget")
 **Methods:**
 
 #### create_area(area_number, title) -> JohnnyDecimalNumber
+
 Create an area-level number.
 
 **Parameters:**
+
 - `area_number` (int): Area number (10-99)
 - `title` (str): Area title
 
 **Returns:** JohnnyDecimalNumber at area level
 
 #### create_category(area_number, category_number, title) -> JohnnyDecimalNumber
+
 Create a category-level number.
 
 **Parameters:**
+
 - `area_number` (int): Parent area number
 - `category_number` (int): Category number (01-99)
 - `title` (str): Category title
@@ -115,9 +121,11 @@ Create a category-level number.
 **Returns:** JohnnyDecimalNumber at category level
 
 #### create_id(area_number, category_number, id_number, title) -> JohnnyDecimalNumber
+
 Create an ID-level number.
 
 **Parameters:**
+
 - `area_number` (int): Parent area number
 - `category_number` (int): Parent category number
 - `id_number` (int): ID number (001-999)
@@ -157,18 +165,23 @@ generator.register_number(number)
 **Methods:**
 
 #### generate_area() -> NumberingResult
+
 Generate next available area number.
 
 #### generate_category(area_number: int) -> NumberingResult
+
 Generate next available category in area.
 
 #### generate_id(area_number: int, category_number: int) -> NumberingResult
+
 Generate next available ID in category.
 
 #### is_number_available(number: JohnnyDecimalNumber) -> bool
+
 Check if number is available for use.
 
 #### register_number(number: JohnnyDecimalNumber, description: str = "") -> None
+
 Register a number as used.
 
 ## Migration Classes
@@ -198,6 +211,7 @@ print(f"Patterns: {result.detected_patterns}")
 ```
 
 **Returns:** ScanResult with:
+
 - `root_path` (Path): Scanned root path
 - `total_folders` (int): Number of folders found
 - `total_files` (int): Number of files found
@@ -238,6 +252,7 @@ print(preview)
 ```
 
 **Returns:** TransformationPlan with:
+
 - `root_path` (Path): Root directory path
 - `rules` (List[TransformationRule]): Transformation rules
 - `estimated_changes` (int): Number of changes
@@ -273,6 +288,7 @@ print(report)
 ```
 
 **Returns:** ValidationResult with:
+
 - `is_valid` (bool): Whether plan is valid
 - `issues` (List[ValidationIssue]): All issues
 - `errors` (List[ValidationIssue]): Blocking errors
@@ -321,21 +337,27 @@ success = migrator.rollback()
 **Methods:**
 
 #### create_migration_plan(root_path: Path) -> Tuple[TransformationPlan, ScanResult]
+
 Create complete migration plan.
 
 #### validate_plan(plan: TransformationPlan) -> ValidationResult
+
 Validate transformation plan.
 
 #### execute_migration(plan, dry_run=True, create_backup=True) -> MigrationResult
+
 Execute transformation plan.
 
 #### rollback(migration_id: Optional[str] = None) -> bool
+
 Rollback a migration.
 
 #### generate_preview(plan, scan_result, validation=None) -> str
+
 Generate human-readable preview.
 
 #### generate_report(result: MigrationResult) -> str
+
 Generate migration report.
 
 ## Configuration Classes
@@ -369,6 +391,7 @@ config = JohnnyDecimalConfig.from_dict(config_dict)
 ```
 
 **Attributes:**
+
 - `scheme` (NumberingScheme): Numbering scheme
 - `migration` (MigrationConfig): Migration settings
 - `compatibility` (CompatibilityConfig): Compatibility settings
@@ -407,21 +430,27 @@ config = (
 **Methods:**
 
 #### add_area(area_number, title, description="") -> ConfigBuilder
+
 Add area definition.
 
 #### add_category(area_number, category_number, title, description="") -> ConfigBuilder
+
 Add category definition.
 
 #### with_migration_config(...) -> ConfigBuilder
+
 Configure migration settings.
 
 #### with_para_integration(...) -> ConfigBuilder
+
 Enable PARA integration.
 
 #### add_custom_mapping(folder_name, area_number) -> ConfigBuilder
+
 Add custom folder mapping.
 
 #### build() -> JohnnyDecimalConfig
+
 Build configuration.
 
 ## Compatibility Classes
@@ -707,15 +736,19 @@ scheme = NumberingScheme(
 ## Utility Functions
 
 ### get_default_scheme() -> NumberingScheme
+
 Get default numbering scheme.
 
 ### create_default_config() -> JohnnyDecimalConfig
+
 Create default configuration.
 
 ### create_para_compatible_config() -> JohnnyDecimalConfig
+
 Create PARA-compatible configuration.
 
 ### create_default_registry(config) -> AdapterRegistry
+
 Create adapter registry with default adapters.
 
 ## Complete Examples

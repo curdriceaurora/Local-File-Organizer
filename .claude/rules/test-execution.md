@@ -24,14 +24,18 @@ Requirements:
 ## Output Focus
 
 ### Success
+
 Keep it simple:
-```
+
+```text
 ✅ All tests passed ({count} tests in {time}s)
 ```
 
 ### Failure
+
 Focus on what failed:
-```
+
+```yaml
 ❌ Test failures: {count}
 
 {test_name} - {file}:{line}
@@ -48,6 +52,7 @@ Focus on what failed:
 ## Cleanup
 
 Always clean up after tests:
+
 ```bash
 # Kill test processes for all supported frameworks
 pkill -f "jest|mocha|pytest|phpunit|rspec|ctest" 2>/dev/null || true

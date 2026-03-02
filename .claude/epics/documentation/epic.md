@@ -26,6 +26,7 @@ Create comprehensive documentation for users and developers.
 ### 1. User Documentation 📚
 
 End-user guides
+
 - **Getting Started Guide** (beginner-friendly)
 - **Installation Guide** (all platforms)
 - **Usage Tutorial** (with examples)
@@ -37,6 +38,7 @@ End-user guides
 ### 2. Developer Documentation 💻
 
 Technical documentation
+
 - **Architecture Overview** (system design)
 - **API Reference** (auto-generated)
 - **Contributing Guide** (for contributors)
@@ -47,6 +49,7 @@ Technical documentation
 ### 3. Project Documentation 📋
 
 Project management docs
+
 - **Roadmap** (timeline and features)
 - **Changelog** (version history)
 - **Release Notes** (what's new)
@@ -56,6 +59,7 @@ Project management docs
 ### 4. Visual Documentation 🎨
 
 Diagrams and screenshots
+
 - Architecture diagrams
 - Workflow diagrams
 - Screenshots of UI
@@ -65,6 +69,7 @@ Diagrams and screenshots
 ### 5. Community Documentation 🤝
 
 Community resources
+
 - **Code of Conduct**
 - **Security Policy**
 - **Issue Templates**

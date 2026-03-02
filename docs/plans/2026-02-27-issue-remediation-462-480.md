@@ -5,6 +5,7 @@
 **Goal:** Systematically address 19 reported issues across bugs, technical debt, and architectural improvements, prioritized by impact and risk.
 
 **Status Overview:**
+
 - **Completed/Merged:** 4 issues (#462-465) - ✅ Already resolved
 - **Open & Valid:** 15 issues (#466-480) - Need prioritized action
 - **Critical Path:** 5 issues (P1) - Foundation for other fixes
@@ -25,6 +26,7 @@
 ### 🔴 OPEN & VALID BUGS (5 Critical Issues)
 
 **Issue #466: API import-time side effects**
+
 - **Status:** Valid & Critical
 - **Validity:** CONFIRMED - `.config` writes occur on `import file_organizer.api.main`
 - **Impact:** Breaks isolated test environments, CI workers, restricted filesystems
@@ -33,6 +35,7 @@
 - **Blocking:** #472 (startup latency), #475 (import coupling)
 
 **Issue #467: Watcher lacks FSEvents fallback**
+
 - **Status:** Valid & Important
 - **Validity:** CONFIRMED - No graceful degradation when FSEvents unavailable
 - **Impact:** Daemon crashes on systems without FSEvents support
@@ -41,6 +44,7 @@
 - **Blocking:** Daemon stability
 
 **Issue #468: ParallelProcessor executor failure**
+
 - **Status:** Valid & Important
 - **Validity:** CONFIRMED - process executor fails under semaphore restrictions
 - **Impact:** Parallel processing crashes in restricted environments (Docker, CI)
@@ -49,6 +53,7 @@
 - **Blocking:** Parallel processing reliability
 
 **Issue #469: README doc links broken**
+
 - **Status:** Valid & Easy
 - **Validity:** CONFIRMED - 3-5 broken links in README
 - **Impact:** Poor user experience, undermines documentation credibility
@@ -57,6 +62,7 @@
 - **Blocking:** None (standalone)
 
 **Issue #470: NLTK test non-hermeticity**
+
 - **Status:** Valid & Important
 - **Validity:** CONFIRMED - Tests depend on host NLTK corpus state
 - **Impact:** Flaky tests, environment-dependent failures, CI/local mismatch
@@ -67,6 +73,7 @@
 ### 🟡 OPEN & VALID P1 (4 High-Priority)
 
 **Issue #471: Storage/Config/State path standardization**
+
 - **Status:** Valid & Foundation-Critical
 - **Validity:** CONFIRMED - Inconsistent path handling across modules
 - **Impact:** Migration complexity, user data location uncertainty, path hygiene
@@ -76,6 +83,7 @@
 - **Priority:** P1 - Foundation for other fixes
 
 **Issue #472: CLI/API startup latency**
+
 - **Status:** Valid & Performance-Critical
 - **Validity:** CONFIRMED - Eager imports load 50+ modules on startup
 - **Impact:** Slow CLI feedback, high memory footprint, reduces usability
@@ -85,6 +93,7 @@
 - **Priority:** P1 - User-facing performance
 
 **Issue #473: Refactor oversized low-cohesion modules**
+
 - **Status:** Valid & Architecture-Critical
 - **Validity:** CONFIRMED - Services modules >1000 LOC with mixed concerns
 - **Impact:** High maintenance burden, testing difficulty, unclear contracts
@@ -94,6 +103,7 @@
 - **Priority:** P1 - Long-term code health
 
 **Issue #476: Deferred migration recovery + plugin restrictions**
+
 - **Status:** Valid & Security-Critical
 - **Validity:** CONFIRMED - TODOs in migration_manager.py, no operation-level restrictions
 - **Impact:** Incomplete migration recovery, security gap for plugin operations
@@ -123,48 +133,57 @@
 ## Recommended Priority Order
 
 ### Phase 1: Quick Wins & Stability (Issues: #469, #467, #468)
+
 **Goal:** Improve reliability without major refactoring
 **Duration:** 1-2 weeks
 
 #### Task 1.1: Fix README broken links (#469)
+
 - **Effort:** 2 hours
 - **Impact:** ⭐⭐ (low-hanging, improves UX)
 - **Steps:** Fix URLs, add CI link-integrity test
 - **Files:** `README.md`, `.github/workflows/ci.yml`
 
 #### Task 1.2: Add Watcher FSEvents fallback (#467)
+
 - **Effort:** 4-6 hours
 - **Impact:** ⭐⭐⭐ (stability on non-macOS systems)
 - **Steps:** Try FSEvents, fallback to polling, test both paths
 - **Files:** `src/file_organizer/watcher/*`
 
 #### Task 1.3: Add ParallelProcessor executor fallback (#468)
+
 - **Effort:** 4-6 hours
 - **Impact:** ⭐⭐⭐ (stability in restricted environments)
 - **Steps:** ProcessPoolExecutor → ThreadPoolExecutor fallback chain
 - **Files:** `src/file_organizer/parallel/executor.py`
 
 ### Phase 2: Test Reliability (#470, #466)
+
 **Goal:** Make tests deterministic and environment-independent
 **Duration:** 2-3 weeks
 
 #### Task 2.1: Fix NLTK test hermeti city (#470)
+
 - **Effort:** 8-12 hours
 - **Impact:** ⭐⭐⭐⭐ (eliminates flaky tests, CI stability)
 - **Steps:** Mock NLTK loaders, embed test fixtures, remove corpus dependencies
 - **Files:** `tests/utils/test_text_processing.py`, `src/file_organizer/utils/text_processing.py`
 
 #### Task 2.2: Isolate API import side effects (#466)
+
 - **Effort:** 12-16 hours
 - **Impact:** ⭐⭐⭐⭐⭐ (fixes broken isolated test environments)
 - **Steps:** Move `.config` writes to explicit initialization, lazy-load API components
 - **Files:** `src/file_organizer/api/main.py`, `src/file_organizer/api/__init__.py`
 
 ### Phase 3: Architectural Foundation (Issues: #471, #472, #476)
+
 **Goal:** Establish clean architecture for sustainable growth
 **Duration:** 4-6 weeks
 
 #### Task 3.1: Standardize storage/config/state paths (#471)
+
 - **Effort:** 24-32 hours
 - **Impact:** ⭐⭐⭐⭐⭐ (foundation for migrations, platform support)
 - **Steps:** Define XDG/platform path resolution, create migration framework, refactor all path handling
@@ -172,6 +191,7 @@
 - **Dependencies:** Must complete before #476
 
 #### Task 3.2: Reduce CLI/API startup latency (#472)
+
 - **Effort:** 20-28 hours
 - **Impact:** ⭐⭐⭐⭐ (user experience, resource efficiency)
 - **Steps:** Profile imports, lazy-load commands/services, measure improvements
@@ -179,6 +199,7 @@
 - **Dependencies:** Should follow #466 (import isolation)
 
 #### Task 3.3: Implement migration recovery + plugin restrictions (#476)
+
 - **Effort:** 16-24 hours
 - **Impact:** ⭐⭐⭐⭐⭐ (security, data safety)
 - **Steps:** Implement backup/rollback for PARA migrations, add operation-level plugin policy
@@ -186,16 +207,19 @@
 - **Dependencies:** Requires #471 (stable path handling)
 
 ### Phase 4: Code Quality & Maintainability (Issues: #473, #474, #475, #478, #480)
+
 **Goal:** Improve codebase health and developer experience
 **Duration:** 8-12 weeks
 
 #### Task 4.1: Remove CI workflow duplication (#474)
+
 - **Effort:** 4-6 hours
 - **Impact:** ⭐⭐ (dev experience, maintenance)
 - **Steps:** Consolidate 3 workflows into 1 parameterized workflow
 - **Files:** `.github/workflows/*.yml`
 
 #### Task 4.2: Decouple optional feature dependencies (#475)
+
 - **Effort:** 8-12 hours
 - **Impact:** ⭐⭐⭐ (import cleanup, stability)
 - **Steps:** Make audio/video/cad imports truly optional, move to service-level imports
@@ -203,6 +227,7 @@
 - **Dependencies:** Should follow #472 (lazy loading established)
 
 #### Task 4.3: Refactor oversized modules (#473)
+
 - **Effort:** 40-60 hours
 - **Impact:** ⭐⭐⭐⭐⭐ (long-term maintainability)
 - **Steps:** Break up 15+ oversized service modules into focused components
@@ -210,6 +235,7 @@
 - **Parallelizable:** Can work on different services in parallel after establishing patterns
 
 #### Task 4.4: Consolidate test suites & enforce conventions (#478)
+
 - **Effort:** 20-32 hours
 - **Impact:** ⭐⭐⭐ (test maintainability, CI consistency)
 - **Steps:** Unify fixture patterns, consolidate overlapping test files, enforce naming conventions
@@ -217,6 +243,7 @@
 - **Dependencies:** Should follow #470 (NLTK hermeticity), #466 (import isolation)
 
 #### Task 4.5: Tighten lint/type strictness (#480)
+
 - **Effort:** 24-40 hours
 - **Impact:** ⭐⭐⭐ (code quality, type safety)
 - **Steps:** Enable mypy strict mode module-by-module with ratcheting, fix type violations
@@ -224,16 +251,19 @@
 - **Dependencies:** Should be last (depends on refactoring completing)
 
 ### Phase 5: Documentation & Warnings (#477, #479)
+
 **Goal:** Clean up technical debt and documentation
 **Duration:** 1-2 weeks
 
 #### Task 5.1: Burn down deprecation/warning debt (#477)
+
 - **Effort:** 8-16 hours
 - **Impact:** ⭐⭐ (code cleanliness, reduced noise)
 - **Steps:** Address deprecation warnings, suppress or fix pytest warnings, clean logs
 - **Files:** Multiple modules using deprecated APIs
 
 #### Task 5.2: Fix package metadata + add validation (#479)
+
 - **Effort:** 4-8 hours
 - **Impact:** ⭐⭐ (release cleanliness)
 - **Steps:** Fix package URLs in `pyproject.toml`, add release metadata CI check
@@ -244,9 +274,11 @@
 ## Execution Strategy
 
 ### Recommended Execution Mode
+
 **Subagent-Driven Development** (with parallel workers where applicable)
 
 Each phase should be executed as independent epics:
+
 - Phase 1 (Quick Wins): Single agent, sequential
 - Phase 2 (Test Reliability): Single agent, sequential (dependencies between tasks)
 - Phase 3 (Architecture): Can split #471/#472 in parallel, #476 must wait for #471
@@ -254,6 +286,7 @@ Each phase should be executed as independent epics:
 - Phase 5 (Documentation): Can run in parallel with Phase 4
 
 ### Estimated Total Timeline
+
 - **Phase 1:** 1-2 weeks
 - **Phase 2:** 2-3 weeks
 - **Phase 3:** 4-6 weeks
@@ -267,13 +300,15 @@ Each phase should be executed as independent epics:
 ## Risk Assessment
 
 ### Critical Dependencies Chain
-```
+
+```bash
 #471 (Paths) → #476 (Migration recovery) → Data safety
 #466 (Import isolation) + #472 (Lazy loading) → #475 (Optional deps)
 #470 (NLTK hermeticity) + #466 (Imports) → #478 (Test consolidation)
 ```
 
 ### High-Risk Tasks
+
 - **#473 (Module refactoring):** Largest scope, highest risk of regressions
   - Mitigation: Establish patterns with 1-2 services, parallelize remainder, comprehensive test coverage
 - **#471 (Path standardization):** Architectural change, affects migrations
@@ -282,6 +317,7 @@ Each phase should be executed as independent epics:
   - Mitigation: Threat modeling, security review, comprehensive test coverage
 
 ### Validation Strategy
+
 - Run full test suite after each phase
 - Regression testing on Phase 3+ changes
 - Performance profiling before/after Phase 2
@@ -296,4 +332,3 @@ Each phase should be executed as independent epics:
 - [ ] Phase 3: Startup latency improved by ≥50%, path architecture documented
 - [ ] Phase 4: Code coverage maintained ≥90%, complexity metrics improved
 - [ ] Phase 5: Zero deprecation warnings in build, metadata validation passing
-

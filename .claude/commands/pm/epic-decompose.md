@@ -7,13 +7,15 @@ allowed-tools: Bash, Read, Write, LS, Task
 Break epic into concrete, actionable tasks.
 
 ## Usage
-```
+
+```text
 /pm:epic-decompose <feature_name>
 ```
 
 ## Required Rules
 
 **IMPORTANT:** Before executing this command, read and follow:
+
 - `.claude/rules/datetime.md` - For getting real current date/time
 
 ## Preflight Checklist
@@ -44,6 +46,7 @@ Do not bother the user with preflight checks progress ("I'm not going to ..."). 
 You are decomposing an epic into specific, actionable tasks for: **$ARGUMENTS**
 
 ### 1. Read the Epic
+
 - Load the epic from `.claude/epics/$ARGUMENTS/epic.md`
 - Understand the technical approach and requirements
 - Review the task breakdown preview
@@ -51,6 +54,7 @@ You are decomposing an epic into specific, actionable tasks for: **$ARGUMENTS**
 ### 2. Analyze for Parallel Creation
 
 Determine if tasks can be created in parallel:
+
 - If tasks are mostly independent: Create in parallel using Task agents
 - If tasks have complex dependencies: Create sequentially
 - For best results: Group independent tasks for parallel creation
@@ -80,6 +84,7 @@ Task:
 ```
 
 ### 4. Task File Format with Frontmatter
+
 For each task, create a file with this exact structure:
 
 ```markdown
@@ -127,11 +132,14 @@ Clear, concise description of what needs to be done
 ```
 
 ### 3. Task Naming Convention
+
 Save tasks as: `.claude/epics/$ARGUMENTS/{task_number}.md`
+
 - Use sequential numbering: 001.md, 002.md, etc.
 - Keep task titles short but descriptive
 
 ### 4. Frontmatter Guidelines
+
 - **name**: Use a descriptive task title (without "Task:" prefix)
 - **status**: Always start with "open" for new tasks
 - **created**: Get REAL current datetime by running: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
@@ -142,6 +150,7 @@ Save tasks as: `.claude/epics/$ARGUMENTS/{task_number}.md`
 - **conflicts_with**: List task numbers that modify the same files (helps coordination)
 
 ### 5. Task Types to Consider
+
 - **Setup tasks**: Environment, dependencies, scaffolding
 - **Data tasks**: Models, schemas, migrations
 - **API tasks**: Endpoints, services, integration
@@ -151,6 +160,7 @@ Save tasks as: `.claude/epics/$ARGUMENTS/{task_number}.md`
 - **Deployment tasks**: CI/CD, infrastructure
 
 ### 6. Parallelization
+
 Mark tasks with `parallel: true` if they can be worked on simultaneously without conflicts.
 
 ### 7. Execution Strategy
@@ -160,17 +170,20 @@ Choose based on task count and complexity:
 **Small Epic (< 5 tasks)**: Create sequentially for simplicity
 
 **Medium Epic (5-10 tasks)**:
+
 - Batch into 2-3 groups
 - Spawn agents for each batch
 - Consolidate results
 
 **Large Epic (> 10 tasks)**:
+
 - Analyze dependencies first
 - Group independent tasks
 - Launch parallel agents (max 5 concurrent)
 - Create dependent tasks after prerequisites
 
 Example for parallel execution:
+
 ```markdown
 Spawning 3 agents for parallel task creation:
 - Agent 1: Creating tasks 001-003 (Database layer)
@@ -181,12 +194,15 @@ Spawning 3 agents for parallel task creation:
 ### 8. Task Dependency Validation
 
 When creating tasks with dependencies:
+
 - Ensure referenced dependencies exist (e.g., if Task 003 depends on Task 002, verify 002 was created)
 - Check for circular dependencies (Task A → Task B → Task A)
 - If dependency issues found, warn but continue: "⚠️ Task dependency warning: {details}"
 
 ### 9. Update Epic with Task Summary
+
 After creating all tasks, update the epic file by adding this section:
+
 ```markdown
 ## Tasks Created
 - [ ] 001.md - {Task Title} (parallel: true/false)
@@ -204,6 +220,7 @@ Also update the epic's frontmatter progress if needed (still 0% until tasks actu
 ### 9. Quality Validation
 
 Before finalizing tasks, verify:
+
 - [ ] All tasks have clear acceptance criteria
 - [ ] Task sizes are reasonable (1-3 days each)
 - [ ] Dependencies are logical and achievable
@@ -213,6 +230,7 @@ Before finalizing tasks, verify:
 ### 10. Post-Decomposition
 
 After successfully creating tasks:
+
 1. Confirm: "✅ Created {count} tasks for epic: $ARGUMENTS"
 2. Show summary:
    - Total tasks created
@@ -223,6 +241,7 @@ After successfully creating tasks:
 ## Error Recovery
 
 If any step fails:
+
 - If task creation partially completes, list which tasks were created
 - Provide option to clean up partial tasks
 - Never leave the epic in an inconsistent state

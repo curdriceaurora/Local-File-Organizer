@@ -1,11 +1,13 @@
 # GitHub Issue CCPM Integration Rule
 
 ## Purpose
+
 Ensure all GitHub issues are automatically tracked in the CCPM system at creation time to maintain synchronization between GitHub and CCPM project management.
 
 ## When This Rule Applies
 
 This rule MUST be followed when:
+
 - Creating new GitHub issues via `gh issue create`
 - Issues are created from code review comments
 - Technical debt items are identified
@@ -293,21 +295,25 @@ Before considering issue creation complete:
 ## Common Issue Categories
 
 ### Code Quality Issues
+
 - **Epic**: Usually the feature epic where found
 - **Labels**: `enhancement`, `code-quality`
 - **Tracking**: `technical-debt-tracking.md`
 
 ### Feature Requests
+
 - **Epic**: Feature-specific or `backlog`
 - **Labels**: `enhancement`, `feature-request`
 - **Tracking**: Epic task files or backlog
 
 ### Bug Reports
+
 - **Epic**: Related feature epic
 - **Labels**: `bug`
 - **Tracking**: Bug tracking or epic execution-status
 
 ### Documentation
+
 - **Epic**: `documentation`
 - **Labels**: `documentation`
 - **Tracking**: Documentation epic files
@@ -324,6 +330,7 @@ Before considering issue creation complete:
 
 **Last Updated**: 2026-01-24T04:45:24Z
 **Related Rules**:
+
 - `github-operations.md` - GitHub CLI operations
 - `frontmatter-operations.md` - CCPM metadata standards
 - `datetime.md` - Timestamp requirements

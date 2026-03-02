@@ -32,6 +32,7 @@ The File Organizer codebase has accumulated 38 naive datetime instances (27 `dat
 ## Scope
 
 ### In Scope
+
 - Fix 27 naive `datetime.now()` calls across 12 files
 - Fix 11 naive `fromtimestamp()` calls across 8 files
 - Enable DTZ001-DTZ012 ruff rules
@@ -39,6 +40,7 @@ The File Organizer codebase has accumulated 38 naive datetime instances (27 `dat
 - Add timestamp-aware test fixtures and safety tests
 
 ### Out of Scope
+
 - Refactoring the entire datetime strategy (e.g., switching to pendulum)
 - Fixing timestamp issues in test files (only production code)
 - Cross-platform st_ctime handling (already fixed in commit 3078196)

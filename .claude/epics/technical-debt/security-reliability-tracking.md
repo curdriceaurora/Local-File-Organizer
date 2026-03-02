@@ -15,6 +15,7 @@ Identified from codebase audit (PR #344, merged 2026-02-18).
 ## High Priority 🔴
 
 **Issue #338: Security: Plugin Sandbox Bypass Risk (Plug-1)**
+
 - **Priority**: High
 - **Status**: Closed ✅
 - **Effort**: 10h (actual)
@@ -23,6 +24,7 @@ Identified from codebase audit (PR #344, merged 2026-02-18).
 - **Completed**: 2026-02-18 — subprocess isolation via `executor.py` + `ipc.py`; 15 tests passing
 
 **Issue #339: Reliability: File Reading Denial of Service Risk (DoS-1)**
+
 - **Priority**: High
 - **Status**: Closed ✅
 - **Effort**: 6h (actual)
@@ -31,6 +33,7 @@ Identified from codebase audit (PR #344, merged 2026-02-18).
 - **Completed**: 2026-02-18 — `FileTooLargeError` + `_check_file_size()` gate on 5 readers; 12 tests passing
 
 **Issue #340: Security: Insecure Default JWT Secret (Auth-1)**
+
 - **Priority**: High
 - **Status**: Closed ✅
 - **Effort**: 3h (actual)
@@ -41,6 +44,7 @@ Identified from codebase audit (PR #344, merged 2026-02-18).
 ## Medium Priority 🟡
 
 **Issue #341: Security: SQL Injection Vector in DatabaseOptimization (DB-1)**
+
 - **Priority**: Medium
 - **Status**: Closed ✅
 - **GitHub**: https://github.com/curdriceaurora/Local-File-Organizer/issues/341
@@ -48,6 +52,7 @@ Identified from codebase audit (PR #344, merged 2026-02-18).
 - **Completed**: 2026-02-18 — regex allowlists for identifiers and pragma values; 76 tests passing
 
 **Issue #342: Security: Weak Password Policy (Auth-2)**
+
 - **Priority**: Medium
 - **Status**: Closed ✅
 - **GitHub**: https://github.com/curdriceaurora/Local-File-Organizer/issues/342
@@ -55,6 +60,7 @@ Identified from codebase audit (PR #344, merged 2026-02-18).
 - **Completed**: 2026-02-18 — 12-char min, uppercase + special char + blocklist; 44 tests passing
 
 **Issue #343: Privacy: Potential Data Leak in Logs (Priv-1)**
+
 - **Priority**: Medium
 - **Status**: Closed ✅
 - **GitHub**: https://github.com/curdriceaurora/Local-File-Organizer/issues/343

@@ -38,18 +38,23 @@ Users who run `file-organizer` on a directory containing MP3s, podcasts, screen 
 ## User Stories
 
 ### As a music collector
+
 I want my MP3/FLAC files automatically sorted into `Genre/Artist/Album/` folders so that my music library is browsable without manual effort.
 
 ### As a podcast listener
+
 I want downloaded podcast episodes organized into `Show/Year/Episode - Title` folders so I can find specific episodes quickly.
 
 ### As a content creator
+
 I want my video files sorted primarily by title/date with resolution as a secondary signal so my footage is logically grouped without waiting for AI processing.
 
 ### As a user with screen recordings
+
 I want my screen recordings (from OBS, QuickTime, Xbox Game Bar, etc.) automatically detected by filename patterns and placed in a dedicated folder so they don't clutter my other video folders.
 
 ### As a user with limited hardware
+
 I want to organize my audio and video files without downloading 6 GB of AI models so the tool works immediately on any machine.
 
 ## Requirements
@@ -57,6 +62,7 @@ I want to organize my audio and video files without downloading 6 GB of AI model
 ### P0 — Must-Have
 
 **R1: Wire existing audio pipeline into core organizer**
+
 - Add `_process_audio_files(files: list[Path]) -> list[ProcessedFile]` to `FileOrganizer`
 - Import and use `AudioMetadataExtractor`, `AudioClassifier`, `AudioOrganizer` from `services.audio`
 - Pipeline: extract metadata → classify type → generate folder/filename via AudioOrganizer templates
@@ -66,6 +72,7 @@ I want to organize my audio and video files without downloading 6 GB of AI model
 - **Acceptance criteria**: `file-organizer --dry-run` on a directory with MP3/FLAC/M4A files shows organized folder structure using existing audio templates (Music/Genre/Artist, Podcasts/Show/Year, etc.)
 
 **R2: Create VideoMetadataExtractor**
+
 - New file: `src/file_organizer/services/video/metadata_extractor.py`
 - `VideoMetadata` dataclass: file_path, file_size, format, duration, width, height, fps, codec, bitrate, creation_date
 - `VideoMetadataExtractor` class using `cv2.VideoCapture` (opencv already optional dep)
@@ -77,6 +84,7 @@ I want to organize my audio and video files without downloading 6 GB of AI model
 - **Acceptance criteria**: `VideoMetadataExtractor().extract(Path("video.mp4"))` returns populated VideoMetadata; without opencv installed, returns partial metadata with file_size and format only
 
 **R3: Create VideoOrganizer**
+
 - New file: `src/file_organizer/services/video/organizer.py`
 - `VideoOrganizer` class with template-based path generation
 - **Primary organization by title/date** (not resolution):
@@ -91,6 +99,7 @@ I want to organize my audio and video files without downloading 6 GB of AI model
 - **Acceptance criteria**: VideoOrganizer prioritizes title/date for folder placement; screen recordings detected by filename are routed to dedicated folder
 
 **R3a: Screen Recording Detection via Filename Patterns**
+
 - Detect screen recordings from common default filename conventions:
   - **macOS**: `Screen Recording YYYY-MM-DD at H.MM.SS PM.mov`
   - **OBS Studio**: `YYYY-MM-DD HH-MM-SS.mkv` (pure timestamp = likely OBS)
@@ -104,6 +113,7 @@ I want to organize my audio and video files without downloading 6 GB of AI model
 - **Acceptance criteria**: `is_screen_recording("Screen Recording 2025-01-15 at 3.45.22 PM.mov")` returns True; `is_screen_recording("birthday_party.mp4")` returns False
 
 **R4: Wire video metadata processing into core organizer**
+
 - Add `_process_video_files(files: list[Path]) -> list[ProcessedFile]` to `FileOrganizer`
 - Import `VideoMetadataExtractor`, `VideoOrganizer` from `services.video`
 - Pipeline: extract metadata → generate folder/filename based on resolution/duration
@@ -113,22 +123,26 @@ I want to organize my audio and video files without downloading 6 GB of AI model
 - **Acceptance criteria**: `file-organizer --dry-run` on a directory with .mp4/.mkv files shows resolution-based folders without requiring Ollama models
 
 **R5: Update file breakdown display**
+
 - `_show_file_breakdown()` changes audio status from "⊘ Skip (needs audio model)" to "✓ Will process (metadata)"
 - Video status changes to "✓ Will process (metadata)"
 - **Acceptance criteria**: CLI output shows correct processing status for both audio and video
 
 **R6: Update services/video/__init__.py exports**
+
 - Export `VideoMetadata`, `VideoMetadataExtractor`, `VideoOrganizer`
 - **Acceptance criteria**: `from file_organizer.services.video import VideoMetadataExtractor` works
 
 ### P1 — Nice-to-Have
 
 **R7: Add pymediainfo as optional dependency**
+
 - Add `pymediainfo>=6.0.0` to video optional deps in pyproject.toml as richer fallback for video metadata
 - Keep opencv as primary extractor (already declared)
 - **Acceptance criteria**: `pip install -e ".[video]"` installs pymediainfo alongside opencv
 
 **R8: Batch processing with progress**
+
 - Use `ParallelProcessor` from `parallel/processor.py` for batch audio/video processing
 - Show progress bar during metadata extraction
 - **Acceptance criteria**: Processing 100+ files shows progress indicator
@@ -192,7 +206,7 @@ I want to organize my audio and video files without downloading 6 GB of AI model
 
 ### Data Flow
 
-```
+```yaml
 Audio: file → AudioMetadataExtractor → AudioClassifier → AudioOrganizer → ProcessedFile
 Video: file → VideoMetadataExtractor → VideoOrganizer → ProcessedFile
 ```
@@ -202,13 +216,16 @@ No AI models in either path. Pure metadata parsing.
 ## Testing Strategy
 
 ### Unit Tests
+
 - `test_metadata_extractor.py`: VideoMetadata creation, extraction with/without opencv, resolution_label helper, batch extraction
 - `test_video_organizer.py`: template generation for each resolution tier, short clip detection, filename sanitization
 
 ### Integration Tests
+
 - `test_audio_video_integration.py`: Core organizer processes audio files via metadata pipeline, core organizer processes video files via metadata pipeline, mixed file type directory (text + images + audio + video), graceful fallback when optional deps unavailable, ProcessedFile output format compatibility with `_organize_files()`
 
 ### Test Approach
+
 - Mock `cv2.VideoCapture` for video metadata tests (no real video files needed)
 - Mock `AudioMetadataExtractor` for audio integration tests
 - Test graceful fallback when optional deps unavailable (mutagen, tinytag, opencv)
@@ -281,6 +298,7 @@ Implementation: regex-based `is_screen_recording(filename)` helper in VideoOrgan
 This PRD implements Tiers 1-2 for audio/video. The following documents the full architecture that already exists across the codebase and should be formalized in a future PRD.
 
 ### Tier 1: Filesystem Only (Zero Dependencies)
+
 **Always available. Instant. No optional deps required.**
 
 - File extension detection and categorization (48+ types)
@@ -291,6 +309,7 @@ This PRD implements Tiers 1-2 for audio/video. The following documents the full 
 **Used by**: All file types as a baseline.
 
 ### Tier 2: Lightweight Metadata Parsing (Optional Libraries)
+
 **Sub-second per file. No ML models. Optional deps: mutagen, tinytag, opencv, Pillow, PyMuPDF, python-docx.**
 
 - Audio: ID3 tags, Vorbis comments, M4A metadata (artist, album, genre, duration, bitrate)
@@ -304,6 +323,7 @@ This PRD implements Tiers 1-2 for audio/video. The following documents the full 
 **Used by**: Audio organization (this PRD), video organization (this PRD), document text extraction (existing).
 
 ### Tier 3: Local ML/Heuristics (No LLM Required)
+
 **Seconds per file. Pattern recognition and classification without Ollama.**
 
 - Audio classification: keyword-based type detection (music/podcast/audiobook/recording/lecture) with confidence scores — 7 content types, ~545 LOC already built
@@ -316,6 +336,7 @@ This PRD implements Tiers 1-2 for audio/video. The following documents the full 
 **Used by**: Audio classifier (this PRD), pattern analyzer (existing), deduplication (existing), intelligence services (existing).
 
 ### Tier 4: AI/LLM Processing (Requires Ollama)
+
 **2-20 seconds per file. Deep content understanding.**
 
 - TextModel (Qwen 2.5 3B, ~1.9 GB): file summarization, intelligent folder/filename generation, content categorization
@@ -325,6 +346,7 @@ This PRD implements Tiers 1-2 for audio/video. The following documents the full 
 **Used by**: Text files (existing), image files (existing). Future: audio content analysis, video content classification.
 
 ### Tier 5: Heavy Compute (GPU/ffmpeg)
+
 **Variable time. Computationally intensive.**
 
 - Video scene detection: content-aware, threshold, adaptive, histogram methods (OpenCV + scenedetect)
@@ -337,7 +359,7 @@ This PRD implements Tiers 1-2 for audio/video. The following documents the full 
 
 Each tier falls back to the tier below if its dependencies are unavailable:
 
-```
+```text
 Tier 5 unavailable → Tier 4 handles it (or skips heavy analysis)
 Tier 4 unavailable → Tier 3 uses heuristics + patterns
 Tier 3 unavailable → Tier 2 uses raw metadata

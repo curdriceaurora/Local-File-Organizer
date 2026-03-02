@@ -20,16 +20,19 @@ Integrate the Johnny Decimal numbering system with existing folder organization 
 
 **Scope**: Core migration tool development and folder transformation logic
 **Files**:
+
 - `src/file_organizer/methodologies/johnny_decimal/migrator.py`
 - `src/file_organizer/methodologies/johnny_decimal/scanner.py`
 - `src/file_organizer/methodologies/johnny_decimal/transformer.py`
 - `src/file_organizer/methodologies/johnny_decimal/validator.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 6 hours
 **Dependencies**: none
 
 **Tasks:**
+
 - Create `JohnnyDecimalMigrator` class
 - Implement folder scanning and analysis
 - Build transformation logic for renaming/restructuring
@@ -41,15 +44,18 @@ Integrate the Johnny Decimal numbering system with existing folder organization 
 
 **Scope**: Ensure Johnny Decimal works with PARA and other systems
 **Files**:
+
 - `src/file_organizer/methodologies/johnny_decimal/compatibility.py`
 - `src/file_organizer/methodologies/johnny_decimal/adapters.py`
 - `src/file_organizer/methodologies/johnny_decimal/config.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 5 hours
 **Dependencies**: none
 
 **Tasks:**
+
 - Define compatibility rules between systems
 - Implement adapter pattern for different methodologies
 - Create configuration for hybrid setups
@@ -60,17 +66,20 @@ Integrate the Johnny Decimal numbering system with existing folder organization 
 
 **Scope**: Comprehensive documentation for users and developers
 **Files**:
+
 - `docs/phase-3/johnny-decimal-user-guide.md`
 - `docs/phase-3/johnny-decimal-migration.md`
 - `docs/phase-3/johnny-decimal-para-compatibility.md`
 - `docs/phase-3/johnny-decimal-api.md`
 - `docs/phase-3/johnny-decimal-faq.md`
+
 **Agent Type**: documentation-specialist
 **Can Start**: immediately
 **Estimated Hours**: 4 hours
 **Dependencies**: none
 
 **Tasks:**
+
 - Write "Getting Started with Johnny Decimal" user guide
 - Create migration guide with step-by-step instructions
 - Document PARA compatibility and hybrid approaches
@@ -81,16 +90,19 @@ Integrate the Johnny Decimal numbering system with existing folder organization 
 
 **Scope**: Comprehensive test suite and integration validation
 **Files**:
+
 - `tests/methodologies/johnny_decimal/test_migrator.py`
 - `tests/methodologies/johnny_decimal/test_compatibility.py`
 - `tests/methodologies/johnny_decimal/test_integration.py`
 - `tests/fixtures/johnny_decimal/`
+
 **Agent Type**: qa-specialist
 **Can Start**: after Streams A & B are 50% complete
 **Estimated Hours**: 5 hours
 **Dependencies**: Streams A & B
 
 **Tasks:**
+
 - Unit tests for migration logic
 - Integration tests with existing folder structures
 - Compatibility tests with PARA method
@@ -121,11 +133,13 @@ Integrate the Johnny Decimal numbering system with existing folder organization 
 **Recommended Approach**: Hybrid parallel-sequential
 
 **Phase 1 (Parallel)**: Launch Streams A, B, C simultaneously
+
 - Development teams work independently on separate modules
 - Documentation begins with initial API design
 - Wall time: ~6 hours
 
 **Phase 2 (Sequential)**: Start Stream D after Phase 1 reaches 50%
+
 - Testing begins with partially complete migration and compatibility
 - Allows early bug detection
 - Wall time: +5 hours
@@ -135,32 +149,38 @@ Integrate the Johnny Decimal numbering system with existing folder organization 
 ## Expected Timeline
 
 With parallel execution:
+
 - **Wall time**: 11 hours (6h parallel + 5h testing)
 - **Total work**: 20 hours (across 4 streams)
 - **Efficiency gain**: 45% time reduction
 
 Without parallel execution:
+
 - **Wall time**: 20 hours
 
 ## Notes
 
 **Dependencies:**
+
 - Task 010 (Implement Johnny Decimal numbering system) must be completed first
 - Existing PARA implementation should be available for compatibility testing
 
 **Critical Success Factors:**
+
 - Migration tool must have comprehensive dry-run mode
 - Rollback functionality is essential for user confidence
 - Documentation should include real-world examples
 - Compatibility with PARA is a key feature
 
 **Risk Mitigation:**
+
 - Test migration tool extensively with various folder structures
 - Provide clear backup instructions in documentation
 - Implement extensive error handling and user feedback
 - Create rollback mechanism for failed migrations
 
 **Example Migration Scenarios:**
+
 1. Simple flat structure → Johnny Decimal
 2. PARA structure → PARA + Johnny Decimal hybrid
 3. Partial migration (selective folders)

@@ -20,13 +20,16 @@ Implement semantic similarity detection for documents using TF-IDF vectorization
 
 **Scope**: Extract text content from various document formats
 **Files**:
+
 - `file_organizer/services/deduplication/extractor.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 5 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - DocumentExtractor class
 - PDF text extraction (PyPDF2)
 - DOCX text extraction (python-docx)
@@ -39,14 +42,17 @@ Implement semantic similarity detection for documents using TF-IDF vectorization
 
 **Scope**: TF-IDF vectorization and cosine similarity computation
 **Files**:
+
 - `file_organizer/services/deduplication/embedder.py`
 - `file_organizer/services/deduplication/semantic.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 9 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - DocumentEmbedder class with TF-IDF
 - Configurable parameters (max_features, ngram_range, min_df)
 - Embedding caching for performance
@@ -60,15 +66,18 @@ Implement semantic similarity detection for documents using TF-IDF vectorization
 
 **Scope**: Integrate with existing deduplication, unified reporting
 **Files**:
+
 - `file_organizer/services/deduplication/document_dedup.py`
 - `file_organizer/services/deduplication/reporter.py`
 - `file_organizer/services/deduplication/__init__.py`
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Streams A and B complete
 **Estimated Hours**: 7 hours
 **Dependencies**: Streams A, B
 
 **Deliverables**:
+
 - DocumentDeduplicator orchestrator class
 - Integration with hash-based deduplication (#46)
 - Integration with image deduplication (#47)
@@ -82,17 +91,20 @@ Implement semantic similarity detection for documents using TF-IDF vectorization
 
 **Scope**: Comprehensive testing and documentation
 **Files**:
+
 - `tests/services/deduplication/test_extractor.py`
 - `tests/services/deduplication/test_embedder.py`
 - `tests/services/deduplication/test_semantic.py`
 - `tests/services/deduplication/test_document_dedup.py`
 - `tests/integration/test_semantic_dedup_e2e.py`
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Stream C completes
 **Estimated Hours**: 3 hours
 **Dependencies**: Stream C
 
 **Deliverables**:
+
 - Unit tests for all classes (>85% coverage)
 - Integration tests with real document datasets
 - Performance tests for 1,000+ documents
@@ -106,6 +118,7 @@ Implement semantic similarity detection for documents using TF-IDF vectorization
 ### Shared Files
 
 Minimal overlap:
+
 - `file_organizer/services/deduplication/__init__.py` - Stream C updates exports after A, B complete
 
 ### Interface Contracts
@@ -113,6 +126,7 @@ Minimal overlap:
 Define these interfaces upfront:
 
 **DocumentExtractor Interface**:
+
 ```python
 def extract_text(file_path: Path) -> str
 def extract_batch(file_paths: List[Path]) -> Dict[Path, str]
@@ -120,6 +134,7 @@ def supports_format(file_path: Path) -> bool
 ```
 
 **DocumentEmbedder Interface**:
+
 ```python
 def __init__(max_features: int = 5000, ngram_range: Tuple = (1, 2))
 def fit_transform(documents: List[str]) -> np.ndarray
@@ -128,6 +143,7 @@ def get_feature_names() -> List[str]
 ```
 
 **SemanticAnalyzer Interface**:
+
 ```python
 def __init__(threshold: float = 0.85)
 def compute_similarity(doc1_vector: np.ndarray, doc2_vector: np.ndarray) -> float
@@ -136,6 +152,7 @@ def cluster_by_similarity(duplicates: Dict) -> List[List[Path]]
 ```
 
 **StorageReporter Interface**:
+
 ```python
 def calculate_reclamation(duplicate_groups: Dict) -> dict
 def generate_report(output_format: str = "text") -> str
@@ -151,6 +168,7 @@ def export_to_csv(duplicate_groups: Dict, output_path: Path)
 ## Conflict Risk Assessment
 
 **Low Risk** - Clear separation between streams:
+
 - Stream A: `extractor.py` only
 - Stream B: `embedder.py`, `semantic.py` only
 - Stream C: `document_dedup.py`, `reporter.py`, `__init__.py`
@@ -161,11 +179,13 @@ def export_to_csv(duplicate_groups: Dict, output_path: Path)
 **Recommended Approach**: hybrid (parallel then sequential)
 
 **Execution Plan**:
+
 1. **Phase 1** (parallel, 9 hours): Launch Streams A and B simultaneously
 2. **Phase 2** (sequential, 7 hours): Stream C integrates A and B
 3. **Phase 3** (sequential, 3 hours): Stream D tests everything
 
 **Timeline**:
+
 - Streams A & B: 9 hours (parallel, limited by Stream B)
 - Stream C: 7 hours (depends on A & B)
 - Stream D: 3 hours (depends on C)
@@ -175,11 +195,13 @@ Total wall time: ~19 hours
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~19 hours (max(A,B) + C + D)
 - Total work: 24 hours
 - Efficiency gain: 21% time savings
 
 **Without parallel execution**:
+
 - Wall time: 24 hours (sequential)
 
 **Parallelization factor**: 2.4x effective speedup for two developers (24h / 10h each)
@@ -219,6 +241,7 @@ Total wall time: ~19 hours
 ### Integration Notes
 
 Must integrate with:
+
 - Issue #46: Hash-based deduplication (exact duplicates)
 - Issue #47: Image perceptual hashing (similar images)
 - Existing DuplicateDetector for unified scanning

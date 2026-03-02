@@ -1,16 +1,19 @@
 # Path Standards Specification
 
 ## Overview
+
 This specification defines file path usage standards within the Claude Code PM system to ensure document portability, privacy protection, and consistency.
 
 ## Core Principles
 
 ### 1. Privacy Protection
+
 - **Prohibit** absolute paths containing usernames
 - **Prohibit** exposing local directory structure in public documentation  
 - **Prohibit** including complete local paths in GitHub Issue comments
 
 ### 2. Portability Principles
+
 - **Prefer** relative paths for referencing project files
 - **Ensure** documentation works across different development environments
 - **Avoid** environment-specific path formats
@@ -18,6 +21,7 @@ This specification defines file path usage standards within the Claude Code PM s
 ## Path Format Standards
 
 ### Project File References ✅
+
 ```markdown
 # Correct Examples
 - `internal/auth/server.go` 
@@ -30,6 +34,7 @@ This specification defines file path usage standards within the Claude Code PM s
 ```
 
 ### Cross-Project/Worktree References ✅
+
 ```markdown
 # Correct Examples
 - `../project-name/internal/auth/server.go`
@@ -41,6 +46,7 @@ This specification defines file path usage standards within the Claude Code PM s
 ```
 
 ### Code Comment File References ✅
+
 ```go
 // Correct Examples
 // See internal/processor/converter.go for data transformation
@@ -53,11 +59,13 @@ This specification defines file path usage standards within the Claude Code PM s
 ## Implementation Rules
 
 ### Documentation Generation Rules
+
 1. **Issue sync templates**: Use relative path template variables
 2. **Progress reports**: Automatically convert absolute paths to relative paths
 3. **Technical documentation**: Use project root relative paths consistently
 
 ### Path Variable Standards
+
 ```yaml
 # Template variable definitions
 project_root: "."              # Current project root directory
@@ -67,6 +75,7 @@ config_path: "configs/"        # Configuration files directory
 ```
 
 ### Automatic Cleanup Rules
+
 ```bash
 # Path normalization function
 normalize_paths() {
@@ -82,11 +91,13 @@ normalize_paths() {
 ## PM Command Integration
 
 ### issue-sync Command Updates
+
 - Automatically clean path formats before sync
 - Use relative path templates for generating comments
 - Record deliverables using standardized paths
 
 ### epic-sync Command Updates
+
 - Standardize task file paths
 - Clean GitHub issue body paths
 - Use relative paths in mapping files
@@ -94,6 +105,7 @@ normalize_paths() {
 ## Validation Checks
 
 ### Automated Check Script
+
 ```bash
 # Check for absolute path violations
 check_absolute_paths() {
@@ -109,6 +121,7 @@ check_sync_content() {
 ```
 
 ### Manual Review Checklist
+
 - [ ] GitHub Issue comments contain no absolute paths
 - [ ] Local documentation uses relative paths consistently
 - [ ] Code comment paths follow standards
@@ -117,12 +130,15 @@ check_sync_content() {
 ## Error Handling
 
 ### When Absolute Paths Are Found
+
 1. **Immediate Action**: Clean published public content
 2. **Batch Fix**: Update local documentation formats
 3. **Prevention**: Update generation templates
 
 ### Emergency Procedures
+
 If privacy information has been leaked:
+
 1. Immediately edit GitHub Issues/comments
 2. Clean Git history if necessary
 3. Update related documentation and templates
@@ -131,6 +147,7 @@ If privacy information has been leaked:
 ## Example Comparisons
 
 ### Documentation Before/After
+
 ```markdown
 # Before ❌
 - ✅ Implemented `/Users/username/parent-dir/project-name/internal/auth/server.go` core logic
@@ -140,6 +157,7 @@ If privacy information has been leaked:
 ```
 
 ### GitHub Comment Format
+
 ```markdown
 # Correct Format ✅
 ## 📦 Deliverables

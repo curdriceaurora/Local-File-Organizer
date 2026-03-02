@@ -173,7 +173,7 @@ except RateLimitError as e:
 
 ### Rate Limit Headers
 
-```
+```yaml
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
 X-RateLimit-Reset: 1645000000

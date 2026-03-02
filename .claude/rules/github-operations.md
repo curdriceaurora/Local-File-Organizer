@@ -30,6 +30,7 @@ Standard patterns for GitHub operations using PM skills and CLI.
 ### When Direct `gh` Commands Are Allowed
 
 **Read-only operations only:**
+
 - `gh issue view {number}` - View issue details
 - `gh issue list` - List issues
 - `gh pr view {number}` - View PR details
@@ -40,6 +41,7 @@ Standard patterns for GitHub operations using PM skills and CLI.
 ### Example: Wrong vs Right
 
 ❌ **WRONG - Manual GitHub operations:**
+
 ```bash
 # Creating issue manually
 gh issue create --title "New feature" --body "Description"
@@ -51,6 +53,7 @@ gh issue comment 43 --body "Progress update"
 ```
 
 ✅ **RIGHT - Using PM skills:**
+
 ```bash
 # Start working on an issue (creates local tracking)
 /pm:issue-start 43
@@ -95,6 +98,7 @@ fi
 ```
 
 This check MUST be performed in ALL commands that:
+
 - Create issues (`gh issue create`)
 - Edit issues (`gh issue edit`)
 - Comment on issues (`gh issue comment`)
@@ -117,11 +121,13 @@ gh {command} || echo "❌ GitHub CLI failed. Run: gh auth login"
 **Users must call PM skills instead of using these commands directly.**
 
 ### Get Issue Details (Read-only - Allowed)
+
 ```bash
 gh issue view {number} --json state,title,labels,body
 ```
 
 ### Create Issue (FORBIDDEN - Use /pm:issue-sync instead)
+
 ```bash
 # ❌ DO NOT USE THIS DIRECTLY
 # Use /pm:issue-sync {task_number} instead
@@ -134,6 +140,7 @@ gh issue create --repo "$REPO" --title "{title}" --body-file {file} --label "{la
 ```
 
 ### Update Issue (FORBIDDEN - Use /pm:issue-sync instead)
+
 ```bash
 # ❌ DO NOT USE THIS DIRECTLY
 # Use /pm:issue-sync {issue_number} instead
@@ -143,6 +150,7 @@ gh issue edit {number} --add-label "{label}" --add-assignee @me
 ```
 
 ### Add Comment (FORBIDDEN - Use /pm:issue-sync instead)
+
 ```bash
 # ❌ DO NOT USE THIS DIRECTLY
 # Use /pm:issue-sync {issue_number} instead
@@ -157,6 +165,7 @@ gh issue comment {number} --repo "$REPO" --body-file {file}
 ## Error Handling
 
 If any gh command fails:
+
 1. Show clear error: "❌ GitHub operation failed: {command}"
 2. Suggest fix: "Run: gh auth login" or check issue number
 3. Don't retry automatically

@@ -7,7 +7,8 @@ allowed-tools: Bash, Read, LS
 Display issue and sub-issues with detailed information.
 
 ## Usage
-```
+
+```text
 /pm:issue-show <issue_number>
 ```
 
@@ -16,14 +17,17 @@ Display issue and sub-issues with detailed information.
 You are displaying comprehensive information about a GitHub issue and related sub-issues for: **Issue #$ARGUMENTS**
 
 ### 1. Fetch Issue Data
+
 - Use `gh issue view #$ARGUMENTS` to get GitHub issue details
 - Look for local task file: first check `.claude/epics/*/$ARGUMENTS.md` (new naming)
 - If not found, search for file with `github:.*issues/$ARGUMENTS` in frontmatter (old naming)
 - Check for related issues and sub-tasks
 
 ### 2. Issue Overview
+
 Display issue header:
-```
+
+```yaml
 🎫 Issue #$ARGUMENTS: {Issue Title}
    Status: {open/closed}
    Labels: {labels}
@@ -36,8 +40,10 @@ Display issue header:
 ```
 
 ### 3. Local File Mapping
+
 If local task file exists:
-```
+
+```sql
 📁 Local Files:
    Task file: .claude/epics/{epic_name}/{task_file}
    Updates: .claude/epics/{epic_name}/updates/$ARGUMENTS/
@@ -45,8 +51,10 @@ If local task file exists:
 ```
 
 ### 4. Sub-Issues and Dependencies
+
 Show related issues:
-```
+
+```text
 🔗 Related Issues:
    Parent Epic: #{epic_issue_number}
    Dependencies: #{dep1}, #{dep2}
@@ -55,8 +63,10 @@ Show related issues:
 ```
 
 ### 5. Recent Activity
+
 Display recent comments and updates:
-```
+
+```text
 💬 Recent Activity:
    {timestamp} - {author}: {comment_preview}
    {timestamp} - {author}: {comment_preview}
@@ -65,8 +75,10 @@ Display recent comments and updates:
 ```
 
 ### 6. Progress Tracking
+
 If task file exists, show progress:
-```
+
+```text
 ✅ Acceptance Criteria:
    ✅ Criterion 1 (completed)
    🔄 Criterion 2 (in progress)
@@ -75,7 +87,8 @@ If task file exists, show progress:
 ```
 
 ### 7. Quick Actions
-```
+
+```sql
 🚀 Quick Actions:
    Start work: /pm:issue-start $ARGUMENTS
    Sync updates: /pm:issue-sync $ARGUMENTS
@@ -84,6 +97,7 @@ If task file exists, show progress:
 ```
 
 ### 8. Error Handling
+
 - Handle invalid issue numbers gracefully
 - Check for network/authentication issues
 - Provide helpful error messages and alternatives

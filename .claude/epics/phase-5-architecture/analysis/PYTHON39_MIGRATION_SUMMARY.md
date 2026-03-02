@@ -24,6 +24,7 @@ Comprehensive analysis completed for migrating File Organizer v2 from Python 3.1
 ### Estimated Effort
 
 **Total:** 32 hours (4 days) across 4 tasks
+
 - Syntax conversion: 8 hours
 - Multi-version testing: 12 hours
 - Docker updates: 8 hours
@@ -38,6 +39,7 @@ Comprehensive analysis completed for migrating File Organizer v2 from Python 3.1
 **Purpose:** Primary migration strategy document
 
 **Contents:**
+
 - Current Python feature usage breakdown
 - Detailed conversion requirements (219 unions)
 - Migration strategy (4 phases)
@@ -57,6 +59,7 @@ Comprehensive analysis completed for migrating File Organizer v2 from Python 3.1
 **Purpose:** Deep dive into dependency compatibility and Docker implications
 
 **Contents:**
+
 - Complete dependency compatibility matrix
 - Docker base image analysis (Debian, Alpine, Ubuntu)
 - Python 3.9 vs 3.12 performance comparison
@@ -68,6 +71,7 @@ Comprehensive analysis completed for migrating File Organizer v2 from Python 3.1
 - Docker deployment benefits
 
 **Key Findings:**
+
 - **pandas>=2.0.0** already requires Python 3.9+ (natural constraint)
 - All other dependencies compatible with Python 3.9+
 - **3x more Docker base image options** with Python 3.9
@@ -75,7 +79,8 @@ Comprehensive analysis completed for migrating File Organizer v2 from Python 3.1
 - Python 3.9 EOL: October 2025 (9 months remaining, sufficient time)
 
 **Docker Impact:**
-```
+
+```text
 Python 3.9 base images: 15+ options (Debian 11/12, Alpine 3.15-3.19, Ubuntu 20.04/22.04/24.04)
 Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 ```
@@ -87,6 +92,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 **Purpose:** File-by-file conversion priority and complexity analysis
 
 **Contents:**
+
 - Module-level union syntax breakdown
 - Priority 1 modules (>10 unions): 5 files, 85 unions
 - Priority 2 modules (5-10 unions): 5 files, 49 unions
@@ -99,6 +105,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 - Timeline summary (3 days)
 
 **Top Files by Complexity:**
+
 1. `utils/file_readers.py` - 21 unions (critical, well-tested)
 2. `methodologies/para/rules/engine.py` - 20 unions (isolated)
 3. `services/audio/utils.py` - 17 unions (complex types)
@@ -112,6 +119,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 **Purpose:** Automated migration script
 
 **Features:**
+
 - Automatic pyupgrade execution
 - Backup creation
 - Git diff review
@@ -121,6 +129,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 - Rollback instructions
 
 **Usage:**
+
 ```bash
 
 ./migrate_to_py39.sh
@@ -137,12 +146,14 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 **Dependencies:** None
 
 **Objectives:**
+
 - Run pyupgrade for automated conversion
 - Manual review of high-priority files
 - Update pyproject.toml configuration
 - Type checking with mypy
 
 **Deliverables:**
+
 - All 219 union operators converted
 - Configuration files updated
 - Type checking passes
@@ -157,6 +168,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 **Dependencies:** #125
 
 **Objectives:**
+
 - Test on Python 3.9, 3.10, 3.11, 3.12
 - Validate all 169 tests pass
 - Type checking on all versions
@@ -164,6 +176,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 - CI/CD GitHub Actions setup
 
 **Deliverables:**
+
 - Test results report (4 Python versions)
 - CI/CD workflow (matrix testing)
 - Performance benchmark data
@@ -178,6 +191,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 **Dependencies:** #125, #126
 
 **Objectives:**
+
 - Create production Dockerfile (Debian)
 - Development Dockerfile
 - Base image variants (Alpine, Ubuntu)
@@ -185,6 +199,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 - Docker Compose configuration
 
 **Deliverables:**
+
 - 5 Dockerfile variants
 - Docker Compose files
 - Build scripts
@@ -200,6 +215,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 **Dependencies:** #125, #126, #127
 
 **Objectives:**
+
 - Update README.md and CLAUDE.md
 - Create migration guide
 - Docker deployment documentation
@@ -207,6 +223,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 - API documentation refresh
 
 **Deliverables:**
+
 - Updated core documentation
 - Migration guide
 - Docker guides
@@ -219,6 +236,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 ### Docker Deployment (Primary Goal)
 
 **Before (Python 3.12):**
+
 - Limited to newest base images
 - Debian 12 (Bookworm) only
 - Ubuntu 24.04 only
@@ -226,6 +244,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 - ~450 MB production image
 
 **After (Python 3.9):**
+
 - **3x more base image choices**
 - Debian 11 & 12
 - Ubuntu 20.04, 22.04, 24.04
@@ -235,6 +254,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 ### Enterprise Compatibility
 
 **Supported Environments:**
+
 - AWS Lambda: Python 3.9+ ✅
 - Google Cloud Functions: Python 3.9+ ✅
 - Azure Functions: Python 3.9+ ✅
@@ -245,6 +265,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 ### Adoption & Accessibility
 
 **Wider User Base:**
+
 - Users on older systems can now use File Organizer
 - No forced Python upgrade required
 - Easier onboarding (less friction)
@@ -284,10 +305,12 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 ### Python 3.9 vs 3.12 Benchmarks
 
 **Overall Performance:**
+
 - Python 3.12 is ~25% faster on CPU-intensive tasks
 - Python 3.9 is ~20% slower on function calls
 
 **For File Organizer:**
+
 - **I/O-bound** (file reading): No meaningful difference
 - **GPU-bound** (AI inference): No difference
 - **Network-bound** (API calls): No difference
@@ -302,10 +325,12 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 ### Week 1: Conversion & Testing
 
 **Days 1-2:** Syntax conversion (#125)
+
 - Automated conversion: 2 hours
 - Manual review: 6 hours
 
 **Days 3-4:** Multi-version testing (#126)
+
 - Environment setup: 2 hours
 - Test execution: 8 hours
 - CI/CD setup: 2 hours
@@ -313,10 +338,12 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 ### Week 2: Docker & Documentation
 
 **Days 5-6:** Docker updates (#127)
+
 - Dockerfile creation: 6 hours
 - Testing: 2 hours
 
 **Day 7:** Documentation (#128)
+
 - Core docs: 2 hours
 - Migration guide: 2 hours
 
@@ -390,6 +417,7 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 ### Proceed with Migration ✅
 
 **Rationale:**
+
 1. **Low risk** - Mostly automated, well-tested, easy rollback
 2. **High value** - Enables Docker deployment (Phase 5 goal)
 3. **Strategic** - Aligns with pandas requirement
@@ -397,12 +425,14 @@ Python 3.12 base images: 5 options (Debian 12, Alpine 3.19, Ubuntu 24.04 only)
 5. **Proven** - pyupgrade is battle-tested
 
 **Conditions:**
+
 - Execute tasks in order (#125 → #126 → #127 → #128)
 - Validate each phase before proceeding
 - Maintain test coverage throughout
 - Document any issues encountered
 
 **Expected Outcome:**
+
 - Working Python 3.9+ codebase
 - Docker deployment ready
 - Wider compatibility

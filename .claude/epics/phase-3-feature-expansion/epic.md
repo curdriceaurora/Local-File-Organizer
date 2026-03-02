@@ -27,6 +27,7 @@ Expand file type support and add advanced organization methodologies.
 ### 1. Audio File Support 🎵
 
 Transcription and organization of audio files
+
 - **Formats**: MP3, WAV, FLAC, M4A, OGG
 - Distil-Whisper integration for transcription
 - Speaker identification
@@ -37,6 +38,7 @@ Transcription and organization of audio files
 ### 2. Advanced Video Processing 🎥
 
 Enhanced video analysis beyond first frame
+
 - Multi-frame analysis (scene detection)
 - Video transcription (audio track)
 - Thumbnail generation
@@ -46,6 +48,7 @@ Enhanced video analysis beyond first frame
 ### 3. PARA Methodology 📂
 
 Projects, Areas, Resources, Archive organization
+
 - Automatic PARA categorization
 - User-defined category rules
 - Smart suggestions based on content
@@ -55,6 +58,7 @@ Projects, Areas, Resources, Archive organization
 ### 4. Johnny Decimal System 🔢
 
 Hierarchical numbering for organization
+
 - Auto-generate Johnny Decimal numbers
 - User-defined numbering schemes
 - Conflict resolution
@@ -64,6 +68,7 @@ Hierarchical numbering for organization
 ### 5. Enhanced Ebook Support 📚
 
 Improved EPUB processing
+
 - Chapter-based analysis
 - Author and genre detection
 - Series recognition
@@ -72,6 +77,7 @@ Improved EPUB processing
 ### 6. Format Expansion 📦
 
 Additional file types
+
 - CAD files (DWG, DXF)
 - Archive files (ZIP, RAR, 7Z)
 - Scientific data formats

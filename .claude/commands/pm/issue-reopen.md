@@ -7,7 +7,8 @@ allowed-tools: Bash, Read, Write, LS
 Reopen a closed issue.
 
 ## Usage
-```
+
+```text
 /pm:issue-reopen <issue_number> [reason]
 ```
 
@@ -23,6 +24,7 @@ If not found: "❌ No local task for issue #$ARGUMENTS"
 Get current datetime: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 
 Update task file frontmatter:
+
 ```yaml
 status: open
 updated: {current_datetime}
@@ -31,6 +33,7 @@ updated: {current_datetime}
 ### 3. Reset Progress
 
 If progress file exists:
+
 - Keep original started date
 - Reset completion to previous value or 0%
 - Add note about reopening with reason
@@ -56,7 +59,7 @@ Recalculate epic progress with this task now open again.
 
 ### 6. Output
 
-```
+```sql
 🔄 Reopened issue #$ARGUMENTS
   Reason: {reason_if_provided}
   Epic progress: {updated_progress}%

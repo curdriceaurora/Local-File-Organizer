@@ -27,6 +27,7 @@ Establish comprehensive testing infrastructure to ensure code quality and reliab
 ### 1. Unit Testing 🧪
 
 Component-level tests
+
 - Test coverage >80%
 - pytest framework
 - Mock external dependencies
@@ -37,6 +38,7 @@ Component-level tests
 ### 2. Integration Testing 🔗
 
 End-to-end workflows
+
 - Full organization workflows
 - Multi-file processing
 - Error scenarios
@@ -46,6 +48,7 @@ End-to-end workflows
 ### 3. Test Automation ⚙️
 
 Continuous testing
+
 - GitHub Actions CI
 - Run tests on every push
 - Multi-platform testing (macOS, Linux, Windows)
@@ -55,6 +58,7 @@ Continuous testing
 ### 4. Code Quality Tools 📊
 
 Static analysis and formatting
+
 - mypy (type checking)
 - ruff (linting)
 - black (formatting)
@@ -64,6 +68,7 @@ Static analysis and formatting
 ### 5. Documentation Testing 📖
 
 Ensure docs are accurate
+
 - Test code examples in docs
 - Link checking
 - Screenshot validation
@@ -153,22 +158,27 @@ Ensure docs are accurate
 ### Parallel Work Streams
 
 **Stream A: Core Models & Processors** (Tasks 001→002→003/004→007/008→009)
+
 - Focus: AI models, file processors, core orchestrator
 - Critical path: ~66-80 hours
 
 **Stream B: Pattern Analysis** (Tasks 001→010→011, 012 parallel)
+
 - Focus: Pattern detection, misplacement detection
 - Parallel work: ~34-40 hours
 
 **Stream C: Deduplication** (Tasks 001→013→014/015/016)
+
 - Focus: Duplicate detection for images and documents
 - Parallel work: ~52-62 hours
 
 **Stream D: Intelligence** (Tasks 001→017→018, 019 parallel)
+
 - Focus: Preference learning, feedback processing
 - Parallel work: ~36-42 hours
 
 **Stream E: Integration** (Tasks 020, 021→022→023)
+
 - Focus: CLI tests, integration tests, CI/CD
 - Final phase: ~44-54 hours
 

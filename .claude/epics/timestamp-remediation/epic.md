@@ -17,6 +17,7 @@ The File Organizer codebase contains 38 naive datetime instances that are potent
 ## Background
 
 For a file management application, timestamps are load-bearing infrastructure:
+
 - **Archive decisions**: PARA methodology uses file age to decide what to archive
 - **Backup naming**: Timestamp suffixes must be collision-free
 - **Duplicate resolution**: "Newer" depends on correct timezone handling
@@ -84,7 +85,7 @@ For a file management application, timestamps are load-bearing infrastructure:
 
 ## Execution Order
 
-```
+```bash
 Task 1 (enable DTZ rules)
     |
     v

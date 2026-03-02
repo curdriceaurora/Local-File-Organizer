@@ -69,7 +69,7 @@ Focus: Clean up technical debt and documentation
 
 ## Critical Dependencies Chain
 
-```
+```bash
 #471 (Paths) → #476 (Migration recovery) → Data safety
 #466 (Import isolation) + #472 (Lazy loading) → #475 (Optional deps)
 #470 (NLTK hermeticity) + #466 (Imports) → #478 (Test consolidation)

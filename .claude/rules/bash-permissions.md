@@ -19,11 +19,13 @@ To enable auto-approval for all bash commands in this project, add the following
 ## Permission Formats
 
 ### Allow All Commands (Recommended for Development)
+
 ```json
 "Bash"
 ```
 
 ### Allow Specific Commands Only
+
 ```json
 "Bash(git:*)"        // All git commands
 "Bash(npm:*)"        // All npm commands
@@ -31,6 +33,7 @@ To enable auto-approval for all bash commands in this project, add the following
 ```
 
 ### Allow Specific Command Patterns
+
 ```json
 "Bash(git commit *)"         // Only git commit
 "Bash(npm install *)"        // Only npm install
@@ -43,6 +46,7 @@ To enable auto-approval for all bash commands in this project, add the following
 **Cause**: The `"Bash"` entry is missing from the allow list, or it's in the wrong format.
 
 **Fix**:
+
 1. Open `.claude/settings.local.json`
 2. Add `"Bash"` as the first item in the `"allow"` array
 3. Save the file
@@ -72,6 +76,7 @@ This project is configured with blanket bash approval in `.claude/settings.local
 ## Security Note
 
 Blanket bash approval (`"Bash"`) means Claude Code can execute any bash command without asking. This is appropriate for:
+
 - Development environments
 - Personal projects
 - Trusted repositories
@@ -79,4 +84,5 @@ Blanket bash approval (`"Bash"`) means Claude Code can execute any bash command 
 For production or shared environments, consider using more restrictive patterns.
 
 ## Last Updated
+
 2026-01-24 - Added blanket Bash approval to resolve multi-line command approval issues

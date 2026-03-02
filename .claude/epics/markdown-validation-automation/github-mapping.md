@@ -3,6 +3,7 @@
 Epic: #565 - https://github.com/curdriceaurora/Local-File-Organizer/issues/565
 
 Tasks:
+
 - #566: pymarkdown config and pre-commit hook setup - https://github.com/curdriceaurora/Local-File-Organizer/issues/566
 - #567: Remove redundant bare code fence check from pre-commit script - https://github.com/curdriceaurora/Local-File-Organizer/issues/567
 - #568: Fix all existing markdown violations - https://github.com/curdriceaurora/Local-File-Organizer/issues/568

@@ -20,16 +20,19 @@ Create comprehensive documentation and user guides for all Phase 4 Intelligence 
 
 **Scope**: Documentation for deduplication and quality assessment features
 **Files**:
+
 - `docs/phase4/deduplication.md`
 - `docs/phase4/quality-assessment.md`
 - `docs/examples/deduplication-examples.md`
 - `docs/api/deduplication-api.md`
+
 **Agent Type**: technical-writer
 **Can Start**: after Task 57 complete
 **Estimated Hours**: 4 hours
 **Dependencies**: Task 57 (tests validate feature accuracy)
 
 **Deliverables**:
+
 - Deduplication feature guide
   - Overview of capabilities
   - How detection works (hash, content, perceptual)
@@ -49,16 +52,19 @@ Create comprehensive documentation and user guides for all Phase 4 Intelligence 
 
 **Scope**: Documentation for preference learning and profile management
 **Files**:
+
 - `docs/phase4/preference-learning.md`
 - `docs/phase4/profile-management.md`
 - `docs/examples/preference-examples.md`
 - `docs/api/preference-api.md`
+
 **Agent Type**: technical-writer
 **Can Start**: after Task 57 complete
 **Estimated Hours**: 4 hours
 **Dependencies**: Task 57
 
 **Deliverables**:
+
 - Preference learning guide
   - Introduction to adaptive learning
   - How the system learns
@@ -81,16 +87,19 @@ Create comprehensive documentation and user guides for all Phase 4 Intelligence 
 
 **Scope**: Documentation for operation history and undo/redo system
 **Files**:
+
 - `docs/phase4/undo-redo.md`
 - `docs/phase4/operation-history.md`
 - `docs/examples/undo-redo-examples.md`
 - `docs/api/operation-api.md`
+
 **Agent Type**: technical-writer
 **Can Start**: after Task 57 complete
 **Estimated Hours**: 4 hours
 **Dependencies**: Task 57
 
 **Deliverables**:
+
 - Undo/redo usage guide
   - Understanding the system
   - What operations can be undone
@@ -112,6 +121,7 @@ Create comprehensive documentation and user guides for all Phase 4 Intelligence 
 
 **Scope**: Documentation for suggestions, analytics, and main README updates
 **Files**:
+
 - `docs/phase4/smart-suggestions.md`
 - `docs/phase4/auto-tagging.md`
 - `docs/phase4/analytics.md`
@@ -123,12 +133,14 @@ Create comprehensive documentation and user guides for all Phase 4 Intelligence 
 - `docs/examples/analytics-examples.md`
 - `docs/api/suggestion-api.md`
 - `docs/api/analytics-api.md`
+
 **Agent Type**: technical-writer
 **Can Start**: after Task 57 complete
 **Estimated Hours**: 4 hours
 **Dependencies**: Task 57
 
 **Deliverables**:
+
 - Smart suggestions tutorial
   - Introduction to AI-powered suggestions
   - How suggestions are generated
@@ -158,6 +170,7 @@ Create comprehensive documentation and user guides for all Phase 4 Intelligence 
 ### Shared Files
 
 One shared file requiring coordination:
+
 - `README.md` - Stream D owns, but should reference content from all streams
 
 ### Documentation Standards (Pre-work)
@@ -165,7 +178,8 @@ One shared file requiring coordination:
 Before parallel work begins, establish:
 
 **Documentation Structure**:
-```
+
+```sql
 docs/
 ├── README.md                          # Updated with Phase 4
 ├── phase4/
@@ -196,6 +210,7 @@ docs/
 ```
 
 **Style Guide**:
+
 - Use clear, non-technical language where possible
 - Include code examples for all features
 - Provide both quick start and detailed guides
@@ -206,6 +221,7 @@ docs/
 
 **Documentation Templates**:
 Each feature documentation should include:
+
 1. Overview
 2. How It Works
 3. Usage Examples
@@ -225,6 +241,7 @@ Each feature documentation should include:
 ## Conflict Risk Assessment
 
 **Minimal Risk** - Only one shared file (README.md) owned by Stream D:
+
 - Stream A: `docs/phase4/{deduplication,quality-assessment}.md`, `docs/{api,examples}/deduplication-*`
 - Stream B: `docs/phase4/{preference-learning,profile-management}.md`, `docs/{api,examples}/preference-*`
 - Stream C: `docs/phase4/{undo-redo,operation-history}.md`, `docs/{api,examples}/undo-redo-*`
@@ -237,12 +254,14 @@ README.md is updated only by Stream D, avoiding conflicts.
 **Recommended Approach**: fully parallel documentation
 
 **Execution Plan**:
+
 1. **Pre-work** (0.5 hours): Establish documentation structure, style guide, and templates
 2. **Wait for dependency**: Task 57 must complete to validate accuracy
 3. **Phase 1** (parallel, 4 hours): Launch all 4 streams simultaneously
 4. **No integration phase needed** - documentation is independent
 
 **Timeline**:
+
 - Stream A: 4 hours
 - Stream B: 4 hours
 - Stream C: 4 hours
@@ -254,11 +273,13 @@ Total wall time: ~4.5 hours (including pre-work, after Task 57)
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~4.5 hours (pre-work + max(A,B,C,D)) after Task 57
 - Total work: 16 hours
 - Efficiency gain: 72% time savings
 
 **Without parallel execution**:
+
 - Wall time: 16 hours (sequential completion) after Task 57
 
 **Parallelization factor**: 3.5x effective speedup (16h / 4.6h actual per writer)
@@ -310,6 +331,7 @@ All agents should be technical writers or developers with strong documentation s
 ### Content Requirements by Stream
 
 **Stream A** (Deduplication):
+
 - Hash-based detection explanation
 - Perceptual hashing for images
 - Safe mode and backup system
@@ -320,6 +342,7 @@ All agents should be technical writers or developers with strong documentation s
 - 10+ working examples
 
 **Stream B** (Preferences):
+
 - Adaptive learning explanation
 - Privacy and security details
 - Training procedures
@@ -332,6 +355,7 @@ All agents should be technical writers or developers with strong documentation s
 - 10+ working examples
 
 **Stream C** (Undo/Redo):
+
 - Operation types supported
 - How to undo/redo
 - History viewing and filtering
@@ -344,6 +368,7 @@ All agents should be technical writers or developers with strong documentation s
 - 10+ working examples
 
 **Stream D** (Suggestions & Analytics):
+
 - AI-powered suggestions explanation
 - Pattern detection details
 - Misplacement detection
@@ -378,8 +403,10 @@ All agents should be technical writers or developers with strong documentation s
 ### Usage Example
 
 ```bash
+
 file-organizer command --options
-```
+
+```bash
 
 ### Configuration
 
@@ -396,6 +423,7 @@ file-organizer command --options
 ### Related Features
 
 [Links to related docs]
+
 ```
 
 ### API Documentation Template
@@ -418,19 +446,23 @@ Description of method.
 
 **Example:**
 ```python
+
 from file_organizer.services import ClassName
 
 instance = ClassName()
 result = instance.method_name(value1, value2)
-```
+
+```text
 
 **Raises:**
 - ExceptionType: When this happens
+
 ```
 
 ### Documentation Review Checklist
 
 Each stream should ensure:
+
 - [ ] All features documented
 - [ ] Code examples tested and working
 - [ ] API reference complete
@@ -445,6 +477,7 @@ Each stream should ensure:
 ### Integration with README
 
 Stream D updates main README.md with:
+
 - Phase 4 features list
 - Quick start examples for new features
 - Links to detailed documentation
@@ -456,6 +489,7 @@ Stream D updates main README.md with:
 ### Future Enhancements
 
 Consider adding (post-Phase 4):
+
 - Video tutorials for complex features
 - Interactive documentation (Jupyter notebooks)
 - Searchable documentation site

@@ -83,6 +83,7 @@ status: open
 ### Pre-Commit Coverage Gate
 
 The `pre-commit-validation.sh` script should enforce:
+
 ```bash
 pytest --cov=file_organizer --cov-fail-under=74 --tb=short
 ```
@@ -90,6 +91,7 @@ pytest --cov=file_organizer --cov-fail-under=74 --tb=short
 ### Coverage Tracking
 
 Track coverage per-module over time:
+
 ```bash
 pytest --cov=file_organizer --cov-report=term-missing --cov-report=html
 ```

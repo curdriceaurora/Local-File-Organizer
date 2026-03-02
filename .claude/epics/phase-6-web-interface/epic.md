@@ -28,6 +28,7 @@ Build a modern web interface and establish a plugin ecosystem for extensibility.
 ### 1. Web Dashboard 🌐
 
 Browser-based interface
+
 - Modern web UI with HTMX
 - File browser with thumbnails
 - Organization preview
@@ -39,6 +40,7 @@ Browser-based interface
 ### 2. FastAPI Backend 🔌
 
 RESTful API server
+
 - REST API endpoints
 - WebSocket support
 - Authentication & authorization
@@ -50,6 +52,7 @@ RESTful API server
 ### 3. Real-Time Updates ⚡
 
 Live synchronization
+
 - WebSocket live updates
 - Real-time progress tracking
 - Multi-client synchronization
@@ -60,6 +63,7 @@ Live synchronization
 ### 4. Multi-User Support 👥
 
 Team collaboration features
+
 - User authentication (JWT)
 - Workspace isolation
 - Permission management (RBAC)
@@ -70,6 +74,7 @@ Team collaboration features
 ### 5. Plugin System 🧩
 
 Extensibility framework
+
 - Plugin architecture
 - Plugin marketplace
 - Community plugins
@@ -80,6 +85,7 @@ Extensibility framework
 ### 6. Integration Ecosystem 🔗
 
 Third-party integrations
+
 - Obsidian plugin
 - VS Code extension
 - Alfred workflow
@@ -179,33 +185,40 @@ The following open review follow-up issues are tracked under technical-debt epic
 ### Parallel Work Streams
 
 **Stream A: Backend Core** (#229 → #230/#231/#232 → #233)
+
 - Critical path: ~64-78 hours
 - Establishes API foundation
 
 **Stream B: Frontend Core** (#234 → #235/#236/#237/#238)
+
 - Can start after #230 complete
 - Parallel execution: ~76-92 hours
 
 **Stream C: Plugin System** (#239 → #240/#241/#242)
+
 - Can start after #230 complete
 - Parallel execution: ~80-98 hours
 
 **Stream D: Testing & Infrastructure** (#244/#245/#246 → #247 → #248)
+
 - Can start after core features complete
 - Final polish: ~64-80 hours
 
 ### Recommended Approach
 
 **Weeks 1-2:** Foundation (Stream A)
+
 - Complete tasks #229-233
 - Backend fully functional
 
 **Weeks 3-5:** Parallel Development (Streams B + C)
+
 - Frontend team: #234-238
 - Plugin team: #239-243
 - Can overlap after #230 complete
 
 **Weeks 6-7:** Testing & Deployment (Stream D)
+
 - Integration testing: #244-246
 - Deployment: #247
 - Documentation: #248
@@ -225,6 +238,7 @@ The following open review follow-up issues are tracked under technical-debt epic
 ## Critical Path
 
 The longest dependency chain:
+
 1. Task #229 (Backend Infrastructure) - 12-16h
 2. Task #230 (REST API) - 16-20h
 3. Task #234 (Web UI Foundation) - 16-20h

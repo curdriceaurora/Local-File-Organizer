@@ -25,23 +25,27 @@ Create an automated end-to-end test suite for the Tauri desktop application. Uni
 ## Technical Approach
 
 ### Test Infrastructure
+
 - `tauri-driver` installed as dev dependency for WebDriver-based webview testing
 - Mock sidecar binary (small Rust binary or Python script) for test isolation
 - Test fixtures for common scenarios (healthy sidecar, crashed sidecar, port conflict)
 - CI matrix: macOS, Windows, Linux with GUI support (or headless via `xvfb` on Linux)
 
 ### Core Lifecycle Tests
+
 - App start → splash screen visible → sidecar spawns → health poll succeeds → main window loads
 - Sidecar crash → error state displayed → restart attempted
 - Multiple instance prevention (single-instance lock)
 - Clean shutdown: quit → sidecar process terminated → no orphan processes
 
 ### Native Integration Tests
+
 - System tray: icon appears, menu items render, clicks trigger correct actions
 - Notifications: shown on events, click navigates correctly
 - Daemon manager: plist/systemd unit/scheduled task CRUD operations (platform-specific)
 
 ### Error & Edge Case Tests
+
 - Port conflict → dynamic port reassignment
 - Missing sidecar binary → user-facing error message
 - Webview CSP enforcement (no external resource loading)

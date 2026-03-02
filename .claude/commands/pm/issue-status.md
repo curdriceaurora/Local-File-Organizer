@@ -7,7 +7,8 @@ allowed-tools: Bash, Read, LS
 Check issue status (open/closed) and current state.
 
 ## Usage
-```
+
+```text
 /pm:issue-status <issue_number>
 ```
 
@@ -16,14 +17,18 @@ Check issue status (open/closed) and current state.
 You are checking the current status of a GitHub issue and providing a quick status report for: **Issue #$ARGUMENTS**
 
 ### 1. Fetch Issue Status
+
 Use GitHub CLI to get current status:
+
 ```bash
 gh issue view #$ARGUMENTS --json state,title,labels,assignees,updatedAt
 ```
 
 ### 2. Status Display
+
 Show concise status information:
-```
+
+```sql
 🎫 Issue #$ARGUMENTS: {Title}
    
 📊 Status: {OPEN/CLOSED}
@@ -34,8 +39,10 @@ Show concise status information:
 ```
 
 ### 3. Epic Context
+
 If issue is part of an epic:
-```
+
+```text
 📚 Epic Context:
    Epic: {epic_name}
    Epic progress: {completed_tasks}/{total_tasks} tasks complete
@@ -43,8 +50,10 @@ If issue is part of an epic:
 ```
 
 ### 4. Local Sync Status
+
 Check if local files are in sync:
-```
+
+```sql
 💾 Local Sync:
    Local file: {exists/missing}
    Last local update: {timestamp}
@@ -52,7 +61,9 @@ Check if local files are in sync:
 ```
 
 ### 5. Quick Status Indicators
+
 Use clear visual indicators:
+
 - 🟢 Open and ready
 - 🟡 Open with blockers  
 - 🔴 Open and overdue
@@ -60,8 +71,10 @@ Use clear visual indicators:
 - ❌ Closed without completion
 
 ### 6. Actionable Next Steps
+
 Based on status, suggest actions:
-```
+
+```sql
 🚀 Suggested Actions:
    - Start work: /pm:issue-start $ARGUMENTS
    - Sync updates: /pm:issue-sync $ARGUMENTS
@@ -70,8 +83,10 @@ Based on status, suggest actions:
 ```
 
 ### 7. Batch Status
+
 If checking multiple issues, support comma-separated list:
-```
+
+```text
 /pm:issue-status 123,124,125
 ```
 

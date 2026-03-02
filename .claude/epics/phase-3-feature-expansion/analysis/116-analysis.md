@@ -23,6 +23,7 @@ Create comprehensive test coverage for all Phase 3 features: audio transcription
 
 **Scope**: Tests for audio transcription and video processing
 **Files**:
+
 - `tests/test_audio_model.py` (new)
 - `tests/services/test_audio_transcription.py` (new)
 - `tests/services/test_video_processing.py` (new)
@@ -40,6 +41,7 @@ Create comprehensive test coverage for all Phase 3 features: audio transcription
 
 **Scope**: Tests for PARA and Johnny Decimal systems
 **Files**:
+
 - `tests/methodologies/test_para_system.py` (new)
 - `tests/methodologies/test_johnny_decimal.py` (new)
 - `tests/methodologies/test_para_integration.py` (new)
@@ -57,6 +59,7 @@ Create comprehensive test coverage for all Phase 3 features: audio transcription
 
 **Scope**: Tests for CAD, archives, EPUB, scientific formats
 **Files**:
+
 - `tests/utils/test_cad_readers.py` (new)
 - `tests/utils/test_archive_readers.py` (new)
 - `tests/utils/test_epub_enhanced.py` (new)
@@ -75,6 +78,7 @@ Create comprehensive test coverage for all Phase 3 features: audio transcription
 
 **Scope**: Integration tests and coverage reporting
 **Files**:
+
 - `tests/integration/test_phase3_workflows.py` (new)
 - `.coveragerc` (update)
 - `pytest.ini` (update)
@@ -96,6 +100,7 @@ Create comprehensive test coverage for all Phase 3 features: audio transcription
 ### Test Fixture Strategy
 
 Each stream creates its own fixtures:
+
 - Stream A: Audio/video sample files
 - Stream B: PARA/Johnny Decimal test structures
 - Stream C: CAD/archive/EPUB/scientific samples
@@ -112,6 +117,7 @@ Each stream creates its own fixtures:
 ### Phase 1: Parallel Unit Tests (Week 1-2)
 
 Launch 3 agents simultaneously:
+
 - **Agent A**: Audio & video testing (12-14h)
 - **Agent B**: Organization methods testing (10-12h)
 - **Agent C**: Format support testing (8-10h)
@@ -121,6 +127,7 @@ All can work simultaneously on different test modules.
 ### Phase 2: Integration & Coverage (Week 2-3)
 
 After unit tests complete:
+
 - **Agent D**: Integration tests, coverage setup, documentation (6-8h)
 
 ## Expected Timeline
@@ -140,7 +147,7 @@ After unit tests complete:
 
 ### Critical Path:
 
-```
+```text
 Streams A, B, C (parallel, 12-14h max) → Stream D (6-8h)
 Total: 18-22 hours wall time
 ```

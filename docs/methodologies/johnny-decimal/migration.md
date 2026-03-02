@@ -48,7 +48,8 @@ print(f"Detected patterns: {scan_result.detected_patterns}")
 ```
 
 **Scan Output Example:**
-```
+
+```text
 Total folders: 45
 Total files: 1,234
 Max depth: 4
@@ -121,6 +122,7 @@ print(preview)
 ```
 
 **Preview Example:**
+
 ```markdown
 # Johnny Decimal Migration Preview
 
@@ -166,6 +168,7 @@ else:
 ```
 
 **Validation Report Example:**
+
 ```markdown
 # Transformation Plan Validation Report
 
@@ -406,6 +409,7 @@ for info in migrator._rollback_history:
 ### Issue: Migration Fails with Permission Error
 
 **Solution**:
+
 ```python
 # Check folder permissions
 import os
@@ -418,6 +422,7 @@ os.access(root_path, os.W_OK)  # Should return True
 ### Issue: Conflicts Detected
 
 **Solution**:
+
 ```python
 # Review conflicts in validation
 validation = migrator.validate_plan(plan)
@@ -431,6 +436,7 @@ for issue in validation.errors:
 ### Issue: Dry Run Shows Unexpected Changes
 
 **Solution**:
+
 - Review the transformation plan carefully
 - Adjust your numbering scheme if needed
 - Use custom mappings for specific folders
@@ -439,6 +445,7 @@ for issue in validation.errors:
 ### Issue: Backup Takes Too Much Space
 
 **Solution**:
+
 ```python
 # Disable backups (only if you have external backup)
 result = migrator.execute_migration(
@@ -451,6 +458,7 @@ result = migrator.execute_migration(
 ### Issue: Some Folders Skipped
 
 **Solution**:
+
 ```python
 # Check skipped paths
 for path in result.skipped_paths:

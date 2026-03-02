@@ -20,16 +20,19 @@ Implement a hash-based duplicate file detection system with MD5/SHA256 support, 
 
 **Scope**: Backend logic for hash computation and duplicate tracking
 **Files**:
+
 - `file_organizer/services/deduplication/__init__.py`
 - `file_organizer/services/deduplication/hasher.py`
 - `file_organizer/services/deduplication/index.py`
 - `file_organizer/services/deduplication/detector.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 7 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - FileHasher class with MD5/SHA256 support
 - Chunked reading for large files
 - DuplicateIndex for hash-to-files mapping
@@ -41,14 +44,17 @@ Implement a hash-based duplicate file detection system with MD5/SHA256 support, 
 
 **Scope**: Safe mode implementation with backup management
 **Files**:
+
 - `file_organizer/services/deduplication/backup.py`
 - Backup directory structure and manifest
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 4 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - BackupManager class
 - Backup directory creation (.file_organizer_backups/)
 - Backup manifest with timestamps
@@ -59,14 +65,17 @@ Implement a hash-based duplicate file detection system with MD5/SHA256 support, 
 
 **Scope**: User-facing command-line interface and interaction
 **Files**:
+
 - `file_organizer/cli/dedupe.py` (new CLI subcommand)
 - Interactive prompt implementation
+
 **Agent Type**: fullstack-specialist
 **Can Start**: immediately
 **Estimated Hours**: 3 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - CLI subcommand for deduplication
 - Interactive confirmation prompts
 - Duplicate group display with metadata
@@ -78,17 +87,20 @@ Implement a hash-based duplicate file detection system with MD5/SHA256 support, 
 
 **Scope**: Bring all components together, comprehensive testing
 **Files**:
+
 - `tests/services/deduplication/test_hasher.py`
 - `tests/services/deduplication/test_index.py`
 - `tests/services/deduplication/test_detector.py`
 - `tests/services/deduplication/test_backup.py`
 - `tests/integration/test_deduplication_e2e.py`
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Streams A, B, and C complete
 **Estimated Hours**: 2 hours
 **Dependencies**: Streams A, B, C
 
 **Deliverables**:
+
 - Unit tests for all classes (>90% coverage)
 - Integration tests for end-to-end flow
 - Performance tests (10,000+ files)
@@ -106,12 +118,14 @@ None - streams work on completely independent file sets
 To enable parallel work, define these interfaces upfront:
 
 **FileHasher Interface**:
+
 ```python
 def compute_hash(file_path: Path, algorithm: str = "sha256") -> str
 def compute_batch(file_paths: List[Path]) -> Dict[Path, str]
 ```
 
 **DuplicateIndex Interface**:
+
 ```python
 def add_file(file_path: Path, file_hash: str, metadata: dict) -> None
 def get_duplicates() -> Dict[str, List[Path]]
@@ -119,6 +133,7 @@ def get_statistics() -> dict
 ```
 
 **BackupManager Interface**:
+
 ```python
 def create_backup(file_path: Path) -> Path
 def restore_backup(backup_path: Path) -> None
@@ -126,6 +141,7 @@ def cleanup_old_backups(max_age_days: int) -> None
 ```
 
 **DuplicateDetector Interface**:
+
 ```python
 def scan_directory(directory: Path) -> DuplicateIndex
 def remove_duplicates(index: DuplicateIndex, strategy: str) -> None
@@ -140,6 +156,7 @@ def remove_duplicates(index: DuplicateIndex, strategy: str) -> None
 ## Conflict Risk Assessment
 
 **Low Risk** - Streams work on completely different directories with no file overlap:
+
 - Stream A: `file_organizer/services/deduplication/{hasher,index,detector}.py`
 - Stream B: `file_organizer/services/deduplication/backup.py`
 - Stream C: `file_organizer/cli/dedupe.py`
@@ -152,11 +169,13 @@ No shared configuration files or types need modification.
 **Recommended Approach**: parallel with final integration
 
 **Execution Plan**:
+
 1. **Pre-work** (0.5 hours): Define and document interface contracts
 2. **Phase 1** (parallel, 7 hours): Launch Streams A, B, C simultaneously
 3. **Phase 2** (sequential, 2 hours): Stream D integrates and tests
 
 **Timeline**:
+
 - Stream A: 7 hours
 - Stream B: 4 hours (completes early)
 - Stream C: 3 hours (completes early)
@@ -167,11 +186,13 @@ Total wall time: ~9.5 hours (including coordination)
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~9.5 hours (pre-work + max(A,B,C) + D)
 - Total work: 16 hours
 - Efficiency gain: 41% time savings
 
 **Without parallel execution**:
+
 - Wall time: 16 hours (sequential completion)
 
 **Parallelization factor**: 2.5x effective speedup (16h / 6.4h actual)
@@ -208,6 +229,7 @@ Total wall time: ~9.5 hours (including coordination)
 ### Integration Points
 
 This task integrates with:
+
 - Existing `FileOrganizer` service (for directory scanning)
 - CLI framework (for new dedupe subcommand)
 - Configuration system (for algorithm selection, backup settings)
