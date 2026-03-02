@@ -1,7 +1,8 @@
 ---
 name: markdown-validation-automation
-status: backlog
+status: in-progress
 created: 2026-03-02T15:30:54Z
+updated: 2026-03-02T16:15:03Z
 progress: 0%
 prd: .claude/prds/markdown-validation-automation.md
 github: https://github.com/curdriceaurora/Local-File-Organizer/issues/565
@@ -68,3 +69,15 @@ Run `pymarkdown scan` across `.claude/` and `docs/`, fix all violations in a sin
 - **Task 3** (cleanup): 1-2 hours — bulk of work, many files to fix
 - **Task 4** (verification): 30 minutes
 - **Critical path**: Task 3 (cleanup) is the longest, but straightforward
+
+## Tasks Created
+
+- [ ] #566 - pymarkdown config and pre-commit hook setup (parallel: false)
+- [ ] #567 - Remove redundant bare code fence check from pre-commit script (parallel: false, depends: #566)
+- [ ] #568 - Fix all existing markdown violations (parallel: true, depends: #566)
+- [ ] #569 - End-to-end verification (parallel: false, depends: #566, #567, #568)
+
+Total tasks: 4
+Parallel tasks: 1
+Sequential tasks: 3
+Estimated total effort: 2.75 hours
