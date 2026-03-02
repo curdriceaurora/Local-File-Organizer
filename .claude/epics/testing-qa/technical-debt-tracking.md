@@ -23,12 +23,12 @@ status: active
 
 ## Summary
 
-**Total Issues**: 1
+**Total Issues**: 6
 - **High Priority**: 0
-- **Medium Priority**: 0
-- **Low Priority**: 1
+- **Medium Priority**: 3 (#444 closed, #451 closed, #535 closed)
+- **Low Priority**: 3 (#330 open, #449 open, #534 closed)
 
-**Total Effort Estimate**: 15-30 minutes
+**Total Effort Estimate**: 9-17.5 hours
 
 ## Tracking Updates
 

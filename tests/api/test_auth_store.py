@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from unittest.mock import patch
 
 import pytest
 
@@ -74,10 +75,10 @@ class TestInMemoryTokenStore:
 
     def test_store_refresh_with_zero_ttl_expires_immediately(self) -> None:
         store = InMemoryTokenStore()
-        store.store_refresh("jti-1", "user-1", ttl_seconds=0)
-        # Manipulate internal state to guarantee expiry without sleeping
-        store._refresh["jti-1"] = time.time() - 1
-        assert store.is_refresh_active("jti-1") is False
+        with patch("file_organizer.api.auth_store.time.time", return_value=1_000.0):
+            store.store_refresh("jti-1", "user-1", ttl_seconds=0)
+        with patch("file_organizer.api.auth_store.time.time", return_value=1_000.0):
+            assert store.is_refresh_active("jti-1") is False
 
 
 # ---------------------------------------------------------------------------
