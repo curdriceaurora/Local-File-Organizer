@@ -52,12 +52,14 @@ With 314 Python modules and 237 test files, coverage is spread unevenly — some
 Focus on high-LOC modules with lowest coverage for maximum impact.
 
 #### Sprint A1: API Routers (3-4 weeks)
+
 - ~22 missing test modules for API route handlers
 - Use `httpx.AsyncClient` with FastAPI `TestClient`
 - Test all route handlers, middleware, error responses
 - Cover authentication, CORS, rate limiting middleware
 
 #### Sprint A2: Plugin System (2-3 weeks)
+
 - ~16 missing test modules
 - Plugin lifecycle (install, enable, disable, uninstall)
 - Marketplace API integration tests
@@ -65,12 +67,14 @@ Focus on high-LOC modules with lowest coverage for maximum impact.
 - Plugin sandbox and security boundaries
 
 #### Sprint A3: CLI Commands (1-2 weeks)
+
 - ~9 missing test modules
 - Use `typer.testing.CliRunner` for command testing
 - Cover all subcommands: organize, dedupe, daemon, marketplace, copilot
 - Test CLI output formatting and error messages
 
 #### Sprint A4: Web & Services (1-2 weeks)
+
 - ~3 missing web test modules (Jinja2 rendering, HTMX endpoints)
 - 23 intelligence service modules at 0% coverage
 - Preference learning, pattern extraction, scoring algorithms
@@ -78,21 +82,25 @@ Focus on high-LOC modules with lowest coverage for maximum impact.
 ### Phase B: Reach Project Target — 90% (6-8 weeks)
 
 #### Sprint B1: TUI Views (1-2 weeks)
+
 - ~5 missing test modules
 - Use Textual's `pilot` testing framework
 - Test all views: dashboard, file browser, settings, logs
 
 #### Sprint B2: Models & Client (1-2 weeks)
+
 - ~4 missing model test modules (model manager, registry)
 - ~3 missing client test modules
 - Model lifecycle, configuration, error handling
 
 #### Sprint B3: Updater & Watcher (1-2 weeks)
+
 - 6 updater modules at 0% (checker, installer, manager)
 - 5 watcher modules at 0% (monitor, handler, queue)
 - File system watching, auto-update flow
 
 #### Sprint B4: Integration & Docstrings (2 weeks)
+
 - End-to-end workflow tests
 - Cross-module integration scenarios
 - Docstring coverage via `interrogate` to 90%

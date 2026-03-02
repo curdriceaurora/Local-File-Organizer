@@ -185,60 +185,68 @@ if [[ -n "$MD_FILES" ]]; then
       continue
     fi
 
-    # Check for headings that don't have a blank line before or after them
-    # Skip the very first line (which may be frontmatter --- or a heading)
-    PREV_LINE=""
-    LINE_NUM=0
+    # Read all lines into an array for look-ahead capability (bash 3.2 compatible)
+    LINES=()
+    while IFS= read -r _line || [[ -n "$_line" ]]; do
+      LINES+=("$_line")
+    done < "$md_file"
+    TOTAL_LINES=${#LINES[@]}
     IN_FRONTMATTER=0
     IN_CODE_BLOCK=0
 
-    while IFS= read -r line; do
-      LINE_NUM=$((LINE_NUM + 1))
+    for (( i=0; i<TOTAL_LINES; i++ )); do
+      line="${LINES[$i]}"
+      DISPLAY_NUM=$((i + 1))
 
       # Track frontmatter (between --- markers at start of file)
-      if [[ $LINE_NUM -eq 1 ]] && [[ "$line" == "---" ]]; then
+      if [[ $i -eq 0 ]] && [[ "$line" == "---" ]]; then
         IN_FRONTMATTER=1
-        PREV_LINE="$line"
         continue
       fi
       if [[ $IN_FRONTMATTER -eq 1 ]] && [[ "$line" == "---" ]]; then
         IN_FRONTMATTER=0
-        PREV_LINE="$line"
         continue
       fi
       if [[ $IN_FRONTMATTER -eq 1 ]]; then
-        PREV_LINE="$line"
         continue
       fi
 
       # Track code blocks
       if [[ "$line" == '```'* ]]; then
         IN_CODE_BLOCK=$(( 1 - IN_CODE_BLOCK ))
-        PREV_LINE="$line"
         continue
       fi
       if [[ $IN_CODE_BLOCK -eq 1 ]]; then
-        PREV_LINE="$line"
         continue
       fi
 
       # Check if current line is a heading (starts with #)
       if [[ "$line" == '#'* ]] && [[ "$line" =~ ^#{1,6}[[:space:]] ]]; then
-        # Heading must have a blank line before it (unless it's the first content line after frontmatter)
-        if [[ -n "$PREV_LINE" ]] && [[ "$PREV_LINE" != "---" ]]; then
-          echo "❌ $md_file:$LINE_NUM: Heading needs blank line before it: $line"
-          MD022_ISSUES=1
+        # Check blank line BEFORE heading (unless first content line after frontmatter)
+        if [[ $i -gt 0 ]]; then
+          PREV_LINE="${LINES[$((i - 1))]}"
+          if [[ -n "$PREV_LINE" ]] && [[ "$PREV_LINE" != "---" ]] && [[ "$PREV_LINE" != '```'* ]]; then
+            echo "❌ $md_file:$DISPLAY_NUM: Heading needs blank line before it: $line"
+            MD022_ISSUES=1
+          fi
+        fi
+
+        # Check blank line AFTER heading (unless it's the last line)
+        if [[ $((i + 1)) -lt $TOTAL_LINES ]]; then
+          NEXT_LINE="${LINES[$((i + 1))]}"
+          if [[ -n "$NEXT_LINE" ]]; then
+            echo "❌ $md_file:$DISPLAY_NUM: Heading needs blank line after it: $line"
+            MD022_ISSUES=1
+          fi
         fi
       fi
-
-      PREV_LINE="$line"
-    done < "$md_file"
+    done
   done
 
   if [[ $MD022_ISSUES -eq 1 ]]; then
     echo ""
     echo "❌ Markdown heading spacing check failed (MD022)"
-    echo "Fix: Add a blank line before each heading"
+    echo "Fix: Add blank lines before AND after each heading"
     exit 1
   fi
   echo "✓ Markdown heading spacing OK"
