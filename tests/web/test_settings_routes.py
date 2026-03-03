@@ -10,14 +10,20 @@ settings_general_get, settings_general_post, etc.) using mocked templates/settin
 from __future__ import annotations
 
 import json
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.web.settings_routes import (
+    LANGUAGE_OPTIONS,
+    LOG_LEVEL_OPTIONS,
     METHODOLOGY_OPTIONS,
+    PERFORMANCE_MODES,
     THEME_OPTIONS,
+    TIMEZONE_OPTIONS,
     WebSettings,
     _as_form_bool,
     _coerce_bool,
