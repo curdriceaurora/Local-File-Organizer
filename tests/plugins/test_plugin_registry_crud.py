@@ -4,16 +4,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from file_organizer.plugins.base import PluginLoadError
 from file_organizer.plugins.errors import PluginNotLoadedError
-from file_organizer.plugins.registry import PluginRegistry, PluginRecord
+from file_organizer.plugins.registry import PluginRecord, PluginRegistry
 from file_organizer.plugins.security import PluginSecurityPolicy
-
 
 # ============================================================================
 # Plugin Loading Tests (CREATE)
@@ -417,6 +415,7 @@ class TestRegistryState:
 
         # Load
         record1 = registry.load_plugin(plugin_with_source)
+        assert record1 is not None
         assert registry.list_plugins() == ["test-plugin"]
 
         # Unload
@@ -425,6 +424,7 @@ class TestRegistryState:
 
         # Reload
         record2 = registry.load_plugin(plugin_with_source)
+        assert record2 is not None
         assert registry.list_plugins() == ["test-plugin"]
 
 

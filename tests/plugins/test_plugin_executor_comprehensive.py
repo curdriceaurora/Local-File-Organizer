@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 from file_organizer.plugins.errors import PluginError, PluginLoadError
-from file_organizer.plugins.executor import PluginExecutor, PluginResult
-
+from file_organizer.plugins.executor import PluginExecutor
 
 # ============================================================================
 # Executor Initialization and Subprocess Tests
@@ -26,6 +24,8 @@ class TestExecutorInitialization:
             plugin_name="test-plugin",
             plugin_path=Path("/path/to/plugin"),
         )
+        assert executor is not None
+        assert executor.plugin_name == "test-plugin"
 
     def test_executor_spawn_subprocess_success(
         self, plugin_with_source: Path, mock_subprocess
@@ -287,6 +287,7 @@ class TestExecutorConcurrency:
                 success_response = b'{"success":true,"return_value":null,"error":null}\n'
                 executor._proc.stdout.readline.return_value = success_response
                 result = executor.call(method_name)
+                assert result is not None
                 call_count[0] += 1
             except Exception as e:
                 exceptions.append(e)
@@ -400,6 +401,7 @@ class TestExecutorLifecycle:
         )
         executor.start()
         process = executor._proc
+        assert process is not None
 
         # Delete executor
         del executor

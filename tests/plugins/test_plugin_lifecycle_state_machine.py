@@ -8,9 +8,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from file_organizer.plugins.errors import (
+    PluginLifecycleError,
+    PluginLoadError,
+    PluginNotLoadedError,
+)
 from file_organizer.plugins.lifecycle import PluginLifecycleManager, PluginState
-from file_organizer.plugins.registry import PluginRegistry, PluginRecord
-
+from file_organizer.plugins.registry import PluginRegistry
 
 # ============================================================================
 # Plugin State Transition Tests
@@ -94,7 +98,7 @@ class TestPluginStateTransitions:
         manager = PluginLifecycleManager(registry)
 
         # Should raise error for non-existent plugin
-        with pytest.raises(Exception):  # PluginNotLoadedError
+        with pytest.raises(PluginNotLoadedError):
             manager.enable("nonexistent")
 
     def test_invalid_transition_disable_unloaded(
@@ -104,7 +108,7 @@ class TestPluginStateTransitions:
         manager = PluginLifecycleManager(registry)
 
         # Should raise error for non-existent plugin
-        with pytest.raises(Exception):  # PluginNotLoadedError
+        with pytest.raises(PluginNotLoadedError):
             manager.disable("nonexistent")
 
     def test_full_lifecycle_transitions(
@@ -330,7 +334,7 @@ class TestPluginStateErrorHandling:
         invalid_path = Path("/nonexistent/plugin")
 
         # Load should fail
-        with pytest.raises(Exception):  # PluginLoadError
+        with pytest.raises(PluginLoadError):
             manager.load(invalid_path)
 
         # Plugin should not be in registry - should return UNLOADED
@@ -349,7 +353,7 @@ class TestPluginStateErrorHandling:
         record.executor.call = MagicMock(side_effect=RuntimeError("Enable failed"))
 
         # Enable should fail
-        with pytest.raises(Exception):
+        with pytest.raises(PluginLifecycleError):
             manager.enable("test-plugin")
 
         # Plugin should be in ERROR state
@@ -368,7 +372,7 @@ class TestPluginStateErrorHandling:
         record.executor.call = MagicMock(side_effect=RuntimeError("Disable failed"))
 
         # Disable should fail
-        with pytest.raises(Exception):
+        with pytest.raises(PluginLifecycleError):
             manager.disable("test-plugin")
 
         # Plugin should be in ERROR state
@@ -386,7 +390,7 @@ class TestPluginStateErrorHandling:
         record.executor.call = MagicMock(side_effect=RuntimeError("Unload failed"))
 
         # Unload should fail
-        with pytest.raises(Exception):
+        with pytest.raises(PluginLifecycleError):
             manager.unload("test-plugin")
 
         # State is removed on failure to clean up stale entries (returns UNLOADED)

@@ -2,29 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import datetime, UTC
-from unittest.mock import MagicMock, Mock, patch
+from datetime import UTC, datetime
+from unittest.mock import Mock
 
 import pytest
 from pydantic import ValidationError
 
-from file_organizer.plugins.api.hooks import (
-    HookEvent,
-    PluginHookManager,
-    WebhookDeliveryResult,
-    WebhookRegistration,
-)
+from file_organizer.plugins.api.hooks import HookEvent, PluginHookManager
 from file_organizer.plugins.api.models import (
     PluginConfigValueResponse,
-    PluginFileListResponse,
-    PluginHookListResponse,
     PluginHookRegistrationRequest,
     PluginHookRegistrationResponse,
     PluginHookTriggerRequest,
     PluginHookTriggerResponse,
     PluginHookTriggerResult,
-    PluginHookUnregisterRequest,
-    PluginHookUnregisterResponse,
     PluginOrganizeFileRequest,
     PluginOrganizeFileResponse,
 )
