@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from file_organizer.plugins.base import PluginMetadata
+from file_organizer.plugins.registry import PluginRegistry
 from file_organizer.plugins.security import PluginSandbox
 
 
@@ -250,6 +251,12 @@ def mock_lifecycle_callbacks() -> dict[str, MagicMock]:
         "on_enable": MagicMock(),
         "on_disable": MagicMock(),
     }
+
+
+@pytest.fixture
+def registry() -> PluginRegistry:
+    """Fresh plugin registry for testing."""
+    return PluginRegistry()
 
 
 # ============================================================================
