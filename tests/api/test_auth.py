@@ -237,6 +237,21 @@ class TestDecodeToken:
         with pytest.raises(TokenError):
             decode_token(bundle.access_token, other_settings)
 
+    def test_algorithm_none_rejected(self, settings: ApiSettings) -> None:
+        """Token with alg:none must be rejected (algorithm confusion attack)."""
+        import base64
+        import json
+
+        header = base64.urlsafe_b64encode(
+            json.dumps({"alg": "none", "typ": "JWT"}).encode()
+        ).rstrip(b"=").decode()
+        payload = base64.urlsafe_b64encode(
+            json.dumps({"sub": "alice", "type": "access"}).encode()
+        ).rstrip(b"=").decode()
+        none_token = f"{header}.{payload}."
+        with pytest.raises(TokenError):
+            decode_token(none_token, settings)
+
 
 # ---------------------------------------------------------------------------
 # is_access_token / is_refresh_token

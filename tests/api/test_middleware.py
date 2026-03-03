@@ -316,6 +316,26 @@ class TestRateLimitMiddleware:
         assert limit == 5
         assert window == 30
 
+    def test_rate_limit_key_format(self) -> None:
+        """Rate limit key must follow the '{client_id}:{path}' format (middleware.py:99)."""
+        limiter = _FakeLimiter()
+        settings = _make_settings(rate_limit_enabled=True)
+        app = _build_app(
+            settings=settings,
+            limiter=limiter,
+            include_rate_limit=True,
+            include_security=False,
+        )
+        client = TestClient(app)
+
+        client.get("/test")
+
+        assert len(limiter.calls) == 1
+        key, _limit, _window = limiter.calls[0]
+        # Unauthenticated requests use "ip:{address}" as the client identifier
+        assert key.startswith("ip:")
+        assert key.endswith(":/test")
+
     def test_rate_limit_headers_values(self) -> None:
         reset_ts = int(time.time()) + 120
         limiter = _FakeLimiter(

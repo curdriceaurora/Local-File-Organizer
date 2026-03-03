@@ -97,9 +97,8 @@ class TestInMemoryLoginRateLimiter:
         limiter = InMemoryLoginRateLimiter(max_attempts=2, window_seconds=60)
         limiter.record_failure("user1")
         limiter.record_failure("user1")
-        # Manipulate internal state to simulate window expiry (no public API for this)
-        state = limiter._state["user1"]
-        state.expires_at = time.time() - 1
+        # Use test helper to simulate window expiry
+        limiter._advance_time("user1", 120)
         blocked, retry = limiter.is_blocked("user1")
         assert blocked is False
         assert retry == 0

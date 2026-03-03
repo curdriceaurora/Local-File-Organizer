@@ -222,7 +222,7 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/**/*.py" = ["D"]
-"scripts/**/*.py" = ["D", "C901"]
+"scripts/**/*.py" = ["D"]
 # C901 ratchet baseline — functions exceeding complexity 15 (2026-02-28)
 # Each entry allows existing complex functions; new ones must stay under 15.
 "src/file_organizer/api/config.py" = ["C901"]

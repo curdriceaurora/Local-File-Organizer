@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from unittest.mock import patch
 
 import pytest
@@ -52,15 +51,15 @@ class TestInMemoryTokenStore:
     def test_refresh_expiry_cleanup(self) -> None:
         store = InMemoryTokenStore()
         store.store_refresh("jti-1", "user-1", ttl_seconds=1)
-        # Manipulate internal state to simulate TTL expiry (no public API for this)
-        store._refresh["jti-1"] = time.time() - 1
+        # Use test helper to simulate TTL expiry
+        store._expire_all()
         assert store.is_refresh_active("jti-1") is False
 
     def test_revoked_access_expiry_cleanup(self) -> None:
         store = InMemoryTokenStore()
         store.revoke_access("access-jti-1", ttl_seconds=1)
-        # Manipulate internal state to simulate TTL expiry (no public API for this)
-        store._revoked["access-jti-1"] = time.time() - 1
+        # Use test helper to simulate TTL expiry
+        store._expire_all()
         assert store.is_access_revoked("access-jti-1") is False
 
     def test_multiple_refresh_tokens(self) -> None:

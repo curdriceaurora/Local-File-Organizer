@@ -46,6 +46,8 @@ def _mock_request(headers: dict[str, str] | None = None) -> MagicMock:
 def _mock_db(user: User | None = None) -> MagicMock:
     """Build a mock db session that returns user from .query().filter().first()."""
     db = MagicMock()
+    # Mirrors the ORM call chain in dependencies.py:168 —
+    # db.query(User).filter(User.id == user_id).first()
     db.query.return_value.filter.return_value.first.return_value = user
     return db
 
