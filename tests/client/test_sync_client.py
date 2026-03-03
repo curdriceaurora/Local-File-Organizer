@@ -2,18 +2,10 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-import httpx
 import pytest
 
-from file_organizer.client.exceptions import (
-    AuthenticationError,
-    ClientError,
-    NotFoundError,
-    ServerError,
-    ValidationError,
-)
 from file_organizer.client.sync_client import FileOrganizerClient
 
 
@@ -114,6 +106,8 @@ class TestFileOrganizerClientHelpers:
 
     def test_raise_for_status_success(self) -> None:
         """Test _raise_for_status with success response."""
+        import httpx
+
         response = MagicMock(spec=httpx.Response)
         response.is_success = True
 
@@ -122,6 +116,10 @@ class TestFileOrganizerClientHelpers:
 
     def test_raise_for_status_client_error(self) -> None:
         """Test _raise_for_status with client error."""
+        from file_organizer.client.exceptions import ClientError
+
+        import httpx
+
         response = MagicMock(spec=httpx.Response)
         response.is_success = False
         response.status_code = 400
@@ -133,6 +131,10 @@ class TestFileOrganizerClientHelpers:
 
     def test_raise_for_status_unauthorized(self) -> None:
         """Test _raise_for_status with 401 response."""
+        from file_organizer.client.exceptions import AuthenticationError
+
+        import httpx
+
         response = MagicMock(spec=httpx.Response)
         response.is_success = False
         response.status_code = 401
@@ -144,6 +146,10 @@ class TestFileOrganizerClientHelpers:
 
     def test_raise_for_status_forbidden(self) -> None:
         """Test _raise_for_status with 403 response."""
+        from file_organizer.client.exceptions import AuthenticationError
+
+        import httpx
+
         response = MagicMock(spec=httpx.Response)
         response.is_success = False
         response.status_code = 403
@@ -155,6 +161,10 @@ class TestFileOrganizerClientHelpers:
 
     def test_raise_for_status_not_found(self) -> None:
         """Test _raise_for_status with 404 response."""
+        from file_organizer.client.exceptions import NotFoundError
+
+        import httpx
+
         response = MagicMock(spec=httpx.Response)
         response.is_success = False
         response.status_code = 404
@@ -166,6 +176,10 @@ class TestFileOrganizerClientHelpers:
 
     def test_raise_for_status_validation_error(self) -> None:
         """Test _raise_for_status with 422 response."""
+        from file_organizer.client.exceptions import ValidationError
+
+        import httpx
+
         response = MagicMock(spec=httpx.Response)
         response.is_success = False
         response.status_code = 422
@@ -177,6 +191,10 @@ class TestFileOrganizerClientHelpers:
 
     def test_raise_for_status_server_error(self) -> None:
         """Test _raise_for_status with 500 response."""
+        from file_organizer.client.exceptions import ServerError
+
+        import httpx
+
         response = MagicMock(spec=httpx.Response)
         response.is_success = False
         response.status_code = 500
@@ -188,6 +206,10 @@ class TestFileOrganizerClientHelpers:
 
     def test_raise_for_status_json_parse_error(self) -> None:
         """Test _raise_for_status when JSON parsing fails."""
+        from file_organizer.client.exceptions import ClientError
+
+        import httpx
+
         response = MagicMock(spec=httpx.Response)
         response.is_success = False
         response.status_code = 400
@@ -199,6 +221,10 @@ class TestFileOrganizerClientHelpers:
 
     def test_raise_for_status_uses_message_field(self) -> None:
         """Test _raise_for_status uses message field when detail missing."""
+        from file_organizer.client.exceptions import ClientError
+
+        import httpx
+
         response = MagicMock(spec=httpx.Response)
         response.is_success = False
         response.status_code = 400
@@ -260,9 +286,10 @@ class TestFileOrganizerClientConfiguration:
 
     def test_empty_token_creates_no_auth_header(self) -> None:
         """Test that empty token doesn't create auth header."""
+        client = FileOrganizerClient(token="")
+
         # Empty token should not create Authorization header
         # (Implementation may vary)
-        FileOrganizerClient(token="")
 
     def test_multiple_client_instances_independent(self) -> None:
         """Test that multiple client instances are independent."""
