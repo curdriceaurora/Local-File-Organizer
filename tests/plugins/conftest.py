@@ -140,6 +140,10 @@ def multiple_plugin_dirs(tmp_path: Path) -> dict[str, Path]:
         manifest_path = plugin_root / "plugin.json"
         manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
+        # Create the entry point file
+        plugin_src = plugin_root / "plugin.py"
+        plugin_src.write_text("# dummy plugin")
+
         plugins[f"plugin_{i}"] = plugin_root
 
     return plugins
@@ -202,13 +206,27 @@ def restricted_sandbox() -> PluginSandbox:
 @pytest.fixture
 def mock_subprocess() -> Any:
     """Mock subprocess.Popen for plugin executor testing."""
-    with patch("subprocess.Popen") as mock_popen:
+    # Patch at the location where PluginExecutor imports it
+    with patch("file_organizer.plugins.executor.subprocess.Popen") as mock_popen, \
+         patch("file_organizer.plugins.executor.select.select") as mock_select:
         # Configure mock subprocess behavior
         mock_process = MagicMock()
         mock_process.pid = 12345
         mock_process.poll.return_value = None  # Process still running
         mock_process.wait.return_value = 0  # Success exit code
         mock_process.communicate.return_value = (b"", b"")
+        mock_process.stdin = MagicMock()
+        mock_process.stdout = MagicMock()
+        mock_process.stderr = MagicMock()
+
+        # Return a valid PluginResult response: {"success": true, "return_value": null, "error": null}\n
+        # This is what the executor expects when calling executor.call()
+        success_response = b'{"success":true,"return_value":null,"error":null}\n'
+        mock_process.stdout.readline.return_value = success_response
+        mock_process.stderr.read.return_value = b""
+
+        # Mock select.select to return the stdout as ready (for Unix systems)
+        mock_select.return_value = ([mock_process.stdout], [], [])
 
         mock_popen.return_value = mock_process
         yield mock_popen
