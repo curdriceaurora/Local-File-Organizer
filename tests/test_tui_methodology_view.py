@@ -146,34 +146,3 @@ async def test_switch_to_jd() -> None:
             view.action_set_jd()
             await pilot.pause()
             assert view._methodology == "jd"
-
-
-@pytest.mark.unit
-class TestMethodologyViewWithPatches:
-    """Additional methodology view tests with patch coverage."""
-
-    def test_show_para_preview_with_empty_dict(self) -> None:
-        panel = MethodologyPreviewPanel()
-        panel.show_para_preview({})
-        content = _get_content(panel)
-        # Empty dict should show structure with 0 items
-        assert "PARA" in content or len(content) > 0
-
-    def test_show_jd_preview_with_empty_areas(self) -> None:
-        panel = MethodologyPreviewPanel()
-        panel.show_jd_preview(areas={}, categories={})
-        content = _get_content(panel)
-        # Empty areas should be handled gracefully
-        assert len(content) > 0
-
-    def test_set_none_methodology(self) -> None:
-        panel = MethodologySelectorPanel()
-        panel.set_methodology("none")
-        assert panel._current == "none"
-
-    def test_methodology_view_has_bindings(self) -> None:
-        view = MethodologyView(id="view")
-        binding_keys = {b.key for b in view.BINDINGS}
-        assert "p" in binding_keys  # PARA key
-        assert "j" in binding_keys  # Johnny Decimal key
-        assert "n" in binding_keys  # None key

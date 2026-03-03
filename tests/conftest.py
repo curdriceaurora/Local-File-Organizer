@@ -288,3 +288,23 @@ def isolated_nltk_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         'file_organizer.utils.text_processing.NLTK_AVAILABLE',
         False
     )
+
+
+# ---------------------------------------------------------------------------
+# Database fixtures for API tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def db_session() -> MagicMock:
+    """Create a mock database session for API tests.
+
+    Used for dependency injection in tests that require a database session
+    but don't need a real database connection.
+
+    Returns:
+        A MagicMock session object suitable for API testing.
+    """
+    from sqlalchemy.orm import Session
+    session = MagicMock(spec=Session)
+    return session

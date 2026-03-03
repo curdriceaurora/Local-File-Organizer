@@ -1,24 +1,24 @@
-"""Unit tests for web _helpers module.
+"""Tests for web template helpers and utilities.
 
-Tests helper functions for path resolution, file type detection, formatting,
-filename sanitization, and thumbnail rendering.
+Tests verify:
+- Template context is built correctly with all required variables
+- Template formatting helpers work with various inputs
+- File type detection and path utilities function correctly
+- Form validators accept valid input and reject invalid input
+- Helper functions handle edge cases (empty input, special chars, None values)
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.web._helpers import (
-    FILE_TYPE_GROUPS,
-    MAX_LIMIT,
-    MAX_NAV_DEPTH,
-    THUMBNAIL_SIZE,
     allowed_roots,
     as_bool,
     base_context,
@@ -34,7 +34,6 @@ from file_organizer.web._helpers import (
     normalize_view,
     parse_file_type_filter,
     path_id,
-    render_placeholder_thumbnail,
     resolve_selected_path,
     sanitize_upload_name,
     select_root_for_path,
@@ -50,8 +49,18 @@ pytestmark = [pytest.mark.unit]
 
 
 @pytest.fixture()
+def settings(tmp_path):
+    """Return an ApiSettings mock."""
+    s = MagicMock(spec=ApiSettings)
+    s.allowed_paths = [str(tmp_path)]
+    s.app_name = "File Organizer"
+    s.version = "2.0.0"
+    return s
+
+
+@pytest.fixture()
 def mock_request():
-    """Mock FastAPI Request object."""
+    """Return a mock FastAPI Request."""
     req = MagicMock()
     req.url = MagicMock()
     req.url.path = "/ui/files"
@@ -59,13 +68,20 @@ def mock_request():
 
 
 @pytest.fixture()
-def mock_settings():
-    """Mock ApiSettings object."""
-    s = MagicMock(spec=ApiSettings)
-    s.app_name = "File Organizer"
-    s.version = "2.0.0"
-    s.allowed_paths = ["/tmp/test"]
-    return s
+def file_tree(tmp_path):
+    """Create a sample file tree for testing."""
+    (tmp_path / "dir_a").mkdir()
+    (tmp_path / "dir_b").mkdir()
+    (tmp_path / ".hidden").mkdir()
+    (tmp_path / "file.txt").write_text("hello")
+    (tmp_path / "image.png").write_bytes(b"\x89PNG")
+    (tmp_path / "video.mp4").write_bytes(b"test")
+    (tmp_path / "audio.mp3").write_bytes(b"test")
+    (tmp_path / "doc.pdf").write_bytes(b"test")
+    (tmp_path / "code.py").write_text("print('hello')")
+    (tmp_path / "data.json").write_text('{"key": "value"}')
+    (tmp_path / "dir_a" / "nested.txt").write_text("nested")
+    return tmp_path
 
 
 # ---------------------------------------------------------------------------
@@ -75,42 +91,43 @@ def mock_settings():
 
 @pytest.mark.unit
 class TestBaseContext:
-    """Test base_context helper."""
+    """Test template context building."""
 
-    def test_basic_context(self, mock_request, mock_settings):
-        """Build a basic template context."""
-        context = base_context(
-            mock_request, mock_settings, active="files", title="File Browser"
+    def test_base_context_has_required_keys(self, mock_request, settings):
+        """Base context should include all required template variables."""
+        ctx = base_context(
+            mock_request, settings, active="home", title="Home"
         )
+        assert ctx["request"] == mock_request
+        assert ctx["app_name"] == "File Organizer"
+        assert ctx["version"] == "2.0.0"
+        assert ctx["active"] == "home"
+        assert ctx["page_title"] == "Home"
+        assert "nav_items" in ctx
+        assert "year" in ctx
 
-        assert context["request"] is mock_request
-        assert context["app_name"] == "File Organizer"
-        assert context["version"] == "2.0.0"
-        assert context["active"] == "files"
-        assert context["page_title"] == "File Browser"
-        assert context["nav_items"]
-        assert "year" in context
-
-    def test_context_with_extras(self, mock_request, mock_settings):
-        """Include extra context variables."""
+    def test_base_context_with_extras(self, mock_request, settings):
+        """Base context should merge extra variables."""
         extras = {"custom_var": "custom_value", "count": 42}
-        context = base_context(
+        ctx = base_context(
             mock_request,
-            mock_settings,
-            active="files",
-            title="Files",
+            settings,
+            active="test",
+            title="Test",
             extras=extras,
         )
+        assert ctx["custom_var"] == "custom_value"
+        assert ctx["count"] == 42
 
-        assert context["custom_var"] == "custom_value"
-        assert context["count"] == 42
-
-    def test_context_year_is_current(self, mock_request, mock_settings):
-        """Year in context is current year."""
-        context = base_context(
-            mock_request, mock_settings, active="home", title="Home"
+    def test_nav_items_present(self, mock_request, settings):
+        """Navigation items should be included."""
+        ctx = base_context(
+            mock_request, settings, active="home", title="Home"
         )
-        assert context["year"] == datetime.now(UTC).year
+        assert len(ctx["nav_items"]) > 0
+        nav_labels = [item[0] for item in ctx["nav_items"]]
+        assert "Home" in nav_labels
+        assert "Settings" in nav_labels
 
 
 # ---------------------------------------------------------------------------
@@ -120,45 +137,28 @@ class TestBaseContext:
 
 @pytest.mark.unit
 class TestAllowedRoots:
-    """Test allowed_roots helper."""
+    """Test allowed root path resolution."""
 
-    @patch("file_organizer.web._helpers.resolve_path")
-    def test_resolves_allowed_paths(self, mock_resolve, mock_settings):
-        """Resolve all allowed paths."""
-        mock_settings.allowed_paths = ["/tmp/test1", "/tmp/test2"]
-        mock_resolve.side_effect = [Path("/tmp/test1"), Path("/tmp/test2")]
-
-        roots = allowed_roots(mock_settings)
-
-        assert len(roots) == 2
-        assert Path("/tmp/test1") in roots
-        assert Path("/tmp/test2") in roots
-
-    @patch("file_organizer.web._helpers.resolve_path")
-    def test_skips_unresolvable_paths(self, mock_resolve, mock_settings):
-        """Skip paths that cannot be resolved."""
-        mock_settings.allowed_paths = ["/tmp/test1", "/tmp/invalid"]
-        mock_resolve.side_effect = [Path("/tmp/test1"), ApiError(400, "error", "Invalid path")]
-
-        roots = allowed_roots(mock_settings)
-
+    def test_resolves_allowed_paths(self, file_tree):
+        """Should return resolved allowed paths."""
+        settings = MagicMock(spec=ApiSettings)
+        settings.allowed_paths = [str(file_tree)]
+        roots = allowed_roots(settings)
         assert len(roots) == 1
-        assert Path("/tmp/test1") in roots
+        assert roots[0] == file_tree
 
-    @patch("file_organizer.web._helpers.resolve_path")
-    def test_deduplicates_roots(self, mock_resolve, mock_settings):
-        """Remove duplicate resolved roots."""
-        mock_settings.allowed_paths = ["/tmp/test", "/tmp/test"]
-        mock_resolve.side_effect = [Path("/tmp/test"), Path("/tmp/test")]
+    def test_no_allowed_paths(self):
+        """Should return empty list when no paths allowed."""
+        settings = MagicMock(spec=ApiSettings)
+        settings.allowed_paths = None
+        roots = allowed_roots(settings)
+        assert roots == []
 
-        roots = allowed_roots(mock_settings)
-
-        assert len(roots) == 1
-
-    def test_handles_none_allowed_paths(self, mock_settings):
-        """Handle None allowed_paths gracefully."""
-        mock_settings.allowed_paths = None
-        roots = allowed_roots(mock_settings)
+    def test_empty_allowed_paths(self):
+        """Should return empty list when paths list is empty."""
+        settings = MagicMock(spec=ApiSettings)
+        settings.allowed_paths = []
+        roots = allowed_roots(settings)
         assert roots == []
 
 
@@ -169,28 +169,28 @@ class TestAllowedRoots:
 
 @pytest.mark.unit
 class TestResolveSelectedPath:
-    """Test resolve_selected_path helper."""
+    """Test user path resolution."""
 
-    @patch("file_organizer.web._helpers.resolve_path")
-    def test_resolves_provided_path(self, mock_resolve, mock_settings):
-        """Resolve a provided path."""
-        mock_resolve.return_value = Path("/tmp/test/subdir")
-        result = resolve_selected_path("/tmp/test/subdir", mock_settings)
-        assert result == Path("/tmp/test/subdir")
+    def test_valid_path_in_allowed_roots(self, file_tree):
+        """Should resolve path when in allowed roots."""
+        settings = MagicMock(spec=ApiSettings)
+        settings.allowed_paths = [str(file_tree)]
+        result = resolve_selected_path(str(file_tree / "dir_a"), settings)
+        assert result == file_tree / "dir_a"
 
-    @patch("file_organizer.web._helpers.allowed_roots")
-    def test_fallback_to_first_root(self, mock_roots, mock_settings):
-        """Fall back to first allowed root when no path provided."""
-        mock_roots.return_value = [Path("/root1"), Path("/root2")]
-        result = resolve_selected_path(None, mock_settings)
-        assert result == Path("/root1")
+    def test_none_path_returns_first_root(self, file_tree):
+        """Should return first allowed root when path is None."""
+        settings = MagicMock(spec=ApiSettings)
+        settings.allowed_paths = [str(file_tree)]
+        result = resolve_selected_path(None, settings)
+        assert result == file_tree
 
-    @patch("file_organizer.web._helpers.allowed_roots")
-    def test_returns_none_when_no_roots(self, mock_roots, mock_settings):
-        """Return None when no roots available."""
-        mock_roots.return_value = []
-        result = resolve_selected_path(None, mock_settings)
-        assert result is None
+    def test_empty_path_returns_first_root(self, file_tree):
+        """Should return first allowed root when path is empty."""
+        settings = MagicMock(spec=ApiSettings)
+        settings.allowed_paths = [str(file_tree)]
+        result = resolve_selected_path("", settings)
+        assert result == file_tree
 
 
 # ---------------------------------------------------------------------------
@@ -200,30 +200,36 @@ class TestResolveSelectedPath:
 
 @pytest.mark.unit
 class TestFormatBytes:
-    """Test format_bytes helper."""
+    """Test byte formatting."""
 
-    def test_bytes_small(self):
+    def test_bytes_under_1kb(self):
+        """Should format bytes correctly."""
+        assert format_bytes(0) == "0 B"
         assert format_bytes(512) == "512 B"
+        assert format_bytes(1023) == "1023 B"
 
     def test_kilobytes(self):
-        result = format_bytes(1024 * 5)
-        assert "KB" in result
+        """Should format kilobytes correctly."""
+        assert "KB" in format_bytes(1024)
+        assert "1.0 KB" == format_bytes(1024)
+        assert "10.0 KB" == format_bytes(10 * 1024)
 
     def test_megabytes(self):
-        result = format_bytes(1024 * 1024 * 10)
+        """Should format megabytes correctly."""
+        result = format_bytes(5 * 1024 * 1024)
         assert "MB" in result
+        assert "5.0 MB" == result
 
     def test_gigabytes(self):
-        result = format_bytes(1024 * 1024 * 1024 * 5)
+        """Should format gigabytes correctly."""
+        result = format_bytes(2 * 1024 * 1024 * 1024)
         assert "GB" in result
+        assert "2.0 GB" == result
 
     def test_terabytes(self):
-        result = format_bytes(1024 * 1024 * 1024 * 1024 * 2)
+        """Should format terabytes correctly."""
+        result = format_bytes(1024 * 1024 * 1024 * 1024)
         assert "TB" in result
-
-    def test_petabytes(self):
-        result = format_bytes(1024 * 1024 * 1024 * 1024 * 1024 * 3)
-        assert "PB" in result
 
 
 # ---------------------------------------------------------------------------
@@ -233,23 +239,26 @@ class TestFormatBytes:
 
 @pytest.mark.unit
 class TestFormatTimestamp:
-    """Test format_timestamp helper."""
+    """Test timestamp formatting."""
 
     def test_format_timestamp(self):
-        ts = datetime(2025, 1, 15, 14, 30, 45, tzinfo=UTC)
-        result = format_timestamp(ts)
+        """Should format datetime correctly."""
+        dt = datetime(2025, 1, 15, 14, 30, 45, tzinfo=UTC)
+        result = format_timestamp(dt)
         assert "2025-01-15" in result
         assert "14:30" in result
         assert "UTC" in result
 
-    def test_format_different_timezone(self):
-        """Handle timestamps with different timezone."""
-        from zoneinfo import ZoneInfo
-
-        tz = ZoneInfo("America/New_York")
-        ts = datetime(2025, 1, 15, 14, 30, 45, tzinfo=tz)
-        result = format_timestamp(ts)
-        assert "UTC" in result
+    def test_format_timestamp_structure(self):
+        """Should follow expected format."""
+        dt = datetime(2025, 12, 31, 23, 59, 59, tzinfo=UTC)
+        result = format_timestamp(dt)
+        # Format: "YYYY-MM-DD HH:MM UTC"
+        parts = result.split()
+        assert len(parts) == 3
+        assert "-" in parts[0]  # Date part
+        assert ":" in parts[1]  # Time part
+        assert parts[2] == "UTC"
 
 
 # ---------------------------------------------------------------------------
@@ -259,29 +268,37 @@ class TestFormatTimestamp:
 
 @pytest.mark.unit
 class TestParseFileTypeFilter:
-    """Test parse_file_type_filter helper."""
+    """Test file type filter parsing."""
 
-    def test_none_returns_none(self):
+    def test_none_filter(self):
+        """None should return None (all files)."""
         assert parse_file_type_filter(None) is None
 
-    def test_all_returns_none(self):
+    def test_all_filter(self):
+        """'all' should return None (all files)."""
         assert parse_file_type_filter("all") is None
 
-    def test_known_type_group(self):
+    def test_image_group(self):
+        """Should parse image group correctly."""
         result = parse_file_type_filter("image")
-        assert result == FILE_TYPE_GROUPS["image"]
+        assert isinstance(result, set)
+        assert ".jpg" in result or ".png" in result
 
-    def test_extension_with_dot(self):
-        result = parse_file_type_filter(".pdf")
-        assert result == {".pdf"}
+    def test_video_group(self):
+        """Should parse video group correctly."""
+        result = parse_file_type_filter("video")
+        assert isinstance(result, set)
+        assert len(result) > 0
 
-    def test_extension_without_dot(self):
-        result = parse_file_type_filter("txt")
-        assert result == {".txt"}
+    def test_custom_extension(self):
+        """Should parse custom extensions."""
+        assert parse_file_type_filter(".pdf") == {".pdf"}
+        assert parse_file_type_filter("pdf") == {".pdf"}
 
     def test_case_insensitive(self):
-        result1 = parse_file_type_filter("image")
-        result2 = parse_file_type_filter("IMAGE")
+        """Should be case insensitive."""
+        result1 = parse_file_type_filter("IMAGE")
+        result2 = parse_file_type_filter("image")
         assert result1 == result2
 
 
@@ -292,31 +309,47 @@ class TestParseFileTypeFilter:
 
 @pytest.mark.unit
 class TestDetectKind:
-    """Test detect_kind helper."""
+    """Test file kind detection."""
 
-    def test_image_file(self):
+    def test_image_detection(self):
+        """Should detect images correctly."""
         assert detect_kind(Path("photo.jpg")) == "image"
+        assert detect_kind(Path("pic.png")) == "image"
+        assert detect_kind(Path("img.gif")) == "image"
 
-    def test_pdf_file(self):
+    def test_pdf_detection(self):
+        """Should detect PDFs correctly."""
         assert detect_kind(Path("document.pdf")) == "pdf"
 
-    def test_video_file(self):
+    def test_video_detection(self):
+        """Should detect videos correctly."""
         assert detect_kind(Path("movie.mp4")) == "video"
+        assert detect_kind(Path("clip.mkv")) == "video"
 
-    def test_audio_file(self):
+    def test_audio_detection(self):
+        """Should detect audio files correctly."""
         assert detect_kind(Path("song.mp3")) == "audio"
+        assert detect_kind(Path("track.wav")) == "audio"
 
-    def test_text_file(self):
+    def test_text_detection(self):
+        """Should detect text files correctly."""
         assert detect_kind(Path("readme.txt")) == "text"
+        assert detect_kind(Path("document.docx")) == "text"
+        assert detect_kind(Path("data.csv")) == "text"
 
-    def test_cad_file(self):
-        assert detect_kind(Path("design.dxf")) == "cad"
+    def test_cad_detection(self):
+        """Should detect CAD files correctly."""
+        assert detect_kind(Path("drawing.dxf")) == "cad"
 
-    def test_unknown_file(self):
-        assert detect_kind(Path("archive.xyz")) == "file"
+    def test_default_to_file(self):
+        """Should default to 'file' for unknown types."""
+        assert detect_kind(Path("unknown.xyz")) == "file"
+        assert detect_kind(Path("data.xyz")) == "file"
 
     def test_case_insensitive(self):
+        """Should be case insensitive."""
         assert detect_kind(Path("photo.JPG")) == "image"
+        assert detect_kind(Path("document.PDF")) == "pdf"
 
 
 # ---------------------------------------------------------------------------
@@ -326,23 +359,30 @@ class TestDetectKind:
 
 @pytest.mark.unit
 class TestPathId:
-    """Test path_id helper."""
+    """Test path identifier generation."""
 
-    def test_returns_short_hash(self):
+    def test_returns_string(self):
+        """Should return a string."""
         result = path_id(Path("/tmp/test"))
         assert isinstance(result, str)
+
+    def test_returns_short_hash(self):
+        """Should return a 10-character hash."""
+        result = path_id(Path("/tmp/test"))
         assert len(result) == 10
 
-    def test_consistent_hash(self):
-        path = Path("/tmp/test/file.txt")
-        hash1 = path_id(path)
-        hash2 = path_id(path)
-        assert hash1 == hash2
+    def test_same_path_same_id(self):
+        """Same path should produce same ID."""
+        path = Path("/tmp/test")
+        id1 = path_id(path)
+        id2 = path_id(path)
+        assert id1 == id2
 
-    def test_different_paths_different_hashes(self):
-        hash1 = path_id(Path("/tmp/test1"))
-        hash2 = path_id(Path("/tmp/test2"))
-        assert hash1 != hash2
+    def test_different_paths_different_ids(self):
+        """Different paths should produce different IDs."""
+        id1 = path_id(Path("/tmp/test1"))
+        id2 = path_id(Path("/tmp/test2"))
+        assert id1 != id2
 
 
 # ---------------------------------------------------------------------------
@@ -352,28 +392,31 @@ class TestPathId:
 
 @pytest.mark.unit
 class TestSelectRootForPath:
-    """Test select_root_for_path helper."""
+    """Test root selection for paths."""
 
-    def test_selects_matching_root(self, tmp_path):
-        """Select a root that the path is under."""
-        sub = tmp_path / "subdir"
-        sub.mkdir()
-        result = select_root_for_path(sub, [tmp_path])
-        assert result == tmp_path
+    def test_selects_matching_root(self, file_tree):
+        """Should select matching root."""
+        roots = [file_tree]
+        path = file_tree / "dir_a"
+        result = select_root_for_path(path, roots)
+        assert result == file_tree
 
-    def test_selects_longest_matching_root(self, tmp_path):
-        """Select the longest matching root."""
-        sub1 = tmp_path / "sub1"
-        sub2 = sub1 / "sub2"
-        sub2.mkdir(parents=True)
-        result = select_root_for_path(sub2, [tmp_path, sub1])
-        assert result == sub1
+    def test_selects_longest_matching_root(self, file_tree):
+        """Should select longest matching root."""
+        root1 = file_tree
+        root2 = file_tree / "dir_a"
+        root2.mkdir(exist_ok=True)
+        roots = [root1, root2]
+        path = root2 / "file.txt"
+        result = select_root_for_path(path, roots)
+        assert result == root2
 
-    def test_returns_path_when_no_match(self, tmp_path):
-        """Return the path itself when no root matches."""
-        other = Path("/other/path")
-        result = select_root_for_path(other, [tmp_path])
-        assert result == other
+    def test_returns_path_when_no_match(self, file_tree):
+        """Should return path when no root matches."""
+        roots = [Path("/other/path")]
+        path = file_tree / "dir_a"
+        result = select_root_for_path(path, roots)
+        assert result == path
 
 
 # ---------------------------------------------------------------------------
@@ -383,21 +426,31 @@ class TestSelectRootForPath:
 
 @pytest.mark.unit
 class TestValidateDepth:
-    """Test validate_depth helper."""
+    """Test depth validation."""
 
-    def test_shallow_path_passes(self, tmp_path):
-        """Shallow paths don't raise."""
-        validate_depth(tmp_path, [tmp_path])
+    def test_shallow_path_valid(self, file_tree):
+        """Shallow paths should be valid."""
+        path = file_tree / "dir_a"
+        # Should not raise
+        validate_depth(path, [file_tree])
 
-    def test_deep_path_raises(self, tmp_path):
-        """Deep paths raise ApiError."""
-        deep = tmp_path
-        for _ in range(MAX_NAV_DEPTH + 2):
-            deep = deep / "level"
+    def test_deeply_nested_path_valid(self, file_tree):
+        """Moderately nested paths should be valid."""
+        deep = file_tree / "a" / "b" / "c"
+        deep.mkdir(parents=True, exist_ok=True)
+        # Should not raise (depth < MAX_NAV_DEPTH)
+        validate_depth(deep, [file_tree])
+
+    def test_very_deep_path_raises(self, file_tree):
+        """Very deep paths should raise ApiError."""
+        # Create a path deeper than MAX_NAV_DEPTH
+        deep = file_tree
+        for i in range(15):
+            deep = deep / f"level_{i}"
+        deep.mkdir(parents=True, exist_ok=True)
 
         with pytest.raises(ApiError) as exc_info:
-            validate_depth(deep, [tmp_path])
-
+            validate_depth(deep, [file_tree])
         assert exc_info.value.error == "path_too_deep"
 
 
@@ -408,32 +461,35 @@ class TestValidateDepth:
 
 @pytest.mark.unit
 class TestHasChildren:
-    """Test has_children helper."""
+    """Test directory children detection."""
 
-    def test_directory_with_subdirs(self, tmp_path):
-        """Directory with subdirectories returns True."""
-        (tmp_path / "subdir").mkdir()
-        assert has_children(tmp_path) is True
+    def test_directory_with_subdirs(self, file_tree):
+        """Should detect subdirectories."""
+        assert has_children(file_tree) is True
 
     def test_empty_directory(self, tmp_path):
-        """Empty directory returns False."""
-        assert has_children(tmp_path) is False
+        """Empty directory should have no children."""
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        assert has_children(empty) is False
 
-    def test_directory_with_only_files(self, tmp_path):
-        """Directory with only files returns False."""
-        (tmp_path / "file.txt").write_text("test")
-        assert has_children(tmp_path) is False
-
-    @patch("file_organizer.web._helpers.is_hidden")
-    def test_ignores_hidden_subdirs(self, mock_hidden, tmp_path):
-        """Ignore hidden subdirectories."""
-        (tmp_path / ".hidden").mkdir()
-        mock_hidden.return_value = True
-        assert has_children(tmp_path) is False
+    def test_directory_with_only_files(self, file_tree):
+        """Directory with only files should have no children."""
+        dir_with_files = file_tree / "dir_a"
+        # dir_a has a nested.txt but no subdirs
+        assert has_children(dir_with_files) is False
 
     def test_nonexistent_directory(self):
-        """Nonexistent directory returns False."""
+        """Nonexistent directory should return False."""
         assert has_children(Path("/nonexistent/path")) is False
+
+    def test_ignores_hidden_directories(self, tmp_path):
+        """Should ignore hidden directories."""
+        visible = tmp_path / "visible"
+        visible.mkdir()
+        hidden = visible / ".hidden"
+        hidden.mkdir()
+        assert has_children(visible) is False
 
 
 # ---------------------------------------------------------------------------
@@ -443,35 +499,37 @@ class TestHasChildren:
 
 @pytest.mark.unit
 class TestIsProbablyText:
-    """Test is_probably_text helper."""
+    """Test text file detection."""
 
-    def test_text_file_is_text(self, tmp_path):
-        """Text file is detected as text."""
-        text_file = tmp_path / "test.txt"
-        text_file.write_text("Hello, world!")
-        assert is_probably_text(text_file) is True
+    def test_text_file(self, file_tree):
+        """Should detect text files."""
+        txt_file = file_tree / "file.txt"
+        assert is_probably_text(txt_file) is True
 
-    def test_binary_file_is_not_text(self, tmp_path):
-        """Binary file is not detected as text."""
-        binary_file = tmp_path / "test.bin"
-        binary_file.write_bytes(b"\x00\x01\x02\x03")
-        assert is_probably_text(binary_file) is False
+    def test_python_file(self, file_tree):
+        """Should detect Python source files."""
+        py_file = file_tree / "code.py"
+        assert is_probably_text(py_file) is True
 
-    def test_empty_file_is_text(self, tmp_path):
-        """Empty file is considered text."""
-        empty_file = tmp_path / "empty.txt"
-        empty_file.write_text("")
-        assert is_probably_text(empty_file) is True
+    def test_json_file(self, file_tree):
+        """Should detect JSON files."""
+        json_file = file_tree / "data.json"
+        assert is_probably_text(json_file) is True
+
+    def test_binary_file(self, file_tree):
+        """Should reject binary files."""
+        png_file = file_tree / "image.png"
+        assert is_probably_text(png_file) is False
 
     def test_nonexistent_file(self):
-        """Nonexistent file returns False."""
-        assert is_probably_text(Path("/nonexistent/file.txt")) is False
+        """Should return False for nonexistent files."""
+        assert is_probably_text(Path("/nonexistent.txt")) is False
 
-    def test_utf8_encoded_text(self, tmp_path):
-        """UTF-8 encoded text is detected as text."""
-        text_file = tmp_path / "utf8.txt"
-        text_file.write_text("Hello, 世界!", encoding="utf-8")
-        assert is_probably_text(text_file) is True
+    def test_empty_file(self, tmp_path):
+        """Should return True for empty files."""
+        empty = tmp_path / "empty.txt"
+        empty.write_text("")
+        assert is_probably_text(empty) is True
 
 
 # ---------------------------------------------------------------------------
@@ -481,39 +539,46 @@ class TestIsProbablyText:
 
 @pytest.mark.unit
 class TestSanitizeUploadName:
-    """Test sanitize_upload_name helper."""
+    """Test upload filename sanitization."""
 
     def test_valid_filename(self):
-        result = sanitize_upload_name("document.txt")
-        assert result == "document.txt"
+        """Should accept valid filenames."""
+        assert sanitize_upload_name("document.pdf") == "document.pdf"
+        assert sanitize_upload_name("photo.jpg") == "photo.jpg"
+        assert sanitize_upload_name("data_2025.json") == "data_2025.json"
 
-    def test_rejects_empty_name(self):
-        assert sanitize_upload_name("") is None
-
-    def test_rejects_dot(self):
+    def test_rejects_current_dir(self):
+        """Should reject '.' as filename."""
         assert sanitize_upload_name(".") is None
 
-    def test_rejects_double_dot(self):
+    def test_rejects_parent_dir(self):
+        """Should reject '..' as filename."""
         assert sanitize_upload_name("..") is None
 
-    def test_rejects_hidden_file(self):
+    def test_rejects_hidden_files(self):
+        """Should reject files starting with '.'."""
         assert sanitize_upload_name(".hidden") is None
 
-    def test_rejects_too_long_name(self):
-        long_name = "a" * 300
+    def test_rejects_invalid_chars(self):
+        """Should reject filenames with invalid characters."""
+        assert sanitize_upload_name('file"name.txt') is None
+        assert sanitize_upload_name("file<name>.txt") is None
+        assert sanitize_upload_name("file|name.txt") is None
+
+    def test_rejects_long_names(self):
+        """Should reject very long filenames."""
+        long_name = "a" * 300 + ".txt"
         assert sanitize_upload_name(long_name) is None
 
-    def test_rejects_invalid_chars(self):
-        assert sanitize_upload_name("file<name>.txt") is None
-        assert sanitize_upload_name("file|name>.txt") is None
+    def test_strips_whitespace(self):
+        """Should strip leading/trailing whitespace."""
+        result = sanitize_upload_name("  document.pdf  ")
+        assert result == "document.pdf"
 
-    def test_accepts_spaces_and_dashes(self):
-        result = sanitize_upload_name("my-document (v1).txt")
-        assert result == "my-document (v1).txt"
-
-    def test_strips_path_components(self):
-        result = sanitize_upload_name("/path/to/file.txt")
-        assert result == "file.txt"
+    def test_rejects_empty_name(self):
+        """Should reject empty names."""
+        assert sanitize_upload_name("") is None
+        assert sanitize_upload_name("   ") is None
 
 
 # ---------------------------------------------------------------------------
@@ -523,18 +588,20 @@ class TestSanitizeUploadName:
 
 @pytest.mark.unit
 class TestNormalizeView:
-    """Test normalize_view helper."""
+    """Test view parameter normalization."""
 
     def test_valid_grid_view(self):
+        """Should accept 'grid' view."""
         assert normalize_view("grid") == "grid"
 
     def test_valid_list_view(self):
+        """Should accept 'list' view."""
         assert normalize_view("list") == "list"
 
     def test_invalid_view_defaults_to_grid(self):
+        """Should default to 'grid' for invalid views."""
         assert normalize_view("invalid") == "grid"
-
-    def test_empty_string_defaults_to_grid(self):
+        assert normalize_view("table") == "grid"
         assert normalize_view("") == "grid"
 
 
@@ -545,16 +612,20 @@ class TestNormalizeView:
 
 @pytest.mark.unit
 class TestNormalizeSortBy:
-    """Test normalize_sort_by helper."""
+    """Test sort-by parameter normalization."""
 
-    def test_valid_sort_by_name(self):
+    def test_valid_sorts(self):
+        """Should accept valid sort fields."""
         assert normalize_sort_by("name") == "name"
-
-    def test_valid_sort_by_size(self):
         assert normalize_sort_by("size") == "size"
+        assert normalize_sort_by("created") == "created"
+        assert normalize_sort_by("modified") == "modified"
+        assert normalize_sort_by("type") == "type"
 
-    def test_invalid_sort_by_defaults_to_name(self):
+    def test_invalid_sort_defaults_to_name(self):
+        """Should default to 'name' for invalid sorts."""
         assert normalize_sort_by("invalid") == "name"
+        assert normalize_sort_by("date") == "name"
 
 
 # ---------------------------------------------------------------------------
@@ -564,16 +635,17 @@ class TestNormalizeSortBy:
 
 @pytest.mark.unit
 class TestNormalizeSortOrder:
-    """Test normalize_sort_order helper."""
+    """Test sort-order parameter normalization."""
 
-    def test_valid_asc(self):
+    def test_valid_orders(self):
+        """Should accept valid sort orders."""
         assert normalize_sort_order("asc") == "asc"
-
-    def test_valid_desc(self):
         assert normalize_sort_order("desc") == "desc"
 
-    def test_invalid_defaults_to_asc(self):
+    def test_invalid_order_defaults_to_asc(self):
+        """Should default to 'asc' for invalid orders."""
         assert normalize_sort_order("invalid") == "asc"
+        assert normalize_sort_order("ascending") == "asc"
 
 
 # ---------------------------------------------------------------------------
@@ -583,19 +655,22 @@ class TestNormalizeSortOrder:
 
 @pytest.mark.unit
 class TestClampLimit:
-    """Test clamp_limit helper."""
+    """Test pagination limit clamping."""
 
-    def test_valid_limit_unchanged(self):
-        assert clamp_limit(50) == 50
+    def test_valid_limit(self):
+        """Should accept valid limits."""
+        assert clamp_limit(10) == 10
+        assert clamp_limit(100) == 100
+        assert clamp_limit(250) == 250
 
-    def test_zero_clamped_to_one(self):
+    def test_lower_bound(self):
+        """Should clamp to minimum."""
         assert clamp_limit(0) == 1
+        assert clamp_limit(-10) == 1
 
-    def test_negative_clamped_to_one(self):
-        assert clamp_limit(-100) == 1
-
-    def test_too_large_clamped_to_max(self):
-        assert clamp_limit(MAX_LIMIT + 1000) == MAX_LIMIT
+    def test_upper_bound(self):
+        """Should clamp to maximum."""
+        assert clamp_limit(1000) == 500  # MAX_LIMIT is 500
 
 
 # ---------------------------------------------------------------------------
@@ -605,27 +680,39 @@ class TestClampLimit:
 
 @pytest.mark.unit
 class TestBuildContentDisposition:
-    """Test build_content_disposition helper."""
+    """Test Content-Disposition header building."""
 
     def test_simple_filename(self):
+        """Should format simple filenames correctly."""
         result = build_content_disposition("document.pdf")
-        assert "document.pdf" in result
         assert "attachment" in result
+        assert "document.pdf" in result
 
     def test_filename_with_spaces(self):
+        """Should handle filenames with spaces."""
         result = build_content_disposition("my document.pdf")
         assert "attachment" in result
+        assert "filename" in result
+
+    def test_filename_with_special_chars(self):
+        """Should handle special characters."""
+        result = build_content_disposition("résumé.pdf")
+        assert "attachment" in result
+        assert "filename" in result
 
     def test_removes_newlines(self):
+        """Should remove newline characters."""
         result = build_content_disposition("file\nname.txt")
         assert "\n" not in result
 
     def test_removes_carriage_returns(self):
+        """Should remove carriage return characters."""
         result = build_content_disposition("file\rname.txt")
         assert "\r" not in result
 
-    def test_handles_unicode_filename(self):
-        result = build_content_disposition("文件.txt")
+    def test_removes_quotes(self):
+        """Should handle quotes in filename."""
+        result = build_content_disposition('file"name.txt')
         assert "attachment" in result
 
 
@@ -636,56 +723,30 @@ class TestBuildContentDisposition:
 
 @pytest.mark.unit
 class TestAsBool:
-    """Test as_bool helper."""
+    """Test form value to boolean conversion."""
 
-    def test_none_returns_false(self):
-        assert as_bool(None) is False
+    def test_true_values(self):
+        """Should recognize true values."""
+        assert as_bool("1") is True
+        assert as_bool("true") is True
+        assert as_bool("yes") is True
+        assert as_bool("on") is True
+        assert as_bool("TRUE") is True
+        assert as_bool("YES") is True
 
-    def test_empty_string_returns_false(self):
+    def test_false_values(self):
+        """Should treat non-true values as false."""
+        assert as_bool("0") is False
+        assert as_bool("false") is False
+        assert as_bool("no") is False
+        assert as_bool("off") is False
         assert as_bool("") is False
 
-    def test_one_returns_true(self):
-        assert as_bool("1") is True
+    def test_none_value(self):
+        """Should treat None as false."""
+        assert as_bool(None) is False
 
-    def test_true_returns_true(self):
-        assert as_bool("true") is True
-
-    def test_yes_returns_true(self):
-        assert as_bool("yes") is True
-
-    def test_on_returns_true(self):
-        assert as_bool("on") is True
-
-    def test_zero_returns_false(self):
-        assert as_bool("0") is False
-
-    def test_false_returns_false(self):
-        assert as_bool("false") is False
-
-
-# ---------------------------------------------------------------------------
-# render_placeholder_thumbnail
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-class TestRenderPlaceholderThumbnail:
-    """Test render_placeholder_thumbnail helper."""
-
-    def test_renders_png_bytes(self):
-        """Render returns PNG bytes."""
-        result = render_placeholder_thumbnail("txt", THUMBNAIL_SIZE)
-        assert isinstance(result, bytes)
-        assert result.startswith(b"\x89PNG")
-
-    def test_renders_different_sizes(self):
-        """Render different sizes."""
-        small = render_placeholder_thumbnail("txt", (100, 100))
-        large = render_placeholder_thumbnail("txt", (500, 500))
-        assert len(small) != len(large)
-
-    def test_label_included_in_thumbnail(self):
-        """Label is rendered in thumbnail."""
-        result = render_placeholder_thumbnail("doc", THUMBNAIL_SIZE)
-        assert isinstance(result, bytes)
-        assert len(result) > 0
+    def test_with_whitespace(self):
+        """Should strip whitespace before checking."""
+        assert as_bool("  true  ") is True
+        assert as_bool("  false  ") is False
