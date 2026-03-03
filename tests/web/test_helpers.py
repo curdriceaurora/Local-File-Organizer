@@ -15,12 +15,9 @@ import pytest
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
 from file_organizer.web._helpers import (
-    ALLOWED_SORT_BY,
-    ALLOWED_VIEWS,
     FILE_TYPE_GROUPS,
     MAX_LIMIT,
     MAX_NAV_DEPTH,
-    SAFE_FILENAME_RE,
     THUMBNAIL_SIZE,
     allowed_roots,
     as_bool,
