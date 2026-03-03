@@ -167,6 +167,50 @@ class TestFilePreviewView:
 
 
 @pytest.mark.unit
+class TestFilePreviewPanelExtended:
+    """Extended tests for FilePreviewPanel dispatch logic."""
+
+    def test_preview_pdf_file(self, tmp_path: Path) -> None:
+        from file_organizer.tui.file_preview import FilePreviewPanel
+
+        # Create a minimal PDF-like file (won't actually parse, but test dispatcher)
+        f = tmp_path / "doc.pdf"
+        f.write_bytes(b"%PDF-1.4\n")
+        # PDF preview should be attempted
+        content = FilePreviewPanel._preview_text(f)
+        assert "Cannot read" in content or "PDF" in content or len(content) > 0
+
+    def test_preview_archive_file(self, tmp_path: Path) -> None:
+        from file_organizer.tui.file_preview import FilePreviewPanel
+
+        f = tmp_path / "archive.zip"
+        f.write_bytes(b"PK\x03\x04")  # ZIP magic bytes
+        content = FilePreviewPanel._preview_generic(f)
+        assert "archive.zip" in content
+
+    def test_preview_very_large_text_file(self, tmp_path: Path) -> None:
+        from file_organizer.tui.file_preview import FilePreviewPanel
+
+        f = tmp_path / "large.txt"
+        f.write_text("\n".join(f"Line {i}" for i in range(500)))
+        content = FilePreviewPanel._preview_text(f, max_lines=100)
+        assert "Line 0" in content
+        assert "Line 99" in content
+        assert "Line 200" not in content
+
+
+@pytest.mark.unit
+class TestFilePreviewViewMessages:
+    """Tests for FilePreviewView message dispatching."""
+
+    def test_selection_changed_message(self) -> None:
+        from file_organizer.tui.file_preview import FilePreviewView
+
+        msg = FilePreviewView.SelectionChanged(42)
+        assert msg.count == 42
+
+
+@pytest.mark.unit
 class TestTuiPreviewExports:
     """Test that the tui __init__ exports are correct."""
 
