@@ -6,7 +6,7 @@ API endpoints for file organization operations.
 
 Analyze files to plan organization.
 
-```
+```text
 POST /api/v1/organize/scan
 ```
 
@@ -39,7 +39,7 @@ POST /api/v1/organize/scan
 
 Preview what organization will do (dry run).
 
-```
+```text
 POST /api/v1/organize/preview
 ```
 
@@ -72,7 +72,7 @@ POST /api/v1/organize/preview
 
 Apply the planned organization.
 
-```
+```text
 POST /api/v1/organize/execute
 ```
 
@@ -103,7 +103,7 @@ POST /api/v1/organize/execute
 
 Get organization job status and progress.
 
-```
+```text
 GET /api/v1/organize/status/{job_id}
 ```
 

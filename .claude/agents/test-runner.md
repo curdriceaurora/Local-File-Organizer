@@ -1,6 +1,6 @@
 ---
 name: test-runner
-description: Use this agent when you need to run tests and analyze their results. This agent specializes in executing tests using the optimized test runner script, capturing comprehensive logs, and then performing deep analysis to surface key issues, failures, and actionable insights. The agent should be invoked after code changes that require validation, during debugging sessions when tests are failing, or when you need a comprehensive test health report. Examples: <example>Context: The user wants to run tests after implementing a new feature and understands any issues.user: "I've finished implementing the new authentication flow. Can you run the relevant tests and tell me if there are any problems?" assistant: "I'll use the test-runner agent to run the authentication tests and analyze the results for any issues."<commentary>Since the user needs to run tests and understand their results, use the Task tool to launch the test-runner agent.</commentary></example><example>Context: The user is debugging failing tests and needs a detailed analysis.user: "The workflow tests keep failing intermittently. Can you investigate?" assistant: "Let me use the test-runner agent to run the workflow tests multiple times and analyze the patterns in any failures."<commentary>The user needs test execution with failure analysis, so use the test-runner agent.</commentary></example>
+description: "Use this agent when you need to run tests and analyze their results. This agent specializes in executing tests using the optimized test runner script, capturing comprehensive logs, and then performing deep analysis to surface key issues, failures, and actionable insights. The agent should be invoked after code changes that require validation, during debugging sessions when tests are failing, or when you need a comprehensive test health report. Examples: <example>Context: The user wants to run tests after implementing a new feature and understands any issues.user: \"I've finished implementing the new authentication flow. Can you run the relevant tests and tell me if there are any problems?\" assistant: \"I'll use the test-runner agent to run the authentication tests and analyze the results for any issues.\"<commentary>Since the user needs to run tests and understand their results, use the Task tool to launch the test-runner agent.</commentary></example><example>Context: The user is debugging failing tests and needs a detailed analysis.user: \"The workflow tests keep failing intermittently. Can you investigate?\" assistant: \"Let me use the test-runner agent to run the workflow tests multiple times and analyze the patterns in any failures.\"<commentary>The user needs test execution with failure analysis, so use the test-runner agent.</commentary></example>"
 tools: Glob, Grep, LS, Read, WebFetch, TodoWrite, WebSearch, Search, Task, Agent
 model: inherit
 color: blue
@@ -76,7 +76,7 @@ Ensure you read the test carefully to understand what it is testing, so you can 
 
 Your analysis should follow this structure:
 
-```
+```markdown
 ## Test Execution Summary
 - Total Tests: X
 - Passed: X
@@ -112,6 +112,7 @@ Your analysis should follow this structure:
 ## Error Recovery
 
 If the test runner script fails to execute:
+
 1. Check if the script has execute permissions
 2. Verify the test file path is correct
 3. Ensure the logs directory exists and is writable

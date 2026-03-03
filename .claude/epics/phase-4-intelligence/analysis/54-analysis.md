@@ -20,15 +20,18 @@ Develop an intelligent auto-tagging system that analyzes file content and user b
 
 **Scope**: File content analysis and tag extraction
 **Files**:
+
 - `file_organizer/services/auto_tagging/tag_analyzer.py`
 - `file_organizer/services/auto_tagging/content_extractor.py`
 - `file_organizer/services/auto_tagging/keyword_extractor.py`
+
 **Agent Type**: backend-specialist (NLP/ML focus)
 **Can Start**: after Task 52 complete
 **Estimated Hours**: 6 hours
 **Dependencies**: Task 52 (smart suggestions infrastructure)
 
 **Deliverables**:
+
 - ContentTagAnalyzer class
 - File content extraction (text, metadata, EXIF)
 - Keyword extraction using TF-IDF
@@ -42,15 +45,18 @@ Develop an intelligent auto-tagging system that analyzes file content and user b
 
 **Scope**: Learning from user tagging patterns
 **Files**:
+
 - `file_organizer/services/auto_tagging/tag_learning.py`
 - `file_organizer/services/auto_tagging/tag_patterns.py`
 - `file_organizer/models/tag_types.py`
+
 **Agent Type**: backend-specialist (ML focus)
 **Can Start**: after Task 52, 49, 50 complete
 **Estimated Hours**: 6 hours
 **Dependencies**: Task 52, 49, 50
 
 **Deliverables**:
+
 - TagLearningEngine class
 - User tagging pattern analysis
 - Tag co-occurrence tracking
@@ -64,14 +70,17 @@ Develop an intelligent auto-tagging system that analyzes file content and user b
 
 **Scope**: Tag suggestion generation and ranking
 **Files**:
+
 - `file_organizer/services/auto_tagging/tag_recommender.py`
 - `file_organizer/services/auto_tagging/auto_tagging.py` (orchestrator)
+
 **Agent Type**: backend-specialist
 **Can Start**: after Task 52, 49, 50 complete
 **Estimated Hours**: 3 hours
 **Dependencies**: Task 52, 49, 50
 
 **Deliverables**:
+
 - TagRecommender class
 - Suggestion generation combining content + behavior signals
 - Confidence scoring for tag recommendations
@@ -85,18 +94,21 @@ Develop an intelligent auto-tagging system that analyzes file content and user b
 
 **Scope**: CLI commands, integration, and comprehensive testing
 **Files**:
+
 - `file_organizer/cli/tag.py` (new CLI subcommand)
 - `file_organizer/services/auto_tagging/__init__.py`
 - `tests/services/auto_tagging/test_tag_analyzer.py`
 - `tests/services/auto_tagging/test_tag_learning.py`
 - `tests/services/auto_tagging/test_tag_recommender.py`
 - `tests/integration/test_auto_tagging_e2e.py`
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Streams A, B, C complete
 **Estimated Hours**: 1 hour
 **Dependencies**: Streams A, B, C
 
 **Deliverables**:
+
 - CLI commands for auto-tagging
 - Unit tests for all components (>85% coverage)
 - Integration tests with Task 52, 49, 50
@@ -110,6 +122,7 @@ Develop an intelligent auto-tagging system that analyzes file content and user b
 ### Shared Files
 
 Minimal overlap:
+
 - `file_organizer/services/auto_tagging/__init__.py` - Stream D updates after A, B, C complete
 - `file_organizer/models/tag_types.py` - Stream B owns, others import
 
@@ -118,6 +131,7 @@ Minimal overlap:
 To enable parallel work, define these interfaces upfront:
 
 **ContentTagAnalyzer Interface**:
+
 ```python
 def analyze_file(file_path: Path) -> List[str]
 def extract_keywords(file_path: Path, top_n: int = 10) -> List[Tuple[str, float]]
@@ -126,6 +140,7 @@ def batch_analyze(files: List[Path]) -> Dict[Path, List[str]]
 ```
 
 **TagLearningEngine Interface**:
+
 ```python
 def record_tag_application(file_path: Path, tags: List[str]) -> None
 def get_tag_patterns(file_type: str) -> List[TagPattern]
@@ -135,6 +150,7 @@ def update_model(feedback: List[Feedback]) -> None
 ```
 
 **TagRecommender Interface**:
+
 ```python
 def recommend_tags(file_path: Path, top_n: int = 5) -> List[TagSuggestion]
 def batch_recommend(files: List[Path]) -> Dict[Path, List[TagSuggestion]]
@@ -143,6 +159,7 @@ def explain_tag(tag: str, file_path: Path) -> str
 ```
 
 **Tag Data Models**:
+
 ```python
 @dataclass
 class TagSuggestion:
@@ -170,6 +187,7 @@ class TagPattern:
 ## Conflict Risk Assessment
 
 **Low Risk** - Streams work on completely different files:
+
 - Stream A: `tag_analyzer.py`, `content_extractor.py`, `keyword_extractor.py`
 - Stream B: `tag_learning.py`, `tag_patterns.py`, `tag_types.py` (models/)
 - Stream C: `tag_recommender.py`, `auto_tagging.py`
@@ -182,12 +200,14 @@ No shared implementation files between A, B, and C.
 **Recommended Approach**: parallel after dependencies, with final integration
 
 **Execution Plan**:
+
 1. **Pre-work** (0.5 hours): Define and document interface contracts and data models
 2. **Wait for dependencies**: Task 52, 49, 50 must complete first
 3. **Phase 1** (parallel, 6 hours): Launch Streams A, B, C simultaneously
 4. **Phase 2** (sequential, 1 hour): Stream D integrates and tests
 
 **Timeline**:
+
 - Stream A: 6 hours
 - Stream B: 6 hours
 - Stream C: 3 hours (completes early)
@@ -198,11 +218,13 @@ Total wall time: ~7.5 hours (including coordination, after dependencies)
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~7.5 hours (pre-work + max(A,B,C) + D) after dependencies
 - Total work: 16 hours
 - Efficiency gain: 53% time savings
 
 **Without parallel execution**:
+
 - Wall time: 16 hours (sequential completion) after dependencies
 
 **Parallelization factor**: 2.0x effective speedup (16h / 8h actual)
@@ -257,6 +279,7 @@ Total wall time: ~7.5 hours (including coordination, after dependencies)
 ### Integration Points
 
 This task integrates with:
+
 - **Task 52**: Smart suggestions infrastructure (required foundation)
 - **Task 49**: User preference tracking (for personalization)
 - **Task 50**: Pattern learning (for behavioral insights)
@@ -274,6 +297,7 @@ This task integrates with:
 ### Test Data Requirements
 
 Create comprehensive test datasets:
+
 - Labeled files with known good tags
 - Diverse content types (documents, images, code, media)
 - Different tagging styles (formal, casual, technical)

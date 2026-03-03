@@ -75,7 +75,7 @@ grep "ERROR" /var/log/file-organizer/app.log
 
 ### Prometheus Metrics
 
-```
+```text
 # Request metrics
 file_organizer_requests_total{method="GET",status="200"}
 file_organizer_request_duration_seconds{endpoint="/api/v1/files"}

@@ -12,10 +12,12 @@ parallelization_factor: 1.0
 ## Overview
 
 `auth_jwt_secret` defaults to `"change-me"` in `ApiSettings`. The existing validation in `load_settings_from_env()` already raises in non-dev/test environments, but the field still has a default — meaning:
+
 1. A misconfigured app that skips `load_settings_from_env()` (e.g. direct `ApiSettings()` in tests) silently uses the weak secret
 2. The warning in dev/test is easily missed
 
 **Fix strategy**:
+
 - Remove the `= "change-me"` default, making the field required (no default)
 - Provide a test-only override via `ApiSettings(auth_jwt_secret="test-secret")` in test fixtures
 - Ensure startup validation still raises clearly in production
@@ -23,6 +25,7 @@ parallelization_factor: 1.0
 ## Single Stream (Sequential — small change)
 
 **Files**:
+
 - `src/file_organizer/api/config.py` — remove default, update validation comment
 - `src/file_organizer/api/test_utils.py` — provide explicit test secret in any test factory
 - `tests/api/test_config.py` (or nearest config test) — add test: `ApiSettings()` without secret raises, `ApiSettings(auth_jwt_secret="x")` succeeds

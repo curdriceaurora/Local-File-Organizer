@@ -6,7 +6,7 @@ API endpoints for file analysis operations.
 
 Scan directory for duplicates.
 
-```
+```text
 POST /api/v1/dedupe/scan
 ```
 
@@ -35,7 +35,7 @@ POST /api/v1/dedupe/scan
 
 Analyze storage usage.
 
-```
+```text
 GET /api/v1/analyze/storage
 ```
 
@@ -68,7 +68,7 @@ GET /api/v1/analyze/storage
 
 Analyze file categories.
 
-```
+```text
 GET /api/v1/analyze/categories
 ```
 

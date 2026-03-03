@@ -20,15 +20,18 @@ Create a comprehensive analytics dashboard that provides insights into storage u
 
 **Scope**: Storage usage analysis and calculation engines
 **Files**:
+
 - `file_organizer/services/analytics/storage_analyzer.py`
 - `file_organizer/services/analytics/metrics_calculator.py`
 - `file_organizer/models/analytics.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 8 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - StorageAnalyzer class
 - analyze_directory() - comprehensive storage analysis
 - calculate_size_distribution() - file size breakdown
@@ -45,14 +48,17 @@ Create a comprehensive analytics dashboard that provides insights into storage u
 
 **Scope**: Terminal-based chart generation and visual representations
 **Files**:
+
 - `file_organizer/utils/chart_generator.py`
 - `file_organizer/services/analytics/visualizer.py`
+
 **Agent Type**: fullstack-specialist
 **Can Start**: immediately
 **Estimated Hours**: 6 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - ChartGenerator class
 - create_pie_chart() - ASCII/Unicode pie charts
 - create_bar_chart() - ASCII/Unicode bar charts
@@ -68,15 +74,18 @@ Create a comprehensive analytics dashboard that provides insights into storage u
 
 **Scope**: Time-series data tracking and report generation
 **Files**:
+
 - `file_organizer/services/analytics/history_tracker.py`
 - `file_organizer/services/analytics/reporter.py`
 - `file_organizer/services/analytics/export.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 6 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - HistoryTracker class
 - record_snapshot() - save metrics snapshots
 - get_history() - retrieve historical data
@@ -93,6 +102,7 @@ Create a comprehensive analytics dashboard that provides insights into storage u
 
 **Scope**: Main analytics service orchestration and CLI interface
 **Files**:
+
 - `file_organizer/services/analytics/analytics_service.py`
 - `file_organizer/services/analytics/__init__.py`
 - `file_organizer/cli/analytics.py` (new CLI subcommand)
@@ -101,12 +111,14 @@ Create a comprehensive analytics dashboard that provides insights into storage u
 - `tests/services/analytics/test_chart_generator.py`
 - `tests/services/analytics/test_history_tracker.py`
 - `tests/integration/test_analytics_e2e.py`
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Streams A, B, C complete
 **Estimated Hours**: 4 hours
 **Dependencies**: Streams A, B, C
 
 **Deliverables**:
+
 - AnalyticsService main orchestrator
 - generate_dashboard() - complete dashboard
 - get_storage_stats() - storage metrics
@@ -123,6 +135,7 @@ Create a comprehensive analytics dashboard that provides insights into storage u
 ### Shared Files
 
 Minimal overlap:
+
 - `file_organizer/services/analytics/__init__.py` - Stream D updates after A, B, C complete
 - `file_organizer/models/analytics.py` - Stream A owns, others import
 
@@ -131,6 +144,7 @@ Minimal overlap:
 To enable parallel work, define these interfaces upfront:
 
 **StorageAnalyzer Interface**:
+
 ```python
 def analyze_directory(path: Path) -> StorageAnalysis
 def calculate_size_distribution() -> Dict[str, int]
@@ -140,6 +154,7 @@ def get_duplicate_space() -> int
 ```
 
 **MetricsCalculator Interface**:
+
 ```python
 def calculate_quality_score(analysis: FileAnalysis) -> float
 def measure_naming_compliance() -> float
@@ -149,6 +164,7 @@ def calculate_improvement_metrics() -> dict
 ```
 
 **ChartGenerator Interface**:
+
 ```python
 def create_pie_chart(data: Dict[str, float], title: str) -> str
 def create_bar_chart(data: Dict[str, int], title: str) -> str
@@ -157,6 +173,7 @@ def create_sparkline(values: List[float]) -> str
 ```
 
 **HistoryTracker Interface**:
+
 ```python
 def record_snapshot(metrics: QualityMetrics) -> None
 def get_history(days: int) -> List[MetricsSnapshot]
@@ -165,6 +182,7 @@ def get_snapshots_between(start: datetime, end: datetime) -> List[MetricsSnapsho
 ```
 
 **AnalyticsService Interface**:
+
 ```python
 def generate_dashboard() -> AnalyticsDashboard
 def get_storage_stats() -> StorageStats
@@ -174,6 +192,7 @@ def calculate_time_saved() -> TimeSavings
 ```
 
 **Data Models**:
+
 ```python
 @dataclass
 class AnalyticsDashboard:
@@ -210,6 +229,7 @@ class QualityMetrics:
 ## Conflict Risk Assessment
 
 **Low Risk** - Streams work on completely different files:
+
 - Stream A: `storage_analyzer.py`, `metrics_calculator.py`, `analytics.py` (models/)
 - Stream B: `chart_generator.py`, `visualizer.py`
 - Stream C: `history_tracker.py`, `reporter.py`, `export.py`
@@ -222,11 +242,13 @@ No shared implementation files between A, B, and C.
 **Recommended Approach**: parallel with final integration
 
 **Execution Plan**:
+
 1. **Pre-work** (0.5 hours): Define and document interface contracts and data models
 2. **Phase 1** (parallel, 8 hours): Launch Streams A, B, C simultaneously
 3. **Phase 2** (sequential, 4 hours): Stream D orchestrates and integrates
 
 **Timeline**:
+
 - Stream A: 8 hours
 - Stream B: 6 hours (completes early)
 - Stream C: 6 hours (completes early)
@@ -237,11 +259,13 @@ Total wall time: ~12.5 hours (including coordination)
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~12.5 hours (pre-work + max(A,B,C) + D)
 - Total work: 24 hours
 - Efficiency gain: 48% time savings
 
 **Without parallel execution**:
+
 - Wall time: 24 hours (sequential completion)
 
 **Parallelization factor**: 2.7x effective speedup (24h / 8.9h actual per developer)
@@ -299,6 +323,7 @@ Total wall time: ~12.5 hours (including coordination)
 ### Integration Points
 
 This task integrates with:
+
 - File scanning infrastructure
 - Deduplication service (for duplicate stats)
 - Operation history (for time saved calculations)
@@ -308,6 +333,7 @@ This task integrates with:
 ### Analytics Categories
 
 **Storage Usage**:
+
 - Total storage analyzed
 - Storage before/after organization
 - Space saved through deduplication
@@ -317,6 +343,7 @@ This task integrates with:
 - Wasted space from duplicates
 
 **File Distribution**:
+
 - Pie charts by file type
 - File counts by type
 - Size distribution by type
@@ -325,6 +352,7 @@ This task integrates with:
 - Category-based distributions
 
 **Duplicate Statistics**:
+
 - Total duplicates found/removed
 - Space saved from deduplication
 - Duplicate clusters and sizes
@@ -334,6 +362,7 @@ This task integrates with:
 - Distribution across directories
 
 **Quality Metrics**:
+
 - Organization quality score (0-100)
 - Improvement tracking over time
 - Naming convention compliance
@@ -343,6 +372,7 @@ This task integrates with:
 - Before/after comparisons
 
 **Time Savings**:
+
 - Time saved through automation
 - Operations performed vs manual time
 - User interaction time vs automated

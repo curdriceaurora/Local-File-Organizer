@@ -12,6 +12,7 @@ status: active
 ## Tooling & Infrastructure
 
 **Issue #330: [Tech Debt] Remove deprecated code-rabbit Claude Code skill**
+
 - **Priority**: Low
 - **Epic**: testing-qa
 - **Status**: Open
@@ -24,6 +25,7 @@ status: active
 ## Summary
 
 **Total Issues**: 6
+
 - **High Priority**: 0
 - **Medium Priority**: 3 (#444 closed, #451 closed, #535 closed)
 - **Low Priority**: 3 (#330 open, #449 open, #534 closed)
@@ -38,6 +40,7 @@ status: active
 - **2026-03-02**: Issues #534 and #535 created from PR #533 code review; resolved in PR #536
 
 **Issue #444: chore: add semantic validation for test logic and docstring accuracy**
+
 - **Priority**: Medium
 - **Epic**: testing-qa
 - **Status**: Closed
@@ -49,6 +52,7 @@ status: active
 - **Deliverables**: `tests/docs/test_cli_docs_helpers.py` (38 tests), `TestMetavarAlignment`, pre-commit CLI docs trigger, ruff D rules
 
 **Issue #449: chore: clean up ~1,600 pre-existing ruff D (pydocstyle) violations**
+
 - **Priority**: Low
 - **Epic**: testing-qa
 - **Status**: Open
@@ -59,6 +63,7 @@ status: active
 - **Notes**: ~1,043 D212 violations are auto-fixable; remainder needs manual docstring authoring
 
 **Issue #451: docs: document 23 CLI parameters missing from cli-reference.md** ✅
+
 - **Priority**: Medium
 - **Epic**: testing-qa
 - **Status**: Closed (merged PR #452, 2026-02-23)
@@ -69,6 +74,7 @@ status: active
 - **Notes**: `KNOWN_PARAM_DOC_GAPS` in test_cli_docs_accuracy.py must be removed once all 23 params are documented
 
 **Issue #534: [Testing] Add missing pytest markers to API auth test files** ✅
+
 - **Priority**: Low
 - **Epic**: testing-qa
 - **Status**: Closed (PR #536, 2026-03-02)
@@ -79,6 +85,7 @@ status: active
 - **Notes**: Added `@pytest.mark.unit` to 12 test classes across 3 API auth test files
 
 **Issue #535: [Testing] Replace time.sleep with deterministic wait in test_auth_store** ✅
+
 - **Priority**: Medium
 - **Epic**: testing-qa
 - **Status**: Closed (PR #536, 2026-03-02)

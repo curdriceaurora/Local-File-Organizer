@@ -23,7 +23,7 @@ File Organizer supports multiple systems:
 
 ### PARA Structure
 
-```
+```text
 PARA/
 ├── Projects/           # Active projects with deadlines
 │   ├── Website Redesign/
@@ -69,7 +69,7 @@ PARA/
 
 ### Johnny Decimal Structure
 
-```
+```text
 JD/
 ├── 10-19 Career/
 │   ├── 11 CV & Applications/

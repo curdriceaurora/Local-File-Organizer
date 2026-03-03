@@ -12,6 +12,7 @@ This update records the Phase 2 CCPM re-baseline and the macOS build pipeline
 improvements (including universal DMG support and CI workflow updates).
 
 Key artifacts and references:
+
 - Phase 2 CCPM execution status: `.claude/epics/phase-2-enhanced-ux/execution-status.md`
 - macOS build script updates: `scripts/build_macos.sh`
 - macOS CI workflow: `.github/workflows/build-macos.yml`

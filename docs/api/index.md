@@ -136,7 +136,7 @@ API requests are rate-limited:
 
 Check rate limit in response headers:
 
-```
+```yaml
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
 X-RateLimit-Reset: 1645026000

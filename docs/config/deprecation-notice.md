@@ -18,6 +18,7 @@ DEFAULT_PREFERENCES_DIR = Path.home() / ".file_organizer" / "preferences"
 ### Why This Change?
 
 The hardcoded paths were inflexible and non-standard:
+
 - No support for XDG Base Directory Specification
 - No environment variable configuration
 - No centralized path management
@@ -26,11 +27,13 @@ The hardcoded paths were inflexible and non-standard:
 ### Migration Path
 
 **Timeline**:
+
 - **v2.0** (Current): New PathManager available, legacy paths still functional
 - **v2.1-2.4**: Deprecation warnings when using legacy patterns
 - **v3.0**: Legacy path handling removed
 
 **Action Required**:
+
 1. Update your code to use `PathManager`
 2. Test with new XDG paths
 3. Update documentation and scripts

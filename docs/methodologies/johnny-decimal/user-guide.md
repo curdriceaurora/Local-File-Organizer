@@ -14,7 +14,7 @@ Johnny Decimal is a decimal-based numbering system that provides a structured, s
 
 ### Example Structure
 
-```
+```text
 10-19 Finance/
   ├─ 11 Budgets/
   │   ├─ 11.01 Annual Budgets/
@@ -32,12 +32,14 @@ Johnny Decimal is a decimal-based numbering system that provides a structured, s
 Areas are the highest level of organization. They represent major domains of your information.
 
 **Guidelines:**
+
 - Use numbers 10-99 (90 possible areas)
 - Group related categories together
 - Leave gaps for future expansion
 - Keep area definitions stable over time
 
 **Example Areas:**
+
 - 10-19: Finance
 - 20-29: Marketing
 - 30-39: Operations
@@ -48,12 +50,14 @@ Areas are the highest level of organization. They represent major domains of you
 Categories subdivide areas into specific topics.
 
 **Guidelines:**
+
 - First two digits match the parent area
 - Second two digits range from 01-99
 - Each area can have up to 99 categories
 - Use descriptive names
 
 **Example Categories in Finance (10-19):**
+
 - 11.01: Annual Budgets
 - 11.02: Quarterly Budgets
 - 12.01: Client Invoices
@@ -64,12 +68,14 @@ Categories subdivide areas into specific topics.
 IDs are the most granular level, representing individual items.
 
 **Guidelines:**
+
 - Inherit area and category numbers
 - Final three digits range from 001-999
 - Use for individual files or sub-folders
 - Chronological or logical ordering
 
 **Example IDs:**
+
 - 11.01.001: Budget 2024
 - 11.01.002: Budget 2025
 - 12.01.001: Client A Invoice
@@ -142,14 +148,16 @@ See [Migration Guide](migration.md) for detailed migration instructions.
 ### Naming Conventions
 
 **With Original Names (Recommended):**
-```
+
+```text
 10 Finance/
 ├─ 11.01 Annual Budgets/
 └─ 11.02 Quarterly Budgets/
 ```
 
 **Numbers Only (Advanced):**
-```
+
+```text
 10/
 ├─ 11.01/
 └─ 11.02/
@@ -166,7 +174,8 @@ See [Migration Guide](migration.md) for detailed migration instructions.
 ### Common Patterns
 
 #### By Department
-```
+
+```text
 10-19 Executive
 20-29 Finance
 30-39 Marketing
@@ -175,7 +184,8 @@ See [Migration Guide](migration.md) for detailed migration instructions.
 ```
 
 #### By Project Phase
-```
+
+```text
 10-19 Planning
 20-29 Design
 30-39 Development
@@ -184,7 +194,8 @@ See [Migration Guide](migration.md) for detailed migration instructions.
 ```
 
 #### By Content Type
-```
+
+```text
 10-19 Documents
 20-29 Spreadsheets
 30-39 Presentations
@@ -203,6 +214,7 @@ With Johnny Decimal, finding files becomes intuitive:
 3. **Know the ID**: Which specific item?
 
 Example: Looking for the 2024 budget?
+
 - Area 10: Finance
 - Category 11.01: Annual Budgets
 - ID 11.01.001: Budget 2024
@@ -230,11 +242,13 @@ When adding new content:
 #### Handling Growth
 
 When categories fill up:
+
 - Create sub-categories using the ID level
 - Restructure the category if needed
 - Archive old items to free up space
 
 When areas fill up:
+
 - Review area definitions
 - Consider consolidating similar areas
 - Expand into unused number ranges
@@ -244,7 +258,8 @@ When areas fill up:
 Johnny Decimal can work alongside PARA methodology. See [PARA Compatibility Guide](para-compatibility.md) for details.
 
 **Hybrid Structure:**
-```
+
+```text
 10 Projects/
 ├─ 10.01 Active Projects/
 └─ 10.02 On Hold Projects/
@@ -280,6 +295,7 @@ config = (
 ### Automated Migration
 
 The migration engine can automatically:
+
 - Scan your existing structure
 - Detect organizational patterns
 - Suggest JD number assignments
@@ -290,6 +306,7 @@ The migration engine can automatically:
 ### Validation and Safety
 
 Before any migration:
+
 - Plans are validated for conflicts
 - Warnings are generated for potential issues
 - Dry-run mode lets you preview changes
@@ -309,6 +326,7 @@ Before any migration:
 ### Problem: Running Out of Numbers
 
 **Solution**:
+
 - Areas: You have 90 possible areas (10-99)
 - Categories: 99 per area
 - IDs: 999 per category
@@ -336,9 +354,11 @@ if not validation.is_valid:
 
 - Original system: [johnnydecimal.com](https://johnnydecimal.com)
 - File Organizer documentation: [Main docs](../../index.md)
+
 ## Support
 
 For issues or questions:
+
 - Check the [FAQ](faq.md)
 - Open an issue on GitHub
 - Consult the API documentation

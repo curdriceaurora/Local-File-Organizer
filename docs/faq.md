@@ -40,7 +40,7 @@ See [Installation Guide](admin/installation.md).
 
 ### Do I need Ollama?
 
-Yes, Ollama provides the AI models. Install from https://ollama.ai
+Yes, Ollama provides the AI models. Install from <https://ollama.ai>
 
 ### Which AI models should I use?
 

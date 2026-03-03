@@ -8,6 +8,7 @@
 Phase 3 creates a unified path management system that serves as the foundation for all subsequent work. We first establish canonical paths with migration support (#471), then use that foundation to build deferred migration recovery and plugin restrictions (#476). In parallel, we reduce startup latency by lazy-loading CLI/API components (#472) to minimize cold starts.
 
 **Tech Stack:**
+
 - XDG Base Directory Specification (Linux/Unix standard)
 - Platform-specific path resolution (pathlib.Path)
 - Lazy imports with conditional loading
@@ -15,6 +16,7 @@ Phase 3 creates a unified path management system that serves as the foundation f
 - Plugin operation restriction policies
 
 **Execution Strategy:**
+
 1. **Critical Path (Sequential):** #471 → #476 (blocks each other)
 2. **Parallel Stream:** #472 can execute simultaneously with #471
 3. **Total Duration:** 60-84 hours (can parallelize #471 and #472 in 2 sessions)
@@ -23,7 +25,7 @@ Phase 3 creates a unified path management system that serves as the foundation f
 
 ## CRITICAL: Execution Dependencies
 
-```
+```text
 Week 1: Phase 3A (Parallel)
 ├─ Stream 1: #471 (Paths) - 24-32 hours
 └─ Stream 2: #472 (Startup latency) - 20-28 hours
@@ -39,10 +41,12 @@ Week 2: Phase 3B (Sequential after 3A)
 # STREAM 1: Issue #471 - Path Standardization (CRITICAL)
 
 ## Overview
+
 Consolidate 4+ inconsistent path locations into single canonical structure following XDG Base Directory specification. Impacts: config manager, parallel persistence, intelligence preferences, events discovery, and multiple test utilities.
 
 ## Architecture
-```
+
+```text
 ~/.config/file-organizer/       # XDG_CONFIG_HOME (canonical)
 ├── config.json                  # Settings
 ├── preferences.json             # User preferences
@@ -58,6 +62,7 @@ Consolidate 4+ inconsistent path locations into single canonical structure follo
 ```
 
 **Migration Strategy:**
+
 - Detect legacy paths (~/.file-organizer, ~/.file_organizer, ./.file_organizer)
 - Copy data to canonical locations
 - Create compatibility layer for backwards compatibility
@@ -68,6 +73,7 @@ Consolidate 4+ inconsistent path locations into single canonical structure follo
 ## Task 1: Create centralized path manager
 
 **Files:**
+
 - Create: `src/file_organizer/config/path_manager.py`
 - Create: `tests/unit/config/test_path_manager.py`
 - Modify: `src/file_organizer/config/__init__.py`
@@ -81,7 +87,6 @@ from pathlib import Path
 from unittest.mock import patch
 import pytest
 from file_organizer.config.path_manager import PathManager, get_canonical_paths
-
 
 def test_get_canonical_paths_uses_xdg_when_available():
     """Should use XDG base directories when environment variables set"""
@@ -97,7 +102,6 @@ def test_get_canonical_paths_uses_xdg_when_available():
         assert paths['state'] == Path('/tmp/test-xdg-state/file-organizer')
         assert paths['cache'] == Path('/tmp/test-xdg-data/file-organizer/cache')
 
-
 def test_get_canonical_paths_uses_home_defaults():
     """Should use ~/.config, ~/.local/share, ~/.local/state when XDG not set"""
     with patch.dict(os.environ, {
@@ -112,7 +116,6 @@ def test_get_canonical_paths_uses_home_defaults():
         assert paths['data'] == Path('/home/testuser/.local/share/file-organizer')
         assert paths['state'] == Path('/home/testuser/.local/state/file-organizer')
 
-
 def test_path_manager_creates_directories():
     """PathManager should create all necessary directories"""
     with patch.dict(os.environ, {'HOME': '/tmp/test-home'}):
@@ -122,7 +125,6 @@ def test_path_manager_creates_directories():
             manager.ensure_directories()
             # Should create at least config, data, state dirs
             assert mock_mkdir.call_count >= 3
-
 
 def test_path_manager_provides_specific_paths():
     """PathManager should provide specific file paths"""
@@ -143,7 +145,8 @@ pytest tests/unit/config/test_path_manager.py -v
 ```
 
 Expected output:
-```
+
+```text
 FAILED tests/unit/config/test_path_manager.py::test_get_canonical_paths_uses_xdg_when_available - ModuleNotFoundError: No module named 'file_organizer.config.path_manager'
 ```
 
@@ -156,7 +159,6 @@ FAILED tests/unit/config/test_path_manager.py::test_get_canonical_paths_uses_xdg
 from pathlib import Path
 from typing import Dict
 import os
-
 
 def get_canonical_paths() -> Dict[str, Path]:
     """Get canonical paths for config, data, and state directories.
@@ -186,7 +188,6 @@ def get_canonical_paths() -> Dict[str, Path]:
         'metadata': data_root / 'metadata',
         'logs': state_root / 'logs',
     }
-
 
 class PathManager:
     """Manages all application paths with automatic directory creation."""
@@ -291,6 +292,7 @@ Addresses Issue #471 Phase 1: Foundation for path standardization"
 ## Task 2: Implement migration layer for legacy paths
 
 **Files:**
+
 - Create: `src/file_organizer/config/path_migration.py`
 - Create: `tests/unit/config/test_path_migration.py`
 - Modify: `src/file_organizer/config/path_manager.py` (add migration support)
@@ -303,7 +305,6 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 import pytest
 from file_organizer.config.path_migration import PathMigrator, detect_legacy_paths
-
 
 def test_detect_legacy_paths_finds_old_locations(tmp_path):
     """Should detect all 3 legacy path patterns"""
@@ -326,7 +327,6 @@ def test_detect_legacy_paths_finds_old_locations(tmp_path):
     assert legacy_2 in detected
     assert legacy_3 in detected
 
-
 def test_path_migrator_copies_legacy_files(tmp_path):
     """Should copy files from legacy to canonical locations"""
     # Setup legacy directory with files
@@ -347,7 +347,6 @@ def test_path_migrator_copies_legacy_files(tmp_path):
     assert (canonical / 'config.json').read_text() == '{"test": true}'
     assert (canonical / 'preferences.json').exists()
 
-
 def test_path_migrator_creates_backup(tmp_path):
     """Should create backup of legacy path before migration"""
     legacy = tmp_path / '.file-organizer'
@@ -362,7 +361,6 @@ def test_path_migrator_creates_backup(tmp_path):
 
     assert backup.exists()
     assert (backup / 'config.json').exists()
-
 
 def test_path_migrator_logs_migration(tmp_path):
     """Should log migration details for audit trail"""
@@ -402,7 +400,6 @@ from typing import List, Dict, Optional
 from datetime import datetime
 import json
 
-
 def detect_legacy_paths(
     home: Path,
     config_home: Path,
@@ -428,7 +425,6 @@ def detect_legacy_paths(
             legacy_paths.append(candidate)
 
     return legacy_paths
-
 
 class PathMigrator:
     """Handles migration from legacy paths to canonical XDG structure."""
@@ -531,6 +527,7 @@ Addresses Issue #471 Phase 2: Legacy path compatibility"
 ## Task 3: Update existing modules to use centralized path manager
 
 **Files:**
+
 - Modify: `src/file_organizer/config/manager.py` (use PathManager)
 - Modify: `src/file_organizer/parallel/persistence.py` (use PathManager)
 - Modify: `src/file_organizer/services/intelligence/preference_store.py` (use PathManager)
@@ -553,7 +550,6 @@ from file_organizer.config.path_manager import PathManager
 from file_organizer.parallel.persistence import ParallelStatePersistence
 from file_organizer.services.intelligence.preference_store import PreferenceStore
 
-
 def test_config_manager_uses_canonical_paths(tmp_path):
     """ConfigManager should use canonical paths from PathManager."""
     with patch.dict('os.environ', {'HOME': str(tmp_path)}):
@@ -564,7 +560,6 @@ def test_config_manager_uses_canonical_paths(tmp_path):
         assert config_manager.config_file == path_manager.config_file
         assert str(config_manager.config_file).endswith('.config/file-organizer/config.json')
 
-
 def test_parallel_persistence_uses_canonical_paths(tmp_path):
     """ParallelStatePersistence should use canonical paths."""
     with patch.dict('os.environ', {'HOME': str(tmp_path)}):
@@ -574,7 +569,6 @@ def test_parallel_persistence_uses_canonical_paths(tmp_path):
         # Should use canonical data directory
         assert persistence.state_file.parent == path_manager.data_dir / 'parallel-state'
 
-
 def test_preference_store_uses_canonical_paths(tmp_path):
     """PreferenceStore should use canonical paths."""
     with patch.dict('os.environ', {'HOME': str(tmp_path)}):
@@ -583,7 +577,6 @@ def test_preference_store_uses_canonical_paths(tmp_path):
 
         # Should use canonical config directory
         assert pref_store.store_file.parent == path_manager.config_dir
-
 
 def test_all_paths_follow_xdg_structure(tmp_path):
     """All paths should follow XDG Base Directory structure."""
@@ -745,6 +738,7 @@ Addresses Issue #471 Phase 3: Module integration"
 ## Task 4: Add documentation and deprecation notices
 
 **Files:**
+
 - Create: `docs/architecture/path-standards.md`
 - Modify: `src/file_organizer/config/manager.py` (add deprecation notes)
 - Modify: `CLAUDE.md` (add path standards section)
@@ -787,24 +781,31 @@ Backups are created before migration in `~/.file-organizer.backup.YYYYMMDD_HHMMS
 ## Using PathManager in Code
 
 ```python
+
 from file_organizer.config.path_manager import PathManager
 
 # Get path manager
+
 path_manager = PathManager()
 
 # Ensure directories exist
+
 path_manager.ensure_directories()
 
 # Access specific paths
+
 config_file = path_manager.config_file
 preferences = path_manager.preferences_file
 history_db = path_manager.history_db
 
 # Get base directories
+
 config_dir = path_manager.config_dir
 data_dir = path_manager.data_dir
 cache_dir = path_manager.cache_dir
-```
+
+```text
+
 ```
 
 **Step 2: Add section to CLAUDE.md**
@@ -844,6 +845,7 @@ Addresses Issue #471 Phase 4: Documentation"
 ## Task 5: Verify migration and backwards compatibility
 
 **Files:**
+
 - Create: `tests/integration/config/test_legacy_migration.py`
 
 **Step 1: Write comprehensive migration test**
@@ -860,7 +862,6 @@ import pytest
 from file_organizer.config.path_manager import PathManager
 from file_organizer.config.path_migration import PathMigrator, detect_legacy_paths
 from file_organizer.config.manager import ConfigManager
-
 
 def test_migration_preserves_data(tmp_path):
     """Legacy path migration should preserve all user data."""
@@ -888,7 +889,6 @@ def test_migration_preserves_data(tmp_path):
     migrated_prefs = json.loads((canonical / 'preferences.json').read_text())
     assert migrated_prefs == prefs_data
 
-
 def test_migration_creates_usable_backup(tmp_path):
     """Migration backup should be complete and usable."""
     legacy = tmp_path / '.file-organizer'
@@ -905,7 +905,6 @@ def test_migration_creates_usable_backup(tmp_path):
     assert (backup / 'config.json').exists()
     assert backup.is_dir()
     assert backup.parent == legacy.parent
-
 
 def test_config_manager_loads_after_migration(tmp_path):
     """ConfigManager should load migrated data correctly."""
@@ -932,7 +931,6 @@ def test_config_manager_loads_after_migration(tmp_path):
 
         # Should load migrated data
         assert config_mgr._data == config_data
-
 
 def test_multiple_legacy_paths_detected(tmp_path):
     """Should detect multiple legacy path formats."""
@@ -995,10 +993,12 @@ Addresses Issue #471 Phase 5: Testing & verification"
 # STREAM 2: Issue #472 - Startup Latency Reduction (PARALLEL with Stream 1)
 
 ## Overview
+
 Reduce CLI/API cold start time by lazy-loading expensive imports. Currently all models, services, and plugins are imported at module level, causing slow startup even for simple operations.
 
 ## Architecture
-```
+
+```text
 OLD (eager loading):
 import file_organizer.cli.main → imports all services → imports all models → load all plugins
 Total: 2-3 seconds for simple operations
@@ -1013,6 +1013,7 @@ Commands import services only when executed (~1 second on demand)
 ## Task 1: Benchmark current startup latency
 
 **Files:**
+
 - Create: `scripts/benchmark_startup.py`
 - Create: `tests/performance/test_startup_latency.py`
 
@@ -1028,7 +1029,6 @@ import sys
 import json
 from pathlib import Path
 
-
 def benchmark_cli_startup():
     """Measure time to import CLI module."""
     start = time.time()
@@ -1039,7 +1039,6 @@ def benchmark_cli_startup():
     )
     elapsed = time.time() - start
     return elapsed
-
 
 def benchmark_api_startup():
     """Measure time to import API module."""
@@ -1052,7 +1051,6 @@ def benchmark_api_startup():
     elapsed = time.time() - start
     return elapsed
 
-
 def benchmark_help_command():
     """Measure time to run 'file-organizer --help'."""
     start = time.time()
@@ -1063,7 +1061,6 @@ def benchmark_help_command():
     )
     elapsed = time.time() - start
     return elapsed
-
 
 def main():
     """Run all benchmarks and report results."""
@@ -1102,7 +1099,6 @@ def main():
     else:
         print(f"❌ CLI startup: {cli_time:.3f}s (FAIL)")
 
-
 if __name__ == '__main__':
     main()
 ```
@@ -1117,7 +1113,6 @@ import time
 import pytest
 from pathlib import Path
 
-
 @pytest.mark.performance
 def test_cli_module_import_latency():
     """CLI module import should complete in < 500ms."""
@@ -1131,7 +1126,6 @@ def test_cli_module_import_latency():
 
     # Should be fast
     assert elapsed < 0.5, f"CLI import took {elapsed:.3f}s (target: < 0.5s)"
-
 
 @pytest.mark.performance
 def test_api_module_import_latency():
@@ -1176,6 +1170,7 @@ Addresses Issue #472 Phase 1: Baseline measurement"
 ## Task 2: Identify heavy imports and create lazy load strategy
 
 **Files:**
+
 - Create: `analysis/import_analysis.md` (document findings)
 - Create: `src/file_organizer/cli/_lazy_loader.py`
 - Create: `src/file_organizer/api/_lazy_loader.py`
@@ -1187,6 +1182,7 @@ Addresses Issue #472 Phase 1: Baseline measurement"
 
 ## Current Hot Path (CLI)
 ```
+
 file_organizer.cli.main
 ├── click (fast)
 ├── All services (SLOW)
@@ -1199,7 +1195,8 @@ file_organizer.cli.main
 │   ├── VisionModel (slow, ~300ms)
 │   └── AudioModel (~200ms)
 └── All plugins (~100ms)
-```
+
+```markdown
 
 ## Optimization Strategy
 1. **Don't load** services until command needs them
@@ -1222,7 +1219,6 @@ file_organizer.cli.main
 
 from typing import Any, Callable, Dict
 import importlib
-
 
 class ServiceLoader:
     """Lazily load services on first access."""
@@ -1261,7 +1257,6 @@ class ServiceLoader:
             cls._cache['intelligence'] = IntelligenceManager()
         return cls._cache['intelligence']
 
-
 def lazy_import(module_path: str) -> Callable:
     """Decorator for lazy importing a module when function is called."""
     def decorator(func: Callable) -> Callable:
@@ -1286,12 +1281,10 @@ import click
 
 from file_organizer.cli._lazy_loader import ServiceLoader
 
-
 @click.group()
 def app():
     """File Organizer - Smart file management with AI."""
     pass
-
 
 @app.command()
 @click.argument('path', type=click.Path(exists=True))
@@ -1302,7 +1295,6 @@ def organize(path: str):
     results = organizer.organize(path)
     click.echo(f"Organized {results['count']} files")
 
-
 @app.command()
 @click.argument('path', type=click.Path(exists=True))
 def dedupe(path: str):
@@ -1312,7 +1304,6 @@ def dedupe(path: str):
     dedup_service = organizer.deduplication_service
     results = dedup_service.find_duplicates(path)
     click.echo(f"Found {len(results)} duplicates")
-
 
 if __name__ == '__main__':
     app()
@@ -1325,7 +1316,6 @@ if __name__ == '__main__':
 """Lazy loading for API services."""
 
 from typing import Any, Dict
-
 
 class APIServiceLoader:
     """Lazily load API dependencies."""
@@ -1372,6 +1362,7 @@ Addresses Issue #472 Phase 2: Lazy loading implementation"
 ## Task 3: Measure improvement and add CI checks
 
 **Files:**
+
 - Modify: `.github/workflows/performance.yml` (add startup latency check)
 - Create: `tests/ci/test_startup_budget.py`
 
@@ -1385,7 +1376,6 @@ import subprocess
 import sys
 import pytest
 
-
 @pytest.mark.ci
 def test_cli_import_budget():
     """Ensure CLI import stays under 300ms budget."""
@@ -1398,7 +1388,6 @@ def test_cli_import_budget():
 
     elapsed = float(result.stdout.strip())
     assert elapsed < 0.3, f"CLI import {elapsed:.3f}s exceeds budget of 0.3s"
-
 
 @pytest.mark.ci
 def test_api_import_budget():
@@ -1448,6 +1437,7 @@ Addresses Issue #472 Phase 3: Measurement and CI enforcement"
 # STREAM 3: Issue #476 - Migration Recovery + Security (SEQUENTIAL after Stream 1)
 
 ## Overview
+
 Implement deferred functionality for PARA migration recovery and plugin operation-level restrictions. This is blocked by Issue #471 (Path standardization) because migrations need stable paths.
 
 **PREREQUISITE:** Issue #471 must be merged before starting this work.
@@ -1457,6 +1447,7 @@ Implement deferred functionality for PARA migration recovery and plugin operatio
 ## Task 1: Implement PARA migration backup and rollback
 
 **Files:**
+
 - Modify: `src/file_organizer/methodologies/para/migration_manager.py`
 - Create: `tests/unit/methodologies/test_para_rollback.py`
 
@@ -1469,7 +1460,6 @@ Implement deferred functionality for PARA migration recovery and plugin operatio
 import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-
 
 def test_migration_creates_backup(tmp_path):
     """Migration should create backup before modifying filesystem."""
@@ -1486,7 +1476,6 @@ def test_migration_creates_backup(tmp_path):
     assert (backup / 'file.txt').exists()
     assert (backup / 'file.txt').read_text() == 'original'
 
-
 def test_migration_can_rollback():
     """Should be able to rollback migration to previous state."""
     from file_organizer.methodologies.para.migration_manager import PARAMigrationManager
@@ -1500,7 +1489,6 @@ def test_migration_can_rollback():
     # Should have rollback method
     assert hasattr(manager, 'rollback')
     assert callable(manager.rollback)
-
 
 def test_rollback_restores_backup():
     """Rollback should restore from backup."""
@@ -1523,7 +1511,6 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
-
 
 class PARAMigrationManager:
     """Manages PARA folder structure migration with backup/rollback support."""
@@ -1647,6 +1634,7 @@ Addresses Issue #476 Phase 1: Migration recovery"
 ## Task 2: Implement plugin operation-level restrictions
 
 **Files:**
+
 - Create: `src/file_organizer/plugins/operation_restrictions.py`
 - Modify: `src/file_organizer/plugins/registry.py`
 - Create: `tests/unit/plugins/test_operation_restrictions.py`
@@ -1660,7 +1648,6 @@ Addresses Issue #476 Phase 1: Migration recovery"
 import pytest
 from enum import Enum
 
-
 def test_plugin_can_restrict_operations():
     """Plugins should be able to define operation restrictions."""
     from file_organizer.plugins.operation_restrictions import OperationRestriction, PluginOperations
@@ -1671,7 +1658,6 @@ def test_plugin_can_restrict_operations():
     assert hasattr(PluginOperations, 'EXECUTE')
     assert hasattr(PluginOperations, 'DELETE')
 
-
 def test_registry_enforces_operation_restrictions():
     """Registry should enforce operation restrictions on plugins."""
     from file_organizer.plugins.registry import PluginRegistry
@@ -1681,7 +1667,6 @@ def test_registry_enforces_operation_restrictions():
     # Registry should check permissions before allowing operations
     assert hasattr(registry, 'check_operation_allowed')
     assert callable(registry.check_operation_allowed)
-
 
 def test_plugin_cannot_perform_restricted_operations():
     """Plugin should not be able to perform restricted operations."""
@@ -1708,7 +1693,6 @@ def test_plugin_cannot_perform_restricted_operations():
 from enum import Enum
 from typing import Set, Dict
 
-
 class PluginOperations(Enum):
     """Operations that plugins can request to perform."""
 
@@ -1718,7 +1702,6 @@ class PluginOperations(Enum):
     DELETE = 'delete'       # Delete files
     MODIFY_CONFIG = 'config'  # Modify application configuration
     NETWORK = 'network'     # Make network calls
-
 
 class OperationRestriction:
     """Defines operation restrictions for a plugin."""
@@ -1747,7 +1730,6 @@ class OperationRestriction:
             True if operation is allowed
         """
         return operation in self.allowed_operations
-
 
 class PluginSecurityPolicy:
     """Global security policy for all plugins."""
@@ -1812,7 +1794,6 @@ from file_organizer.plugins.operation_restrictions import (
     PluginSecurityPolicy,
     PluginOperations
 )
-
 
 class PluginRegistry:
     """Manage plugins with operation-level security restrictions."""
@@ -1910,6 +1891,7 @@ Addresses Issue #476 Phase 2: Plugin operation restrictions"
 ## Task 3: Add integration tests and documentation
 
 **Files:**
+
 - Create: `tests/integration/methodologies/test_para_migration_complete.py`
 - Create: `docs/architecture/plugin-security-policy.md`
 
@@ -1921,7 +1903,6 @@ Addresses Issue #476 Phase 2: Plugin operation restrictions"
 
 import pytest
 from pathlib import Path
-
 
 def test_complete_para_migration_flow(tmp_path):
     """Test complete migration with backup and recovery."""
@@ -1945,7 +1926,6 @@ def test_complete_para_migration_flow(tmp_path):
     # Verify can rollback
     manager.rollback()
     assert (source / 'project.txt').read_text() == 'project data'
-
 
 def test_migration_cleanup(tmp_path):
     """Should cleanup backup after successful migration."""
@@ -2008,7 +1988,9 @@ Plugins operate under a principle of least privilege. All plugins are restricted
 ## Plugin Declaration
 
 ```python
+
 # plugins/my_plugin.py
+
 from file_organizer.plugins.base import BasePlugin
 from file_organizer.plugins.operation_restrictions import PluginOperations
 
@@ -2016,20 +1998,24 @@ class MyPlugin(BasePlugin):
     name = "my-plugin"
 
     # Declare required operations
+
     required_operations = {
         PluginOperations.READ,
         PluginOperations.WRITE,
     }
-```
+
+```text
 
 ## Registry Enforcement
 
 The PluginRegistry enforces all operation checks:
 
 ```python
+
 registry = PluginRegistry()
 
 # Register plugin with permissions
+
 registry.register_plugin(
     'my-plugin',
     MyPluginClass,
@@ -2040,6 +2026,7 @@ registry.register_plugin(
 )
 
 # Operation check enforced
+
 registry.execute_plugin_operation(
     'my-plugin',
     PluginOperations.WRITE,  # ✅ Allowed
@@ -2051,7 +2038,8 @@ registry.execute_plugin_operation(
     PluginOperations.DELETE,  # ❌ PermissionError
     file_path='/path/to/file'
 )
-```
+
+```markdown
 
 ## Best Practices
 
@@ -2059,6 +2047,7 @@ registry.execute_plugin_operation(
 2. **Document why each operation needed**: Help users understand plugin safety
 3. **Handle permission errors gracefully**: Provide helpful error messages
 4. **Never bypass security checks**: PluginRegistry controls all operations
+
 ```
 
 **Step 3: Commit tests and docs**
@@ -2083,6 +2072,7 @@ Addresses Issue #476 Phase 3: Documentation and testing"
 # Summary & Execution
 
 **Total Implementation:**
+
 - Issue #471 (Paths): 5 tasks, ~24-32 hours
 - Issue #472 (Startup): 3 tasks, ~20-28 hours (PARALLEL)
 - Issue #476 (Migration/Security): 3 tasks, ~16-24 hours (SEQUENTIAL after #471)
@@ -2091,6 +2081,7 @@ Addresses Issue #476 Phase 3: Documentation and testing"
 **Parallel Path:** #472 (can run simultaneously)
 
 **Recommended Execution:**
+
 - Create 2 sessions for parallel streams
 - Session 1: Issues #471 + #472 (4-6 weeks)
 - Session 2: Issue #476 (2-3 weeks, after #471 complete)
@@ -2104,12 +2095,14 @@ Plan complete and saved to `docs/plans/2026-02-27-phase-3-architectural-foundati
 **Two execution options:**
 
 **Option 1: Subagent-Driven (Current Session)**
+
 - I dispatch fresh subagent per task with code review
 - Fast iteration with immediate feedback
 - Best for complex architecture work
 - Takes 2-3 hours to complete all tasks with reviews
 
 **Option 2: Parallel Execution (Separate Sessions)**
+
 - Session 1: Phase 3A (Issues #471 + #472 in parallel)
 - Session 2: Phase 3B (Issue #476 after #471 merges)
 - Best for parallel development with coordination

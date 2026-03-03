@@ -45,6 +45,7 @@ The project has a procedurally-generated icon set at `desktop/icons/` (7 files) 
 ## Technical Approach
 
 ### Phase 1: Complete the Icon Set
+
 - Add missing sizes to `generate_icons.py`: `icon_16x16.png`, `icon_48x48.png`, `icon_512x512.png`
 - Add HiDPI: `icon_32x32@2x.png` (64px), `icon_128x128@2x.png` (256px), `icon_256x256@2x.png` (512px)
 - Regenerate all icons with updated script
@@ -52,12 +53,14 @@ The project has a procedurally-generated icon set at `desktop/icons/` (7 files) 
 - Validate ICNS contains proper type entries
 
 ### Phase 2: Build Workflow Integration
+
 - Add `copy-icons` step to Tauri build (pre-build hook or npm script)
 - Update `tauri.conf.json` to reference all icon sizes
 - Update Linux `.desktop` file and Flatpak manifest icon paths
 - Integrate `generate_icons.py` into `scripts/build_*.sh` scripts
 
 ### Phase 3: CI Validation
+
 - Add icon validation script (`scripts/validate_icons.py`)
 - Verify: file exists, is valid PNG/ICO/ICNS, correct dimensions, RGBA color type
 - Run in CI before `tauri build` step

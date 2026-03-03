@@ -20,14 +20,17 @@ Implement intelligent pattern learning that adapts to user feedback. The system 
 
 **Scope**: Naming pattern identification and extraction algorithms
 **Files**:
+
 - `file_organizer/services/intelligence/pattern_extractor.py`
 - `file_organizer/services/intelligence/naming_analyzer.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 8 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - NamingPatternExtractor class
 - Filename structure analysis
 - Common element extraction
@@ -42,14 +45,17 @@ Implement intelligent pattern learning that adapts to user feedback. The system 
 
 **Scope**: Confidence calculation engine and pattern decay mechanisms
 **Files**:
+
 - `file_organizer/services/intelligence/confidence.py`
 - `file_organizer/services/intelligence/scoring.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 7 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - ConfidenceEngine class
 - Multi-factor confidence scoring (frequency, recency, consistency)
 - Time-decay algorithms for old patterns
@@ -64,14 +70,17 @@ Implement intelligent pattern learning that adapts to user feedback. The system 
 
 **Scope**: Folder preference learning and feedback loop integration
 **Files**:
+
 - `file_organizer/services/intelligence/folder_learner.py`
 - `file_organizer/services/intelligence/feedback_processor.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: after Stream A completes
 **Estimated Hours**: 7 hours
 **Dependencies**: Stream A
 
 **Deliverables**:
+
 - FolderPreferenceLearner class
 - File type to folder mapping learning
 - Workflow-based organization detection
@@ -86,6 +95,7 @@ Implement intelligent pattern learning that adapts to user feedback. The system 
 
 **Scope**: PatternLearner orchestration, PreferenceTracker integration, comprehensive testing
 **Files**:
+
 - `file_organizer/services/intelligence/pattern_learner.py`
 - `file_organizer/services/intelligence/__init__.py`
 - `tests/services/intelligence/test_pattern_extractor.py`
@@ -94,12 +104,14 @@ Implement intelligent pattern learning that adapts to user feedback. The system 
 - `tests/services/intelligence/test_feedback_processor.py`
 - `tests/services/intelligence/test_pattern_learner.py`
 - `tests/integration/test_pattern_learning_e2e.py`
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Streams A, B, and C complete
 **Estimated Hours**: 2 hours
 **Dependencies**: Streams A, B, C
 
 **Deliverables**:
+
 - PatternLearner orchestrator class
 - Integration with PreferenceTracker (#50)
 - Unified API for pattern learning
@@ -117,6 +129,7 @@ Implement intelligent pattern learning that adapts to user feedback. The system 
 ### Shared Files
 
 Minimal overlap:
+
 - `file_organizer/services/intelligence/__init__.py` - Stream D updates exports after A, B, C complete
 
 ### Interface Contracts
@@ -124,6 +137,7 @@ Minimal overlap:
 Define these interfaces upfront:
 
 **NamingPatternExtractor Interface**:
+
 ```python
 def analyze_filename(filename: str) -> dict
 def extract_common_elements(filenames: List[str]) -> List[str]
@@ -134,6 +148,7 @@ def detect_date_format(filename: str) -> Optional[str]
 ```
 
 **ConfidenceEngine Interface**:
+
 ```python
 def calculate_confidence(pattern: dict, usage_data: dict) -> float
 def decay_old_patterns(patterns: List[dict], time_threshold: int) -> List[dict]
@@ -143,6 +158,7 @@ def get_confidence_trend(pattern_id: str, history: List) -> dict
 ```
 
 **FolderPreferenceLearner Interface**:
+
 ```python
 def track_folder_choice(file_type: str, folder: Path, context: dict) -> None
 def get_preferred_folder(file_type: str, confidence_threshold: float) -> Optional[Path]
@@ -151,6 +167,7 @@ def suggest_folder_structure(file_info: dict) -> Optional[Path]
 ```
 
 **FeedbackProcessor Interface**:
+
 ```python
 def process_correction(original: Path, corrected: Path, context: dict) -> None
 def batch_process_history(corrections: List[dict]) -> None
@@ -159,6 +176,7 @@ def trigger_retraining() -> None
 ```
 
 **PatternLearner Interface** (Orchestrator):
+
 ```python
 def learn_from_correction(original: Path, corrected: Path, context: dict) -> None
 def extract_naming_pattern(filenames: List[str]) -> dict
@@ -176,6 +194,7 @@ def get_pattern_suggestion(file_info: dict, min_confidence: float) -> Optional[d
 ## Conflict Risk Assessment
 
 **Low Risk** - Clear file separation:
+
 - Stream A: `pattern_extractor.py`, `naming_analyzer.py`
 - Stream B: `confidence.py`, `scoring.py`
 - Stream C: `folder_learner.py`, `feedback_processor.py`
@@ -188,11 +207,13 @@ No implementation file overlap between A, B, and C.
 **Recommended Approach**: hybrid (partial parallel then sequential)
 
 **Execution Plan**:
+
 1. **Phase 1** (parallel, 8 hours): Launch Streams A and B simultaneously
 2. **Phase 2** (sequential, 7 hours): Stream C starts after A completes
 3. **Phase 3** (sequential, 2 hours): Stream D integrates and tests
 
 **Timeline**:
+
 - Streams A & B: 8 hours (parallel, limited by Stream A)
 - Stream C: 7 hours (depends on A)
 - Stream D: 2 hours (depends on A, B, C)
@@ -202,11 +223,13 @@ Total wall time: ~17 hours
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~17 hours (max(A,B) + C + D)
 - Total work: 24 hours
 - Efficiency gain: 29% time savings
 
 **Without parallel execution**:
+
 - Wall time: 24 hours (sequential)
 
 **Parallelization factor**: 2.2x effective speedup (24h / 10.9h per developer)
@@ -258,7 +281,7 @@ Total wall time: ~17 hours
 
 ### Confidence Scoring Formula
 
-```
+```markdown
 confidence = (frequency * 0.4) + (recency * 0.3) + (consistency * 0.3)
 
 where:
@@ -296,6 +319,7 @@ where:
 ### Test Data Requirements
 
 Stream D should test:
+
 - 5+ correction scenarios for pattern learning
 - 20+ folder choices for preference accuracy
 - Real-time vs batch processing comparison

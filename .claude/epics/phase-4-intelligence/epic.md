@@ -28,6 +28,7 @@ Add intelligent features including deduplication, preference learning, and undo/
 ### 1. File Deduplication 🔍
 
 Identify and remove duplicate files
+
 - **Exact duplicates**: Hash-based detection (MD5/SHA256)
 - **Similar images**: Perceptual hashing (pHash)
 - **Similar documents**: Semantic similarity analysis
@@ -39,6 +40,7 @@ Identify and remove duplicate files
 ### 2. User Preference Learning 🧠
 
 Adapt to user's organization preferences
+
 - Track user corrections and changes
 - Learn naming patterns
 - Remember folder preferences
@@ -50,6 +52,7 @@ Adapt to user's organization preferences
 ### 3. Undo/Redo System ⏮️
 
 Revert organization operations
+
 - Track all file operations
 - Undo single operation
 - Undo batch operations
@@ -61,6 +64,7 @@ Revert organization operations
 ### 4. Smart Suggestions 💡
 
 AI-powered recommendations
+
 - Suggest organization improvements
 - Detect organizational patterns
 - Recommend folder structures
@@ -70,6 +74,7 @@ AI-powered recommendations
 ### 5. Advanced Analytics 📊
 
 Insights into file organization
+
 - Storage usage analysis
 - File type distribution
 - Duplicate statistics

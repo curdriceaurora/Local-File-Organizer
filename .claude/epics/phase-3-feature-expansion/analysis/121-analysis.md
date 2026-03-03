@@ -20,15 +20,18 @@ Implement automatic PARA folder structure generation with migration support from
 
 **Scope**: Core PARA folder creation and structure management
 **Files**:
+
 - `src/file_organizer/methodologies/para/folder_generator.py`
 - `src/file_organizer/methodologies/para/structure_validator.py`
 - `src/file_organizer/methodologies/para/config.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 5 hours
 **Dependencies**: none
 
 **Tasks:**
+
 - Create `PARAFolderGenerator` class
 - Implement standard PARA structure generation
 - Add customizable subfolder creation
@@ -41,15 +44,18 @@ Implement automatic PARA folder structure generation with migration support from
 
 **Scope**: Migrate existing flat/hierarchical structures to PARA
 **Files**:
+
 - `src/file_organizer/methodologies/para/migration_manager.py`
 - `src/file_organizer/methodologies/para/migration_analyzer.py`
 - `src/file_organizer/methodologies/para/migration_planner.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 6 hours
 **Dependencies**: none
 
 **Tasks:**
+
 - Create `PARAMigrationManager` class
 - Implement source structure analysis
 - Build migration planning logic
@@ -63,14 +69,17 @@ Implement automatic PARA folder structure generation with migration support from
 
 **Scope**: Integrate categorization rules with folder generation
 **Files**:
+
 - `src/file_organizer/methodologies/para/folder_mapper.py`
 - `src/file_organizer/methodologies/para/rule_engine_integration.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: after Stream A reaches 30%
 **Estimated Hours**: 3 hours
 **Dependencies**: Stream A (needs folder structure API)
 
 **Tasks:**
+
 - Create `CategoryFolderMapper` class
 - Map files to PARA folders based on rules
 - Integrate with existing rule engine
@@ -82,17 +91,20 @@ Implement automatic PARA folder structure generation with migration support from
 
 **Scope**: Comprehensive test suite for all components
 **Files**:
+
 - `tests/methodologies/para/test_folder_generator.py`
 - `tests/methodologies/para/test_migration_manager.py`
 - `tests/methodologies/para/test_folder_mapper.py`
 - `tests/methodologies/para/test_integration.py`
 - `tests/fixtures/para_migration/`
+
 **Agent Type**: qa-specialist
 **Can Start**: after Streams A & B are 50% complete
 **Estimated Hours**: 5 hours
 **Dependencies**: Streams A, B, C
 
 **Tasks:**
+
 - Unit tests for folder generation
 - Unit tests for migration logic
 - Integration tests with complete workflow
@@ -112,6 +124,7 @@ Implement automatic PARA folder structure generation with migration support from
 ### Shared Data Structures
 
 All streams need agreement on:
+
 - `PARAFolderConfig` structure
 - `PARACategory` enum
 - `MigrationPlan` format
@@ -136,15 +149,18 @@ All streams need agreement on:
 **Recommended Approach**: Hybrid parallel-sequential
 
 **Phase 1 (Parallel)**: Launch Streams A & B simultaneously
+
 - Folder generation and migration work independently
 - Coordinate on shared data structure definitions
 - Wall time: ~6 hours (longest stream)
 
 **Phase 2 (Sequential)**: Start Stream C after Stream A reaches 30%
+
 - Rule integration builds on folder structure API
 - Wall time: +3 hours (overlaps with Phase 1 completion)
 
 **Phase 3 (Testing)**: Start Stream D after Streams A & B reach 50%
+
 - Early testing provides feedback to development
 - Wall time: +5 hours
 
@@ -153,21 +169,25 @@ All streams need agreement on:
 ## Expected Timeline
 
 With parallel execution:
+
 - **Wall time**: 11 hours (6h parallel + 3h sequential + overlap with 5h testing)
 - **Total work**: 19 hours (across 4 streams)
 - **Efficiency gain**: 42% time reduction
 
 Without parallel execution:
+
 - **Wall time**: 19 hours
 
 ## Notes
 
 **Dependencies:**
+
 - Task 007 (Design PARA categorization system) must be completed first
 - Rule engine from Task 007 should be available for integration
 
 **PARA Structure:**
-```
+
+```text
 /
 ├── Projects/
 │   ├── Active/
@@ -184,12 +204,14 @@ Without parallel execution:
 ```
 
 **Migration Process:**
+
 1. **Analysis**: Scan source, identify files, apply categorization
 2. **Preview**: Show proposed structure and file movements
 3. **Execution**: Create backup, generate folders, move files
 4. **Validation**: Verify integrity and generate report
 
 **Safety Considerations:**
+
 - Always create backups before migration
 - Use atomic operations where possible
 - Implement transaction-like rollback
@@ -197,18 +219,21 @@ Without parallel execution:
 - Graceful failure with partial completion recovery
 
 **Performance Optimizations:**
+
 - Batch file operations for efficiency
 - Parallel processing for large migrations
 - Incremental progress updates
 - Resume capability for interrupted migrations
 
 **Error Handling:**
+
 - Detailed error logging
 - User-friendly error messages
 - Recovery suggestions
 - Partial completion support
 
 **Testing Priorities:**
+
 1. Standard PARA structure generation
 2. Custom structure configurations
 3. Migration from various source structures
@@ -218,6 +243,7 @@ Without parallel execution:
 7. Edge cases (permissions, conflicts, duplicates)
 
 **Migration Report Example:**
+
 ```markdown
 # PARA Migration Report
 

@@ -23,7 +23,7 @@ API keys are personal access tokens for API requests.
 
 API keys are personal access tokens:
 
-```
+```text
 fo_abc123_token456
 ```
 
@@ -122,7 +122,7 @@ Rate limits are configured in the application settings (`ApiSettings`).
 
 Rate limits appear in response headers:
 
-```
+```yaml
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
 X-RateLimit-Reset: 1645026000
@@ -259,7 +259,7 @@ const apiKey = process.env.FILE_ORGANIZER_API_KEY;
 
 **.env File**:
 
-```
+```bash
 FILE_ORGANIZER_API_KEY=fo_abc123_token456
 ```
 

@@ -20,15 +20,18 @@ Implement intelligent content-based organization for audio files using both tran
 
 **Scope**: Develop classification engine to identify audio types
 **Files**:
+
 - `src/file_organizer/services/audio_classifier.py`
 - `src/file_organizer/services/audio_type_detector.py`
 - `src/file_organizer/models/audio_types.py`
+
 **Agent Type**: ml-specialist
 **Can Start**: immediately
 **Estimated Hours**: 4 hours
 **Dependencies**: none
 
 **Tasks:**
+
 - Create `AudioClassifier` class with type detection
 - Implement rule-based classification (metadata patterns)
 - Add ML-based classification for ambiguous cases
@@ -40,15 +43,18 @@ Implement intelligent content-based organization for audio files using both tran
 
 **Scope**: Build flexible rule engine for organizing different audio types
 **Files**:
+
 - `src/file_organizer/services/audio_organizer.py`
 - `src/file_organizer/core/organization_rules.py`
 - `src/file_organizer/models/organization_templates.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 4 hours
 **Dependencies**: none
 
 **Tasks:**
+
 - Create `AudioOrganizer` class
 - Implement `OrganizationRules` with customizable templates
 - Build path generation logic for each audio type
@@ -60,15 +66,18 @@ Implement intelligent content-based organization for audio files using both tran
 
 **Scope**: Integrate transcription and metadata for smart organization
 **Files**:
+
 - `src/file_organizer/services/audio_content_analyzer.py`
 - `src/file_organizer/services/topic_extractor.py`
 - `src/file_organizer/utils/path_utils.py`
+
 **Agent Type**: nlp-specialist
 **Can Start**: immediately
 **Estimated Hours**: 4 hours
 **Dependencies**: none
 
 **Tasks:**
+
 - Extract topics and keywords from transcriptions
 - Apply NLP for topic modeling
 - Extract dates and event names from speech
@@ -80,14 +89,17 @@ Implement intelligent content-based organization for audio files using both tran
 
 **Scope**: Identify and handle duplicate audio files
 **Files**:
+
 - `src/file_organizer/services/audio_duplicate_detector.py`
 - `src/file_organizer/utils/audio_fingerprint.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 3 hours
 **Dependencies**: none
 
 **Tasks:**
+
 - Implement audio fingerprinting
 - Compare audio fingerprints for duplicates
 - Check metadata similarity
@@ -99,18 +111,21 @@ Implement intelligent content-based organization for audio files using both tran
 
 **Scope**: Comprehensive testing across all components
 **Files**:
+
 - `tests/services/test_audio_classifier.py`
 - `tests/services/test_audio_organizer.py`
 - `tests/services/test_audio_content_analyzer.py`
 - `tests/services/test_audio_duplicate_detector.py`
 - `tests/integration/test_audio_organization_workflow.py`
 - `tests/fixtures/audio_organization/`
+
 **Agent Type**: qa-specialist
 **Can Start**: after Streams A-D are 50% complete
 **Estimated Hours**: 4 hours
 **Dependencies**: Streams A, B, C, D
 
 **Tasks:**
+
 - Unit tests for classification logic
 - Unit tests for organization rules
 - Integration tests with complete workflow
@@ -128,6 +143,7 @@ Implement intelligent content-based organization for audio files using both tran
 ### Type Definitions
 
 All streams need agreement on:
+
 - `AudioType` enum (Music, Podcast, Audiobook, Recording, Interview, etc.)
 - `AudioMetadata` dataclass structure
 - `OrganizationResult` return type
@@ -150,11 +166,13 @@ All streams need agreement on:
 **Recommended Approach**: Full parallel with staggered testing
 
 **Phase 1 (Parallel)**: Launch Streams A, B, C, D simultaneously
+
 - All development work proceeds independently
 - Teams coordinate on shared type definitions
 - Wall time: ~4 hours (longest stream)
 
 **Phase 2 (Testing)**: Start Stream E after Phase 1 reaches 50%
+
 - Early integration testing begins
 - Bug fixes fed back to development streams
 - Wall time: +4 hours
@@ -164,21 +182,25 @@ All streams need agreement on:
 ## Expected Timeline
 
 With parallel execution:
+
 - **Wall time**: 8 hours (4h parallel dev + 4h testing)
 - **Total work**: 19 hours (across 5 streams)
 - **Efficiency gain**: 58% time reduction
 
 Without parallel execution:
+
 - **Wall time**: 19 hours
 
 ## Notes
 
 **Dependencies:**
+
 - Task 001 (transcription) - Required for content analysis (Task 42)
 - Task 002 (metadata extraction) - Required for classification (Task 43)
 - These dependencies must be completed before starting this task
 
 **Performance Considerations:**
+
 - Cache classification results to avoid reprocessing
 - Batch process multiple files for efficiency
 - Optimize path generation algorithms
@@ -186,6 +208,7 @@ Without parallel execution:
 - Implement progress tracking for user feedback
 
 **User Experience Focus:**
+
 - Dry-run mode is essential for user confidence
 - Provide detailed preview before moving files
 - Clear organization reports with statistics
@@ -195,21 +218,25 @@ Without parallel execution:
 **Organization Templates:**
 
 Music:
-```
+
+```text
 Music/{Genre}/{Artist}/{Album}/{TrackNum} - {Title}.{ext}
 ```
 
 Podcasts:
-```
+
+```text
 Podcasts/{Show Name}/{Year}/{Episode} - {Title} ({Date}).{ext}
 ```
 
 Recordings:
-```
+
+```text
 Recordings/{Year}/{Month}/{Topic}/{Date} - {Description}.{ext}
 ```
 
 **Testing Priorities:**
+
 1. Classification accuracy across different audio types
 2. Organization logic with various metadata combinations
 3. Handling of missing or incomplete metadata

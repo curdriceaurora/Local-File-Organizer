@@ -20,14 +20,17 @@ Implement perceptual hashing for detecting visually similar images using imagede
 
 **Scope**: Backend logic for perceptual hash computation and similarity matching
 **Files**:
+
 - `file_organizer/services/deduplication/image_dedup.py`
 - `file_organizer/services/deduplication/image_utils.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 10 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - ImageDeduplicator class with imagededup integration
 - Support for pHash, dHash, aHash algorithms
 - Hamming distance calculation for hash comparison
@@ -42,13 +45,16 @@ Implement perceptual hashing for detecting visually similar images using imagede
 
 **Scope**: Image quality analysis and best-quality selection logic
 **Files**:
+
 - `file_organizer/services/deduplication/quality.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 4 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - ImageQualityAnalyzer class
 - Quality metrics: resolution, file size, format preference
 - Quality scoring algorithm
@@ -61,13 +67,16 @@ Implement perceptual hashing for detecting visually similar images using imagede
 
 **Scope**: Terminal-based UI for reviewing duplicate images
 **Files**:
+
 - `file_organizer/services/deduplication/viewer.py`
+
 **Agent Type**: fullstack-specialist
 **Can Start**: immediately
 **Estimated Hours**: 6 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - ComparisonViewer class
 - Terminal-based image preview (ASCII art or external viewer integration)
 - Metadata display (dimensions, size, format, modification date)
@@ -81,18 +90,21 @@ Implement perceptual hashing for detecting visually similar images using imagede
 
 **Scope**: Bring components together, comprehensive testing, CLI integration
 **Files**:
+
 - `file_organizer/cli/dedupe_images.py` (new CLI subcommand)
 - `tests/services/deduplication/test_image_dedup.py`
 - `tests/services/deduplication/test_quality.py`
 - `tests/services/deduplication/test_viewer.py`
 - `tests/integration/test_image_deduplication_e2e.py`
 - `file_organizer/services/deduplication/__init__.py` (update exports)
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Streams A, B, and C complete
 **Estimated Hours**: 4 hours
 **Dependencies**: Streams A, B, C
 
 **Deliverables**:
+
 - CLI subcommand for image deduplication
 - Unit tests for all classes (>85% coverage)
 - Integration tests with diverse image datasets
@@ -106,6 +118,7 @@ Implement perceptual hashing for detecting visually similar images using imagede
 ### Shared Files
 
 Minimal overlap - only module init file:
+
 - `file_organizer/services/deduplication/__init__.py` - Stream D updates exports after A, B, C complete
 
 ### Interface Contracts
@@ -113,6 +126,7 @@ Minimal overlap - only module init file:
 To enable parallel work, define these interfaces upfront:
 
 **ImageDeduplicator Interface**:
+
 ```python
 def __init__(hash_method: str = "phash", threshold: int = 10)
 def find_duplicates(directory: Path) -> Dict[str, List[Path]]
@@ -121,6 +135,7 @@ def get_image_hash(image_path: Path) -> str
 ```
 
 **ImageQualityAnalyzer Interface**:
+
 ```python
 def assess_quality(image_path: Path) -> float
 def compare_quality(img1: Path, img2: Path) -> int  # Returns -1, 0, 1
@@ -129,6 +144,7 @@ def get_quality_metrics(image_path: Path) -> dict
 ```
 
 **ComparisonViewer Interface**:
+
 ```python
 def show_comparison(images: List[Path]) -> Path
 def batch_review(duplicate_groups: Dict) -> Dict[Path, str]
@@ -145,6 +161,7 @@ def interactive_select(images: List[Path]) -> List[Path]  # Returns images to ke
 ## Conflict Risk Assessment
 
 **Low Risk** - Streams work on completely different files:
+
 - Stream A: `image_dedup.py`, `image_utils.py`
 - Stream B: `quality.py`
 - Stream C: `viewer.py`
@@ -157,11 +174,13 @@ No shared implementation files between A, B, and C.
 **Recommended Approach**: parallel with final integration
 
 **Execution Plan**:
+
 1. **Pre-work** (0.5 hours): Define and document interface contracts
 2. **Phase 1** (parallel, 10 hours): Launch Streams A, B, C simultaneously
 3. **Phase 2** (sequential, 4 hours): Stream D integrates and tests
 
 **Timeline**:
+
 - Stream A: 10 hours (longest)
 - Stream B: 4 hours (completes early)
 - Stream C: 6 hours (completes early)
@@ -172,11 +191,13 @@ Total wall time: ~14.5 hours (including coordination)
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~14.5 hours (pre-work + max(A,B,C) + D)
 - Total work: 24 hours
 - Efficiency gain: 40% time savings
 
 **Without parallel execution**:
+
 - Wall time: 24 hours (sequential completion)
 
 **Parallelization factor**: 2.8x effective speedup (24h / 8.6h actual per developer)
@@ -216,6 +237,7 @@ Total wall time: ~14.5 hours (including coordination)
 ### Integration Points
 
 This task integrates with:
+
 - Issue #46 (hash-based deduplication) - shares deduplication service directory
 - Existing FileOrganizer service for directory scanning
 - CLI framework for new image dedupe subcommand
@@ -224,16 +246,19 @@ This task integrates with:
 ### Dependencies to Install
 
 Required Python packages:
+
 - `imagededup>=0.3.0` - Perceptual hashing
 - `Pillow>=10.0.0` - Image processing
 - `numpy>=1.24.0` - Numerical operations
 
 Optional:
+
 - `termplotlib` or `rich` for enhanced terminal display
 
 ### Test Data Requirements
 
 Stream D should create/use diverse test image sets:
+
 - Exact duplicates with different names
 - Resized versions (various resolutions)
 - JPEG quality variations

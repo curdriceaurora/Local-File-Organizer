@@ -26,6 +26,7 @@ parallelization_factor: 2.0
 **Scope**: Add `MAX_FILE_SIZE_BYTES` constant, `FileTooLargeError` exception, and `_check_file_size()` helper. Patch `read_file()` dispatcher and the four unbounded readers (`read_docx_file`, `read_presentation_file`, `read_ebook_file`, `read_tar_file`).
 
 **Files**:
+
 - `src/file_organizer/utils/file_readers.py` — add constant, exception, helper, patch readers
 - `src/file_organizer/utils/__init__.py` — export `FileTooLargeError`
 
@@ -37,6 +38,7 @@ parallelization_factor: 2.0
 **Scope**: Unit tests for the size gate using mocked `os.stat` (no real 2 GB files needed). Verify `read_file()` and each patched reader raise `FileTooLargeError` on oversized input. Verify normal-sized files still pass.
 
 **Files**:
+
 - `tests/utils/test_file_size_limit.py` ← new
 
 **Can Start**: immediately (mock-based, no dependency on Stream A code)

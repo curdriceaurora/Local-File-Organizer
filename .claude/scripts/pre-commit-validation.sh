@@ -273,17 +273,6 @@ if [[ -n "$DOCS_FILES" ]]; then
       echo "❌ $doc_file: First line must be a # heading, got: $FIRST_LINE"
       DOCS_ISSUES=1
     fi
-
-    # Opening code fences must have language annotation
-    # Track fence state: odd occurrences are openers, even are closers
-    # Match exactly triple-backtick fences (not 4-backtick MkDocs tab/admonition containers)
-    # with optional leading whitespace
-    BARE_OPENERS=$(awk '/^[[:space:]]*```([^`]|$)/{count++; if(count%2==1 && $0~/^[[:space:]]*```[[:space:]]*$/) print NR": "$0}' "$doc_file")
-    if [[ -n "$BARE_OPENERS" ]]; then
-      echo "❌ $doc_file: Opening code fences without language annotation found"
-      echo "$BARE_OPENERS" | sed 's/^/    /'
-      DOCS_ISSUES=1
-    fi
   done
 
   if [[ $DOCS_ISSUES -eq 1 ]]; then

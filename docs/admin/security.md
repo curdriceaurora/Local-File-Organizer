@@ -168,7 +168,7 @@ roles:
 
 Log all security-relevant events:
 
-```
+```bash
 2026-02-17 10:30:00 | USER_LOGIN | admin | 192.168.1.100 | SUCCESS
 2026-02-17 10:31:00 | FILE_UPLOAD | user1 | 192.168.1.101 | document.pdf | SUCCESS
 2026-02-17 10:32:00 | API_KEY_CREATE | admin | 192.168.1.100 | client-key | SUCCESS

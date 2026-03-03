@@ -133,7 +133,7 @@ class MyPlugin(Plugin):
 
 ### Directory Layout
 
-```
+```text
 my_plugin/
 ├── __init__.py
 ├── plugin.py

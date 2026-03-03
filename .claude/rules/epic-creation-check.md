@@ -1,11 +1,13 @@
 # Epic Creation Check Rule
 
 ## Purpose
+
 Prevent duplication of epics by checking for existing epics before creating new ones.
 
 ## When This Rule Applies
 
 This rule MUST be followed before:
+
 - Creating a new PRD (`/pm:prd-new`)
 - Creating a new epic (`/pm:prd-parse`)
 - Decomposing an epic (`/pm:epic-decompose`)
@@ -14,6 +16,7 @@ This rule MUST be followed before:
 ## Check Procedure
 
 ### Step 1: List Existing Epics
+
 Before creating any new epic or PRD, always list existing epics:
 
 ```bash
@@ -25,13 +28,16 @@ find .claude/epics -name "epic.md" -exec dirname {} \; | sed 's|.claude/epics/||
 ```
 
 ### Step 2: Review Epic Names and Purposes
+
 For each existing epic found, check:
+
 ```bash
 # Read epic frontmatter and title
 head -15 .claude/epics/{epic-name}/epic.md
 ```
 
 Look for:
+
 - Epic name/title
 - Description/overview
 - Related GitHub issue
@@ -41,6 +47,7 @@ Look for:
 ### Step 3: Check for Overlap
 
 **Ask yourself**:
+
 1. Does an epic already exist for this topic?
 2. Would the new work fit better as tasks in an existing epic?
 3. Is there partial overlap that should be consolidated?
@@ -59,7 +66,8 @@ Look for:
 ## Example Scenarios
 
 ### Scenario 1: Exact Match ✅
-```
+
+```yaml
 User: "Create epic for unit testing"
 Agent finds: .claude/epics/testing-qa/epic.md (status: open)
 Action:
@@ -69,7 +77,8 @@ Action:
 ```
 
 ### Scenario 2: Partial Overlap ⚠️
-```
+
+```yaml
 User: "Create epic for database testing"
 Agent finds: .claude/epics/testing-qa/epic.md (includes all testing)
 Action:
@@ -79,7 +88,8 @@ Action:
 ```
 
 ### Scenario 3: Completed Epic 🔄
-```
+
+```yaml
 User: "Create epic for additional testing"
 Agent finds: .claude/epics/testing-qa/epic.md (status: completed)
 Action:
@@ -89,7 +99,8 @@ Action:
 ```
 
 ### Scenario 4: No Match 🆕
-```
+
+```yaml
 User: "Create epic for desktop app"
 Agent finds: No epics related to desktop/UI
 Action:
@@ -100,7 +111,9 @@ Action:
 ## Implementation in Commands
 
 ### In `/pm:prd-new` Command
+
 Add this step BEFORE creating the PRD:
+
 ```bash
 echo "Checking for existing epics..."
 existing_epics=$(ls -1 .claude/epics/)
@@ -109,7 +122,9 @@ echo "Found epics: $existing_epics"
 ```
 
 ### In `/pm:prd-parse` Command
+
 Add this step BEFORE parsing the PRD into an epic:
+
 ```bash
 epic_name="${FEATURE_NAME}"
 if [ -d ".claude/epics/${epic_name}" ]; then
@@ -121,6 +136,7 @@ fi
 ```
 
 ### In `/pm:epic-decompose` Command
+
 Already checks for existing epic directory - this is good!
 Enhancement: Also suggest related epics that might need the same decomposition.
 
@@ -128,7 +144,7 @@ Enhancement: Also suggest related epics that might need the same decomposition.
 
 When duplication is detected, use this format:
 
-```
+```yaml
 ⚠️ Found existing epic that may overlap: {epic-name}
 
 Epic: {title}
@@ -155,18 +171,23 @@ Which would you like to do?
 ## Edge Cases
 
 ### Multiple Related Epics
+
 Some topics may genuinely need multiple epics (e.g., "Testing Phase 1" vs "Testing Phase 2"):
+
 - Allow this if epics are phased or have different timelines
 - Ensure clear naming convention (testing-phase-1, testing-phase-2)
 - Document relationship between epics
 
 ### Archived/Completed Epics
+
 - Completed epics can be reopened if more work is needed
 - Consider creating "V2" epic for major new iterations
 - Archive old epic directory if completely superseded
 
 ### Ambiguous Names
+
 If epic names are unclear:
+
 - Read the full epic.md file
 - Check GitHub issue for context
 - Better to ask user than assume
@@ -174,6 +195,7 @@ If epic names are unclear:
 ## Validation Checklist
 
 Before creating a new epic, confirm:
+
 - [ ] Listed all existing epics in `.claude/epics/`
 - [ ] Read titles and descriptions of potentially related epics
 - [ ] Checked GitHub issues for related work
@@ -192,5 +214,6 @@ Before creating a new epic, confirm:
 
 **Last Updated**: 2026-01-24T04:18:42Z
 **Related Rules**:
+
 - `frontmatter-operations.md` - Epic frontmatter standards
 - `github-operations.md` - GitHub issue synchronization

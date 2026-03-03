@@ -14,11 +14,13 @@ branch: epic/phase-3-feature-expansion (merged)
 Note: 3 of 4 agents worked directly on main branch instead of worktree due to coordination issue.
 
 **Completed on main branch:**
+
 - ✅ #112: Add CAD file support - Completed on main (commits 7e17c2c-8c97d7d)
 - ✅ #113: Add archive and scientific format support - Completed on main (commits 7c8acb6-dd0f4f4)
 - ✅ #123: Enhance EPUB processing - Completed on main (commits 132e323-2387de8)
 
 **Completed in worktree, merged to main:**
+
 - ✅ #83: Implement Johnny Decimal numbering system - Merged via commit 678a564
 
 ## Previously Completed ✅
@@ -82,8 +84,8 @@ Note: 3 of 4 agents worked directly on main branch instead of worktree due to co
 - Custom schemes, conflict detection, persistence
 
 **Total Implementation:**
+
 - ~6,973 lines of code added
 - 169 tests created
 - 4 new file format categories
 - All agents completed successfully in parallel
-

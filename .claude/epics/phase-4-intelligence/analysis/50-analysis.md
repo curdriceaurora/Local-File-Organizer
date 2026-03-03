@@ -20,13 +20,16 @@ Build a comprehensive preference tracking system that captures user corrections 
 
 **Scope**: Main preference tracking engine and correction capture
 **Files**:
+
 - `file_organizer/services/intelligence/preference_tracker.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 6 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - PreferenceTracker class
 - Correction tracking (file moves, renames, category overrides)
 - Preference data structures
@@ -39,13 +42,16 @@ Build a comprehensive preference tracking system that captures user corrections 
 
 **Scope**: JSON-based persistence with atomic writes
 **Files**:
+
 - `file_organizer/services/intelligence/preference_store.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 5 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - PreferenceStore class
 - JSON schema definition (v1.0)
 - Serialization/deserialization logic
@@ -59,14 +65,17 @@ Build a comprehensive preference tracking system that captures user corrections 
 
 **Scope**: Per-directory preferences with inheritance and conflict handling
 **Files**:
+
 - `file_organizer/services/intelligence/directory_prefs.py`
 - `file_organizer/services/intelligence/conflict_resolver.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 3 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - Directory-level preference scoping
 - Parent directory inheritance
 - Override capabilities for subdirectories
@@ -80,17 +89,20 @@ Build a comprehensive preference tracking system that captures user corrections 
 
 **Scope**: Module integration, comprehensive testing, and CLI hooks
 **Files**:
+
 - `file_organizer/services/intelligence/__init__.py`
 - `tests/services/intelligence/test_preference_tracker.py`
 - `tests/services/intelligence/test_preference_store.py`
 - `tests/services/intelligence/test_directory_prefs.py`
 - `tests/services/intelligence/test_conflict_resolver.py`
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Streams A, B, and C complete
 **Estimated Hours**: 2 hours
 **Dependencies**: Streams A, B, C
 
 **Deliverables**:
+
 - Module exports in __init__.py
 - Unit tests for all classes
 - JSON schema validation tests
@@ -106,6 +118,7 @@ Build a comprehensive preference tracking system that captures user corrections 
 ### Shared Files
 
 Minimal - only module init:
+
 - `file_organizer/services/intelligence/__init__.py` - Stream D updates after A, B, C complete
 
 ### Interface Contracts
@@ -113,6 +126,7 @@ Minimal - only module init:
 Define these interfaces upfront:
 
 **PreferenceTracker Interface**:
+
 ```python
 def track_correction(source: Path, destination: Path, context: dict) -> None
 def get_preference(file_path: Path, preference_type: str) -> Optional[dict]
@@ -122,6 +136,7 @@ def get_statistics() -> dict
 ```
 
 **PreferenceStore Interface**:
+
 ```python
 def add_preference(path: Path, preference_data: dict) -> None
 def get_preference(path: Path, fallback_to_parent: bool = True) -> Optional[dict]
@@ -132,6 +147,7 @@ def import_json(input_path: Path) -> None
 ```
 
 **DirectoryPrefs Interface**:
+
 ```python
 def get_preference_with_inheritance(path: Path) -> Optional[dict]
 def set_preference(path: Path, pref: dict, override_parent: bool) -> None
@@ -139,6 +155,7 @@ def list_directory_preferences() -> List[Tuple[Path, dict]]
 ```
 
 **ConflictResolver Interface**:
+
 ```python
 def resolve(conflicting_preferences: List[dict]) -> dict
 def weight_by_recency(preferences: List[dict]) -> List[float]
@@ -154,6 +171,7 @@ def score_confidence(preference: dict) -> float
 ## Conflict Risk Assessment
 
 **Low Risk** - Streams work on completely different files:
+
 - Stream A: `preference_tracker.py` only
 - Stream B: `preference_store.py` only
 - Stream C: `directory_prefs.py`, `conflict_resolver.py` only
@@ -166,10 +184,12 @@ No implementation file overlap between A, B, and C.
 **Recommended Approach**: parallel with final integration
 
 **Execution Plan**:
+
 1. **Phase 1** (parallel, 6 hours): Launch Streams A, B, C simultaneously
 2. **Phase 2** (sequential, 2 hours): Stream D integrates and tests
 
 **Timeline**:
+
 - Stream A: 6 hours (longest)
 - Stream B: 5 hours (completes early)
 - Stream C: 3 hours (completes early)
@@ -180,11 +200,13 @@ Total wall time: ~8 hours
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~8 hours (max(A,B,C) + D)
 - Total work: 16 hours
 - Efficiency gain: 50% time savings
 
 **Without parallel execution**:
+
 - Wall time: 16 hours (sequential)
 
 **Parallelization factor**: 2.7x effective speedup (16h / 5.9h per developer)
@@ -264,6 +286,7 @@ Total wall time: ~8 hours
 ### Test Data Requirements
 
 Stream D should test:
+
 - Single correction tracking
 - Multiple corrections for same file type
 - Conflicting preferences

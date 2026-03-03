@@ -46,26 +46,31 @@
 ## Why PM Skills Are Mandatory
 
 ### 1. Consistency
+
 - PM skills maintain consistent formatting across all issues
 - Standard comment structure for progress updates
 - Uniform frontmatter metadata
 
 ### 2. CCPM Synchronization
+
 - Automatic sync between local CCPM state and GitHub
 - Frontmatter updates with proper timestamps
 - Progress calculation and epic status updates
 
 ### 3. Audit Trail
+
 - Sync markers prevent duplicate comments
 - Timestamp tracking for all operations
 - Complete history of changes
 
 ### 4. Repository Safety
+
 - Built-in protection against wrong repository operations
 - Validation of remote URLs before GitHub operations
 - Prevents accidental modifications to template repos
 
 ### 5. Data Integrity
+
 - Proper frontmatter validation
 - Consistent datetime formatting (ISO 8601)
 - Relative path standards enforced
@@ -86,6 +91,7 @@ EOF
 ```
 
 Instead, use:
+
 ```bash
 # RIGHT - Use PM skill
 /pm:issue-sync 92
@@ -99,6 +105,7 @@ gh issue comment 43 --body "Progress update"
 ```
 
 Instead, use:
+
 ```bash
 # RIGHT - Use PM skill
 /pm:issue-sync 43
@@ -112,6 +119,7 @@ gh issue create --title "New feature" --body "Description"
 ```
 
 Instead, use:
+
 ```bash
 # RIGHT - Use PM skill
 # First create local task, then sync
@@ -129,6 +137,7 @@ completion: 50%      # Manual guess
 ```
 
 Instead, use:
+
 ```bash
 # RIGHT - Use PM skill (auto-updates frontmatter)
 /pm:issue-sync {issue_number}
@@ -166,12 +175,14 @@ git push
 ## Enforcement
 
 **Claude agents MUST:**
+
 1. Check this rule before ANY GitHub issue operation
 2. Use PM skills for ALL issue/epic/PRD management
 3. NEVER create tracking documents manually
 4. NEVER post GitHub comments without PM skills
 
 **Violations:**
+
 - Creating manual tracking documents → Delete and recreate with PM skills
 - Posting direct GitHub comments → Use `/pm:issue-sync` instead
 - Manual frontmatter updates → Use PM skills to regenerate
@@ -179,6 +190,7 @@ git push
 ## Quick Reference
 
 **Working on an issue?**
+
 ```bash
 /pm:issue-start 43    # Start tracking
 # ... do work ...
@@ -190,6 +202,7 @@ git push
 ```
 
 **Working on an epic?**
+
 ```bash
 /pm:prd-parse epic-name       # Create epic from PRD
 /pm:epic-decompose epic-name  # Break into tasks
@@ -198,6 +211,7 @@ git push
 ```
 
 **Need to view status?**
+
 ```bash
 /pm:issue-show 43       # View issue details
 /pm:issue-status        # List all issues

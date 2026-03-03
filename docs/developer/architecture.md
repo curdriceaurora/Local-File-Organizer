@@ -4,7 +4,7 @@
 
 ### High-Level Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                    Web Browser (UI)                     │
 ├─────────────────────────────────────────────────────────┤
@@ -130,7 +130,7 @@
 
 ### File Organization Workflow
 
-```
+```markdown
 1. User uploads file
    ↓
 2. File stored temporarily
@@ -159,7 +159,7 @@
 
 ### API Request Flow
 
-```
+```text
 HTTP Request
    ↓
 FastAPI Router

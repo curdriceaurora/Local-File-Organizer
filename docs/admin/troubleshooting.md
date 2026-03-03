@@ -6,7 +6,7 @@
 
 #### Problem: Port Already in Use
 
-```
+```text
 ERROR: Failed to bind to port 8000
 ```
 
@@ -25,7 +25,7 @@ PORT=8001 python app.py
 
 #### Problem: Database Connection Failed
 
-```
+```text
 ERROR: Unable to connect to database
 ```
 

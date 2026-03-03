@@ -9,6 +9,7 @@ This command creates the initial project context documentation in `.claude/conte
 ## Required Rules
 
 **IMPORTANT:** Before executing this command, read and follow:
+
 - `.claude/rules/datetime.md` - For getting real current date/time
 
 ## Preflight Checklist
@@ -17,6 +18,7 @@ Before proceeding, complete these validation steps.
 Do not bother the user with preflight checks progress ("I'm not going to ..."). Just do them and move on.
 
 ### 1. Context Directory Check
+
 - Run: `ls -la .claude/context/ 2>/dev/null`
 - If directory exists and has files:
   - Count existing files: `ls -1 .claude/context/*.md 2>/dev/null | wc -l`
@@ -25,6 +27,7 @@ Do not bother the user with preflight checks progress ("I'm not going to ..."). 
   - If user says no, suggest: "Use /context:update to refresh existing context"
 
 ### 2. Project Type Detection
+
 - Check for project indicators:
   - Node.js: `test -f package.json && echo "Node.js project detected"`
   - Python: `test -f requirements.txt || test -f pyproject.toml && echo "Python project detected"`
@@ -34,30 +37,36 @@ Do not bother the user with preflight checks progress ("I'm not going to ..."). 
 - If not a git repo, ask: "⚠️ Not a git repository. Continue anyway? (yes/no)"
 
 ### 3. Directory Creation
+
 - If `.claude/` doesn't exist, create it: `mkdir -p .claude/context/`
 - Verify write permissions: `touch .claude/context/.test && rm .claude/context/.test`
 - If permission denied, tell user: "❌ Cannot create context directory. Check permissions."
 
 ### 4. Get Current DateTime
+
 - Run: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 - Store this value for use in all context file frontmatter
 
 ## Instructions
 
 ### 1. Pre-Analysis Validation
+
 - Confirm project root directory is correct (presence of .git, package.json, etc.)
 - Check for existing documentation that can inform context (README.md, docs/)
 - If README.md doesn't exist, ask user for project description
 
 ### 2. Systematic Project Analysis
+
 Gather information in this order:
 
 **Project Detection:**
+
 - Run: `find . -maxdepth 2 \( -name 'package.json' -o -name 'requirements.txt' -o -name 'pyproject.toml' -o -name 'pom.xml' -o -name 'build.gradle' -o -name 'build.gradle.kts' -o -name '*.sln' -o -name '*.csproj' -o -name 'Gemfile' -o -name 'Cargo.toml' -o -name 'go.mod' -o -name 'composer.json' -o -name 'pubspec.yaml' -o -name 'CMakeLists.txt' -o -name 'Dockerfile' -o -name 'docker-compose.yml' -o -name 'Package.swift' -o -type d -name '*.xcodeproj' -o -type d -name '*.xcworkspace' \) 2>/dev/null`
 - Run: `git remote -v 2>/dev/null` to get repository information
 - Run: `git branch --show-current 2>/dev/null` to get current branch
 
 **Codebase Analysis:**
+
 - Run: `find . -type f \( -name '*.js' -o -name '*.ts' -o -name '*.jsx' -o -name '*.tsx' -o -name '*.py' -o -name '*.rs' -o -name '*.go' -o -name '*.php' -o -name '*.swift' -o -name '*.java' -o -name '*.kt' -o -name '*.kts' -o -name '*.cs' -o -name '*.rb' -o -name '*.dart' -o -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' -o -name '*.sh' \) 2>/dev/null | head -20`
 - Run: `ls -la` to see root directory structure
 - Read README.md if it exists
@@ -76,6 +85,7 @@ author: Claude Code PM System
 ```
 
 Generate the following initial context files:
+
   - `progress.md` - Document current project status, completed work, and immediate next steps
     - Include: Current branch, recent commits, outstanding changes
   - `project-structure.md` - Map out the directory structure and file organization
@@ -94,9 +104,11 @@ Generate the following initial context files:
     - Include: Future goals, potential expansions, strategic priorities
   - `project-style-guide.md` - Document coding standards, conventions, and style preferences
     - Include: Naming conventions, file structure patterns, comment style
+
 ### 4. Quality Validation
 
 After creating each file:
+
 - Verify file was created successfully
 - Check file is not empty (minimum 10 lines of content)
 - Ensure frontmatter is present and valid
@@ -105,11 +117,13 @@ After creating each file:
 ### 5. Error Handling
 
 **Common Issues:**
+
 - **No write permissions:** "❌ Cannot write to .claude/context/. Check permissions."
 - **Disk space:** "❌ Insufficient disk space for context files."
 - **File creation failed:** "❌ Failed to create {filename}. Error: {error}"
 
 If any file fails to create:
+
 - Report which files were successfully created
 - Provide option to continue with partial context
 - Never leave corrupted or incomplete files
@@ -117,7 +131,8 @@ If any file fails to create:
 ### 6. Post-Creation Summary
 
 Provide comprehensive summary:
-```
+
+```text
 📋 Context Creation Complete
 
 📁 Created context in: .claude/context/
@@ -142,6 +157,7 @@ Provide comprehensive summary:
 ## Context Gathering Commands
 
 Use these commands to gather project information:
+
 - Target directory: `.claude/context/` (create if needed)
 - Current git status: `git status --short`
 - Recent commits: `git log --oneline -10`

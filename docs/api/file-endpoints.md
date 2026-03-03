@@ -6,7 +6,7 @@ API endpoints for file listing, content reading, moving, and deletion.
 
 List files in a directory.
 
-```
+```text
 GET /api/v1/files
 ```
 
@@ -48,7 +48,7 @@ GET /api/v1/files
 
 Get detailed information about a specific file.
 
-```
+```text
 GET /api/v1/files/info
 ```
 
@@ -76,7 +76,7 @@ GET /api/v1/files/info
 
 Read the text content of a file.
 
-```
+```text
 GET /api/v1/files/content
 ```
 
@@ -105,7 +105,7 @@ GET /api/v1/files/content
 
 Move or rename a file.
 
-```
+```text
 POST /api/v1/files/move
 ```
 
@@ -136,7 +136,7 @@ POST /api/v1/files/move
 
 Delete a file (moves to trash by default).
 
-```
+```text
 DELETE /api/v1/files
 ```
 

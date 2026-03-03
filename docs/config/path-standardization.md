@@ -92,12 +92,14 @@ data_file = path_manager.data_dir / "mydata.json"
 Replace hardcoded paths with PathManager:
 
 **Before (Legacy):**
+
 ```python
 DEFAULT_CONFIG_DIR = Path.home() / ".config" / "file-organizer"
 config_path = DEFAULT_CONFIG_DIR / "config.json"
 ```
 
 **After (New):**
+
 ```python
 from file_organizer.config.path_manager import PathManager
 

@@ -7,7 +7,8 @@ allowed-tools: Bash, Read, Write, LS
 Analyze an issue to identify parallel work streams for maximum efficiency.
 
 ## Usage
-```
+
+```text
 /pm:issue-analyze <issue_number>
 ```
 
@@ -19,7 +20,8 @@ Analyze an issue to identify parallel work streams for maximum efficiency.
    - If not found: "❌ No local task for issue #$ARGUMENTS. Run: /pm:import first"
 
 2. **Check for existing analysis:**
-   ```bash
+  
+```bash
    test -f .claude/epics/*/$ARGUMENTS-analysis.md && echo "⚠️ Analysis already exists. Overwrite? (yes/no)"
    ```
 
@@ -28,6 +30,7 @@ Analyze an issue to identify parallel work streams for maximum efficiency.
 ### 1. Read Issue Context
 
 Get issue details from GitHub:
+
 ```bash
 gh issue view $ARGUMENTS --json title,body,labels
 ```
@@ -159,7 +162,7 @@ Ensure:
 
 ### 5. Output
 
-```
+```text
 ✅ Analysis complete for issue #$ARGUMENTS
 
 Identified {count} parallel work streams:

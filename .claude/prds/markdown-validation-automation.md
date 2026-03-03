@@ -16,6 +16,7 @@ Add automated markdown linting to the pre-commit validation pipeline to catch fo
 Markdown formatting issues in `.claude/` PM files and `docs/` are consistently caught by CodeRabbit during PR review, requiring follow-up fix commits that slow down development velocity. The current pre-commit validation script (`pre-commit-validation.sh`) has strong Python checks but minimal markdown coverage — only broken links and `docs/`-specific formatting. The 1,200+ markdown files in `.claude/` have zero formatting validation.
 
 **Evidence of churn:**
+
 - 8 separate commits fixing MD022 (heading spacing) across multiple PRs
 - 10+ commits fixing trailing whitespace in markdown
 - An MD022 check was implemented in commit `a939ed8` but stranded on a different branch and never merged
@@ -25,11 +26,13 @@ Markdown formatting issues in `.claude/` PM files and `docs/` are consistently c
 ## User Stories
 
 ### US-1: Developer commits markdown changes
+
 **As a** developer editing `.claude/` or `docs/` markdown files,
 **I want** formatting issues caught at pre-commit time,
 **So that** my PRs pass CodeRabbit review on the first attempt.
 
 **Acceptance Criteria:**
+
 - Pre-commit blocks on MD022 violations (missing blank lines around headings)
 - Pre-commit blocks on trailing whitespace in markdown
 - Pre-commit blocks on bare code fences without language annotation
@@ -37,11 +40,13 @@ Markdown formatting issues in `.claude/` PM files and `docs/` are consistently c
 - Frontmatter blocks and code blocks are correctly skipped (no false positives)
 
 ### US-2: Developer runs full markdown lint
+
 **As a** developer wanting to check all markdown files at once,
 **I want** a pymarkdown configuration that matches project conventions,
 **So that** I can fix all violations before submitting a PR.
 
 **Acceptance Criteria:**
+
 - `pymarkdown` available via `.pre-commit-config.yaml` hook and `pip install -e ".[dev]"`
 - `.pymarkdown.json` config at project root with project-appropriate rules
 - Running `pymarkdown scan .` produces zero violations after cleanup
@@ -52,6 +57,7 @@ Markdown formatting issues in `.claude/` PM files and `docs/` are consistently c
 ### Functional Requirements
 
 #### FR-1: pymarkdownlnt integration (single source of truth for markdown formatting)
+
 Add pymarkdownlnt as a pre-commit hook (pure Python, no Node.js required):
 
 1. **`.pymarkdown.json` configuration**
@@ -67,6 +73,7 @@ Add pymarkdownlnt as a pre-commit hook (pure Python, no Node.js required):
    - Runs on staged files only
 
 #### FR-2: Consolidate existing bash checks (remove redundancy)
+
 Remove checks from `pre-commit-validation.sh` that pymarkdownlnt now covers:
 
 1. **Remove bare code fence check** (Section 7a-2, lines ~199-208)
@@ -80,6 +87,7 @@ Remove checks from `pre-commit-validation.sh` that pymarkdownlnt now covers:
    - These enforce `docs/`-specific conventions that pymarkdownlnt rules would conflict with globally
 
 #### FR-3: One-time cleanup
+
 Fix all existing violations across `.claude/` and `docs/` so the gates are clean from day one.
 
 ### Non-Functional Requirements

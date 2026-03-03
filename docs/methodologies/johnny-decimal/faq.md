@@ -5,6 +5,7 @@
 ### What is Johnny Decimal?
 
 Johnny Decimal is a decimal-based numbering system for organizing files and folders hierarchically. It uses three levels:
+
 - **Areas (10-99)**: Broad categories
 - **Categories (XX.XX)**: Specific topics within areas
 - **IDs (XX.XX.XXX)**: Individual items within categories
@@ -12,6 +13,7 @@ Johnny Decimal is a decimal-based numbering system for organizing files and fold
 ### Why use Johnny Decimal?
 
 **Benefits:**
+
 - Fast navigation with unique numbers
 - Scalable to large collections
 - Prevents naming conflicts
@@ -22,6 +24,7 @@ Johnny Decimal is a decimal-based numbering system for organizing files and fold
 ### How is this different from just using folders?
 
 Johnny Decimal adds:
+
 - **Consistent structure**: Same patterns everywhere
 - **Unique identifiers**: Easy to reference
 - **Number-based navigation**: Faster than clicking through folders
@@ -31,6 +34,7 @@ Johnny Decimal adds:
 ### Is Johnny Decimal right for me?
 
 Good fit if you:
+
 - ✅ Manage many files/folders (100+)
 - ✅ Need quick reference system
 - ✅ Want consistent organization
@@ -38,6 +42,7 @@ Good fit if you:
 - ✅ Share files with others
 
 Maybe not if you:
+
 - ❌ Have very few files (<20 folders)
 - ❌ Prefer tag-based systems
 - ❌ Don't like numbers
@@ -58,11 +63,13 @@ See [User Guide](user-guide.md) for detailed instructions.
 ### Should I migrate existing files or start fresh?
 
 **Start Fresh** if:
+
 - You have relatively few files
 - Current organization is chaotic
 - You want a clean slate
 
 **Migrate** if:
+
 - You have many files
 - Current organization has some structure
 - You can't afford downtime
@@ -72,6 +79,7 @@ Use the [Migration Tool](migration.md) for automated migration.
 ### How long does migration take?
 
 Depends on scale:
+
 - **100 folders**: 15-30 minutes
 - **500 folders**: 1-2 hours
 - **1000+ folders**: 2-4 hours
@@ -81,6 +89,7 @@ Includes planning, preview, and execution.
 ### What if I mess up during migration?
 
 The migrator includes:
+
 - **Automatic backups**: Created before execution
 - **Dry-run mode**: Preview changes first
 - **Rollback support**: Undo if needed
@@ -93,6 +102,7 @@ See [Migration Guide](migration.md) for safety features.
 ### Why start at 10, not 01?
 
 Areas start at 10 to:
+
 - Reserve 00-09 for system/admin use
 - Make numbers easier to say ("ten" vs "oh-one")
 - Follow original Johnny Decimal convention
@@ -101,11 +111,13 @@ Areas start at 10 to:
 ### What if I run out of numbers?
 
 You have:
+
 - **90 areas** (10-99)
 - **99 categories per area** (01-99)
 - **999 IDs per category** (001-999)
 
 That's **8,910,990** possible items. If you hit limits:
+
 - Review if you're over-categorizing
 - Consolidate similar categories
 - Archive old items
@@ -114,12 +126,14 @@ That's **8,910,990** possible items. If you hit limits:
 ### Can I skip numbers?
 
 Yes! Leaving gaps is recommended:
+
 - Allows future expansion
 - Groups related items
 - Makes structure clearer
 
 Example:
-```
+
+```yaml
 10-19: Personal
 20-29: Work
 30-39: (reserved for future)
@@ -129,6 +143,7 @@ Example:
 ### Can I use 00-09 for areas?
 
 Not recommended. Those are reserved for:
+
 - System folders
 - Admin/meta information
 - Special purposes
@@ -138,6 +153,7 @@ But File Organizer doesn't enforce this if you really need it.
 ### Do I have to use all three levels?
 
 No! Use what you need:
+
 - **Areas only**: Good for simple structures
 - **Areas + Categories**: Most common
 - **All three levels**: For complex hierarchies
@@ -147,11 +163,13 @@ No! Use what you need:
 ### How do I decide on areas?
 
 Ask yourself:
+
 1. What are my main domains of information?
 2. What are my major responsibilities?
 3. How do I naturally think about my work?
 
 Common approaches:
+
 - **By department**: Finance, Marketing, Operations
 - **By role**: Projects, Areas, Resources, Archive (PARA)
 - **By lifecycle**: Planning, Execution, Archive
@@ -160,14 +178,16 @@ Common approaches:
 ### Should I keep original folder names?
 
 Recommended: **Yes**
-```
+
+```text
 10 Finance
 11.01 Annual Budgets
 11.01.001 Budget 2024
 ```
 
 Alternative: **Numbers only**
-```
+
+```text
 10
 11.01
 11.01.001
@@ -178,6 +198,7 @@ Original names are more user-friendly.
 ### How do I handle shared folders?
 
 Options:
+
 1. **Duplicate**: Copy to multiple areas
 2. **Reference**: Keep original, link from others
 3. **Choose one**: File in primary location
@@ -188,20 +209,23 @@ Choose based on how often items are shared.
 ### How do I organize by date?
 
 **Option 1**: Date in ID level
-```
+
+```text
 11.01.001 Budget 2024-Q1
 11.01.002 Budget 2024-Q2
 ```
 
 **Option 2**: Date as category
-```
+
+```text
 11 Budgets
 11.24 Budget 2024
 11.25 Budget 2025
 ```
 
 **Option 3**: Chronological IDs
-```
+
+```text
 11.01.001 Latest Budget (rotate periodically)
 ```
 
@@ -214,7 +238,8 @@ Choose based on access patterns.
 Yes! See [PARA Compatibility Guide](para-compatibility.md).
 
 **Option 1**: PARA at top level
-```
+
+```text
 10 Projects/
 20 Areas/
 30 Resources/
@@ -222,7 +247,8 @@ Yes! See [PARA Compatibility Guide](para-compatibility.md).
 ```
 
 **Option 2**: Map areas to PARA
-```
+
+```yaml
 10-19: Projects
 20-29: Areas
 30-39: Resources
@@ -248,6 +274,7 @@ Neither! They serve different purposes:
 **Johnny Decimal**: Hierarchical structure with numbers
 
 Best approach: Use both together!
+
 - PARA for high-level organization
 - JD for detailed structure within each
 
@@ -258,6 +285,7 @@ Best approach: Use both together!
 Yes! Johnny Decimal is just a naming convention, so it works on all platforms.
 
 File Organizer v2.0 supports:
+
 - ✅ macOS
 - ✅ Linux
 - ✅ Windows
@@ -266,12 +294,14 @@ File Organizer v2.0 supports:
 ### What about special characters in names?
 
 Recommended naming:
-```
+
+```text
 10 Finance
 11.01 Annual Budgets
 ```
 
 Avoid:
+
 - ❌ Slashes: /\
 - ❌ Colons: :
 - ❌ Pipes: |
@@ -284,19 +314,22 @@ These cause issues on some platforms.
 ### Can I use Johnny Decimal with Git?
 
 Yes! Johnny Decimal works great with Git:
+
 - Structure is version-controlled
 - Numbers make references stable
 - Easy to reference in commits
 - Works across branches
 
 Example commit:
-```
+
+```text
 feat: Add budget template to 11.01.003
 ```
 
 ### Does it work with cloud storage?
 
 Yes! Works perfectly with:
+
 - Dropbox
 - Google Drive
 - OneDrive
@@ -338,6 +371,7 @@ Or restore from automatic backup created during migration.
 ### What if my structure changes?
 
 Johnny Decimal is flexible:
+
 - Add new areas as needed
 - Create new categories
 - Consolidate old categories
@@ -363,6 +397,7 @@ config = (
 ### How do I handle very deep hierarchies?
 
 File Organizer automatically flattens deep structures:
+
 - Level 1 → Area
 - Level 2 → Category
 - Level 3+ → ID (consolidated)
@@ -372,6 +407,7 @@ Or manually restructure to be flatter.
 ### Can I integrate with other systems?
 
 Yes! File Organizer provides adapters for:
+
 - PARA methodology
 - Generic filesystems
 - Custom methodologies (extend MethodologyAdapter)
@@ -399,18 +435,23 @@ See [API Reference](api-reference.md) for full automation options.
 ### What are common mistakes?
 
 ❌ **Over-categorizing**: Too many areas/categories
+
 - Fix: Consolidate related items
 
 ❌ **Inconsistent naming**: Mixed formats
+
 - Fix: Stick to one naming pattern
 
 ❌ **Not leaving gaps**: Sequential numbers
+
 - Fix: Leave room for growth
 
 ❌ **Wrong level**: Using IDs when categories suffice
+
 - Fix: Review hierarchy needs
 
 ❌ **No documentation**: Forgetting what numbers mean
+
 - Fix: Maintain a master index
 
 ### How detailed should I be?
@@ -418,21 +459,24 @@ See [API Reference](api-reference.md) for full automation options.
 Start simple, add detail as needed:
 
 **Phase 1**: Areas only
-```
+
+```text
 10 Finance
 20 Marketing
 30 Operations
 ```
 
 **Phase 2**: Add categories
-```
+
+```text
 10 Finance
   11 Budgets
   12 Invoices
 ```
 
 **Phase 3**: Add IDs if needed
-```
+
+```text
 11 Budgets
   11.01 Annual
   11.02 Quarterly
@@ -441,7 +485,8 @@ Start simple, add detail as needed:
 ### How do I handle one-off items?
 
 **Option 1**: Create "Miscellaneous" category
-```
+
+```text
 19 Finance - Misc
 29 Marketing - Misc
 ```
@@ -453,7 +498,8 @@ Start simple, add detail as needed:
 ### Should I document my system?
 
 Yes! Create a master index:
-```
+
+```text
 Johnny Decimal Index
 
 10-19: Finance
@@ -484,6 +530,7 @@ Keep this index updated as structure evolves.
 ### How do I report bugs?
 
 Open an issue on GitHub with:
+
 - Description of the problem
 - Steps to reproduce
 - Expected vs. actual behavior
@@ -493,6 +540,7 @@ Open an issue on GitHub with:
 ### Can I contribute?
 
 Yes! Contributions welcome:
+
 - Bug fixes
 - Documentation improvements
 - New features
@@ -504,6 +552,7 @@ See project README for contribution guidelines.
 ### Is there a community?
 
 Check:
+
 - GitHub Discussions
 - Project Discord/Slack (if available)
 - Original Johnny Decimal forum at johnnydecimal.com

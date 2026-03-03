@@ -7,7 +7,8 @@ allowed-tools: Bash, Read, Write, LS
 Mark an issue as complete and close it on GitHub.
 
 ## Usage
-```
+
+```text
 /pm:issue-close <issue_number> [completion_notes]
 ```
 
@@ -24,6 +25,7 @@ If not found: "❌ No local task for issue #$ARGUMENTS"
 Get current datetime: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 
 Update task file frontmatter:
+
 ```yaml
 status: closed
 updated: {current_datetime}
@@ -32,6 +34,7 @@ updated: {current_datetime}
 ### 3. Update Progress File
 
 If progress file exists at `.claude/epics/{epic}/updates/$ARGUMENTS/progress.md`:
+
 - Set completion: 100%
 - Add completion note with timestamp
 - Update last_sync with current datetime
@@ -39,6 +42,7 @@ If progress file exists at `.claude/epics/{epic}/updates/$ARGUMENTS/progress.md`
 ### 4. Close on GitHub
 
 Add completion comment and close:
+
 ```bash
 # Add final comment
 echo "✅ Task completed
@@ -86,7 +90,7 @@ fi
 
 ### 7. Output
 
-```
+```sql
 ✅ Closed issue #$ARGUMENTS
   Local: Task marked complete
   GitHub: Issue closed & epic updated

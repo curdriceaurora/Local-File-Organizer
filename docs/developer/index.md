@@ -53,7 +53,7 @@ python -m uvicorn main:app --reload
 
 ## Architecture
 
-```
+```text
 File Organizer v2.0
 ├── Web Interface (FastAPI)
 │   ├── REST API

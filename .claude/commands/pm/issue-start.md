@@ -7,16 +7,19 @@ allowed-tools: Bash, Read, Write, LS, Task
 Begin work on a GitHub issue with parallel agents based on work stream analysis.
 
 ## Usage
-```
+
+```text
 /pm:issue-start <issue_number>
 ```
 
 ## Quick Check
 
 1. **Get issue details:**
-   ```bash
+
+```bash
    gh issue view $ARGUMENTS --json state,title,labels,body
-   ```
+```
+
    If it fails: "❌ Cannot access issue #$ARGUMENTS. Check number or run: gh auth login"
 
 2. **Find local task file:**
@@ -25,19 +28,20 @@ Begin work on a GitHub issue with parallel agents based on work stream analysis.
    - If not found: "❌ No local task for issue #$ARGUMENTS. This issue may have been created outside the PM system."
 
 3. **Check for analysis:**
-   ```bash
-   test -f .claude/epics/*/$ARGUMENTS-analysis.md || echo "❌ No analysis found for issue #$ARGUMENTS
-   
-   Run: /pm:issue-analyze $ARGUMENTS first
-   Or: /pm:issue-start $ARGUMENTS --analyze to do both"
-   ```
-   If no analysis exists and no --analyze flag, stop execution.
+
+```bash
+test -f .claude/epics/*/$ARGUMENTS-analysis.md || \
+  echo "❌ No analysis found for issue #$ARGUMENTS. Run: /pm:issue-analyze $ARGUMENTS first"
+```
+
+If no analysis exists and no --analyze flag, stop execution.
 
 ## Instructions
 
 ### 1. Ensure Worktree Exists
 
 Check if epic worktree exists:
+
 ```bash
 # Find epic name from task file
 epic_name={extracted_from_path}
@@ -52,6 +56,7 @@ fi
 ### 2. Read Analysis
 
 Read `.claude/epics/{epic_name}/$ARGUMENTS-analysis.md`:
+
 - Parse parallel streams
 - Identify which can start immediately
 - Note dependencies between streams
@@ -61,6 +66,7 @@ Read `.claude/epics/{epic_name}/$ARGUMENTS-analysis.md`:
 Get current datetime: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 
 Create workspace structure:
+
 ```bash
 mkdir -p .claude/epics/{epic_name}/updates/$ARGUMENTS
 ```
@@ -72,6 +78,7 @@ Update task file frontmatter `updated` field with current datetime.
 For each stream that can start immediately:
 
 Create `.claude/epics/{epic_name}/updates/$ARGUMENTS/stream-{X}.md`:
+
 ```markdown
 ---
 issue: $ARGUMENTS
@@ -94,6 +101,7 @@ status: in_progress
 ```
 
 Launch agent using Task tool:
+
 ```yaml
 Task:
   description: "Issue #$ARGUMENTS Stream {X}"
@@ -132,7 +140,7 @@ gh issue edit $ARGUMENTS --add-assignee @me --add-label "in-progress"
 
 ### 6. Output
 
-```
+```text
 ✅ Started parallel work on issue #$ARGUMENTS
 
 Epic: {epic_name}
@@ -153,6 +161,7 @@ Sync updates: /pm:issue-sync $ARGUMENTS
 ## Error Handling
 
 If any step fails, report clearly:
+
 - "❌ {What failed}: {How to fix}"
 - Continue with what's possible
 - Never leave partial state

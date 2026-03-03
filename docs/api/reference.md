@@ -83,4 +83,3 @@ For hand-written endpoint guides, see the other pages in the API Reference secti
     options:
       show_root_heading: true
       members_order: source
-

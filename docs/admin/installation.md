@@ -50,7 +50,7 @@ This guide covers installing the File Organizer system for deployment and admini
 
 1. **Access the web UI**:
 
-   ```
+   ```text
    http://localhost:8000/ui/
    ```
 

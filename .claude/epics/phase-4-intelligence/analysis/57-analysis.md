@@ -20,18 +20,21 @@ Create comprehensive test coverage for all Phase 4 Intelligence features includi
 
 **Scope**: Tests for hash-based and perceptual duplicate detection
 **Files**:
+
 - `tests/unit/deduplication/test_hasher.py`
 - `tests/unit/deduplication/test_image_dedup.py`
 - `tests/unit/deduplication/test_quality.py`
 - `tests/unit/deduplication/test_backup.py`
 - `tests/integration/test_deduplication_e2e.py`
 - `tests/fixtures/deduplication/` (test data)
+
 **Agent Type**: qa-specialist
 **Can Start**: after Tasks 46, 47, 48 complete
 **Estimated Hours**: 8 hours
 **Dependencies**: Tasks 46, 47, 48
 
 **Deliverables**:
+
 - Unit tests for hash calculation consistency
 - Duplicate detection accuracy tests
 - Perceptual hash similarity tests
@@ -46,17 +49,20 @@ Create comprehensive test coverage for all Phase 4 Intelligence features includi
 
 **Scope**: Tests for preference tracking and pattern learning
 **Files**:
+
 - `tests/unit/preferences/test_preference_tracker.py`
 - `tests/unit/preferences/test_pattern_learner.py`
 - `tests/unit/preferences/test_profile_manager.py`
 - `tests/integration/test_preference_engine_e2e.py`
 - `tests/fixtures/preferences/` (test data)
+
 **Agent Type**: qa-specialist
 **Can Start**: after Tasks 49, 50, 51 complete
 **Estimated Hours**: 8 hours
 **Dependencies**: Tasks 49, 50, 51
 
 **Deliverables**:
+
 - Preference tracking session tests
 - Pattern extraction tests
 - Model training tests
@@ -71,6 +77,7 @@ Create comprehensive test coverage for all Phase 4 Intelligence features includi
 
 **Scope**: Tests for operation history and undo/redo system
 **Files**:
+
 - `tests/unit/history/test_database.py`
 - `tests/unit/history/test_tracker.py`
 - `tests/unit/history/test_transaction.py`
@@ -79,12 +86,14 @@ Create comprehensive test coverage for all Phase 4 Intelligence features includi
 - `tests/unit/undo/test_rollback.py`
 - `tests/integration/test_undo_redo_e2e.py`
 - `tests/fixtures/undo/` (test filesystem)
+
 **Agent Type**: qa-specialist
 **Can Start**: after Tasks 53, 55 complete
 **Estimated Hours**: 8 hours
 **Dependencies**: Tasks 53, 55
 
 **Deliverables**:
+
 - Database operation tests
 - Operation capture tests
 - Undo operation tests (move, rename, delete, copy)
@@ -101,6 +110,7 @@ Create comprehensive test coverage for all Phase 4 Intelligence features includi
 
 **Scope**: Tests for AI-powered suggestions and auto-tagging
 **Files**:
+
 - `tests/unit/smart_suggestions/test_pattern_analyzer.py`
 - `tests/unit/smart_suggestions/test_suggestion_engine.py`
 - `tests/unit/smart_suggestions/test_misplacement_detector.py`
@@ -108,12 +118,14 @@ Create comprehensive test coverage for all Phase 4 Intelligence features includi
 - `tests/unit/auto_tagging/test_tag_learning.py`
 - `tests/integration/test_smart_suggestions_e2e.py`
 - `tests/fixtures/suggestions/` (ground truth data)
+
 **Agent Type**: qa-specialist
 **Can Start**: after Tasks 52, 54 complete
 **Estimated Hours**: 8 hours
 **Dependencies**: Tasks 52, 54
 
 **Deliverables**:
+
 - Pattern detection tests
 - Suggestion generation tests
 - Relevance scoring tests
@@ -130,6 +142,7 @@ Create comprehensive test coverage for all Phase 4 Intelligence features includi
 ### Shared Files
 
 None - each stream works on completely separate test directories:
+
 - Stream A: `tests/**/deduplication/`
 - Stream B: `tests/**/preferences/`
 - Stream C: `tests/**/history/`, `tests/**/undo/`
@@ -140,6 +153,7 @@ None - each stream works on completely separate test directories:
 Before parallel work begins, establish:
 
 **Common Test Fixtures**:
+
 ```python
 # tests/conftest.py - shared fixtures
 
@@ -160,6 +174,7 @@ def mock_ai_model():
 ```
 
 **Coverage Configuration**:
+
 ```python
 # pytest.ini or pyproject.toml
 
@@ -178,6 +193,7 @@ omit = ["*/tests/*", "*/migrations/*"]
 ```
 
 **Test Categories**:
+
 - Unit tests: Fast, isolated component tests
 - Integration tests: End-to-end workflow tests
 - Performance tests: Benchmark critical operations
@@ -198,12 +214,14 @@ omit = ["*/tests/*", "*/migrations/*"]
 **Recommended Approach**: fully parallel testing
 
 **Execution Plan**:
+
 1. **Pre-work** (1 hour): Set up common test infrastructure and fixtures
 2. **Wait for dependencies**: Tasks 46-56 must complete
 3. **Phase 1** (parallel, 8 hours): Launch all 4 streams simultaneously
 4. **No integration phase needed** - tests are independent
 
 **Timeline**:
+
 - Stream A: 8 hours
 - Stream B: 8 hours
 - Stream C: 8 hours
@@ -215,11 +233,13 @@ Total wall time: ~9 hours (including pre-work, after dependencies)
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~9 hours (pre-work + max(A,B,C,D)) after dependencies
 - Total work: 32 hours
 - Efficiency gain: 72% time savings
 
 **Without parallel execution**:
+
 - Wall time: 32 hours (sequential completion) after dependencies
 
 **Parallelization factor**: 4.0x effective speedup (32h / 8h actual per tester)
@@ -268,6 +288,7 @@ All agents can be QA specialists or developers with strong testing skills.
 ### Test Data Requirements
 
 **Stream A** (Deduplication):
+
 - Exact duplicate files
 - Similar images (various resolutions)
 - JPEG quality variations
@@ -277,6 +298,7 @@ All agents can be QA specialists or developers with strong testing skills.
 - Large collections (1,000+ images)
 
 **Stream B** (Preferences):
+
 - User interaction histories
 - Various organizational patterns
 - Cold-start scenarios
@@ -285,6 +307,7 @@ All agents can be QA specialists or developers with strong testing skills.
 - Edge cases (empty preferences, corrupted data)
 
 **Stream C** (Undo/Redo):
+
 - Temporary filesystem
 - Various file operations
 - Transaction scenarios
@@ -293,6 +316,7 @@ All agents can be QA specialists or developers with strong testing skills.
 - Permission errors
 
 **Stream D** (Suggestions):
+
 - Ground truth datasets
 - Well-organized directories
 - Poorly-organized directories
@@ -321,6 +345,7 @@ All agents can be QA specialists or developers with strong testing skills.
 ### CI/CD Integration
 
 Each stream should produce:
+
 - Test results (JUnit XML)
 - Coverage reports (HTML + JSON)
 - Performance benchmarks
@@ -329,6 +354,7 @@ Each stream should produce:
 ### Documentation Requirements
 
 Each stream provides:
+
 - Test strategy document
 - Test data generation scripts
 - Ground truth dataset descriptions
@@ -338,6 +364,7 @@ Each stream provides:
 ### Quality Gates
 
 All streams must achieve:
+
 - Zero failing tests
 - Coverage targets met
 - Performance targets met

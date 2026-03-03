@@ -27,6 +27,7 @@ Improve the user interface and experience with interactive features, better CLI,
 ### 1. Copilot Mode 🤖
 
 Interactive chat interface for natural language file organization
+
 - Chat with AI: "read and rename all PDFs"
 - Multi-turn conversations
 - Save custom organization rules
@@ -35,6 +36,7 @@ Interactive chat interface for natural language file organization
 ### 2. CLI Model Switching 🔄
 
 Dynamic AI model selection
+
 - List available models
 - Switch between text/vision/audio models
 - Compare model performance
@@ -43,6 +45,7 @@ Dynamic AI model selection
 ### 3. Interactive TUI 📺
 
 Terminal user interface with Textual
+
 - File browser with preview
 - Live organization preview
 - Keyboard shortcuts
@@ -51,6 +54,7 @@ Terminal user interface with Textual
 ### 4. Improved CLI ⌨️
 
 Enhanced command-line with Typer
+
 - Subcommands: organize, preview, undo, config
 - Integrate existing Phase 4 CLI modules (dedupe, autotag, profile, analytics)
 - Auto-completion support
@@ -60,6 +64,7 @@ Enhanced command-line with Typer
 ### 5. Configuration System ⚙️
 
 YAML-based unified configuration
+
 - User preferences
 - Default options
 - Exclusion patterns
@@ -69,6 +74,7 @@ YAML-based unified configuration
 ### 6. Cross-Platform Executables 📦
 
 Pre-built binaries for easy installation
+
 - macOS (Intel + Apple Silicon)
 - Windows (.exe)
 - Linux (AppImage)

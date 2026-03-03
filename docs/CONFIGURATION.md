@@ -1,9 +1,11 @@
 # File Organizer v2 Configuration Guide
 
 ## Overview
+
 Configuration is managed via a YAML file located at `config/file-organizer/config.yaml` (relative to your system's config directory). You can also manage configuration via the CLI or TUI.
 
 ## CLI Configuration
+
 You can view and edit configuration using the `config` command:
 
 ```bash
@@ -18,13 +20,16 @@ file-organizer config edit --temperature 0.7
 ## Configuration File Structure
 
 ### Global Settings
+
 | Key | Description | Default |
 |-----|-------------|---------|
 | `default_methodology` | Organization style (`none`, `para`, `jd`) | `none` |
 | `version` | Config version | `1.0` |
 
 ### Models
+
 Settings for Local LLM inference.
+
 ```yaml
 models:
   text_model: "qwen2.5:3b-instruct-q4_K_M"
@@ -36,7 +41,9 @@ models:
 ```
 
 ### Watcher
+
 Configuration for the file system watcher.
+
 ```yaml
 watcher:
   watch_directories:
@@ -49,12 +56,15 @@ watcher:
 ```
 
 ### Profiles
+
 You can define multiple profiles (e.g., `work`, `personal`) and switch between them.
+
 ```bash
 file-organizer config edit --profile work --methodology para
 ```
 
 ### Environment Variables
+
 - `FILE_ORGANIZER_CONFIG`: Custom path to config file.
 - `OLLAMA_HOST`: URL of the Ollama server (default: `http://localhost:11434`).
 - `FO_DISABLE_UPDATE_CHECK`: Set to `1` to disable update checks.
@@ -62,7 +72,9 @@ file-organizer config edit --profile work --methodology para
 ## Advanced Configuration
 
 ### PARA Methodology
+
 Configure folder names for Projects, Areas, Resources, and Archives.
+
 ```yaml
 para:
   project_dir: "Projects"
@@ -73,7 +85,9 @@ para:
 ```
 
 ### Johnny Decimal
+
 Configure your specific numbering scheme.
+
 ```yaml
 johnny_decimal:
   scheme:

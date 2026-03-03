@@ -11,7 +11,7 @@ and the interactive API docs are at `/docs` and `/redoc`.
 
 If you're running File Organizer locally:
 
-```
+```text
 http://localhost:8000/ui/
 ```
 
@@ -19,7 +19,7 @@ http://localhost:8000/ui/
 
 If deployed on a remote server:
 
-```
+```text
 http://your-server-address:8000/ui/
 ```
 

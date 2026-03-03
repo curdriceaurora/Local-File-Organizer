@@ -27,6 +27,7 @@ Refactor to event-driven architecture, add real-time file watching, and containe
 ### 1. Event-Driven Architecture 🔄
 
 Microservices with event streaming
+
 - Redis Streams integration
 - Pub/sub event system
 - Microservices communication
@@ -37,6 +38,7 @@ Microservices with event streaming
 ### 2. Real-Time File Watching 👁️
 
 Automatic organization of new files
+
 - Monitor directories for changes
 - Auto-organize new files
 - Configurable watch directories
@@ -48,6 +50,7 @@ Automatic organization of new files
 ### 3. Batch Processing Optimization ⚡
 
 Efficient processing of large collections
+
 - Parallel processing (multi-core)
 - Progress persistence
 - Resume capability after interruption
@@ -58,6 +61,7 @@ Efficient processing of large collections
 ### 4. Docker Deployment 🐳
 
 Containerized deployment
+
 - **Dockerfile** with multi-stage builds
 - **Docker Compose** for easy setup
 - Pre-built images on Docker Hub
@@ -69,6 +73,7 @@ Containerized deployment
 ### 5. Performance Optimizations 🚀
 
 Speed improvements across the board
+
 - Model loading optimization
 - Caching layer
 - Lazy loading
@@ -79,6 +84,7 @@ Speed improvements across the board
 ### 6. CI/CD Pipeline 🔧
 
 Automated testing and deployment
+
 - GitHub Actions workflows
 - Automated testing on push
 - Multi-platform builds
@@ -179,16 +185,19 @@ Additional defects were opened after Phase 5 completion and are tracked under th
 **Total Hours:** 228 hours (approximately 29 working days)
 
 **Breakdown by Size:**
+
 - Small (S): 3 tasks, 20 hours
 - Medium (M): 14 tasks, 168 hours
 - Large (L): 4 tasks, 60 hours
 
 **Parallelization:**
+
 - **Parallel tasks:** 8 tasks (can run simultaneously)
   - #125, #129, #133, #136, #141, #142, #144, and their dependents
 - **Sequential tasks:** 13 tasks (must wait for dependencies)
 
 **Critical Path:**
+
 1. Python 3.9 migration (125-128) → Docker deployment (139-140)
 2. Redis Streams (129) → Event system (130-132)
 3. File watching (133) → Daemon (134-135)
@@ -197,6 +206,7 @@ Additional defects were opened after Phase 5 completion and are tracked under th
 6. CI/CD (144-145)
 
 **Estimated Timeline:**
+
 - With 4 parallel work streams: ~7-8 weeks
 - Sequential execution: ~12-15 weeks
 - Recommended: 9-10 weeks with 3-4 developers

@@ -20,15 +20,18 @@ Develop an AI-powered system that analyzes file organization patterns and provid
 
 **Scope**: Core pattern detection and analysis algorithms
 **Files**:
+
 - `file_organizer/services/smart_suggestions/pattern_analyzer.py`
 - `file_organizer/services/smart_suggestions/pattern_types.py`
 - `file_organizer/services/smart_suggestions/clustering.py`
+
 **Agent Type**: backend-specialist (ML/algorithms focus)
 **Can Start**: immediately
 **Estimated Hours**: 10 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - PatternAnalyzer class for structure analysis
 - Directory structure analysis
 - File naming pattern detection (regex extraction)
@@ -42,15 +45,18 @@ Develop an AI-powered system that analyzes file organization patterns and provid
 
 **Scope**: Recommendation generation and confidence scoring
 **Files**:
+
 - `file_organizer/services/smart_suggestions/suggestion_engine.py`
 - `file_organizer/services/smart_suggestions/confidence_scorer.py`
 - `file_organizer/models/suggestion_types.py`
+
 **Agent Type**: backend-specialist (AI integration)
 **Can Start**: immediately
 **Estimated Hours**: 10 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - SuggestionEngine class
 - Recommendation generator using AI models
 - Multi-factor confidence scoring system
@@ -64,14 +70,17 @@ Develop an AI-powered system that analyzes file organization patterns and provid
 
 **Scope**: Content-location mismatch detection
 **Files**:
+
 - `file_organizer/services/smart_suggestions/misplacement_detector.py`
 - `file_organizer/services/smart_suggestions/context_analyzer.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: immediately
 **Estimated Hours**: 6 hours
 **Dependencies**: none
 
 **Deliverables**:
+
 - MisplacementDetector class
 - Content-location mismatch detection
 - File type vs location analysis
@@ -84,16 +93,19 @@ Develop an AI-powered system that analyzes file organization patterns and provid
 
 **Scope**: User feedback loop and component integration
 **Files**:
+
 - `file_organizer/services/smart_suggestions/feedback_system.py`
 - `file_organizer/services/smart_suggestions/__init__.py`
 - `file_organizer/services/smart_suggestions/smart_suggestions.py` (orchestrator)
 - `file_organizer/cli/suggest.py` (new CLI subcommand)
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Streams A, B, C complete
 **Estimated Hours**: 6 hours
 **Dependencies**: Streams A, B, C
 
 **Deliverables**:
+
 - FeedbackSystem class
 - User action tracking
 - Suggestion acceptance/rejection logging
@@ -109,6 +121,7 @@ Develop an AI-powered system that analyzes file organization patterns and provid
 ### Shared Files
 
 Minimal overlap:
+
 - `file_organizer/services/smart_suggestions/__init__.py` - Stream D updates after A, B, C complete
 - `file_organizer/models/suggestion_types.py` - Stream B owns, others import
 
@@ -117,6 +130,7 @@ Minimal overlap:
 To enable parallel work, define these interfaces upfront:
 
 **PatternAnalyzer Interface**:
+
 ```python
 def analyze_directory(directory: Path) -> PatternAnalysis
 def detect_naming_patterns(files: List[Path]) -> List[NamingPattern]
@@ -125,6 +139,7 @@ def get_location_patterns(directory: Path) -> List[LocationPattern]
 ```
 
 **SuggestionEngine Interface**:
+
 ```python
 def generate_suggestions(files: List[Path], patterns: PatternAnalysis) -> List[Suggestion]
 def calculate_confidence(suggestion: Suggestion) -> float
@@ -133,6 +148,7 @@ def explain_suggestion(suggestion: Suggestion) -> str
 ```
 
 **MisplacementDetector Interface**:
+
 ```python
 def detect_misplaced(directory: Path) -> List[MisplacedFile]
 def analyze_context(file_path: Path) -> ContextAnalysis
@@ -141,6 +157,7 @@ def find_correct_location(file_path: Path) -> Path
 ```
 
 **FeedbackSystem Interface**:
+
 ```python
 def record_action(suggestion: Suggestion, action: str) -> None
 def get_acceptance_rate(suggestion_type: str) -> float
@@ -149,6 +166,7 @@ def get_learning_stats() -> dict
 ```
 
 **Suggestion Data Model**:
+
 ```python
 @dataclass
 class Suggestion:
@@ -170,6 +188,7 @@ class Suggestion:
 ## Conflict Risk Assessment
 
 **Low Risk** - Streams work on completely different files:
+
 - Stream A: `pattern_analyzer.py`, `pattern_types.py`, `clustering.py`
 - Stream B: `suggestion_engine.py`, `confidence_scorer.py`, `suggestion_types.py` (models/)
 - Stream C: `misplacement_detector.py`, `context_analyzer.py`
@@ -182,11 +201,13 @@ No shared implementation files between A, B, and C.
 **Recommended Approach**: parallel with final integration
 
 **Execution Plan**:
+
 1. **Pre-work** (1 hour): Define and document interface contracts, data models, and AI integration patterns
 2. **Phase 1** (parallel, 10 hours): Launch Streams A, B, C simultaneously
 3. **Phase 2** (sequential, 6 hours): Stream D orchestrates and integrates
 
 **Timeline**:
+
 - Stream A: 10 hours
 - Stream B: 10 hours
 - Stream C: 6 hours (completes early)
@@ -197,11 +218,13 @@ Total wall time: ~17 hours (including coordination)
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~17 hours (pre-work + max(A,B,C) + D)
 - Total work: 32 hours
 - Efficiency gain: 47% time savings
 
 **Without parallel execution**:
+
 - Wall time: 32 hours (sequential completion)
 
 **Parallelization factor**: 3.2x effective speedup (32h / 10h actual per developer)
@@ -254,6 +277,7 @@ Total wall time: ~17 hours (including coordination)
 ### Integration Points
 
 This task integrates with:
+
 - Existing AI model infrastructure (Gemini 2.0, Claude)
 - FileOrganizer service for directory scanning
 - CLI framework for new suggest subcommand
@@ -270,6 +294,7 @@ This task integrates with:
 ### Test Data Requirements
 
 Create diverse test datasets:
+
 - Well-organized directories (extract patterns)
 - Poorly-organized directories (test suggestions)
 - Mixed content types (documents, images, code)

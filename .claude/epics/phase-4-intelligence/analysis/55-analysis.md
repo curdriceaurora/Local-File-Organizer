@@ -20,15 +20,18 @@ Implement a reliable undo/redo system that allows users to safely revert file or
 
 **Scope**: Core undo/redo logic and pre-operation validation
 **Files**:
+
 - `file_organizer/undo/undo_manager.py`
 - `file_organizer/undo/validator.py`
 - `file_organizer/undo/models.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: after Task 53 complete
 **Estimated Hours**: 10 hours
 **Dependencies**: Task 53 (operation history tracking)
 
 **Deliverables**:
+
 - UndoManager class with undo/redo operations
 - undo_last_operation(), undo_operation(), undo_transaction()
 - redo_last_operation(), redo_operation()
@@ -43,14 +46,17 @@ Implement a reliable undo/redo system that allows users to safely revert file or
 
 **Scope**: Execution of rollback operations for all operation types
 **Files**:
+
 - `file_organizer/undo/rollback.py`
 - `file_organizer/undo/recovery.py`
+
 **Agent Type**: backend-specialist
 **Can Start**: after Task 53 complete
 **Estimated Hours**: 8 hours
 **Dependencies**: Task 53
 
 **Deliverables**:
+
 - RollbackExecutor class
 - rollback_move() - reverse move operations
 - rollback_rename() - reverse rename operations
@@ -66,15 +72,18 @@ Implement a reliable undo/redo system that allows users to safely revert file or
 
 **Scope**: User interface for viewing and interacting with history
 **Files**:
+
 - `file_organizer/undo/viewer.py`
 - `file_organizer/cli/undo.py` (new CLI subcommand)
 - `file_organizer/cli/history.py` (new CLI subcommand)
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Task 53 complete
 **Estimated Hours**: 4 hours
 **Dependencies**: Task 53
 
 **Deliverables**:
+
 - HistoryViewer class for CLI display
 - show_recent_operations() with formatting
 - show_transaction_details()
@@ -89,6 +98,7 @@ Implement a reliable undo/redo system that allows users to safely revert file or
 
 **Scope**: Integration with file operations and comprehensive testing
 **Files**:
+
 - `file_organizer/undo/__init__.py`
 - Integration points in `file_organizer/core/organizer.py`
 - `tests/undo/test_undo_manager.py`
@@ -96,12 +106,14 @@ Implement a reliable undo/redo system that allows users to safely revert file or
 - `tests/undo/test_rollback.py`
 - `tests/undo/test_viewer.py`
 - `tests/integration/test_undo_redo_e2e.py`
+
 **Agent Type**: fullstack-specialist
 **Can Start**: after Streams A, B, C complete
 **Estimated Hours**: 2 hours
 **Dependencies**: Streams A, B, C
 
 **Deliverables**:
+
 - Integration with file operation services
 - Unit tests for all components (>90% coverage)
 - Integration tests for end-to-end undo/redo
@@ -115,6 +127,7 @@ Implement a reliable undo/redo system that allows users to safely revert file or
 ### Shared Files
 
 Minimal overlap:
+
 - `file_organizer/undo/__init__.py` - Stream D updates after A, B, C complete
 - Core organizer files - Stream D adds integration hooks
 
@@ -123,6 +136,7 @@ Minimal overlap:
 To enable parallel work, define these interfaces upfront:
 
 **UndoManager Interface**:
+
 ```python
 def undo_last_operation() -> bool
 def undo_operation(operation_id: int) -> bool
@@ -137,6 +151,7 @@ def clear_redo_stack() -> None
 ```
 
 **OperationValidator Interface**:
+
 ```python
 def validate_undo(operation: Operation) -> ValidationResult
 def validate_redo(operation: Operation) -> ValidationResult
@@ -146,6 +161,7 @@ def check_conflicts(operation: Operation) -> List[Conflict]
 ```
 
 **RollbackExecutor Interface**:
+
 ```python
 def rollback_move(operation: Operation) -> bool
 def rollback_rename(operation: Operation) -> bool
@@ -155,6 +171,7 @@ def rollback_transaction(transaction_id: str) -> RollbackResult
 ```
 
 **HistoryViewer Interface**:
+
 ```python
 def show_recent_operations(limit: int = 10) -> None
 def show_transaction_details(transaction_id: str) -> None
@@ -164,6 +181,7 @@ def search_by_path(path: Path) -> List[Operation]
 ```
 
 **Data Models**:
+
 ```python
 @dataclass
 class ValidationResult:
@@ -190,6 +208,7 @@ class RollbackResult:
 ## Conflict Risk Assessment
 
 **Low Risk** - Streams work on completely different files:
+
 - Stream A: `undo_manager.py`, `validator.py`, `models.py`
 - Stream B: `rollback.py`, `recovery.py`
 - Stream C: `viewer.py`, `cli/undo.py`, `cli/history.py`
@@ -202,12 +221,14 @@ No shared implementation files between A, B, and C.
 **Recommended Approach**: parallel after dependency, with final integration
 
 **Execution Plan**:
+
 1. **Pre-work** (0.5 hours): Define and document interface contracts and data models
 2. **Wait for dependency**: Task 53 must complete first
 3. **Phase 1** (parallel, 10 hours): Launch Streams A, B, C simultaneously
 4. **Phase 2** (sequential, 2 hours): Stream D integrates and tests
 
 **Timeline**:
+
 - Stream A: 10 hours
 - Stream B: 8 hours (completes early)
 - Stream C: 4 hours (completes early)
@@ -218,11 +239,13 @@ Total wall time: ~12.5 hours (including coordination, after Task 53)
 ## Expected Timeline
 
 **With parallel execution**:
+
 - Wall time: ~12.5 hours (pre-work + max(A,B,C) + D) after Task 53
 - Total work: 24 hours
 - Efficiency gain: 48% time savings
 
 **Without parallel execution**:
+
 - Wall time: 24 hours (sequential completion) after Task 53
 
 **Parallelization factor**: 2.3x effective speedup (24h / 10.4h actual)
@@ -278,6 +301,7 @@ Total wall time: ~12.5 hours (including coordination, after Task 53)
 ### Integration Points
 
 This task integrates with:
+
 - **Task 53**: Operation history tracking (required foundation)
 - All file operation services
 - CLI framework for undo/redo/history commands
@@ -286,21 +310,25 @@ This task integrates with:
 ### Undo Logic by Operation Type
 
 **Move Operation**:
+
 - Original: `source_path → destination_path`
 - Undo: `destination_path → source_path`
 - Validation: destination exists, source location available
 
 **Rename Operation**:
+
 - Original: `old_name → new_name`
 - Undo: `new_name → old_name`
 - Validation: new_name exists, old_name available
 
 **Delete Operation**:
+
 - Original: file deleted (moved to trash)
 - Undo: restore from trash
 - Validation: file in trash, destination available, hash matches
 
 **Copy Operation**:
+
 - Original: created copy at destination
 - Undo: delete the copy
 - Validation: copy exists, hash matches original

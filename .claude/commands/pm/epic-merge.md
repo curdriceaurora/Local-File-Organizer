@@ -7,13 +7,15 @@ allowed-tools: Bash, Read, Write
 Merge completed epic from worktree back to main branch.
 
 ## Usage
-```
+
+```text
 /pm:epic-merge <epic_name>
 ```
 
 ## Quick Check
 
 1. **Verify worktree exists:**
+
    ```bash
    git worktree list | grep "epic-$ARGUMENTS" || echo "❌ No worktree for epic: $ARGUMENTS"
    ```
@@ -27,6 +29,7 @@ Merge completed epic from worktree back to main branch.
 ### 1. Pre-Merge Validation
 
 Navigate to worktree and check status:
+
 ```bash
 cd ../epic-$ARGUMENTS
 
@@ -125,6 +128,7 @@ fi"
 ### 5. Handle Merge Conflicts
 
 If merge fails with conflicts:
+
 ```bash
 # Check conflict status
 git status
@@ -155,6 +159,7 @@ exit 1
 ### 6. Post-Merge Cleanup
 
 If merge succeeds:
+
 ```bash
 # Push to remote
 git push origin main
@@ -176,6 +181,7 @@ echo "✅ Epic archived: .claude/epics/archived/$ARGUMENTS"
 ### 7. Update GitHub Issues
 
 Close related issues:
+
 ```bash
 # Get issue numbers from epic
 # Extract epic issue number
@@ -207,7 +213,7 @@ done
 
 ### 8. Final Output
 
-```
+```yaml
 ✅ Epic Merged Successfully: $ARGUMENTS
 
 Summary:
@@ -231,7 +237,8 @@ Next steps:
 ## Conflict Resolution Help
 
 If conflicts need resolution:
-```
+
+```bash
 The epic branch has conflicts with main.
 
 This typically happens when:

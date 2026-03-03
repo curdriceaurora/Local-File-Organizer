@@ -7,25 +7,29 @@ allowed-tools: Bash, Read, Write, LS, Task
 Launch parallel agents to work on epic tasks in a shared worktree.
 
 ## Usage
-```
+
+```text
 /pm:epic-start <epic_name>
 ```
 
 ## Quick Check
 
 1. **Verify epic exists:**
-   ```bash
+
+```bash
    test -f .claude/epics/$ARGUMENTS/epic.md || echo "❌ Epic not found. Run: /pm:prd-parse $ARGUMENTS"
-   ```
+```
 
 2. **Check GitHub sync:**
    Look for `github:` field in epic frontmatter.
    If missing: "❌ Epic not synced. Run: /pm:epic-sync $ARGUMENTS first"
 
 3. **Check for worktree:**
-   ```bash
-   git worktree list | grep "epic-$ARGUMENTS"
-   ```
+  
+```bash
+git worktree list | grep "epic-$ARGUMENTS"
+
+```
 
 ## Instructions
 
@@ -48,11 +52,13 @@ fi
 ### 2. Identify Ready Issues
 
 Read all task files in `.claude/epics/$ARGUMENTS/`:
+
 - Parse frontmatter for `status`, `depends_on`, `parallel` fields
 - Check GitHub issue status if needed
 - Build dependency graph
 
 Categorize issues:
+
 - **Ready**: No unmet dependencies, not started
 - **Blocked**: Has unmet dependencies
 - **In Progress**: Already being worked on
@@ -61,6 +67,7 @@ Categorize issues:
 ### 3. Analyze Ready Issues
 
 For each ready issue without analysis:
+
 ```bash
 # Check for analysis
 if ! test -f .claude/epics/$ARGUMENTS/{issue}-analysis.md; then
@@ -85,22 +92,33 @@ Launching agents in worktree: ../epic-$ARGUMENTS/
 ```
 
 Use Task tool to launch each stream:
+
 ```yaml
 Task:
   description: "Issue #{issue} Stream {X}"
   subagent_type: "{agent_type}"
   prompt: |
+    ================================================================
+    MANDATORY: Your task specification is at:
+      .claude/epics/$ARGUMENTS/{task_file}
+    READ THIS FILE FIRST. It is your primary source of truth.
+    ================================================================
+
     Working in worktree: ../epic-$ARGUMENTS/
     Issue: #{issue} - {title}
     Stream: {stream_name}
+    Files: {file_patterns}
 
-    Your scope:
-    - Files: {file_patterns}
-    - Work: {stream_description}
-
-    Read full requirements from:
-    - .claude/epics/$ARGUMENTS/{task_file}
-    - .claude/epics/$ARGUMENTS/{issue}-analysis.md
+    WORKFLOW:
+    1. Read .claude/epics/$ARGUMENTS/{task_file} COMPLETELY
+       - Your acceptance criteria are defined there
+       - Your technical details are defined there
+       - Your Definition of Done checklist is defined there
+    2. Read .claude/epics/$ARGUMENTS/{issue}-analysis.md (if exists)
+    3. Execute the work described in the task file
+    4. Before declaring done, verify EVERY item in the
+       "Definition of Done" section of the task file
+    5. Run any verification commands specified in the task file
 
     Follow coordination rules in /rules/agent-coordination.md
 
@@ -109,6 +127,44 @@ Task:
 
     Update progress in:
     .claude/epics/$ARGUMENTS/updates/{issue}/stream-{X}.md
+```
+
+**Critical**: Do NOT paraphrase task content into the prompt. The task file
+IS the spec. The prompt provides only routing info (worktree, issue number,
+stream assignment). All requirements, acceptance criteria, and verification
+steps come from the task file itself.
+
+### 4.5 Verification Gate
+
+**Before launching tasks that depend on a completed task**, verify the
+completed task meets its Definition of Done:
+
+1. Read the completed task file: `.claude/epics/$ARGUMENTS/{task_file}`
+2. Find the "Definition of Done" section
+3. For each DoD item, verify it is actually satisfied:
+   - If DoD says "zero violations" → run the scan command, confirm zero
+   - If DoD says "tests pass" → run the tests, confirm pass
+   - If DoD says "command works" → run the command, confirm output
+4. If ANY DoD item fails → do NOT launch dependent tasks
+   - Report which items failed
+   - Re-run or fix the failed task before proceeding
+
+Verification output format:
+
+```text
+Verifying Task #{completed_issue} Definition of Done:
+  [x] Item 1 - PASS (evidence: command output)
+  [x] Item 2 - PASS (evidence: file exists)
+  [ ] Item 3 - FAIL (expected: zero violations, got: 47)
+
+Result: BLOCKED - fix item 3 before launching dependents
+```
+
+If all DoD items pass:
+
+```text
+✅ Task #{completed_issue} Definition of Done verified
+   Proceeding to launch dependent tasks: #{dep1}, #{dep2}
 ```
 
 ### 5. Track Active Agents
@@ -140,6 +196,7 @@ branch: epic/$ARGUMENTS
 ### 6. Monitor and Coordinate
 
 Set up monitoring:
+
 ```bash
 echo "
 Agents launched successfully!
@@ -161,13 +218,14 @@ Merge when complete:
 ### 7. Handle Dependencies
 
 As agents complete streams:
+
 - Check if any blocked issues are now ready
 - Launch new agents for newly-ready work
 - Update execution-status.md
 
 ## Output Format
 
-```
+```yaml
 🚀 Epic Execution Started: $ARGUMENTS
 
 Worktree: ../epic-$ARGUMENTS
@@ -194,7 +252,8 @@ Monitor with: /pm:epic-status $ARGUMENTS
 ## Error Handling
 
 If agent launch fails:
-```
+
+```text
 ❌ Failed to start Agent-{id}
   Issue: #{issue}
   Stream: {stream}
@@ -204,7 +263,8 @@ Continue with other agents? (yes/no)
 ```
 
 If worktree creation fails:
-```
+
+```text
 ❌ Cannot create worktree
   {git error message}
 

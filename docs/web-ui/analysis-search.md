@@ -41,7 +41,7 @@ Access advanced search from the **Search** section:
 
 Enter search terms using natural language:
 
-```
+```bash
 - "quarterly report"    # Exact phrase
 - report AND 2024      # Multiple terms
 - report NOT draft     # Exclude terms
@@ -337,25 +337,25 @@ Set up automatic exports:
 
 **Recent Files**
 
-```
+```text
 date:last7days
 ```
 
 **Large Files to Clean**
 
-```
+```text
 size:>100mb
 ```
 
 **Unorganized Files**
 
-```
+```text
 path:/downloads
 ```
 
 **Project Files**
 
-```
+```text
 tag:project-x OR path:/projects/x
 ```
 

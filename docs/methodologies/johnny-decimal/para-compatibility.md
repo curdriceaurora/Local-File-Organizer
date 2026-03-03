@@ -18,17 +18,20 @@ PARA (Projects, Areas, Resources, Archive) is an organizational system that cate
 Each system has strengths:
 
 **PARA Strengths:**
+
 - Simple, actionability-based categorization
 - Clear distinction between active and reference material
 - Easy to understand and adopt
 
 **Johnny Decimal Strengths:**
+
 - Precise hierarchical structure
 - Scalable to large information collections
 - Quick navigation with numbers
 - Avoids naming conflicts
 
 **Together:**
+
 - PARA provides high-level organization
 - JD provides detailed structure within each PARA category
 - Best of both worlds!
@@ -39,7 +42,7 @@ Each system has strengths:
 
 Use PARA categories as top-level organization, with JD numbering inside each:
 
-```
+```text
 10 Projects/
 ├─ 10.01 Website Redesign/
 ├─ 10.02 App Launch/
@@ -61,11 +64,13 @@ Use PARA categories as top-level organization, with JD numbering inside each:
 ```
 
 **Pros:**
+
 - Intuitive top-level structure
 - Easy to move items between PARA categories
 - Clear separation of active vs. reference
 
 **Cons:**
+
 - Number ranges must be managed carefully
 - Moving between PARA categories requires renumbering
 
@@ -73,7 +78,7 @@ Use PARA categories as top-level organization, with JD numbering inside each:
 
 Map JD areas directly to PARA categories:
 
-```
+```yaml
 10-19: Projects
 20-29: Areas
 30-39: Resources
@@ -81,7 +86,8 @@ Map JD areas directly to PARA categories:
 ```
 
 Structure example:
-```
+
+```text
 10 Projects - Website Redesign/
 11 Projects - App Launch/
 12 Projects - Q1 Campaign/
@@ -99,11 +105,13 @@ Structure example:
 ```
 
 **Pros:**
+
 - Unified numbering system
 - JD benefits throughout
 - Easy to see PARA category from number
 
 **Cons:**
+
 - Limits areas within each PARA category
 - May feel redundant to include category name
 
@@ -111,7 +119,7 @@ Structure example:
 
 Create custom mappings that fit your specific needs:
 
-```
+```yaml
 00-09: Admin & System
 10-19: Active Projects (PARA: Projects)
 20-39: Life Areas (PARA: Areas)
@@ -363,16 +371,19 @@ print(jd_number.formatted_number)  # Output: "20.01"
 ### Choosing the Right Approach
 
 **Use Approach 1** (PARA at Top) if:
+
 - You're new to both systems
 - You frequently move items between PARA categories
 - You want familiar PARA structure
 
 **Use Approach 2** (JD Areas as PARA) if:
+
 - You want unified numbering
 - You're comfortable with JD system
 - You rarely move between PARA categories
 
 **Use Approach 3** (Custom Mapping) if:
+
 - You have specific organizational needs
 - You're an advanced user
 - You want maximum flexibility
@@ -380,7 +391,8 @@ print(jd_number.formatted_number)  # Output: "20.01"
 ### Managing Number Ranges
 
 **Allocate Wisely:**
-```
+
+```yaml
 Projects: 10-19 (10 possible areas)
 Areas: 20-29 (10 possible areas)
 Resources: 30-39 (10 possible areas)
@@ -388,7 +400,8 @@ Archive: 40-49 (10 possible areas)
 ```
 
 **Expand if Needed:**
-```
+
+```yaml
 Projects: 10-19
 Areas: 20-39 (20 areas for more life/work separation)
 Resources: 40-59 (20 areas for extensive resources)
@@ -407,16 +420,19 @@ When moving items between PARA categories:
 ### Maintaining the Hybrid System
 
 **Weekly Review:**
+
 - Move completed projects to archive
 - Update project statuses
 - File new resources appropriately
 
 **Monthly Review:**
+
 - Audit PARA categorization
 - Consolidate similar items
 - Archive old materials
 
 **Quarterly Review:**
+
 - Restructure if needed
 - Update numbering scheme
 - Optimize organization
@@ -503,6 +519,7 @@ config = (
 ### Issue: Items in Wrong PARA Category
 
 **Solution**: Use migration tool to reorganize:
+
 ```python
 # Scan and identify misplaced items
 analyzer = CompatibilityAnalyzer(config)
@@ -514,6 +531,7 @@ detected = analyzer.detect_para_structure(root)
 ### Issue: Running Out of Numbers in PARA Range
 
 **Solution**: Expand the ranges:
+
 ```python
 config.compatibility.para_integration.projects_area = 10  # 10-19
 config.compatibility.para_integration.areas_area = 20     # 20-39 (expanded)
@@ -522,7 +540,8 @@ config.compatibility.para_integration.areas_area = 20     # 20-39 (expanded)
 ### Issue: Confusion Between PARA and JD Numbering
 
 **Solution**: Add clear naming:
-```
+
+```text
 10 [P] Website Redesign/
 20 [A] Personal Finance/
 30 [R] Design References/

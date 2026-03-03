@@ -34,11 +34,13 @@ file-organizer version
 Organize files in a directory using AI models.
 
 **Usage:**
+
 ```bash
 file-organizer organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 ```
 
 **Arguments:**
+
 - `INPUT_DIR` — Directory containing files to organize
 - `OUTPUT_DIR` — Destination directory for organized files
 
@@ -47,6 +49,7 @@ file-organizer organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 - `--verbose, -v` — Verbose output
 
 **Examples:**
+
 ```bash
 # Organize ~/Downloads into ~/Organized
 file-organizer organize ~/Downloads ~/Organized
@@ -67,11 +70,13 @@ file-organizer organize ~/Downloads ~/Organized --verbose
 Preview how files would be organized without moving them (dry-run shortcut).
 
 **Usage:**
+
 ```bash
 file-organizer preview INPUT_DIR
 ```
 
 **Examples:**
+
 ```bash
 file-organizer preview ~/Downloads
 fo preview ~/Downloads
@@ -84,6 +89,7 @@ fo preview ~/Downloads
 Start the File Organizer web server and API.
 
 **Usage:**
+
 ```bash
 file-organizer serve [OPTIONS]
 ```
@@ -95,6 +101,7 @@ file-organizer serve [OPTIONS]
 - `--workers INTEGER` — Number of worker processes (default: `1`)
 
 **Examples:**
+
 ```bash
 # Start with defaults (port 8000, all interfaces)
 file-organizer serve
@@ -118,6 +125,7 @@ file-organizer serve --workers 4
 Search for files by name pattern with optional type filtering.
 
 **Usage:**
+
 ```bash
 file-organizer search QUERY [DIRECTORY] [OPTIONS]
 ```
@@ -133,6 +141,7 @@ file-organizer search QUERY [DIRECTORY] [OPTIONS]
 - `--json` — Output as JSON array
 
 **Examples:**
+
 ```bash
 # Search by glob pattern
 file-organizer search "*.pdf" ~/Documents
@@ -157,6 +166,7 @@ file-organizer search "*.py" ./src --json
 Analyze a file using AI and show its description, category, and confidence score.
 
 **Usage:**
+
 ```bash
 file-organizer analyze FILE [OPTIONS]
 ```
@@ -169,6 +179,7 @@ file-organizer analyze FILE [OPTIONS]
 - `--json` — Output as JSON
 
 **Examples:**
+
 ```bash
 # Basic analysis
 file-organizer analyze ~/Documents/report.pdf
@@ -199,6 +210,7 @@ file-organizer tui
 Undo file operations.
 
 **Usage:**
+
 ```bash
 file-organizer undo [OPTIONS]
 ```
@@ -210,6 +222,7 @@ file-organizer undo [OPTIONS]
 - `--verbose, -v` — Verbose output
 
 **Examples:**
+
 ```bash
 # Undo the last operation
 file-organizer undo
@@ -228,6 +241,7 @@ file-organizer undo --transaction-id abc123
 Redo previously undone file operations.
 
 **Usage:**
+
 ```bash
 file-organizer redo [OPTIONS]
 ```
@@ -244,6 +258,7 @@ file-organizer redo [OPTIONS]
 View operation history.
 
 **Usage:**
+
 ```bash
 file-organizer history [OPTIONS]
 ```
@@ -256,6 +271,7 @@ file-organizer history [OPTIONS]
 - `--verbose, -v` — Verbose output
 
 **Examples:**
+
 ```bash
 file-organizer history
 file-organizer history --limit 50
@@ -269,6 +285,7 @@ file-organizer history --stats
 Display storage analytics dashboard.
 
 **Usage:**
+
 ```bash
 file-organizer analytics [DIRECTORY] [OPTIONS]
 ```
@@ -280,6 +297,7 @@ file-organizer analytics [DIRECTORY] [OPTIONS]
 - `--verbose, -v` — Verbose output
 
 **Examples:**
+
 ```bash
 file-organizer analytics
 file-organizer analytics ~/Documents
@@ -375,6 +393,7 @@ Options:
 - `--methodology TEXT` — Set default methodology (`none`, `para`, `jd`)
 
 **Examples:**
+
 ```bash
 file-organizer config show
 file-organizer config show --profile work
@@ -420,6 +439,7 @@ file-organizer model cache
 ```
 
 **Examples:**
+
 ```bash
 file-organizer model list
 file-organizer model list --type vision
@@ -448,6 +468,7 @@ Options:
 - `--dir, -d TEXT` — Working directory for file operations
 
 **Examples:**
+
 ```bash
 # Interactive REPL
 file-organizer copilot chat
@@ -473,6 +494,7 @@ Displays:
 - Copilot readiness status
 
 **Examples:**
+
 ```bash
 file-organizer copilot status
 fo copilot status
@@ -517,6 +539,7 @@ Options:
 - `--poll-interval FLOAT` — Seconds between polls (default: 1.0)
 
 **Examples:**
+
 ```bash
 file-organizer daemon watch ~/Inbox
 file-organizer daemon watch ~/Documents --poll-interval 2.0
@@ -538,6 +561,7 @@ Options:
 - `--dry-run` — Preview changes without moving files
 
 **Examples:**
+
 ```bash
 file-organizer daemon process ~/Inbox ~/Organized
 
@@ -552,6 +576,7 @@ Displays a summary table with:
 - Folder structure created
 
 **Examples:**
+
 ```bash
 file-organizer daemon start --watch-dir ~/Inbox --output-dir ~/Organized
 file-organizer daemon status
@@ -595,6 +620,7 @@ file-organizer dedupe resolve DIRECTORY [OPTIONS]
 - `DIRECTORY` — Directory to scan for duplicates
 
 **Examples:**
+
 ```bash
 file-organizer dedupe scan ~/Images
 file-organizer dedupe report
@@ -697,6 +723,7 @@ file-organizer rules import FILE [--set RULE_SET]
 - `FILE` — YAML file to import
 
 **Examples:**
+
 ```bash
 # List rules in the default rule set
 file-organizer rules list
@@ -755,6 +782,7 @@ file-organizer suggest patterns DIRECTORY [OPTIONS]
 ```
 
 **Examples:**
+
 ```bash
 file-organizer suggest files ~/Downloads
 file-organizer suggest files ~/Documents --min-confidence 60
@@ -840,6 +868,7 @@ Options:
 - `--content TEXT` — Review text (required)
 
 **Examples:**
+
 ```bash
 file-organizer marketplace review awesome-plugin \
   --user john_doe \
@@ -960,6 +989,7 @@ file-organizer api system-stats [--base-url URL]
 **Default base URL:** `http://localhost:8000`
 
 **Examples:**
+
 ```bash
 file-organizer api health
 file-organizer api health --base-url http://myserver:8000
@@ -1085,6 +1115,7 @@ Options:
 - `--show-conflicts` — Show conflicts before merging
 
 **Examples:**
+
 ```bash
 file-organizer profile merge work personal --output merged --strategy confident
 
@@ -1108,6 +1139,7 @@ Options:
 - `--no-backup` — Skip backup before migration
 
 **Examples:**
+
 ```bash
 file-organizer profile migrate work --to-version 2.0
 
@@ -1127,6 +1159,7 @@ Arguments:
 - `PROFILE_NAME` — Name of the profile to validate
 
 **Examples:**
+
 ```bash
 file-organizer profile validate work
 ```
@@ -1164,6 +1197,7 @@ Displays:
 - Learned patterns and confidence levels
 
 **Examples:**
+
 ```bash
 file-organizer profile template preview default
 file-organizer profile template preview minimal
@@ -1185,6 +1219,7 @@ Options:
 - `--activate, -a` — Activate the profile immediately after creation
 
 **Examples:**
+
 ```bash
 file-organizer profile template apply default myprofile
 
@@ -1195,6 +1230,7 @@ file-organizer profile template apply minimal myprofile --activate
 ---
 
 **General Profile Examples:**
+
 ```bash
 file-organizer profile list
 file-organizer profile create work --description "Work files config"
@@ -1271,6 +1307,7 @@ Options:
 - `--json` — Output as JSON
 
 **Examples:**
+
 ```bash
 file-organizer autotag suggest ~/Documents
 file-organizer autotag apply ~/Documents/report.pdf finance quarterly
@@ -1307,6 +1344,7 @@ file-organizer COMMAND SUBCOMMAND --help
 ```
 
 For example:
+
 ```bash
 file-organizer rules --help
 file-organizer rules add --help
