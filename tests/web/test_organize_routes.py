@@ -662,4 +662,7 @@ class TestModuleConstants:
         assert "content_based" in ORGANIZE_METHODOLOGIES
 
     def test_max_delay(self):
+        from file_organizer.web.organize_routes import ORGANIZE_MAX_DELAY_MIN
+        assert ORGANIZE_MAX_DELAY_MIN > 0
+
         assert ORGANIZE_MAX_DELAY_MIN == 7 * 24 * 60

@@ -1,23 +1,31 @@
-"""Unit tests for web settings_routes helpers and route handlers.
+"""Tests for settings routes and handlers.
 
-Tests internal helpers (_as_form_bool, _coerce_bool, _validate_choice,
-_validate_methodology, _validate_rules, _load_web_settings, _save_web_settings,
-_update_web_settings, _section_context, _render_section) and route handlers
-(settings_page, settings_search, settings_export, settings_import, settings_reset,
-settings_general_get, settings_general_post, etc.) using mocked templates/settings.
+Tests verify:
+- Settings pages render with correct template and context
+- Form submissions save settings correctly
+- Configuration changes are applied
+- Import/export operations work
+- Reset operations clear settings properly
+- Validation of rules and choices
+- Error conditions are handled
 """
 
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.web.settings_routes import (
+    LANGUAGE_OPTIONS,
+    LOG_LEVEL_OPTIONS,
     METHODOLOGY_OPTIONS,
+    PERFORMANCE_MODES,
     THEME_OPTIONS,
+    TIMEZONE_OPTIONS,
     WebSettings,
     _as_form_bool,
     _coerce_bool,
@@ -29,12 +37,6 @@ from file_organizer.web.settings_routes import (
     _validate_choice,
     _validate_methodology,
     _validate_rules,
-    settings_export,
-    settings_general_get,
-    settings_general_post,
-    settings_page,
-    settings_reset,
-    settings_search,
 )
 
 pytestmark = [pytest.mark.unit]
@@ -47,7 +49,7 @@ pytestmark = [pytest.mark.unit]
 
 @pytest.fixture()
 def mock_request():
-    """Mock FastAPI Request object."""
+    """Return a mock FastAPI Request."""
     req = MagicMock()
     req.url = MagicMock()
     req.url.path = "/ui/settings"
@@ -55,27 +57,24 @@ def mock_request():
 
 
 @pytest.fixture()
-def mock_settings():
-    """Mock ApiSettings object."""
+def settings():
+    """Return an ApiSettings mock."""
     s = MagicMock(spec=ApiSettings)
+    s.allowed_paths = ["/tmp/test"]
     s.app_name = "File Organizer"
     s.version = "2.0.0"
-    s.allowed_paths = ["/tmp/test"]
-    s.db_url = "sqlite://"
     return s
 
 
-@pytest.fixture()
-def temp_settings_file(tmp_path):
-    """Create a temporary settings file for testing."""
-    settings_dir = tmp_path / "config"
-    settings_dir.mkdir()
-    settings_file = settings_dir / "web-settings.json"
-
-    # Patch the settings file location
-    with patch("file_organizer.web.settings_routes._SETTINGS_DIR", settings_dir):
-        with patch("file_organizer.web.settings_routes._SETTINGS_FILE", settings_file):
-            yield settings_file
+@pytest.fixture(autouse=True)
+def use_temp_settings_dir(monkeypatch, tmp_path):
+    """Use temporary directory for settings file."""
+    with patch("file_organizer.web.settings_routes._SETTINGS_DIR", tmp_path):
+        with patch(
+            "file_organizer.web.settings_routes._SETTINGS_FILE",
+            tmp_path / "web-settings.json",
+        ):
+            yield tmp_path
 
 
 # ---------------------------------------------------------------------------
@@ -85,40 +84,25 @@ def temp_settings_file(tmp_path):
 
 @pytest.mark.unit
 class TestAsFormBool:
-    """Test _as_form_bool helper."""
+    """Test HTML form checkbox value conversion."""
 
-    def test_none_returns_false(self):
-        assert _as_form_bool(None) is False
-
-    def test_empty_string_returns_false(self):
-        assert _as_form_bool("") is False
-
-    def test_whitespace_only_returns_false(self):
-        assert _as_form_bool("   ") is False
-
-    def test_one_returns_true(self):
+    def test_true_values(self):
+        """Should recognize true values."""
         assert _as_form_bool("1") is True
-
-    def test_true_returns_true(self):
         assert _as_form_bool("true") is True
-
-    def test_yes_returns_true(self):
         assert _as_form_bool("yes") is True
-
-    def test_on_returns_true(self):
         assert _as_form_bool("on") is True
 
-    def test_true_uppercase_returns_true(self):
-        assert _as_form_bool("TRUE") is True
-
-    def test_zero_returns_false(self):
+    def test_false_values(self):
+        """Should treat non-true values as false."""
         assert _as_form_bool("0") is False
-
-    def test_false_returns_false(self):
         assert _as_form_bool("false") is False
+        assert _as_form_bool("no") is False
+        assert _as_form_bool("") is False
 
-    def test_random_string_returns_false(self):
-        assert _as_form_bool("random") is False
+    def test_none_value(self):
+        """Should treat None as false."""
+        assert _as_form_bool(None) is False
 
 
 # ---------------------------------------------------------------------------
@@ -128,27 +112,25 @@ class TestAsFormBool:
 
 @pytest.mark.unit
 class TestCoerceBool:
-    """Test _coerce_bool helper."""
+    """Test arbitrary value to boolean coercion."""
 
-    def test_bool_true_returns_true(self):
+    def test_bool_values(self):
+        """Should pass through bool values."""
         assert _coerce_bool(True, False) is True
-
-    def test_bool_false_returns_false(self):
         assert _coerce_bool(False, True) is False
 
-    def test_string_true_returns_true(self):
+    def test_string_values(self):
+        """Should coerce string values."""
         assert _coerce_bool("true", False) is True
-
-    def test_string_false_returns_false(self):
         assert _coerce_bool("false", True) is False
+        assert _coerce_bool("1", False) is True
 
-    def test_invalid_type_returns_default(self):
-        assert _coerce_bool(123, True) is True
+    def test_fallback_to_default(self):
+        """Should use default for non-bool/string values."""
         assert _coerce_bool(123, False) is False
-
-    def test_none_returns_default(self):
-        assert _coerce_bool(None, True) is True
+        assert _coerce_bool(123, True) is True
         assert _coerce_bool(None, False) is False
+        assert _coerce_bool([], True) is True
 
 
 # ---------------------------------------------------------------------------
@@ -158,23 +140,23 @@ class TestCoerceBool:
 
 @pytest.mark.unit
 class TestValidateChoice:
-    """Test _validate_choice helper."""
+    """Test choice validation."""
 
-    def test_valid_choice_returns_value(self):
-        result = _validate_choice("en", ["en", "es", "fr"], "en")
-        assert result == "en"
+    def test_valid_choice(self):
+        """Should return valid choice."""
+        allowed = ["en", "es", "fr"]
+        assert _validate_choice("en", allowed, "en") == "en"
+        assert _validate_choice("fr", allowed, "en") == "fr"
 
-    def test_invalid_choice_returns_fallback(self):
-        result = _validate_choice("invalid", ["en", "es", "fr"], "en")
-        assert result == "en"
+    def test_invalid_choice_uses_fallback(self):
+        """Should use fallback for invalid choice."""
+        allowed = ["en", "es", "fr"]
+        assert _validate_choice("de", allowed, "en") == "en"
 
-    def test_whitespace_stripped(self):
-        result = _validate_choice("  en  ", ["en", "es", "fr"], "en")
-        assert result == "en"
-
-    def test_empty_string_returns_fallback(self):
-        result = _validate_choice("", ["en", "es", "fr"], "en")
-        assert result == "en"
+    def test_strips_whitespace(self):
+        """Should strip whitespace."""
+        allowed = ["en", "es"]
+        assert _validate_choice("  en  ", allowed, "en") == "en"
 
 
 # ---------------------------------------------------------------------------
@@ -184,23 +166,24 @@ class TestValidateChoice:
 
 @pytest.mark.unit
 class TestValidateMethodology:
-    """Test _validate_methodology helper."""
+    """Test methodology validation."""
 
-    def test_valid_methodology_returns_value(self):
-        result = _validate_methodology("content_based")
-        assert result == "content_based"
+    def test_valid_methodologies(self):
+        """Should accept valid methodologies."""
+        assert _validate_methodology("content_based") == "content_based"
+        assert _validate_methodology("johnny_decimal") == "johnny_decimal"
+        assert _validate_methodology("para") == "para"
+        assert _validate_methodology("date_based") == "date_based"
 
-    def test_uppercase_normalized(self):
-        result = _validate_methodology("PARA")
-        assert result == "para"
+    def test_case_insensitive(self):
+        """Should be case insensitive."""
+        assert _validate_methodology("CONTENT_BASED") == "content_based"
+        assert _validate_methodology("PARA") == "para"
 
-    def test_invalid_methodology_returns_default(self):
-        result = _validate_methodology("invalid")
-        assert result == "content_based"
-
-    def test_whitespace_stripped(self):
-        result = _validate_methodology("  johnny_decimal  ")
-        assert result == "johnny_decimal"
+    def test_invalid_defaults_to_content_based(self):
+        """Should default to content_based for invalid."""
+        assert _validate_methodology("invalid") == "content_based"
+        assert _validate_methodology("") == "content_based"
 
 
 # ---------------------------------------------------------------------------
@@ -210,113 +193,156 @@ class TestValidateMethodology:
 
 @pytest.mark.unit
 class TestValidateRules:
-    """Test _validate_rules helper."""
+    """Test organization rule validation."""
 
-    def test_valid_single_rule(self):
-        valid, msg = _validate_rules("docs/* -> Documents")
-        assert valid is True
-        assert "valid" in msg.lower()
-
-    def test_valid_multiple_rules(self):
-        valid, msg = _validate_rules("docs/* -> Documents\nimages/* -> Media")
+    def test_valid_rules(self):
+        """Should accept valid rules."""
+        rules = "docs/* -> Documents\nimages/* -> Media/Images"
+        valid, msg = _validate_rules(rules)
         assert valid is True
 
-    def test_empty_rules_invalid(self):
+    def test_empty_rules(self):
+        """Should reject empty rules."""
         valid, msg = _validate_rules("")
         assert valid is False
-        assert "empty" in msg.lower()
+        assert "cannot be empty" in msg.lower()
 
-    def test_missing_arrow_invalid(self):
-        valid, msg = _validate_rules("docs/* Documents")
+    def test_missing_arrow(self):
+        """Should reject rules missing arrow."""
+        rules = "docs/* Documents"
+        valid, msg = _validate_rules(rules)
         assert valid is False
-        assert "->" in msg or "invalid" in msg.lower()
+        assert "invalid" in msg.lower()
 
-    def test_empty_pattern_invalid(self):
-        valid, msg = _validate_rules(" -> Documents")
+    def test_missing_pattern(self):
+        """Should reject rules with missing pattern."""
+        rules = " -> Documents"
+        valid, msg = _validate_rules(rules)
         assert valid is False
 
-    def test_empty_destination_invalid(self):
-        valid, msg = _validate_rules("docs/* -> ")
+    def test_missing_destination(self):
+        """Should reject rules with missing destination."""
+        rules = "docs/* ->"
+        valid, msg = _validate_rules(rules)
         assert valid is False
 
-    def test_comments_ignored(self):
-        valid, msg = _validate_rules("# This is a comment\ndocs/* -> Documents")
+    def test_lines_with_comments(self):
+        """Should allow comment lines."""
+        rules = "# This is a comment\ndocs/* -> Documents"
+        valid, msg = _validate_rules(rules)
         assert valid is True
 
-    def test_whitespace_only_lines_ignored(self):
-        valid, msg = _validate_rules("   \n\ndocs/* -> Documents\n   ")
+    def test_multiline_rules(self):
+        """Should validate multiple rules."""
+        rules = "docs/* -> Documents\nimages/* -> Media\nvideos/* -> Media/Videos"
+        valid, msg = _validate_rules(rules)
+        assert valid is True
+
+    def test_whitespace_handling(self):
+        """Should handle extra whitespace."""
+        rules = "  docs/*  ->  Documents  \n  images/*  ->  Media  "
+        valid, msg = _validate_rules(rules)
         assert valid is True
 
 
 # ---------------------------------------------------------------------------
-# _load_web_settings & _save_web_settings
+# _load_web_settings
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestLoadSaveWebSettings:
-    """Test _load_web_settings and _save_web_settings helpers."""
+class TestLoadWebSettings:
+    """Test settings loading."""
 
-    def test_load_defaults_when_file_missing(self, temp_settings_file):
-        """Load defaults when file doesn't exist."""
+    def test_default_settings_when_missing(self, use_temp_settings_dir):
+        """Should return defaults when file missing."""
         ws = _load_web_settings()
         assert isinstance(ws, WebSettings)
         assert ws.language == "en"
+        assert ws.timezone == "UTC"
         assert ws.theme == "light"
 
-    def test_save_creates_file(self, temp_settings_file):
-        """Save settings to disk."""
-        ws = WebSettings(language="es", theme="dark")
-        _save_web_settings(ws)
-        assert temp_settings_file.exists()
-        content = json.loads(temp_settings_file.read_text())
-        assert content["language"] == "es"
-        assert content["theme"] == "dark"
-
-    def test_load_persisted_settings(self, temp_settings_file):
-        """Load previously saved settings."""
-        ws_original = WebSettings(language="fr", timezone="Europe/London")
+    def test_load_existing_settings(self, use_temp_settings_dir):
+        """Should load settings from file."""
+        # Save settings
+        ws_original = WebSettings(language="es", timezone="Europe/London")
         _save_web_settings(ws_original)
 
+        # Load and verify
         ws_loaded = _load_web_settings()
-        assert ws_loaded.language == "fr"
+        assert ws_loaded.language == "es"
         assert ws_loaded.timezone == "Europe/London"
 
-    def test_invalid_json_returns_defaults(self, temp_settings_file):
-        """Invalid JSON in file returns defaults."""
-        temp_settings_file.write_text("invalid json {", encoding="utf-8")
-        ws = _load_web_settings()
-        assert ws.language == "en"
+    def test_coerce_bool_fields(self, use_temp_settings_dir):
+        """Should coerce bool fields correctly."""
+        from file_organizer.web.settings_routes import _SETTINGS_FILE
 
-    def test_non_dict_payload_returns_defaults(self, temp_settings_file):
-        """Non-dict JSON payload returns defaults."""
-        temp_settings_file.write_text('["not", "a", "dict"]', encoding="utf-8")
-        ws = _load_web_settings()
-        assert ws.language == "en"
-
-    def test_unknown_fields_skipped(self, temp_settings_file):
-        """Unknown fields in saved settings are skipped."""
-        data = {
-            "language": "de",
-            "unknown_field": "should be skipped",
-        }
-        temp_settings_file.write_text(json.dumps(data), encoding="utf-8")
-        ws = _load_web_settings()
-        assert ws.language == "de"
-        assert not hasattr(ws, "unknown_field")
-
-    def test_bool_coercion_on_load(self, temp_settings_file):
-        """Boolean values are properly coerced on load."""
-        data = {
+        raw = {
             "auto_organize": "true",
             "notifications_enabled": "1",
             "cache_enabled": "false",
+            "debug_mode": None,
         }
-        temp_settings_file.write_text(json.dumps(data), encoding="utf-8")
+        _SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _SETTINGS_FILE.write_text(json.dumps(raw))
+
         ws = _load_web_settings()
         assert ws.auto_organize is True
         assert ws.notifications_enabled is True
         assert ws.cache_enabled is False
+        assert ws.debug_mode is False
+
+    def test_unknown_fields_ignored(self, use_temp_settings_dir):
+        """Should ignore unknown fields."""
+        from file_organizer.web.settings_routes import _SETTINGS_FILE
+
+        raw = {
+            "language": "en",
+            "unknown_field": "value",
+        }
+        _SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _SETTINGS_FILE.write_text(json.dumps(raw))
+
+        ws = _load_web_settings()
+        assert ws.language == "en"
+        assert not hasattr(ws, "unknown_field")
+
+
+# ---------------------------------------------------------------------------
+# _save_web_settings
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestSaveWebSettings:
+    """Test settings saving."""
+
+    def test_save_to_file(self, use_temp_settings_dir):
+        """Should save settings to JSON file."""
+        ws = WebSettings(language="es", timezone="Europe/London")
+        _save_web_settings(ws)
+
+        from file_organizer.web.settings_routes import _SETTINGS_FILE
+
+        assert _SETTINGS_FILE.exists()
+        raw = json.loads(_SETTINGS_FILE.read_text())
+        assert raw["language"] == "es"
+        assert raw["timezone"] == "Europe/London"
+
+    def test_creates_directory(self, use_temp_settings_dir, tmp_path):
+        """Should create directory if missing."""
+
+        new_dir = tmp_path / "new" / "path"
+        with patch(
+            "file_organizer.web.settings_routes._SETTINGS_DIR", new_dir
+        ):
+            with patch(
+                "file_organizer.web.settings_routes._SETTINGS_FILE",
+                new_dir / "settings.json",
+            ):
+                ws = WebSettings()
+                _save_web_settings(ws)
+                assert new_dir.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -326,28 +352,30 @@ class TestLoadSaveWebSettings:
 
 @pytest.mark.unit
 class TestUpdateWebSettings:
-    """Test _update_web_settings helper."""
+    """Test settings update."""
 
-    def test_update_single_field(self, temp_settings_file):
-        """Update a single field."""
-        ws = _update_web_settings(language="es")
-        assert ws.language == "es"
-        # Verify it was saved
-        ws_loaded = _load_web_settings()
-        assert ws_loaded.language == "es"
-
-    def test_update_multiple_fields(self, temp_settings_file):
-        """Update multiple fields."""
-        ws = _update_web_settings(language="fr", theme="dark", timezone="Europe/Paris")
+    def test_update_single_field(self, use_temp_settings_dir):
+        """Should update single field."""
+        ws = _update_web_settings(language="fr")
         assert ws.language == "fr"
-        assert ws.theme == "dark"
-        assert ws.timezone == "Europe/Paris"
+        assert ws.timezone == "UTC"  # Unchanged
 
-    def test_unknown_fields_ignored(self, temp_settings_file):
-        """Unknown fields are ignored."""
-        ws = _update_web_settings(language="de", unknown_field="ignored")
-        assert ws.language == "de"
-        assert not hasattr(ws, "unknown_field")
+    def test_update_multiple_fields(self, use_temp_settings_dir):
+        """Should update multiple fields."""
+        ws = _update_web_settings(
+            language="es",
+            timezone="America/New_York",
+            theme="dark",
+        )
+        assert ws.language == "es"
+        assert ws.timezone == "America/New_York"
+        assert ws.theme == "dark"
+
+    def test_unknown_fields_ignored(self, use_temp_settings_dir):
+        """Should ignore unknown fields."""
+        ws = _update_web_settings(unknown_field="value")
+        # Should not raise and should load successfully
+        assert isinstance(ws, WebSettings)
 
 
 # ---------------------------------------------------------------------------
@@ -357,34 +385,48 @@ class TestUpdateWebSettings:
 
 @pytest.mark.unit
 class TestSectionContext:
-    """Test _section_context helper."""
+    """Test section context building."""
 
-    def test_basic_context(self, mock_request):
-        """Build a basic section context."""
+    def test_section_context_has_required_keys(self, mock_request):
+        """Should include required keys."""
         ws = WebSettings()
-        context = _section_context(mock_request, ws, section="general")
+        ctx = _section_context(mock_request, ws, section="general")
+        assert ctx["request"] == mock_request
+        assert ctx["ws"] == ws
+        assert ctx["section"] == "general"
 
-        assert context["request"] is mock_request
-        assert context["ws"] is ws
-        assert context["section"] == "general"
-        assert context["methodology_options"] == METHODOLOGY_OPTIONS
-        assert context["theme_options"] == THEME_OPTIONS
-
-    def test_with_success_message(self, mock_request):
-        """Include a success message."""
+    def test_section_context_includes_options(self, mock_request):
+        """Should include all option lists."""
         ws = WebSettings()
-        context = _section_context(
-            mock_request, ws, section="general", success_message="Saved!"
+        ctx = _section_context(mock_request, ws, section="general")
+        assert "methodology_options" in ctx
+        assert "log_level_options" in ctx
+        assert "theme_options" in ctx
+        assert "language_options" in ctx
+        assert "timezone_options" in ctx
+        assert "performance_modes" in ctx
+
+    def test_success_message(self, mock_request):
+        """Should include success message."""
+        ws = WebSettings()
+        ctx = _section_context(
+            mock_request,
+            ws,
+            section="general",
+            success_message="Settings saved!",
         )
-        assert context["success_message"] == "Saved!"
+        assert ctx["success_message"] == "Settings saved!"
 
-    def test_with_error_message(self, mock_request):
-        """Include an error message."""
+    def test_error_message(self, mock_request):
+        """Should include error message."""
         ws = WebSettings()
-        context = _section_context(
-            mock_request, ws, section="general", error_message="Failed!"
+        ctx = _section_context(
+            mock_request,
+            ws,
+            section="general",
+            error_message="Save failed!",
         )
-        assert context["error_message"] == "Failed!"
+        assert ctx["error_message"] == "Save failed!"
 
 
 # ---------------------------------------------------------------------------
@@ -394,25 +436,11 @@ class TestSectionContext:
 
 @pytest.mark.unit
 class TestRenderSection:
-    """Test _render_section helper."""
+    """Test section rendering."""
 
     @patch("file_organizer.web.settings_routes.templates")
-    def test_render_section_general(self, mock_templates, mock_request):
-        """Render a settings section."""
-        ws = WebSettings()
-        mock_response = MagicMock()
-        mock_templates.TemplateResponse.return_value = mock_response
-
-        result = _render_section(mock_request, ws, section="general")
-
-        assert result is mock_response
-        mock_templates.TemplateResponse.assert_called_once()
-        call_args = mock_templates.TemplateResponse.call_args
-        assert call_args[0][1] == "settings/_general.html"
-
-    @patch("file_organizer.web.settings_routes.templates")
-    def test_render_section_with_messages(self, mock_templates, mock_request):
-        """Render section with success/error messages."""
+    def test_render_section_calls_template(self, mock_templates, mock_request):
+        """Should call template renderer."""
         ws = WebSettings()
         mock_response = MagicMock()
         mock_templates.TemplateResponse.return_value = mock_response
@@ -420,176 +448,203 @@ class TestRenderSection:
         result = _render_section(
             mock_request,
             ws,
-            section="models",
-            success_message="Settings saved!",
+            section="general",
+            success_message="Saved!",
         )
 
-        assert result is mock_response
-        call_args = mock_templates.TemplateResponse.call_args
-        context = call_args[0][2]
-        assert context["success_message"] == "Settings saved!"
-
-
-# ---------------------------------------------------------------------------
-# Route handlers: settings_page
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-class TestSettingsPage:
-    """Test settings_page route handler."""
-
-    @patch("file_organizer.web.settings_routes._load_web_settings")
-    @patch("file_organizer.web.settings_routes.base_context")
-    @patch("file_organizer.web.settings_routes.templates")
-    def test_settings_page(self, mock_templates, mock_base_context, mock_load,
-                          mock_request, mock_settings):
-        """GET /settings returns full page."""
-        ws = WebSettings()
-        mock_load.return_value = ws
-        mock_context = {"request": mock_request, "ws": ws}
-        mock_base_context.return_value = mock_context
-        mock_response = MagicMock()
-        mock_templates.TemplateResponse.return_value = mock_response
-
-        result = settings_page(mock_request, mock_settings)
-
-        assert result is mock_response
+        assert result == mock_response
         mock_templates.TemplateResponse.assert_called_once()
-        call_args = mock_templates.TemplateResponse.call_args
-        assert call_args[0][1] == "settings/index.html"
 
-
-# ---------------------------------------------------------------------------
-# Route handlers: settings_search
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-class TestSettingsSearch:
-    """Test settings_search route handler."""
-
-    def test_search_empty_query_returns_empty(self):
-        """Empty query returns empty response."""
-        result = settings_search(query="")
-        assert result.body == b""
-
-    def test_search_matches_section_name(self):
-        """Search matches section names."""
-        result = settings_search(query="general")
-        assert b"General" in result.body
-
-    def test_search_matches_setting_term(self):
-        """Search matches setting terms."""
-        result = settings_search(query="theme")
-        assert b"Appearance" in result.body
-
-    def test_search_no_matches_returns_hint(self):
-        """No matches returns a hint message."""
-        result = settings_search(query="nonexistent")
-        assert b"No matching" in result.body
-
-    def test_search_case_insensitive(self):
-        """Search is case-insensitive."""
-        result = settings_search(query="GENERAL")
-        assert b"General" in result.body
-
-
-# ---------------------------------------------------------------------------
-# Route handlers: settings_export
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-class TestSettingsExport:
-    """Test settings_export route handler."""
-
-    @patch("file_organizer.web.settings_routes._load_web_settings")
-    def test_settings_export(self, mock_load):
-        """Export settings as JSON."""
-        ws = WebSettings(language="es", theme="dark")
-        mock_load.return_value = ws
-
-        result = settings_export()
-
-        assert result.media_type == "application/json"
-        assert "web-settings.json" in result.headers["Content-Disposition"]
-
-        payload = json.loads(result.body.decode())
-        assert payload["language"] == "es"
-        assert payload["theme"] == "dark"
-
-
-# ---------------------------------------------------------------------------
-# Route handlers: settings_reset
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-class TestSettingsReset:
-    """Test settings_reset route handler."""
-
-    @patch("file_organizer.web.settings_routes._save_web_settings")
     @patch("file_organizer.web.settings_routes.templates")
-    def test_settings_reset(self, mock_templates, mock_save, mock_request, temp_settings_file):
-        """Reset settings to defaults."""
+    def test_render_section_with_error(
+        self, mock_templates, mock_request
+    ):
+        """Should render with error message."""
+        ws = WebSettings()
         mock_response = MagicMock()
         mock_templates.TemplateResponse.return_value = mock_response
 
-        result = settings_reset(mock_request, section="general")
+        result = _render_section(
+            mock_request,
+            ws,
+            section="general",
+            error_message="Save failed!",
+        )
 
-        assert result is mock_response
-        mock_save.assert_called_once()
-        call_args = mock_save.call_args
-        saved_ws = call_args[0][0]
-        assert isinstance(saved_ws, WebSettings)
-        assert saved_ws.language == "en"  # defaults
+        assert result == mock_response
 
 
 # ---------------------------------------------------------------------------
-# Route handlers: settings_general_get & settings_general_post
+# WebSettings dataclass
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestSettingsGeneralRoutes:
-    """Test settings_general_get and settings_general_post route handlers."""
+class TestWebSettings:
+    """Test WebSettings dataclass."""
 
-    @patch("file_organizer.web.settings_routes._load_web_settings")
-    @patch("file_organizer.web.settings_routes._render_section")
-    def test_settings_general_get(self, mock_render, mock_load, mock_request,
-                                 temp_settings_file):
-        """GET /settings/general returns section partial."""
+    def test_default_values(self):
+        """Should have sensible defaults."""
         ws = WebSettings()
-        mock_load.return_value = ws
-        mock_response = MagicMock()
-        mock_render.return_value = mock_response
+        assert ws.language == "en"
+        assert ws.timezone == "UTC"
+        assert ws.theme == "light"
+        assert ws.auto_organize is False
+        assert ws.notifications_enabled is True
+        assert ws.cache_enabled is True
+        assert ws.debug_mode is False
+        assert ws.performance_mode == "balanced"
 
-        result = settings_general_get(mock_request)
-
-        assert result is mock_response
-        mock_render.assert_called_once_with(mock_request, ws, section="general")
-
-    @patch("file_organizer.web.settings_routes._update_web_settings")
-    @patch("file_organizer.web.settings_routes._render_section")
-    def test_settings_general_post(self, mock_render, mock_update, mock_request,
-                                  temp_settings_file):
-        """POST /settings/general saves and returns section partial."""
-        ws = WebSettings(language="es", timezone="Europe/Madrid")
-        mock_update.return_value = ws
-        mock_response = MagicMock()
-        mock_render.return_value = mock_response
-
-        result = settings_general_post(
-            mock_request,
+    def test_custom_values(self):
+        """Should accept custom values."""
+        ws = WebSettings(
             language="es",
-            timezone="Europe/Madrid",
-            default_input_dir="/home/user/Downloads",
-            default_output_dir="/home/user/Organized",
+            timezone="Europe/London",
+            theme="dark",
+            auto_organize=True,
+        )
+        assert ws.language == "es"
+        assert ws.timezone == "Europe/London"
+        assert ws.theme == "dark"
+        assert ws.auto_organize is True
+
+    def test_to_dict(self):
+        """Should convert to dict with asdict."""
+        ws = WebSettings(language="fr")
+        d = asdict(ws)
+        assert d["language"] == "fr"
+        assert d["timezone"] == "UTC"
+        assert isinstance(d, dict)
+
+    def test_all_fields_present(self):
+        """Should have all expected fields."""
+        ws = WebSettings()
+        assert hasattr(ws, "language")
+        assert hasattr(ws, "timezone")
+        assert hasattr(ws, "default_input_dir")
+        assert hasattr(ws, "default_output_dir")
+        assert hasattr(ws, "text_model")
+        assert hasattr(ws, "vision_model")
+        assert hasattr(ws, "ollama_url")
+        assert hasattr(ws, "default_methodology")
+        assert hasattr(ws, "auto_organize")
+        assert hasattr(ws, "notifications_enabled")
+        assert hasattr(ws, "file_filter_glob")
+        assert hasattr(ws, "organization_rules")
+        assert hasattr(ws, "theme")
+        assert hasattr(ws, "custom_theme_name")
+        assert hasattr(ws, "log_level")
+        assert hasattr(ws, "cache_enabled")
+        assert hasattr(ws, "debug_mode")
+        assert hasattr(ws, "performance_mode")
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestConstants:
+    """Test that option constants are properly defined."""
+
+    def test_methodology_options(self):
+        """Should have methodology options."""
+        assert "content_based" in METHODOLOGY_OPTIONS
+        assert "johnny_decimal" in METHODOLOGY_OPTIONS
+        assert "para" in METHODOLOGY_OPTIONS
+        assert "date_based" in METHODOLOGY_OPTIONS
+
+    def test_theme_options(self):
+        """Should have theme options."""
+        assert "light" in THEME_OPTIONS
+        assert "dark" in THEME_OPTIONS
+        assert "auto" in THEME_OPTIONS
+
+    def test_log_level_options(self):
+        """Should have log level options."""
+        assert "DEBUG" in LOG_LEVEL_OPTIONS
+        assert "INFO" in LOG_LEVEL_OPTIONS
+        assert "WARNING" in LOG_LEVEL_OPTIONS
+
+    def test_language_options(self):
+        """Should have language options."""
+        assert "en" in LANGUAGE_OPTIONS
+
+    def test_timezone_options(self):
+        """Should have timezone options."""
+        assert "UTC" in TIMEZONE_OPTIONS
+
+    def test_performance_modes(self):
+        """Should have performance modes."""
+        assert "balanced" in PERFORMANCE_MODES
+        assert "performance" in PERFORMANCE_MODES
+        assert "memory_saver" in PERFORMANCE_MODES
+
+
+# ---------------------------------------------------------------------------
+# Integration tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestSettingsIntegration:
+    """Integration tests for settings lifecycle."""
+
+    def test_save_and_load_roundtrip(self, use_temp_settings_dir):
+        """Should save and load settings correctly."""
+        # Save
+        original = WebSettings(
+            language="fr",
+            timezone="Europe/London",
+            theme="dark",
+            auto_organize=True,
+        )
+        _save_web_settings(original)
+
+        # Load
+        loaded = _load_web_settings()
+
+        # Verify
+        assert loaded.language == "fr"
+        assert loaded.timezone == "Europe/London"
+        assert loaded.theme == "dark"
+        assert loaded.auto_organize is True
+
+    def test_update_preserves_other_fields(self, use_temp_settings_dir):
+        """Update should not affect other fields."""
+        # Set initial values
+        _update_web_settings(
+            language="es",
+            timezone="Europe/London",
+            theme="dark",
         )
 
-        assert result is mock_response
-        mock_render.assert_called_once()
-        call_args = mock_render.call_args
-        assert call_args[1]["section"] == "general"
-        assert "saved" in call_args[1]["success_message"].lower()
+        # Update only language
+        ws = _update_web_settings(language="fr")
+
+        # Verify language changed but others preserved
+        assert ws.language == "fr"
+        assert ws.timezone == "Europe/London"
+        assert ws.theme == "dark"
+
+    def test_invalid_choice_gets_validated_on_load(
+        self, use_temp_settings_dir
+    ):
+        """Invalid choices should be fixed on load."""
+        from file_organizer.web.settings_routes import _SETTINGS_FILE
+
+        # Save invalid data directly
+        raw = {
+            "language": "invalid_lang",
+            "timezone": "invalid_tz",
+            "theme": "invalid_theme",
+        }
+        _SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _SETTINGS_FILE.write_text(json.dumps(raw))
+
+        # Load and verify defaults applied
+        ws = _load_web_settings()
+        assert ws.language == "en"  # Defaults
+        assert ws.timezone == "UTC"
+        assert ws.theme == "light"

@@ -341,3 +341,4 @@ class TestBuildFileResultsContext:
                 file_type=None, sort_by="name", sort_order="asc", limit=50,
             )
         assert ctx["view"] == "grid"
+

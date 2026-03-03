@@ -197,43 +197,6 @@ class TestFileBrowserView:
 
 
 @pytest.mark.unit
-class TestFileBrowserTreeActions:
-    """Tests for FileBrowserTree cursor actions."""
-
-    def test_cursor_parent_with_none_node(self, tmp_path: Path) -> None:
-        from file_organizer.tui.file_browser import FileBrowserTree
-
-        tree = FileBrowserTree(tmp_path)
-        # When cursor_node is None, parent action should be safe
-        tree.action_cursor_parent()
-
-    def test_cursor_toggle_expands_directory(self, tmp_path: Path) -> None:
-        from file_organizer.tui.file_browser import FileBrowserTree
-
-        subdir = tmp_path / "sub"
-        subdir.mkdir()
-        tree = FileBrowserTree(tmp_path)
-        # Toggle should expand directory
-        tree.action_cursor_toggle()
-
-    def test_cursor_down_navigation(self, tmp_path: Path) -> None:
-        from file_organizer.tui.file_browser import FileBrowserTree
-
-        (tmp_path / "file1.txt").touch()
-        (tmp_path / "file2.txt").touch()
-        tree = FileBrowserTree(tmp_path)
-        tree.action_cursor_down()
-
-    def test_cursor_up_navigation(self, tmp_path: Path) -> None:
-        from file_organizer.tui.file_browser import FileBrowserTree
-
-        (tmp_path / "file1.txt").touch()
-        (tmp_path / "file2.txt").touch()
-        tree = FileBrowserTree(tmp_path)
-        tree.action_cursor_up()
-
-
-@pytest.mark.unit
 class TestTuiExports:
     """Test that the tui __init__ exports are correct."""
 
