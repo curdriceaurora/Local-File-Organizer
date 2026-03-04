@@ -577,5 +577,3 @@ class TestModuleConstants:
         from file_organizer.web.profile_routes import _RESET_TOKEN_TTL_MINUTES
 
         assert _RESET_TOKEN_TTL_MINUTES > 0
-
-
