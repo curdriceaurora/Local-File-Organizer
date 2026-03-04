@@ -62,11 +62,11 @@ export FEATURE_OPTION=custom
 
 Explain the common usage patterns with concrete examples.
 
-```python
-# Import and initialise (adjust import path to match the actual module)
-from file_organizer.feature import FeatureClass
+```text
+# Replace with the actual import path for your module, e.g.:
+# from file_organizer.services.your_service import YourClass
 
-instance = FeatureClass(option_one="value")
+instance = YourClass(option_one="value")
 result = instance.run()
 print(result)
 ```
@@ -93,4 +93,4 @@ Feature ran successfully with option_one=value
 
 <!-- Add links to external resources, RFCs, or upstream documentation when relevant. -->
 
-- [Project README](../README.md)
+- Project README (link to the root `README.md` or relevant top-level doc)

@@ -1,0 +1,17 @@
+# Exclude internal CCPM framework files (not user-facing documentation)
+.claude/
+
+# Exclude demo/sample content (illustrative files, not docs)
+demo_files/
+
+# Exclude internal project management docs
+project-docs/
+
+# Exclude source code READMEs (library-internal, not doc site)
+src/
+
+# Exclude task tracking files
+tasks/
+
+# Exclude test fixtures
+tests/fixtures/

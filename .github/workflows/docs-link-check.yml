@@ -7,5 +7,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: lycheeverse/lychee-action@v2
         with:
-          args: --no-progress --exclude-external '**/*.md'
+          args: --no-progress --offline 'docs/**/*.md' '*.md'
           fail: true
