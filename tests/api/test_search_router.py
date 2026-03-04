@@ -140,13 +140,15 @@ class TestSearch:
         resp_all = client.get("/api/v1/search?q=e")  # Matches multiple files
         all_results = resp_all.json()
 
-        if len(all_results) > 1:
-            # Get with offset=1
-            resp_offset = client.get("/api/v1/search?q=e&offset=1")
-            offset_results = resp_offset.json()
+        # Precondition: must have more than 1 result to test offset
+        assert len(all_results) > 1, "Fixture must return multiple results for this test"
 
-            # Should get results after the first one
-            assert len(offset_results) == len(all_results) - 1
+        # Get with offset=1
+        resp_offset = client.get("/api/v1/search?q=e&offset=1")
+        offset_results = resp_offset.json()
+
+        # Should get results after the first one
+        assert len(offset_results) == len(all_results) - 1
 
     def test_search_pagination_limit_and_offset(self) -> None:
         """Test pagination with both limit and offset."""
@@ -156,14 +158,16 @@ class TestSearch:
         resp_all = client.get("/api/v1/search?q=e")
         all_results = resp_all.json()
 
-        if len(all_results) > 2:
-            # Get with offset=1, limit=1
-            resp = client.get("/api/v1/search?q=e&limit=1&offset=1")
-            results = resp.json()
+        # Precondition: must have at least 3 results to test offset and limit
+        assert len(all_results) > 2, "Fixture must return at least 3 results for this test"
 
-            # Should get exactly 1 result (the second one)
-            assert len(results) == 1
-            assert results[0] == all_results[1]
+        # Get with offset=1, limit=1
+        resp = client.get("/api/v1/search?q=e&limit=1&offset=1")
+        results = resp.json()
+
+        # Should get exactly 1 result (the second one)
+        assert len(results) == 1
+        assert results[0] == all_results[1]
 
     def test_search_result_schema(self) -> None:
         """Test that search results have correct schema."""

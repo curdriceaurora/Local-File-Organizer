@@ -91,11 +91,13 @@ class TestUpdateStateDue:
         state = UpdateState()
         assert state.due(interval_hours=24) is True
 
-    def test_never_due_if_interval_zero(self):
+    def test_due_if_interval_zero(self):
+        """Zero interval means always due."""
         state = UpdateState(last_checked="2024-01-01T00:00:00Z")
         assert state.due(interval_hours=0) is True
 
-    def test_never_due_if_interval_negative(self):
+    def test_due_if_interval_negative(self):
+        """Negative interval means always due."""
         state = UpdateState(last_checked="2024-01-01T00:00:00Z")
         assert state.due(interval_hours=-1) is True
 

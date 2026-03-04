@@ -532,6 +532,7 @@ class TestGetTemplateRecommendations:
             recommendations = tm.get_template_recommendations(file_types=[".txt"])
 
             assert isinstance(recommendations, list)
+            assert len(recommendations) == 0
 
 
 @pytest.mark.unit
