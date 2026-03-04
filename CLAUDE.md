@@ -32,17 +32,21 @@ An AI-powered local file management system with privacy-first architecture. Orga
 This document contains critical enforcement rules and operational guidelines. Detailed reference documentation is organized in the following structure:
 
 ### Architecture & Design
+
 - **[Project Structure](docs/architecture/project-structure.md)** - Complete directory tree, module organization (314 modules)
 - **[Architecture Overview](docs/architecture/architecture-overview.md)** - Design principles, core components, data flow
 
 ### Setup & Configuration
+
 - **[Dependencies & Setup](docs/setup/dependencies.md)** - Installation, system requirements, optional dependencies
 - **[AI Model Configuration](docs/setup/models.md)** - Supported models, device support, model selection
 
 ### Testing & Quality
+
 - **[Testing Strategy](docs/testing/testing-strategy.md)** - Test organization, markers, coverage goals, running tests
 
 ### Reference
+
 - **[Supported File Types](docs/reference/file-formats.md)** - Complete file format support matrix (48+ types)
 - **[Performance Metrics](docs/reference/performance.md)** - Processing times by file type, memory usage by component
 
@@ -123,6 +127,7 @@ bash .claude/scripts/pre-commit-validation.sh
 **MANDATORY**: Before EVERY commit, complete these steps in order:
 
 ### Step 1: Code Quality Validation
+
 ```bash
 ruff check .
 ```
@@ -130,6 +135,7 @@ ruff check .
 - Verify all violations are resolved before proceeding
 
 ### Step 2: Code Formatting
+
 ```bash
 ruff format . --check
 ```
@@ -137,6 +143,7 @@ ruff format . --check
 - Verify formatting passes check before proceeding
 
 ### Step 3: Run Test Suite
+
 ```bash
 pytest tests/ -x -q
 ```
@@ -145,6 +152,7 @@ pytest tests/ -x -q
 - Do NOT commit with failing tests
 
 ### Step 4: Review Your Diff
+
 Before running `git commit`:
 ```bash
 git diff --cached
@@ -155,6 +163,7 @@ git diff --cached
 - Watch for E402/I001 errors that ruff might have missed
 
 ### Step 5: Commit Only If All Pass
+
 ```bash
 git commit -m "message"
 ```
@@ -162,14 +171,10 @@ git commit -m "message"
 **NEVER commit if ruff check, ruff format, or tests fail.**
 
 ### Git Pre-Commit Hook
-A git pre-commit hook is available at `.git/hooks/pre-commit` that automatically runs `ruff check` and `ruff format --check` before allowing commits.
 
-**To enable the hook**, run after cloning:
-```bash
-pre-commit install
-```
+A git hook is configured at `.git/hooks/pre-commit` that automatically runs `ruff check` and `ruff format --check` before allowing commits.
 
-If the hook detects violations:
+If the hook fails:
 - Fix the violations: `ruff check . --fix && ruff format .`
 - Stage fixed files: `git add <files>`
 - Try commit again
@@ -357,7 +362,7 @@ See **[Testing Strategy Reference](docs/testing/testing-strategy.md)** for test 
 ```bash
 pytest                        # Run all tests
 pytest --cov=file_organizer  # With coverage report
-pytest -m "not regression"   # Skip slow tests
+pytest -m "not regression"   # Skip regression tests
 pytest -x -q                 # Stop on first failure
 ```
 

@@ -1,6 +1,6 @@
 # Testing Strategy
 
-### Running Tests
+## Running Tests
 
 ```bash
 pytest                                          # All tests
@@ -10,7 +10,7 @@ pytest -m "not regression" -x                  # Skip regression tests, stop on 
 pytest -k "backup or dedup"                     # Filter by name
 ```
 
-### Test Markers
+## Test Markers
 
 ```python
 @pytest.mark.unit          # Unit tests
@@ -25,7 +25,7 @@ def test_example():
     pass
 ```
 
-### Coverage Goals
+## Coverage Goals
 
 - Unit tests: 80%+ coverage
 - Integration tests: Key workflows

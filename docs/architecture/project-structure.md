@@ -41,7 +41,7 @@ Local-File-Organizer/
 │   │   └── suggestion_feedback.py    # Feedback tracking
 │   │
 │   ├── core/                         # Main orchestrator
-│   │   └── file_organizer.py         # FileOrganizer class
+│   │   └── organizer.py              # FileOrganizer class
 │   │
 │   ├── cli/                          # Command-line interfaces (18 modules)
 │   │   ├── main.py                   # CLI entrypoint

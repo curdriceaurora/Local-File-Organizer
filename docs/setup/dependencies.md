@@ -1,13 +1,13 @@
 # Dependencies & Setup
 
-### System Requirements
+## System Requirements
 
 - **Python**: 3.11+
 - **Ollama**: Latest version for local inference
 - **Storage**: ~10 GB for models
 - **RAM**: 8 GB minimum, 16 GB recommended
 
-### Installation
+## Installation
 
 ```bash
 # 1. Clone repository
@@ -30,7 +30,7 @@ file-organizer --version
 fo --version
 ```
 
-### Optional Dependencies
+## Optional Dependencies
 
 ```bash
 pip install -e ".[audio]"       # Audio transcription (faster-whisper, torch)
@@ -43,7 +43,9 @@ pip install -e ".[build]"       # Executable packaging (PyInstaller)
 pip install -e ".[all]"         # Everything
 ```
 
-### CLI Entrypoints
+> **Note**: Additional extras (`gui`, `docs`, `dev`) are available in `pyproject.toml` for GUI support, documentation building, and development tooling.
+
+## CLI Entrypoints
 
 ```toml
 # pyproject.toml

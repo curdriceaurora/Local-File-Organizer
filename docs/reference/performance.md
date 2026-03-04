@@ -8,7 +8,7 @@
 | Audio | 2–10 s | faster-whisper |
 | PDF (text) | 3–10 s | Qwen 2.5 3B |
 
-### Memory Usage
+## Memory Usage
 
 | Component | RAM |
 |-----------|-----|

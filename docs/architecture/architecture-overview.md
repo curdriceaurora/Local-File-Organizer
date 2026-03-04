@@ -1,6 +1,6 @@
 # Architecture Overview
 
-### Design Principles
+## Design Principles
 
 1. **Privacy-First**: 100% local processing, zero cloud dependencies
 2. **Model Abstraction**: Abstract AI model interface for framework flexibility
@@ -11,7 +11,7 @@
 7. **Type Safety**: Full type hints with strict mypy configuration
 8. **Resource Management**: Context managers for automatic cleanup
 
-### Core Components
+## Core Components
 
 | Component | Purpose | Location | Status |
 |-----------|---------|----------|--------|
@@ -22,9 +22,9 @@
 | **AudioModel** | Audio transcription | `models/audio_model.py` | ✅ Active |
 | **TextProcessor** | Text file pipeline | `services/text_processor.py` | ✅ Active |
 | **VisionProcessor** | Image/video pipeline | `services/vision_processor.py` | ✅ Active |
-| **FileOrganizer** | Main orchestrator | `core/file_organizer.py` | ✅ Active |
+| **FileOrganizer** | Main orchestrator | `core/organizer.py` | ✅ Active |
 | **PatternAnalyzer** | Naming pattern detection | `services/pattern_analyzer.py` | ✅ Active |
-| **SmartSuggestions** | Placement suggestions | `services/smart_suggestions.py` | ✅ Active |
+| **SuggestionEngine** | Placement suggestions | `services/smart_suggestions.py` | ✅ Active |
 | **Intelligence** | User preference learning | `services/intelligence/` | ✅ Active |
 | **Deduplication** | Duplicate detection | `services/deduplication/` | ✅ Active |
 | **OperationHistory** | Operation tracking | `history/` | ✅ Active |
@@ -37,7 +37,7 @@
 | **PluginSystem** | Extension marketplace | `plugins/` | ✅ Active |
 | **Methodologies** | PARA, Johnny Decimal | `methodologies/` | ✅ Active |
 
-### Data Flow
+## Data Flow
 
 ```text
 Input File → FileOrganizer → File Type Detection
