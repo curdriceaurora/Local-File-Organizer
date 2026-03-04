@@ -40,13 +40,10 @@ class TestRealtimeWebSocket:
         _, client = _build_app()
 
         # WebSocket connections use TestClient with 'with' statement
-        try:
-            with client.websocket_connect("/api/v1/ws"):
-                # Connection successful
-                pass
-        except Exception:
-            # WebSocket endpoint may not be fully implemented or may require auth
-            pass
+        # Should succeed or raise expected auth error, not swallow all exceptions
+        with client.websocket_connect("/api/v1/ws") as ws:
+            # Connection successful
+            assert ws is not None
 
     def test_websocket_receives_data(self) -> None:
         """Test WebSocket receives realtime data."""

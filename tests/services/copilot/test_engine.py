@@ -117,7 +117,7 @@ class TestChatBasic:
 
         recent = engine.conversation.get_recent_messages(n=6)
 
-        assert len(recent) >= 4  # At least 3 user + 2 assistant responses
+        assert len(recent) == 6  # Should have exactly 3 user + 3 assistant messages
 
 
 @pytest.mark.unit
@@ -154,7 +154,7 @@ class TestChatWithMocking:
         response = engine.chat("Organize downloads")
 
         engine._executor.execute.assert_called_once()
-        assert "Organized" in response or response
+        assert "Organized" in response
 
     def test_chat_skips_execution_for_non_actionable(self):
         """Test that non-actionable intents are not executed."""
@@ -338,7 +338,7 @@ class TestReset:
         engine.reset()
 
         new_session = engine.session
-        assert new_session is not old_session or len(new_session.messages) == 0
+        assert new_session is not old_session and len(new_session.messages) == 0
 
     def test_reset_preserves_working_directory(self):
         """Test that reset preserves working directory."""
@@ -379,15 +379,12 @@ class TestErrorHandling:
         """Test handling of intent parsing errors."""
         engine = CopilotEngine()
         engine._intent_parser.parse = MagicMock(
-            return_value=Intent(
-                intent_type=IntentType.CHAT,
-                                confidence=0.5,
-            )
+            side_effect=Exception("Intent parsing failed")
         )
 
-        # Should not raise exception
+        # Should not raise exception but return a fallback response
         response = engine.chat("Test")
-        assert response is not None
+        assert response is not None and isinstance(response, str)
 
     def test_chat_handles_execution_error(self):
         """Test that execution errors are propagated."""
@@ -447,7 +444,7 @@ class TestContextWindow:
 
         # Old messages should be summarized
         summary = engine.conversation.summary_text
-        assert len(summary) >= 0  # May or may not have summary depending on implementation
+        assert summary is None or (isinstance(summary, str) and len(summary) > 0)
 
 
 @pytest.mark.unit

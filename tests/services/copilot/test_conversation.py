@@ -153,8 +153,9 @@ class TestGetRecentMessages:
 
         recent = cm.get_recent_messages(n=0)
 
-        # Implementation returns all messages when n=0 or defaults to 1
-        assert len(recent) >= 0
+        # Implementation should return at least the message that was added
+        assert len(recent) >= 1
+        assert any(m.content == "Message" for m in recent)
 
 
 @pytest.mark.unit
