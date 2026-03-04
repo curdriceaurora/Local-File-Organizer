@@ -55,7 +55,7 @@ def _excluded_doc_dir(md_file: Path) -> bool:
     return rel.parts[0] in EXCLUDED_DOC_DIRS if rel.parts else False
 
 
-def get_doc_path_params() -> list[tuple[str, str]]:
+def _get_doc_path_params() -> list[tuple[str, str]]:
     """Collect (doc_file_str, referenced_path) pairs from all docs.
 
     Returns only pairs that:
@@ -87,7 +87,7 @@ def get_doc_path_params() -> list[tuple[str, str]]:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("doc_file,ref_path", get_doc_path_params())
+@pytest.mark.parametrize("doc_file,ref_path", _get_doc_path_params())
 def test_referenced_path_exists(doc_file: str, ref_path: str) -> None:
     """Paths referenced in docs must exist in the repository.
 

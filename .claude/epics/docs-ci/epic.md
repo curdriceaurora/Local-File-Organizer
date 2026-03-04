@@ -29,7 +29,7 @@ Add CI automation to eliminate the recurring documentation PR review churn ident
 **`.github/workflows/docs-lint.yml`**
 - Trigger: push, pull_request (all branches)
 - Action: `DavidAnson/markdownlint-cli2-action@v17`
-- Glob: `**/*.md`
+- Glob: `docs/**/*.md` and `*.md`
 - Rules: MD001, MD022, MD040, MD041
 
 **`.github/workflows/docs-link-check.yml`**
