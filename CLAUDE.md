@@ -235,7 +235,7 @@ ollama pull qwen2.5:3b-instruct-q4_K_M qwen2.5vl:7b-q4_K_M
 file-organizer --help
 ```
 
-**Requirements:** Python 3.9+, Ollama, 8 GB RAM, 10 GB storage
+**Requirements:** Python 3.11+, Ollama, 8 GB RAM, 10 GB storage
 
 ---
 
