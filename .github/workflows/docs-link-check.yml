@@ -1,0 +1,11 @@
+name: Check Markdown Links
+on: [push, pull_request]
+jobs:
+  link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --exclude-external '**/*.md'
+          fail: true
