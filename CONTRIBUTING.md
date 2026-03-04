@@ -216,7 +216,7 @@ These are the most frequent causes of CI failures that pass locally:
 
 ### Commit Messages
 
-```
+```text
 <type>(<scope>): <subject>
 ```
 

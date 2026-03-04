@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - **Copilot Chat Interface** (#26): Natural-language AI assistant for file organisation
   - Interactive REPL and single-shot CLI modes
   - Intent parsing with 11 intent types (organize, move, rename, find, undo, redo, preview, suggest, status, help, chat)
@@ -34,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **User Documentation** (#13): User guide, CLI reference, configuration guide, troubleshooting
 
 ### Phase 2 Completion Summary
+
 - Phase 2 (Enhanced UX) is now 100% complete: 24/24 tasks done
 - TUI with 8 navigable views (Files, Organized, Analytics, Methodology, Audio, History, Settings, Copilot)
 - Full CLI with 30+ sub-commands across 8 command groups
@@ -43,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.0-alpha.1] - 2026-01-15
 
 ### Added
+
 - Phase 1: Core text and image processing with Ollama
 - Phase 3: Audio processing, PARA/JD methodologies, CAD/archive/scientific formats
 - Phase 4: Deduplication, user preference learning, undo/redo, analytics

@@ -1,4 +1,5 @@
 # Business Requirements Document (BRD)
+
 ## File Organizer v2.0 - AI-Powered Local File Management
 
 **Document Version**: 1.1
@@ -263,7 +264,7 @@ The product addresses a critical pain point: digital file chaos. Users spend an 
 ### 6.1 What We Have (Phase 1 Complete)
 
 **Technology Stack:**
-```
+```text
 AI Models:
 - Qwen2.5 3B Instruct (text processing)
 - Qwen2.5-VL 7B (image/video processing)
@@ -281,7 +282,7 @@ Libraries:
 ```
 
 **Architecture:**
-```
+```text
 Local-File-Organizer/
 ├── models/         # AI model abstractions
 ├── services/       # Business logic
@@ -1727,7 +1728,7 @@ This roadmap incorporates user-requested features alongside the original strateg
 
 ### 15.3 Roadmap Timeline
 
-```
+```text
 Weeks 1-2:  [████████████████████] Phase 1: Foundation ✅
 Weeks 3-4:  [                    ] Phase 2: Enhanced UX
 Weeks 5-7:  [                    ] Phase 3: Feature Expansion
