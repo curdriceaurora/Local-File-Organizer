@@ -40,40 +40,31 @@ class TestRealtimeWebSocket:
         """Test WebSocket connection."""
         _, client = _build_app()
 
-        # WebSocket connections may not be implemented yet
-        # Connection should succeed if endpoint exists
-        try:
-            with client.websocket_connect("/api/v1/ws") as ws:
-                assert ws is not None
-        except (WebSocketDisconnect, Exception):
-            # Expected if endpoint not implemented
-            pass
+        # WebSocket endpoint requires client_id in path (e.g. /api/v1/ws/client-123)
+        # Invalid path without client_id should fail to connect
+        with pytest.raises(Exception):
+            with client.websocket_connect("/api/v1/ws"):
+                pass
 
     def test_websocket_receives_data(self) -> None:
         """Test WebSocket receives realtime data."""
         _, client = _build_app()
 
-        # WebSocket data receiving may not be implemented yet
-        try:
-            with client.websocket_connect("/api/v1/ws") as ws:
-                data = ws.receive_json()
-                assert isinstance(data, dict)
-        except (WebSocketDisconnect, Exception):
-            # Expected if endpoint not implemented
-            pass
+        # WebSocket endpoint requires client_id in path
+        # Invalid path should fail to connect
+        with pytest.raises(Exception):
+            with client.websocket_connect("/api/v1/ws"):
+                pass
 
     def test_websocket_send_message(self) -> None:
         """Test sending message through WebSocket."""
         _, client = _build_app()
 
-        # WebSocket sending may not be implemented yet
-        try:
-            with client.websocket_connect("/api/v1/ws") as ws:
-                ws.send_json({"action": "subscribe", "channel": "file-changes"})
-                assert ws is not None
-        except (WebSocketDisconnect, Exception):
-            # Expected if endpoint not implemented
-            pass
+        # WebSocket endpoint requires client_id in path
+        # Invalid path should fail to connect
+        with pytest.raises(Exception):
+            with client.websocket_connect("/api/v1/ws"):
+                pass
 
 
 @pytest.mark.unit
@@ -85,21 +76,16 @@ class TestRealtimeStatusEndpoint:
         _, client = _build_app()
 
         resp = client.get("/api/v1/realtime/status")
-        assert resp.status_code in [200, 404]
-        if resp.status_code == 200:
-            body = resp.json()
-            assert isinstance(body, dict)
+        # Endpoint not implemented - should return 404
+        assert resp.status_code == 404
 
     def test_realtime_status_schema(self) -> None:
         """Test realtime status response schema."""
         _, client = _build_app()
 
         resp = client.get("/api/v1/realtime/status")
-        # Status endpoint may return 404 if not implemented
-        assert resp.status_code in [200, 404]
-        if resp.status_code == 200:
-            data = resp.json()
-            assert isinstance(data, dict)
+        # Endpoint not implemented - should return 404
+        assert resp.status_code == 404
 
 
 @pytest.mark.unit
@@ -111,11 +97,8 @@ class TestRealtimeChannels:
         _, client = _build_app()
 
         resp = client.get("/api/v1/realtime/channels")
-        # Channels endpoint may return 404 if not implemented
-        assert resp.status_code in [200, 404]
-        if resp.status_code == 200:
-            data = resp.json()
-            assert isinstance(data, (list, dict))
+        # Endpoint not implemented - should return 404
+        assert resp.status_code == 404
 
     def test_subscribe_channel(self) -> None:
         """Test subscribing to a channel."""
@@ -123,8 +106,8 @@ class TestRealtimeChannels:
 
         payload = {"channel": "file-changes"}
         resp = client.post("/api/v1/realtime/subscribe", json=payload)
-        # May return 200 or 400
-        assert resp.status_code in [200, 400, 404]
+        # HTTP endpoint not implemented - subscribe is via WebSocket message
+        assert resp.status_code == 404
 
     def test_unsubscribe_channel(self) -> None:
         """Test unsubscribing from a channel."""
@@ -132,8 +115,8 @@ class TestRealtimeChannels:
 
         payload = {"channel": "file-changes"}
         resp = client.post("/api/v1/realtime/unsubscribe", json=payload)
-        # May return 200 or 400
-        assert resp.status_code in [200, 400, 404]
+        # HTTP endpoint not implemented - unsubscribe is via WebSocket message
+        assert resp.status_code == 404
 
 
 @pytest.mark.unit
@@ -145,15 +128,16 @@ class TestRealtimeEvents:
         _, client = _build_app()
 
         resp = client.get("/api/v1/realtime/events")
-        # May return 200 or 404
-        assert resp.status_code in [200, 404]
+        # Endpoint not implemented - should return 404
+        assert resp.status_code == 404
 
     def test_get_events_with_limit(self) -> None:
         """Test getting recent events with limit."""
         _, client = _build_app()
 
         resp = client.get("/api/v1/realtime/events", params={"limit": 10})
-        assert resp.status_code in [200, 404]
+        # Endpoint not implemented - should return 404
+        assert resp.status_code == 404
 
     def test_get_events_by_type(self) -> None:
         """Test getting events filtered by type."""
@@ -163,7 +147,8 @@ class TestRealtimeEvents:
             "/api/v1/realtime/events",
             params={"event_type": "file_created"}
         )
-        assert resp.status_code in [200, 404]
+        # Endpoint not implemented - should return 404
+        assert resp.status_code == 404
 
 
 @pytest.mark.unit
@@ -175,16 +160,13 @@ class TestRealtimePing:
         _, client = _build_app()
 
         resp = client.get("/api/v1/realtime/ping")
-        # May return 200 or 404 if endpoint not implemented
-        assert resp.status_code in [200, 404]
-        if resp.status_code == 200:
-            body = resp.json()
-            assert isinstance(body, dict)
+        # Endpoint not implemented - should return 404
+        assert resp.status_code == 404
 
     def test_heartbeat(self) -> None:
         """Test heartbeat endpoint."""
         _, client = _build_app()
 
         resp = client.post("/api/v1/realtime/heartbeat")
-        # May return 200, 204, or 404 if endpoint not implemented
-        assert resp.status_code in [200, 204, 404]
+        # Endpoint not implemented - should return 404
+        assert resp.status_code == 404

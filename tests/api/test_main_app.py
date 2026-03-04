@@ -18,34 +18,37 @@ class TestAppFactory:
 
     def test_create_app_returns_fastapi_instance(self) -> None:
         """Test that create_app returns a FastAPI instance."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             assert isinstance(app, FastAPI)
 
     def test_app_has_routers(self) -> None:
         """Test that created app has routers registered."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             # Check that app has routes
             assert len(app.routes) > 0
 
     def test_app_has_exception_handlers(self) -> None:
         """Test that app has exception handlers registered."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
-            # Exception handlers should be registered
-            assert hasattr(app, "exception_handlers")
+            client = TestClient(app)
+            # Exception handlers should return JSON responses
+            resp = client.get("/nonexistent")
+            assert resp.status_code == 404
+            assert isinstance(resp.json(), dict)
 
     def test_app_has_middleware(self) -> None:
         """Test that created app has middleware."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
-            # Middleware should be present in the app
-            assert hasattr(app, "middleware_stack")
+            # Middleware should be applied - verify by checking user_middleware list
+            assert len(app.user_middleware) > 0
 
 
 @pytest.mark.unit
@@ -54,12 +57,12 @@ class TestAppMiddleware:
 
     def test_cors_middleware_allows_origins(self) -> None:
         """Test CORS middleware allows configured origins."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
+        with patch("file_organizer.api.main.load_settings") as mock_load:
             settings = ApiSettings(
                 environment="test",
                 cors_origins=["http://localhost:3000"],
             )
-            mock_settings.return_value = settings
+            mock_load.return_value = settings
             app = create_app()
 
             # CORS middleware should be present
@@ -67,16 +70,16 @@ class TestAppMiddleware:
 
     def test_middleware_ordering(self) -> None:
         """Test middleware is applied in correct order."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             # Middleware should be applied via middleware list
             assert len(app.user_middleware) > 0
 
     def test_request_id_middleware(self) -> None:
         """Test request ID middleware adds tracking."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             # Request ID middleware should be part of middleware stack
             assert hasattr(app, "user_middleware")
@@ -88,32 +91,32 @@ class TestAppStartupShutdown:
 
     def test_app_startup_event(self) -> None:
         """Test app startup event is configured."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             # Startup events should be registered or at least app is created
             assert app is not None
 
     def test_app_shutdown_event(self) -> None:
         """Test app shutdown event is configured."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             # Shutdown events should be registered or at least app is created
             assert app is not None
 
     def test_app_lifecycle(self) -> None:
         """Test complete app lifecycle."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             client = TestClient(app)
 
             # Client context manager triggers startup/shutdown
             with client:
-                resp = client.get("/health")
-                # Should get valid response
-                assert resp.status_code in [200, 404]
+                resp = client.get("/api/v1/health")
+                # Health endpoint should return 200 when working
+                assert resp.status_code == 200
 
 
 @pytest.mark.unit
@@ -122,8 +125,8 @@ class TestAppExceptionHandlers:
 
     def test_404_exception_handler(self) -> None:
         """Test 404 handler returns JSON."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             client = TestClient(app)
 
@@ -135,8 +138,8 @@ class TestAppExceptionHandlers:
 
     def test_500_exception_handler(self) -> None:
         """Test 500 error handler."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
 
             # Exception handler should be registered as part of app setup
@@ -149,8 +152,8 @@ class TestAppRoutes:
 
     def test_health_route_exists(self) -> None:
         """Test health route is registered."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             client = TestClient(app)
 
@@ -160,8 +163,8 @@ class TestAppRoutes:
 
     def test_api_routes_exist(self) -> None:
         """Test API routes are registered."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             client = TestClient(app)
 
@@ -172,8 +175,8 @@ class TestAppRoutes:
 
     def test_openapi_schema_available(self) -> None:
         """Test OpenAPI schema is available."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             client = TestClient(app)
 
@@ -189,24 +192,24 @@ class TestAppConfiguration:
 
     def test_app_title_and_description(self) -> None:
         """Test app title and description are set."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             # App should have title
             assert app.title is not None
 
     def test_app_version(self) -> None:
         """Test app version is set."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             # App should have version
             assert app.version is not None
 
     def test_app_docs_enabled(self) -> None:
         """Test API documentation is available."""
-        with patch("file_organizer.api.main.ApiSettings") as mock_settings:
-            mock_settings.return_value = ApiSettings(environment="test")
+        with patch("file_organizer.api.main.load_settings") as mock_load:
+            mock_load.return_value = ApiSettings(environment="test")
             app = create_app()
             client = TestClient(app)
 
