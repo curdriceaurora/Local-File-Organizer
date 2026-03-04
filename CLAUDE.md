@@ -12,17 +12,18 @@ An AI-powered local file management system with privacy-first architecture. Orga
 ## Table of Contents
 
 1. [Claude Agent Permissions](#claude-agent-permissions)
-2. [Pre-Commit Checklist](#pre-commit-checklist)
-3. [Quick Start](#quick-start)
-4. [Project Structure](#project-structure)
-5. [Architecture Overview](#architecture-overview)
-6. [Dependencies & Setup](#dependencies--setup)
-7. [AI Model Configuration](#ai-model-configuration)
-8. [Development Guidelines](#development-guidelines)
-9. [Testing Strategy](#testing-strategy)
-10. [Common Workflows](#common-workflows)
-11. [Supported File Types](#supported-file-types)
-12. [Performance Notes](#performance-notes)
+2. [External References](#external-references)
+3. [Pre-Commit Checklist](#pre-commit-checklist)
+4. [Quick Start](#quick-start)
+5. [Project Structure](#project-structure)
+6. [Architecture Overview](#architecture-overview)
+7. [Dependencies & Setup](#dependencies--setup)
+8. [AI Model Configuration](#ai-model-configuration)
+9. [Development Guidelines](#development-guidelines)
+10. [Testing Strategy](#testing-strategy)
+11. [Common Workflows](#common-workflows)
+12. [Supported File Types](#supported-file-types)
+13. [Performance Notes](#performance-notes)
 
 ---
 ## External References
