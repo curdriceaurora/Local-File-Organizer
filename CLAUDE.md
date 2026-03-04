@@ -12,16 +12,38 @@ An AI-powered local file management system with privacy-first architecture. Orga
 ## Table of Contents
 
 1. [Claude Agent Permissions](#claude-agent-permissions)
-2. [Quick Start](#quick-start)
-3. [Project Structure](#project-structure)
-4. [Architecture Overview](#architecture-overview)
-5. [Dependencies & Setup](#dependencies--setup)
-6. [AI Model Configuration](#ai-model-configuration)
-7. [Development Guidelines](#development-guidelines)
-8. [Testing Strategy](#testing-strategy)
-9. [Common Workflows](#common-workflows)
-10. [Supported File Types](#supported-file-types)
-11. [Performance Notes](#performance-notes)
+2. [Pre-Commit Checklist](#pre-commit-checklist)
+3. [Quick Start](#quick-start)
+4. [Project Structure](#project-structure)
+5. [Architecture Overview](#architecture-overview)
+6. [Dependencies & Setup](#dependencies--setup)
+7. [AI Model Configuration](#ai-model-configuration)
+8. [Development Guidelines](#development-guidelines)
+9. [Testing Strategy](#testing-strategy)
+10. [Common Workflows](#common-workflows)
+11. [Supported File Types](#supported-file-types)
+12. [Performance Notes](#performance-notes)
+
+---
+## External References
+
+This document contains critical enforcement rules and operational guidelines. Detailed reference documentation is organized in the following structure:
+
+### Architecture & Design
+- **[Project Structure](../docs/architecture/project-structure.md)** - Complete directory tree, module organization (314 modules)
+- **[Architecture Overview](../docs/architecture/architecture-overview.md)** - Design principles, core components, data flow
+
+### Setup & Configuration
+- **[Dependencies & Setup](../docs/setup/dependencies.md)** - Installation, system requirements, optional dependencies
+- **[AI Model Configuration](../docs/setup/models.md)** - Supported models, device support, model selection
+
+### Testing & Quality
+- **[Testing Strategy](../docs/testing/testing-strategy.md)** - Test organization, markers, coverage goals, running tests
+- **[Code Quality Validation](../docs/setup/code-quality.md)** - Pre-commit validation, pattern checks, automated scripts
+
+### Reference
+- **[Supported File Types](../docs/reference/file-formats.md)** - Complete file format support matrix (48+ types)
+- **[Performance Metrics](../docs/reference/performance.md)** - Processing times by file type, memory usage by component
 
 ---
 
@@ -92,6 +114,59 @@ bash .claude/scripts/pre-commit-validation.sh
 - `.claude/scripts/pre-commit-validation.sh` — Automated validation script
 - `.claude/rules/github-operations.md` — GitHub integration rules
 - `.claude/rules/datetime.md` — Timestamp requirements
+
+---
+
+## Pre-Commit Checklist
+
+**MANDATORY**: Before EVERY commit, complete these steps in order:
+
+### Step 1: Code Quality Validation
+```bash
+ruff check .
+```
+- If violations found, run: `ruff check . --fix`
+- Verify all violations are resolved before proceeding
+
+### Step 2: Code Formatting
+```bash
+ruff format . --check
+```
+- If formatting issues found, run: `ruff format .` to auto-fix
+- Verify formatting passes check before proceeding
+
+### Step 3: Run Test Suite
+```bash
+pytest tests/ -x -q
+```
+- Ensure all tests pass
+- If tests fail, fix the failures before committing
+- Do NOT commit with failing tests
+
+### Step 4: Review Your Diff
+Before running `git commit`:
+```bash
+git diff --cached
+```
+- Verify no duplicate imports
+- Verify no misplaced lines (e.g., pytestmark in wrong location)
+- Verify changes match intended modifications
+- Watch for E402/I001 errors that ruff might have missed
+
+### Step 5: Commit Only If All Pass
+```bash
+git commit -m "message"
+```
+
+**NEVER commit if ruff check, ruff format, or tests fail.**
+
+### Git Pre-Commit Hook
+A git hook is configured at `.git/hooks/pre-commit` that automatically runs `ruff check` and `ruff format --check` before allowing commits. If the hook fails:
+- Fix the violations: `ruff check . --fix && ruff format .`
+- Stage fixed files: `git add <files>`
+- Try commit again
+
+**This hook prevents accidental commits with lint violations.**
 
 ---
 
