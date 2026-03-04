@@ -20,6 +20,9 @@ pytest -k "backup or dedup"                     # Filter by name
 @pytest.mark.ci            # CI-specific tests
 @pytest.mark.slow          # Slow tests
 @pytest.mark.regression    # Regression tests
+
+def test_example():
+    pass
 ```
 
 ### Coverage Goals
