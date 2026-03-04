@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -47,7 +48,7 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:  # noqa: C901
     # Store added users in a simple dict for tracking
     db_session._added_users = {}
 
-    def mock_add(user):
+    def mock_add(user: User) -> None:
         """Store user when added to mock session."""
         # Initialize default values for SQLAlchemy columns
         if user.id is None:
@@ -60,7 +61,7 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:  # noqa: C901
             user._is_active_set = True
         db_session._added_users[user.username] = user
 
-    def mock_refresh(user):
+    def mock_refresh(user: User) -> None:
         """Refresh user - ensure all fields have values."""
         # The add method should have already set these, but ensure they're set
         if user.id is None:
@@ -72,7 +73,7 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:  # noqa: C901
         if not hasattr(user, 'last_login'):
             user.last_login = None
 
-    def _find_user(attr_name, attr_value):
+    def _find_user(attr_name: str, attr_value: Any) -> User | None:
         """Find user by attribute."""
         if attr_name == 'username':
             return db_session._added_users.get(attr_value)
@@ -86,15 +87,15 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:  # noqa: C901
                     return user
         return None
 
-    def mock_query(model):
+    def mock_query(model: type[User]) -> MagicMock:
         """Mock query to return users from storage."""
         query_obj = MagicMock()
 
-        def filter_func(*args, **kwargs):
+        def filter_func(*args: Any, **kwargs: Any) -> MagicMock:
             """Filter users based on query conditions."""
             filter_obj = MagicMock()
 
-            def first_func():
+            def first_func() -> User | None:
                 """Return first matching user or None."""
                 for condition in args:
                     if hasattr(condition, 'left') and hasattr(condition, 'right'):
@@ -110,7 +111,7 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:  # noqa: C901
             filter_obj.first = MagicMock(side_effect=first_func)
             return filter_obj
 
-        def count_func():
+        def count_func() -> int:
             """Return count of users."""
             return len(db_session._added_users)
 
@@ -419,8 +420,9 @@ class TestLogout:
             "refresh_token": "some.token",
         }
         resp = client.post("/api/v1/auth/logout", json=logout_payload)
-        # Depends on how the router handles unauthenticated requests
-        assert resp.status_code in [401, 403] or "detail" in resp.json()
+        # Logout without auth should return 401 Unauthorized
+        assert resp.status_code == 401
+        assert "detail" in resp.json()
 
     def test_logout_with_auth(self, db_session: Session) -> None:
         """Test successful logout."""

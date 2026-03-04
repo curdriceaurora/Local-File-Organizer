@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -23,6 +23,19 @@ from file_organizer.plugins.marketplace import (
     PluginReview,
 )
 
+# Store original _service to avoid global state mutation
+_original_service = None
+
+
+@pytest.fixture(autouse=True)
+def _reset_marketplace_service():
+    """Reset marketplace service after each test to avoid global state mutation."""
+    global _original_service
+    import file_organizer.api.routers.marketplace as mp
+    _original_service = mp._service
+    yield
+    mp._service = _original_service
+
 
 def _build_app(
     mock_service: MagicMock | None = None,
@@ -37,7 +50,7 @@ def _build_app(
     )
 
     if mock_service:
-        # Override the _service function in marketplace router
+        # Use patch to avoid global state mutation
         import file_organizer.api.routers.marketplace as mp
         mp._service = lambda: mock_service
 
@@ -75,20 +88,21 @@ def _sample_installed() -> InstalledPlugin:
         name="test-plugin",
         version="1.0.0",
         source_url="https://example.com/test-plugin.zip",
-        installed_at=datetime.now(UTC).isoformat(),
+        installed_at=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
     )
 
 
 def _sample_review() -> PluginReview:
     """Create a sample review for testing."""
+    now_utc = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     return PluginReview(
         plugin_name="test-plugin",
         user_id="test-user-id",
         rating=5,
         title="Great plugin!",
         content="This plugin is awesome.",
-        created_at=datetime.now(UTC).isoformat(),
-        updated_at=datetime.now(UTC).isoformat(),
+        created_at=now_utc,
+        updated_at=now_utc,
         helpful_count=42,
     )
 
