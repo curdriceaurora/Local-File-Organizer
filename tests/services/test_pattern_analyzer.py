@@ -198,8 +198,8 @@ class TestAnalyzeDirectory:
             analyzer = PatternAnalyzer(max_depth=2)
             analysis = analyzer.analyze_directory(tmppath)
 
-            # Should find files up to depth 2, but not deeper
-            assert analysis.total_files <= 3
+            # Should find exactly 3 files up to depth 2, but not deeper (skips l3.txt at depth 3)
+            assert analysis.total_files == 3
 
 
 @pytest.mark.unit

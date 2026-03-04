@@ -197,7 +197,7 @@ class TestDetectMisplaced:
 
             # Homogeneous directory should have no misplaced files
             assert isinstance(misplaced, list)
-            assert len(misplaced) <= 1  # May have one if threshold triggers
+            assert len(misplaced) == 0, "Homogeneous directory should have no misplaced files"
 
     def test_detect_misplaced_outlier_file(self):
         """Test detection of outlier file in directory."""
