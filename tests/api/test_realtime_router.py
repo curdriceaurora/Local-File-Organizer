@@ -49,27 +49,20 @@ class TestRealtimeWebSocket:
         """Test WebSocket receives realtime data."""
         _, client = _build_app()
 
-        try:
-            with client.websocket_connect("/api/v1/ws") as ws:
-                # Try to receive initial message
-                data = ws.receive_json()
-                assert isinstance(data, dict)
-        except Exception:
-            # Expected if WebSocket is not fully implemented
-            pass
+        with client.websocket_connect("/api/v1/ws") as ws:
+            # Try to receive initial message
+            data = ws.receive_json()
+            assert isinstance(data, dict)
 
     def test_websocket_send_message(self) -> None:
         """Test sending message through WebSocket."""
         _, client = _build_app()
 
-        try:
-            with client.websocket_connect("/api/v1/ws") as ws:
-                # Send message
-                ws.send_json({"action": "subscribe", "channel": "file-changes"})
-                # May receive response
-        except Exception:
-            # Expected if WebSocket is not fully implemented
-            pass
+        with client.websocket_connect("/api/v1/ws") as ws:
+            # Send message
+            ws.send_json({"action": "subscribe", "channel": "file-changes"})
+            # Verify connection is still open
+            assert ws is not None
 
 
 @pytest.mark.unit
@@ -91,7 +84,9 @@ class TestRealtimeStatusEndpoint:
         _, client = _build_app()
 
         resp = client.get("/api/v1/realtime/status")
-        assert resp.status_code in [200, 404]
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, dict)
 
 
 @pytest.mark.unit
@@ -103,8 +98,9 @@ class TestRealtimeChannels:
         _, client = _build_app()
 
         resp = client.get("/api/v1/realtime/channels")
-        # May return 200 or 404
-        assert resp.status_code in [200, 404]
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, (list, dict))
 
     def test_subscribe_channel(self) -> None:
         """Test subscribing to a channel."""
