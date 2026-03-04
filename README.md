@@ -61,7 +61,7 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 - [User Guide](docs/USER_GUIDE.md)
 - [CLI Reference](docs/cli-reference.md)
 - [Configuration Guide](docs/CONFIGURATION.md)
-- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Troubleshooting](docs/troubleshooting.md)
 - [Getting Started](docs/getting-started.md)
 
 ## Optional Feature Packs
