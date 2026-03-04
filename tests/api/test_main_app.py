@@ -159,8 +159,8 @@ class TestAppRoutes:
             client = TestClient(app)
 
             resp = client.get("/api/v1/health")
-            # Health route should exist
-            assert resp.status_code in [200, 500]
+            # Health route should exist (207 = Multi-Status for multiple health checks)
+            assert resp.status_code in [200, 207, 500]
 
     def test_api_routes_exist(self) -> None:
         """Test API routes are registered."""
