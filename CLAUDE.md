@@ -215,137 +215,39 @@ See **[Project Structure Reference](../docs/architecture/project-structure.md)**
 
 ## Architecture Overview
 
-### Design Principles
+See **[Architecture Overview Reference](../docs/architecture/architecture-overview.md)** for complete design principles, core components table, and data flow diagram.
 
-1. **Privacy-First**: 100% local processing, zero cloud dependencies
-2. **Model Abstraction**: Abstract AI model interface for framework flexibility
-3. **Service Layer Pattern**: Business logic separate from models
-4. **Strategy Pattern**: Different processors for different file types
-5. **Event-Driven**: Event bus for loosely-coupled inter-component communication
-6. **Plugin Architecture**: Extensible via plugin marketplace
-7. **Type Safety**: Full type hints with strict mypy configuration
-8. **Resource Management**: Context managers for automatic cleanup
-
-### Core Components
-
-| Component | Purpose | Location | Status |
-|-----------|---------|----------|--------|
-| **BaseModel** | Abstract AI model interface | `models/base.py` | ✅ Core |
-| **ModelManager** | Unified model lifecycle | `models/model_manager.py` | ✅ Active |
-| **TextModel** | Ollama text generation | `models/text_model.py` | ✅ Active |
-| **VisionModel** | Vision-language wrapper | `models/vision_model.py` | ✅ Active |
-| **AudioModel** | Audio transcription | `models/audio_model.py` | ✅ Active |
-| **TextProcessor** | Text file pipeline | `services/text_processor.py` | ✅ Active |
-| **VisionProcessor** | Image/video pipeline | `services/vision_processor.py` | ✅ Active |
-| **FileOrganizer** | Main orchestrator | `core/file_organizer.py` | ✅ Active |
-| **PatternAnalyzer** | Naming pattern detection | `services/pattern_analyzer.py` | ✅ Active |
-| **SmartSuggestions** | Placement suggestions | `services/smart_suggestions.py` | ✅ Active |
-| **Intelligence** | User preference learning | `services/intelligence/` | ✅ Active |
-| **Deduplication** | Duplicate detection | `services/deduplication/` | ✅ Active |
-| **OperationHistory** | Operation tracking | `history/` | ✅ Active |
-| **UndoManager** | Undo/redo system | `undo/` | ✅ Active |
-| **EventBus** | Inter-component events | `events/` | ✅ Active |
-| **Daemon** | Background file watching | `daemon/` | ✅ Active |
-| **API Server** | FastAPI REST endpoints | `api/` | ✅ Active |
-| **Web UI** | Browser-based interface | `web/` | ✅ Active |
-| **TUI** | Textual terminal UI | `tui/` | ✅ Active |
-| **PluginSystem** | Extension marketplace | `plugins/` | ✅ Active |
-| **Methodologies** | PARA, Johnny Decimal | `methodologies/` | ✅ Active |
-
-### Data Flow
-
-```
-Input File → FileOrganizer → File Type Detection
-    ↓
-Text Files: TextProcessor → TextModel (Qwen 2.5 3B)
-Image/Video: VisionProcessor → VisionModel (Qwen 2.5-VL 7B)
-Audio: AudioModel/AudioTranscriber → faster-whisper
-
-All Processors → PatternAnalyzer → SmartSuggestions
-    ↓
-Intelligence Services → User Preference Learning
-EventBus → Daemon / Web UI / TUI notifications
-
-Final Output: Organized files + Operation history
-```
+**Quick Summary:**
+- Privacy-first: 100% local processing
+- 20+ core components with clear separation of concerns
+- Service layer pattern with plugin extensibility
+- Event-driven architecture for loose coupling
 
 ---
 
 ## Dependencies & Setup
 
-### System Requirements
+See **[Dependencies & Setup Reference](../docs/setup/dependencies.md)** for system requirements, installation steps, and optional dependency groups.
 
-- **Python**: 3.9+
-- **Ollama**: Latest version for local inference
-- **Storage**: ~10 GB for models
-- **RAM**: 8 GB minimum, 16 GB recommended
-
-### Installation
-
+**Quick Start:**
 ```bash
-# 1. Clone repository
-git clone <repo-url>
-cd Local-File-Organizer
-
-# 2. Install Ollama and pull models
-ollama pull qwen2.5:3b-instruct-q4_K_M    # Text: ~1.9 GB
-ollama pull qwen2.5vl:7b-q4_K_M           # Vision: ~6.0 GB
-
-# 3. Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# 4. Install package
 pip install -e .
-
-# 5. Verify
-file-organizer --version
-fo --version
+ollama pull qwen2.5:3b-instruct-q4_K_M qwen2.5vl:7b-q4_K_M
+file-organizer --help
 ```
 
-### Optional Dependencies
-
-```bash
-pip install -e ".[audio]"       # Audio transcription (faster-whisper, torch)
-pip install -e ".[video]"       # Video processing (opencv, scenedetect)
-pip install -e ".[dedup]"       # Image deduplication (imagededup)
-pip install -e ".[archive]"     # Archive support (7z, RAR)
-pip install -e ".[scientific]"  # Scientific formats (HDF5, NetCDF, MATLAB)
-pip install -e ".[cad]"         # CAD formats (ezdxf)
-pip install -e ".[build]"       # Executable packaging (PyInstaller)
-pip install -e ".[all]"         # Everything
-```
-
-### CLI Entrypoints
-
-```toml
-# pyproject.toml
-[project.scripts]
-file-organizer = "file_organizer.cli:main"
-fo = "file_organizer.cli:main"
-```
+**Requirements:** Python 3.9+, Ollama, 8 GB RAM, 10 GB storage
 
 ---
 
 ## AI Model Configuration
 
-### Supported Models
+See **[AI Model Configuration Reference](../docs/setup/models.md)** for supported models, device support options, and configuration details.
 
-- `qwen2.5:3b-instruct-q4_K_M` — Default text model (~1.9 GB)
-- `qwen2.5vl:7b-q4_K_M` — Default vision model (~6.0 GB)
-- `faster-whisper` — Audio transcription (local, multi-language)
-
-### Device Support
-
-```python
-from file_organizer.models.base import DeviceType
-
-DeviceType.AUTO    # Automatic detection (recommended)
-DeviceType.CPU     # CPU inference (universal)
-DeviceType.CUDA    # NVIDIA GPU (fastest)
-DeviceType.MPS     # Apple Silicon (fast)
-DeviceType.METAL   # Apple Metal (fast)
-```
+**Default Models:**
+- Text: Qwen 2.5 3B (~1.9 GB)
+- Vision: Qwen 2.5-VL 7B (~6.0 GB)
+- Audio: faster-whisper (local, multi-language)
 
 ---
 
@@ -435,67 +337,38 @@ Key patterns to avoid:
 
 ## Testing Strategy
 
-### Running Tests
+See **[Testing Strategy Reference](../docs/testing/testing-strategy.md)** for test runners, markers, and coverage goals.
 
+**Quick Test Commands:**
 ```bash
-pytest                                          # All tests
-pytest --cov=file_organizer --cov-report=html  # With coverage
-pytest tests/services/ -v                       # Specific directory
-pytest -m "not regression" -x                  # Skip regression, stop on first fail
-pytest -k "backup or dedup"                     # Filter by name
+pytest                        # Run all tests
+pytest --cov=file_organizer  # With coverage report
+pytest -m "not regression"   # Skip slow tests
+pytest -x -q                 # Stop on first failure
 ```
 
-### Test Markers
-
-```python
-@pytest.mark.unit          # Unit tests
-@pytest.mark.integration   # Integration tests
-@pytest.mark.ci            # CI-specific tests
-@pytest.mark.slow          # Slow tests
-@pytest.mark.regression    # Regression tests
-```
-
-### Coverage Goals
-
-- Unit tests: 80%+ coverage
-- Integration tests: Key workflows
-- CI tests: Pipeline and build validation
+**Coverage Goals:** 80%+ unit, key workflows integrated, CI validation
 
 ---
 
 ## Supported File Types
 
-| Category | Formats | Count |
-|----------|---------|-------|
-| Documents | `.txt`, `.md`, `.pdf`, `.docx`, `.doc`, `.csv`, `.xlsx`, `.xls`, `.ppt`, `.pptx`, `.epub` | 11 |
-| Images | `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.tiff`, `.tif` | 7 |
-| Video | `.mp4`, `.avi`, `.mkv`, `.mov`, `.wmv` | 5 |
-| Audio | `.mp3`, `.wav`, `.flac`, `.m4a`, `.ogg` | 5 |
-| Archives | `.zip`, `.7z`, `.tar`, `.tar.gz`, `.tgz`, `.tar.bz2`, `.rar` | 7 |
-| Scientific | `.hdf5`, `.h5`, `.hdf`, `.nc`, `.nc4`, `.netcdf`, `.mat` | 7 |
-| CAD | `.dxf`, `.dwg`, `.step`, `.stp`, `.iges`, `.igs` | 6 |
+See **[File Formats Reference](../docs/reference/file-formats.md)** for complete list of supported file types.
 
-**Total**: 48+ file types supported
+**Supported Categories:**
+- Documents (11), Images (7), Video (5), Audio (5)
+- Archives (7), Scientific (7), CAD (6)
+- **Total:** 48+ file types across 7 categories
 
 ---
 
 ## Performance Notes
 
-| File Type | Average Time | Model |
-|-----------|-------------|-------|
-| Text (< 1 MB) | 2–5 s | Qwen 2.5 3B |
-| Image | 3–8 s | Qwen 2.5-VL 7B |
-| Video | 5–20 s | Qwen 2.5-VL 7B |
-| Audio | 2–10 s | faster-whisper |
-| PDF (text) | 3–10 s | Qwen 2.5 3B |
+See **[Performance Reference](../docs/reference/performance.md)** for processing times and memory requirements.
 
-### Memory Usage
-
-| Component | RAM |
-|-----------|-----|
-| Qwen 2.5 3B (Q4) | ~2.5 GB |
-| Qwen 2.5-VL 7B (Q4) | ~5.5 GB |
-| Base application | ~200 MB |
+**Quick Metrics:**
+- Text: 2-5s, Image: 3-8s, Video: 5-20s, Audio: 2-10s
+- Qwen 3B: 2.5 GB RAM, Qwen 7B: 5.5 GB RAM, App: 200 MB
 
 ---
 
