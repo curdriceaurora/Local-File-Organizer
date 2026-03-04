@@ -172,14 +172,20 @@ git commit -m "message"
 
 ### Git Pre-Commit Hook
 
-A git hook is configured at `.git/hooks/pre-commit` that automatically runs `ruff check` and `ruff format --check` before allowing commits.
+A pre-commit configuration is defined in `.pre-commit-config.yaml`. After running `pre-commit install`, hooks run automatically on every commit. The configured hooks are:
 
-If the hook fails:
-- Fix the violations: `ruff check . --fix && ruff format .`
+- `ruff check` — lint the full project and `src/`
+- `pytest` — websocket validations, CI guardrails, web UI, and non-regression tests
+- `codespell` — spell check `src/` and `docs/`
+- `absolute-path-check` — blocks absolute paths (e.g. `/Users/…`) in staged diffs
+- `pymarkdown` — markdown lint using `.pymarkdown.json` rules
+
+If a hook fails:
+- Fix the reported violations (e.g. `ruff check . --fix` for lint, `codespell --write-changes` for spelling)
 - Stage fixed files: `git add <files>`
 - Try commit again
 
-**This hook prevents accidental commits with lint violations.**
+**This hook prevents accidental commits with lint, test, spelling, or markdown violations.**
 
 ---
 
@@ -267,29 +273,34 @@ See **[AI Model Configuration Reference](docs/setup/models.md)** for supported m
 ## Workflow Orchestration
 
 ### 1. Plan Mode Default
+
 - Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
 - If something goes sideways, STOP and re-plan immediately - don't keep pushing
 - Use plan mode for verification steps, not just building
 - Write detailed specs upfront to reduce ambiguity
 
 ### 2. Subagent Strategy to keep main context window clean
+
 - Offload research, exploration, and parallel analysis to subagents
 - For complex problems, throw more compute at it via subagents
 - One task per subagent for focused execution
 
 ### 3. Self-Improvement Loop
+
 - After ANY correction from the user: update 'tasks/lessons.md' with the pattern
 - Write rules for yourself that prevent the same mistake
 - Ruthlessly iterate on these lessons until mistake rate drops
 - Review lessons at session start for relevant project
 
 ### 4. Verification Before Done
+
 - Never mark a task complete without proving it works
 - Diff behavior between main and your changes when relevant
 - Ask yourself: "Would a staff engineer approve this?"
 - Run tests, check logs, demonstrate correctness
 
 ### 5. Demand Elegance (Balanced)
+
 - For non-trivial changes: pause and ask "is there a more elegant way?"
 - If a fix feels hacky: "Knowing everything I know
 now, implement the elegant solution"
@@ -297,6 +308,7 @@ now, implement the elegant solution"
 - Challenge your own work before presenting it
 
 ### 6. Autonomous Bug Fixing
+
 - When given a bug report: just fix it. Don't ask for hand-holding
 - Point at logs, errors, failing tests - then resolve them
 - Zero context switching required from the user
