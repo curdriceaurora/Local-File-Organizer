@@ -1,4 +1,4 @@
-## Testing Strategy
+# Testing Strategy
 
 ### Running Tests
 

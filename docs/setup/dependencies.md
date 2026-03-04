@@ -1,4 +1,4 @@
-## Dependencies & Setup
+# Dependencies & Setup
 
 ### System Requirements
 

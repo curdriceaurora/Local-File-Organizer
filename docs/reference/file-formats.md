@@ -1,4 +1,4 @@
-## Supported File Types
+# Supported File Types
 
 | Category | Formats | Count |
 |----------|---------|-------|

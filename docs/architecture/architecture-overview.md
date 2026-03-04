@@ -1,4 +1,4 @@
-## Architecture Overview
+# Architecture Overview
 
 ### Design Principles
 
@@ -39,7 +39,7 @@
 
 ### Data Flow
 
-```
+```text
 Input File → FileOrganizer → File Type Detection
     ↓
 Text Files: TextProcessor → TextModel (Qwen 2.5 3B)

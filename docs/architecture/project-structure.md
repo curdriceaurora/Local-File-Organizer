@@ -1,6 +1,6 @@
-## Project Structure
+# Project Structure
 
-```
+```text
 Local-File-Organizer/
 ├── .claude/                          # CCPM project management
 │   ├── commands/                     # PM commands

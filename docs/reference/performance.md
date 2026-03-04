@@ -1,4 +1,4 @@
-## Performance Notes
+# Performance Notes
 
 | File Type | Average Time | Model |
 |-----------|-------------|-------|
