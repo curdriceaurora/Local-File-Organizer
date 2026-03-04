@@ -126,7 +126,6 @@ Without CI automation, every documentation PR requires multiple human review rou
 
 - External link validation (too flaky for CI)
 - Auto-fixing markdown violations in CI (report only)
-- Linting non-docs markdown (e.g., `.github/` templates)
 - Replacing the existing `pymarkdown` pre-commit hook (complementary, not replacement)
 
 ## Dependencies
@@ -140,21 +139,24 @@ Without CI automation, every documentation PR requires multiple human review rou
 ## Implementation Plan
 
 ### Phase 1 — P0: CI Workflows (2 files, ~20 lines total)
+
 1. `.github/workflows/docs-lint.yml`
 2. `.github/workflows/docs-link-check.yml`
 
 **Estimated effort**: 1 hour. Eliminates ~19 of 46 PR #588 comments (53%).
 
 ### Phase 2 — P1: Accuracy Tests (3 files, ~65 lines total)
-3. `tests/docs/test_doc_file_paths.py`
-4. `tests/docs/test_doc_symbols.py`
-5. `tests/docs/test_pyproject_sync.py`
+
+1. `tests/docs/test_doc_file_paths.py`
+2. `tests/docs/test_doc_symbols.py`
+3. `tests/docs/test_pyproject_sync.py`
 
 **Estimated effort**: 2–3 hours. Eliminates recurring content drift and omission comments.
 
 ### Phase 3 — P2: Template & Marker Check (2 files)
-6. `docs/_template.md`
-7. Marker sync check (extend test_pyproject_sync.py)
+
+1. `docs/_template.md`
+2. Marker sync check (extend test_pyproject_sync.py)
 
 **Estimated effort**: 30 minutes.
 

@@ -101,11 +101,11 @@ Add CI automation to eliminate the recurring documentation PR review churn ident
 
 ## Tasks Created
 
-- [ ] #590 - - Add markdown linting CI workflow (parallel: true)
-- [ ] #591 - - Add link validation CI workflow (parallel: true)
-- [ ] #592 - - Add file path existence test (parallel: true)
-- [ ] #593 - - Add pyproject.toml sync tests (parallel: true)
-- [ ] #594 - - Add new-file template for docs (parallel: true)
+- [ ] #590 - Add markdown linting CI workflow (parallel: true)
+- [ ] #591 - Add link validation CI workflow (parallel: true)
+- [ ] #592 - Add file path existence test (parallel: true)
+- [ ] #593 - Add pyproject.toml sync tests (parallel: true)
+- [ ] #594 - Add new-file template for docs (parallel: true)
 
 Total tasks: 5
 Parallel tasks: 5
