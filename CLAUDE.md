@@ -32,19 +32,19 @@ An AI-powered local file management system with privacy-first architecture. Orga
 This document contains critical enforcement rules and operational guidelines. Detailed reference documentation is organized in the following structure:
 
 ### Architecture & Design
-- **[Project Structure](../docs/architecture/project-structure.md)** - Complete directory tree, module organization (314 modules)
-- **[Architecture Overview](../docs/architecture/architecture-overview.md)** - Design principles, core components, data flow
+- **[Project Structure](docs/architecture/project-structure.md)** - Complete directory tree, module organization (314 modules)
+- **[Architecture Overview](docs/architecture/architecture-overview.md)** - Design principles, core components, data flow
 
 ### Setup & Configuration
-- **[Dependencies & Setup](../docs/setup/dependencies.md)** - Installation, system requirements, optional dependencies
-- **[AI Model Configuration](../docs/setup/models.md)** - Supported models, device support, model selection
+- **[Dependencies & Setup](docs/setup/dependencies.md)** - Installation, system requirements, optional dependencies
+- **[AI Model Configuration](docs/setup/models.md)** - Supported models, device support, model selection
 
 ### Testing & Quality
-- **[Testing Strategy](../docs/testing/testing-strategy.md)** - Test organization, markers, coverage goals, running tests
+- **[Testing Strategy](docs/testing/testing-strategy.md)** - Test organization, markers, coverage goals, running tests
 
 ### Reference
-- **[Supported File Types](../docs/reference/file-formats.md)** - Complete file format support matrix (48+ types)
-- **[Performance Metrics](../docs/reference/performance.md)** - Processing times by file type, memory usage by component
+- **[Supported File Types](docs/reference/file-formats.md)** - Complete file format support matrix (48+ types)
+- **[Performance Metrics](docs/reference/performance.md)** - Processing times by file type, memory usage by component
 
 ---
 
@@ -162,7 +162,14 @@ git commit -m "message"
 **NEVER commit if ruff check, ruff format, or tests fail.**
 
 ### Git Pre-Commit Hook
-A git hook is configured at `.git/hooks/pre-commit` that automatically runs `ruff check` and `ruff format --check` before allowing commits. If the hook fails:
+A git pre-commit hook is available at `.git/hooks/pre-commit` that automatically runs `ruff check` and `ruff format --check` before allowing commits.
+
+**To enable the hook**, run after cloning:
+```bash
+pre-commit install
+```
+
+If the hook detects violations:
 - Fix the violations: `ruff check . --fix && ruff format .`
 - Stage fixed files: `git add <files>`
 - Try commit again
@@ -202,7 +209,7 @@ See: `.claude/rules/pm-skills-mandatory.md` for complete requirements.
 
 ## Project Structure
 
-See **[Project Structure Reference](../docs/architecture/project-structure.md)** for the complete directory tree.
+See **[Project Structure Reference](docs/architecture/project-structure.md)** for the complete directory tree.
 
 **Quick Summary:**
 - `src/file_organizer/` — Main application (78,800 LOC, 314 modules)
@@ -215,7 +222,7 @@ See **[Project Structure Reference](../docs/architecture/project-structure.md)**
 
 ## Architecture Overview
 
-See **[Architecture Overview Reference](../docs/architecture/architecture-overview.md)** for complete design principles, core components table, and data flow diagram.
+See **[Architecture Overview Reference](docs/architecture/architecture-overview.md)** for complete design principles, core components table, and data flow diagram.
 
 **Quick Summary:**
 - Privacy-first: 100% local processing
@@ -227,7 +234,7 @@ See **[Architecture Overview Reference](../docs/architecture/architecture-overvi
 
 ## Dependencies & Setup
 
-See **[Dependencies & Setup Reference](../docs/setup/dependencies.md)** for system requirements, installation steps, and optional dependency groups.
+See **[Dependencies & Setup Reference](docs/setup/dependencies.md)** for system requirements, installation steps, and optional dependency groups.
 
 **Quick Start:**
 ```bash
@@ -242,7 +249,7 @@ file-organizer --help
 
 ## AI Model Configuration
 
-See **[AI Model Configuration Reference](../docs/setup/models.md)** for supported models, device support options, and configuration details.
+See **[AI Model Configuration Reference](docs/setup/models.md)** for supported models, device support options, and configuration details.
 
 **Default Models:**
 - Text: Qwen 2.5 3B (~1.9 GB)
@@ -344,7 +351,7 @@ Key patterns to avoid:
 
 ## Testing Strategy
 
-See **[Testing Strategy Reference](../docs/testing/testing-strategy.md)** for test runners, markers, and coverage goals.
+See **[Testing Strategy Reference](docs/testing/testing-strategy.md)** for test runners, markers, and coverage goals.
 
 **Quick Test Commands:**
 ```bash
@@ -360,7 +367,7 @@ pytest -x -q                 # Stop on first failure
 
 ## Supported File Types
 
-See **[File Formats Reference](../docs/reference/file-formats.md)** for complete list of supported file types.
+See **[File Formats Reference](docs/reference/file-formats.md)** for complete list of supported file types.
 
 **Supported Categories:**
 - Documents (11), Images (7), Video (5), Audio (5)
@@ -371,7 +378,7 @@ See **[File Formats Reference](../docs/reference/file-formats.md)** for complete
 
 ## Performance Notes
 
-See **[Performance Reference](../docs/reference/performance.md)** for processing times and memory requirements.
+See **[Performance Reference](docs/reference/performance.md)** for processing times and memory requirements.
 
 **Quick Metrics:**
 - Text: 2-5s, Image: 3-8s, Video: 5-20s, Audio: 2-10s
