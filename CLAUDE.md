@@ -4,7 +4,7 @@
 
 An AI-powered local file management system with privacy-first architecture. Organizes files intelligently using local LLMs with zero cloud dependencies.
 
-**Core Metrics**: ~78,800 LOC | 314 modules | 237 tests | Python 3.11+
+**Core Metrics**: ~78,800 LOC | 314 modules | 237 test files | Python 3.11+
 **Version**: 2.0.0-alpha.1
 
 ---
@@ -218,7 +218,7 @@ See **[Project Structure Reference](docs/architecture/project-structure.md)** fo
 
 **Quick Summary:**
 - `src/file_organizer/` — Main application (78,800 LOC, 314 modules)
-- `tests/` — Test suite (237 tests)
+- `tests/` — Test suite (237 test files)
 - `.claude/` — CCPM project management
 - `docs/` — Documentation
 - `scripts/` — Build and utility scripts
@@ -244,7 +244,8 @@ See **[Dependencies & Setup Reference](docs/setup/dependencies.md)** for system 
 **Quick Start:**
 ```bash
 pip install -e .
-ollama pull qwen2.5:3b-instruct-q4_K_M qwen2.5vl:7b-q4_K_M
+ollama pull qwen2.5:3b-instruct-q4_K_M
+ollama pull qwen2.5vl:7b-q4_K_M
 file-organizer --help
 ```
 
@@ -311,7 +312,7 @@ now, implement the elegant solution"
 
 ## Core Principles
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
-- **No Laziness**: Find root causes. No temporary fixes. Senior deveoper standards.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
 - **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
 
 ## Development Guidelines

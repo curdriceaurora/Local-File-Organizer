@@ -114,7 +114,16 @@ Local-File-Organizer/
 │   ├── build_macos.sh
 │   └── build_linux.sh
 │
+├── .github/                          # GitHub Actions workflows & templates
+├── alembic/                          # Database migrations
+├── deploy/                           # Deployment automation
+├── desktop/                          # Desktop application packaging
 ├── docs/                             # Project documentation
+├── examples/                         # Usage examples
+├── packaging/                        # Installer packaging
+├── plugins/                          # Plugin marketplace
+├── project-docs/                     # Extended project documentation
+├── technical-debt/                   # Tracked technical debt
 ├── demo.py                           # CLI demo
 └── pyproject.toml                    # Project configuration
 ```

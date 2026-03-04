@@ -27,7 +27,7 @@ def test_example():
 
 ## Coverage Goals
 
-- Unit tests: 80%+ coverage
+- Unit tests: 80%+ coverage (current CI gate: 74% via `--cov-fail-under=74`)
 - Integration tests: Key workflows
 - CI tests: Pipeline and build validation
 

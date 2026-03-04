@@ -46,7 +46,7 @@ Text Files: TextProcessor → TextModel (Qwen 2.5 3B)
 Image/Video: VisionProcessor → VisionModel (Qwen 2.5-VL 7B)
 Audio: AudioModel/AudioTranscriber → faster-whisper
 
-All Processors → PatternAnalyzer → SmartSuggestions
+All Processors → PatternAnalyzer → SuggestionEngine
     ↓
 Intelligence Services → User Preference Learning
 EventBus → Daemon / Web UI / TUI notifications
