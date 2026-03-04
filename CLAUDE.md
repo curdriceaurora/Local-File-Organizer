@@ -21,7 +21,7 @@ An AI-powered local file management system with privacy-first architecture. Orga
 8. [AI Model Configuration](#ai-model-configuration)
 9. [Development Guidelines](#development-guidelines)
 10. [Testing Strategy](#testing-strategy)
-11. [Common Workflows](#common-workflows)
+11. [Workflow Orchestration](#workflow-orchestration)
 12. [Supported File Types](#supported-file-types)
 13. [Performance Notes](#performance-notes)
 
@@ -40,7 +40,6 @@ This document contains critical enforcement rules and operational guidelines. De
 
 ### Testing & Quality
 - **[Testing Strategy](../docs/testing/testing-strategy.md)** - Test organization, markers, coverage goals, running tests
-- **[Code Quality Validation](../docs/setup/code-quality.md)** - Pre-commit validation, pattern checks, automated scripts
 
 ### Reference
 - **[Supported File Types](../docs/reference/file-formats.md)** - Complete file format support matrix (48+ types)
