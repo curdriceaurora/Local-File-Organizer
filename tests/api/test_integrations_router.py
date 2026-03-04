@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -43,9 +43,9 @@ def _build_app(
 
     # Set up mock overrides if provided
     if mock_integration_manager is not None:
-        app.dependency_overrides[get_integration_manager] = lambda: mock_integration_manager  # noqa: E731
+        app.dependency_overrides[get_integration_manager] = lambda: mock_integration_manager
     if mock_browser_manager is not None:
-        app.dependency_overrides[get_browser_extension_manager] = lambda: mock_browser_manager  # noqa: E731
+        app.dependency_overrides[get_browser_extension_manager] = lambda: mock_browser_manager
 
     app.include_router(router, prefix="/api/v1")
     client = TestClient(app)
@@ -387,7 +387,7 @@ class TestIssueBrowserToken:
     def test_issue_token_success(self, tmp_path: Path) -> None:
         """Test successfully issuing a browser token."""
         mock_manager = MagicMock()
-        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        expires_at = datetime.now(UTC) + timedelta(hours=1)
         mock_record = MagicMock()
         mock_record.token = "test-token-abc123"
         mock_record.expires_at = expires_at
@@ -407,7 +407,7 @@ class TestIssueBrowserToken:
     def test_issue_token_schema(self, tmp_path: Path) -> None:
         """Test token issue response schema."""
         mock_manager = MagicMock()
-        expires_at = datetime.now(timezone.utc) + timedelta(hours=2)
+        expires_at = datetime.now(UTC) + timedelta(hours=2)
         mock_record = MagicMock()
         mock_record.token = "token-value"
         mock_record.expires_at = expires_at

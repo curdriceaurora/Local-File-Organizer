@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi import FastAPI
@@ -10,7 +10,6 @@ from fastapi.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app
-from file_organizer.api.dependencies import get_settings
 
 
 @pytest.mark.unit
@@ -62,7 +61,6 @@ class TestAppMiddleware:
             )
             mock_settings.return_value = settings
             app = create_app()
-            client = TestClient(app)
 
             # CORS middleware should be present
             assert hasattr(app, "middleware_stack")
@@ -144,11 +142,9 @@ class TestAppExceptionHandlers:
         with patch("file_organizer.api.main.ApiSettings") as mock_settings:
             mock_settings.return_value = ApiSettings(environment="test")
             app = create_app()
-            client = TestClient(app)
 
-            # Trigger an internal error (if endpoint exists)
-            # This depends on app implementation
-            assert True
+            # Exception handler should be registered as part of app setup
+            assert hasattr(app, "exception_handlers")
 
 
 @pytest.mark.unit

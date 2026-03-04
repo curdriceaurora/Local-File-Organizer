@@ -15,14 +15,7 @@ from file_organizer.api.dependencies import (
     get_settings,
 )
 from file_organizer.api.exceptions import setup_exception_handlers
-from file_organizer.api.routers.config import (
-    AISettings,
-    ConfigResponse,
-    ConfigUpdateRequest,
-    OrganizationSettings,
-    StorageSettings,
-    router,
-)
+from file_organizer.api.routers.config import ConfigResponse, router
 
 
 def _build_app(admin_user: User | None = None, auth_enabled: bool = False) -> tuple[FastAPI, TestClient]:

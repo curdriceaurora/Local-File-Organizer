@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, AsyncMock
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -17,10 +17,10 @@ from file_organizer.api.dependencies import (
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.marketplace import router
 from file_organizer.plugins.marketplace import (
-    PluginPackage,
     InstalledPlugin,
-    PluginReview,
     MarketplaceError,
+    PluginPackage,
+    PluginReview,
 )
 
 
@@ -75,7 +75,7 @@ def _sample_installed() -> InstalledPlugin:
         name="test-plugin",
         version="1.0.0",
         source_url="https://example.com/test-plugin.zip",
-        installed_at=datetime.now(timezone.utc).isoformat(),
+        installed_at=datetime.now(UTC).isoformat(),
     )
 
 
@@ -87,8 +87,8 @@ def _sample_review() -> PluginReview:
         rating=5,
         title="Great plugin!",
         content="This plugin is awesome.",
-        created_at=datetime.now(timezone.utc).isoformat(),
-        updated_at=datetime.now(timezone.utc).isoformat(),
+        created_at=datetime.now(UTC).isoformat(),
+        updated_at=datetime.now(UTC).isoformat(),
         helpful_count=42,
     )
 

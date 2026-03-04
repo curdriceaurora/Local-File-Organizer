@@ -22,9 +22,9 @@ from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.auth import router
 
 
-def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:
+def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:  # noqa: C901
     """Create a minimal FastAPI app with the auth router and dependency overrides."""
-    from datetime import datetime, timezone
+    from datetime import UTC, datetime
     from uuid import uuid4
 
     settings = ApiSettings(
@@ -53,7 +53,7 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:
         if user.id is None:
             user.id = str(uuid4())
         if user.created_at is None:
-            user.created_at = datetime.now(timezone.utc)
+            user.created_at = datetime.now(UTC)
         # is_active defaults to True
         if not hasattr(user, '_is_active_set'):
             user.is_active = True
@@ -66,11 +66,25 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:
         if user.id is None:
             user.id = str(uuid4())
         if user.created_at is None:
-            user.created_at = datetime.now(timezone.utc)
+            user.created_at = datetime.now(UTC)
         if not hasattr(user, 'is_active') or user.is_active is None:
             user.is_active = True
         if not hasattr(user, 'last_login'):
             user.last_login = None
+
+    def _find_user(attr_name, attr_value):
+        """Find user by attribute."""
+        if attr_name == 'username':
+            return db_session._added_users.get(attr_value)
+        if attr_name == 'email':
+            for user in db_session._added_users.values():
+                if user.email == attr_value:
+                    return user
+        if attr_name == 'id':
+            for user in db_session._added_users.values():
+                if user.id == attr_value:
+                    return user
+        return None
 
     def mock_query(model):
         """Mock query to return users from storage."""
@@ -82,23 +96,15 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:
 
             def first_func():
                 """Return first matching user or None."""
-                # Handle filter conditions
                 for condition in args:
-                    # Check for User.username == value pattern
                     if hasattr(condition, 'left') and hasattr(condition, 'right'):
                         attr_name = getattr(condition.left, 'name', None)
-                        attr_value = condition.right.value if hasattr(condition.right, 'value') else condition.right
-
-                        if attr_name == 'username':
-                            return db_session._added_users.get(attr_value)
-                        elif attr_name == 'email':
-                            for user in db_session._added_users.values():
-                                if user.email == attr_value:
-                                    return user
-                        elif attr_name == 'id':
-                            for user in db_session._added_users.values():
-                                if user.id == attr_value:
-                                    return user
+                        attr_value = (
+                            condition.right.value
+                            if hasattr(condition.right, 'value')
+                            else condition.right
+                        )
+                        return _find_user(attr_name, attr_value)
                 return None
 
             filter_obj.first = MagicMock(side_effect=first_func)

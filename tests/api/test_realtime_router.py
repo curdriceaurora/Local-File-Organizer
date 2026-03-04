@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -41,7 +41,7 @@ class TestRealtimeWebSocket:
 
         # WebSocket connections use TestClient with 'with' statement
         try:
-            with client.websocket_connect("/api/v1/ws") as websocket:
+            with client.websocket_connect("/api/v1/ws"):
                 # Connection successful
                 pass
         except Exception:
@@ -53,9 +53,9 @@ class TestRealtimeWebSocket:
         _, client = _build_app()
 
         try:
-            with client.websocket_connect("/api/v1/ws") as websocket:
+            with client.websocket_connect("/api/v1/ws") as ws:
                 # Try to receive initial message
-                data = websocket.receive_json()
+                data = ws.receive_json()
                 assert isinstance(data, dict)
         except Exception:
             # Expected if WebSocket is not fully implemented
@@ -66,9 +66,9 @@ class TestRealtimeWebSocket:
         _, client = _build_app()
 
         try:
-            with client.websocket_connect("/api/v1/ws") as websocket:
+            with client.websocket_connect("/api/v1/ws") as ws:
                 # Send message
-                websocket.send_json({"action": "subscribe", "channel": "file-changes"})
+                ws.send_json({"action": "subscribe", "channel": "file-changes"})
                 # May receive response
         except Exception:
             # Expected if WebSocket is not fully implemented
