@@ -12,7 +12,7 @@ github: https://github.com/curdriceaurora/Local-File-Organizer/issues/589
 
 ## Overview
 
-Add CI automation to eliminate the recurring documentation PR review churn identified in the PR #588 retrospective. Two GitHub Actions workflows (markdown linting + link validation) handle structural issues. Three `tests/docs/` accuracy tests handle content drift and omission issues. Together they convert ~40 of 46 historical review comments into automated failures caught before human review.
+Add CI automation to eliminate the recurring documentation PR review churn identified in the PR #588 retrospective. Two GitHub Actions workflows (markdown linting + link validation) handle structural issues. Two `tests/docs/` accuracy tests and a new-file template handle content drift and omission issues. Together they convert ~40 of 46 historical review comments into automated failures caught before human review.
 
 ## Architecture Decisions
 
@@ -97,7 +97,7 @@ Add CI automation to eliminate the recurring documentation PR review churn ident
 - **Task 4** (test_pyproject_sync.py): 1 hour
 - **Task 5** (docs/_template.md): 15 min
 
-**Total**: ~3.5 hours | 7 files created/modified
+**Total**: ~3.25 hours | 7 files created/modified
 
 ## Tasks Created
 

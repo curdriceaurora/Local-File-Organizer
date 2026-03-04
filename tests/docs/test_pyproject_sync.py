@@ -5,8 +5,10 @@ pyproject.toml appear in the corresponding documentation files. Catches
 omissions when new extras or markers are added without updating docs.
 """
 
+import re
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -15,40 +17,44 @@ PYPROJECT = REPO_ROOT / "pyproject.toml"
 DEPS_DOC = REPO_ROOT / "docs" / "setup" / "dependencies.md"
 TESTING_DOC = REPO_ROOT / "docs" / "testing" / "testing-strategy.md"
 
+pytestmark = pytest.mark.unit
 
-def load_pyproject():
+
+def _load_pyproject() -> dict[str, Any]:
     """Load and parse pyproject.toml using stdlib tomllib."""
     with open(PYPROJECT, "rb") as f:
         return tomllib.load(f)
 
 
-def get_extras():
+def _get_extras() -> list[str]:
     """Return list of optional-dependency group names from pyproject.toml."""
-    data = load_pyproject()
+    data = _load_pyproject()
     return list(data.get("project", {}).get("optional-dependencies", {}).keys())
 
 
-def get_markers():
+def _get_markers() -> list[str]:
     """Return list of pytest marker names from pyproject.toml."""
-    data = load_pyproject()
-    raw_markers = data.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("markers", [])
+    data = _load_pyproject()
+    raw_markers = (
+        data.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("markers", [])
+    )
     # Markers are formatted as "name: description" — extract just the name
     return [m.split(":")[0].strip() for m in raw_markers]
 
 
-@pytest.mark.parametrize("extra", get_extras())
-def test_extra_documented(extra):
+@pytest.mark.parametrize("extra", _get_extras())
+def test_extra_documented(extra: str) -> None:
     """Each pyproject.toml optional-dependency group must appear in dependencies.md."""
-    content = DEPS_DOC.read_text()
-    assert extra in content, (
+    content = DEPS_DOC.read_text(encoding="utf-8")
+    assert re.search(rf"\b{re.escape(extra)}\b", content), (
         f"Optional extra '{extra}' not found in {DEPS_DOC.relative_to(REPO_ROOT)}"
     )
 
 
-@pytest.mark.parametrize("marker", get_markers())
-def test_marker_documented(marker):
+@pytest.mark.parametrize("marker", _get_markers())
+def test_marker_documented(marker: str) -> None:
     """Each pytest marker must appear in testing-strategy.md."""
-    content = TESTING_DOC.read_text()
-    assert marker in content, (
+    content = TESTING_DOC.read_text(encoding="utf-8")
+    assert re.search(rf"\b{re.escape(marker)}\b", content), (
         f"Pytest marker '{marker}' not found in {TESTING_DOC.relative_to(REPO_ROOT)}"
     )

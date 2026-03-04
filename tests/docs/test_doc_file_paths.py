@@ -37,16 +37,7 @@ EXCLUDED_DOC_DIRS = {
 # when the documentation itself needs to be updated separately.
 #
 # Format: frozenset of strings matching exactly what the regex captures.
-ALLOWLIST: frozenset[str] = frozenset(
-    [
-        # docs/architecture/architecture-overview.md and
-        # docs/quality-ratchet-baseline.md reference 'core/organizer.py'
-        # (a legacy path).  The actual module lives at
-        # src/file_organizer/core/organizer.py.  These docs need updating;
-        # the allowlist entry tracks the known drift.
-        "core/organizer.py",
-    ]
-)
+ALLOWLIST: frozenset[str] = frozenset()
 
 
 def _is_glob_pattern(path: str) -> bool:

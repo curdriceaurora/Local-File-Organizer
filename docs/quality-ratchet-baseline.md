@@ -42,7 +42,7 @@ in `pyproject.toml`. New code must stay under 15.
 | `parallel/processor.py` | `process_batch_iter` | 24 |
 | `services/intelligence/profile_importer.py` | `validate_import_file` | 24 |
 | `cli/dedupe.py` | `dedupe_command` | 23 |
-| `core/organizer.py` | `organize` | 20 |
+| `src/file_organizer/core/organizer.py` | `organize` | 20 |
 | `web/files_routes.py` | `_collect_entries` | 20 |
 | `updater/installer.py` | `select_asset` | 19 |
 | `cli/undo_redo.py` | `undo_command` | 18 |
