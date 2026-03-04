@@ -24,6 +24,9 @@ from file_organizer.api.routers.auth import router
 
 def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:
     """Create a minimal FastAPI app with the auth router and dependency overrides."""
+    from datetime import datetime, timezone
+    from uuid import uuid4
+
     settings = ApiSettings(
         environment="test",
         auth_enabled=True,
@@ -34,19 +37,94 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:
         auth_bootstrap_admin_local_only=False,
         auth_password_min_length=8,
         auth_password_require_uppercase=True,
-        auth_password_require_digits=True,
+        auth_password_require_number=True,
         auth_password_require_special=True,
         auth_login_rate_limit_enabled=False,
     )
     app = FastAPI()
     setup_exception_handlers(app)
+
+    # Store added users in a simple dict for tracking
+    db_session._added_users = {}
+
+    def mock_add(user):
+        """Store user when added to mock session."""
+        # Initialize default values for SQLAlchemy columns
+        if user.id is None:
+            user.id = str(uuid4())
+        if user.created_at is None:
+            user.created_at = datetime.now(timezone.utc)
+        # is_active defaults to True
+        if not hasattr(user, '_is_active_set'):
+            user.is_active = True
+            user._is_active_set = True
+        db_session._added_users[user.username] = user
+
+    def mock_refresh(user):
+        """Refresh user - ensure all fields have values."""
+        # The add method should have already set these, but ensure they're set
+        if user.id is None:
+            user.id = str(uuid4())
+        if user.created_at is None:
+            user.created_at = datetime.now(timezone.utc)
+        if not hasattr(user, 'is_active') or user.is_active is None:
+            user.is_active = True
+        if not hasattr(user, 'last_login'):
+            user.last_login = None
+
+    def mock_query(model):
+        """Mock query to return users from storage."""
+        query_obj = MagicMock()
+
+        def filter_func(*args, **kwargs):
+            """Filter users based on query conditions."""
+            filter_obj = MagicMock()
+
+            def first_func():
+                """Return first matching user or None."""
+                # Handle filter conditions
+                for condition in args:
+                    # Check for User.username == value pattern
+                    if hasattr(condition, 'left') and hasattr(condition, 'right'):
+                        attr_name = getattr(condition.left, 'name', None)
+                        attr_value = condition.right.value if hasattr(condition.right, 'value') else condition.right
+
+                        if attr_name == 'username':
+                            return db_session._added_users.get(attr_value)
+                        elif attr_name == 'email':
+                            for user in db_session._added_users.values():
+                                if user.email == attr_value:
+                                    return user
+                        elif attr_name == 'id':
+                            for user in db_session._added_users.values():
+                                if user.id == attr_value:
+                                    return user
+                return None
+
+            filter_obj.first = MagicMock(side_effect=first_func)
+            return filter_obj
+
+        def count_func():
+            """Return count of users."""
+            return len(db_session._added_users)
+
+        query_obj.filter = MagicMock(side_effect=filter_func)
+        query_obj.count = MagicMock(side_effect=count_func)
+        return query_obj
+
+    db_session.add = MagicMock(side_effect=mock_add)
+    db_session.commit = MagicMock()
+    db_session.refresh = MagicMock(side_effect=mock_refresh)
+    db_session.query = MagicMock(side_effect=mock_query)
+
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_db] = lambda: db_session
     app.dependency_overrides[get_token_store] = lambda: MagicMock()
     app.dependency_overrides[get_login_rate_limiter] = lambda: MagicMock()
 
-    # Default user dependency to None (can be overridden per test)
-    app.dependency_overrides[get_current_active_user] = lambda: None
+    # NOTE: Do NOT set a default override for get_current_active_user to None
+    # because it prevents proper authentication error handling.
+    # Individual tests that need to override should set it explicitly.
 
     app.include_router(router, prefix="/api/v1")
     client = TestClient(app)
@@ -352,17 +430,37 @@ class TestLogout:
         client.post("/api/v1/auth/register", json=reg_payload)
         user = db_session.query(User).filter(User.username == "testuser").first()
 
-        # Mock the current user and token store
+        # Mock the current user, token store, and oauth2 scheme
         app.dependency_overrides[get_current_active_user] = lambda: user
         mock_store = MagicMock()
         app.dependency_overrides[get_token_store] = lambda: mock_store
-        client = TestClient(app)
+        # Override oauth2_scheme to return a valid token
+        from file_organizer.api.dependencies import oauth2_scheme
+        app.dependency_overrides[oauth2_scheme] = lambda: "test.access.token"
 
-        logout_payload = {
-            "refresh_token": "valid.refresh.token",
-        }
-        resp = client.post("/api/v1/auth/logout", json=logout_payload)
-        assert resp.status_code in [204, 200]
+        # Mock decode_token and is_refresh_token to handle token validation
+        with patch("file_organizer.api.routers.auth.decode_token") as mock_decode, \
+             patch("file_organizer.api.routers.auth.is_refresh_token") as mock_is_refresh:
+            # Mock access token payload
+            mock_decode.side_effect = lambda token, settings: {
+                "jti": "access-jti-123",
+                "user_id": user.id,
+                "exp": 9999999999,
+            } if token == "test.access.token" else {
+                "jti": "refresh-jti-456",
+                "user_id": user.id,
+                "token_type": "refresh",
+                "exp": 9999999999,
+            }
+            mock_is_refresh.return_value = True
+
+            client = TestClient(app)
+
+            logout_payload = {
+                "refresh_token": "valid.refresh.token",
+            }
+            resp = client.post("/api/v1/auth/logout", json=logout_payload)
+            assert resp.status_code in [204, 200]
 
 
 # ---------------------------------------------------------------------------
@@ -376,10 +474,14 @@ class TestMe:
 
     def test_me_without_auth(self, db_session: Session) -> None:
         """Test /me requires authentication."""
-        _, client = _build_app(db_session)
+        app, client = _build_app(db_session)
 
+        # oauth2_scheme by default returns None when no auth header is present
+        # This should cause get_current_active_user to return None or raise an error
+        # The /me endpoint requires authentication, so it should return 401/403
         resp = client.get("/api/v1/auth/me")
-        assert resp.status_code in [401, 403] or "detail" in resp.json()
+        # Should get unauthorized response
+        assert resp.status_code in [401, 403]
 
     def test_me_with_auth(self, db_session: Session) -> None:
         """Test successful /me retrieval."""

@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 from textual.binding import Binding
 from textual.containers import Vertical
-from textual.widgets import DirectoryTree, Input, Static
+from textual.widgets import DirectoryTree, Static
 
 from file_organizer.tui.file_browser import (
     FileBrowserTree,
