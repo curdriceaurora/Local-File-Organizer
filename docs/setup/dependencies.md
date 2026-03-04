@@ -2,7 +2,7 @@
 
 ### System Requirements
 
-- **Python**: 3.9+
+- **Python**: 3.11+
 - **Ollama**: Latest version for local inference
 - **Storage**: ~10 GB for models
 - **RAM**: 8 GB minimum, 16 GB recommended
