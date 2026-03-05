@@ -98,7 +98,10 @@ class TestProfilePage:
         with patch("file_organizer.web.profile_routes.templates") as mock_tpl:
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<html></html>")
             client.get("/ui/profile")
-        assert "profile/index.html" in str(mock_tpl.TemplateResponse.call_args)
+        call_args = mock_tpl.TemplateResponse.call_args
+        assert call_args is not None
+        args, kwargs = call_args
+        assert args[1] == "profile/index.html"
 
 
 # ---------------------------------------------------------------------------

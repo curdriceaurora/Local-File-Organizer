@@ -70,12 +70,14 @@ class TestCopilotStatus:
             assert result.exit_code == 0
             assert "Copilot" in result.output
 
-    @patch("file_organizer.cli.copilot._ollama", create=True)
-    def test_status_with_ollama(self, mock_ollama: MagicMock) -> None:
+    def test_status_with_ollama(self) -> None:
         mock_client = MagicMock()
-        mock_ollama.Client.return_value = mock_client
         mock_client.list.return_value = {"models": [{"name": "qwen2.5:3b"}]}
 
-        with patch("file_organizer.cli.copilot.console"):
-            result = runner.invoke(app, ["copilot", "status"])
+        stub_ollama = MagicMock()
+        stub_ollama.Client.return_value = mock_client
+
+        with patch.dict("sys.modules", {"ollama": stub_ollama}):
+            with patch("file_organizer.cli.copilot.console"):
+                result = runner.invoke(app, ["copilot", "status"])
         assert result.exit_code == 0
