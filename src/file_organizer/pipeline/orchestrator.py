@@ -399,13 +399,15 @@ class PipelineOrchestrator:
                 events = self._monitor.get_events(max_size=self.config.max_concurrent)
 
                 for event in events:
-                    # Only process file creation and modification events
                     if event.is_directory:
                         continue
 
-                    file_path = event.path
-                    if file_path.exists() and file_path.is_file():
-                        self.process_file(file_path)
+                    try:
+                        self.process_file(event.path)
+                    except FileNotFoundError:
+                        logger.debug("File vanished before processing: %s", event.path)
+                    except Exception:
+                        logger.exception("Error processing %s", event.path)
 
             except Exception:
                 logger.exception("Error in watch loop")

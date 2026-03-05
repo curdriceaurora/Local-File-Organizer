@@ -31,6 +31,7 @@ def create_executor(
         is either "process" or "thread" indicating which was actually created.
     """
     if executor_type == "process":
+        process_executor: ProcessPoolExecutor | None = None
         try:
             process_executor = ProcessPoolExecutor(max_workers=max_workers)
             logger.info(
@@ -44,6 +45,8 @@ def create_executor(
                 "Falling back to ThreadPoolExecutor.",
                 e,
             )
+            if process_executor is not None:
+                process_executor.shutdown(wait=False)
             thread_executor = ThreadPoolExecutor(max_workers=max_workers)
             logger.info(
                 "Created ThreadPoolExecutor with %d workers (fallback)",

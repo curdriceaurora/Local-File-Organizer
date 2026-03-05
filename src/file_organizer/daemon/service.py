@@ -8,6 +8,8 @@ handling, PID file management, and periodic tasks.
 from __future__ import annotations
 
 import logging
+import os
+import select
 import signal
 import threading
 import time
@@ -57,6 +59,8 @@ class DaemonService:
         self._thread: threading.Thread | None = None
         self._original_sigterm: signal.Handlers | None = None
         self._original_sigint: signal.Handlers | None = None
+        self._sig_wakeup_r: int | None = None
+        self._sig_wakeup_w: int | None = None
         self._started_at: float | None = None
         self._files_processed: int = 0
         self._on_start_callback: Callable[[], None] | None = None
@@ -248,11 +252,27 @@ class DaemonService:
     def _run_loop(self) -> None:
         """Main daemon event loop.
 
-        Polls for file events and processes them at the configured
-        interval. Exits when the stop event is set.
+        Uses select() on the self-pipe when signal handlers are installed
+        (foreground mode). Falls back to Event.wait() in background mode
+        where no signals are installed.
         """
         while not self._stop_event.is_set():
-            self._stop_event.wait(timeout=self.config.poll_interval)
+            if self._sig_wakeup_r is not None:
+                ready, _, _ = select.select(
+                    [self._sig_wakeup_r],
+                    [],
+                    [],
+                    self.config.poll_interval,
+                )
+                if ready:
+                    try:
+                        os.read(self._sig_wakeup_r, 1024)
+                    except OSError:
+                        pass
+                    logger.info("Received signal, initiating graceful shutdown")
+                    self._stop_event.set()
+            else:
+                self._stop_event.wait(timeout=self.config.poll_interval)
 
     def _cleanup(self) -> None:
         """Clean up daemon resources on shutdown.
@@ -295,6 +315,9 @@ class DaemonService:
             return
 
         try:
+            self._sig_wakeup_r, self._sig_wakeup_w = os.pipe()
+            os.set_blocking(self._sig_wakeup_r, False)
+            os.set_blocking(self._sig_wakeup_w, False)
             self._original_sigterm = signal.getsignal(signal.SIGTERM)
             self._original_sigint = signal.getsignal(signal.SIGINT)
             signal.signal(signal.SIGTERM, self._handle_signal)
@@ -315,6 +338,12 @@ class DaemonService:
             if self._original_sigint is not None:
                 signal.signal(signal.SIGINT, self._original_sigint)
                 self._original_sigint = None
+            if self._sig_wakeup_r is not None:
+                os.close(self._sig_wakeup_r)
+                self._sig_wakeup_r = None
+            if self._sig_wakeup_w is not None:
+                os.close(self._sig_wakeup_w)
+                self._sig_wakeup_w = None
             logger.debug("Restored original signal handlers")
         except (OSError, ValueError) as exc:
             logger.warning("Could not restore signal handlers: %s", exc)
@@ -322,13 +351,18 @@ class DaemonService:
     def _handle_signal(self, signum: int, frame: object) -> None:
         """Handle a termination signal by requesting graceful shutdown.
 
+        Only performs async-signal-safe operations (os.write).
+        The run loop drains the pipe and logs the signal receipt.
+
         Args:
             signum: The signal number received.
             frame: The current stack frame (unused).
         """
-        sig_name = signal.Signals(signum).name
-        logger.info("Received %s, initiating graceful shutdown", sig_name)
-        self._stop_event.set()
+        try:
+            if self._sig_wakeup_w is not None:
+                os.write(self._sig_wakeup_w, b"\x00")
+        except OSError:
+            pass  # pipe full or closed
 
     def _setup_default_tasks(self) -> None:
         """Register default periodic tasks with the scheduler."""

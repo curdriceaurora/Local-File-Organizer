@@ -7,6 +7,7 @@ optional Redis backend.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from dataclasses import dataclass
 from typing import Optional, Protocol
@@ -50,34 +51,42 @@ class _MemoryEntry:
 
 
 class InMemoryCache:
-    """In-process TTL cache implementation."""
+    """In-process TTL cache implementation.
+
+    Thread-safe: all operations are protected by an internal lock.
+    """
 
     def __init__(self) -> None:
         """Initialize InMemoryCache with empty entries dict."""
         self._entries: dict[str, _MemoryEntry] = {}
+        self._lock = threading.Lock()
 
     def get(self, key: str) -> Optional[str]:
         """Return the cached value for key, or None if absent or expired."""
-        entry = self._entries.get(key)
-        if entry is None:
-            return None
-        if entry.expires_at < time.time():
-            self._entries.pop(key, None)
-            return None
-        return entry.value
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is None:
+                return None
+            if entry.expires_at < time.time():
+                self._entries.pop(key, None)
+                return None
+            return entry.value
 
     def set(self, key: str, value: str, *, ttl_seconds: int) -> None:
         """Store value for key with the given TTL."""
         expires_at = time.time() + max(1, ttl_seconds)
-        self._entries[key] = _MemoryEntry(value=value, expires_at=expires_at)
+        with self._lock:
+            self._entries[key] = _MemoryEntry(value=value, expires_at=expires_at)
 
     def delete(self, key: str) -> None:
         """Delete key from the cache if present."""
-        self._entries.pop(key, None)
+        with self._lock:
+            self._entries.pop(key, None)
 
     def close(self) -> None:
         """Clear all cache entries."""
-        self._entries.clear()
+        with self._lock:
+            self._entries.clear()
 
 
 class RedisCache:
@@ -116,8 +125,8 @@ class RedisCache:
         """Close the Redis connection."""
         try:
             self._redis.close()
-        except RedisError:
-            pass
+        except RedisError as exc:
+            logger.warning("Redis close failed: {}", exc)
 
 
 def _is_valid_redis_url(redis_url: str) -> bool:
