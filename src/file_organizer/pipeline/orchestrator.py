@@ -10,6 +10,7 @@ import logging
 import shutil
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -99,6 +100,7 @@ class PipelineOrchestrator:
         self._lock = threading.Lock()
         self._monitor = None
         self._watch_thread: threading.Thread | None = None
+        self._executor = ThreadPoolExecutor(max_workers=self.config.max_concurrent)
 
     def start(self) -> None:
         """Start the pipeline, including watch mode if configured.
@@ -149,6 +151,9 @@ class PipelineOrchestrator:
 
             # Clean up processors
             self.processor_pool.cleanup()
+
+            # Shut down the thread pool executor
+            self._executor.shutdown(wait=False)
 
             logger.info("Pipeline stopped")
 
@@ -377,6 +382,19 @@ class PipelineOrchestrator:
         shutil.copy2(source, final_dest)
         logger.info("Organized %s -> %s", source, final_dest)
 
+    def _process_watched_file(self, path: Path) -> None:
+        """Process a single watched file with error handling.
+
+        Wraps process_file so that exceptions are caught in the
+        executor thread rather than lost silently.
+        """
+        try:
+            self.process_file(path)
+        except FileNotFoundError:
+            logger.debug("File vanished before processing: %s", path)
+        except Exception:
+            logger.exception("Error processing %s", path)
+
     def _start_watch_mode(self) -> None:
         """Start the file monitor and watch thread."""
         from file_organizer.watcher import FileMonitor
@@ -402,12 +420,7 @@ class PipelineOrchestrator:
                     if event.is_directory:
                         continue
 
-                    try:
-                        self.process_file(event.path)
-                    except FileNotFoundError:
-                        logger.debug("File vanished before processing: %s", event.path)
-                    except Exception:
-                        logger.exception("Error processing %s", event.path)
+                    self._executor.submit(self._process_watched_file, event.path)
 
             except Exception:
                 logger.exception("Error in watch loop")
