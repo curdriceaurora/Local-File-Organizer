@@ -35,6 +35,11 @@ _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
     "api/routers/files.py": {
         "target = Path(file_id)",
     },
+    # Search endpoint uses allowed_paths from trusted config for search roots.
+    # Explicit path filter uses resolve_path() for request-driven paths.
+    "api/routers/search.py": {
+        "search_roots = [Path(p) for p in settings.allowed_paths]",
+    },
     "web/_helpers.py": {
         "BASE_DIR = Path(__file__).resolve().parent",
         "safe_name = Path(name).name.strip()",
