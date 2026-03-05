@@ -78,9 +78,17 @@ class TestTransaction:
 
     def test_transaction_rollback_on_error(self, db):
         with pytest.raises(ValueError):
-            with db.transaction():
+            with db.transaction() as conn:
+                conn.execute(
+                    "INSERT INTO preferences "
+                    "(preference_type, key, value, confidence, frequency, "
+                    "created_at, updated_at, source) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    ("test", "rollback_key", "v1", 0.5, 1, "2025-01-01", "2025-01-01", "test"),
+                )
                 raise ValueError("boom")
-        # Nothing should have been committed
+        # The row written inside the transaction must not be visible after rollback
+        assert db.get_preference("test", "rollback_key") is None
 
 
 # ---------------------------------------------------------------------------
@@ -102,9 +110,9 @@ class TestCRUD:
         assert pref["value"] == "v2"
 
     def test_add_preference_with_context(self, db):
-        db.add_preference("naming", "k", "v", context={"source_dir": "/tmp"})
+        db.add_preference("naming", "k", "v", context={"source_dir": "tmp"})
         pref = db.get_preference("naming", "k")
-        assert pref["context"] == {"source_dir": "/tmp"}
+        assert pref["context"] == {"source_dir": "tmp"}
 
     def test_get_preference_not_found(self, db):
         assert db.get_preference("nope", "nope") is None
@@ -155,8 +163,8 @@ class TestCorrections:
     def test_add_and_get_corrections(self, db):
         cid = db.add_correction(
             "file_move",
-            "/src/a.txt",
-            destination_path="/dst/a.txt",
+            "src/a.txt",
+            destination_path="dst/a.txt",
             category_old="misc",
             category_new="docs",
             confidence_before=0.3,
@@ -169,13 +177,13 @@ class TestCorrections:
         assert corrections[0]["metadata"] == {"reason": "user"}
 
     def test_get_corrections_all_types(self, db):
-        db.add_correction("file_move", "/a")
-        db.add_correction("rename", "/b")
+        db.add_correction("file_move", "a.txt")
+        db.add_correction("rename", "b.txt")
         all_corrections = db.get_corrections()
         assert len(all_corrections) == 2
 
     def test_get_corrections_without_metadata(self, db):
-        db.add_correction("move", "/a")
+        db.add_correction("move", "a.txt")
         corrections = db.get_corrections()
         assert corrections[0]["metadata"] is None
 

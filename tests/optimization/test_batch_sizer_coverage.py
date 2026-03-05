@@ -75,6 +75,7 @@ class TestGetAvailableMemory:
             result = AdaptiveBatchSizer._get_available_memory()
         # Should still get a value through the fallback path
         assert isinstance(result, int)
+        assert result >= 0
 
     def test_proc_meminfo_not_found_uses_total(self) -> None:
         """Test fallback when /proc/meminfo doesn't exist."""
@@ -196,8 +197,8 @@ class TestGetRss:
         ):
             # resource import will raise due to None module
             result = AdaptiveBatchSizer._get_rss()
-        # May return 0 or fallback value
-        assert isinstance(result, int)
+        # No RSS info available, should return 0
+        assert result == 0
 
 
 # ---------------------------------------------------------------------------

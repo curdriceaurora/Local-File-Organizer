@@ -153,6 +153,7 @@ class TestUpdateProfile:
         pm.create_profile("upd", "original")
         assert pm.update_profile("upd", description="updated") is True
         p = pm.get_profile("upd")
+        assert p is not None
         assert p.description == "updated"
 
     def test_update_preferences(self, pm):

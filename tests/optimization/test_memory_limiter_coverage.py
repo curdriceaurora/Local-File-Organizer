@@ -98,7 +98,7 @@ class TestGetRssCoverage:
             patch.dict("sys.modules", {"resource": None}),
         ):
             result = MemoryLimiter._get_rss()
-        assert isinstance(result, int)
+        assert result == 0
 
 
 # ---------------------------------------------------------------------------

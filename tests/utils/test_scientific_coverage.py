@@ -94,13 +94,16 @@ class TestReadMat:
                     read_mat_file(Path("/test.mat"))
 
     def test_successful_read(self):
-        import numpy as np
+        # Use a simple mock instead of numpy to avoid an undeclared dependency.
+        mock_matrix = MagicMock()
+        mock_matrix.shape = (2, 2)
+        type(mock_matrix).__name__ = "ndarray"
 
         with patch("file_organizer.utils.readers.scientific.SCIPY_AVAILABLE", True):
             mock_data = {
                 "__header__": b"test",
                 "__version__": "1.0",
-                "matrix": np.array([[1, 2], [3, 4]]),
+                "matrix": mock_matrix,
                 "scalar": 42,
             }
             mock_loadmat = MagicMock(return_value=mock_data)

@@ -101,12 +101,12 @@ class TestDaemonStart:
 class TestDaemonStop:
     """Covers lines 86-112."""
 
-    def test_stop_no_pid_file(self) -> None:
+    def test_stop_no_pid_file(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
         with patch(
             "file_organizer.cli.daemon._DEFAULT_PID_FILE",
-            Path("/tmp/nonexistent_daemon_test.pid"),
+            tmp_path / "nonexistent_daemon_test.pid",
         ):
             result = runner.invoke(daemon_app, ["stop"])
 
@@ -211,7 +211,7 @@ class TestDaemonStatus:
         assert result.exit_code == 0
         assert "Running" in result.output
 
-    def test_status_stopped(self) -> None:
+    def test_status_stopped(self, tmp_path: Path) -> None:
         from file_organizer.cli.daemon import daemon_app
 
         mock_mgr = MagicMock()
@@ -220,7 +220,7 @@ class TestDaemonStatus:
         with (
             patch(
                 "file_organizer.cli.daemon._DEFAULT_PID_FILE",
-                Path("/tmp/nonexistent.pid"),
+                tmp_path / "nonexistent.pid",
             ),
             patch("file_organizer.daemon.pid.PidFileManager", return_value=mock_mgr),
         ):

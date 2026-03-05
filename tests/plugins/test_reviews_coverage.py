@@ -158,7 +158,7 @@ class TestReviewManagerMarkHelpful:
         mgr.add_review(_review(user_id="author"))
         mgr.mark_helpful("demo", "author", "reader")
         reviews = mgr.get_reviews("demo")
-        assert reviews[0].helpful_count >= 1
+        assert reviews[0].helpful_count == 1
 
     def test_mark_own_review_raises(self, tmp_path):
         mgr = ReviewManager(tmp_path / "reviews.json")

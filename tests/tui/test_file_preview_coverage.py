@@ -121,14 +121,16 @@ class TestPreviewPdf:
 class TestPreviewArchive:
     """Test FilePreviewPanel._preview_archive."""
 
-    def test_archive_with_mock_reader(self) -> None:
-        mock_path = MagicMock(spec=Path)
+    def test_archive_with_single_file(self, tmp_path: Path) -> None:
+        f = tmp_path / "test.tar.gz"
+        f.write_bytes(b"\x1f\x8b" + b"\0" * 50)
         with patch(
-            "file_organizer.tui.file_preview.FilePreviewPanel._preview_archive"
-        ) as mock_method:
-            mock_method.return_value = "[b]Archive Contents[/b]\n\nfile1.txt"
-            result = mock_method(mock_path)
-        assert "Archive" in result
+            "file_organizer.utils.file_readers.read_file",
+            return_value="file1.txt",
+        ):
+            result = FilePreviewPanel._preview_archive(f)
+        assert "Archive Contents" in result
+        assert "file1.txt" in result
 
     def test_archive_empty_content(self, tmp_path: Path) -> None:
         f = tmp_path / "test.zip"
@@ -253,7 +255,7 @@ class TestFilePreviewViewActions:
 
     def test_action_deselect_all(self) -> None:
         view = FilePreviewView()
-        view.selection._selected.add(Path("/tmp/a.txt"))
+        view.selection._selected.add(Path("tmp/a.txt"))
         view.post_message = MagicMock()
         view._notify_selection = MagicMock()
         view.action_deselect_all()
@@ -272,6 +274,6 @@ class TestFilePreviewViewActions:
         view.post_message.assert_called_once()
 
     def test_init_custom_path(self) -> None:
-        view = FilePreviewView(path="/tmp/test")
-        assert view._root_path == Path("/tmp/test")
+        view = FilePreviewView(path="tmp/test")
+        assert view._root_path == Path("tmp/test")
         assert view._current_path is None

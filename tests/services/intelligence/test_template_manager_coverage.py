@@ -84,6 +84,8 @@ class TestCreateProfileFromTemplate:
         with patch.object(tm.profile_manager, "update_profile", return_value=False):
             result = tm.create_profile_from_template("work", "fail_work")
         assert result is None
+        # Profile should have been deleted during cleanup
+        assert not tm.profile_manager.profile_exists("fail_work")
 
 
 # ---------------------------------------------------------------------------

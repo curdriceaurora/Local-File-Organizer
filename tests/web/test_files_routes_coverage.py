@@ -239,8 +239,23 @@ class TestFilesThumbnailRoute:
                 raise OSError("denied")
             return original_stat(self_, *a, **kw)
 
+        original_exists = Path.exists
+        original_is_file = Path.is_file
+
+        def _exists_side_effect(self_, *a, **kw):
+            if self_ == img:
+                return True
+            return original_exists(self_, *a, **kw)
+
+        def _is_file_side_effect(self_, *a, **kw):
+            if self_ == img:
+                return True
+            return original_is_file(self_, *a, **kw)
+
         with (
             patch("file_organizer.web.files_routes.resolve_path", return_value=img),
+            patch.object(Path, "exists", _exists_side_effect),
+            patch.object(Path, "is_file", _is_file_side_effect),
             patch.object(Path, "stat", _stat_side_effect),
             patch(
                 "file_organizer.web.files_routes.render_placeholder_thumbnail",

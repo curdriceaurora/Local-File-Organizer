@@ -37,7 +37,7 @@ class TestCreateBackup:
 
     def test_backup_nonexistent_raises(self, bm):
         with pytest.raises(FileNotFoundError):
-            bm.create_backup(Path("/no/such/file.txt"))
+            bm.create_backup(Path("no/such/file.txt"))
 
     def test_backup_directory_raises(self, bm, tmp_path):
         d = tmp_path / "adir"
@@ -74,7 +74,7 @@ class TestRestoreBackup:
 
     def test_restore_nonexistent_backup(self, bm):
         with pytest.raises(FileNotFoundError):
-            bm.restore_backup(Path("/no/such/backup.txt"))
+            bm.restore_backup(Path("no/such/backup.txt"))
 
     def test_restore_not_in_manifest(self, bm, tmp_path):
         f = tmp_path / "rogue.txt"

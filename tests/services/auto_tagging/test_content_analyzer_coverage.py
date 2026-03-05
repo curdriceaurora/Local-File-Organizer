@@ -23,7 +23,7 @@ def analyzer():
 
 class TestAnalyzeFile:
     def test_nonexistent_file(self, analyzer):
-        result = analyzer.analyze_file(Path("/nonexistent/file.txt"))
+        result = analyzer.analyze_file(Path("nonexistent/file.txt"))
         assert result == []
 
     def test_text_file(self, analyzer, tmp_path):
@@ -56,7 +56,7 @@ class TestAnalyzeFile:
 
 class TestExtractKeywords:
     def test_nonexistent_file(self, analyzer):
-        assert analyzer.extract_keywords(Path("/no/such.txt")) == []
+        assert analyzer.extract_keywords(Path("no/such.txt")) == []
 
     def test_non_text_file(self, analyzer, tmp_path):
         f = tmp_path / "binary.bin"
@@ -96,7 +96,7 @@ class TestExtractKeywords:
 
 class TestExtractEntities:
     def test_nonexistent_file(self, analyzer):
-        assert analyzer.extract_entities(Path("/no/such.txt")) == []
+        assert analyzer.extract_entities(Path("no/such.txt")) == []
 
     def test_non_text_file(self, analyzer, tmp_path):
         f = tmp_path / "img.jpg"
@@ -143,7 +143,7 @@ class TestBatchAnalyze:
     def test_batch_with_error(self, analyzer, tmp_path):
         f1 = tmp_path / "good.txt"
         f1.write_text("content")
-        f2 = Path("/nonexistent/bad.txt")
+        f2 = Path("nonexistent/bad.txt")
         results = analyzer.batch_analyze([f1, f2])
         assert f1 in results
         assert f2 in results
@@ -215,7 +215,7 @@ class TestExtractFromMetadata:
         assert "small" in tags
 
     def test_nonexistent_file(self, analyzer):
-        tags = analyzer._extract_from_metadata(Path("/no/such/file"))
+        tags = analyzer._extract_from_metadata(Path("no/such/file"))
         assert tags == []
 
 

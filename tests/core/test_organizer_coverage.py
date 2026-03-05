@@ -46,6 +46,7 @@ class TestCollectFiles:
         f.write_text("hello")
         files = organizer._collect_files(f)
         assert len(files) == 1
+        assert f in files
 
     def test_collect_directory(self, organizer, tmp_path):
         (tmp_path / "a.txt").write_text("a")
@@ -53,6 +54,8 @@ class TestCollectFiles:
         (tmp_path / ".hidden").write_text("skip")
         files = organizer._collect_files(tmp_path)
         assert len(files) == 2  # hidden skipped
+        assert tmp_path / "a.txt" in files
+        assert tmp_path / "b.txt" in files
 
     def test_collect_empty(self, organizer, tmp_path):
         files = organizer._collect_files(tmp_path)
@@ -132,12 +135,14 @@ class TestUndoRedo:
         organizer._last_transaction_id = "txn-1"
         organizer._last_output_path = tmp_path
         assert organizer.undo() is True
+        organizer._undo_manager.undo_transaction.assert_called_once_with("txn-1")
 
     def test_redo_calls_manager(self, organizer):
         organizer._undo_manager = MagicMock()
         organizer._undo_manager.redo_transaction.return_value = True
         organizer._last_transaction_id = "txn-1"
         assert organizer.redo() is True
+        organizer._undo_manager.redo_transaction.assert_called_once_with("txn-1")
 
 
 # ---------------------------------------------------------------------------
@@ -148,7 +153,7 @@ class TestUndoRedo:
 class TestOrganize:
     def test_nonexistent_input(self, organizer):
         with pytest.raises(ValueError, match="Input path does not exist"):
-            organizer.organize(Path("/nonexistent"), Path("/output"))
+            organizer.organize(Path("nonexistent"), Path("output"))
 
     def test_empty_directory(self, organizer, tmp_path):
         result = organizer.organize(tmp_path, tmp_path / "output")

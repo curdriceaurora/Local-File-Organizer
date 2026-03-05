@@ -20,7 +20,7 @@ pytestmark = pytest.mark.unit
 
 class TestProcessingResult:
     def test_defaults(self):
-        r = ProcessingResult(file_path=Path("/test.txt"), success=True)
+        r = ProcessingResult(file_path=Path("test.txt"), success=True)
         assert r.dry_run is True
         assert r.processor_type == ProcessorType.UNKNOWN
         assert r.error is None
