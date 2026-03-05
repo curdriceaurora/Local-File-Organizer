@@ -35,9 +35,7 @@ def _get_extras() -> list[str]:
 def _get_markers() -> list[str]:
     """Return list of pytest marker names from pyproject.toml."""
     data = _load_pyproject()
-    raw_markers = (
-        data.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("markers", [])
-    )
+    raw_markers = data.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("markers", [])
     # Markers are formatted as "name: description" — extract just the name
     return [m.split(":")[0].strip() for m in raw_markers]
 
@@ -54,9 +52,7 @@ def _extract_section(content: str, heading: str) -> str:
     level = match.group(1)  # e.g. "##"
     start = match.end()
     # Find next heading at same or higher level
-    next_heading = re.search(
-        rf"^#{{1,{len(level)}}}\s", content[start:], re.MULTILINE
-    )
+    next_heading = re.search(rf"^#{{1,{len(level)}}}\s", content[start:], re.MULTILINE)
     if next_heading:
         return content[start : start + next_heading.start()]
     return content[start:]
@@ -77,8 +73,10 @@ def test_extra_documented(extra: str) -> None:
 def test_marker_documented(marker: str) -> None:
     """Each pytest marker must appear in testing-strategy.md."""
     content = TESTING_DOC.read_text(encoding="utf-8")
-    assert re.search(rf"\b{re.escape(marker)}\b", content), (
-        f"Pytest marker '{marker}' not found in {TESTING_DOC.relative_to(REPO_ROOT)}"
+    section = _extract_section(content, "Test Markers")
+    assert re.search(rf"\b{re.escape(marker)}\b", section), (
+        f"Pytest marker '{marker}' not found in 'Test Markers' section "
+        f"of {TESTING_DOC.relative_to(REPO_ROOT)}"
     )
 
 
