@@ -160,7 +160,7 @@ class TestLoginPost:
     def test_successful_login(self, client, fake_user):
         mock_db = MagicMock()
         mock_db.query.return_value.filter.return_value.first.return_value = fake_user
-        fake_user.password_hash = "hashed"
+        fake_user.hashed_password = "hashed"
 
         with (
             patch(

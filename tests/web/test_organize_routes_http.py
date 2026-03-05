@@ -214,6 +214,7 @@ class TestOrganizeExecute:
                 return_value=mock_job,
             ),
             patch("file_organizer.web.organize_routes._set_job_metadata"),
+            patch("file_organizer.web.organize_routes._run_organize_job"),
             patch("file_organizer.web.organize_routes.get_job", return_value=mock_job),
             patch(
                 "file_organizer.web.organize_routes._get_job_metadata",
