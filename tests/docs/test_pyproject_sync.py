@@ -42,6 +42,26 @@ def _get_markers() -> list[str]:
     return [m.split(":")[0].strip() for m in raw_markers]
 
 
+def _extract_section(content: str, heading: str) -> str:
+    """Extract markdown content under a heading up to the next same-level heading.
+
+    If the heading is not found, returns the full content as a safe fallback.
+    """
+    pattern = rf"^(#{{1,6}})\s+{re.escape(heading)}\s*$"
+    match = re.search(pattern, content, re.MULTILINE)
+    if not match:
+        return content
+    level = match.group(1)  # e.g. "##"
+    start = match.end()
+    # Find next heading at same or higher level
+    next_heading = re.search(
+        rf"^#{{1,{len(level)}}}\s", content[start:], re.MULTILINE
+    )
+    if next_heading:
+        return content[start : start + next_heading.start()]
+    return content[start:]
+
+
 @pytest.mark.parametrize("extra", _get_extras())
 def test_extra_documented(extra: str) -> None:
     """Each pyproject.toml optional-dependency group must appear in dependencies.md."""
