@@ -80,10 +80,9 @@ class TestExtractNumberFromPath:
         assert num is None
 
     def test_extract_empty_name(self, system: JohnnyDecimalSystem) -> None:
-        """Edge case with empty name returns None."""
+        """Edge case with empty name returns None — no crash expected."""
         num = system._extract_number_from_path(Path("/root/"))
-        # Should handle gracefully
-        assert num is None or num is not None  # just no crash
+        assert num is None
 
 
 class TestAssignNumberToFile:

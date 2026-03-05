@@ -94,10 +94,15 @@ class TestReadMat:
                     read_mat_file(Path("/test.mat"))
 
     def test_successful_read(self):
-        # Use a simple mock instead of numpy to avoid an undeclared dependency.
-        mock_matrix = MagicMock()
-        mock_matrix.shape = (2, 2)
-        type(mock_matrix).__name__ = "ndarray"
+        # Use a lightweight fake instead of numpy to avoid an undeclared dependency.
+        # A real class named ``ndarray`` avoids mutating the global MagicMock type.
+        class ndarray:
+            """Fake numpy ndarray for testing."""
+
+            def __init__(self, shape: tuple[int, ...]) -> None:
+                self.shape = shape
+
+        mock_matrix = ndarray((2, 2))
 
         with patch("file_organizer.utils.readers.scientific.SCIPY_AVAILABLE", True):
             mock_data = {

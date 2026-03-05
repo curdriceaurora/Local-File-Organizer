@@ -40,9 +40,11 @@ class TestDaemonServiceStartBackground:
         config = _make_config()
         daemon = DaemonService(config)
         daemon.start_background()
-        assert daemon.is_running is True
-        assert daemon.uptime_seconds > 0
-        daemon.stop()
+        try:
+            assert daemon.is_running is True
+            assert daemon.uptime_seconds > 0
+        finally:
+            daemon.stop()
         assert daemon.is_running is False
 
     def test_double_start_raises(self):
@@ -66,16 +68,20 @@ class TestDaemonServiceRestart:
         config = _make_config()
         daemon = DaemonService(config)
         daemon.start_background()
-        daemon.restart()
-        assert daemon.is_running is True
-        daemon.stop()
+        try:
+            daemon.restart()
+            assert daemon.is_running is True
+        finally:
+            daemon.stop()
 
     def test_restart_from_stopped(self):
         config = _make_config()
         daemon = DaemonService(config)
         daemon.restart()
-        assert daemon.is_running is True
-        daemon.stop()
+        try:
+            assert daemon.is_running is True
+        finally:
+            daemon.stop()
 
 
 class TestDaemonServiceCallbacks:
@@ -85,8 +91,10 @@ class TestDaemonServiceCallbacks:
         start_called = threading.Event()
         daemon.on_start(lambda: start_called.set())
         daemon.start_background()
-        assert start_called.wait(timeout=2.0)
-        daemon.stop()
+        try:
+            assert start_called.wait(timeout=2.0)
+        finally:
+            daemon.stop()
 
     def test_on_stop_callback(self):
         config = _make_config()
@@ -106,8 +114,10 @@ class TestDaemonServiceCallbacks:
 
         daemon.on_start(bad_callback)
         daemon.start_background()
-        assert daemon.is_running is True
-        daemon.stop()
+        try:
+            assert daemon.is_running is True
+        finally:
+            daemon.stop()
 
     def test_on_stop_callback_exception_does_not_crash(self):
         config = _make_config()
@@ -128,11 +138,11 @@ class TestDaemonServicePidFile:
         config = _make_config(pid_file=pid_file)
         daemon = DaemonService(config)
         daemon.start_background()
-
-        # PID file should exist
-        assert pid_file.exists()
-
-        daemon.stop()
+        try:
+            # PID file should exist
+            assert pid_file.exists()
+        finally:
+            daemon.stop()
         # PID file should be removed
         assert not pid_file.exists()
 
@@ -162,9 +172,11 @@ class TestDaemonServiceUptimeProperty:
         config = _make_config()
         daemon = DaemonService(config)
         daemon.start_background()
-        time.sleep(0.05)
-        assert daemon.uptime_seconds > 0
-        daemon.stop()
+        try:
+            time.sleep(0.05)
+            assert daemon.uptime_seconds > 0
+        finally:
+            daemon.stop()
 
     def test_uptime_zero_after_stop(self):
         config = _make_config()

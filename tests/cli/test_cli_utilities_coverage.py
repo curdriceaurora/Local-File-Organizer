@@ -70,12 +70,14 @@ class TestSearchTypeFilter:
         (tmp_path / "data.tar.gz").write_bytes(b"fake")
         result = runner.invoke(app, ["search", "*", str(tmp_path), "--type", "archive"])
         assert result.exit_code == 0
+        assert "data.tar.gz" in result.output
 
     def test_tar_bz2_filter(self, tmp_path: Path) -> None:
         app = _make_app()
         (tmp_path / "data.tar.bz2").write_bytes(b"fake")
         result = runner.invoke(app, ["search", "*", str(tmp_path), "--type", "archive"])
         assert result.exit_code == 0
+        assert "data.tar.bz2" in result.output
 
 
 class TestSearchNoMatch:

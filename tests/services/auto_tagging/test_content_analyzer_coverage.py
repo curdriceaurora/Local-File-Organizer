@@ -83,10 +83,14 @@ class TestExtractKeywords:
 
     def test_long_word_boost(self, analyzer, tmp_path):
         f = tmp_path / "doc.txt"
-        # "programming" is >6 chars, should get boost
+        # "programming" is >6 chars, should get boost; "code" is <=6 chars
         f.write_text("programming " * 20 + "code " * 20)
         results = analyzer.extract_keywords(f, top_n=10)
         assert len(results) > 0
+        scores = dict(results)
+        # "programming" should score higher than "code" due to long-word boost
+        if "programming" in scores and "code" in scores:
+            assert scores["programming"] > scores["code"]
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +239,7 @@ class TestReadTextContent:
         f = tmp_path / "latin1.txt"
         f.write_bytes(b"caf\xe9")
         content = analyzer._read_text_content(f)
-        assert "caf" in content
+        assert "café" in content
 
     def test_too_large_file(self, analyzer, tmp_path):
         f = tmp_path / "big.txt"
@@ -262,4 +266,5 @@ class TestCleanTags:
 
     def test_removes_special_chars(self, analyzer):
         tags = analyzer._clean_tags(["hello!world", "test@tag"])
+        assert tags
         assert all(c.isalnum() or c == "-" for tag in tags for c in tag)

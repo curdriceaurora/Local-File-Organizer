@@ -39,7 +39,7 @@ class TestPreviewText:
         f = tmp_path / "long.txt"
         f.write_text("\n".join(f"line{i}" for i in range(200)))
         result = FilePreviewPanel._preview_text(f, max_lines=100)
-        assert "100" in result  # truncation notice
+        assert "lines shown" in result  # truncation notice
 
     def test_short_file_no_truncation(self, tmp_path: Path) -> None:
         f = tmp_path / "short.txt"

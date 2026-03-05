@@ -157,11 +157,8 @@ class TestProfileDecoratorExceptions:
         with pytest.raises(ValueError, match="test error"):
             failing_func()
 
-        # last_result should still be None since exception was raised
-        # Actually, the finally block still runs and sets last_result
-        # but the return is skipped. Let's check behavior.
-        # The function raises in try block, finally runs, then re-raises
-        # last_result should NOT be set since we don't reach the assignment
+        # The exception prevents execution from reaching the code after
+        # the try/finally block, so last_result is never assigned.
         assert profiler.last_result is None
 
 

@@ -125,7 +125,7 @@ class TestFilesTreeRoute:
                 side_effect=ApiError(status_code=403, error="forbidden", message="nope"),
             ),
         ):
-            files_tree(request, settings, path="/bad", depth=0, active=None)
+            files_tree(request, settings, path="bad", depth=0, active=None)
         mock_templates.TemplateResponse.assert_called_once()
 
     def test_tree_no_roots(self, settings, mock_templates) -> None:
@@ -338,7 +338,7 @@ class TestFilesPreviewRoute:
             "file_organizer.web.files_routes.resolve_path",
             side_effect=ApiError(status_code=403, error="forbidden", message="nope"),
         ):
-            files_preview(request, settings, path="/bad")
+            files_preview(request, settings, path="bad")
         mock_templates.TemplateResponse.assert_called_once()
 
 
