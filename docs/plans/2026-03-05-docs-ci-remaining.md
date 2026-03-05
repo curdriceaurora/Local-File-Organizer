@@ -56,10 +56,10 @@ class TestExtractSection:
         result = _extract_section(content, "Only Section")
         assert "Content here" in result
 
-    def test_returns_full_content_when_heading_not_found(self) -> None:
+    def test_raises_when_heading_not_found(self) -> None:
         content = "# Title\n\nNo matching section\n"
-        result = _extract_section(content, "Missing")
-        assert result == content
+        with pytest.raises(ValueError, match="Heading 'Missing' not found"):
+            _extract_section(content, "Missing")
 ```
 
 **Step 2: Run test to verify it fails**
@@ -90,12 +90,13 @@ git commit -m "test(#597): add failing tests for _extract_section helper"
 def _extract_section(content: str, heading: str) -> str:
     """Extract markdown content under a heading up to the next same-level heading.
 
-    If the heading is not found, returns the full content as a safe fallback.
+    Raises ValueError if the heading is not found, so callers know the section
+    anchor is missing rather than silently searching the full document.
     """
-    pattern = rf"^(#{1,6})\s+{re.escape(heading)}\s*$"
+    pattern = rf"^(#{{1,6}})\s+{re.escape(heading)}\s*$"
     match = re.search(pattern, content, re.MULTILINE)
     if not match:
-        return content
+        raise ValueError(f"Heading '{heading}' not found in document")
     level = match.group(1)  # e.g. "##"
     start = match.end()
     # Find next heading at same or higher level
