@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -168,10 +169,12 @@ class TestUpdateStateStoreLoad:
     def test_load_valid_file(self, tmp_path):
         state_file = tmp_path / "state.json"
         state_file.write_text(
-            json.dumps({
-                "last_checked": "2024-01-15T14:30:45Z",
-                "last_version": "2.0.0",
-            })
+            json.dumps(
+                {
+                    "last_checked": "2024-01-15T14:30:45Z",
+                    "last_version": "2.0.0",
+                }
+            )
         )
         store = UpdateStateStore(state_path=state_file)
         state = store.load()
@@ -205,11 +208,13 @@ class TestUpdateStateStoreLoad:
     def test_load_with_extra_fields(self, tmp_path):
         state_file = tmp_path / "state.json"
         state_file.write_text(
-            json.dumps({
-                "last_checked": "2024-01-15T14:30:45Z",
-                "last_version": "2.0.0",
-                "extra_field": "ignored",
-            })
+            json.dumps(
+                {
+                    "last_checked": "2024-01-15T14:30:45Z",
+                    "last_version": "2.0.0",
+                    "extra_field": "ignored",
+                }
+            )
         )
         store = UpdateStateStore(state_path=state_file)
         state = store.load()
@@ -332,3 +337,49 @@ class TestUpdateStateStoreRecordCheck:
         # Verify only latest is persisted
         loaded = store.load()
         assert loaded.last_version == "2.0.0"
+
+
+# ---------------------------------------------------------------------------
+# Atomic write and fsync
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestUpdateStateStoreAtomicWrite:
+    """Test atomic write with fsync in UpdateStateStore.save."""
+
+    def test_save_atomic_write(self, tmp_path):
+        """Verify save uses temp file + replace (atomic write pattern)."""
+        state_file = tmp_path / "state.json"
+        store = UpdateStateStore(state_path=state_file)
+        state = UpdateState(last_checked="2024-01-15T14:30:45Z", last_version="2.0.0")
+        store.save(state)
+        # Verify data is correct
+        data = json.loads(state_file.read_text())
+        assert data["last_checked"] == "2024-01-15T14:30:45Z"
+        assert data["last_version"] == "2.0.0"
+        # Verify no temp file left behind
+        assert not state_file.with_suffix(".tmp").exists()
+
+    def test_save_calls_fsync(self, tmp_path):
+        """Verify os.fsync is called during save."""
+        state_file = tmp_path / "state.json"
+        store = UpdateStateStore(state_path=state_file)
+        state = UpdateState(last_checked="2024-01-15T14:30:45Z", last_version="2.0.0")
+        with patch("os.fsync") as mock_fsync:
+            store.save(state)
+            mock_fsync.assert_called_once()
+        # Verify save still works correctly
+        data = json.loads(state_file.read_text())
+        assert data["last_version"] == "2.0.0"
+
+    def test_save_cleanup_on_error(self, tmp_path):
+        """Verify temp file is cleaned up when write fails."""
+        state_file = tmp_path / "state.json"
+        store = UpdateStateStore(state_path=state_file)
+        state = UpdateState(last_checked="2024-01-15T14:30:45Z", last_version="2.0.0")
+        with patch("builtins.open", side_effect=OSError("disk full")):
+            with pytest.raises(OSError, match="disk full"):
+                store.save(state)
+        # Verify no temp file left behind
+        assert not state_file.with_suffix(".tmp").exists()

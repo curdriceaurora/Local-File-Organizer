@@ -350,20 +350,22 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
 
     def test_temp_file_cleaned_up_after_successful_write(self) -> None:
         """Test temporary files are created during writes and cleaned up after."""
+        import builtins
+
         job = JobState(id="atomic-job-2", status=JobStatus.RUNNING, total_files=5)
         temp_path = self.jobs_dir / "atomic-job-2.tmp"
         job_path = self.jobs_dir / "atomic-job-2.json"
 
-        original_write_text = Path.write_text
+        original_open = builtins.open
         temp_file_was_created = False
 
-        def track_temp_write(path_self: Path, data: str, encoding: str = "utf-8") -> int:
+        def track_open(path, *args, **kwargs):
             nonlocal temp_file_was_created
-            if path_self.suffix == ".tmp":
+            if str(path).endswith(".tmp"):
                 temp_file_was_created = True
-            return original_write_text(path_self, data, encoding=encoding)
+            return original_open(path, *args, **kwargs)
 
-        with patch.object(Path, "write_text", autospec=True, side_effect=track_temp_write):
+        with patch("builtins.open", side_effect=track_open):
             self.persistence.save_job(job)
 
         # Verify temp file was created during save
@@ -433,6 +435,36 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
             "Existing job file should remain intact on failed save",
         )
         self.assertFalse(job_path.with_suffix(".tmp").exists())
+
+
+@pytest.mark.unit
+class TestPersistenceFsync(unittest.TestCase):
+    """Test that save_job uses fsync before atomic rename."""
+
+    def setUp(self) -> None:
+        import tempfile
+
+        self._tmpdir = tempfile.mkdtemp()
+        self.tmp_path = Path(self._tmpdir)
+        self.persistence = JobPersistence(jobs_dir=self.tmp_path / "jobs")
+
+    def tearDown(self) -> None:
+        import shutil
+
+        shutil.rmtree(self._tmpdir, ignore_errors=True)
+
+    def test_save_job_calls_fsync(self) -> None:
+        """Verify os.fsync is called during save_job."""
+        job = JobState(
+            id="fsync-test",
+            status=JobStatus.PENDING,
+        )
+        with patch("os.fsync") as mock_fsync:
+            self.persistence.save_job(job)
+            mock_fsync.assert_called_once()
+        # Verify the job was actually saved
+        loaded = self.persistence.load_job("fsync-test")
+        self.assertIsNotNone(loaded)
 
 
 if __name__ == "__main__":

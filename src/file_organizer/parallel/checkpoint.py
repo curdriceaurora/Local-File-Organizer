@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -145,10 +146,13 @@ class CheckpointManager:
         path = self._checkpoint_path(checkpoint.job_id)
         data = checkpoint.to_dict()
 
-        # Atomic write: write to temp file, then rename
+        # Atomic write: write to temp file, fsync, then rename
         temp_path = path.with_suffix(".tmp")
         try:
-            temp_path.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
+            with open(temp_path, "w", encoding="utf-8") as f:
+                f.write(json.dumps(data, indent=2, default=str))
+                f.flush()
+                os.fsync(f.fileno())
             temp_path.replace(path)
             logger.debug("Saved checkpoint for job %s", checkpoint.job_id)
         except Exception:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -67,13 +68,26 @@ class UpdateStateStore:
         )
 
     def save(self, state: UpdateState) -> None:
-        """Persist update state to disk."""
+        """Persist update state to disk using atomic write."""
         self._state_path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {
-            "last_checked": state.last_checked,
-            "last_version": state.last_version,
-        }
-        self._state_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        payload = json.dumps(
+            {
+                "last_checked": state.last_checked,
+                "last_version": state.last_version,
+            },
+            indent=2,
+        )
+        temp_path = self._state_path.with_suffix(".tmp")
+        try:
+            with open(temp_path, "w", encoding="utf-8") as f:
+                f.write(payload)
+                f.flush()
+                os.fsync(f.fileno())
+            temp_path.replace(self._state_path)
+        except Exception:
+            if temp_path.exists():
+                temp_path.unlink()
+            raise
 
     def record_check(self, version: str, *, now: datetime | None = None) -> UpdateState:
         """Record a successful check and return the updated state."""
