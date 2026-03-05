@@ -5,6 +5,7 @@ Tests the ``dedupe scan``, ``dedupe resolve``, and ``dedupe report`` commands.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -20,8 +21,6 @@ runner = CliRunner()
 
 def _make_file_meta(path: str, size: int = 1024) -> MagicMock:
     """Create a mock file metadata entry."""
-    from datetime import UTC, datetime
-
     meta = MagicMock()
     meta.path = Path(path)
     meta.size = size

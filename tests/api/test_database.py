@@ -17,6 +17,16 @@ from file_organizer.api.database import (
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def _clear_lru_caches():
+    """Clear engine/session LRU caches before and after each test."""
+    get_engine.cache_clear()
+    get_session_factory.cache_clear()
+    yield
+    get_engine.cache_clear()
+    get_session_factory.cache_clear()
+
+
 class TestResolveDatabaseUrl:
     """Tests for resolve_database_url."""
 
@@ -73,11 +83,6 @@ class TestResolveDatabaseUrl:
 class TestGetEngine:
     """Tests for get_engine."""
 
-    def setup_method(self):
-        """Clear the LRU cache before each test."""
-        get_engine.cache_clear()
-        get_session_factory.cache_clear()
-
     def test_memory_engine_uses_static_pool(self):
         engine = get_engine(":memory:")
         assert isinstance(engine, Engine)
@@ -103,10 +108,6 @@ class TestGetEngine:
 class TestGetSessionFactory:
     """Tests for get_session_factory."""
 
-    def setup_method(self):
-        get_engine.cache_clear()
-        get_session_factory.cache_clear()
-
     def test_factory_returns_callable(self):
         factory = get_session_factory(":memory:")
         assert callable(factory)
@@ -119,10 +120,6 @@ class TestGetSessionFactory:
 
 class TestCreateSession:
     """Tests for create_session."""
-
-    def setup_method(self):
-        get_engine.cache_clear()
-        get_session_factory.cache_clear()
 
     def test_create_session_returns_session(self):
         session = create_session(":memory:")

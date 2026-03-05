@@ -102,7 +102,6 @@ class TestWorkspaceRepositoryUpdate:
 
         result = WorkspaceRepository.update(session, "ws-1", name="New Name")
         assert result is ws
-        ws.__setattr__("name", "New Name")
         session.flush.assert_called_once()
 
     def test_update_ignores_unknown_keys(self):

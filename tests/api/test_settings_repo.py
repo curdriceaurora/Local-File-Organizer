@@ -175,6 +175,7 @@ class TestSettingsRepositoryListAll:
         query.order_by.return_value = query
         query.all.return_value = []
 
-        SettingsRepository.list_all(session, user_id="user-1")
-        # Should call filter with user_id
-        query.filter.assert_called()
+        result = SettingsRepository.list_all(session, user_id="user-1")
+        # Verify filter was called with user_id condition
+        query.filter.assert_called_once()
+        assert result == {}

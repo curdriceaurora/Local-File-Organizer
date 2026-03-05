@@ -88,7 +88,8 @@ class TestSessionRepositoryGetActiveByTokenHash:
         custom_now = datetime(2026, 1, 1, tzinfo=UTC)
 
         SessionRepository.get_active_by_token_hash(session, "hash-abc", now=custom_now)
-        # Should not raise; the now parameter is used in the filter
+        # Verify filter was called (the now parameter affects the expiry comparison)
+        session.query.return_value.filter.assert_called()
 
 
 class TestSessionRepositoryListActiveForUser:

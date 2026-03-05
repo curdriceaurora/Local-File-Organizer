@@ -3,6 +3,7 @@ context manager cleanup, and subprocess management."""
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -265,8 +266,6 @@ class TestStop:
         assert ex._proc is None
 
     def test_stop_kills_on_timeout(self) -> None:
-        import subprocess
-
         ex = _make_executor()
         mock_proc = MagicMock()
         mock_proc.stdin = MagicMock()

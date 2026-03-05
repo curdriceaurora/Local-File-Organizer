@@ -179,6 +179,7 @@ class TestJobRepositoryUpdateResult:
         JobRepository.update_result(session, "job-1", processed_files=20)
         assert job.processed_files == 20
         # total_files should NOT have been reassigned (None arg skipped)
+        assert job.total_files == 50
 
     def test_update_result_not_found(self):
         session = MagicMock(spec=Session)
