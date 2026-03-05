@@ -155,11 +155,24 @@ class TestDaemonServiceScheduler:
 
 
 class TestDaemonServiceSignalHandling:
-    def test_handle_signal_sets_stop_event(self):
+    def test_handle_signal_writes_to_pipe(self):
+        """Signal handler writes to self-pipe (no longer sets stop event directly)."""
+        import os
+
         config = _make_config()
         daemon = DaemonService(config)
-        daemon._handle_signal(signal.SIGTERM, None)
-        assert daemon._stop_event.is_set()
+        r, w = os.pipe()
+        os.set_blocking(r, False)
+        os.set_blocking(w, False)
+        daemon._sig_wakeup_r = r
+        daemon._sig_wakeup_w = w
+        try:
+            daemon._handle_signal(signal.SIGTERM, None)
+            data = os.read(r, 1024)
+            assert len(data) > 0
+        finally:
+            os.close(r)
+            os.close(w)
 
 
 class TestDaemonServiceUptimeProperty:

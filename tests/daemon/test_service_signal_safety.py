@@ -1,0 +1,183 @@
+"""Tests for daemon signal handler deadlock fix (self-pipe pattern) and coverage gaps."""
+
+from __future__ import annotations
+
+import os
+import signal
+import threading
+import time
+from pathlib import Path
+
+import pytest
+
+from file_organizer.daemon.config import DaemonConfig
+from file_organizer.daemon.service import DaemonService
+
+pytestmark = pytest.mark.unit
+
+
+def _make_config(**kwargs) -> DaemonConfig:
+    defaults = {
+        "watch_directories": [],
+        "output_directory": Path("tmp/organized"),
+        "pid_file": None,
+        "poll_interval": 0.05,
+    }
+    defaults.update(kwargs)
+    return DaemonConfig(**defaults)
+
+
+# ---------------------------------------------------------------------------
+# Self-pipe signal handler tests
+# ---------------------------------------------------------------------------
+
+
+class TestSignalHandlerWritesToPipe:
+    def test_signal_handler_writes_byte_to_pipe(self):
+        daemon = DaemonService(_make_config())
+        r, w = os.pipe()
+        os.set_blocking(r, False)
+        os.set_blocking(w, False)
+        daemon._sig_wakeup_r = r
+        daemon._sig_wakeup_w = w
+
+        try:
+            daemon._handle_signal(signal.SIGTERM, None)
+            data = os.read(r, 1024)
+            assert data == b"\x00"
+        finally:
+            os.close(r)
+            os.close(w)
+
+    def test_signal_handler_tolerates_closed_pipe(self):
+        daemon = DaemonService(_make_config())
+        _r, w = os.pipe()
+        os.close(_r)
+        os.close(w)
+        daemon._sig_wakeup_w = w
+
+        # Should not raise — OSError is caught internally
+        daemon._handle_signal(signal.SIGTERM, None)
+
+    def test_signal_handler_tolerates_none_pipe(self):
+        daemon = DaemonService(_make_config())
+        assert daemon._sig_wakeup_w is None
+        # Should not raise when pipe is None
+        daemon._handle_signal(signal.SIGTERM, None)
+
+
+class TestRunLoopExitsOnPipeSignal:
+    def test_run_loop_exits_on_pipe_signal(self):
+        daemon = DaemonService(_make_config())
+        r, w = os.pipe()
+        os.set_blocking(r, False)
+        os.set_blocking(w, False)
+        daemon._sig_wakeup_r = r
+        daemon._sig_wakeup_w = w
+
+        # Write a byte to simulate a signal arrival
+        os.write(w, b"\x00")
+
+        try:
+            daemon._run_loop()
+            assert daemon._stop_event.is_set()
+        finally:
+            os.close(r)
+            os.close(w)
+
+    def test_run_loop_falls_back_to_event_wait(self):
+        daemon = DaemonService(_make_config())
+        assert daemon._sig_wakeup_r is None  # No pipe
+
+        # Set stop event after a short delay
+        def stop_later():
+            time.sleep(0.05)
+            daemon._stop_event.set()
+
+        t = threading.Thread(target=stop_later)
+        t.start()
+        daemon._run_loop()
+        t.join(timeout=2.0)
+        assert daemon._stop_event.is_set()
+
+
+class TestPipeClosedOnRestore:
+    def test_pipe_closed_on_restore(self):
+        daemon = DaemonService(_make_config())
+
+        # Call from main thread so it doesn't skip
+        daemon._install_signal_handlers()
+
+        # Verify pipe was created
+        assert daemon._sig_wakeup_r is not None
+        assert daemon._sig_wakeup_w is not None
+        r_fd = daemon._sig_wakeup_r
+        w_fd = daemon._sig_wakeup_w
+
+        daemon._restore_signal_handlers()
+
+        # Verify pipe fds are cleared
+        assert daemon._sig_wakeup_r is None
+        assert daemon._sig_wakeup_w is None
+
+        # Verify fds are actually closed (os.fstat should fail)
+        with pytest.raises(OSError):
+            os.fstat(r_fd)
+        with pytest.raises(OSError):
+            os.fstat(w_fd)
+
+
+# ---------------------------------------------------------------------------
+# Coverage gap tests (lines 215, 301-304, 316-320)
+# ---------------------------------------------------------------------------
+
+
+class TestBackgroundRunEarlyReturn:
+    def test_background_run_early_return_when_already_running(self):
+        """Cover line 215: _background_run returns early when _running is True."""
+        daemon = DaemonService(_make_config())
+
+        with daemon._lock:
+            daemon._running = True
+
+        # _background_run should return immediately without setting _started_event
+        daemon._background_run()
+        assert not daemon._started_event.is_set()
+
+        # Clean up
+        daemon._running = False
+
+
+class TestInstallSignalHandlersMainThread:
+    def test_install_signal_handlers_success_main_thread(self):
+        """Cover lines 301-304: signal handler installation in main thread."""
+        daemon = DaemonService(_make_config())
+
+        try:
+            daemon._install_signal_handlers()
+            assert daemon._original_sigterm is not None
+            assert daemon._original_sigint is not None
+            assert daemon._sig_wakeup_r is not None
+            assert daemon._sig_wakeup_w is not None
+        finally:
+            daemon._restore_signal_handlers()
+
+
+class TestRestoreSignalHandlersMainThread:
+    def test_restore_signal_handlers_success_main_thread(self):
+        """Cover lines 316-320: signal handler restoration in main thread."""
+        daemon = DaemonService(_make_config())
+
+        # Set up state as if handlers were installed
+        r, w = os.pipe()
+        daemon._original_sigterm = signal.SIG_DFL
+        daemon._original_sigint = signal.SIG_DFL
+        daemon._sig_wakeup_r = r
+        daemon._sig_wakeup_w = w
+
+        daemon._restore_signal_handlers()
+
+        assert daemon._original_sigterm is None
+        assert daemon._original_sigint is None
+        assert daemon._sig_wakeup_r is None
+        assert daemon._sig_wakeup_w is None
