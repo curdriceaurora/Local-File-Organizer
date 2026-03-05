@@ -47,7 +47,7 @@ class TestSearchDirectoryNotExist:
         bad = tmp_path / "nonexistent"
         result = runner.invoke(app, ["search", "foo", str(bad)])
         assert result.exit_code == 1
-        assert "does not exist" in result.output
+        assert "does not exist" in result.output.replace("\n", " ")
 
 
 class TestSearchBadTypeFilter:

@@ -231,9 +231,17 @@ class TestFilesThumbnailRoute:
 
         img = tmp_path / "bad.png"
         img.write_bytes(b"\x89PNG")
+
+        original_stat = Path.stat
+
+        def _stat_side_effect(self_, *a, **kw):
+            if self_ == img:
+                raise OSError("denied")
+            return original_stat(self_, *a, **kw)
+
         with (
             patch("file_organizer.web.files_routes.resolve_path", return_value=img),
-            patch.object(Path, "stat", side_effect=OSError("denied")),
+            patch.object(Path, "stat", _stat_side_effect),
             patch(
                 "file_organizer.web.files_routes.render_placeholder_thumbnail",
                 return_value=b"placeholder",
