@@ -50,17 +50,17 @@ class TestInMemoryTokenStore:
 
     def test_refresh_expiry_cleanup(self) -> None:
         store = InMemoryTokenStore()
-        store.store_refresh("jti-1", "user-1", ttl_seconds=1)
-        # Use test helper to simulate TTL expiry
-        store._expire_all()
-        assert store.is_refresh_active("jti-1") is False
+        with patch("file_organizer.api.auth_store.time.time", return_value=1_000.0):
+            store.store_refresh("jti-1", "user-1", ttl_seconds=1)
+        with patch("file_organizer.api.auth_store.time.time", return_value=1_002.0):
+            assert store.is_refresh_active("jti-1") is False
 
     def test_revoked_access_expiry_cleanup(self) -> None:
         store = InMemoryTokenStore()
-        store.revoke_access("access-jti-1", ttl_seconds=1)
-        # Use test helper to simulate TTL expiry
-        store._expire_all()
-        assert store.is_access_revoked("access-jti-1") is False
+        with patch("file_organizer.api.auth_store.time.time", return_value=1_000.0):
+            store.revoke_access("access-jti-1", ttl_seconds=1)
+        with patch("file_organizer.api.auth_store.time.time", return_value=1_002.0):
+            assert store.is_access_revoked("access-jti-1") is False
 
     def test_multiple_refresh_tokens(self) -> None:
         store = InMemoryTokenStore()

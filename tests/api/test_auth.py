@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import patch
@@ -247,9 +249,6 @@ class TestDecodeToken:
 
     def test_algorithm_none_rejected(self, settings: ApiSettings) -> None:
         """Token with alg:none must be rejected (algorithm confusion attack)."""
-        import base64
-        import json
-
         header = (
             base64.urlsafe_b64encode(json.dumps({"alg": "none", "typ": "JWT"}).encode())
             .rstrip(b"=")

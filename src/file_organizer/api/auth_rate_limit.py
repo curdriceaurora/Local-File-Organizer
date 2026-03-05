@@ -78,12 +78,6 @@ class InMemoryLoginRateLimiter:
         """Clear rate limit state for the given key."""
         self._state.pop(key, None)
 
-    def _advance_time(self, key: str, seconds: float) -> None:
-        """Shift the window expiry of key backwards by seconds (test helper)."""
-        state = self._state.get(key)
-        if state is not None:
-            state.expires_at -= seconds
-
 
 @dataclass(frozen=True)
 class RedisLoginRateLimiter:

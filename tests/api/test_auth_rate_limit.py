@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from unittest.mock import patch
 
 import pytest
 
@@ -94,12 +95,14 @@ class TestInMemoryLoginRateLimiter:
         limiter.reset("nonexistent")  # should not raise
 
     def test_window_expiry_cleanup(self) -> None:
-        limiter = InMemoryLoginRateLimiter(max_attempts=2, window_seconds=60)
-        limiter.record_failure("user1")
-        limiter.record_failure("user1")
-        # Use test helper to simulate window expiry
-        limiter._advance_time("user1", 120)
-        blocked, retry = limiter.is_blocked("user1")
+        now = time.time()
+        with patch("file_organizer.api.auth_rate_limit.time.time", return_value=now):
+            limiter = InMemoryLoginRateLimiter(max_attempts=2, window_seconds=60)
+            limiter.record_failure("user1")
+            limiter.record_failure("user1")
+        # Simulate time advancing past the window
+        with patch("file_organizer.api.auth_rate_limit.time.time", return_value=now + 120):
+            blocked, retry = limiter.is_blocked("user1")
         assert blocked is False
         assert retry == 0
 
