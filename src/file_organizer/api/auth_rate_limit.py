@@ -26,6 +26,7 @@ class LoginRateLimiter(Protocol):
 @dataclass
 class RateLimitState:
     """Track rate limit count and expiry for a key."""
+
     count: int
     expires_at: float
 

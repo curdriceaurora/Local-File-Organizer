@@ -226,9 +226,7 @@ class TestRateLimitMiddleware:
 
     def test_rate_limit_exceeded_returns_429(self) -> None:
         reset_at = int(time.time()) + 60
-        limiter = _FakeLimiter(
-            _FakeLimiterConfig(allowed=False, remaining=0, reset_at=reset_at)
-        )
+        limiter = _FakeLimiter(_FakeLimiterConfig(allowed=False, remaining=0, reset_at=reset_at))
         settings = _make_settings(rate_limit_enabled=True)
         app = _build_app(settings=settings, limiter=limiter, include_rate_limit=True)
         client = TestClient(app)
@@ -338,9 +336,7 @@ class TestRateLimitMiddleware:
 
     def test_rate_limit_headers_values(self) -> None:
         reset_ts = int(time.time()) + 120
-        limiter = _FakeLimiter(
-            _FakeLimiterConfig(allowed=True, remaining=42, reset_at=reset_ts)
-        )
+        limiter = _FakeLimiter(_FakeLimiterConfig(allowed=True, remaining=42, reset_at=reset_ts))
         settings = _make_settings(
             rate_limit_enabled=True,
             rate_limit_default_requests=100,

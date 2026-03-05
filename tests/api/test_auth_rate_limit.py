@@ -123,21 +123,15 @@ class TestBuildLoginRateLimiter:
     """Tests for build_login_rate_limiter factory."""
 
     def test_returns_in_memory_when_redis_url_is_none(self) -> None:
-        limiter = build_login_rate_limiter(
-            redis_url=None, max_attempts=5, window_seconds=300
-        )
+        limiter = build_login_rate_limiter(redis_url=None, max_attempts=5, window_seconds=300)
         assert isinstance(limiter, InMemoryLoginRateLimiter)
 
     def test_returns_in_memory_when_redis_url_is_empty(self) -> None:
-        limiter = build_login_rate_limiter(
-            redis_url="", max_attempts=5, window_seconds=300
-        )
+        limiter = build_login_rate_limiter(redis_url="", max_attempts=5, window_seconds=300)
         assert isinstance(limiter, InMemoryLoginRateLimiter)
 
     def test_in_memory_limiter_has_correct_config(self) -> None:
-        limiter = build_login_rate_limiter(
-            redis_url=None, max_attempts=10, window_seconds=120
-        )
+        limiter = build_login_rate_limiter(redis_url=None, max_attempts=10, window_seconds=120)
         assert isinstance(limiter, InMemoryLoginRateLimiter)
         assert limiter.max_attempts == 10
         assert limiter.window_seconds == 120
