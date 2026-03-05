@@ -58,3 +58,23 @@ def test_marker_documented(marker: str) -> None:
     assert re.search(rf"\b{re.escape(marker)}\b", content), (
         f"Pytest marker '{marker}' not found in {TESTING_DOC.relative_to(REPO_ROOT)}"
     )
+
+
+class TestExtractSection:
+    """Tests for _extract_section helper."""
+
+    def test_extracts_target_section(self) -> None:
+        content = "# Title\n\nIntro\n\n## Section A\n\nA content\n\n## Section B\n\nB content\n"
+        result = _extract_section(content, "Section A")
+        assert "A content" in result
+        assert "B content" not in result
+
+    def test_extracts_to_eof_when_last_section(self) -> None:
+        content = "# Title\n\n## Only Section\n\nContent here\n"
+        result = _extract_section(content, "Only Section")
+        assert "Content here" in result
+
+    def test_returns_full_content_when_heading_not_found(self) -> None:
+        content = "# Title\n\nNo matching section\n"
+        result = _extract_section(content, "Missing")
+        assert result == content
