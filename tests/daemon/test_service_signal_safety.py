@@ -13,6 +13,8 @@ import pytest
 from file_organizer.daemon.config import DaemonConfig
 from file_organizer.daemon.service import DaemonService
 
+from .conftest import wired_pipe
+
 pytestmark = pytest.mark.unit
 
 
@@ -35,19 +37,10 @@ def _make_config(**kwargs) -> DaemonConfig:
 class TestSignalHandlerWritesToPipe:
     def test_signal_handler_writes_byte_to_pipe(self):
         daemon = DaemonService(_make_config())
-        r, w = os.pipe()
-        os.set_blocking(r, False)
-        os.set_blocking(w, False)
-        daemon._sig_wakeup_r = r
-        daemon._sig_wakeup_w = w
-
-        try:
+        with wired_pipe(daemon) as (r, _w):
             daemon._handle_signal(signal.SIGTERM, None)
             data = os.read(r, 1024)
             assert data == b"\x00"
-        finally:
-            os.close(r)
-            os.close(w)
 
     def test_signal_handler_tolerates_closed_pipe(self):
         daemon = DaemonService(_make_config())
@@ -69,21 +62,11 @@ class TestSignalHandlerWritesToPipe:
 class TestRunLoopExitsOnPipeSignal:
     def test_run_loop_exits_on_pipe_signal(self):
         daemon = DaemonService(_make_config())
-        r, w = os.pipe()
-        os.set_blocking(r, False)
-        os.set_blocking(w, False)
-        daemon._sig_wakeup_r = r
-        daemon._sig_wakeup_w = w
-
-        # Write a byte to simulate a signal arrival
-        os.write(w, b"\x00")
-
-        try:
+        with wired_pipe(daemon) as (_r, w):
+            # Write a byte to simulate a signal arrival
+            os.write(w, b"\x00")
             daemon._run_loop()
             assert daemon._stop_event.is_set()
-        finally:
-            os.close(r)
-            os.close(w)
 
     def test_run_loop_falls_back_to_event_wait(self):
         daemon = DaemonService(_make_config())

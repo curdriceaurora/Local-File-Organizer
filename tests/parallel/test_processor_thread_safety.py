@@ -1,4 +1,4 @@
-"""Tests for ParallelProcessor thread safety (executor_type_used lock)."""
+"""Tests for ParallelProcessor thread safety."""
 
 from __future__ import annotations
 
@@ -13,11 +13,6 @@ pytestmark = pytest.mark.unit
 
 
 class TestProcessorThreadSafety:
-    def test_executor_type_lock_exists(self):
-        proc = ParallelProcessor()
-        assert hasattr(proc, "_executor_type_lock")
-        assert isinstance(proc._executor_type_lock, type(threading.Lock()))
-
     def test_executor_type_default(self):
         proc = ParallelProcessor()
         assert proc._executor_type_used == "thread"

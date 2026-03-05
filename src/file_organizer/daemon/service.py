@@ -325,6 +325,13 @@ class DaemonService:
             logger.debug("Installed SIGTERM and SIGINT handlers")
         except (OSError, ValueError) as exc:
             logger.warning("Could not install signal handlers: %s", exc)
+            # Close pipe fds if they were created before the failure
+            if self._sig_wakeup_r is not None:
+                os.close(self._sig_wakeup_r)
+                self._sig_wakeup_r = None
+            if self._sig_wakeup_w is not None:
+                os.close(self._sig_wakeup_w)
+                self._sig_wakeup_w = None
 
     def _restore_signal_handlers(self) -> None:
         """Restore the original signal handlers saved during installation."""

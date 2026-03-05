@@ -159,20 +159,14 @@ class TestDaemonServiceSignalHandling:
         """Signal handler writes to self-pipe (no longer sets stop event directly)."""
         import os
 
+        from .conftest import wired_pipe
+
         config = _make_config()
         daemon = DaemonService(config)
-        r, w = os.pipe()
-        os.set_blocking(r, False)
-        os.set_blocking(w, False)
-        daemon._sig_wakeup_r = r
-        daemon._sig_wakeup_w = w
-        try:
+        with wired_pipe(daemon) as (r, _w):
             daemon._handle_signal(signal.SIGTERM, None)
             data = os.read(r, 1024)
             assert len(data) > 0
-        finally:
-            os.close(r)
-            os.close(w)
 
 
 class TestDaemonServiceUptimeProperty:

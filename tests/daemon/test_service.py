@@ -260,49 +260,36 @@ class TestSignalHandling:
         """
         import os
 
+        from .conftest import wired_pipe
+
         svc = DaemonService(config)
 
-        # Set up the self-pipe so the handler has somewhere to write
-        r, w = os.pipe()
-        os.set_blocking(r, False)
-        os.set_blocking(w, False)
-        svc._sig_wakeup_r = r
-        svc._sig_wakeup_w = w
+        with wired_pipe(svc) as (r, _w):
+            svc._stop_event.clear()
+            svc._running = True
 
-        svc._stop_event.clear()
-        svc._running = True
+            svc._handle_signal(signal.SIGTERM, None)
 
-        # Simulate receiving SIGTERM — writes to pipe
-        svc._handle_signal(signal.SIGTERM, None)
+            data = os.read(r, 1024)
+            assert len(data) > 0
 
-        data = os.read(r, 1024)
-        assert len(data) > 0
-
-        # Clean up
-        os.close(r)
-        os.close(w)
         svc._running = False
 
     def test_sigint_triggers_stop(self, config: DaemonConfig) -> None:
         """SIGINT triggers the stop event via the handler (writes to pipe)."""
         import os
 
+        from .conftest import wired_pipe
+
         svc = DaemonService(config)
 
-        r, w = os.pipe()
-        os.set_blocking(r, False)
-        os.set_blocking(w, False)
-        svc._sig_wakeup_r = r
-        svc._sig_wakeup_w = w
+        with wired_pipe(svc) as (r, _w):
+            svc._stop_event.clear()
+            svc._running = True
 
-        svc._stop_event.clear()
-        svc._running = True
+            svc._handle_signal(signal.SIGINT, None)
 
-        svc._handle_signal(signal.SIGINT, None)
+            data = os.read(r, 1024)
+            assert len(data) > 0
 
-        data = os.read(r, 1024)
-        assert len(data) > 0
-
-        os.close(r)
-        os.close(w)
         svc._running = False
