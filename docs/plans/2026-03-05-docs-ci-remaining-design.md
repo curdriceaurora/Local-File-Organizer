@@ -36,7 +36,7 @@ maintainers, creating a supply-chain risk.
 **Solution**:
 - Replace each mutable tag with its current 40-char commit SHA
 - Add `permissions: contents: read` to each job
-- Keep tag as inline comment for readability: `@SHA  # v4.2.2`
+- Keep tag as inline comment for readability: `@SHA  # v4.3.1`
 
 **Actions to pin**:
 - `actions/checkout@v4`
