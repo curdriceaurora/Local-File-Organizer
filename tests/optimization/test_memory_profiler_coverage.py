@@ -68,13 +68,13 @@ class TestGetRssCoverage:
         assert result == 256000 * 1024
 
     def test_no_rss_info(self) -> None:
-        """Test when no RSS info is available."""
+        """Test when no RSS info is available returns zero."""
         with (
             patch("builtins.open", side_effect=FileNotFoundError),
             patch.dict("sys.modules", {"resource": None}),
         ):
             result = MemoryProfiler._get_rss()
-        assert isinstance(result, int)
+        assert result == 0
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +125,7 @@ class TestGetRssVmsCoverage:
         ):
             rss, vms = MemoryProfiler._get_rss_vms()
         assert rss == 256000 * 1024
+        assert vms == 0  # VMS not available from resource module
 
     def test_no_info_returns_zeros(self) -> None:
         """Test when no memory info is available."""
@@ -133,8 +134,8 @@ class TestGetRssVmsCoverage:
             patch.dict("sys.modules", {"resource": None}),
         ):
             rss, vms = MemoryProfiler._get_rss_vms()
-        assert isinstance(rss, int)
-        assert isinstance(vms, int)
+        assert rss == 0
+        assert vms == 0
 
 
 # ---------------------------------------------------------------------------

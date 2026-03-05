@@ -64,7 +64,8 @@ class TestPreviewImage:
         f.write_bytes(b"not a real image")
         with patch.dict("sys.modules", {"PIL": None, "PIL.Image": None}):
             result = FilePreviewPanel._preview_image(f)
-        assert "Image" in result or "Cannot" in result
+        assert "Image" in result
+        assert "Cannot read image metadata" in result
 
     def test_image_preview_with_mock_pillow(self, tmp_path: Path) -> None:
         f = tmp_path / "test.png"
@@ -116,6 +117,7 @@ class TestPreviewPdf:
         with patch.dict("sys.modules", {"fitz": None}):
             result = FilePreviewPanel._preview_pdf(mock_path)
         assert "PDF" in result
+        assert "Cannot read PDF" in result
 
 
 class TestPreviewArchive:
@@ -186,7 +188,9 @@ class TestPreviewDirectory:
         (d / "child").mkdir()
         (d / "file.txt").touch()
         result = FilePreviewPanel._preview_directory(d)
-        assert "D" in result  # directory marker
+        assert "child" in result
+        assert "file.txt" in result
+        assert "parent/" in result
 
     def test_directory_os_error(self) -> None:
         mock_path = MagicMock(spec=Path)

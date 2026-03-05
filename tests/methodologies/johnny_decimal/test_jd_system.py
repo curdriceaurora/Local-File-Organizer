@@ -8,6 +8,7 @@ renumber_file, get_area_summary.
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -33,7 +34,7 @@ class TestInitializeFromDirectory:
 
     def test_nonexistent_dir_raises(self, system: JohnnyDecimalSystem) -> None:
         with pytest.raises(ValueError, match="does not exist"):
-            system.initialize_from_directory(Path("/nonexistent"))
+            system.initialize_from_directory(Path("nonexistent"))
 
     def test_scans_jd_numbered_dirs(self, system: JohnnyDecimalSystem, tmp_path: Path) -> None:
         """Detects JD numbers from directory names."""
@@ -60,28 +61,28 @@ class TestExtractNumberFromPath:
     """Cover _extract_number_from_path — lines 107."""
 
     def test_extract_area_number(self, system: JohnnyDecimalSystem) -> None:
-        num = system._extract_number_from_path(Path("/root/10 Finance"))
+        num = system._extract_number_from_path(Path("root/10 Finance"))
         assert num is not None
         assert num.area == 10
 
     def test_extract_category_number(self, system: JohnnyDecimalSystem) -> None:
-        num = system._extract_number_from_path(Path("/root/11.01 Budgets"))
+        num = system._extract_number_from_path(Path("root/11.01 Budgets"))
         assert num is not None
         assert num.area == 11
         assert num.category == 1
 
     def test_extract_id_number(self, system: JohnnyDecimalSystem) -> None:
-        num = system._extract_number_from_path(Path("/root/11.01.001 Q1 Budget"))
+        num = system._extract_number_from_path(Path("root/11.01.001 Q1 Budget"))
         assert num is not None
         assert num.item_id == 1
 
     def test_extract_no_number(self, system: JohnnyDecimalSystem) -> None:
-        num = system._extract_number_from_path(Path("/root/Random Folder"))
+        num = system._extract_number_from_path(Path("root/Random Folder"))
         assert num is None
 
     def test_extract_empty_name(self, system: JohnnyDecimalSystem) -> None:
         """Edge case with empty name returns None — no crash expected."""
-        num = system._extract_number_from_path(Path("/root/"))
+        num = system._extract_number_from_path(Path("root/"))
         assert num is None
 
 
@@ -172,7 +173,11 @@ class TestRenumberFile:
     def test_renumber_new_conflicts_rollback(
         self, system: JohnnyDecimalSystem, tmp_path: Path
     ) -> None:
-        """New number conflicts => old number restored (lines 323-327)."""
+        """New number conflicts at register time => old number restored (lines 323-327).
+
+        We mock validate_number to pass, then let register_existing_number
+        raise NumberConflictError so the rollback branch is actually exercised.
+        """
         f1 = tmp_path / "f1.txt"
         f1.write_text("x")
         f2 = tmp_path / "f2.txt"
@@ -183,11 +188,17 @@ class TestRenumberFile:
         taken_num = JohnnyDecimalNumber(area=20, category=5)
         system.generator.register_existing_number(taken_num, f2)
 
-        with pytest.raises(NumberConflictError):
+        # validate_number returns (True, []) so we pass the pre-check,
+        # but register_existing_number will raise because taken_num exists.
+        with (
+            patch.object(system.generator, "validate_number", return_value=(True, [])),
+            pytest.raises(NumberConflictError),
+        ):
             system.renumber_file(old_num, taken_num, f1)
 
-        # Old number should be restored
+        # Rollback must restore old number
         assert old_num.formatted_number in system.generator._used_numbers
+        assert system.generator._number_mappings[old_num.formatted_number] == f1
 
 
 class TestGetAreaSummary:
