@@ -53,7 +53,7 @@ DOCS_DIR = REPO_ROOT / "docs"
 PATH_PATTERN = re.compile(r"`((?:src|core|tests|scripts|\.github)/[^`\s]+\.[a-zA-Z]+)`")
 
 # ---------------------------------------------------------------------------
-# Exclusion layer 1: directory-level exclusions
+# Exclusion layer 1 of 3: directory-level exclusions
 # ---------------------------------------------------------------------------
 # Directories under docs/ that contain design/planning documents.
 # These files describe work-in-progress or future features and intentionally
@@ -68,7 +68,8 @@ EXCLUDED_DOC_DIRS: set[str] = {
 }
 
 # ---------------------------------------------------------------------------
-# Exclusion layer 3: per-path allowlist
+# Exclusion layer 3 of 3: per-path allowlist
+# (Layer 2 is the _is_glob_pattern() filter applied in _get_doc_path_params)
 # ---------------------------------------------------------------------------
 # Individual paths referenced in docs that are *not* expected to exist on disk.
 # Every entry MUST have an inline comment stating the reason for allowlisting.
@@ -87,11 +88,7 @@ EXCLUDED_DOC_DIRS: set[str] = {
 #   3. Open a tracking issue if the root cause is a stale doc reference.
 #
 # Format: frozenset of strings matching exactly what PATH_PATTERN captures.
-ALLOWLIST: frozenset[str] = frozenset(
-    {
-        # (empty — all current doc paths are expected to resolve)
-    }
-)
+ALLOWLIST: frozenset[str] = frozenset()
 
 
 def _is_glob_pattern(path: str) -> bool:
