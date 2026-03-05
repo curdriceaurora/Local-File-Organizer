@@ -78,7 +78,7 @@ class TestFilesBrowser:
             client.get(f"/ui/files?path={tree}")
         call_args = mock_tpl.TemplateResponse.call_args
         assert call_args is not None
-        args, kwargs = call_args
+        args, _ = call_args
         assert args[1] == "files/browser.html"
 
     def test_accepts_view_param(self, client, tree):
@@ -108,7 +108,7 @@ class TestFilesList:
             client.get(f"/ui/files/list?path={tree}")
         call_args = mock_tpl.TemplateResponse.call_args
         assert call_args is not None
-        args, kwargs = call_args
+        args, _ = call_args
         assert args[1] == "files/_results.html"
 
     def test_query_filter(self, client, tree):

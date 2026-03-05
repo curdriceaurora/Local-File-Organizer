@@ -104,7 +104,7 @@ class TestOrganizeDashboard:
             client.get("/ui/organize")
         call_args = mock_tpl.TemplateResponse.call_args
         assert call_args is not None
-        args, kwargs = call_args
+        args, _ = call_args
         assert args[1] == "organize/dashboard.html"
 
 
