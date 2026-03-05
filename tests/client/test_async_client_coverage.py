@@ -15,6 +15,7 @@ from file_organizer.client.exceptions import (
     ClientError,
     NotFoundError,
     ServerError,
+    ValidationError,
 )
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
@@ -368,3 +369,146 @@ class TestAsyncClientErrorHandling:
         assert "X-API-Key" in c._client.headers
         assert "Authorization" in c._client.headers
         await c.aclose()
+
+    async def test_403_raises_auth_error(self, client):
+        resp = _mock_response(403, {"detail": "forbidden"})
+        client._client.get = AsyncMock(return_value=resp)
+        with pytest.raises(AuthenticationError, match="403"):
+            await client.health()
+
+    async def test_422_raises_validation_error(self, client):
+        resp = _mock_response(422, {"detail": "invalid field"})
+        client._client.post = AsyncMock(return_value=resp)
+        with pytest.raises(ValidationError, match="422"):
+            await client.login("u", "p")
+
+    async def test_502_raises_server_error(self, client):
+        resp = _mock_response(502, {"detail": "bad gateway"})
+        client._client.get = AsyncMock(return_value=resp)
+        with pytest.raises(ServerError, match="502"):
+            await client.health()
+
+    async def test_error_response_no_json(self, client):
+        """When response.json() raises, fallback to response.text."""
+        resp = _mock_response(500)
+        resp.text = "plain text error"
+        client._client.get = AsyncMock(return_value=resp)
+        with pytest.raises(ServerError, match="plain text error"):
+            await client.health()
+
+    async def test_error_response_message_key(self, client):
+        """When body has 'message' instead of 'detail'."""
+        resp = _mock_response(400, {"message": "custom msg"})
+        client._client.get = AsyncMock(return_value=resp)
+        with pytest.raises(ClientError, match="custom msg"):
+            await client.health()
+
+
+# ---------------------------------------------------------------------------
+# Init parameter combinations
+# ---------------------------------------------------------------------------
+
+
+class TestAsyncClientInit:
+    async def test_init_token_only(self):
+        c = AsyncFileOrganizerClient(token="tok-only")
+        assert "Authorization" in c._client.headers
+        assert "X-API-Key" not in c._client.headers
+        await c.aclose()
+
+    async def test_init_api_key_only(self):
+        c = AsyncFileOrganizerClient(api_key="key-only")
+        assert "X-API-Key" in c._client.headers
+        assert "Authorization" not in c._client.headers
+        await c.aclose()
+
+    async def test_init_defaults(self):
+        c = AsyncFileOrganizerClient()
+        assert "Authorization" not in c._client.headers
+        assert "X-API-Key" not in c._client.headers
+        assert c._base_url == "http://localhost:8000"
+        await c.aclose()
+
+    async def test_init_custom_base_url(self):
+        c = AsyncFileOrganizerClient(base_url="http://custom:9000")
+        assert c._base_url == "http://custom:9000"
+        await c.aclose()
+
+
+# ---------------------------------------------------------------------------
+# Context manager edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestAsyncClientContextManagerEdge:
+    async def test_aclose_idempotent(self):
+        c = AsyncFileOrganizerClient()
+        c._client.aclose = AsyncMock()
+        await c.aclose()
+        await c.aclose()
+        assert c._client.aclose.await_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Optional parameter branches
+# ---------------------------------------------------------------------------
+
+
+class TestAsyncClientOptionalParams:
+    async def test_register_without_full_name(self, client):
+        resp = _mock_response(
+            200,
+            {
+                "id": "1",
+                "username": "u",
+                "email": "e@e.com",
+                "is_active": True,
+                "is_admin": False,
+                "created_at": NOW,
+            },
+        )
+        client._client.post = AsyncMock(return_value=resp)
+        result = await client.register("u", "e@e.com", "p")
+        assert result.username == "u"
+        # Verify full_name not in payload
+        call_kwargs = client._client.post.call_args
+        payload = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+        assert "full_name" not in payload
+
+    async def test_list_files_no_file_type(self, client):
+        resp = _mock_response(200, {"items": [], "total": 0, "skip": 0, "limit": 100})
+        client._client.get = AsyncMock(return_value=resp)
+        result = await client.list_files("/tmp")
+        assert result.total == 0
+        call_kwargs = client._client.get.call_args
+        params = call_kwargs.kwargs.get("params") or call_kwargs[1].get("params")
+        assert "file_type" not in params
+
+    async def test_dedupe_scan_with_max_file_size(self, client):
+        resp = _mock_response(200, {"path": "/tmp", "duplicates": [], "stats": {"total": 0}})
+        client._client.post = AsyncMock(return_value=resp)
+        result = await client.dedupe_scan("/tmp", max_file_size=1024)
+        assert result.path == "/tmp"
+        call_kwargs = client._client.post.call_args
+        payload = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+        assert payload["max_file_size"] == 1024
+
+    async def test_system_stats_no_max_depth(self, client):
+        resp = _mock_response(
+            200,
+            {
+                "total_size": 1000,
+                "organized_size": 500,
+                "saved_size": 200,
+                "file_count": 10,
+                "directory_count": 3,
+                "size_by_type": {},
+                "largest_files": [],
+            },
+        )
+        client._client.get = AsyncMock(return_value=resp)
+        result = await client.system_stats()
+        assert result.file_count == 10
+        call_kwargs = client._client.get.call_args
+        params = call_kwargs.kwargs.get("params") or call_kwargs[1].get("params")
+        assert "max_depth" not in params
