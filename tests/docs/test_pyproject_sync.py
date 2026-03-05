@@ -66,8 +66,10 @@ def _extract_section(content: str, heading: str) -> str:
 def test_extra_documented(extra: str) -> None:
     """Each pyproject.toml optional-dependency group must appear in dependencies.md."""
     content = DEPS_DOC.read_text(encoding="utf-8")
-    assert re.search(rf"\b{re.escape(extra)}\b", content), (
-        f"Optional extra '{extra}' not found in {DEPS_DOC.relative_to(REPO_ROOT)}"
+    section = _extract_section(content, "Optional Dependencies")
+    assert re.search(rf"\b{re.escape(extra)}\b", section), (
+        f"Optional extra '{extra}' not found in 'Optional Dependencies' section "
+        f"of {DEPS_DOC.relative_to(REPO_ROOT)}"
     )
 
 
