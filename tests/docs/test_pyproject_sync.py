@@ -43,12 +43,13 @@ def _get_markers() -> list[str]:
 def _extract_section(content: str, heading: str) -> str:
     """Extract markdown content under a heading up to the next same-level heading.
 
-    If the heading is not found, returns the full content as a safe fallback.
+    Raises ValueError if the heading is not found, so callers know the section
+    anchor is missing rather than silently searching the full document.
     """
     pattern = rf"^(#{{1,6}})\s+{re.escape(heading)}\s*$"
     match = re.search(pattern, content, re.MULTILINE)
     if not match:
-        return content
+        raise ValueError(f"Heading '{heading}' not found in document")
     level = match.group(1)  # e.g. "##"
     start = match.end()
     # Find next heading at same or higher level
@@ -94,7 +95,22 @@ class TestExtractSection:
         result = _extract_section(content, "Only Section")
         assert "Content here" in result
 
-    def test_returns_full_content_when_heading_not_found(self) -> None:
+    def test_raises_when_heading_not_found(self) -> None:
         content = "# Title\n\nNo matching section\n"
-        result = _extract_section(content, "Missing")
-        assert result == content
+        with pytest.raises(ValueError, match="Heading 'Missing' not found"):
+            _extract_section(content, "Missing")
+
+    def test_subsection_does_not_stop_extraction(self) -> None:
+        content = (
+            "## Target\n\nTop content\n\n"
+            "### Nested\n\nNested content\n\n"
+            "## Sibling\n\nSibling content\n"
+        )
+        result = _extract_section(content, "Target")
+        assert "Nested content" in result
+        assert "Sibling content" not in result
+
+    def test_matches_any_heading_level(self) -> None:
+        content = "### Optional Dependencies\n\nContent\n"
+        result = _extract_section(content, "Optional Dependencies")
+        assert "Content" in result
