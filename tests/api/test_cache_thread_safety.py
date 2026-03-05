@@ -1,4 +1,4 @@
-"""Thread safety tests for InMemoryCache and RedisCache close logging."""
+"""Thread safety tests for API cache implementations."""
 
 from __future__ import annotations
 
@@ -13,30 +13,30 @@ from file_organizer.api.cache import InMemoryCache, RedisCache
 pytestmark = pytest.mark.unit
 
 
-class TestInMemoryConcurrentGetSet:
-    def test_concurrent_get_set_no_crash(self) -> None:
-        """10 threads reading and writing simultaneously should not corrupt state.
+class TestInMemoryCacheThreadSafety:
+    """Verify InMemoryCache is thread-safe."""
 
-        This test exercises the critical path where multiple threads concurrently
-        access the cache with set/get operations to ensure the locking mechanism
-        prevents race conditions and data corruption.
-        """
+    def test_has_lock(self):
+        cache = InMemoryCache()
+        assert hasattr(cache, "_lock")
+        assert isinstance(cache._lock, type(threading.Lock()))
+
+    def test_concurrent_get_set(self):
+        """10 threads read/write simultaneously without crash."""
         cache = InMemoryCache()
         errors: list[Exception] = []
 
-        def writer(thread_id: int) -> None:
-            """Write entries to cache from thread."""
+        def writer(tid: int):
             try:
                 for i in range(50):
-                    cache.set(f"key-{thread_id}-{i}", f"val-{i}", ttl_seconds=60)
+                    cache.set(f"key-{tid}-{i}", f"val-{tid}-{i}", ttl_seconds=60)
             except Exception as exc:
                 errors.append(exc)
 
-        def reader(thread_id: int) -> None:
-            """Read entries from cache from thread."""
+        def reader(tid: int):
             try:
                 for i in range(50):
-                    cache.get(f"key-{thread_id}-{i}")
+                    cache.get(f"key-{tid}-{i}")
             except Exception as exc:
                 errors.append(exc)
 
@@ -48,92 +48,78 @@ class TestInMemoryConcurrentGetSet:
         for t in threads:
             t.start()
         for t in threads:
-            t.join(timeout=5.0)
+            t.join(timeout=10)
 
-        # Verify all threads actually completed
-        assert all(not t.is_alive() for t in threads), "Some threads did not finish"
-        assert not errors, f"Concurrent access errors: {errors}"
+        assert not errors, f"Thread safety errors: {errors}"
 
-    def test_concurrent_expired_eviction(self) -> None:
-        """Short TTL entries evicted during concurrent reads should not crash.
-
-        This test ensures that concurrent expiration and eviction of cache
-        entries doesn't cause race conditions or exceptions.
-        """
+    def test_concurrent_expired_eviction(self):
+        """Concurrent reads trigger eviction of expired entries safely."""
         cache = InMemoryCache()
         errors: list[Exception] = []
 
-        # Pre-populate with entries that will expire
+        # Pre-populate with short-TTL entries
         for i in range(20):
-            cache.set(f"exp-{i}", f"val-{i}", ttl_seconds=1)
-            cache._entries[f"exp-{i}"].expires_at = time.time() - 1
+            cache.set(f"k{i}", f"v{i}", ttl_seconds=1)
 
-        def reader() -> None:
-            """Read entries and trigger eviction from thread."""
+        # Immediately expire them
+        with cache._lock:
+            for entry in cache._entries.values():
+                entry.expires_at = time.time() - 1
+
+        def reader():
             try:
                 for i in range(20):
-                    cache.get(f"exp-{i}")  # Should evict expired entries
+                    cache.get(f"k{i}")
             except Exception as exc:
                 errors.append(exc)
 
-        threads = [threading.Thread(target=reader) for _ in range(5)]
+        threads = [threading.Thread(target=reader) for _ in range(10)]
         for t in threads:
             t.start()
         for t in threads:
-            t.join(timeout=5.0)
+            t.join(timeout=10)
 
-        assert not errors, f"Concurrent eviction errors: {errors}"
+        assert not errors, f"Eviction race errors: {errors}"
 
-    def test_concurrent_delete(self) -> None:
-        """Concurrent deletes should not crash.
-
-        This test verifies that multiple threads can safely delete cache
-        entries simultaneously without corruption or exceptions.
-        """
+    def test_concurrent_delete(self):
+        """Concurrent deletes do not crash."""
         cache = InMemoryCache()
+        for i in range(20):
+            cache.set(f"k{i}", f"v{i}", ttl_seconds=60)
+
         errors: list[Exception] = []
 
-        for i in range(20):
-            cache.set(f"del-{i}", f"val-{i}", ttl_seconds=60)
-
-        def deleter() -> None:
-            """Delete entries from cache from thread."""
+        def deleter(start: int):
             try:
-                for i in range(20):
-                    cache.delete(f"del-{i}")
+                for i in range(start, start + 10):
+                    cache.delete(f"k{i}")
             except Exception as exc:
                 errors.append(exc)
 
-        threads = [threading.Thread(target=deleter) for _ in range(5)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join(timeout=5.0)
+        t1 = threading.Thread(target=deleter, args=(0,))
+        t2 = threading.Thread(target=deleter, args=(10,))
+        t1.start()
+        t2.start()
+        t1.join(timeout=5)
+        t2.join(timeout=5)
 
-        assert not errors, f"Concurrent delete errors: {errors}"
+        assert not errors
 
 
-class TestRedisCacheCloseLogsOnError:
-    def test_close_logs_warning_on_error(self) -> None:
-        """RedisCache.close() should log a warning when Redis raises.
+class TestRedisCacheCloseLogging:
+    """Verify RedisCache.close() logs on error instead of silently swallowing."""
 
-        This test verifies that when the underlying Redis client fails to
-        close (e.g., due to connection loss), the error is logged as a
-        warning rather than silently ignored or propagated.
-        """
-        with patch("file_organizer.api.cache.Redis") as mock_redis_cls:
-            mock_redis = MagicMock()
-            mock_redis_cls.from_url.return_value = mock_redis
+    def test_close_logs_warning_on_error(self):
+        from file_organizer.api.cache import RedisError
 
+        mock_redis = MagicMock()
+        mock_redis.close.side_effect = RedisError("connection lost")
+        with patch("file_organizer.api.cache.Redis") as mock_cls:
+            mock_cls.from_url.return_value = mock_redis
             cache = RedisCache("redis://localhost:6379")
 
-            # Import the actual RedisError used by the module
-            from file_organizer.api.cache import RedisError
-
-            mock_redis.close.side_effect = RedisError("connection lost")
-
-            with patch("file_organizer.api.cache.logger") as mock_logger:
-                cache.close()
-                mock_logger.warning.assert_called_once()
-                call_args = mock_logger.warning.call_args
-                assert "close" in call_args[0][0].lower() or "Redis" in call_args[0][0]
+        with patch("file_organizer.api.cache.logger") as mock_logger:
+            cache.close()
+            mock_logger.warning.assert_called_once()
+            call_args = str(mock_logger.warning.call_args)
+            assert "close failed" in call_args

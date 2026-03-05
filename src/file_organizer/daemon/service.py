@@ -129,15 +129,15 @@ class DaemonService:
             if self._running:
                 raise RuntimeError("Daemon is already running")
 
-        self._started_event.clear()
-        self._stopped_event.clear()
+            self._started_event.clear()
+            self._stopped_event.clear()
 
-        self._thread = threading.Thread(
-            target=self._background_run,
-            name="daemon-service",
-            daemon=True,
-        )
-        self._thread.start()
+            self._thread = threading.Thread(
+                target=self._background_run,
+                name="daemon-service",
+                daemon=True,
+            )
+            self._thread.start()
 
         # Wait for the daemon to fully initialize
         self._started_event.wait(timeout=5.0)
@@ -166,7 +166,8 @@ class DaemonService:
         Performs a full stop followed by a background start.
         """
         logger.info("Restarting daemon service")
-        was_running = self._running
+        with self._lock:
+            was_running = self._running
 
         if was_running:
             self.stop()
@@ -299,8 +300,9 @@ class DaemonService:
             except Exception:
                 logger.exception("on_stop callback failed")
 
-        self._running = False
-        self._started_at = None
+        with self._lock:
+            self._running = False
+            self._started_at = None
         self._stopped_event.set()
         logger.info("Daemon service stopped")
 

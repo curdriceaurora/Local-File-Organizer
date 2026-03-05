@@ -6,6 +6,7 @@ import signal
 import threading
 import time
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -191,3 +192,113 @@ class TestDaemonServiceUptimeProperty:
         daemon.start_background()
         daemon.stop()
         assert daemon.uptime_seconds == 0.0
+
+
+class TestDaemonServiceForeground:
+    def test_start_foreground_runs_loop_until_stop(self, tmp_path):
+        """start() runs in foreground blocking until stop_event is set."""
+        pid_file = tmp_path / "daemon.pid"
+        config = _make_config(pid_file=pid_file)
+        daemon = DaemonService(config)
+
+        # Run start() in a thread since it blocks
+        started = threading.Event()
+        daemon.on_start(lambda: started.set())
+
+        t = threading.Thread(target=daemon.start, daemon=True)
+        t.start()
+        try:
+            assert started.wait(timeout=5.0), "Daemon did not start"
+            assert daemon.is_running
+            assert pid_file.exists()
+        finally:
+            daemon.stop()
+            t.join(timeout=5.0)
+
+        assert not daemon.is_running
+
+    def test_start_foreground_callback_exception_logged(self):
+        """on_start callback exception in foreground mode should be logged, not crash."""
+        config = _make_config()
+        daemon = DaemonService(config)
+        daemon.on_start(lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+
+        t = threading.Thread(target=daemon.start, daemon=True)
+        t.start()
+        try:
+            time.sleep(0.1)
+            assert daemon.is_running
+        finally:
+            daemon.stop()
+            t.join(timeout=5.0)
+
+    def test_start_foreground_double_start_raises(self):
+        """Calling start() while already running should raise."""
+        config = _make_config()
+        daemon = DaemonService(config)
+
+        t = threading.Thread(target=daemon.start, daemon=True)
+        t.start()
+        try:
+            daemon._started_event.wait(timeout=5.0)
+            with pytest.raises(RuntimeError, match="already running"):
+                daemon.start()
+        finally:
+            daemon.stop()
+            t.join(timeout=5.0)
+
+
+class TestDaemonServiceSignalHandlerEdgeCases:
+    def test_signal_handlers_skipped_in_non_main_thread(self):
+        """_install_signal_handlers should skip when not in main thread."""
+        config = _make_config()
+        daemon = DaemonService(config)
+        result = []
+
+        def worker():
+            daemon._install_signal_handlers()
+            # Should not have set any original handlers
+            result.append(daemon._original_sigterm)
+            result.append(daemon._original_sigint)
+
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join(timeout=5.0)
+        # Both should still be None (handlers not installed from non-main thread)
+        assert result == [None, None]
+
+    def test_signal_handler_installation_oserror(self):
+        """OSError during signal handler installation should be caught."""
+        config = _make_config()
+        daemon = DaemonService(config)
+        with patch("signal.getsignal", side_effect=OSError("not supported")):
+            # Should not raise
+            daemon._install_signal_handlers()
+
+    def test_restore_signal_handlers_skipped_in_non_main_thread(self):
+        """_restore_signal_handlers should skip when not in main thread."""
+        config = _make_config()
+        daemon = DaemonService(config)
+        # Set some fake originals
+        daemon._original_sigterm = signal.SIG_DFL
+        daemon._original_sigint = signal.SIG_DFL
+
+        def worker():
+            daemon._restore_signal_handlers()
+
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join(timeout=5.0)
+        # Should NOT have restored (not main thread), originals still set
+        assert daemon._original_sigterm is not None
+        assert daemon._original_sigint is not None
+
+    def test_restore_signal_handlers_oserror(self):
+        """OSError during signal handler restoration should be caught."""
+        config = _make_config()
+        daemon = DaemonService(config)
+        daemon._original_sigterm = signal.SIG_DFL
+        daemon._original_sigint = signal.SIG_DFL
+        with patch("signal.signal", side_effect=OSError("not supported")):
+            # Should not raise
+            daemon._restore_signal_handlers()

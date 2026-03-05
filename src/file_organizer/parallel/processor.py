@@ -8,6 +8,7 @@ retry logic, progress reporting, and graceful shutdown.
 from __future__ import annotations
 
 import os
+import threading
 import time
 from collections.abc import Callable, Iterator
 from concurrent.futures import (
@@ -79,6 +80,7 @@ class ParallelProcessor:
             config: Processing configuration. Uses defaults if None.
         """
         self._config = config or ParallelConfig()
+        self._lock = threading.Lock()
         self._executor_type_used: str = "thread"  # Track which executor type is in use
 
     @property
@@ -181,7 +183,9 @@ class ParallelProcessor:
             executor_type = (
                 "process" if self._config.executor_type == ExecutorType.PROCESS else "thread"
             )
-            exec_instance, self._executor_type_used = create_executor(executor_type, max_workers)
+            exec_instance, exec_type = create_executor(executor_type, max_workers)
+            with self._lock:
+                self._executor_type_used = exec_type
         else:
             assert executor is not None
             exec_instance = executor

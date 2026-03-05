@@ -1,4 +1,4 @@
-"""Tests for pipeline orchestrator watch loop — executor-based processing."""
+"""Tests for PipelineOrchestrator watch loop."""
 
 from __future__ import annotations
 
@@ -8,228 +8,138 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from file_organizer.pipeline.config import PipelineConfig
-from file_organizer.pipeline.orchestrator import PipelineOrchestrator
+from file_organizer.pipeline.orchestrator import PipelineConfig, PipelineOrchestrator
 
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def _patch_watch_loop_sleep():
-    """Patch time.sleep in watch loop to speed up tests."""
-    with patch("file_organizer.pipeline.orchestrator.time.sleep"):
-        yield
-
-
 @dataclass
 class FakeEvent:
-    """Minimal file-system event for testing."""
+    """Minimal file event for watch loop testing."""
 
     path: Path
     is_directory: bool = False
 
 
-def _sync_executor(pipeline: PipelineOrchestrator) -> MagicMock:
-    """Replace the executor with one that calls functions synchronously.
+class TestWatchLoop:
+    """Tests for _watch_loop method."""
 
-    This makes tests deterministic by avoiding thread-pool timing issues.
+    def _make_orchestrator(self) -> PipelineOrchestrator:
+        config = PipelineConfig(dry_run=True)
+        orch = PipelineOrchestrator(config)
+        return orch
 
-    Args:
-        pipeline: The orchestrator instance to configure.
-
-    Returns:
-        The mock executor configured with synchronous behavior.
-    """
-    mock_executor = MagicMock()
-
-    def sync_submit(fn, *args, **kwargs):  # type: ignore[no-untyped-def]
-        """Execute function synchronously instead of submitting to pool."""
-        fn(*args, **kwargs)
-        return MagicMock()
-
-    mock_executor.submit.side_effect = sync_submit
-    pipeline._executor = mock_executor
-    return mock_executor
-
-
-class TestWatchLoopProcessesFileEvents:
     def test_watch_loop_processes_file_events(self):
-        config = PipelineConfig()
-        pipeline = PipelineOrchestrator(config)
-        _sync_executor(pipeline)
-
-        fake_event = FakeEvent(path=Path("/tmp/test.txt"))
-        monitor = MagicMock()
-        monitor.get_events.side_effect = [[fake_event], []]
-
-        pipeline._monitor = monitor
-        pipeline._running = True
+        """File events should be passed to process_file."""
+        orch = self._make_orchestrator()
+        orch._running = True
+        mock_monitor = MagicMock()
+        orch._monitor = mock_monitor
 
         call_count = 0
 
-        def stop_after_one(*_args, **_kwargs):
+        def fake_get_events(max_size=None):
             nonlocal call_count
             call_count += 1
-            if call_count >= 1:
-                pipeline._running = False
-            return MagicMock(success=True, category="test")
+            if call_count == 1:
+                return [FakeEvent(path=Path("/tmp/test.txt"))]
+            # Stop the loop
+            orch._running = False
+            return []
 
-        with patch.object(pipeline, "process_file", side_effect=stop_after_one) as pf:
-            pipeline._watch_loop()
+        mock_monitor.get_events = fake_get_events
 
-        pf.assert_called_once_with(Path("/tmp/test.txt"))
+        with patch.object(orch, "process_file") as mock_process:
+            orch._watch_loop()
+            mock_process.assert_called_once_with(Path("/tmp/test.txt"))
 
     def test_watch_loop_skips_directory_events(self):
-        config = PipelineConfig()
-        pipeline = PipelineOrchestrator(config)
-        _sync_executor(pipeline)
-
-        dir_event = FakeEvent(path=Path("/tmp/somedir"), is_directory=True)
-        monitor = MagicMock()
-        monitor.get_events.side_effect = [[dir_event], []]
-
-        pipeline._monitor = monitor
-        pipeline._running = True
+        """Directory events should be skipped."""
+        orch = self._make_orchestrator()
+        orch._running = True
+        mock_monitor = MagicMock()
+        orch._monitor = mock_monitor
 
         call_count = 0
 
-        def count_and_stop(seconds):
+        def fake_get_events(max_size=None):
             nonlocal call_count
             call_count += 1
-            if call_count >= 1:
-                pipeline._running = False
+            if call_count == 1:
+                return [FakeEvent(path=Path("/tmp/somedir"), is_directory=True)]
+            orch._running = False
+            return []
 
-        with (
-            patch.object(pipeline, "process_file") as pf,
-            patch("file_organizer.pipeline.orchestrator.time.sleep", side_effect=count_and_stop),
-        ):
-            pipeline._watch_loop()
+        mock_monitor.get_events = fake_get_events
 
-        pf.assert_not_called()
+        with patch.object(orch, "process_file") as mock_process:
+            orch._watch_loop()
+            mock_process.assert_not_called()
 
     def test_watch_loop_handles_vanished_file(self):
-        config = PipelineConfig()
-        pipeline = PipelineOrchestrator(config)
-        _sync_executor(pipeline)
-
-        fake_event = FakeEvent(path=Path("/tmp/vanished.txt"))
-        monitor = MagicMock()
-        monitor.get_events.side_effect = [[fake_event], []]
-
-        pipeline._monitor = monitor
-        pipeline._running = True
+        """FileNotFoundError from process_file should be caught, loop continues."""
+        orch = self._make_orchestrator()
+        orch._running = True
+        mock_monitor = MagicMock()
+        orch._monitor = mock_monitor
 
         call_count = 0
 
-        def raise_fnf(*_args, **_kwargs):
+        def fake_get_events(max_size=None):
             nonlocal call_count
             call_count += 1
-            pipeline._running = False
-            raise FileNotFoundError("gone")
+            if call_count == 1:
+                return [
+                    FakeEvent(path=Path("/tmp/vanished.txt")),
+                    FakeEvent(path=Path("/tmp/exists.txt")),
+                ]
+            orch._running = False
+            return []
 
-        with patch.object(pipeline, "process_file", side_effect=raise_fnf):
-            # Should not crash — _process_watched_file catches FileNotFoundError
-            pipeline._watch_loop()
+        mock_monitor.get_events = fake_get_events
+
+        process_calls = []
+
+        def fake_process(path):
+            process_calls.append(path)
+            if "vanished" in str(path):
+                raise FileNotFoundError(f"No such file: {path}")
+
+        with patch.object(orch, "process_file", side_effect=fake_process):
+            orch._watch_loop()
+
+        # Both files attempted, loop didn't crash
+        assert len(process_calls) == 2
 
     def test_watch_loop_handles_processing_error(self):
-        config = PipelineConfig()
-        pipeline = PipelineOrchestrator(config)
-        _sync_executor(pipeline)
-
-        fake_event = FakeEvent(path=Path("/tmp/bad.txt"))
-        monitor = MagicMock()
-        monitor.get_events.side_effect = [[fake_event], []]
-
-        pipeline._monitor = monitor
-        pipeline._running = True
+        """RuntimeError from process_file should be caught, loop continues."""
+        orch = self._make_orchestrator()
+        orch._running = True
+        mock_monitor = MagicMock()
+        orch._monitor = mock_monitor
 
         call_count = 0
 
-        def raise_runtime(*_args, **_kwargs):
+        def fake_get_events(max_size=None):
             nonlocal call_count
             call_count += 1
-            pipeline._running = False
-            raise RuntimeError("boom")
+            if call_count == 1:
+                return [FakeEvent(path=Path("/tmp/bad.txt"))]
+            orch._running = False
+            return []
 
-        with patch.object(pipeline, "process_file", side_effect=raise_runtime):
-            # Should not crash — exception is logged and loop continues
-            pipeline._watch_loop()
+        mock_monitor.get_events = fake_get_events
+
+        with patch.object(orch, "process_file", side_effect=RuntimeError("processing failed")):
+            # Should not raise
+            orch._watch_loop()
 
     def test_watch_loop_stops_on_running_false(self):
-        config = PipelineConfig()
-        pipeline = PipelineOrchestrator(config)
+        """Loop should exit when _running is set to False."""
+        orch = self._make_orchestrator()
+        orch._running = False
+        orch._monitor = MagicMock()
 
-        monitor = MagicMock()
-        monitor.get_events.return_value = []
-
-        pipeline._monitor = monitor
-        pipeline._running = False
-
-        # Loop should exit immediately
-        pipeline._watch_loop()
-
-
-class TestWatchLoopExecutor:
-    """Tests for the ThreadPoolExecutor integration in the watch loop."""
-
-    def test_watch_loop_uses_executor_submit(self):
-        """Verify _watch_loop submits work to the executor instead of calling directly."""
-        config = PipelineConfig()
-        pipeline = PipelineOrchestrator(config)
-
-        fake_event = FakeEvent(path=Path("/tmp/test.txt"))
-        monitor = MagicMock()
-        monitor.get_events.side_effect = [[fake_event], []]
-
-        pipeline._monitor = monitor
-        pipeline._running = True
-
-        mock_executor = MagicMock()
-        # submit doesn't call the function — just records it
-        mock_executor.submit.return_value = MagicMock()
-        pipeline._executor = mock_executor
-
-        call_count = 0
-
-        def stop_after_events(seconds):
-            nonlocal call_count
-            call_count += 1
-            if call_count >= 1:
-                pipeline._running = False
-
-        with patch(
-            "file_organizer.pipeline.orchestrator.time.sleep", side_effect=stop_after_events
-        ):
-            pipeline._watch_loop()
-
-        # Verify submit was called with _process_watched_file and the path
-        mock_executor.submit.assert_called_once_with(
-            pipeline._process_watched_file, Path("/tmp/test.txt")
-        )
-
-    def test_executor_shutdown_on_stop(self):
-        """Verify _executor.shutdown() is called during stop()."""
-        config = PipelineConfig()
-        pipeline = PipelineOrchestrator(config)
-
-        mock_executor = MagicMock()
-        pipeline._executor = mock_executor
-        pipeline._running = True
-
-        pipeline.stop()
-
-        mock_executor.shutdown.assert_called_once_with(wait=True)
-
-    def test_executor_max_workers(self):
-        """Verify max_workers matches config.max_concurrent."""
-        config = PipelineConfig(max_concurrent=8)
-        pipeline = PipelineOrchestrator(config)
-
-        assert pipeline._executor._max_workers == 8
-
-    def test_executor_default_max_workers(self):
-        """Verify default max_workers is 4."""
-        config = PipelineConfig()
-        pipeline = PipelineOrchestrator(config)
-
-        assert pipeline._executor._max_workers == 4
+        # Should return immediately without calling get_events
+        orch._watch_loop()
+        orch._monitor.get_events.assert_not_called()

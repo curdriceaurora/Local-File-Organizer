@@ -31,6 +31,7 @@ def create_executor(
         is either "process" or "thread" indicating which was actually created.
     """
     if executor_type == "process":
+        process_executor = None
         try:
             process_executor = ProcessPoolExecutor(max_workers=max_workers)
             logger.info(
@@ -39,6 +40,8 @@ def create_executor(
             )
             return process_executor, "process"
         except (RuntimeError, OSError) as e:
+            if process_executor is not None:
+                process_executor.shutdown(wait=False)
             logger.warning(
                 "ProcessPoolExecutor initialization failed: %s. "
                 "Falling back to ThreadPoolExecutor.",
