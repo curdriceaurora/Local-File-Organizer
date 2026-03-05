@@ -31,7 +31,7 @@ def _make_suggestion(
     s = MagicMock()
     s.suggestion_id = suggestion_id
     s.suggestion_type.value = suggestion_type
-    s.file_path = file_path or Path("/tmp/test.txt")
+    s.file_path = file_path or Path("test.txt")
     s.target_path = target_path
     s.confidence = confidence
     s.reasoning = reasoning

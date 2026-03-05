@@ -6,6 +6,7 @@ template rendering, job management, and the FileOrganizer.
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
@@ -230,6 +231,8 @@ class TestOrganizeExecute:
                 data={"plan_id": "test-plan", "dry_run": "0"},
             )
         assert response.status_code == 200
+        trigger = json.loads(response.headers["HX-Trigger"])
+        assert trigger == {"refreshHistory": True, "refreshStats": True}
 
 
 # ---------------------------------------------------------------------------
@@ -351,6 +354,8 @@ class TestOrganizeJobRollback:
             mock_tpl.TemplateResponse.return_value = HTMLResponse("<div>rolled back</div>")
             response = client.post("/ui/organize/jobs/test-job-1/rollback")
         assert response.status_code == 200
+        trigger = json.loads(response.headers["HX-Trigger"])
+        assert trigger == {"refreshHistory": True, "refreshStats": True}
 
     def test_rollback_not_found(self, client):
         with patch(

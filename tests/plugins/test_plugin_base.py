@@ -132,7 +132,7 @@ class TestValidateManifestOptional:
         validate_manifest(_valid_manifest(max_organizer_version=None))
 
     def test_allowed_paths_list_accepted(self) -> None:
-        validate_manifest(_valid_manifest(allowed_paths=["/tmp"]))
+        validate_manifest(_valid_manifest(allowed_paths=["./data"]))
 
     def test_allowed_paths_null_raises(self) -> None:
         with pytest.raises(PluginLoadError, match="field 'allowed_paths' must not be null"):

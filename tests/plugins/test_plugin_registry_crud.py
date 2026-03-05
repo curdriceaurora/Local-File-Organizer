@@ -42,7 +42,7 @@ def _make_record(name: str = "test-plugin") -> PluginRecord:
     return PluginRecord(
         name=name,
         version="1.0.0",
-        plugin_dir=Path("/fake"),
+        plugin_dir=Path("fake"),
         policy=PluginSecurityPolicy.unrestricted(),
         manifest={"name": name},
         executor=MagicMock(),
@@ -174,8 +174,8 @@ class TestCallAll:
         rec.executor.call.return_value = None
         reg._records["p"] = rec
 
-        reg.call_all("on_file", "/tmp/f.txt", mode="read")
-        rec.executor.call.assert_called_once_with("on_file", "/tmp/f.txt", mode="read")
+        reg.call_all("on_file", "tmp/f.txt", mode="read")
+        rec.executor.call.assert_called_once_with("on_file", "tmp/f.txt", mode="read")
 
 
 # ---------------------------------------------------------------------------

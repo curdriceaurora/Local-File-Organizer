@@ -10,7 +10,7 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.fixture
-def tc():
+def tc() -> PluginTestCase:
     """Provide a PluginTestCase with automatic setUp/tearDown."""
     instance = PluginTestCase()
     instance.setUp()

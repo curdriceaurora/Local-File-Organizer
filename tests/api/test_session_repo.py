@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.orm import Session
@@ -87,8 +87,9 @@ class TestSessionRepositoryGetActiveByTokenHash:
         session = self._make_session(result=None)
         custom_now = datetime(2026, 1, 1, tzinfo=UTC)
 
-        SessionRepository.get_active_by_token_hash(session, "hash-abc", now=custom_now)
-        # Verify filter was called (the now parameter affects the expiry comparison)
+        with patch("file_organizer.api.repositories.session_repo.datetime") as mock_dt:
+            SessionRepository.get_active_by_token_hash(session, "hash-abc", now=custom_now)
+            mock_dt.now.assert_not_called()
         session.query.return_value.filter.assert_called()
 
 
@@ -116,7 +117,9 @@ class TestSessionRepositoryListActiveForUser:
         query.all.return_value = []
 
         custom_now = datetime(2026, 3, 1, tzinfo=UTC)
-        result = SessionRepository.list_active_for_user(session, "user-1", now=custom_now)
+        with patch("file_organizer.api.repositories.session_repo.datetime") as mock_dt:
+            result = SessionRepository.list_active_for_user(session, "user-1", now=custom_now)
+            mock_dt.now.assert_not_called()
         assert result == []
 
 
@@ -175,5 +178,7 @@ class TestSessionRepositoryPruneExpired:
         query.delete.return_value = 1
 
         custom_now = datetime(2026, 6, 1, tzinfo=UTC)
-        result = SessionRepository.prune_expired(session, now=custom_now)
+        with patch("file_organizer.api.repositories.session_repo.datetime") as mock_dt:
+            result = SessionRepository.prune_expired(session, now=custom_now)
+            mock_dt.now.assert_not_called()
         assert result == 1

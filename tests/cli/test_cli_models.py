@@ -70,6 +70,7 @@ class TestModelPull:
 
         result = runner.invoke(app, ["model", "pull", "nonexistent:model"])
         assert result.exit_code == 1
+        mock_mgr.pull_model.assert_called_once_with("nonexistent:model")
 
 
 # ---------------------------------------------------------------------------

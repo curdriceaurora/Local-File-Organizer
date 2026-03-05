@@ -6,7 +6,7 @@ via TestClient at the HTTP transport layer with mocked dependencies.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from starlette.testclient import TestClient
 
+from file_organizer.api.auth import TokenBundle
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.exceptions import setup_exception_handlers
@@ -172,7 +173,14 @@ class TestLoginPost:
             ),
             patch(
                 "file_organizer.web.profile_routes.create_token_bundle",
-                return_value=MagicMock(access_token="tok123", refresh_token="ref456"),
+                return_value=TokenBundle(
+                    access_token="tok123",
+                    refresh_token="ref456",
+                    access_jti="jti-access-1",
+                    refresh_jti="jti-refresh-1",
+                    access_expires_at=datetime(2026, 6, 1, tzinfo=UTC) + timedelta(hours=1),
+                    refresh_expires_at=datetime(2026, 6, 1, tzinfo=UTC) + timedelta(days=7),
+                ),
             ),
         ):
             response = client.post(
