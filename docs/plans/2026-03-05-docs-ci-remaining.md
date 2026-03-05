@@ -101,7 +101,7 @@ def _extract_section(content: str, heading: str) -> str:
     start = match.end()
     # Find next heading at same or higher level
     next_heading = re.search(
-        rf"^#{1,{len(level)}}\s", content[start:], re.MULTILINE
+        rf"^#{{1,{len(level)}}}\s", content[start:], re.MULTILINE
     )
     if next_heading:
         return content[start : start + next_heading.start()]
@@ -114,7 +114,7 @@ def _extract_section(content: str, heading: str) -> str:
 pytest tests/docs/test_pyproject_sync.py::TestExtractSection -v
 ```
 
-Expected: 3 PASS
+Expected: 5 PASS
 
 **Step 3: Commit**
 
