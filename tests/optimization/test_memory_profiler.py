@@ -451,3 +451,97 @@ class TestMemoryProfilerTopObjects:
         """Test that limit is respected."""
         result = MemoryProfiler._get_top_objects(limit=3)
         assert len(result) <= 3
+
+
+@pytest.mark.unit
+class TestProfileGCBehavior:
+    """Tests for GC disable/enable during profiled function measurement."""
+
+    @patch.object(MemoryProfiler, "_get_rss", return_value=100_000_000)
+    def test_gc_disabled_during_measurement(self, mock_rss: MagicMock) -> None:
+        """Verify gc.disable is called before and gc.enable after the function."""
+        profiler = MemoryProfiler()
+        gc_calls: list[str] = []
+
+        original_collect = __import__("gc").collect
+        original_disable = __import__("gc").disable
+        original_enable = __import__("gc").enable
+
+        def track_collect(*a: object, **kw: object) -> int:
+            gc_calls.append("collect")
+            return original_collect()
+
+        def track_disable() -> None:
+            gc_calls.append("disable")
+            original_disable()
+
+        def track_enable() -> None:
+            gc_calls.append("enable")
+            original_enable()
+
+        @profiler.profile
+        def sample() -> str:
+            return "ok"
+
+        with (
+            patch("gc.collect", side_effect=track_collect),
+            patch("gc.disable", side_effect=track_disable),
+            patch("gc.enable", side_effect=track_enable),
+        ):
+            sample()
+
+        # Expected order: collect (pre-clean), disable, enable, collect (post-clean)
+        assert gc_calls == ["collect", "disable", "enable", "collect"]
+
+    @patch.object(MemoryProfiler, "_get_rss", return_value=100_000_000)
+    def test_gc_reenabled_on_exception(self, mock_rss: MagicMock) -> None:
+        """GC must be re-enabled even if the profiled function raises."""
+        profiler = MemoryProfiler()
+        enable_called = False
+
+        original_enable = __import__("gc").enable
+
+        def track_enable() -> None:
+            nonlocal enable_called
+            enable_called = True
+            original_enable()
+
+        @profiler.profile
+        def exploding() -> None:
+            raise ValueError("boom")
+
+        with (
+            patch("gc.enable", side_effect=track_enable),
+        ):
+            with pytest.raises(ValueError, match="boom"):
+                exploding()
+
+        assert enable_called, "gc.enable() must be called even when function raises"
+
+    @patch.object(MemoryProfiler, "_get_rss", return_value=100_000_000)
+    def test_no_gc_collect_during_measurement(self, mock_rss: MagicMock) -> None:
+        """Verify gc.collect is NOT called between start and end of measurement."""
+        profiler = MemoryProfiler()
+        collect_timestamps: list[float] = []
+
+        @profiler.profile
+        def sample() -> str:
+            return "ok"
+
+        original_collect = __import__("gc").collect
+
+        def track_collect(*a: object, **kw: object) -> int:
+            collect_timestamps.append(time.monotonic())
+            return original_collect()
+
+        with patch("gc.collect", side_effect=track_collect):
+            before = time.monotonic()
+            sample()
+            after = time.monotonic()
+
+        # Should have exactly 2 collects: one before measurement, one after
+        assert len(collect_timestamps) == 2
+        # First collect is pre-measurement (before gc.disable)
+        # Second collect is post-measurement (after gc.enable)
+        assert collect_timestamps[0] >= before
+        assert collect_timestamps[1] <= after

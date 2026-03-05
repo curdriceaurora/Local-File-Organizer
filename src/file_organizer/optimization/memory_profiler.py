@@ -111,14 +111,16 @@ class MemoryProfiler:
             mem_before = self._get_rss()
             peak = mem_before
 
+            gc.disable()
             start = time.monotonic()
             try:
                 result = func(*args, **kwargs)
             finally:
                 end = time.monotonic()
-                gc.collect()
                 mem_after = self._get_rss()
                 peak = max(peak, mem_after)
+                gc.enable()
+                gc.collect()
 
             allocated = max(0, mem_after - mem_before)
             freed = max(0, mem_before - mem_after)
