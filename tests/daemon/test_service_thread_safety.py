@@ -11,7 +11,7 @@ import pytest
 from file_organizer.daemon.config import DaemonConfig
 from file_organizer.daemon.service import DaemonService
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _make_config(**kwargs) -> DaemonConfig:

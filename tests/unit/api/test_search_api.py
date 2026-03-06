@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 
 from file_organizer.api.main import create_app
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.fixture
 def client():
@@ -13,7 +15,6 @@ def client():
     return TestClient(app)
 
 
-@pytest.mark.unit
 class TestSearchEndpoint:
     """Tests for the /search endpoint."""
 

@@ -10,7 +10,7 @@ import pytest
 
 from file_organizer.pipeline.orchestrator import PipelineConfig, PipelineOrchestrator
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 @dataclass

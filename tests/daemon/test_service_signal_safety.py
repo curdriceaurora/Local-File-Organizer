@@ -15,7 +15,7 @@ from file_organizer.daemon.service import DaemonService
 
 from .conftest import wired_pipe
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _make_config(**kwargs) -> DaemonConfig:

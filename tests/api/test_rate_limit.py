@@ -14,8 +14,9 @@ from file_organizer.api.rate_limit import (
     build_rate_limiter,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
-@pytest.mark.unit
+
 class TestRateLimitResult:
     """Tests for RateLimitResult dataclass."""
 
@@ -31,7 +32,6 @@ class TestRateLimitResult:
             result.allowed = False  # type: ignore[misc]
 
 
-@pytest.mark.unit
 class TestInMemoryRateLimiter:
     """Tests for InMemoryRateLimiter."""
 
@@ -107,7 +107,6 @@ class TestInMemoryRateLimiter:
         assert result.remaining == 0
 
 
-@pytest.mark.unit
 class TestRedisRateLimiter:
     """Tests for RedisRateLimiter."""
 
@@ -164,7 +163,6 @@ class TestRedisRateLimiter:
         assert call_args[0][3] == 120  # window_seconds
 
 
-@pytest.mark.unit
 class TestBuildRateLimiter:
     """Tests for build_rate_limiter."""
 

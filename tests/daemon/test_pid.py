@@ -14,6 +14,8 @@ import pytest
 
 from file_organizer.daemon.pid import PidFileManager
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.fixture
 def pid_manager() -> PidFileManager:

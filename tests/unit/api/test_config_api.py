@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 
 from file_organizer.api.main import create_app
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.fixture
 def client():
@@ -13,7 +15,6 @@ def client():
     return TestClient(app)
 
 
-@pytest.mark.unit
 class TestConfigGetEndpoint:
     """Tests for GET /config endpoint."""
 
@@ -72,7 +73,6 @@ class TestConfigGetEndpoint:
             assert "version" in data or "app_version" in data
 
 
-@pytest.mark.unit
 class TestConfigUpdateEndpoint:
     """Tests for PUT /config endpoint."""
 
@@ -139,7 +139,6 @@ class TestConfigUpdateEndpoint:
                     assert data["organization"].get("method") == "PARA"
 
 
-@pytest.mark.unit
 class TestConfigResetEndpoint:
     """Tests for POST /config/reset endpoint."""
 

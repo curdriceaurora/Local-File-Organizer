@@ -9,7 +9,11 @@ import unittest
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from unittest.mock import patch
 
+import pytest
+
 from file_organizer.parallel.executor import create_executor
+
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 class TestCreateExecutor(unittest.TestCase):

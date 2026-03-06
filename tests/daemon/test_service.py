@@ -18,6 +18,8 @@ import pytest
 from file_organizer.daemon.config import DaemonConfig
 from file_organizer.daemon.service import DaemonService
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.fixture
 def watch_dir(tmp_path: Path) -> Path:

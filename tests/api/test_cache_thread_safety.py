@@ -10,7 +10,7 @@ import pytest
 
 from file_organizer.api.cache import InMemoryCache, RedisCache
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 class TestInMemoryCacheThreadSafety:

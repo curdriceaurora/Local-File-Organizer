@@ -6,8 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 from fastapi import FastAPI
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
-@pytest.mark.unit
+
 class TestAppInitializationLaziness:
     """Test that app initialization is deferred and not at import time."""
 
@@ -55,7 +56,6 @@ class TestAppInitializationLaziness:
             main_module._app = original_app
 
 
-@pytest.mark.unit
 class TestAppThreadSafety:
     """Test that app initialization is thread-safe."""
 
@@ -195,7 +195,6 @@ class TestAppThreadSafety:
             main_module._LOGGING_CONFIGURED = original_logging
 
 
-@pytest.mark.unit
 class TestAppCaching:
     """Test that app instance is properly cached."""
 

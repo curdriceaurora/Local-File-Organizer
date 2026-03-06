@@ -8,8 +8,9 @@ import pytest
 
 from file_organizer.pipeline.router import FileRouter, ProcessorType
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
-@pytest.mark.unit
+
 class TestProcessorTypeEnum:
     """Test the ProcessorType enum values."""
 
@@ -29,7 +30,6 @@ class TestProcessorTypeEnum:
         assert ProcessorType.UNKNOWN == "unknown"
 
 
-@pytest.mark.unit
 class TestFileRouterExtensionRouting:
     """Test extension-based file routing."""
 
@@ -124,7 +124,6 @@ class TestFileRouterExtensionRouting:
         assert router.route(Path("README")) == ProcessorType.UNKNOWN
 
 
-@pytest.mark.unit
 class TestFileRouterExtensionManagement:
     """Test adding and removing extension mappings."""
 
@@ -166,7 +165,6 @@ class TestFileRouterExtensionManagement:
         assert ".custom" not in router.get_extension_map()
 
 
-@pytest.mark.unit
 class TestFileRouterCustomRules:
     """Test custom routing rules."""
 
@@ -229,7 +227,6 @@ class TestFileRouterCustomRules:
         assert router.route(Path("documents/data.csv")) == ProcessorType.TEXT
 
 
-@pytest.mark.unit
 class TestFileRouterEdgeCases:
     """Additional edge case tests for FileRouter."""
 

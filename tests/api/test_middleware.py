@@ -6,12 +6,15 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
 from file_organizer.api.rate_limit import RateLimitResult
+
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 # ---------------------------------------------------------------------------
 # Helpers

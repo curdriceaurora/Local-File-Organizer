@@ -24,6 +24,8 @@ from file_organizer.api.auth import (
 )
 from file_organizer.api.config import ApiSettings, load_settings
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 @pytest.fixture()
 def settings() -> ApiSettings:

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 def _make_app(allowed_paths: list[str]) -> TestClient:

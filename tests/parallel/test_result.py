@@ -12,8 +12,9 @@ import pytest
 
 from file_organizer.parallel.result import BatchResult, FileResult
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
-@pytest.mark.unit
+
 class TestFileResult(unittest.TestCase):
     """Test cases for FileResult dataclass."""
 
@@ -116,7 +117,6 @@ class TestFileResult(unittest.TestCase):
         self.assertIsNone(result.error)
 
 
-@pytest.mark.unit
 class TestBatchResult(unittest.TestCase):
     """Test cases for BatchResult dataclass."""
 

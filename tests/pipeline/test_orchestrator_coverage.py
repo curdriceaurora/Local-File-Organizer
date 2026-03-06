@@ -15,7 +15,7 @@ from file_organizer.pipeline.orchestrator import (
 )
 from file_organizer.pipeline.router import ProcessorType
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 class TestProcessingResult:

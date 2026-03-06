@@ -21,6 +21,8 @@ from file_organizer.api.dependencies import (
 from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.auth import router
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
 
 def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:  # noqa: C901
     """Create a minimal FastAPI app with the auth router and dependency overrides."""

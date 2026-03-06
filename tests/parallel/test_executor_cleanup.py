@@ -9,7 +9,7 @@ import pytest
 
 from file_organizer.parallel.executor import create_executor
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 class TestExecutorFactoryCleanup:

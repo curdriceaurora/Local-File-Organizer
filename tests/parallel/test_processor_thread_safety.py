@@ -9,7 +9,7 @@ import pytest
 from file_organizer.parallel.config import ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 class TestProcessorThreadSafety:
