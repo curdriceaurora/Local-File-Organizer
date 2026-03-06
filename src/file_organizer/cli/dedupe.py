@@ -470,7 +470,7 @@ Examples:
         # Progress callback
         progress_bar = None
 
-        def progress_callback(current: int, total: int):
+        def progress_callback(current: int, total: int) -> None:
             """Update progress display for file hashing.
 
             Args:
