@@ -65,10 +65,11 @@ def _collect_matching_files(
     if file_type:
         ext_filter = file_type.lower() if file_type.startswith(".") else f".{file_type.lower()}"
 
-    count = 0
+    traversed = 0
     try:
         for entry in root.rglob("*"):
-            if count >= max_files:
+            traversed += 1
+            if traversed > max_files:
                 break
             if not entry.is_file():
                 continue
@@ -79,7 +80,6 @@ def _collect_matching_files(
             # Check if query matches name or path
             if q_lower in entry.name.lower() or q_lower in str(entry).lower():
                 yield entry
-                count += 1
     except PermissionError:
         logger.debug("Permission denied traversing %s", root)
 

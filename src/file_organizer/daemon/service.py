@@ -345,15 +345,23 @@ class DaemonService:
             if self._original_sigint is not None:
                 signal.signal(signal.SIGINT, self._original_sigint)
                 self._original_sigint = None
-            if self._sig_wakeup_r is not None:
-                os.close(self._sig_wakeup_r)
-                self._sig_wakeup_r = None
-            if self._sig_wakeup_w is not None:
-                os.close(self._sig_wakeup_w)
-                self._sig_wakeup_w = None
             logger.debug("Restored original signal handlers")
         except (OSError, ValueError) as exc:
             logger.warning("Could not restore signal handlers: %s", exc)
+        finally:
+            # Always close pipe fds and clear attributes, even if signal restoration fails
+            if self._sig_wakeup_r is not None:
+                try:
+                    os.close(self._sig_wakeup_r)
+                except OSError:
+                    pass
+                self._sig_wakeup_r = None
+            if self._sig_wakeup_w is not None:
+                try:
+                    os.close(self._sig_wakeup_w)
+                except OSError:
+                    pass
+                self._sig_wakeup_w = None
 
     def _handle_signal(self, signum: int, frame: object) -> None:
         """Handle a termination signal by requesting graceful shutdown.

@@ -204,7 +204,7 @@ class TestWatchLoopExecutor:
 
         pipeline.stop()
 
-        mock_executor.shutdown.assert_called_once_with(wait=False)
+        mock_executor.shutdown.assert_called_once_with(wait=True)
 
     def test_executor_max_workers(self):
         """Verify max_workers matches config.max_concurrent."""

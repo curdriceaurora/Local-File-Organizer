@@ -116,6 +116,9 @@ class PipelineOrchestrator:
                 raise RuntimeError("Pipeline is already running")
 
             self._running = True
+            # Recreate executor if it was shutdown in previous stop()
+            if self._executor._shutdown:
+                self._executor = ThreadPoolExecutor(max_workers=self.config.max_concurrent)
 
             # Start file monitor if watch config is provided
             if self.config.watch_config is not None:
@@ -149,11 +152,12 @@ class PipelineOrchestrator:
                 self._watch_thread.join(timeout=5.0)
                 self._watch_thread = None
 
+            # Shut down executor first, waiting for in-flight tasks to complete
+            # This ensures no race conditions with processor cleanup
+            self._executor.shutdown(wait=True)
+
             # Clean up processors
             self.processor_pool.cleanup()
-
-            # Shut down the thread pool executor
-            self._executor.shutdown(wait=False)
 
             logger.info("Pipeline stopped")
 

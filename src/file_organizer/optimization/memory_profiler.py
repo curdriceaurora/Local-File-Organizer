@@ -111,6 +111,8 @@ class MemoryProfiler:
             mem_before = self._get_rss()
             peak = mem_before
 
+            # Capture initial GC state and disable for measurement
+            gc_was_enabled = gc.isenabled()
             gc.disable()
             start = time.monotonic()
             try:
@@ -119,8 +121,11 @@ class MemoryProfiler:
                 end = time.monotonic()
                 mem_after = self._get_rss()
                 peak = max(peak, mem_after)
-                gc.enable()
-                gc.collect()
+                # Restore GC to initial state
+                if gc_was_enabled:
+                    gc.enable()
+            # Collect outside measurement window
+            gc.collect()
 
             allocated = max(0, mem_after - mem_before)
             freed = max(0, mem_before - mem_after)
