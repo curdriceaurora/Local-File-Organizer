@@ -126,18 +126,29 @@ class DaemonService:
             RuntimeError: If the daemon is already running.
         """
         with self._lock:
-            if self._running:
+            if self._running or (self._thread is not None and self._thread.is_alive()):
                 raise RuntimeError("Daemon is already running")
+            if self._thread is not None and not self._thread.is_alive():
+                self._thread = None
 
             self._started_event.clear()
             self._stopped_event.clear()
 
+            # Set _running = True while holding lock to prevent race condition
+            # where two threads both pass the check above before _running is set
+            self._running = True
             self._thread = threading.Thread(
                 target=self._background_run,
                 name="daemon-service",
                 daemon=True,
             )
-            self._thread.start()
+            try:
+                self._thread.start()
+            except Exception:
+                # Reset state on thread creation failure
+                self._running = False
+                self._thread = None
+                raise
 
         # Wait for the daemon to fully initialize
         self._started_event.wait(timeout=5.0)
@@ -213,12 +224,11 @@ class DaemonService:
         self._on_stop_callback = callback
 
     def _background_run(self) -> None:
-        """Entry point for the background thread."""
-        with self._lock:
-            if self._running:
-                return
-            self._running = True
+        """Entry point for the background thread.
 
+        Assumes self._running is already set to True by start_background()
+        while holding self._lock.
+        """
         logger.info("Starting daemon service (background)")
         self._started_at = time.monotonic()
         self._stop_event.clear()

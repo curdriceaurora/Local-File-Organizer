@@ -129,7 +129,7 @@ class TestAsyncClientFiles:
             {
                 "items": [
                     {
-                        "path": "/f.txt",
+                        "path": "files/f.txt",
                         "name": "f.txt",
                         "size": 100,
                         "created": _NOW,
@@ -145,14 +145,14 @@ class TestAsyncClientFiles:
         client._client = AsyncMock()
         client._client.get = AsyncMock(return_value=resp)
 
-        result = await client.list_files("/tmp", file_type="txt")
+        result = await client.list_files("incoming", file_type="txt")
         assert result.total == 1
 
     async def test_get_file_info(self):
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
-                "path": "/f.txt",
+                "path": "files/f.txt",
                 "name": "f.txt",
                 "size": 100,
                 "created": _NOW,
@@ -163,14 +163,14 @@ class TestAsyncClientFiles:
         client._client = AsyncMock()
         client._client.get = AsyncMock(return_value=resp)
 
-        info = await client.get_file_info("/f.txt")
+        info = await client.get_file_info("files/f.txt")
         assert info.name == "f.txt"
 
     async def test_read_file_content(self):
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
-                "path": "/f.txt",
+                "path": "files/f.txt",
                 "content": "hello",
                 "encoding": "utf-8",
                 "truncated": False,
@@ -180,25 +180,27 @@ class TestAsyncClientFiles:
         client._client = AsyncMock()
         client._client.get = AsyncMock(return_value=resp)
 
-        content = await client.read_file_content("/f.txt")
+        content = await client.read_file_content("files/f.txt")
         assert content.content == "hello"
 
     async def test_move_file(self):
         client = AsyncFileOrganizerClient()
-        resp = _ok({"source": "/a", "destination": "/b", "moved": True, "dry_run": False})
+        resp = _ok(
+            {"source": "source.txt", "destination": "dest.txt", "moved": True, "dry_run": False}
+        )
         client._client = AsyncMock()
         client._client.post = AsyncMock(return_value=resp)
 
-        result = await client.move_file("/a", "/b")
+        result = await client.move_file("source.txt", "dest.txt")
         assert result.moved is True
 
     async def test_delete_file(self):
         client = AsyncFileOrganizerClient()
-        resp = _ok({"path": "/f.txt", "deleted": True, "dry_run": False})
+        resp = _ok({"path": "files/f.txt", "deleted": True, "dry_run": False})
         client._client = AsyncMock()
         client._client.request = AsyncMock(return_value=resp)
 
-        result = await client.delete_file("/f.txt", permanent=True)
+        result = await client.delete_file("files/f.txt", permanent=True)
         assert result.deleted is True
 
 
@@ -206,11 +208,11 @@ class TestAsyncClientFiles:
 class TestAsyncClientOrganize:
     async def test_scan(self):
         client = AsyncFileOrganizerClient()
-        resp = _ok({"input_dir": "/tmp", "total_files": 10, "counts": {"txt": 5}})
+        resp = _ok({"input_dir": "incoming", "total_files": 10, "counts": {"txt": 5}})
         client._client = AsyncMock()
         client._client.post = AsyncMock(return_value=resp)
 
-        result = await client.scan("/tmp")
+        result = await client.scan("incoming")
         assert result.total_files == 10
 
     async def test_preview_organize(self):
@@ -229,7 +231,7 @@ class TestAsyncClientOrganize:
         client._client = AsyncMock()
         client._client.post = AsyncMock(return_value=resp)
 
-        result = await client.preview_organize("/in", "/out")
+        result = await client.preview_organize("input_dir", "output_dir")
         assert result.total_files == 5
 
     async def test_organize(self):
@@ -238,7 +240,7 @@ class TestAsyncClientOrganize:
         client._client = AsyncMock()
         client._client.post = AsyncMock(return_value=resp)
 
-        result = await client.organize("/in", "/out")
+        result = await client.organize("input_dir", "output_dir")
         assert result.job_id == "j1"
 
     async def test_get_job(self):

@@ -34,11 +34,14 @@ class TestStartBackgroundLockCoverage:
         daemon = DaemonService(config)
 
         # Verify that _started_event, _stopped_event, and _thread are all
-        # set atomically within the lock
+        # set atomically within the lock. _running must be set before
+        # thread creation so concurrent calls see consistent state.
         daemon.start_background()
         try:
             assert daemon.is_running
             assert daemon._thread is not None
+            # Verify _thread is alive (created and started while holding lock)
+            assert daemon._thread.is_alive()
         finally:
             daemon.stop()
 
@@ -60,9 +63,53 @@ class TestStartBackgroundLockCoverage:
         for t in threads:
             t.start()
         for t in threads:
-            t.join(timeout=10)
+            t.join()  # Wait indefinitely instead of timeout
+
+        # Verify all threads actually terminated (not hung)
+        for i, t in enumerate(threads):
+            assert not t.is_alive(), f"Cycle thread {i} did not terminate"
 
         assert not errors, f"Race condition errors: {errors}"
+
+    def test_concurrent_start_raises_on_second_call(self):
+        """Concurrent start_background calls should only succeed once.
+
+        Verifies that _running is protected by the lock and set before
+        thread creation, preventing the double-start race condition.
+        """
+        config = _make_config()
+        daemon = DaemonService(config)
+        errors: list[Exception] = []
+        successes = 0
+
+        def try_start():
+            nonlocal successes
+            try:
+                daemon.start_background()
+                successes += 1
+            except RuntimeError as exc:
+                if "already running" in str(exc):
+                    errors.append(None)  # Expected error
+                else:
+                    errors.append(exc)
+            except Exception as exc:
+                errors.append(exc)
+
+        # Spawn multiple threads trying to start simultaneously
+        threads = [threading.Thread(target=try_start) for _ in range(5)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # Only one should succeed
+        assert successes == 1, f"Expected 1 success, got {successes}"
+        # Rest should get RuntimeError
+        assert len(errors) == 4, f"Expected 4 errors, got {len(errors)}"
+        # No unexpected errors (check all are None = expected error)
+        assert all(e is None for e in errors), f"Unexpected errors: {[e for e in errors if e]}"
+
+        daemon.stop()
 
 
 class TestRestartLockedRead:

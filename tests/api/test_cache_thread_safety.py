@@ -50,6 +50,10 @@ class TestInMemoryCacheThreadSafety:
         for t in threads:
             t.join(timeout=10)
 
+        # Verify all threads actually terminated (not hung)
+        for i, t in enumerate(threads):
+            assert not t.is_alive(), f"Thread {i} did not terminate"
+
         assert not errors, f"Thread safety errors: {errors}"
 
     def test_concurrent_expired_eviction(self):
@@ -79,6 +83,10 @@ class TestInMemoryCacheThreadSafety:
         for t in threads:
             t.join(timeout=10)
 
+        # Verify all threads actually terminated (not hung)
+        for i, t in enumerate(threads):
+            assert not t.is_alive(), f"Reader thread {i} did not terminate"
+
         assert not errors, f"Eviction race errors: {errors}"
 
     def test_concurrent_delete(self):
@@ -102,6 +110,10 @@ class TestInMemoryCacheThreadSafety:
         t2.start()
         t1.join(timeout=5)
         t2.join(timeout=5)
+
+        # Verify threads actually terminated (not hung)
+        assert not t1.is_alive(), "Deleter thread 1 did not terminate"
+        assert not t2.is_alive(), "Deleter thread 2 did not terminate"
 
         assert not errors
 
