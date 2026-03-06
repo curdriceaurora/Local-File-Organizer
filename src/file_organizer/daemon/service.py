@@ -309,15 +309,19 @@ class DaemonService:
 
         Only installs handlers when running in the main thread.
         Saves original handlers so they can be restored later.
+        On Windows, skips pipe creation (select.select only supports sockets).
         """
         if threading.current_thread() is not threading.main_thread():
             logger.debug("Skipping signal handler installation (not main thread)")
             return
 
         try:
-            self._sig_wakeup_r, self._sig_wakeup_w = os.pipe()
-            os.set_blocking(self._sig_wakeup_r, False)
-            os.set_blocking(self._sig_wakeup_w, False)
+            # Only create signal wakeup pipe on Unix-like systems
+            # (Windows select() doesn't support pipes, falls back to Event.wait)
+            if os.name != 'nt':
+                self._sig_wakeup_r, self._sig_wakeup_w = os.pipe()
+                os.set_blocking(self._sig_wakeup_r, False)
+                os.set_blocking(self._sig_wakeup_w, False)
             self._original_sigterm = signal.getsignal(signal.SIGTERM)
             self._original_sigint = signal.getsignal(signal.SIGINT)
             signal.signal(signal.SIGTERM, self._handle_signal)

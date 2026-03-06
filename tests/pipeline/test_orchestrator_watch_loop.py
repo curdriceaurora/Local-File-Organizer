@@ -14,6 +14,13 @@ from file_organizer.pipeline.orchestrator import PipelineOrchestrator
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def _patch_watch_loop_sleep():
+    """Patch time.sleep in watch loop to speed up tests."""
+    with patch("file_organizer.pipeline.orchestrator.time.sleep"):
+        yield
+
+
 @dataclass
 class FakeEvent:
     """Minimal file-system event for testing."""

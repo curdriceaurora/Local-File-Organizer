@@ -43,6 +43,8 @@ class TestInMemoryConcurrentGetSet:
         for t in threads:
             t.join(timeout=5.0)
 
+        # Verify all threads actually completed
+        assert all(not t.is_alive() for t in threads), "Some threads did not finish"
         assert not errors, f"Concurrent access errors: {errors}"
 
     def test_concurrent_expired_eviction(self):
