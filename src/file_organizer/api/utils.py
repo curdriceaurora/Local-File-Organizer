@@ -25,7 +25,8 @@ def resolve_path(path_value: str, allowed_paths: Optional[list[str]] = None) -> 
         )
 
     # Allowed roots are configuration-controlled.
-    roots = [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]  # codeql[py/path-injection]
+    # codeql[py/path-injection]
+    roots = [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]
     if not roots:
         raise ApiError(
             status_code=403,
