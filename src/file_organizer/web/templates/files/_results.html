@@ -194,9 +194,32 @@
                     {% endif %}
                     <button class="file-menu" type="button" data-context-trigger aria-label="File actions">...</button>
                     <div class="context-menu" data-context-menu>
-                        <button type="button" data-context-action="rename" disabled title="Rename is not implemented yet">Rename</button>
-                        <button type="button" data-context-action="move" disabled title="Move is not implemented yet">Move</button>
-                        <button type="button" data-context-action="delete" disabled title="Delete is not implemented yet">Delete</button>
+                        <button
+                            type="button"
+                            data-context-action="rename"
+                            title="Rename this file"
+                            hx-get="/ui/files/rename-dialog?path={{ entry.path_param }}"
+                            hx-target="#file-action-dialog"
+                            hx-swap="innerHTML"
+                        >Rename</button>
+                        <button
+                            type="button"
+                            data-context-action="move"
+                            title="Move this file"
+                            hx-get="/ui/files/move-dialog?path={{ entry.path_param }}"
+                            hx-target="#file-action-dialog"
+                            hx-swap="innerHTML"
+                        >Move</button>
+                        <button
+                            type="button"
+                            data-context-action="delete"
+                            title="Delete this file"
+                            hx-post="/ui/files/delete"
+                            hx-prompt="Are you sure you want to delete this file?"
+                            hx-vals='{"path": "{{ entry.path }}"}'
+                            hx-target="#file-results"
+                            hx-swap="innerHTML"
+                        >Delete</button>
                     </div>
                 </div>
             </article>

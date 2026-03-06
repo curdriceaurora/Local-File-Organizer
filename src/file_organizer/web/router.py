@@ -8,6 +8,8 @@ It also hosts lightweight routes that don't warrant their own module
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
@@ -22,6 +24,8 @@ from file_organizer.web.marketplace_routes import marketplace_router
 from file_organizer.web.organize_routes import organize_router
 from file_organizer.web.profile_routes import profile_router
 from file_organizer.web.settings_routes import settings_router
+
+logger = logging.getLogger(__name__)
 
 # Re-export so ``from file_organizer.web.router import STATIC_DIR`` keeps working.
 __all__ = ["STATIC_DIR", "router"]
@@ -51,14 +55,15 @@ def dashboard_pulse(
 ) -> HTMLResponse:
     """Get dashboard metrics: active jobs, suggestions, and rules."""
     # Get active jobs from the job queue
-    jobs = list_jobs()
-    active_jobs = sum(1 for job in jobs if job.get("status") in {"queued", "running"})
+    jobs = list_jobs(statuses={"queued", "running"})
+    active_jobs = len(jobs)
 
     # Get suggestions and rules from workspace settings
+    # Suggestions: placeholder for future recommendation engine (e.g., ML-based organization hints)
     suggestions = 0
     rules = 0
     try:
-        with create_session() as session:
+        with create_session(settings.auth_db_path) as session:
             repo = WorkspaceRepository(session)
             workspace = repo.get_active_workspace()
             if workspace:
@@ -67,11 +72,9 @@ def dashboard_pulse(
                 rules = len(
                     [line for line in rules_text.splitlines() if line.strip() and "->" in line]
                 )
-                # Suggestions could come from various sources - for now use 0
-                suggestions = 0
-    except Exception:
+    except Exception as e:
         # If database unavailable, use defaults
-        pass
+        logger.warning(f"Failed to fetch workspace settings: {e}")
 
     context = base_context(request, settings, active="home", title="Dashboard")
     return templates.TemplateResponse(

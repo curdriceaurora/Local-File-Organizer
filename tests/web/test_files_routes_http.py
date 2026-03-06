@@ -270,3 +270,200 @@ class TestFilesUpload:
                 files=[("files", ("hello.txt", BytesIO(b"dup"), "text/plain"))],
             )
         assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# POST /files/rename
+# ---------------------------------------------------------------------------
+
+
+class TestFilesRename:
+    """Test POST /ui/files/rename endpoint."""
+
+    def test_rename_file_success(self, client, tree):
+        old_file = tree / "hello.txt"
+        assert old_file.exists()
+        response = client.post(
+            "/ui/files/rename",
+            data={"path": str(old_file), "new_name": "renamed.txt"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["old_path"] == str(old_file)
+        assert "renamed.txt" in data["new_path"]
+        # Verify file was actually renamed
+        assert not old_file.exists()
+        assert (tree / "renamed.txt").exists()
+
+    def test_rename_file_not_found(self, client, tree):
+        nonexistent = tree / "nonexistent.txt"
+        response = client.post(
+            "/ui/files/rename",
+            data={"path": str(nonexistent), "new_name": "new.txt"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "not found" in data["error"].lower()
+
+    def test_rename_with_invalid_name(self, client, tree):
+        file_path = tree / "hello.txt"
+        response = client.post(
+            "/ui/files/rename",
+            data={"path": str(file_path), "new_name": "path/with/slashes.txt"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "path separator" in data["error"].lower()
+
+    def test_rename_with_empty_name(self, client, tree):
+        file_path = tree / "hello.txt"
+        # Empty string will be caught at validation level (422)
+        # Test with whitespace-only name instead
+        response = client.post(
+            "/ui/files/rename",
+            data={"path": str(file_path), "new_name": "   "},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "empty" in data["error"].lower()
+
+    def test_rename_to_existing_name(self, client, tree):
+        file1 = tree / "hello.txt"
+        # photo.png already exists in tree
+        response = client.post(
+            "/ui/files/rename",
+            data={"path": str(file1), "new_name": "photo.png"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "exists" in data["error"].lower()
+
+
+# ---------------------------------------------------------------------------
+# POST /files/move
+# ---------------------------------------------------------------------------
+
+
+class TestFilesMove:
+    """Test POST /ui/files/move endpoint."""
+
+    def test_move_file_success(self, client, tree):
+        file_to_move = tree / "hello.txt"
+        dest_dir = tree / "subdir"
+        assert file_to_move.exists()
+        assert dest_dir.exists() and dest_dir.is_dir()
+
+        response = client.post(
+            "/ui/files/move",
+            data={"path": str(file_to_move), "destination": str(dest_dir)},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["source_path"] == str(file_to_move)
+        # Verify file was actually moved
+        assert not file_to_move.exists()
+        assert (dest_dir / "hello.txt").exists()
+
+    def test_move_file_not_found(self, client, tree):
+        nonexistent = tree / "nonexistent.txt"
+        dest_dir = tree / "subdir"
+        response = client.post(
+            "/ui/files/move",
+            data={"path": str(nonexistent), "destination": str(dest_dir)},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "not found" in data["error"].lower()
+
+    def test_move_to_nonexistent_dest(self, client, tree):
+        file_to_move = tree / "hello.txt"
+        nonexistent_dir = tree / "nonexistent"
+        response = client.post(
+            "/ui/files/move",
+            data={"path": str(file_to_move), "destination": str(nonexistent_dir)},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "not found" in data["error"].lower()
+
+    def test_move_to_file_instead_of_dir(self, client, tree):
+        file_to_move = tree / "hello.txt"
+        dest_file = tree / "photo.png"
+        response = client.post(
+            "/ui/files/move",
+            data={"path": str(file_to_move), "destination": str(dest_file)},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "not a directory" in data["error"].lower()
+
+    def test_move_file_to_self_fails(self, client, tree):
+        file_to_move = tree / "hello.txt"
+        # Try to move to parent (which creates hello.txt again)
+        # Create a duplicate scenario
+        dest_dir = tree
+        file_to_move.write_text("content")
+        response = client.post(
+            "/ui/files/move",
+            data={"path": str(file_to_move), "destination": str(dest_dir)},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        # File already exists (itself) in destination
+        assert data["success"] is False
+
+
+# ---------------------------------------------------------------------------
+# POST /files/delete
+# ---------------------------------------------------------------------------
+
+
+class TestFilesDelete:
+    """Test POST /ui/files/delete endpoint."""
+
+    def test_delete_file_success(self, client, tree):
+        file_to_delete = tree / "hello.txt"
+        assert file_to_delete.exists()
+        response = client.post(
+            "/ui/files/delete",
+            data={"path": str(file_to_delete)},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["path"] == str(file_to_delete)
+        # Verify file was actually deleted
+        assert not file_to_delete.exists()
+
+    def test_delete_file_not_found(self, client, tree):
+        nonexistent = tree / "nonexistent.txt"
+        response = client.post(
+            "/ui/files/delete",
+            data={"path": str(nonexistent)},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "not found" in data["error"].lower()
+
+    def test_delete_directory(self, client, tree):
+        dir_to_delete = tree / "subdir"
+        assert dir_to_delete.exists() and dir_to_delete.is_dir()
+        response = client.post(
+            "/ui/files/delete",
+            data={"path": str(dir_to_delete)},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        # Verify directory was actually deleted
+        assert not dir_to_delete.exists()
