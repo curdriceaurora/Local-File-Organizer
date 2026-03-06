@@ -79,8 +79,7 @@ def _main(argv: list[str]) -> int:
     if "--output" in argv:
         try:
             # CLI output path is an explicit user selection for local key storage.
-            # codeql[py/path-injection]
-            output_path = Path(argv[argv.index("--output") + 1]).expanduser()
+            output_path = Path(argv[argv.index("--output") + 1]).expanduser()  # codeql[py/path-injection]
         except (ValueError, IndexError):
             _print_usage()
             return 1

@@ -153,8 +153,7 @@ def load_settings() -> ApiSettings:
 
     if config_path:
         # Config file path is provided by deployment configuration, not request data.
-        # codeql[py/path-injection]
-        path = Path(config_path).expanduser()
+        path = Path(config_path).expanduser()  # codeql[py/path-injection]
         if path.exists():
             payload = _load_yaml(path)
             data.update(payload.get("api", payload))
