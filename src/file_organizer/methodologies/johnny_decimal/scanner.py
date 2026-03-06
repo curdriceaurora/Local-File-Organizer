@@ -221,6 +221,14 @@ class FolderScanner:
         # Check for date-based organization
         # Look for 4-digit years in reasonable range (1900-2099)
         def has_year_pattern(name: str) -> bool:
+            """Check if folder name contains a year pattern (1900-2099).
+
+            Args:
+                name: Folder name to check
+
+            Returns:
+                True if name contains a valid year pattern
+            """
             import re
 
             year_match = re.search(r"\b(19\d{2}|20\d{2})\b", name)
