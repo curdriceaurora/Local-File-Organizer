@@ -35,14 +35,16 @@ def _make_config(**kwargs) -> DaemonConfig:
 
 
 class TestSignalHandlerWritesToPipe:
-    def test_signal_handler_writes_byte_to_pipe(self):
+    def test_signal_handler_writes_byte_to_pipe(self) -> None:
+        """Verify signal handler writes a byte to the wakeup pipe."""
         daemon = DaemonService(_make_config())
         with wired_pipe(daemon) as (r, _w):
             daemon._handle_signal(signal.SIGTERM, None)
             data = os.read(r, 1024)
             assert data == b"\x00"
 
-    def test_signal_handler_tolerates_closed_pipe(self):
+    def test_signal_handler_tolerates_closed_pipe(self) -> None:
+        """Verify signal handler gracefully handles a closed write pipe."""
         daemon = DaemonService(_make_config())
         _r, w = os.pipe()
         os.close(_r)
@@ -52,7 +54,8 @@ class TestSignalHandlerWritesToPipe:
         # Should not raise — OSError is caught internally
         daemon._handle_signal(signal.SIGTERM, None)
 
-    def test_signal_handler_tolerates_none_pipe(self):
+    def test_signal_handler_tolerates_none_pipe(self) -> None:
+        """Verify signal handler works correctly when no pipe is initialized."""
         daemon = DaemonService(_make_config())
         assert daemon._sig_wakeup_w is None
         # Should not raise when pipe is None
@@ -60,7 +63,8 @@ class TestSignalHandlerWritesToPipe:
 
 
 class TestRunLoopExitsOnPipeSignal:
-    def test_run_loop_exits_on_pipe_signal(self):
+    def test_run_loop_exits_on_pipe_signal(self) -> None:
+        """Verify run loop exits when signal is written to pipe."""
         daemon = DaemonService(_make_config())
         with wired_pipe(daemon) as (_r, w):
             # Write a byte to simulate a signal arrival
@@ -68,12 +72,18 @@ class TestRunLoopExitsOnPipeSignal:
             daemon._run_loop()
             assert daemon._stop_event.is_set()
 
-    def test_run_loop_falls_back_to_event_wait(self):
+    def test_run_loop_falls_back_to_event_wait(self) -> None:
+        """Verify run loop falls back to event.wait when no pipe available.
+
+        This tests the Windows-compatibility path where select() is not available
+        and the loop waits on the stop event directly.
+        """
         daemon = DaemonService(_make_config())
         assert daemon._sig_wakeup_r is None  # No pipe
 
         # Set stop event after a short delay
-        def stop_later():
+        def stop_later() -> None:
+            """Set stop event after a delay."""
             time.sleep(0.05)
             daemon._stop_event.set()
 
@@ -85,7 +95,8 @@ class TestRunLoopExitsOnPipeSignal:
 
 
 class TestPipeClosedOnRestore:
-    def test_pipe_closed_on_restore(self):
+    def test_pipe_closed_on_restore(self) -> None:
+        """Verify pipes are properly closed when signal handlers are restored."""
         daemon = DaemonService(_make_config())
 
         # Call from main thread so it doesn't skip
@@ -116,8 +127,13 @@ class TestPipeClosedOnRestore:
 
 
 class TestBackgroundRunEarlyReturn:
-    def test_background_run_early_return_when_already_running(self):
-        """Cover line 215: _background_run returns early when _running is True."""
+    def test_background_run_early_return_when_already_running(self) -> None:
+        """Cover line 215: _background_run returns early when _running is True.
+
+        This exercises the code path where the daemon service is already
+        running and _background_run is called, ensuring it returns without
+        attempting to start again.
+        """
         daemon = DaemonService(_make_config())
 
         with daemon._lock:

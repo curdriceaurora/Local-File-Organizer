@@ -13,7 +13,14 @@ pytestmark = pytest.mark.unit
 
 
 def _make_app(allowed_paths: list[str]) -> TestClient:
-    """Create a test client with search router and given allowed_paths."""
+    """Create a test client with search router and given allowed_paths.
+
+    Args:
+        allowed_paths: List of directory paths to allow searching.
+
+    Returns:
+        A TestClient configured with the search router.
+    """
     from fastapi import FastAPI
 
     from file_organizer.api.exceptions import setup_exception_handlers
@@ -29,6 +36,7 @@ def _make_app(allowed_paths: list[str]) -> TestClient:
     )
 
     def override_settings() -> ApiSettings:
+        """Override dependency to return test settings."""
         return settings
 
     from file_organizer.api.dependencies import get_settings

@@ -13,16 +13,22 @@ pytestmark = pytest.mark.unit
 
 
 class TestProcessorThreadSafety:
-    def test_executor_type_default(self):
+    def test_executor_type_default(self) -> None:
+        """Verify executor type defaults to 'thread'."""
         proc = ParallelProcessor()
         assert proc._executor_type_used == "thread"
 
-    def test_concurrent_batch_iter_access(self):
-        """Multiple threads reading _executor_type_used should not crash."""
+    def test_concurrent_batch_iter_access(self) -> None:
+        """Multiple threads reading _executor_type_used should not crash.
+
+        This exercises the critical path where multiple threads concurrently
+        access the processor's executor type field to ensure no race conditions.
+        """
         proc = ParallelProcessor(ParallelConfig(max_workers=1))
         errors: list[Exception] = []
 
         def read_type() -> None:
+            """Read executor type multiple times from thread."""
             try:
                 for _ in range(50):
                     _ = proc._executor_type_used
@@ -37,4 +43,4 @@ class TestProcessorThreadSafety:
 
         # Verify all threads actually completed
         assert all(not t.is_alive() for t in threads), "Some threads did not finish"
-        assert not errors
+        assert not errors, f"Thread errors: {errors}"

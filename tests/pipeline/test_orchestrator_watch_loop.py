@@ -33,10 +33,17 @@ def _sync_executor(pipeline: PipelineOrchestrator) -> MagicMock:
     """Replace the executor with one that calls functions synchronously.
 
     This makes tests deterministic by avoiding thread-pool timing issues.
+
+    Args:
+        pipeline: The orchestrator instance to configure.
+
+    Returns:
+        The mock executor configured with synchronous behavior.
     """
     mock_executor = MagicMock()
 
-    def sync_submit(fn, *args, **kwargs):
+    def sync_submit(fn, *args, **kwargs):  # type: ignore[no-untyped-def]
+        """Execute function synchronously instead of submitting to pool."""
         fn(*args, **kwargs)
         return MagicMock()
 
