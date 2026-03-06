@@ -54,11 +54,17 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "report"})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
         results = resp.json()
-        assert len(results) == 1
-        assert results[0]["filename"] == "report.txt"
-        assert results[0]["score"] > 0
+        assert len(results) == 1, (
+            f"Expected 1 result for 'report', got {len(results)}: {[r['filename'] for r in results]}"
+        )
+        assert results[0]["filename"] == "report.txt", (
+            f"Expected 'report.txt', got '{results[0]['filename']}'"
+        )
+        assert results[0]["score"] > 0, (
+            f"Expected positive score, got {results[0]['score']}"
+        )
 
     def test_search_file_type_filter(self, tmp_path: Path) -> None:
         (tmp_path / "doc.pdf").write_bytes(b"%PDF")
@@ -94,10 +100,15 @@ class TestSearchReturnsRealFiles:
         resp = client.get("/search", params={"q": "report"})
         assert resp.status_code == 200
         results = resp.json()
-        assert len(results) == 2
+        assert len(results) == 2, f"Expected 2 results, got {len(results)}"
         # Exact stem match ("report") should be first
-        assert results[0]["filename"] == "report.txt"
-        assert results[0]["score"] > results[1]["score"]
+        assert results[0]["filename"] == "report.txt", (
+            f"Expected exact match 'report.txt' first, got '{results[0]['filename']}'"
+        )
+        assert results[0]["score"] > results[1]["score"], (
+            f"Exact match score ({results[0]['score']}) should exceed "
+            f"substring match score ({results[1]['score']})"
+        )
 
     def test_search_pagination(self, tmp_path: Path) -> None:
         for i in range(5):
@@ -105,19 +116,26 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "file", "limit": 2, "offset": 0})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Page 1: Expected 200, got {resp.status_code}"
         page1 = resp.json()
-        assert len(page1) == 2
+        assert len(page1) == 2, (
+            f"Page 1: Expected 2 results with limit=2, got {len(page1)}"
+        )
 
         resp = client.get("/search", params={"q": "file", "limit": 2, "offset": 2})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Page 2: Expected 200, got {resp.status_code}"
         page2 = resp.json()
-        assert len(page2) == 2
+        assert len(page2) == 2, (
+            f"Page 2: Expected 2 results with limit=2, offset=2, got {len(page2)}"
+        )
 
         # Pages should have different files
         names1 = {r["filename"] for r in page1}
         names2 = {r["filename"] for r in page2}
-        assert names1.isdisjoint(names2)
+        assert names1.isdisjoint(names2), (
+            f"Page 1 and 2 should have no overlap. "
+            f"Page 1: {names1}, Page 2: {names2}"
+        )
 
     def test_search_empty_query(self, tmp_path: Path) -> None:
         client = _make_app([str(tmp_path)])
