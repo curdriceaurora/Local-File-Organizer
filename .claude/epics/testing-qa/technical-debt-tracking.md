@@ -94,3 +94,15 @@ status: active
 - **Effort**: 0.5 hours
 - **Related**: #533 (code review finding)
 - **Notes**: Replaced `time.sleep(0.01)` with deterministic timestamp manipulation
+
+## From CI Workflow Test Failure
+
+**Issue #638: CI - Fix workflow test Python version matrix parsing**
+- **Priority**: Medium
+- **Epic**: testing-qa
+- **Status**: Open
+- **Created**: 2026-03-06
+- **GitHub**: https://github.com/curdriceaurora/Local-File-Organizer/issues/638
+- **Effort**: 2-3 hours
+- **Files**: tests/ci/test_workflows.py
+- **Description**: Test fails because it expects a list of Python versions but receives a GitHub Actions expression string. Need to update test to handle dynamic matrix expressions.
