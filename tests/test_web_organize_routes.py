@@ -23,7 +23,7 @@ def _build_client(tmp_path: Path, allowed_paths: list[str] | None = None) -> Tes
 
 
 @pytest.fixture
-def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> Any:
     """Mock FileOrganizer to avoid AI model initialization in tests.
 
     FileOrganizer initializes AI models and TextProcessor calls ensure_nltk_data(),
@@ -40,10 +40,12 @@ def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> None:
         },
         "error": None,
     }
+    mock_class = MagicMock(return_value=mock_organizer)
     monkeypatch.setattr(
         "file_organizer.web.organize_routes.FileOrganizer",
-        MagicMock(return_value=mock_organizer),
+        mock_class,
     )
+    return mock_organizer.organize
 
 
 @pytest.mark.unit
@@ -75,7 +77,7 @@ class TestOrganizePage:
 class TestOrganizeScan:
     """Tests for scan endpoint with different methodologies."""
 
-    def test_organize_scan_with_default_method(self, tmp_path: Path, mock_file_organizer: Any) -> None:
+    def test_organize_scan_with_default_method(self, tmp_path: Path, mock_file_organizer: MagicMock) -> None:
         """Should scan with default (content_based) methodology."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
@@ -91,8 +93,10 @@ class TestOrganizeScan:
             },
         )
         assert response.status_code == 200
+        # Verify plan was generated (success path, not error path)
+        assert "plan" in response.text.lower()
 
-    def test_organize_scan_with_para_method(self, tmp_path: Path, mock_file_organizer: Any) -> None:
+    def test_organize_scan_with_para_method(self, tmp_path: Path, mock_file_organizer: MagicMock) -> None:
         """Should scan with PARA methodology."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
@@ -108,8 +112,10 @@ class TestOrganizeScan:
             },
         )
         assert response.status_code == 200
+        # Verify plan was generated (success path, not error path)
+        assert "plan" in response.text.lower()
 
-    def test_organize_scan_with_johnny_decimal_method(self, tmp_path: Path, mock_file_organizer: Any) -> None:
+    def test_organize_scan_with_johnny_decimal_method(self, tmp_path: Path, mock_file_organizer: MagicMock) -> None:
         """Should scan with Johnny Decimal methodology."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
@@ -125,6 +131,8 @@ class TestOrganizeScan:
             },
         )
         assert response.status_code == 200
+        # Verify plan was generated (success path, not error path)
+        assert "plan" in response.text.lower()
 
 
 @pytest.mark.unit
@@ -213,7 +221,7 @@ class TestOrganizeResults:
 class TestOrganizeHtmxEndpoints:
     """Tests for HTMX partial response endpoints."""
 
-    def test_organize_htmx_request_header(self, tmp_path: Path, mock_file_organizer: Any) -> None:
+    def test_organize_htmx_request_header(self, tmp_path: Path, mock_file_organizer: MagicMock) -> None:
         """Should handle HTMX request headers for partial updates."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
@@ -230,6 +238,8 @@ class TestOrganizeHtmxEndpoints:
             headers={"HX-Request": "true"},
         )
         assert response.status_code == 200
+        # HTMX requests should return HTML fragment with plan/result content
+        assert "plan" in response.text.lower() or "organize" in response.text.lower()
 
     def test_organize_scan_validation(self, tmp_path: Path) -> None:
         """Should validate scan parameters and return errors when needed."""

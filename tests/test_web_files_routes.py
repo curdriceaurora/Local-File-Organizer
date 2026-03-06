@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -65,6 +66,11 @@ class TestFilesSorting:
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
         response = client.get("/ui/files?sort_by=name")
         assert response.status_code == 200
+        # Verify files are sorted by name (ascending)
+        content = response.text
+        assert "a.txt" in content
+        assert "b.txt" in content
+        assert content.index("a.txt") < content.index("b.txt")
 
     def test_files_sort_by_size(self, tmp_path: Path) -> None:
         """Should handle sort by size parameter."""
@@ -74,22 +80,47 @@ class TestFilesSorting:
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
         response = client.get("/ui/files?sort_by=size")
         assert response.status_code == 200
+        # Verify files are sorted by size (ascending - small before large)
+        content = response.text
+        assert "small.txt" in content
+        assert "large.txt" in content
+        assert content.index("small.txt") < content.index("large.txt")
 
     def test_files_sort_by_modified(self, tmp_path: Path) -> None:
         """Should handle sort by modified time parameter."""
-        (tmp_path / "file.txt").write_text("test")
+        old_file = tmp_path / "file_old.txt"
+        old_file.write_text("test")
+        os.utime(old_file, (1000000000, 1000000000))  # Explicit older timestamp
+        new_file = tmp_path / "file_new.txt"
+        new_file.write_text("test")
+        os.utime(new_file, (2000000000, 2000000000))  # Explicit newer timestamp
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
         response = client.get("/ui/files?sort_by=modified")
         assert response.status_code == 200
+        # Verify files are sorted by modified time (older before newer)
+        content = response.text
+        assert "file_old.txt" in content
+        assert "file_new.txt" in content
+        assert content.index("file_old.txt") < content.index("file_new.txt")
 
     def test_files_sort_by_created(self, tmp_path: Path) -> None:
         """Should handle sort by created time parameter."""
-        (tmp_path / "file.txt").write_text("test")
+        first_file = tmp_path / "file_first.txt"
+        first_file.write_text("test")
+        os.utime(first_file, (1500000000, 1500000000))  # Explicit earlier timestamp
+        second_file = tmp_path / "file_second.txt"
+        second_file.write_text("test")
+        os.utime(second_file, (2500000000, 2500000000))  # Explicit later timestamp
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
         response = client.get("/ui/files?sort_by=created")
         assert response.status_code == 200
+        # Verify files are sorted by created time (first before second)
+        content = response.text
+        assert "file_first.txt" in content
+        assert "file_second.txt" in content
+        assert content.index("file_first.txt") < content.index("file_second.txt")
 
     def test_files_sort_by_type(self, tmp_path: Path) -> None:
         """Should handle sort by type parameter."""
@@ -99,6 +130,12 @@ class TestFilesSorting:
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
         response = client.get("/ui/files?sort_by=type")
         assert response.status_code == 200
+        # Verify files are sorted by type extension
+        content = response.text
+        assert "file.txt" in content
+        assert "file.pdf" in content
+        # PDF comes before TXT alphabetically by extension
+        assert content.index("file.pdf") < content.index("file.txt")
 
     def test_files_sort_descending(self, tmp_path: Path) -> None:
         """Should handle descending sort order via sort_order parameter."""
@@ -131,6 +168,9 @@ class TestFilesFiltering:
         assert response.status_code == 200
         # Should include the .txt file
         assert "file.txt" in response.text
+        # Should exclude other file types
+        assert "doc.pdf" not in response.text
+        assert "data.csv" not in response.text
 
 
 @pytest.mark.unit
