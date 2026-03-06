@@ -8,11 +8,9 @@ created: 2026-03-06T21:00:00Z
 updated: 2026-03-06T21:43:00Z
 ---
 
-Task 579.1: Core Components Docstrings
-======================================
+# Task 579.1: Core Components Docstrings
 
-Scope
------
+## Scope
 
 Add docstrings to core components in `src/file_organizer/core/`:
 
@@ -24,35 +22,31 @@ Add docstrings to core components in `src/file_organizer/core/`:
 - `cache.py` - Caching utilities
 - Other core modules as present
 
-Acceptance Criteria
--------------------
+## Acceptance Criteria
 
 - [ ] All public classes have docstrings
-- [ ] All public methods/functions have docstrings  
+- [ ] All public methods/functions have docstrings
 - [ ] Module-level docstring present in each file
 - [ ] No function signatures changed
 - [ ] Google-style formatting consistent
 - [ ] `interrogate -v src/file_organizer/core` reports 90%+ coverage
 
-Implementation Notes
----------------------
+## Implementation Notes
 
 1. Start with `file_metadata.py` (foundational)
 2. Then `pipeline.py` and `config.py` (core architecture)
 3. Fill remaining modules
 4. Verify with: `interrogate -v src/file_organizer/core`
 
-Definition of Done
--------------------
+## Definition of Done
 
-- [x] Baseline measured: `interrogate src/file_organizer/core` (100% coverage achieved)
+- [x] Baseline measured: `interrogate src/file_organizer/core` (100% coverage)
 - [x] All public APIs have docstrings (19/19 items documented)
 - [x] Coverage reported >= 90% for core/ (100% achieved)
 - [x] No behavior changes (docstrings only)
-- [x] Commit: 5c5797e "Issue #579: Add comprehensive docstrings to core organizer module"
+- [x] Commit: 5c5797e (comprehensive docstrings to core module)
 
-Files to Touch
---------------
+## Files to Touch
 
 ```tree
 src/file_organizer/core/
@@ -65,8 +59,7 @@ src/file_organizer/core/
 └── [other .py files]
 ```
 
-Verification Command
---------------------
+## Verification Command
 
 ```bash
 interrogate -v src/file_organizer/core --quiet
