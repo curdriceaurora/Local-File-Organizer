@@ -284,21 +284,23 @@ class TestCheckpointAtomicWrites(unittest.TestCase):
 
     def test_save_checkpoint_uses_temp_file_then_replace(self) -> None:
         """Test save_checkpoint writes temp file before replacing target."""
+        import os as os_module
+
         f1 = self.tmp_path / "a.txt"
         f1.write_text("a", encoding="utf-8")
         ckpt = self.mgr.create_checkpoint("atomic-1", [f1], [])
 
         checkpoint_path = self.ckpt_dir / "atomic-1.checkpoint.json"
-        original_replace = Path.replace
+        original_replace = os_module.replace
         saw_temp_file_before_replace = False
 
-        def wrapped_replace(path_self: Path, target: Path) -> Path:
+        def wrapped_replace(src, dst):
             nonlocal saw_temp_file_before_replace
-            if path_self.suffix == ".tmp":
-                saw_temp_file_before_replace = path_self.exists()
-            return original_replace(path_self, target)
+            if str(src).endswith(".tmp"):
+                saw_temp_file_before_replace = Path(src).exists()
+            return original_replace(src, dst)
 
-        with patch.object(Path, "replace", autospec=True, side_effect=wrapped_replace):
+        with patch("os.replace", side_effect=wrapped_replace):
             self.mgr.save_checkpoint(ckpt)
 
         self.assertTrue(saw_temp_file_before_replace)
@@ -441,11 +443,12 @@ class TestCheckpointFsync(unittest.TestCase):
         shutil.rmtree(self._tmpdir, ignore_errors=True)
 
     def test_save_checkpoint_calls_fsync(self) -> None:
-        """Verify os.fsync is called during save_checkpoint."""
+        """Verify os.fsync is called during save_checkpoint (file + directory)."""
         ckpt = Checkpoint(job_id="fsync-test", file_hashes={})
         with patch("os.fsync") as mock_fsync:
             self.mgr.save_checkpoint(ckpt)
-            mock_fsync.assert_called_once()
+            # fsync is called twice: once on file, once on directory
+            self.assertEqual(mock_fsync.call_count, 2)
         # Verify the checkpoint was actually saved
         loaded = self.mgr.load_checkpoint("fsync-test")
         self.assertIsNotNone(loaded)

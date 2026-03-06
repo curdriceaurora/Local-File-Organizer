@@ -329,19 +329,21 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
 
     def test_save_job_uses_temp_file_then_replace(self) -> None:
         """Test save_job writes temp file before replacing target."""
+        import os as os_module
+
         job = JobState(id="atomic-job-1", status=JobStatus.RUNNING, total_files=5)
         job_path = self.jobs_dir / "atomic-job-1.json"
 
-        original_replace = Path.replace
+        original_replace = os_module.replace
         saw_temp_file_before_replace = False
 
-        def wrapped_replace(path_self: Path, target: Path) -> Path:
+        def wrapped_replace(src, dst):
             nonlocal saw_temp_file_before_replace
-            if path_self.suffix == ".tmp":
-                saw_temp_file_before_replace = path_self.exists()
-            return original_replace(path_self, target)
+            if str(src).endswith(".tmp"):
+                saw_temp_file_before_replace = Path(src).exists()
+            return original_replace(src, dst)
 
-        with patch.object(Path, "replace", autospec=True, side_effect=wrapped_replace):
+        with patch("os.replace", side_effect=wrapped_replace):
             self.persistence.save_job(job)
 
         self.assertTrue(saw_temp_file_before_replace)
@@ -382,19 +384,21 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
 
     def test_temp_file_cleaned_up_after_write_failure(self) -> None:
         """Test temporary files are cleaned up after failed writes."""
+        import os as os_module
+
         job = JobState(id="atomic-job-3", status=JobStatus.PENDING, total_files=10)
         job_path = self.jobs_dir / "atomic-job-3.json"
         temp_path = job_path.with_suffix(".tmp")
 
-        original_replace = Path.replace
+        original_replace = os_module.replace
 
-        def failing_replace(path_self: Path, target: Path) -> Path:
+        def failing_replace(src, dst):
             # Let write_text succeed so temp file is created, then fail on replace
-            if path_self.suffix == ".tmp":
+            if str(src).endswith(".tmp"):
                 raise OSError("simulated replace failure")
-            return original_replace(path_self, target)
+            return original_replace(src, dst)
 
-        with patch.object(Path, "replace", autospec=True, side_effect=failing_replace):
+        with patch("os.replace", side_effect=failing_replace):
             with self.assertRaises(OSError):
                 self.persistence.save_job(job)
 
@@ -405,18 +409,20 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
 
     def test_failed_save_does_not_corrupt_existing_file(self) -> None:
         """Test failed save operations don't corrupt existing job files."""
+        import os as os_module
+
         job = JobState(id="atomic-job-4", status=JobStatus.PENDING, total_files=10)
         self.persistence.save_job(job)
         job_path = self.jobs_dir / "atomic-job-4.json"
         original_contents = job_path.read_text(encoding="utf-8")
 
-        original_replace = Path.replace
+        original_replace = os_module.replace
 
-        def failing_replace(path_self: Path, target: Path) -> Path:
+        def failing_replace(src, dst):
             # Let write_text succeed so temp file is created, then fail on replace
-            if path_self.suffix == ".tmp":
+            if str(src).endswith(".tmp"):
                 raise OSError("simulated replace failure")
-            return original_replace(path_self, target)
+            return original_replace(src, dst)
 
         updated_job = JobState(
             id="atomic-job-4",
@@ -425,7 +431,7 @@ class TestJobPersistenceAtomicWrites(unittest.TestCase):
             completed_files=10,
         )
 
-        with patch.object(Path, "replace", autospec=True, side_effect=failing_replace):
+        with patch("os.replace", side_effect=failing_replace):
             with self.assertRaises(OSError):
                 self.persistence.save_job(updated_job)
 
@@ -454,14 +460,15 @@ class TestPersistenceFsync(unittest.TestCase):
         shutil.rmtree(self._tmpdir, ignore_errors=True)
 
     def test_save_job_calls_fsync(self) -> None:
-        """Verify os.fsync is called during save_job."""
+        """Verify os.fsync is called during save_job (file + directory)."""
         job = JobState(
             id="fsync-test",
             status=JobStatus.PENDING,
         )
         with patch("os.fsync") as mock_fsync:
             self.persistence.save_job(job)
-            mock_fsync.assert_called_once()
+            # fsync is called twice: once on file, once on directory
+            self.assertEqual(mock_fsync.call_count, 2)
         # Verify the job was actually saved
         loaded = self.persistence.load_job("fsync-test")
         self.assertIsNotNone(loaded)

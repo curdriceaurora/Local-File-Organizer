@@ -39,6 +39,7 @@ _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
     # Explicit path filter uses resolve_path() for request-driven paths.
     "api/routers/search.py": {
         "search_roots = [Path(p) for p in settings.allowed_paths]",
+        "search_roots = [Path(p).resolve() for p in settings.allowed_paths]",
     },
     "web/_helpers.py": {
         "BASE_DIR = Path(__file__).resolve().parent",

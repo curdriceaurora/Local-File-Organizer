@@ -368,7 +368,8 @@ class TestUpdateStateStoreAtomicWrite:
         state = UpdateState(last_checked="2024-01-15T14:30:45Z", last_version="2.0.0")
         with patch("os.fsync") as mock_fsync:
             store.save(state)
-            mock_fsync.assert_called_once()
+            # fsync is called twice: once on file, once on directory
+            assert mock_fsync.call_count == 2
         # Verify save still works correctly
         data = json.loads(state_file.read_text())
         assert data["last_version"] == "2.0.0"
