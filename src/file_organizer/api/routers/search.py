@@ -112,9 +112,7 @@ def search(
     else:
         # Normalize allowed_paths to ensure consistent path representation.
         # Allowed roots are configuration-controlled, not request-driven.
-        search_roots = [
-            Path(p).resolve() for p in settings.allowed_paths
-        ]  # codeql[py/path-injection]
+        search_roots = [Path(p).resolve() for p in settings.allowed_paths]  # codeql[py/path-injection]
 
     results: list[SearchResult] = []
     total_traversed = 0
