@@ -89,11 +89,42 @@ gh pr create --title "fix: skip codecov upload on PR events" --body "..."
 - Confirm coverage gates pass if applicable
 - Run pre-commit validation: `bash .claude/scripts/pre-commit-validation.sh`
 
-**Mandatory Quality Gates:**
-1. **Code Quality:** Invoke `/simplify` after major code changes to review for reuse, efficiency, and correctness
-2. **Code Review:** Invoke `/code-reviewer` after completing major implementation steps (major features, bug fixes)
-3. **Pre-Commit Validation:** Always run `bash .claude/scripts/pre-commit-validation.sh` before committing
-4. **CCPM Tracking:** Track all work in CCPM using `/pm:issue-start`, `/pm:issue-sync`, `/pm:issue-close`
+**Mandatory Quality Gates (In Order - Non-Negotiable):**
+
+1. **Code Simplification** (`/simplify`)
+   - After significant code changes (>50 lines of new code)
+   - Reviews for reuse, efficiency, and quality issues
+   - **MUST run BEFORE code review**
+   - Fixes suggestions and stages changes
+
+2. **Code Review** (`/code-reviewer`)
+   - After completing major implementation steps (features, bug fixes, tests)
+   - Validates against CLAUDE.md standards
+   - Checks for architectural, design, and logic issues
+   - **MUST run BEFORE pre-commit validation**
+   - Addresses findings and stages changes
+
+3. **Pre-Commit Validation**
+   - Run: `bash .claude/scripts/pre-commit-validation.sh`
+   - Validates: linting, formatting, types, tests, patterns
+   - **MUST PASS before committing**
+   - Pre-commit will prompt to run quality gates if changes are significant
+
+4. **CCPM Tracking** (Mandatory)
+   - Use `/pm:issue-start` when beginning work
+   - Use `/pm:issue-sync` after major progress
+   - Use `/pm:issue-close` when task complete
+   - **Non-optional** - provides visibility and audit trail
+
+**Order Matters:** Simplify → Code Review → Pre-Commit → Commit → CCPM Sync
+
+**What Each Gate Catches:**
+- **Automation (Pre-Commit)**: Linting, formatting, type checking, basic tests, patterns
+- **Code Review**: Test logic, assertions, API contracts, design patterns, error handling
+- **Simplify**: Code reuse, efficiency, unnecessary complexity
+- **Copilot Review**: Additional cross-file patterns, edge cases (happens in PR review, should be caught earlier)
+
+**Why Order Matters:** Earlier gates catch issues before later gates. Test logic must be validated by `/code-reviewer` before pre-commit can verify it. Pre-commit can't validate whether assertions are meaningful or if tests match API contracts.
 
 **Completion Criteria:** Do not say "All done" until ALL steps are verified. If any step fails verification, fix it before moving on.
 

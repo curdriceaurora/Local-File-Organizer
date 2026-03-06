@@ -137,6 +137,46 @@ if [[ -n "$PY_FILES" ]]; then
   echo ""
 fi
 
+# 6b. Code Quality & Design Review (MANDATORY for significant changes)
+#     These must be done before running pre-commit-validation
+echo "📊 Checking code quality and design requirements..."
+
+# Detect if major code changes are staged
+SIGNIFICANT_PY_CHANGES=0
+if [[ -n "$PY_FILES" ]]; then
+  # Count lines of changes in src/ files
+  ADDED_LINES=$(git diff --cached -- 'src/file_organizer/**/*.py' | grep '^+' | wc -l || echo 0)
+  MODIFIED_TESTS=$(echo "$PY_FILES" | grep '^tests/' | wc -l || echo 0)
+
+  if [[ $ADDED_LINES -gt 50 ]] || [[ $MODIFIED_TESTS -gt 0 ]]; then
+    SIGNIFICANT_PY_CHANGES=1
+  fi
+fi
+
+if [[ $SIGNIFICANT_PY_CHANGES -eq 1 ]]; then
+  echo "⚠️  Significant code changes detected. Running quality gates..."
+  echo ""
+  echo "You MUST run these quality gates before committing:"
+  echo ""
+  echo "  1. Code Simplification Review:"
+  echo "     /simplify"
+  echo ""
+  echo "  2. Code Design Review:"
+  echo "     /code-reviewer"
+  echo ""
+  echo "These validate code quality, design patterns, and test logic that"
+  echo "automation cannot catch (assertions, test design, API contracts)."
+  echo ""
+  echo "After running these skills, stage any fixes and try again:"
+  echo "  git add <files>"
+  echo "  bash .claude/scripts/pre-commit-validation.sh"
+  echo ""
+  exit 1
+fi
+
+echo "✓ Code quality gates not required (no significant changes)"
+echo ""
+
 # 7. Check for broken links in markdown files
 MD_FILES=$(echo "$MODIFIED" | grep '\.md$' || true)
 if [[ -n "$MD_FILES" ]]; then
