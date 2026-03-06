@@ -17,6 +17,8 @@ pytestmark = pytest.mark.ci
 _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
     "api/api_keys.py": {
         'output_path = Path(argv[argv.index("--output") + 1]).expanduser()',
+        # Multi-line variants (formatter may break long lines)
+        'argv[argv.index("--output") + 1]',
     },
     "api/config.py": {
         "path = Path(config_path).expanduser()",
@@ -25,6 +27,8 @@ _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
         "resolved = Path(path_value).expanduser()",
         "roots = [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]",
         "return Path(resolved_str)",
+        # Multi-line variants (formatter may break long lines)
+        "os.path.realpath(Path(root).expanduser())",
     },
     "api/routers/system.py": {
         "file_info_from_path(Path(info.path))",
@@ -40,6 +44,8 @@ _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
     "api/routers/search.py": {
         "search_roots = [Path(p) for p in settings.allowed_paths]",
         "search_roots = [Path(p).resolve() for p in settings.allowed_paths]",
+        # Multi-line variants (formatter may break long lines)
+        "Path(p).resolve() for p in settings.allowed_paths",
     },
     "web/_helpers.py": {
         "BASE_DIR = Path(__file__).resolve().parent",
