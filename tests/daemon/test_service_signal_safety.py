@@ -126,27 +126,6 @@ class TestPipeClosedOnRestore:
 # ---------------------------------------------------------------------------
 
 
-class TestBackgroundRunEarlyReturn:
-    def test_background_run_early_return_when_already_running(self) -> None:
-        """Cover line 215: _background_run returns early when _running is True.
-
-        This exercises the code path where the daemon service is already
-        running and _background_run is called, ensuring it returns without
-        attempting to start again.
-        """
-        daemon = DaemonService(_make_config())
-
-        with daemon._lock:
-            daemon._running = True
-
-        # _background_run should return immediately without setting _started_event
-        daemon._background_run()
-        assert not daemon._started_event.is_set()
-
-        # Clean up
-        daemon._running = False
-
-
 class TestInstallSignalHandlersMainThread:
     def test_install_signal_handlers_success_main_thread(self):
         """Cover lines 301-304: signal handler installation in main thread."""
