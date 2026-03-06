@@ -833,8 +833,8 @@ async def organize_stats_events() -> StreamingResponse:
 
 @organize_router.get("/organize/history/events")
 async def organize_history_events(
-    status_filter: str = Query("all"),
-    limit: int = Query(50),
+    status_filter: str = Query("all", pattern="^(all|queued|running|completed|failed)$"),
+    limit: int = Query(50, ge=1, le=200),
 ) -> StreamingResponse:
     """Stream server-sent events for job history updates.
 
@@ -847,7 +847,6 @@ async def organize_history_events(
     Returns:
         SSE stream with periodic history updates.
     """
-    limit = max(1, min(limit, 200))
 
     async def _event_generator() -> Any:
         last_payload = ""

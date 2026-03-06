@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from html import escape
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, Query, Request
@@ -265,8 +266,7 @@ def plugin_details(
     """
     try:
         service = _service()
-        plugins, _ = service.list_plugins(per_page=1000, query=name)
-        plugin = next((p for p in plugins if p.name == name), None)
+        plugin = service.get_plugin(name)
 
         if not plugin:
             return HTMLResponse("<p>Plugin not found.</p>", status_code=404)
@@ -280,4 +280,5 @@ def plugin_details(
         )
         return templates.TemplateResponse(request, "marketplace/plugin_details.html", context)
     except MarketplaceError as exc:
-        return HTMLResponse(f"<p>Error loading plugin details: {exc}</p>", status_code=500)
+        error_msg = escape(str(exc))
+        return HTMLResponse(f"<p>Error loading plugin details: {error_msg}</p>", status_code=500)
