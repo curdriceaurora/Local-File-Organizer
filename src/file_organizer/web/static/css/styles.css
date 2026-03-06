@@ -874,6 +874,33 @@ body {
   cursor: not-allowed;
 }
 
+.pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.pagination-info {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.pagination-buttons .btn-ghost[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .modal {
   position: fixed;
   inset: 0;

@@ -79,7 +79,7 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="plugins-tbody">
             {% for plugin in plugins %}
             <tr>
                 <td>
@@ -129,6 +129,41 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <!-- Pagination Controls -->
+    {% if total_plugins > per_page %}
+    <div class="pagination-controls">
+        <div class="pagination-info">
+            Page {{ page }} of {{ (total_plugins + per_page - 1) // per_page }}
+            ({{ total_plugins }} total plugins)
+        </div>
+        <div class="pagination-buttons">
+            {% if page > 1 %}
+            <button
+                class="btn-ghost"
+                hx-get="/ui/marketplace?q={{ query }}&category={{ category }}&tag={{ tags | join(',') }}&page={{ page - 1 }}&per_page={{ per_page }}"
+                hx-target="#main"
+                hx-swap="innerHTML">
+                Previous
+            </button>
+            {% else %}
+            <button class="btn-ghost" disabled>Previous</button>
+            {% endif %}
+
+            {% if page < (total_plugins + per_page - 1) // per_page %}
+            <button
+                class="btn-ghost"
+                hx-get="/ui/marketplace?q={{ query }}&category={{ category }}&tag={{ tags | join(',') }}&page={{ page + 1 }}&per_page={{ per_page }}"
+                hx-target="#main"
+                hx-swap="innerHTML">
+                Next
+            </button>
+            {% else %}
+            <button class="btn-ghost" disabled>Next</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
     {% else %}
     <p class="organize-hint">No plugins match the current filters.</p>
     {% endif %}
