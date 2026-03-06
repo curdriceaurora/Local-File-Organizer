@@ -15,7 +15,7 @@ import pytest
 
 from file_organizer.watcher.queue import EventQueue, EventType, FileEvent
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 # Note: EventQueue tests use threading.Thread and time.sleep(),
 # making them timing-sensitive. Excluded from smoke suite.
 

@@ -5,13 +5,13 @@ from __future__ import annotations
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import quote, unquote
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
+from loguru import logger
 from PIL import Image, UnidentifiedImageError
-from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
@@ -53,44 +53,6 @@ files_router = APIRouter(tags=["web"])
 # ---------------------------------------------------------------------------
 # Request/Response Models
 # ---------------------------------------------------------------------------
-
-
-class RenameRequest(BaseModel):
-    """Request to rename a file."""
-
-    new_name: str
-
-
-class RenameResponse(BaseModel):
-    """Response after renaming a file."""
-
-    success: bool
-    old_path: str
-    new_path: str
-    error: Optional[str] = None
-
-
-class MoveRequest(BaseModel):
-    """Request to move a file."""
-
-    destination: str
-
-
-class MoveResponse(BaseModel):
-    """Response after moving a file."""
-
-    success: bool
-    source_path: str
-    destination_path: str
-    error: Optional[str] = None
-
-
-class DeleteResponse(BaseModel):
-    """Response after deleting a file."""
-
-    success: bool
-    path: str
-    error: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -779,13 +741,31 @@ def files_upload(
 # ---------------------------------------------------------------------------
 
 
-@files_router.post("/files/rename", response_model=RenameResponse)
+@files_router.get("/files/rename-dialog", response_class=HTMLResponse)
+def rename_dialog(request: Request, path: str = Query(...)) -> HTMLResponse:
+    """Display a dialog form to rename a file.
+
+    Args:
+        request: Incoming FastAPI request.
+        path: File path to rename.
+
+    Returns:
+        HTML modal with rename form.
+    """
+    return templates.TemplateResponse(
+        request,
+        "files/_rename_dialog.html",
+        {"path": path},
+    )
+
+
+@files_router.post("/files/rename", response_class=HTMLResponse)
 def files_rename(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
     path: str = Form(...),
     new_name: str = Form(...),
-) -> RenameResponse:
+) -> HTMLResponse:
     """Rename a file.
 
     Args:
@@ -795,70 +775,60 @@ def files_rename(
         new_name: New filename (not a path, just the name).
 
     Returns:
-        Response with success status and updated paths.
+        Updated file results HTML.
     """
+    error_message = None
     try:
         target = resolve_path(path, settings.allowed_paths)
         if not target.exists():
-            return RenameResponse(
-                success=False,
-                old_path=path,
-                new_path="",
-                error="File not found",
-            )
+            error_message = "File not found"
+        elif "/" in new_name or "\\" in new_name:
+            error_message = "Invalid filename: cannot contain path separators"
+        elif not new_name or new_name.strip() == "":
+            error_message = "New name cannot be empty"
+        else:
+            new_name = new_name.strip()
+            new_path = target.parent / new_name
+            if new_path.exists():
+                error_message = "File with that name already exists"
+            else:
+                target.rename(new_path)
+    except Exception:
+        logger.exception("Failed to rename file: {}", path)
+        error_message = "Unable to rename file"
 
-        # Validate new_name doesn't contain path separators
-        if "/" in new_name or "\\" in new_name:
-            return RenameResponse(
-                success=False,
-                old_path=path,
-                new_path="",
-                error="Invalid filename: cannot contain path separators",
-            )
-
-        if not new_name or new_name.strip() == "":
-            return RenameResponse(
-                success=False,
-                old_path=path,
-                new_path="",
-                error="New name cannot be empty",
-            )
-
-        new_name = new_name.strip()
-        new_path = target.parent / new_name
-
-        if new_path.exists():
-            return RenameResponse(
-                success=False,
-                old_path=path,
-                new_path="",
-                error="File with that name already exists",
-            )
-
-        target.rename(new_path)
-
-        return RenameResponse(
-            success=True,
-            old_path=str(target),
-            new_path=str(new_path),
-            error=None,
-        )
-    except Exception as exc:
-        return RenameResponse(
-            success=False,
-            old_path=path,
-            new_path="",
-            error=str(exc),
-        )
+    context = _build_file_results_context(
+        request, settings, path=None, view="list", query=None, file_type=None
+    )
+    context["error_message"] = error_message
+    return templates.TemplateResponse(request, "files/_results.html", context)
 
 
-@files_router.post("/files/move", response_model=MoveResponse)
+@files_router.get("/files/move-dialog", response_class=HTMLResponse)
+def move_dialog(request: Request, path: str = Query(...)) -> HTMLResponse:
+    """Display a dialog form to move a file.
+
+    Args:
+        request: Incoming FastAPI request.
+        path: File path to move.
+
+    Returns:
+        HTML modal with move form.
+    """
+    return templates.TemplateResponse(
+        request,
+        "files/_move_dialog.html",
+        {"path": path},
+    )
+
+
+@files_router.post("/files/move", response_class=HTMLResponse)
 def files_move(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
     path: str = Form(...),
     destination: str = Form(...),
-) -> MoveResponse:
+) -> HTMLResponse:
     """Move a file to a different directory.
 
     Args:
@@ -868,64 +838,42 @@ def files_move(
         destination: Destination directory path.
 
     Returns:
-        Response with success status and updated paths.
+        Updated file results HTML.
     """
-    try:
-        import shutil
+    import shutil
 
+    error_message = None
+    try:
         source = resolve_path(path, settings.allowed_paths)
         dest_dir = resolve_path(destination, settings.allowed_paths)
 
         if not source.exists():
-            return MoveResponse(
-                success=False,
-                source_path=path,
-                destination_path="",
-                error="Source file not found",
-            )
+            error_message = "Source file not found"
+        elif not dest_dir.exists() or not dest_dir.is_dir():
+            error_message = "Destination directory not found"
+        else:
+            target_path = dest_dir / source.name
+            if target_path.exists():
+                error_message = "File already exists in destination"
+            else:
+                shutil.move(str(source), str(target_path))
+    except Exception:
+        logger.exception("Failed to move file: {}", path)
+        error_message = "Unable to move file"
 
-        if not dest_dir.exists() or not dest_dir.is_dir():
-            return MoveResponse(
-                success=False,
-                source_path=path,
-                destination_path="",
-                error="Destination directory not found or is not a directory",
-            )
-
-        # Create target path with source filename in destination directory
-        target_path = dest_dir / source.name
-
-        if target_path.exists():
-            return MoveResponse(
-                success=False,
-                source_path=path,
-                destination_path="",
-                error="File already exists in destination",
-            )
-
-        shutil.move(str(source), str(target_path))
-
-        return MoveResponse(
-            success=True,
-            source_path=str(source),
-            destination_path=str(target_path),
-            error=None,
-        )
-    except Exception as exc:
-        return MoveResponse(
-            success=False,
-            source_path=path,
-            destination_path="",
-            error=str(exc),
-        )
+    context = _build_file_results_context(
+        request, settings, path=None, view="list", query=None, file_type=None
+    )
+    context["error_message"] = error_message
+    return templates.TemplateResponse(request, "files/_results.html", context)
 
 
-@files_router.post("/files/delete", response_model=DeleteResponse)
+@files_router.post("/files/delete", response_class=HTMLResponse)
 def files_delete(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
     path: str = Form(...),
-) -> DeleteResponse:
+) -> HTMLResponse:
     """Delete a file.
 
     Args:
@@ -934,33 +882,29 @@ def files_delete(
         path: Absolute path of file to delete.
 
     Returns:
-        Response with success status.
+        Updated file results HTML.
     """
+    import shutil
+
+    error_message = None
     try:
+        # Reject path traversal attempts
         target = resolve_path(path, settings.allowed_paths)
-
-        if not target.exists():
-            return DeleteResponse(
-                success=False,
-                path=path,
-                error="File not found",
-            )
-
-        if target.is_dir():
-            import shutil
-
-            shutil.rmtree(target)
+        if target.name in (".", ".."):
+            error_message = "Cannot delete parent directories"
+        elif not target.exists():
+            error_message = "File not found"
         else:
-            target.unlink()
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+    except Exception:
+        logger.exception("Failed to delete file: {}", path)
+        error_message = "Unable to delete file"
 
-        return DeleteResponse(
-            success=True,
-            path=str(target),
-            error=None,
-        )
-    except Exception as exc:
-        return DeleteResponse(
-            success=False,
-            path=path,
-            error=str(exc),
-        )
+    context = _build_file_results_context(
+        request, settings, path=None, view="list", query=None, file_type=None
+    )
+    context["error_message"] = error_message
+    return templates.TemplateResponse(request, "files/_results.html", context)

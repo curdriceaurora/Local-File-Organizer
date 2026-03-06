@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
+from loguru import logger
 
 from file_organizer.api.auth_db import create_session
 from file_organizer.api.config import ApiSettings
@@ -52,13 +53,13 @@ def dashboard_pulse(
     """Get dashboard metrics: active jobs, suggestions, and rules."""
     # Get active jobs from the job queue
     jobs = list_jobs()
-    active_jobs = sum(1 for job in jobs if job.get("status") in {"queued", "running"})
+    active_jobs = sum(1 for job in jobs if job.status in {"queued", "running"})
 
     # Get suggestions and rules from workspace settings
     suggestions = 0
     rules = 0
     try:
-        with create_session() as session:
+        with create_session(settings.auth_db_path) as session:
             repo = WorkspaceRepository(session)
             workspace = repo.get_active_workspace()
             if workspace:
@@ -71,7 +72,7 @@ def dashboard_pulse(
                 suggestions = 0
     except Exception:
         # If database unavailable, use defaults
-        pass
+        logger.exception("Failed to fetch dashboard metrics")
 
     context = base_context(request, settings, active="home", title="Dashboard")
     return templates.TemplateResponse(

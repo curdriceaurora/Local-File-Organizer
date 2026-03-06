@@ -19,7 +19,7 @@
             <span class="hero-card-title">System Pulse</span>
             <span class="hero-card-status">Stable</span>
         </div>
-        <div id="hero-metrics" class="hero-metrics" hx-get="/ui/dashboard/pulse" hx-trigger="load" hx-swap="innerHTML">
+        <div id="hero-metrics" class="hero-metrics" hx-get="/ui/dashboard/pulse" hx-trigger="load" hx-swap="innerHTML" aria-live="polite" aria-atomic="true">
             <div class="metric">
                 <span class="metric-label">Active jobs</span>
                 <span class="metric-value">-</span>

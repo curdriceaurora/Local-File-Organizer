@@ -1,0 +1,21 @@
+<div class="modal-backdrop" data-modal-close></div>
+<div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="move-modal-title">
+    <div class="modal-header">
+        <div>
+            <p class="modal-kicker">File action</p>
+            <h2 class="modal-title" id="move-modal-title">Move file</h2>
+        </div>
+        <button class="modal-close" type="button" data-modal-close>Close</button>
+    </div>
+    <div class="modal-body">
+        <form hx-post="/ui/files/move" hx-target="#file-results" hx-swap="innerHTML">
+            <input type="hidden" name="path" value="{{ path }}">
+            <label for="destination">Destination directory</label>
+            <input id="destination" name="destination" type="text" required placeholder="Enter destination path">
+            <div class="form-actions">
+                <button class="btn-primary" type="submit">Move</button>
+                <button class="btn-ghost" type="button" data-modal-close>Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>

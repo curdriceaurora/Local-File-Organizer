@@ -86,7 +86,7 @@
 {% elif auth_enabled %}
 <section class="panel-grid two">
     <article class="panel" id="auth-panel" hx-get="/ui/profile/login" hx-trigger="load" hx-target="#auth-panel">
-        <div class="loading-state">Loading...</div>
+        <div class="loading-state"><div class="spinner"></div><p>Loading...</p></div>
     </article>
 </section>
 {% else %}
