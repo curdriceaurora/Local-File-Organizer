@@ -29,7 +29,17 @@ from file_organizer.undo import UndoManager
 
 @dataclass
 class OrganizationResult:
-    """Result of organizing files."""
+    """Result of organizing files.
+
+    Attributes:
+        total_files: Total number of files found
+        processed_files: Number of files successfully processed
+        skipped_files: Number of files skipped (unsupported types)
+        failed_files: Number of files that failed processing
+        processing_time: Total time taken in seconds
+        organized_structure: Dictionary mapping folder names to file lists
+        errors: List of (file_path, error_message) tuples
+    """
 
     total_files: int = 0
     processed_files: int = 0
@@ -49,6 +59,13 @@ class FileOrganizer:
     - Organizes files into folder structure
     - Handles errors gracefully
     - Provides progress feedback
+
+    Attributes:
+        TEXT_EXTENSIONS: Supported text file extensions
+        IMAGE_EXTENSIONS: Supported image file extensions
+        VIDEO_EXTENSIONS: Supported video file extensions
+        AUDIO_EXTENSIONS: Supported audio file extensions
+        CAD_EXTENSIONS: Supported CAD file extensions
     """
 
     # Supported file extensions
@@ -126,6 +143,9 @@ class FileOrganizer:
 
         Returns:
             OrganizationResult with statistics and structure
+
+        Raises:
+            ValueError: If input path does not exist
         """
         import time
 
@@ -277,10 +297,10 @@ class FileOrganizer:
         """Collect all files from path.
 
         Args:
-            path: Directory to scan
+            path: Directory to scan or file to include
 
         Returns:
-            List of file paths
+            List of file paths found
         """
         files = []
         if path.is_file():
@@ -303,7 +323,16 @@ class FileOrganizer:
         cad_files: list[Path],
         other_files: list[Path],
     ) -> None:
-        """Show breakdown of file types."""
+        """Show breakdown of file types.
+
+        Args:
+            text_files: List of text files found
+            image_files: List of image files found
+            video_files: List of video files found
+            audio_files: List of audio files found
+            cad_files: List of CAD files found
+            other_files: List of other (unsupported) files found
+        """
         table = Table(title="File Type Breakdown", show_header=True)
         table.add_column("Type", style="cyan")
         table.add_column("Count", justify="right", style="green")
@@ -341,6 +370,14 @@ class FileOrganizer:
 
             # Helper for pickling
             def _process_one(path: Path) -> ProcessedFile:
+                """Process a single text file with the text processor.
+
+                Args:
+                    path: Path to the text file to process
+
+                Returns:
+                    ProcessedFile with extracted content and metadata
+                """
                 # self.text_processor is initialized before this call
                 assert self.text_processor is not None
                 return self.text_processor.process_file(path)
@@ -404,6 +441,14 @@ class FileOrganizer:
 
             # Helper for pickling
             def _process_one_image(path: Path) -> ProcessedImage:
+                """Process a single image file with the vision processor.
+
+                Args:
+                    path: Path to the image file to process
+
+                Returns:
+                    ProcessedImage with extracted content and metadata
+                """
                 # self.vision_processor is initialized before this call
                 assert self.vision_processor is not None
                 return self.vision_processor.process_file(path)
@@ -657,7 +702,13 @@ class FileOrganizer:
         video_files: list[Path],
         audio_files: list[Path],
     ) -> None:
-        """Show information about skipped files."""
+        """Show information about skipped files.
+
+        Args:
+            image_files: List of image files that were skipped
+            video_files: List of video files that were skipped
+            audio_files: List of audio files that were skipped
+        """
         self.console.print("\n[bold yellow]Skipped Files:[/bold yellow]")
 
         if image_files:
@@ -679,8 +730,8 @@ class FileOrganizer:
         """Show final summary.
 
         Args:
-            result: Organization result
-            output_path: Output path
+            result: Organization result with statistics
+            output_path: Output path where files were organized
         """
         self.console.print("\n" + "=" * 70)
         self.console.print("[bold green]Organization Complete![/bold green]")
