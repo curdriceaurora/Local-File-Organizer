@@ -46,6 +46,8 @@ _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
         "search_roots = [Path(p).resolve() for p in settings.allowed_paths]",
         # Multi-line variants (formatter may break long lines)
         "Path(p).resolve() for p in settings.allowed_paths",
+        # Variant when comment is inline and line wraps
+        "]  # codeql[py/path-injection]",
     },
     "web/_helpers.py": {
         "BASE_DIR = Path(__file__).resolve().parent",
