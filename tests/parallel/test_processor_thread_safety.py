@@ -69,6 +69,10 @@ class TestProcessorThreadSafety:
         t1.join(timeout=10)
         t2.join(timeout=10)
 
+        # Verify threads actually terminated (don't leak live threads into later tests)
+        assert not t1.is_alive(), "Thread t1 should have terminated after join, but is still alive"
+        assert not t2.is_alive(), "Thread t2 should have terminated after join, but is still alive"
+
         assert not errors, f"Unexpected errors in concurrent processing: {errors}"
         assert len(results_a) == 2, f"Thread A should process 2 files, got {len(results_a)}"
         assert len(results_b) == 2, f"Thread B should process 2 files, got {len(results_b)}"

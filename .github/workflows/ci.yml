@@ -125,7 +125,7 @@ jobs:
         if: matrix.python-version == '3.11'
         run: interrogate -v src/ --fail-under 90
       - name: Upload coverage
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.11' && github.event_name != 'pull_request'
         uses: codecov/codecov-action@v4
         with:
           file: coverage.xml
