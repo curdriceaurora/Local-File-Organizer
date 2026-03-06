@@ -19,18 +19,18 @@
             <span class="hero-card-title">System Pulse</span>
             <span class="hero-card-status">Stable</span>
         </div>
-        <div class="hero-metrics">
+        <div id="hero-metrics" class="hero-metrics" hx-get="/ui/dashboard/pulse" hx-trigger="load" hx-swap="innerHTML">
             <div class="metric">
                 <span class="metric-label">Active jobs</span>
-                <span class="metric-value">0</span>
+                <span class="metric-value">-</span>
             </div>
             <div class="metric">
                 <span class="metric-label">Suggestions</span>
-                <span class="metric-value">12</span>
+                <span class="metric-value">-</span>
             </div>
             <div class="metric">
                 <span class="metric-label">Rules</span>
-                <span class="metric-value">8</span>
+                <span class="metric-value">-</span>
             </div>
         </div>
         <div class="hero-card-footer">
