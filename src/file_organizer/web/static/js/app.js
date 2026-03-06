@@ -155,6 +155,14 @@
         // Ignore parse errors
       }
     });
+    organizeStatsEventSource.onopen = () => {
+      // Reset retry counter on successful connection
+      if (sseReconnectState.statsTimer) {
+        clearTimeout(sseReconnectState.statsTimer);
+        sseReconnectState.statsTimer = null;
+      }
+      sseReconnectState.statsRetries = 0;
+    };
     organizeStatsEventSource.onerror = () => {
       organizeStatsEventSource?.close();
       organizeStatsEventSource = null;
@@ -188,23 +196,20 @@
       return;
     }
 
-    closeOrganizeHistoryStream();
     const filterInput = document.querySelector("[name='status_filter']");
     const limitInput = document.querySelector("[name='limit']");
     const statusFilter = filterInput ? filterInput.value : "all";
     const limit = limitInput ? limitInput.value : "50";
 
+    const encodedStatusFilter = encodeURIComponent(statusFilter);
+    const encodedLimit = encodeURIComponent(limit);
+
     organizeHistoryEventSource = new EventSource(
-      `/ui/organize/history/events?status_filter=${statusFilter}&limit=${limit}`
+      `/ui/organize/history/events?status_filter=${encodedStatusFilter}&limit=${encodedLimit}`
     );
     organizeHistoryEventSource.addEventListener("history", (event) => {
-      try {
-        const rows = JSON.parse(event.data);
-        // Trigger HTMX to refresh with the new data
-        dispatchOrganizeRefresh();
-      } catch (error) {
-        // Ignore parse errors
-      }
+      // SSE notifies of history change; let HTMX fetch fresh HTML
+      dispatchOrganizeRefresh();
     });
     organizeHistoryEventSource.onerror = () => {
       organizeHistoryEventSource?.close();

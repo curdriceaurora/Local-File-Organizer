@@ -15,7 +15,7 @@
 
 <section class="panel organize-control-panel">
     <h2>1) Scan and generate plan</h2>
-    <div id="organize-scan-spinner" class="spinner" style="display: none; margin-bottom: 1rem;"></div>
+    <div id="organize-scan-spinner" class="spinner htmx-indicator" style="display: none; margin-bottom: 1rem;"></div>
     <form
         class="organize-form"
         hx-post="/ui/organize/scan"
@@ -82,7 +82,7 @@
     <article class="panel">
         <div class="section-headline">
             <h2>History and logs</h2>
-            <div id="organize-history-spinner" class="spinner" style="display: none; margin-right: 1rem;"></div>
+            <div id="organize-history-spinner" class="spinner htmx-indicator" style="display: none; margin-right: 1rem;"></div>
             <form
                 class="history-filters"
                 hx-get="/ui/organize/history"
@@ -100,6 +100,9 @@
                 <input name="limit" type="number" min="1" max="200" value="50">
                 <button class="btn-ghost" type="submit">Apply</button>
             </form>
+        </div>
+        <div id="organize-history-error" style="display: none; color: #dc2626; padding: 0.75rem; background-color: #fee2e2; border-radius: 0.375rem; margin-bottom: 1rem;">
+            Error loading history
         </div>
         <div
             id="organize-history"
@@ -119,6 +122,9 @@
 
     <article class="panel">
         <h2>Statistics</h2>
+        <div id="organize-stats-error" style="display: none; color: #dc2626; padding: 0.75rem; background-color: #fee2e2; border-radius: 0.375rem; margin-bottom: 1rem;">
+            Error loading statistics
+        </div>
         <div
             id="organize-stats"
             hx-get="/ui/organize/stats"
