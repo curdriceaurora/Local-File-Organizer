@@ -13,11 +13,9 @@ import logging
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
-from file_organizer.api.auth_db import create_session
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.jobs import list_jobs
-from file_organizer.api.repositories.workspace_repo import WorkspaceRepository
 from file_organizer.web._helpers import STATIC_DIR, base_context, templates
 from file_organizer.web.files_routes import files_router
 from file_organizer.web.marketplace_routes import marketplace_router
