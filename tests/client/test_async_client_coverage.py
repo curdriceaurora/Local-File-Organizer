@@ -39,7 +39,9 @@ def _err(status: int, detail: str = "error") -> httpx.Response:
 
 @pytest.mark.asyncio
 class TestAsyncClientAuth:
+    """TestAsyncClientAuth test suite."""
     async def test_login(self):
+        """Test login."""
         client = AsyncFileOrganizerClient(base_url="http://test")
         resp = _ok({"access_token": "tok", "refresh_token": "ref", "token_type": "bearer"})
         client._client = AsyncMock()
@@ -50,6 +52,7 @@ class TestAsyncClientAuth:
         assert tokens.refresh_token == "ref"
 
     async def test_register(self):
+        """Test register."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -68,6 +71,7 @@ class TestAsyncClientAuth:
         assert user.username == "u"
 
     async def test_register_without_full_name(self):
+        """Test register without full name."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -86,6 +90,7 @@ class TestAsyncClientAuth:
         assert user.username == "u"
 
     async def test_refresh_token(self):
+        """Test refresh token."""
         client = AsyncFileOrganizerClient()
         resp = _ok({"access_token": "new_tok", "refresh_token": "new_ref", "token_type": "bearer"})
         client._client = AsyncMock()
@@ -95,6 +100,7 @@ class TestAsyncClientAuth:
         assert tokens.access_token == "new_tok"
 
     async def test_me(self):
+        """Test me."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -113,6 +119,7 @@ class TestAsyncClientAuth:
         assert user.username == "me"
 
     async def test_logout(self):
+        """Test logout."""
         client = AsyncFileOrganizerClient()
         resp = _ok({})
         client._client = AsyncMock()
@@ -123,7 +130,9 @@ class TestAsyncClientAuth:
 
 @pytest.mark.asyncio
 class TestAsyncClientFiles:
+    """TestAsyncClientFiles test suite."""
     async def test_list_files(self):
+        """Test list files."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -149,6 +158,7 @@ class TestAsyncClientFiles:
         assert result.total == 1
 
     async def test_get_file_info(self):
+        """Test get file info."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -167,6 +177,7 @@ class TestAsyncClientFiles:
         assert info.name == "f.txt"
 
     async def test_read_file_content(self):
+        """Test read file content."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -184,6 +195,7 @@ class TestAsyncClientFiles:
         assert content.content == "hello"
 
     async def test_move_file(self):
+        """Test move file."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {"source": "source.txt", "destination": "dest.txt", "moved": True, "dry_run": False}
@@ -195,6 +207,7 @@ class TestAsyncClientFiles:
         assert result.moved is True
 
     async def test_delete_file(self):
+        """Test delete file."""
         client = AsyncFileOrganizerClient()
         resp = _ok({"path": "files/f.txt", "deleted": True, "dry_run": False})
         client._client = AsyncMock()
@@ -206,7 +219,9 @@ class TestAsyncClientFiles:
 
 @pytest.mark.asyncio
 class TestAsyncClientOrganize:
+    """TestAsyncClientOrganize test suite."""
     async def test_scan(self):
+        """Test scan."""
         client = AsyncFileOrganizerClient()
         resp = _ok({"input_dir": "incoming", "total_files": 10, "counts": {"txt": 5}})
         client._client = AsyncMock()
@@ -216,6 +231,7 @@ class TestAsyncClientOrganize:
         assert result.total_files == 10
 
     async def test_preview_organize(self):
+        """Test preview organize."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -235,6 +251,7 @@ class TestAsyncClientOrganize:
         assert result.total_files == 5
 
     async def test_organize(self):
+        """Test organize."""
         client = AsyncFileOrganizerClient()
         resp = _ok({"status": "queued", "job_id": "j1"})
         client._client = AsyncMock()
@@ -244,6 +261,7 @@ class TestAsyncClientOrganize:
         assert result.job_id == "j1"
 
     async def test_get_job(self):
+        """Test get job."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -262,7 +280,9 @@ class TestAsyncClientOrganize:
 
 @pytest.mark.asyncio
 class TestAsyncClientSystem:
+    """TestAsyncClientSystem test suite."""
     async def test_health(self):
+        """Test health."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -280,6 +300,7 @@ class TestAsyncClientSystem:
         assert health.status == "ok"
 
     async def test_system_status(self):
+        """Test system status."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -299,6 +320,7 @@ class TestAsyncClientSystem:
         assert result.version == "2.0"
 
     async def test_get_config(self):
+        """Test get config."""
         client = AsyncFileOrganizerClient()
         resp = _ok({"profile": "default", "config": {}, "profiles": ["default"]})
         client._client = AsyncMock()
@@ -308,6 +330,7 @@ class TestAsyncClientSystem:
         assert result.profile == "default"
 
     async def test_update_config(self):
+        """Test update config."""
         client = AsyncFileOrganizerClient()
         resp = _ok({"profile": "default", "config": {"key": "val"}, "profiles": ["default"]})
         client._client = AsyncMock()
@@ -317,6 +340,7 @@ class TestAsyncClientSystem:
         assert result.config["key"] == "val"
 
     async def test_system_stats(self):
+        """Test system stats."""
         client = AsyncFileOrganizerClient()
         resp = _ok(
             {
@@ -338,7 +362,9 @@ class TestAsyncClientSystem:
 
 @pytest.mark.asyncio
 class TestAsyncClientDedupe:
+    """TestAsyncClientDedupe test suite."""
     async def test_dedupe_scan(self):
+        """Test dedupe scan."""
         client = AsyncFileOrganizerClient()
         resp = _ok({"path": "/tmp", "duplicates": [], "stats": {"total": 0}})
         client._client = AsyncMock()
@@ -348,6 +374,7 @@ class TestAsyncClientDedupe:
         assert result.path == "/tmp"
 
     async def test_dedupe_preview(self):
+        """Test dedupe preview."""
         client = AsyncFileOrganizerClient()
         resp = _ok({"path": "/tmp", "preview": [], "stats": {"total": 0}})
         client._client = AsyncMock()
@@ -357,6 +384,7 @@ class TestAsyncClientDedupe:
         assert result.path == "/tmp"
 
     async def test_dedupe_execute(self):
+        """Test dedupe execute."""
         client = AsyncFileOrganizerClient()
         resp = _ok({"path": "/tmp", "removed": [], "dry_run": True, "stats": {"total": 0}})
         client._client = AsyncMock()
@@ -368,11 +396,14 @@ class TestAsyncClientDedupe:
 
 @pytest.mark.asyncio
 class TestAsyncClientContextManager:
+    """TestAsyncClientContextManager test suite."""
     async def test_async_context_manager(self):
+        """Test async context manager."""
         async with AsyncFileOrganizerClient() as client:
             assert client is not None
 
     async def test_aclose(self):
+        """Test aclose."""
         client = AsyncFileOrganizerClient()
         client._client = AsyncMock()
         client._client.aclose = AsyncMock()
@@ -382,7 +413,9 @@ class TestAsyncClientContextManager:
 
 @pytest.mark.asyncio
 class TestAsyncClientErrorHandling:
+    """TestAsyncClientErrorHandling test suite."""
     async def test_401_raises_authentication_error(self):
+        """Test 401 raises authentication error."""
         client = AsyncFileOrganizerClient()
         client._client = AsyncMock()
         client._client.get = AsyncMock(return_value=_err(401, "unauthorized"))
@@ -391,6 +424,7 @@ class TestAsyncClientErrorHandling:
             await client.health()
 
     async def test_403_raises_authentication_error(self):
+        """Test 403 raises authentication error."""
         client = AsyncFileOrganizerClient()
         client._client = AsyncMock()
         client._client.get = AsyncMock(return_value=_err(403, "forbidden"))
@@ -399,6 +433,7 @@ class TestAsyncClientErrorHandling:
             await client.health()
 
     async def test_404_raises_not_found_error(self):
+        """Test 404 raises not found error."""
         client = AsyncFileOrganizerClient()
         client._client = AsyncMock()
         client._client.get = AsyncMock(return_value=_err(404, "not found"))
@@ -407,6 +442,7 @@ class TestAsyncClientErrorHandling:
             await client.health()
 
     async def test_422_raises_validation_error(self):
+        """Test 422 raises validation error."""
         client = AsyncFileOrganizerClient()
         client._client = AsyncMock()
         client._client.get = AsyncMock(return_value=_err(422, "invalid"))
@@ -415,6 +451,7 @@ class TestAsyncClientErrorHandling:
             await client.health()
 
     async def test_500_raises_server_error(self):
+        """Test 500 raises server error."""
         client = AsyncFileOrganizerClient()
         client._client = AsyncMock()
         client._client.get = AsyncMock(return_value=_err(500, "internal"))
@@ -423,6 +460,7 @@ class TestAsyncClientErrorHandling:
             await client.health()
 
     async def test_400_raises_client_error(self):
+        """Test 400 raises client error."""
         client = AsyncFileOrganizerClient()
         client._client = AsyncMock()
         client._client.get = AsyncMock(return_value=_err(400, "bad request"))
@@ -447,17 +485,22 @@ class TestAsyncClientErrorHandling:
 
 @pytest.mark.asyncio
 class TestAsyncClientSetToken:
+    """TestAsyncClientSetToken test suite."""
     async def test_set_token_updates_header(self):
+        """Test set token updates header."""
         client = AsyncFileOrganizerClient()
         client.set_token("new_token")
         assert client._client.headers["Authorization"] == "Bearer new_token"
 
 
 class TestAsyncClientInitHeaders:
+    """TestAsyncClientInitHeaders test suite."""
     def test_init_with_token(self):
+        """Test init with token."""
         client = AsyncFileOrganizerClient(token="my_token")
         assert "Authorization" in client._client.headers
 
     def test_init_with_api_key(self):
+        """Test init with api key."""
         client = AsyncFileOrganizerClient(api_key="my_key")
         assert "X-API-Key" in client._client.headers

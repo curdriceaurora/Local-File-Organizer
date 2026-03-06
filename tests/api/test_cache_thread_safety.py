@@ -17,6 +17,7 @@ class TestInMemoryCacheThreadSafety:
     """Verify InMemoryCache is thread-safe."""
 
     def test_has_lock(self):
+        """Test has lock."""
         cache = InMemoryCache()
         assert hasattr(cache, "_lock")
         assert isinstance(cache._lock, type(threading.Lock()))
@@ -27,6 +28,7 @@ class TestInMemoryCacheThreadSafety:
         errors: list[Exception] = []
 
         def writer(tid: int):
+            """writer."""
             try:
                 for i in range(50):
                     cache.set(f"key-{tid}-{i}", f"val-{tid}-{i}", ttl_seconds=60)
@@ -34,6 +36,7 @@ class TestInMemoryCacheThreadSafety:
                 errors.append(exc)
 
         def reader(tid: int):
+            """reader."""
             try:
                 for i in range(50):
                     cache.get(f"key-{tid}-{i}")
@@ -71,6 +74,7 @@ class TestInMemoryCacheThreadSafety:
                 entry.expires_at = time.time() - 1
 
         def reader():
+            """reader."""
             try:
                 for i in range(20):
                     cache.get(f"k{i}")
@@ -98,6 +102,7 @@ class TestInMemoryCacheThreadSafety:
         errors: list[Exception] = []
 
         def deleter(start: int):
+            """deleter."""
             try:
                 for i in range(start, start + 10):
                     cache.delete(f"k{i}")
@@ -122,6 +127,7 @@ class TestRedisCacheCloseLogging:
     """Verify RedisCache.close() logs on error instead of silently swallowing."""
 
     def test_close_logs_warning_on_error(self):
+        """Test close logs warning on error."""
         from file_organizer.api.cache import RedisError
 
         mock_redis = MagicMock()

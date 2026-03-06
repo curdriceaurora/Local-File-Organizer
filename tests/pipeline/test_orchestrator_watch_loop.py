@@ -25,6 +25,7 @@ class TestWatchLoop:
     """Tests for _watch_loop method."""
 
     def _make_orchestrator(self) -> PipelineOrchestrator:
+        """_make_orchestrator."""
         config = PipelineConfig(dry_run=True)
         orch = PipelineOrchestrator(config)
         return orch
@@ -39,6 +40,7 @@ class TestWatchLoop:
         call_count = 0
 
         def fake_get_events(max_size=None):
+            """fake_get_events."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -63,6 +65,7 @@ class TestWatchLoop:
         call_count = 0
 
         def fake_get_events(max_size=None):
+            """fake_get_events."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -86,6 +89,7 @@ class TestWatchLoop:
         call_count = 0
 
         def fake_get_events(max_size=None):
+            """fake_get_events."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -101,6 +105,7 @@ class TestWatchLoop:
         process_calls = []
 
         def fake_process(path):
+            """fake_process."""
             process_calls.append(path)
             if "vanished" in str(path):
                 raise FileNotFoundError(f"No such file: {path}")
@@ -121,6 +126,7 @@ class TestWatchLoop:
         call_count = 0
 
         def fake_get_events(max_size=None):
+            """fake_get_events."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -149,6 +155,7 @@ class TestWatchLoopExecutor:
     """Tests for ThreadPoolExecutor usage in watch loop."""
 
     def _make_orchestrator(self) -> PipelineOrchestrator:
+        """_make_orchestrator."""
         config = PipelineConfig(dry_run=True)
         orch = PipelineOrchestrator(config)
         return orch
@@ -163,6 +170,7 @@ class TestWatchLoopExecutor:
         call_count = 0
 
         def fake_get_events(max_size=None):
+            """fake_get_events."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:

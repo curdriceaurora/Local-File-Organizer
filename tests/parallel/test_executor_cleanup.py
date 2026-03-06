@@ -42,6 +42,7 @@ class TestExecutorFactoryCleanup:
             call_count = 0
 
             def info_side_effect(*args, **kwargs):
+                """info_side_effect."""
                 nonlocal call_count
                 call_count += 1
                 if call_count == 1:

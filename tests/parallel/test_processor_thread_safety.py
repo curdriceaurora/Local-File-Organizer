@@ -51,6 +51,7 @@ class TestProcessorThreadSafety:
         errors: list = []
 
         def worker(file_list, results_out):
+            """worker."""
             try:
                 for r in proc.process_batch_iter(file_list, lambda p: p.read_text()):
                     results_out.append(r)

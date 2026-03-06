@@ -51,6 +51,7 @@ class TestStartBackgroundLockCoverage:
         errors: list[Exception] = []
 
         def cycle():
+            """cycle."""
             try:
                 daemon = DaemonService(config)
                 daemon.start_background()
@@ -83,6 +84,7 @@ class TestStartBackgroundLockCoverage:
         successes = 0
 
         def try_start():
+            """try_start."""
             nonlocal successes
             try:
                 daemon.start_background()

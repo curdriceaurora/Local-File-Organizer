@@ -28,7 +28,9 @@ def _make_config(**kwargs) -> DaemonConfig:
 
 
 class TestDaemonServiceInit:
+    """TestDaemonServiceInit test suite."""
     def test_initial_state(self):
+        """Test initial state."""
         config = _make_config()
         daemon = DaemonService(config)
         assert daemon.is_running is False
@@ -37,7 +39,9 @@ class TestDaemonServiceInit:
 
 
 class TestDaemonServiceStartBackground:
+    """TestDaemonServiceStartBackground test suite."""
     def test_start_and_stop(self):
+        """Test start and stop."""
         config = _make_config()
         daemon = DaemonService(config)
         daemon.start_background()
@@ -49,6 +53,7 @@ class TestDaemonServiceStartBackground:
         assert daemon.is_running is False
 
     def test_double_start_raises(self):
+        """Test double start raises."""
         config = _make_config()
         daemon = DaemonService(config)
         daemon.start_background()
@@ -59,13 +64,16 @@ class TestDaemonServiceStartBackground:
             daemon.stop()
 
     def test_stop_when_not_running(self):
+        """Test stop when not running."""
         config = _make_config()
         daemon = DaemonService(config)
         daemon.stop()  # Should not raise
 
 
 class TestDaemonServiceRestart:
+    """TestDaemonServiceRestart test suite."""
     def test_restart(self):
+        """Test restart."""
         config = _make_config()
         daemon = DaemonService(config)
         daemon.start_background()
@@ -76,6 +84,7 @@ class TestDaemonServiceRestart:
             daemon.stop()
 
     def test_restart_from_stopped(self):
+        """Test restart from stopped."""
         config = _make_config()
         daemon = DaemonService(config)
         daemon.restart()
@@ -86,7 +95,9 @@ class TestDaemonServiceRestart:
 
 
 class TestDaemonServiceCallbacks:
+    """TestDaemonServiceCallbacks test suite."""
     def test_on_start_callback(self):
+        """Test on start callback."""
         config = _make_config()
         daemon = DaemonService(config)
         start_called = threading.Event()
@@ -98,6 +109,7 @@ class TestDaemonServiceCallbacks:
             daemon.stop()
 
     def test_on_stop_callback(self):
+        """Test on stop callback."""
         config = _make_config()
         daemon = DaemonService(config)
         stop_called = threading.Event()
@@ -107,10 +119,12 @@ class TestDaemonServiceCallbacks:
         assert stop_called.wait(timeout=2.0)
 
     def test_on_start_callback_exception_does_not_crash(self):
+        """Test on start callback exception does not crash."""
         config = _make_config()
         daemon = DaemonService(config)
 
         def bad_callback():
+            """bad_callback."""
             raise RuntimeError("boom")
 
         daemon.on_start(bad_callback)
@@ -121,10 +135,12 @@ class TestDaemonServiceCallbacks:
             daemon.stop()
 
     def test_on_stop_callback_exception_does_not_crash(self):
+        """Test on stop callback exception does not crash."""
         config = _make_config()
         daemon = DaemonService(config)
 
         def bad_callback():
+            """bad_callback."""
             raise RuntimeError("boom")
 
         daemon.on_stop(bad_callback)
@@ -134,7 +150,9 @@ class TestDaemonServiceCallbacks:
 
 
 class TestDaemonServicePidFile:
+    """TestDaemonServicePidFile test suite."""
     def test_pid_file_written_and_removed(self, tmp_path):
+        """Test pid file written and removed."""
         pid_file = tmp_path / "daemon.pid"
         config = _make_config(pid_file=pid_file)
         daemon = DaemonService(config)
@@ -149,13 +167,16 @@ class TestDaemonServicePidFile:
 
 
 class TestDaemonServiceScheduler:
+    """TestDaemonServiceScheduler test suite."""
     def test_scheduler_accessible(self):
+        """Test scheduler accessible."""
         config = _make_config()
         daemon = DaemonService(config)
         assert daemon.scheduler is not None
 
 
 class TestDaemonServiceSignalHandling:
+    """TestDaemonServiceSignalHandling test suite."""
     def test_handle_signal_writes_to_pipe(self):
         """Signal handler writes to self-pipe (no longer sets stop event directly)."""
         import os
@@ -171,12 +192,15 @@ class TestDaemonServiceSignalHandling:
 
 
 class TestDaemonServiceUptimeProperty:
+    """TestDaemonServiceUptimeProperty test suite."""
     def test_uptime_zero_when_not_running(self):
+        """Test uptime zero when not running."""
         config = _make_config()
         daemon = DaemonService(config)
         assert daemon.uptime_seconds == 0.0
 
     def test_uptime_positive_when_running(self):
+        """Test uptime positive when running."""
         config = _make_config()
         daemon = DaemonService(config)
         daemon.start_background()
@@ -187,6 +211,7 @@ class TestDaemonServiceUptimeProperty:
             daemon.stop()
 
     def test_uptime_zero_after_stop(self):
+        """Test uptime zero after stop."""
         config = _make_config()
         daemon = DaemonService(config)
         daemon.start_background()
@@ -195,6 +220,7 @@ class TestDaemonServiceUptimeProperty:
 
 
 class TestDaemonServiceForeground:
+    """TestDaemonServiceForeground test suite."""
     def test_start_foreground_runs_loop_until_stop(self, tmp_path):
         """start() runs in foreground blocking until stop_event is set."""
         pid_file = tmp_path / "daemon.pid"
@@ -250,6 +276,7 @@ class TestDaemonServiceForeground:
 
 
 class TestDaemonServiceSignalHandlerEdgeCases:
+    """TestDaemonServiceSignalHandlerEdgeCases test suite."""
     def test_signal_handlers_skipped_in_non_main_thread(self):
         """_install_signal_handlers should skip when not in main thread."""
         config = _make_config()
@@ -257,6 +284,7 @@ class TestDaemonServiceSignalHandlerEdgeCases:
         result = []
 
         def worker():
+            """worker."""
             daemon._install_signal_handlers()
             # Should not have set any original handlers
             result.append(daemon._original_sigterm)
@@ -285,6 +313,7 @@ class TestDaemonServiceSignalHandlerEdgeCases:
         daemon._original_sigint = signal.SIG_DFL
 
         def worker():
+            """worker."""
             daemon._restore_signal_handlers()
 
         t = threading.Thread(target=worker)
