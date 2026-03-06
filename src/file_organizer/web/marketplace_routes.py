@@ -245,3 +245,39 @@ def update_plugin(
         message=message,
         message_kind=message_kind,
     )
+
+
+@marketplace_router.get("/marketplace/plugins/{name}/details", response_class=HTMLResponse)
+def plugin_details(
+    request: Request,
+    name: str,
+    settings: ApiSettings = Depends(get_settings),
+) -> HTMLResponse:
+    """Display plugin details in a modal.
+
+    Args:
+        request: Incoming FastAPI request.
+        name: Plugin identifier.
+        settings: Application settings.
+
+    Returns:
+        Plugin details HTML fragment for modal.
+    """
+    try:
+        service = _service()
+        plugins, _ = service.list_plugins(per_page=1000, query=name)
+        plugin = next((p for p in plugins if p.name == name), None)
+
+        if not plugin:
+            return HTMLResponse("<p>Plugin not found.</p>", status_code=404)
+
+        context = base_context(
+            request,
+            settings,
+            active="marketplace",
+            title=f"{plugin.name} Details",
+            extras={"plugin": plugin},
+        )
+        return templates.TemplateResponse(request, "marketplace/plugin_details.html", context)
+    except MarketplaceError as exc:
+        return HTMLResponse(f"<p>Error loading plugin details: {exc}</p>", status_code=500)

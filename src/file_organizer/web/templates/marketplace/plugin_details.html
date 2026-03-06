@@ -1,0 +1,47 @@
+<div class="modal-header">
+    <h2 class="modal-title">{{ plugin.name }}</h2>
+    <button type="button" class="modal-close" onclick="document.querySelector('.modal').classList.remove('modal-open')" aria-label="Close modal">
+        &times;
+    </button>
+</div>
+<div class="modal-content">
+    <div class="plugin-details-header">
+        <div class="plugin-info">
+            <p class="text-secondary">{{ plugin.description }}</p>
+        </div>
+    </div>
+
+    <div class="plugin-details-meta">
+        <div class="plugin-detail-item">
+            <span class="plugin-detail-label">Version</span>
+            <span class="plugin-detail-value">{{ plugin.version }}</span>
+        </div>
+        <div class="plugin-detail-item">
+            <span class="plugin-detail-label">Author</span>
+            <span class="plugin-detail-value">{{ plugin.author }}</span>
+        </div>
+        <div class="plugin-detail-item">
+            <span class="plugin-detail-label">Category</span>
+            <span class="plugin-detail-value">{{ plugin.category }}</span>
+        </div>
+        <div class="plugin-detail-item">
+            <span class="plugin-detail-label">Rating</span>
+            <span class="plugin-detail-value">{{ '%.1f' | format(plugin.rating) }} ⭐</span>
+        </div>
+        <div class="plugin-detail-item">
+            <span class="plugin-detail-label">Downloads</span>
+            <span class="plugin-detail-value">{{ plugin.downloads }}</span>
+        </div>
+    </div>
+
+    {% if plugin.tags %}
+    <div class="plugin-tags">
+        <span class="plugin-detail-label">Tags</span>
+        <div class="tag-list">
+            {% for tag in plugin.tags %}
+            <span class="tag">{{ tag }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
