@@ -11,6 +11,7 @@ from urllib.parse import quote, unquote
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from PIL import Image, UnidentifiedImageError
+from pydantic import BaseModel
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
@@ -47,6 +48,54 @@ from file_organizer.web._helpers import (
 )
 
 files_router = APIRouter(tags=["web"])
+
+
+# ---------------------------------------------------------------------------
+# Request/Response Models
+# ---------------------------------------------------------------------------
+
+
+class RenameRequest(BaseModel):
+    """Request to rename a file."""
+
+    new_name: str
+
+
+class RenameResponse(BaseModel):
+    """Response after renaming a file."""
+
+    success: bool
+    old_path: str
+    new_path: str
+    error: Optional[str] = None
+
+
+class MoveRequest(BaseModel):
+    """Request to move a file."""
+
+    destination: str
+
+
+class MoveResponse(BaseModel):
+    """Response after moving a file."""
+
+    success: bool
+    source_path: str
+    destination_path: str
+    error: Optional[str] = None
+
+
+class DeleteResponse(BaseModel):
+    """Response after deleting a file."""
+
+    success: bool
+    path: str
+    error: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Helper Functions
+# ---------------------------------------------------------------------------
 
 
 def _build_breadcrumbs(path: Path, roots: list[Path]) -> list[dict[str, str]]:
@@ -723,3 +772,195 @@ def files_upload(
     context["info_message"] = info_message
     context["error_message"] = error_message or context.get("error_message")
     return templates.TemplateResponse(request, "files/_results.html", context)
+
+
+# ---------------------------------------------------------------------------
+# Bulk File Operations
+# ---------------------------------------------------------------------------
+
+
+@files_router.post("/files/rename", response_model=RenameResponse)
+def files_rename(
+    request: Request,
+    settings: ApiSettings = Depends(get_settings),
+    path: str = Form(...),
+    new_name: str = Form(...),
+) -> RenameResponse:
+    """Rename a file.
+
+    Args:
+        request: Incoming FastAPI request.
+        settings: Application settings with allowed paths.
+        path: Absolute path of file to rename.
+        new_name: New filename (not a path, just the name).
+
+    Returns:
+        Response with success status and updated paths.
+    """
+    try:
+        target = resolve_path(path, settings.allowed_paths)
+        if not target.exists():
+            return RenameResponse(
+                success=False,
+                old_path=path,
+                new_path="",
+                error="File not found",
+            )
+
+        # Validate new_name doesn't contain path separators
+        if "/" in new_name or "\\" in new_name:
+            return RenameResponse(
+                success=False,
+                old_path=path,
+                new_path="",
+                error="Invalid filename: cannot contain path separators",
+            )
+
+        if not new_name or new_name.strip() == "":
+            return RenameResponse(
+                success=False,
+                old_path=path,
+                new_path="",
+                error="New name cannot be empty",
+            )
+
+        new_name = new_name.strip()
+        new_path = target.parent / new_name
+
+        if new_path.exists():
+            return RenameResponse(
+                success=False,
+                old_path=path,
+                new_path="",
+                error="File with that name already exists",
+            )
+
+        target.rename(new_path)
+
+        return RenameResponse(
+            success=True,
+            old_path=str(target),
+            new_path=str(new_path),
+            error=None,
+        )
+    except Exception as exc:
+        return RenameResponse(
+            success=False,
+            old_path=path,
+            new_path="",
+            error=str(exc),
+        )
+
+
+@files_router.post("/files/move", response_model=MoveResponse)
+def files_move(
+    request: Request,
+    settings: ApiSettings = Depends(get_settings),
+    path: str = Form(...),
+    destination: str = Form(...),
+) -> MoveResponse:
+    """Move a file to a different directory.
+
+    Args:
+        request: Incoming FastAPI request.
+        settings: Application settings with allowed paths.
+        path: Absolute path of file to move.
+        destination: Destination directory path.
+
+    Returns:
+        Response with success status and updated paths.
+    """
+    try:
+        import shutil
+
+        source = resolve_path(path, settings.allowed_paths)
+        dest_dir = resolve_path(destination, settings.allowed_paths)
+
+        if not source.exists():
+            return MoveResponse(
+                success=False,
+                source_path=path,
+                destination_path="",
+                error="Source file not found",
+            )
+
+        if not dest_dir.exists() or not dest_dir.is_dir():
+            return MoveResponse(
+                success=False,
+                source_path=path,
+                destination_path="",
+                error="Destination directory not found or is not a directory",
+            )
+
+        # Create target path with source filename in destination directory
+        target_path = dest_dir / source.name
+
+        if target_path.exists():
+            return MoveResponse(
+                success=False,
+                source_path=path,
+                destination_path="",
+                error="File already exists in destination",
+            )
+
+        shutil.move(str(source), str(target_path))
+
+        return MoveResponse(
+            success=True,
+            source_path=str(source),
+            destination_path=str(target_path),
+            error=None,
+        )
+    except Exception as exc:
+        return MoveResponse(
+            success=False,
+            source_path=path,
+            destination_path="",
+            error=str(exc),
+        )
+
+
+@files_router.post("/files/delete", response_model=DeleteResponse)
+def files_delete(
+    request: Request,
+    settings: ApiSettings = Depends(get_settings),
+    path: str = Form(...),
+) -> DeleteResponse:
+    """Delete a file.
+
+    Args:
+        request: Incoming FastAPI request.
+        settings: Application settings with allowed paths.
+        path: Absolute path of file to delete.
+
+    Returns:
+        Response with success status.
+    """
+    try:
+        target = resolve_path(path, settings.allowed_paths)
+
+        if not target.exists():
+            return DeleteResponse(
+                success=False,
+                path=path,
+                error="File not found",
+            )
+
+        if target.is_dir():
+            import shutil
+
+            shutil.rmtree(target)
+        else:
+            target.unlink()
+
+        return DeleteResponse(
+            success=True,
+            path=str(target),
+            error=None,
+        )
+    except Exception as exc:
+        return DeleteResponse(
+            success=False,
+            path=path,
+            error=str(exc),
+        )
