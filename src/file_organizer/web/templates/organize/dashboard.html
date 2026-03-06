@@ -104,6 +104,7 @@
         <div
             id="organize-history"
             hx-get="/ui/organize/history"
+            hx-include=".history-filters"
             hx-trigger="load, refreshHistory from:body, every 10s"
             hx-target="#organize-history"
             hx-swap="innerHTML"
