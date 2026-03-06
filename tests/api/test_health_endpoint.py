@@ -51,7 +51,6 @@ def _mock_health(ollama: bool) -> dict[str, object]:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestHealthEndpoint:
     """Tests for GET /health."""
 

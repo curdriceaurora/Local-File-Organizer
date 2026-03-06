@@ -15,7 +15,7 @@ from file_organizer.daemon.service import DaemonService
 
 from .conftest import wired_pipe
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = pytest.mark.unit
 
 
 def _make_config(**kwargs) -> DaemonConfig:
@@ -34,6 +34,7 @@ def _make_config(**kwargs) -> DaemonConfig:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 class TestSignalHandlerWritesToPipe:
     """TestSignalHandlerWritesToPipe test suite."""
     def test_signal_handler_writes_byte_to_pipe(self) -> None:
@@ -63,6 +64,7 @@ class TestSignalHandlerWritesToPipe:
         daemon._handle_signal(signal.SIGTERM, None)
 
 
+@pytest.mark.ci
 class TestRunLoopExitsOnPipeSignal:
     """TestRunLoopExitsOnPipeSignal test suite."""
     def test_run_loop_exits_on_pipe_signal(self) -> None:

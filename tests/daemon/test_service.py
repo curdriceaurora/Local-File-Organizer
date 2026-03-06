@@ -65,7 +65,6 @@ def daemon(config: DaemonConfig) -> DaemonService:
         svc.stop()
 
 
-@pytest.mark.unit
 class TestDaemonLifecycle:
     """Tests for start/stop lifecycle."""
 
@@ -120,7 +119,6 @@ class TestDaemonLifecycle:
         assert daemon.is_running is True
 
 
-@pytest.mark.unit
 class TestPidFileManagement:
     """Tests for PID file lifecycle with the daemon."""
 
@@ -159,7 +157,6 @@ class TestPidFileManagement:
             svc.stop()
 
 
-@pytest.mark.unit
 class TestCallbacks:
     """Tests for on_start and on_stop callbacks."""
 
@@ -194,7 +191,6 @@ class TestCallbacks:
         assert daemon.is_running is True
 
 
-@pytest.mark.unit
 class TestUptimeAndStats:
     """Tests for uptime and statistics tracking."""
 
@@ -214,7 +210,6 @@ class TestUptimeAndStats:
         assert daemon.files_processed == 0
 
 
-@pytest.mark.unit
 class TestSchedulerIntegration:
     """Tests for scheduler access from the daemon."""
 
@@ -249,7 +244,6 @@ class TestSchedulerIntegration:
             assert counter["value"] >= 2
 
 
-@pytest.mark.unit
 class TestSignalHandling:
     """Tests for signal handler installation."""
 

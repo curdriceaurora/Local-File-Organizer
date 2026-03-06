@@ -14,7 +14,7 @@ import pytest
 
 from file_organizer.daemon.pid import PidFileManager
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = pytest.mark.unit
 
 
 @pytest.fixture
