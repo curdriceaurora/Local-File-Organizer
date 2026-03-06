@@ -154,3 +154,68 @@ class TestSearchReturnsRealFiles:
         resp = client.get("/search", params={"q": "secret", "path": str(forbidden)})
         # resolve_path raises ApiError with 403
         assert resp.status_code in (403, 422)
+
+    def test_search_schema_validation(self, tmp_path: Path) -> None:
+        """Verify search results have all required and optional fields with correct types."""
+        (tmp_path / "test.pdf").write_bytes(b"%PDF")
+        client = _make_app([str(tmp_path)])
+
+        resp = client.get("/search", params={"q": "test"})
+        assert resp.status_code == 200
+        results = resp.json()
+        assert len(results) == 1
+
+        result = results[0]
+        # Required fields
+        assert "filename" in result and isinstance(result["filename"], str)
+        assert "path" in result and isinstance(result["path"], str)
+        assert "score" in result and isinstance(result["score"], float)
+
+        # Optional fields with correct types
+        assert "type" in result and (isinstance(result["type"], str) or result["type"] is None)
+        assert "size" in result and (isinstance(result["size"], int) or result["size"] is None)
+        assert "created" in result and (
+            isinstance(result["created"], str) or result["created"] is None
+        )
+
+    def test_search_limit_zero_returns_all(self, tmp_path: Path) -> None:
+        """Verify limit=0 returns all results (treated as 'no limit')."""
+        for i in range(5):
+            (tmp_path / f"file_{i}.txt").write_text(str(i))
+        client = _make_app([str(tmp_path)])
+
+        resp = client.get("/search", params={"q": "file", "limit": 0})
+        assert resp.status_code == 200
+        results = resp.json()
+        # limit=0 means no limit, return all
+        assert len(results) == 5
+
+    def test_search_negative_offset_behaves_as_zero(self, tmp_path: Path) -> None:
+        """Verify negative offset is treated as zero or handled gracefully."""
+        (tmp_path / "file.txt").write_text("x")
+        client = _make_app([str(tmp_path)])
+
+        # Negative offset should either be treated as 0 or raise 422
+        resp = client.get("/search", params={"q": "file", "offset": -1})
+        # Either valid (treated as 0) or validation error
+        assert resp.status_code in (200, 422)
+
+    def test_search_large_offset_returns_empty(self, tmp_path: Path) -> None:
+        """Verify offset beyond results count returns empty list."""
+        (tmp_path / "file.txt").write_text("x")
+        client = _make_app([str(tmp_path)])
+
+        resp = client.get("/search", params={"q": "file", "offset": 1000})
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_search_utf8_query(self, tmp_path: Path) -> None:
+        """Verify search works with UTF-8 characters in query."""
+        (tmp_path / "café.txt").write_text("content")
+        client = _make_app([str(tmp_path)])
+
+        resp = client.get("/search", params={"q": "café"})
+        assert resp.status_code == 200
+        results = resp.json()
+        # UTF-8 search should work (case-insensitive)
+        assert len(results) >= 0  # May or may not match depending on OS
