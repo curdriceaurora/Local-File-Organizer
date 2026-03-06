@@ -99,7 +99,7 @@ class TestOrganizeScan:
         )
         assert response.status_code == 200
         # Verify plan was generated (success path, not error path)
-        assert "plan" in response.text.lower()
+        assert "Plan generated" in response.text
         # Verify FileOrganizer was called with correct methodology
         assert mock_file_organizer.call_count > 0
 
@@ -120,7 +120,7 @@ class TestOrganizeScan:
         )
         assert response.status_code == 200
         # Verify plan was generated (success path, not error path)
-        assert "plan" in response.text.lower()
+        assert "Plan generated" in response.text
         # Verify FileOrganizer was called (methodology handling verified by endpoint)
         assert mock_file_organizer.call_count > 0
 
@@ -141,7 +141,7 @@ class TestOrganizeScan:
         )
         assert response.status_code == 200
         # Verify plan was generated (success path, not error path)
-        assert "plan" in response.text.lower()
+        assert "Plan generated" in response.text
         # Verify FileOrganizer was called (methodology handling verified by endpoint)
         assert mock_file_organizer.call_count > 0
 

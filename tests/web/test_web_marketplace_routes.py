@@ -14,11 +14,14 @@ from file_organizer.api.test_utils import build_test_settings
 def _build_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     """Create a test client with marketplace route access.
 
-    Sets FO_MARKETPLACE_HOME to tmp_path to prevent tests from creating
-    files in the user's actual config directory (hermetic testing).
+    Sets FO_MARKETPLACE_HOME and FO_MARKETPLACE_REPO_URL to tmp_path to prevent
+    tests from creating files in the user's actual config directory or hitting
+    external URLs (hermetic testing).
     """
     # Isolate marketplace to tmp_path to avoid polluting user's environment
     monkeypatch.setenv("FO_MARKETPLACE_HOME", str(tmp_path / "marketplace"))
+    # Ensure the marketplace repo URL also points to a local path for hermetic tests
+    monkeypatch.setenv("FO_MARKETPLACE_REPO_URL", str(tmp_path / "marketplace_repo"))
 
     settings = build_test_settings(tmp_path, allowed_paths=[])
     app = create_app(settings)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import platform
 from pathlib import Path
 
 import pytest
@@ -104,6 +105,11 @@ class TestFilesSorting:
         assert "file_new.txt" in content
         assert content.index("file_old.txt") < content.index("file_new.txt")
 
+    @pytest.mark.skipif(
+        platform.system() in ("Windows", "Darwin"),
+        reason="Creation time sorting is flaky on Windows/macOS: st_birthtime and st_ctime "
+        "don't reliably match st_mtime (used by os.utime). Skip on these platforms.",
+    )
     def test_files_sort_by_created(self, tmp_path: Path) -> None:
         """Should handle sort by created time parameter."""
         first_file = tmp_path / "file_first.txt"

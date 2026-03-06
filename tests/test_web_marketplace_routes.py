@@ -19,6 +19,19 @@ def _build_client(tmp_path: Path) -> TestClient:
     return TestClient(app)
 
 
+def _mock_marketplace_service() -> MagicMock:
+    """Create marketplace service mock with deterministic test behavior.
+
+    Returns a MagicMock configured with:
+    - list_plugins() returns ([], 0) - empty list with count
+    - list_installed() returns [] - empty list, iterable for _render_marketplace_page
+    """
+    mock_instance = MagicMock()
+    mock_instance.list_plugins.return_value = ([], 0)
+    mock_instance.list_installed.return_value = []
+    return mock_instance
+
+
 @pytest.mark.unit
 class TestMarketplacePage:
     """Tests for the main marketplace page."""
@@ -129,9 +142,7 @@ class TestMarketplaceHtmxEndpoints:
         client = _build_client(tmp_path)
         # Mock the MarketplaceService.install method
         with patch("file_organizer.web.marketplace_routes.MarketplaceService") as mock_service_class:
-            mock_instance = MagicMock()
-            # Mock list_plugins to return empty list and total count
-            mock_instance.list_plugins.return_value = ([], 0)
+            mock_instance = _mock_marketplace_service()
             mock_service_class.return_value = mock_instance
 
             # Test the install endpoint with a valid plugin name
@@ -160,9 +171,7 @@ class TestMarketplaceInstallFlow:
         client = _build_client(tmp_path)
         # Mock the MarketplaceService to handle validation
         with patch("file_organizer.web.marketplace_routes.MarketplaceService") as mock_service_class:
-            mock_instance = MagicMock()
-            # Mock list_plugins to return empty list and total count
-            mock_instance.list_plugins.return_value = ([], 0)
+            mock_instance = _mock_marketplace_service()
             mock_service_class.return_value = mock_instance
 
             # Test that install endpoint rejects invalid plugin names or missing plugins
@@ -186,9 +195,7 @@ class TestMarketplaceInstallFlow:
         client = _build_client(tmp_path)
         # Mock the MarketplaceService to track install progress
         with patch("file_organizer.web.marketplace_routes.MarketplaceService") as mock_service_class:
-            mock_instance = MagicMock()
-            # Mock list_plugins to return empty list and total count
-            mock_instance.list_plugins.return_value = ([], 0)
+            mock_instance = _mock_marketplace_service()
             mock_service_class.return_value = mock_instance
 
             # Test the full install workflow by calling the install endpoint
