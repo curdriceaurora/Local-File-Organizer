@@ -59,6 +59,12 @@ def read_hdf5_file(file_path: str | Path, max_datasets: int = 20) -> str:
             dataset_count = 0
 
             def visit_item(name: str, obj: h5py.Dataset | h5py.Group) -> None:
+                """Visit and document HDF5 datasets and groups.
+
+                Args:
+                    name: The name of the dataset or group.
+                    obj: The HDF5 dataset or group object.
+                """
                 nonlocal dataset_count
                 if dataset_count >= max_datasets:
                     return
