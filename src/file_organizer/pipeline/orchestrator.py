@@ -196,7 +196,8 @@ class PipelineOrchestrator:
         # Check if extension is supported
         if not self.config.is_supported(file_path):
             duration_ms = (time.monotonic() - start_time) * 1000
-            self.stats.skipped += 1
+            with self._lock:
+                self.stats.skipped += 1
             return ProcessingResult(
                 file_path=file_path,
                 success=False,
@@ -210,7 +211,8 @@ class PipelineOrchestrator:
 
         if processor_type == ProcessorType.UNKNOWN:
             duration_ms = (time.monotonic() - start_time) * 1000
-            self.stats.skipped += 1
+            with self._lock:
+                self.stats.skipped += 1
             return ProcessingResult(
                 file_path=file_path,
                 success=False,
@@ -225,7 +227,8 @@ class PipelineOrchestrator:
 
         if processor is None:
             duration_ms = (time.monotonic() - start_time) * 1000
-            self.stats.failed += 1
+            with self._lock:
+                self.stats.failed += 1
             return ProcessingResult(
                 file_path=file_path,
                 success=False,
@@ -249,10 +252,11 @@ class PipelineOrchestrator:
             if self.config.should_move_files:
                 self._organize_file(file_path, destination)
 
-            # Update stats
-            self.stats.total_processed += 1
-            self.stats.successful += 1
-            self.stats.total_duration_ms += duration_ms
+            # Update stats (thread-safe)
+            with self._lock:
+                self.stats.total_processed += 1
+                self.stats.successful += 1
+                self.stats.total_duration_ms += duration_ms
 
             processing_result = ProcessingResult(
                 file_path=file_path,
@@ -275,9 +279,10 @@ class PipelineOrchestrator:
 
         except Exception as e:
             duration_ms = (time.monotonic() - start_time) * 1000
-            self.stats.total_processed += 1
-            self.stats.failed += 1
-            self.stats.total_duration_ms += duration_ms
+            with self._lock:
+                self.stats.total_processed += 1
+                self.stats.failed += 1
+                self.stats.total_duration_ms += duration_ms
 
             logger.exception("Failed to process %s", file_path)
 

@@ -83,7 +83,13 @@ class UpdateStateStore:
                 f.write(payload)
                 f.flush()
                 os.fsync(f.fileno())
-            temp_path.replace(self._state_path)
+            os.replace(temp_path, self._state_path)
+            # Fsync directory to persist rename metadata
+            dir_fd = os.open(str(self._state_path.parent), os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
         except Exception:
             if temp_path.exists():
                 temp_path.unlink()

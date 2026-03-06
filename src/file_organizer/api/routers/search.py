@@ -71,6 +71,9 @@ def _collect_matching_files(
             traversed += 1
             if traversed > max_files:
                 break
+            # Skip symlinks to prevent traversing into hidden/protected directories
+            if entry.is_symlink():
+                continue
             if not entry.is_file():
                 continue
             if is_hidden(entry):
@@ -103,17 +106,25 @@ def search(
             content={"detail": "Query parameter 'q' is required"},
         )
 
-    # Determine search roots
+    # Determine search roots (normalize paths for consistency)
     if path:
         search_roots = [resolve_path(path, settings.allowed_paths)]
     else:
-        search_roots = [Path(p) for p in settings.allowed_paths]
+        # Normalize allowed_paths to ensure consistent path representation
+        search_roots = [Path(p).resolve() for p in settings.allowed_paths]
 
     results: list[SearchResult] = []
+    total_traversed = 0
+
     for root in search_roots:
         if not root.exists() or not root.is_dir():
             continue
-        for fp in _collect_matching_files(root, q, type):
+        # Adjust remaining quota for this root (global limit across all roots)
+        remaining = _MAX_TRAVERSAL - total_traversed
+        if remaining <= 0:
+            break
+        for fp in _collect_matching_files(root, q, type, max_files=remaining):
+            total_traversed += 1
             try:
                 stat = fp.stat()
             except OSError:
@@ -123,6 +134,9 @@ def search(
                 creation_ts = stat.st_birthtime
             else:
                 creation_ts = stat.st_mtime
+            created_dt = datetime.fromtimestamp(creation_ts, tz=UTC)
+            # Format as ISO 8601 with Z suffix for UTC
+            created_str = created_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
             results.append(
                 SearchResult(
                     filename=fp.name,
@@ -130,16 +144,16 @@ def search(
                     score=score,
                     type=fp.suffix.lower().lstrip(".") or "unknown",
                     size=stat.st_size,
-                    created=datetime.fromtimestamp(creation_ts, tz=UTC).isoformat(),
+                    created=created_str,
                 )
             )
 
-    # Sort by score descending
-    results.sort(key=lambda r: r.score, reverse=True)
+    # Sort by score descending, then by filename for deterministic pagination
+    results.sort(key=lambda r: (-r.score, r.filename))
 
-    # Apply pagination
+    # Apply pagination (handle limit=0 as explicit "no limit")
     skip = offset or 0
-    if limit:
+    if limit is not None and limit > 0:
         results = results[skip : skip + limit]
     else:
         results = results[skip:]

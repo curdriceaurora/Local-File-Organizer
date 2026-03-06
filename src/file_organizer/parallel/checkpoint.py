@@ -146,14 +146,20 @@ class CheckpointManager:
         path = self._checkpoint_path(checkpoint.job_id)
         data = checkpoint.to_dict()
 
-        # Atomic write: write to temp file, fsync, then rename
+        # Atomic write: write to temp file, fsync, rename, then fsync directory
         temp_path = path.with_suffix(".tmp")
         try:
             with open(temp_path, "w", encoding="utf-8") as f:
                 f.write(json.dumps(data, indent=2, default=str))
                 f.flush()
                 os.fsync(f.fileno())
-            temp_path.replace(path)
+            os.replace(temp_path, path)
+            # Fsync directory to persist rename metadata
+            dir_fd = os.open(str(path.parent), os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
             logger.debug("Saved checkpoint for job %s", checkpoint.job_id)
         except Exception:
             if temp_path.exists():
