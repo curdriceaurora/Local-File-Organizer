@@ -93,6 +93,14 @@ def _display_groups_table(
 
 
 def _format_size(size: int) -> str:
+    """Format file size in human-readable units.
+
+    Args:
+        size: File size in bytes.
+
+    Returns:
+        Formatted size string (e.g., "1.5 MB").
+    """
     for unit in ("B", "KB", "MB", "GB", "TB"):
         if size < 1024:
             return f"{size:.1f} {unit}" if unit != "B" else f"{size} {unit}"

@@ -16,6 +16,11 @@ console = Console()
 
 
 def _service() -> MarketplaceService:
+    """Get the marketplace service instance.
+
+    Returns:
+        Lazily-loaded MarketplaceService instance.
+    """
     # Imported lazily to reduce startup latency
     from file_organizer.plugins.marketplace import MarketplaceService
 
@@ -23,6 +28,11 @@ def _service() -> MarketplaceService:
 
 
 def _render_plugins(items: list[PluginPackage]) -> None:
+    """Render plugins as a formatted table.
+
+    Args:
+        items: List of PluginPackage objects to display.
+    """
     table = Table(title="Marketplace Plugins", show_lines=False)
     table.add_column("Name", style="cyan")
     table.add_column("Version", style="green")

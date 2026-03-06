@@ -28,6 +28,19 @@ def _build_client(
     api_key: Optional[str],
     timeout: float,
 ) -> tuple[FileOrganizerClient, type[ClientError]]:
+    """Build an API client with the given configuration.
+
+    Lazily imports client libraries to reduce startup latency (~260ms savings).
+
+    Args:
+        base_url: Base URL of the API endpoint.
+        token: Optional bearer token for authentication.
+        api_key: Optional API key for authentication.
+        timeout: Request timeout in seconds.
+
+    Returns:
+        Tuple of (FileOrganizerClient instance, ClientError exception class).
+    """
     # Imported lazily to reduce startup latency (~260ms savings at startup)
     from file_organizer.client.exceptions import ClientError
     from file_organizer.client.sync_client import FileOrganizerClient
@@ -38,6 +51,11 @@ def _build_client(
 
 
 def _print_json(payload: object) -> None:
+    """Print a payload as formatted JSON to the console.
+
+    Args:
+        payload: Any Python object to serialize and print as JSON.
+    """
     console.print(json.dumps(payload, indent=2, default=str))
 
 
