@@ -122,10 +122,10 @@ jobs:
             pytest tests/ --cov=file_organizer --cov-fail-under=95 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
           fi
       - name: Check docstring coverage
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.11'
         run: interrogate -v src/ --fail-under 90
       - name: Upload coverage
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.11'
         uses: codecov/codecov-action@v4
         with:
           file: coverage.xml
