@@ -143,3 +143,54 @@ class TestWatchLoop:
         # Should return immediately without calling get_events
         orch._watch_loop()
         orch._monitor.get_events.assert_not_called()
+
+
+class TestWatchLoopExecutor:
+    """Tests for ThreadPoolExecutor usage in watch loop."""
+
+    def _make_orchestrator(self) -> PipelineOrchestrator:
+        config = PipelineConfig(dry_run=True)
+        orch = PipelineOrchestrator(config)
+        return orch
+
+    def test_watch_loop_uses_executor(self):
+        """File processing should be submitted to executor."""
+        orch = self._make_orchestrator()
+        orch._running = True
+        mock_monitor = MagicMock()
+        orch._monitor = mock_monitor
+
+        call_count = 0
+
+        def fake_get_events(max_size=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return [FakeEvent(path=Path("/tmp/test.txt"))]
+            orch._running = False
+            return []
+
+        mock_monitor.get_events = fake_get_events
+
+        with patch.object(orch._executor, "submit") as mock_submit:
+            orch._watch_loop()
+            # submit should have been called with process_file and the path
+            mock_submit.assert_called_once()
+            assert mock_submit.call_args[0][0] == orch.process_file
+            assert mock_submit.call_args[0][1] == Path("/tmp/test.txt")
+
+    def test_executor_max_workers_matches_config(self):
+        """Executor max_workers should match config.max_concurrent."""
+        config = PipelineConfig(dry_run=True, max_concurrent=8)
+        orch = PipelineOrchestrator(config)
+        assert orch._executor._max_workers == 8
+
+    def test_executor_shutdown_on_stop(self):
+        """Executor should be shutdown when pipeline stops."""
+        orch = self._make_orchestrator()
+        orch._running = True
+        orch._thread = MagicMock()
+
+        with patch.object(orch._executor, "shutdown") as mock_shutdown:
+            orch.stop()
+            mock_shutdown.assert_called_once_with(wait=False)

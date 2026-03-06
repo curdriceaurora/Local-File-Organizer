@@ -10,6 +10,7 @@ import logging
 import shutil
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -99,6 +100,7 @@ class PipelineOrchestrator:
         self._lock = threading.Lock()
         self._monitor = None
         self._watch_thread: threading.Thread | None = None
+        self._executor = ThreadPoolExecutor(max_workers=config.max_concurrent if config else 4)
 
     def start(self) -> None:
         """Start the pipeline, including watch mode if configured.
@@ -146,6 +148,9 @@ class PipelineOrchestrator:
             if self._watch_thread is not None:
                 self._watch_thread.join(timeout=5.0)
                 self._watch_thread = None
+
+            # Clean up executor
+            self._executor.shutdown(wait=False)
 
             # Clean up processors
             self.processor_pool.cleanup()
@@ -393,7 +398,10 @@ class PipelineOrchestrator:
         logger.info("Watch mode started")
 
     def _watch_loop(self) -> None:
-        """Background loop that polls the monitor for events and processes them."""
+        """Background loop that polls the monitor for events and processes them.
+
+        Uses a thread pool executor to process files without blocking the event loop.
+        """
         while self._running and self._monitor is not None:
             try:
                 events = self._monitor.get_events(max_size=self.config.max_concurrent)
@@ -403,7 +411,8 @@ class PipelineOrchestrator:
                         continue
 
                     try:
-                        self.process_file(event.path)
+                        # Submit to executor to avoid blocking the watch loop
+                        self._executor.submit(self.process_file, event.path)
                     except Exception:
                         logger.exception("Error processing %s", event.path)
 
