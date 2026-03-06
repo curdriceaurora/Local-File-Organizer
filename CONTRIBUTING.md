@@ -237,8 +237,9 @@ pytest --cov=file_organizer --cov-report=html
 
 # Run specific markers
 pytest -m unit          # Unit tests only
+pytest -m smoke         # Fast smoke suite (~3.5s, used in pre-commit)
 pytest -m "not slow"    # Skip slow tests
-pytest -m "not regression"  # Skip regression (matches CI PR behaviour)
+pytest -m "not regression"  # Full suite (regression tests included for CI)
 ```
 
 ### Test Markers
@@ -246,6 +247,7 @@ pytest -m "not regression"  # Skip regression (matches CI PR behaviour)
 | Marker | Purpose |
 |--------|---------|
 | `@pytest.mark.unit` | Fast unit tests |
+| `@pytest.mark.smoke` | Critical-path tests for pre-commit validation (~3.5s) |
 | `@pytest.mark.integration` | Integration tests |
 | `@pytest.mark.slow` | Long-running tests |
 | `@pytest.mark.regression` | Full regression (skipped on CI PRs) |
