@@ -99,7 +99,7 @@ gh pr create --title "fix: skip codecov upload on PR events" --body "..."
 
 **Real Assertions:** Always write real assertions with meaningful test logic.
 - ✅ Write actual assertions that verify behavior
-- ❌ Never use `XCTSkip` or `pytest.skip` as placeholders
+- ❌ Never use `pytest.skip` as a placeholder
 - ❌ Never write no-op assertions that don't test anything
 - ❌ Never use `assert True` or `pass` in test bodies
 
