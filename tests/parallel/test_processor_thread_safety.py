@@ -16,7 +16,9 @@ class TestProcessorThreadSafety:
     def test_executor_type_default(self) -> None:
         """Verify executor type defaults to 'thread'."""
         proc = ParallelProcessor()
-        assert proc._executor_type_used == "thread"
+        assert proc._executor_type_used == "thread", (
+            f"Executor type should default to 'thread', got '{proc._executor_type_used}'"
+        )
 
     def test_concurrent_batch_iter_access(self) -> None:
         """Multiple threads reading _executor_type_used should not crash.
@@ -42,5 +44,10 @@ class TestProcessorThreadSafety:
             t.join(timeout=5.0)
 
         # Verify all threads actually completed
-        assert all(not t.is_alive() for t in threads), "Some threads did not finish"
-        assert not errors, f"Thread errors: {errors}"
+        alive_threads = [t for t in threads if t.is_alive()]
+        assert not alive_threads, (
+            f"Expected all 5 threads to complete, but {len(alive_threads)} are still alive"
+        )
+        assert not errors, (
+            f"Concurrent read access errors: {[str(e) for e in errors]}"
+        )
