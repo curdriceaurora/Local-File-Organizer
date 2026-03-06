@@ -33,7 +33,7 @@ repos:
         pass_filenames: false
       - id: pytest-smoke
         name: pytest (smoke)
-        entry: bash -c "pytest tests/ -m \"smoke\" -q --override-ini=\"addopts=\""
+        entry: bash -c "pytest tests/ -m \"smoke\" -q --strict-markers --timeout=30 --override-ini=\"addopts=\""
         language: system
         pass_filenames: false
       - id: codespell

@@ -13,7 +13,9 @@ import pytest
 
 from file_organizer.parallel.executor import create_executor
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.smoke]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+# Note: Tests ProcessPoolExecutor spawning (real executor, platform-dependent).
+# Excluded from smoke suite due to timing variability.
 
 
 class TestCreateExecutor(unittest.TestCase):

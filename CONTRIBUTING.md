@@ -229,28 +229,29 @@ Example: `fix(history): replace deprecated datetime.utcnow() with timezone-aware
 ## Testing
 
 ```bash
-# Run all tests
+# Run all tests (full suite)
 pytest
 
 # Run with coverage
 pytest --cov=file_organizer --cov-report=html
 
-# Run specific markers
-pytest -m unit          # Unit tests only
-pytest -m smoke         # Fast smoke suite (~3.5s, used in pre-commit)
-pytest -m "not slow"    # Skip slow tests
-pytest -m "not regression"  # Full suite (regression tests included for CI)
+# Run specific test subsets
+pytest -m smoke         # Fast smoke suite (~3.2s) — local pre-commit validation
+pytest -m ci            # CI validation tests — PR check suite
+pytest -m "not slow"    # Skip slow tests for faster local development
+pytest tests/            # Full suite including regression tests (CI only)
 ```
 
 ### Test Markers
 
-| Marker | Purpose |
-|--------|---------|
-| `@pytest.mark.unit` | Fast unit tests |
-| `@pytest.mark.smoke` | Critical-path tests for pre-commit validation (~3.5s) |
-| `@pytest.mark.integration` | Integration tests |
-| `@pytest.mark.slow` | Long-running tests |
-| `@pytest.mark.regression` | Full regression (skipped on CI PRs) |
+| Marker | Purpose | When Used |
+|--------|---------|-----------|
+| `@pytest.mark.unit` | Fast unit tests | Both local and CI |
+| `@pytest.mark.smoke` | Critical-path tests for pre-commit (~3.2s) | Local pre-commit only |
+| `@pytest.mark.ci` | PR validation tests | GitHub Actions PR checks |
+| `@pytest.mark.integration` | Integration tests | Full CI runs |
+| `@pytest.mark.regression` | Full regression suite | Complete CI runs, manual testing |
+| `@pytest.mark.slow` | Long-running tests | Skipped in pre-commit and CI PRs |
 | `@pytest.mark.ci` | CI pipeline validation |
 
 ---
