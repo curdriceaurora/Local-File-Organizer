@@ -11,19 +11,99 @@ An AI-powered local file management system with privacy-first architecture. Orga
 
 ## Table of Contents
 
-1. [Claude Agent Permissions](#claude-agent-permissions)
-2. [External References](#external-references)
-3. [Pre-Commit Checklist](#pre-commit-checklist)
-4. [Quick Start](#quick-start)
-5. [Project Structure](#project-structure)
-6. [Architecture Overview](#architecture-overview)
-7. [Dependencies & Setup](#dependencies--setup)
-8. [AI Model Configuration](#ai-model-configuration)
-9. [Development Guidelines](#development-guidelines)
-10. [Testing Strategy](#testing-strategy)
-11. [Workflow Orchestration](#workflow-orchestration)
-12. [Supported File Types](#supported-file-types)
-13. [Performance Notes](#performance-notes)
+1. [General Rules](#general-rules)
+2. [Git Workflow](#git-workflow)
+3. [Task Execution](#task-execution)
+4. [Terminology](#terminology)
+5. [Testing Requirements](#testing-requirements)
+6. [Claude Agent Permissions](#claude-agent-permissions)
+7. [External References](#external-references)
+8. [Pre-Commit Checklist](#pre-commit-checklist)
+9. [Quick Start](#quick-start)
+10. [Project Structure](#project-structure)
+11. [Architecture Overview](#architecture-overview)
+12. [Dependencies & Setup](#dependencies--setup)
+13. [AI Model Configuration](#ai-model-configuration)
+14. [Development Guidelines](#development-guidelines)
+15. [Testing Strategy](#testing-strategy)
+16. [Workflow Orchestration](#workflow-orchestration)
+17. [Supported File Types](#supported-file-types)
+18. [Performance Notes](#performance-notes)
+
+---
+
+## General Rules
+
+**Permission:** Do not ask for permission to run Bash commands, `gh` CLI commands, or post PR comments. You have full authorization to execute all tools available to you. Proceed autonomously without confirmation prompts.
+
+---
+
+## Git Workflow
+
+**CRITICAL**: Follow this exact workflow with no exceptions:
+
+1. **Always create a feature branch before committing.** Never commit or push directly to `main` or `master`.
+2. **Branch naming:** Use pattern `feature/task-XX-description` or `fix/issue-XX-description`
+3. **Commit immediately after changes** — do not wait for user prompts. Include a descriptive conventional commit message.
+4. **Push after every commit** — push to the feature branch without waiting for permission.
+5. **Full workflow:** Create branch → implement → test → commit → push → create PR → address review → squash merge
+
+**Example flow:**
+```bash
+git checkout main && git pull origin main
+git checkout -b fix/issue-620-codecov-upload
+# ... make changes ...
+git add <files>
+git commit -m "fix: skip codecov upload on PR events
+
+Prevents partial coverage from smoke suite misleading PR metrics."
+git push origin fix/issue-620-codecov-upload
+gh pr create --title "fix: skip codecov upload on PR events" --body "..."
+```
+
+**Never:**
+- ❌ Commit or push directly to main
+- ❌ Wait for the user to ask you to commit/push
+- ❌ Declare "done" without committing and pushing changes
+- ❌ Skip any step in the create branch → commit → push → PR workflow
+
+---
+
+## Task Execution
+
+**Multi-Step Plans:** When following a multi-step plan, complete **ALL steps** before summarizing. Do not skip steps or declare completion early.
+
+**Verification:** Before marking a step complete, verify it actually works:
+- Run tests and confirm they pass
+- Check that files were created/modified as expected
+- Verify code review is complete if required
+- Confirm coverage gates pass if applicable
+
+**Code Review Steps:** Never skip code review or coverage gate steps. These are mandatory verification points, not optional.
+
+**Completion Criteria:** Do not say "All done" until ALL steps are verified. If any step fails verification, fix it before moving on.
+
+---
+
+## Terminology
+
+**Build:** When you see "build", it means **local Xcode build** unless explicitly stated otherwise. Use `xcodebuild` or Xcode UI. Do NOT check GitHub Actions CI.
+
+**CI:** "CI" refers to GitHub Actions workflows. If you need to check CI status, use `gh workflow view` or `gh pr checks`.
+
+**PR status:** Always verify both local tests AND GitHub CI checks pass before declaring a PR ready to merge.
+
+---
+
+## Testing Requirements
+
+**Real Assertions:** Always write real assertions with meaningful test logic.
+- ✅ Write actual assertions that verify behavior
+- ❌ Never use `XCTSkip` or `pytest.skip` as placeholders
+- ❌ Never write no-op assertions that don't test anything
+- ❌ Never use `assert True` or `pass` in test bodies
+
+**Test Quality:** Tests must actually exercise the code being tested and verify expected outcomes. If you find yourself writing a test that doesn't assert anything meaningful, the test design is wrong — fix it rather than leaving a placeholder.
 
 ---
 
