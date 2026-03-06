@@ -19,6 +19,14 @@ pytestmark = pytest.mark.unit
 
 
 def _make_config(**kwargs) -> DaemonConfig:
+    """Create a DaemonConfig for testing with standard defaults.
+
+    Args:
+        **kwargs: Config overrides to apply.
+
+    Returns:
+        A DaemonConfig with test defaults.
+    """
     defaults = {
         "watch_directories": [],
         "output_directory": Path("tmp/organized"),
@@ -41,7 +49,9 @@ class TestSignalHandlerWritesToPipe:
         with wired_pipe(daemon) as (r, _w):
             daemon._handle_signal(signal.SIGTERM, None)
             data = os.read(r, 1024)
-            assert data == b"\x00"
+            assert data == b"\x00", (
+                f"Signal handler should write null byte, got {data!r}"
+            )
 
     def test_signal_handler_tolerates_closed_pipe(self) -> None:
         """Verify signal handler gracefully handles a closed write pipe."""
@@ -79,7 +89,9 @@ class TestRunLoopExitsOnPipeSignal:
         and the loop waits on the stop event directly.
         """
         daemon = DaemonService(_make_config())
-        assert daemon._sig_wakeup_r is None  # No pipe
+        assert daemon._sig_wakeup_r is None, (
+            "No pipe should be initialized for fallback path"
+        )
 
         # Set stop event after a short delay
         def stop_later() -> None:
@@ -91,7 +103,9 @@ class TestRunLoopExitsOnPipeSignal:
         t.start()
         daemon._run_loop()
         t.join(timeout=2.0)
-        assert daemon._stop_event.is_set()
+        assert daemon._stop_event.is_set(), (
+            "Stop event should be set after run loop exits"
+        )
 
 
 class TestPipeClosedOnRestore:
@@ -103,16 +117,24 @@ class TestPipeClosedOnRestore:
         daemon._install_signal_handlers()
 
         # Verify pipe was created
-        assert daemon._sig_wakeup_r is not None
-        assert daemon._sig_wakeup_w is not None
+        assert daemon._sig_wakeup_r is not None, (
+            "Signal wakeup read FD should be created"
+        )
+        assert daemon._sig_wakeup_w is not None, (
+            "Signal wakeup write FD should be created"
+        )
         r_fd = daemon._sig_wakeup_r
         w_fd = daemon._sig_wakeup_w
 
         daemon._restore_signal_handlers()
 
         # Verify pipe fds are cleared
-        assert daemon._sig_wakeup_r is None
-        assert daemon._sig_wakeup_w is None
+        assert daemon._sig_wakeup_r is None, (
+            "Signal wakeup read FD should be cleared on restore"
+        )
+        assert daemon._sig_wakeup_w is None, (
+            "Signal wakeup write FD should be cleared on restore"
+        )
 
         # Verify fds are actually closed (os.fstat should fail)
         with pytest.raises(OSError):
@@ -154,10 +176,18 @@ class TestInstallSignalHandlersMainThread:
 
         try:
             daemon._install_signal_handlers()
-            assert daemon._original_sigterm is not None
-            assert daemon._original_sigint is not None
-            assert daemon._sig_wakeup_r is not None
-            assert daemon._sig_wakeup_w is not None
+            assert daemon._original_sigterm is not None, (
+                "Original SIGTERM handler should be saved"
+            )
+            assert daemon._original_sigint is not None, (
+                "Original SIGINT handler should be saved"
+            )
+            assert daemon._sig_wakeup_r is not None, (
+                "Signal wakeup pipe read FD should be created"
+            )
+            assert daemon._sig_wakeup_w is not None, (
+                "Signal wakeup pipe write FD should be created"
+            )
         finally:
             daemon._restore_signal_handlers()
 
@@ -176,7 +206,9 @@ class TestRestoreSignalHandlersMainThread:
 
         daemon._restore_signal_handlers()
 
-        assert daemon._original_sigterm is None
+        assert daemon._original_sigterm is None, (
+            "Original SIGTERM should be cleared after restore"
+        )
         assert daemon._original_sigint is None
         assert daemon._sig_wakeup_r is None
         assert daemon._sig_wakeup_w is None
