@@ -178,10 +178,10 @@ class TestOpencvFallback:
         mock_cap = MagicMock()
         mock_cap.isOpened.return_value = True
         mock_cap.get.side_effect = lambda prop: {
-            3: 1280.0,   # CAP_PROP_FRAME_WIDTH
-            4: 720.0,    # CAP_PROP_FRAME_HEIGHT
-            5: 24.0,     # CAP_PROP_FPS
-            7: 2400.0,   # CAP_PROP_FRAME_COUNT
+            3: 1280.0,  # CAP_PROP_FRAME_WIDTH
+            4: 720.0,  # CAP_PROP_FRAME_HEIGHT
+            5: 24.0,  # CAP_PROP_FPS
+            7: 2400.0,  # CAP_PROP_FRAME_COUNT
         }.get(prop, 0.0)
         mock_cv2.VideoCapture.return_value = mock_cap
         mock_cv2.CAP_PROP_FRAME_WIDTH = 3

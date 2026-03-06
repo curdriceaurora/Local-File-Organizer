@@ -212,9 +212,7 @@ class TestAcceptanceRejectionRates:
     def test_type_filter(self, tmp_path):
         fb = SuggestionFeedback(feedback_file=tmp_path / "fb.json")
         fb.record_action(_make_suggestion(sid="1", stype=SuggestionType.MOVE), "accepted")
-        fb.record_action(
-            _make_suggestion(sid="2", stype=SuggestionType.RENAME), "rejected"
-        )
+        fb.record_action(_make_suggestion(sid="2", stype=SuggestionType.RENAME), "rejected")
         assert fb.get_acceptance_rate("move") == 100.0
         assert fb.get_rejection_rate("move") == 0.0
 
@@ -235,12 +233,8 @@ class TestLearningStatsComputation:
 
     def test_full_stats(self, tmp_path):
         fb = SuggestionFeedback(feedback_file=tmp_path / "fb.json")
-        fb.record_action(
-            _make_suggestion(sid="1", confidence=90.0), "accepted"
-        )
-        fb.record_action(
-            _make_suggestion(sid="2", confidence=30.0), "rejected"
-        )
+        fb.record_action(_make_suggestion(sid="1", confidence=90.0), "accepted")
+        fb.record_action(_make_suggestion(sid="2", confidence=30.0), "rejected")
         fb.record_action(_make_suggestion(sid="3"), "ignored")
         fb.record_action(_make_suggestion(sid="4"), "modified")
 

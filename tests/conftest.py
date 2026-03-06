@@ -172,8 +172,9 @@ def mock_nltk_tokenizer() -> MagicMock:
     def tokenize_text(text: str) -> list[str]:
         """Simple tokenizer that splits on whitespace and punctuation."""
         import re
+
         # Simple regex-based tokenization
-        tokens = re.findall(r'\b\w+\b', text.lower())
+        tokens = re.findall(r"\b\w+\b", text.lower())
         return tokens
 
     tokenizer_mock.side_effect = tokenize_text
@@ -190,17 +191,65 @@ def mock_nltk_stopwords() -> MagicMock:
 
     # Minimal English stopwords set
     english_stopwords = {
-        'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for',
-        'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'or',
-        'that', 'the', 'to', 'was', 'will', 'with', 'i', 'you', 'we',
-        'they', 'she', 'him', 'her', 'me', 'us', 'can', 'could', 'would',
-        'should', 'do', 'does', 'did', 'have', 'having', 'not',
-        'no', 'nor', 'so', 'than', 'too', 'very', 'just', 'own', 'same',
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "but",
+        "by",
+        "for",
+        "from",
+        "has",
+        "he",
+        "in",
+        "is",
+        "it",
+        "its",
+        "of",
+        "on",
+        "or",
+        "that",
+        "the",
+        "to",
+        "was",
+        "will",
+        "with",
+        "i",
+        "you",
+        "we",
+        "they",
+        "she",
+        "him",
+        "her",
+        "me",
+        "us",
+        "can",
+        "could",
+        "would",
+        "should",
+        "do",
+        "does",
+        "did",
+        "have",
+        "having",
+        "not",
+        "no",
+        "nor",
+        "so",
+        "than",
+        "too",
+        "very",
+        "just",
+        "own",
+        "same",
     }
 
-    def get_stopwords(language: str = 'english') -> set[str]:
+    def get_stopwords(language: str = "english") -> set[str]:
         """Return a minimal set of stopwords."""
-        if language == 'english':
+        if language == "english":
             return english_stopwords
         return set()
 
@@ -217,7 +266,7 @@ def mock_nltk_lemmatizer() -> MagicMock:
     lemmatizer_class = MagicMock()
     lemmatizer_instance = MagicMock()
 
-    def lemmatize(word: str, pos: str = 'n') -> str:
+    def lemmatize(word: str, pos: str = "n") -> str:
         """Simple lemmatization - just return the word."""
         # In real lemmatization, this would transform words to their base form
         # For testing, we just return the word as-is
@@ -267,7 +316,8 @@ def mock_nltk_ensure_data_no_op() -> None:
             ...
     """
     from unittest.mock import patch
-    with patch('file_organizer.utils.text_processing.ensure_nltk_data'):
+
+    with patch("file_organizer.utils.text_processing.ensure_nltk_data"):
         yield
 
 
@@ -284,10 +334,7 @@ def isolated_nltk_environment(monkeypatch: pytest.MonkeyPatch) -> None:
             ...
     """
     # Mock NLTK_AVAILABLE as False
-    monkeypatch.setattr(
-        'file_organizer.utils.text_processing.NLTK_AVAILABLE',
-        False
-    )
+    monkeypatch.setattr("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
 
 
 # ---------------------------------------------------------------------------
@@ -306,5 +353,6 @@ def db_session() -> MagicMock:
         A MagicMock session object suitable for API testing.
     """
     from sqlalchemy.orm import Session
+
     session = MagicMock(spec=Session)
     return session

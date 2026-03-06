@@ -227,9 +227,7 @@ class UndoManager:
                     conn.rollback()
                     return False
         except Exception:
-            logger.exception(
-                f"Unexpected error while redoing transaction {transaction_id}"
-            )
+            logger.exception(f"Unexpected error while redoing transaction {transaction_id}")
             conn.rollback()
             return False
 

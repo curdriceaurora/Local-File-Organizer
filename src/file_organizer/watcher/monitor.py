@@ -81,14 +81,10 @@ class FileMonitor:
             try:
                 self._observer = Observer()
                 self._observer_type = "native"
-                logger.info(
-                    "Using native file system observer "
-                    "(FSEvents/Inotify/Windows)"
-                )
+                logger.info("Using native file system observer (FSEvents/Inotify/Windows)")
             except Exception as e:  # Intentional: catch any observer initialization failure
                 logger.warning(
-                    "Native observer failed to initialize: %s. "
-                    "Falling back to polling observer.",
+                    "Native observer failed to initialize: %s. Falling back to polling observer.",
                     e,
                 )
                 self._observer = PollingObserver(timeout=1.0)

@@ -29,6 +29,7 @@ import pytest
 
 try:
     import pytest_benchmark  # noqa: F401
+
     HAS_PYTEST_BENCHMARK = True
 except ImportError:
     HAS_PYTEST_BENCHMARK = False
@@ -175,8 +176,7 @@ class TestComplexTreeOrganization:
         organizer = FileOrganizer(dry_run=False, use_hardlinks=False)
         result = organizer.organize(complex_file_tree, tmp_path / "out", skip_existing=False)
         assert result.processed_files > 0, (
-            f"No files were processed (total={result.total_files}, "
-            f"failed={result.failed_files})"
+            f"No files were processed (total={result.total_files}, failed={result.failed_files})"
         )
 
     def test_media_files_categorized(
@@ -210,9 +210,7 @@ class TestComplexTreeOrganization:
         assert len(deep_files) > 0, "Test fixture is missing Work/Projects/2024 DOCX files"
         # Collect all filenames placed in any output folder
         all_placed = {
-            fname
-            for filelist in result.organized_structure.values()
-            for fname in filelist
+            fname for filelist in result.organized_structure.values() for fname in filelist
         }
         for f in deep_files:
             placed_name = f.name
@@ -258,8 +256,7 @@ class TestComplexTreeOrganization:
             f"(first run placed {first.processed_files} files)"
         )
         assert second_file_count == first_file_count, (
-            f"Output directory gained files on second run: "
-            f"{first_file_count} → {second_file_count}"
+            f"Output directory gained files on second run: {first_file_count} → {second_file_count}"
         )
 
 

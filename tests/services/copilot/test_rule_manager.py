@@ -37,25 +37,15 @@ def manager(temp_rules_dir: TemporaryDirectory) -> RuleManager:
 @pytest.fixture()
 def sample_rule() -> Rule:
     """Create a sample rule for testing."""
-    condition = RuleCondition(
-        condition_type=ConditionType.EXTENSION,
-        value=".pdf"
-    )
-    action = RuleAction(
-        action_type=ActionType.MOVE,
-        destination="Documents"
-    )
-    return Rule(
-        name="pdf_rule",
-        conditions=[condition],
-        action=action,
-        enabled=True
-    )
+    condition = RuleCondition(condition_type=ConditionType.EXTENSION, value=".pdf")
+    action = RuleAction(action_type=ActionType.MOVE, destination="Documents")
+    return Rule(name="pdf_rule", conditions=[condition], action=action, enabled=True)
 
 
 # ================================================================ #
 # Rule Set CRUD
 # ================================================================ #
+
 
 @pytest.mark.unit
 class TestListRuleSets:
@@ -289,6 +279,7 @@ class TestDeleteRuleSet:
 # ================================================================ #
 # Individual Rule CRUD
 # ================================================================ #
+
 
 @pytest.mark.unit
 class TestAddRule:

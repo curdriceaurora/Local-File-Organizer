@@ -208,12 +208,14 @@ class TestJobState(unittest.TestCase):
         """Test that invalid status value raises ValueError."""
         now = datetime.now(UTC).isoformat()
         with self.assertRaises(ValueError):
-            JobState.from_dict({
-                "id": "bad",
-                "status": "nonexistent",
-                "created": now,
-                "updated": now,
-            })
+            JobState.from_dict(
+                {
+                    "id": "bad",
+                    "status": "nonexistent",
+                    "created": now,
+                    "updated": now,
+                }
+            )
 
 
 @pytest.mark.unit
@@ -369,9 +371,11 @@ class TestCheckpoint(unittest.TestCase):
     def test_from_dict_missing_job_id_raises(self) -> None:
         """Test that missing 'job_id' key raises KeyError."""
         with self.assertRaises(KeyError):
-            Checkpoint.from_dict({
-                "last_updated": datetime.now(UTC).isoformat(),
-            })
+            Checkpoint.from_dict(
+                {
+                    "last_updated": datetime.now(UTC).isoformat(),
+                }
+            )
 
     def test_lists_are_independent_across_instances(self) -> None:
         """Test that default mutable fields are independent."""

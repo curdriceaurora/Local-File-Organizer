@@ -228,9 +228,7 @@ class TestPreviewDuplicates:
         scan_dir.mkdir()
         empty_group = DuplicateGroup(hash_value="empty", files=[])
         mock_instance = MagicMock()
-        mock_instance.scan_directory.return_value = _make_mock_index(
-            groups={"empty": empty_group}
-        )
+        mock_instance.scan_directory.return_value = _make_mock_index(groups={"empty": empty_group})
         mock_detector_cls.return_value = mock_instance
         _, client, _ = _build_app(tmp_path)
 
@@ -294,9 +292,7 @@ class TestExecuteDeduplication:
         group = DuplicateGroup(hash_value="h1", files=[fm1, fm2])
 
         mock_instance = MagicMock()
-        mock_instance.scan_directory.return_value = _make_mock_index(
-            groups={"h1": group}
-        )
+        mock_instance.scan_directory.return_value = _make_mock_index(groups={"h1": group})
         mock_detector_cls.return_value = mock_instance
         _, client, _ = _build_app(tmp_path)
 
@@ -332,18 +328,12 @@ class TestExecuteDeduplication:
             FileMetadata,
         )
 
-        fm1 = FileMetadata(
-            path=dup1, size=4, modified_time=now, accessed_time=now, hash_value="h2"
-        )
-        fm2 = FileMetadata(
-            path=dup2, size=4, modified_time=now, accessed_time=now, hash_value="h2"
-        )
+        fm1 = FileMetadata(path=dup1, size=4, modified_time=now, accessed_time=now, hash_value="h2")
+        fm2 = FileMetadata(path=dup2, size=4, modified_time=now, accessed_time=now, hash_value="h2")
         group = DuplicateGroup(hash_value="h2", files=[fm1, fm2])
 
         mock_instance = MagicMock()
-        mock_instance.scan_directory.return_value = _make_mock_index(
-            groups={"h2": group}
-        )
+        mock_instance.scan_directory.return_value = _make_mock_index(groups={"h2": group})
         mock_detector_cls.return_value = mock_instance
         _, client, _ = _build_app(tmp_path)
 
@@ -385,18 +375,12 @@ class TestExecuteDeduplication:
             FileMetadata,
         )
 
-        fm1 = FileMetadata(
-            path=dup1, size=4, modified_time=now, accessed_time=now, hash_value="h3"
-        )
-        fm2 = FileMetadata(
-            path=dup2, size=4, modified_time=now, accessed_time=now, hash_value="h3"
-        )
+        fm1 = FileMetadata(path=dup1, size=4, modified_time=now, accessed_time=now, hash_value="h3")
+        fm2 = FileMetadata(path=dup2, size=4, modified_time=now, accessed_time=now, hash_value="h3")
         group = DuplicateGroup(hash_value="h3", files=[fm1, fm2])
 
         mock_instance = MagicMock()
-        mock_instance.scan_directory.return_value = _make_mock_index(
-            groups={"h3": group}
-        )
+        mock_instance.scan_directory.return_value = _make_mock_index(groups={"h3": group})
         mock_detector_cls.return_value = mock_instance
         _, client, _ = _build_app(tmp_path)
 
@@ -421,9 +405,7 @@ class TestExecuteDeduplication:
                 f.unlink(missing_ok=True)
 
     @patch("file_organizer.api.routers.dedupe.DuplicateDetector")
-    def test_execute_nonexistent_file_skipped(
-        self, mock_detector_cls, tmp_path: Path
-    ) -> None:
+    def test_execute_nonexistent_file_skipped(self, mock_detector_cls, tmp_path: Path) -> None:
         """Files that don't exist at execution time are silently skipped."""
         scan_dir = tmp_path / "data"
         scan_dir.mkdir()
@@ -438,18 +420,14 @@ class TestExecuteDeduplication:
             FileMetadata,
         )
 
-        fm1 = FileMetadata(
-            path=keep, size=7, modified_time=now, accessed_time=now, hash_value="h4"
-        )
+        fm1 = FileMetadata(path=keep, size=7, modified_time=now, accessed_time=now, hash_value="h4")
         fm2 = FileMetadata(
             path=ghost, size=7, modified_time=now, accessed_time=now, hash_value="h4"
         )
         group = DuplicateGroup(hash_value="h4", files=[fm1, fm2])
 
         mock_instance = MagicMock()
-        mock_instance.scan_directory.return_value = _make_mock_index(
-            groups={"h4": group}
-        )
+        mock_instance.scan_directory.return_value = _make_mock_index(groups={"h4": group})
         mock_detector_cls.return_value = mock_instance
         _, client, _ = _build_app(tmp_path)
 

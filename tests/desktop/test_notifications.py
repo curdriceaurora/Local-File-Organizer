@@ -1,4 +1,5 @@
 """Tests for native notification system."""
+
 import unittest
 from pathlib import Path
 

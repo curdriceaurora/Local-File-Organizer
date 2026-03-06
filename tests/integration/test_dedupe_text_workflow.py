@@ -71,4 +71,4 @@ class TestDedupeTextWorkflow:
         # report.txt and meeting.txt should remain. report_copy.txt should be gone.
         assert len(remaining_files) == 2
         assert "meeting.txt" in remaining_files
-        assert ("report.txt" in remaining_files or "report_copy.txt" in remaining_files)
+        assert "report.txt" in remaining_files or "report_copy.txt" in remaining_files

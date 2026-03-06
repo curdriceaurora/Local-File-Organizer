@@ -313,9 +313,7 @@ class JohnnyDecimalMigrator:
         Args:
             rollback_info: Rollback information to save
         """
-        rollback_file = (
-            _get_data_dir() / "rollback" / f"{rollback_info.migration_id}.json"
-        )
+        rollback_file = _get_data_dir() / "rollback" / f"{rollback_info.migration_id}.json"
         rollback_file.parent.mkdir(parents=True, exist_ok=True)
 
         data = {

@@ -95,7 +95,14 @@ class TestHandleAutotagCommand:
     """Tests for handle_autotag_command router."""
 
     def test_route_suggest(self, mock_service):
-        args = Namespace(autotag_command="suggest", files=[], existing_tags=None, top_n=10, min_confidence=40.0, json=False)
+        args = Namespace(
+            autotag_command="suggest",
+            files=[],
+            existing_tags=None,
+            top_n=10,
+            min_confidence=40.0,
+            json=False,
+        )
         with patch("file_organizer.cli.autotag.AutoTaggingService", return_value=mock_service):
             with patch("file_organizer.cli.autotag.handle_suggest") as mock_handler:
                 handle_autotag_command(args)
@@ -130,7 +137,9 @@ class TestHandleAutotagCommand:
                 mock_handler.assert_called_once()
 
     def test_route_batch(self, mock_service):
-        args = Namespace(autotag_command="batch", directory="/tmp", pattern="*", recursive=False, output=None)
+        args = Namespace(
+            autotag_command="batch", directory="/tmp", pattern="*", recursive=False, output=None
+        )
         with patch("file_organizer.cli.autotag.AutoTaggingService", return_value=mock_service):
             with patch("file_organizer.cli.autotag.handle_batch") as mock_handler:
                 handle_autotag_command(args)

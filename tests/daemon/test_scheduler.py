@@ -565,9 +565,7 @@ class TestIntegration:
 
         assert "cancel_me" not in scheduler.task_names
 
-    def test_exception_in_one_task_doesnt_block_others(
-        self, scheduler: DaemonScheduler
-    ) -> None:
+    def test_exception_in_one_task_doesnt_block_others(self, scheduler: DaemonScheduler) -> None:
         """A failing task does not prevent other tasks from running."""
         failing_cb = MagicMock(side_effect=RuntimeError("fail"))
         good_cb = MagicMock()

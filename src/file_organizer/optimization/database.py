@@ -189,8 +189,7 @@ class DatabaseOptimizer:
                 int(pragma_value)
             except ValueError:
                 raise ValueError(
-                    f"PRAGMA {pragma_name!r} requires an integer value, "
-                    f"got {pragma_value!r}."
+                    f"PRAGMA {pragma_name!r} requires an integer value, got {pragma_value!r}."
                 ) from None
         else:
             # For pragmas not explicitly categorised, fall back to integer

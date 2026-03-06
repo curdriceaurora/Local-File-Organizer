@@ -88,9 +88,7 @@ def load_manifest(plugin_dir: Path) -> dict[str, Any]:
     try:
         manifest: dict[str, Any] = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise PluginLoadError(
-            f"Invalid JSON in {manifest_path}: {exc}"
-        ) from exc
+        raise PluginLoadError(f"Invalid JSON in {manifest_path}: {exc}") from exc
 
     if not isinstance(manifest, dict):
         raise PluginLoadError(
@@ -125,9 +123,7 @@ def validate_manifest(
     # Required fields
     for field_name, expected_type in MANIFEST_REQUIRED_FIELDS.items():
         if field_name not in manifest:
-            raise PluginLoadError(
-                f"Manifest {source} is missing required field '{field_name}'."
-            )
+            raise PluginLoadError(f"Manifest {source} is missing required field '{field_name}'.")
         value = manifest[field_name]
         if not isinstance(value, expected_type):
             raise PluginLoadError(
@@ -144,9 +140,7 @@ def validate_manifest(
         if value is None and default is None:
             continue
         if value is None:
-            raise PluginLoadError(
-                f"Manifest {source}: field '{field_name}' must not be null."
-            )
+            raise PluginLoadError(f"Manifest {source}: field '{field_name}' must not be null.")
         if expected_type is not None and not isinstance(value, expected_type):
             raise PluginLoadError(
                 f"Manifest {source}: field '{field_name}' must be "

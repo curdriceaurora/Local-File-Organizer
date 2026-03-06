@@ -124,9 +124,7 @@ def test_workflow_integration_reuses_single_timestamp(
 
         @classmethod
         def now(cls, tz: tzinfo | None = None) -> datetime:
-            value = datetime(2026, 2, 9, 12, 0, 0, tzinfo=UTC) + timedelta(
-                seconds=cls.calls
-            )
+            value = datetime(2026, 2, 9, 12, 0, 0, tzinfo=UTC) + timedelta(seconds=cls.calls)
             cls.calls += 1
             if tz is None:
                 return value

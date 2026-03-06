@@ -14,6 +14,7 @@ from starlette.websockets import WebSocketState
 @dataclass(frozen=True)
 class BroadcastEvent:
     """A broadcast event with channel and payload."""
+
     channel: str
     payload: dict[str, Any]
 

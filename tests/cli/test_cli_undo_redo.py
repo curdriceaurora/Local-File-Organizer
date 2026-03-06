@@ -514,9 +514,7 @@ class TestMainRedo:
         ):
             main_redo()
         assert exc_info.value.code == 0
-        mock_cmd.assert_called_once_with(
-            operation_id=None, dry_run=False, verbose=False
-        )
+        mock_cmd.assert_called_once_with(operation_id=None, dry_run=False, verbose=False)
 
     def test_main_redo_with_options(self):
         """Test main_redo with operation-id and dry-run flags."""
@@ -527,9 +525,7 @@ class TestMainRedo:
         ):
             main_redo()
         assert exc_info.value.code == 0
-        mock_cmd.assert_called_once_with(
-            operation_id=7, dry_run=True, verbose=True
-        )
+        mock_cmd.assert_called_once_with(operation_id=7, dry_run=True, verbose=True)
 
 
 @pytest.mark.unit
@@ -587,14 +583,22 @@ class TestMainHistory:
                 "sys.argv",
                 [
                     "history",
-                    "--limit", "25",
-                    "--type", "move",
-                    "--status", "completed",
-                    "--since", "2024-01-01",
-                    "--until", "2024-12-31",
-                    "--search", "documents",
-                    "--transaction", "tx-abc",
-                    "--operation-id", "42",
+                    "--limit",
+                    "25",
+                    "--type",
+                    "move",
+                    "--status",
+                    "completed",
+                    "--since",
+                    "2024-01-01",
+                    "--until",
+                    "2024-12-31",
+                    "--search",
+                    "documents",
+                    "--transaction",
+                    "tx-abc",
+                    "--operation-id",
+                    "42",
                 ],
             ),
             patch("file_organizer.cli.undo_redo.history_command", return_value=0) as mock_cmd,

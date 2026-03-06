@@ -545,10 +545,7 @@ class TestHeuristicEngine:
         # (only thresholds should differ, not the scoring itself)
         for category in PARACategory:
             assert (
-                abs(
-                    default_result.scores[category].score
-                    - custom_result.scores[category].score
-                )
+                abs(default_result.scores[category].score - custom_result.scores[category].score)
                 < 0.01
             ), f"Scores should be identical for {category}"
 

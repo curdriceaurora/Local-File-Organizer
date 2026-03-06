@@ -105,7 +105,7 @@ DESCRIPTION:"""
         prefixes = ["description:", "this is", "the text is about", "this text"]
         for prefix in prefixes:
             if description.lower().startswith(prefix):
-                description = description[len(prefix):].strip()
+                description = description[len(prefix) :].strip()
 
         return description if description else "Document content analysis"
 

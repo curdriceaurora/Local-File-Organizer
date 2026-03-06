@@ -229,9 +229,7 @@ class TestBatchProcessHistory:
 
         # Should detect strong type->folder preference (100% of .pdf to /documents)
         assert len(result["folder_patterns"]) > 0
-        pdf_patterns = [
-            p for p in result["folder_patterns"] if p.get("file_type") == ".pdf"
-        ]
+        pdf_patterns = [p for p in result["folder_patterns"] if p.get("file_type") == ".pdf"]
         assert len(pdf_patterns) > 0
         assert pdf_patterns[0]["confidence"] > 0.6
 
@@ -411,7 +409,9 @@ class TestAnalyzeNameCorrection:
 
         pattern_types = [p["pattern_type"] for p in result["patterns"]]
         assert "suffix_addition" in pattern_types
-        suffix_pattern = next(p for p in result["patterns"] if p["pattern_type"] == "suffix_addition")
+        suffix_pattern = next(
+            p for p in result["patterns"] if p["pattern_type"] == "suffix_addition"
+        )
         assert suffix_pattern["suffix"] == "_v2"
 
     def test_prefix_addition(self, processor):
@@ -420,7 +420,9 @@ class TestAnalyzeNameCorrection:
 
         pattern_types = [p["pattern_type"] for p in result["patterns"]]
         assert "prefix_addition" in pattern_types
-        prefix_pattern = next(p for p in result["patterns"] if p["pattern_type"] == "prefix_addition")
+        prefix_pattern = next(
+            p for p in result["patterns"] if p["pattern_type"] == "prefix_addition"
+        )
         assert prefix_pattern["prefix"] == "final_"
 
     def test_no_patterns(self, processor):
@@ -575,9 +577,7 @@ class TestExtractBatchNamePatterns:
 
         result = processor._extract_batch_name_patterns(changes)
 
-        delimiter_patterns = [
-            p for p in result if p["pattern_type"] == "preferred_delimiter"
-        ]
+        delimiter_patterns = [p for p in result if p["pattern_type"] == "preferred_delimiter"]
         assert len(delimiter_patterns) == 1
         assert delimiter_patterns[0]["delimiter"] == "_"
 
@@ -590,9 +590,7 @@ class TestExtractBatchNamePatterns:
 
         result = processor._extract_batch_name_patterns(changes)
 
-        case_patterns = [
-            p for p in result if p["pattern_type"] == "preferred_case"
-        ]
+        case_patterns = [p for p in result if p["pattern_type"] == "preferred_case"]
         assert len(case_patterns) == 1
 
 

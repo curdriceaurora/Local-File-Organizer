@@ -56,7 +56,9 @@ class TestListTemplates:
             templates = tm.list_templates()
 
             assert isinstance(templates, list)
-            assert len(templates) >= 5  # At least work, personal, photography, development, academic
+            assert (
+                len(templates) >= 5
+            )  # At least work, personal, photography, development, academic
             assert "work" in templates
             assert "personal" in templates
             assert "photography" in templates
@@ -246,9 +248,7 @@ class TestCreateProfileFromTemplate:
             )
 
             assert profile is not None
-            assert (
-                profile.preferences["global"]["naming_patterns"]["separator"] == "-"
-            )
+            assert profile.preferences["global"]["naming_patterns"]["separator"] == "-"
             assert profile.preferences["global"]["folder_mappings"]["projects"] == "My Projects"
 
     def test_create_profile_inherits_template_data(self):
@@ -306,7 +306,10 @@ class TestApplyCustomizations:
 
             customized = tm._apply_customizations(template, customize)
 
-            assert customized["preferences"]["global"]["folder_mappings"]["documents"] == "My Documents"
+            assert (
+                customized["preferences"]["global"]["folder_mappings"]["documents"]
+                == "My Documents"
+            )
             assert customized["preferences"]["global"]["folder_mappings"]["reports"] == "My Reports"
 
     def test_apply_customizations_description(self):
@@ -338,7 +341,10 @@ class TestApplyCustomizations:
             customized = tm._apply_customizations(template, customize)
 
             assert customized["preferences"]["global"]["naming_patterns"]["case_style"] == "lower"
-            assert customized["preferences"]["global"]["folder_mappings"]["projects"] == "work_projects"
+            assert (
+                customized["preferences"]["global"]["folder_mappings"]["projects"]
+                == "work_projects"
+            )
             assert customized["description"] == "Custom Dev Profile"
 
 
@@ -432,9 +438,7 @@ class TestGetTemplateRecommendations:
             pm = ProfileManager(storage_path=tmpdir)
             tm = TemplateManager(pm)
 
-            recommendations = tm.get_template_recommendations(
-                file_types=[".jpg", ".raw", ".cr2"]
-            )
+            recommendations = tm.get_template_recommendations(file_types=[".jpg", ".raw", ".cr2"])
 
             assert "photography" in recommendations
 
@@ -444,9 +448,7 @@ class TestGetTemplateRecommendations:
             pm = ProfileManager(storage_path=tmpdir)
             tm = TemplateManager(pm)
 
-            recommendations = tm.get_template_recommendations(
-                file_types=[".pdf", ".docx", ".xlsx"]
-            )
+            recommendations = tm.get_template_recommendations(file_types=[".pdf", ".docx", ".xlsx"])
 
             assert "work" in recommendations
 
@@ -468,9 +470,7 @@ class TestGetTemplateRecommendations:
             pm = ProfileManager(storage_path=tmpdir)
             tm = TemplateManager(pm)
 
-            recommendations = tm.get_template_recommendations(
-                use_case="personal family photos"
-            )
+            recommendations = tm.get_template_recommendations(use_case="personal family photos")
 
             assert "personal" in recommendations
 
@@ -583,9 +583,7 @@ class TestCompareTemplates:
             pm = ProfileManager(storage_path=tmpdir)
             tm = TemplateManager(pm)
 
-            comparison = tm.compare_templates(
-                ["work", "personal", "photography", "development"]
-            )
+            comparison = tm.compare_templates(["work", "personal", "photography", "development"])
 
             assert comparison is not None
             assert len(comparison["templates"]) == 4

@@ -110,7 +110,7 @@ def test_backwards_compatibility_default_paths():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
+        with patch.dict(os.environ, {"HOME": str(tmp_path)}):
             # Old code using DEFAULT_CONFIG_DIR should still work
             from file_organizer.config.manager import DEFAULT_CONFIG_DIR
 
@@ -136,10 +136,13 @@ def test_new_and_legacy_paths_coexist():
         # Set XDG_CONFIG_HOME to a custom location so PathManager uses
         # a different path from ConfigManager's hardcoded default
         custom_xdg = tmp_path / "custom-xdg-config"
-        with patch.dict(os.environ, {
-            'HOME': str(tmp_path),
-            'XDG_CONFIG_HOME': str(custom_xdg),
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "HOME": str(tmp_path),
+                "XDG_CONFIG_HOME": str(custom_xdg),
+            },
+        ):
             # Create config in legacy path (hardcoded default)
             legacy_cm = ConfigManager()
             legacy_config = AppConfig(profile_name="legacy")
@@ -192,7 +195,7 @@ def test_config_manager_with_path_manager_production_workflow():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
+        with patch.dict(os.environ, {"HOME": str(tmp_path)}):
             # Initialize with PathManager (production pattern)
             path_manager = PathManager()
             path_manager.ensure_directories()
@@ -200,10 +203,7 @@ def test_config_manager_with_path_manager_production_workflow():
             config_manager = ConfigManager(config_dir=path_manager.config_dir)
 
             # Create and save production config
-            prod_config = AppConfig(
-                profile_name="production",
-                default_methodology="para"
-            )
+            prod_config = AppConfig(profile_name="production", default_methodology="para")
             config_manager.save(prod_config, profile="production")
 
             # Simulate restart - load production config
@@ -219,7 +219,7 @@ def test_preference_store_with_path_manager_production_workflow():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
+        with patch.dict(os.environ, {"HOME": str(tmp_path)}):
             # Initialize with PathManager (production pattern)
             path_manager = PathManager()
             path_manager.ensure_directories()
@@ -234,7 +234,7 @@ def test_preference_store_with_path_manager_production_workflow():
                     "folder_mappings": {"important": "Archive"},
                     "naming_patterns": {"pattern_1": "*.pdf"},
                     "category_overrides": {"override_1": "Documents"},
-                }
+                },
             )
             pref_store.save_preferences()
 

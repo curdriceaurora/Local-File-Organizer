@@ -97,6 +97,7 @@ class TestGetAudioDuration:
 
     def test_no_audio_libs(self, audio_file):
         """When neither pydub nor tinytag is available."""
+
         def fake_import(name, *args, **kwargs):
             if name in ("pydub", "tinytag"):
                 raise ImportError(f"no {name}")
@@ -269,17 +270,13 @@ class TestValidateAudioFile:
         assert "Unsupported" in msg
 
     def test_valid_file(self, audio_file):
-        with patch(
-            "file_organizer.services.audio.utils.get_audio_duration", return_value=5.0
-        ):
+        with patch("file_organizer.services.audio.utils.get_audio_duration", return_value=5.0):
             valid, msg = validate_audio_file(audio_file)
         assert valid
         assert msg is None
 
     def test_zero_duration(self, audio_file):
-        with patch(
-            "file_organizer.services.audio.utils.get_audio_duration", return_value=0.0
-        ):
+        with patch("file_organizer.services.audio.utils.get_audio_duration", return_value=0.0):
             valid, msg = validate_audio_file(audio_file)
         assert not valid
         assert "zero duration" in msg

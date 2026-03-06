@@ -25,6 +25,7 @@ router = APIRouter(
 
 class MarketplacePluginResponse(BaseModel):
     """Marketplace plugin details response model."""
+
     name: str
     version: str
     author: str
@@ -42,6 +43,7 @@ class MarketplacePluginResponse(BaseModel):
 
 class MarketplacePluginListResponse(BaseModel):
     """Paginated list of marketplace plugins."""
+
     items: list[MarketplacePluginResponse]
     page: int
     per_page: int
@@ -50,6 +52,7 @@ class MarketplacePluginListResponse(BaseModel):
 
 class MarketplaceInstalledResponse(BaseModel):
     """Details of an installed marketplace plugin."""
+
     name: str
     version: str
     source_url: str
@@ -58,12 +61,14 @@ class MarketplaceInstalledResponse(BaseModel):
 
 class MarketplaceUpdateResponse(BaseModel):
     """Result of a plugin update operation."""
+
     updated: bool
     plugin: Optional[MarketplaceInstalledResponse] = None
 
 
 class MarketplaceReviewRequest(BaseModel):
     """Request body for submitting a plugin review."""
+
     rating: int = Field(..., ge=1, le=5)
     title: str = Field(..., min_length=1, max_length=120)
     content: str = Field(..., min_length=1, max_length=2000)
@@ -71,6 +76,7 @@ class MarketplaceReviewRequest(BaseModel):
 
 class MarketplaceReviewResponse(BaseModel):
     """Plugin review details response model."""
+
     plugin_name: str
     user_id: str
     rating: int

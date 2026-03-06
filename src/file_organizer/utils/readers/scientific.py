@@ -66,9 +66,7 @@ def read_hdf5_file(file_path: str | Path, max_datasets: int = 20) -> str:
                 if isinstance(obj, h5py.Dataset):
                     shape_str = "x".join(map(str, obj.shape))
                     size_kb = obj.nbytes / 1024
-                    lines.append(
-                        f"  Dataset: {name} [{obj.dtype}] {shape_str} ({size_kb:.2f} KB)"
-                    )
+                    lines.append(f"  Dataset: {name} [{obj.dtype}] {shape_str} ({size_kb:.2f} KB)")
 
                     # List attributes
                     if obj.attrs:

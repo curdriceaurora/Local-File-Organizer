@@ -303,9 +303,7 @@ class TestOperationValidator(unittest.TestCase):
         )
         result = self.validator.validate_undo(operation)
         self.assertFalse(result.can_proceed)
-        self.assertTrue(
-            any(c.conflict_type == ConflictType.FILE_MISSING for c in result.conflicts)
-        )
+        self.assertTrue(any(c.conflict_type == ConflictType.FILE_MISSING for c in result.conflicts))
 
     def test_validate_redo_rename_success(self):
         """Test redo of a rename operation delegates to redo_move."""
@@ -344,9 +342,7 @@ class TestOperationValidator(unittest.TestCase):
         )
         result = self.validator.validate_redo(operation)
         self.assertFalse(result.can_proceed)
-        self.assertTrue(
-            any(c.conflict_type == ConflictType.FILE_MISSING for c in result.conflicts)
-        )
+        self.assertTrue(any(c.conflict_type == ConflictType.FILE_MISSING for c in result.conflicts))
 
     def test_validate_redo_copy_success(self):
         """Test redo of a copy operation (copy file again)."""
@@ -374,9 +370,7 @@ class TestOperationValidator(unittest.TestCase):
         )
         result = self.validator.validate_redo(operation)
         self.assertFalse(result.can_proceed)
-        self.assertTrue(
-            any(c.conflict_type == ConflictType.FILE_MISSING for c in result.conflicts)
-        )
+        self.assertTrue(any(c.conflict_type == ConflictType.FILE_MISSING for c in result.conflicts))
 
     def test_validate_redo_copy_dest_occupied(self):
         """Test redo copy when destination is occupied."""
@@ -537,9 +531,7 @@ class TestOperationValidator(unittest.TestCase):
 
     def test_check_file_integrity_nonexistent(self):
         """Test file integrity check for nonexistent file."""
-        result = self.validator.check_file_integrity(
-            self.test_dir / "no_such_file.txt", "abc"
-        )
+        result = self.validator.check_file_integrity(self.test_dir / "no_such_file.txt", "abc")
         self.assertFalse(result)
 
     def test_check_file_integrity_directory(self):

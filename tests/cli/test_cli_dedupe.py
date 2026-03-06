@@ -634,9 +634,7 @@ class TestDedupeCommandDuplicates:
         (tmp_path / "a.txt").write_text("data")
         (tmp_path / "b.txt").write_text("data")
 
-        grp = self._make_mock_group(
-            [str(tmp_path / "a.txt"), str(tmp_path / "b.txt")]
-        )
+        grp = self._make_mock_group([str(tmp_path / "a.txt"), str(tmp_path / "b.txt")])
 
         mock_detector = MagicMock()
         mock_detector.scan_directory.return_value = None
@@ -647,12 +645,15 @@ class TestDedupeCommandDuplicates:
             patch(_BACKUP_MGR_PATH, return_value=MagicMock()),
             patch(_SCAN_OPTS_PATH),
         ):
-            result = dedupe_command([
-                str(tmp_path),
-                "--dry-run",
-                "--strategy", "oldest",
-                "--batch",
-            ])
+            result = dedupe_command(
+                [
+                    str(tmp_path),
+                    "--dry-run",
+                    "--strategy",
+                    "oldest",
+                    "--batch",
+                ]
+            )
         assert result == 0
 
     def test_duplicates_found_interactive_confirm(self, tmp_path):
@@ -660,9 +661,7 @@ class TestDedupeCommandDuplicates:
         (tmp_path / "a.txt").write_text("data")
         (tmp_path / "b.txt").write_text("data")
 
-        grp = self._make_mock_group(
-            [str(tmp_path / "a.txt"), str(tmp_path / "b.txt")]
-        )
+        grp = self._make_mock_group([str(tmp_path / "a.txt"), str(tmp_path / "b.txt")])
 
         mock_detector = MagicMock()
         mock_detector.scan_directory.return_value = None
@@ -677,11 +676,14 @@ class TestDedupeCommandDuplicates:
             mock_console.input.return_value = "y"
             # Need to allow print calls through
             mock_console.print = MagicMock()
-            result = dedupe_command([
-                str(tmp_path),
-                "--dry-run",
-                "--strategy", "oldest",
-            ])
+            result = dedupe_command(
+                [
+                    str(tmp_path),
+                    "--dry-run",
+                    "--strategy",
+                    "oldest",
+                ]
+            )
         assert result == 0
 
     def test_duplicates_skip_group(self, tmp_path):
@@ -689,9 +691,7 @@ class TestDedupeCommandDuplicates:
         (tmp_path / "a.txt").write_text("data")
         (tmp_path / "b.txt").write_text("data")
 
-        grp = self._make_mock_group(
-            [str(tmp_path / "a.txt"), str(tmp_path / "b.txt")]
-        )
+        grp = self._make_mock_group([str(tmp_path / "a.txt"), str(tmp_path / "b.txt")])
 
         mock_detector = MagicMock()
         mock_detector.scan_directory.return_value = None
@@ -705,11 +705,14 @@ class TestDedupeCommandDuplicates:
         ):
             mock_console.input.return_value = "n"
             mock_console.print = MagicMock()
-            result = dedupe_command([
-                str(tmp_path),
-                "--dry-run",
-                "--strategy", "oldest",
-            ])
+            result = dedupe_command(
+                [
+                    str(tmp_path),
+                    "--dry-run",
+                    "--strategy",
+                    "oldest",
+                ]
+            )
         assert result == 0
 
     def test_duplicates_live_remove_with_backup(self, tmp_path):
@@ -733,11 +736,14 @@ class TestDedupeCommandDuplicates:
             patch(_BACKUP_MGR_PATH, return_value=mock_bkp),
             patch(_SCAN_OPTS_PATH),
         ):
-            result = dedupe_command([
-                str(tmp_path),
-                "--strategy", "oldest",
-                "--batch",
-            ])
+            result = dedupe_command(
+                [
+                    str(tmp_path),
+                    "--strategy",
+                    "oldest",
+                    "--batch",
+                ]
+            )
         assert result == 0
 
     def test_duplicates_error_during_remove(self, tmp_path):
@@ -762,12 +768,15 @@ class TestDedupeCommandDuplicates:
             patch(_BACKUP_MGR_PATH, return_value=MagicMock()),
             patch(_SCAN_OPTS_PATH),
         ):
-            result = dedupe_command([
-                str(tmp_path),
-                "--strategy", "oldest",
-                "--batch",
-                "--no-safe-mode",
-            ])
+            result = dedupe_command(
+                [
+                    str(tmp_path),
+                    "--strategy",
+                    "oldest",
+                    "--batch",
+                    "--no-safe-mode",
+                ]
+            )
         # Should still return 0 (error is per-file, not fatal)
         assert result == 0
 

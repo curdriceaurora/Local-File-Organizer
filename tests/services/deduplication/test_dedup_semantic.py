@@ -302,13 +302,12 @@ class TestGetDuplicateGroups:
     """Tests for get_duplicate_groups."""
 
     def test_returns_groups(self, low_threshold_analyzer, sample_embeddings, sample_paths):
-        with patch.object(Path, "exists", return_value=True), patch.object(
-            Path, "stat"
-        ) as mock_stat:
+        with (
+            patch.object(Path, "exists", return_value=True),
+            patch.object(Path, "stat") as mock_stat,
+        ):
             mock_stat.return_value.st_size = 1024
-            groups = low_threshold_analyzer.get_duplicate_groups(
-                sample_embeddings, sample_paths
-            )
+            groups = low_threshold_analyzer.get_duplicate_groups(sample_embeddings, sample_paths)
 
         # Should find at least one group
         assert isinstance(groups, list)
@@ -320,13 +319,12 @@ class TestGetDuplicateGroups:
             assert group["count"] >= 2
 
     def test_sorted_by_similarity(self, low_threshold_analyzer, sample_embeddings, sample_paths):
-        with patch.object(Path, "exists", return_value=True), patch.object(
-            Path, "stat"
-        ) as mock_stat:
+        with (
+            patch.object(Path, "exists", return_value=True),
+            patch.object(Path, "stat") as mock_stat,
+        ):
             mock_stat.return_value.st_size = 1024
-            groups = low_threshold_analyzer.get_duplicate_groups(
-                sample_embeddings, sample_paths
-            )
+            groups = low_threshold_analyzer.get_duplicate_groups(sample_embeddings, sample_paths)
 
         if len(groups) > 1:
             for i in range(len(groups) - 1):

@@ -483,9 +483,7 @@ class TestFindDuplicates:
     """Tests for ServiceFacade.find_duplicates()."""
 
     @pytest.mark.asyncio
-    async def test_returns_success_true_with_statistics_and_groups(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_returns_success_true_with_statistics_and_groups(self, tmp_path: Path) -> None:
         """find_duplicates returns success=True with statistics and groups."""
         facade = _make_facade()
         mock_detector = MagicMock()
@@ -632,9 +630,7 @@ class TestGetOperationHistory:
         mock_history = MagicMock()
         mock_history.get_recent_operations.return_value = []
 
-        with patch(
-            "file_organizer.history.tracker.OperationHistory", return_value=mock_history
-        ):
+        with patch("file_organizer.history.tracker.OperationHistory", return_value=mock_history):
             result = await facade.get_operation_history()
 
         assert result["success"] is True
@@ -648,9 +644,7 @@ class TestGetOperationHistory:
         mock_history = MagicMock()
         mock_history.get_recent_operations.return_value = []
 
-        with patch(
-            "file_organizer.history.tracker.OperationHistory", return_value=mock_history
-        ):
+        with patch("file_organizer.history.tracker.OperationHistory", return_value=mock_history):
             await facade.get_operation_history()
 
         mock_history.get_recent_operations.assert_called_once_with(limit=10)
@@ -662,9 +656,7 @@ class TestGetOperationHistory:
         mock_history = MagicMock()
         mock_history.get_recent_operations.return_value = []
 
-        with patch(
-            "file_organizer.history.tracker.OperationHistory", return_value=mock_history
-        ):
+        with patch("file_organizer.history.tracker.OperationHistory", return_value=mock_history):
             await facade.get_operation_history(limit=25)
 
         mock_history.get_recent_operations.assert_called_once_with(limit=25)
@@ -688,9 +680,7 @@ class TestGetOperationHistory:
 
         mock_history.get_recent_operations.return_value = [mock_op]
 
-        with patch(
-            "file_organizer.history.tracker.OperationHistory", return_value=mock_history
-        ):
+        with patch("file_organizer.history.tracker.OperationHistory", return_value=mock_history):
             result = await facade.get_operation_history()
 
         if result["success"] and result["data"]["operations"]:
@@ -730,9 +720,7 @@ class TestGetOperationHistory:
 
         mock_history.get_recent_operations.return_value = [mock_op]
 
-        with patch(
-            "file_organizer.history.tracker.OperationHistory", return_value=mock_history
-        ):
+        with patch("file_organizer.history.tracker.OperationHistory", return_value=mock_history):
             result = await facade.get_operation_history()
 
         if result["success"] and result["data"]["operations"]:

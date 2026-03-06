@@ -1,4 +1,5 @@
 """Tests for Linux context menu integration scripts."""
+
 import stat
 import unittest
 from pathlib import Path

@@ -24,11 +24,14 @@ from file_organizer.utils.text_processing import (
 class TestNLTKHermeticity:
     """Tests ensuring NLTK functionality works in isolated environments."""
 
-    @pytest.mark.parametrize("text,expected_contains", [
-        ("Hello World Test", ["hello", "world"]),
-        ("CamelCaseTest", ["camel", "case", "test"]),
-        ("Multiple   Spaces", ["multiple", "spaces"]),
-    ])
+    @pytest.mark.parametrize(
+        "text,expected_contains",
+        [
+            ("Hello World Test", ["hello", "world"]),
+            ("CamelCaseTest", ["camel", "case", "test"]),
+            ("Multiple   Spaces", ["multiple", "spaces"]),
+        ],
+    )
     def test_clean_text_without_nltk_corpus(
         self,
         text: str,
@@ -51,8 +54,7 @@ class TestNLTKHermeticity:
         result_words = set(result.lower().split("_"))
         for expected_word in expected_contains:
             assert expected_word in result_words, (
-                f"Expected '{expected_word}' in result '{result}' "
-                f"(words: {result_words})"
+                f"Expected '{expected_word}' in result '{result}' (words: {result_words})"
             )
 
     def test_extract_keywords_fallback_without_nltk(
@@ -123,10 +125,10 @@ class TestNLTKHermeticity:
 class TestNLTKMockingCompleteness:
     """Tests verifying NLTK mocking is complete for all code paths."""
 
-    @patch('file_organizer.utils.text_processing.NLTK_AVAILABLE', True)
-    @patch('file_organizer.utils.text_processing.word_tokenize')
-    @patch('file_organizer.utils.text_processing.stopwords')
-    @patch('file_organizer.utils.text_processing.WordNetLemmatizer')
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("file_organizer.utils.text_processing.stopwords")
+    @patch("file_organizer.utils.text_processing.WordNetLemmatizer")
     def test_clean_text_with_mocked_nltk(
         self,
         mock_lemmatizer_cls: MagicMock,
@@ -148,9 +150,9 @@ class TestNLTKMockingCompleteness:
         # Verify mocks were called
         mock_tokenize.assert_called()
 
-    @patch('file_organizer.utils.text_processing.NLTK_AVAILABLE', True)
-    @patch('file_organizer.utils.text_processing.word_tokenize')
-    @patch('nltk.probability.FreqDist', create=True)
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("nltk.probability.FreqDist", create=True)
     def test_extract_keywords_with_mocked_nltk(
         self,
         mock_freqdist_cls: MagicMock,

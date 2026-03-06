@@ -219,7 +219,6 @@ class TestHistoryViewer(unittest.TestCase):
         # Should include our test operations (logged today)
         self.assertGreater(len(operations), 0)
 
-
     # --- Extended coverage tests ---
 
     def test_show_recent_operations_empty(self):
@@ -390,9 +389,7 @@ class TestHistoryViewer(unittest.TestCase):
     def test_format_path_with_destination(self):
         """Test _format_path with destination path."""
         operations = self.history.get_operations(limit=10)
-        move_op = next(
-            (op for op in operations if op.destination_path is not None), None
-        )
+        move_op = next((op for op in operations if op.destination_path is not None), None)
         self.assertIsNotNone(move_op)
 
         formatted = self.viewer._format_path(move_op)

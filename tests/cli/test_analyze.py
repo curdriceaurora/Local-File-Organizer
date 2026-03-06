@@ -155,9 +155,12 @@ def test_analyze_handles_model_error(tmp_path: Path):
     mock_model.generate.side_effect = RuntimeError("model exploded")
 
     # Patch generate_category to propagate the RuntimeError
-    with _patch_text_model(mock_model), patch(
-        "file_organizer.services.analyzer.generate_category",
-        side_effect=RuntimeError("AI analysis blew up"),
+    with (
+        _patch_text_model(mock_model),
+        patch(
+            "file_organizer.services.analyzer.generate_category",
+            side_effect=RuntimeError("AI analysis blew up"),
+        ),
     ):
         result = runner.invoke(app, ["analyze", str(f)])
 

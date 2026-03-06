@@ -64,7 +64,8 @@ def get_app() -> FastAPI:
             # Import here to avoid circular dependencies at module level
             # Call main.get_app() to respect singleton pattern there
             import file_organizer.api.main
-            globals()['_app_cache'] = file_organizer.api.main.get_app()
+
+            globals()["_app_cache"] = file_organizer.api.main.get_app()
 
         return _app_cache
 

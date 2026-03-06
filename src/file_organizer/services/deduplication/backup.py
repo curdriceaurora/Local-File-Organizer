@@ -20,6 +20,7 @@ from pathlib import Path
 # fcntl is Unix-only, not available on Windows
 try:
     import fcntl
+
     HAS_FCNTL = True
 except ImportError:
     HAS_FCNTL = False
@@ -99,9 +100,9 @@ class BackupManager:
             "backup_path": str(backup_path),
             "backup_time": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "file_size": file_path.stat().st_size,
-            "original_mtime": datetime.fromtimestamp(
-                file_path.stat().st_mtime, tz=UTC
-            ).isoformat().replace("+00:00", "Z"),
+            "original_mtime": datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC)
+            .isoformat()
+            .replace("+00:00", "Z"),
         }
         self._save_manifest(manifest)
 
@@ -169,9 +170,7 @@ class BackupManager:
 
         # Find and remove old backups
         for backup_key, metadata in list(manifest.items()):
-            backup_time = datetime.fromisoformat(
-                metadata["backup_time"].replace("Z", "+00:00")
-            )
+            backup_time = datetime.fromisoformat(metadata["backup_time"].replace("Z", "+00:00"))
             if backup_time.tzinfo is None:
                 backup_time = backup_time.replace(tzinfo=UTC)
 

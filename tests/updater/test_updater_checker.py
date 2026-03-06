@@ -209,8 +209,15 @@ class TestFetchLatestReleasePrerelease:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = [
-            {"tag_name": "v2.0.0-rc1", "draft": False, "prerelease": True,
-             "body": "", "assets": [], "published_at": "", "html_url": ""},
+            {
+                "tag_name": "v2.0.0-rc1",
+                "draft": False,
+                "prerelease": True,
+                "body": "",
+                "assets": [],
+                "published_at": "",
+                "html_url": "",
+            },
         ]
         mock_client.get.return_value = mock_resp
         mock_client.__enter__ = MagicMock(return_value=mock_client)
@@ -228,8 +235,15 @@ class TestFetchLatestReleasePrerelease:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = [
-            {"tag_name": "v3.0.0", "draft": True, "prerelease": False,
-             "body": "", "assets": [], "published_at": "", "html_url": ""},
+            {
+                "tag_name": "v3.0.0",
+                "draft": True,
+                "prerelease": False,
+                "body": "",
+                "assets": [],
+                "published_at": "",
+                "html_url": "",
+            },
         ]
         mock_client.get.return_value = mock_resp
         mock_client.__enter__ = MagicMock(return_value=mock_client)

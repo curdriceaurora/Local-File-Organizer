@@ -259,7 +259,9 @@ class TestVisionProcessorCleanName:
 
     def test_clean_basic(self, vision_processor: VisionProcessor) -> None:
         """Test basic name cleaning."""
-        assert vision_processor._clean_ai_generated_name("Nature Photography") == "nature_photography"
+        assert (
+            vision_processor._clean_ai_generated_name("Nature Photography") == "nature_photography"
+        )
 
     def test_clean_bad_words_filtered(self, vision_processor: VisionProcessor) -> None:
         """Test bad words (articles, generic terms) are filtered."""

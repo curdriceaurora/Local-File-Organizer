@@ -362,9 +362,7 @@ class TestSuggestFolderStructure:
 
     def test_type_based_suggestion(self, populated_learner, temp_storage):
         """Test type-based folder suggestion."""
-        result = populated_learner.suggest_folder_structure(
-            {"type": ".pdf"}, min_confidence=0.5
-        )
+        result = populated_learner.suggest_folder_structure({"type": ".pdf"}, min_confidence=0.5)
 
         assert result is not None
         docs_folder = temp_storage / "documents"

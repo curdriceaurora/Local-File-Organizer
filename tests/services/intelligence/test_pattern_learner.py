@@ -336,9 +336,7 @@ class TestIdentifyFolderPreference:
 
         learner.identify_folder_preference(".pdf", folder, None)
 
-        learner.folder_learner.track_folder_choice.assert_called_once_with(
-            ".pdf", folder, None
-        )
+        learner.folder_learner.track_folder_choice.assert_called_once_with(".pdf", folder, None)
 
     def test_tracks_with_context(self, learner, temp_storage):
         """Test tracking with context information."""
@@ -348,9 +346,7 @@ class TestIdentifyFolderPreference:
         context = {"pattern": "vacation"}
         learner.identify_folder_preference(".jpg", folder, context)
 
-        learner.folder_learner.track_folder_choice.assert_called_once_with(
-            ".jpg", folder, context
-        )
+        learner.folder_learner.track_folder_choice.assert_called_once_with(".jpg", folder, context)
 
 
 # ---------------------------------------------------------------------------
@@ -542,9 +538,7 @@ class TestBatchLearnFromHistory:
 
         result = learner.batch_learn_from_history(corrections, max_age_days=30)
 
-        learner.feedback_processor.batch_process_history.assert_called_once_with(
-            corrections, 30
-        )
+        learner.feedback_processor.batch_process_history.assert_called_once_with(corrections, 30)
         assert result["processed_count"] == 0
 
 
@@ -605,9 +599,7 @@ class TestLearningToggle:
         """Test that corrections are ignored when disabled."""
         learner.disable_learning()
 
-        result = learner.learn_from_correction(
-            Path("/a/old.txt"), Path("/b/new.txt")
-        )
+        result = learner.learn_from_correction(Path("/a/old.txt"), Path("/b/new.txt"))
 
         assert result == {"learning_enabled": False}
 
@@ -616,9 +608,7 @@ class TestLearningToggle:
         learner.disable_learning()
         learner.enable_learning()
 
-        result = learner.learn_from_correction(
-            Path("/a/old.txt"), Path("/b/new.txt")
-        )
+        result = learner.learn_from_correction(Path("/a/old.txt"), Path("/b/new.txt"))
 
         assert "timestamp" in result
         assert len(result["learned"]) > 0
@@ -644,6 +634,7 @@ class TestLearnNamingPattern:
         """Test learning from delimiter change."""
         # Set up mock to return different delimiters
         call_count = [0]
+
         def side_effect(name):
             call_count[0] += 1
             if call_count[0] % 2 == 1:
@@ -661,15 +652,14 @@ class TestLearnNamingPattern:
         result = learner._learn_naming_pattern("my-file.txt", "my_file.txt")
 
         assert result["type"] == "naming"
-        delimiter_patterns = [
-            p for p in result["patterns"] if p["pattern_type"] == "delimiter"
-        ]
+        delimiter_patterns = [p for p in result["patterns"] if p["pattern_type"] == "delimiter"]
         assert len(delimiter_patterns) == 1
         assert delimiter_patterns[0]["value"] == ["_"]
 
     def test_case_style_change(self, learner):
         """Test learning from case style change."""
         call_count = [0]
+
         def side_effect(name):
             call_count[0] += 1
             if call_count[0] % 2 == 1:
@@ -687,9 +677,7 @@ class TestLearnNamingPattern:
         result = learner._learn_naming_pattern("myfile.txt", "MyFile.txt")
 
         assert result["type"] == "naming"
-        case_patterns = [
-            p for p in result["patterns"] if p["pattern_type"] == "case_style"
-        ]
+        case_patterns = [p for p in result["patterns"] if p["pattern_type"] == "case_style"]
         assert len(case_patterns) == 1
         assert case_patterns[0]["value"] == "PascalCase"
 
@@ -711,9 +699,7 @@ class TestLearnNamingPattern:
 
         result = learner._learn_naming_pattern("file.txt", "2024_file.txt")
 
-        structure_patterns = [
-            p for p in result["patterns"] if p["pattern_type"] == "structure"
-        ]
+        structure_patterns = [p for p in result["patterns"] if p["pattern_type"] == "structure"]
         assert len(structure_patterns) == 1
 
 
@@ -769,9 +755,7 @@ class TestGetNamingSuggestions:
 
     def test_basic_suggestion(self, learner):
         """Test basic naming suggestion when convention is available."""
-        learner.pattern_extractor.suggest_naming_convention.return_value = (
-            "suggested_name"
-        )
+        learner.pattern_extractor.suggest_naming_convention.return_value = "suggested_name"
 
         result = learner._get_naming_suggestions("my_file.txt")
 
@@ -794,6 +778,4 @@ class TestGetNamingSuggestions:
 
         learner._get_naming_suggestions("my_file.txt")
 
-        learner.pattern_extractor.analyze_filename.assert_called_once_with(
-            "my_file.txt"
-        )
+        learner.pattern_extractor.analyze_filename.assert_called_once_with("my_file.txt")

@@ -115,7 +115,9 @@ class TestRedoOperationDispatch:
 
     def test_dispatch_exception_caught(self, env):
         _, _, executor = env
-        op = _op(OperationType.RENAME, Path("/nope"), Path("/nope2"), status=OperationStatus.ROLLED_BACK)
+        op = _op(
+            OperationType.RENAME, Path("/nope"), Path("/nope2"), status=OperationStatus.ROLLED_BACK
+        )
         result = executor.redo_operation(op)
         assert result is False
 
@@ -297,7 +299,13 @@ class TestRollbackTransactionEdges:
 
         ops = [
             _op(OperationType.MOVE, file1, dst1, op_id=1, txn_id="txn"),
-            _op(OperationType.MOVE, Path("/nonexistent"), Path("/also_nonexistent"), op_id=2, txn_id="txn"),
+            _op(
+                OperationType.MOVE,
+                Path("/nonexistent"),
+                Path("/also_nonexistent"),
+                op_id=2,
+                txn_id="txn",
+            ),
         ]
 
         # Reversed: op2 runs first (fails), then stops

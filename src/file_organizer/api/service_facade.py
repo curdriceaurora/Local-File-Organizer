@@ -400,11 +400,7 @@ class ServiceFacade:
                 # Serialise groups (dict of hash -> DuplicateGroup objects)
                 groups: list[dict[str, Any]] = []
                 for file_hash, group in groups_raw.items():
-                    paths = (
-                        [str(fm.path) for fm in group.files]
-                        if hasattr(group, "files")
-                        else []
-                    )
+                    paths = [str(fm.path) for fm in group.files] if hasattr(group, "files") else []
                     groups.append(
                         {
                             "hash": file_hash,
@@ -499,7 +495,10 @@ class ServiceFacade:
             return {"success": True, "data": {"operations": operations}}
         except Exception as exc:
             logger.error("get_operation_history failed: {}", exc)
-            return {"success": False, "error": "Internal server error while retrieving operation history"}
+            return {
+                "success": False,
+                "error": "Internal server error while retrieving operation history",
+            }
 
     # ------------------------------------------------------------------
     # Private helpers

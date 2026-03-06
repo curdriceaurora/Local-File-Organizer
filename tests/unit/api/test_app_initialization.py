@@ -99,7 +99,9 @@ class TestAppThreadSafety:
             # All instances should be the same object (same id)
             first_id = id(instances[0])
             for instance in instances[1:]:
-                assert id(instance) == first_id, "Got different app instances from different threads"
+                assert id(instance) == first_id, (
+                    "Got different app instances from different threads"
+                )
 
         finally:
             # Restore original state
@@ -140,7 +142,9 @@ class TestAppThreadSafety:
             # All instances should be the same object (same id)
             first_id = id(instances[0])
             for instance in instances[1:]:
-                assert id(instance) == first_id, "Got different app instances from different threads"
+                assert id(instance) == first_id, (
+                    "Got different app instances from different threads"
+                )
 
         finally:
             # Restore original state
@@ -164,6 +168,7 @@ class TestAppThreadSafety:
                 """Create app in a separate thread."""
                 try:
                     from file_organizer.api.main import create_app
+
                     app = create_app()
                     apps.append(app)
                 except Exception as e:

@@ -13,6 +13,7 @@ from redis import Redis
 @dataclass(frozen=True)
 class RateLimitResult:
     """Result of a rate limit check."""
+
     allowed: bool
     remaining: int
     reset_at: int
@@ -28,6 +29,7 @@ class RateLimiter(Protocol):
 @dataclass
 class RateLimitState:
     """Mutable rate limit state for a single key."""
+
     count: int
     reset_at: int
 

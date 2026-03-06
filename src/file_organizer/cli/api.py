@@ -32,7 +32,9 @@ def _build_client(
     from file_organizer.client.exceptions import ClientError
     from file_organizer.client.sync_client import FileOrganizerClient
 
-    return FileOrganizerClient(base_url=base_url, token=token, api_key=api_key, timeout=timeout), ClientError
+    return FileOrganizerClient(
+        base_url=base_url, token=token, api_key=api_key, timeout=timeout
+    ), ClientError
 
 
 def _print_json(payload: object) -> None:
@@ -46,7 +48,9 @@ def health(
     as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
     """Check API health."""
-    client, ClientError = _build_client(base_url=base_url, token=None, api_key=None, timeout=timeout)
+    client, ClientError = _build_client(
+        base_url=base_url, token=None, api_key=None, timeout=timeout
+    )
     try:
         result = client.health()
         if as_json:
@@ -76,7 +80,9 @@ def login(
     as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
     """Authenticate and print/store access tokens."""
-    client, ClientError = _build_client(base_url=base_url, token=None, api_key=None, timeout=timeout)
+    client, ClientError = _build_client(
+        base_url=base_url, token=None, api_key=None, timeout=timeout
+    )
     try:
         tokens = client.login(username, password)
         payload = tokens.model_dump()
@@ -104,7 +110,9 @@ def me(
     as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
     """Show authenticated user info."""
-    client, ClientError = _build_client(base_url=base_url, token=token, api_key=None, timeout=timeout)
+    client, ClientError = _build_client(
+        base_url=base_url, token=token, api_key=None, timeout=timeout
+    )
     try:
         user = client.me()
         if as_json:
@@ -128,7 +136,9 @@ def logout(
     timeout: float = typer.Option(30.0, help="Request timeout in seconds."),
 ) -> None:
     """Revoke the current access/refresh token pair."""
-    client, ClientError = _build_client(base_url=base_url, token=token, api_key=None, timeout=timeout)
+    client, ClientError = _build_client(
+        base_url=base_url, token=token, api_key=None, timeout=timeout
+    )
     try:
         client.logout(refresh_token)
         console.print("[green]Logout successful[/green]")
@@ -151,7 +161,9 @@ def files_list(
     as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
     """List files via the API client."""
-    client, ClientError = _build_client(base_url=base_url, token=token, api_key=None, timeout=timeout)
+    client, ClientError = _build_client(
+        base_url=base_url, token=token, api_key=None, timeout=timeout
+    )
     try:
         result = client.list_files(
             path,
@@ -185,7 +197,9 @@ def system_status(
     as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
     """Show system status from the API."""
-    client, ClientError = _build_client(base_url=base_url, token=token, api_key=None, timeout=timeout)
+    client, ClientError = _build_client(
+        base_url=base_url, token=token, api_key=None, timeout=timeout
+    )
     try:
         result = client.system_status(path)
         if as_json:
@@ -212,7 +226,9 @@ def system_stats(
     as_json: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
     """Show storage analytics stats from the API."""
-    client, ClientError = _build_client(base_url=base_url, token=token, api_key=None, timeout=timeout)
+    client, ClientError = _build_client(
+        base_url=base_url, token=token, api_key=None, timeout=timeout
+    )
     try:
         stats = client.system_stats(path=path, max_depth=max_depth, use_cache=use_cache)
         if as_json:

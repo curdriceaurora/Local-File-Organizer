@@ -96,9 +96,7 @@ class TestCreateExecutor(unittest.TestCase):
             try:
                 # Verify info was logged for ProcessPoolExecutor creation
                 info_calls = list(mock_logger.info.call_args_list)
-                self.assertTrue(
-                    any("ProcessPoolExecutor" in str(call) for call in info_calls)
-                )
+                self.assertTrue(any("ProcessPoolExecutor" in str(call) for call in info_calls))
             finally:
                 executor.shutdown(wait=False)
 

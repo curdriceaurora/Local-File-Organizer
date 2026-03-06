@@ -77,24 +77,18 @@ class TestFlatpakManifestYAML:
         """The 'runtime' field must be present and non-empty."""
         runtime = manifest.get("runtime")
         assert runtime is not None, "Manifest is missing the 'runtime' field."
-        assert isinstance(runtime, str) and runtime.strip(), (
-            "'runtime' must be a non-empty string."
-        )
+        assert isinstance(runtime, str) and runtime.strip(), "'runtime' must be a non-empty string."
 
     def test_runtime_version_is_set(self, manifest: dict) -> None:
         """The 'runtime-version' field must be present."""
         runtime_version = manifest.get("runtime-version")
-        assert runtime_version is not None, (
-            "Manifest is missing the 'runtime-version' field."
-        )
+        assert runtime_version is not None, "Manifest is missing the 'runtime-version' field."
 
     def test_sdk_is_set(self, manifest: dict) -> None:
         """The 'sdk' field must be present and non-empty."""
         sdk = manifest.get("sdk")
         assert sdk is not None, "Manifest is missing the 'sdk' field."
-        assert isinstance(sdk, str) and sdk.strip(), (
-            "'sdk' must be a non-empty string."
-        )
+        assert isinstance(sdk, str) and sdk.strip(), "'sdk' must be a non-empty string."
 
     def test_command_is_set(self, manifest: dict) -> None:
         """The 'command' field must be set to 'file-organizer'."""
@@ -108,9 +102,7 @@ class TestFlatpakManifestYAML:
         """The 'modules' section must be present and contain at least one module."""
         modules = manifest.get("modules")
         assert modules is not None, "Manifest is missing the 'modules' section."
-        assert isinstance(modules, list) and len(modules) > 0, (
-            "'modules' must be a non-empty list."
-        )
+        assert isinstance(modules, list) and len(modules) > 0, "'modules' must be a non-empty list."
 
 
 class TestFlatpakFinishArgs:
@@ -128,8 +120,7 @@ class TestFlatpakFinishArgs:
     def test_finish_args_section_is_present(self, finish_args: list[str]) -> None:
         """The finish-args section must be present and non-empty."""
         assert len(finish_args) > 0, (
-            "The 'finish-args' section is missing or empty. "
-            "Sandbox permissions must be declared."
+            "The 'finish-args' section is missing or empty. Sandbox permissions must be declared."
         )
 
     def test_filesystem_home_permission_is_present(self, finish_args: list[str]) -> None:
@@ -252,16 +243,12 @@ class TestMetainfoXML:
     def test_description_element_is_present(self, metainfo_root: ET.Element) -> None:
         """The <description> element must be present with content."""
         description_element = metainfo_root.find("description")
-        assert description_element is not None, (
-            "<description> element is missing from metainfo."
-        )
+        assert description_element is not None, "<description> element is missing from metainfo."
 
     def test_license_element_is_present(self, metainfo_root: ET.Element) -> None:
         """The <project_license> element must be present."""
         license_element = metainfo_root.find("project_license")
-        assert license_element is not None, (
-            "<project_license> element is missing from metainfo."
-        )
+        assert license_element is not None, "<project_license> element is missing from metainfo."
         assert license_element.text and license_element.text.strip(), (
             "<project_license> element must specify a license (e.g., MIT or Apache-2.0)."
         )

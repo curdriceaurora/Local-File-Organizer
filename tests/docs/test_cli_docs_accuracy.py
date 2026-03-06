@@ -32,7 +32,6 @@ EXCLUDED_COMMANDS: set[str] = {
 }
 
 
-
 # ---------------------------------------------------------------------------
 # Introspection helpers
 # ---------------------------------------------------------------------------
@@ -415,8 +414,7 @@ class TestCLIDocsCoverage:
         documented = sum(
             1
             for c in commands
-            if c.path not in EXCLUDED_COMMANDS
-            and _command_is_documented(doc_content, c.path)
+            if c.path not in EXCLUDED_COMMANDS and _command_is_documented(doc_content, c.path)
         )
         pct = (documented / total * 100) if total else 0
 

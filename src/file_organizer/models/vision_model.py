@@ -138,9 +138,7 @@ class VisionModel(BaseModel):
 
             raw_response = response.get("response")
             if not raw_response:
-                raise ValueError(
-                    f"Ollama returned empty response for model {self.config.name}"
-                )
+                raise ValueError(f"Ollama returned empty response for model {self.config.name}")
             generated_text = str(raw_response)
             logger.debug(
                 f"Generated {len(generated_text)} characters "

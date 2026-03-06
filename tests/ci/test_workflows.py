@@ -280,9 +280,7 @@ class TestCIFullWorkflow:
         jobs = workflow.get("jobs", {})
         assert "test-macos" in jobs, "CI Full should have a 'test-macos' job (issue #370)"
         macos_job = jobs["test-macos"]
-        assert macos_job.get("runs-on") == "macos-latest", (
-            "macOS job must use macos-latest runner"
-        )
+        assert macos_job.get("runs-on") == "macos-latest", "macOS job must use macos-latest runner"
 
     def test_ci_full_has_windows_job(self, workflow: dict[str, Any]) -> None:
         """Verify CI Full includes a Windows runner (issue #371)."""

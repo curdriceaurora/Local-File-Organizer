@@ -28,9 +28,7 @@ def mock_client_cls():
 def test_health_command(mock_client_cls):
     """Test the health command success."""
     mock_instance = MagicMock()
-    mock_instance.health.return_value = MagicMock(
-        status="ok", version="1.0.0", environment="test"
-    )
+    mock_instance.health.return_value = MagicMock(status="ok", version="1.0.0", environment="test")
     mock_client_cls.return_value = mock_instance
 
     result = runner.invoke(api_app, ["health"])
@@ -80,9 +78,7 @@ def test_login_command(mock_client_cls, tmp_path):
     token_file = tmp_path / "token.json"
 
     result = runner.invoke(
-        api_app,
-        ["login", "--save-token", str(token_file)],
-        input="user\npass\n"
+        api_app, ["login", "--save-token", str(token_file)], input="user\npass\n"
     )
 
     assert result.exit_code == 0
@@ -139,7 +135,7 @@ def test_files_list_command(mock_client_cls):
 
     # Mock items
     item1 = MagicMock(name="f1.txt", file_type="file", size=100)
-    item1.name = "f1.txt" # Need to set explicitly due to MagicMock behavior
+    item1.name = "f1.txt"  # Need to set explicitly due to MagicMock behavior
 
     result_obj = MagicMock(total=1, items=[item1])
     mock_instance.list_files.return_value = result_obj

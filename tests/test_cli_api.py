@@ -88,14 +88,18 @@ def test_api_help() -> None:
 
 
 def test_api_health(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("file_organizer.cli.api._build_client", lambda **_: (_FakeClient(), ClientError))
+    monkeypatch.setattr(
+        "file_organizer.cli.api._build_client", lambda **_: (_FakeClient(), ClientError)
+    )
     result = runner.invoke(app, ["api", "health"])
     assert result.exit_code == 0
     assert "Status:" in result.stdout
 
 
 def test_api_login_json_and_save_token(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr("file_organizer.cli.api._build_client", lambda **_: (_FakeClient(), ClientError))
+    monkeypatch.setattr(
+        "file_organizer.cli.api._build_client", lambda **_: (_FakeClient(), ClientError)
+    )
     token_file = tmp_path / "tokens.json"
     result = runner.invoke(
         app,
@@ -121,7 +125,9 @@ def test_api_error_exit_code(monkeypatch: pytest.MonkeyPatch) -> None:
         def health(self) -> _Model:
             raise ClientError("boom", status_code=500)
 
-    monkeypatch.setattr("file_organizer.cli.api._build_client", lambda **_: (_ErrorClient(), ClientError))
+    monkeypatch.setattr(
+        "file_organizer.cli.api._build_client", lambda **_: (_ErrorClient(), ClientError)
+    )
     result = runner.invoke(app, ["api", "health"])
     assert result.exit_code == 1
     assert "API error" in result.stdout

@@ -57,7 +57,7 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:  # noqa: C901
         if user.created_at is None:
             user.created_at = datetime.now(UTC)
         # is_active defaults to True
-        if not hasattr(user, '_is_active_set'):
+        if not hasattr(user, "_is_active_set"):
             user.is_active = True
             user._is_active_set = True
         db_session._added_users[user.username] = user
@@ -69,20 +69,20 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:  # noqa: C901
             user.id = str(uuid4())
         if user.created_at is None:
             user.created_at = datetime.now(UTC)
-        if not hasattr(user, 'is_active') or user.is_active is None:
+        if not hasattr(user, "is_active") or user.is_active is None:
             user.is_active = True
-        if not hasattr(user, 'last_login'):
+        if not hasattr(user, "last_login"):
             user.last_login = None
 
     def _find_user(attr_name, attr_value):
         """Find user by attribute."""
-        if attr_name == 'username':
+        if attr_name == "username":
             return db_session._added_users.get(attr_value)
-        if attr_name == 'email':
+        if attr_name == "email":
             for user in db_session._added_users.values():
                 if user.email == attr_value:
                     return user
-        if attr_name == 'id':
+        if attr_name == "id":
             for user in db_session._added_users.values():
                 if user.id == attr_value:
                     return user
@@ -99,11 +99,11 @@ def _build_app(db_session: Session) -> tuple[FastAPI, TestClient]:  # noqa: C901
             def first_func():
                 """Return first matching user or None."""
                 for condition in args:
-                    if hasattr(condition, 'left') and hasattr(condition, 'right'):
-                        attr_name = getattr(condition.left, 'name', None)
+                    if hasattr(condition, "left") and hasattr(condition, "right"):
+                        attr_name = getattr(condition.left, "name", None)
                         attr_value = (
                             condition.right.value
-                            if hasattr(condition.right, 'value')
+                            if hasattr(condition.right, "value")
                             else condition.right
                         )
                         return _find_user(attr_name, attr_value)
@@ -444,22 +444,29 @@ class TestLogout:
         app.dependency_overrides[get_token_store] = lambda: mock_store
         # Override oauth2_scheme to return a valid token
         from file_organizer.api.dependencies import oauth2_scheme
+
         app.dependency_overrides[oauth2_scheme] = lambda: "test.access.token"
 
         # Mock decode_token and is_refresh_token to handle token validation
-        with patch("file_organizer.api.routers.auth.decode_token") as mock_decode, \
-             patch("file_organizer.api.routers.auth.is_refresh_token") as mock_is_refresh:
+        with (
+            patch("file_organizer.api.routers.auth.decode_token") as mock_decode,
+            patch("file_organizer.api.routers.auth.is_refresh_token") as mock_is_refresh,
+        ):
             # Mock access token payload
-            mock_decode.side_effect = lambda token, settings: {
-                "jti": "access-jti-123",
-                "user_id": user.id,
-                "exp": 9999999999,
-            } if token == "test.access.token" else {
-                "jti": "refresh-jti-456",
-                "user_id": user.id,
-                "token_type": "refresh",
-                "exp": 9999999999,
-            }
+            mock_decode.side_effect = lambda token, settings: (
+                {
+                    "jti": "access-jti-123",
+                    "user_id": user.id,
+                    "exp": 9999999999,
+                }
+                if token == "test.access.token"
+                else {
+                    "jti": "refresh-jti-456",
+                    "user_id": user.id,
+                    "token_type": "refresh",
+                    "exp": 9999999999,
+                }
+            )
             mock_is_refresh.return_value = True
 
             client = TestClient(app)

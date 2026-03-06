@@ -218,10 +218,7 @@ def coordinated_update(
 
     if dry_run:
         downloaded.unlink(missing_ok=True)
-        result.message = (
-            f"Dry run: would install sidecar {status.latest_version} "
-            f"from {asset.name}"
-        )
+        result.message = f"Dry run: would install sidecar {status.latest_version} from {asset.name}"
         result.success = True
         return result
 
@@ -232,16 +229,12 @@ def coordinated_update(
         result.sidecar_updated = True
         result.sidecar_version = status.latest_version
         result.success = True
-        result.message = (
-            f"Sidecar updated: {status.current_version} -> {status.latest_version}"
-        )
+        result.message = f"Sidecar updated: {status.current_version} -> {status.latest_version}"
         emit("update-installed", {"version": status.latest_version})
         return result
 
     # Step 5: Sidecar install failed — attempt shell rollback.
-    logger.error(
-        "Sidecar install failed: {}. Attempting shell rollback.", install_result.message
-    )
+    logger.error("Sidecar install failed: {}. Attempting shell rollback.", install_result.message)
     emit("update-failed", {"reason": install_result.message})
 
     shell_manager = UpdateManager(
@@ -254,9 +247,8 @@ def coordinated_update(
 
     result.rolled_back = rolled_back
     result.success = False
-    result.message = (
-        f"Sidecar install failed: {install_result.message}. "
-        + ("Shell rolled back successfully." if rolled_back else "Shell rollback also failed.")
+    result.message = f"Sidecar install failed: {install_result.message}. " + (
+        "Shell rolled back successfully." if rolled_back else "Shell rollback also failed."
     )
 
     return result

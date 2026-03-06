@@ -74,9 +74,7 @@ class TestListIntegrations:
         mock_status_2.details = {}
 
         # Setup async method
-        mock_manager.list_statuses = AsyncMock(
-            return_value=[mock_status_1, mock_status_2]
-        )
+        mock_manager.list_statuses = AsyncMock(return_value=[mock_status_1, mock_status_2])
 
         _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
         resp = client.get("/api/v1/integrations")
@@ -140,9 +138,7 @@ class TestUpdateIntegrationSettings:
         payload = {"settings": {"vault_path": str(tmp_path)}}
 
         _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
-        resp = client.post(
-            "/api/v1/integrations/obsidian/settings", json=payload
-        )
+        resp = client.post("/api/v1/integrations/obsidian/settings", json=payload)
 
         assert resp.status_code == 200
         body = resp.json()
@@ -157,9 +153,7 @@ class TestUpdateIntegrationSettings:
         payload = {"settings": {}}  # Empty settings - no path validation
 
         _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
-        resp = client.post(
-            "/api/v1/integrations/nonexistent/settings", json=payload
-        )
+        resp = client.post("/api/v1/integrations/nonexistent/settings", json=payload)
 
         assert resp.status_code == 404
         body = resp.json()
@@ -174,9 +168,7 @@ class TestUpdateIntegrationSettings:
         payload = {"settings": {"vault_path": "/etc/passwd"}}
 
         _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
-        resp = client.post(
-            "/api/v1/integrations/obsidian/settings", json=payload
-        )
+        resp = client.post("/api/v1/integrations/obsidian/settings", json=payload)
 
         # Should get 403 from path validation (path not allowed)
         assert resp.status_code == 403
@@ -299,9 +291,7 @@ class TestSendFileToIntegration:
         payload = {"path": str(tmp_path / "test.txt"), "metadata": {}}
 
         _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
-        resp = client.post(
-            "/api/v1/integrations/nonexistent/send", json=payload
-        )
+        resp = client.post("/api/v1/integrations/nonexistent/send", json=payload)
 
         assert resp.status_code == 404
 
@@ -313,9 +303,7 @@ class TestSendFileToIntegration:
         payload = {"path": "/etc/passwd", "metadata": {}}
 
         _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
-        resp = client.post(
-            "/api/v1/integrations/obsidian/send", json=payload
-        )
+        resp = client.post("/api/v1/integrations/obsidian/send", json=payload)
 
         # Should get 403 from path validation (path not allowed)
         assert resp.status_code == 403
@@ -335,9 +323,7 @@ class TestSendFileToIntegration:
         }
 
         _, client = _build_app(tmp_path, mock_integration_manager=mock_manager)
-        resp = client.post(
-            "/api/v1/integrations/vscode/send", json=payload
-        )
+        resp = client.post("/api/v1/integrations/vscode/send", json=payload)
 
         assert resp.status_code == 200
         body = resp.json()
@@ -438,9 +424,7 @@ class TestVerifyBrowserToken:
         payload = {"token": "valid-token"}
 
         _, client = _build_app(tmp_path, mock_browser_manager=mock_manager)
-        resp = client.post(
-            "/api/v1/integrations/browser/verify", json=payload
-        )
+        resp = client.post("/api/v1/integrations/browser/verify", json=payload)
 
         assert resp.status_code == 200
         body = resp.json()
@@ -454,9 +438,7 @@ class TestVerifyBrowserToken:
         payload = {"token": "invalid-token"}
 
         _, client = _build_app(tmp_path, mock_browser_manager=mock_manager)
-        resp = client.post(
-            "/api/v1/integrations/browser/verify", json=payload
-        )
+        resp = client.post("/api/v1/integrations/browser/verify", json=payload)
 
         assert resp.status_code == 200
         body = resp.json()
@@ -470,9 +452,7 @@ class TestVerifyBrowserToken:
         payload = {"token": "expired-token"}
 
         _, client = _build_app(tmp_path, mock_browser_manager=mock_manager)
-        resp = client.post(
-            "/api/v1/integrations/browser/verify", json=payload
-        )
+        resp = client.post("/api/v1/integrations/browser/verify", json=payload)
 
         assert resp.status_code == 200
         body = resp.json()

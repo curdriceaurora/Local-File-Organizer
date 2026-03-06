@@ -24,14 +24,20 @@ from file_organizer.services.copilot.rules.models import (
 # Enum coverage
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestConditionType:
     """Tests for the ConditionType enum."""
 
     def test_all_members(self) -> None:
         expected = {
-            "extension", "name_pattern", "size_greater", "size_less",
-            "content_contains", "modified_before", "modified_after",
+            "extension",
+            "name_pattern",
+            "size_greater",
+            "size_less",
+            "content_contains",
+            "modified_before",
+            "modified_after",
             "path_matches",
         }
         assert {ct.value for ct in ConditionType} == expected
@@ -46,8 +52,13 @@ class TestActionType:
 
     def test_all_members(self) -> None:
         expected = {
-            "move", "rename", "tag", "categorize",
-            "delete", "archive", "copy",
+            "move",
+            "rename",
+            "tag",
+            "categorize",
+            "delete",
+            "archive",
+            "copy",
         }
         assert {at.value for at in ActionType} == expected
 
@@ -59,36 +70,29 @@ class TestActionType:
 # RuleCondition
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestRuleCondition:
     """Tests for RuleCondition dataclass."""
 
     def test_basic_creation(self) -> None:
-        cond = RuleCondition(
-            condition_type=ConditionType.EXTENSION, value=".pdf"
-        )
+        cond = RuleCondition(condition_type=ConditionType.EXTENSION, value=".pdf")
         assert cond.condition_type == ConditionType.EXTENSION
         assert cond.value == ".pdf"
         assert cond.negate is False
 
     def test_negate_flag(self) -> None:
-        cond = RuleCondition(
-            condition_type=ConditionType.EXTENSION, value=".tmp", negate=True
-        )
+        cond = RuleCondition(condition_type=ConditionType.EXTENSION, value=".tmp", negate=True)
         assert cond.negate is True
 
     def test_to_dict_without_negate(self) -> None:
-        cond = RuleCondition(
-            condition_type=ConditionType.NAME_PATTERN, value="*.log"
-        )
+        cond = RuleCondition(condition_type=ConditionType.NAME_PATTERN, value="*.log")
         d = cond.to_dict()
         assert d == {"type": "name_pattern", "value": "*.log"}
         assert "negate" not in d
 
     def test_to_dict_with_negate(self) -> None:
-        cond = RuleCondition(
-            condition_type=ConditionType.SIZE_GREATER, value="1024", negate=True
-        )
+        cond = RuleCondition(condition_type=ConditionType.SIZE_GREATER, value="1024", negate=True)
         d = cond.to_dict()
         assert d["negate"] is True
         assert d["type"] == "size_greater"
@@ -101,9 +105,7 @@ class TestRuleCondition:
         assert cond.negate is False
 
     def test_from_dict_with_negate(self) -> None:
-        cond = RuleCondition.from_dict(
-            {"type": "path_matches", "value": "/tmp/*", "negate": True}
-        )
+        cond = RuleCondition.from_dict({"type": "path_matches", "value": "/tmp/*", "negate": True})
         assert cond.negate is True
         assert cond.condition_type == ConditionType.PATH_MATCHES
 
@@ -128,6 +130,7 @@ class TestRuleCondition:
 # RuleAction
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestRuleAction:
     """Tests for RuleAction dataclass."""
@@ -139,9 +142,7 @@ class TestRuleAction:
         assert action.parameters == {}
 
     def test_with_destination(self) -> None:
-        action = RuleAction(
-            action_type=ActionType.COPY, destination="/backup"
-        )
+        action = RuleAction(action_type=ActionType.COPY, destination="/backup")
         assert action.destination == "/backup"
 
     def test_with_parameters(self) -> None:
@@ -159,9 +160,7 @@ class TestRuleAction:
         assert "parameters" not in d
 
     def test_to_dict_with_destination(self) -> None:
-        action = RuleAction(
-            action_type=ActionType.ARCHIVE, destination="/archive"
-        )
+        action = RuleAction(action_type=ActionType.ARCHIVE, destination="/archive")
         d = action.to_dict()
         assert d["destination"] == "/archive"
 
@@ -193,11 +192,13 @@ class TestRuleAction:
         assert action.parameters == {}
 
     def test_from_dict_full(self) -> None:
-        action = RuleAction.from_dict({
-            "type": "copy",
-            "destination": "/backup",
-            "parameters": {"preserve_metadata": True},
-        })
+        action = RuleAction.from_dict(
+            {
+                "type": "copy",
+                "destination": "/backup",
+                "parameters": {"preserve_metadata": True},
+            }
+        )
         assert action.action_type == ActionType.COPY
         assert action.destination == "/backup"
         assert action.parameters["preserve_metadata"] is True
@@ -224,6 +225,7 @@ class TestRuleAction:
 # Rule
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestRule:
     """Tests for Rule dataclass."""
@@ -239,12 +241,8 @@ class TestRule:
         assert isinstance(rule.created_at, datetime)
 
     def test_full_creation(self) -> None:
-        cond = RuleCondition(
-            condition_type=ConditionType.EXTENSION, value=".pdf"
-        )
-        action = RuleAction(
-            action_type=ActionType.MOVE, destination="/docs"
-        )
+        cond = RuleCondition(condition_type=ConditionType.EXTENSION, value=".pdf")
+        action = RuleAction(action_type=ActionType.MOVE, destination="/docs")
         rule = Rule(
             name="pdf-rule",
             description="Move PDFs to docs",
@@ -258,12 +256,8 @@ class TestRule:
         assert rule.action.destination == "/docs"
 
     def test_to_dict(self) -> None:
-        cond = RuleCondition(
-            condition_type=ConditionType.EXTENSION, value=".log"
-        )
-        action = RuleAction(
-            action_type=ActionType.DELETE
-        )
+        cond = RuleCondition(condition_type=ConditionType.EXTENSION, value=".log")
+        action = RuleAction(action_type=ActionType.DELETE)
         rule = Rule(
             name="cleanup",
             description="Remove logs",
@@ -348,6 +342,7 @@ class TestRule:
 # ------------------------------------------------------------------ #
 # RuleSet
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.unit
 class TestRuleSet:
@@ -441,9 +436,7 @@ class TestRuleSet:
         assert rs.rules[1].enabled is False
 
     def test_roundtrip(self) -> None:
-        cond = RuleCondition(
-            condition_type=ConditionType.EXTENSION, value=".txt"
-        )
+        cond = RuleCondition(condition_type=ConditionType.EXTENSION, value=".txt")
         action = RuleAction(
             action_type=ActionType.CATEGORIZE,
             parameters={"category": "text"},

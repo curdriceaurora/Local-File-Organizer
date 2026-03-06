@@ -154,9 +154,7 @@ class TestMigrateVersionWithRegisteredFunction:
 
         assert result is False
 
-    def test_migration_step_raises_with_backup_triggers_rollback(
-        self, migrator, profile_manager
-    ):
+    def test_migration_step_raises_with_backup_triggers_rollback(self, migrator, profile_manager):
         """Test migration function exception triggers rollback when backup exists."""
         profile_manager.create_profile("rb_test", "Rollback test")
         _set_profile_version(profile_manager, "rb_test", "0.9")

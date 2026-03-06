@@ -210,9 +210,7 @@ class FileOrganizer:
 
         # Process video files via metadata pipeline (no AI model required)
         if video_files:
-            self.console.print(
-                f"\n[bold blue]Processing {len(video_files)} videos...[/bold blue]"
-            )
+            self.console.print(f"\n[bold blue]Processing {len(video_files)} videos...[/bold blue]")
             processed_videos = self._process_video_files(video_files)
             all_processed.extend(processed_videos)
 
@@ -479,7 +477,11 @@ class FileOrganizer:
                     parts.append(metadata.artist)
                 if metadata.title:
                     parts.append(metadata.title)
-                description = ": ".join(parts[:1]) + " " + " - ".join(parts[1:]) if len(parts) > 1 else parts[0]
+                description = (
+                    ": ".join(parts[:1]) + " " + " - ".join(parts[1:])
+                    if len(parts) > 1
+                    else parts[0]
+                )
 
                 processed.append(
                     ProcessedFile(

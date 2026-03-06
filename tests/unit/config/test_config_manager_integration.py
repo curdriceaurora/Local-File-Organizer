@@ -16,7 +16,7 @@ def test_config_manager_with_path_manager():
         tmp_path = Path(tmp_dir)
 
         # Create PathManager with temp dir
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
+        with patch.dict(os.environ, {"HOME": str(tmp_path)}):
             path_manager = PathManager()
             path_manager.ensure_directories()
 
@@ -33,7 +33,7 @@ def test_config_manager_saves_to_path_manager_dir():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
+        with patch.dict(os.environ, {"HOME": str(tmp_path)}):
             path_manager = PathManager()
             path_manager.ensure_directories()
 
@@ -53,7 +53,7 @@ def test_config_manager_loads_from_path_manager_dir():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
+        with patch.dict(os.environ, {"HOME": str(tmp_path)}):
             path_manager = PathManager()
             path_manager.ensure_directories()
 
@@ -78,10 +78,13 @@ def test_config_manager_default_dir_vs_path_manager():
         # Set XDG_CONFIG_HOME to a custom location so PathManager differs
         # from ConfigManager's hardcoded default (~/.config/file-organizer)
         custom_xdg = tmp_path / "custom-xdg-config"
-        with patch.dict(os.environ, {
-            'HOME': str(tmp_path),
-            'XDG_CONFIG_HOME': str(custom_xdg),
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "HOME": str(tmp_path),
+                "XDG_CONFIG_HOME": str(custom_xdg),
+            },
+        ):
             # Default ConfigManager uses hardcoded legacy path
             default_cm = ConfigManager()
 

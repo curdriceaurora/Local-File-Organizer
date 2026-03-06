@@ -84,9 +84,7 @@ class TestProfileExporter(unittest.TestCase):
         self.mock_manager.get_profile.return_value = None
         exporter = self._make_exporter()
 
-        result = exporter.export_profile(
-            "missing", self.test_dir / "out.json"
-        )
+        result = exporter.export_profile("missing", self.test_dir / "out.json")
         self.assertFalse(result)
 
     def test_export_profile_validation_fails(self):
@@ -94,9 +92,7 @@ class TestProfileExporter(unittest.TestCase):
         self.mock_profile.validate.return_value = False
         exporter = self._make_exporter()
 
-        result = exporter.export_profile(
-            "test_profile", self.test_dir / "out.json"
-        )
+        result = exporter.export_profile("test_profile", self.test_dir / "out.json")
         self.assertFalse(result)
 
     def test_export_profile_exception(self):
@@ -104,9 +100,7 @@ class TestProfileExporter(unittest.TestCase):
         self.mock_manager.get_profile.side_effect = RuntimeError("db error")
         exporter = self._make_exporter()
 
-        result = exporter.export_profile(
-            "test_profile", self.test_dir / "out.json"
-        )
+        result = exporter.export_profile("test_profile", self.test_dir / "out.json")
         self.assertFalse(result)
 
     def test_export_selective_global(self):
@@ -114,9 +108,7 @@ class TestProfileExporter(unittest.TestCase):
         exporter = self._make_exporter()
         out_path = self.test_dir / "selective.json"
 
-        result = exporter.export_selective(
-            "test_profile", out_path, ["global"]
-        )
+        result = exporter.export_selective("test_profile", out_path, ["global"])
         self.assertTrue(result)
 
         with open(out_path, encoding="utf-8") as f:
@@ -129,9 +121,7 @@ class TestProfileExporter(unittest.TestCase):
         exporter = self._make_exporter()
         out_path = self.test_dir / "naming.json"
 
-        result = exporter.export_selective(
-            "test_profile", out_path, ["naming"]
-        )
+        result = exporter.export_selective("test_profile", out_path, ["naming"])
         self.assertTrue(result)
 
         with open(out_path, encoding="utf-8") as f:
@@ -143,9 +133,7 @@ class TestProfileExporter(unittest.TestCase):
         exporter = self._make_exporter()
         out_path = self.test_dir / "folders.json"
 
-        result = exporter.export_selective(
-            "test_profile", out_path, ["folders"]
-        )
+        result = exporter.export_selective("test_profile", out_path, ["folders"])
         self.assertTrue(result)
 
         with open(out_path, encoding="utf-8") as f:
@@ -157,9 +145,7 @@ class TestProfileExporter(unittest.TestCase):
         exporter = self._make_exporter()
         out_path = self.test_dir / "dir_spec.json"
 
-        result = exporter.export_selective(
-            "test_profile", out_path, ["directory_specific"]
-        )
+        result = exporter.export_selective("test_profile", out_path, ["directory_specific"])
         self.assertTrue(result)
 
     def test_export_selective_learned_patterns(self):
@@ -167,9 +153,7 @@ class TestProfileExporter(unittest.TestCase):
         exporter = self._make_exporter()
         out_path = self.test_dir / "patterns.json"
 
-        result = exporter.export_selective(
-            "test_profile", out_path, ["learned_patterns"]
-        )
+        result = exporter.export_selective("test_profile", out_path, ["learned_patterns"])
         self.assertTrue(result)
 
         with open(out_path, encoding="utf-8") as f:
@@ -181,9 +165,7 @@ class TestProfileExporter(unittest.TestCase):
         exporter = self._make_exporter()
         out_path = self.test_dir / "confidence.json"
 
-        result = exporter.export_selective(
-            "test_profile", out_path, ["confidence_data"]
-        )
+        result = exporter.export_selective("test_profile", out_path, ["confidence_data"])
         self.assertTrue(result)
 
         with open(out_path, encoding="utf-8") as f:
@@ -195,9 +177,7 @@ class TestProfileExporter(unittest.TestCase):
         self.mock_manager.get_profile.return_value = None
         exporter = self._make_exporter()
 
-        result = exporter.export_selective(
-            "missing", self.test_dir / "out.json", ["global"]
-        )
+        result = exporter.export_selective("missing", self.test_dir / "out.json", ["global"])
         self.assertFalse(result)
 
     def test_export_selective_exception(self):
@@ -205,9 +185,7 @@ class TestProfileExporter(unittest.TestCase):
         self.mock_manager.get_profile.side_effect = RuntimeError("err")
         exporter = self._make_exporter()
 
-        result = exporter.export_selective(
-            "test_profile", self.test_dir / "out.json", ["global"]
-        )
+        result = exporter.export_selective("test_profile", self.test_dir / "out.json", ["global"])
         self.assertFalse(result)
 
     def test_validate_export_valid_full(self):
@@ -245,9 +223,7 @@ class TestProfileExporter(unittest.TestCase):
     def test_validate_export_missing_file(self):
         """Test validate_export with non-existent file."""
         exporter = self._make_exporter()
-        self.assertFalse(
-            exporter.validate_export(self.test_dir / "missing.json")
-        )
+        self.assertFalse(exporter.validate_export(self.test_dir / "missing.json"))
 
     def test_validate_export_missing_fields(self):
         """Test validate_export with missing required fields."""
@@ -413,9 +389,7 @@ class TestProfileExporter(unittest.TestCase):
         exporter = self._make_exporter()
         out_dir = self.test_dir / "multi"
 
-        results = exporter.export_multiple(
-            ["test_profile", "test_profile"], out_dir
-        )
+        results = exporter.export_multiple(["test_profile", "test_profile"], out_dir)
         self.assertIn("test_profile", results)
         self.assertTrue(results["test_profile"])
 

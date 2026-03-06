@@ -62,6 +62,7 @@ _AVI_STUB = b"RIFF\x00\x00\x00\x00AVI "
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _write_text(path: Path, content: str | None = None) -> None:
     """Write a text file, generating faker content if none provided."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -98,6 +99,7 @@ def _csv_content(rows: int = 5) -> str:
 # ---------------------------------------------------------------------------
 # Complex file tree fixture (~60 files, 15+ dirs, 3-4 levels deep)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
@@ -248,6 +250,7 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
 # ---------------------------------------------------------------------------
 # Mock AI processor fixtures
 # ---------------------------------------------------------------------------
+
 
 def _make_mock_process_file(
     folder_map: dict[str, str],

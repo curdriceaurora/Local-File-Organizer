@@ -16,6 +16,7 @@ from file_organizer.services.text_processor import TextProcessor
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_text_model():
     """Return a MagicMock that stands in for TextModel."""
@@ -38,18 +39,21 @@ def processor(mock_text_model):
     return tp
 
 
-def _reset_model_side_effect(mock_text_model, folder_resp="healthcare", filename_resp="patient_data_analysis"):
+def _reset_model_side_effect(
+    mock_text_model, folder_resp="healthcare", filename_resp="patient_data_analysis"
+):
     """Helper to reset the side_effect on the mock model for a fresh call."""
     mock_text_model.generate.side_effect = [
         "A document about healthcare data.",  # description
-        folder_resp,                           # folder name
-        filename_resp,                          # filename
+        folder_resp,  # folder name
+        filename_resp,  # filename
     ]
 
 
 # ---------------------------------------------------------------------------
 # Tests: INFO-level logs must NOT contain generated folder/file names
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestInfoLevelDoesNotLeakContent:
@@ -59,8 +63,13 @@ class TestInfoLevelDoesNotLeakContent:
         """INFO logs must not contain the literal generated folder name."""
         _reset_model_side_effect(mock_text_model, folder_resp="healthcare_technology")
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="healthcare content"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch(
+                "file_organizer.services.text_processor.read_file",
+                return_value="healthcare content",
+            ),
+        ):
             processor.process_file("/tmp/test.txt")
 
         info_messages = [str(c) for c in mock_logger.info.call_args_list]
@@ -73,8 +82,12 @@ class TestInfoLevelDoesNotLeakContent:
         """INFO logs must not contain the literal generated filename."""
         _reset_model_side_effect(mock_text_model, filename_resp="patient_data_analysis")
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="medical records"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch(
+                "file_organizer.services.text_processor.read_file", return_value="medical records"
+            ),
+        ):
             processor.process_file("/tmp/records.txt")
 
         info_messages = [str(c) for c in mock_logger.info.call_args_list]
@@ -85,10 +98,17 @@ class TestInfoLevelDoesNotLeakContent:
 
     def test_info_logs_contain_length_not_name(self, processor, mock_text_model):
         """INFO logs for folder/filename generation should reference char count, not the value."""
-        _reset_model_side_effect(mock_text_model, folder_resp="finance", filename_resp="budget_report")
+        _reset_model_side_effect(
+            mock_text_model, folder_resp="finance", filename_resp="budget_report"
+        )
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="financial planning"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch(
+                "file_organizer.services.text_processor.read_file",
+                return_value="financial planning",
+            ),
+        ):
             processor.process_file("/tmp/budget.txt")
 
         # At least one INFO call should mention "chars" (length-based log)
@@ -103,6 +123,7 @@ class TestInfoLevelDoesNotLeakContent:
 # Tests: WARNING-level logs must NOT contain generated folder/file names
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestWarningLevelDoesNotLeakContent:
     """Verify that WARNING log messages never contain user-generated content."""
@@ -112,21 +133,27 @@ class TestWarningLevelDoesNotLeakContent:
         # Return a very short folder name to trigger fallback
         mock_text_model.generate.side_effect = [
             "Some description.",
-            "ab",   # too short — triggers warning
+            "ab",  # too short — triggers warning
             "good_filename",
         ]
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="some text"), \
-             patch("file_organizer.services.text_processor.clean_text", return_value="fallback_folder"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch("file_organizer.services.text_processor.read_file", return_value="some text"),
+            patch(
+                "file_organizer.services.text_processor.clean_text", return_value="fallback_folder"
+            ),
+        ):
             processor.process_file("/tmp/short_folder.txt")
 
         warning_messages = [str(c) for c in mock_logger.warning.call_args_list]
         combined = " ".join(warning_messages)
-        assert "'ab'" not in combined, "Short folder name value 'ab' must not appear in WARNING logs"
-        assert "ab" not in combined or "fallback" in combined.lower() or "keyword" in combined.lower(), (
-            "WARNING log for short folder name must not expose the actual bad value"
+        assert "'ab'" not in combined, (
+            "Short folder name value 'ab' must not appear in WARNING logs"
         )
+        assert (
+            "ab" not in combined or "fallback" in combined.lower() or "keyword" in combined.lower()
+        ), "WARNING log for short folder name must not expose the actual bad value"
 
     def test_filename_fallback_warning_has_no_filename_value(self, processor, mock_text_model):
         """When filename is too short, WARNING must not include the bad value."""
@@ -136,9 +163,11 @@ class TestWarningLevelDoesNotLeakContent:
             "xy",  # too short — triggers warning
         ]
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="some code"), \
-             patch("file_organizer.services.text_processor.clean_text", return_value="code_snippet"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch("file_organizer.services.text_processor.read_file", return_value="some code"),
+            patch("file_organizer.services.text_processor.clean_text", return_value="code_snippet"),
+        ):
             processor.process_file("/tmp/short_fn.txt")
 
         warning_messages = [str(c) for c in mock_logger.warning.call_args_list]
@@ -153,15 +182,19 @@ class TestWarningLevelDoesNotLeakContent:
             "some_filename",
         ]
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="content"), \
-             patch("file_organizer.services.text_processor.clean_text", return_value="fallback"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch("file_organizer.services.text_processor.read_file", return_value="content"),
+            patch("file_organizer.services.text_processor.clean_text", return_value="fallback"),
+        ):
             processor.process_file("/tmp/warn_test.txt")
 
         # The warning call should exist and contain generic text
         warning_calls = mock_logger.warning.call_args_list
         # Find the folder-related warning
-        folder_warnings = [c for c in warning_calls if "folder" in str(c).lower() or "fallback" in str(c).lower()]
+        folder_warnings = [
+            c for c in warning_calls if "folder" in str(c).lower() or "fallback" in str(c).lower()
+        ]
         assert len(folder_warnings) >= 1, "Should have logged a warning about short folder name"
         warning_text = str(folder_warnings[0])
         # It should NOT contain the f-string interpolation syntax evidence (curly braces with variable)
@@ -171,6 +204,7 @@ class TestWarningLevelDoesNotLeakContent:
 # ---------------------------------------------------------------------------
 # Tests: DEBUG-level logs must NOT contain raw AI response content
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestDebugLevelDoesNotLeakAiResponses:
@@ -185,8 +219,10 @@ class TestDebugLevelDoesNotLeakAiResponses:
             "some_filename",
         ]
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="text"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch("file_organizer.services.text_processor.read_file", return_value="text"),
+        ):
             processor.process_file("/tmp/debug_test.txt")
 
         debug_messages = [str(c) for c in mock_logger.debug.call_args_list]
@@ -204,8 +240,10 @@ class TestDebugLevelDoesNotLeakAiResponses:
             sensitive_response,
         ]
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="text"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch("file_organizer.services.text_processor.read_file", return_value="text"),
+        ):
             processor.process_file("/tmp/debug_fn_test.txt")
 
         debug_messages = [str(c) for c in mock_logger.debug.call_args_list]
@@ -223,8 +261,10 @@ class TestDebugLevelDoesNotLeakAiResponses:
             "python_tutorial",
         ]
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="python code"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch("file_organizer.services.text_processor.read_file", return_value="python code"),
+        ):
             processor.process_file("/tmp/code_guide.txt")
 
         debug_messages = [str(c) for c in mock_logger.debug.call_args_list]
@@ -243,31 +283,48 @@ class TestDebugLevelDoesNotLeakAiResponses:
 # Tests: Verify specific log messages format (regression guards)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestLogMessageFormats:
     """Guard the exact format of safe log messages."""
 
     def test_folder_info_log_uses_percent_format(self, processor, mock_text_model):
         """logger.info for folder generation should use %d-style format args."""
-        _reset_model_side_effect(mock_text_model, folder_resp="recipes", filename_resp="chocolate_cake")
+        _reset_model_side_effect(
+            mock_text_model, folder_resp="recipes", filename_resp="chocolate_cake"
+        )
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="recipe content"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch(
+                "file_organizer.services.text_processor.read_file", return_value="recipe content"
+            ),
+        ):
             processor.process_file("/tmp/recipe.txt")
 
         # Check that info was called with "Folder name generated" message
         info_call_strings = [str(c) for c in mock_logger.info.call_args_list]
         folder_info_calls = [s for s in info_call_strings if "Folder name generated" in s]
-        assert len(folder_info_calls) >= 1, "Should have called logger.info with 'Folder name generated'"
+        assert len(folder_info_calls) >= 1, (
+            "Should have called logger.info with 'Folder name generated'"
+        )
 
     def test_filename_info_log_uses_percent_format(self, processor, mock_text_model):
         """logger.info for filename generation should use %d-style format args."""
-        _reset_model_side_effect(mock_text_model, folder_resp="cooking", filename_resp="pasta_carbonara_recipe")
+        _reset_model_side_effect(
+            mock_text_model, folder_resp="cooking", filename_resp="pasta_carbonara_recipe"
+        )
 
-        with patch("file_organizer.services.text_processor.logger") as mock_logger, \
-             patch("file_organizer.services.text_processor.read_file", return_value="cooking content"):
+        with (
+            patch("file_organizer.services.text_processor.logger") as mock_logger,
+            patch(
+                "file_organizer.services.text_processor.read_file", return_value="cooking content"
+            ),
+        ):
             processor.process_file("/tmp/cooking.txt")
 
         info_call_strings = [str(c) for c in mock_logger.info.call_args_list]
         filename_info_calls = [s for s in info_call_strings if "Filename generated" in s]
-        assert len(filename_info_calls) >= 1, "Should have called logger.info with 'Filename generated'"
+        assert len(filename_info_calls) >= 1, (
+            "Should have called logger.info with 'Filename generated'"
+        )

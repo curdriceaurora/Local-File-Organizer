@@ -19,7 +19,9 @@ class TestInMemoryCacheThreadSafety:
     def test_has_lock(self):
         """Test has lock."""
         cache = InMemoryCache()
-        assert hasattr(cache, "_lock"), "InMemoryCache should have _lock attribute for thread safety"
+        assert hasattr(cache, "_lock"), (
+            "InMemoryCache should have _lock attribute for thread safety"
+        )
         assert isinstance(cache._lock, type(threading.Lock())), (
             f"_lock should be a threading.Lock, got {type(cache._lock)}"
         )
@@ -155,6 +157,5 @@ class TestRedisCacheCloseLogging:
             )
             call_args = str(mock_logger.warning.call_args)
             assert "close failed" in call_args, (
-                f"Warning message should mention 'close failed'. "
-                f"Got: {call_args}"
+                f"Warning message should mention 'close failed'. Got: {call_args}"
             )

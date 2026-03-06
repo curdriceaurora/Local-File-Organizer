@@ -1,4 +1,5 @@
 """Tests for file_organizer.api.exceptions module."""
+
 from __future__ import annotations
 
 import pytest

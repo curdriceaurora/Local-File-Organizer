@@ -92,9 +92,7 @@ def test_search_no_recursive(tmp_path: Path):
     (sub / "nested.txt").write_text("nested")
     (tmp_path / "top.txt").write_text("top")
 
-    result = runner.invoke(
-        app, ["search", "*.txt", str(tmp_path), "--no-recursive"]
-    )
+    result = runner.invoke(app, ["search", "*.txt", str(tmp_path), "--no-recursive"])
     assert result.exit_code == 0
     assert "top.txt" in result.output
     assert "nested.txt" not in result.output
@@ -105,9 +103,7 @@ def test_search_limit_results(tmp_path: Path):
     for i in range(10):
         (tmp_path / f"file{i:02d}.txt").write_text(f"content {i}")
 
-    result = runner.invoke(
-        app, ["search", "*.txt", str(tmp_path), "--limit", "3"]
-    )
+    result = runner.invoke(app, ["search", "*.txt", str(tmp_path), "--limit", "3"])
     assert result.exit_code == 0
     # Count how many .txt filenames appear in the output
     count = sum(1 for i in range(10) if f"file{i:02d}.txt" in result.output)
@@ -141,9 +137,7 @@ def test_search_json_output(tmp_path: Path):
     """--json outputs a valid JSON array with expected fields."""
     (tmp_path / "data.csv").write_text("a,b,c")
 
-    result = runner.invoke(
-        app, ["search", "*.csv", str(tmp_path), "--json"]
-    )
+    result = runner.invoke(app, ["search", "*.csv", str(tmp_path), "--json"])
     assert result.exit_code == 0
     records = json.loads(result.output)
     assert isinstance(records, list)

@@ -36,9 +36,7 @@ class TestUpdateStatus:
         assert "1.0.0" in s.message
 
     def test_message_available(self):
-        s = UpdateStatus(
-            available=True, current_version="1.0.0", latest_version="2.0.0"
-        )
+        s = UpdateStatus(available=True, current_version="1.0.0", latest_version="2.0.0")
         assert "Update available" in s.message
         assert "1.0.0" in s.message
         assert "2.0.0" in s.message

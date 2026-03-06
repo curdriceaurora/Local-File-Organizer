@@ -1,4 +1,5 @@
 """Tests for splash screen implementation (Issue #540)."""
+
 import unittest
 from pathlib import Path
 

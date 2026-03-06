@@ -194,9 +194,7 @@ class TestUndoManager(unittest.TestCase):
         mgr, history, validator, executor = self._make_manager()
         op = self._make_op(status=OperationStatus.ROLLED_BACK)
         history.get_operations.return_value = [op]
-        validator.validate_redo.return_value = ValidationResult(
-            can_proceed=True, warnings=["warn"]
-        )
+        validator.validate_redo.return_value = ValidationResult(can_proceed=True, warnings=["warn"])
         executor.redo_operation.return_value = True
         self.assertTrue(mgr.redo_operation(1))
 
@@ -348,9 +346,7 @@ class TestUndoManager(unittest.TestCase):
         history = MagicMock()
         validator = MagicMock()
         executor = MagicMock()
-        with UndoManager(
-            history=history, validator=validator, executor=executor
-        ) as mgr:
+        with UndoManager(history=history, validator=validator, executor=executor) as mgr:
             self.assertIsNotNone(mgr)
         history.close.assert_called_once()
 

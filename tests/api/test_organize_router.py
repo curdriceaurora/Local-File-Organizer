@@ -349,9 +349,7 @@ class TestExecuteOrganization:
         mock_organizer_cls.assert_called_once_with(dry_run=True, use_hardlinks=True)
 
     @patch("file_organizer.api.routers.organize.FileOrganizer")
-    def test_execute_sync_with_hardlinks_disabled(
-        self, mock_organizer_cls, tmp_path: Path
-    ) -> None:
+    def test_execute_sync_with_hardlinks_disabled(self, mock_organizer_cls, tmp_path: Path) -> None:
         (tmp_path / "input").mkdir()
         (tmp_path / "output").mkdir()
         mock_instance = MagicMock()

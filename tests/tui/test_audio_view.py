@@ -49,9 +49,7 @@ class FakeMetadata:
 class FakeClassification:
     """Minimal classification result stand-in."""
 
-    audio_type: SimpleNamespace = field(
-        default_factory=lambda: SimpleNamespace(value="music")
-    )
+    audio_type: SimpleNamespace = field(default_factory=lambda: SimpleNamespace(value="music"))
     confidence: float = 0.85
     reasoning: str = "Detected melody"
     alternatives: list = field(default_factory=list)
@@ -61,9 +59,7 @@ class FakeClassification:
 class FakeAltClassification:
     """Alternative classification entry."""
 
-    audio_type: SimpleNamespace = field(
-        default_factory=lambda: SimpleNamespace(value="speech")
-    )
+    audio_type: SimpleNamespace = field(default_factory=lambda: SimpleNamespace(value="speech"))
     confidence: float = 0.1
     reasoning: str = "Low match"
 
@@ -246,9 +242,7 @@ class TestAudioClassificationPanel:
     def test_set_classification_with_alternatives(self):
         panel = AudioClassificationPanel()
         panel.update = MagicMock()
-        cls = FakeClassification(
-            alternatives=[FakeAltClassification(), FakeAltClassification()]
-        )
+        cls = FakeClassification(alternatives=[FakeAltClassification(), FakeAltClassification()])
         panel.set_classification(cls)
         rendered = panel.update.call_args[0][0]
         assert "speech" in rendered
@@ -463,12 +457,15 @@ class TestScanAudioFiles:
         mock_extractor_cls = MagicMock()
         mock_classifier_cls = MagicMock()
 
-        with patch(
-            "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
-            mock_extractor_cls,
-        ), patch(
-            "file_organizer.services.audio.classifier.AudioClassifier",
-            mock_classifier_cls,
+        with (
+            patch(
+                "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
+                mock_extractor_cls,
+            ),
+            patch(
+                "file_organizer.services.audio.classifier.AudioClassifier",
+                mock_classifier_cls,
+            ),
         ):
             self._scan_unwrapped(view)
 
@@ -505,15 +502,19 @@ class TestScanAudioFiles:
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = mock_classification
 
-        with patch(
-            "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
-            return_value=mock_extractor,
-        ), patch(
-            "file_organizer.services.audio.classifier.AudioClassifier",
-            return_value=mock_classifier,
-        ), patch(
-            "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor.format_duration",
-            return_value="3:00",
+        with (
+            patch(
+                "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
+                return_value=mock_extractor,
+            ),
+            patch(
+                "file_organizer.services.audio.classifier.AudioClassifier",
+                return_value=mock_classifier,
+            ),
+            patch(
+                "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor.format_duration",
+                return_value="3:00",
+            ),
         ):
             self._scan_unwrapped(view)
 
@@ -568,12 +569,15 @@ class TestScanAudioFiles:
         mock_extractor = MagicMock()
         mock_extractor.extract.side_effect = Exception("corrupt file")
 
-        with patch(
-            "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
-            return_value=mock_extractor,
-        ), patch(
-            "file_organizer.services.audio.classifier.AudioClassifier",
-            return_value=MagicMock(),
+        with (
+            patch(
+                "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
+                return_value=mock_extractor,
+            ),
+            patch(
+                "file_organizer.services.audio.classifier.AudioClassifier",
+                return_value=MagicMock(),
+            ),
         ):
             self._scan_unwrapped(view)
 
@@ -595,12 +599,15 @@ class TestScanAudioFiles:
 
         mock_extractor_cls = MagicMock(side_effect=RuntimeError("kaboom"))
 
-        with patch(
-            "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
-            mock_extractor_cls,
-        ), patch(
-            "file_organizer.services.audio.classifier.AudioClassifier",
-            MagicMock(),
+        with (
+            patch(
+                "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
+                mock_extractor_cls,
+            ),
+            patch(
+                "file_organizer.services.audio.classifier.AudioClassifier",
+                MagicMock(),
+            ),
         ):
             self._scan_unwrapped(view)
 

@@ -55,9 +55,7 @@ def config_edit(
     text_model: Optional[str] = typer.Option(None, help="Set text model name."),
     vision_model: Optional[str] = typer.Option(None, help="Set vision model name."),
     temperature: Optional[float] = typer.Option(None, help="Set temperature (0.0-1.0)."),
-    device: Optional[str] = typer.Option(
-        None, help="Set device (auto, cpu, cuda, mps, metal)."
-    ),
+    device: Optional[str] = typer.Option(None, help="Set device (auto, cpu, cuda, mps, metal)."),
     methodology: Optional[str] = typer.Option(
         None, help="Set default methodology (none, para, jd)."
     ),

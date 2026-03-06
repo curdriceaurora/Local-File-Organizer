@@ -211,7 +211,9 @@ class TestGetImageMetadata:
         mock_img.__enter__ = MagicMock(return_value=mock_img)
         mock_img.__exit__ = MagicMock(return_value=False)
 
-        with patch("file_organizer.services.deduplication.image_utils.Image.open", return_value=mock_img):
+        with patch(
+            "file_organizer.services.deduplication.image_utils.Image.open", return_value=mock_img
+        ):
             result = get_image_metadata(p)
 
         assert result is not None
@@ -262,7 +264,9 @@ class TestGetImageDimensions:
         mock_img.__enter__ = MagicMock(return_value=mock_img)
         mock_img.__exit__ = MagicMock(return_value=False)
 
-        with patch("file_organizer.services.deduplication.image_utils.Image.open", return_value=mock_img):
+        with patch(
+            "file_organizer.services.deduplication.image_utils.Image.open", return_value=mock_img
+        ):
             result = get_image_dimensions(p)
 
         assert result == (640, 480)
@@ -298,7 +302,9 @@ class TestGetImageFormat:
         mock_img.__enter__ = MagicMock(return_value=mock_img)
         mock_img.__exit__ = MagicMock(return_value=False)
 
-        with patch("file_organizer.services.deduplication.image_utils.Image.open", return_value=mock_img):
+        with patch(
+            "file_organizer.services.deduplication.image_utils.Image.open", return_value=mock_img
+        ):
             result = get_image_format(p)
 
         assert result == "PNG"
@@ -508,7 +514,12 @@ class TestCompareImageQuality:
 
     def test_first_none(self):
         meta = ImageMetadata(
-            path=Path("b.jpg"), width=100, height=100, image_format="JPEG", mode="RGB", size_bytes=5000
+            path=Path("b.jpg"),
+            width=100,
+            height=100,
+            image_format="JPEG",
+            mode="RGB",
+            size_bytes=5000,
         )
         with patch(
             "file_organizer.services.deduplication.image_utils.get_image_metadata",
@@ -519,7 +530,12 @@ class TestCompareImageQuality:
 
     def test_second_none(self):
         meta = ImageMetadata(
-            path=Path("a.jpg"), width=100, height=100, image_format="JPEG", mode="RGB", size_bytes=5000
+            path=Path("a.jpg"),
+            width=100,
+            height=100,
+            image_format="JPEG",
+            mode="RGB",
+            size_bytes=5000,
         )
         with patch(
             "file_organizer.services.deduplication.image_utils.get_image_metadata",
@@ -530,10 +546,20 @@ class TestCompareImageQuality:
 
     def test_higher_resolution_wins(self):
         meta1 = ImageMetadata(
-            path=Path("a.png"), width=1920, height=1080, image_format="PNG", mode="RGB", size_bytes=5000
+            path=Path("a.png"),
+            width=1920,
+            height=1080,
+            image_format="PNG",
+            mode="RGB",
+            size_bytes=5000,
         )
         meta2 = ImageMetadata(
-            path=Path("b.png"), width=640, height=480, image_format="PNG", mode="RGB", size_bytes=5000
+            path=Path("b.png"),
+            width=640,
+            height=480,
+            image_format="PNG",
+            mode="RGB",
+            size_bytes=5000,
         )
         with patch(
             "file_organizer.services.deduplication.image_utils.get_image_metadata",
@@ -544,10 +570,20 @@ class TestCompareImageQuality:
 
     def test_same_res_better_format_wins(self):
         meta1 = ImageMetadata(
-            path=Path("a.png"), width=100, height=100, image_format="PNG", mode="RGB", size_bytes=5000
+            path=Path("a.png"),
+            width=100,
+            height=100,
+            image_format="PNG",
+            mode="RGB",
+            size_bytes=5000,
         )
         meta2 = ImageMetadata(
-            path=Path("b.jpg"), width=100, height=100, image_format="JPEG", mode="RGB", size_bytes=5000
+            path=Path("b.jpg"),
+            width=100,
+            height=100,
+            image_format="JPEG",
+            mode="RGB",
+            size_bytes=5000,
         )
         with patch(
             "file_organizer.services.deduplication.image_utils.get_image_metadata",
@@ -558,10 +594,20 @@ class TestCompareImageQuality:
 
     def test_same_everything_larger_file_wins(self):
         meta1 = ImageMetadata(
-            path=Path("a.png"), width=100, height=100, image_format="PNG", mode="RGB", size_bytes=10000
+            path=Path("a.png"),
+            width=100,
+            height=100,
+            image_format="PNG",
+            mode="RGB",
+            size_bytes=10000,
         )
         meta2 = ImageMetadata(
-            path=Path("b.png"), width=100, height=100, image_format="PNG", mode="RGB", size_bytes=5000
+            path=Path("b.png"),
+            width=100,
+            height=100,
+            image_format="PNG",
+            mode="RGB",
+            size_bytes=5000,
         )
         with patch(
             "file_organizer.services.deduplication.image_utils.get_image_metadata",
@@ -572,7 +618,12 @@ class TestCompareImageQuality:
 
     def test_truly_equal(self):
         meta = ImageMetadata(
-            path=Path("a.png"), width=100, height=100, image_format="PNG", mode="RGB", size_bytes=5000
+            path=Path("a.png"),
+            width=100,
+            height=100,
+            image_format="PNG",
+            mode="RGB",
+            size_bytes=5000,
         )
         with patch(
             "file_organizer.services.deduplication.image_utils.get_image_metadata",

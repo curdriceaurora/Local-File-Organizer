@@ -375,9 +375,7 @@ class TestFileEventHandlerMovedEdgeCases:
         assert len(events) == 1
         assert events[0].dest_path is None
 
-    def test_moved_directory_event(
-        self, default_config: WatcherConfig, queue: EventQueue
-    ) -> None:
+    def test_moved_directory_event(self, default_config: WatcherConfig, queue: EventQueue) -> None:
         """Test that directory move events are classified correctly."""
         from watchdog.events import DirMovedEvent
 

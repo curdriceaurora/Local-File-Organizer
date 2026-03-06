@@ -42,6 +42,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=F
 @dataclass(frozen=True)
 class AnonymousUser:
     """Anonymous user identity used when auth is disabled."""
+
     id: str = "anonymous"
     username: str = "anonymous"
     email: str = "anonymous@example.com"
@@ -55,6 +56,7 @@ class AnonymousUser:
 @dataclass(frozen=True)
 class ApiKeyIdentity:
     """API key-based user identity."""
+
     id: str
     username: str
     email: str = "api-key@example.com"

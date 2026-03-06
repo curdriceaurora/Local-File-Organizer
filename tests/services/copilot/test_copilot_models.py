@@ -23,6 +23,7 @@ from file_organizer.services.copilot.models import (
 # MessageRole enum
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestMessageRole:
     """Tests for the MessageRole enum."""
@@ -51,21 +52,44 @@ class TestMessageRole:
 # IntentType enum
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestIntentType:
     """Tests for the IntentType enum."""
 
     def test_all_members_present(self) -> None:
         expected = {
-            "organize", "move", "rename", "find", "undo", "redo",
-            "preview", "suggest", "status", "help", "chat", "unknown",
+            "organize",
+            "move",
+            "rename",
+            "find",
+            "undo",
+            "redo",
+            "preview",
+            "suggest",
+            "status",
+            "help",
+            "chat",
+            "unknown",
         }
         assert {it.value for it in IntentType} == expected
 
     @pytest.mark.parametrize(
         "value",
-        ["organize", "move", "rename", "find", "undo", "redo",
-         "preview", "suggest", "status", "help", "chat", "unknown"],
+        [
+            "organize",
+            "move",
+            "rename",
+            "find",
+            "undo",
+            "redo",
+            "preview",
+            "suggest",
+            "status",
+            "help",
+            "chat",
+            "unknown",
+        ],
     )
     def test_from_value_roundtrip(self, value: str) -> None:
         assert IntentType(value).value == value
@@ -74,6 +98,7 @@ class TestIntentType:
 # ------------------------------------------------------------------ #
 # CopilotMessage
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.unit
 class TestCopilotMessage:
@@ -127,6 +152,7 @@ class TestCopilotMessage:
 # Intent
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestIntent:
     """Tests for Intent dataclass."""
@@ -138,15 +164,21 @@ class TestIntent:
         assert intent.raw_text == ""
 
     def test_is_actionable_for_file_actions(self) -> None:
-        for it in (IntentType.ORGANIZE, IntentType.MOVE, IntentType.RENAME,
-                    IntentType.FIND, IntentType.UNDO, IntentType.REDO,
-                    IntentType.PREVIEW, IntentType.SUGGEST):
+        for it in (
+            IntentType.ORGANIZE,
+            IntentType.MOVE,
+            IntentType.RENAME,
+            IntentType.FIND,
+            IntentType.UNDO,
+            IntentType.REDO,
+            IntentType.PREVIEW,
+            IntentType.SUGGEST,
+        ):
             intent = Intent(intent_type=it)
             assert intent.is_actionable is True, f"{it} should be actionable"
 
     def test_is_not_actionable_for_non_file_actions(self) -> None:
-        for it in (IntentType.CHAT, IntentType.HELP,
-                    IntentType.UNKNOWN, IntentType.STATUS):
+        for it in (IntentType.CHAT, IntentType.HELP, IntentType.UNKNOWN, IntentType.STATUS):
             intent = Intent(intent_type=it)
             assert intent.is_actionable is False, f"{it} should NOT be actionable"
 
@@ -172,6 +204,7 @@ class TestIntent:
 # ------------------------------------------------------------------ #
 # ExecutionResult
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.unit
 class TestExecutionResult:
@@ -205,6 +238,7 @@ class TestExecutionResult:
 # ------------------------------------------------------------------ #
 # CopilotSession
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.unit
 class TestCopilotSession:

@@ -7,11 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 
-def detect_legacy_paths(
-    home: Path,
-    config_home: Path,
-    data_home: Path
-) -> list[Path]:
+def detect_legacy_paths(home: Path, config_home: Path, data_home: Path) -> list[Path]:
     """Detect legacy path locations that need migration.
 
     Checks for:
@@ -22,9 +18,9 @@ def detect_legacy_paths(
     legacy_paths = []
 
     candidates = [
-        home / '.file-organizer',
-        home / '.file_organizer',
-        config_home / 'file-organizer',  # Old location in config_home
+        home / ".file-organizer",
+        home / ".file_organizer",
+        config_home / "file-organizer",  # Old location in config_home
     ]
 
     for candidate in candidates:
@@ -56,8 +52,8 @@ class PathMigrator:
             Path to backup directory
         """
         # Use microseconds to ensure uniqueness for rapid successive migrations
-        timestamp = datetime.now(UTC).strftime('%Y%m%d_%H%M%S_%f')
-        backup = self.legacy_path.parent / f'{self.legacy_path.name}.backup.{timestamp}'
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")
+        backup = self.legacy_path.parent / f"{self.legacy_path.name}.backup.{timestamp}"
         shutil.copytree(self.legacy_path, backup)
         self.backup_path = backup
         return backup
@@ -74,7 +70,7 @@ class PathMigrator:
         self.canonical_path.mkdir(parents=True, exist_ok=True)
 
         # Copy all files from legacy to canonical
-        for item in self.legacy_path.rglob('*'):
+        for item in self.legacy_path.rglob("*"):
             if item.is_file():
                 relative = item.relative_to(self.legacy_path)
                 target = self.canonical_path / relative
@@ -88,22 +84,22 @@ class PathMigrator:
             Dictionary with migration details
         """
         return {
-            'timestamp': datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-            'from': str(self.legacy_path),
-            'to': str(self.canonical_path),
-            'status': 'pending',
-            'backup': str(self.backup_path) if self.backup_path else None,
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "from": str(self.legacy_path),
+            "to": str(self.canonical_path),
+            "status": "pending",
+            "backup": str(self.backup_path) if self.backup_path else None,
         }
 
     def finalize_migration(self) -> None:
         """Finalize migration after verification, persisting audit trail."""
         log = self.create_migration_log()
-        log['status'] = 'completed'
+        log["status"] = "completed"
         self.migration_log = log
 
         # Persist log to audit trail for data integrity and compliance
         self.canonical_path.mkdir(parents=True, exist_ok=True)
-        audit_file = self.canonical_path / '.migration-audit.json'
+        audit_file = self.canonical_path / ".migration-audit.json"
         audit_file.write_text(json.dumps(log, indent=2, default=str))
 
         # Could optionally remove legacy path here

@@ -83,7 +83,9 @@ class OperationHistory:
                     {
                         "size": stat.st_size,
                         "mode": stat.st_mode,
-                        "mtime": datetime.fromtimestamp(stat.st_mtime, tz=UTC).isoformat().replace("+00:00", "Z"),
+                        "mtime": datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+                        .isoformat()
+                        .replace("+00:00", "Z"),
                         "is_file": source_path.is_file(),
                         "is_dir": source_path.is_dir(),
                     }
@@ -179,7 +181,11 @@ class OperationHistory:
         WHERE transaction_id = ?
         """
 
-        params = (TransactionStatus.COMPLETED.value, completed_at.isoformat().replace("+00:00", "Z"), transaction_id)
+        params = (
+            TransactionStatus.COMPLETED.value,
+            completed_at.isoformat().replace("+00:00", "Z"),
+            transaction_id,
+        )
 
         try:
             self.db.execute_query(query, params)

@@ -38,6 +38,7 @@ class MaliciousPlugin(Plugin):
     def get_metadata(self) -> Any:  # type: ignore[override]
         """Return minimal plugin metadata for testing purposes."""
         from file_organizer.plugins.base import PluginMetadata
+
         return PluginMetadata(
             name=self.name,
             version=self.version,

@@ -179,7 +179,9 @@ class TestAppendActivity:
         from file_organizer.web.profile_routes import _append_activity
 
         state: dict[str, object] = {
-            "activity_log": [{"id": str(i), "message": f"Item {i}", "timestamp": ""} for i in range(120)]
+            "activity_log": [
+                {"id": str(i), "message": f"Item {i}", "timestamp": ""} for i in range(120)
+            ]
         }
         _append_activity(state, "new entry")
         log = state["activity_log"]
@@ -226,7 +228,9 @@ class TestAppendNotification:
         from file_organizer.web.profile_routes import _append_notification
 
         state: dict[str, object] = {
-            "notifications": [{"id": str(i), "message": "x", "created_at": "", "read": False} for i in range(120)]
+            "notifications": [
+                {"id": str(i), "message": "x", "created_at": "", "read": False} for i in range(120)
+            ]
         }
         _append_notification(state, "new")
         notifs = state["notifications"]
@@ -348,9 +352,11 @@ class TestGetCurrentWebUser:
         mock_db = MagicMock()
         mock_db.query.return_value.filter.return_value.first.return_value = fake_user
 
-        with patch("file_organizer.web.profile_routes.decode_token", return_value=mock_payload), \
-             patch("file_organizer.web.profile_routes.is_access_token", return_value=True), \
-             patch("file_organizer.web.profile_routes.create_session", return_value=mock_db):
+        with (
+            patch("file_organizer.web.profile_routes.decode_token", return_value=mock_payload),
+            patch("file_organizer.web.profile_routes.is_access_token", return_value=True),
+            patch("file_organizer.web.profile_routes.create_session", return_value=mock_db),
+        ):
             result = get_current_web_user(request, settings)
         assert result is not None
         assert result.id == "user-1"
@@ -366,9 +372,11 @@ class TestGetCurrentWebUser:
         mock_db = MagicMock()
         mock_db.query.return_value.filter.return_value.first.return_value = None
 
-        with patch("file_organizer.web.profile_routes.decode_token", return_value=mock_payload), \
-             patch("file_organizer.web.profile_routes.is_access_token", return_value=True), \
-             patch("file_organizer.web.profile_routes.create_session", return_value=mock_db):
+        with (
+            patch("file_organizer.web.profile_routes.decode_token", return_value=mock_payload),
+            patch("file_organizer.web.profile_routes.is_access_token", return_value=True),
+            patch("file_organizer.web.profile_routes.create_session", return_value=mock_db),
+        ):
             result = get_current_web_user(request, settings)
         assert result is None
         mock_db.close.assert_called_once()
@@ -380,8 +388,10 @@ class TestGetCurrentWebUser:
         request.cookies = {"fo_session": "refresh-token"}
 
         mock_payload = {"user_id": "user-1"}
-        with patch("file_organizer.web.profile_routes.decode_token", return_value=mock_payload), \
-             patch("file_organizer.web.profile_routes.is_access_token", return_value=False):
+        with (
+            patch("file_organizer.web.profile_routes.decode_token", return_value=mock_payload),
+            patch("file_organizer.web.profile_routes.is_access_token", return_value=False),
+        ):
             result = get_current_web_user(request, settings)
         assert result is None
 
@@ -392,8 +402,10 @@ class TestGetCurrentWebUser:
         request.cookies = {"fo_session": "some-token"}
 
         mock_payload = {"scope": "full"}  # no user_id key
-        with patch("file_organizer.web.profile_routes.decode_token", return_value=mock_payload), \
-             patch("file_organizer.web.profile_routes.is_access_token", return_value=True):
+        with (
+            patch("file_organizer.web.profile_routes.decode_token", return_value=mock_payload),
+            patch("file_organizer.web.profile_routes.is_access_token", return_value=True),
+        ):
             result = get_current_web_user(request, settings)
         assert result is None
 
@@ -445,12 +457,15 @@ class TestWorkspaceContext:
         from file_organizer.web.profile_routes import _workspace_context
 
         mock_db = MagicMock()
-        with patch(
-            "file_organizer.web.profile_routes.WorkspaceRepository.list_by_owner",
-            return_value=[],
-        ), patch(
-            "file_organizer.web.profile_routes._load_profile_state",
-            return_value={"active_workspace_id": ""},
+        with (
+            patch(
+                "file_organizer.web.profile_routes.WorkspaceRepository.list_by_owner",
+                return_value=[],
+            ),
+            patch(
+                "file_organizer.web.profile_routes._load_profile_state",
+                return_value={"active_workspace_id": ""},
+            ),
         ):
             result = _workspace_context(mock_db, "user-1")
         assert isinstance(result, tuple)
@@ -466,14 +481,18 @@ class TestWorkspaceContext:
         mock_ws.id = "ws-1"
         mock_db = MagicMock()
 
-        with patch(
-            "file_organizer.web.profile_routes.WorkspaceRepository.list_by_owner",
-            return_value=[mock_ws],
-        ), patch(
-            "file_organizer.web.profile_routes._load_profile_state",
-            return_value={"active_workspace_id": ""},
-        ), patch(
-            "file_organizer.web.profile_routes._save_profile_state",
+        with (
+            patch(
+                "file_organizer.web.profile_routes.WorkspaceRepository.list_by_owner",
+                return_value=[mock_ws],
+            ),
+            patch(
+                "file_organizer.web.profile_routes._load_profile_state",
+                return_value={"active_workspace_id": ""},
+            ),
+            patch(
+                "file_organizer.web.profile_routes._save_profile_state",
+            ),
         ):
             workspaces, active_id = _workspace_context(mock_db, "user-1")
         assert active_id == "ws-1"
@@ -522,7 +541,12 @@ class TestMakeProfileContext:
 
         with patch(
             "file_organizer.web.profile_routes.base_context",
-            return_value={"request": request, "user": fake_user, "auth_enabled": True, "custom": 42},
+            return_value={
+                "request": request,
+                "user": fake_user,
+                "auth_enabled": True,
+                "custom": 42,
+            },
         ):
             ctx = _make_profile_context(request, settings, fake_user, extras={"custom": 42})
         assert ctx.get("custom") == 42

@@ -195,7 +195,9 @@ class TestOrganizeRouting:
         out = tmp_path / "output"
         organizer = FileOrganizer(dry_run=True)
 
-        with patch.object(organizer, "_process_audio_files", wraps=organizer._process_audio_files) as mock_audio:
+        with patch.object(
+            organizer, "_process_audio_files", wraps=organizer._process_audio_files
+        ) as mock_audio:
             result = organizer.organize(str(src), str(out))
 
         mock_audio.assert_called_once()
@@ -213,7 +215,9 @@ class TestOrganizeRouting:
         organizer = FileOrganizer(dry_run=True)
 
         with (
-            patch.object(organizer, "_process_video_files", wraps=organizer._process_video_files) as mock_video,
+            patch.object(
+                organizer, "_process_video_files", wraps=organizer._process_video_files
+            ) as mock_video,
             patch.object(organizer, "_process_image_files") as mock_image,
         ):
             organizer.organize(str(src), str(out))
@@ -250,8 +254,12 @@ class TestOrganizeRouting:
         with (
             patch.object(organizer, "_process_text_files") as mock_text,
             patch.object(organizer, "_process_image_files") as mock_img,
-            patch.object(organizer, "_process_audio_files", wraps=organizer._process_audio_files) as mock_audio,
-            patch.object(organizer, "_process_video_files", wraps=organizer._process_video_files) as mock_video,
+            patch.object(
+                organizer, "_process_audio_files", wraps=organizer._process_audio_files
+            ) as mock_audio,
+            patch.object(
+                organizer, "_process_video_files", wraps=organizer._process_video_files
+            ) as mock_video,
             # Prevent real Ollama/model connections during test
             patch("file_organizer.core.organizer.TextProcessor") as mock_tp_cls,
             patch("file_organizer.core.organizer.VisionProcessor") as mock_vp_cls,

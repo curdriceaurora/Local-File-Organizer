@@ -87,16 +87,12 @@ class TestValidationResult(unittest.TestCase):
         self.assertIn("Validation passed", s)
 
     def test_str_passed_with_warnings(self):
-        vr = ValidationResult(
-            can_proceed=True, warnings=["warn1", "warn2"]
-        )
+        vr = ValidationResult(can_proceed=True, warnings=["warn1", "warn2"])
         s = str(vr)
         self.assertIn("2 warnings", s)
 
     def test_str_failed(self):
-        vr = ValidationResult(
-            can_proceed=False, error_message="Something went wrong"
-        )
+        vr = ValidationResult(can_proceed=False, error_message="Something went wrong")
         s = str(vr)
         self.assertIn("Validation failed", s)
         self.assertIn("Something went wrong", s)

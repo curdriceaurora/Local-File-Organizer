@@ -40,6 +40,7 @@ def _err(status: int, detail: str = "error") -> httpx.Response:
 @pytest.mark.asyncio
 class TestAsyncClientAuth:
     """TestAsyncClientAuth test suite."""
+
     async def test_login(self):
         """Test login."""
         client = AsyncFileOrganizerClient(base_url="http://test")
@@ -131,6 +132,7 @@ class TestAsyncClientAuth:
 @pytest.mark.asyncio
 class TestAsyncClientFiles:
     """TestAsyncClientFiles test suite."""
+
     async def test_list_files(self):
         """Test list files."""
         client = AsyncFileOrganizerClient()
@@ -220,6 +222,7 @@ class TestAsyncClientFiles:
 @pytest.mark.asyncio
 class TestAsyncClientOrganize:
     """TestAsyncClientOrganize test suite."""
+
     async def test_scan(self):
         """Test scan."""
         client = AsyncFileOrganizerClient()
@@ -281,6 +284,7 @@ class TestAsyncClientOrganize:
 @pytest.mark.asyncio
 class TestAsyncClientSystem:
     """TestAsyncClientSystem test suite."""
+
     async def test_health(self):
         """Test health."""
         client = AsyncFileOrganizerClient()
@@ -363,6 +367,7 @@ class TestAsyncClientSystem:
 @pytest.mark.asyncio
 class TestAsyncClientDedupe:
     """TestAsyncClientDedupe test suite."""
+
     async def test_dedupe_scan(self):
         """Test dedupe scan."""
         client = AsyncFileOrganizerClient()
@@ -397,6 +402,7 @@ class TestAsyncClientDedupe:
 @pytest.mark.asyncio
 class TestAsyncClientContextManager:
     """TestAsyncClientContextManager test suite."""
+
     async def test_async_context_manager(self):
         """Test async context manager."""
         async with AsyncFileOrganizerClient() as client:
@@ -414,6 +420,7 @@ class TestAsyncClientContextManager:
 @pytest.mark.asyncio
 class TestAsyncClientErrorHandling:
     """TestAsyncClientErrorHandling test suite."""
+
     async def test_401_raises_authentication_error(self):
         """Test 401 raises authentication error."""
         client = AsyncFileOrganizerClient()
@@ -486,6 +493,7 @@ class TestAsyncClientErrorHandling:
 @pytest.mark.asyncio
 class TestAsyncClientSetToken:
     """TestAsyncClientSetToken test suite."""
+
     async def test_set_token_updates_header(self):
         """Test set token updates header."""
         client = AsyncFileOrganizerClient()
@@ -495,6 +503,7 @@ class TestAsyncClientSetToken:
 
 class TestAsyncClientInitHeaders:
     """TestAsyncClientInitHeaders test suite."""
+
     def test_init_with_token(self):
         """Test init with token."""
         client = AsyncFileOrganizerClient(token="my_token")

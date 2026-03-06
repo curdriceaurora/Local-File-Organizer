@@ -516,9 +516,7 @@ class TestGenerateFolderName:
         folder = text_processor._generate_folder_name("Content")
         assert folder == "programming"
 
-    def test_strips_quotes(
-        self, text_processor: TextProcessor, mock_text_model: MagicMock
-    ) -> None:
+    def test_strips_quotes(self, text_processor: TextProcessor, mock_text_model: MagicMock) -> None:
         """Surrounding quotes are removed."""
         mock_text_model.generate.return_value = '"recipes"'
         folder = text_processor._generate_folder_name("Content about cooking")
@@ -704,9 +702,7 @@ class TestGenerateFilename:
         filename = text_processor._generate_filename("Content")
         assert "png" not in filename
 
-    def test_strips_quotes(
-        self, text_processor: TextProcessor, mock_text_model: MagicMock
-    ) -> None:
+    def test_strips_quotes(self, text_processor: TextProcessor, mock_text_model: MagicMock) -> None:
         """Surrounding quotes are removed."""
         mock_text_model.generate.return_value = "'research_paper'"
         filename = text_processor._generate_filename("Content")

@@ -25,6 +25,7 @@ class TokenError(Exception):
 @dataclass(frozen=True)
 class TokenBundle:
     """Bundle of access and refresh tokens."""
+
     access_token: str
     refresh_token: str
     access_jti: str
@@ -43,14 +44,27 @@ def hash_password(password: str) -> str:
     return _PWD_CONTEXT.hash(password)
 
 
-_COMMON_PASSWORDS: frozenset[str] = frozenset({
-    "password", "password1", "password12", "password123",
-    "passw0rd", "p@ssword", "p@ssw0rd",
-    "admin", "admin123", "admin1234",
-    "letmein", "welcome1", "monkey123",
-    "qwerty123", "abc123456",
-    "iloveyou1", "sunshine1",
-})
+_COMMON_PASSWORDS: frozenset[str] = frozenset(
+    {
+        "password",
+        "password1",
+        "password12",
+        "password123",
+        "passw0rd",
+        "p@ssword",
+        "p@ssw0rd",
+        "admin",
+        "admin123",
+        "admin1234",
+        "letmein",
+        "welcome1",
+        "monkey123",
+        "qwerty123",
+        "abc123456",
+        "iloveyou1",
+        "sunshine1",
+    }
+)
 
 
 def validate_password(password: str, settings: ApiSettings) -> tuple[bool, str]:
@@ -67,7 +81,7 @@ def validate_password(password: str, settings: ApiSettings) -> tuple[bool, str]:
     if settings.auth_password_require_uppercase and not any(ch.isupper() for ch in password):
         return False, "Password must include at least one uppercase letter"
     if settings.auth_password_require_special and not any(
-        ch in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~' for ch in password
+        ch in "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~" for ch in password
     ):
         return False, "Password must include at least one special character"
     if password.lower() in _COMMON_PASSWORDS:
@@ -95,7 +109,9 @@ def _build_token(
         "iat": int(issued_at.timestamp()),
         "exp": int(expires_at.timestamp()),
     }
-    token = jwt.encode(claims, settings.auth_jwt_secret.get_secret_value(), algorithm=settings.auth_jwt_algorithm)
+    token = jwt.encode(
+        claims, settings.auth_jwt_secret.get_secret_value(), algorithm=settings.auth_jwt_algorithm
+    )
     return token, jti, expires_at
 
 
@@ -127,7 +143,11 @@ def create_token_bundle(user_id: str, username: str, settings: ApiSettings) -> T
 def decode_token(token: str, settings: ApiSettings) -> dict[str, Any]:
     """Decode and return the JWT payload, raising TokenError if invalid."""
     try:
-        return jwt.decode(token, settings.auth_jwt_secret.get_secret_value(), algorithms=[settings.auth_jwt_algorithm])
+        return jwt.decode(
+            token,
+            settings.auth_jwt_secret.get_secret_value(),
+            algorithms=[settings.auth_jwt_algorithm],
+        )
     except JWTError as exc:
         raise TokenError("Invalid token") from exc
 

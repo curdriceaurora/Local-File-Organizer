@@ -50,7 +50,9 @@ def _seed_user(
         db.close()
 
 
-def _login(client: TestClient, username: str = "alice", password: str = "P@ssword1Test!") -> TestClient:
+def _login(
+    client: TestClient, username: str = "alice", password: str = "P@ssword1Test!"
+) -> TestClient:
     """Log in via the web form and persist the session cookie on the client."""
     response = client.post(
         "/ui/profile/login",

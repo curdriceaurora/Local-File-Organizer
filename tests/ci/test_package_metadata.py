@@ -60,8 +60,7 @@ class TestPackageMetadata:
         for label, url in urls.items():
             for pattern in PLACEHOLDER_PATTERNS:
                 assert not pattern.search(url), (
-                    f"project.urls.{label} contains placeholder pattern "
-                    f"'{pattern.pattern}': {url}"
+                    f"project.urls.{label} contains placeholder pattern '{pattern.pattern}': {url}"
                 )
 
     def test_urls_are_valid(self) -> None:
@@ -73,9 +72,7 @@ class TestPackageMetadata:
             assert parsed.scheme in ("http", "https"), (
                 f"project.urls.{label} has invalid scheme: {url}"
             )
-            assert parsed.netloc, (
-                f"project.urls.{label} has no host: {url}"
-            )
+            assert parsed.netloc, f"project.urls.{label} has no host: {url}"
 
     def test_required_url_keys_present(self) -> None:
         data = _load_pyproject()

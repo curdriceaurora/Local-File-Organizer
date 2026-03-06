@@ -64,7 +64,7 @@ class TestTextWorkflowsIntegration:
                 file_path=file_path,
                 description=f"Mock description for {name}",
                 folder_name="financials" if name in ("report", "invoice") else "documents",
-                filename=f"processed_{name}"
+                filename=f"processed_{name}",
             )
 
         mock_processor.process_file.side_effect = mock_process_file
@@ -96,7 +96,9 @@ class TestTextWorkflowsIntegration:
         # Verify original files still exist (copy mode)
         assert (source_dir / "report.txt").exists()
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="Hardlinks require admin privileges on Windows")
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="Hardlinks require admin privileges on Windows"
+    )
     @patch("file_organizer.core.organizer.TextProcessor")
     @patch("file_organizer.core.organizer.VisionProcessor")
     def test_end_to_end_text_organization_hardlink(
@@ -111,7 +113,7 @@ class TestTextWorkflowsIntegration:
                 file_path=file_path,
                 description="desc",
                 folder_name="auto_sorted",
-                filename=f"linked_{file_path.stem}"
+                filename=f"linked_{file_path.stem}",
             )
 
         mock_processor.process_file.side_effect = mock_process_file
@@ -145,7 +147,7 @@ class TestTextWorkflowsIntegration:
                 file_path=file_path,
                 description="desc",
                 folder_name="collide_folder",
-                filename="duplicate_name"
+                filename="duplicate_name",
             )
 
         mock_processor.process_file.side_effect = mock_process_file_collision

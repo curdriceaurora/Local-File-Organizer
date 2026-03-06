@@ -269,9 +269,7 @@ class TestDuplicateDetector(unittest.TestCase):
         """Test find_duplicates_of_file raises for missing file."""
         detector = DuplicateDetector()
         with self.assertRaises(FileNotFoundError):
-            detector.find_duplicates_of_file(
-                Path("/nonexistent.txt"), self.test_dir
-            )
+            detector.find_duplicates_of_file(Path("/nonexistent.txt"), self.test_dir)
 
     def test_find_duplicates_of_file_success(self):
         """Test find_duplicates_of_file with real files."""
@@ -282,9 +280,7 @@ class TestDuplicateDetector(unittest.TestCase):
         dup.write_text("hello" * 100)
 
         detector = DuplicateDetector()
-        duplicates = detector.find_duplicates_of_file(
-            target, self.test_dir
-        )
+        duplicates = detector.find_duplicates_of_file(target, self.test_dir)
         # May or may not find duplicates depending on hash; just verify no error
         self.assertIsInstance(duplicates, list)
 

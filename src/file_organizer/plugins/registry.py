@@ -164,9 +164,7 @@ class PluginRegistry:
 
         # Phase 2: Build sandbox policy and spawn isolated subprocess
         effective_policy = (
-            policy
-            if policy is not None
-            else self._build_sandbox_from_manifest(manifest)
+            policy if policy is not None else self._build_sandbox_from_manifest(manifest)
         )
 
         executor = PluginExecutor(
@@ -196,9 +194,7 @@ class PluginRegistry:
             executor=executor,
         )
         self._records[plugin_name] = record
-        logger.info(
-            "Loaded plugin '%s' v%s from %s", plugin_name, plugin_version, plugin_dir
-        )
+        logger.info("Loaded plugin '%s' v%s from %s", plugin_name, plugin_version, plugin_dir)
         return record
 
     def unload_plugin(self, plugin_name: str) -> None:

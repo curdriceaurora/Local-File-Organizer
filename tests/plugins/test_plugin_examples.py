@@ -25,9 +25,7 @@ def test_example_plugins_are_discoverable() -> None:
     found = {
         d.name
         for d in EXAMPLE_ROOT.iterdir()
-        if d.is_dir()
-        and (d / "plugin.py").exists()
-        and (d / "plugin.json").exists()
+        if d.is_dir() and (d / "plugin.py").exists() and (d / "plugin.json").exists()
     }
     assert found == EXPECTED_EXAMPLES
 

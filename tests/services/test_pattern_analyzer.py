@@ -276,7 +276,7 @@ class TestNamingPatternDetection:
             tmppath = Path(tmpdir)
             # Create files with date prefix
             for i in range(3):
-                (tmppath / f"2024-01-{15+i:02d}_report.pdf").write_text("content")
+                (tmppath / f"2024-01-{15 + i:02d}_report.pdf").write_text("content")
 
             analyzer = PatternAnalyzer(min_pattern_count=3)
             files = analyzer._collect_files(tmppath)
@@ -291,7 +291,11 @@ class TestNamingPatternDetection:
         with TemporaryDirectory() as tmpdir:
             tmppath = Path(tmpdir)
             # Create files with snake_case names
-            for name in ["report_q1_2024.txt", "summary_sales_data.txt", "invoice_monthly_2024.txt"]:
+            for name in [
+                "report_q1_2024.txt",
+                "summary_sales_data.txt",
+                "invoice_monthly_2024.txt",
+            ]:
                 (tmppath / name).write_text("content")
 
             analyzer = PatternAnalyzer(min_pattern_count=3)
@@ -307,7 +311,7 @@ class TestNamingPatternDetection:
             tmppath = Path(tmpdir)
             # Create 5 files with date prefix, 5 without
             for i in range(5):
-                (tmppath / f"2024-01-{15+i:02d}_file.txt").write_text("content")
+                (tmppath / f"2024-01-{15 + i:02d}_file.txt").write_text("content")
             for i in range(5):
                 (tmppath / f"random_file_{i}.txt").write_text("content")
 

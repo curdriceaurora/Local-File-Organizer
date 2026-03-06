@@ -247,7 +247,12 @@ class TestGetDuplicateStats:
         """Test group where the first file does not exist on disk."""
         service = AnalyticsService()
         groups = [
-            {"files": [str(temp_directory / "nonexistent.txt"), str(temp_directory / "also_gone.txt")]}
+            {
+                "files": [
+                    str(temp_directory / "nonexistent.txt"),
+                    str(temp_directory / "also_gone.txt"),
+                ]
+            }
         ]
         stats = service.get_duplicate_stats(groups, total_size=10000)
 
@@ -327,7 +332,9 @@ class TestGetQualityMetrics:
 
     def test_quality_with_mocked_dependencies(self, mock_service, temp_directory):
         """Test quality metrics with mocked calculator."""
-        metrics = mock_service.get_quality_metrics(temp_directory, total_files=10, organized_size=500)
+        metrics = mock_service.get_quality_metrics(
+            temp_directory, total_files=10, organized_size=500
+        )
 
         assert isinstance(metrics, QualityMetrics)
         assert metrics.quality_score == 75.0
@@ -540,9 +547,7 @@ class TestExportDashboard:
         dashboard = service.generate_dashboard(temp_directory)
 
         with pytest.raises(ValueError, match="Unsupported format"):
-            service.export_dashboard(
-                dashboard, temp_directory / "out.xml", format="xml"
-            )
+            service.export_dashboard(dashboard, temp_directory / "out.xml", format="xml")
 
     def test_export_invalid_format_csv(self, temp_directory):
         """Test that csv format also raises ValueError."""
@@ -550,9 +555,7 @@ class TestExportDashboard:
         dashboard = service.generate_dashboard(temp_directory)
 
         with pytest.raises(ValueError, match="Unsupported format: csv"):
-            service.export_dashboard(
-                dashboard, temp_directory / "out.csv", format="csv"
-            )
+            service.export_dashboard(dashboard, temp_directory / "out.csv", format="csv")
 
 
 @pytest.mark.unit

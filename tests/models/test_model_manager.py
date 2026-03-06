@@ -29,9 +29,7 @@ class TestModelManager:
         """Test check_installed parses JSON output correctly."""
         mock_result = MagicMock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps(
-            {"models": [{"name": "qwen2.5:3b"}, {"name": "llama3:8b"}]}
-        )
+        mock_result.stdout = json.dumps({"models": [{"name": "qwen2.5:3b"}, {"name": "llama3:8b"}]})
         mock_run.return_value = mock_result
 
         installed = model_manager.check_installed()
@@ -53,7 +51,9 @@ class TestModelManager:
 
         mock_run.side_effect = [mock_result_fail, mock_result_success]
 
-        with patch.object(model_manager, "_parse_ollama_list_text", return_value={"phi3:mini"}) as mock_fallback:
+        with patch.object(
+            model_manager, "_parse_ollama_list_text", return_value={"phi3:mini"}
+        ) as mock_fallback:
             installed = model_manager.check_installed()
             assert installed == {"phi3:mini"}
             mock_fallback.assert_called_once()
@@ -110,7 +110,9 @@ class TestModelManager:
         result = model_manager.pull_model("test-model")
         assert result is True
         mock_run.assert_called_once_with(["ollama", "pull", "test-model"], timeout=600)
-        model_manager._console.print.assert_any_call("[green]Model 'test-model' pulled successfully.[/green]")
+        model_manager._console.print.assert_any_call(
+            "[green]Model 'test-model' pulled successfully.[/green]"
+        )
 
     @patch("file_organizer.models.model_manager.subprocess.run")
     def test_pull_model_failure(self, mock_run, model_manager):
@@ -129,7 +131,9 @@ class TestModelManager:
         mock_run.side_effect = FileNotFoundError()
         result = model_manager.pull_model("test-model")
         assert result is False
-        model_manager._console.print.assert_any_call("[red]Ollama CLI not found. Install from https://ollama.ai[/red]")
+        model_manager._console.print.assert_any_call(
+            "[red]Ollama CLI not found. Install from https://ollama.ai[/red]"
+        )
 
     @patch("file_organizer.models.model_manager.subprocess.run")
     def test_pull_model_timeout(self, mock_run, model_manager):

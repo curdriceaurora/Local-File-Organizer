@@ -47,9 +47,7 @@ class ApiSettings(BaseModel):
     websocket_ping_interval: int = Field(default=30, gt=0)
     websocket_token: Optional[str] = None
     auth_enabled: bool = True
-    auth_db_path: str = Field(
-        default_factory=_default_auth_db_path
-    )
+    auth_db_path: str = Field(default_factory=_default_auth_db_path)
     auth_jwt_secret: SecretStr = SecretStr("change-me")
     auth_jwt_algorithm: str = "HS256"
     auth_access_token_minutes: int = Field(default=30, gt=0)

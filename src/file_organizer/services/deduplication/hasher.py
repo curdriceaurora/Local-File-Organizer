@@ -42,20 +42,16 @@ class FileHasher:
             ValueError: If chunk_size is invalid
         """
         if not isinstance(chunk_size, int):
-            raise ValueError(
-                f"chunk_size must be an integer, got {type(chunk_size).__name__}"
-            )
+            raise ValueError(f"chunk_size must be an integer, got {type(chunk_size).__name__}")
 
         if chunk_size < self.MIN_CHUNK_SIZE:
             raise ValueError(
-                f"chunk_size must be at least {self.MIN_CHUNK_SIZE} bytes (1KB), "
-                f"got {chunk_size}"
+                f"chunk_size must be at least {self.MIN_CHUNK_SIZE} bytes (1KB), got {chunk_size}"
             )
 
         if chunk_size > self.MAX_CHUNK_SIZE:
             raise ValueError(
-                f"chunk_size must not exceed {self.MAX_CHUNK_SIZE} bytes (10MB), "
-                f"got {chunk_size}"
+                f"chunk_size must not exceed {self.MAX_CHUNK_SIZE} bytes (10MB), got {chunk_size}"
             )
 
         self.chunk_size = chunk_size

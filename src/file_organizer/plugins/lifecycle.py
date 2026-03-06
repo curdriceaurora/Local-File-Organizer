@@ -74,9 +74,7 @@ class PluginLifecycleManager:
                 record.executor.call("on_enable")
             except Exception as exc:
                 self._states[name] = PluginState.ERROR
-                raise PluginLifecycleError(
-                    f"Failed to enable plugin '{name}'."
-                ) from exc
+                raise PluginLifecycleError(f"Failed to enable plugin '{name}'.") from exc
             self._states[name] = PluginState.ENABLED
 
     def disable(self, name: str) -> None:
@@ -90,9 +88,7 @@ class PluginLifecycleManager:
                 record.executor.call("on_disable")
             except Exception as exc:
                 self._states[name] = PluginState.ERROR
-                raise PluginLifecycleError(
-                    f"Failed to disable plugin '{name}'."
-                ) from exc
+                raise PluginLifecycleError(f"Failed to disable plugin '{name}'.") from exc
             self._states[name] = PluginState.DISABLED
 
     def unload(self, name: str) -> None:
@@ -108,9 +104,7 @@ class PluginLifecycleManager:
                 # failure the plugin is already removed from the registry.
                 # Clean up the state entry to avoid a stale ERROR leak.
                 self._states.pop(name, None)
-                raise PluginLifecycleError(
-                    f"Failed to unload plugin '{name}'."
-                ) from exc
+                raise PluginLifecycleError(f"Failed to unload plugin '{name}'.") from exc
             # Plugin fully unloaded — remove state entry (no orphaned UNLOADED).
             self._states.pop(name, None)
 
@@ -130,6 +124,5 @@ class PluginLifecycleManager:
             return self.registry.get_plugin(name)
         except PluginNotLoadedError:
             raise PluginNotLoadedError(
-                f"Plugin '{name}' is not loaded. "
-                "Call load() with the plugin directory first."
+                f"Plugin '{name}' is not loaded. Call load() with the plugin directory first."
             ) from None

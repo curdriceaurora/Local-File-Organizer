@@ -83,7 +83,9 @@ class TestFileOrganizer:
     @patch("file_organizer.core.organizer.TextProcessor")
     @patch("file_organizer.core.organizer.VisionProcessor")
     @patch("file_organizer.core.organizer.FileOrganizer._collect_files")
-    def test_organize_empty_directory(self, mock_collect, mock_vision, mock_text, organizer, tmp_path):
+    def test_organize_empty_directory(
+        self, mock_collect, mock_vision, mock_text, organizer, tmp_path
+    ):
         """Test organizing an empty directory returns early."""
         mock_collect.return_value = []
 
@@ -100,7 +102,15 @@ class TestFileOrganizer:
     @patch("file_organizer.core.organizer.TextProcessor")
     @patch("file_organizer.core.organizer.VisionProcessor")
     def test_organize_dry_run_flow(
-        self, mock_vision_cls, mock_text_cls, mock_collect, mock_simulate, mock_imgs, mock_txts, organizer, tmp_path
+        self,
+        mock_vision_cls,
+        mock_text_cls,
+        mock_collect,
+        mock_simulate,
+        mock_imgs,
+        mock_txts,
+        organizer,
+        tmp_path,
     ):
         """Test full orchestrator flow in dry-run mode."""
         # Setup files
@@ -162,10 +172,7 @@ class TestFileOrganizer:
         out_path = tmp_path / "out"
         structure = organizer._simulate_organization([p1, p2, p3, err], out_path)
 
-        assert structure == {
-            "docs": ["file_1.txt", "file_2.txt"],
-            "images": ["img_1.jpg"]
-        }
+        assert structure == {"docs": ["file_1.txt", "file_2.txt"], "images": ["img_1.jpg"]}
         # Verify it didn't create anything
         assert not out_path.exists()
 
@@ -173,7 +180,7 @@ class TestFileOrganizer:
     def test_organize_files_copy(self, mock_copy, organizer, tmp_path):
         """Test physical file copy organization."""
         organizer.dry_run = False
-        organizer.use_hardlinks = False # Force copy
+        organizer.use_hardlinks = False  # Force copy
 
         out_path = tmp_path / "out"
         f1 = tmp_path / "f1.txt"
@@ -225,7 +232,9 @@ class TestFileOrganizer:
 
     def test_show_methods_do_not_crash(self, organizer, tmp_path):
         """Ensure UI display methods run without error."""
-        organizer._show_file_breakdown([tmp_path], [tmp_path], [tmp_path], [tmp_path], [tmp_path], [tmp_path])
+        organizer._show_file_breakdown(
+            [tmp_path], [tmp_path], [tmp_path], [tmp_path], [tmp_path], [tmp_path]
+        )
         organizer._show_skipped_files([tmp_path], [tmp_path], [tmp_path])
 
         res = OrganizationResult(total_files=5, processing_time=1.0)

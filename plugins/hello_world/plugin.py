@@ -1,4 +1,5 @@
 """Reference plugin used for development and integration checks."""
+
 from __future__ import annotations
 
 from file_organizer.plugins import Plugin, PluginMetadata
@@ -31,4 +32,3 @@ class HelloWorldPlugin(Plugin):
     def on_unload(self) -> None:
         """Handle plugin unload event."""
         return None
-

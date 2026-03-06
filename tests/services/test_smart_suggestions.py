@@ -55,12 +55,8 @@ class FakeLocationPattern:
 @dataclass
 class FakeContentCluster:
     cluster_id: str = "cluster-1"
-    file_paths: list[Path] = field(
-        default_factory=lambda: [Path(f"/f{i}.txt") for i in range(6)]
-    )
-    common_keywords: list[str] = field(
-        default_factory=lambda: ["report", "quarterly", "finance"]
-    )
+    file_paths: list[Path] = field(default_factory=lambda: [Path(f"/f{i}.txt") for i in range(6)])
+    common_keywords: list[str] = field(default_factory=lambda: ["report", "quarterly", "finance"])
     file_types: set[str] = field(default_factory=lambda: {".txt"})
     size_range: tuple[int, int] = (100, 5000)
     category: str = "reports"
@@ -91,23 +87,15 @@ class TestConfidenceScorerUserHistory:
 
     def test_no_target_returns_50(self):
         scorer = ConfidenceScorer()
-        result = scorer._calculate_user_history_score(
-            Path("/a.txt"), None, {"move_history": {}}
-        )
+        result = scorer._calculate_user_history_score(Path("/a.txt"), None, {"move_history": {}})
         assert result == 50.0
 
     def test_target_with_history(self, tmp_path):
         scorer = ConfidenceScorer()
         target = tmp_path / "dest"
         target.mkdir()
-        history = {
-            "move_history": {
-                ".txt": {str(target): 3}
-            }
-        }
-        result = scorer._calculate_user_history_score(
-            tmp_path / "a.txt", target / "a.txt", history
-        )
+        history = {"move_history": {".txt": {str(target): 3}}}
+        result = scorer._calculate_user_history_score(tmp_path / "a.txt", target / "a.txt", history)
         assert result > 50.0
 
     def test_target_no_match_in_history(self, tmp_path):
@@ -123,9 +111,7 @@ class TestConfidenceScorerUserHistory:
         target = tmp_path / "dest"
         target.mkdir()
         history = {"move_history": {".txt": {str(target): 20}}}
-        result = scorer._calculate_user_history_score(
-            tmp_path / "a.txt", target / "a.txt", history
-        )
+        result = scorer._calculate_user_history_score(tmp_path / "a.txt", target / "a.txt", history)
         assert result == 100.0
 
 
@@ -177,9 +163,7 @@ class TestConfidenceScorerNamingMatch:
         analysis = FakePatternAnalysis(
             location_patterns=[FakeLocationPattern(directory=Path("/other"))]
         )
-        result = scorer._calculate_naming_match(
-            Path("/a.txt"), Path("/dest/a.txt"), analysis
-        )
+        result = scorer._calculate_naming_match(Path("/a.txt"), Path("/dest/a.txt"), analysis)
         assert result == 40.0
 
     def test_with_naming_patterns(self, tmp_path):
@@ -187,13 +171,9 @@ class TestConfidenceScorerNamingMatch:
         target = tmp_path / "docs"
         target.mkdir()
         analysis = FakePatternAnalysis(
-            location_patterns=[
-                FakeLocationPattern(directory=target, naming_patterns=["report_*"])
-            ]
+            location_patterns=[FakeLocationPattern(directory=target, naming_patterns=["report_*"])]
         )
-        result = scorer._calculate_naming_match(
-            tmp_path / "a.txt", target / "a.txt", analysis
-        )
+        result = scorer._calculate_naming_match(tmp_path / "a.txt", target / "a.txt", analysis)
         assert result == 70.0
 
 
@@ -211,9 +191,7 @@ class TestConfidenceScorerFileTypeMatch:
         analysis = FakePatternAnalysis(
             location_patterns=[FakeLocationPattern(directory=Path("/other"))]
         )
-        result = scorer._calculate_file_type_match(
-            Path("/a.txt"), Path("/dest/a.txt"), analysis
-        )
+        result = scorer._calculate_file_type_match(Path("/a.txt"), Path("/dest/a.txt"), analysis)
         assert result == 40.0
 
     def test_matching_type(self, tmp_path):
@@ -221,13 +199,9 @@ class TestConfidenceScorerFileTypeMatch:
         target = tmp_path / "docs"
         target.mkdir()
         analysis = FakePatternAnalysis(
-            location_patterns=[
-                FakeLocationPattern(directory=target, file_types={".txt", ".pdf"})
-            ]
+            location_patterns=[FakeLocationPattern(directory=target, file_types={".txt", ".pdf"})]
         )
-        result = scorer._calculate_file_type_match(
-            tmp_path / "a.txt", target / "a.txt", analysis
-        )
+        result = scorer._calculate_file_type_match(tmp_path / "a.txt", target / "a.txt", analysis)
         assert result == 85.0
 
     def test_empty_target_types(self, tmp_path):
@@ -235,13 +209,9 @@ class TestConfidenceScorerFileTypeMatch:
         target = tmp_path / "docs"
         target.mkdir()
         analysis = FakePatternAnalysis(
-            location_patterns=[
-                FakeLocationPattern(directory=target, file_types=set())
-            ]
+            location_patterns=[FakeLocationPattern(directory=target, file_types=set())]
         )
-        result = scorer._calculate_file_type_match(
-            tmp_path / "a.txt", target / "a.txt", analysis
-        )
+        result = scorer._calculate_file_type_match(tmp_path / "a.txt", target / "a.txt", analysis)
         assert result == 50.0
 
     def test_non_matching_type(self, tmp_path):
@@ -249,13 +219,9 @@ class TestConfidenceScorerFileTypeMatch:
         target = tmp_path / "docs"
         target.mkdir()
         analysis = FakePatternAnalysis(
-            location_patterns=[
-                FakeLocationPattern(directory=target, file_types={".pdf"})
-            ]
+            location_patterns=[FakeLocationPattern(directory=target, file_types={".pdf"})]
         )
-        result = scorer._calculate_file_type_match(
-            tmp_path / "a.txt", target / "a.txt", analysis
-        )
+        result = scorer._calculate_file_type_match(tmp_path / "a.txt", target / "a.txt", analysis)
         assert result == 25.0
 
 
@@ -322,9 +288,7 @@ class TestConfidenceScorerSizeScore:
 
     def test_error_handling(self, tmp_path):
         scorer = ConfidenceScorer()
-        result = scorer._calculate_size_score(
-            tmp_path / "nope.txt", tmp_path / "also_nope"
-        )
+        result = scorer._calculate_size_score(tmp_path / "nope.txt", tmp_path / "also_nope")
         assert result == 50.0
 
 
@@ -402,41 +366,31 @@ class TestSuggestionEngineMoveReasoning:
     def test_high_pattern_strength(self):
         engine = SuggestionEngine()
         factors = ConfidenceFactors(pattern_strength=80.0)
-        result = engine._generate_move_reasoning(
-            Path("/a.txt"), Path("/dest"), factors
-        )
+        result = engine._generate_move_reasoning(Path("/a.txt"), Path("/dest"), factors)
         assert "pattern" in result
 
     def test_high_file_type_match(self):
         engine = SuggestionEngine()
         factors = ConfidenceFactors(file_type_match=80.0)
-        result = engine._generate_move_reasoning(
-            Path("/a.txt"), Path("/dest"), factors
-        )
+        result = engine._generate_move_reasoning(Path("/a.txt"), Path("/dest"), factors)
         assert "file type" in result
 
     def test_high_content_similarity(self):
         engine = SuggestionEngine()
         factors = ConfidenceFactors(content_similarity=80.0)
-        result = engine._generate_move_reasoning(
-            Path("/a.txt"), Path("/dest"), factors
-        )
+        result = engine._generate_move_reasoning(Path("/a.txt"), Path("/dest"), factors)
         assert "similar files" in result
 
     def test_high_user_history(self):
         engine = SuggestionEngine()
         factors = ConfidenceFactors(user_history=80.0)
-        result = engine._generate_move_reasoning(
-            Path("/a.txt"), Path("/dest"), factors
-        )
+        result = engine._generate_move_reasoning(Path("/a.txt"), Path("/dest"), factors)
         assert "moved similar" in result
 
     def test_no_reasons_fallback(self):
         engine = SuggestionEngine()
         factors = ConfidenceFactors()
-        result = engine._generate_move_reasoning(
-            Path("/a.txt"), Path("/dest"), factors
-        )
+        result = engine._generate_move_reasoning(Path("/a.txt"), Path("/dest"), factors)
         assert "improve organization" in result
 
 
@@ -488,9 +442,7 @@ class TestSuggestionEngineFindBestLocation:
         target.mkdir()
         analysis = FakePatternAnalysis(
             location_patterns=[
-                FakeLocationPattern(
-                    directory=target, file_types={".txt"}, file_count=10
-                )
+                FakeLocationPattern(directory=target, file_types={".txt"}, file_count=10)
             ]
         )
         result = engine._find_best_location(tmp_path / "sub" / "a.txt", analysis)

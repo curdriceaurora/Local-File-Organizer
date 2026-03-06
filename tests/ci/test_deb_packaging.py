@@ -40,16 +40,12 @@ class TestDebianControl:
     def test_control_architecture_field(self) -> None:
         """control file must contain Architecture: amd64."""
         content = (DEBIAN_DIR / "control").read_text()
-        assert "Architecture: amd64" in content, (
-            "debian/control missing 'Architecture: amd64'"
-        )
+        assert "Architecture: amd64" in content, "debian/control missing 'Architecture: amd64'"
 
     def test_control_depends_python3(self) -> None:
         """control Depends must include python3 >= 3.9."""
         content = (DEBIAN_DIR / "control").read_text()
-        assert "python3 (>= 3.9)" in content, (
-            "debian/control Depends missing 'python3 (>= 3.9)'"
-        )
+        assert "python3 (>= 3.9)" in content, "debian/control Depends missing 'python3 (>= 3.9)'"
 
     def test_control_depends_libwebkit(self) -> None:
         """control Depends must include libwebkit2gtk-4.1-0."""
@@ -68,9 +64,7 @@ class TestDebianControl:
     def test_control_description_field(self) -> None:
         """control file must contain a Description field."""
         content = (DEBIAN_DIR / "control").read_text()
-        assert "Description:" in content, (
-            "debian/control missing 'Description:' field"
-        )
+        assert "Description:" in content, "debian/control missing 'Description:' field"
 
     def test_control_homepage_field(self) -> None:
         """control file must contain the project Homepage."""
@@ -111,9 +105,7 @@ class TestDebianRules:
     def test_rules_has_dh_wildcard(self) -> None:
         """rules file must contain the debhelper wildcard target."""
         content = (DEBIAN_DIR / "rules").read_text()
-        assert "dh $@" in content, (
-            "debian/rules missing 'dh $@' debhelper wildcard rule"
-        )
+        assert "dh $@" in content, "debian/rules missing 'dh $@' debhelper wildcard rule"
 
     def test_rules_has_build_override(self) -> None:
         """rules file must have override_dh_auto_build for pre-built binaries."""
@@ -128,9 +120,7 @@ class TestDesktopEntry:
 
     def test_desktop_file_exists(self) -> None:
         """Desktop entry file must exist."""
-        assert (DEB_DIR / "file-organizer.desktop").exists(), (
-            "file-organizer.desktop not found"
-        )
+        assert (DEB_DIR / "file-organizer.desktop").exists(), "file-organizer.desktop not found"
 
     def test_desktop_entry_section(self) -> None:
         """Desktop entry must have [Desktop Entry] section header."""
@@ -156,9 +146,7 @@ class TestDesktopEntry:
     def test_desktop_type_field(self) -> None:
         """Desktop entry must have Type=Application."""
         content = (DEB_DIR / "file-organizer.desktop").read_text()
-        assert "Type=Application" in content, (
-            "file-organizer.desktop missing 'Type=Application'"
-        )
+        assert "Type=Application" in content, "file-organizer.desktop missing 'Type=Application'"
 
     def test_desktop_categories_utility(self) -> None:
         """Desktop entry Categories must include Utility."""
@@ -247,16 +235,14 @@ class TestDebianCopyright:
     def test_copyright_format_url(self) -> None:
         """copyright must have DEP-5 Format URL."""
         content = (DEBIAN_DIR / "copyright").read_text()
-        assert "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/" in content, (
-            "debian/copyright missing DEP-5 Format URL"
-        )
+        assert (
+            "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/" in content
+        ), "debian/copyright missing DEP-5 Format URL"
 
     def test_copyright_license_mit(self) -> None:
         """copyright must specify MIT license."""
         content = (DEBIAN_DIR / "copyright").read_text()
-        assert "License: MIT" in content, (
-            "debian/copyright missing 'License: MIT'"
-        )
+        assert "License: MIT" in content, "debian/copyright missing 'License: MIT'"
 
     def test_copyright_upstream_name(self) -> None:
         """copyright must have Upstream-Name field."""

@@ -333,9 +333,7 @@ class TestSaveWebSettings:
         """Should create directory if missing."""
 
         new_dir = tmp_path / "new" / "path"
-        with patch(
-            "file_organizer.web.settings_routes._SETTINGS_DIR", new_dir
-        ):
+        with patch("file_organizer.web.settings_routes._SETTINGS_DIR", new_dir):
             with patch(
                 "file_organizer.web.settings_routes._SETTINGS_FILE",
                 new_dir / "settings.json",
@@ -456,9 +454,7 @@ class TestRenderSection:
         mock_templates.TemplateResponse.assert_called_once()
 
     @patch("file_organizer.web.settings_routes.templates")
-    def test_render_section_with_error(
-        self, mock_templates, mock_request
-    ):
+    def test_render_section_with_error(self, mock_templates, mock_request):
         """Should render with error message."""
         ws = WebSettings()
         mock_response = MagicMock()
@@ -628,9 +624,7 @@ class TestSettingsIntegration:
         assert ws.timezone == "Europe/London"
         assert ws.theme == "dark"
 
-    def test_invalid_choice_gets_validated_on_load(
-        self, use_temp_settings_dir
-    ):
+    def test_invalid_choice_gets_validated_on_load(self, use_temp_settings_dir):
         """Invalid choices should be fixed on load."""
         from file_organizer.web.settings_routes import _SETTINGS_FILE
 

@@ -198,7 +198,9 @@ def test_refresh_rejects_expired_token(tmp_path: Path) -> None:
         "iat": int((now - timedelta(days=2)).timestamp()),
         "exp": int((now - timedelta(days=1)).timestamp()),
     }
-    token = jwt.encode(payload, settings.auth_jwt_secret.get_secret_value(), algorithm=settings.auth_jwt_algorithm)
+    token = jwt.encode(
+        payload, settings.auth_jwt_secret.get_secret_value(), algorithm=settings.auth_jwt_algorithm
+    )
 
     response = client.post(
         "/api/v1/auth/refresh",

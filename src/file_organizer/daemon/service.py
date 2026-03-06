@@ -330,7 +330,7 @@ class DaemonService:
         try:
             # Only create signal wakeup pipe on Unix-like systems
             # (Windows select() doesn't support pipes, falls back to Event.wait)
-            if os.name != 'nt':
+            if os.name != "nt":
                 self._sig_wakeup_r, self._sig_wakeup_w = os.pipe()
                 os.set_blocking(self._sig_wakeup_r, False)
                 os.set_blocking(self._sig_wakeup_w, False)

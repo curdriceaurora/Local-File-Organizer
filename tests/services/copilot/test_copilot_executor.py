@@ -163,9 +163,7 @@ class TestHandleOrganize:
             "file_organizer.core.organizer.FileOrganizer",
             return_value=mock_organizer,
         ):
-            result = executor._handle_organize(
-                _intent(IntentType.ORGANIZE, source=str(sub))
-            )
+            result = executor._handle_organize(_intent(IntentType.ORGANIZE, source=str(sub)))
         assert result.success
         # Default dest is source / "organized"
         mock_organizer.organize.assert_called_once()
@@ -204,9 +202,7 @@ class TestHandleMove:
         src = tmp_path / "src.txt"
         src.write_text("data")
         dst = tmp_path / "sub" / "dst.txt"
-        result = executor.execute(
-            _intent(IntentType.MOVE, source=str(src), destination=str(dst))
-        )
+        result = executor.execute(_intent(IntentType.MOVE, source=str(src), destination=str(dst)))
         assert result.success
         assert dst.exists()
         assert not src.exists()
@@ -250,9 +246,7 @@ class TestHandleRename:
     def test_rename_success(self, executor, tmp_path):
         src = tmp_path / "a.txt"
         src.write_text("hi")
-        result = executor.execute(
-            _intent(IntentType.RENAME, target=str(src), new_name="b.txt")
-        )
+        result = executor.execute(_intent(IntentType.RENAME, target=str(src), new_name="b.txt"))
         assert result.success
         assert (tmp_path / "b.txt").exists()
         assert not src.exists()
@@ -298,9 +292,7 @@ class TestHandleFind:
         sub = tmp_path / "sub"
         sub.mkdir()
         (sub / "found.txt").write_text("x")
-        result = executor.execute(
-            _intent(IntentType.FIND, query="found", paths=[str(sub)])
-        )
+        result = executor.execute(_intent(IntentType.FIND, query="found", paths=[str(sub)]))
         assert result.success
         assert len(result.affected_files) == 1
 
@@ -331,10 +323,9 @@ class TestHandleUndoRedo:
     def test_undo_success(self, executor):
         mock_manager = MagicMock()
         mock_manager.undo_last_operation.return_value = True
-        with patch(
-            "file_organizer.history.tracker.OperationHistory"
-        ) as mock_history_cls, patch(
-            "file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager
+        with (
+            patch("file_organizer.history.tracker.OperationHistory") as mock_history_cls,
+            patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
         ):
             mock_history_cls.return_value = MagicMock()
             result = executor._handle_undo(_intent(IntentType.UNDO))
@@ -344,10 +335,9 @@ class TestHandleUndoRedo:
     def test_undo_nothing(self, executor):
         mock_manager = MagicMock()
         mock_manager.undo_last_operation.return_value = False
-        with patch(
-            "file_organizer.history.tracker.OperationHistory"
-        ) as mock_history_cls, patch(
-            "file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager
+        with (
+            patch("file_organizer.history.tracker.OperationHistory") as mock_history_cls,
+            patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
         ):
             mock_history_cls.return_value = MagicMock()
             result = executor._handle_undo(_intent(IntentType.UNDO))
@@ -364,10 +354,9 @@ class TestHandleUndoRedo:
     def test_redo_success(self, executor):
         mock_manager = MagicMock()
         mock_manager.redo_last_operation.return_value = True
-        with patch(
-            "file_organizer.history.tracker.OperationHistory"
-        ) as mock_history_cls, patch(
-            "file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager
+        with (
+            patch("file_organizer.history.tracker.OperationHistory") as mock_history_cls,
+            patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
         ):
             mock_history_cls.return_value = MagicMock()
             result = executor._handle_redo(_intent(IntentType.REDO))
@@ -377,10 +366,9 @@ class TestHandleUndoRedo:
     def test_redo_nothing(self, executor):
         mock_manager = MagicMock()
         mock_manager.redo_last_operation.return_value = False
-        with patch(
-            "file_organizer.history.tracker.OperationHistory"
-        ) as mock_history_cls, patch(
-            "file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager
+        with (
+            patch("file_organizer.history.tracker.OperationHistory") as mock_history_cls,
+            patch("file_organizer.undo.undo_manager.UndoManager", return_value=mock_manager),
         ):
             mock_history_cls.return_value = MagicMock()
             result = executor._handle_redo(_intent(IntentType.REDO))
@@ -407,9 +395,7 @@ class TestHandlePreview:
             "file_organizer.core.organizer.FileOrganizer",
             return_value=mock_organizer,
         ):
-            result = executor._handle_preview(
-                _intent(IntentType.PREVIEW, source=str(sub))
-            )
+            result = executor._handle_preview(_intent(IntentType.PREVIEW, source=str(sub)))
         assert result.success
         assert "Would" in result.message
 
@@ -429,9 +415,7 @@ class TestHandleSuggest:
         assert "specify" in result.message.lower()
 
     def test_path_not_found(self, executor, tmp_path):
-        result = executor.execute(
-            _intent(IntentType.SUGGEST, paths=[str(tmp_path / "nope")])
-        )
+        result = executor.execute(_intent(IntentType.SUGGEST, paths=[str(tmp_path / "nope")]))
         assert not result.success
         assert "not found" in result.message.lower()
 
@@ -439,9 +423,7 @@ class TestHandleSuggest:
         f = tmp_path / "file.txt"
         f.write_text("x")
         with patch.dict("sys.modules", {"file_organizer.services.smart_suggestions": MagicMock()}):
-            result = executor._handle_suggest(
-                _intent(IntentType.SUGGEST, paths=[str(f)])
-            )
+            result = executor._handle_suggest(_intent(IntentType.SUGGEST, paths=[str(f)]))
         assert result.success
         assert "available" in result.message.lower()
 
@@ -450,9 +432,7 @@ class TestHandleSuggest:
         f.write_text("x")
         with patch.dict("sys.modules", {"file_organizer.services.smart_suggestions": None}):
             # The import inside the handler will raise ImportError
-            result = executor._handle_suggest(
-                _intent(IntentType.SUGGEST, paths=[str(f)])
-            )
+            result = executor._handle_suggest(_intent(IntentType.SUGGEST, paths=[str(f)]))
         # Either branch returns success=True
         assert result.success
 

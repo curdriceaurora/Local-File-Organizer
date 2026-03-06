@@ -39,6 +39,7 @@ def _build_app(
     if mock_service:
         # Override the _service function in marketplace router
         import file_organizer.api.routers.marketplace as mp
+
         mp._service = lambda: mock_service
 
     app.include_router(router, prefix="/api/v1")
@@ -126,7 +127,7 @@ class TestListPlugins:
 
         resp = client.get(
             "/api/v1/marketplace/plugins",
-            params={"q": "test", "category": "organization", "page": 1, "per_page": 10}
+            params={"q": "test", "category": "organization", "page": 1, "per_page": 10},
         )
         assert resp.status_code == 200
         mock_service.list_plugins.assert_called_once_with(
@@ -143,10 +144,7 @@ class TestListPlugins:
         mock_service.list_plugins.return_value = ([_sample_plugin()], 50)
         _, client = _build_app(mock_service)
 
-        resp = client.get(
-            "/api/v1/marketplace/plugins",
-            params={"page": 2, "per_page": 25}
-        )
+        resp = client.get("/api/v1/marketplace/plugins", params={"page": 2, "per_page": 25})
         assert resp.status_code == 200
         body = resp.json()
         assert body["page"] == 2
@@ -159,10 +157,7 @@ class TestListPlugins:
         mock_service.list_plugins.return_value = ([], 0)
         _, client = _build_app(mock_service)
 
-        resp = client.get(
-            "/api/v1/marketplace/plugins",
-            params={"tags": ["test", "demo"]}
-        )
+        resp = client.get("/api/v1/marketplace/plugins", params={"tags": ["test", "demo"]})
         assert resp.status_code == 200
         mock_service.list_plugins.assert_called_once()
         call_kwargs = mock_service.list_plugins.call_args[1]
@@ -312,8 +307,7 @@ class TestInstallPlugin:
         _, client = _build_app(mock_service)
 
         resp = client.post(
-            "/api/v1/marketplace/plugins/test-plugin/install",
-            params={"version": "1.5.0"}
+            "/api/v1/marketplace/plugins/test-plugin/install", params={"version": "1.5.0"}
         )
         assert resp.status_code == 200
         mock_service.install.assert_called_once_with("test-plugin", version="1.5.0")
@@ -439,10 +433,7 @@ class TestListReviews:
         mock_service.get_reviews.return_value = []
         _, client = _build_app(mock_service)
 
-        resp = client.get(
-            "/api/v1/marketplace/plugins/test-plugin/reviews",
-            params={"limit": 50}
-        )
+        resp = client.get("/api/v1/marketplace/plugins/test-plugin/reviews", params={"limit": 50})
         assert resp.status_code == 200
         mock_service.get_reviews.assert_called_once_with("test-plugin", limit=50)
 
@@ -483,10 +474,7 @@ class TestAddReview:
             "title": "Great plugin!",
             "content": "This plugin is awesome.",
         }
-        resp = client.post(
-            "/api/v1/marketplace/plugins/test-plugin/reviews",
-            json=payload
-        )
+        resp = client.post("/api/v1/marketplace/plugins/test-plugin/reviews", json=payload)
         assert resp.status_code == 200
         body = resp.json()
         assert body["plugin_name"] == "test-plugin"
@@ -504,10 +492,7 @@ class TestAddReview:
             "title": "Great!",
             "content": "Good plugin.",
         }
-        resp = client.post(
-            "/api/v1/marketplace/plugins/test-plugin/reviews",
-            json=payload
-        )
+        resp = client.post("/api/v1/marketplace/plugins/test-plugin/reviews", json=payload)
         assert resp.status_code == 422  # Validation error
 
     def test_add_review_empty_title(self) -> None:
@@ -520,10 +505,7 @@ class TestAddReview:
             "title": "",  # Invalid: min_length=1
             "content": "Good plugin.",
         }
-        resp = client.post(
-            "/api/v1/marketplace/plugins/test-plugin/reviews",
-            json=payload
-        )
+        resp = client.post("/api/v1/marketplace/plugins/test-plugin/reviews", json=payload)
         assert resp.status_code == 422
 
     def test_add_review_plugin_not_found(self) -> None:
@@ -538,10 +520,7 @@ class TestAddReview:
             "title": "Great!",
             "content": "Good plugin.",
         }
-        resp = client.post(
-            "/api/v1/marketplace/plugins/nonexistent/reviews",
-            json=payload
-        )
+        resp = client.post("/api/v1/marketplace/plugins/nonexistent/reviews", json=payload)
         assert resp.status_code == 404
 
     def test_add_review_write_failed(self) -> None:
@@ -556,10 +535,7 @@ class TestAddReview:
             "title": "Great!",
             "content": "Good plugin.",
         }
-        resp = client.post(
-            "/api/v1/marketplace/plugins/test-plugin/reviews",
-            json=payload
-        )
+        resp = client.post("/api/v1/marketplace/plugins/test-plugin/reviews", json=payload)
         assert resp.status_code == 500
         body = resp.json()
         assert body["error"] == "review_write_failed"
@@ -576,10 +552,7 @@ class TestAddReview:
             "title": "OK",  # Minimum title length
             "content": "Acceptable.",
         }
-        resp = client.post(
-            "/api/v1/marketplace/plugins/test-plugin/reviews",
-            json=payload
-        )
+        resp = client.post("/api/v1/marketplace/plugins/test-plugin/reviews", json=payload)
         assert resp.status_code == 200
 
     def test_add_review_maximum_content(self) -> None:
@@ -594,8 +567,5 @@ class TestAddReview:
             "title": "x" * 120,  # Maximum title length
             "content": "y" * 2000,  # Maximum content length
         }
-        resp = client.post(
-            "/api/v1/marketplace/plugins/test-plugin/reviews",
-            json=payload
-        )
+        resp = client.post("/api/v1/marketplace/plugins/test-plugin/reviews", json=payload)
         assert resp.status_code == 200

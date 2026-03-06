@@ -200,6 +200,7 @@ class TestHealthEndpoint:
 
             # Small delay
             import time
+
             time.sleep(0.01)
 
             resp2 = client.get("/api/v1/health")

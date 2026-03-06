@@ -320,7 +320,7 @@ class TestExtractOdt:
         # Create a minimal ODT (zip containing content.xml)
         content_xml = (
             '<?xml version="1.0"?>'
-            '<office:document-content '
+            "<office:document-content "
             'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
             'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">'
             "<office:body><office:text>"

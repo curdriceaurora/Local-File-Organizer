@@ -64,9 +64,7 @@ class TestListFiles:
         (sub / "deep.txt").write_text("deep")
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.get(
-            "/api/v1/files", params={"path": str(tmp_path), "recursive": True}
-        )
+        resp = client.get("/api/v1/files", params={"path": str(tmp_path), "recursive": True})
         assert resp.status_code == 200
         assert resp.json()["total"] == 2
 
@@ -77,9 +75,7 @@ class TestListFiles:
         (sub / "deep.txt").write_text("deep")
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.get(
-            "/api/v1/files", params={"path": str(tmp_path), "recursive": False}
-        )
+        resp = client.get("/api/v1/files", params={"path": str(tmp_path), "recursive": False})
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 
@@ -109,9 +105,7 @@ class TestListFiles:
         (tmp_path / "b.py").write_text("python")
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.get(
-            "/api/v1/files", params={"path": str(tmp_path), "file_type": ".txt"}
-        )
+        resp = client.get("/api/v1/files", params={"path": str(tmp_path), "file_type": ".txt"})
         assert resp.status_code == 200
         body = resp.json()
         assert body["total"] == 1
@@ -122,9 +116,7 @@ class TestListFiles:
         (tmp_path / "pic.jpg").write_bytes(b"\xff\xd8")
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.get(
-            "/api/v1/files", params={"path": str(tmp_path), "file_type": "image"}
-        )
+        resp = client.get("/api/v1/files", params={"path": str(tmp_path), "file_type": "image"})
         assert resp.status_code == 200
         body = resp.json()
         assert body["total"] == 1
@@ -191,9 +183,7 @@ class TestListFiles:
     def test_list_files_path_not_found(self, tmp_path: Path) -> None:
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.get(
-            "/api/v1/files", params={"path": str(tmp_path / "nonexistent")}
-        )
+        resp = client.get("/api/v1/files", params={"path": str(tmp_path / "nonexistent")})
         assert resp.status_code == 404
 
     def test_list_files_single_file_path(self, tmp_path: Path) -> None:
@@ -243,9 +233,7 @@ class TestListFiles:
         (tmp_path / "a.txt").write_text("txt")
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.get(
-            "/api/v1/files", params={"path": str(tmp_path), "file_type": ""}
-        )
+        resp = client.get("/api/v1/files", params={"path": str(tmp_path), "file_type": ""})
         assert resp.status_code == 200
         # Empty filter returns all files
         assert resp.json()["total"] == 1
@@ -287,9 +275,7 @@ class TestGetFileInfo:
     def test_get_file_info_not_found(self, tmp_path: Path) -> None:
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.get(
-            "/api/v1/files/info", params={"path": str(tmp_path / "ghost.txt")}
-        )
+        resp = client.get("/api/v1/files/info", params={"path": str(tmp_path / "ghost.txt")})
         assert resp.status_code == 404
 
     def test_get_file_info_directory(self, tmp_path: Path) -> None:
@@ -327,9 +313,7 @@ class TestReadFileContent:
         f.write_text("x" * 500)
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.get(
-            "/api/v1/files/content", params={"path": str(f), "max_bytes": 100}
-        )
+        resp = client.get("/api/v1/files/content", params={"path": str(f), "max_bytes": 100})
         assert resp.status_code == 200
         body = resp.json()
         assert body["truncated"] is True
@@ -338,9 +322,7 @@ class TestReadFileContent:
     def test_read_content_not_found(self, tmp_path: Path) -> None:
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.get(
-            "/api/v1/files/content", params={"path": str(tmp_path / "gone.txt")}
-        )
+        resp = client.get("/api/v1/files/content", params={"path": str(tmp_path / "gone.txt")})
         assert resp.status_code == 404
 
     def test_read_content_directory(self, tmp_path: Path) -> None:
@@ -369,9 +351,7 @@ class TestReadFileContent:
         f.write_text("x" * 100)
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.get(
-            "/api/v1/files/content", params={"path": str(f), "max_bytes": 100}
-        )
+        resp = client.get("/api/v1/files/content", params={"path": str(f), "max_bytes": 100})
         assert resp.status_code == 200
         assert resp.json()["truncated"] is False
 
@@ -673,9 +653,7 @@ class TestDeleteFileById:
         f.write_text("delete me")
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.delete(
-            f"/api/v1/files/{f.name}", params={"permanent": True}
-        )
+        resp = client.delete(f"/api/v1/files/{f.name}", params={"permanent": True})
         # The file_id is treated as a filename resolved against allowed_paths.
         # Since it's just a filename and won't resolve to tmp_path/target.txt
         # via resolve_path, it may fail. Let's accept any non-500 code.
@@ -686,9 +664,7 @@ class TestDeleteFileById:
         f.write_text("trash me")
         _, client, _ = _build_app(tmp_path)
 
-        resp = client.delete(
-            f"/api/v1/files/{f.name}", params={"permanent": False}
-        )
+        resp = client.delete(f"/api/v1/files/{f.name}", params={"permanent": False})
         assert resp.status_code in (200, 403, 404)
 
 

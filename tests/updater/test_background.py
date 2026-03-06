@@ -89,7 +89,9 @@ class TestMaybeCheckForUpdates:
                     )
                     mock_mgr_inst.check.return_value = status
                     mock_mgr.return_value = mock_mgr_inst
-                    with patch("file_organizer.updater.background.UpdateStateStore", return_value=store):
+                    with patch(
+                        "file_organizer.updater.background.UpdateStateStore", return_value=store
+                    ):
                         result = maybe_check_for_updates()
                         assert result is not None
                         assert result.available is False
@@ -122,7 +124,9 @@ class TestMaybeCheckForUpdates:
                     )
                     mock_mgr_inst.check.return_value = status
                     mock_mgr.return_value = mock_mgr_inst
-                    with patch("file_organizer.updater.background.UpdateStateStore", return_value=store):
+                    with patch(
+                        "file_organizer.updater.background.UpdateStateStore", return_value=store
+                    ):
                         maybe_check_for_updates()
                         # Verify record_check was called with latest version
                         store.record_check.assert_called_once()
@@ -156,7 +160,9 @@ class TestMaybeCheckForUpdates:
                     )
                     mock_mgr_inst.check.return_value = status
                     mock_mgr.return_value = mock_mgr_inst
-                    with patch("file_organizer.updater.background.UpdateStateStore", return_value=store):
+                    with patch(
+                        "file_organizer.updater.background.UpdateStateStore", return_value=store
+                    ):
                         maybe_check_for_updates()
                         store.record_check.assert_called_once()
                         args = store.record_check.call_args
@@ -182,7 +188,9 @@ class TestMaybeCheckForUpdates:
                 mock_cfg.updates.include_prereleases = False
                 mock_cfg_mgr.return_value.load.return_value = mock_cfg
                 with patch("file_organizer.updater.background.UpdateManager"):
-                    with patch("file_organizer.updater.background.UpdateStateStore", return_value=store):
+                    with patch(
+                        "file_organizer.updater.background.UpdateStateStore", return_value=store
+                    ):
                         maybe_check_for_updates(profile="custom")
                         mock_cfg_mgr.return_value.load.assert_called_with(profile="custom")
         finally:
@@ -238,7 +246,9 @@ class TestMaybeCheckForUpdates:
                     )
                     mock_mgr_inst.check.return_value = status
                     mock_mgr.return_value = mock_mgr_inst
-                    with patch("file_organizer.updater.background.UpdateStateStore", return_value=store):
+                    with patch(
+                        "file_organizer.updater.background.UpdateStateStore", return_value=store
+                    ):
                         now = datetime(2024, 1, 15, 14, 0, 0, tzinfo=UTC)
                         result = maybe_check_for_updates(now=now)
                         # Should have checked since 2 days > 24 hours

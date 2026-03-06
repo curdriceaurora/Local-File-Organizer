@@ -445,9 +445,7 @@ class TestFindDuplicates:
 
         dedup.find_duplicates(tmp_path)
         call_kwargs = dedup.hasher.find_duplicates.call_args
-        encoding_map = call_kwargs.kwargs.get(
-            "encoding_map", call_kwargs[1].get("encoding_map")
-        )
+        encoding_map = call_kwargs.kwargs.get("encoding_map", call_kwargs[1].get("encoding_map"))
         assert str(good) in encoding_map
         assert str(bad) not in encoding_map
 
@@ -707,9 +705,7 @@ class TestValidateImage:
         img.write_bytes(b"\xff\xd8\xff\xe0data")
 
         dedup = _make_dedup()
-        with patch(
-            "file_organizer.services.deduplication.image_dedup.Image"
-        ) as mock_image:
+        with patch("file_organizer.services.deduplication.image_dedup.Image") as mock_image:
             mock_ctx = MagicMock()
             mock_image.open.return_value.__enter__ = MagicMock(return_value=mock_ctx)
             mock_image.open.return_value.__exit__ = MagicMock(return_value=False)
@@ -748,12 +744,8 @@ class TestValidateImage:
         img.write_bytes(b"\xff\xd8\xff\xe0corrupt")
 
         dedup = _make_dedup()
-        with patch(
-            "file_organizer.services.deduplication.image_dedup.Image"
-        ) as mock_image:
-            mock_image.open.return_value.__enter__ = MagicMock(
-                side_effect=OSError("truncated")
-            )
+        with patch("file_organizer.services.deduplication.image_dedup.Image") as mock_image:
+            mock_image.open.return_value.__enter__ = MagicMock(side_effect=OSError("truncated"))
             mock_image.open.return_value.__exit__ = MagicMock(return_value=False)
 
             is_valid, error = dedup.validate_image(img)
@@ -766,12 +758,8 @@ class TestValidateImage:
         img.write_bytes(b"\x89PNGbaddata")
 
         dedup = _make_dedup()
-        with patch(
-            "file_organizer.services.deduplication.image_dedup.Image"
-        ) as mock_image:
-            mock_image.open.return_value.__enter__ = MagicMock(
-                side_effect=Exception("weird error")
-            )
+        with patch("file_organizer.services.deduplication.image_dedup.Image") as mock_image:
+            mock_image.open.return_value.__enter__ = MagicMock(side_effect=Exception("weird error"))
             mock_image.open.return_value.__exit__ = MagicMock(return_value=False)
 
             is_valid, error = dedup.validate_image(img)

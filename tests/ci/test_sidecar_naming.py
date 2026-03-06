@@ -72,7 +72,7 @@ def _assert_triple_in_script(content: str, triple: str, script_path: Path) -> No
     assert triple in content, (
         f"Target triple '{triple}' not found in {script_path.name}.\n"
         "Expected it to appear as a shell variable value or inline string.\n"
-        f"Example: SIDECAR_TRIPLE=\"{triple}\" or file-organizer-backend-{triple}"
+        f'Example: SIDECAR_TRIPLE="{triple}" or file-organizer-backend-{triple}'
     )
 
 
@@ -104,20 +104,18 @@ class TestMacosSidecarNaming:
     def test_sidecar_path_variable_defined(self) -> None:
         """Script must define SIDECAR_PATH that combines prefix and triple."""
         content = _read_script(MACOS_SCRIPT)
-        assert "SIDECAR_PATH" in content, (
-            f"{MACOS_SCRIPT.name} must define SIDECAR_PATH variable."
-        )
+        assert "SIDECAR_PATH" in content, f"{MACOS_SCRIPT.name} must define SIDECAR_PATH variable."
         # The SIDECAR_PATH must incorporate the prefix
-        assert re.search(
-            rf'SIDECAR_PATH=.*{re.escape(SIDECAR_PREFIX)}', content
-        ), f"{MACOS_SCRIPT.name}: SIDECAR_PATH must include '{SIDECAR_PREFIX}'."
+        assert re.search(rf"SIDECAR_PATH=.*{re.escape(SIDECAR_PREFIX)}", content), (
+            f"{MACOS_SCRIPT.name}: SIDECAR_PATH must include '{SIDECAR_PREFIX}'."
+        )
 
     def test_sidecar_copy_command(self) -> None:
         """Script must copy the executable to the sidecar path."""
         content = _read_script(MACOS_SCRIPT)
-        assert re.search(
-            r'cp\s+"\$\{EXECUTABLE\}"\s+"\$\{SIDECAR_PATH\}"', content
-        ), f"{MACOS_SCRIPT.name} must copy EXECUTABLE to SIDECAR_PATH."
+        assert re.search(r'cp\s+"\$\{EXECUTABLE\}"\s+"\$\{SIDECAR_PATH\}"', content), (
+            f"{MACOS_SCRIPT.name} must copy EXECUTABLE to SIDECAR_PATH."
+        )
 
     def test_sidecar_is_executable(self) -> None:
         """Script must chmod +x the sidecar."""
@@ -165,18 +163,16 @@ class TestLinuxSidecarNaming:
 
     def test_sidecar_path_variable_defined(self) -> None:
         content = _read_script(LINUX_SCRIPT)
-        assert "SIDECAR_PATH" in content, (
-            f"{LINUX_SCRIPT.name} must define SIDECAR_PATH variable."
+        assert "SIDECAR_PATH" in content, f"{LINUX_SCRIPT.name} must define SIDECAR_PATH variable."
+        assert re.search(rf"SIDECAR_PATH=.*{re.escape(SIDECAR_PREFIX)}", content), (
+            f"{LINUX_SCRIPT.name}: SIDECAR_PATH must include '{SIDECAR_PREFIX}'."
         )
-        assert re.search(
-            rf'SIDECAR_PATH=.*{re.escape(SIDECAR_PREFIX)}', content
-        ), f"{LINUX_SCRIPT.name}: SIDECAR_PATH must include '{SIDECAR_PREFIX}'."
 
     def test_sidecar_copy_command(self) -> None:
         content = _read_script(LINUX_SCRIPT)
-        assert re.search(
-            r'cp\s+"\$\{EXECUTABLE\}"\s+"\$\{SIDECAR_PATH\}"', content
-        ), f"{LINUX_SCRIPT.name} must copy EXECUTABLE to SIDECAR_PATH."
+        assert re.search(r'cp\s+"\$\{EXECUTABLE\}"\s+"\$\{SIDECAR_PATH\}"', content), (
+            f"{LINUX_SCRIPT.name} must copy EXECUTABLE to SIDECAR_PATH."
+        )
 
     def test_sidecar_is_executable(self) -> None:
         content = _read_script(LINUX_SCRIPT)
@@ -228,9 +224,9 @@ class TestWindowsSidecarNaming:
         assert "sidecarPath" in content, (
             f"{WINDOWS_SCRIPT.name} must define a sidecarPath variable."
         )
-        assert re.search(
-            rf'sidecar.*{re.escape(SIDECAR_PREFIX)}', content, re.IGNORECASE
-        ), f"{WINDOWS_SCRIPT.name}: sidecar variable must include '{SIDECAR_PREFIX}'."
+        assert re.search(rf"sidecar.*{re.escape(SIDECAR_PREFIX)}", content, re.IGNORECASE), (
+            f"{WINDOWS_SCRIPT.name}: sidecar variable must include '{SIDECAR_PREFIX}'."
+        )
 
     def test_sidecar_has_exe_extension(self) -> None:
         """Windows sidecar must include .exe extension."""
@@ -291,7 +287,11 @@ class TestSidecarNamingConvention:
 
     def test_sidecar_binary_name_no_underscores(self) -> None:
         """Sidecar prefix must use hyphens, not underscores."""
-        wrong_prefixes = ["file_organizer_backend", "file-organizer_backend", "fileorganizer-backend"]
+        wrong_prefixes = [
+            "file_organizer_backend",
+            "file-organizer_backend",
+            "fileorganizer-backend",
+        ]
         for script in [MACOS_SCRIPT, LINUX_SCRIPT, WINDOWS_SCRIPT]:
             if not script.exists():
                 continue

@@ -102,9 +102,7 @@ def serve(
         )
         raise typer.Exit(code=1) from exc
 
-    console.print(
-        f"[bold]Starting File Organizer[/bold] at http://{host}:{port}/ui/"
-    )
+    console.print(f"[bold]Starting File Organizer[/bold] at http://{host}:{port}/ui/")
 
     try:
         uvicorn.run(

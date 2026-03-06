@@ -157,9 +157,7 @@ class TestPluginInfo:
 
     def test_info_with_version(self, runner, mock_service):
         with patch("file_organizer.cli.marketplace._service", return_value=mock_service):
-            result = runner.invoke(
-                marketplace_app, ["info", "file-sorter", "--version", "1.0.0"]
-            )
+            result = runner.invoke(marketplace_app, ["info", "file-sorter", "--version", "1.0.0"])
         assert result.exit_code == 0
         mock_service.get_plugin.assert_called_once_with("file-sorter", version="1.0.0")
 

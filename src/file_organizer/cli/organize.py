@@ -47,9 +47,7 @@ def preview(
 
         organizer = FileOrganizer(dry_run=True)
         result = organizer.organize(input_dir, input_dir)
-        console.print(
-            f"[green]Preview:[/green] {result.total_files} files would be organized"
-        )
+        console.print(f"[green]Preview:[/green] {result.total_files} files would be organized")
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")
         raise typer.Exit(code=1) from exc

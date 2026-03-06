@@ -11,7 +11,9 @@ from pathlib import Path
 
 import pytest
 
-MANIFEST_PATH = Path(__file__).parent.parent.parent / "desktop" / "src-tauri" / "windows-manifest.xml"
+MANIFEST_PATH = (
+    Path(__file__).parent.parent.parent / "desktop" / "src-tauri" / "windows-manifest.xml"
+)
 
 # XML namespace map used in the manifest
 NS = {
@@ -60,16 +62,12 @@ class TestWindowsManifestXML:
         """Root element must be <assembly> with the correct namespace."""
         root = manifest_tree.getroot()
         expected_tag = "{urn:schemas-microsoft-com:asm.v1}assembly"
-        assert root.tag == expected_tag, (
-            f"Expected root tag '{expected_tag}', got '{root.tag}'"
-        )
+        assert root.tag == expected_tag, f"Expected root tag '{expected_tag}', got '{root.tag}'"
 
     def test_manifest_version_is_1_0(self, manifest_tree: ET.ElementTree) -> None:
         """The <assembly> element must declare manifestVersion='1.0'."""
         root = manifest_tree.getroot()
-        assert root.get("manifestVersion") == "1.0", (
-            "assembly/@manifestVersion must be '1.0'"
-        )
+        assert root.get("manifestVersion") == "1.0", "assembly/@manifestVersion must be '1.0'"
 
 
 class TestRequestedExecutionLevel:
@@ -130,9 +128,7 @@ class TestSupportedOS:
     def test_compatibility_section_exists(self, manifest_root: ET.Element) -> None:
         """A <compatibility> section must exist in the manifest."""
         compat = manifest_root.find(".//compat:application", NS)
-        assert compat is not None, (
-            "No <compatibility><application> section found in manifest."
-        )
+        assert compat is not None, "No <compatibility><application> section found in manifest."
 
     def test_windows_10_supported_os_id_present(self, manifest_root: ET.Element) -> None:
         """The Windows 10 supportedOS GUID must be declared."""
@@ -162,9 +158,7 @@ class TestDpiAwareness:
         dpi_aware = manifest_root.find(
             ".//asm3:application/asm3:windowsSettings/dpi2005:dpiAware", NS
         )
-        assert dpi_aware is not None, (
-            "<dpiAware> element not found in windowsSettings."
-        )
+        assert dpi_aware is not None, "<dpiAware> element not found in windowsSettings."
 
     def test_dpi_aware_is_true(self, manifest_root: ET.Element) -> None:
         """dpiAware must be set to 'true'."""
@@ -181,9 +175,7 @@ class TestDpiAwareness:
         dpi_awareness = manifest_root.find(
             ".//asm3:application/asm3:windowsSettings/dpi2016:dpiAwareness", NS
         )
-        assert dpi_awareness is not None, (
-            "<dpiAwareness> element not found in windowsSettings."
-        )
+        assert dpi_awareness is not None, "<dpiAwareness> element not found in windowsSettings."
 
     def test_dpi_awareness_is_per_monitor_v2(self, manifest_root: ET.Element) -> None:
         """dpiAwareness must be set to 'PerMonitorV2' for best multi-monitor support."""

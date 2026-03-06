@@ -44,6 +44,7 @@ DEBUG_ONLY_ENTITLEMENTS: dict[str, bool] = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def load_plist(path: Path) -> dict:
     """Load and return a plist file as a dictionary."""
     with path.open("rb") as f:
@@ -54,11 +55,10 @@ def load_plist(path: Path) -> dict:
 # File existence tests
 # ---------------------------------------------------------------------------
 
+
 class TestEntitlementsFilesExist:
     def test_entitlements_plist_exists(self) -> None:
-        assert ENTITLEMENTS_PLIST.exists(), (
-            f"entitlements.plist not found at {ENTITLEMENTS_PLIST}"
-        )
+        assert ENTITLEMENTS_PLIST.exists(), f"entitlements.plist not found at {ENTITLEMENTS_PLIST}"
 
     def test_debug_entitlements_plist_exists(self) -> None:
         assert DEBUG_ENTITLEMENTS_PLIST.exists(), (
@@ -66,21 +66,18 @@ class TestEntitlementsFilesExist:
         )
 
     def test_sign_script_exists(self) -> None:
-        assert SIGN_SCRIPT.exists(), (
-            f"sign_macos.sh not found at {SIGN_SCRIPT}"
-        )
+        assert SIGN_SCRIPT.exists(), f"sign_macos.sh not found at {SIGN_SCRIPT}"
 
     def test_sign_script_is_executable(self) -> None:
         mode = SIGN_SCRIPT.stat().st_mode
         is_executable = bool(mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH))
-        assert is_executable, (
-            f"sign_macos.sh is not executable. Run: chmod +x {SIGN_SCRIPT}"
-        )
+        assert is_executable, f"sign_macos.sh is not executable. Run: chmod +x {SIGN_SCRIPT}"
 
 
 # ---------------------------------------------------------------------------
 # Production entitlements tests
 # ---------------------------------------------------------------------------
+
 
 class TestProductionEntitlements:
     def test_plist_is_valid_xml(self) -> None:
@@ -115,6 +112,7 @@ class TestProductionEntitlements:
 # Debug entitlements tests
 # ---------------------------------------------------------------------------
 
+
 class TestDebugEntitlements:
     def test_plist_is_valid_xml(self) -> None:
         data = load_plist(DEBUG_ENTITLEMENTS_PLIST)
@@ -141,6 +139,7 @@ class TestDebugEntitlements:
 # Sign script content tests
 # ---------------------------------------------------------------------------
 
+
 class TestSignScript:
     def _read_script(self) -> str:
         return SIGN_SCRIPT.read_text()
@@ -159,9 +158,7 @@ class TestSignScript:
 
     def test_references_entitlements_plist(self) -> None:
         content = self._read_script()
-        assert "entitlements.plist" in content, (
-            "sign_macos.sh must reference entitlements.plist"
-        )
+        assert "entitlements.plist" in content, "sign_macos.sh must reference entitlements.plist"
 
     def test_references_debug_entitlements_plist(self) -> None:
         content = self._read_script()
@@ -171,9 +168,7 @@ class TestSignScript:
 
     def test_uses_codesign(self) -> None:
         content = self._read_script()
-        assert "codesign" in content, (
-            "sign_macos.sh must invoke the codesign tool"
-        )
+        assert "codesign" in content, "sign_macos.sh must invoke the codesign tool"
 
     def test_notarytool_present(self) -> None:
         content = self._read_script()

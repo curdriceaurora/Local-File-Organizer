@@ -69,18 +69,20 @@ def run(
 
     if not files:
         if json_output:
-            console.print(json.dumps(
-                {
-                    "files_processed": 0,
-                    "total_time_seconds": 0.0,
-                    "median_time": 0.0,
-                    "avg_time": 0.0,
-                    "peak_memory_mb": 0.0,
-                    "cache_hits": 0,
-                    "cache_misses": 0,
-                    "llm_calls": 0,
-                }
-            ))
+            console.print(
+                json.dumps(
+                    {
+                        "files_processed": 0,
+                        "total_time_seconds": 0.0,
+                        "median_time": 0.0,
+                        "avg_time": 0.0,
+                        "peak_memory_mb": 0.0,
+                        "cache_hits": 0,
+                        "cache_misses": 0,
+                        "llm_calls": 0,
+                    }
+                )
+            )
         else:
             console.print("[yellow]No files found in the specified path.[/yellow]")
         return
@@ -178,6 +180,4 @@ def run(
         table.add_row("LLM Calls", str(results["llm_calls"]))
 
         console.print(table)
-        console.print(
-            "\n[bold green]Benchmark completed[/bold green]"
-        )
+        console.print("\n[bold green]Benchmark completed[/bold green]")

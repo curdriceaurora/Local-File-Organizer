@@ -18,7 +18,9 @@ from file_organizer.api.exceptions import setup_exception_handlers
 from file_organizer.api.routers.config import ConfigResponse, router
 
 
-def _build_app(admin_user: User | None = None, auth_enabled: bool = False) -> tuple[FastAPI, TestClient]:
+def _build_app(
+    admin_user: User | None = None, auth_enabled: bool = False
+) -> tuple[FastAPI, TestClient]:
     """Create a FastAPI app with config router and dependency overrides."""
     settings = ApiSettings(
         environment="test",

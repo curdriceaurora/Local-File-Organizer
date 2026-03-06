@@ -58,9 +58,7 @@ def fake_release() -> ReleaseInfo:
 @pytest.fixture()
 def mock_checker_with_update(fake_release: ReleaseInfo) -> Iterator[Any]:
     """Patch UpdateChecker so it always returns ``fake_release``."""
-    with patch(
-        "file_organizer.updater.sidecar_updater.UpdateChecker"
-    ) as MockChecker:
+    with patch("file_organizer.updater.sidecar_updater.UpdateChecker") as MockChecker:
         instance = MockChecker.return_value
         instance.current_version = "2.0.0"
         instance.check.return_value = fake_release
@@ -70,9 +68,7 @@ def mock_checker_with_update(fake_release: ReleaseInfo) -> Iterator[Any]:
 @pytest.fixture()
 def mock_checker_no_update() -> Iterator[Any]:
     """Patch UpdateChecker so it always returns ``None`` (no update)."""
-    with patch(
-        "file_organizer.updater.sidecar_updater.UpdateChecker"
-    ) as MockChecker:
+    with patch("file_organizer.updater.sidecar_updater.UpdateChecker") as MockChecker:
         instance = MockChecker.return_value
         instance.current_version = "2.1.0"
         instance.check.return_value = None
@@ -96,24 +92,18 @@ class TestCheckSidecarUpdate:
         assert status.current_version == "2.0.0"
         assert status.release is fake_release
 
-    def test_returns_not_available_when_up_to_date(
-        self, mock_checker_no_update
-    ) -> None:
+    def test_returns_not_available_when_up_to_date(self, mock_checker_no_update) -> None:
         status = check_sidecar_update()
         assert status.available is False
         assert status.latest_version == ""
         assert status.release is None
 
-    def test_message_contains_version_when_available(
-        self, mock_checker_with_update
-    ) -> None:
+    def test_message_contains_version_when_available(self, mock_checker_with_update) -> None:
         status = check_sidecar_update()
         assert "2.0.0" in status.message
         assert "2.1.0" in status.message
 
-    def test_message_says_up_to_date_when_no_update(
-        self, mock_checker_no_update
-    ) -> None:
+    def test_message_says_up_to_date_when_no_update(self, mock_checker_no_update) -> None:
         status = check_sidecar_update()
         assert "up to date" in status.message.lower()
 
@@ -164,9 +154,7 @@ class TestCoordinatedUpdateSuccess:
 
         @contextlib.contextmanager
         def _ctx():
-            with patch(
-                "file_organizer.updater.sidecar_updater.UpdateInstaller"
-            ) as MockInstaller:
+            with patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller:
                 inst = MockInstaller.return_value
                 inst.select_asset.return_value = fake_release.assets[0]
                 inst.find_checksum.return_value = ""
@@ -223,9 +211,7 @@ class TestCoordinatedUpdateSuccess:
 
         assert received[0] == "update-available"
 
-    def test_no_update_returns_early_without_events(
-        self, mock_checker_no_update
-    ) -> None:
+    def test_no_update_returns_early_without_events(self, mock_checker_no_update) -> None:
         received: list[str] = []
 
         def capture(event: str, _payload: object) -> None:
@@ -249,11 +235,10 @@ class TestCoordinatedUpdateRollback:
 
         @contextlib.contextmanager
         def _ctx():
-            with patch(
-                "file_organizer.updater.sidecar_updater.UpdateInstaller"
-            ) as MockInstaller, patch(
-                "file_organizer.updater.sidecar_updater.UpdateManager"
-            ) as MockManager:
+            with (
+                patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller,
+                patch("file_organizer.updater.sidecar_updater.UpdateManager") as MockManager,
+            ):
                 inst = MockInstaller.return_value
                 inst.select_asset.return_value = fake_release.assets[0]
                 inst.find_checksum.return_value = ""
@@ -319,9 +304,7 @@ class TestCoordinatedUpdateDryRun:
     def test_dry_run_returns_success_without_installing(
         self, mock_checker_with_update, fake_release: ReleaseInfo, tmp_path: Path
     ) -> None:
-        with patch(
-            "file_organizer.updater.sidecar_updater.UpdateInstaller"
-        ) as MockInstaller:
+        with patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller:
             inst = MockInstaller.return_value
             inst.select_asset.return_value = fake_release.assets[0]
             inst.find_checksum.return_value = ""
@@ -338,9 +321,7 @@ class TestCoordinatedUpdateDryRun:
     def test_dry_run_message_mentions_dry_run(
         self, mock_checker_with_update, fake_release: ReleaseInfo, tmp_path: Path
     ) -> None:
-        with patch(
-            "file_organizer.updater.sidecar_updater.UpdateInstaller"
-        ) as MockInstaller:
+        with patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller:
             inst = MockInstaller.return_value
             inst.select_asset.return_value = fake_release.assets[0]
             inst.find_checksum.return_value = ""

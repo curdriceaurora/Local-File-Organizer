@@ -432,9 +432,7 @@ class TestGetEventRate:
         mock_redis_client: MagicMock,
     ):
         """Test rate with a single event in the window."""
-        mock_redis_client.xrange.return_value = [
-            ("1700000000000-0", {"key": "value"})
-        ]
+        mock_redis_client.xrange.return_value = [("1700000000000-0", {"key": "value"})]
 
         rate = monitor.get_event_rate("file-events", window_seconds=10)
         assert abs(rate - 0.1) < 0.01

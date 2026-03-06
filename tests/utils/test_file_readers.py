@@ -494,12 +494,8 @@ class TestCADReaders:
         """Create a minimal IGES file with proper column structure."""
         # IGES format: 80-char lines with section type at column 73
         start_line = "{:<72}S{:>7d}\n".format("Test IGES file", 1)
-        global_line = "{:<72}G{:>7d}\n".format(
-            "1H,,1H;,4Htest,8Htest.igs,8Htest.igs", 1
-        )
-        term_line = "{:<72}T{:>7d}\n".format(
-            "S      1G      1D      0P      0", 1
-        )
+        global_line = "{:<72}G{:>7d}\n".format("1H,,1H;,4Htest,8Htest.igs,8Htest.igs", 1)
+        term_line = "{:<72}T{:>7d}\n".format("S      1G      1D      0P      0", 1)
 
         iges_path = tmp_path / "model.igs"
         iges_path.write_text(start_line + global_line + term_line)

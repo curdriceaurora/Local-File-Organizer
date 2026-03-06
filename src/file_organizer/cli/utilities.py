@@ -17,9 +17,7 @@ console = Console()
 
 def search(
     query: str = typer.Argument(..., help="Search query (glob pattern or keyword)."),
-    directory: Path = typer.Argument(
-        ".", help="Directory to search in.", exists=False
-    ),
+    directory: Path = typer.Argument(".", help="Directory to search in.", exists=False),
     type_filter: Optional[str] = typer.Option(
         None,
         "--type",
@@ -36,24 +34,73 @@ def search(
     # File type extension mappings
     type_extensions: dict[str, set[str]] = {
         "text": {
-            ".txt", ".md", ".pdf", ".docx", ".doc", ".csv", ".xlsx", ".xls",
-            ".ppt", ".pptx", ".epub", ".py", ".js", ".ts", ".html", ".css",
-            ".json", ".yaml", ".yml", ".xml", ".rst", ".tex", ".log", ".cfg",
-            ".ini", ".toml",
+            ".txt",
+            ".md",
+            ".pdf",
+            ".docx",
+            ".doc",
+            ".csv",
+            ".xlsx",
+            ".xls",
+            ".ppt",
+            ".pptx",
+            ".epub",
+            ".py",
+            ".js",
+            ".ts",
+            ".html",
+            ".css",
+            ".json",
+            ".yaml",
+            ".yml",
+            ".xml",
+            ".rst",
+            ".tex",
+            ".log",
+            ".cfg",
+            ".ini",
+            ".toml",
         },
         "image": {
-            ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif",
-            ".webp", ".svg", ".ico",
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".bmp",
+            ".tiff",
+            ".tif",
+            ".webp",
+            ".svg",
+            ".ico",
         },
         "video": {
-            ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm",
+            ".mp4",
+            ".avi",
+            ".mkv",
+            ".mov",
+            ".wmv",
+            ".flv",
+            ".webm",
         },
         "audio": {
-            ".mp3", ".wav", ".flac", ".m4a", ".ogg", ".aac", ".wma",
+            ".mp3",
+            ".wav",
+            ".flac",
+            ".m4a",
+            ".ogg",
+            ".aac",
+            ".wma",
         },
         "archive": {
-            ".zip", ".7z", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".rar",
-            ".gz", ".bz2",
+            ".zip",
+            ".7z",
+            ".tar",
+            ".tar.gz",
+            ".tgz",
+            ".tar.bz2",
+            ".rar",
+            ".gz",
+            ".bz2",
         },
     }
 
@@ -137,13 +184,15 @@ def search(
         records = []
         for p in matches:
             stat = p.stat()
-            records.append({
-                "path": str(p),
-                "size": stat.st_size,
-                "modified": datetime.fromtimestamp(
-                    stat.st_mtime, tz=UTC
-                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            })
+            records.append(
+                {
+                    "path": str(p),
+                    "size": stat.st_size,
+                    "modified": datetime.fromtimestamp(stat.st_mtime, tz=UTC).strftime(
+                        "%Y-%m-%dT%H:%M:%SZ"
+                    ),
+                }
+            )
         typer.echo(json_mod.dumps(records, indent=2))
     else:
         typer.echo(f"Found {len(matches)} file(s):")
@@ -213,8 +262,7 @@ def analyze(
         model.initialize()
     except ImportError as exc:
         console.print(
-            "[red]Error: Ollama is not available. "
-            "Please install Ollama to use AI analysis.[/red]"
+            "[red]Error: Ollama is not available. Please install Ollama to use AI analysis.[/red]"
         )
         raise typer.Exit(code=1) from exc
 

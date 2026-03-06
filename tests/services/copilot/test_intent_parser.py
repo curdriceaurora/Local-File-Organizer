@@ -21,6 +21,7 @@ def parser() -> IntentParser:
 # Empty / fallback
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestParseEdgeCases:
     """Edge cases for the parse method."""
@@ -55,6 +56,7 @@ class TestParseEdgeCases:
 # Undo / Redo (highest confidence)
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestUndoRedo:
     """Tests for undo/redo intent detection."""
@@ -82,18 +84,22 @@ class TestUndoRedo:
 # Organize
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestOrganize:
     """Tests for organize intent detection and parameter extraction."""
 
-    @pytest.mark.parametrize("text", [
-        "organise my Downloads folder",
-        "organize these files",
-        "sort my files by type",
-        "clean up the desktop",
-        "tidy my documents",
-        "categorize these",
-    ])
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "organise my Downloads folder",
+            "organize these files",
+            "sort my files by type",
+            "clean up the desktop",
+            "tidy my documents",
+            "categorize these",
+        ],
+    )
     def test_organize_keywords(self, parser: IntentParser, text: str) -> None:
         intent = parser.parse(text)
         assert intent.intent_type == IntentType.ORGANIZE
@@ -123,15 +129,19 @@ class TestOrganize:
 # Move
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestMove:
     """Tests for move intent detection and parameter extraction."""
 
-    @pytest.mark.parametrize("text", [
-        "move this file",
-        "relocate the document",
-        "transfer the archive",
-    ])
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "move this file",
+            "relocate the document",
+            "transfer the archive",
+        ],
+    )
     def test_move_keywords(self, parser: IntentParser, text: str) -> None:
         intent = parser.parse(text)
         assert intent.intent_type == IntentType.MOVE
@@ -151,6 +161,7 @@ class TestMove:
 # ------------------------------------------------------------------ #
 # Rename
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.unit
 class TestRename:
@@ -178,19 +189,29 @@ class TestRename:
 # Find
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestFind:
     """Tests for find intent detection and parameter extraction."""
 
-    @pytest.mark.parametrize("text,expected_query", [
-        ("find budget report", "budget report"),
-        ("search for tax documents", "for tax documents"),
-        ("where is my resume", None),  # "where is" matches, query extraction uses different keywords
-        ("locate the contract", "the contract"),
-        ("look for vacation photos", "vacation photos"),
-    ])
+    @pytest.mark.parametrize(
+        "text,expected_query",
+        [
+            ("find budget report", "budget report"),
+            ("search for tax documents", "for tax documents"),
+            (
+                "where is my resume",
+                None,
+            ),  # "where is" matches, query extraction uses different keywords
+            ("locate the contract", "the contract"),
+            ("look for vacation photos", "vacation photos"),
+        ],
+    )
     def test_find_keywords_and_query(
-        self, parser: IntentParser, text: str, expected_query: str | None,
+        self,
+        parser: IntentParser,
+        text: str,
+        expected_query: str | None,
     ) -> None:
         intent = parser.parse(text)
         assert intent.intent_type == IntentType.FIND
@@ -207,15 +228,19 @@ class TestFind:
 # Preview
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestPreview:
     """Tests for preview intent detection."""
 
-    @pytest.mark.parametrize("text", [
-        "preview changes",
-        "dry run the operation",
-        "dry-run this",
-    ])
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "preview changes",
+            "dry run the operation",
+            "dry-run this",
+        ],
+    )
     def test_preview_keywords(self, parser: IntentParser, text: str) -> None:
         intent = parser.parse(text)
         assert intent.intent_type == IntentType.PREVIEW
@@ -243,16 +268,20 @@ class TestPreview:
 # Suggest
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestSuggest:
     """Tests for suggest intent detection."""
 
-    @pytest.mark.parametrize("text", [
-        "suggest a location",
-        "recommend where to put this",
-        "where should I save this?",
-        "is there a better location?",
-    ])
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "suggest a location",
+            "recommend where to put this",
+            "where should I save this?",
+            "is there a better location?",
+        ],
+    )
     def test_suggest_keywords(self, parser: IntentParser, text: str) -> None:
         intent = parser.parse(text)
         assert intent.intent_type == IntentType.SUGGEST
@@ -262,16 +291,20 @@ class TestSuggest:
 # Status
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestStatus:
     """Tests for status intent detection."""
 
-    @pytest.mark.parametrize("text", [
-        "status",
-        "how many files are left?",
-        "show me the statistics",
-        "what are the stats?",
-    ])
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "status",
+            "how many files are left?",
+            "show me the statistics",
+            "what are the stats?",
+        ],
+    )
     def test_status_keywords(self, parser: IntentParser, text: str) -> None:
         intent = parser.parse(text)
         assert intent.intent_type == IntentType.STATUS
@@ -281,16 +314,20 @@ class TestStatus:
 # Help
 # ------------------------------------------------------------------ #
 
+
 @pytest.mark.unit
 class TestHelp:
     """Tests for help intent detection."""
 
-    @pytest.mark.parametrize("text", [
-        "help",
-        "what can you do?",
-        "show me available commands",
-        "what are your capabilities?",
-    ])
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "help",
+            "what can you do?",
+            "show me available commands",
+            "what are your capabilities?",
+        ],
+    )
     def test_help_keywords(self, parser: IntentParser, text: str) -> None:
         intent = parser.parse(text)
         assert intent.intent_type == IntentType.HELP
@@ -299,6 +336,7 @@ class TestHelp:
 # ------------------------------------------------------------------ #
 # Parameter extraction helpers
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.unit
 class TestParameterExtraction:
@@ -331,6 +369,7 @@ class TestParameterExtraction:
 # ------------------------------------------------------------------ #
 # Confidence precedence
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.unit
 class TestConfidencePrecedence:

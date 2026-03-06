@@ -238,9 +238,7 @@ class TestExportProfile:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.ProfileExporter", return_value=mock_exporter),
         ):
-            result = runner.invoke(
-                profile_command, ["export", "test-profile", "-o", output_file]
-            )
+            result = runner.invoke(profile_command, ["export", "test-profile", "-o", output_file])
         assert result.exit_code == 0
         assert "Exported profile" in result.output
 
@@ -267,9 +265,7 @@ class TestExportProfile:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.ProfileExporter", return_value=mock_exporter),
         ):
-            result = runner.invoke(
-                profile_command, ["export", "test-profile", "-o", output_file]
-            )
+            result = runner.invoke(profile_command, ["export", "test-profile", "-o", output_file])
         assert result.exit_code != 0
         assert "Failed to export" in result.output
 
@@ -327,9 +323,7 @@ class TestImportProfile:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.ProfileImporter", return_value=mock_importer),
         ):
-            result = runner.invoke(
-                profile_command, ["import", str(import_file), "--preview"]
-            )
+            result = runner.invoke(profile_command, ["import", str(import_file), "--preview"])
         assert result.exit_code == 0
         assert "Import Preview" in result.output
         assert "preview-test" in result.output
@@ -354,15 +348,13 @@ class TestImportProfile:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.ProfileImporter", return_value=mock_importer),
         ):
-            result = runner.invoke(
-                profile_command, ["import", str(import_file), "--preview"]
-            )
+            result = runner.invoke(profile_command, ["import", str(import_file), "--preview"])
         assert result.exit_code == 0
         assert "Conflicts detected" in result.output
 
     def test_import_failure(self, runner, mock_manager, tmp_path):
         import_file = tmp_path / "import.json"
-        import_file.write_text('{}')
+        import_file.write_text("{}")
 
         mock_importer = MagicMock()
         mock_importer.import_profile.return_value = None
@@ -391,9 +383,7 @@ class TestMergeProfiles:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.ProfileMerger", return_value=mock_merger),
         ):
-            result = runner.invoke(
-                profile_command, ["merge", "p1", "p2", "-o", "merged"]
-            )
+            result = runner.invoke(profile_command, ["merge", "p1", "p2", "-o", "merged"])
         assert result.exit_code == 0
         assert "Merged 2 profiles" in result.output
 
@@ -403,9 +393,7 @@ class TestMergeProfiles:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.ProfileMerger", return_value=mock_merger),
         ):
-            result = runner.invoke(
-                profile_command, ["merge", "p1", "-o", "merged"]
-            )
+            result = runner.invoke(profile_command, ["merge", "p1", "-o", "merged"])
         assert result.exit_code != 0
         assert "Need at least 2 profiles" in result.output
 
@@ -463,9 +451,7 @@ class TestMergeProfiles:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.ProfileMerger", return_value=mock_merger),
         ):
-            result = runner.invoke(
-                profile_command, ["merge", "p1", "p2", "-o", "merged"]
-            )
+            result = runner.invoke(profile_command, ["merge", "p1", "p2", "-o", "merged"])
         assert result.exit_code != 0
         assert "Failed to merge" in result.output
 
@@ -548,9 +534,7 @@ class TestTemplateCommands:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.TemplateManager", return_value=mock_tmpl),
         ):
-            result = runner.invoke(
-                profile_command, ["template", "apply", "developer", "my-dev"]
-            )
+            result = runner.invoke(profile_command, ["template", "apply", "developer", "my-dev"])
         assert result.exit_code == 0
         assert "Created profile 'my-dev' from template 'developer'" in result.output
 
@@ -574,9 +558,7 @@ class TestTemplateCommands:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.TemplateManager", return_value=mock_tmpl),
         ):
-            result = runner.invoke(
-                profile_command, ["template", "apply", "bad", "my-prof"]
-            )
+            result = runner.invoke(profile_command, ["template", "apply", "bad", "my-prof"])
         assert result.exit_code != 0
         assert "Failed to create" in result.output
 
@@ -597,9 +579,7 @@ class TestMigrateProfile:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.ProfileMigrator", return_value=mock_migrator),
         ):
-            result = runner.invoke(
-                profile_command, ["migrate", "old", "--to-version", "2.0"]
-            )
+            result = runner.invoke(profile_command, ["migrate", "old", "--to-version", "2.0"])
         assert result.exit_code == 0
         assert "Migrated profile" in result.output
         mock_migrator.migrate_version.assert_called_once_with("old", "2.0", backup=True)
@@ -624,9 +604,7 @@ class TestMigrateProfile:
             patch("file_organizer.cli.profile.get_profile_manager", return_value=mock_manager),
             patch("file_organizer.cli.profile.ProfileMigrator", return_value=mock_migrator),
         ):
-            result = runner.invoke(
-                profile_command, ["migrate", "bad", "--to-version", "2.0"]
-            )
+            result = runner.invoke(profile_command, ["migrate", "bad", "--to-version", "2.0"])
         assert result.exit_code != 0
         assert "Failed to migrate" in result.output
 

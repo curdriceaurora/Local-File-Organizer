@@ -176,9 +176,7 @@ class TestGeneratePath:
         folder, _name = organizer.generate_path(metadata)
         assert folder == "Videos/2025"
 
-    def test_screen_recording_priority_over_short_clip(
-        self, organizer: VideoOrganizer
-    ) -> None:
+    def test_screen_recording_priority_over_short_clip(self, organizer: VideoOrganizer) -> None:
         # Short screen recording should go to Screen_Recordings, not Short_Clips
         metadata = _make_metadata(
             filename="Screen Recording 2025-01-15 at 3.45.22 PM.mov",

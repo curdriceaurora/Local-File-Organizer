@@ -314,7 +314,9 @@ class TestDetectDevice:
         """When torch is not installed at all, we fall back to cpu."""
         t = AudioTranscriber.__new__(AudioTranscriber)
 
-        original_import = __builtins__.__import__ if hasattr(__builtins__, '__import__') else __import__
+        original_import = (
+            __builtins__.__import__ if hasattr(__builtins__, "__import__") else __import__
+        )
 
         def fake_import(name, *args, **kwargs):
             if name == "torch":
@@ -338,9 +340,7 @@ class TestLoadModel:
     def test_load_model_success(self, make_transcriber: Any) -> None:
         t = make_transcriber()
         mock_model = MagicMock()
-        with patch(
-            "file_organizer.models.audio_transcriber.WhisperModel", return_value=mock_model
-        ):
+        with patch("file_organizer.models.audio_transcriber.WhisperModel", return_value=mock_model):
             model = t._load_model()
         assert model is mock_model
 
@@ -397,9 +397,7 @@ class TestDetectLanguage:
         with pytest.raises(FileNotFoundError, match="Audio file not found"):
             t.detect_language("/nonexistent/file.wav")
 
-    def test_detect_language_english(
-        self, make_transcriber: Any, tmp_audio_file: Path
-    ) -> None:
+    def test_detect_language_english(self, make_transcriber: Any, tmp_audio_file: Path) -> None:
         t = make_transcriber()
         info = _make_transcribe_info(language="en", language_probability=0.97)
         mock_model = MagicMock()
@@ -430,8 +428,14 @@ class TestDetectLanguage:
         self, make_transcriber: Any, tmp_audio_file: Path
     ) -> None:
         """Verify several languages from the internal mapping."""
-        for code, name in [("es", "Spanish"), ("fr", "French"), ("de", "German"),
-                           ("zh", "Chinese"), ("ja", "Japanese"), ("ko", "Korean")]:
+        for code, name in [
+            ("es", "Spanish"),
+            ("fr", "French"),
+            ("de", "German"),
+            ("zh", "Chinese"),
+            ("ja", "Japanese"),
+            ("ko", "Korean"),
+        ]:
             t = make_transcriber()
             info = _make_transcribe_info(language=code, language_probability=0.90)
             mock_model = MagicMock()
@@ -458,9 +462,7 @@ class TestDetectLanguage:
             t.detect_language(tmp_audio_file)
             load_mock.assert_not_called()
 
-    def test_detect_language_failure(
-        self, make_transcriber: Any, tmp_audio_file: Path
-    ) -> None:
+    def test_detect_language_failure(self, make_transcriber: Any, tmp_audio_file: Path) -> None:
         t = make_transcriber()
         mock_model = MagicMock()
         mock_model.transcribe.side_effect = Exception("decode error")
@@ -497,9 +499,7 @@ class TestTranscribe:
         with pytest.raises(FileNotFoundError, match="Audio file not found"):
             t.transcribe("/nonexistent/audio.wav")
 
-    def test_transcribe_default_options(
-        self, make_transcriber: Any, tmp_audio_file: Path
-    ) -> None:
+    def test_transcribe_default_options(self, make_transcriber: Any, tmp_audio_file: Path) -> None:
         t = make_transcriber()
         seg = _make_segment(start=0.0, end=2.0, text=" Hello world ", avg_logprob=-0.2)
         info = _make_transcribe_info(language="en", language_probability=0.98, duration=2.0)
@@ -536,9 +536,7 @@ class TestTranscribe:
         expected_confidence = math.exp(log_prob)
         assert abs(result.segments[0].confidence - expected_confidence) < 1e-6
 
-    def test_transcribe_zero_logprob(
-        self, make_transcriber: Any, tmp_audio_file: Path
-    ) -> None:
+    def test_transcribe_zero_logprob(self, make_transcriber: Any, tmp_audio_file: Path) -> None:
         """When avg_logprob is 0 (falsy), confidence should be 0.0."""
         t = make_transcriber()
         seg = _make_segment(avg_logprob=0)
@@ -652,9 +650,7 @@ class TestTranscribe:
             t.transcribe(tmp_audio_file)
             load_mock.assert_not_called()
 
-    def test_transcribe_failure(
-        self, make_transcriber: Any, tmp_audio_file: Path
-    ) -> None:
+    def test_transcribe_failure(self, make_transcriber: Any, tmp_audio_file: Path) -> None:
         t = make_transcriber()
         mock_model = MagicMock()
         mock_model.transcribe.side_effect = RuntimeError("corrupted file")

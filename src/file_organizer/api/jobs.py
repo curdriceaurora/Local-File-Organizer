@@ -17,6 +17,7 @@ JobStateStatus = Literal["queued", "running", "completed", "failed"]
 @dataclass
 class JobState:
     """State record for a background API job."""
+
     job_id: str
     job_type: str
     status: JobStateStatus

@@ -76,12 +76,8 @@ class TestFullUpdateFlow:
             events.append((event, payload))
 
         with (
-            patch(
-                "file_organizer.updater.sidecar_updater.UpdateChecker"
-            ) as MockChecker,
-            patch(
-                "file_organizer.updater.sidecar_updater.UpdateInstaller"
-            ) as MockInstaller,
+            patch("file_organizer.updater.sidecar_updater.UpdateChecker") as MockChecker,
+            patch("file_organizer.updater.sidecar_updater.UpdateInstaller") as MockInstaller,
         ):
             checker = MockChecker.return_value
             checker.current_version = "2.0.0"
@@ -141,9 +137,7 @@ class TestFullUpdateFlow:
 class TestSha256VerificationIntegration:
     """Integration test: SHA256 check is enforced throughout the flow."""
 
-    def test_sha256_verification_passes_for_correct_digest(
-        self, tmp_path: Path
-    ) -> None:
+    def test_sha256_verification_passes_for_correct_digest(self, tmp_path: Path) -> None:
         """verify_sha256 returns True for a file with a known correct digest."""
         content = b"integration test binary content"
         target = tmp_path / "binary"
@@ -151,9 +145,7 @@ class TestSha256VerificationIntegration:
         digest = _sha256_of(content)
         assert verify_sha256(target, digest) is True
 
-    def test_sha256_verification_fails_for_tampered_file(
-        self, tmp_path: Path
-    ) -> None:
+    def test_sha256_verification_fails_for_tampered_file(self, tmp_path: Path) -> None:
         """verify_sha256 returns False when a file has been tampered with."""
         original_content = b"original binary"
         tampered_content = b"tampered binary"
@@ -162,9 +154,7 @@ class TestSha256VerificationIntegration:
         expected_digest = _sha256_of(original_content)
         assert verify_sha256(target, expected_digest) is False
 
-    def test_download_with_wrong_sha256_returns_none(
-        self, tmp_path: Path
-    ) -> None:
+    def test_download_with_wrong_sha256_returns_none(self, tmp_path: Path) -> None:
         """When the installer reports a download failure, coordinated_update
         emits update-failed and returns success=False."""
         release = _make_release()
@@ -184,9 +174,7 @@ class TestSha256VerificationIntegration:
             # Simulate failed download (SHA256 mismatch caught inside installer)
             inst.download_asset.return_value = None
 
-            result = coordinated_update(
-                event_callback=lambda e, _: events.append(e)
-            )
+            result = coordinated_update(event_callback=lambda e, _: events.append(e))
 
         assert result.success is False
         assert "update-failed" in events
@@ -200,9 +188,7 @@ class TestSha256VerificationIntegration:
 class TestRollbackIntegration:
     """Integration test: rollback leaves the system in a consistent state."""
 
-    def test_rollback_called_when_sidecar_install_fails(
-        self, tmp_path: Path
-    ) -> None:
+    def test_rollback_called_when_sidecar_install_fails(self, tmp_path: Path) -> None:
         """UpdateManager.rollback is invoked when sidecar installation fails."""
         release = _make_release()
         downloaded = tmp_path / "dl.bin"
@@ -220,9 +206,7 @@ class TestRollbackIntegration:
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = ""
             inst.download_asset.return_value = downloaded
-            inst.install.return_value = InstallResult(
-                success=False, message="Permission denied."
-            )
+            inst.install.return_value = InstallResult(success=False, message="Permission denied.")
 
             mgr = MM.return_value
             mgr.rollback.return_value = True
@@ -232,9 +216,7 @@ class TestRollbackIntegration:
         assert result.rolled_back is True
         mgr.rollback.assert_called_once()
 
-    def test_result_message_reflects_rollback_status(
-        self, tmp_path: Path
-    ) -> None:
+    def test_result_message_reflects_rollback_status(self, tmp_path: Path) -> None:
         """The result message explicitly mentions rollback outcome."""
         release = _make_release()
         downloaded = tmp_path / "dl.bin"
@@ -252,9 +234,7 @@ class TestRollbackIntegration:
             inst.select_asset.return_value = release.assets[0]
             inst.find_checksum.return_value = ""
             inst.download_asset.return_value = downloaded
-            inst.install.return_value = InstallResult(
-                success=False, message="Disk full."
-            )
+            inst.install.return_value = InstallResult(success=False, message="Disk full.")
 
             MM.return_value.rollback.return_value = True
 

@@ -236,11 +236,13 @@ class TestSelectAsset:
     @patch("platform.machine", return_value="x86_64")
     def test_select_linux_x64(self, _m, _s):
         inst = UpdateInstaller(install_dir=Path("/tmp"))
-        release = self._make_release([
-            "app-linux-x86_64.AppImage",
-            "app-macos-arm64.zip",
-            "SHA256SUMS.txt",
-        ])
+        release = self._make_release(
+            [
+                "app-linux-x86_64.AppImage",
+                "app-macos-arm64.zip",
+                "SHA256SUMS.txt",
+            ]
+        )
         asset = inst.select_asset(release)
         assert asset is not None
         assert "linux" in asset.name.lower()
@@ -249,10 +251,12 @@ class TestSelectAsset:
     @patch("platform.machine", return_value="arm64")
     def test_select_macos_arm(self, _m, _s):
         inst = UpdateInstaller(install_dir=Path("/tmp"))
-        release = self._make_release([
-            "app-macos-universal.tar.gz",
-            "app-linux-x86_64.AppImage",
-        ])
+        release = self._make_release(
+            [
+                "app-macos-universal.tar.gz",
+                "app-linux-x86_64.AppImage",
+            ]
+        )
         asset = inst.select_asset(release)
         assert asset is not None
         assert "macos" in asset.name.lower()
@@ -261,10 +265,12 @@ class TestSelectAsset:
     @patch("platform.machine", return_value="AMD64")
     def test_select_windows(self, _m, _s):
         inst = UpdateInstaller(install_dir=Path("/tmp"))
-        release = self._make_release([
-            "app-windows-amd64.exe",
-            "app-linux-x86_64.AppImage",
-        ])
+        release = self._make_release(
+            [
+                "app-windows-amd64.exe",
+                "app-linux-x86_64.AppImage",
+            ]
+        )
         asset = inst.select_asset(release)
         assert asset is not None
         assert "windows" in asset.name.lower()
@@ -281,10 +287,12 @@ class TestSelectAsset:
     @patch("platform.machine", return_value="x86_64")
     def test_skips_checksum_files(self, _m, _s):
         inst = UpdateInstaller(install_dir=Path("/tmp"))
-        release = self._make_release([
-            "app-linux-x86_64.sha256",
-            "app-linux-x86_64.AppImage",
-        ])
+        release = self._make_release(
+            [
+                "app-linux-x86_64.sha256",
+                "app-linux-x86_64.AppImage",
+            ]
+        )
         asset = inst.select_asset(release)
         assert asset is not None
         assert asset.name.endswith(".AppImage")

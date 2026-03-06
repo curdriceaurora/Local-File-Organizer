@@ -81,7 +81,9 @@ class TestCopilotMessageLogAddMessage:
         log = CopilotMessageLog()
         log.mount = MagicMock()
         mock_widget = MagicMock()
-        with patch("file_organizer.tui.copilot_view.Static", return_value=mock_widget) as mock_static:
+        with patch(
+            "file_organizer.tui.copilot_view.Static", return_value=mock_widget
+        ) as mock_static:
             log.add_message(MessageRole.USER, "hello")
         markup = mock_static.call_args[0][0]
         assert "You>" in markup
@@ -93,7 +95,9 @@ class TestCopilotMessageLogAddMessage:
         log = CopilotMessageLog()
         log.mount = MagicMock()
         mock_widget = MagicMock()
-        with patch("file_organizer.tui.copilot_view.Static", return_value=mock_widget) as mock_static:
+        with patch(
+            "file_organizer.tui.copilot_view.Static", return_value=mock_widget
+        ) as mock_static:
             log.add_message(MessageRole.ASSISTANT, "I can help")
         markup = mock_static.call_args[0][0]
         assert "Copilot>" in markup
@@ -105,7 +109,9 @@ class TestCopilotMessageLogAddMessage:
         log = CopilotMessageLog()
         log.mount = MagicMock()
         mock_widget = MagicMock()
-        with patch("file_organizer.tui.copilot_view.Static", return_value=mock_widget) as mock_static:
+        with patch(
+            "file_organizer.tui.copilot_view.Static", return_value=mock_widget
+        ) as mock_static:
             log.add_message(MessageRole.SYSTEM, "system msg")
         markup = mock_static.call_args[0][0]
         assert "dim" in markup
@@ -116,7 +122,9 @@ class TestCopilotMessageLogAddMessage:
         log = CopilotMessageLog()
         log.mount = MagicMock()
         mock_widget = MagicMock()
-        with patch("file_organizer.tui.copilot_view.Static", return_value=mock_widget) as mock_static:
+        with patch(
+            "file_organizer.tui.copilot_view.Static", return_value=mock_widget
+        ) as mock_static:
             log.add_message(MessageRole.USER, "[test]")
         markup = mock_static.call_args[0][0]
         assert "\\[test]" in markup
@@ -135,7 +143,9 @@ class TestCopilotMessageLogAddMessage:
         log = CopilotMessageLog()
         log.mount = MagicMock()
         mock_widget = MagicMock()
-        with patch("file_organizer.tui.copilot_view.Static", return_value=mock_widget) as mock_static:
+        with patch(
+            "file_organizer.tui.copilot_view.Static", return_value=mock_widget
+        ) as mock_static:
             log.add_system_note("Welcome!")
         markup = mock_static.call_args[0][0]
         assert "dim italic" in markup

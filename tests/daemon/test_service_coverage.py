@@ -29,6 +29,7 @@ def _make_config(**kwargs) -> DaemonConfig:
 
 class TestDaemonServiceInit:
     """TestDaemonServiceInit test suite."""
+
     def test_initial_state(self):
         """Test initial state."""
         config = _make_config()
@@ -40,6 +41,7 @@ class TestDaemonServiceInit:
 
 class TestDaemonServiceStartBackground:
     """TestDaemonServiceStartBackground test suite."""
+
     def test_start_and_stop(self):
         """Test start and stop."""
         config = _make_config()
@@ -72,6 +74,7 @@ class TestDaemonServiceStartBackground:
 
 class TestDaemonServiceRestart:
     """TestDaemonServiceRestart test suite."""
+
     def test_restart(self):
         """Test restart."""
         config = _make_config()
@@ -96,6 +99,7 @@ class TestDaemonServiceRestart:
 
 class TestDaemonServiceCallbacks:
     """TestDaemonServiceCallbacks test suite."""
+
     def test_on_start_callback(self):
         """Test on start callback."""
         config = _make_config()
@@ -151,6 +155,7 @@ class TestDaemonServiceCallbacks:
 
 class TestDaemonServicePidFile:
     """TestDaemonServicePidFile test suite."""
+
     def test_pid_file_written_and_removed(self, tmp_path):
         """Test pid file written and removed."""
         pid_file = tmp_path / "daemon.pid"
@@ -168,6 +173,7 @@ class TestDaemonServicePidFile:
 
 class TestDaemonServiceScheduler:
     """TestDaemonServiceScheduler test suite."""
+
     def test_scheduler_accessible(self):
         """Test scheduler accessible."""
         config = _make_config()
@@ -177,6 +183,7 @@ class TestDaemonServiceScheduler:
 
 class TestDaemonServiceSignalHandling:
     """TestDaemonServiceSignalHandling test suite."""
+
     def test_handle_signal_writes_to_pipe(self):
         """Signal handler writes to self-pipe (no longer sets stop event directly)."""
         import os
@@ -193,6 +200,7 @@ class TestDaemonServiceSignalHandling:
 
 class TestDaemonServiceUptimeProperty:
     """TestDaemonServiceUptimeProperty test suite."""
+
     def test_uptime_zero_when_not_running(self):
         """Test uptime zero when not running."""
         config = _make_config()
@@ -221,6 +229,7 @@ class TestDaemonServiceUptimeProperty:
 
 class TestDaemonServiceForeground:
     """TestDaemonServiceForeground test suite."""
+
     def test_start_foreground_runs_loop_until_stop(self, tmp_path):
         """start() runs in foreground blocking until stop_event is set."""
         pid_file = tmp_path / "daemon.pid"
@@ -277,6 +286,7 @@ class TestDaemonServiceForeground:
 
 class TestDaemonServiceSignalHandlerEdgeCases:
     """TestDaemonServiceSignalHandlerEdgeCases test suite."""
+
     def test_signal_handlers_skipped_in_non_main_thread(self):
         """_install_signal_handlers should skip when not in main thread."""
         config = _make_config()

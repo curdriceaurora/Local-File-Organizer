@@ -119,9 +119,7 @@ def read_pdf_file(file_path: str | Path, max_pages: int = 5) -> str:
 
             text = "\n".join(pages_text)
 
-        logger.debug(
-            f"Extracted {len(text)} characters from {num_pages} pages of {file_path.name}"
-        )
+        logger.debug(f"Extracted {len(text)} characters from {num_pages} pages of {file_path.name}")
         return text
     except Exception as e:
         raise FileReadError(f"Failed to read PDF file {file_path}: {e}") from e

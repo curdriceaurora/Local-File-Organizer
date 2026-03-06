@@ -112,12 +112,8 @@ def scan(
     recursive: bool = typer.Option(True, help="Scan subdirectories."),
     min_size: int = typer.Option(0, help="Minimum file size in bytes."),
     max_size: Optional[int] = typer.Option(None, help="Maximum file size in bytes."),
-    include: Optional[str] = typer.Option(
-        None, help="Comma-separated glob include patterns."
-    ),
-    exclude: Optional[str] = typer.Option(
-        None, help="Comma-separated glob exclude patterns."
-    ),
+    include: Optional[str] = typer.Option(None, help="Comma-separated glob include patterns."),
+    exclude: Optional[str] = typer.Option(None, help="Comma-separated glob exclude patterns."),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
 ) -> None:
     """Scan a directory and display duplicate file groups."""

@@ -362,9 +362,7 @@ class TestContextWindowBehavior:
 
         for i in range(6):
             role = MessageRole.USER if i % 2 == 0 else MessageRole.ASSISTANT
-            cm.add_message(
-                CopilotMessage(role=role, content=f"Message {i} with some content")
-            )
+            cm.add_message(CopilotMessage(role=role, content=f"Message {i} with some content"))
 
         context = cm.get_context_string()
         max_chars = 500 * 4  # _CHARS_PER_TOKEN = 4
@@ -390,9 +388,7 @@ class TestContextWindowBehavior:
         # Simulate 4 turns (8 messages)
         for turn in range(4):
             cm.add_message(
-                CopilotMessage(
-                    role=MessageRole.USER, content=f"Turn {turn} user message"
-                )
+                CopilotMessage(role=MessageRole.USER, content=f"Turn {turn} user message")
             )
             cm.add_message(
                 CopilotMessage(
@@ -446,10 +442,7 @@ class TestEdgeCases:
     def test_message_order_preserved(self):
         """Test that message order is always preserved."""
         cm = ConversationManager()
-        messages = [
-            CopilotMessage(role=MessageRole.USER, content=f"Message {i}")
-            for i in range(5)
-        ]
+        messages = [CopilotMessage(role=MessageRole.USER, content=f"Message {i}") for i in range(5)]
 
         for msg in messages:
             cm.add_message(msg)

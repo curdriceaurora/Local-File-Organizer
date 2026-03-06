@@ -132,7 +132,12 @@ def test_api_router_uses_shared_service() -> None:
     service_mod = importlib.import_module("file_organizer.services.analyzer")
 
     # The API router must import these from the shared service
-    for name in ("generate_category", "generate_description", "calculate_confidence", "truncate_content"):
+    for name in (
+        "generate_category",
+        "generate_description",
+        "calculate_confidence",
+        "truncate_content",
+    ):
         router_obj = getattr(router_mod, name, None)
         service_obj = getattr(service_mod, name, None)
         assert router_obj is service_obj, (

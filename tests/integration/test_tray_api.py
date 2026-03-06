@@ -3,6 +3,7 @@
 These tests verify that desktop/src-tauri/src/tray.rs contains the correct API
 endpoint URLs and menu items required by issue #552.
 """
+
 import unittest
 from pathlib import Path
 

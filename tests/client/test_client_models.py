@@ -236,9 +236,7 @@ class TestMoveFileResponse:
         assert resp.dry_run is False
 
     def test_dry_run(self):
-        resp = MoveFileResponse(
-            source="s", destination="d", moved=False, dry_run=True
-        )
+        resp = MoveFileResponse(source="s", destination="d", moved=False, dry_run=True)
         assert resp.dry_run is True
         assert resp.moved is False
 
@@ -258,9 +256,7 @@ class TestDeleteFileResponse:
         assert resp.trashed_path is None
 
     def test_with_trashed_path(self):
-        resp = DeleteFileResponse(
-            path="/x", deleted=True, dry_run=False, trashed_path="/trash/x"
-        )
+        resp = DeleteFileResponse(path="/x", deleted=True, dry_run=False, trashed_path="/trash/x")
         assert resp.trashed_path == "/trash/x"
 
     def test_dry_run_not_deleted(self):
@@ -418,9 +414,7 @@ class TestTokenResponse:
         assert resp.token_type == "bearer"
 
     def test_custom_token_type(self):
-        resp = TokenResponse(
-            access_token="a", refresh_token="r", token_type="mac"
-        )
+        resp = TokenResponse(access_token="a", refresh_token="r", token_type="mac")
         assert resp.token_type == "mac"
 
     def test_default_token_type(self):
@@ -617,9 +611,7 @@ class TestDedupeExecuteResponse:
         assert resp.stats["removed"] == 2
 
     def test_dry_run(self):
-        resp = DedupeExecuteResponse(
-            path="/exec", removed=[], dry_run=True, stats={"removed": 0}
-        )
+        resp = DedupeExecuteResponse(path="/exec", removed=[], dry_run=True, stats={"removed": 0})
         assert resp.dry_run is True
         assert resp.removed == []
 

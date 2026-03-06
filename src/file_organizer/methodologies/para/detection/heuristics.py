@@ -132,9 +132,9 @@ class TemporalHeuristic(Heuristic):
         days_since_accessed = (now - stat.st_atime) / 86400
         # Cross-platform file age: use birth time if available (macOS/Windows),
         # fall back to modification time on Linux (st_ctime is inode change time, not creation).
-        if hasattr(stat, 'st_birthtime'):  # macOS
+        if hasattr(stat, "st_birthtime"):  # macOS
             ref_time = stat.st_birthtime
-        elif os.name == 'nt':  # Windows
+        elif os.name == "nt":  # Windows
             ref_time = stat.st_ctime
         else:  # Linux — use mtime as best proxy for "last active"
             ref_time = stat.st_mtime

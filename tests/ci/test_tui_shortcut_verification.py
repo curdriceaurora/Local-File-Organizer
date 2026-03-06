@@ -44,9 +44,7 @@ def _parse_global_shortcuts(text: str) -> set[str]:
     Returns normalised lowercase key names (e.g. ``{"q", "?", "tab"}``).
     """
     # Find the Global shortcuts table (between "### Global" and next "###").
-    match = re.search(
-        r"### Global\s*\n(.*?)(?=\n### |\n## |\Z)", text, re.DOTALL
-    )
+    match = re.search(r"### Global\s*\n(.*?)(?=\n### |\n## |\Z)", text, re.DOTALL)
     if not match:
         return set()
 
@@ -117,8 +115,7 @@ class TestTuiShortcutVerification:
                 missing.append(f"{doc_key!r} (expected binding key {mapped!r})")
 
         assert not missing, (
-            f"Documented shortcuts missing from FileOrganizerApp.BINDINGS: "
-            f"{', '.join(missing)}"
+            f"Documented shortcuts missing from FileOrganizerApp.BINDINGS: {', '.join(missing)}"
         )
 
     def test_bindings_documented(self) -> None:
@@ -137,8 +134,7 @@ class TestTuiShortcutVerification:
                 undocumented.append(f"{bk!r} (doc equivalent: {doc_equiv!r})")
 
         assert not undocumented, (
-            f"BINDINGS keys not documented in docs/tui.md Global table: "
-            f"{', '.join(undocumented)}"
+            f"BINDINGS keys not documented in docs/tui.md Global table: {', '.join(undocumented)}"
         )
 
 

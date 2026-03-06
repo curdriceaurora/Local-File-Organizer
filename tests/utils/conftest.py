@@ -23,8 +23,10 @@ def mock_nltk_globally(
     This fixture patches NLTK imports at module level to ensure tests work
     in clean containers without host NLTK corpus data.
     """
-    with patch('file_organizer.utils.text_processing.word_tokenize', mock_nltk_tokenizer), \
-         patch('file_organizer.utils.text_processing.stopwords', mock_nltk_stopwords), \
-         patch('file_organizer.utils.text_processing.WordNetLemmatizer', mock_nltk_lemmatizer), \
-         patch('file_organizer.utils.text_processing.nltk.probability.FreqDist', mock_nltk_freqdist):
+    with (
+        patch("file_organizer.utils.text_processing.word_tokenize", mock_nltk_tokenizer),
+        patch("file_organizer.utils.text_processing.stopwords", mock_nltk_stopwords),
+        patch("file_organizer.utils.text_processing.WordNetLemmatizer", mock_nltk_lemmatizer),
+        patch("file_organizer.utils.text_processing.nltk.probability.FreqDist", mock_nltk_freqdist),
+    ):
         yield

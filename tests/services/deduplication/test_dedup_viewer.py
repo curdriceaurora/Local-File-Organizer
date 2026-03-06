@@ -280,9 +280,7 @@ class TestBatchReview:
         review_skip = DuplicateReview([], [], skipped=True)
         with (
             patch.object(viewer, "show_comparison", return_value=review_skip),
-            patch(
-                "file_organizer.services.deduplication.viewer.Confirm.ask", return_value=False
-            ),
+            patch("file_organizer.services.deduplication.viewer.Confirm.ask", return_value=False),
             patch.object(viewer, "_display_review_summary"),
         ):
             groups = {"h1": [Path("/a.png")], "h2": [Path("/b.png")]}
@@ -298,9 +296,7 @@ class TestBatchReview:
 
         with (
             patch.object(viewer, "show_comparison", side_effect=lambda *a, **kw: next(call_iter)),
-            patch(
-                "file_organizer.services.deduplication.viewer.Confirm.ask", return_value=True
-            ),
+            patch("file_organizer.services.deduplication.viewer.Confirm.ask", return_value=True),
             patch.object(viewer, "_display_review_summary"),
         ):
             groups = {"h1": [Path("/a.png")], "h2": [Path("/b.png")]}
@@ -312,9 +308,7 @@ class TestBatchReview:
         review_skip = DuplicateReview([], [], skipped=True)
         with (
             patch.object(viewer, "show_comparison", return_value=review_skip),
-            patch(
-                "file_organizer.services.deduplication.viewer.Confirm.ask"
-            ) as mock_confirm,
+            patch("file_organizer.services.deduplication.viewer.Confirm.ask") as mock_confirm,
             patch.object(viewer, "_display_review_summary"),
         ):
             groups = {"h1": [Path("/a.png")]}
@@ -445,9 +439,7 @@ class TestGenerateAsciiPreview:
         result = viewer._generate_ascii_preview(Path("/nonexistent/img.png"))
         assert result is None
 
-    def test_real_image_returns_none_or_string(
-        self, tmp_path: Path, viewer: ComparisonViewer
-    ):
+    def test_real_image_returns_none_or_string(self, tmp_path: Path, viewer: ComparisonViewer):
         """With a real image the function either returns a string or None
         depending on the Pillow version.  Either outcome is acceptable."""
         img_path = _make_png(tmp_path, "preview.png", (80, 60))
@@ -483,7 +475,9 @@ class TestGenerateAsciiPreview:
             "file_organizer.services.deduplication.viewer.Image.open",
             return_value=mock_open_cm,
         ):
-            result = viewer._generate_ascii_preview(Path("/fake/img.png"), max_width=40, max_height=15)
+            result = viewer._generate_ascii_preview(
+                Path("/fake/img.png"), max_width=40, max_height=15
+            )
 
         assert result is not None
         assert isinstance(result, str)
@@ -529,7 +523,9 @@ class TestGenerateAsciiPreview:
             "file_organizer.services.deduplication.viewer.Image.open",
             return_value=mock_cm,
         ):
-            result = viewer._generate_ascii_preview(Path("/fake/wide.png"), max_width=20, max_height=10)
+            result = viewer._generate_ascii_preview(
+                Path("/fake/wide.png"), max_width=20, max_height=10
+            )
         assert result is not None
 
         # Portrait: 100x400, aspect_ratio=0.25 < 1
@@ -541,7 +537,9 @@ class TestGenerateAsciiPreview:
             "file_organizer.services.deduplication.viewer.Image.open",
             return_value=mock_cm2,
         ):
-            result = viewer._generate_ascii_preview(Path("/fake/tall.png"), max_width=20, max_height=10)
+            result = viewer._generate_ascii_preview(
+                Path("/fake/tall.png"), max_width=20, max_height=10
+            )
         assert result is not None
 
 
@@ -571,9 +569,7 @@ class TestPromptUserAction:
             assert viewer._prompt_user_action(3) == expected_action
 
     def test_valid_digit_returns_keep(self, viewer: ComparisonViewer):
-        with patch(
-            "file_organizer.services.deduplication.viewer.Prompt.ask", return_value="2"
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="2"):
             assert viewer._prompt_user_action(3) == UserAction.KEEP
 
     def test_invalid_digit_then_valid(self, viewer: ComparisonViewer):
@@ -621,9 +617,7 @@ class TestProcessUserAction:
         self, viewer: ComparisonViewer, sample_metadata, sample_metadata_small
     ):
         metas = [sample_metadata, sample_metadata_small]
-        with patch(
-            "file_organizer.services.deduplication.viewer.Confirm.ask", return_value=True
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Confirm.ask", return_value=True):
             result = viewer._process_user_action(UserAction.DELETE_ALL, metas)
         assert result.files_to_keep == []
         assert len(result.files_to_delete) == 2
@@ -632,9 +626,7 @@ class TestProcessUserAction:
         self, viewer: ComparisonViewer, sample_metadata, sample_metadata_small
     ):
         metas = [sample_metadata, sample_metadata_small]
-        with patch(
-            "file_organizer.services.deduplication.viewer.Confirm.ask", return_value=False
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Confirm.ask", return_value=False):
             result = viewer._process_user_action(UserAction.DELETE_ALL, metas)
         assert result.skipped is True
 
@@ -649,9 +641,7 @@ class TestProcessUserAction:
         self, viewer: ComparisonViewer, sample_metadata, sample_metadata_small
     ):
         metas = [sample_metadata, sample_metadata_small]
-        with patch(
-            "file_organizer.services.deduplication.viewer.Prompt.ask", return_value="1"
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="1"):
             result = viewer._process_user_action(UserAction.KEEP, metas)
         assert result.files_to_keep == [sample_metadata.path]
         assert result.files_to_delete == [sample_metadata_small.path]
@@ -660,24 +650,18 @@ class TestProcessUserAction:
         self, viewer: ComparisonViewer, sample_metadata, sample_metadata_small
     ):
         metas = [sample_metadata, sample_metadata_small]
-        with patch(
-            "file_organizer.services.deduplication.viewer.Prompt.ask", return_value="2"
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="2"):
             result = viewer._process_user_action(UserAction.KEEP, metas)
         assert result.files_to_keep == [sample_metadata_small.path]
         assert result.files_to_delete == [sample_metadata.path]
 
     def test_keep_invalid_choice_skips(self, viewer: ComparisonViewer, sample_metadata):
-        with patch(
-            "file_organizer.services.deduplication.viewer.Prompt.ask", return_value="abc"
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="abc"):
             result = viewer._process_user_action(UserAction.KEEP, [sample_metadata])
         assert result.skipped is True
 
     def test_keep_out_of_range_skips(self, viewer: ComparisonViewer, sample_metadata):
-        with patch(
-            "file_organizer.services.deduplication.viewer.Prompt.ask", return_value="99"
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="99"):
             result = viewer._process_user_action(UserAction.KEEP, [sample_metadata])
         assert result.skipped is True
 
@@ -752,9 +736,7 @@ class TestCalculateQualityScore:
             modified_time=datetime.now(UTC),
             mode="RGB",
         )
-        assert viewer._calculate_quality_score(png_meta) > viewer._calculate_quality_score(
-            gif_meta
-        )
+        assert viewer._calculate_quality_score(png_meta) > viewer._calculate_quality_score(gif_meta)
 
     def test_unknown_format_gets_low_multiplier(self, viewer: ComparisonViewer):
         meta = ImageMetadata(
@@ -861,25 +843,19 @@ class TestInteractiveSelect:
 
     def test_select_all(self, tmp_path: Path, viewer: ComparisonViewer):
         imgs = [_make_png(tmp_path, f"img{i}.png") for i in range(3)]
-        with patch(
-            "file_organizer.services.deduplication.viewer.Prompt.ask", return_value="all"
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="all"):
             result = viewer.interactive_select(imgs)
         assert result == imgs
 
     def test_select_none(self, tmp_path: Path, viewer: ComparisonViewer):
         imgs = [_make_png(tmp_path, f"img{i}.png") for i in range(3)]
-        with patch(
-            "file_organizer.services.deduplication.viewer.Prompt.ask", return_value="none"
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="none"):
             result = viewer.interactive_select(imgs)
         assert result == []
 
     def test_select_specific_numbers(self, tmp_path: Path, viewer: ComparisonViewer):
         imgs = [_make_png(tmp_path, f"img{i}.png") for i in range(4)]
-        with patch(
-            "file_organizer.services.deduplication.viewer.Prompt.ask", return_value="1,3"
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="1,3"):
             result = viewer.interactive_select(imgs)
         assert result == [imgs[0], imgs[2]]
 
@@ -896,16 +872,12 @@ class TestInteractiveSelect:
     ):
         """If metadata load fails for an image, fallback text is shown."""
         imgs = [Path("/nonexistent/bad.png")]
-        with patch(
-            "file_organizer.services.deduplication.viewer.Prompt.ask", return_value="all"
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="all"):
             result = viewer.interactive_select(imgs)
         assert result == imgs
 
     def test_custom_prompt(self, tmp_path: Path, viewer: ComparisonViewer):
         imgs = [_make_png(tmp_path, "one.png")]
-        with patch(
-            "file_organizer.services.deduplication.viewer.Prompt.ask", return_value="all"
-        ):
+        with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="all"):
             result = viewer.interactive_select(imgs, prompt="Pick your favorites")
         assert result == imgs

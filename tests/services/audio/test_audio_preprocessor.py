@@ -178,9 +178,7 @@ class TestConvertToWav:
         out = tmp_path / "out.wav"
 
         with patch("subprocess.run", side_effect=FileNotFoundError("ffmpeg not found")):
-            with patch.object(
-                preprocessor, "_convert_with_pydub", return_value=out
-            ) as mock_pydub:
+            with patch.object(preprocessor, "_convert_with_pydub", return_value=out) as mock_pydub:
                 result = preprocessor.convert_to_wav(audio_file, output_path=out)
                 mock_pydub.assert_called_once()
                 assert result == out
@@ -199,9 +197,7 @@ class TestConvertToWav:
         mock_result.returncode = 0
 
         with patch("subprocess.run", return_value=mock_result) as mock_run:
-            preprocessor.convert_to_wav(
-                audio_file, output_path=out, sample_rate=44100, channels=2
-            )
+            preprocessor.convert_to_wav(audio_file, output_path=out, sample_rate=44100, channels=2)
             # Verify ffmpeg was called with correct args
             cmd = mock_run.call_args[0][0]
             assert "44100" in cmd
@@ -256,9 +252,7 @@ class TestNormalizeAudio:
         mock_effects = MagicMock()
         mock_effects.normalize.return_value = MagicMock()
 
-        with patch.dict(
-            "sys.modules", {"pydub": mock_pydub, "pydub.effects": mock_effects}
-        ):
+        with patch.dict("sys.modules", {"pydub": mock_pydub, "pydub.effects": mock_effects}):
             result = preprocessor.normalize_audio(audio_file, output_path=out)
         assert result == out
 
@@ -267,9 +261,7 @@ class TestNormalizeAudio:
         mock_effects = MagicMock()
         mock_effects.normalize.return_value = MagicMock()
 
-        with patch.dict(
-            "sys.modules", {"pydub": mock_pydub, "pydub.effects": mock_effects}
-        ):
+        with patch.dict("sys.modules", {"pydub": mock_pydub, "pydub.effects": mock_effects}):
             result = preprocessor.normalize_audio(audio_file)
         assert result == audio_file
 

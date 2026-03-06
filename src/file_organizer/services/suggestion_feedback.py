@@ -56,9 +56,7 @@ class FeedbackEntry:
             file_path=data["file_path"],
             target_path=data.get("target_path"),
             confidence=data["confidence"],
-            timestamp=datetime.fromisoformat(
-                data["timestamp"].replace("Z", "+00:00")
-            ),
+            timestamp=datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00")),
             metadata=data.get("metadata", {}),
         )
 
@@ -99,9 +97,7 @@ class SuggestionFeedback:
         Args:
             feedback_file: Path to store feedback data
         """
-        self.feedback_file = (
-            feedback_file or _get_data_dir() / "suggestion_feedback.json"
-        )
+        self.feedback_file = feedback_file or _get_data_dir() / "suggestion_feedback.json"
         self.feedback_entries: list[FeedbackEntry] = []
         self.pattern_adjustments: dict[str, float] = {}
 

@@ -192,7 +192,9 @@ class TestMigrationBackupSystem:
         with pytest.raises(BackupIntegrityError):
             migration_manager.verify_backup(backup_id)
 
-    def test_backup_manifest_checksum_verification(self, migration_manager, temp_source, temp_target):
+    def test_backup_manifest_checksum_verification(
+        self, migration_manager, temp_source, temp_target
+    ):
         """Test manifest checksum verification."""
         plan = migration_manager.analyze_source(temp_source, temp_target, recursive=True)
         backup_id = migration_manager._create_backup(plan)

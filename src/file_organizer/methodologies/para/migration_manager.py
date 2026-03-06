@@ -360,14 +360,16 @@ class PARAMigrationManager:
                     file_hash = self._calculate_file_hash(backup_file)
 
                     # Record entry
-                    file_entries.append({
-                        "original_path": str(source),
-                        "backup_path": str(backup_file),
-                        "size": file_size,
-                        "hash": file_hash,
-                        "category": migration_file.target_category.value,
-                        "confidence": migration_file.confidence,
-                    })
+                    file_entries.append(
+                        {
+                            "original_path": str(source),
+                            "backup_path": str(backup_file),
+                            "size": file_size,
+                            "hash": file_hash,
+                            "category": migration_file.target_category.value,
+                            "confidence": migration_file.confidence,
+                        }
+                    )
 
                     total_size += file_size
 
@@ -405,7 +407,9 @@ class PARAMigrationManager:
                     "checksum": manifest.checksum,
                     "source_root": str(manifest.source_root),
                     "status": manifest.status,
-                    "restored_at": manifest.restored_at.strftime("%Y-%m-%dT%H:%M:%SZ") if manifest.restored_at else None,
+                    "restored_at": manifest.restored_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    if manifest.restored_at
+                    else None,
                     "file_entries": manifest.file_entries,
                 }
                 json.dump(manifest_data, f, indent=2)
@@ -479,7 +483,7 @@ class PARAMigrationManager:
                     if original_path.exists():
                         # Backup the current file (which was migrated) using a unique name
                         # to prevent collisions on repeated rollbacks.
-                        ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")+"Z"
+                        ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f") + "Z"
                         migrated_backup = original_path.with_name(
                             f"{original_path.stem}.{ts}.migrated{original_path.suffix}"
                         )

@@ -159,10 +159,7 @@ class TestRealtimeEvents:
         """Test getting events filtered by type."""
         _, client = _build_app()
 
-        resp = client.get(
-            "/api/v1/realtime/events",
-            params={"event_type": "file_created"}
-        )
+        resp = client.get("/api/v1/realtime/events", params={"event_type": "file_created"})
         assert resp.status_code in [200, 404]
 
 

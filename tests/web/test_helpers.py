@@ -95,9 +95,7 @@ class TestBaseContext:
 
     def test_base_context_has_required_keys(self, mock_request, settings):
         """Base context should include all required template variables."""
-        ctx = base_context(
-            mock_request, settings, active="home", title="Home"
-        )
+        ctx = base_context(mock_request, settings, active="home", title="Home")
         assert ctx["request"] == mock_request
         assert ctx["app_name"] == "File Organizer"
         assert ctx["version"] == "2.0.0"
@@ -121,9 +119,7 @@ class TestBaseContext:
 
     def test_nav_items_present(self, mock_request, settings):
         """Navigation items should be included."""
-        ctx = base_context(
-            mock_request, settings, active="home", title="Home"
-        )
+        ctx = base_context(mock_request, settings, active="home", title="Home")
         assert len(ctx["nav_items"]) > 0
         nav_labels = [item[0] for item in ctx["nav_items"]]
         assert "Home" in nav_labels

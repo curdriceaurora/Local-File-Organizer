@@ -35,12 +35,8 @@ class FakeOperation:
     """Minimal operation stand-in."""
 
     id: str | None = "op-1"
-    operation_type: SimpleNamespace = field(
-        default_factory=lambda: SimpleNamespace(value="move")
-    )
-    status: SimpleNamespace = field(
-        default_factory=lambda: SimpleNamespace(value="completed")
-    )
+    operation_type: SimpleNamespace = field(default_factory=lambda: SimpleNamespace(value="move"))
+    status: SimpleNamespace = field(default_factory=lambda: SimpleNamespace(value="completed"))
     timestamp: datetime | None = field(
         default_factory=lambda: datetime(2025, 1, 15, 10, 30, 0, tzinfo=UTC)
     )

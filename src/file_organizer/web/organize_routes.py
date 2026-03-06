@@ -711,7 +711,6 @@ def organize_execute(
         request,
         "organize/_job_status.html",
         {
-
             "job": job_view,
             "info_message": info_message,
             "error_message": error_message,
@@ -747,7 +746,6 @@ def organize_job_status(
         request,
         "organize/_job_status.html",
         {
-
             "job": job,
             "info_message": None,
             "error_message": None,
@@ -822,7 +820,6 @@ def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
         request,
         "organize/_job_status.html",
         {
-
             "job": refreshed_job,
             "info_message": info_message,
             "error_message": error_message,
@@ -866,7 +863,6 @@ def organize_job_rollback(request: Request, job_id: str) -> HTMLResponse:
         request,
         "organize/_job_status.html",
         {
-
             "job": refreshed_job,
             "info_message": None,
             "error_message": error_message,
@@ -893,7 +889,6 @@ def organize_history(
         request,
         "organize/_history.html",
         {
-
             "rows": rows,
             "status_filter": status_filter,
             "limit": limit,
@@ -908,7 +903,6 @@ def organize_stats(request: Request) -> HTMLResponse:
         request,
         "organize/_stats.html",
         {
-
             "stats": _build_organize_stats(),
         },
     )

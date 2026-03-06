@@ -27,7 +27,9 @@ class TestTextProcessing:
     def test_ensure_nltk_data_unavailable(self, mock_logger: MagicMock) -> None:
         """Test ensure_nltk_data when NLTK is not available."""
         ensure_nltk_data()
-        mock_logger.warning.assert_called_with("NLTK not available, text processing will be limited")
+        mock_logger.warning.assert_called_with(
+            "NLTK not available, text processing will be limited"
+        )
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.nltk.download")

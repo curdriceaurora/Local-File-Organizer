@@ -270,9 +270,7 @@ def read_rar_file(file_path: str | Path, max_files: int = 50) -> str:
             for info in info_list[:max_files]:
                 size_kb = info.file_size / 1024
                 compressed_kb = info.compress_size / 1024
-                lines.append(
-                    f"  - {info.filename} ({size_kb:.2f} KB → {compressed_kb:.2f} KB)"
-                )
+                lines.append(f"  - {info.filename} ({size_kb:.2f} KB → {compressed_kb:.2f} KB)")
 
             if total_files > max_files:
                 lines.append(f"  ... and {total_files - max_files} more files")

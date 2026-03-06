@@ -21,6 +21,7 @@ from file_organizer.optimization.database import DatabaseOptimizer
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_optimizer() -> DatabaseOptimizer:
     """Return a DatabaseOptimizer backed by an in-memory SQLite database."""
     return DatabaseOptimizer(":memory:")
@@ -37,6 +38,7 @@ def _optimizer_with_table(table_name: str = "items") -> DatabaseOptimizer:
 # ---------------------------------------------------------------------------
 # TestIdentifierValidation
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestIdentifierValidation:
@@ -95,6 +97,7 @@ class TestIdentifierValidation:
 # ---------------------------------------------------------------------------
 # TestPragmaValueValidation
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestPragmaValueValidation:
@@ -159,6 +162,7 @@ class TestPragmaValueValidation:
 # TestCreateIndexesSafe
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestCreateIndexesSafe:
     """create_indexes must work for valid indexes and block malicious ones."""
@@ -166,14 +170,10 @@ class TestCreateIndexesSafe:
     def test_create_indexes_on_existing_table(self) -> None:
         """Indexes on existing tables should be created without error."""
         opt = _optimizer_with_table("operations")
-        opt.connection.execute(
-            "ALTER TABLE operations ADD COLUMN timestamp TEXT"
-        )
+        opt.connection.execute("ALTER TABLE operations ADD COLUMN timestamp TEXT")
         opt.connection.commit()
 
-        count = opt.create_indexes(
-            extra_indexes=[("idx_ops_ts", "operations", "timestamp", False)]
-        )
+        count = opt.create_indexes(extra_indexes=[("idx_ops_ts", "operations", "timestamp", False)])
         assert count >= 1
         opt.close()
 
@@ -226,6 +226,7 @@ class TestCreateIndexesSafe:
 # TestOptimizePragmasSafe
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestOptimizePragmasSafe:
     """optimize_pragmas must accept valid settings and reject injections."""
@@ -274,6 +275,7 @@ class TestOptimizePragmasSafe:
 # TestCountRowsSafe
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestCountRowsSafe:
     """_count_rows must validate the table name before building SQL."""
@@ -307,6 +309,7 @@ class TestCountRowsSafe:
 # ---------------------------------------------------------------------------
 # TestGetPragmaIntSafe
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestGetPragmaIntSafe:

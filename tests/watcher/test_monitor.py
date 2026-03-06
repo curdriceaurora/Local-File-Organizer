@@ -429,9 +429,7 @@ class TestFileMonitorObserverFallback:
         # Type is preserved after stop
         assert monitor.observer_type in ("native", "polling")
 
-    def test_fallback_to_polling_observer(
-        self, watch_dir: Path
-    ) -> None:
+    def test_fallback_to_polling_observer(self, watch_dir: Path) -> None:
         """Test that monitor falls back to PollingObserver when native fails.
 
         This test mocks Observer.__init__ to raise an exception to simulate
@@ -461,9 +459,7 @@ class TestFileMonitorObserverFallback:
             assert mon.is_running is True
             mon.stop()
 
-    def test_polling_observer_detects_files(
-        self, watch_dir: Path
-    ) -> None:
+    def test_polling_observer_detects_files(self, watch_dir: Path) -> None:
         """Test that PollingObserver detects file changes.
 
         This test forces use of PollingObserver and verifies it can still
@@ -499,8 +495,7 @@ class TestFileMonitorObserverFallback:
             events = _wait_for_event_matching(
                 mon,
                 lambda evts: any(
-                    e.event_type == EventType.CREATED
-                    and e.path.name == "polling_test.txt"
+                    e.event_type == EventType.CREATED and e.path.name == "polling_test.txt"
                     for e in evts
                 ),
                 timeout=5.0,  # Give polling observer more time
@@ -508,8 +503,7 @@ class TestFileMonitorObserverFallback:
             created = [
                 e
                 for e in events
-                if e.event_type == EventType.CREATED
-                and e.path.name == "polling_test.txt"
+                if e.event_type == EventType.CREATED and e.path.name == "polling_test.txt"
             ]
             assert len(created) >= 1
             mon.stop()

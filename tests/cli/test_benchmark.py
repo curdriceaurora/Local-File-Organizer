@@ -38,11 +38,10 @@ def test_benchmark_runs_with_fixtures(tmp_path: Path) -> None:
     (fixtures_dir / "test1.txt").write_text("test content 1")
     (fixtures_dir / "test2.txt").write_text("test content 2")
 
-    with patch(
-        "file_organizer.optimization.resource_monitor.ResourceMonitor"
-    ) as mock_monitor_cls, patch(
-        "file_organizer.optimization.memory_profiler.MemoryProfiler"
-    ) as mock_profiler_cls:
+    with (
+        patch("file_organizer.optimization.resource_monitor.ResourceMonitor") as mock_monitor_cls,
+        patch("file_organizer.optimization.memory_profiler.MemoryProfiler") as mock_profiler_cls,
+    ):
         # Mock the monitor
         mock_monitor = MagicMock()
         mock_monitor.get_memory_usage.return_value.rss = 1000000
@@ -78,11 +77,10 @@ def test_benchmark_json_output(tmp_path: Path) -> None:
 
     (fixtures_dir / "test1.txt").write_text("test content")
 
-    with patch(
-        "file_organizer.optimization.resource_monitor.ResourceMonitor"
-    ) as mock_monitor_cls, patch(
-        "file_organizer.optimization.memory_profiler.MemoryProfiler"
-    ) as mock_profiler_cls:
+    with (
+        patch("file_organizer.optimization.resource_monitor.ResourceMonitor") as mock_monitor_cls,
+        patch("file_organizer.optimization.memory_profiler.MemoryProfiler") as mock_profiler_cls,
+    ):
         # Mock the monitor
         mock_monitor = MagicMock()
         mock_monitor.get_memory_usage.return_value.rss = 1000000
@@ -124,11 +122,10 @@ def test_benchmark_tracks_cache_hits(tmp_path: Path) -> None:
     fixtures_dir.mkdir()
     (fixtures_dir / "test1.txt").write_text("test content")
 
-    with patch(
-        "file_organizer.optimization.resource_monitor.ResourceMonitor"
-    ) as mock_monitor_cls, patch(
-        "file_organizer.optimization.memory_profiler.MemoryProfiler"
-    ) as mock_profiler_cls:
+    with (
+        patch("file_organizer.optimization.resource_monitor.ResourceMonitor") as mock_monitor_cls,
+        patch("file_organizer.optimization.memory_profiler.MemoryProfiler") as mock_profiler_cls,
+    ):
         # Mock the monitor
         mock_monitor = MagicMock()
         mock_monitor.get_memory_usage.return_value.rss = 1000000
@@ -160,11 +157,10 @@ def test_benchmark_json_includes_cache_metrics(tmp_path: Path) -> None:
     fixtures_dir.mkdir()
     (fixtures_dir / "test1.txt").write_text("test content")
 
-    with patch(
-        "file_organizer.optimization.resource_monitor.ResourceMonitor"
-    ) as mock_monitor_cls, patch(
-        "file_organizer.optimization.memory_profiler.MemoryProfiler"
-    ) as mock_profiler_cls:
+    with (
+        patch("file_organizer.optimization.resource_monitor.ResourceMonitor") as mock_monitor_cls,
+        patch("file_organizer.optimization.memory_profiler.MemoryProfiler") as mock_profiler_cls,
+    ):
         # Mock the monitor
         mock_monitor = MagicMock()
         mock_monitor.get_memory_usage.return_value.rss = 1000000
@@ -199,11 +195,10 @@ def test_benchmark_llm_call_count(tmp_path: Path) -> None:
     fixtures_dir.mkdir()
     (fixtures_dir / "test1.txt").write_text("test content")
 
-    with patch(
-        "file_organizer.optimization.resource_monitor.ResourceMonitor"
-    ) as mock_monitor_cls, patch(
-        "file_organizer.optimization.memory_profiler.MemoryProfiler"
-    ) as mock_profiler_cls:
+    with (
+        patch("file_organizer.optimization.resource_monitor.ResourceMonitor") as mock_monitor_cls,
+        patch("file_organizer.optimization.memory_profiler.MemoryProfiler") as mock_profiler_cls,
+    ):
         # Mock the monitor
         mock_monitor = MagicMock()
         mock_monitor.get_memory_usage.return_value.rss = 1000000

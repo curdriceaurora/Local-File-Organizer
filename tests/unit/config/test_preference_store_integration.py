@@ -14,7 +14,7 @@ def test_preference_store_with_path_manager():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
+        with patch.dict(os.environ, {"HOME": str(tmp_path)}):
             path_manager = PathManager()
             path_manager.ensure_directories()
 
@@ -32,7 +32,7 @@ def test_preference_store_saves_to_path_manager_dir():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
+        with patch.dict(os.environ, {"HOME": str(tmp_path)}):
             path_manager = PathManager()
             path_manager.ensure_directories()
 
@@ -41,8 +41,7 @@ def test_preference_store_saves_to_path_manager_dir():
 
             # Add a preference
             pref_store.add_preference(
-                path=Path("Documents"),
-                preference_data={"folder_mappings": {"test": "docs"}}
+                path=Path("Documents"), preference_data={"folder_mappings": {"test": "docs"}}
             )
 
             # Save preferences
@@ -58,7 +57,7 @@ def test_preference_store_loads_from_path_manager_dir():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
+        with patch.dict(os.environ, {"HOME": str(tmp_path)}):
             path_manager = PathManager()
             path_manager.ensure_directories()
 
@@ -67,8 +66,7 @@ def test_preference_store_loads_from_path_manager_dir():
 
             # Add and save a preference
             pref_store.add_preference(
-                path=Path("Documents"),
-                preference_data={"folder_mappings": {"test": "docs"}}
+                path=Path("Documents"), preference_data={"folder_mappings": {"test": "docs"}}
             )
             pref_store.save_preferences()
 
@@ -86,7 +84,7 @@ def test_preference_store_default_dir_vs_path_manager():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
 
-        with patch.dict(os.environ, {'HOME': str(tmp_path)}):
+        with patch.dict(os.environ, {"HOME": str(tmp_path)}):
             # Default PreferenceStore uses legacy path
             PreferenceStore()
 

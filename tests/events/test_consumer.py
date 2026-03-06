@@ -342,9 +342,7 @@ class TestEventConsumerStartStop:
             stop_quickly(),
         )
 
-        mock_manager.create_consumer_group.assert_called_once_with(
-            "file-events", "custom-grp"
-        )
+        mock_manager.create_consumer_group.assert_called_once_with("file-events", "custom-grp")
 
     @pytest.mark.asyncio
     async def test_start_consuming_uses_default_group(self, mock_manager: MagicMock):

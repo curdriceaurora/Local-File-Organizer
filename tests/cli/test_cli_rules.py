@@ -145,7 +145,16 @@ class TestRulesAdd:
         with patch(_RULE_MGR_ADD_PATH, return_value=mock_mgr):
             result = runner.invoke(
                 rules_app,
-                ["add", "move-images", "--ext", ".jpg,.png", "--action", "move", "--dest", "/images"],
+                [
+                    "add",
+                    "move-images",
+                    "--ext",
+                    ".jpg,.png",
+                    "--action",
+                    "move",
+                    "--dest",
+                    "/images",
+                ],
             )
         assert result.exit_code == 0
         assert "Added rule" in result.output
@@ -397,8 +406,6 @@ class TestRulesImport:
             patch(_RULE_SET_PATH) as mock_rule_set_cls,
         ):
             mock_rule_set_cls.from_dict.return_value = mock_rs
-            result = runner.invoke(
-                rules_app, ["import", str(yaml_file), "--set", "overridden"]
-            )
+            result = runner.invoke(rules_app, ["import", str(yaml_file), "--set", "overridden"])
         assert result.exit_code == 0
         assert mock_rs.name == "overridden"

@@ -130,7 +130,7 @@ class TestChatWithMocking:
         engine._intent_parser.parse = MagicMock(
             return_value=Intent(
                 intent_type=IntentType.CHAT,
-                                confidence=0.8,
+                confidence=0.8,
             )
         )
 
@@ -144,7 +144,7 @@ class TestChatWithMocking:
         engine._intent_parser.parse = MagicMock(
             return_value=Intent(
                 intent_type=IntentType.ORGANIZE,
-                                confidence=0.9,
+                confidence=0.9,
             )
         )
         engine._executor.execute = MagicMock(
@@ -162,7 +162,7 @@ class TestChatWithMocking:
         engine._intent_parser.parse = MagicMock(
             return_value=Intent(
                 intent_type=IntentType.CHAT,
-                                confidence=0.5,
+                confidence=0.5,
             )
         )
         engine._executor.execute = MagicMock()
@@ -177,7 +177,7 @@ class TestChatWithMocking:
         engine._intent_parser.parse = MagicMock(
             return_value=Intent(
                 intent_type=IntentType.ORGANIZE,
-                                confidence=0.9,
+                confidence=0.9,
             )
         )
         engine._executor.execute = MagicMock(
@@ -210,7 +210,7 @@ class TestResponseGeneration:
         engine._intent_parser.parse = MagicMock(
             return_value=Intent(
                 intent_type=IntentType.CHAT,
-                                confidence=0.5,
+                confidence=0.5,
             )
         )
 
@@ -224,7 +224,7 @@ class TestResponseGeneration:
         engine._intent_parser.parse = MagicMock(
             return_value=Intent(
                 intent_type=IntentType.HELP,
-                                confidence=0.9,
+                confidence=0.9,
             )
         )
 
@@ -238,7 +238,7 @@ class TestResponseGeneration:
         engine._intent_parser.parse = MagicMock(
             return_value=Intent(
                 intent_type=IntentType.STATUS,
-                                confidence=0.8,
+                confidence=0.8,
             )
         )
 
@@ -252,13 +252,11 @@ class TestResponseGeneration:
         engine._intent_parser.parse = MagicMock(
             return_value=Intent(
                 intent_type=IntentType.ORGANIZE,
-                                confidence=0.9,
+                confidence=0.9,
             )
         )
         engine._executor.execute = MagicMock(
-            return_value=ExecutionResult(
-                success=True, message="Organized 10 files successfully"
-            )
+            return_value=ExecutionResult(success=True, message="Organized 10 files successfully")
         )
 
         response = engine.chat("Organize")
@@ -381,11 +379,7 @@ class TestErrorHandling:
 
         engine = CopilotEngine()
         engine._intent_parser.parse = MagicMock(
-            return_value=Intent(
-                intent_type=IntentType.UNKNOWN,
-                confidence=0.0,
-                parameters={}
-            )
+            return_value=Intent(intent_type=IntentType.UNKNOWN, confidence=0.0, parameters={})
         )
 
         # Should return a response with fallback intent
@@ -416,7 +410,7 @@ class TestErrorHandling:
         engine._intent_parser.parse = MagicMock(
             return_value=Intent(
                 intent_type=IntentType.CHAT,
-                                confidence=0.5,
+                confidence=0.5,
             )
         )
 

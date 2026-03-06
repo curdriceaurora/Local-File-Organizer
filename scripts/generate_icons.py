@@ -26,11 +26,11 @@ except ImportError:
 
 
 # ── Design constants ──────────────────────────────────────────────────────────
-BG_COLOR = (37, 99, 235)        # #2563EB  Tailwind blue-600
-BG_COLOR_DARK = (29, 78, 216)   # #1D4ED8  slightly darker for depth
-FOLDER_COLOR = (255, 255, 255)   # white folder body
+BG_COLOR = (37, 99, 235)  # #2563EB  Tailwind blue-600
+BG_COLOR_DARK = (29, 78, 216)  # #1D4ED8  slightly darker for depth
+FOLDER_COLOR = (255, 255, 255)  # white folder body
 FOLDER_TAB_COLOR = (191, 219, 254)  # light blue folder tab
-ARROW_COLOR = (16, 185, 129)     # #10B981 green accent arrow
+ARROW_COLOR = (16, 185, 129)  # #10B981 green accent arrow
 
 OUTPUT_DIR = Path(__file__).parent.parent / "desktop" / "icons"
 
@@ -71,10 +71,10 @@ def draw_icon(size: int) -> Image.Image:
     )
 
     # ── Folder tab (small rounded rect above folder body) ─────────────────────
-    fx1 = s * 0.20   # folder left
-    fx2 = s * 0.80   # folder right
-    fy1 = s * 0.30   # folder top (body)
-    fy2 = s * 0.76   # folder bottom
+    fx1 = s * 0.20  # folder left
+    fx2 = s * 0.80  # folder right
+    fy1 = s * 0.30  # folder top (body)
+    fy2 = s * 0.76  # folder bottom
 
     tab_w = (fx2 - fx1) * 0.42
     tab_h = s * 0.07
@@ -95,7 +95,7 @@ def draw_icon(size: int) -> Image.Image:
 
     # ── Arrow (pointing down = organise / sort) ───────────────────────────────
     # Arrow shaft
-    cx = s * 0.50          # center x
+    cx = s * 0.50  # center x
     shaft_w = s * 0.08
     shaft_top = fy1 + (fy2 - fy1) * 0.14
     shaft_bot = fy1 + (fy2 - fy1) * 0.60
@@ -106,7 +106,7 @@ def draw_icon(size: int) -> Image.Image:
     # Arrow head (triangle pointing down)
     head_w = s * 0.22
     head_h = s * 0.16
-    head_top = shaft_bot - s * 0.01   # slight overlap
+    head_top = shaft_bot - s * 0.01  # slight overlap
     head_bot = head_top + head_h
     draw.polygon(
         [
@@ -166,7 +166,9 @@ def build_icns(images: dict[int, Image.Image], out: Path) -> None:
         # Not on macOS – save a placeholder PNG named .icns so the build
         # can substitute it later on a Mac CI runner.
         images[512].save(str(out), "PNG")
-        print(f"  Saved (PNG fallback, iconutil not available): {out.relative_to(OUTPUT_DIR.parent.parent)}")
+        print(
+            f"  Saved (PNG fallback, iconutil not available): {out.relative_to(OUTPUT_DIR.parent.parent)}"
+        )
         return
 
     # Build an .iconset directory then convert
@@ -176,15 +178,15 @@ def build_icns(images: dict[int, Image.Image], out: Path) -> None:
 
         # Required iconset filenames per Apple spec
         iconset_map = {
-            "icon_16x16.png":      16,
-            "icon_16x16@2x.png":   32,
-            "icon_32x32.png":      32,
-            "icon_32x32@2x.png":   64,
-            "icon_128x128.png":    128,
+            "icon_16x16.png": 16,
+            "icon_16x16@2x.png": 32,
+            "icon_32x32.png": 32,
+            "icon_32x32@2x.png": 64,
+            "icon_128x128.png": 128,
             "icon_128x128@2x.png": 256,
-            "icon_256x256.png":    256,
+            "icon_256x256.png": 256,
             "icon_256x256@2x.png": 512,
-            "icon_512x512.png":    512,
+            "icon_512x512.png": 512,
             "icon_512x512@2x.png": 1024,
         }
 

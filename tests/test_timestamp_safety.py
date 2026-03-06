@@ -36,9 +36,7 @@ class TestDTZRuleCompliance:
             capture_output=True,
             text=True,
         )
-        assert result.returncode == 0, (
-            f"DTZ violations found:\n{result.stdout}"
-        )
+        assert result.returncode == 0, f"DTZ violations found:\n{result.stdout}"
 
 
 @pytest.mark.unit
@@ -82,14 +80,10 @@ class TestPatternAbsence:
         """No utcnow() usage anywhere (deprecated in 3.12)."""
         pattern = re.compile(r"datetime\.utcnow\(\)")
         matches = self._scan_python_files(pattern)
-        assert not matches, (
-            "Found deprecated utcnow():\n" + "\n".join(matches)
-        )
+        assert not matches, "Found deprecated utcnow():\n" + "\n".join(matches)
 
     def test_no_utcfromtimestamp(self) -> None:
         """No utcfromtimestamp() usage (deprecated in 3.12)."""
         pattern = re.compile(r"datetime\.utcfromtimestamp\(\)")
         matches = self._scan_python_files(pattern)
-        assert not matches, (
-            "Found deprecated utcfromtimestamp():\n" + "\n".join(matches)
-        )
+        assert not matches, "Found deprecated utcfromtimestamp():\n" + "\n".join(matches)

@@ -87,11 +87,7 @@ def _load_plugin_directly(plugin_path: Path) -> type[Plugin]:
 
     for attr_name in dir(module):
         obj = getattr(module, attr_name)
-        if (
-            isinstance(obj, type)
-            and issubclass(obj, Plugin)
-            and obj is not Plugin
-        ):
+        if isinstance(obj, type) and issubclass(obj, Plugin) and obj is not Plugin:
             return obj
 
     raise RuntimeError(f"No Plugin subclass found in {plugin_path}")
@@ -147,9 +143,7 @@ class TestBypassAttempts:
     When Stream A lands, replace the ``patch`` blocks with real executor calls.
     """
 
-    def test_plugin_cannot_call_os_system(
-        self, malicious_plugin_class: type[Plugin]
-    ) -> None:
+    def test_plugin_cannot_call_os_system(self, malicious_plugin_class: type[Plugin]) -> None:
         """A plugin calling os.system() in on_load must raise a sandbox error.
 
         The fixture plugin (``malicious_plugin/plugin.py``) calls
@@ -260,9 +254,7 @@ class TestBypassAttempts:
                     return original_open(path, *args, **kwargs)
                 except ValueError:
                     continue
-            raise PluginPermissionError(
-                f"Plugin attempted to open forbidden path: {resolved}"
-            )
+            raise PluginPermissionError(f"Plugin attempted to open forbidden path: {resolved}")
 
         with patch("builtins.open", side_effect=_guarded_open):
             with pytest.raises((PluginPermissionError, PluginLoadError, OSError)):
@@ -316,9 +308,7 @@ class TestExecutorInterface:
         try:
             # on_load must not raise for a benign plugin.
             result = executor.call("on_load")
-            assert result is None, (
-                "on_load() returns None for a plugin that has no return value"
-            )
+            assert result is None, "on_load() returns None for a plugin that has no return value"
         finally:
             executor.stop()
 

@@ -120,17 +120,11 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
     plugin_instance: Plugin | None = None
     for _attr_name in dir(module):
         obj = getattr(module, _attr_name)
-        if (
-            isinstance(obj, type)
-            and issubclass(obj, Plugin)
-            and obj is not Plugin
-        ):
+        if isinstance(obj, type) and issubclass(obj, Plugin) and obj is not Plugin:
             try:
                 plugin_instance = obj()
             except Exception as exc:
-                sys.stderr.write(
-                    f"Error instantiating plugin class '{_attr_name}': {exc}\n"
-                )
+                sys.stderr.write(f"Error instantiating plugin class '{_attr_name}': {exc}\n")
                 sys.exit(1)
             break
 
@@ -353,8 +347,7 @@ class PluginExecutor:
                 # The daemon reader thread is still blocked on readline().
                 # It will be cleaned up when stop() kills the subprocess.
                 raise PluginError(
-                    f"Worker process did not respond within {timeout}s "
-                    "(possible hang or timeout)."
+                    f"Worker process did not respond within {timeout}s (possible hang or timeout)."
                 ) from None
             if isinstance(value, Exception):
                 raise PluginError(f"Failed to read from worker: {value}") from value
@@ -364,8 +357,7 @@ class PluginExecutor:
             ready, _, _ = select.select([self._proc.stdout], [], [], timeout)
             if not ready:
                 raise PluginError(
-                    f"Worker process did not respond within {timeout}s "
-                    "(possible hang or timeout)."
+                    f"Worker process did not respond within {timeout}s (possible hang or timeout)."
                 )
             return self._proc.stdout.readline()
 
@@ -395,9 +387,7 @@ class PluginExecutor:
                 "Call start() or use it as a context manager."
             )
         if self._proc.stdin is None or self._proc.stdout is None:
-            raise PluginError(
-                f"Worker pipes for '{self._plugin_name}' are unexpectedly closed."
-            )
+            raise PluginError(f"Worker pipes for '{self._plugin_name}' are unexpectedly closed.")
 
         call_msg = PluginCall(method=method, args=list(args), kwargs=kwargs)
         try:
@@ -405,8 +395,7 @@ class PluginExecutor:
             self._proc.stdin.flush()
         except BrokenPipeError as exc:
             raise PluginError(
-                f"Worker for '{self._plugin_name}' died before receiving "
-                f"call '{method}'."
+                f"Worker for '{self._plugin_name}' died before receiving call '{method}'."
             ) from exc
 
         raw = self._readline_with_timeout(timeout=10.0)
@@ -423,14 +412,12 @@ class PluginExecutor:
             result: PluginResult = decode_result(raw)
         except ValueError as exc:
             raise PluginError(
-                f"Corrupt IPC response from '{self._plugin_name}' "
-                f"(method='{method}'): {exc}"
+                f"Corrupt IPC response from '{self._plugin_name}' (method='{method}'): {exc}"
             ) from exc
 
         if not result.success:
             error_msg = (
-                f"Plugin '{self._plugin_name}' raised an error in "
-                f"'{method}': {result.error}"
+                f"Plugin '{self._plugin_name}' raised an error in '{method}': {result.error}"
             )
             # on_load failures surface as PluginLoadError so callers can
             # distinguish initialisation errors from runtime errors.

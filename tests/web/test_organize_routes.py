@@ -469,13 +469,18 @@ class TestBuildJobView:
         mock_job.updated_at = datetime(2025, 1, 2, tzinfo=UTC)
         mock_job.error = None
 
-        with patch("file_organizer.web.organize_routes.get_job", return_value=mock_job), \
-             patch("file_organizer.web.organize_routes._get_job_metadata", return_value={
-                 "methodology": "para",
-                 "input_dir": "/in",
-                 "output_dir": "/out",
-                 "dry_run": False,
-             }):
+        with (
+            patch("file_organizer.web.organize_routes.get_job", return_value=mock_job),
+            patch(
+                "file_organizer.web.organize_routes._get_job_metadata",
+                return_value={
+                    "methodology": "para",
+                    "input_dir": "/in",
+                    "output_dir": "/out",
+                    "dry_run": False,
+                },
+            ),
+        ):
             view = _build_job_view("job-1")
 
         assert view is not None
@@ -502,8 +507,10 @@ class TestBuildJobView:
         mock_job.updated_at = datetime(2025, 1, 2, tzinfo=UTC)
         mock_job.error = None
 
-        with patch("file_organizer.web.organize_routes.get_job", return_value=mock_job), \
-             patch("file_organizer.web.organize_routes._get_job_metadata", return_value={}):
+        with (
+            patch("file_organizer.web.organize_routes.get_job", return_value=mock_job),
+            patch("file_organizer.web.organize_routes._get_job_metadata", return_value={}),
+        ):
             view = _build_job_view("job-2")
 
         assert view is not None
@@ -522,11 +529,16 @@ class TestBuildJobView:
         mock_job.updated_at = datetime(2025, 1, 2, tzinfo=UTC)
         mock_job.error = None
 
-        with patch("file_organizer.web.organize_routes.get_job", return_value=mock_job), \
-             patch("file_organizer.web.organize_routes._get_job_metadata", return_value={
-                 "schedule_delay_minutes": 30,
-                 "scheduled_for": "2025-01-01T01:00:00Z",
-             }):
+        with (
+            patch("file_organizer.web.organize_routes.get_job", return_value=mock_job),
+            patch(
+                "file_organizer.web.organize_routes._get_job_metadata",
+                return_value={
+                    "schedule_delay_minutes": 30,
+                    "scheduled_for": "2025-01-01T01:00:00Z",
+                },
+            ),
+        ):
             view = _build_job_view("job-3")
 
         assert view is not None
@@ -559,8 +571,10 @@ class TestListOrganizeJobs:
         job2.job_id = "j2"
         job2.status = "failed"
 
-        with patch("file_organizer.web.organize_routes.list_jobs", return_value=[job1, job2]), \
-             patch("file_organizer.web.organize_routes._build_job_view") as mock_view:
+        with (
+            patch("file_organizer.web.organize_routes.list_jobs", return_value=[job1, job2]),
+            patch("file_organizer.web.organize_routes._build_job_view") as mock_view,
+        ):
             mock_view.return_value = {"status": "completed"}
             result = _list_organize_jobs(status_filter="completed")
 
@@ -574,8 +588,13 @@ class TestListOrganizeJobs:
         job1.job_id = "j1"
         job1.status = "completed"
 
-        with patch("file_organizer.web.organize_routes.list_jobs", return_value=[job1]), \
-             patch("file_organizer.web.organize_routes._build_job_view", return_value={"status": "completed"}):
+        with (
+            patch("file_organizer.web.organize_routes.list_jobs", return_value=[job1]),
+            patch(
+                "file_organizer.web.organize_routes._build_job_view",
+                return_value={"status": "completed"},
+            ),
+        ):
             result = _list_organize_jobs(status_filter="all")
 
         assert len(result) == 1
@@ -663,6 +682,7 @@ class TestModuleConstants:
 
     def test_max_delay(self):
         from file_organizer.web.organize_routes import ORGANIZE_MAX_DELAY_MIN
+
         assert ORGANIZE_MAX_DELAY_MIN > 0
 
         assert ORGANIZE_MAX_DELAY_MIN == 7 * 24 * 60

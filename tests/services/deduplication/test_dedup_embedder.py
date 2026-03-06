@@ -49,10 +49,15 @@ def embedder(mock_vectorizer):
     """Create a DocumentEmbedder with mocked sklearn."""
     mock_tfidf_cls = MagicMock(return_value=mock_vectorizer)
 
-    with patch.dict("sys.modules", {"sklearn": MagicMock(), "sklearn.feature_extraction": MagicMock(), "sklearn.feature_extraction.text": MagicMock()}):
-        with patch(
-            "sklearn.feature_extraction.text.TfidfVectorizer", mock_tfidf_cls
-        ):
+    with patch.dict(
+        "sys.modules",
+        {
+            "sklearn": MagicMock(),
+            "sklearn.feature_extraction": MagicMock(),
+            "sklearn.feature_extraction.text": MagicMock(),
+        },
+    ):
+        with patch("sklearn.feature_extraction.text.TfidfVectorizer", mock_tfidf_cls):
             from file_organizer.services.deduplication.embedder import DocumentEmbedder
 
             emb = DocumentEmbedder(max_features=100, ngram_range=(1, 2))
@@ -77,12 +82,20 @@ class TestDocumentEmbedderInit:
 
     def test_sklearn_import_error(self):
         """Raises ImportError when sklearn not available."""
-        with patch.dict("sys.modules", {"sklearn": None, "sklearn.feature_extraction": None, "sklearn.feature_extraction.text": None}):
+        with patch.dict(
+            "sys.modules",
+            {
+                "sklearn": None,
+                "sklearn.feature_extraction": None,
+                "sklearn.feature_extraction.text": None,
+            },
+        ):
             with pytest.raises(ImportError, match="scikit-learn"):
                 # Force reimport
                 import importlib
 
                 import file_organizer.services.deduplication.embedder as mod
+
                 importlib.reload(mod)
                 mod.DocumentEmbedder()
 

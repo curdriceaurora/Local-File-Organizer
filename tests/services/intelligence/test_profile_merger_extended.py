@@ -163,12 +163,8 @@ class TestMergeConfidenceData:
 
     def _make_profiles(self, pm):
         """Create two profiles with overlapping confidence data."""
-        p1 = _create_profile_with_data(
-            pm, "cd1", "CD1", confidence={"key1": 0.7, "key2": 0.5}
-        )
-        p2 = _create_profile_with_data(
-            pm, "cd2", "CD2", confidence={"key1": 0.9, "key3": 0.8}
-        )
+        p1 = _create_profile_with_data(pm, "cd1", "CD1", confidence={"key1": 0.7, "key2": 0.5})
+        p2 = _create_profile_with_data(pm, "cd2", "CD2", confidence={"key1": 0.9, "key3": 0.8})
         return [p1, p2]
 
     def test_confident_strategy_uses_max(self, merger, profile_manager):
@@ -225,7 +221,9 @@ class TestMergePreferences:
     def test_merge_directory_specific_prefs(self, merger, profile_manager):
         """Test merging directory-specific preferences."""
         p1 = _create_profile_with_data(
-            profile_manager, "dp1", "Dir prefs 1",
+            profile_manager,
+            "dp1",
+            "Dir prefs 1",
             prefs={
                 "global": {},
                 "directory_specific": {"/path/a": {"mode": "fast"}},
@@ -233,7 +231,9 @@ class TestMergePreferences:
             confidence={"/path/a": 0.9},
         )
         p2 = _create_profile_with_data(
-            profile_manager, "dp2", "Dir prefs 2",
+            profile_manager,
+            "dp2",
+            "Dir prefs 2",
             prefs={
                 "global": {},
                 "directory_specific": {"/path/a": {"mode": "slow"}, "/path/b": {"mode": "auto"}},
@@ -251,12 +251,16 @@ class TestMergePreferences:
     def test_merge_global_prefs(self, merger, profile_manager):
         """Test merging global preferences from multiple profiles."""
         p1 = _create_profile_with_data(
-            profile_manager, "gp1", "Global prefs 1",
+            profile_manager,
+            "gp1",
+            "Global prefs 1",
             prefs={"global": {"theme": "dark"}, "directory_specific": {}},
             confidence={"theme": 0.7},
         )
         p2 = _create_profile_with_data(
-            profile_manager, "gp2", "Global prefs 2",
+            profile_manager,
+            "gp2",
+            "Global prefs 2",
             prefs={"global": {"theme": "light", "lang": "en"}, "directory_specific": {}},
             confidence={"theme": 0.9, "lang": 0.8},
         )
@@ -279,12 +283,16 @@ class TestMergeLearnedPatterns:
     def test_merge_with_conflict(self, merger, profile_manager):
         """Test merging learned patterns with conflicting keys."""
         p1 = _create_profile_with_data(
-            profile_manager, "lp1", "LP1",
+            profile_manager,
+            "lp1",
+            "LP1",
             patterns={"key": "val_a"},
             confidence={"key": 0.5},
         )
         p2 = _create_profile_with_data(
-            profile_manager, "lp2", "LP2",
+            profile_manager,
+            "lp2",
+            "LP2",
             patterns={"key": "val_b"},
             confidence={"key": 0.9},
         )
@@ -295,12 +303,16 @@ class TestMergeLearnedPatterns:
     def test_merge_disjoint_patterns(self, merger, profile_manager):
         """Test merging learned patterns with no overlap."""
         p1 = _create_profile_with_data(
-            profile_manager, "dlp1", "DLP1",
+            profile_manager,
+            "dlp1",
+            "DLP1",
             patterns={"alpha": "a"},
             confidence={"alpha": 0.8},
         )
         p2 = _create_profile_with_data(
-            profile_manager, "dlp2", "DLP2",
+            profile_manager,
+            "dlp2",
+            "DLP2",
             patterns={"beta": "b"},
             confidence={"beta": 0.7},
         )
@@ -322,13 +334,17 @@ class TestPreserveHighConfidence:
     def test_preserves_global_preference(self, merger, profile_manager):
         """Test preserving high-confidence global preference."""
         merged = _create_profile_with_data(
-            profile_manager, "phc_merged", "Merged",
+            profile_manager,
+            "phc_merged",
+            "Merged",
             prefs={"global": {"key1": "merged_val"}, "directory_specific": {}},
             confidence={"key1": 0.5},
         )
 
         source = _create_profile_with_data(
-            profile_manager, "phc_source", "Source",
+            profile_manager,
+            "phc_source",
+            "Source",
             prefs={"global": {"key1": "source_val"}, "directory_specific": {}},
             confidence={"key1": 0.95},
         )
@@ -341,13 +357,17 @@ class TestPreserveHighConfidence:
     def test_preserves_directory_specific_preference(self, merger, profile_manager):
         """Test preserving high-confidence directory-specific preference."""
         merged = _create_profile_with_data(
-            profile_manager, "phc_dir_merged", "Merged",
+            profile_manager,
+            "phc_dir_merged",
+            "Merged",
             prefs={"global": {}, "directory_specific": {"/test": "old_val"}},
             confidence={"/test": 0.4},
         )
 
         source = _create_profile_with_data(
-            profile_manager, "phc_dir_source", "Source",
+            profile_manager,
+            "phc_dir_source",
+            "Source",
             prefs={"global": {}, "directory_specific": {"/test": "new_val"}},
             confidence={"/test": 0.85},
         )
@@ -360,13 +380,17 @@ class TestPreserveHighConfidence:
     def test_preserves_learned_pattern(self, merger, profile_manager):
         """Test preserving high-confidence learned pattern."""
         merged = _create_profile_with_data(
-            profile_manager, "phc_lp_merged", "Merged",
+            profile_manager,
+            "phc_lp_merged",
+            "Merged",
             patterns={"pat1": "old"},
             confidence={"pat1": 0.3},
         )
 
         source = _create_profile_with_data(
-            profile_manager, "phc_lp_source", "Source",
+            profile_manager,
+            "phc_lp_source",
+            "Source",
             patterns={"pat1": "new"},
             confidence={"pat1": 0.92},
         )
@@ -379,13 +403,17 @@ class TestPreserveHighConfidence:
     def test_skips_below_threshold(self, merger, profile_manager):
         """Test that below-threshold confidence is not preserved."""
         merged = _create_profile_with_data(
-            profile_manager, "phc_skip_merged", "Merged",
+            profile_manager,
+            "phc_skip_merged",
+            "Merged",
             prefs={"global": {"k": "orig"}, "directory_specific": {}},
             confidence={"k": 0.5},
         )
 
         source = _create_profile_with_data(
-            profile_manager, "phc_skip_source", "Source",
+            profile_manager,
+            "phc_skip_source",
+            "Source",
             prefs={"global": {"k": "new"}, "directory_specific": {}},
             confidence={"k": 0.6},
         )
@@ -398,19 +426,25 @@ class TestPreserveHighConfidence:
     def test_highest_confidence_wins_across_sources(self, merger, profile_manager):
         """Test that highest confidence from multiple sources wins."""
         merged = _create_profile_with_data(
-            profile_manager, "phc_multi_merged", "Merged",
+            profile_manager,
+            "phc_multi_merged",
+            "Merged",
             prefs={"global": {"k": "orig"}, "directory_specific": {}},
             confidence={"k": 0.3},
         )
 
         source1 = _create_profile_with_data(
-            profile_manager, "phc_multi_s1", "Source 1",
+            profile_manager,
+            "phc_multi_s1",
+            "Source 1",
             prefs={"global": {"k": "val1"}, "directory_specific": {}},
             confidence={"k": 0.85},
         )
 
         source2 = _create_profile_with_data(
-            profile_manager, "phc_multi_s2", "Source 2",
+            profile_manager,
+            "phc_multi_s2",
+            "Source 2",
             prefs={"global": {"k": "val2"}, "directory_specific": {}},
             confidence={"k": 0.95},
         )
@@ -469,9 +503,7 @@ class TestCreateMergedProfile:
 
     def test_create_handles_exception(self, merger, profile_manager):
         """Test create_merged_profile handles exceptions gracefully."""
-        with patch.object(
-            profile_manager, "create_profile", side_effect=RuntimeError("error")
-        ):
+        with patch.object(profile_manager, "create_profile", side_effect=RuntimeError("error")):
             result = merger.create_merged_profile("exc_create", {})
         assert result is None
 
@@ -496,24 +528,28 @@ class TestMergeProfilesExtended:
     def test_merge_with_frequent_strategy(self, merger, profile_manager):
         """Test merge_profiles with FREQUENT strategy."""
         _create_profile_with_data(
-            profile_manager, "freq1", "Freq1",
+            profile_manager,
+            "freq1",
+            "Freq1",
             prefs={"global": {"k": "a"}, "directory_specific": {}},
             confidence={"k": 0.5},
         )
         _create_profile_with_data(
-            profile_manager, "freq2", "Freq2",
+            profile_manager,
+            "freq2",
+            "Freq2",
             prefs={"global": {"k": "a"}, "directory_specific": {}},
             confidence={"k": 0.6},
         )
         _create_profile_with_data(
-            profile_manager, "freq3", "Freq3",
+            profile_manager,
+            "freq3",
+            "Freq3",
             prefs={"global": {"k": "b"}, "directory_specific": {}},
             confidence={"k": 0.7},
         )
 
-        result = merger.merge_profiles(
-            ["freq1", "freq2", "freq3"], "frequent", "freq_merged"
-        )
+        result = merger.merge_profiles(["freq1", "freq2", "freq3"], "frequent", "freq_merged")
 
         assert result is not None
         # "a" appears twice, "b" once, so "a" wins
@@ -531,9 +567,7 @@ class TestMergeProfilesExtended:
 
     def test_merge_exception(self, merger, profile_manager):
         """Test merge_profiles handles exceptions gracefully."""
-        with patch.object(
-            profile_manager, "get_profile", side_effect=RuntimeError("error")
-        ):
+        with patch.object(profile_manager, "get_profile", side_effect=RuntimeError("error")):
             result = merger.merge_profiles(["a", "b"], "confident")
         assert result is None
 
@@ -550,11 +584,15 @@ class TestGetMergeConflictsExtended:
     def test_no_conflicts_identical_values(self, merger, profile_manager):
         """Test no conflicts when profiles have identical values."""
         _create_profile_with_data(
-            profile_manager, "nc1", "NC1",
+            profile_manager,
+            "nc1",
+            "NC1",
             prefs={"global": {"k": "same"}, "directory_specific": {}},
         )
         _create_profile_with_data(
-            profile_manager, "nc2", "NC2",
+            profile_manager,
+            "nc2",
+            "NC2",
             prefs={"global": {"k": "same"}, "directory_specific": {}},
         )
 
@@ -564,11 +602,15 @@ class TestGetMergeConflictsExtended:
     def test_directory_specific_conflicts(self, merger, profile_manager):
         """Test detecting directory-specific conflicts."""
         _create_profile_with_data(
-            profile_manager, "dc1", "DC1",
+            profile_manager,
+            "dc1",
+            "DC1",
             prefs={"global": {}, "directory_specific": {"/test": "val1"}},
         )
         _create_profile_with_data(
-            profile_manager, "dc2", "DC2",
+            profile_manager,
+            "dc2",
+            "DC2",
             prefs={"global": {}, "directory_specific": {"/test": "val2"}},
         )
 
@@ -584,9 +626,7 @@ class TestGetMergeConflictsExtended:
 
     def test_exception_returns_empty(self, merger, profile_manager):
         """Test get_merge_conflicts returns empty dict on exception."""
-        with patch.object(
-            profile_manager, "get_profile", side_effect=RuntimeError("error")
-        ):
+        with patch.object(profile_manager, "get_profile", side_effect=RuntimeError("error")):
             conflicts = merger.get_merge_conflicts(["a", "b"])
         assert conflicts == {}
 

@@ -237,9 +237,7 @@ class TestDetectScenes:
         detector = SceneDetector()
         with patch.object(detector, "_detect_with_scenedetect") as mock_sd:
             mock_sd.return_value = _make_result(video, method=DetectionMethod.THRESHOLD)
-            detector.detect_scenes(
-                video, method=DetectionMethod.THRESHOLD, threshold=10.0
-            )
+            detector.detect_scenes(video, method=DetectionMethod.THRESHOLD, threshold=10.0)
             mock_sd.assert_called_once_with(video, DetectionMethod.THRESHOLD, 10.0)
 
     @patch("file_organizer.services.video.scene_detector.SceneDetector._check_dependencies")
@@ -264,9 +262,7 @@ class TestDetectScenes:
         video.write_bytes(b"\x00")
 
         detector = SceneDetector()
-        with patch.object(
-            detector, "_detect_with_scenedetect", side_effect=ImportError
-        ):
+        with patch.object(detector, "_detect_with_scenedetect", side_effect=ImportError):
             with patch.object(detector, "_detect_with_opencv") as mock_cv:
                 mock_cv.return_value = _make_result(video)
                 detector.detect_scenes(str(video))
@@ -535,9 +531,7 @@ class TestExtractSceneThumbnails:
         mock_cv2.CAP_PROP_POS_FRAMES = 1
 
         with patch.dict("sys.modules", {"cv2": mock_cv2}):
-            SceneDetector.extract_scene_thumbnails(
-                video, result, output_dir, frame_offset=1.0
-            )
+            SceneDetector.extract_scene_thumbnails(video, result, output_dir, frame_offset=1.0)
 
         # target_time = 2.0 + 1.0 = 3.0, target_frame = 3.0 * 30 = 90
         cap.set.assert_called_once_with(mock_cv2.CAP_PROP_POS_FRAMES, 90)
