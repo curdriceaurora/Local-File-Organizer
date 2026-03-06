@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
+from file_organizer.api.routers.search import _ScoringTiers
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
@@ -124,7 +125,7 @@ class TestSearchReturnsRealFiles:
         )
 
     def test_search_extension_match_scores_half(self, tmp_path: Path) -> None:
-        """Verify extension-only match scores 0.5."""
+        """Verify extension-only match scores EXTENSION_MATCH (0.5)."""
         (tmp_path / "budget.pdf").write_text("expense data")
         client = _make_app([str(tmp_path)])
 
@@ -135,12 +136,13 @@ class TestSearchReturnsRealFiles:
         assert results[0]["filename"] == "budget.pdf", (
             f"Expected filename 'budget.pdf', got {results[0]['filename']}"
         )
-        assert results[0]["score"] == 0.5, (
-            f"Extension-only match should score 0.5, got {results[0]['score']}"
+        assert results[0]["score"] == _ScoringTiers.EXTENSION_MATCH, (
+            f"Extension-only match should score {_ScoringTiers.EXTENSION_MATCH}, "
+            f"got {results[0]['score']}"
         )
 
     def test_search_extension_scores_below_name_contains(self, tmp_path: Path) -> None:
-        """Verify extension match (0.5) ranks below stem contains (0.7)."""
+        """Verify extension match ranks below stem contains match."""
         (tmp_path / "pdf_notes.txt").write_text("note data")
         (tmp_path / "budget.pdf").write_text("expense data")
         client = _make_app([str(tmp_path)])
@@ -155,15 +157,17 @@ class TestSearchReturnsRealFiles:
         assert results[0]["filename"] == "pdf_notes.txt", (
             f"Stem-contains match should rank first, got {results[0]['filename']}"
         )
-        assert results[0]["score"] == 0.7, (
-            f"Stem-contains match should score 0.7, got {results[0]['score']}"
+        assert results[0]["score"] == _ScoringTiers.STEM_CONTAINS, (
+            f"Stem-contains match should score {_ScoringTiers.STEM_CONTAINS}, "
+            f"got {results[0]['score']}"
         )
         # Extension match should rank second
         assert results[1]["filename"] == "budget.pdf", (
             f"Extension match should rank second, got {results[1]['filename']}"
         )
-        assert results[1]["score"] == 0.5, (
-            f"Extension-only match should score 0.5, got {results[1]['score']}"
+        assert results[1]["score"] == _ScoringTiers.EXTENSION_MATCH, (
+            f"Extension-only match should score {_ScoringTiers.EXTENSION_MATCH}, "
+            f"got {results[1]['score']}"
         )
 
     def test_search_pagination(self, tmp_path: Path) -> None:

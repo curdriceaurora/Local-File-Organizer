@@ -23,6 +23,16 @@ router = APIRouter(tags=["search"])
 _MAX_TRAVERSAL = 10_000
 
 
+class _ScoringTiers:
+    """Relevance scoring tiers for file search results."""
+
+    EXACT_MATCH = 1.0  # Exact filename or stem match
+    STEM_CONTAINS = 0.7  # Query appears in filename stem (not extension)
+    EXTENSION_MATCH = 0.5  # Exact file extension match
+    PATH_CONTAINS = 0.3  # Query appears anywhere in file path
+    NO_MATCH = 0.0
+
+
 class SearchResult(BaseModel):
     """Single search result."""
 
@@ -37,8 +47,16 @@ class SearchResult(BaseModel):
 def _compute_score(file_path: Path, query: str) -> float:
     """Score a file path against a search query.
 
-    Returns 1.0 for exact filename or stem match, 0.7 for stem contains,
-    0.5 for exact extension match, 0.3 for path contains.
+    Scoring tiers:
+    - 1.0 (EXACT_MATCH): Exact filename or stem match
+    - 0.7 (STEM_CONTAINS): Query appears in filename stem (not extension)
+    - 0.5 (EXTENSION_MATCH): Exact file extension match
+    - 0.3 (PATH_CONTAINS): Query appears anywhere in file path
+    - 0.0 (NO_MATCH): No match found
+
+    Note: Changed from checking full filename to stem only in tier-2.
+    This prevents queries matching both the stem and extension from
+    scoring higher than extension-only matches.
     """
     q_lower = query.lower()
     name_lower = file_path.name.lower()
@@ -46,14 +64,17 @@ def _compute_score(file_path: Path, query: str) -> float:
     suffix_lower = file_path.suffix.lower().lstrip(".")
 
     if name_lower == q_lower or stem_lower == q_lower:
-        return 1.0
+        return _ScoringTiers.EXACT_MATCH
     if q_lower in stem_lower:
-        return 0.7
-    if q_lower == suffix_lower:
-        return 0.5
+        return _ScoringTiers.STEM_CONTAINS
+    # Handle extension match: normalize both sides (strip leading dots)
+    # This allows queries like "pdf" or ".pdf" to match extension ".pdf"
+    q_suffix = q_lower.lstrip(".")
+    if q_suffix and q_suffix == suffix_lower:
+        return _ScoringTiers.EXTENSION_MATCH
     if q_lower in str(file_path).lower():
-        return 0.3
-    return 0.0
+        return _ScoringTiers.PATH_CONTAINS
+    return _ScoringTiers.NO_MATCH
 
 
 def _collect_matching_files(
