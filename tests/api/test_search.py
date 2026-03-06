@@ -257,5 +257,7 @@ class TestSearchReturnsRealFiles:
         resp = client.get("/search", params={"q": "café"})
         assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
         results = resp.json()
-        # UTF-8 search should work (case-insensitive)
-        assert len(results) >= 0, f"UTF-8 search should succeed, got {len(results)} results"
+        # UTF-8 search should find the file with UTF-8 characters
+        assert any("café.txt" in r["path"] for r in results), (
+            f"UTF-8 search should find café.txt, got {[r['path'] for r in results]}"
+        )
