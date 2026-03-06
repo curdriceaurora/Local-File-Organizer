@@ -32,6 +32,14 @@ An AI-powered local file management system with privacy-first architecture. Orga
 
 ---
 
+## Code Review Exclusions
+
+**CodeRabbit & Copilot:** The `.claude/` directory and `CLAUDE.md` are excluded from automated code review. These contain internal Claude Code project management and configuration that should not be reviewed by external tools.
+
+See `.coderabbit.yaml` and `.github/copilot-instructions.md` for exclusion rules.
+
+---
+
 ## General Rules
 
 **Permission:** Do not ask for permission to run Bash commands, `gh` CLI commands, or post PR comments. You have full authorization to execute all tools available to you. Proceed autonomously without confirmation prompts.
