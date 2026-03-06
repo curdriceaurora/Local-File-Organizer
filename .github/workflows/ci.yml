@@ -87,10 +87,9 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || matrix.python-version == '3.11'
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ${{ github.event_name == 'pull_request' && fromJson('["3.11"]') || fromJson('["3.11", "3.12"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
