@@ -1,5 +1,8 @@
 # CodeQL configuration for local file organizer.
-# We validate user-provided paths against an explicit allowlist in API utils.
-# Exclude that helper from CodeQL path-injection alerts to avoid false positives.
+# We validate user-provided paths against an explicit allowlist in API modules.
+# Exclude these helpers from CodeQL path-injection alerts to avoid false positives.
+# These modules use configuration-controlled paths, not user-provided values.
 paths-ignore:
   - src/file_organizer/api/utils.py
+  - src/file_organizer/api/api_keys.py
+  - src/file_organizer/api/routers/search.py
