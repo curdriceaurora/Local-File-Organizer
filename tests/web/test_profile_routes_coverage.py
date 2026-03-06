@@ -281,6 +281,8 @@ class TestLoginSubmit:
         ):
             result = login_submit(MagicMock(), username="u", password="p", settings=settings)
         assert result.status_code == 303
+        # Verify that auth cookie was set in response headers
+        assert any("Set-Cookie" in header for header in result.headers)
 
 
 # ---------------------------------------------------------------------------
