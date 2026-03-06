@@ -421,6 +421,7 @@ def _schedule_job(job_id: str, organize_request: OrganizeRequest, delay_minutes:
     delay_seconds = delay_minutes * 60
 
     def _runner() -> None:
+        """Execute the scheduled organization job."""
         with _SCHEDULED_TIMERS_LOCK:
             _SCHEDULED_TIMERS.pop(job_id, None)
         _run_organize_job(job_id, organize_request)
@@ -768,6 +769,11 @@ async def organize_job_events(job_id: str) -> StreamingResponse:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
 
     async def _event_generator() -> Any:
+        """Generate server-sent events for job status updates.
+
+        Yields:
+            SSE formatted event strings for job status and completion.
+        """
         last_payload = ""
         while True:
             job = _build_job_view(job_id)
@@ -810,6 +816,11 @@ async def organize_stats_events(request: Request) -> StreamingResponse:
     """
 
     async def _event_generator() -> Any:
+        """Generate server-sent events for statistics updates.
+
+        Yields:
+            SSE formatted event strings with job statistics.
+        """
         last_payload = ""
         while True:
             if await request.is_disconnected():
@@ -853,6 +864,11 @@ async def organize_history_events(
     """
 
     async def _event_generator() -> Any:
+        """Generate server-sent events for history updates.
+
+        Yields:
+            SSE formatted event strings with job history.
+        """
         last_payload = ""
         while True:
             if await request.is_disconnected():

@@ -186,6 +186,14 @@ def _collect_entries(
     elif sort_by == "created":
         # Cross-platform: st_birthtime (macOS), st_ctime (Windows), st_mtime (Linux)
         def _creation_key(p: Path) -> float:
+            """Get file creation timestamp, handling cross-platform differences.
+
+            Args:
+                p: File path to get creation time for.
+
+            Returns:
+                Creation timestamp, or 0.0 if unavailable.
+            """
             s = file_stats.get(p)
             if s is None:
                 return 0.0

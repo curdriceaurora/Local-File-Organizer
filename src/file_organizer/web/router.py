@@ -38,5 +38,10 @@ router.include_router(profile_router)
 
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request, settings: ApiSettings = Depends(get_settings)) -> HTMLResponse:
+    """Render the home page with base context.
+
+    Returns:
+        Full HTML page for the home view.
+    """
     context = base_context(request, settings, active="home", title="Home")
     return templates.TemplateResponse(request, "index.html", context)
