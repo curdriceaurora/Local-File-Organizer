@@ -51,8 +51,15 @@ class TestInMemoryConcurrentGetSet:
             t.join(timeout=5.0)
 
         # Verify all threads actually completed
-        assert all(not t.is_alive() for t in threads), "Some threads did not finish"
-        assert not errors, f"Concurrent access errors: {errors}"
+        alive = [t for t in threads if t.is_alive()]
+        assert not alive, (
+            f"All threads should complete. "
+            f"Still alive: {len(alive)} threads"
+        )
+        assert not errors, (
+            f"No concurrent access errors expected. "
+            f"Got {len(errors)} errors: {[str(e) for e in errors]}"
+        )
 
     def test_concurrent_expired_eviction(self) -> None:
         """Short TTL entries evicted during concurrent reads should not crash.
@@ -82,7 +89,10 @@ class TestInMemoryConcurrentGetSet:
         for t in threads:
             t.join(timeout=5.0)
 
-        assert not errors, f"Concurrent eviction errors: {errors}"
+        assert not errors, (
+            f"No concurrent eviction errors expected. "
+            f"Got {len(errors)} errors: {[str(e) for e in errors]}"
+        )
 
     def test_concurrent_delete(self) -> None:
         """Concurrent deletes should not crash.
@@ -110,7 +120,10 @@ class TestInMemoryConcurrentGetSet:
         for t in threads:
             t.join(timeout=5.0)
 
-        assert not errors, f"Concurrent delete errors: {errors}"
+        assert not errors, (
+            f"No concurrent delete errors expected. "
+            f"Got {len(errors)} errors: {[str(e) for e in errors]}"
+        )
 
 
 class TestRedisCacheCloseLogsOnError:
@@ -134,6 +147,12 @@ class TestRedisCacheCloseLogsOnError:
 
             with patch("file_organizer.api.cache.logger") as mock_logger:
                 cache.close()
-                mock_logger.warning.assert_called_once()
+                mock_logger.warning.assert_called_once(), (
+                    f"logger.warning should be called once when Redis close fails. "
+                    f"Actual call count: {mock_logger.warning.call_count}"
+                )
                 call_args = mock_logger.warning.call_args
-                assert "close" in call_args[0][0].lower() or "Redis" in call_args[0][0]
+                assert "close" in call_args[0][0].lower() or "Redis" in call_args[0][0], (
+                    f"Warning message should mention 'close' or 'Redis'. "
+                    f"Got: {call_args[0][0]}"
+                )

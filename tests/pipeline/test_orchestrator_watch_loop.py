@@ -33,6 +33,8 @@ def _sync_executor(pipeline: PipelineOrchestrator) -> MagicMock:
     """Replace the executor with one that calls functions synchronously.
 
     This makes tests deterministic by avoiding thread-pool timing issues.
+    The mock executor's submit method executes functions immediately
+    rather than deferring to a thread pool.
 
     Args:
         pipeline: The orchestrator instance to configure.
@@ -54,6 +56,7 @@ def _sync_executor(pipeline: PipelineOrchestrator) -> MagicMock:
 
 class TestWatchLoopProcessesFileEvents:
     def test_watch_loop_processes_file_events(self):
+        """Test that watch loop submits file events to executor for processing."""
         config = PipelineConfig()
         pipeline = PipelineOrchestrator(config)
         _sync_executor(pipeline)
@@ -77,7 +80,11 @@ class TestWatchLoopProcessesFileEvents:
         with patch.object(pipeline, "process_file", side_effect=stop_after_one) as pf:
             pipeline._watch_loop()
 
-        pf.assert_called_once_with(Path("/tmp/test.txt"))
+        pf.assert_called_once_with(Path("/tmp/test.txt")), (
+            "process_file should be called exactly once with the test file path. "
+            f"Actual calls: {pf.call_count}, "
+            f"Call args: {[str(call[0][0]) for call in pf.call_args_list] if pf.call_args_list else 'None'}"
+        )
 
     def test_watch_loop_skips_directory_events(self):
         config = PipelineConfig()
@@ -105,7 +112,11 @@ class TestWatchLoopProcessesFileEvents:
         ):
             pipeline._watch_loop()
 
-        pf.assert_not_called()
+        pf.assert_not_called(), (
+            f"process_file should not be called for directory events, "
+            f"but was called {pf.call_count} times. "
+            f"Call args: {[str(call[0][0]) for call in pf.call_args_list] if pf.call_args_list else 'None'}"
+        )
 
     def test_watch_loop_handles_vanished_file(self):
         config = PipelineConfig()
@@ -205,6 +216,10 @@ class TestWatchLoopExecutor:
         # Verify submit was called with _process_watched_file and the path
         mock_executor.submit.assert_called_once_with(
             pipeline._process_watched_file, Path("/tmp/test.txt")
+        ), (
+            f"executor.submit should be called once with _process_watched_file and test path. "
+            f"Actual call count: {mock_executor.submit.call_count}, "
+            f"Call args: {mock_executor.submit.call_args_list}"
         )
 
     def test_executor_shutdown_on_stop(self):
@@ -218,18 +233,28 @@ class TestWatchLoopExecutor:
 
         pipeline.stop()
 
-        mock_executor.shutdown.assert_called_once_with(wait=True)
+        mock_executor.shutdown.assert_called_once_with(wait=True), (
+            f"executor.shutdown should be called once with wait=True. "
+            f"Actual call count: {mock_executor.shutdown.call_count}, "
+            f"Call args: {mock_executor.shutdown.call_args_list}"
+        )
 
     def test_executor_max_workers(self):
         """Verify max_workers matches config.max_concurrent."""
         config = PipelineConfig(max_concurrent=8)
         pipeline = PipelineOrchestrator(config)
 
-        assert pipeline._executor._max_workers == 8
+        assert pipeline._executor._max_workers == 8, (
+            f"executor._max_workers should match config.max_concurrent. "
+            f"Expected: 8, Got: {pipeline._executor._max_workers}"
+        )
 
     def test_executor_default_max_workers(self):
         """Verify default max_workers is 4."""
         config = PipelineConfig()
         pipeline = PipelineOrchestrator(config)
 
-        assert pipeline._executor._max_workers == 4
+        assert pipeline._executor._max_workers == 4, (
+            f"executor._max_workers should default to 4. "
+            f"Expected: 4, Got: {pipeline._executor._max_workers}"
+        )
