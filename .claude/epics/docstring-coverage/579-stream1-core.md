@@ -3,9 +3,9 @@ name: 579-stream1-core
 issue: 579
 stream: 1
 title: "Core Components Docstrings"
-status: open
+status: completed
 created: 2026-03-06T21:00:00Z
-updated: 2026-03-06T21:00:00Z
+updated: 2026-03-06T21:43:00Z
 ---
 
 # Task 579.1: Core Components Docstrings
@@ -40,11 +40,11 @@ Add docstrings to core components in `src/file_organizer/core/`:
 
 ## Definition of Done
 
-- [ ] Baseline measured: `interrogate src/file_organizer/core`
-- [ ] All public APIs have docstrings
-- [ ] Coverage reported >= 90% for core/
-- [ ] No behavior changes (docstrings only)
-- [ ] Commit: "docs: add docstrings to core components (#579.1)"
+- [x] Baseline measured: `interrogate src/file_organizer/core` (100% coverage achieved)
+- [x] All public APIs have docstrings (19/19 items documented)
+- [x] Coverage reported >= 90% for core/ (100% achieved)
+- [x] No behavior changes (docstrings only)
+- [x] Commit: 5c5797e "Issue #579: Add comprehensive docstrings to core organizer module"
 
 ## Files to Touch
 
