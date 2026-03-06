@@ -141,7 +141,7 @@
             {% if page > 1 %}
             <button
                 class="btn-ghost"
-                hx-get="/ui/marketplace?q={{ query }}&category={{ category }}&tag={{ tags | join(',') }}&page={{ page - 1 }}&per_page={{ per_page }}"
+                hx-get="/ui/marketplace?q={{ query | urlencode }}&category={{ category | urlencode }}&tag={{ tags | join(',') | urlencode }}&page={{ page - 1 }}&per_page={{ per_page }}"
                 hx-target="#main"
                 hx-swap="innerHTML">
                 Previous
@@ -153,7 +153,7 @@
             {% if page < (total_plugins + per_page - 1) // per_page %}
             <button
                 class="btn-ghost"
-                hx-get="/ui/marketplace?q={{ query }}&category={{ category }}&tag={{ tags | join(',') }}&page={{ page + 1 }}&per_page={{ per_page }}"
+                hx-get="/ui/marketplace?q={{ query | urlencode }}&category={{ category | urlencode }}&tag={{ tags | join(',') | urlencode }}&page={{ page + 1 }}&per_page={{ per_page }}"
                 hx-target="#main"
                 hx-swap="innerHTML">
                 Next
