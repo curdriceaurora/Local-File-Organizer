@@ -239,7 +239,7 @@ pytest --cov=file_organizer --cov-report=html
 pytest -m smoke         # Fast smoke suite (~3.2s) — local pre-commit validation
 pytest -m ci            # CI validation tests — PR check suite
 pytest -m "not slow"    # Skip slow tests for faster local development
-pytest tests/            # Full suite including regression tests (CI only)
+pytest tests/            # Full suite including regression tests (local and CI)
 ```
 
 ### Test Markers

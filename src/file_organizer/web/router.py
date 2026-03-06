@@ -60,21 +60,10 @@ def dashboard_pulse(
 
     # Get suggestions and rules from workspace settings
     # Suggestions: placeholder for future recommendation engine (e.g., ML-based organization hints)
+    # Note: organization_rules is not currently persisted in workspace model
+    # This should be retrieved from settings when rule persistence is implemented
     suggestions = 0
     rules = 0
-    try:
-        with create_session(settings.auth_db_path) as session:
-            repo = WorkspaceRepository(session)
-            workspace = repo.get_active_workspace()
-            if workspace:
-                # Count organization rules (split by newline and filter empty)
-                rules_text = getattr(workspace, "organization_rules", "")
-                rules = len(
-                    [line for line in rules_text.splitlines() if line.strip() and "->" in line]
-                )
-    except Exception as e:
-        # If database unavailable, use defaults
-        logger.warning(f"Failed to fetch workspace settings: {e}")
 
     context = base_context(request, settings, active="home", title="Dashboard")
     return templates.TemplateResponse(
