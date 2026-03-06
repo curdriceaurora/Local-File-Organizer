@@ -6,7 +6,7 @@
 pytest                                          # Full test suite
 pytest --cov=file_organizer --cov-report=html  # With coverage
 pytest tests/services/ -v                       # Specific directory
-pytest -m smoke -x                              # Fast smoke suite (pre-commit validation, ~3.2s)
+pytest -m smoke -x                              # Fast smoke suite (pre-commit validation, deterministic)
 pytest -m ci -x                                 # CI tests for PR validation
 pytest -m "not regression" -x                   # All tests except regression (full run)
 pytest -k "backup or dedup"                     # Filter by name

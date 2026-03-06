@@ -247,12 +247,11 @@ pytest tests/            # Full suite including regression tests (CI only)
 | Marker | Purpose | When Used |
 |--------|---------|-----------|
 | `@pytest.mark.unit` | Fast unit tests | Both local and CI |
-| `@pytest.mark.smoke` | Critical-path tests for pre-commit (~3.2s) | Local pre-commit only |
+| `@pytest.mark.smoke` | Critical-path tests for pre-commit (deterministic, fast) | Local pre-commit only |
 | `@pytest.mark.ci` | PR validation tests | GitHub Actions PR checks |
 | `@pytest.mark.integration` | Integration tests | Full CI runs |
 | `@pytest.mark.regression` | Full regression suite | Complete CI runs, manual testing |
 | `@pytest.mark.slow` | Long-running tests | Skipped in pre-commit and CI PRs |
-| `@pytest.mark.ci` | CI pipeline validation |
 
 ---
 
