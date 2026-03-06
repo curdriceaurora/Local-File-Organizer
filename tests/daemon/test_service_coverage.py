@@ -240,7 +240,8 @@ class TestDaemonServiceForeground:
         t = threading.Thread(target=daemon.start, daemon=True)
         t.start()
         try:
-            daemon._started_event.wait(timeout=5.0)
+            # Verify first start reached readiness before attempting double-start
+            assert daemon._started_event.wait(timeout=5.0), "First start did not reach readiness"
             with pytest.raises(RuntimeError, match="already running"):
                 daemon.start()
         finally:

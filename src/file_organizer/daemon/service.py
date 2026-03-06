@@ -131,6 +131,7 @@ class DaemonService:
             if self._thread is not None and not self._thread.is_alive():
                 self._thread = None
 
+            self._stop_event.clear()
             self._started_event.clear()
             self._stopped_event.clear()
 
@@ -231,7 +232,6 @@ class DaemonService:
         """
         logger.info("Starting daemon service (background)")
         self._started_at = time.monotonic()
-        self._stop_event.clear()
 
         try:
             # Write PID file

@@ -19,7 +19,7 @@ from file_organizer.client.exceptions import (
 
 pytestmark = pytest.mark.unit
 
-_NOW = datetime.now(tz=UTC).isoformat()
+_NOW = datetime.now(tz=UTC).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _ok(body: dict, status: int = 200) -> httpx.Response:

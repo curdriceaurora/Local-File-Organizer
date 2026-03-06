@@ -404,8 +404,6 @@ class PipelineOrchestrator:
 
                     try:
                         self.process_file(event.path)
-                    except FileNotFoundError:
-                        logger.debug("File vanished before processing: %s", event.path)
                     except Exception:
                         logger.exception("Error processing %s", event.path)
 
