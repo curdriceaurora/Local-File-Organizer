@@ -110,7 +110,9 @@ def search(
     if path:
         search_roots = [resolve_path(path, settings.allowed_paths)]
     else:
-        # Normalize allowed_paths to ensure consistent path representation
+        # Normalize allowed_paths to ensure consistent path representation.
+        # Allowed roots are configuration-controlled, not request-driven.
+        # codeql[py/path-injection]
         search_roots = [Path(p).resolve() for p in settings.allowed_paths]
 
     results: list[SearchResult] = []
