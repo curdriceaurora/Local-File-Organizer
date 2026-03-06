@@ -57,6 +57,8 @@
 
   let organizeEventSource = null;
   let organizeJobId = null;
+  let organizeStatsEventSource = null;
+  let organizeHistoryEventSource = null;
 
   const closeOrganizeStream = () => {
     if (organizeEventSource) {
@@ -66,9 +68,94 @@
     organizeJobId = null;
   };
 
+  const closeOrganizeStatsStream = () => {
+    if (organizeStatsEventSource) {
+      organizeStatsEventSource.close();
+      organizeStatsEventSource = null;
+    }
+  };
+
+  const closeOrganizeHistoryStream = () => {
+    if (organizeHistoryEventSource) {
+      organizeHistoryEventSource.close();
+      organizeHistoryEventSource = null;
+    }
+  };
+
   const dispatchOrganizeRefresh = () => {
     document.body.dispatchEvent(new Event("refreshHistory"));
     document.body.dispatchEvent(new Event("refreshStats"));
+  };
+
+  const bindOrganizeStatsStream = () => {
+    const target = document.querySelector("#organize-stats");
+    if (!target) {
+      closeOrganizeStatsStream();
+      return;
+    }
+
+    if (organizeStatsEventSource) {
+      return;
+    }
+
+    closeOrganizeStatsStream();
+    organizeStatsEventSource = new EventSource("/ui/organize/stats/events");
+    organizeStatsEventSource.addEventListener("stats", (event) => {
+      try {
+        const stats = JSON.parse(event.data);
+        const statsHTML = document.querySelector("#organize-stats");
+        if (statsHTML) {
+          const totalJobsEl = statsHTML.querySelector("[data-stat='total_jobs']");
+          const activeJobsEl = statsHTML.querySelector("[data-stat='active_jobs']");
+          const filesEl = statsHTML.querySelector("[data-stat='total_files']");
+          const rateEl = statsHTML.querySelector("[data-stat='success_rate']");
+
+          if (totalJobsEl) totalJobsEl.textContent = stats.total_jobs || 0;
+          if (activeJobsEl) activeJobsEl.textContent = stats.active_jobs || 0;
+          if (filesEl) filesEl.textContent = stats.total_files || 0;
+          if (rateEl) rateEl.textContent = stats.success_rate ? (stats.success_rate * 100).toFixed(1) + "%" : "0.0%";
+        }
+      } catch (error) {
+        // Ignore parse errors
+      }
+    });
+    organizeStatsEventSource.onerror = () => {
+      closeOrganizeStatsStream();
+    };
+  };
+
+  const bindOrganizeHistoryStream = () => {
+    const target = document.querySelector("#organize-history");
+    if (!target) {
+      closeOrganizeHistoryStream();
+      return;
+    }
+
+    if (organizeHistoryEventSource) {
+      return;
+    }
+
+    closeOrganizeHistoryStream();
+    const filterInput = document.querySelector("[name='status_filter']");
+    const limitInput = document.querySelector("[name='limit']");
+    const statusFilter = filterInput ? filterInput.value : "all";
+    const limit = limitInput ? limitInput.value : "50";
+
+    organizeHistoryEventSource = new EventSource(
+      `/ui/organize/history/events?status_filter=${statusFilter}&limit=${limit}`
+    );
+    organizeHistoryEventSource.addEventListener("history", (event) => {
+      try {
+        const rows = JSON.parse(event.data);
+        // Trigger HTMX to refresh with the new data
+        dispatchOrganizeRefresh();
+      } catch (error) {
+        // Ignore parse errors
+      }
+    });
+    organizeHistoryEventSource.onerror = () => {
+      closeOrganizeHistoryStream();
+    };
   };
 
   const refreshOrganizeProgress = async (statusUrl) => {
@@ -355,9 +442,17 @@
     if (target && target.id === "organize-progress") {
       bindOrganizeDashboard();
     }
+    if (target && target.id === "organize-stats") {
+      bindOrganizeStatsStream();
+    }
+    if (target && target.id === "organize-history") {
+      bindOrganizeHistoryStream();
+    }
     if (target && target.id === "main") {
       bindFileBrowser();
       bindOrganizeDashboard();
+      bindOrganizeStatsStream();
+      bindOrganizeHistoryStream();
     }
   });
 
@@ -370,4 +465,6 @@
 
   bindFileBrowser();
   bindOrganizeDashboard();
+  bindOrganizeStatsStream();
+  bindOrganizeHistoryStream();
 })();

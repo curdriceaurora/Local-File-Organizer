@@ -845,6 +845,35 @@ body {
   display: block;
 }
 
+.spinner-inline {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  margin-left: 0.5rem;
+}
+
+.action-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.action-group .btn-primary,
+.action-group .btn-ghost {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.action-group button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .modal {
   position: fixed;
   inset: 0;

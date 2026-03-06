@@ -1,19 +1,19 @@
 <div class="stats-card-grid">
     <article class="stat-card">
         <h3>Total jobs</h3>
-        <p class="stat-value">{{ stats.total_jobs }}</p>
+        <p class="stat-value" data-stat="total_jobs">{{ stats.total_jobs }}</p>
     </article>
     <article class="stat-card">
         <h3>Active jobs</h3>
-        <p class="stat-value">{{ stats.active_jobs }}</p>
+        <p class="stat-value" data-stat="active_jobs">{{ stats.active_jobs }}</p>
     </article>
     <article class="stat-card">
         <h3>Files organized</h3>
-        <p class="stat-value">{{ stats.total_files }}</p>
+        <p class="stat-value" data-stat="total_files">{{ stats.total_files }}</p>
     </article>
     <article class="stat-card">
         <h3>Success rate</h3>
-        <p class="stat-value">{{ '%.1f' | format(stats.success_rate) }}%</p>
+        <p class="stat-value" data-stat="success_rate">{{ '%.1f' | format(stats.success_rate) }}%</p>
     </article>
 </div>
 

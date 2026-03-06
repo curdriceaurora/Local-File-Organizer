@@ -798,6 +798,79 @@ async def organize_job_events(job_id: str) -> StreamingResponse:
     )
 
 
+@organize_router.get("/organize/stats/events")
+async def organize_stats_events() -> StreamingResponse:
+    """Stream server-sent events for aggregate statistics updates.
+
+    Emits events whenever job statistics change (active jobs, total jobs,
+    files organized, success rate).
+
+    Returns:
+        SSE stream with periodic statistics updates.
+    """
+
+    async def _event_generator() -> Any:
+        last_payload = ""
+        while True:
+            stats = _build_organize_stats()
+            data = json.dumps(stats)
+            if data != last_payload:
+                yield f"event: stats\ndata: {data}\n\n"
+                last_payload = data
+            else:
+                yield ": keep-alive\n\n"
+            await asyncio.sleep(ORGANIZE_EVENT_POLL_SECONDS)
+
+    return StreamingResponse(
+        _event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@organize_router.get("/organize/history/events")
+async def organize_history_events(
+    status_filter: str = Query("all"),
+    limit: int = Query(50),
+) -> StreamingResponse:
+    """Stream server-sent events for job history updates.
+
+    Emits events whenever the job history changes (new jobs, status changes).
+
+    Args:
+        status_filter: Filter history by status (all, queued, running, completed, failed).
+        limit: Maximum number of history records to include (1-200).
+
+    Returns:
+        SSE stream with periodic history updates.
+    """
+    limit = max(1, min(limit, 200))
+
+    async def _event_generator() -> Any:
+        last_payload = ""
+        while True:
+            rows = _list_organize_jobs(status_filter, limit)
+            data = json.dumps(rows)
+            if data != last_payload:
+                yield f"event: history\ndata: {data}\n\n"
+                last_payload = data
+            else:
+                yield ": keep-alive\n\n"
+            await asyncio.sleep(ORGANIZE_EVENT_POLL_SECONDS)
+
+    return StreamingResponse(
+        _event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @organize_router.post("/organize/jobs/{job_id}/cancel", response_class=HTMLResponse)
 def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
     """Cancel a scheduled organization job.

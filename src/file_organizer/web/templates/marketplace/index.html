@@ -92,27 +92,38 @@
                 <td>{{ '%.1f' | format(plugin.rating) }}</td>
                 <td>{{ plugin.downloads }}</td>
                 <td>
-                    {% if plugin.name in installed_names %}
-                    <form method="post" action="/ui/marketplace/plugins/{{ plugin.name }}/update">
-                        <input type="hidden" name="q" value="{{ query }}">
-                        <input type="hidden" name="category" value="{{ category }}">
-                        <input type="hidden" name="tag_csv" value="{{ tags | join(',') }}">
-                        <button class="btn-ghost" type="submit">Update</button>
-                    </form>
-                    <form method="post" action="/ui/marketplace/plugins/{{ plugin.name }}/uninstall">
-                        <input type="hidden" name="q" value="{{ query }}">
-                        <input type="hidden" name="category" value="{{ category }}">
-                        <input type="hidden" name="tag_csv" value="{{ tags | join(',') }}">
-                        <button class="btn-ghost" type="submit">Uninstall</button>
-                    </form>
-                    {% else %}
-                    <form method="post" action="/ui/marketplace/plugins/{{ plugin.name }}/install">
-                        <input type="hidden" name="q" value="{{ query }}">
-                        <input type="hidden" name="category" value="{{ category }}">
-                        <input type="hidden" name="tag_csv" value="{{ tags | join(',') }}">
-                        <button class="btn-primary" type="submit">Install</button>
-                    </form>
-                    {% endif %}
+                    <div class="action-group">
+                        {% if plugin.name in installed_names %}
+                        <button
+                            class="btn-ghost"
+                            hx-post="/ui/marketplace/plugins/{{ plugin.name }}/update"
+                            hx-vals='{"q": "{{ query }}", "category": "{{ category }}", "tag_csv": "{{ tags | join(',') }}"}'
+                            hx-indicator="#update-spinner-{{ loop.index }}"
+                            hx-disabled-elt="this">
+                            Update
+                        </button>
+                        <div id="update-spinner-{{ loop.index }}" class="htmx-indicator spinner-inline"></div>
+                        <button
+                            class="btn-ghost"
+                            hx-post="/ui/marketplace/plugins/{{ plugin.name }}/uninstall"
+                            hx-vals='{"q": "{{ query }}", "category": "{{ category }}", "tag_csv": "{{ tags | join(',') }}"}'
+                            hx-indicator="#uninstall-spinner-{{ loop.index }}"
+                            hx-disabled-elt="this">
+                            Uninstall
+                        </button>
+                        <div id="uninstall-spinner-{{ loop.index }}" class="htmx-indicator spinner-inline"></div>
+                        {% else %}
+                        <button
+                            class="btn-primary"
+                            hx-post="/ui/marketplace/plugins/{{ plugin.name }}/install"
+                            hx-vals='{"q": "{{ query }}", "category": "{{ category }}", "tag_csv": "{{ tags | join(',') }}"}'
+                            hx-indicator="#install-spinner-{{ loop.index }}"
+                            hx-disabled-elt="this">
+                            Install
+                        </button>
+                        <div id="install-spinner-{{ loop.index }}" class="htmx-indicator spinner-inline"></div>
+                        {% endif %}
+                    </div>
                 </td>
             </tr>
             {% endfor %}

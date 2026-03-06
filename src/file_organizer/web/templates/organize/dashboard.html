@@ -100,11 +100,14 @@
         <div
             id="organize-history"
             hx-get="/ui/organize/history"
-            hx-trigger="load, refreshHistory from:body, every 45s"
+            hx-trigger="load, refreshHistory from:body, every 10s"
             hx-target="#organize-history"
             hx-swap="innerHTML"
         >
-            <div class="loading-state">Loading history...</div>
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading history...</p>
+            </div>
         </div>
     </article>
 
@@ -113,11 +116,14 @@
         <div
             id="organize-stats"
             hx-get="/ui/organize/stats"
-            hx-trigger="load, refreshStats from:body, every 45s"
+            hx-trigger="load, refreshStats from:body, every 10s"
             hx-target="#organize-stats"
             hx-swap="innerHTML"
         >
-            <div class="loading-state">Loading statistics...</div>
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading statistics...</p>
+            </div>
         </div>
     </article>
 </section>

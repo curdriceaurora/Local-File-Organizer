@@ -125,9 +125,9 @@ def install_plugin(
     request: Request,
     name: str,
     settings: ApiSettings = Depends(get_settings),
-    q: str = Form(""),
-    category: str = Form(""),
-    tag_csv: str = Form(""),
+    q: str = Form(default=""),
+    category: str = Form(default=""),
+    tag_csv: str = Form(default=""),
 ) -> HTMLResponse:
     """Install a marketplace plugin by name and re-render the marketplace page.
 
@@ -166,9 +166,9 @@ def uninstall_plugin(
     request: Request,
     name: str,
     settings: ApiSettings = Depends(get_settings),
-    q: str = Form(""),
-    category: str = Form(""),
-    tag_csv: str = Form(""),
+    q: str = Form(default=""),
+    category: str = Form(default=""),
+    tag_csv: str = Form(default=""),
 ) -> HTMLResponse:
     """Uninstall a previously installed plugin and re-render the marketplace page.
 
@@ -207,9 +207,9 @@ def update_plugin(
     request: Request,
     name: str,
     settings: ApiSettings = Depends(get_settings),
-    q: str = Form(""),
-    category: str = Form(""),
-    tag_csv: str = Form(""),
+    q: str = Form(default=""),
+    category: str = Form(default=""),
+    tag_csv: str = Form(default=""),
 ) -> HTMLResponse:
     """Update an installed plugin to the latest version.
 
