@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,6 +20,30 @@ def _build_client(tmp_path: Path, allowed_paths: list[str] | None = None) -> Tes
     settings = build_test_settings(tmp_path, allowed_paths=allowed_paths)
     app = create_app(settings)
     return TestClient(app)
+
+
+@pytest.fixture
+def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Mock FileOrganizer to avoid AI model initialization in tests.
+
+    FileOrganizer initializes AI models and TextProcessor calls ensure_nltk_data(),
+    which can download datasets and cause tests to be slow/flaky. This fixture
+    patches it with a fast stub that returns deterministic results.
+    """
+    mock_organizer = MagicMock()
+    mock_organizer.organize.return_value = {
+        "plan": {
+            "moves": [],
+            "copies": [],
+            "conflicts": [],
+            "statistics": {"total_files": 0, "organized": 0},
+        },
+        "error": None,
+    }
+    monkeypatch.setattr(
+        "file_organizer.web.organize_routes.FileOrganizer",
+        MagicMock(return_value=mock_organizer),
+    )
 
 
 @pytest.mark.unit
@@ -49,7 +75,7 @@ class TestOrganizePage:
 class TestOrganizeScan:
     """Tests for scan endpoint with different methodologies."""
 
-    def test_organize_scan_with_default_method(self, tmp_path: Path) -> None:
+    def test_organize_scan_with_default_method(self, tmp_path: Path, mock_file_organizer: Any) -> None:
         """Should scan with default (content_based) methodology."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
@@ -66,7 +92,7 @@ class TestOrganizeScan:
         )
         assert response.status_code == 200
 
-    def test_organize_scan_with_para_method(self, tmp_path: Path) -> None:
+    def test_organize_scan_with_para_method(self, tmp_path: Path, mock_file_organizer: Any) -> None:
         """Should scan with PARA methodology."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
@@ -83,7 +109,7 @@ class TestOrganizeScan:
         )
         assert response.status_code == 200
 
-    def test_organize_scan_with_johnny_decimal_method(self, tmp_path: Path) -> None:
+    def test_organize_scan_with_johnny_decimal_method(self, tmp_path: Path, mock_file_organizer: Any) -> None:
         """Should scan with Johnny Decimal methodology."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
@@ -105,7 +131,7 @@ class TestOrganizeScan:
 class TestScanOptions:
     """Tests for scan endpoint with different options."""
 
-    def test_scan_returns_plan(self, tmp_path: Path) -> None:
+    def test_scan_returns_plan(self, tmp_path: Path, mock_file_organizer: Any) -> None:
         """Scan should return an organization plan."""
         (tmp_path / "file1.txt").write_text("test")
         (tmp_path / "file2.pdf").write_text("test")
@@ -122,7 +148,7 @@ class TestScanOptions:
         )
         assert response.status_code == 200
 
-    def test_scan_with_recursive_option(self, tmp_path: Path) -> None:
+    def test_scan_with_recursive_option(self, tmp_path: Path, mock_file_organizer: Any) -> None:
         """Scan should handle recursive directory traversal."""
         subdir = tmp_path / "subdir"
         subdir.mkdir()
@@ -142,7 +168,7 @@ class TestScanOptions:
         assert response.status_code == 200
 
     def test_scan_with_hidden_files(self, tmp_path: Path) -> None:
-        """Scan should handle hidden file inclusion."""
+        """Scan should reject hidden file inclusion."""
         (tmp_path / ".hidden").write_text("test")
         output_dir = tmp_path / "organized"
         output_dir.mkdir()
@@ -157,6 +183,7 @@ class TestScanOptions:
             },
         )
         assert response.status_code == 200
+        assert "not supported" in response.text.lower()
 
 
 @pytest.mark.unit
@@ -186,7 +213,7 @@ class TestOrganizeResults:
 class TestOrganizeHtmxEndpoints:
     """Tests for HTMX partial response endpoints."""
 
-    def test_organize_htmx_request_header(self, tmp_path: Path) -> None:
+    def test_organize_htmx_request_header(self, tmp_path: Path, mock_file_organizer: Any) -> None:
         """Should handle HTMX request headers for partial updates."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
@@ -214,4 +241,5 @@ class TestOrganizeHtmxEndpoints:
                 "output_dir": str(tmp_path / "out"),
             },
         )
-        assert response.status_code in [200, 400]  # May show error fragment
+        assert response.status_code == 200
+        assert "Input directory is required" in response.text
