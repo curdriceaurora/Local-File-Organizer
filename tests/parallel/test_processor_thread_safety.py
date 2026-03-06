@@ -18,8 +18,10 @@ class TestProcessorThreadSafety:
     def test_lock_exists(self):
         """ParallelProcessor should have a threading.Lock for shared state."""
         proc = ParallelProcessor()
-        assert hasattr(proc, "_lock")
-        assert isinstance(proc._lock, type(threading.Lock()))
+        assert hasattr(proc, "_lock"), "ParallelProcessor should have _lock attribute"
+        assert isinstance(proc._lock, type(threading.Lock())), (
+            f"_lock should be a threading.Lock, got {type(proc._lock)}"
+        )
 
     def test_executor_type_used_protected_by_lock(self):
         """_executor_type_used should be updated under the lock."""
@@ -29,10 +31,12 @@ class TestProcessorThreadSafety:
         # Process an empty batch — no actual work, but verifies
         # the initial state is coherent.
         results = list(proc.process_batch_iter([], lambda p: None))
-        assert results == []
+        assert results == [], f"Empty batch should return empty results, got {results}"
 
         # Verify _executor_type_used can be read safely
-        assert proc._executor_type_used in ("thread", "process")
+        assert proc._executor_type_used in ("thread", "process"), (
+            f"_executor_type_used should be 'thread' or 'process', got {proc._executor_type_used}"
+        )
 
     def test_concurrent_process_batch_iter(self, tmp_path):
         """Two threads calling process_batch_iter simultaneously should not crash."""
@@ -65,7 +69,9 @@ class TestProcessorThreadSafety:
         t1.join(timeout=10)
         t2.join(timeout=10)
 
-        assert not errors, f"Unexpected errors: {errors}"
-        assert len(results_a) == 2
-        assert len(results_b) == 2
-        assert all(r.success for r in results_a + results_b)
+        assert not errors, f"Unexpected errors in concurrent processing: {errors}"
+        assert len(results_a) == 2, f"Thread A should process 2 files, got {len(results_a)}"
+        assert len(results_b) == 2, f"Thread B should process 2 files, got {len(results_b)}"
+        assert all(r.success for r in results_a + results_b), (
+            f"All results should be successful. Failed: {[r for r in results_a + results_b if not r.success]}"
+        )

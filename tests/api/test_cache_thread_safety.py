@@ -19,8 +19,10 @@ class TestInMemoryCacheThreadSafety:
     def test_has_lock(self):
         """Test has lock."""
         cache = InMemoryCache()
-        assert hasattr(cache, "_lock")
-        assert isinstance(cache._lock, type(threading.Lock()))
+        assert hasattr(cache, "_lock"), "InMemoryCache should have _lock attribute for thread safety"
+        assert isinstance(cache._lock, type(threading.Lock())), (
+            f"_lock should be a threading.Lock, got {type(cache._lock)}"
+        )
 
     def test_concurrent_get_set(self):
         """10 threads read/write simultaneously without crash."""
@@ -55,9 +57,12 @@ class TestInMemoryCacheThreadSafety:
 
         # Verify all threads actually terminated (not hung)
         for i, t in enumerate(threads):
-            assert not t.is_alive(), f"Thread {i} did not terminate"
+            assert not t.is_alive(), f"Thread {i} did not terminate after join timeout"
 
-        assert not errors, f"Thread safety errors: {errors}"
+        assert not errors, (
+            f"Thread safety errors during concurrent access: {len(errors)} errors: "
+            f"{[str(e) for e in errors[:3]]}"  # Show first 3 errors
+        )
 
     def test_concurrent_expired_eviction(self):
         """Concurrent reads trigger eviction of expired entries safely."""
@@ -89,9 +94,12 @@ class TestInMemoryCacheThreadSafety:
 
         # Verify all threads actually terminated (not hung)
         for i, t in enumerate(threads):
-            assert not t.is_alive(), f"Reader thread {i} did not terminate"
+            assert not t.is_alive(), f"Reader thread {i} did not terminate after join timeout"
 
-        assert not errors, f"Eviction race errors: {errors}"
+        assert not errors, (
+            f"Eviction race errors during concurrent expired entry access: {len(errors)} errors: "
+            f"{[str(e) for e in errors[:3]]}"  # Show first 3 errors
+        )
 
     def test_concurrent_delete(self):
         """Concurrent deletes do not crash."""
@@ -117,10 +125,13 @@ class TestInMemoryCacheThreadSafety:
         t2.join(timeout=5)
 
         # Verify threads actually terminated (not hung)
-        assert not t1.is_alive(), "Deleter thread 1 did not terminate"
-        assert not t2.is_alive(), "Deleter thread 2 did not terminate"
+        assert not t1.is_alive(), "Deleter thread 1 did not terminate after join timeout"
+        assert not t2.is_alive(), "Deleter thread 2 did not terminate after join timeout"
 
-        assert not errors
+        assert not errors, (
+            f"Concurrent delete errors: {len(errors)} errors: "
+            f"{[str(e) for e in errors[:3]]}"  # Show first 3 errors
+        )
 
 
 class TestRedisCacheCloseLogging:
@@ -138,6 +149,12 @@ class TestRedisCacheCloseLogging:
 
         with patch("file_organizer.api.cache.logger") as mock_logger:
             cache.close()
-            mock_logger.warning.assert_called_once()
+            assert mock_logger.warning.call_count == 1, (
+                f"logger.warning should be called exactly once when RedisCache.close() fails. "
+                f"Actual call count: {mock_logger.warning.call_count}"
+            )
             call_args = str(mock_logger.warning.call_args)
-            assert "close failed" in call_args
+            assert "close failed" in call_args, (
+                f"Warning message should mention 'close failed'. "
+                f"Got: {call_args}"
+            )
