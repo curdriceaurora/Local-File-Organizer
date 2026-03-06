@@ -378,6 +378,14 @@ def get_best_quality_image(images: list[Path]) -> Path | None:
 
     # Sort by quality criteria
     def quality_key(item: tuple[Path, ImageMetadata]) -> tuple[int, int, int]:
+        """Generate quality score tuple for image sorting.
+
+        Args:
+            item: Tuple of (image_path, metadata) to score
+
+        Returns:
+            Tuple of (resolution, format_quality, file_size) for sorting
+        """
         img_path, meta = item
         return (
             meta.resolution,  # Higher resolution is better
