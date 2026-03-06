@@ -31,9 +31,9 @@ repos:
         entry: bash -c "pytest tests/test_web_ui.py -q --override-ini=\"addopts=\""
         language: system
         pass_filenames: false
-      - id: pytest-not-regression
-        name: pytest (not regression)
-        entry: bash -c "pytest tests/ -m \"not regression\" --override-ini=\"addopts=\""
+      - id: pytest-smoke
+        name: pytest (smoke)
+        entry: bash -c "pytest tests/ -m \"smoke\" -q --override-ini=\"addopts=\""
         language: system
         pass_filenames: false
       - id: codespell

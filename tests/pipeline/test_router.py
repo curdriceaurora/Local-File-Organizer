@@ -8,7 +8,7 @@ import pytest
 
 from file_organizer.pipeline.router import FileRouter, ProcessorType
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.smoke]
 
 
 class TestProcessorTypeEnum:

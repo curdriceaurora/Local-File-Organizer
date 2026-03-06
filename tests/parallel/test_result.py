@@ -12,7 +12,7 @@ import pytest
 
 from file_organizer.parallel.result import BatchResult, FileResult
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.smoke]
 
 
 class TestFileResult(unittest.TestCase):

@@ -281,6 +281,7 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "ci: marks tests intended for PR CI validation",
+    "smoke: marks tests for fast pre-commit validation (<30s total)",
     "regression: marks tests intended for full regression runs",
     "e2e: end-to-end tests against real file trees (no Ollama required)",
     "benchmark: performance benchmark tests (use --benchmark-only to run)",

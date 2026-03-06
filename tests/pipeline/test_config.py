@@ -11,7 +11,7 @@ from file_organizer.pipeline.config import (
     PipelineConfig,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.smoke]
 
 
 class TestPipelineConfigDefaults:

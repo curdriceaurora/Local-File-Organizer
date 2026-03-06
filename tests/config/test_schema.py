@@ -6,6 +6,8 @@ import pytest
 
 from file_organizer.config.schema import AppConfig, ModelPreset, UpdateSettings
 
+pytestmark = [pytest.mark.unit, pytest.mark.smoke]
+
 
 @pytest.mark.unit
 class TestModelPreset:

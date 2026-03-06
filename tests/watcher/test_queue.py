@@ -15,6 +15,8 @@ import pytest
 
 from file_organizer.watcher.queue import EventQueue, EventType, FileEvent
 
+pytestmark = [pytest.mark.unit, pytest.mark.smoke]
+
 # ---------------------------------------------------------------------------
 # FileEvent tests
 # ---------------------------------------------------------------------------

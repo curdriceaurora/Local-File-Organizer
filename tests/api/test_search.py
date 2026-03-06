@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.routers.search import _ScoringTiers
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.smoke]
 
 
 def _make_app(allowed_paths: list[str]) -> TestClient:

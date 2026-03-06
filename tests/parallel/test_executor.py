@@ -13,7 +13,7 @@ import pytest
 
 from file_organizer.parallel.executor import create_executor
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.smoke]
 
 
 class TestCreateExecutor(unittest.TestCase):

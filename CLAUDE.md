@@ -230,13 +230,14 @@ ruff format . --check
 - If formatting issues found, run: `ruff format .` to auto-fix
 - Verify formatting passes check before proceeding
 
-### Step 3: Run Test Suite
+### Step 3: Run Smoke Test Suite
 
 ```bash
-pytest tests/ -x -q
+pytest tests/ -m smoke -x -q
 ```
-- Ensure all tests pass
+- Ensure all smoke tests pass
 - If tests fail, fix the failures before committing
+- Smoke suite (<30s) runs critical path tests; full suite runs in CI
 - Do NOT commit with failing tests
 
 ### Step 4: Review Your Diff

@@ -14,7 +14,7 @@ from file_organizer.api.cache import (
     build_cache_backend,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.ci]
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.smoke]
 
 
 class TestInMemoryCache:
