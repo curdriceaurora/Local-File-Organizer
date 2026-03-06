@@ -19,6 +19,18 @@ pytestmark = pytest.mark.unit
 
 
 def _make_config(**kwargs) -> DaemonConfig:
+    """Create a test DaemonConfig with sensible defaults.
+
+    Args:
+        **kwargs: Overrides for config fields. Default values:
+            - watch_directories: []
+            - output_directory: Path("tmp/organized")
+            - pid_file: None
+            - poll_interval: 0.05
+
+    Returns:
+        A DaemonConfig instance with specified or default values.
+    """
     defaults = {
         "watch_directories": [],
         "output_directory": Path("tmp/organized"),
@@ -44,7 +56,7 @@ class TestSignalHandlerWritesToPipe:
         with wired_pipe(daemon) as (r, _w):
             daemon._handle_signal(signal.SIGTERM, None)
             data = os.read(r, 1024)
-            assert data == b"\x00"
+            assert data == b"\x00", f"Signal handler should write null byte to pipe, got {data!r}"
 
     def test_signal_handler_tolerates_closed_pipe(self) -> None:
         """Verify signal handler gracefully handles a closed write pipe."""
@@ -55,14 +67,20 @@ class TestSignalHandlerWritesToPipe:
         daemon._sig_wakeup_w = w
 
         # Should not raise — OSError is caught internally
-        daemon._handle_signal(signal.SIGTERM, None)
+        try:
+            daemon._handle_signal(signal.SIGTERM, None)
+        except OSError:
+            pytest.fail("Signal handler should tolerate closed pipe")
 
     def test_signal_handler_tolerates_none_pipe(self) -> None:
         """Verify signal handler works correctly when no pipe is initialized."""
         daemon = DaemonService(_make_config())
-        assert daemon._sig_wakeup_w is None
+        assert daemon._sig_wakeup_w is None, "Initial pipe write FD should be None"
         # Should not raise when pipe is None
-        daemon._handle_signal(signal.SIGTERM, None)
+        try:
+            daemon._handle_signal(signal.SIGTERM, None)
+        except TypeError:
+            pytest.fail("Signal handler should tolerate None pipe")
 
 
 @pytest.mark.ci
@@ -76,7 +94,7 @@ class TestRunLoopExitsOnPipeSignal:
             # Write a byte to simulate a signal arrival
             os.write(w, b"\x00")
             daemon._run_loop()
-            assert daemon._stop_event.is_set()
+            assert daemon._stop_event.is_set(), "Run loop should set stop event after pipe signal"
 
     def test_run_loop_falls_back_to_event_wait(self) -> None:
         """Verify run loop falls back to event.wait when no pipe available.
@@ -85,7 +103,7 @@ class TestRunLoopExitsOnPipeSignal:
         and the loop waits on the stop event directly.
         """
         daemon = DaemonService(_make_config())
-        assert daemon._sig_wakeup_r is None  # No pipe
+        assert daemon._sig_wakeup_r is None, "No pipe should be created initially"
 
         # Set stop event after a short delay
         def stop_later() -> None:
@@ -97,7 +115,7 @@ class TestRunLoopExitsOnPipeSignal:
         t.start()
         daemon._run_loop()
         t.join(timeout=2.0)
-        assert daemon._stop_event.is_set()
+        assert daemon._stop_event.is_set(), "Stop event should be set after event.wait path"
 
 
 class TestPipeClosedOnRestore:
@@ -111,16 +129,20 @@ class TestPipeClosedOnRestore:
         daemon._install_signal_handlers()
 
         # Verify pipe was created
-        assert daemon._sig_wakeup_r is not None
-        assert daemon._sig_wakeup_w is not None
+        assert daemon._sig_wakeup_r is not None, (
+            "Read FD should be created after installing handlers"
+        )
+        assert daemon._sig_wakeup_w is not None, (
+            "Write FD should be created after installing handlers"
+        )
         r_fd = daemon._sig_wakeup_r
         w_fd = daemon._sig_wakeup_w
 
         daemon._restore_signal_handlers()
 
         # Verify pipe fds are cleared
-        assert daemon._sig_wakeup_r is None
-        assert daemon._sig_wakeup_w is None
+        assert daemon._sig_wakeup_r is None, "Read FD should be None after restoring handlers"
+        assert daemon._sig_wakeup_w is None, "Write FD should be None after restoring handlers"
 
         # Verify fds are actually closed (os.fstat should fail)
         with pytest.raises(OSError):
@@ -143,10 +165,10 @@ class TestInstallSignalHandlersMainThread:
 
         try:
             daemon._install_signal_handlers()
-            assert daemon._original_sigterm is not None
-            assert daemon._original_sigint is not None
-            assert daemon._sig_wakeup_r is not None
-            assert daemon._sig_wakeup_w is not None
+            assert daemon._original_sigterm is not None, "Original SIGTERM handler should be saved"
+            assert daemon._original_sigint is not None, "Original SIGINT handler should be saved"
+            assert daemon._sig_wakeup_r is not None, "Pipe read FD should be created"
+            assert daemon._sig_wakeup_w is not None, "Pipe write FD should be created"
         finally:
             daemon._restore_signal_handlers()
 
@@ -167,7 +189,11 @@ class TestRestoreSignalHandlersMainThread:
 
         daemon._restore_signal_handlers()
 
-        assert daemon._original_sigterm is None
-        assert daemon._original_sigint is None
-        assert daemon._sig_wakeup_r is None
-        assert daemon._sig_wakeup_w is None
+        assert daemon._original_sigterm is None, (
+            "Original SIGTERM handler should be cleared after restore"
+        )
+        assert daemon._original_sigint is None, (
+            "Original SIGINT handler should be cleared after restore"
+        )
+        assert daemon._sig_wakeup_r is None, "Pipe read FD should be closed and cleared"
+        assert daemon._sig_wakeup_w is None, "Pipe write FD should be closed and cleared"

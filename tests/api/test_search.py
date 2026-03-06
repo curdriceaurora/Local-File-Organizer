@@ -15,11 +15,20 @@ pytestmark = [pytest.mark.unit, pytest.mark.ci]
 def _make_app(allowed_paths: list[str]) -> TestClient:
     """Create a test client with search router and given allowed_paths.
 
+    Sets up a FastAPI test client with the search router, exception handlers,
+    and dependency overrides for testing. This allows tests to control which
+    paths are allowed for searching.
+
     Args:
         allowed_paths: List of directory paths to allow searching.
 
     Returns:
         A TestClient configured with the search router.
+
+    Example:
+        >>> client = _make_app(['/tmp/test'])
+        >>> resp = client.get('/search', params={'q': 'test'})
+        >>> assert resp.status_code == 200
     """
     from fastapi import FastAPI
 
@@ -54,11 +63,15 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "report"})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
         results = resp.json()
-        assert len(results) == 1
-        assert results[0]["filename"] == "report.txt"
-        assert results[0]["score"] > 0
+        assert len(results) == 1, (
+            f"Expected 1 result for 'report' query, got {len(results)} results"
+        )
+        assert results[0]["filename"] == "report.txt", (
+            f"Expected filename 'report.txt', got {results[0]['filename']}"
+        )
+        assert results[0]["score"] > 0, f"Expected score > 0, got {results[0]['score']}"
 
     def test_search_file_type_filter(self, tmp_path: Path) -> None:
         (tmp_path / "doc.pdf").write_bytes(b"%PDF")
@@ -66,10 +79,12 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "doc", "type": "pdf"})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
         results = resp.json()
-        assert len(results) == 1
-        assert results[0]["filename"] == "doc.pdf"
+        assert len(results) == 1, f"Expected 1 PDF result, got {len(results)} results"
+        assert results[0]["filename"] == "doc.pdf", (
+            f"Expected PDF file, got {results[0]['filename']}"
+        )
 
     def test_search_path_filter(self, tmp_path: Path) -> None:
         sub = tmp_path / "subdir"
@@ -79,11 +94,13 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "inside", "path": str(sub)})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
         results = resp.json()
         filenames = [r["filename"] for r in results]
-        assert "inside.txt" in filenames
-        assert "outside.txt" not in filenames
+        assert "inside.txt" in filenames, f"Expected 'inside.txt' in results, got {filenames}"
+        assert "outside.txt" not in filenames, (
+            f"Did not expect 'outside.txt' in filtered results, got {filenames}"
+        )
 
     def test_search_scoring_order(self, tmp_path: Path) -> None:
         # Exact stem match should score higher than contains
@@ -92,12 +109,19 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "report"})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
         results = resp.json()
-        assert len(results) == 2
+        assert len(results) == 2, (
+            f"Expected 2 results, got {len(results)}: {[r['filename'] for r in results]}"
+        )
         # Exact stem match ("report") should be first
-        assert results[0]["filename"] == "report.txt"
-        assert results[0]["score"] > results[1]["score"]
+        assert results[0]["filename"] == "report.txt", (
+            f"Exact match should rank first, got {results[0]['filename']}"
+        )
+        assert results[0]["score"] > results[1]["score"], (
+            f"Exact match score ({results[0]['score']}) should be higher than "
+            f"substring match ({results[1]['score']})"
+        )
 
     def test_search_pagination(self, tmp_path: Path) -> None:
         for i in range(5):
@@ -105,36 +129,38 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "file", "limit": 2, "offset": 0})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
         page1 = resp.json()
-        assert len(page1) == 2
+        assert len(page1) == 2, f"Expected 2 results in page 1, got {len(page1)}"
 
         resp = client.get("/search", params={"q": "file", "limit": 2, "offset": 2})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
         page2 = resp.json()
-        assert len(page2) == 2
+        assert len(page2) == 2, f"Expected 2 results in page 2, got {len(page2)}"
 
         # Pages should have different files
         names1 = {r["filename"] for r in page1}
         names2 = {r["filename"] for r in page2}
-        assert names1.isdisjoint(names2)
+        assert names1.isdisjoint(names2), (
+            f"Pages should be non-overlapping. Page 1: {names1}, Page 2: {names2}"
+        )
 
     def test_search_empty_query(self, tmp_path: Path) -> None:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": ""})
-        assert resp.status_code == 400
+        assert resp.status_code == 400, f"Empty query should return 400, got {resp.status_code}"
 
         resp = client.get("/search")
-        assert resp.status_code == 400
+        assert resp.status_code == 400, f"Missing query should return 400, got {resp.status_code}"
 
     def test_search_no_results(self, tmp_path: Path) -> None:
         (tmp_path / "hello.txt").write_text("x")
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "nonexistent_xyz"})
-        assert resp.status_code == 200
-        assert resp.json() == []
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
+        assert resp.json() == [], f"Nonexistent query should return empty list, got {resp.json()}"
 
     def test_search_respects_allowed_paths(self, tmp_path: Path) -> None:
         allowed = tmp_path / "allowed"
@@ -147,13 +173,15 @@ class TestSearchReturnsRealFiles:
 
         # Search without path filter — only searches allowed roots
         resp = client.get("/search", params={"q": "secret"})
-        assert resp.status_code == 200
-        assert resp.json() == []
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
+        assert resp.json() == [], f"Secret should not be found in allowed paths, got {resp.json()}"
 
         # Explicit path outside allowed_paths should be rejected
         resp = client.get("/search", params={"q": "secret", "path": str(forbidden)})
         # resolve_path raises ApiError with 403
-        assert resp.status_code in (403, 422)
+        assert resp.status_code in (403, 422), (
+            f"Forbidden path should return 403 or 422, got {resp.status_code}"
+        )
 
     def test_search_schema_validation(self, tmp_path: Path) -> None:
         """Verify search results have all required and optional fields with correct types."""
@@ -161,22 +189,32 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "test"})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
         results = resp.json()
-        assert len(results) == 1
+        assert len(results) == 1, f"Expected 1 result, got {len(results)}"
 
         result = results[0]
         # Required fields
-        assert "filename" in result and isinstance(result["filename"], str)
-        assert "path" in result and isinstance(result["path"], str)
-        assert "score" in result and isinstance(result["score"], float)
+        assert "filename" in result and isinstance(result["filename"], str), (
+            f"filename field missing or not string: {result.get('filename')}"
+        )
+        assert "path" in result and isinstance(result["path"], str), (
+            f"path field missing or not string: {result.get('path')}"
+        )
+        assert "score" in result and isinstance(result["score"], float), (
+            f"score field missing or not float: {result.get('score')}"
+        )
 
         # Optional fields with correct types
-        assert "type" in result and (isinstance(result["type"], str) or result["type"] is None)
-        assert "size" in result and (isinstance(result["size"], int) or result["size"] is None)
+        assert "type" in result and (isinstance(result["type"], str) or result["type"] is None), (
+            f"type field should be str or None: {result.get('type')}"
+        )
+        assert "size" in result and (isinstance(result["size"], int) or result["size"] is None), (
+            f"size field should be int or None: {result.get('size')}"
+        )
         assert "created" in result and (
             isinstance(result["created"], str) or result["created"] is None
-        )
+        ), f"created field should be str or None: {result.get('created')}"
 
     def test_search_limit_zero_returns_all(self, tmp_path: Path) -> None:
         """Verify limit=0 returns all results (treated as 'no limit')."""
@@ -185,10 +223,10 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "file", "limit": 0})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
         results = resp.json()
         # limit=0 means no limit, return all
-        assert len(results) == 5
+        assert len(results) == 5, f"limit=0 should return all 5 results, got {len(results)}"
 
     def test_search_negative_offset_behaves_as_zero(self, tmp_path: Path) -> None:
         """Verify negative offset is treated as zero or handled gracefully."""
@@ -198,7 +236,9 @@ class TestSearchReturnsRealFiles:
         # Negative offset should either be treated as 0 or raise 422
         resp = client.get("/search", params={"q": "file", "offset": -1})
         # Either valid (treated as 0) or validation error
-        assert resp.status_code in (200, 422)
+        assert resp.status_code in (200, 422), (
+            f"Negative offset should return 200 or 422, got {resp.status_code}"
+        )
 
     def test_search_large_offset_returns_empty(self, tmp_path: Path) -> None:
         """Verify offset beyond results count returns empty list."""
@@ -206,8 +246,8 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "file", "offset": 1000})
-        assert resp.status_code == 200
-        assert resp.json() == []
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
+        assert resp.json() == [], f"Large offset should return empty list, got {resp.json()}"
 
     def test_search_utf8_query(self, tmp_path: Path) -> None:
         """Verify search works with UTF-8 characters in query."""
@@ -215,7 +255,7 @@ class TestSearchReturnsRealFiles:
         client = _make_app([str(tmp_path)])
 
         resp = client.get("/search", params={"q": "café"})
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
         results = resp.json()
         # UTF-8 search should work (case-insensitive)
-        assert len(results) >= 0  # May or may not match depending on OS
+        assert len(results) >= 0, f"UTF-8 search should succeed, got {len(results)} results"

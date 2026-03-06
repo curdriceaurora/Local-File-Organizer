@@ -25,7 +25,11 @@ class TestWatchLoop:
     """Tests for _watch_loop method."""
 
     def _make_orchestrator(self) -> PipelineOrchestrator:
-        """_make_orchestrator."""
+        """Create a PipelineOrchestrator with dry-run config.
+
+        Returns:
+            A PipelineOrchestrator configured for testing.
+        """
         config = PipelineConfig(dry_run=True)
         orch = PipelineOrchestrator(config)
         return orch
@@ -40,7 +44,7 @@ class TestWatchLoop:
         call_count = 0
 
         def fake_get_events(max_size=None):
-            """fake_get_events."""
+            """Get test events on first call, then stop loop."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -53,7 +57,12 @@ class TestWatchLoop:
 
         with patch.object(orch, "process_file") as mock_process:
             orch._watch_loop()
-            mock_process.assert_called_once_with(Path("/tmp/test.txt"))
+            assert mock_process.call_count == 1, (
+                f"process_file should be called once, got {mock_process.call_count} calls"
+            )
+            assert mock_process.call_args[0][0] == Path("/tmp/test.txt"), (
+                f"Expected Path('/tmp/test.txt'), got {mock_process.call_args[0][0]}"
+            )
 
     def test_watch_loop_skips_directory_events(self):
         """Directory events should be skipped."""
@@ -65,7 +74,7 @@ class TestWatchLoop:
         call_count = 0
 
         def fake_get_events(max_size=None):
-            """fake_get_events."""
+            """Get directory event on first call, then stop loop."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -77,7 +86,9 @@ class TestWatchLoop:
 
         with patch.object(orch, "process_file") as mock_process:
             orch._watch_loop()
-            mock_process.assert_not_called()
+            assert mock_process.call_count == 0, (
+                f"process_file should not be called for directories, got {mock_process.call_count} calls"
+            )
 
     def test_watch_loop_handles_vanished_file(self):
         """FileNotFoundError from process_file should be caught, loop continues."""
@@ -89,7 +100,7 @@ class TestWatchLoop:
         call_count = 0
 
         def fake_get_events(max_size=None):
-            """fake_get_events."""
+            """Get two events on first call, then stop loop."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -105,7 +116,7 @@ class TestWatchLoop:
         process_calls = []
 
         def fake_process(path):
-            """fake_process."""
+            """Process file or raise FileNotFoundError."""
             process_calls.append(path)
             if "vanished" in str(path):
                 raise FileNotFoundError(f"No such file: {path}")
@@ -114,7 +125,9 @@ class TestWatchLoop:
             orch._watch_loop()
 
         # Both files attempted, loop didn't crash
-        assert len(process_calls) == 2
+        assert len(process_calls) == 2, (
+            f"Both files should be attempted even if one vanishes, got {len(process_calls)} attempts"
+        )
 
     def test_watch_loop_handles_processing_error(self):
         """RuntimeError from process_file should be caught, loop continues."""
@@ -126,7 +139,7 @@ class TestWatchLoop:
         call_count = 0
 
         def fake_get_events(max_size=None):
-            """fake_get_events."""
+            """Get test event on first call, then stop loop."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -138,7 +151,10 @@ class TestWatchLoop:
 
         with patch.object(orch, "process_file", side_effect=RuntimeError("processing failed")):
             # Should not raise
-            orch._watch_loop()
+            try:
+                orch._watch_loop()
+            except RuntimeError:
+                pytest.fail("Watch loop should catch and handle processing errors")
 
     def test_watch_loop_stops_on_running_false(self):
         """Loop should exit when _running is set to False."""
@@ -148,14 +164,20 @@ class TestWatchLoop:
 
         # Should return immediately without calling get_events
         orch._watch_loop()
-        orch._monitor.get_events.assert_not_called()
+        assert orch._monitor.get_events.call_count == 0, (
+            f"get_events should not be called when running=False, got {orch._monitor.get_events.call_count} calls"
+        )
 
 
 class TestWatchLoopExecutor:
     """Tests for ThreadPoolExecutor usage in watch loop."""
 
     def _make_orchestrator(self) -> PipelineOrchestrator:
-        """_make_orchestrator."""
+        """Create a PipelineOrchestrator with dry-run config.
+
+        Returns:
+            A PipelineOrchestrator configured for testing.
+        """
         config = PipelineConfig(dry_run=True)
         orch = PipelineOrchestrator(config)
         return orch
@@ -170,7 +192,7 @@ class TestWatchLoopExecutor:
         call_count = 0
 
         def fake_get_events(max_size=None):
-            """fake_get_events."""
+            """Get test event on first call, then stop loop."""
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -183,15 +205,23 @@ class TestWatchLoopExecutor:
         with patch.object(orch._executor, "submit") as mock_submit:
             orch._watch_loop()
             # submit should have been called with process_file and the path
-            mock_submit.assert_called_once()
-            assert mock_submit.call_args[0][0] == orch.process_file
-            assert mock_submit.call_args[0][1] == Path("/tmp/test.txt")
+            assert mock_submit.call_count == 1, (
+                f"Executor.submit should be called once, got {mock_submit.call_count} calls"
+            )
+            assert mock_submit.call_args[0][0] == orch.process_file, (
+                "First arg should be process_file method"
+            )
+            assert mock_submit.call_args[0][1] == Path("/tmp/test.txt"), (
+                f"Second arg should be Path('/tmp/test.txt'), got {mock_submit.call_args[0][1]}"
+            )
 
     def test_executor_max_workers_matches_config(self):
         """Executor max_workers should match config.max_concurrent."""
         config = PipelineConfig(dry_run=True, max_concurrent=8)
         orch = PipelineOrchestrator(config)
-        assert orch._executor._max_workers == 8
+        assert orch._executor._max_workers == 8, (
+            f"Executor max_workers should be 8, got {orch._executor._max_workers}"
+        )
 
     def test_executor_shutdown_on_stop(self):
         """Executor should be shutdown when pipeline stops."""
@@ -201,4 +231,9 @@ class TestWatchLoopExecutor:
 
         with patch.object(orch._executor, "shutdown") as mock_shutdown:
             orch.stop()
-            mock_shutdown.assert_called_once_with(wait=False)
+            assert mock_shutdown.call_count == 1, (
+                f"Executor.shutdown should be called once, got {mock_shutdown.call_count} calls"
+            )
+            assert mock_shutdown.call_args[1]["wait"] is False, (
+                "Executor shutdown should be called with wait=False"
+            )
