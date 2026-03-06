@@ -845,6 +845,17 @@ body {
   display: block;
 }
 
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
 .spinner-inline {
   width: 16px;
   height: 16px;

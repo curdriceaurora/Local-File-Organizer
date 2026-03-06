@@ -97,7 +97,7 @@
                         <button
                             class="btn-ghost"
                             hx-post="/ui/marketplace/plugins/{{ plugin.name }}/update"
-                            hx-vals='{"q": "{{ query }}", "category": "{{ category }}", "tag_csv": "{{ tags | join(',') }}"}'
+                            hx-vals='{{ {"q": query, "category": category, "tag_csv": tags | join(","), "page": page, "per_page": per_page} | tojson }}'
                             hx-indicator="#update-spinner-{{ loop.index }}"
                             hx-disabled-elt="this">
                             Update
@@ -106,7 +106,7 @@
                         <button
                             class="btn-ghost"
                             hx-post="/ui/marketplace/plugins/{{ plugin.name }}/uninstall"
-                            hx-vals='{"q": "{{ query }}", "category": "{{ category }}", "tag_csv": "{{ tags | join(',') }}"}'
+                            hx-vals='{{ {"q": query, "category": category, "tag_csv": tags | join(","), "page": page, "per_page": per_page} | tojson }}'
                             hx-indicator="#uninstall-spinner-{{ loop.index }}"
                             hx-disabled-elt="this">
                             Uninstall
@@ -116,7 +116,7 @@
                         <button
                             class="btn-primary"
                             hx-post="/ui/marketplace/plugins/{{ plugin.name }}/install"
-                            hx-vals='{"q": "{{ query }}", "category": "{{ category }}", "tag_csv": "{{ tags | join(',') }}"}'
+                            hx-vals='{{ {"q": query, "category": category, "tag_csv": tags | join(","), "page": page, "per_page": per_page} | tojson }}'
                             hx-indicator="#install-spinner-{{ loop.index }}"
                             hx-disabled-elt="this">
                             Install

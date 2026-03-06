@@ -98,7 +98,6 @@
       return;
     }
 
-    closeOrganizeStatsStream();
     organizeStatsEventSource = new EventSource("/ui/organize/stats/events");
     organizeStatsEventSource.addEventListener("stats", (event) => {
       try {
@@ -113,7 +112,7 @@
           if (totalJobsEl) totalJobsEl.textContent = stats.total_jobs || 0;
           if (activeJobsEl) activeJobsEl.textContent = stats.active_jobs || 0;
           if (filesEl) filesEl.textContent = stats.total_files || 0;
-          if (rateEl) rateEl.textContent = stats.success_rate ? (stats.success_rate * 100).toFixed(1) + "%" : "0.0%";
+          if (rateEl) rateEl.textContent = stats.success_rate ? Number(stats.success_rate).toFixed(1) + "%" : "0.0%";
         }
       } catch (error) {
         // Ignore parse errors

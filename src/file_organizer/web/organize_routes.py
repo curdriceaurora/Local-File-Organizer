@@ -852,7 +852,7 @@ async def organize_history_events(
     async def _event_generator() -> Any:
         last_payload = ""
         while True:
-            rows = _list_organize_jobs(status_filter, limit)
+            rows = _list_organize_jobs(status_filter=status_filter, limit=limit)
             data = json.dumps(rows)
             if data != last_payload:
                 yield f"event: history\ndata: {data}\n\n"
