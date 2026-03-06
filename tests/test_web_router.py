@@ -1,4 +1,8 @@
-"""Tests for the web router (home page and main app routes)."""
+"""Tests for the web UI router (routes at /ui/ prefix).
+
+NOTE: This module tests the web router initialization and basic /ui/ route
+accessibility. For comprehensive web route tests, see tests/web/ directory.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,6 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings
 
@@ -28,37 +31,36 @@ class TestHomeRoute:
     """Tests for the home page route."""
 
     def test_home_page_returns_200(self, tmp_path: Path) -> None:
-        """Home page should return 200 status."""
+        """Web home page should return 200 status."""
         client = _build_client(tmp_path)
-        response = client.get("/")
+        response = client.get("/ui/")
         assert response.status_code == 200
 
     def test_home_page_returns_html(self, tmp_path: Path) -> None:
-        """Home page should return content."""
+        """Web home page should return HTML content."""
         client = _build_client(tmp_path)
-        response = client.get("/")
-        # Home route returns JSON status, not HTML
-        content_type = response.headers.get("content-type", "")
-        assert "application/json" in content_type or "text/html" in content_type
+        response = client.get("/ui/")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
 
     def test_home_page_renders_template(self, tmp_path: Path) -> None:
-        """Home page should render the base template."""
+        """Web home page should render the base template with expected HTML structure."""
         client = _build_client(tmp_path)
-        response = client.get("/")
-        # Basic check that HTML content exists
-        assert len(response.text) > 0
-        assert response.text.count("<html") >= 0  # May or may not have explicit html tag
+        response = client.get("/ui/")
+        assert response.status_code == 200
+        # Check for common HTML structural elements
+        assert any(tag in response.text for tag in ("<!DOCTYPE html", "<html", "<head", "<body"))
 
     def test_home_page_with_auth_disabled(self, tmp_path: Path) -> None:
-        """Home page works with auth disabled."""
+        """Web home page works with auth disabled."""
         client = _build_client(tmp_path, auth_enabled=False)
-        response = client.get("/")
+        response = client.get("/ui/")
         assert response.status_code == 200
 
     def test_home_page_with_auth_enabled(self, tmp_path: Path) -> None:
-        """Home page accessible with auth enabled."""
+        """Web home page accessible with auth enabled."""
         client = _build_client(tmp_path, auth_enabled=True)
-        response = client.get("/")
+        response = client.get("/ui/")
         # May redirect to login or show home - either is acceptable
         assert response.status_code in [200, 303]
 
@@ -70,14 +72,17 @@ class TestErrorPages:
     def test_nonexistent_path_returns_404(self, tmp_path: Path) -> None:
         """Requesting nonexistent path should return 404."""
         client = _build_client(tmp_path)
-        response = client.get("/nonexistent/path/that/does/not/exist")
+        response = client.get("/ui/nonexistent/path/that/does/not/exist")
         assert response.status_code == 404
 
-    def test_404_returns_html(self, tmp_path: Path) -> None:
-        """404 error should return HTML content."""
+    def test_404_returns_valid_response(self, tmp_path: Path) -> None:
+        """404 error should return valid response with appropriate content type."""
         client = _build_client(tmp_path)
-        response = client.get("/invalid")
-        assert "text/html" in response.headers.get("content-type", "") or response.status_code == 404
+        response = client.get("/ui/invalid")
+        assert response.status_code == 404
+        # FastAPI may return JSON or HTML depending on error handler configuration
+        content_type = response.headers.get("content-type", "")
+        assert "json" in content_type or "html" in content_type
 
 
 @pytest.mark.unit
@@ -91,8 +96,7 @@ class TestRouterSetup:
         assert app is not None
 
     def test_client_can_make_requests(self, tmp_path: Path) -> None:
-        """Test client should be able to make requests."""
+        """Test client should be able to make requests to web routes."""
         client = _build_client(tmp_path)
-        response = client.get("/")
-        assert response is not None
-        assert hasattr(response, "status_code")
+        response = client.get("/ui/")
+        assert response.status_code in [200, 303]  # Allow redirect for auth

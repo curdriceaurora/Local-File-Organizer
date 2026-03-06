@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings
 
@@ -47,42 +46,80 @@ class TestOrganizePage:
 
 
 @pytest.mark.unit
-class TestOrganizeMethodSelection:
-    """Tests for methodology/method selection."""
+class TestOrganizeScan:
+    """Tests for scan endpoint with different methodologies."""
 
-    def test_organize_with_default_method(self, tmp_path: Path) -> None:
-        """Should handle default organization method."""
+    def test_organize_scan_with_default_method(self, tmp_path: Path) -> None:
+        """Should scan with default (content_based) methodology."""
         (tmp_path / "file.txt").write_text("test")
+        output_dir = tmp_path / "organized"
+        output_dir.mkdir()
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/organize")
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(tmp_path),
+                "output_dir": str(output_dir),
+                "methodology": "content_based",
+            },
+        )
         assert response.status_code == 200
 
-    def test_organize_with_para_method(self, tmp_path: Path) -> None:
-        """Should handle PARA methodology selection."""
-        client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/organize?methodology=para")
-        assert response.status_code in [200, 400]
+    def test_organize_scan_with_para_method(self, tmp_path: Path) -> None:
+        """Should scan with PARA methodology."""
+        (tmp_path / "file.txt").write_text("test")
+        output_dir = tmp_path / "organized"
+        output_dir.mkdir()
 
-    def test_organize_with_johnny_decimal_method(self, tmp_path: Path) -> None:
-        """Should handle Johnny Decimal methodology selection."""
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/organize?methodology=johnny_decimal")
-        assert response.status_code in [200, 400]
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(tmp_path),
+                "output_dir": str(output_dir),
+                "methodology": "para",
+            },
+        )
+        assert response.status_code == 200
+
+    def test_organize_scan_with_johnny_decimal_method(self, tmp_path: Path) -> None:
+        """Should scan with Johnny Decimal methodology."""
+        (tmp_path / "file.txt").write_text("test")
+        output_dir = tmp_path / "organized"
+        output_dir.mkdir()
+
+        client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(tmp_path),
+                "output_dir": str(output_dir),
+                "methodology": "johnny_decimal",
+            },
+        )
+        assert response.status_code == 200
 
 
 @pytest.mark.unit
-class TestScanEndpoint:
-    """Tests for the scan directory endpoint."""
+class TestScanOptions:
+    """Tests for scan endpoint with different options."""
 
-    def test_scan_returns_file_list(self, tmp_path: Path) -> None:
-        """Scan should return list of files found."""
+    def test_scan_returns_plan(self, tmp_path: Path) -> None:
+        """Scan should return an organization plan."""
         (tmp_path / "file1.txt").write_text("test")
-        (tmp_path / "file2.txt").write_text("test")
+        (tmp_path / "file2.pdf").write_text("test")
+        output_dir = tmp_path / "organized"
+        output_dir.mkdir()
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        # Scan might be a POST to /ui/organize/scan or similar
-        response = client.get("/ui/organize")
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(tmp_path),
+                "output_dir": str(output_dir),
+            },
+        )
         assert response.status_code == 200
 
     def test_scan_with_recursive_option(self, tmp_path: Path) -> None:
@@ -90,18 +127,36 @@ class TestScanEndpoint:
         subdir = tmp_path / "subdir"
         subdir.mkdir()
         (subdir / "file.txt").write_text("test")
+        output_dir = tmp_path / "organized"
+        output_dir.mkdir()
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/organize?recursive=true")
-        assert response.status_code in [200, 400]
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(tmp_path),
+                "output_dir": str(output_dir),
+                "recursive": "1",
+            },
+        )
+        assert response.status_code == 200
 
     def test_scan_with_hidden_files(self, tmp_path: Path) -> None:
         """Scan should handle hidden file inclusion."""
         (tmp_path / ".hidden").write_text("test")
+        output_dir = tmp_path / "organized"
+        output_dir.mkdir()
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/organize?include_hidden=true")
-        assert response.status_code in [200, 400]
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(tmp_path),
+                "output_dir": str(output_dir),
+                "include_hidden": "1",
+            },
+        )
+        assert response.status_code == 200
 
 
 @pytest.mark.unit
@@ -131,15 +186,32 @@ class TestOrganizeResults:
 class TestOrganizeHtmxEndpoints:
     """Tests for HTMX partial response endpoints."""
 
-    def test_organizehtmx_event_stream(self, tmp_path: Path) -> None:
-        """Should support HTMX event stream for progress."""
-        # Progress updates typically via SSE or similar
+    def test_organize_htmx_request_header(self, tmp_path: Path) -> None:
+        """Should handle HTMX request headers for partial updates."""
+        (tmp_path / "file.txt").write_text("test")
+        output_dir = tmp_path / "organized"
+        output_dir.mkdir()
+
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/organize")
+        # Send scan request with HTMX header to indicate it's a partial update
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(tmp_path),
+                "output_dir": str(output_dir),
+            },
+            headers={"HX-Request": "true"},
+        )
         assert response.status_code == 200
 
-    def test_organize_dry_run_mode(self, tmp_path: Path) -> None:
-        """Should support dry-run preview mode."""
+    def test_organize_scan_validation(self, tmp_path: Path) -> None:
+        """Should validate scan parameters and return errors when needed."""
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/organize?dry_run=true")
-        assert response.status_code in [200, 400]
+        # Missing required input_dir should error
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "output_dir": str(tmp_path / "out"),
+            },
+        )
+        assert response.status_code in [200, 400]  # May show error fragment

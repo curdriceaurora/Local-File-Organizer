@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from file_organizer.api.config import ApiSettings
 from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings
 
@@ -101,35 +100,37 @@ class TestFilesSorting:
         response = client.get("/ui/files?sort_by=type")
         assert response.status_code == 200
 
-    def test_files_sort_reverse(self, tmp_path: Path) -> None:
-        """Should handle reverse sort parameter."""
-        (tmp_path / "file.txt").write_text("test")
+    def test_files_sort_descending(self, tmp_path: Path) -> None:
+        """Should handle descending sort order via sort_order parameter."""
+        (tmp_path / "a.txt").write_text("test")
+        (tmp_path / "b.txt").write_text("test")
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/files?reverse=true")
+        response = client.get("/ui/files?sort_by=name&sort_order=desc")
         assert response.status_code == 200
+        content = response.text
+        assert "a.txt" in content
+        assert "b.txt" in content
+        # In descending order by name, "b.txt" should appear before "a.txt"
+        assert content.index("b.txt") < content.index("a.txt")
 
 
 @pytest.mark.unit
 class TestFilesFiltering:
     """Tests for file filtering endpoints."""
 
-    def test_files_hide_hidden(self, tmp_path: Path) -> None:
-        """Should handle hide hidden files parameter."""
-        (tmp_path / ".hidden").write_text("test")
-        (tmp_path / "visible.txt").write_text("test")
+    def test_files_filter_by_type(self, tmp_path: Path) -> None:
+        """Should filter files by type parameter."""
+        (tmp_path / "doc.pdf").write_text("test")
+        (tmp_path / "data.csv").write_text("test")
+        (tmp_path / "file.txt").write_text("test")
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/files?hide_hidden=true")
+        # Filter to show only .txt files
+        response = client.get("/ui/files?type=.txt")
         assert response.status_code == 200
-
-    def test_files_show_hidden(self, tmp_path: Path) -> None:
-        """Should handle show hidden files parameter."""
-        (tmp_path / ".hidden").write_text("test")
-
-        client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/files?hide_hidden=false")
-        assert response.status_code == 200
+        # Should include the .txt file
+        assert "file.txt" in response.text
 
 
 @pytest.mark.unit
@@ -137,14 +138,15 @@ class TestFilesApi:
     """Tests for file API endpoints (HTMX and JSON)."""
 
     def test_file_tree_endpoint(self, tmp_path: Path) -> None:
-        """Should provide file tree endpoint."""
+        """Should provide file tree endpoint for directory navigation."""
         subdir = tmp_path / "subdir"
         subdir.mkdir()
         (subdir / "file.txt").write_text("test")
 
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
-        response = client.get(f"/ui/files/tree?path={tmp_path}")
-        assert response.status_code in [200, 400]  # May fail with query param issues
+        # Use params dict for proper URL encoding
+        response = client.get("/ui/files/tree", params={"path": str(tmp_path)})
+        assert response.status_code == 200
 
     def test_files_breadcrumbs(self, tmp_path: Path) -> None:
         """Should generate breadcrumb navigation."""
