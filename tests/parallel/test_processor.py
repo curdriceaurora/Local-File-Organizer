@@ -111,7 +111,6 @@ class TestParallelProcessorInit(unittest.TestCase):
         self.assertEqual(processor.config.chunk_size, 5)
 
 
-@pytest.mark.ci
 class TestProcessBatch(unittest.TestCase):
     """Test ParallelProcessor.process_batch."""
 
