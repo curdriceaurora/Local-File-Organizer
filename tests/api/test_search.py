@@ -123,6 +123,49 @@ class TestSearchReturnsRealFiles:
             f"substring match ({results[1]['score']})"
         )
 
+    def test_search_extension_match_scores_half(self, tmp_path: Path) -> None:
+        """Verify extension-only match scores 0.5."""
+        (tmp_path / "budget.pdf").write_text("expense data")
+        client = _make_app([str(tmp_path)])
+
+        resp = client.get("/search", params={"q": "pdf"})
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
+        results = resp.json()
+        assert len(results) == 1, f"Expected 1 result for 'pdf' query, got {len(results)} results"
+        assert results[0]["filename"] == "budget.pdf", (
+            f"Expected filename 'budget.pdf', got {results[0]['filename']}"
+        )
+        assert results[0]["score"] == 0.5, (
+            f"Extension-only match should score 0.5, got {results[0]['score']}"
+        )
+
+    def test_search_extension_scores_below_name_contains(self, tmp_path: Path) -> None:
+        """Verify extension match (0.5) ranks below stem contains (0.7)."""
+        (tmp_path / "pdf_notes.txt").write_text("note data")
+        (tmp_path / "budget.pdf").write_text("expense data")
+        client = _make_app([str(tmp_path)])
+
+        resp = client.get("/search", params={"q": "pdf"})
+        assert resp.status_code == 200, f"Expected status 200, got {resp.status_code}"
+        results = resp.json()
+        assert len(results) == 2, (
+            f"Expected 2 results, got {len(results)}: {[r['filename'] for r in results]}"
+        )
+        # Stem contains ("pdf" in "pdf_notes") should rank first
+        assert results[0]["filename"] == "pdf_notes.txt", (
+            f"Stem-contains match should rank first, got {results[0]['filename']}"
+        )
+        assert results[0]["score"] == 0.7, (
+            f"Stem-contains match should score 0.7, got {results[0]['score']}"
+        )
+        # Extension match should rank second
+        assert results[1]["filename"] == "budget.pdf", (
+            f"Extension match should rank second, got {results[1]['filename']}"
+        )
+        assert results[1]["score"] == 0.5, (
+            f"Extension-only match should score 0.5, got {results[1]['score']}"
+        )
+
     def test_search_pagination(self, tmp_path: Path) -> None:
         for i in range(5):
             (tmp_path / f"file_{i}.txt").write_text(str(i))

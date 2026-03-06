@@ -37,17 +37,20 @@ class SearchResult(BaseModel):
 def _compute_score(file_path: Path, query: str) -> float:
     """Score a file path against a search query.
 
-    Returns 1.0 for exact filename match, 0.7 for filename contains,
-    0.3 for path contains.
+    Returns 1.0 for exact filename or stem match, 0.7 for stem contains,
+    0.5 for exact extension match, 0.3 for path contains.
     """
     q_lower = query.lower()
     name_lower = file_path.name.lower()
     stem_lower = file_path.stem.lower()
+    suffix_lower = file_path.suffix.lower().lstrip(".")
 
     if name_lower == q_lower or stem_lower == q_lower:
         return 1.0
-    if q_lower in name_lower:
+    if q_lower in stem_lower:
         return 0.7
+    if q_lower == suffix_lower:
+        return 0.5
     if q_lower in str(file_path).lower():
         return 0.3
     return 0.0
