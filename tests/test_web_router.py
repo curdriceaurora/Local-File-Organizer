@@ -61,8 +61,7 @@ class TestHomeRoute:
         """Web home page accessible with auth enabled."""
         client = _build_client(tmp_path, auth_enabled=True)
         response = client.get("/ui/")
-        # May redirect to login or show home - either is acceptable
-        assert response.status_code in [200, 303]
+        assert response.status_code == 200
 
 
 @pytest.mark.unit
@@ -99,4 +98,4 @@ class TestRouterSetup:
         """Test client should be able to make requests to web routes."""
         client = _build_client(tmp_path)
         response = client.get("/ui/")
-        assert response.status_code in [200, 303]  # Allow redirect for auth
+        assert response.status_code == 200

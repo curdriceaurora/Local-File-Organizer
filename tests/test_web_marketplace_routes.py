@@ -11,8 +11,20 @@ from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings
 
 
-def _build_client(tmp_path: Path) -> TestClient:
-    """Create a test client with marketplace route access."""
+def _build_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch | None = None) -> TestClient:
+    """Create a test client with marketplace route access.
+
+    Sets FO_MARKETPLACE_HOME to tmp_path to prevent tests from creating
+    files in the user's actual config directory (hermetic testing).
+    """
+    import os
+
+    # Isolate marketplace to tmp_path to avoid polluting user's environment
+    if monkeypatch is not None:
+        monkeypatch.setenv("FO_MARKETPLACE_HOME", str(tmp_path / "marketplace"))
+    else:
+        os.environ["FO_MARKETPLACE_HOME"] = str(tmp_path / "marketplace")
+
     settings = build_test_settings(tmp_path, allowed_paths=[])
     app = create_app(settings)
     return TestClient(app)
@@ -131,8 +143,10 @@ class TestMarketplaceHtmxEndpoints:
                 "tag_csv": "",
             },
         )
-        # Should return either success (200) or error (could be 404 if plugin doesn't exist)
-        assert response.status_code in [200, 404]
+        # Route always returns 200 (renders marketplace page with message)
+        assert response.status_code == 200
+        # Should return HTML marketplace page
+        assert any(tag in response.text.lower() for tag in ["<html", "<body", "marketplace"])
 
 
 @pytest.mark.unit
@@ -151,8 +165,10 @@ class TestMarketplaceInstallFlow:
                 "tag_csv": "",
             },
         )
-        # Should return 404 or error response for non-existent plugin
-        assert response.status_code in [404, 400, 200]  # 200 if error rendered in HTML
+        # Route always returns 200 (renders marketplace page with message)
+        assert response.status_code == 200
+        # Should return HTML marketplace page
+        assert any(tag in response.text.lower() for tag in ["<html", "<body", "marketplace"])
 
     def test_marketplace_install_progress(self, tmp_path: Path) -> None:
         """Should handle installation workflow."""
@@ -166,5 +182,7 @@ class TestMarketplaceInstallFlow:
                 "tag_csv": "",
             },
         )
-        # Should handle the request and return marketplace page with result
-        assert response.status_code in [200, 404]
+        # Route always returns 200 (renders marketplace page with message)
+        assert response.status_code == 200
+        # Should return HTML marketplace page with search preserved
+        assert any(tag in response.text.lower() for tag in ["<html", "<body", "marketplace"])

@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 from file_organizer.api.main import create_app
 from file_organizer.api.test_utils import build_test_settings
+from file_organizer.core.organizer import OrganizationResult
 
 
 def _build_client(tmp_path: Path, allowed_paths: list[str] | None = None) -> TestClient:
@@ -24,25 +25,31 @@ def _build_client(tmp_path: Path, allowed_paths: list[str] | None = None) -> Tes
 
 @pytest.fixture
 def mock_file_organizer(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Mock FileOrganizer to avoid AI model initialization in tests.
+    """Mock FileOrganizer.organize() to avoid AI model initialization in tests.
 
     FileOrganizer initializes AI models and TextProcessor calls ensure_nltk_data(),
     which can download datasets and cause tests to be slow/flaky. This fixture
-    patches it with a fast stub that returns deterministic results.
+    patches ONLY the organize() method while keeping the class available for
+    attributes like TEXT_EXTENSIONS used by route helpers.
     """
-    mock_organizer = MagicMock()
-    mock_organizer.organize.return_value = {
-        "plan": {
-            "moves": [],
-            "copies": [],
-            "conflicts": [],
-            "statistics": {"total_files": 0, "organized": 0},
-        },
-        "error": None,
-    }
+    # Create mock result matching OrganizationResult interface
+    # Must include all attributes that route code accesses
+    mock_result = MagicMock(spec=OrganizationResult)
+    mock_result.total_files = 0
+    mock_result.processed_files = 0
+    mock_result.skipped_files = 0
+    mock_result.failed_files = 0
+    mock_result.processing_time = 0.0
+    mock_result.organized_structure = {}
+    mock_result.errors = []
+
+    # Patch only the organize method, not the entire class
+    def mock_organize(*args: Any, **kwargs: Any) -> Any:
+        return mock_result
+
     monkeypatch.setattr(
-        "file_organizer.web.organize_routes.FileOrganizer",
-        MagicMock(return_value=mock_organizer),
+        "file_organizer.web.organize_routes.FileOrganizer.organize",
+        mock_organize,
     )
 
 
@@ -91,6 +98,8 @@ class TestOrganizeScan:
             },
         )
         assert response.status_code == 200
+        # Verify plan was generated (success path, not error path)
+        assert "plan" in response.text.lower()
 
     def test_organize_scan_with_para_method(self, tmp_path: Path, mock_file_organizer: Any) -> None:
         """Should scan with PARA methodology."""
@@ -108,6 +117,8 @@ class TestOrganizeScan:
             },
         )
         assert response.status_code == 200
+        # Verify plan was generated (success path, not error path)
+        assert "plan" in response.text.lower()
 
     def test_organize_scan_with_johnny_decimal_method(self, tmp_path: Path, mock_file_organizer: Any) -> None:
         """Should scan with Johnny Decimal methodology."""
@@ -125,6 +136,8 @@ class TestOrganizeScan:
             },
         )
         assert response.status_code == 200
+        # Verify plan was generated (success path, not error path)
+        assert "plan" in response.text.lower()
 
 
 @pytest.mark.unit
