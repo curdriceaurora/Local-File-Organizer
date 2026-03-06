@@ -15,11 +15,13 @@
 
 <section class="panel organize-control-panel">
     <h2>1) Scan and generate plan</h2>
+    <div id="organize-scan-spinner" class="spinner" style="display: none; margin-bottom: 1rem;"></div>
     <form
         class="organize-form"
         hx-post="/ui/organize/scan"
         hx-target="#organize-plan"
         hx-swap="innerHTML"
+        hx-indicator="#organize-scan-spinner"
     >
         <label for="organize-input-dir">Input directory</label>
         <input id="organize-input-dir" name="input_dir" type="text" value="{{ default_input_dir }}" required>
@@ -80,11 +82,13 @@
     <article class="panel">
         <div class="section-headline">
             <h2>History and logs</h2>
+            <div id="organize-history-spinner" class="spinner" style="display: none; margin-right: 1rem;"></div>
             <form
                 class="history-filters"
                 hx-get="/ui/organize/history"
                 hx-target="#organize-history"
                 hx-swap="innerHTML"
+                hx-indicator="#organize-history-spinner"
             >
                 <select name="status_filter" aria-label="Filter history by status">
                     <option value="all">All statuses</option>
@@ -103,6 +107,7 @@
             hx-trigger="load, refreshHistory from:body, every 10s"
             hx-target="#organize-history"
             hx-swap="innerHTML"
+            hx-on:htmx:responseError="document.querySelector('#organize-history-error').style.display = 'block'; setTimeout(() => document.querySelector('#organize-history-error').style.display = 'none', 5000);"
         >
             <div class="loading-state">
                 <div class="spinner"></div>
@@ -119,6 +124,7 @@
             hx-trigger="load, refreshStats from:body, every 10s"
             hx-target="#organize-stats"
             hx-swap="innerHTML"
+            hx-on:htmx:responseError="document.querySelector('#organize-stats-error').style.display = 'block'; setTimeout(() => document.querySelector('#organize-stats-error').style.display = 'none', 5000);"
         >
             <div class="loading-state">
                 <div class="spinner"></div>
