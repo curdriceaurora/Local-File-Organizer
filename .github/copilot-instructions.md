@@ -41,7 +41,7 @@ Do NOT review or comment on these paths:
 ## Suppression Syntax
 
 If a PR touches .claude/ files, use:
-```
+```text
 <!-- copilot: skip_review -->
 ```
 
