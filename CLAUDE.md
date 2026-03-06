@@ -125,7 +125,7 @@ Every subtask must satisfy:
 
 Before creating parallel PRs:
 
-```
+```text
 □ List all files that will be modified across all subtasks
 □ Check for file overlaps (conflict risk)
 □ Identify hard dependencies (PR A must merge before PR B)
@@ -368,37 +368,46 @@ This single command validates:
 If the validation script is unavailable, complete these steps manually:
 
 #### Step 1: Code Quality Validation
+
 ```bash
 ruff check .
 ```
+
 - If violations found, run: `ruff check . --fix`
 - Verify all violations are resolved before proceeding
 
 #### Step 2: Code Formatting
+
 ```bash
 ruff format . --check
 ```
+
 - If formatting issues found, run: `ruff format .` to auto-fix
 - Verify formatting passes check before proceeding
 
 #### Step 3: Run Smoke Test Suite
+
 ```bash
 pytest tests/ -m smoke -x -q
 ```
+
 - Ensure all smoke tests pass
 - Smoke suite (<30s) runs critical path tests; full suite runs in CI
 - Do NOT commit with failing tests
 
 #### Step 4: Review Your Diff
+
 ```bash
 git diff --cached
 ```
+
 - Verify no duplicate imports
 - Verify no misplaced lines (e.g., pytestmark in wrong location)
 - Verify changes match intended modifications
 - Check for known patterns (see `.claude/rules/code-quality-validation.md`)
 
 #### Step 5: Commit Only If All Pass
+
 ```bash
 git commit -m "message"
 ```
