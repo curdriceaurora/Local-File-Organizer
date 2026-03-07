@@ -48,27 +48,24 @@ class TestFilesBrowse:
 class TestFilesSorting:
     """Tests for file sorting endpoints."""
 
-    def test_files_sort_by_name(self, tmp_path: Path, web_client_builder) -> None:
-        """Should handle sort by name parameter."""
-        (tmp_path / "b.txt").write_text("test")
-        (tmp_path / "a.txt").write_text("test")
+    @pytest.mark.parametrize(
+        "sort_by,files,expected_order",
+        [
+            ("name", {"a.txt": "test", "b.txt": "test"}, ["a.txt", "b.txt"]),
+            ("size", {"small.txt": "x", "large.txt": "x" * 1000}, ["small.txt", "large.txt"]),
+            ("type", {"file.txt": "test", "file.pdf": "test"}, ["file.pdf", "file.txt"]),
+        ],
+        ids=["by_name", "by_size", "by_type"],
+    )
+    def test_files_sort(self, tmp_path: Path, web_client_builder, sort_by: str, files: dict, expected_order: list) -> None:
+        """Should handle various file sorting parameters."""
+        for filename, content in files.items():
+            (tmp_path / filename).write_text(content)
 
         client = web_client_builder(allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/files?sort_by=name")
+        response = client.get(f"/ui/files?sort_by={sort_by}")
         assert response.status_code == 200
-        # Verify files are sorted by name (ascending)
-        assert_file_order_in_html(response.text, "a.txt", "b.txt")
-
-    def test_files_sort_by_size(self, tmp_path: Path, web_client_builder) -> None:
-        """Should handle sort by size parameter."""
-        (tmp_path / "large.txt").write_text("x" * 1000)
-        (tmp_path / "small.txt").write_text("x")
-
-        client = web_client_builder(allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/files?sort_by=size")
-        assert response.status_code == 200
-        # Verify files are sorted by size (ascending - small before large)
-        assert_file_order_in_html(response.text, "small.txt", "large.txt")
+        assert_file_order_in_html(response.text, *expected_order)
 
     def test_files_sort_by_modified(self, tmp_path: Path, web_client_builder) -> None:
         """Should handle sort by modified time parameter."""
@@ -104,17 +101,6 @@ class TestFilesSorting:
         assert response.status_code == 200
         # Verify files are sorted by created time (first before second)
         assert_file_order_in_html(response.text, "file_first.txt", "file_second.txt")
-
-    def test_files_sort_by_type(self, tmp_path: Path, web_client_builder) -> None:
-        """Should handle sort by type parameter."""
-        (tmp_path / "file.txt").write_text("test")
-        (tmp_path / "file.pdf").write_text("test")
-
-        client = web_client_builder(allowed_paths=[str(tmp_path)])
-        response = client.get("/ui/files?sort_by=type")
-        assert response.status_code == 200
-        # Verify files are sorted by type extension (PDF comes before TXT alphabetically)
-        assert_file_order_in_html(response.text, "file.pdf", "file.txt")
 
     def test_files_sort_descending(self, tmp_path: Path, web_client_builder) -> None:
         """Should handle descending sort order via sort_order parameter."""

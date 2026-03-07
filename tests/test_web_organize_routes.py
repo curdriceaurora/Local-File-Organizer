@@ -69,8 +69,19 @@ class TestOrganizePage:
 class TestOrganizeScan:
     """Tests for scan endpoint with different methodologies."""
 
-    def test_organize_scan_with_default_method(self, tmp_path: Path, web_client_builder, mock_file_organizer: MagicMock) -> None:
-        """Should scan with default (content_based) methodology."""
+    @pytest.mark.parametrize(
+        "methodology",
+        [
+            "content_based",
+            "para",
+            "johnny_decimal",
+        ],
+        ids=["default", "para", "johnny_decimal"],
+    )
+    def test_organize_scan_with_methodology(
+        self, tmp_path: Path, web_client_builder, mock_file_organizer: MagicMock, methodology: str
+    ) -> None:
+        """Should scan with different organization methodologies."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
         output_dir.mkdir()
@@ -81,55 +92,13 @@ class TestOrganizeScan:
             data={
                 "input_dir": str(tmp_path),
                 "output_dir": str(output_dir),
-                "methodology": "content_based",
+                "methodology": methodology,
             },
         )
         assert response.status_code == 200
         # Verify plan was generated (success path, not error path)
         assert "Plan generated" in response.text
         # Verify FileOrganizer was called with correct methodology
-        assert mock_file_organizer.call_count > 0
-
-    def test_organize_scan_with_para_method(self, tmp_path: Path, web_client_builder, mock_file_organizer: MagicMock) -> None:
-        """Should scan with PARA methodology."""
-        (tmp_path / "file.txt").write_text("test")
-        output_dir = tmp_path / "organized"
-        output_dir.mkdir()
-
-        client = web_client_builder(allowed_paths=[str(tmp_path)])
-        response = client.post(
-            "/ui/organize/scan",
-            data={
-                "input_dir": str(tmp_path),
-                "output_dir": str(output_dir),
-                "methodology": "para",
-            },
-        )
-        assert response.status_code == 200
-        # Verify plan was generated (success path, not error path)
-        assert "Plan generated" in response.text
-        # Verify FileOrganizer was called (methodology handling verified by endpoint)
-        assert mock_file_organizer.call_count > 0
-
-    def test_organize_scan_with_johnny_decimal_method(self, tmp_path: Path, web_client_builder, mock_file_organizer: MagicMock) -> None:
-        """Should scan with Johnny Decimal methodology."""
-        (tmp_path / "file.txt").write_text("test")
-        output_dir = tmp_path / "organized"
-        output_dir.mkdir()
-
-        client = web_client_builder(allowed_paths=[str(tmp_path)])
-        response = client.post(
-            "/ui/organize/scan",
-            data={
-                "input_dir": str(tmp_path),
-                "output_dir": str(output_dir),
-                "methodology": "johnny_decimal",
-            },
-        )
-        assert response.status_code == 200
-        # Verify plan was generated (success path, not error path)
-        assert "Plan generated" in response.text
-        # Verify FileOrganizer was called (methodology handling verified by endpoint)
         assert mock_file_organizer.call_count > 0
 
 
