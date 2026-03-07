@@ -11,8 +11,8 @@ pytest
 # Run with coverage report
 pytest --cov=file_organizer --cov-report=html
 
-# Fast smoke tests (pre-commit validation)
-pytest -m smoke -x
+# Fast smoke tests (pre-commit validation, matches actual gate)
+pytest tests/ -m "smoke" -q --strict-markers --timeout=30 --override-ini="addopts="
 
 # Run specific module tests
 pytest tests/services/ -v
@@ -54,8 +54,8 @@ Use pytest markers to categorize tests:
 ### Running Tests by Marker
 
 ```bash
-# Only smoke tests (fast pre-commit validation)
-pytest -m smoke -x
+# Only smoke tests (fast pre-commit validation - full gate)
+pytest tests/ -m "smoke" -q --strict-markers --timeout=30 --override-ini="addopts="
 
 # All unit tests
 pytest -m unit
@@ -119,7 +119,7 @@ Use `httpx.AsyncClient` for testing async FastAPI endpoints:
 
 ```python
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, Client
 from file_organizer.api.main import create_app
 
 @pytest.fixture
@@ -225,8 +225,8 @@ All tests must follow these standards:
 Before committing, run the smoke test suite:
 
 ```bash
-# Fast pre-commit validation (< 30 seconds)
-pytest -m smoke -x
+# Fast pre-commit validation (< 30 seconds, matches actual gate)
+pytest tests/ -m "smoke" -q --strict-markers --timeout=30 --override-ini="addopts="
 
 # Or use the full validation script
 bash .claude/scripts/pre-commit-validation.sh
@@ -241,7 +241,7 @@ GitHub Actions runs the full test suite on every PR:
 - **Smoke tests**: Run on every commit (30s)
 - **Full suite**: Run on main push (~40s)
 - **Coverage gate**: Fail if coverage < 95% (code) or < 90% (docstrings)
-- **Lint gate**: Fail on ruff violations
+- **Lint gate**: Fail on ruff (Python code) or markdownlint (documentation) violations
 
 See `.github/workflows/` for CI configuration.
 

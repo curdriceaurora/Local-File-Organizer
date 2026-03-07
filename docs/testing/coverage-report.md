@@ -18,7 +18,7 @@ Epic #571 "Desktop UI Test Coverage" successfully expanded project test coverage
 | Services coverage | 80% | 82% | ✅ +2% |
 | Models coverage | 90% | 90% | ✅ Met |
 | Config coverage | 90% | 95% | ✅ +5% |
-| Overall code coverage | 74% (CI gate) | 95%+ (tested) | ✅ Exceeded |
+| Overall code coverage | 95% (CI gate) | 95%+ (tested) | ✅ Met |
 
 ## Test Suite Breakdown
 
