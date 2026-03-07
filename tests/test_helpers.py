@@ -17,14 +17,14 @@ def assert_file_order_in_html(response_text: str, *files: str) -> None:
     text_lower = response_text.lower()
     files_lower = [f.lower() for f in files]
 
-    # Verify all files are present
-    for file_lower in files_lower:
-        assert file_lower in text_lower, f"File {file_lower} not found in response"
-
-    # Verify they appear in order
+    # Verify files appear in order (single pass)
     previous_index = -1
     for file_lower in files_lower:
-        current_index = text_lower.index(file_lower)
+        try:
+            current_index = text_lower.index(file_lower)
+        except ValueError as err:
+            raise AssertionError(f"File {file_lower} not found in response") from err
+
         assert current_index > previous_index, (
             f"Files not in correct order: {file_lower} at index {current_index} "
             f"should come after previous at {previous_index}"
@@ -43,9 +43,10 @@ def assert_html_contains(response_text: str, *keywords: str) -> None:
         AssertionError: If any keyword is not found in response.
     """
     text_lower = response_text.lower()
-    for keyword in keywords:
-        assert keyword.lower() in text_lower, (
-            f"Keyword '{keyword}' not found in response"
+    keywords_lower = [k.lower() for k in keywords]
+    for keyword_lower in keywords_lower:
+        assert keyword_lower in text_lower, (
+            f"Keyword '{keyword_lower}' not found in response"
         )
 
 
@@ -79,7 +80,8 @@ def assert_html_tag_present(response_text: str, *tags: str) -> None:
         AssertionError: If any tag is not found in response.
     """
     text_lower = response_text.lower()
-    for tag in tags:
-        assert tag.lower() in text_lower, (
-            f"HTML tag '{tag}' not found in response"
+    tags_lower = [t.lower() for t in tags]
+    for tag_lower in tags_lower:
+        assert tag_lower in text_lower, (
+            f"HTML tag '{tag_lower}' not found in response"
         )

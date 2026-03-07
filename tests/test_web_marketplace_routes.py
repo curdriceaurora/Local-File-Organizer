@@ -215,7 +215,7 @@ class TestMarketplaceInputValidation:
         response = client.get("/ui/marketplace?category=readers")
         assert response.status_code == 200
         # Verify response includes result counts or plugin list
-        assert "plugin" in response.text.lower() or "marketplace" in response.text.lower()
+        assert_html_contains_any(response.text, "plugin", "marketplace")
 
 
 @pytest.mark.unit
