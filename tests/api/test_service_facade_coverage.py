@@ -73,12 +73,16 @@ class TestOrganizeFiles:
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = mock_result
 
-        with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer):
+        with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer) as mock_cls:
             facade = _facade()
             result = await facade.organize_files(str(tmp_path))
 
         assert result["success"] is True
         assert result["data"]["dry_run"] is False
+        mock_cls.assert_called_once_with(dry_run=False)
+        mock_organizer.organize.assert_called_once_with(
+            input_path=str(tmp_path), output_path=str(tmp_path)
+        )
 
     @pytest.mark.asyncio
     async def test_organize_files_dry_run(self, tmp_path) -> None:
@@ -95,12 +99,16 @@ class TestOrganizeFiles:
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = mock_result
 
-        with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer):
+        with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer) as mock_cls:
             facade = _facade()
             result = await facade.organize_files(str(tmp_path), dry_run=True)
 
         assert result["success"] is True
         assert result["data"]["dry_run"] is True
+        mock_cls.assert_called_once_with(dry_run=True)
+        mock_organizer.organize.assert_called_once_with(
+            input_path=str(tmp_path), output_path=str(tmp_path)
+        )
 
     @pytest.mark.asyncio
     async def test_organize_files_exception(self, tmp_path) -> None:
@@ -150,10 +158,14 @@ class TestDaemonManagement:
     @pytest.mark.asyncio
     async def test_get_daemon_status_error(self) -> None:
         """get_daemon_status returns error dict when attribute access raises."""
-        mock_daemon = MagicMock()
-        type(mock_daemon).is_running = property(lambda self: (_ for _ in ()).throw(RuntimeError("daemon crash")))
+
+        class _RaisingDaemon:
+            @property
+            def is_running(self) -> bool:
+                raise RuntimeError("daemon crash")
+
         facade = _facade()
-        facade._daemon_service = mock_daemon
+        facade._daemon_service = _RaisingDaemon()
 
         result = await facade.get_daemon_status()
 

@@ -114,7 +114,9 @@ class TestSendError:
         with patch("file_organizer.api.routers.realtime.realtime_manager") as mock_mgr:
             mock_mgr.send_personal_message = AsyncMock()
             await _send_error(ws, "something went wrong")
-            mock_mgr.send_personal_message.assert_called_once()
+            mock_mgr.send_personal_message.assert_called_once_with(
+                {"type": "error", "message": "something went wrong"}, ws
+            )
 
     @pytest.mark.asyncio
     async def test_send_error_when_disconnected(self) -> None:
@@ -154,28 +156,73 @@ class TestSendError:
 class TestWebSocketAuth:
     """Tests for WebSocket auth rejection."""
 
-    def test_websocket_rejected_when_token_required_missing(self) -> None:
-        """Connection is closed with 1008 when token is required but absent."""
-        _, client = _build_app(auth_enabled=False, websocket_token="secret-tok")
+    @pytest.mark.asyncio
+    async def test_websocket_rejected_when_token_required_missing(self) -> None:
+        """websocket_endpoint closes with 1008 when a token is required but absent."""
+        from fastapi import status as ws_status
 
-        with pytest.raises(Exception, match=""):
-            with client.websocket_connect("/api/v1/ws/client-1") as ws:
-                ws.receive_json()
+        from file_organizer.api.routers import realtime as rt_module
 
-    def test_websocket_accepted_without_token_requirement(self) -> None:
-        """Connection succeeds when no token is required."""
-        _, client = _build_app(auth_enabled=False, websocket_token=None)
+        ws = AsyncMock()
+        ws.headers = MagicMock()
+        ws.headers.get = MagicMock(return_value=None)  # no auth header
+        ws.close = AsyncMock()
 
-        with patch("file_organizer.api.routers.realtime.realtime_manager") as mock_mgr:
+        settings = ApiSettings(
+            environment="test",
+            auth_enabled=False,
+            websocket_token="secret-tok",  # token required
+            websocket_ping_interval=60,
+        )
+
+        await rt_module.websocket_endpoint(
+            websocket=ws,
+            client_id="test-client",
+            token=None,
+            settings=settings,
+            db=MagicMock(),
+            token_store=MagicMock(),
+        )
+
+        ws.close.assert_called_once_with(code=ws_status.WS_1008_POLICY_VIOLATION)
+
+    @pytest.mark.asyncio
+    async def test_websocket_accepted_without_token_requirement(self) -> None:
+        """websocket_endpoint accepts connection when no token is required."""
+        from fastapi import WebSocketDisconnect
+
+        from file_organizer.api.routers import realtime as rt_module
+
+        ws = AsyncMock()
+        ws.headers = MagicMock()
+        ws.headers.get = MagicMock(return_value=None)
+        ws.client_state = MagicMock()
+        ws.receive_json = AsyncMock(side_effect=WebSocketDisconnect())
+
+        settings = ApiSettings(
+            environment="test",
+            auth_enabled=False,
+            websocket_token=None,  # no token required
+            websocket_ping_interval=60,
+        )
+
+        with patch.object(rt_module, "realtime_manager") as mock_mgr:
             mock_mgr.connect = AsyncMock()
             mock_mgr.disconnect = AsyncMock()
             mock_mgr.send_personal_message = AsyncMock()
 
-            try:
-                with client.websocket_connect("/api/v1/ws/client-1") as ws:
-                    ws.close()
-            except Exception:
-                pass  # disconnect handling varies by starlette version
+            await rt_module.websocket_endpoint(
+                websocket=ws,
+                client_id="test-client",
+                token=None,
+                settings=settings,
+                db=MagicMock(),
+                token_store=MagicMock(),
+            )
+
+        # Connection was accepted — manager.connect() was called, close() was not
+        mock_mgr.connect.assert_called_once()
+        ws.close.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
