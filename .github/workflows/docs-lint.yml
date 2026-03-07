@@ -10,8 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
-      - uses: DavidAnson/markdownlint-cli2-action@db43aef879112c3119a410d69f66701e0d530809  # v17.0.0
+      - uses: actions/setup-python@v5
         with:
-          globs: |
-            docs/**/*.md
-            *.md
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install pymarkdown
+        run: pip install 'pymarkdownlnt==0.9.25'
+      - name: Run markdown linting
+        run: |
+          # Scan all tracked markdown files in repository (including nested)
+          # using git ls-files to match pre-commit hook behavior
+          pymarkdown -c .pymarkdown.json scan $(git ls-files '*.md')
