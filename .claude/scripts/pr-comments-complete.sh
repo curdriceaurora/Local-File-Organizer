@@ -4,7 +4,8 @@
 # pr-comments-complete: Fetch all PR comments including review comments
 #
 # This script works around limitations in the built-in /pr-comments skill
-# by fetching both PR-level comments AND review comments with full context.
+# by fetching PR-level comments, review comments, and reviews in a single
+# GraphQL query for efficiency.
 #
 # Usage:
 #   bash .claude/scripts/pr-comments-complete.sh [PR_NUMBER]
@@ -35,19 +36,71 @@ echo "## PR #$PR_NUMBER Comments - Complete"
 echo ""
 
 ##############################################################################
+# Fetch all data via single GraphQL query for efficiency
+##############################################################################
+
+# Build GraphQL query as a string (avoiding quote issues)
+read -r -d '' GRAPHQL_QUERY <<'QUERY' || true
+query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      comments(first: 100) {
+        nodes {
+          author { login }
+          createdAt
+          body
+        }
+      }
+      reviewComments(first: 100) {
+        nodes {
+          author { login }
+          path
+          line
+          diffHunk
+          body
+          createdAt
+        }
+      }
+      reviews(first: 100) {
+        nodes {
+          author { login }
+          state
+          submittedAt
+          body
+          comments(first: 100) {
+            nodes {
+              path
+              line
+              diffHunk
+              body
+            }
+          }
+        }
+      }
+    }
+  }
+}
+QUERY
+
+# Execute GraphQL query (pass PR_NUMBER as integer, not string)
+RESPONSE=$(gh api graphql \
+  --field owner="$OWNER" \
+  --field repo="$REPO_NAME" \
+  --field number="$PR_NUMBER" \
+  --raw-field query="$GRAPHQL_QUERY" 2>/dev/null || echo '{"errors":[{"message":"GraphQL query failed"}]}')
+
+##############################################################################
 # Section 1: PR-Level Comments
 ##############################################################################
 
 echo "### PR-Level Comments"
 echo ""
 
-COMMENTS=$(gh api /repos/"$OWNER"/"$REPO_NAME"/issues/"$PR_NUMBER"/comments 2>/dev/null || echo "[]")
-
-if [ "$COMMENTS" = "[]" ] || [ -z "$COMMENTS" ]; then
-  echo "No PR-level comments found."
+if echo "$RESPONSE" | jq -e '.data.repository.pullRequest.comments.nodes | length > 0' >/dev/null 2>&1; then
+  echo "$RESPONSE" | jq -r '.data.repository.pullRequest.comments.nodes[] |
+    "**@\(.author.login)** - \(.createdAt | sub("T.*"; ""))\n\n\(.body)\n\n---\n"'
 else
-  echo "$COMMENTS" | jq -r '.[] |
-    "**@\(.user.login)** - \(.created_at | sub("T.*"; ""))\n\n\(.body)\n\n---\n"'
+  echo "No PR-level comments found."
 fi
 
 echo ""
@@ -59,13 +112,11 @@ echo ""
 echo "### Review Comments (Inline)"
 echo ""
 
-REVIEW_COMMENTS=$(gh api /repos/"$OWNER"/"$REPO_NAME"/pulls/"$PR_NUMBER"/comments 2>/dev/null || echo "[]")
-
-if [ "$REVIEW_COMMENTS" = "[]" ] || [ -z "$REVIEW_COMMENTS" ]; then
-  echo "No inline review comments found."
+if echo "$RESPONSE" | jq -e '.data.repository.pullRequest.reviewComments.nodes | length > 0' >/dev/null 2>&1; then
+  echo "$RESPONSE" | jq -r '.data.repository.pullRequest.reviewComments.nodes[] |
+    "**@\(.author.login)** - \(.path)#L\(.line)\n\n```diff\n\(.diffHunk)\n```\n\n> \(.body)\n\n---\n"'
 else
-  echo "$REVIEW_COMMENTS" | jq -r '.[] |
-    "**@\(.user.login)** - \(.path)#L\(.line)\n\n```diff\n\(.diff_hunk)\n```\n\n> \(.body)\n\n---\n"'
+  echo "No inline review comments found."
 fi
 
 echo ""
@@ -77,16 +128,14 @@ echo ""
 echo "### Review Summary"
 echo ""
 
-REVIEWS=$(gh api /repos/"$OWNER"/"$REPO_NAME"/pulls/"$PR_NUMBER"/reviews 2>/dev/null || echo "[]")
-
-if [ "$REVIEWS" = "[]" ] || [ -z "$REVIEWS" ]; then
-  echo "No reviews found."
+if echo "$RESPONSE" | jq -e '.data.repository.pullRequest.reviews.nodes | length > 0' >/dev/null 2>&1; then
+  echo "$RESPONSE" | jq -r '.data.repository.pullRequest.reviews.nodes[] |
+    "**\(.state)** - @\(.author.login) (\(.submittedAt | sub("T.*"; "")))\n\n\(.body // "(no summary body)")\n\nReview comments:\n\(.comments.nodes | if length > 0 then (.[] | "  - \(.path)#L\(.line): \(.body)") | join("\n") else "(no inline comments in this review)" end)\n\n---\n"'
 else
-  echo "$REVIEWS" | jq -r '.[] |
-    "**\(.state)** - @\(.user.login) (\(.submitted_at | sub("T.*"; "")))\n\n\(.body // "(no body)")\n\n---\n"'
+  echo "No reviews found."
 fi
 
 echo ""
 echo "---"
 echo ""
-echo "✅ All comments retrieved successfully"
+echo "✅ All comments retrieved successfully (via GraphQL single query)"
