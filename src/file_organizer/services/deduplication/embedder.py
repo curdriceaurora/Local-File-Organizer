@@ -294,3 +294,4 @@ class DocumentEmbedder:
         # Only save if we have both a path and non-empty cache data
         if cache_path and embedding_cache:
             self._save_cache()
+# Trigger security workflow
