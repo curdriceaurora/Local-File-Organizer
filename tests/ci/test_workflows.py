@@ -99,21 +99,48 @@ class TestCIWorkflow:
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
     def test_ci_uses_python_312(self, workflow: dict[str, Any]) -> None:
-        """Verify CI test job uses Python 3.11 and 3.12 for fast feedback."""
+        """Verify CI test job uses Python 3.11 and 3.12 for fast feedback.
+
+        The test matrix uses a GitHub Actions expression to dynamically select
+        Python versions based on the trigger event:
+        - Pull requests: 3.11 only (faster feedback)
+        - Full runs (push): 3.11 and 3.12 (comprehensive testing)
+        """
         jobs = workflow.get("jobs", {})
         assert "test" in jobs, "CI workflow should have a 'test' job"
         test_job = jobs["test"]
 
-        # Ensure the test job uses a matrix strategy with Python 3.11 and 3.12
+        # Ensure the test job uses a matrix strategy with Python versions
         strategy = test_job.get("strategy", {})
         matrix = strategy.get("matrix", {})
-        python_versions = matrix.get("python-version", [])
+        python_versions_value = matrix.get("python-version", [])
 
-        assert len(python_versions) == 2, (
-            "CI 'test' job must test against exactly 2 Python versions (3.11 and 3.12)"
-        )
-        assert "3.11" in python_versions, "CI 'test' job must include Python 3.11 in the matrix"
-        assert "3.12" in python_versions, "CI 'test' job must include Python 3.12 in the matrix"
+        # Handle both static lists and GitHub Actions expressions
+        if isinstance(python_versions_value, str):
+            # This is a GitHub Actions expression like:
+            # ${{ github.event_name == 'pull_request' && fromJson('["3.11"]') || fromJson('["3.11", "3.12"]') }}
+            assert python_versions_value.startswith("${{"), (
+                "python-version should be a GitHub Actions expression starting with ${{ "
+                f"but got: {python_versions_value}"
+            )
+            # Verify the expression contains the expected version arrays
+            assert '"3.11"' in python_versions_value, (
+                "Expression must include Python 3.11 version"
+            )
+            assert '"3.12"' in python_versions_value, (
+                "Expression must include Python 3.12 version"
+            )
+            assert "pull_request" in python_versions_value, (
+                "Expression should handle pull_request events differently"
+            )
+        else:
+            # If it's a static list (shouldn't be in this workflow)
+            python_versions = python_versions_value if isinstance(python_versions_value, list) else [python_versions_value]
+            assert len(python_versions) >= 2, (
+                "CI 'test' job must test against Python 3.11 and 3.12"
+            )
+            assert "3.11" in python_versions, "CI 'test' job must include Python 3.11"
+            assert "3.12" in python_versions, "CI 'test' job must include Python 3.12"
 
         # Verify the setup-python step uses the matrix variable
         steps = test_job.get("steps", [])
