@@ -286,5 +286,10 @@ class DocumentEmbedder:
 
     def __del__(self):
         """Cleanup: save cache on destruction."""
-        if self.cache_path and self.embedding_cache:
+        # Use getattr with defaults to safely handle cases where __init__ failed
+        # before these attributes were set (e.g., sklearn import error)
+        cache_path = getattr(self, "cache_path", None)
+        embedding_cache = getattr(self, "embedding_cache", None)
+
+        if cache_path and embedding_cache:
             self._save_cache()
