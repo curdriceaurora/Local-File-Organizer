@@ -220,13 +220,16 @@ class TestMarketplaceInputValidation:
         client = web_client_builder(allowed_paths=[])
 
         # Mock list_plugins to return filtered results for category filter
-        reader_plugins = (
-            [
-                MagicMock(name="pdf-reader", category="readers", version="1.0"),
-                MagicMock(name="epub-reader", category="readers", version="1.0"),
-            ],
-            2,
-        )
+        # Note: MagicMock(name=...) sets the internal debug name, not .name attribute
+        pdf_plugin = MagicMock()
+        pdf_plugin.name = "pdf-reader"
+        pdf_plugin.category = "readers"
+        pdf_plugin.version = "1.0"
+        epub_plugin = MagicMock()
+        epub_plugin.name = "epub-reader"
+        epub_plugin.category = "readers"
+        epub_plugin.version = "1.0"
+        reader_plugins = ([pdf_plugin, epub_plugin], 2)
         mock_marketplace_service.list_plugins.return_value = reader_plugins
 
         # Search for specific category

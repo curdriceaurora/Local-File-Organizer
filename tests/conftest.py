@@ -421,6 +421,7 @@ def mock_marketplace_service() -> MagicMock:
     installed_plugin = MagicMock()
     installed_plugin.name = "test-plugin"
     installed_plugin.version = "1.0.0"
+    installed_plugin.source_url = "https://example.com/test-plugin.zip"
     mock_instance.install.return_value = installed_plugin
 
     return mock_instance
