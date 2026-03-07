@@ -230,81 +230,109 @@ if [[ -n "$MD_FILES" ]]; then
   echo ""
 fi
 
-# 7a-1. Markdown heading spacing (MD022) — headings must have blank lines around them
+# 7a-1. Full Markdown Linting (MD022, MD040, and more)
 if [[ -n "$MD_FILES" ]]; then
-  echo "📝 Checking markdown heading spacing (MD022)..."
-  MD022_ISSUES=0
+  echo "📝 Running comprehensive markdown linting..."
+  MD_LINT_FAILED=0
 
-  for md_file in $MD_FILES; do
-    if [[ ! -f "$md_file" ]]; then
-      continue
+  # First, try to use markdownlint-cli2 if available (same as CI)
+  if command -v markdownlint-cli2 &> /dev/null; then
+    echo "  Using markdownlint-cli2 (matches CI linter)..."
+
+    # Run markdownlint-cli2 with config (if exists) or defaults
+    if [[ -f ".markdownlintrc.json" ]] || [[ -f ".markdownlintrc.yaml" ]]; then
+      if ! markdownlint-cli2 $MD_FILES; then
+        MD_LINT_FAILED=1
+      fi
+    else
+      # Use default rules without config file
+      if ! markdownlint-cli2 $MD_FILES; then
+        MD_LINT_FAILED=1
+      fi
     fi
+  else
+    # Fall back to custom Python-based markdown linting (MD022, MD040)
+    echo "  Using custom markdown linter (markdownlint-cli2 not found)..."
 
-    # Read all lines into an array for look-ahead capability (bash 3.2 compatible)
-    LINES=()
-    while IFS= read -r _line || [[ -n "$_line" ]]; do
-      LINES+=("$_line")
-    done < "$md_file"
-    TOTAL_LINES=${#LINES[@]}
-    IN_FRONTMATTER=0
-    IN_CODE_BLOCK=0
-
-    for (( i=0; i<TOTAL_LINES; i++ )); do
-      line="${LINES[$i]}"
-      DISPLAY_NUM=$((i + 1))
-
-      # Track frontmatter (between --- markers at start of file)
-      if [[ $i -eq 0 ]] && [[ "$line" == "---" ]]; then
-        IN_FRONTMATTER=1
-        continue
-      fi
-      if [[ $IN_FRONTMATTER -eq 1 ]] && [[ "$line" == "---" ]]; then
-        IN_FRONTMATTER=0
-        continue
-      fi
-      if [[ $IN_FRONTMATTER -eq 1 ]]; then
+    for md_file in $MD_FILES; do
+      if [[ ! -f "$md_file" ]]; then
         continue
       fi
 
-      # Track code blocks
-      if [[ "$line" == '```'* ]]; then
-        IN_CODE_BLOCK=$(( 1 - IN_CODE_BLOCK ))
-        continue
-      fi
-      if [[ $IN_CODE_BLOCK -eq 1 ]]; then
-        continue
-      fi
+      python3 - "$md_file" << 'MARKDOWN_LINT_PY'
+import re
+import sys
 
-      # Check if current line is a heading (starts with #)
-      if [[ "$line" == '#'* ]] && [[ "$line" =~ ^#{1,6}[[:space:]] ]]; then
-        # Check blank line BEFORE heading (unless first content line after frontmatter)
-        if [[ $i -gt 0 ]]; then
-          PREV_LINE="${LINES[$((i - 1))]}"
-          if [[ -n "$PREV_LINE" ]] && [[ "$PREV_LINE" != "---" ]] && [[ "$PREV_LINE" != '```'* ]]; then
-            echo "❌ $md_file:$DISPLAY_NUM: Heading needs blank line before it: $line"
-            MD022_ISSUES=1
-          fi
-        fi
+filepath = sys.argv[1]
 
-        # Check blank line AFTER heading (unless it's the last line)
-        if [[ $((i + 1)) -lt $TOTAL_LINES ]]; then
-          NEXT_LINE="${LINES[$((i + 1))]}"
-          if [[ -n "$NEXT_LINE" ]]; then
-            echo "❌ $md_file:$DISPLAY_NUM: Heading needs blank line after it: $line"
-            MD022_ISSUES=1
-          fi
-        fi
+with open(filepath, 'r') as f:
+    lines = f.readlines()
+
+issues = 0
+in_code_block = False
+in_frontmatter = False
+frontmatter_count = 0
+
+for line_num, line in enumerate(lines, 1):
+    line_content = line.rstrip('\n')
+
+    # Track frontmatter
+    if line_num == 1 and line_content == '---':
+        in_frontmatter = True
+        frontmatter_count += 1
+        continue
+    if in_frontmatter and line_content == '---':
+        frontmatter_count += 1
+        if frontmatter_count == 2:
+            in_frontmatter = False
+        continue
+    if in_frontmatter:
+        continue
+
+    # MD040: Fenced code blocks should have language
+    if line_content.startswith('```'):
+        if not in_code_block:
+            # Opening fence
+            lang_part = line_content[3:].strip()
+            if not lang_part:
+                print(f"❌ {filepath}:{line_num} MD040 Fenced code blocks should have a language specified")
+                issues += 1
+        in_code_block = not in_code_block
+        continue
+
+    # Skip checks inside code blocks
+    if in_code_block:
+        continue
+
+    # MD022: Headings must have blank lines before and after
+    if re.match(r'^#{1,6}\s', line_content):
+        if line_num > 1:
+            prev_line = lines[line_num - 2].rstrip('\n')
+            if prev_line.strip() and not prev_line.startswith('---'):
+                print(f"❌ {filepath}:{line_num} MD022 Heading needs blank line before it")
+                issues += 1
+        if line_num < len(lines):
+            next_line = lines[line_num].rstrip('\n')
+            if next_line.strip():
+                print(f"❌ {filepath}:{line_num} MD022 Heading needs blank line after it")
+                issues += 1
+
+sys.exit(1 if issues > 0 else 0)
+MARKDOWN_LINT_PY
+
+      if [[ $? -ne 0 ]]; then
+        MD_LINT_FAILED=1
       fi
     done
-  done
+  fi
 
-  if [[ $MD022_ISSUES -eq 1 ]]; then
+  if [[ $MD_LINT_FAILED -eq 1 ]]; then
     echo ""
-    echo "❌ Markdown heading spacing check failed (MD022)"
-    echo "Fix: Add blank lines before AND after each heading"
+    echo "❌ Markdown linting failed"
+    echo "Fix markdown issues above and try again"
     exit 1
   fi
-  echo "✓ Markdown heading spacing OK"
+  echo "✓ Markdown linting passed (MD022, MD040, etc.)"
   echo ""
 fi
 
