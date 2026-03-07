@@ -140,10 +140,10 @@ class TestCIWorkflow:
             # Parse JSON arrays and validate versions
             arrays = [json.loads(match) for match in matches]
             assert ["3.11"] in arrays, (
-                f"Expression must include fromJson('[\"3.11\"]') for PR runs"
+                "Expression must include fromJson('[\"3.11\"]') for PR runs"
             )
             assert ["3.11", "3.12"] in arrays, (
-                f"Expression must include fromJson('[\"3.11\", \"3.12\"]') for full runs"
+                "Expression must include fromJson('[\"3.11\", \"3.12\"]') for full runs"
             )
         else:
             # If it's a static list (shouldn't be in this workflow)
