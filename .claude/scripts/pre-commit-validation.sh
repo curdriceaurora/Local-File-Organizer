@@ -236,8 +236,8 @@ if [[ -n "$MD_FILES" ]]; then
 
   if command -v pymarkdown &> /dev/null; then
     # Use pymarkdown with .pymarkdown.json config
-    # Quote variables to preserve file paths with spaces
-    if ! pymarkdown -c .pymarkdown.json scan ${MD_FILES}; then
+    # Double-quote variable to prevent globbing and word splitting (SC2086)
+    if ! pymarkdown -c .pymarkdown.json scan "${MD_FILES}"; then
       echo ""
       echo "❌ Markdown linting failed"
       echo "Fix markdown issues above and try again"
