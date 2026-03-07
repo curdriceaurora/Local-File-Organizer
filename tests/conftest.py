@@ -398,3 +398,20 @@ def web_client_builder(tmp_path: Path):
         return TestClient(app)
 
     return _build
+
+
+@pytest.fixture
+def mock_marketplace_service() -> MagicMock:
+    """Create a marketplace service mock with deterministic test behavior.
+
+    Configured with:
+    - list_plugins() returns ([], 0) - empty list with count
+    - list_installed() returns [] - empty list, iterable for rendering
+
+    Returns:
+        A MagicMock configured as MarketplaceService instance.
+    """
+    mock_instance = MagicMock()
+    mock_instance.list_plugins.return_value = ([], 0)
+    mock_instance.list_installed.return_value = []
+    return mock_instance
