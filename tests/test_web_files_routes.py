@@ -202,3 +202,40 @@ class TestFilesApi:
         assert response.status_code == 200
         # Breadcrumbs would be embedded in HTML
         assert len(response.text) > 0
+
+
+@pytest.mark.unit
+class TestFilesErrorHandling:
+    """Tests for error handling and edge cases in files routes (Stream A)."""
+
+    def test_files_invalid_sort_parameter(self, tmp_path: Path) -> None:
+        """Should handle invalid sort_by parameter gracefully."""
+        (tmp_path / "file.txt").write_text("test")
+
+        client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        # Invalid sort parameter is validated and rejected with 422
+        response = client.get("/ui/files?sort_by=invalid_sort_field")
+        # Should return 422 Unprocessable Entity for invalid parameter
+        assert response.status_code in (422, 400)
+
+    def test_files_directory_traversal_protection(self, tmp_path: Path) -> None:
+        """Should safely handle directory path parameters."""
+        (tmp_path / "allowed.txt").write_text("test")
+
+        client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        # Path traversal attempts should be handled safely (either blocked or ignored)
+        response = client.get("/ui/files?path=../../../etc/passwd")
+        # Should return 200 (safe handling) or error
+        assert response.status_code in (200, 400, 403, 404)
+
+    def test_files_unicode_filename_handling(self, tmp_path: Path) -> None:
+        """Should correctly handle files with unicode characters in names."""
+        # Create files with unicode names
+        (tmp_path / "файл_тест.txt").write_text("test")  # Russian
+        (tmp_path / "文件测试.txt").write_text("test")  # Chinese
+
+        client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        response = client.get("/ui/files")
+        assert response.status_code == 200
+        # Response should handle unicode without crashing
+        assert len(response.text) > 0

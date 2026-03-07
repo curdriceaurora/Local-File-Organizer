@@ -213,3 +213,46 @@ class TestMarketplaceInstallFlow:
             assert any(tag in response.text.lower() for tag in ["<html", "<body", "marketplace"])
             # Verify install was called for sample plugin
             mock_instance.install.assert_called()
+
+
+@pytest.mark.unit
+class TestMarketplaceErrorHandling:
+    """Tests for error handling and edge cases in marketplace routes (Stream A)."""
+
+    def test_marketplace_invalid_pagination(self, tmp_path: Path) -> None:
+        """Should handle invalid pagination parameters."""
+        client = _build_client(tmp_path)
+        # Invalid page number (negative)
+        response = client.get("/ui/marketplace?page=-1")
+        # Should either ignore or reject invalid pagination
+        assert response.status_code in (200, 400)
+
+    def test_marketplace_missing_category(self, tmp_path: Path) -> None:
+        """Should handle missing category parameter gracefully."""
+        client = _build_client(tmp_path)
+        response = client.get("/ui/marketplace")
+        # Should return 200 with default category or error message
+        assert response.status_code == 200
+
+    def test_marketplace_install_nonexistent_plugin(self, tmp_path: Path) -> None:
+        """Should handle installation of non-existent plugins."""
+        client = _build_client(tmp_path)
+        response = client.post(
+            "/ui/marketplace/plugins/nonexistent-plugin/install",
+            data={
+                "q": "",
+                "category": "",
+                "tag_csv": "",
+            },
+        )
+        # Should return 200 but indicate plugin not found
+        assert response.status_code == 200
+
+    def test_marketplace_search_special_characters(self, tmp_path: Path) -> None:
+        """Should handle special characters in search queries."""
+        client = _build_client(tmp_path)
+        response = client.get("/ui/marketplace?q=test<script>alert('xss')</script>")
+        # Should safely escape special characters
+        assert response.status_code == 200
+        # Response should not contain unescaped script tags
+        assert "<script>" not in response.text

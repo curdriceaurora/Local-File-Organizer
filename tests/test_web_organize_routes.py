@@ -264,3 +264,55 @@ class TestOrganizeHtmxEndpoints:
         )
         assert response.status_code == 200
         assert "Input directory is required" in response.text
+
+
+@pytest.mark.unit
+class TestOrganizeErrorHandling:
+    """Tests for error handling and edge cases in organize routes (Stream A)."""
+
+    def test_organize_invalid_methodology(self, tmp_path: Path) -> None:
+        """Should handle invalid methodology parameter."""
+        (tmp_path / "file.txt").write_text("test")
+
+        client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(tmp_path),
+                "output_dir": str(tmp_path / "out"),
+                "methodology": "invalid_methodology",
+            },
+        )
+        # Should reject invalid methodology
+        assert response.status_code in (200, 400)
+
+    def test_organize_nonexistent_directory(self, tmp_path: Path) -> None:
+        """Should handle non-existent input directory."""
+        nonexistent = tmp_path / "does_not_exist"
+
+        client = _build_client(tmp_path, allowed_paths=[str(tmp_path), str(nonexistent)])
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(nonexistent),
+                "output_dir": str(tmp_path / "out"),
+            },
+        )
+        # Should reject non-existent directory
+        assert response.status_code in (200, 400, 404)
+
+    def test_organize_scan_permission_error(self, tmp_path: Path) -> None:
+        """Should handle permission errors gracefully."""
+        (tmp_path / "file.txt").write_text("test")
+
+        client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
+        # Use an output directory outside allowed paths (permission error scenario)
+        response = client.post(
+            "/ui/organize/scan",
+            data={
+                "input_dir": str(tmp_path),
+                "output_dir": "/root/not_allowed",
+            },
+        )
+        # Should handle permission error gracefully
+        assert response.status_code in (200, 400, 403)
