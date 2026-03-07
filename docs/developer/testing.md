@@ -128,6 +128,13 @@ async def client():
     async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac
 
+# Or for synchronous use:
+@pytest.fixture
+def sync_client():
+    app = create_app()
+    with Client(app=app, base_url="http://test") as c:
+        yield c
+
 @pytest.mark.asyncio
 async def test_organize_endpoint(client):
     response = await client.post("/api/organize", json={"path": "/tmp"})
