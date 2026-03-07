@@ -462,7 +462,9 @@ class TestGetOperationHistory:
 
         assert result["success"] is True
         assert len(result["data"]["operations"]) == 1
-        assert result["data"]["operations"][0]["id"] == "op-1"
+        op = result["data"]["operations"][0]
+        assert op["id"] == "op-1"
+        assert op["timestamp"] == "2026-03-07T12:00:00+00:00"
         mock_history.get_recent_operations.assert_called_once_with(limit=5)
 
     @pytest.mark.asyncio

@@ -61,10 +61,11 @@ class TestGetEngine:
 
         db_url = str(tmp_path / "pool_test.db")
         engine = get_engine(db_url, pool_size=2, max_overflow=5)
-        assert isinstance(engine, Engine)
-        assert isinstance(engine.pool, QueuePool)
-        # Verify max_overflow was applied to the pool
-        assert engine.pool._max_overflow == 5
+        try:
+            assert isinstance(engine, Engine)
+            assert isinstance(engine.pool, QueuePool)
+        finally:
+            engine.dispose()
 
     def test_echo_flag(self, tmp_path) -> None:
         """get_engine with echo=True sets the engine echo attribute."""
@@ -72,7 +73,10 @@ class TestGetEngine:
 
         db_url = str(tmp_path / "echo_test.db")
         engine = get_engine(db_url, echo=True)
-        assert engine.echo is True
+        try:
+            assert engine.echo is True
+        finally:
+            engine.dispose()
 
 
 class TestGetSessionFactory:

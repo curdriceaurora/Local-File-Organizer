@@ -11,34 +11,10 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 from file_organizer.api.config import ApiSettings
-from file_organizer.api.dependencies import get_db, get_settings, get_token_store
-from file_organizer.api.exceptions import setup_exception_handlers
-from file_organizer.api.routers.realtime import router
 
 pytestmark = pytest.mark.unit
-
-
-def _build_app(auth_enabled: bool = False, websocket_token: str | None = None) -> tuple[FastAPI, TestClient]:
-    settings = ApiSettings(
-        environment="test",
-        auth_enabled=auth_enabled,
-        auth_jwt_secret="test-secret",
-        rate_limit_enabled=False,
-        websocket_token=websocket_token,
-        websocket_ping_interval=60,
-    )
-    app = FastAPI()
-    setup_exception_handlers(app)
-    app.dependency_overrides[get_settings] = lambda: settings
-    app.dependency_overrides[get_db] = lambda: MagicMock()
-    app.dependency_overrides[get_token_store] = lambda: MagicMock()
-    app.include_router(router, prefix="/api/v1")
-    client = TestClient(app, raise_server_exceptions=False)
-    return app, client
 
 
 # ---------------------------------------------------------------------------
@@ -232,11 +208,6 @@ class TestWebSocketAuth:
 
 class TestWebSocketMessages:
     """Tests for WebSocket message type handling."""
-
-    def _patched_client(self, messages: list) -> TestClient:
-        """Build a client that processes `messages` then disconnects."""
-        _, client = _build_app(auth_enabled=False, websocket_token=None)
-        return client
 
     @pytest.mark.asyncio
     async def test_ping_message_returns_pong(self) -> None:
@@ -577,9 +548,5 @@ class TestWebSocketMessages:
                     token_store=MagicMock(),
                 )
 
-        # pong triggers no send_personal_message
-        pong_responses = [
-            c for c in mock_mgr.send_personal_message.call_args_list
-            if c[0][0].get("type") in ("pong", "error")
-        ]
-        assert len(pong_responses) == 0
+        # pong is silently accepted — no outbound message of any kind
+        mock_mgr.send_personal_message.assert_not_called()
