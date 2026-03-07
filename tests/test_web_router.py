@@ -105,8 +105,8 @@ class TestResponseHeaders:
         client = web_client_builder(allowed_paths=[])
         response = client.get("/ui/")
         assert response.status_code == 200
-        # Verify response was successful
-        assert len(response.text) > 0
+        # Assert cache-control header (FINDING 6)
+        assert response.headers.get("cache-control") is not None
 
     def test_response_headers_etag_for_static_content(self, web_client_builder) -> None:
         """Responses may include ETag header for cache validation."""
