@@ -18,6 +18,6 @@ jobs:
         run: pip install 'pymarkdownlnt==0.9.25'
       - name: Run markdown linting
         run: |
-          # Scan all tracked markdown files in repository (including nested)
-          # using git ls-files to match pre-commit hook behavior
-          pymarkdown -c .pymarkdown.json scan $(git ls-files '*.md')
+          # Scan all tracked markdown files using NUL-delimited list for robustness
+          # (handles filenames with spaces; avoids command substitution word-splitting)
+          git ls-files -z '*.md' | xargs -0 -- pymarkdown -c .pymarkdown.json scan

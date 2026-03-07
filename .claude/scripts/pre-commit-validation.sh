@@ -236,8 +236,10 @@ if [[ -n "$MD_FILES" ]]; then
 
   if command -v pymarkdown &> /dev/null; then
     # Use pymarkdown with .pymarkdown.json config
-    # Double-quote variable to prevent globbing and word splitting (SC2086)
-    if ! pymarkdown -c .pymarkdown.json scan "${MD_FILES}"; then
+    # MD_FILES is newline-separated (from git diff --name-only); load into array so
+    # each path becomes a separate argument, preserving paths with spaces correctly.
+    mapfile -t _md_lint_files < <(echo "${MD_FILES}" | grep -v '^$')
+    if ! pymarkdown -c .pymarkdown.json scan "${_md_lint_files[@]}"; then
       echo ""
       echo "❌ Markdown linting failed"
       echo "Fix markdown issues above and try again"
