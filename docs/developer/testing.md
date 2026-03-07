@@ -68,7 +68,7 @@ pytest -m "not slow"
 
 # CI gate tests only
 pytest -m ci
-```text
+```
 
 ## Coverage Metrics
 
@@ -109,30 +109,32 @@ pytest --cov=file_organizer --cov-report=html
 
 # Docstring coverage (requires interrogate)
 interrogate -v src/file_organizer --fail-under 90
-```text
+```
 
 ## Testing Patterns
 
 ### API Route Testing
 
-Use `httpx.AsyncClient` for testing async FastAPI endpoints:
+Use `httpx` with ASGI transport for testing FastAPI endpoints:
 
 ```python
 import pytest
-from httpx import AsyncClient, Client
+from httpx import ASGITransport, AsyncClient, Client
 from file_organizer.api.main import create_app
 
 @pytest.fixture
 async def client():
     app = create_app()
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
 # Or for synchronous use:
 @pytest.fixture
 def sync_client():
     app = create_app()
-    with Client(app=app, base_url="http://test") as c:
+    transport = ASGITransport(app=app)
+    with Client(transport=transport, base_url="http://test") as c:
         yield c
 
 @pytest.mark.asyncio
@@ -147,13 +149,18 @@ async def test_organize_endpoint(client):
 Test services with real dependencies, mocking only external boundaries:
 
 ```python
+from pathlib import Path
 from file_organizer.services.text_processor import TextProcessor
 
-def test_text_processor():
+def test_text_processor(tmp_path):
     processor = TextProcessor()
-    result = processor.extract_text("document.pdf")
-    assert isinstance(result, str)
-    assert len(result) > 0
+    # Create test file
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Sample content for testing")
+
+    result = processor.process_file(test_file)
+    assert result is not None
+    assert "test" in str(result).lower() or len(result) > 0
 ```
 
 ### CLI Testing
@@ -185,7 +192,7 @@ async def test_app_loads():
     app = FileOrganizerApp()
     async with app.run_test() as pilot:
         assert pilot.app.title == "File Organizer"
-```text
+```
 
 ## Test Quality Standards
 
@@ -236,12 +243,19 @@ Both must pass before committing code changes.
 
 ## CI/CD Testing
 
-GitHub Actions runs the full test suite on every PR:
+GitHub Actions runs automated checks on every PR and push to main:
 
-- **Smoke tests**: Run on every commit (30s)
-- **Full suite**: Run on main push (~40s)
-- **Coverage gate**: Fail if coverage < 95% (code) or < 90% (docstrings)
-- **Lint gate**: Fail on ruff (Python code) or markdownlint (documentation) violations
+**Pull Request Validation:**
+- `pytest -m "ci"` test subset runs (selected critical tests)
+- Linting checks (ruff for Python, markdownlint for docs)
+- Type checking (mypy)
+- No coverage threshold enforced
+
+**Main Branch Pushes:**
+- Full test suite passes (`pytest`)
+- Coverage must be ≥ 95% (code) or ≥ 90% (docstrings)
+- Linting must pass (ruff and markdownlint)
+- Type checking must pass (mypy)
 
 See `.github/workflows/` for CI configuration.
 

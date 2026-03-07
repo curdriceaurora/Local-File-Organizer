@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-Epic #571 "Desktop UI Test Coverage" successfully expanded project test coverage from **12% to 96.8%** across all modules, with comprehensive test suites for every major component.
+Epic #571 "Desktop UI Test Coverage" increased project **docstring coverage from 12% to 96.8%** and achieved **95%+ code coverage across all Phase A/B tested modules**, with comprehensive test suites for every major in-scope component.
 
 ### Key Metrics
 
@@ -131,6 +131,11 @@ Epic #571 "Desktop UI Test Coverage" successfully expanded project test coverage
 |--------|----------|-------|
 | routers/files | 91% | Most paths covered |
 | utils | 90% | Helper functions covered |
+
+### Low Coverage (< 70%)
+
+| Module | Coverage | Reason |
+|--------|----------|--------|
 | routers/realtime | 52% | WebSocket edge cases (lower outlier) |
 
 ### Known Gaps (0-50%)
