@@ -6,6 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
+from .test_helpers import assert_html_contains_any, assert_html_tag_present
+
 
 @pytest.mark.unit
 class TestMarketplacePage:
@@ -101,7 +103,7 @@ class TestMarketplaceHtmxEndpoints:
         # Should handle HTMX request header
         assert response.status_code == 200
         # HTMX requests should return HTML fragment with searchable content
-        assert "marketplace" in response.text.lower() or "plugin" in response.text.lower()
+        assert_html_contains_any(response.text, "marketplace", "plugin")
 
     def test_marketplace_htmx_pagination(self, web_client_builder) -> None:
         """HTMX pagination should return marketplace results with updated page."""
@@ -110,7 +112,7 @@ class TestMarketplaceHtmxEndpoints:
         response = client.get("/ui/marketplace?page=2", headers=headers)
         assert response.status_code == 200
         # HTMX requests should return HTML fragment with results
-        assert "marketplace" in response.text.lower() or "plugin" in response.text.lower()
+        assert_html_contains_any(response.text, "marketplace", "plugin")
 
     def test_marketplace_plugin_installation_action(self, web_client_builder, mock_marketplace_service) -> None:
         """Should support plugin installation via HTMX POST request."""
@@ -131,7 +133,7 @@ class TestMarketplaceHtmxEndpoints:
             # Route always returns 200 (renders marketplace page with message)
             assert response.status_code == 200
             # Should return HTML marketplace page
-            assert any(tag in response.text.lower() for tag in ["<html", "<body", "marketplace"])
+            assert_html_tag_present(response.text, "<html", "<body", "marketplace")
             # Verify install method was called with plugin name
             mock_marketplace_service.install.assert_called()
 
@@ -159,7 +161,7 @@ class TestMarketplaceInstallFlow:
             # Route always returns 200 (renders marketplace page with message)
             assert response.status_code == 200
             # Should return HTML marketplace page
-            assert any(tag in response.text.lower() for tag in ["<html", "<body", "marketplace"])
+            assert_html_tag_present(response.text, "<html", "<body", "marketplace")
             # Verify install was called even for nonexistent plugins (validation happens in service)
             mock_marketplace_service.install.assert_called()
 
@@ -182,7 +184,7 @@ class TestMarketplaceInstallFlow:
             # Route always returns 200 (renders marketplace page with message)
             assert response.status_code == 200
             # Should return HTML marketplace page with search preserved
-            assert any(tag in response.text.lower() for tag in ["<html", "<body", "marketplace"])
+            assert_html_tag_present(response.text, "<html", "<body", "marketplace")
             # Verify install was called for sample plugin
             mock_marketplace_service.install.assert_called()
 
