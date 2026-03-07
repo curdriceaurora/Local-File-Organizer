@@ -18,9 +18,7 @@ PatternAnalyzer -> SmartSuggestions -> Intelligence -> Output
 - **TextModel**: Ollama wrapper (`models/text_model.py`)
 - **VisionModel**: Multi-modal wrapper (`models/vision_model.py`)
 
-
-
-## Model Configuration 
+## Model Configuration
 
 @dataclass
 class ModelConfig:

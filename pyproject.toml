@@ -285,6 +285,7 @@ markers = [
     "regression: marks tests intended for full regression runs",
     "e2e: end-to-end tests against real file trees (no Ollama required)",
     "benchmark: performance benchmark tests (use --benchmark-only to run)",
+    "asyncio: marks tests as async (requires pytest-asyncio)",
 ]
 filterwarnings = [
     "error::DeprecationWarning:file_organizer",

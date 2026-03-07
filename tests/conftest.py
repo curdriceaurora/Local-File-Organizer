@@ -356,3 +356,61 @@ def db_session() -> MagicMock:
 
     session = MagicMock(spec=Session)
     return session
+
+
+# ---------------------------------------------------------------------------
+# Web route test fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def web_client_builder(tmp_path: Path):
+    """Factory fixture for creating web test clients with customizable settings.
+
+    Centralizes _build_client logic to avoid duplication across test files.
+
+    Returns:
+        A callable that creates TestClient instances with specified options.
+    """
+    from fastapi.testclient import TestClient
+
+    from file_organizer.api.main import create_app
+    from file_organizer.api.test_utils import build_test_settings
+
+    def _build(allowed_paths: list[str] | None = None, auth_enabled: bool = False) -> TestClient:
+        """Build a test client with the specified settings.
+
+        Args:
+            allowed_paths: List of allowed directory paths. Defaults to [str(tmp_path)].
+            auth_enabled: Whether authentication is enabled. Defaults to False.
+
+        Returns:
+            A FastAPI TestClient for the app.
+        """
+        if allowed_paths is None:
+            allowed_paths = [str(tmp_path)]
+        settings = build_test_settings(
+            tmp_path,
+            allowed_paths=allowed_paths,
+            auth_overrides={"auth_enabled": auth_enabled},
+        )
+        app = create_app(settings)
+        return TestClient(app)
+
+    return _build
+
+
+@pytest.fixture
+def mock_marketplace_service() -> MagicMock:
+    """Create marketplace service mock with deterministic test behavior.
+
+    Provides mocked responses for marketplace operations without requiring
+    actual marketplace service dependencies.
+
+    Returns:
+        A MagicMock configured for marketplace service operations.
+    """
+    mock_instance = MagicMock()
+    mock_instance.list_plugins.return_value = ([], 0)
+    mock_instance.list_installed.return_value = []
+    return mock_instance

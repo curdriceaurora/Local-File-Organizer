@@ -18,19 +18,19 @@ An AI-powered local file management system with privacy-first architecture. Orga
 5. [Multi-Task Execution Strategy](#multi-task-execution-strategy)
 6. [Terminology](#terminology)
 7. [Testing Requirements](#testing-requirements)
-7. [Claude Agent Permissions](#claude-agent-permissions)
-8. [External References](#external-references)
-9. [Pre-Commit Checklist](#pre-commit-checklist)
-10. [Quick Start](#quick-start)
-11. [Project Structure](#project-structure)
-12. [Architecture Overview](#architecture-overview)
-13. [Dependencies & Setup](#dependencies--setup)
-14. [AI Model Configuration](#ai-model-configuration)
-15. [Development Guidelines](#development-guidelines)
-16. [Testing Strategy](#testing-strategy)
-17. [Workflow Orchestration](#workflow-orchestration)
-18. [Supported File Types](#supported-file-types)
-19. [Performance Notes](#performance-notes)
+8. [Claude Agent Permissions](#claude-agent-permissions)
+9. [External References](#external-references)
+10. [Pre-Commit Checklist](#pre-commit-checklist)
+11. [Quick Start](#quick-start)
+12. [Project Structure](#project-structure)
+13. [Architecture Overview](#architecture-overview)
+14. [Dependencies & Setup](#dependencies--setup)
+15. [AI Model Configuration](#ai-model-configuration)
+16. [Development Guidelines](#development-guidelines)
+17. [Testing Strategy](#testing-strategy)
+18. [Workflow Orchestration](#workflow-orchestration)
+19. [Supported File Types](#supported-file-types)
+20. [Performance Notes](#performance-notes)
 
 ---
 
@@ -83,105 +83,16 @@ gh pr create --title "fix: skip codecov upload on PR events" --body "..."
 
 **CRITICAL**: When a PR receives review comments from CodeRabbit or other reviewers, follow this exact protocol to avoid iterative churn.
 
-### Core Principle
+See **[PR Review Response Protocol](./.claude/rules/pr-review-response-protocol.md)** for the complete 6-step protocol:
 
-**Do not iterate one comment at a time.** Extract ALL findings upfront, fix all of them locally in a single pass, then push once. Iterative monitoring loops cause churn.
+1. Extract ALL findings upfront (don't iterate incrementally)
+2. Verify each finding against current code
+3. Apply all valid fixes in one local pass (NO pushing between fixes)
+4. Run full quality gate sequence (simplify → code-reviewer → pre-commit)
+5. Commit and push once
+6. Do NOT create monitoring loops
 
-### Step 1: Extract All Findings Upfront
-
-When the PR has review comments:
-
-1. Read ALL comments in one session (don't monitor incrementally)
-2. Copy each comment verbatim into a local checklist
-3. Do NOT start fixing until you have the complete list
-4. Example: "Found 5 issues: #1 mock mismatch, #2 weak assertion, #3 missing mock, #4 flaky test, #5 test isolation"
-
-### Step 2: Verify Each Finding Against Current Code
-
-For each comment:
-
-1. Locate the exact code line mentioned
-2. Read the implementation being tested
-3. Verify if the finding is actually valid or already fixed
-4. Document: "Issue #2 (weak assertion) - VALID: assertion only checks text exists, should verify full plan structure"
-5. Mark as APPLY or SKIP
-
-### Step 3: Apply All Valid Fixes in One Local Pass
-
-1. **NO pushing between fixes** — batch all changes locally
-2. Fix all APPLY items in the order they appear
-3. For each fix, update code + verify locally
-4. Don't push until ALL fixes are applied
-
-### Step 4: Run Full Quality Gate Sequence
-
-```bash
-/simplify                     # Review changes for efficiency/reuse
-/code-reviewer                # Validate changes against standards
-bash .claude/scripts/pre-commit-validation.sh  # Must pass
-```
-
-### Step 5: Commit and Push Once
-
-```bash
-git add <all fixed files>
-git commit -m "fix: address review findings
-
-- Mock contract: ensure marketplace service matches test usage
-- Assertion strength: verify full plan structure, not substring
-- Missing mocks: add list_installed mock for deterministic behavior
-- Test isolation: add FO_MARKETPLACE_REPO_URL for hermetic env
-- Code quality: extract duplicate mock logic into helper"
-
-git push origin <branch>
-```
-
-### Step 6: Do NOT Create Monitoring Loop
-
-- ❌ Do NOT create background scripts to monitor review status
-- ❌ Do NOT wait for re-review to see if fixes worked
-- ❌ Do NOT push partial fixes and hope for the best
-- ✅ Trust that running quality gates locally caught issues before pushing
-- ✅ Verification comes from local testing, not iterative PR reviews
-
-### What This Avoids
-
-**Bad pattern (causes churn):**
-```text
-Push initial code
-→ Wait for CodeRabbit comments
-→ Find comment #1, fix it, push
-→ Find comment #2, fix it, push
-→ Find comment #3, fix it, push
-→ Result: 3 commits, multiple PR activity, verification delay
-```
-
-**Good pattern (clean merge):**
-```text
-Extract all 3 comments at once
-→ Fix all 3 locally in one pass
-→ Run quality gates
-→ Single commit, single push
-→ Result: Clean PR history, confident merge
-```
-
-### Example: PR #635
-
-**Before (wrong):**
-- Push initial tests
-- Monitor for CodeRabbit comments
-- Find mock issue, push fix
-- Find assertion issue, push fix
-- Find environment isolation issue, push fix
-- Result: Multiple corrections, multiple pushes
-
-**After (correct):**
-- Extract all 5 findings upfront
-- Verify each against code
-- Fix all 5 in one local pass (including helper extraction improvement)
-- Run /simplify, /code-reviewer, pre-commit validation
-- Single push (commit bbe606a)
-- Result: Clean approval and merge
+**Core Principle**: Extract all findings → fix all locally → run quality gates → single push. Prevents iterative churn.
 
 ---
 
@@ -819,57 +730,20 @@ Without CCPM tracking:
 
 ## Development Guidelines
 
-### Code Style
+See **[Development Guidelines](./.claude/rules/development-guidelines.md)** for complete standards including:
 
-- **Black** for formatting (line length: 100)
-- **isort** for import sorting
-- **Ruff** for linting (strict)
-- **mypy** strict mode for type checking
+**Code Style**: Black (100 chars), isort, Ruff (strict), mypy (strict)
 
-### Naming Conventions
+**Naming Conventions**: snake_case for functions/variables, PascalCase for classes, UPPER_SNAKE_CASE for constants
 
-- Files/modules: `snake_case.py`
-- Classes: `PascalCase`
-- Functions/variables: `snake_case`
-- Constants: `UPPER_SNAKE_CASE`
-- Private: `_single_underscore`
+**Git Commit Format**: `<type>(<scope>): <subject>` with types: feat, fix, docs, style, refactor, test, chore
 
-### Git Commit Messages
-
-```text
-<type>(<scope>): <subject>
-```
-
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-
-### Pre-Commit Validation (MANDATORY)
-
-Before EVERY single commit, run:
-
+**Pre-Commit Validation (MANDATORY)**:
 ```bash
-bash .claude/scripts/pre-commit-validation.sh
-# Must PASS before committing
+bash .claude/scripts/pre-commit-validation.sh  # Must PASS before committing
 ```
 
-**Why this is non-negotiable:**
-- Catches 80% of code review issues before they're published
-- Prevents churn (validation now vs code review later)
-- Maintains code quality standards
-- Reduces feedback loops
-
-**If validation fails:**
-- Fix violations locally
-- Re-run validation
-- Only commit after passing
-
-**Key patterns the script validates:**
-1. Dict-style dataclass access → use `hasattr()`
-2. Wrong return types → read implementation first
-3. Non-existent imports → verify module exists
-4. Wrong constructor params → check class definition
-5. Build artifacts → add to `.gitignore`
-
-See: `.claude/rules/code-quality-validation.md` for detailed patterns
+Validates: linting, formatting, type checking, tests, patterns (dict-style access, return types, imports, constructors, build artifacts)
 
 ---
 
