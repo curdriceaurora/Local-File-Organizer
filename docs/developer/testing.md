@@ -16,7 +16,7 @@ pytest tests/ -m "smoke" -q --strict-markers --timeout=30 --override-ini="addopt
 
 # Run specific module tests
 pytest tests/services/ -v
-```text
+```
 
 ## Test Organization
 

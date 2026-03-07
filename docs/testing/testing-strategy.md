@@ -19,6 +19,7 @@ pytest -k "backup or dedup"                     # Filter by name
 @pytest.mark.smoke         # Fast critical-path tests (pre-commit validation)
 @pytest.mark.integration   # Integration tests
 @pytest.mark.e2e           # End-to-end tests
+@pytest.mark.asyncio       # Async tests (FastAPI, TUI, services)
 @pytest.mark.benchmark     # Performance benchmarks
 @pytest.mark.ci            # CI-specific tests
 @pytest.mark.slow          # Slow tests
