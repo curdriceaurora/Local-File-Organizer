@@ -17,6 +17,21 @@ cd "$REPO_ROOT"
 BRANCH=$(git branch --show-current)
 echo "✓ Current branch: $BRANCH"
 
+# 1.5. CCPM tracking awareness (soft warning, non-blocking)
+if [[ "$BRANCH" != "main" && "$BRANCH" != "master" ]]; then
+  # Extract issue number from branch name (e.g., "feature/issue-580-name" -> "580")
+  ISSUE_NUM=$(echo "$BRANCH" | grep -oE 'issue-[0-9]+|#[0-9]+' | grep -oE '[0-9]+' | head -1)
+
+  if [[ -n "$ISSUE_NUM" ]]; then
+    # Check if CCPM tracking exists for this issue
+    if ! find .claude/epics -name "*${ISSUE_NUM}*" -type f 2>/dev/null | grep -q . ; then
+      echo "⚠️  CCPM tracking not found for issue #${ISSUE_NUM}"
+      echo "   Consider running: /pm:issue-start ${ISSUE_NUM}"
+      echo ""
+    fi
+  fi
+fi
+
 # 2. Modified files (staged for commit)
 MODIFIED=$(git diff --name-only --cached)
 if [[ -z "$MODIFIED" ]]; then

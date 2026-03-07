@@ -13,10 +13,11 @@ An AI-powered local file management system with privacy-first architecture. Orga
 
 1. [General Rules](#general-rules)
 2. [Git Workflow](#git-workflow)
-3. [Task Execution](#task-execution)
-4. [Multi-Task Execution Strategy](#multi-task-execution-strategy)
-5. [Terminology](#terminology)
-6. [Testing Requirements](#testing-requirements)
+3. [PR Review Response Protocol](#pr-review-response-protocol)
+4. [Task Execution](#task-execution)
+5. [Multi-Task Execution Strategy](#multi-task-execution-strategy)
+6. [Terminology](#terminology)
+7. [Testing Requirements](#testing-requirements)
 7. [Claude Agent Permissions](#claude-agent-permissions)
 8. [External References](#external-references)
 9. [Pre-Commit Checklist](#pre-commit-checklist)
@@ -78,6 +79,112 @@ gh pr create --title "fix: skip codecov upload on PR events" --body "..."
 
 ---
 
+## PR Review Response Protocol
+
+**CRITICAL**: When a PR receives review comments from CodeRabbit or other reviewers, follow this exact protocol to avoid iterative churn.
+
+### Core Principle
+
+**Do not iterate one comment at a time.** Extract ALL findings upfront, fix all of them locally in a single pass, then push once. Iterative monitoring loops cause churn.
+
+### Step 1: Extract All Findings Upfront
+
+When the PR has review comments:
+
+1. Read ALL comments in one session (don't monitor incrementally)
+2. Copy each comment verbatim into a local checklist
+3. Do NOT start fixing until you have the complete list
+4. Example: "Found 5 issues: #1 mock mismatch, #2 weak assertion, #3 missing mock, #4 flaky test, #5 test isolation"
+
+### Step 2: Verify Each Finding Against Current Code
+
+For each comment:
+
+1. Locate the exact code line mentioned
+2. Read the implementation being tested
+3. Verify if the finding is actually valid or already fixed
+4. Document: "Issue #2 (weak assertion) - VALID: assertion only checks text exists, should verify full plan structure"
+5. Mark as APPLY or SKIP
+
+### Step 3: Apply All Valid Fixes in One Local Pass
+
+1. **NO pushing between fixes** — batch all changes locally
+2. Fix all APPLY items in the order they appear
+3. For each fix, update code + verify locally
+4. Don't push until ALL fixes are applied
+
+### Step 4: Run Full Quality Gate Sequence
+
+```bash
+/simplify                     # Review changes for efficiency/reuse
+/code-reviewer                # Validate changes against standards
+bash .claude/scripts/pre-commit-validation.sh  # Must pass
+```
+
+### Step 5: Commit and Push Once
+
+```bash
+git add <all fixed files>
+git commit -m "fix: address review findings
+
+- Mock contract: ensure marketplace service matches test usage
+- Assertion strength: verify full plan structure, not substring
+- Missing mocks: add list_installed mock for deterministic behavior
+- Test isolation: add FO_MARKETPLACE_REPO_URL for hermetic env
+- Code quality: extract duplicate mock logic into helper"
+
+git push origin <branch>
+```
+
+### Step 6: Do NOT Create Monitoring Loop
+
+- ❌ Do NOT create background scripts to monitor review status
+- ❌ Do NOT wait for re-review to see if fixes worked
+- ❌ Do NOT push partial fixes and hope for the best
+- ✅ Trust that running quality gates locally caught issues before pushing
+- ✅ Verification comes from local testing, not iterative PR reviews
+
+### What This Avoids
+
+**Bad pattern (causes churn):**
+```
+Push initial code
+→ Wait for CodeRabbit comments
+→ Find comment #1, fix it, push
+→ Find comment #2, fix it, push
+→ Find comment #3, fix it, push
+→ Result: 3 commits, multiple PR activity, verification delay
+```
+
+**Good pattern (clean merge):**
+```
+Extract all 3 comments at once
+→ Fix all 3 locally in one pass
+→ Run quality gates
+→ Single commit, single push
+→ Result: Clean PR history, confident merge
+```
+
+### Example: PR #635
+
+**Before (wrong):**
+- Push initial tests
+- Monitor for CodeRabbit comments
+- Find mock issue, push fix
+- Find assertion issue, push fix
+- Find environment isolation issue, push fix
+- Result: Multiple corrections, multiple pushes
+
+**After (correct):**
+- Extract all 5 findings upfront
+- Verify each against code
+- Fix all 5 in one local pass (including helper extraction improvement)
+- Run /simplify, /code-reviewer, pre-commit validation
+- Single push (commit bbe606a)
+- Result: Clean approval and merge
+
+---
+
 ## Task Execution
 
 **Multi-Step Plans:** When following a multi-step plan, complete **ALL steps** before summarizing. Do not skip steps or declare completion early.
@@ -127,6 +234,48 @@ gh pr create --title "fix: skip codecov upload on PR events" --body "..."
 **Why Order Matters:** Earlier gates catch issues before later gates. Test logic must be validated by `/code-reviewer` before pre-commit can verify it. Pre-commit can't validate whether assertions are meaningful or if tests match API contracts.
 
 **Completion Criteria:** Do not say "All done" until ALL steps are verified. If any step fails verification, fix it before moving on.
+
+### Resuming After Context Break
+
+When resuming a task after context compression or session break:
+
+1. **Verify branch state:**
+   ```bash
+   git branch --show-current
+   git status
+   git log --oneline -5
+   ```
+
+2. **Read MEMORY.md for task context:**
+   - What issue are you working on?
+   - What's the current status?
+   - What has already been attempted?
+   - Are there any known blockers?
+
+3. **Re-establish CCPM if active:**
+   ```bash
+   # Check if CCPM tracking exists for this branch
+   ls -la .claude/epics/*/updates/ | grep -i $(git branch --show-current | sed 's/.*issue-//')
+
+   # If found, sync progress
+   /pm:issue-sync <issue-number>
+   ```
+
+4. **Confirm quality gate status:**
+   - Have `/simplify` and `/code-reviewer` been run on current changes?
+   - Has pre-commit validation passed?
+   - If uncertain, re-run them before pushing
+
+5. **Continue work:**
+   - Don't skip context re-establishment
+   - Re-read MEMORY.md even if you feel you remember
+   - Trust the documented state, not memory
+
+**Why this matters:**
+- Session resumption is where CCPM gets dropped (Gap #3 in PR #635)
+- Quality gates get skipped due to lost context (Gap #1 in PR #635)
+- MEMORY.md becomes the source of truth across session breaks
+- Proper re-establishment prevents repeating mistakes from earlier in the session
 
 ---
 
