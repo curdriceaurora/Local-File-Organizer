@@ -78,8 +78,8 @@ Epic #571 "Desktop UI Test Coverage" successfully expanded project test coverage
 #### Task #576: Updater & Watcher Tests
 
 - **Coverage**: Tests for application updates and file system monitoring
-- **Tests**: 20+ tests for version checking, installation, rollback
-- **Status**: ✅ Complete
+- **Tests**: 20+ tests for version checking, installation, rollback (planned, not yet implemented)
+- **Status**: 🔶 Deferred to Phase C (not included in Phase B scope)
 
 #### Task #578: Integration & E2E Tests
 
@@ -120,13 +120,18 @@ Epic #571 "Desktop UI Test Coverage" successfully expanded project test coverage
 | Module | Coverage | Notes |
 |--------|----------|-------|
 | routers/auth | 85% | Edge cases in error handling |
-| routers/files | 91% | Most paths covered |
 | routers/search | 86% | Advanced filtering untested |
 | routers/integrations | 82% | Third-party API integration |
-| routers/realtime | 52% | WebSocket edge cases |
 | middleware | 84% | Logging and monitoring gaps |
 | main | 88% | Startup/shutdown scenarios |
+
+### Additional High Coverage (90%+) ✅
+
+| Module | Coverage | Notes |
+|--------|----------|-------|
+| routers/files | 91% | Most paths covered |
 | utils | 90% | Helper functions covered |
+| routers/realtime | 52% | WebSocket edge cases (lower outlier) |
 
 ### Known Gaps (0-50%)
 
@@ -158,10 +163,10 @@ These gaps represent ~15% of codebase and will be addressed in Phase C work.
 
 ### CI Gate
 
-- **Trigger**: On every PR
+- **Trigger**: On every push to main; selective tests on PR
 - **Checks**:
   - Full test suite must pass
-  - Coverage must be ≥ 74%
+  - Coverage must be ≥ 95% (on main branch pushes only; PR validation uses `-m "ci"` marker)
   - Linting must pass (ruff)
   - Type checking must pass (mypy)
 - **Duration**: ~2-3 minutes
@@ -184,15 +189,16 @@ Tests are integrated with GitHub Actions:
 
 ### Workflows
 
-- **PR Validation**: Full suite + coverage checks
-- **Pre-Commit**: Smoke tests (30s quick check)
-- **Release**: Full suite + docstring check
+- **Push to Main**: Full test suite with 95% coverage gate, linting, type checking
+- **Pull Request**: Selected tests via `-m "ci"` marker, linting, type checking (no coverage gate)
+- **Documentation**: Link integrity checks on docs changes
+- **Security**: SAST scanning on code changes
 
 ### Coverage Tracking
 
 - Codecov integration for per-commit tracking
-- HTML reports available in PR checks
-- Coverage badges in README
+- HTML reports available in CI workflow artifacts
+- Coverage XML uploaded to Codecov service
 
 ## How to Maintain Coverage
 
