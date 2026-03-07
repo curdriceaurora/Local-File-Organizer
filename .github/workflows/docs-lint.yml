@@ -19,5 +19,6 @@ jobs:
       - name: Run markdown linting
         run: |
           # Scan all tracked markdown files in repository (including nested)
-          # using git ls-files to match pre-commit hook behavior
-          pymarkdown -c .pymarkdown.json scan $(git ls-files '*.md')
+          # using NUL-delimited git ls-files piped to xargs to safely handle
+          # filenames with spaces and avoid argument-length limits
+          git ls-files -z '*.md' | xargs -0 -- pymarkdown -c .pymarkdown.json scan

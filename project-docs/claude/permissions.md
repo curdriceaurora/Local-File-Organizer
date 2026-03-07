@@ -36,3 +36,4 @@ created: 2026-01-23T09:00:00Z  # Fixed creation time
 updated: 2026-01-23T14:30:00Z  # Updated on every edit
 status: backlog|in-progress|completed
 ---
+```
