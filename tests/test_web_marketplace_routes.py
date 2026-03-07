@@ -8,7 +8,7 @@ import pytest
 
 from file_organizer.plugins.marketplace.errors import MarketplaceError
 
-from .test_helpers import assert_html_contains_any, assert_html_tag_present
+from .test_helpers import assert_html_contains, assert_html_contains_any, assert_html_tag_present
 
 
 @pytest.mark.unit
@@ -225,10 +225,18 @@ class TestMarketplaceInputValidation:
         pdf_plugin.name = "pdf-reader"
         pdf_plugin.category = "readers"
         pdf_plugin.version = "1.0"
+        pdf_plugin.description = "PDF reader plugin"
+        pdf_plugin.author = "test-author"
+        pdf_plugin.downloads = 100
+        pdf_plugin.rating = 4.5
         epub_plugin = MagicMock()
         epub_plugin.name = "epub-reader"
         epub_plugin.category = "readers"
         epub_plugin.version = "1.0"
+        epub_plugin.description = "EPUB reader plugin"
+        epub_plugin.author = "test-author"
+        epub_plugin.downloads = 50
+        epub_plugin.rating = 4.0
         reader_plugins = ([pdf_plugin, epub_plugin], 2)
         mock_marketplace_service.list_plugins.return_value = reader_plugins
 
@@ -238,8 +246,8 @@ class TestMarketplaceInputValidation:
             response = client.get("/ui/marketplace?category=readers")
 
         assert response.status_code == 200
-        # Verify response includes filtered plugin names
-        assert_html_contains_any(response.text, "pdf-reader", "epub-reader")
+        # Verify response includes BOTH filtered plugin names
+        assert_html_contains(response.text, "pdf-reader", "epub-reader")
 
 
 @pytest.mark.unit
