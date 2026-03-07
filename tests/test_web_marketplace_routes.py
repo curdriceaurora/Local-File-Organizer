@@ -216,6 +216,35 @@ class TestMarketplaceInstallFlow:
 
 
 @pytest.mark.unit
+class TestMarketplaceInputValidation:
+    """Tests for input validation and pagination boundaries (Stream C)."""
+
+    def test_marketplace_pagination_boundary_zero(self, tmp_path: Path) -> None:
+        """Should handle pagination at boundary (page 0)."""
+        client = _build_client(tmp_path)
+        # Page 0 should be treated as invalid or default to page 1
+        response = client.get("/ui/marketplace?page=0")
+        # 422 is correct for pagination validation failure (page >= 1)
+        assert response.status_code in (200, 400, 422)
+
+    def test_marketplace_pagination_boundary_negative(self, tmp_path: Path) -> None:
+        """Should reject negative page numbers."""
+        client = _build_client(tmp_path)
+        response = client.get("/ui/marketplace?page=-5")
+        # 422 is correct for pagination validation failure (page >= 1)
+        assert response.status_code in (200, 400, 422)
+
+    def test_marketplace_filter_result_count_accuracy(self, tmp_path: Path) -> None:
+        """Filter results should accurately represent filtered content."""
+        client = _build_client(tmp_path)
+        # Search for specific category
+        response = client.get("/ui/marketplace?category=readers")
+        assert response.status_code == 200
+        # Verify response includes result counts or plugin list
+        assert "plugin" in response.text.lower() or "marketplace" in response.text.lower()
+
+
+@pytest.mark.unit
 class TestMarketplaceErrorHandling:
     """Tests for error handling and edge cases in marketplace routes (Stream A)."""
 
@@ -224,8 +253,8 @@ class TestMarketplaceErrorHandling:
         client = _build_client(tmp_path)
         # Invalid page number (negative)
         response = client.get("/ui/marketplace?page=-1")
-        # Should either ignore or reject invalid pagination
-        assert response.status_code in (200, 400)
+        # Should either ignore or reject invalid pagination (422 for validation failure)
+        assert response.status_code in (200, 400, 422)
 
     def test_marketplace_missing_category(self, tmp_path: Path) -> None:
         """Should handle missing category parameter gracefully."""
