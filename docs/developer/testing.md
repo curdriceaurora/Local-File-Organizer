@@ -22,7 +22,7 @@ pytest tests/services/ -v
 
 Tests are organized by module under `tests/` mirroring the source structure:
 
-```bash
+```text
 tests/
 ├── api/              # FastAPI routes, middleware, models (100+ tests)
 ├── cli/              # CLI commands (65+ tests)
@@ -33,7 +33,7 @@ tests/
 ├── config/           # Configuration (30+ tests)
 ├── integration/      # Cross-module workflows (50+ tests)
 └── ci/               # CI/workflow validation (20+ tests)
-```text
+```
 
 ## Test Markers
 
@@ -49,7 +49,7 @@ Use pytest markers to categorize tests:
 @pytest.mark.ci            # CI-specific tests
 @pytest.mark.slow          # Long-running tests (>5s)
 @pytest.mark.regression    # Regression tests (full suite only)
-```text
+```
 
 ### Running Tests by Marker
 
@@ -140,7 +140,7 @@ async def test_organize_endpoint(client):
     response = await client.post("/api/organize", json={"path": "/tmp"})
     assert response.status_code == 200
     assert "organized" in response.json()
-```text
+```
 
 ### Service Testing
 
@@ -154,7 +154,7 @@ def test_text_processor():
     result = processor.extract_text("document.pdf")
     assert isinstance(result, str)
     assert len(result) > 0
-```text
+```
 
 ### CLI Testing
 
@@ -170,7 +170,7 @@ def test_organize_command():
     result = runner.invoke(app, ["organize", "/tmp/files"])
     assert result.exit_code == 0
     assert "organized" in result.stdout
-```text
+```
 
 ### TUI Testing
 
@@ -230,7 +230,7 @@ pytest -m smoke -x
 
 # Or use the full validation script
 bash .claude/scripts/pre-commit-validation.sh
-```text
+```
 
 Both must pass before committing code changes.
 
@@ -239,8 +239,8 @@ Both must pass before committing code changes.
 GitHub Actions runs the full test suite on every PR:
 
 - **Smoke tests**: Run on every commit (30s)
-- **Full suite**: Run on PR creation (2-3 min)
-- **Coverage gate**: Fail if coverage < 74%
+- **Full suite**: Run on main push (~40s)
+- **Coverage gate**: Fail if coverage < 95% (code) or < 90% (docstrings)
 - **Lint gate**: Fail on ruff violations
 
 See `.github/workflows/` for CI configuration.
@@ -252,7 +252,7 @@ See `.github/workflows/` for CI configuration.
 **Solution**: Ensure test file is in correct directory with `__init__.py`
 ```bash
 touch tests/your_module/__init__.py
-```text
+```
 
 ### Issue: Async test failures
 
@@ -262,7 +262,7 @@ touch tests/your_module/__init__.py
 async def test_async_function():
     result = await some_async_call()
     assert result is not None
-```text
+```
 
 ### Issue: Fixture scope confusion
 
@@ -272,7 +272,7 @@ async def test_async_function():
 def temp_dir():
     with tempfile.TemporaryDirectory() as tmpdir:
         yield tmpdir
-```text
+```
 
 ### Issue: Flaky tests (fail intermittently)
 
