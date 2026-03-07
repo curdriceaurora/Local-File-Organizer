@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
-      - uses: actions/setup-python@f677139bbe7f9c59b41e7cf4bdfca50c6605f8fe  # v5.2.1
+      - uses: actions/setup-python@v5.2.1
         with:
           python-version: '3.11'
           cache: 'pip'
