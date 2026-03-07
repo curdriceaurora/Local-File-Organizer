@@ -52,11 +52,15 @@ class TestOrganizeFiles:
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = mock_result
 
-        with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer):
+        with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer) as mock_cls:
             facade = _facade()
             result = await facade.organize_files(str(tmp_path), output_dir=str(tmp_path / "out"))
 
         assert result["success"] is True
+        mock_cls.assert_called_once_with(dry_run=False)
+        mock_organizer.organize.assert_called_once_with(
+            input_path=str(tmp_path), output_path=str(tmp_path / "out")
+        )
 
     @pytest.mark.asyncio
     async def test_organize_files_no_output_dir(self, tmp_path) -> None:
@@ -236,7 +240,7 @@ class TestDaemonManagement:
         ):
             svc = facade._get_daemon_service()
 
-        assert svc is not None
+        assert svc is mock_service
 
     def test_get_daemon_service_returns_cached(self) -> None:
         """_get_daemon_service returns the same instance on repeated calls."""

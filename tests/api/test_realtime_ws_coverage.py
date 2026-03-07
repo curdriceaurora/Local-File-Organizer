@@ -68,18 +68,17 @@ class TestHeartbeat:
 
         ws = AsyncMock()
         stop = asyncio.Event()
-        ping_count = 0
+        received_payloads: list = []
 
         async def _send(data):
-            nonlocal ping_count
-            ping_count += 1
-            if ping_count >= 1:
-                stop.set()
+            received_payloads.append(data)
+            stop.set()
 
         ws.send_json = _send
 
         await asyncio.wait_for(_heartbeat(ws, interval=0, stop=stop), timeout=2)
-        assert ping_count >= 1
+        assert len(received_payloads) >= 1
+        assert received_payloads[0] == {"type": "ping"}
 
     @pytest.mark.asyncio
     async def test_heartbeat_exits_on_send_error(self) -> None:
@@ -91,6 +90,7 @@ class TestHeartbeat:
         stop = asyncio.Event()
 
         await asyncio.wait_for(_heartbeat(ws, interval=0, stop=stop), timeout=2)
+        ws.send_json.assert_called_once_with({"type": "ping"})
 
 
 # ---------------------------------------------------------------------------
@@ -402,10 +402,11 @@ class TestWebSocketMessages:
                     token_store=MagicMock(),
                 )
 
-        # Should send an error about unknown message type
+        # Should send exactly "Unknown message type" error
         calls = mock_mgr.send_personal_message.call_args_list
         error_calls = [c for c in calls if c[0][0].get("type") == "error"]
         assert len(error_calls) >= 1
+        assert error_calls[0][0][0] == {"type": "error", "message": "Unknown message type"}
 
     @pytest.mark.asyncio
     async def test_invalid_json_payload(self) -> None:
