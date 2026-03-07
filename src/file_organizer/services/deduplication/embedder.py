@@ -291,5 +291,6 @@ class DocumentEmbedder:
         cache_path = getattr(self, "cache_path", None)
         embedding_cache = getattr(self, "embedding_cache", None)
 
-        if cache_path is not None and embedding_cache is not None:
+        # Only save if we have both a path and non-empty cache data
+        if cache_path and embedding_cache:
             self._save_cache()

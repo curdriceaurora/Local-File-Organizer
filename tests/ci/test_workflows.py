@@ -101,10 +101,9 @@ class TestCIWorkflow:
         assert "test" in jobs, "CI workflow should have a 'test' job"
 
     def test_ci_uses_python_312(self, workflow: dict[str, Any]) -> None:
-        """Verify CI test job uses Python 3.11 and 3.12 for fast feedback.
+        """Verify CI test job dynamically selects Python versions by event type.
 
-        The test matrix uses a GitHub Actions expression to dynamically select
-        Python versions based on the trigger event:
+        The test matrix uses a GitHub Actions expression to select versions:
         - Pull requests: 3.11 only (faster feedback)
         - Full runs (push): 3.11 and 3.12 (comprehensive testing)
         """
