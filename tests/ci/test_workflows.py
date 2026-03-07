@@ -9,6 +9,8 @@ because ``on`` is a boolean literal in YAML 1.1.  The helper
 
 from __future__ import annotations
 
+import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -123,24 +125,33 @@ class TestCIWorkflow:
                 "python-version should be a GitHub Actions expression starting with ${{ "
                 f"but got: {python_versions_value}"
             )
-            # Verify the expression contains the expected version arrays
-            assert '"3.11"' in python_versions_value, (
-                "Expression must include Python 3.11 version"
-            )
-            assert '"3.12"' in python_versions_value, (
-                "Expression must include Python 3.12 version"
-            )
+            # Verify the expression contains pull_request handling
             assert "pull_request" in python_versions_value, (
                 "Expression should handle pull_request events differently"
+            )
+
+            # Parse the fromJson payloads to validate version arrays
+            fromjson_pattern = r"fromJson\('(\[.*?\])'\)"
+            matches = re.findall(fromjson_pattern, python_versions_value)
+            assert len(matches) == 2, (
+                f"Expected 2 fromJson(...) payloads in expression, found {len(matches)}"
+            )
+
+            # Parse JSON arrays and validate versions
+            arrays = [json.loads(match) for match in matches]
+            assert ["3.11"] in arrays, (
+                f"Expression must include fromJson('[\"3.11\"]') for PR runs"
+            )
+            assert ["3.11", "3.12"] in arrays, (
+                f"Expression must include fromJson('[\"3.11\", \"3.12\"]') for full runs"
             )
         else:
             # If it's a static list (shouldn't be in this workflow)
             python_versions = python_versions_value if isinstance(python_versions_value, list) else [python_versions_value]
-            assert len(python_versions) >= 2, (
-                "CI 'test' job must test against Python 3.11 and 3.12"
+            assert python_versions == ["3.11", "3.12"], (
+                f"CI 'test' job must use exactly [\"3.11\", \"3.12\"], "
+                f"got {python_versions}"
             )
-            assert "3.11" in python_versions, "CI 'test' job must include Python 3.11"
-            assert "3.12" in python_versions, "CI 'test' job must include Python 3.12"
 
         # Verify the setup-python step uses the matrix variable
         steps = test_job.get("steps", [])
