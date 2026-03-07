@@ -225,7 +225,7 @@ All tests must follow these standards:
 
    Covers: text extraction, pattern analysis, suggestion generation.
    """
-```text
+```
 
 ## Pre-Commit Validation
 
@@ -299,7 +299,7 @@ assert event_received
 # Good: use explicit synchronization
 event.wait(timeout=5)
 assert event.is_set()
-```text
+```
 
 ## Test Coverage by Epic
 
