@@ -293,7 +293,7 @@ class TestFilesErrorHandling:
         # Invalid sort parameter is validated and rejected with 422
         response = client.get("/ui/files?sort_by=invalid_sort_field")
         # Should return 422 Unprocessable Entity for invalid parameter
-        assert response.status_code in (422, 400)
+        assert response.status_code == 422
 
     def test_files_directory_traversal_protection(self, tmp_path: Path) -> None:
         """Should safely handle directory path parameters."""
@@ -302,8 +302,8 @@ class TestFilesErrorHandling:
         client = _build_client(tmp_path, allowed_paths=[str(tmp_path)])
         # Path traversal attempts should be handled safely (either blocked or ignored)
         response = client.get("/ui/files?path=../../../etc/passwd")
-        # Should return 200 (safe handling) or error
-        assert response.status_code in (200, 400, 403, 404)
+        # Should return 200 (safe handling - error caught in HTML response)
+        assert response.status_code == 200
 
     def test_files_unicode_filename_handling(self, tmp_path: Path) -> None:
         """Should correctly handle files with unicode characters in names."""

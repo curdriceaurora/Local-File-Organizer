@@ -225,14 +225,14 @@ class TestMarketplaceInputValidation:
         # Page 0 should be treated as invalid or default to page 1
         response = client.get("/ui/marketplace?page=0")
         # 422 is correct for pagination validation failure (page >= 1)
-        assert response.status_code in (200, 400, 422)
+        assert response.status_code == 422
 
     def test_marketplace_pagination_boundary_negative(self, tmp_path: Path) -> None:
         """Should reject negative page numbers."""
         client = _build_client(tmp_path)
         response = client.get("/ui/marketplace?page=-5")
         # 422 is correct for pagination validation failure (page >= 1)
-        assert response.status_code in (200, 400, 422)
+        assert response.status_code == 422
 
     def test_marketplace_filter_result_count_accuracy(self, tmp_path: Path) -> None:
         """Filter results should accurately represent filtered content."""

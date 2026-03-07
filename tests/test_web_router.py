@@ -129,7 +129,7 @@ class TestHTMXIntegration:
         headers = {"HX-Request": "true"}
         response = client.get("/ui/", headers=headers)
         # Response should handle HTMX request appropriately
-        assert response.status_code in [200, 303, 404]
+        assert response.status_code in [200, 303]
 
     def test_htmx_swap_target_header(self, web_client_builder) -> None:
         """Server should handle HX-Target header for swap operations."""

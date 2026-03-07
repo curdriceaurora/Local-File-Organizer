@@ -383,8 +383,8 @@ class TestOrganizeErrorHandling:
                 "methodology": "invalid_methodology",
             },
         )
-        # Should reject invalid methodology
-        assert response.status_code in (200, 400)
+        # Should process with default methodology and return 200 with result
+        assert response.status_code == 200
 
     def test_organize_nonexistent_directory(self, tmp_path: Path) -> None:
         """Should handle non-existent input directory."""
@@ -398,8 +398,8 @@ class TestOrganizeErrorHandling:
                 "output_dir": str(tmp_path / "out"),
             },
         )
-        # Should reject non-existent directory
-        assert response.status_code in (200, 400, 404)
+        # Should reject non-existent directory with error message
+        assert response.status_code == 200  # Returns 200 with error in HTML
 
     def test_organize_scan_permission_error(self, tmp_path: Path) -> None:
         """Should handle permission errors gracefully."""
@@ -414,5 +414,5 @@ class TestOrganizeErrorHandling:
                 "output_dir": "/root/not_allowed",
             },
         )
-        # Should handle permission error gracefully
-        assert response.status_code in (200, 400, 403)
+        # Should handle permission error gracefully, returning 200 with error message or 403
+        assert response.status_code in (200, 403)
