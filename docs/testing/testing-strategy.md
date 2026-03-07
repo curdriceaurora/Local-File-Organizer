@@ -30,9 +30,26 @@ def test_example():
 
 ## Coverage Goals
 
-- Unit tests: 80%+ coverage (current CI gate: 74% via `--cov-fail-under=74`)
-- Integration tests: Key workflows
-- CI tests: Pipeline and build validation
+### Current Status (Epic #571 Complete)
+
+- **Overall**: 96.8% docstring coverage | 916+ tests
+- **API Module**: 92% code coverage ✅
+- **Services**: 82% code coverage ✅
+- **Models**: 90% code coverage ✅
+- **CI Gate**: 74% minimum (coverage requirement)
+
+### Coverage Targets by Module
+
+| Module | Target | Current | Status |
+|--------|--------|---------|--------|
+| api | 80% | 92% | ✅ +12% |
+| services | 80% | 82% | ✅ +2% |
+| models | 90% | 90% | ✅ Met |
+| cli | 80% | 75% | 🔶 -5% |
+| tui | 90% | 79% | 🔶 -11% |
+| web | 80% | 78% | 🔶 -2% |
+
+See [Coverage Report](coverage-report.md) for detailed metrics by module.
 
 ---
 
