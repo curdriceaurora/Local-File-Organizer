@@ -147,7 +147,7 @@ git push origin <branch>
 ### What This Avoids
 
 **Bad pattern (causes churn):**
-```
+```text
 Push initial code
 → Wait for CodeRabbit comments
 → Find comment #1, fix it, push
@@ -157,7 +157,7 @@ Push initial code
 ```
 
 **Good pattern (clean merge):**
-```
+```text
 Extract all 3 comments at once
 → Fix all 3 locally in one pass
 → Run quality gates
