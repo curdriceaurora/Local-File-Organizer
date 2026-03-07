@@ -407,6 +407,7 @@ def mock_marketplace_service() -> MagicMock:
     Configured with:
     - list_plugins() returns ([], 0) - empty list with count
     - list_installed() returns [] - empty list, iterable for rendering
+    - install() returns stable object with name/version (no MagicMock string variation)
 
     Returns:
         A MagicMock configured as MarketplaceService instance.
@@ -414,4 +415,12 @@ def mock_marketplace_service() -> MagicMock:
     mock_instance = MagicMock()
     mock_instance.list_plugins.return_value = ([], 0)
     mock_instance.list_installed.return_value = []
+
+    # Configure install() to return a stable object with name/version attributes
+    # Prevents non-deterministic responses if tests assert on flash messages
+    installed_plugin = MagicMock()
+    installed_plugin.name = "test-plugin"
+    installed_plugin.version = "1.0.0"
+    mock_instance.install.return_value = installed_plugin
+
     return mock_instance

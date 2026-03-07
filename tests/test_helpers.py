@@ -21,7 +21,7 @@ def assert_file_order_in_html(response_text: str, *files: str) -> None:
     previous_index = -1
     for file_lower in files_lower:
         try:
-            current_index = text_lower.index(file_lower)
+            current_index = text_lower.index(file_lower, previous_index + 1)
         except ValueError as err:
             raise AssertionError(f"File {file_lower} not found in response") from err
 

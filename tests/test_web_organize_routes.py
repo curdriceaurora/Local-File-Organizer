@@ -98,8 +98,9 @@ class TestOrganizeScan:
         assert response.status_code == 200
         # Verify plan was generated (success path, not error path)
         assert "Plan generated" in response.text
-        # Verify FileOrganizer was called with correct methodology
+        # Verify FileOrganizer was instantiated and organize() was called
         assert mock_file_organizer.call_count > 0
+        assert mock_file_organizer.return_value.organize.call_count > 0
 
 
 @pytest.mark.unit
