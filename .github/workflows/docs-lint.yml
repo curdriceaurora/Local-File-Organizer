@@ -15,6 +15,11 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install pymarkdown
-        run: pip install 'pymarkdownlnt>=0.9.25'
+        run: pip install 'pymarkdownlnt==0.9.25'
       - name: Run markdown linting
-        run: pymarkdown -c .pymarkdown.json scan docs/ README.md *.md
+        run: |
+          # Find all markdown files to ensure proper file handling
+          files=$(find . -maxdepth 1 -name "*.md" -type f && find docs -name "*.md" -type f 2>/dev/null || true)
+          if [[ -n "$files" ]]; then
+            pymarkdown -c .pymarkdown.json scan $files
+          fi
