@@ -16,13 +16,13 @@ pytest -m smoke -x
 
 # Run specific module tests
 pytest tests/services/ -v
-```
+```text
 
 ## Test Organization
 
 Tests are organized by module under `tests/` mirroring the source structure:
 
-```
+```bash
 tests/
 ├── api/              # FastAPI routes, middleware, models (100+ tests)
 ├── cli/              # CLI commands (65+ tests)
@@ -33,7 +33,7 @@ tests/
 ├── config/           # Configuration (30+ tests)
 ├── integration/      # Cross-module workflows (50+ tests)
 └── ci/               # CI/workflow validation (20+ tests)
-```
+```text
 
 ## Test Markers
 
@@ -49,7 +49,7 @@ Use pytest markers to categorize tests:
 @pytest.mark.ci            # CI-specific tests
 @pytest.mark.slow          # Long-running tests (>5s)
 @pytest.mark.regression    # Regression tests (full suite only)
-```
+```text
 
 ### Running Tests by Marker
 
@@ -68,7 +68,7 @@ pytest -m "not slow"
 
 # CI gate tests only
 pytest -m ci
-```
+```text
 
 ## Coverage Metrics
 
@@ -109,7 +109,7 @@ pytest --cov=file_organizer --cov-report=html
 
 # Docstring coverage (requires interrogate)
 interrogate -v src/file_organizer --fail-under 90
-```
+```text
 
 ## Testing Patterns
 
@@ -133,7 +133,7 @@ async def test_organize_endpoint(client):
     response = await client.post("/api/organize", json={"path": "/tmp"})
     assert response.status_code == 200
     assert "organized" in response.json()
-```
+```text
 
 ### Service Testing
 
@@ -147,7 +147,7 @@ def test_text_processor():
     result = processor.extract_text("document.pdf")
     assert isinstance(result, str)
     assert len(result) > 0
-```
+```text
 
 ### CLI Testing
 
@@ -163,7 +163,7 @@ def test_organize_command():
     result = runner.invoke(app, ["organize", "/tmp/files"])
     assert result.exit_code == 0
     assert "organized" in result.stdout
-```
+```text
 
 ### TUI Testing
 
@@ -178,7 +178,7 @@ async def test_app_loads():
     app = FileOrganizerApp()
     async with app.run_test() as pilot:
         assert pilot.app.title == "File Organizer"
-```
+```text
 
 ## Test Quality Standards
 
@@ -211,7 +211,7 @@ All tests must follow these standards:
 
    Covers: text extraction, pattern analysis, suggestion generation.
    """
-   ```
+```text
 
 ## Pre-Commit Validation
 
@@ -223,7 +223,7 @@ pytest -m smoke -x
 
 # Or use the full validation script
 bash .claude/scripts/pre-commit-validation.sh
-```
+```text
 
 Both must pass before committing code changes.
 
@@ -245,7 +245,7 @@ See `.github/workflows/` for CI configuration.
 **Solution**: Ensure test file is in correct directory with `__init__.py`
 ```bash
 touch tests/your_module/__init__.py
-```
+```text
 
 ### Issue: Async test failures
 
@@ -255,7 +255,7 @@ touch tests/your_module/__init__.py
 async def test_async_function():
     result = await some_async_call()
     assert result is not None
-```
+```text
 
 ### Issue: Fixture scope confusion
 
@@ -265,7 +265,7 @@ async def test_async_function():
 def temp_dir():
     with tempfile.TemporaryDirectory() as tmpdir:
         yield tmpdir
-```
+```text
 
 ### Issue: Flaky tests (fail intermittently)
 
@@ -278,7 +278,7 @@ assert event_received
 # Good: use explicit synchronization
 event.wait(timeout=5)
 assert event.is_set()
-```
+```text
 
 ## Test Coverage by Epic
 
