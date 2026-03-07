@@ -209,6 +209,7 @@ Step 4c: /simplify (OPTIONAL - suggestions)
 | "What decisions do I make?" | PR Review Response - Decision Matrix |
 | "Why did I transition states?" | This Master document - Transition Rules |
 | "I'm stuck, where am I?" | This Master document - State Definitions |
+| "Merge is blocked" | PR Merge Troubleshooting (diagnosis & resolution) |
 
 ---
 
@@ -234,6 +235,9 @@ A: Depends on CI speed (2-5 min) and reviewer response time (5-60 min). Once aut
 
 **Q: Rate limit hit, what happens?**
 A: Continue monitoring but don't trigger API calls. Check GitHub UI manually. When limit resets, resume normal workflow.
+
+**Q: Merge blocked with "Cannot update this protected ref"?**
+A: Usually means PR branch is behind main (another PR merged after yours was created). Run `gh pr update-branch <PR_NUM>` to rebase on latest main, wait for CI to re-run (1-2 min), then merge. See PR Merge Troubleshooting guide for full diagnosis.
 
 ---
 
