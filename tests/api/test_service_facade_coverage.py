@@ -336,6 +336,9 @@ class TestGetSuggestions:
 
         assert result["success"] is True
         assert len(result["data"]["suggestions"]) == 1
+        assert result["data"]["suggestions"][0]["suggestion_type"] == "move"
+        assert result["data"]["suggestions"][0]["confidence"] == 0.9
+        mock_engine.generate_suggestions.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_suggestions_error(self, tmp_path) -> None:
@@ -375,6 +378,10 @@ class TestFindDuplicates:
         assert result["success"] is True
         assert "statistics" in result["data"]
         assert len(result["data"]["groups"]) == 1
+        from pathlib import Path
+        mock_detector.scan_directory.assert_called_once_with(Path(str(tmp_path)))
+        mock_detector.get_statistics.assert_called_once()
+        mock_detector.get_duplicate_groups.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_find_duplicates_error(self, tmp_path) -> None:
