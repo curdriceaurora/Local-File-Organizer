@@ -90,7 +90,7 @@ class TestSendError:
         with patch("file_organizer.api.routers.realtime.realtime_manager") as mock_mgr:
             mock_mgr.send_personal_message = AsyncMock()
             await _send_error(ws, "something went wrong")
-            mock_mgr.send_personal_message.assert_called_once_with(
+            mock_mgr.send_personal_message.assert_awaited_once_with(
                 {"type": "error", "message": "something went wrong"}, ws
             )
 
@@ -196,8 +196,9 @@ class TestWebSocketAuth:
                 token_store=MagicMock(),
             )
 
-        # Connection was accepted — manager.connect() was called, close() was not
-        mock_mgr.connect.assert_called_once()
+        # Connection was accepted — manager.connect()/disconnect() were awaited, close() was not
+        mock_mgr.connect.assert_awaited_once()
+        mock_mgr.disconnect.assert_awaited_once()
         ws.close.assert_not_called()
 
 
@@ -227,6 +228,7 @@ class TestWebSocketMessages:
             if call_count == 1:
                 return {"type": "ping"}
             from fastapi import WebSocketDisconnect
+
             raise WebSocketDisconnect()
 
         ws.receive_json = _receive
@@ -270,6 +272,7 @@ class TestWebSocketMessages:
             if call_count == 1:
                 return {"type": "subscribe", "channel": "jobs"}
             from fastapi import WebSocketDisconnect
+
             raise WebSocketDisconnect()
 
         ws.receive_json = _receive
@@ -293,7 +296,7 @@ class TestWebSocketMessages:
                     token_store=MagicMock(),
                 )
 
-        mock_mgr.subscribe.assert_called_once_with(ws, "jobs")
+        mock_mgr.subscribe.assert_awaited_once_with(ws, "jobs")
 
     @pytest.mark.asyncio
     async def test_unsubscribe_message(self) -> None:
@@ -311,6 +314,7 @@ class TestWebSocketMessages:
             if call_count == 1:
                 return {"type": "unsubscribe", "channel": "jobs"}
             from fastapi import WebSocketDisconnect
+
             raise WebSocketDisconnect()
 
         ws.receive_json = _receive
@@ -334,7 +338,7 @@ class TestWebSocketMessages:
                     token_store=MagicMock(),
                 )
 
-        mock_mgr.unsubscribe.assert_called_once_with(ws, "jobs")
+        mock_mgr.unsubscribe.assert_awaited_once_with(ws, "jobs")
 
     @pytest.mark.asyncio
     async def test_unknown_message_type(self) -> None:
@@ -352,6 +356,7 @@ class TestWebSocketMessages:
             if call_count == 1:
                 return {"type": "unknown_action"}
             from fastapi import WebSocketDisconnect
+
             raise WebSocketDisconnect()
 
         ws.receive_json = _receive
@@ -396,6 +401,7 @@ class TestWebSocketMessages:
             if call_count == 1:
                 raise ValueError("not json")
             from fastapi import WebSocketDisconnect
+
             raise WebSocketDisconnect()
 
         ws.receive_json = _receive
@@ -439,6 +445,7 @@ class TestWebSocketMessages:
             if call_count == 1:
                 return ["not", "a", "dict"]
             from fastapi import WebSocketDisconnect
+
             raise WebSocketDisconnect()
 
         ws.receive_json = _receive
@@ -483,6 +490,7 @@ class TestWebSocketMessages:
             if call_count == 1:
                 return {"type": "subscribe"}  # no channel
             from fastapi import WebSocketDisconnect
+
             raise WebSocketDisconnect()
 
         ws.receive_json = _receive
@@ -527,6 +535,7 @@ class TestWebSocketMessages:
             if call_count == 1:
                 return {"type": "pong"}
             from fastapi import WebSocketDisconnect
+
             raise WebSocketDisconnect()
 
         ws.receive_json = _receive

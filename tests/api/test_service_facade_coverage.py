@@ -52,7 +52,9 @@ class TestOrganizeFiles:
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = mock_result
 
-        with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer) as mock_cls:
+        with patch(
+            "file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer
+        ) as mock_cls:
             facade = _facade()
             result = await facade.organize_files(str(tmp_path), output_dir=str(tmp_path / "out"))
 
@@ -77,7 +79,9 @@ class TestOrganizeFiles:
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = mock_result
 
-        with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer) as mock_cls:
+        with patch(
+            "file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer
+        ) as mock_cls:
             facade = _facade()
             result = await facade.organize_files(str(tmp_path))
 
@@ -103,7 +107,9 @@ class TestOrganizeFiles:
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = mock_result
 
-        with patch("file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer) as mock_cls:
+        with patch(
+            "file_organizer.core.organizer.FileOrganizer", return_value=mock_organizer
+        ) as mock_cls:
             facade = _facade()
             result = await facade.organize_files(str(tmp_path), dry_run=True)
 
@@ -299,7 +305,10 @@ class TestGetModelStatus:
     @pytest.mark.asyncio
     async def test_get_model_status_error(self) -> None:
         """get_model_status returns error dict on exception."""
-        with patch("file_organizer.models.model_manager.ModelManager", side_effect=RuntimeError("no models")):
+        with patch(
+            "file_organizer.models.model_manager.ModelManager",
+            side_effect=RuntimeError("no models"),
+        ):
             facade = _facade()
             result = await facade.get_model_status()
 
@@ -330,7 +339,9 @@ class TestGetSuggestions:
 
         (tmp_path / "test.txt").write_text("hello")
 
-        with patch("file_organizer.services.smart_suggestions.SuggestionEngine", return_value=mock_engine):
+        with patch(
+            "file_organizer.services.smart_suggestions.SuggestionEngine", return_value=mock_engine
+        ):
             facade = _facade()
             result = await facade.get_suggestions(str(tmp_path))
 
@@ -343,7 +354,10 @@ class TestGetSuggestions:
     @pytest.mark.asyncio
     async def test_get_suggestions_error(self, tmp_path) -> None:
         """get_suggestions returns error dict on exception."""
-        with patch("file_organizer.services.smart_suggestions.SuggestionEngine", side_effect=RuntimeError("boom")):
+        with patch(
+            "file_organizer.services.smart_suggestions.SuggestionEngine",
+            side_effect=RuntimeError("boom"),
+        ):
             facade = _facade()
             result = await facade.get_suggestions(str(tmp_path))
 
@@ -371,22 +385,27 @@ class TestFindDuplicates:
         mock_detector.get_statistics.return_value = {"total_duplicates": 1}
         mock_detector.get_duplicate_groups.return_value = {"abc123": mock_group}
 
-        with patch("file_organizer.services.deduplication.detector.DuplicateDetector", return_value=mock_detector):
+        with patch(
+            "file_organizer.services.deduplication.detector.DuplicateDetector",
+            return_value=mock_detector,
+        ):
             facade = _facade()
             result = await facade.find_duplicates(str(tmp_path))
 
         assert result["success"] is True
         assert "statistics" in result["data"]
         assert len(result["data"]["groups"]) == 1
-        from pathlib import Path
-        mock_detector.scan_directory.assert_called_once_with(Path(str(tmp_path)))
+        mock_detector.scan_directory.assert_called_once_with(tmp_path)
         mock_detector.get_statistics.assert_called_once()
         mock_detector.get_duplicate_groups.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_find_duplicates_error(self, tmp_path) -> None:
         """find_duplicates returns error dict on exception."""
-        with patch("file_organizer.services.deduplication.detector.DuplicateDetector", side_effect=RuntimeError("no dedup")):
+        with patch(
+            "file_organizer.services.deduplication.detector.DuplicateDetector",
+            side_effect=RuntimeError("no dedup"),
+        ):
             facade = _facade()
             result = await facade.find_duplicates(str(tmp_path))
 
@@ -430,7 +449,9 @@ class TestUndoLastOperation:
     @pytest.mark.asyncio
     async def test_undo_error(self) -> None:
         """undo_last_operation returns error dict on exception."""
-        with patch("file_organizer.undo.undo_manager.UndoManager", side_effect=RuntimeError("no undo")):
+        with patch(
+            "file_organizer.undo.undo_manager.UndoManager", side_effect=RuntimeError("no undo")
+        ):
             facade = _facade()
             result = await facade.undo_last_operation()
 
@@ -502,7 +523,10 @@ class TestGetOperationHistory:
     @pytest.mark.asyncio
     async def test_get_history_error(self) -> None:
         """get_operation_history returns error dict on exception."""
-        with patch("file_organizer.history.tracker.OperationHistory", side_effect=RuntimeError("no history")):
+        with patch(
+            "file_organizer.history.tracker.OperationHistory",
+            side_effect=RuntimeError("no history"),
+        ):
             facade = _facade()
             result = await facade.get_operation_history()
 

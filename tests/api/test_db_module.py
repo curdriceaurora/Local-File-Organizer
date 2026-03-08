@@ -121,7 +121,7 @@ class TestCreateSession:
         init_db(":memory:")
         session = create_session(":memory:")
         try:
-            result = session.execute(text("SELECT 1"))
-            assert result.scalar() == 1
+            result = session.execute(text("SELECT COUNT(*) FROM users"))
+            assert isinstance(result.scalar(), int)
         finally:
             session.close()
