@@ -27,7 +27,10 @@ mock_obj.method.assert_called_once_with(input_path=..., output_path=...)
 
 ---
 
-## Pattern 2: NON_NONE_IDENTITY_CHECK (Non-None identity check)
+## Pattern 2: NON_NONE_IDENTITY_CHECK (formerly MISSING_CALL_VERIFY)
+
+Renamed from `MISSING_CALL_VERIFY` to match the narrower pattern documented here:
+asserting a value is non-`None` instead of proving it is the expected instance.
 
 **What it is**: Checking `is not None` instead of asserting the exact expected instance.
 
