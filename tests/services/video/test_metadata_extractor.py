@@ -266,6 +266,9 @@ class TestParseDatetime:
         result = _parse_datetime("2025-06-15T10:30:00.123456Z")
         assert result is not None
         assert result.year == 2025
+        assert result.month == 6
+        assert result.microsecond == 123456
+        assert result.tzinfo == UTC
 
     def test_date_only(self) -> None:
         result = _parse_datetime("2025-06-15")
@@ -275,6 +278,7 @@ class TestParseDatetime:
         result = _parse_datetime("2025")
         assert result is not None
         assert result.year == 2025
+        assert result.tzinfo is not None  # implementation normalises naive → UTC
 
     def test_unparseable(self) -> None:
         assert _parse_datetime("not-a-date") is None
@@ -282,15 +286,14 @@ class TestParseDatetime:
     def test_timezone_offset(self) -> None:
         result = _parse_datetime("2025-06-15T10:30:00+05:30")
         assert result is not None
-        # Normalised to UTC: 10:30 IST = 05:00 UTC
-        assert result.tzinfo is not None
+        # Normalised to UTC: 10:30 IST (+05:30) = 05:00 UTC
         assert result == datetime(2025, 6, 15, 5, 0, 0, tzinfo=UTC)
 
     def test_datetime_with_microseconds_no_z(self) -> None:
         result = _parse_datetime("2025-06-15T10:30:00.123456")
         assert result is not None
         assert result.year == 2025
-        assert result.tzinfo is not None
+        assert result.tzinfo == UTC  # naive → UTC normalisation applied
 
 
 # ---------------------------------------------------------------------------

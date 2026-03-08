@@ -34,7 +34,7 @@ def _make_metadata(
     file_size: int = 1024,
 ) -> VideoMetadata:
     """Build a VideoMetadata with sensible defaults."""
-    path = Path(f"/tmp/{filename}")
+    path = Path(filename)
     return VideoMetadata(
         file_path=path,
         file_size=file_size,
@@ -221,8 +221,8 @@ class TestGenerateDescription:
         metadata = _make_metadata(width=None, height=None)
         desc = organizer.generate_description(metadata)
         assert "Video" in desc
-        # Should not contain resolution label when unknown
-        assert "unknown" not in desc.lower() or "unknown" not in desc
+        # generate_description skips the label when resolution_label returns "unknown"
+        assert "unknown" not in desc.lower()
 
     def test_no_duration(self, organizer: VideoOrganizer) -> None:
         metadata = _make_metadata(duration=None)
@@ -253,7 +253,7 @@ class TestAllNoneOptionalFields:
 
     def test_generate_path_with_all_none(self, organizer: VideoOrganizer) -> None:
         metadata = VideoMetadata(
-            file_path=Path("/tmp/mystery.mp4"),
+            file_path=Path("mystery.mp4"),
             file_size=512,
             format="mp4",
             duration=None,
@@ -270,7 +270,7 @@ class TestAllNoneOptionalFields:
 
     def test_generate_description_with_all_none(self, organizer: VideoOrganizer) -> None:
         metadata = VideoMetadata(
-            file_path=Path("/tmp/mystery.mp4"),
+            file_path=Path("mystery.mp4"),
             file_size=512,
             format="mp4",
         )
