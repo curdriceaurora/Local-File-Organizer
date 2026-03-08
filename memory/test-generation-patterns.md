@@ -27,7 +27,7 @@ Mapping from the 1,830-finding audit (115 PRs) to pattern numbers in this file:
 **Total classified test findings: 634 (across all 115 PRs, 34% of dataset)**
 **Average: ~16 test findings per test PR**
 
-This file also documents 7 additional patterns (11–17) discovered in test-specific audit PRs
+This file also documents 7 additional patterns (5, 12–17) discovered in test-specific audit PRs
 (#603, #605, #607, #624, #635, #652, #655) beyond the initial T1–T10 catalog.
 
 ---
@@ -560,3 +560,6 @@ If no: add `mock_obj.method.assert_called_once_with(expected_args)`.
 8. **Web route tests check template name AND context dict** (Pattern 15: WRONG_TEMPLATE_ASSERTION)
 9. **Exception mocks use the exact type the production code catches** (Pattern 16: WRONG_EXCEPTION_TYPE_IN_MOCK)
 10. **Assertions check specific values, not just truthiness** (Pattern 1: WEAK_ASSERTION)
+11. **Near-identical test methods use `@pytest.mark.parametrize`** — no copy-paste variants (Pattern 18: MISSING_PARAMETRIZE)
+12. **Async methods are mocked with `AsyncMock`, not `MagicMock`** (Pattern 19: WRONG_MOCK_ASYNC)
+13. **Failure injection uses mock side effects, not platform-specific paths** — no `/proc/`, `/nonexistent/` (Pattern 20: PLATFORM_SPECIFIC_FAILURE_INJECTION)
