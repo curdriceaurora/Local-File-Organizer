@@ -234,3 +234,46 @@ class TestGenerateDescription:
         desc = organizer.generate_description(metadata)
         assert "Video" in desc
         assert "h264" not in desc
+
+    def test_hours_minutes_format(self, organizer: VideoOrganizer) -> None:
+        """5400 s = 1h30m."""
+        metadata = _make_metadata(duration=5400.0)
+        desc = organizer.generate_description(metadata)
+        assert "1h30m" in desc
+
+
+# ---------------------------------------------------------------------------
+# Integration: all-None optional fields
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestAllNoneOptionalFields:
+    """Verify the organizer degrades gracefully when metadata is filesystem-only."""
+
+    def test_generate_path_with_all_none(self, organizer: VideoOrganizer) -> None:
+        metadata = VideoMetadata(
+            file_path=Path("/tmp/mystery.mp4"),
+            file_size=512,
+            format="mp4",
+            duration=None,
+            width=None,
+            height=None,
+            fps=None,
+            codec=None,
+            bitrate=None,
+            creation_date=None,
+        )
+        folder, name = organizer.generate_path(metadata)
+        assert folder == "Videos/Unsorted"
+        assert name == "mystery"
+
+    def test_generate_description_with_all_none(self, organizer: VideoOrganizer) -> None:
+        metadata = VideoMetadata(
+            file_path=Path("/tmp/mystery.mp4"),
+            file_size=512,
+            format="mp4",
+        )
+        desc = organizer.generate_description(metadata)
+        assert "Video" in desc  # always present
+        # no exceptions raised for missing fields
