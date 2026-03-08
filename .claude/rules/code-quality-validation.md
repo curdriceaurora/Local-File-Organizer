@@ -464,6 +464,218 @@ echo "htmlcov/" >> .gitignore
 
 ```
 
+## Cross-Cutting Patterns (All Work Types)
+
+These patterns appear across TEST, FEATURE, DOCS, CI, and REFACTOR work.
+Sourced from audit of 1,830 findings — 157 occurrences combined (G1–G5).
+
+### Pattern G1: ABSOLUTE_PATH — 53 findings
+
+**Problem**: Hardcoded absolute paths (`~/.config/...`, `/tmp/...`, `/var/...`) instead of using the config system or `tmp_path` pytest fixture.
+
+**Wrong**:
+
+```python
+
+# ❌ Hardcoded path — breaks on different machines, doesn't use config
+TRASH_DIR = Path("~/.config/file-organizer/trash").expanduser()
+CACHE_DIR = Path("/tmp/file-organizer-cache")
+
+```
+
+**Correct**:
+
+```python
+
+# ✅ Use config system
+from file_organizer.config import ConfigManager
+trash_dir = ConfigManager.get_path("trash")
+
+# ✅ Use tmp_path in tests (not /tmp/ directly)
+def test_something(tmp_path):
+    test_file = tmp_path / "test.txt"
+
+```
+
+**Validation**:
+
+```bash
+
+# Check staged diff for hardcoded paths
+git diff --cached | grep -E '(~/.config|/tmp/|/var/|/home/|expanduser\("~)'
+
+```
+
+---
+
+### Pattern G2: LOGGING_FORMAT — ~12 findings
+
+**Problem**: f-strings in `logger.debug(f"...")` — string is formatted eagerly even when the log level suppresses output. Measurable performance impact in hot paths.
+
+**Wrong**:
+
+```python
+
+# ❌ f-string evaluated even if debug logging is off
+logger.debug(f"Processing file: {file_path}")
+logger.info(f"Found {len(results)} results for query: {query}")
+
+```
+
+**Correct**:
+
+```python
+
+# ✅ Lazy % formatting — only evaluated if log level allows
+logger.debug("Processing file: %s", file_path)
+logger.info("Found %d results for query: %s", len(results), query)
+
+```
+
+**Validation**:
+
+```bash
+
+# Find f-strings in logger calls
+rg 'logger\.(debug|info|warning|error|critical)\(f"' src/
+
+```
+
+---
+
+### Pattern G3: IMPORT_ORDER — ~8 findings
+
+**Problem**: Local imports inside functions (`from module import x` inside a function body) used to avoid circular imports. This hides the root cause — the circular dependency itself.
+
+**Wrong**:
+
+```python
+
+# ❌ Local import to avoid circular dependency
+def process(data):
+    from file_organizer.services.processor import Processor  # inside function!
+    return Processor().run(data)
+
+```
+
+**Correct**:
+
+```python
+
+# ✅ Fix the circular dependency at the architectural level
+# Option A: Use TYPE_CHECKING guard for type hints only
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from file_organizer.services.processor import Processor
+
+# Option B: Restructure modules to eliminate the cycle
+# Option C: Use dependency injection instead of direct import
+
+```
+
+**Validation**:
+
+```bash
+
+# Find local imports (imports inside function/method bodies)
+ast-grep --pattern 'def $FUNC($$$):
+    $$$
+    from $MODULE import $NAME
+    $$$' --lang python src/ 2>/dev/null || rg '^\s{4,}from .* import|^\s{4,}import ' src/
+
+```
+
+---
+
+### Pattern G4: UNUSED_CODE — 41 findings
+
+**Problem**: Unused imports, variables, and functions left across all work types after refactors.
+
+**Wrong**:
+
+```python
+
+# ❌ Unused import (ruff F401)
+import json  # never used in this file
+from pathlib import Path  # used below, but also imported Path from elsewhere
+
+# ❌ Unused variable
+result = compute()  # result never read
+for item in items:
+    pass  # loop variable 'item' never used
+
+```
+
+**Correct**:
+
+```python
+
+# ✅ Remove unused imports
+# (run: ruff check --select F401 src/ --fix)
+
+# ✅ Use _ for intentionally unused loop variables
+for _ in range(retries):
+    attempt()
+
+```
+
+**Validation**:
+
+```bash
+
+# Unused imports (auto-fixable)
+ruff check --select F401 src/ --fix
+
+# Unused variables/functions (requires vulture)
+vulture src/ --min-confidence 80 2>/dev/null || echo "vulture not installed"
+
+```
+
+---
+
+### Pattern G5: NAMING_CONVENTION — 43 findings
+
+**Problem**: Test names that overstate what they test; inconsistent field names; edge-case tests that don't actually exercise the edge case.
+
+**Wrong**:
+
+```python
+
+# ❌ Name implies exhaustive test, body tests one case
+def test_handles_all_edge_cases():
+    result = process("normal input")
+    assert result.success
+
+# ❌ Name says "complete workflow" but mocks everything
+def test_complete_organize_workflow():
+    with patch("everything"):
+        result = organize()
+    assert result is not None
+
+```
+
+**Correct**:
+
+```python
+
+# ✅ Name matches what's actually tested
+def test_process_returns_success_for_valid_text_input():
+    result = process("normal input")
+    assert result.success
+
+# ✅ If mocking everything, name reflects it
+def test_organize_delegates_to_service_with_correct_params():
+    with patch("file_organizer.services.OrganizeService") as mock_svc:
+        organize(input_dir=Path("/test"))
+    mock_svc.return_value.run.assert_called_once_with(Path("/test"))
+
+```
+
+**Validation (manual)**: For every test function, ask: *"If I read only the test name, does it accurately describe what's being asserted?"*
+
+---
+
 ## Automated Validation Script
 
 The canonical validation script is located at `.claude/scripts/pre-commit-validation.sh`.

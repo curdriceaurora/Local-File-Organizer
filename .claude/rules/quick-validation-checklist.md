@@ -65,11 +65,40 @@ config = Config(param_that_doesnt_exist=True)
 
 ```
 
+### 5. Logging f-strings (G2)
+
+```bash
+
+# Find f-strings in logger calls
+rg 'logger\.(debug|info|warning|error)\(f"' src/
+# If any match: replace with % format: logger.debug("msg %s", var)
+
+```
+
+### 6. Absolute paths (G1)
+
+```bash
+
+# Check staged diff for hardcoded paths
+git diff --cached | grep -E '(~/.config|/tmp/|expanduser\()'
+# If match: use ConfigManager.get_path() or tmp_path fixture
+
+```
+
+### 7. Unused imports (G4)
+
+```bash
+
+# Auto-fix unused imports
+ruff check --select F401 src/ --fix
+
+```
+
 ## 🔧 Before Every Commit
 
 ```bash
 
-# Run automated validation
+# Run automated validation (catches linting, formatting, types, tests, and G2/G4 patterns)
 bash .claude/scripts/pre-commit-validation.sh
 
 # If passes, commit safely:
