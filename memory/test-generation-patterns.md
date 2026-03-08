@@ -7,7 +7,32 @@ Sourced from CodeRabbit and Copilot review comments across test-generation PRs (
 
 ---
 
-## Pattern 1: WEAK_ASSERTION (Success-only check)
+## Audit Catalog Cross-Reference (Issue #657)
+
+Mapping from the 1,830-finding audit (115 PRs) to pattern numbers in this file:
+
+| Audit ID | Name | Audit Count | Pattern # in this file |
+|----------|------|-------------|------------------------|
+| T1 | WEAK_ASSERTION | 54 | Pattern 1 |
+| T2 | MISSING_CALL_VERIFY | 93 | Pattern 2 + Pattern 3b |
+| T3 | WRONG_PAYLOAD | 20 | Pattern 3 |
+| T4 | BROAD_EXCEPTION | ~15 | Pattern 6 |
+| T5 | GLOBAL_STATE_LEAK | ~10 | Pattern 11 |
+| T6 | PERMISSIVE_FILTER | 26 | Pattern 4 |
+| T7 | WRONG_PATCH_TARGET | ~8 | Pattern 10 |
+| T8 | BRITTLE_ASSERTION | 23 | Pattern 9 |
+| T9 | RESOURCE_LEAK | ~10 | Pattern 7 |
+| T10 | DEAD_TEST_CODE | ~15 | Pattern 8 |
+
+**Total classified test findings: 634 (across all 115 PRs, 34% of dataset)**
+**Average: ~16 test findings per test PR**
+
+This file also documents 7 additional patterns (11–17) discovered in test-specific audit PRs
+(#603, #605, #607, #624, #635, #652, #655) beyond the initial T1–T10 catalog.
+
+---
+
+## Pattern 1: WEAK_ASSERTION — 54 audit findings
 
 **What it is**: Asserting only `result["success"] is True` without verifying the underlying behavior.
 
@@ -27,7 +52,7 @@ mock_obj.method.assert_called_once_with(input_path=..., output_path=...)
 
 ---
 
-## Pattern 2: NON_NONE_IDENTITY_CHECK (formerly MISSING_CALL_VERIFY)
+## Pattern 2: NON_NONE_IDENTITY_CHECK — 93 audit findings (T2 MISSING_CALL_VERIFY)
 
 Renamed from `MISSING_CALL_VERIFY` to match the narrower pattern documented here:
 asserting a value is non-`None` instead of proving it is the expected instance.
@@ -48,7 +73,7 @@ assert svc is mock_service
 
 ---
 
-## Pattern 3: WRONG_PAYLOAD (Call count without payload)
+## Pattern 3: WRONG_PAYLOAD — 20 audit findings (T3)
 
 **What it is**: Asserting call count without verifying what was passed.
 
@@ -68,7 +93,7 @@ assert calls[0][0][0] == {"type": "error", "message": "Unknown message type"}
 
 ---
 
-## Pattern 3b: MISSING_CALL_VERIFY (Mock set up, call never verified)
+## Pattern 3b: MISSING_CALL_VERIFY — 93 audit findings (T2, part 2)
 
 **What it is**: A mock is configured and the function under test runs, but no `assert_called_*` check is ever made — so the mock could be uncalled or called with wrong args and the test still passes. This was the #1-ranked finding in the issue #656 audit (42 instances, 15% of all findings).
 
@@ -91,7 +116,7 @@ mock_db.save.assert_called_once_with({"name": "alice"})
 
 ---
 
-## Pattern 4: PERMISSIVE_FILTER (Filter instead of assert_not_called)
+## Pattern 4: PERMISSIVE_FILTER — 26 audit findings (T6)
 
 **What it is**: Filtering for a subset of values rather than asserting nothing was sent.
 
@@ -128,7 +153,7 @@ assert isinstance(engine.pool, QueuePool)
 
 ---
 
-## Pattern 6: BROAD_EXCEPTION (Broad exception catching)
+## Pattern 6: BROAD_EXCEPTION — ~15 audit findings (T4)
 
 **What it is**: Catching `Exception` broadly in tests, hiding real failures.
 
@@ -150,7 +175,7 @@ with pytest.raises(WebSocketDisconnect):
 
 ---
 
-## Pattern 7: RESOURCE_LEAK (SQLAlchemy engines with LRU cache)
+## Pattern 7: RESOURCE_LEAK — ~10 audit findings (T9)
 
 **What it is**: File-backed engines cached via LRU stay open after the test, breaking `tmp_path` cleanup.
 
@@ -173,7 +198,7 @@ finally:
 
 ---
 
-## Pattern 8: DEAD_CODE (Unused helpers / imports)
+## Pattern 8: DEAD_CODE — ~15 audit findings (T10 DEAD_TEST_CODE)
 
 **What it is**: Leaving unused test helper methods and imports in test files.
 
@@ -199,7 +224,7 @@ def test_ping():
 
 ---
 
-## Pattern 9: BRITTLE_ASSERTION
+## Pattern 9: BRITTLE_ASSERTION — 23 audit findings (T8)
 
 **What it is**: Assertions that rely on the string `repr` of `call_args`, private
 attributes, or other implementation details that break across library versions or
@@ -229,7 +254,7 @@ assert response.status_code == 200
 
 ---
 
-## Pattern 10: WRONG_PATCH_TARGET
+## Pattern 10: WRONG_PATCH_TARGET — ~8 audit findings (T7)
 
 **What it is**: Patching the wrong module path so the patch never intercepts the
 actual import used by production code.
@@ -262,7 +287,7 @@ module attribute (`x.method`), not the local alias.
 
 ---
 
-## Pattern 11: GLOBAL_STATE_LEAK
+## Pattern 11: GLOBAL_STATE_LEAK — ~10 audit findings (T5)
 
 **What it is**: Test fixtures or mocks that modify global or class-level state
 without teardown, causing test pollution that makes tests pass or fail depending
