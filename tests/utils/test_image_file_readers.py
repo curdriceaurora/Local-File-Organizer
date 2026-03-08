@@ -155,6 +155,7 @@ class TestMagicByteStubFiles:
             is_valid, msg = validate_image_file(p)
 
         assert is_valid
+        assert msg is None
 
     def test_webp_stub_passes_extension_check(self, tmp_path: Path) -> None:
         p = tmp_path / "photo.webp"
