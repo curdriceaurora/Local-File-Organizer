@@ -1,9 +1,12 @@
-"""Tests for image file reading utilities — issue #394.
+"""Complementary image utility tests — issue #394.
 
 Complements tests/services/deduplication/test_dedup_image_utils.py by:
 - Testing with real minimal image byte stubs (magic bytes) rather than full PIL mocks
 - Covering edge cases missing from the comprehensive deduplication test suite
-- Providing @pytest.mark.smoke coverage for the image reading pipeline
+- Providing @pytest.mark.smoke and @pytest.mark.ci coverage for the image reading pipeline
+
+Tests target file_organizer.services.deduplication.image_utils and live here
+to mirror the source module's location (services/deduplication/).
 
 All tests mock PIL at the module level so they run without Pillow installed.
 """
@@ -41,7 +44,7 @@ from file_organizer.services.deduplication.image_utils import (  # noqa: E402
     validate_image_file,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 # ---------------------------------------------------------------------------
 # Minimal image byte stubs (magic bytes only — no real image content)
@@ -65,7 +68,7 @@ class TestSupportedFormatsCompleteness:
 
     def test_all_expected_formats_present(self) -> None:
         expected = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp"}
-        assert expected.issubset(SUPPORTED_FORMATS)
+        assert SUPPORTED_FORMATS == expected
 
     def test_non_image_not_supported(self) -> None:
         for ext in [".pdf", ".docx", ".mp3", ".mp4", ".py", ".txt"]:
