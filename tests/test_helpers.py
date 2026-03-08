@@ -2,9 +2,44 @@
 
 from __future__ import annotations
 
+import re
+
+
+def _find_filename_in_html(text: str, filename: str, start: int = 0) -> int:
+    """Find the position of a filename as an exact token in HTML text.
+
+    Uses negative lookahead/lookbehind to avoid matching ``filename`` as a
+    substring of a longer filename (e.g. ``file.txt`` inside ``my-file.txt``).
+    Filename boundary characters are: alphanumerics, ``_``, ``-``, ``.``.
+
+    The compiled-pattern ``pos`` parameter is used so no substring is allocated
+    when searching from an offset (e.g. if *start* is 20 and the token is found
+    at absolute position 35, ``match.start()`` returns 35 directly).
+
+    Args:
+        text: The lowercased HTML text to search.
+        filename: The lowercased filename to locate.
+        start: Offset to begin searching from.
+
+    Returns:
+        Start index of the exact-token match.
+
+    Raises:
+        ValueError: If no exact-token match is found at or after *start*.
+    """
+    compiled = re.compile(r"(?<![.\w-])" + re.escape(filename) + r"(?![.\w-])")
+    match = compiled.search(text, pos=start)
+    if match is None:
+        raise ValueError(filename)
+    return match.start()
+
 
 def assert_file_order_in_html(response_text: str, *files: str) -> None:
     """Assert files appear in HTML response in the specified order.
+
+    Each filename is matched as an exact token so that a short name such as
+    ``file.txt`` cannot accidentally match inside a longer name such as
+    ``my-file.txt``, preventing structural false positives.
 
     Args:
         response_text: The HTML response text to check.
@@ -13,20 +48,18 @@ def assert_file_order_in_html(response_text: str, *files: str) -> None:
     Raises:
         AssertionError: If files are not found in response or not in order.
     """
-    # Cache lowercased text to avoid repeated operations
     text_lower = response_text.lower()
     files_lower = [f.lower() for f in files]
 
-    # Verify files appear in order (single pass)
     previous_index = -1
     for file_lower in files_lower:
         try:
-            current_index = text_lower.index(file_lower, previous_index + 1)
+            current_index = _find_filename_in_html(text_lower, file_lower, previous_index + 1)
         except ValueError as err:
-            raise AssertionError(f"File {file_lower} not found in response") from err
+            raise AssertionError(f"File '{file_lower}' not found as exact token in response") from err
 
         assert current_index > previous_index, (
-            f"Files not in correct order: {file_lower} at index {current_index} "
+            f"Files not in correct order: '{file_lower}' at index {current_index} "
             f"should come after previous at {previous_index}"
         )
         previous_index = current_index

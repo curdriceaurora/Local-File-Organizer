@@ -189,6 +189,7 @@ file_organizer = [
 line-length = 100
 target-version = "py311"
 exclude = [
+    ".claude/",
     "technical-debt/",
     "fix_coderabbit_issues.py",
     "test_preference_tracker.py",
