@@ -94,7 +94,7 @@ sudo apt install ffmpeg
 winget install ffmpeg
 ```
 
-**CUDA + cuDNN** — optional, for GPU-accelerated transcription (10–50× faster than CPU):
+**CUDA + cuDNN** — optional, for significantly faster transcription (see [faster-whisper benchmarks](https://github.com/SYSTRAN/faster-whisper) for hardware-specific numbers):
 
 ```bash
 # Install CUDA Toolkit from https://developer.nvidia.com/cuda-downloads
