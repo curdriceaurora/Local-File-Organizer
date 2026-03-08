@@ -68,6 +68,29 @@ assert calls[0][0][0] == {"type": "error", "message": "Unknown message type"}
 
 ---
 
+## Pattern 3b: MISSING_CALL_VERIFY (Mock set up, call never verified)
+
+**What it is**: A mock is configured and the function under test runs, but no `assert_called_*` check is ever made — so the mock could be uncalled or called with wrong args and the test still passes. This was the #1-ranked finding in the issue #656 audit (42 instances, 15% of all findings).
+
+**Bad**:
+```python
+# BAD — mock set up but never verified; function could skip it entirely
+mock_db.save = MagicMock()
+result = service.create_user({"name": "alice"})
+assert result["id"] == 1
+```
+
+**Good**:
+```python
+# GOOD — verify the dependency was actually invoked with correct args
+mock_db.save = MagicMock(return_value={"id": 1})
+result = service.create_user({"name": "alice"})
+assert result["id"] == 1
+mock_db.save.assert_called_once_with({"name": "alice"})
+```
+
+---
+
 ## Pattern 4: PERMISSIVE_FILTER (Filter instead of assert_not_called)
 
 **What it is**: Filtering for a subset of values rather than asserting nothing was sent.
@@ -153,6 +176,23 @@ finally:
 ## Pattern 8: DEAD_CODE (Unused helpers / imports)
 
 **What it is**: Leaving unused test helper methods and imports in test files.
+
+**Bad**:
+```python
+from app.service import build_payload  # unused import
+
+def _make_unused_user():               # unused helper
+    return {"name": "alice"}
+
+def test_ping():
+    assert ping() == "ok"
+```
+
+**Good**:
+```python
+def test_ping():
+    assert ping() == "ok"
+```
 
 - Remove unused test helper methods and their imports immediately
 - Ruff will catch unused imports but not unused methods — scan manually
@@ -310,21 +350,26 @@ assert count == 3
 
 ## Pattern 14: MISSING_EXIT_CODE_ASSERT
 
-**What it is**: CLI tests that check `result.output` without first asserting `result.exit_code == 0`, hiding crashes behind output matching.
+**What it is**: CLI tests that check `result.output` without first asserting the expected `result.exit_code`, hiding crashes or wrong failure modes behind output matching.
 
 **Bad**:
 ```python
-# BAD — passes even if CLI crashed with exit code 1
+# BAD — passes even if CLI crashed or returned the wrong status
 result = runner.invoke(app, ["cmd"])
 assert "Success" in result.output
 ```
 
 **Good**:
 ```python
-# GOOD — catch crashes before checking output
+# GOOD — assert the expected exit code before checking output
 result = runner.invoke(app, ["cmd"])
-assert result.exit_code == 0, result.output
+assert result.exit_code == 0, result.output   # success path: expect 0
 assert "Success" in result.output
+
+# For failure-path tests, assert the non-zero code explicitly:
+result = runner.invoke(app, ["cmd", "--bad-arg"])
+assert result.exit_code == 2, result.output   # typer/click usage error
+assert "Error" in result.output
 ```
 
 ---
@@ -341,10 +386,12 @@ mock_templates.TemplateResponse.assert_called_once()
 
 **Good**:
 ```python
-# GOOD — verify template name and key context values
-mock_templates.TemplateResponse.assert_called_once_with(
-    "dashboard.html", {"request": mock_request, "user": expected_user}
-)
+# GOOD — verify template name and the context entries that matter
+mock_templates.TemplateResponse.assert_called_once()
+template_name, context = mock_templates.TemplateResponse.call_args.args[:2]
+assert template_name == "dashboard.html"
+assert context["request"] is mock_request
+assert context["user"] == expected_user
 ```
 
 ---
@@ -404,7 +451,7 @@ If no: add `mock_obj.method.assert_called_once_with(expected_args)`.
 4. **Every mock call is verified with exact args** — not just call count (Pattern 3: WRONG_PAYLOAD)
 5. **No `assert isinstance(x, list)` or `assert n >= 0`** — assert actual values (Pattern 13: TAUTOLOGY_ASSERTION)
 6. **No hardcoded `/tmp/` paths** — use `tmp_path` fixture (Pattern 12: HARDCODED_ABSOLUTE_PATH)
-7. **CLI tests assert `exit_code == 0` before checking output** (Pattern 14: MISSING_EXIT_CODE_ASSERT)
+7. **CLI tests assert the expected `exit_code` before checking output** — `== 0` for success paths, explicit non-zero for failure paths (Pattern 14: MISSING_EXIT_CODE_ASSERT)
 8. **Web route tests check template name AND context dict** (Pattern 15: WRONG_TEMPLATE_ASSERTION)
 9. **Exception mocks use the exact type the production code catches** (Pattern 16: WRONG_EXCEPTION_TYPE_IN_MOCK)
 10. **Assertions check specific values, not just truthiness** (Pattern 1: WEAK_ASSERTION)
