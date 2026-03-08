@@ -1,7 +1,7 @@
 """Complementary image utility tests — issue #394.
 
 Complements tests/services/deduplication/test_dedup_image_utils.py by:
-- Testing with real minimal image byte stubs (magic bytes) rather than full PIL mocks
+- Testing extension/filesystem gate and mocked PIL calls using minimal image byte stubs
 - Covering edge cases missing from the comprehensive deduplication test suite
 - Providing @pytest.mark.smoke and @pytest.mark.ci coverage for the image reading pipeline
 
@@ -176,6 +176,7 @@ class TestMagicByteStubFiles:
             is_valid, msg = validate_image_file(p)
 
         assert is_valid
+        assert msg is None
 
     def test_non_image_extension_rejected_before_pil(self, tmp_path: Path) -> None:
         """Extension check runs before PIL; .pdf should be rejected without PIL call."""
@@ -282,7 +283,7 @@ class TestGetBestQualityImageEdgeCases:
             ),
             patch(
                 "file_organizer.services.deduplication.image_utils.get_image_metadata",
-                side_effect=[meta_png, meta_jpg, meta_png, meta_jpg],
+                side_effect=[meta_png, meta_jpg],
             ),
         ):
             result = get_best_quality_image([png, jpg])
