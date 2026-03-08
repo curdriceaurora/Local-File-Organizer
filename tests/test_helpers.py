@@ -2,7 +2,24 @@
 
 from __future__ import annotations
 
+import functools
 import re
+
+
+@functools.lru_cache(maxsize=128)
+def _filename_pattern(filename: str) -> re.Pattern[str]:
+    """Return a compiled regex pattern that matches *filename* as an exact token.
+
+    Results are cached so repeated calls with the same filename (common in
+    multi-assertion test helpers) avoid redundant pattern compilation.
+
+    Args:
+        filename: The lowercased filename to build a pattern for.
+
+    Returns:
+        Compiled pattern with negative lookahead/lookbehind boundaries.
+    """
+    return re.compile(r"(?<![.\w-])" + re.escape(filename) + r"(?![.\w-])")
 
 
 def _find_filename_in_html(text: str, filename: str, start: int = 0) -> int:
@@ -27,8 +44,7 @@ def _find_filename_in_html(text: str, filename: str, start: int = 0) -> int:
     Raises:
         ValueError: If no exact-token match is found at or after *start*.
     """
-    compiled = re.compile(r"(?<![.\w-])" + re.escape(filename) + r"(?![.\w-])")
-    match = compiled.search(text, pos=start)
+    match = _filename_pattern(filename).search(text, pos=start)
     if match is None:
         raise ValueError(filename)
     return match.start()
