@@ -292,6 +292,32 @@ class OrganizeService:
 
 ---
 
+## Pattern F9: DYNAMIC_IMPORT_ANTIPATTERN — 11 findings (Phase 1 triage — PR #562)
+
+**What it is**: `__import__()` used inline (e.g., in `default_factory` lambdas) instead of top-level `import` statements. Makes code harder to analyze, breaks static analysis tools, and creates subtle behavior differences. Most common in `dataclasses.field(default_factory=lambda: __import__("module").something)`.
+
+**Bad**:
+```python
+# BAD — dynamic import in default_factory; mypy can't analyze; no tree-shaking
+@dataclass
+class Config:
+    dirs: Any = field(default_factory=lambda: __import__("platformdirs").user_data_dir("app"))
+```
+
+**Good**:
+```python
+# GOOD — top-level import; analyzable; explicit
+import platformdirs
+
+@dataclass
+class Config:
+    dirs: str = field(default_factory=lambda: platformdirs.user_data_dir("app"))
+```
+
+**Pre-generation check**: Never use `__import__()` outside of true dynamic loading scenarios (plugin systems, optional dependency guards). Use `try/except ImportError` for optional deps instead.
+
+---
+
 ## Rule of Thumb
 
 For every new feature, ask:
@@ -300,3 +326,4 @@ For every new feature, ask:
 3. **F1**: *"For every external call, what exception can it raise and do I handle it?"*
 4. **F2**: *"Does every function have a concrete return type annotation?"*
 5. **F5**: *"Does ConfigManager already own this value?"*
+6. **F9**: *"Am I using `__import__()` inline? If yes — move to top-level import."*

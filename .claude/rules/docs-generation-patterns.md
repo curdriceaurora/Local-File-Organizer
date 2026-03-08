@@ -173,6 +173,48 @@ grep -n "complete\|planned\|TODO\|not yet\|coming soon" docs/my-doc.md
 
 ---
 
+## Pattern D7: SCRIPT_BUG — 4 findings (Phase 1 triage — PR #175)
+
+**What it is**: Shell scripts embedded in documentation have code bugs — wrong regex, missing `read -r`, non-recursive globs, or incorrect variable quoting. Distinct from D3 BROKEN_EXAMPLE (which is about API/import errors); D7 is script logic bugs that won't work as described.
+
+**Bad**:
+```bash
+# BAD — non-recursive glob misses nested files
+for f in /path/to/files/*.py; do ...
+
+# BAD — missing read -r causes backslash interpretation
+while read line; do ...
+
+# BAD — unquoted variable causes word splitting
+rm -f $MY_VAR
+
+# BAD — wrong regex (forgot to escape dot)
+if [[ "$filename" =~ .*\.py ]]; then  # . matches any char
+```
+
+**Good**:
+```bash
+# GOOD — recursive glob with ** and globstar
+shopt -s globstar
+for f in /path/to/files/**/*.py; do ...
+
+# GOOD — read -r prevents backslash interpretation
+while IFS= read -r line; do ...
+
+# GOOD — quoted variable
+rm -f "$MY_VAR"
+
+# GOOD — escaped dot in regex
+if [[ "$filename" =~ .*\.py$ ]]; then
+```
+
+**Pre-generation check**: For every shell script in documentation, run it locally before committing. Use `shellcheck` for automated detection:
+```bash
+shellcheck your_script.sh
+```
+
+---
+
 ## Rule of Thumb
 
 Before committing any documentation:
@@ -181,3 +223,4 @@ Before committing any documentation:
 2. **D1**: Every method/command documented was verified in source code
 3. **D3**: Every code example was copied from a test file and tested locally
 4. **D6**: Grep for contradictory status markers and resolve them
+5. **D7**: Every shell script in docs passes `shellcheck` locally

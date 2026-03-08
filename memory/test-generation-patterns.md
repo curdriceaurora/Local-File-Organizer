@@ -462,6 +462,86 @@ assert result == expected_output
 
 ---
 
+## Pattern 18: MISSING_PARAMETRIZE (Phase 1 triage — PR #605)
+
+**What it is**: Near-identical test methods repeated N times instead of `@pytest.mark.parametrize`. Found 3+ times in PR #605 alone. Reduces maintainability and hides duplication.
+
+**Bad**:
+```python
+# BAD — copy-paste bloat; 3 methods, identical structure
+def test_convention_snake_case():
+    assert normalize("my file") == "my_file"
+
+def test_convention_kebab_case():
+    assert normalize("my file") == "my-file"
+
+def test_convention_camel_case():
+    assert normalize("my file") == "myFile"
+```
+
+**Good**:
+```python
+# GOOD — single source of truth
+@pytest.mark.parametrize("convention,expected", [
+    ("snake", "my_file"),
+    ("kebab", "my-file"),
+    ("camel", "myFile"),
+])
+def test_normalize_convention(convention, expected):
+    assert normalize("my file", convention=convention) == expected
+```
+
+**Pre-generation check**: If writing `def test_X_A` and `def test_X_B` with identical structure — use `@pytest.mark.parametrize` instead.
+
+---
+
+## Pattern 19: WRONG_MOCK_ASYNC (Phase 1 triage — PR #605)
+
+**What it is**: Async methods mocked with synchronous `MagicMock` instead of `AsyncMock`. Test passes silently but never actually awaits the correct coroutine.
+
+**Bad**:
+```python
+# BAD — async method mocked with sync MagicMock; await returns MagicMock, not a Response
+mock_client = MagicMock()
+mock_client.get.return_value = Response(200, json={"status": "ok"})
+```
+
+**Good**:
+```python
+# GOOD — AsyncMock for async callables
+from unittest.mock import AsyncMock
+
+mock_client = MagicMock()
+mock_client.get = AsyncMock(return_value=Response(200, json={"status": "ok"}))
+```
+
+**Pre-generation check**: For every mocked method, ask: *"Is this `async def` in the real implementation?"* If yes → use `AsyncMock`.
+
+---
+
+## Pattern 20: PLATFORM_SPECIFIC_FAILURE_INJECTION (Phase 1 triage — PR #605)
+
+**What it is**: Tests use Linux-specific paths (`/proc/impossible/`, `/nonexistent/`) to trigger I/O failures instead of mocking. Passes on Linux, fails silently on macOS/Windows.
+
+**Bad**:
+```python
+# BAD — /proc/ is Linux-only
+def test_move_fails_gracefully():
+    result = mover.move_file(Path("/proc/impossible/source.txt"), dest)
+    assert result.success is False
+```
+
+**Good**:
+```python
+# GOOD — mock the OS call portably
+def test_move_fails_gracefully(monkeypatch):
+    monkeypatch.setattr(shutil, "move", Mock(side_effect=OSError("Permission denied")))
+    result = mover.move_file(Path("/any/source.txt"), dest)
+    assert result.success is False
+```
+
+---
+
 ## Rule of Thumb
 
 For every mocked dependency, ask: **"If this method was never called, or called with wrong args, would my test catch it?"**
