@@ -27,7 +27,7 @@ def _find_filename_in_html(text: str, filename: str, start: int = 0) -> int:
     Raises:
         ValueError: If no exact-token match is found at or after *start*.
     """
-    compiled = re.compile(r"(?<![.\w-])" + re.escape(filename) + r"(?![.\w-])")
+    compiled = re.compile(r"(?<![.\w-])" + re.escape(filename) + r"(?![.\w-])", re.ASCII)
     match = compiled.search(text, pos=start)
     if match is None:
         raise ValueError(filename)
@@ -58,10 +58,6 @@ def assert_file_order_in_html(response_text: str, *files: str) -> None:
         except ValueError as err:
             raise AssertionError(f"File '{file_lower}' not found as exact token in response") from err
 
-        assert current_index > previous_index, (
-            f"Files not in correct order: '{file_lower}' at index {current_index} "
-            f"should come after previous at {previous_index}"
-        )
         previous_index = current_index
 
 

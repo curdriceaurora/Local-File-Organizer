@@ -37,9 +37,8 @@ class TestAssertFileOrderInHtml:
         """Files in the wrong order must raise AssertionError.
 
         When HTML lists [beta, alpha] but we assert [alpha, beta], the helper
-        finds alpha first, then cannot locate beta after it, so it raises an
-        AssertionError (either 'not found' or 'not in correct order' depending
-        on whether the file appears again later in the HTML).
+        finds alpha first, then cannot locate beta after position of alpha, so
+        it raises AssertionError with 'not found as exact token in response'.
         """
         html = self._html("beta.txt", "alpha.txt")
         with pytest.raises(AssertionError):
@@ -98,7 +97,7 @@ class TestAssertFileOrderInHtml:
     def test_duplicate_filename_second_occurrence_used(self) -> None:
         """When a filename appears twice, the second occurrence is used for ordering."""
         # alpha.txt appears at positions 4 and 22; both are distinct tokens.
-        # Searching for [alpha, alpha] must find the first at 4 then the second at 20.
+        # Searching for [alpha, alpha] must find the first at 4 then the second at 22.
         html = "<li>alpha.txt</li><li>alpha.txt</li>"
         assert_file_order_in_html(html, "alpha.txt", "alpha.txt")
 
