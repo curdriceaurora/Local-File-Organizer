@@ -193,6 +193,7 @@ class TestGeneratePath:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestGenerateDescription:
     def test_full_description(self, organizer: VideoOrganizer) -> None:
         metadata = _make_metadata(

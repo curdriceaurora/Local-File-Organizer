@@ -257,6 +257,7 @@ class TestBatchExtraction:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestParseDatetime:
     def test_iso_with_z(self) -> None:
         result = _parse_datetime("2025-06-15T10:30:00Z")
