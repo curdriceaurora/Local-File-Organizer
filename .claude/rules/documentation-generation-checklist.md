@@ -6,6 +6,8 @@
 
 Before writing ANY documentation, complete these discovery steps:
 
+> **D1 Rule** (94 findings — #2 in dataset): Read the actual implementation file BEFORE writing any claim about a method, command, or feature. Never document from memory.
+
 ### Step 1A: Identify All Source of Truth
 
 For any claim you plan to make, identify where it's verified in actual code:
@@ -18,6 +20,7 @@ For any claim you plan to make, identify where it's verified in actual code:
 | Feature exists | Actual codebase | `ls`, `grep`, or test imports |
 | Threshold/limit | Code config files | Check actual values |
 | Integration points | Integration tests | Read actual test setup |
+| Any method/feature claim | `src/file_organizer/` | `grep "def method_name"` or `rg "class ClassName"` |
 
 **Rule**: If you can't find it in source, don't claim it.
 
@@ -217,6 +220,18 @@ grep "cov-fail-under" pyproject.toml || echo "NOT ENFORCED"
 ---
 
 ## Phase 3: Pre-Finalization Review
+
+### Step 0 (MANDATORY — run FIRST): Markdown Lint Validation
+
+```bash
+# Run pymarkdown on every .md file you modified
+pymarkdown scan <your-doc-file.md>
+```
+
+- **Zero violations required** before proceeding to commit
+- This catches D5 WRONG_FORMAT — the #1 finding across the entire 1,830-finding dataset (139 occurrences)
+- Common violations: heading level skips, missing blank lines around code blocks, nested code fences
+- Auto-fix most issues: fix heading levels manually; add blank lines around code blocks; remove nested fences
 
 ### Checklist 3A: Complete Source Verification
 
