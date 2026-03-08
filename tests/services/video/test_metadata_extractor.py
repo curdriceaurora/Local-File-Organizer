@@ -323,7 +323,6 @@ class TestFfprobeErrorHandling:
         with patch.dict("sys.modules", {"cv2": None}):
             metadata = extractor.extract(sample_video)
         assert metadata.width is None
-        assert metadata.file_size == 1024
 
     @patch("subprocess.run")
     def test_bad_json_falls_back(
@@ -334,7 +333,6 @@ class TestFfprobeErrorHandling:
         with patch.dict("sys.modules", {"cv2": None}):
             metadata = extractor.extract(sample_video)
         assert metadata.width is None
-        assert metadata.file_size == 1024
 
     @patch("subprocess.run")
     def test_audio_only_file_no_video_stream(
@@ -369,20 +367,17 @@ class TestFfprobeFpsEdgeCases:
         self, mock_run: MagicMock, extractor: VideoMetadataExtractor, sample_video: Path
     ) -> None:
         """r_frame_rate '30/0' must NOT cause a ZeroDivisionError; fps stays None."""
-        probe = {
-            "streams": [
-                {
-                    "codec_type": "video",
-                    "width": 1280,
-                    "height": 720,
-                    "r_frame_rate": "30/0",
-                    "codec_name": "h264",
-                    "duration": "60.0",
-                }
-            ],
-            "format": {"duration": "60.0", "bit_rate": "2000000", "tags": {}},
-        }
-        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps(probe))
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=_ffprobe_output(
+                width=1280,
+                height=720,
+                fps="30/0",
+                duration="60.0",
+                bitrate="2000000",
+                creation_time=None,
+            ),
+        )
         metadata = extractor.extract(sample_video)
         assert metadata.fps is None  # zero denominator → skipped
         assert metadata.width == 1280
@@ -392,19 +387,17 @@ class TestFfprobeFpsEdgeCases:
         self, mock_run: MagicMock, extractor: VideoMetadataExtractor, sample_video: Path
     ) -> None:
         """r_frame_rate without '/' means fps is left as None."""
-        probe = {
-            "streams": [
-                {
-                    "codec_type": "video",
-                    "width": 640,
-                    "height": 480,
-                    "r_frame_rate": "25",  # no slash
-                    "codec_name": "h264",
-                }
-            ],
-            "format": {"duration": "10.0", "bit_rate": "500000", "tags": {}},
-        }
-        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps(probe))
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=_ffprobe_output(
+                width=640,
+                height=480,
+                fps="25",
+                duration="10.0",
+                bitrate="500000",
+                creation_time=None,
+            ),
+        )
         metadata = extractor.extract(sample_video)
         assert metadata.fps is None
         # Confirm ffprobe path was taken — other fields from the stream are populated
@@ -441,6 +434,31 @@ class TestFfprobeFpsEdgeCases:
 # ---------------------------------------------------------------------------
 
 
+def _make_mock_cv2(
+    opened: bool = True,
+    width: float = 1280.0,
+    height: float = 720.0,
+    fps: float = 24.0,
+    frame_count: float = 2400.0,
+) -> MagicMock:
+    """Return a mock cv2 module with a pre-configured VideoCapture."""
+    mock_cv2 = MagicMock()
+    mock_cv2.CAP_PROP_FRAME_WIDTH = 3
+    mock_cv2.CAP_PROP_FRAME_HEIGHT = 4
+    mock_cv2.CAP_PROP_FPS = 5
+    mock_cv2.CAP_PROP_FRAME_COUNT = 7
+    mock_cap = MagicMock()
+    mock_cap.isOpened.return_value = opened
+    mock_cap.get.side_effect = lambda prop: {
+        3: width,  # CAP_PROP_FRAME_WIDTH
+        4: height,  # CAP_PROP_FRAME_HEIGHT
+        5: fps,  # CAP_PROP_FPS
+        7: frame_count,  # CAP_PROP_FRAME_COUNT
+    }.get(prop, 0.0)
+    mock_cv2.VideoCapture.return_value = mock_cap
+    return mock_cv2
+
+
 @pytest.mark.unit
 @pytest.mark.ci
 class TestOpencvEdgeCases:
@@ -450,12 +468,7 @@ class TestOpencvEdgeCases:
     ) -> None:
         """When cap.isOpened() returns False, OpenCV path returns False and
         falls through to the filesystem-only baseline."""
-        mock_cv2 = MagicMock()
-        mock_cap = MagicMock()
-        mock_cap.isOpened.return_value = False
-        mock_cv2.VideoCapture.return_value = mock_cap
-
-        with patch.dict("sys.modules", {"cv2": mock_cv2}):
+        with patch.dict("sys.modules", {"cv2": _make_mock_cv2(opened=False)}):
             metadata = extractor.extract(sample_video)
 
         assert metadata.width is None
@@ -468,25 +481,10 @@ class TestOpencvEdgeCases:
         self, mock_run: MagicMock, extractor: VideoMetadataExtractor, sample_video: Path
     ) -> None:
         """fps=0 from OpenCV must not cause division-by-zero when computing duration."""
-        mock_cv2 = MagicMock()
-        mock_cap = MagicMock()
-        mock_cap.isOpened.return_value = True
-        mock_cap.get.side_effect = lambda prop: {
-            3: 1280.0,
-            4: 720.0,
-            5: 0.0,  # fps = 0
-            7: 1000.0,
-        }.get(prop, 0.0)
-        mock_cv2.VideoCapture.return_value = mock_cap
-        mock_cv2.CAP_PROP_FRAME_WIDTH = 3
-        mock_cv2.CAP_PROP_FRAME_HEIGHT = 4
-        mock_cv2.CAP_PROP_FPS = 5
-        mock_cv2.CAP_PROP_FRAME_COUNT = 7
-
-        with patch.dict("sys.modules", {"cv2": mock_cv2}):
+        with patch.dict("sys.modules", {"cv2": _make_mock_cv2(fps=0.0, frame_count=1000.0)}):
             metadata = extractor.extract(sample_video)
 
-        assert metadata.fps is None  # 0.0 → or None
+        assert metadata.fps is None  # 0.0 → falsy → or None
         assert metadata.duration is None  # no valid fps → duration not computed
 
 

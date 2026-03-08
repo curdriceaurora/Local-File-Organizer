@@ -254,18 +254,8 @@ class TestAllNoneOptionalFields:
     """Verify the organizer degrades gracefully when metadata is filesystem-only."""
 
     def test_generate_path_with_all_none(self, organizer: VideoOrganizer) -> None:
-        metadata = VideoMetadata(
-            file_path=Path("mystery.mp4"),
-            file_size=512,
-            format="mp4",
-            duration=None,
-            width=None,
-            height=None,
-            fps=None,
-            codec=None,
-            bitrate=None,
-            creation_date=None,
-        )
+        # All optional fields left at their None defaults — filesystem-only baseline
+        metadata = VideoMetadata(file_path=Path("mystery.mp4"), file_size=512, format="mp4")
         folder, name = organizer.generate_path(metadata)
         assert folder == "Videos/Unsorted"
         assert name == "mystery"
