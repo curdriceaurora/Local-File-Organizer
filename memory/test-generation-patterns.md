@@ -14,7 +14,7 @@ Mapping from the 1,830-finding audit (115 PRs) to pattern numbers in this file:
 | Audit ID | Name | Audit Count | Pattern # in this file |
 |----------|------|-------------|------------------------|
 | T1 | WEAK_ASSERTION | 54 | Pattern 1 |
-| T2 | MISSING_CALL_VERIFY | 93 | Pattern 2 + Pattern 3b |
+| T2 | MISSING_CALL_VERIFY | 93 | NON_NONE_IDENTITY_CHECK (Pattern 2) + MISSING_CALL_VERIFY (Pattern 3b) |
 | T3 | WRONG_PAYLOAD | 20 | Pattern 3 |
 | T4 | BROAD_EXCEPTION | ~15 | Pattern 6 |
 | T5 | GLOBAL_STATE_LEAK | ~10 | Pattern 11 |
