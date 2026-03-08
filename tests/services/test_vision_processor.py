@@ -386,6 +386,30 @@ class TestVisionProcessorDescriptionAndOCR:
 
         assert result is None
 
+    def test_extract_text_na_response(
+        self, vision_processor: VisionProcessor, mock_vision_model: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test 'N/A' response returns None."""
+        img = tmp_path / "test.jpg"
+        img.write_bytes(b"\xff\xd8")
+        mock_vision_model.generate.return_value = "N/A"
+
+        result = vision_processor._extract_text(img)
+
+        assert result is None
+
+    def test_extract_text_no_text_with_space(
+        self, vision_processor: VisionProcessor, mock_vision_model: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test 'NO TEXT' (with space) response returns None."""
+        img = tmp_path / "test.jpg"
+        img.write_bytes(b"\xff\xd8")
+        mock_vision_model.generate.return_value = "NO TEXT"
+
+        result = vision_processor._extract_text(img)
+
+        assert result is None
+
 
 @pytest.mark.unit
 class TestVisionProcessorFolderAndFilename:
