@@ -77,7 +77,36 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 | Build | `pip install -e ".[build]"` | Executable packaging (PyInstaller) |
 | All | `pip install -e ".[all]"` | Everything above |
 
-Audio processing requires additional system dependencies (FFmpeg, optionally CUDA). See the [Installation Guide](docs/admin/installation.md) for details.
+### Audio system dependencies
+
+The `[audio]` pack requires **FFmpeg** (all platforms) and optionally **CUDA + cuDNN** (NVIDIA GPU users).
+
+**FFmpeg** — required for any format other than raw `.wav` (MP3, M4A, FLAC, OGG):
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Ubuntu / Debian
+sudo apt install ffmpeg
+
+# Windows (winget)
+winget install Gyan.FFmpeg
+```
+
+**CUDA + cuDNN** — optional, for GPU-accelerated transcription (10–50× faster than CPU):
+
+```bash
+# Install CUDA Toolkit from https://developer.nvidia.com/cuda-downloads
+# Install cuDNN from https://developer.nvidia.com/cudnn
+
+# Verify after installation
+python3 -c "import torch; print('CUDA:', torch.cuda.is_available())"
+```
+
+**Fallback behaviour**: without FFmpeg, only `.wav` files are transcribed; other formats are organized by filename/metadata but not content-analysed. Without CUDA, transcription runs on CPU (slower but fully functional).
+
+See the [Installation Guide](docs/admin/installation.md) for troubleshooting and advanced configuration.
 
 ## Development
 
