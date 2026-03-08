@@ -52,9 +52,18 @@ pytestmark = [pytest.mark.unit, pytest.mark.ci]
 _PNG_STUB = b"\x89PNG\r\n\x1a\n" + b"\x00" * 8
 _JPEG_STUB = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
 _GIF_STUB = b"GIF89a" + b"\x00" * 10
-_BMP_STUB = b"BM" + b"\x00" * 10
 _WEBP_STUB = b"RIFF" + b"\x00" * 4 + b"WEBP"
-_TIFF_LE_STUB = b"II\x2a\x00" + b"\x00" * 4  # little-endian TIFF
+
+_IMAGE_OPEN_PATCH = "file_organizer.services.deduplication.image_utils.Image.open"
+
+
+def _make_mock_img() -> MagicMock:
+    """Return a context-manager-compatible PIL Image mock with minimal size."""
+    mock_img = MagicMock()
+    mock_img.size = (1, 1)
+    mock_img.__enter__ = MagicMock(return_value=mock_img)
+    mock_img.__exit__ = MagicMock(return_value=False)
+    return mock_img
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +71,6 @@ _TIFF_LE_STUB = b"II\x2a\x00" + b"\x00" * 4  # little-endian TIFF
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestSupportedFormatsCompleteness:
     """Verify all expected image formats are registered as supported."""
 
@@ -96,7 +104,6 @@ class TestSupportedFormatsCompleteness:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestMagicByteStubFiles:
     """Test image validation with minimal valid magic-byte stubs stored as files.
 
@@ -108,73 +115,36 @@ class TestMagicByteStubFiles:
     def test_png_stub_passes_extension_check(self, tmp_path: Path) -> None:
         p = tmp_path / "image.png"
         p.write_bytes(_PNG_STUB)
-        # The file exists, is a file, and has a supported extension.
-        # PIL.open is still mocked; we only care about the extension gate here.
-        mock_img = MagicMock()
-        mock_img.size = (1, 1)
-        mock_img.__enter__ = MagicMock(return_value=mock_img)
-        mock_img.__exit__ = MagicMock(return_value=False)
-
-        with patch(
-            "file_organizer.services.deduplication.image_utils.Image.open",
-            side_effect=[mock_img, mock_img],
-        ):
+        mock_img = _make_mock_img()
+        with patch(_IMAGE_OPEN_PATCH, side_effect=[mock_img, mock_img]):
             is_valid, msg = validate_image_file(p)
-
         assert is_valid
         assert msg is None
 
     def test_jpeg_stub_passes_extension_check(self, tmp_path: Path) -> None:
         p = tmp_path / "photo.jpg"
         p.write_bytes(_JPEG_STUB)
-
-        mock_img = MagicMock()
-        mock_img.size = (1, 1)
-        mock_img.__enter__ = MagicMock(return_value=mock_img)
-        mock_img.__exit__ = MagicMock(return_value=False)
-
-        with patch(
-            "file_organizer.services.deduplication.image_utils.Image.open",
-            side_effect=[mock_img, mock_img],
-        ):
+        mock_img = _make_mock_img()
+        with patch(_IMAGE_OPEN_PATCH, side_effect=[mock_img, mock_img]):
             is_valid, msg = validate_image_file(p)
-
         assert is_valid
         assert msg is None
 
     def test_gif_stub_passes_extension_check(self, tmp_path: Path) -> None:
         p = tmp_path / "anim.gif"
         p.write_bytes(_GIF_STUB)
-
-        mock_img = MagicMock()
-        mock_img.size = (1, 1)
-        mock_img.__enter__ = MagicMock(return_value=mock_img)
-        mock_img.__exit__ = MagicMock(return_value=False)
-
-        with patch(
-            "file_organizer.services.deduplication.image_utils.Image.open",
-            side_effect=[mock_img, mock_img],
-        ):
+        mock_img = _make_mock_img()
+        with patch(_IMAGE_OPEN_PATCH, side_effect=[mock_img, mock_img]):
             is_valid, msg = validate_image_file(p)
-
         assert is_valid
         assert msg is None
 
     def test_webp_stub_passes_extension_check(self, tmp_path: Path) -> None:
         p = tmp_path / "photo.webp"
         p.write_bytes(_WEBP_STUB)
-
-        mock_img = MagicMock()
-        mock_img.size = (1, 1)
-        mock_img.__enter__ = MagicMock(return_value=mock_img)
-        mock_img.__exit__ = MagicMock(return_value=False)
-
-        with patch(
-            "file_organizer.services.deduplication.image_utils.Image.open",
-            side_effect=[mock_img, mock_img],
-        ):
+        mock_img = _make_mock_img()
+        with patch(_IMAGE_OPEN_PATCH, side_effect=[mock_img, mock_img]):
             is_valid, msg = validate_image_file(p)
-
         assert is_valid
         assert msg is None
 
@@ -196,7 +166,6 @@ class TestMagicByteStubFiles:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestQualityScoreRanking:
     """Test that quality scores form a total ordering."""
 
@@ -220,7 +189,6 @@ class TestQualityScoreRanking:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestGetBestQualityImageEdgeCases:
     """Edge cases for get_best_quality_image not covered in dedup test suite."""
 
@@ -296,7 +264,6 @@ class TestGetBestQualityImageEdgeCases:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestCompareImageQualityAdditional:
     """Additional compare_image_quality cases."""
 
@@ -332,7 +299,6 @@ class TestCompareImageQualityAdditional:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestFindImagesAdditional:
     """Additional find_images_in_directory cases."""
 
