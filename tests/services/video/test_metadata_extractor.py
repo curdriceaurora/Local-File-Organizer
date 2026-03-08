@@ -291,9 +291,7 @@ class TestParseDatetime:
 
     def test_datetime_with_microseconds_no_z(self) -> None:
         result = _parse_datetime("2025-06-15T10:30:00.123456")
-        assert result is not None
-        assert result.year == 2025
-        assert result.tzinfo == UTC  # naive → UTC normalisation applied
+        assert result == datetime(2025, 6, 15, 10, 30, 0, 123456, tzinfo=UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -302,6 +300,7 @@ class TestParseDatetime:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestFfprobeErrorHandling:
     @patch("subprocess.run", side_effect=subprocess.TimeoutExpired("ffprobe", 10))
     def test_timeout_falls_back(
@@ -362,6 +361,7 @@ class TestFfprobeErrorHandling:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestFfprobeFpsEdgeCases:
     @patch("subprocess.run")
     def test_zero_denominator_fps_not_set(
@@ -406,6 +406,11 @@ class TestFfprobeFpsEdgeCases:
         mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps(probe))
         metadata = extractor.extract(sample_video)
         assert metadata.fps is None
+        # Confirm ffprobe path was taken — other fields from the stream are populated
+        assert metadata.width == 640
+        assert metadata.height == 480
+        assert metadata.codec == "h264"
+        assert metadata.duration == 10.0
 
     @patch("subprocess.run")
     def test_duration_falls_back_to_format_section(
@@ -436,6 +441,7 @@ class TestFfprobeFpsEdgeCases:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestOpencvEdgeCases:
     @patch("subprocess.run", side_effect=FileNotFoundError)
     def test_cap_not_opened_falls_through(
@@ -489,6 +495,7 @@ class TestOpencvEdgeCases:
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestBatchEdgeCases:
     def test_empty_batch_returns_empty_list(self, extractor: VideoMetadataExtractor) -> None:
         results = extractor.extract_batch([])

@@ -243,11 +243,12 @@ class TestGenerateDescription:
 
 
 # ---------------------------------------------------------------------------
-# Integration: all-None optional fields
+# All-None optional fields (filesystem-only metadata baseline)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestAllNoneOptionalFields:
     """Verify the organizer degrades gracefully when metadata is filesystem-only."""
 
@@ -275,5 +276,5 @@ class TestAllNoneOptionalFields:
             format="mp4",
         )
         desc = organizer.generate_description(metadata)
-        assert "Video" in desc  # always present
-        # no exceptions raised for missing fields
+        # With all optional fields None, only "Video" is emitted
+        assert desc == "Video"
