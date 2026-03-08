@@ -27,7 +27,7 @@ Mapping from the 1,830-finding audit (115 PRs) to pattern numbers in this file:
 **Total classified test findings: 634 (across all 115 PRs, 34% of dataset)**
 **Average: ~16 test findings per test PR**
 
-This file also documents 7 additional patterns (5, 12–17) discovered in test-specific audit PRs
+This file also documents 10 additional patterns (5, 12–20) discovered in test-specific audit PRs
 (#603, #605, #607, #624, #635, #652, #655) beyond the initial T1–T10 catalog.
 
 ---
@@ -52,7 +52,7 @@ mock_obj.method.assert_called_once_with(input_path=..., output_path=...)
 
 ---
 
-## Pattern 2: NON_NONE_IDENTITY_CHECK — 93 audit findings (T2 MISSING_CALL_VERIFY)
+## Pattern 2: NON_NONE_IDENTITY_CHECK — 93 T2 audit findings shared with Pattern 3b (MISSING_CALL_VERIFY)
 
 Renamed from `MISSING_CALL_VERIFY` to match the narrower pattern documented here:
 asserting a value is non-`None` instead of proving it is the expected instance.
@@ -93,7 +93,7 @@ assert calls[0][0][0] == {"type": "error", "message": "Unknown message type"}
 
 ---
 
-## Pattern 3b: MISSING_CALL_VERIFY — 93 audit findings (T2, part 2)
+## Pattern 3b: MISSING_CALL_VERIFY — 93 T2 audit findings shared with Pattern 2 (NON_NONE_IDENTITY_CHECK)
 
 **What it is**: A mock is configured and the function under test runs, but no `assert_called_*` check is ever made — so the mock could be uncalled or called with wrong args and the test still passes. This was the #1-ranked finding in the issue #656 audit (42 instances, 15% of all findings).
 
