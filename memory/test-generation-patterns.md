@@ -1,7 +1,7 @@
 # Test Generation Anti-Patterns
 
 Reference ruleset for writing tests that pass PR review without correction.
-Sourced from CodeRabbit and Copilot review comments across test-generation PRs (#572–#581, #603, #605, #635, #654, #655).
+Sourced from CodeRabbit and Copilot review comments across test-generation PRs (#603, #605, #607, #624, #635, #652, #655).
 
 **Frequency baseline**: 280 classified findings across 7 PRs (40 findings/PR average).
 
@@ -27,7 +27,7 @@ mock_obj.method.assert_called_once_with(input_path=..., output_path=...)
 
 ---
 
-## Pattern 2: MISSING_CALL_VERIFY (Non-None identity check)
+## Pattern 2: NON_NONE_IDENTITY_CHECK (Non-None identity check)
 
 **What it is**: Checking `is not None` instead of asserting the exact expected instance.
 
@@ -261,8 +261,6 @@ mutating class-level attributes on `MagicMock` types.
 
 ---
 
----
-
 ## Pattern 12: HARDCODED_ABSOLUTE_PATH
 
 **What it is**: Hardcoding Unix-specific paths (`/tmp/...`, `/a.mp3`, `/proc/...`) instead of using `tmp_path`. Most flagged pattern in PRs #605 and #635 (25+ instances).
@@ -400,7 +398,7 @@ If no: add `mock_obj.method.assert_called_once_with(expected_args)`.
 1. **No `str(mock.call_args)` assertions** — use `.assert_called_once_with()` (Pattern 9: BRITTLE_ASSERTION)
 2. **Every `patch()` target is the import site, not the definition site** (Pattern 10: WRONG_PATCH_TARGET)
 3. **Every fixture owning a resource uses `yield` + teardown** (Patterns 7, 11: RESOURCE_LEAK, GLOBAL_STATE_LEAK)
-4. **Every mock call is verified with exact args** — not just `assert result == ...` (Patterns 2, 3: MISSING_CALL_VERIFY, WRONG_PAYLOAD)
+4. **Every mock call is verified with exact args** — not just call count (Pattern 3: WRONG_PAYLOAD)
 5. **No `assert isinstance(x, list)` or `assert n >= 0`** — assert actual values (Pattern 13: TAUTOLOGY_ASSERTION)
 6. **No hardcoded `/tmp/` paths** — use `tmp_path` fixture (Pattern 12: HARDCODED_ABSOLUTE_PATH)
 7. **CLI tests assert `exit_code == 0` before checking output** (Pattern 14: MISSING_EXIT_CODE_ASSERT)
