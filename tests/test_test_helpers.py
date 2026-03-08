@@ -37,11 +37,11 @@ class TestAssertFileOrderInHtml:
         """Files in the wrong order must raise AssertionError.
 
         When HTML lists [beta, alpha] but we assert [alpha, beta], the helper
-        finds alpha first, then cannot locate beta after position of alpha, so
-        it raises AssertionError with 'not found as exact token in response'.
+        finds alpha first, then cannot locate beta after alpha's position, so
+        it raises AssertionError noting beta was not found after alpha.
         """
         html = self._html("beta.txt", "alpha.txt")
-        with pytest.raises(AssertionError):
+        with pytest.raises(AssertionError, match="not found"):
             assert_file_order_in_html(html, "alpha.txt", "beta.txt")
 
     def test_missing_file_raises(self) -> None:
@@ -91,7 +91,7 @@ class TestAssertFileOrderInHtml:
     def test_two_files_wrong_order_raises(self) -> None:
         """Two-file wrong-order case raises with a clear message."""
         html = self._html("file_new.txt", "file_old.txt")
-        with pytest.raises(AssertionError):
+        with pytest.raises(AssertionError, match="not found"):
             assert_file_order_in_html(html, "file_old.txt", "file_new.txt")
 
     def test_duplicate_filename_second_occurrence_used(self) -> None:
