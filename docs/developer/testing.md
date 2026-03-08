@@ -39,7 +39,7 @@ tests/
 
 Use pytest markers to categorize tests:
 
-```python
+```text
 @pytest.mark.unit          # Unit tests (isolated, fast)
 @pytest.mark.smoke         # Critical path tests (< 30s total, pre-commit validation)
 @pytest.mark.integration   # Integration tests (cross-module workflows)
