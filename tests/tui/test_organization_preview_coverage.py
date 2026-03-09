@@ -7,7 +7,7 @@ action_refresh_preview, action_confirm, action_cancel, _set_status.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -97,7 +97,6 @@ class TestOrganizationPreviewViewLoadPreview:
 
     def test_load_preview_success(self) -> None:
         view = OrganizationPreviewView()
-        view.call_from_thread = MagicMock()
         view.query_one = MagicMock()
 
         mock_result = SimpleNamespace(
@@ -111,28 +110,35 @@ class TestOrganizationPreviewViewLoadPreview:
         mock_organizer = MagicMock()
         mock_organizer.organize.return_value = mock_result
 
-        with patch(
-            "file_organizer.core.organizer.FileOrganizer",
-            return_value=mock_organizer,
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.core.organizer.FileOrganizer",
+                return_value=mock_organizer,
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             OrganizationPreviewView._load_preview.__wrapped__(view)
 
         # Should update both panels + status
-        assert view.call_from_thread.call_count >= 3
+        assert mock_app.call_from_thread.call_count >= 3
 
     def test_load_preview_exception(self) -> None:
         view = OrganizationPreviewView()
-        view.call_from_thread = MagicMock()
         view.query_one = MagicMock()
 
-        with patch(
-            "file_organizer.core.organizer.FileOrganizer",
-            side_effect=RuntimeError("model not found"),
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.core.organizer.FileOrganizer",
+                side_effect=RuntimeError("model not found"),
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             OrganizationPreviewView._load_preview.__wrapped__(view)
 
         # Should update panels with error messages
-        assert view.call_from_thread.call_count >= 2
+        assert mock_app.call_from_thread.call_count >= 2
 
     def test_action_refresh_preview(self) -> None:
         view = OrganizationPreviewView()
@@ -151,5 +157,5 @@ class TestOrganizationPreviewViewLoadPreview:
         mock_bar = MagicMock()
         mock_app = MagicMock()
         mock_app.query_one.return_value = mock_bar
-        view._app = mock_app
-        view._set_status("loaded")
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            view._set_status("loaded")

@@ -423,10 +423,11 @@ class TestListBackupsExtended:
 class TestMigrateV1ToV2:
     """Tests for the _migrate_v1_to_v2 placeholder method."""
 
-    def test_placeholder_returns_none(self, migrator):
-        """Test that the placeholder migration returns None (pass statement)."""
-        result = migrator._migrate_v1_to_v2({"profile_name": "test"})
-        assert result is None
+    def test_placeholder_returns_data(self, migrator):
+        """Test that the placeholder migration returns the input data unchanged."""
+        data = {"profile_name": "test"}
+        result = migrator._migrate_v1_to_v2(data)
+        assert result == data
 
 
 # ---------------------------------------------------------------------------

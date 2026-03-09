@@ -154,7 +154,7 @@ class TestFileBrowserTree:
         ):
             tree.action_cursor_toggle()
         mock_post.assert_called_once()
-        mock_fs.assert_called_once_with(mock_node)
+        mock_fs.assert_called_once_with(mock_node, mock_node.data.path)
 
     def test_action_cursor_toggle_none_node(self) -> None:
         tree = FileBrowserTree()

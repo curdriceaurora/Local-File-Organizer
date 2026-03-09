@@ -38,7 +38,7 @@ class SettingsRepository:
             .filter(SettingsStore.key == key, SettingsStore.user_id == user_id)
             .first()
         )
-        return str(row.value) if row is not None else None
+        return str(row.value) if row is not None and row.value is not None else None
 
     # ------------------------------------------------------------------
     # Write

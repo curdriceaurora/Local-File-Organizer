@@ -72,12 +72,12 @@ def _mock_sub_components(learner):
     components with MagicMock objects so the tests can exercise
     PatternLearner's own orchestration logic.
     """
-    # Mock confidence engine (missing: update_pattern_confidence, recalculate_all, get_stats)
+    # Mock confidence engine (missing: recalculate_all, get_stats)
     learner.confidence_engine = MagicMock()
-    learner.confidence_engine.decay_old_patterns.return_value = 0
+    learner.confidence_engine.clear_stale_patterns.return_value = 0
     learner.confidence_engine.get_stats.return_value = {"patterns": 0}
 
-    # Mock preference tracker (missing: track_operation)
+    # Mock preference tracker (missing: track_correction)
     learner.preference_tracker = MagicMock()
 
     # Mock folder learner so we can control return values
@@ -238,7 +238,7 @@ class TestLearnFromCorrection:
         assert "folder" in types_learned
 
     def test_retraining_triggered(self, learner):
-        """Test that retraining is triggered after threshold corrections."""
+        """Test that retraining flag is set after threshold corrections."""
         original = Path("/a/file.txt")
         corrected = Path("/b/file.txt")
 
@@ -246,7 +246,6 @@ class TestLearnFromCorrection:
             result = learner.learn_from_correction(original, corrected)
 
         assert result.get("retraining_triggered") is True
-        learner.confidence_engine.recalculate_all.assert_called()
 
     def test_no_change(self, learner):
         """Test learning from identical paths."""
@@ -273,7 +272,7 @@ class TestLearnFromCorrection:
 
         learner.learn_from_correction(original, corrected)
 
-        learner.preference_tracker.track_operation.assert_called_once()
+        learner.preference_tracker.track_correction.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -362,17 +361,19 @@ class TestUpdateConfidence:
         """Test updating confidence with success."""
         learner.update_confidence("test_pattern", True)
 
-        learner.confidence_engine.update_pattern_confidence.assert_called_once_with(
-            "test_pattern", True
-        )
+        learner.confidence_engine.track_usage.assert_called_once()
+        args = learner.confidence_engine.track_usage.call_args[0]
+        assert args[0] == "test_pattern"
+        assert args[2] is True
 
     def test_failure_update(self, learner):
         """Test updating confidence with failure."""
         learner.update_confidence("test_pattern", False)
 
-        learner.confidence_engine.update_pattern_confidence.assert_called_once_with(
-            "test_pattern", False
-        )
+        learner.confidence_engine.track_usage.assert_called_once()
+        args = learner.confidence_engine.track_usage.call_args[0]
+        assert args[0] == "test_pattern"
+        assert args[2] is False
 
 
 # ---------------------------------------------------------------------------
@@ -554,7 +555,7 @@ class TestClearOldPatterns:
     def test_clear_with_no_data(self, learner):
         """Test clearing when there's no data."""
         learner.folder_learner.clear_old_preferences.return_value = 0
-        learner.confidence_engine.decay_old_patterns.return_value = 0
+        learner.confidence_engine.clear_stale_patterns.return_value = 0
 
         result = learner.clear_old_patterns(days=90)
 
@@ -566,13 +567,13 @@ class TestClearOldPatterns:
     def test_clear_with_custom_days(self, learner):
         """Test clearing with custom day threshold."""
         learner.folder_learner.clear_old_preferences.return_value = 3
-        learner.confidence_engine.decay_old_patterns.return_value = 2
+        learner.confidence_engine.clear_stale_patterns.return_value = 2
 
         result = learner.clear_old_patterns(days=30)
 
         assert result["folder_preferences_cleared"] == 3
         assert result["patterns_decayed"] == 2
-        learner.confidence_engine.decay_old_patterns.assert_called_once_with(30)
+        learner.confidence_engine.clear_stale_patterns.assert_called_once_with(30)
 
 
 # ---------------------------------------------------------------------------

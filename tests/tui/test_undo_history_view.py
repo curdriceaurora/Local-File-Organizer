@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -307,5 +307,5 @@ class TestUndoHistoryViewSetStatus:
         mock_status = MagicMock()
         mock_app = MagicMock()
         mock_app.query_one.return_value = mock_status
-        view._app = mock_app
-        view._set_status("loaded")
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            view._set_status("loaded")

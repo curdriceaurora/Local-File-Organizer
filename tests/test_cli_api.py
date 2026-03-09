@@ -33,6 +33,7 @@ class _FakeClient:
                 "status": "ok",
                 "version": "1.0.0",
                 "environment": "test",
+                "readiness": "ready",
             }
         )
 

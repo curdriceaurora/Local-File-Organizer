@@ -7,7 +7,7 @@ _process_message, _get_engine, _set_status, action_clear_input).
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from textual.binding import Binding
@@ -271,11 +271,13 @@ class TestCopilotViewProcessMessage:
 
         mock_log = MagicMock()
         view.query_one = MagicMock(return_value=mock_log)
-        view.call_from_thread = lambda fn, *a, **kw: fn(*a, **kw)
         view._set_status = MagicMock()
 
-        # Call the underlying function (skip @work decorator)
-        CopilotView._process_message.__wrapped__(view, "test message")
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            # Call the underlying function (skip @work decorator)
+            CopilotView._process_message.__wrapped__(view, "test message")
 
         mock_engine.chat.assert_called_once_with("test message")
         mock_log.add_message.assert_called_once()
@@ -288,10 +290,12 @@ class TestCopilotViewProcessMessage:
 
         mock_log = MagicMock()
         view.query_one = MagicMock(return_value=mock_log)
-        view.call_from_thread = lambda fn, *a, **kw: fn(*a, **kw)
         view._set_status = MagicMock()
 
-        CopilotView._process_message.__wrapped__(view, "test")
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            CopilotView._process_message.__wrapped__(view, "test")
 
         mock_log.add_system_note.assert_called_once()
         assert "model failed" in mock_log.add_system_note.call_args[0][0]
@@ -303,10 +307,12 @@ class TestCopilotViewProcessMessage:
         view._engine = mock_engine
 
         view.query_one = MagicMock(return_value=MagicMock())
-        view.call_from_thread = lambda fn, *a, **kw: fn(*a, **kw)
         view._set_status = MagicMock()
 
-        CopilotView._process_message.__wrapped__(view, "test")
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            CopilotView._process_message.__wrapped__(view, "test")
 
         view._set_status.assert_called_with("Copilot: ready")
 
@@ -361,13 +367,13 @@ class TestCopilotViewSetStatus:
         mock_status = MagicMock()
         mock_app = MagicMock()
         mock_app.query_one.return_value = mock_status
-        view._app = mock_app
-        view._set_status("ready")
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            view._set_status("ready")
 
     def test_exception_swallowed(self) -> None:
         view = CopilotView()
         mock_app = MagicMock()
         mock_app.query_one.side_effect = Exception("no StatusBar")
-        view._app = mock_app
         # Should not raise
-        view._set_status("test")
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            view._set_status("test")

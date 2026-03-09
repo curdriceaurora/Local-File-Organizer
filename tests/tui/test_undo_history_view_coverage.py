@@ -7,7 +7,7 @@ _set_status with exception paths, and HistoryStatsPanel edge cases.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -153,7 +153,6 @@ class TestUndoHistoryViewLoadHistory:
     def test_load_history_success(self) -> None:
         """Test successful history load path."""
         view = UndoHistoryView()
-        view.call_from_thread = MagicMock()
         view.query_one = MagicMock()
 
         mock_history = MagicMock()
@@ -164,6 +163,7 @@ class TestUndoHistoryViewLoadHistory:
         mock_manager.get_redo_stack.return_value = []
         mock_viewer.get_statistics.return_value = {}
 
+        mock_app = MagicMock()
         with (
             patch(
                 "file_organizer.history.tracker.OperationHistory",
@@ -177,27 +177,31 @@ class TestUndoHistoryViewLoadHistory:
                 "file_organizer.undo.viewer.HistoryViewer",
                 return_value=mock_viewer,
             ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             # Call the underlying function directly (not the @work wrapper)
             UndoHistoryView._load_history.__wrapped__(view)
 
-        assert view.call_from_thread.call_count >= 4
+        assert mock_app.call_from_thread.call_count >= 4
         mock_history.close.assert_called_once()
 
     def test_load_history_exception(self) -> None:
         """Test history load with exception."""
         view = UndoHistoryView()
-        view.call_from_thread = MagicMock()
         view.query_one = MagicMock()
 
-        with patch(
-            "file_organizer.history.tracker.OperationHistory",
-            side_effect=RuntimeError("db error"),
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.history.tracker.OperationHistory",
+                side_effect=RuntimeError("db error"),
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             UndoHistoryView._load_history.__wrapped__(view)
 
         # Should have called update on panels with error message
-        assert view.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -210,12 +214,12 @@ class TestUndoHistoryViewRunUndo:
 
     def test_undo_success(self) -> None:
         view = UndoHistoryView()
-        view.call_from_thread = MagicMock()
 
         mock_history = MagicMock()
         mock_manager = MagicMock()
         mock_manager.undo_last_operation.return_value = True
 
+        mock_app = MagicMock()
         with (
             patch(
                 "file_organizer.history.tracker.OperationHistory",
@@ -225,21 +229,22 @@ class TestUndoHistoryViewRunUndo:
                 "file_organizer.undo.undo_manager.UndoManager",
                 return_value=mock_manager,
             ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             UndoHistoryView._run_undo.__wrapped__(view)
 
         mock_history.close.assert_called_once()
         # Should set status "Undo successful" and refresh
-        assert view.call_from_thread.call_count >= 2
+        assert mock_app.call_from_thread.call_count >= 2
 
     def test_undo_nothing_to_undo(self) -> None:
         view = UndoHistoryView()
-        view.call_from_thread = MagicMock()
 
         mock_history = MagicMock()
         mock_manager = MagicMock()
         mock_manager.undo_last_operation.return_value = False
 
+        mock_app = MagicMock()
         with (
             patch(
                 "file_organizer.history.tracker.OperationHistory",
@@ -249,6 +254,7 @@ class TestUndoHistoryViewRunUndo:
                 "file_organizer.undo.undo_manager.UndoManager",
                 return_value=mock_manager,
             ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             UndoHistoryView._run_undo.__wrapped__(view)
 
@@ -256,16 +262,19 @@ class TestUndoHistoryViewRunUndo:
 
     def test_undo_exception(self) -> None:
         view = UndoHistoryView()
-        view.call_from_thread = MagicMock()
 
-        with patch(
-            "file_organizer.history.tracker.OperationHistory",
-            side_effect=RuntimeError("db error"),
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.history.tracker.OperationHistory",
+                side_effect=RuntimeError("db error"),
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             UndoHistoryView._run_undo.__wrapped__(view)
 
         # Should set failure status
-        assert view.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -278,12 +287,12 @@ class TestUndoHistoryViewRunRedo:
 
     def test_redo_success(self) -> None:
         view = UndoHistoryView()
-        view.call_from_thread = MagicMock()
 
         mock_history = MagicMock()
         mock_manager = MagicMock()
         mock_manager.redo_last_operation.return_value = True
 
+        mock_app = MagicMock()
         with (
             patch(
                 "file_organizer.history.tracker.OperationHistory",
@@ -293,6 +302,7 @@ class TestUndoHistoryViewRunRedo:
                 "file_organizer.undo.undo_manager.UndoManager",
                 return_value=mock_manager,
             ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             UndoHistoryView._run_redo.__wrapped__(view)
 
@@ -300,12 +310,12 @@ class TestUndoHistoryViewRunRedo:
 
     def test_redo_nothing_to_redo(self) -> None:
         view = UndoHistoryView()
-        view.call_from_thread = MagicMock()
 
         mock_history = MagicMock()
         mock_manager = MagicMock()
         mock_manager.redo_last_operation.return_value = False
 
+        mock_app = MagicMock()
         with (
             patch(
                 "file_organizer.history.tracker.OperationHistory",
@@ -315,6 +325,7 @@ class TestUndoHistoryViewRunRedo:
                 "file_organizer.undo.undo_manager.UndoManager",
                 return_value=mock_manager,
             ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             UndoHistoryView._run_redo.__wrapped__(view)
 
@@ -322,12 +333,15 @@ class TestUndoHistoryViewRunRedo:
 
     def test_redo_exception(self) -> None:
         view = UndoHistoryView()
-        view.call_from_thread = MagicMock()
 
-        with patch(
-            "file_organizer.history.tracker.OperationHistory",
-            side_effect=RuntimeError("db error"),
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.history.tracker.OperationHistory",
+                side_effect=RuntimeError("db error"),
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             UndoHistoryView._run_redo.__wrapped__(view)
 
-        assert view.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count >= 1

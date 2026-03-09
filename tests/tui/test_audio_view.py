@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -384,9 +384,9 @@ class TestAudioViewSetStatus:
         mock_status = MagicMock()
         mock_app = MagicMock()
         mock_app.query_one.return_value = mock_status
-        view._app = mock_app
-        # _set_status catches exceptions
-        view._set_status("loaded")
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            # _set_status catches exceptions
+            view._set_status("loaded")
 
 
 @pytest.mark.unit
@@ -451,12 +451,13 @@ class TestScanAudioFiles:
             return mock_cls_panel
 
         view.query_one = query_side
-        view.call_from_thread = lambda fn, *a, **kw: fn(*a, **kw)
         view._set_status = MagicMock()
 
         mock_extractor_cls = MagicMock()
         mock_classifier_cls = MagicMock()
 
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
@@ -466,6 +467,7 @@ class TestScanAudioFiles:
                 "file_organizer.services.audio.classifier.AudioClassifier",
                 mock_classifier_cls,
             ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             self._scan_unwrapped(view)
 
@@ -491,7 +493,6 @@ class TestScanAudioFiles:
             return mock_cls_panel
 
         view.query_one = query_side
-        view.call_from_thread = lambda fn, *a, **kw: fn(*a, **kw)
         view._set_status = MagicMock()
 
         mock_metadata = FakeMetadata()
@@ -502,6 +503,8 @@ class TestScanAudioFiles:
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = mock_classification
 
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
@@ -515,6 +518,7 @@ class TestScanAudioFiles:
                 "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor.format_duration",
                 return_value="3:00",
             ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             self._scan_unwrapped(view)
 
@@ -531,14 +535,18 @@ class TestScanAudioFiles:
         view = AudioView(scan_dir=tmp_path)
         mock_panel = MagicMock()
         view.query_one = MagicMock(return_value=mock_panel)
-        view.call_from_thread = lambda fn, *a, **kw: fn(*a, **kw)
 
-        with patch.dict(
-            "sys.modules",
-            {
-                "file_organizer.services.audio.classifier": None,
-                "file_organizer.services.audio.metadata_extractor": None,
-            },
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "file_organizer.services.audio.classifier": None,
+                    "file_organizer.services.audio.metadata_extractor": None,
+                },
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             self._scan_unwrapped(view)
 
@@ -563,12 +571,13 @@ class TestScanAudioFiles:
             return mock_cls_panel
 
         view.query_one = query_side
-        view.call_from_thread = lambda fn, *a, **kw: fn(*a, **kw)
         view._set_status = MagicMock()
 
         mock_extractor = MagicMock()
         mock_extractor.extract.side_effect = Exception("corrupt file")
 
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
@@ -578,6 +587,7 @@ class TestScanAudioFiles:
                 "file_organizer.services.audio.classifier.AudioClassifier",
                 return_value=MagicMock(),
             ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             self._scan_unwrapped(view)
 
@@ -594,11 +604,12 @@ class TestScanAudioFiles:
         view = AudioView(scan_dir=tmp_path)
         mock_panel = MagicMock()
         view.query_one = MagicMock(return_value=mock_panel)
-        view.call_from_thread = lambda fn, *a, **kw: fn(*a, **kw)
         view._set_status = MagicMock()
 
         mock_extractor_cls = MagicMock(side_effect=RuntimeError("kaboom"))
 
+        mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor",
@@ -608,6 +619,7 @@ class TestScanAudioFiles:
                 "file_organizer.services.audio.classifier.AudioClassifier",
                 MagicMock(),
             ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             self._scan_unwrapped(view)
 

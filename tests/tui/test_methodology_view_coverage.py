@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -122,19 +122,22 @@ class TestLoadParaPreview:
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
         view = MethodologyView(scan_dir=empty_dir)
-        view.call_from_thread = MagicMock()
         mock_preview = MagicMock()
         view.query_one = MagicMock(return_value=mock_preview)
 
         mock_mapper = MagicMock()
-        with patch(
-            "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
-            return_value=mock_mapper,
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
+                return_value=mock_mapper,
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             MethodologyView._load_para_preview.__wrapped__(view)
 
         # Should call show_para_preview with None (no files)
-        assert view.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count >= 1
 
     def test_para_preview_with_files(self, tmp_path: Path) -> None:
         f1 = tmp_path / "a.txt"
@@ -143,7 +146,6 @@ class TestLoadParaPreview:
         f2.touch()
 
         view = MethodologyView(scan_dir=tmp_path)
-        view.call_from_thread = MagicMock()
         mock_preview = MagicMock()
         view.query_one = MagicMock(return_value=mock_preview)
 
@@ -151,13 +153,17 @@ class TestLoadParaPreview:
         mock_mapper = MagicMock()
         mock_mapper.map_batch.return_value = [mock_result, mock_result]
 
-        with patch(
-            "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
-            return_value=mock_mapper,
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
+                return_value=mock_mapper,
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             MethodologyView._load_para_preview.__wrapped__(view)
 
-        assert view.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count >= 1
 
     def test_para_preview_with_plain_category(self, tmp_path: Path) -> None:
         """Test when target_category doesn't have .value attribute."""
@@ -165,7 +171,6 @@ class TestLoadParaPreview:
         f1.touch()
 
         view = MethodologyView(scan_dir=tmp_path)
-        view.call_from_thread = MagicMock()
         mock_preview = MagicMock()
         view.query_one = MagicMock(return_value=mock_preview)
 
@@ -173,28 +178,35 @@ class TestLoadParaPreview:
         mock_mapper = MagicMock()
         mock_mapper.map_batch.return_value = [mock_result]
 
-        with patch(
-            "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
-            return_value=mock_mapper,
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
+                return_value=mock_mapper,
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             MethodologyView._load_para_preview.__wrapped__(view)
 
-        assert view.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count >= 1
 
     def test_para_preview_exception(self, tmp_path: Path) -> None:
         view = MethodologyView(scan_dir=tmp_path)
-        view.call_from_thread = MagicMock()
         mock_preview = MagicMock()
         view.query_one = MagicMock(return_value=mock_preview)
 
-        with patch(
-            "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
-            side_effect=RuntimeError("import error"),
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
+                side_effect=RuntimeError("import error"),
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             MethodologyView._load_para_preview.__wrapped__(view)
 
         # Should call show_error
-        assert view.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +219,6 @@ class TestLoadJdPreview:
 
     def test_jd_preview_success(self) -> None:
         view = MethodologyView()
-        view.call_from_thread = MagicMock()
         mock_preview = MagicMock()
         view.query_one = MagicMock(return_value=mock_preview)
 
@@ -215,17 +226,20 @@ class TestLoadJdPreview:
         mock_config.scheme.areas = {10: SimpleNamespace(title="Finance")}
         mock_config.scheme.categories = {"10": SimpleNamespace(title="Banking")}
 
-        with patch(
-            "file_organizer.methodologies.johnny_decimal.config.create_default_config",
-            return_value=mock_config,
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.methodologies.johnny_decimal.config.create_default_config",
+                return_value=mock_config,
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             MethodologyView._load_jd_preview.__wrapped__(view)
 
-        assert view.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count >= 1
 
     def test_jd_preview_no_areas(self) -> None:
         view = MethodologyView()
-        view.call_from_thread = MagicMock()
         mock_preview = MagicMock()
         view.query_one = MagicMock(return_value=mock_preview)
 
@@ -233,27 +247,34 @@ class TestLoadJdPreview:
         mock_config.scheme.areas = None
         mock_config.scheme.categories = None
 
-        with patch(
-            "file_organizer.methodologies.johnny_decimal.config.create_default_config",
-            return_value=mock_config,
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.methodologies.johnny_decimal.config.create_default_config",
+                return_value=mock_config,
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             MethodologyView._load_jd_preview.__wrapped__(view)
 
-        assert view.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count >= 1
 
     def test_jd_preview_exception(self) -> None:
         view = MethodologyView()
-        view.call_from_thread = MagicMock()
         mock_preview = MagicMock()
         view.query_one = MagicMock(return_value=mock_preview)
 
-        with patch(
-            "file_organizer.methodologies.johnny_decimal.config.create_default_config",
-            side_effect=ImportError("no jd module"),
+        mock_app = MagicMock()
+        with (
+            patch(
+                "file_organizer.methodologies.johnny_decimal.config.create_default_config",
+                side_effect=ImportError("no jd module"),
+            ),
+            patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             MethodologyView._load_jd_preview.__wrapped__(view)
 
-        assert view.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -273,8 +294,8 @@ class TestMethodologyViewSetStatus:
         mock_bar = MagicMock()
         mock_app = MagicMock()
         mock_app.query_one.return_value = mock_bar
-        view._app = mock_app
-        view._set_status("loaded")
+        with patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app):
+            view._set_status("loaded")
 
 
 # ---------------------------------------------------------------------------
