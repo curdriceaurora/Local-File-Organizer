@@ -87,6 +87,28 @@ class FileOrganizer:
     AUDIO_EXTENSIONS: ClassVar[set[str]] = {".mp3", ".wav", ".flac", ".m4a", ".ogg"}
     CAD_EXTENSIONS: ClassVar[set[str]] = {".dwg", ".dxf", ".step", ".stp", ".iges", ".igs"}
 
+    # Extension -> folder name mapping used when Ollama is unavailable
+    _TEXT_FALLBACK_MAP: ClassVar[dict[str, str]] = {
+        ".pdf": "PDFs",
+        ".doc": "Documents",
+        ".docx": "Documents",
+        ".txt": "Documents",
+        ".md": "Documents",
+        ".csv": "Spreadsheets",
+        ".xlsx": "Spreadsheets",
+        ".xls": "Spreadsheets",
+        ".ppt": "Presentations",
+        ".pptx": "Presentations",
+        ".epub": "eBooks",
+        ".dwg": "CAD",
+        ".dxf": "CAD",
+        ".step": "CAD",
+        ".stp": "CAD",
+        ".iges": "CAD",
+        ".igs": "CAD",
+    }
+    _IMAGE_FALLBACK_FOLDER: ClassVar[str] = "Images"
+
     def __init__(
         self,
         text_model_config: ModelConfig | None = None,
@@ -125,6 +147,9 @@ class FileOrganizer:
         self._undo_manager: UndoManager | None = None
         self._last_transaction_id: str | None = None
         self._last_output_path: Path | None = None
+
+        # Graceful degradation: set to False when Ollama is unreachable
+        self._ollama_available: bool = True
 
         logger.info(f"FileOrganizer initialized (dry_run={dry_run}, parallel={parallel_workers})")
 
@@ -189,35 +214,64 @@ class FileOrganizer:
 
         # Initialize text processor for text and CAD files
         if text_files or cad_files:
-            self.text_processor = TextProcessor(config=self.text_model_config)
-            self.text_processor.initialize()
-            self.console.print("[green]✓[/green] Text model ready")
+            try:
+                self.text_processor = TextProcessor(config=self.text_model_config)
+                self.text_processor.initialize()
+                self.console.print("[green]✓[/green] Text model ready")
+            except Exception as e:
+                self._ollama_available = False
+                self.console.print(
+                    f"[yellow]⚠ Ollama unavailable ({e.__class__.__name__}): "
+                    "falling back to extension-based organization[/yellow]"
+                )
+                logger.warning(
+                    "Ollama unavailable for text processing, using extension fallback: {}", e
+                )
 
         # Initialize vision processor for image files only (video uses metadata now)
         if image_files:
-            self.vision_processor = VisionProcessor(config=self.vision_model_config)
-            self.vision_processor.initialize()
-            self.console.print("[green]✓[/green] Vision model ready")
+            try:
+                self.vision_processor = VisionProcessor(config=self.vision_model_config)
+                self.vision_processor.initialize()
+                self.console.print("[green]✓[/green] Vision model ready")
+            except Exception as e:
+                self._ollama_available = False
+                self.console.print(
+                    f"[yellow]⚠ Ollama unavailable ({e.__class__.__name__}): "
+                    "falling back to extension-based organization for images[/yellow]"
+                )
+                logger.warning(
+                    "Ollama unavailable for vision processing, using extension fallback: {}", e
+                )
 
         # Process text files
-        all_processed = []
+        all_processed: list[ProcessedFile | ProcessedImage] = []
         if text_files:
             self.console.print(
                 f"\n[bold blue]Processing {len(text_files)} text files...[/bold blue]"
             )
-            processed_text = self._process_text_files(text_files)
+            if self._ollama_available and self.text_processor is not None:
+                processed_text = self._process_text_files(text_files)
+            else:
+                processed_text = self._fallback_by_extension(text_files)
             all_processed.extend(processed_text)
 
         # Process CAD files (treat as text files - extract metadata)
         if cad_files:
             self.console.print(f"\n[bold blue]Processing {len(cad_files)} CAD files...[/bold blue]")
-            processed_cad = self._process_text_files(cad_files)
+            if self._ollama_available and self.text_processor is not None:
+                processed_cad = self._process_text_files(cad_files)
+            else:
+                processed_cad = self._fallback_by_extension(cad_files)
             all_processed.extend(processed_cad)
 
         # Process image files
         if image_files:
             self.console.print(f"\n[bold blue]Processing {len(image_files)} images...[/bold blue]")
-            processed_images = self._process_image_files(image_files)
+            if self._ollama_available and self.vision_processor is not None:
+                processed_images = self._process_image_files(image_files)
+            else:
+                processed_images = self._fallback_by_extension(image_files)
             all_processed.extend(processed_images)
 
         # Process audio files via metadata pipeline (no AI model required)
@@ -346,6 +400,47 @@ class FileOrganizer:
         table.add_row("Other", str(len(other_files)), "⊘ Skip (unsupported)")
 
         self.console.print(table)
+
+    def _fallback_by_extension(self, files: list[Path]) -> list[ProcessedFile]:
+        """Organize files by extension when Ollama is unavailable.
+
+        Args:
+            files: List of file paths to organize.
+
+        Returns:
+            List of ProcessedFile with extension-based folder assignment.
+        """
+        import datetime
+
+        results = []
+        for file_path in files:
+            ext = file_path.suffix.lower()
+            if ext in self._TEXT_FALLBACK_MAP:
+                folder = self._TEXT_FALLBACK_MAP[ext]
+            elif ext in self.IMAGE_EXTENSIONS:
+                try:
+                    year = str(
+                        datetime.datetime.fromtimestamp(
+                            file_path.stat().st_mtime, tz=datetime.UTC
+                        ).year
+                    )
+                except Exception:
+                    year = "Unknown"
+                folder = f"{self._IMAGE_FALLBACK_FOLDER}/{year}"
+            else:
+                folder = "Other"
+
+            results.append(
+                ProcessedFile(
+                    file_path=file_path,
+                    description=f"Extension-based organization (Ollama unavailable): {ext}",
+                    folder_name=folder,
+                    filename=file_path.stem,
+                    error=None,
+                )
+            )
+            logger.debug("Fallback organized {} -> {}/{}", file_path.name, folder, file_path.name)
+        return results
 
     def _process_text_files(self, files: list[Path]) -> list[ProcessedFile]:
         """Process text files with AI.
