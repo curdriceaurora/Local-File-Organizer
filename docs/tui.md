@@ -246,7 +246,7 @@ The TUI follows terminal accessibility standards:
 python3 -c "import textual; print(textual.__version__)"
 
 # Reinstall if needed
-pip install "file-organizer[tui]"
+pip install "local-file-organizer[tui]"
 ```
 
 ### Display Issues

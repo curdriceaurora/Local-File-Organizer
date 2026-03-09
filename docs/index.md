@@ -128,7 +128,7 @@ File Organizer processes **43+ file formats** including:
 === "Python Package"
 
     ```bash
-    pip install file-organizer
+    pip install local-file-organizer
     file-organizer serve
     ```
 

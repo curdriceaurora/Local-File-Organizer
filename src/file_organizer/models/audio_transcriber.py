@@ -140,14 +140,14 @@ class AudioTranscriber:
 
         Raises:
             ImportError: If faster-whisper is not installed.
-                Install with: ``pip install 'file-organizer[audio]'``
+                Install with: ``pip install 'local-file-organizer[audio]'``
             ValueError: If model size or device is invalid
             RuntimeError: If model loading fails
         """
         if not _FASTER_WHISPER_AVAILABLE:
             raise ImportError(
                 "faster-whisper is required for audio transcription. "
-                "Install it with: pip install 'file-organizer[audio]'"
+                "Install it with: pip install 'local-file-organizer[audio]'"
             )
 
         # Convert enums to strings if needed

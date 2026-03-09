@@ -159,7 +159,7 @@ class TestCreateReleaseNotes:
     def test_release_notes_contain_install_instructions(self) -> None:
         """Release notes include pip install command."""
         notes = create_release_notes("2.1.0", "changelog")
-        assert "pip install file-organizer==2.1.0" in notes
+        assert "pip install local-file-organizer==2.1.0" in notes
 
     def test_release_notes_contain_changelog_link(self) -> None:
         """Release notes reference CHANGELOG.md."""

@@ -60,11 +60,11 @@ author: Claude Code PM System
 ## Optional Dependencies
 
 ```
-pip install 'file-organizer[dedup]'    # imagededup for perceptual hashing
-pip install 'file-organizer[audio]'   # faster-whisper
-pip install 'file-organizer[scientific]' # h5py, scipy for HDF5/NetCDF/MAT
-pip install 'file-organizer[cad]'     # ezdxf, cadquery for DXF/STEP
-pip install 'file-organizer[dev]'     # pytest, mypy, ruff, etc.
+pip install 'local-file-organizer[dedup]'    # imagededup for perceptual hashing
+pip install 'local-file-organizer[audio]'   # faster-whisper
+pip install 'local-file-organizer[scientific]' # h5py, scipy for HDF5/NetCDF/MAT
+pip install 'local-file-organizer[cad]'     # ezdxf, cadquery for DXF/STEP
+pip install 'local-file-organizer[dev]'     # pytest, mypy, ruff, etc.
 ```
 
 ## Infrastructure

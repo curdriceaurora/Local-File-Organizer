@@ -755,7 +755,7 @@ class TestMissingFasterWhisper:
         original = _mod._FASTER_WHISPER_AVAILABLE
         try:
             _mod._FASTER_WHISPER_AVAILABLE = False
-            with pytest.raises(ImportError, match="pip install 'file-organizer\\[audio\\]'"):
+            with pytest.raises(ImportError, match="pip install 'local-file-organizer\\[audio\\]'"):
                 AudioTranscriber()
         finally:
             _mod._FASTER_WHISPER_AVAILABLE = original

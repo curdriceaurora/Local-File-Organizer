@@ -62,13 +62,13 @@ class ImageDeduplicator:
 
         Raises:
             ImportError: If imagededup is not installed.
-                Install with: ``pip install 'file-organizer[dedup]'``
+                Install with: ``pip install 'local-file-organizer[dedup]'``
             ValueError: If hash_method is not supported or threshold is invalid
         """
         if not _IMAGEDEDUP_AVAILABLE:
             raise ImportError(
                 "imagededup is required for image deduplication. "
-                "Install it with: pip install 'file-organizer[dedup]'"
+                "Install it with: pip install 'local-file-organizer[dedup]'"
             )
 
         if hash_method not in ("phash", "dhash", "ahash"):

@@ -784,7 +784,7 @@ class TestMissingImagededupDep:
         original = _mod._IMAGEDEDUP_AVAILABLE
         try:
             _mod._IMAGEDEDUP_AVAILABLE = False
-            with pytest.raises(ImportError, match="pip install 'file-organizer\\[dedup\\]'"):
+            with pytest.raises(ImportError, match="pip install 'local-file-organizer\\[dedup\\]'"):
                 ImageDeduplicator()
         finally:
             _mod._IMAGEDEDUP_AVAILABLE = original

@@ -42,7 +42,7 @@ See [Deployment Guide](admin/deployment.md) for detailed Docker setup.
 **Install**:
 
 ```bash
-pip install file-organizer
+pip install local-file-organizer
 
 # Start the API server
 file-organizer serve

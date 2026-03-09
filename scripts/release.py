@@ -79,7 +79,7 @@ def bump_version(part: str) -> str:
     # Strip pre-release for bumping, treating base version as the starting point
     info = parse_version(current)
     base_current = info.base_version
-    new_version = _bump(base_current, part)
+    new_version: str = _bump(base_current, part)
 
     # Update pyproject.toml
     _update_file_version(_PYPROJECT_TOML, current, new_version, pattern="version")
@@ -251,7 +251,7 @@ def create_release_notes(version: str, changelog: str) -> str:
 ## Installation
 
 ```bash
-pip install file-organizer=={version}
+pip install local-file-organizer=={version}
 ```
 
 ## Full Changelog

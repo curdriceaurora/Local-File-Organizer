@@ -33,7 +33,7 @@ Yes. File Organizer runs on all three platforms.
 Three options:
 
 1. **Docker** (recommended): `docker-compose up -d`
-1. **Python Package**: `pip install file-organizer`
+1. **Python Package**: `pip install local-file-organizer`
 1. **From Source**: Clone repo and `pip install -e .`
 
 See [Installation Guide](admin/installation.md).

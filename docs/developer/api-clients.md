@@ -5,7 +5,7 @@
 ### Installation
 
 ```bash
-pip install file-organizer
+pip install local-file-organizer
 ```
 
 ### Basic Usage

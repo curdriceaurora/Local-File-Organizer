@@ -7,7 +7,7 @@ This document provides comprehensive API documentation for the Johnny Decimal me
 ## Installation
 
 ```bash
-pip install file-organizer-v2
+pip install local-file-organizer
 ```
 
 ## Quick Start
