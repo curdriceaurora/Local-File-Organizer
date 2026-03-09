@@ -10,7 +10,8 @@ from pathlib import Path
 from loguru import logger
 
 from file_organizer.models import VisionModel
-from file_organizer.models.base import ModelConfig
+from file_organizer.models.base import BaseModel, ModelConfig
+from file_organizer.models.provider_factory import get_vision_model
 
 
 @dataclass
@@ -40,21 +41,26 @@ class VisionProcessor:
 
     def __init__(
         self,
-        vision_model: VisionModel | None = None,
+        vision_model: BaseModel | None = None,
         config: ModelConfig | None = None,
-    ):
+    ) -> None:
         """Initialize vision processor.
 
         Args:
-            vision_model: Pre-initialized vision model (optional)
-            config: Model configuration (used if vision_model not provided)
+            vision_model: Pre-initialized vision model (optional). Any
+                ``BaseModel`` subclass is accepted, allowing Ollama and
+                OpenAI-compatible models to be passed interchangeably.
+            config: Model configuration (used if ``vision_model`` not provided).
+                The ``config.provider`` field controls which backend is used.
+                If omitted, the Ollama default configuration is applied
+                regardless of any global provider setting.
         """
         if vision_model is not None:
             self.vision_model = vision_model
             self._owns_model = False
         else:
             config = config or VisionModel.get_default_config()
-            self.vision_model = VisionModel(config)
+            self.vision_model = get_vision_model(config)
             self._owns_model = True
 
         logger.info("VisionProcessor initialized")

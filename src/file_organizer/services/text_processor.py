@@ -9,7 +9,8 @@ from pathlib import Path
 from loguru import logger
 
 from file_organizer.models import TextModel
-from file_organizer.models.base import ModelConfig
+from file_organizer.models.base import BaseModel, ModelConfig
+from file_organizer.models.provider_factory import get_text_model
 from file_organizer.utils.file_readers import FileReadError, read_file
 from file_organizer.utils.text_processing import (
     clean_text,
@@ -43,21 +44,26 @@ class TextProcessor:
 
     def __init__(
         self,
-        text_model: TextModel | None = None,
+        text_model: BaseModel | None = None,
         config: ModelConfig | None = None,
-    ):
+    ) -> None:
         """Initialize text processor.
 
         Args:
-            text_model: Pre-initialized text model (optional)
-            config: Model configuration (used if text_model not provided)
+            text_model: Pre-initialized text model (optional). Any
+                ``BaseModel`` subclass is accepted, allowing Ollama and
+                OpenAI-compatible models to be passed interchangeably.
+            config: Model configuration (used if ``text_model`` not provided).
+                The ``config.provider`` field controls which backend is used.
+                If omitted, the Ollama default configuration is applied
+                regardless of any global provider setting.
         """
         if text_model is not None:
             self.text_model = text_model
             self._owns_model = False
         else:
             config = config or TextModel.get_default_config()
-            self.text_model = TextModel(config)
+            self.text_model = get_text_model(config)
             self._owns_model = True
 
         # Ensure NLTK data is available
