@@ -27,9 +27,9 @@ from file_organizer.api.auth import (
 from file_organizer.api.auth_db import create_session
 from file_organizer.api.auth_models import Base, User
 from file_organizer.api.config import ApiSettings
+from file_organizer.api.db_models import Workspace
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.repositories.settings_repo import SettingsRepository
-from file_organizer.api.db_models import Workspace
 from file_organizer.api.repositories.workspace_repo import WorkspaceRepository
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.web._helpers import base_context, templates
