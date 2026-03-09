@@ -107,7 +107,9 @@ class TestOrganizeScan:
 class TestScanOptions:
     """Tests for scan endpoint with different options."""
 
-    def test_scan_returns_plan(self, tmp_path: Path, web_client_builder, mock_file_organizer: Any) -> None:
+    def test_scan_returns_plan(
+        self, tmp_path: Path, web_client_builder, mock_file_organizer: Any
+    ) -> None:
         """Scan should return an organization plan."""
         (tmp_path / "file1.txt").write_text("test")
         (tmp_path / "file2.pdf").write_text("test")
@@ -124,7 +126,9 @@ class TestScanOptions:
         )
         assert response.status_code == 200
 
-    def test_scan_with_recursive_option(self, tmp_path: Path, web_client_builder, mock_file_organizer: Any) -> None:
+    def test_scan_with_recursive_option(
+        self, tmp_path: Path, web_client_builder, mock_file_organizer: Any
+    ) -> None:
         """Scan should handle recursive directory traversal."""
         subdir = tmp_path / "subdir"
         subdir.mkdir()
@@ -189,7 +193,9 @@ class TestOrganizeResults:
 class TestOrganizeHtmxEndpoints:
     """Tests for HTMX partial response endpoints."""
 
-    def test_organize_htmx_request_header(self, tmp_path: Path, web_client_builder, mock_file_organizer: MagicMock) -> None:
+    def test_organize_htmx_request_header(
+        self, tmp_path: Path, web_client_builder, mock_file_organizer: MagicMock
+    ) -> None:
         """Should handle HTMX request headers for partial updates."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
@@ -239,7 +245,11 @@ class TestOrganizeInputValidation:
         )
         # Should reject empty/whitespace input
         assert response.status_code in (200, 400)
-        assert "required" in response.text.lower() or "empty" in response.text.lower() or response.status_code == 400
+        assert (
+            "required" in response.text.lower()
+            or "empty" in response.text.lower()
+            or response.status_code == 400
+        )
 
     def test_organize_path_normalization(self, tmp_path: Path, web_client_builder) -> None:
         """Should normalize path inputs correctly."""
@@ -296,7 +306,9 @@ class TestOrganizeProgressStreaming:
     #     # Endpoint may exist and return stream, or be 404 (acceptable)
     #     assert response.status_code in (200, 404)
 
-    def test_organize_scan_with_progress_updates(self, tmp_path: Path, web_client_builder, mock_file_organizer: MagicMock) -> None:
+    def test_organize_scan_with_progress_updates(
+        self, tmp_path: Path, web_client_builder, mock_file_organizer: MagicMock
+    ) -> None:
         """Scan operation should emit progress updates during processing."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"

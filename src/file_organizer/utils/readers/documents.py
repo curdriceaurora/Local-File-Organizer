@@ -142,21 +142,25 @@ def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
     try:
         if file_path.suffix.lower() == ".csv":
             import csv
+
             rows = []
-            with open(file_path, newline='', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, newline="", encoding="utf-8", errors="ignore") as f:
                 reader = csv.reader(f)
                 for i, row in enumerate(reader):
                     if i >= max_rows:
                         break
                     rows.append(",".join(row))
             text = "\n".join(rows)
-            logger.debug(f"Extracted {len(text)} characters from {len(rows)} rows of {file_path.name}")
+            logger.debug(
+                f"Extracted {len(text)} characters from {len(rows)} rows of {file_path.name}"
+            )
             return text
 
         elif file_path.suffix.lower() in (".xlsx", ".xls"):
             if not OPENPYXL_AVAILABLE:
                 raise ImportError("openpyxl is not installed. Install with: pip install openpyxl")
             import openpyxl
+
             wb = openpyxl.load_workbook(file_path, data_only=True, read_only=True)
             ws = wb.active
             rows = []
@@ -168,7 +172,9 @@ def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
                 if row_str.strip(","):
                     rows.append(row_str)
             text = "\n".join(rows)
-            logger.debug(f"Extracted {len(text)} characters from {len(rows)} rows of {file_path.name}")
+            logger.debug(
+                f"Extracted {len(text)} characters from {len(rows)} rows of {file_path.name}"
+            )
             return text
 
         else:

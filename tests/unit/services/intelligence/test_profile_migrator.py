@@ -13,6 +13,7 @@ def mock_profile_manager():
     manager.storage_path = Path("/mock/storage")
     return manager
 
+
 @pytest.fixture
 def sample_profile():
     profile = MagicMock(spec=Profile)
@@ -28,10 +29,11 @@ def sample_profile():
         "description": "Test description",
         "preferences": {"global": {}, "directory_specific": {}},
         "learned_patterns": [],
-        "confidence_data": {}
+        "confidence_data": {},
     }
     profile.validate.return_value = True
     return profile
+
 
 class TestProfileMigrator:
     def test_init(self, mock_profile_manager):
@@ -65,7 +67,9 @@ class TestProfileMigrator:
 
         assert migrator.migrate_version("test_profile", "invalid.version") is False
 
-    @patch("file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration")
+    @patch(
+        "file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration"
+    )
     def test_migrate_version_backup_fails(self, mock_backup, mock_profile_manager, sample_profile):
         mock_profile_manager.get_profile.return_value = sample_profile
         mock_backup.return_value = None
@@ -76,7 +80,9 @@ class TestProfileMigrator:
 
         assert migrator.migrate_version("test_profile", "2.0") is False
 
-    @patch("file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration")
+    @patch(
+        "file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration"
+    )
     def test_migrate_version_no_path(self, mock_backup, mock_profile_manager, sample_profile):
         mock_profile_manager.get_profile.return_value = sample_profile
         mock_backup.return_value = Path("/mock/backup.json")
@@ -86,9 +92,13 @@ class TestProfileMigrator:
 
         assert migrator.migrate_version("test_profile", "2.0") is False
 
-    @patch("file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration")
+    @patch(
+        "file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration"
+    )
     @patch("file_organizer.services.intelligence.profile_migrator.Profile")
-    def test_migrate_version_success(self, mock_profile_class, mock_backup, mock_profile_manager, sample_profile):
+    def test_migrate_version_success(
+        self, mock_profile_class, mock_backup, mock_profile_manager, sample_profile
+    ):
         mock_profile_manager.get_profile.return_value = sample_profile
         mock_backup.return_value = Path("/mock/backup.json")
         mock_profile_manager.update_profile.return_value = True
@@ -118,9 +128,15 @@ class TestProfileMigrator:
         assert migrator.migrate_version("test_profile", "2.0") is True
         mock_profile_manager.update_profile.assert_called_once()
 
-    @patch("file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration")
-    @patch("file_organizer.services.intelligence.profile_migrator.ProfileMigrator.rollback_migration")
-    def test_migrate_version_step_fails(self, mock_rollback, mock_backup, mock_profile_manager, sample_profile):
+    @patch(
+        "file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration"
+    )
+    @patch(
+        "file_organizer.services.intelligence.profile_migrator.ProfileMigrator.rollback_migration"
+    )
+    def test_migrate_version_step_fails(
+        self, mock_rollback, mock_backup, mock_profile_manager, sample_profile
+    ):
         mock_profile_manager.get_profile.return_value = sample_profile
         mock_backup.return_value = Path("/mock/backup.json")
 
@@ -219,17 +235,25 @@ class TestProfileMigrator:
         assert len(filtered) == 1
         assert "test1" in filtered[0].name
 
-    @patch("file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration")
+    @patch(
+        "file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration"
+    )
     @patch("file_organizer.services.intelligence.profile_migrator.Profile")
-    @patch("file_organizer.services.intelligence.profile_migrator.ProfileMigrator.rollback_migration")
-    def test_migrate_version_invalid_migrated_profile(self, mock_rollback, mock_profile_class, mock_backup, mock_profile_manager, sample_profile):
+    @patch(
+        "file_organizer.services.intelligence.profile_migrator.ProfileMigrator.rollback_migration"
+    )
+    def test_migrate_version_invalid_migrated_profile(
+        self, mock_rollback, mock_profile_class, mock_backup, mock_profile_manager, sample_profile
+    ):
         mock_profile_manager.get_profile.return_value = sample_profile
         mock_backup.return_value = Path("/mock/backup.json")
 
         migrator = ProfileMigrator(mock_profile_manager)
         migrator.SUPPORTED_VERSIONS.append("2.0")
 
-        def mock_migration_func(data): return data
+        def mock_migration_func(data):
+            return data
+
         migrator.register_migration("1.0", "2.0", mock_migration_func)
         migrator._find_migration_path = MagicMock(return_value=["1.0->2.0"])
 
@@ -240,10 +264,16 @@ class TestProfileMigrator:
         assert migrator.migrate_version("test_profile", "2.0") is False
         mock_rollback.assert_called_once()
 
-    @patch("file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration")
+    @patch(
+        "file_organizer.services.intelligence.profile_migrator.ProfileMigrator.backup_before_migration"
+    )
     @patch("file_organizer.services.intelligence.profile_migrator.Profile")
-    @patch("file_organizer.services.intelligence.profile_migrator.ProfileMigrator.rollback_migration")
-    def test_migrate_version_update_fails(self, mock_rollback, mock_profile_class, mock_backup, mock_profile_manager, sample_profile):
+    @patch(
+        "file_organizer.services.intelligence.profile_migrator.ProfileMigrator.rollback_migration"
+    )
+    def test_migrate_version_update_fails(
+        self, mock_rollback, mock_profile_class, mock_backup, mock_profile_manager, sample_profile
+    ):
         mock_profile_manager.get_profile.return_value = sample_profile
         mock_backup.return_value = Path("/mock/backup.json")
         mock_profile_manager.update_profile.return_value = False
@@ -266,10 +296,12 @@ class TestProfileMigrator:
         assert migrator.migrate_version("test", "2.0") is False
 
     @patch("file_organizer.services.intelligence.profile_migrator.Profile")
-    def test_rollback_migration_invalid_backup(self, mock_profile_class, mock_profile_manager, tmp_path):
+    def test_rollback_migration_invalid_backup(
+        self, mock_profile_class, mock_profile_manager, tmp_path
+    ):
         migrator = ProfileMigrator(mock_profile_manager)
         backup_file = tmp_path / "backup.json"
-        backup_file.write_text('{}')
+        backup_file.write_text("{}")
 
         mock_restored = MagicMock()
         mock_restored.validate.return_value = False
@@ -280,7 +312,7 @@ class TestProfileMigrator:
     def test_rollback_migration_exception(self, mock_profile_manager, tmp_path):
         migrator = ProfileMigrator(mock_profile_manager)
         backup_file = tmp_path / "backup.json"
-        backup_file.write_text('invalid json')
+        backup_file.write_text("invalid json")
 
         assert migrator.rollback_migration("test", backup_file) is False
 
@@ -296,14 +328,16 @@ class TestProfileMigrator:
         migrator = ProfileMigrator(mock_profile_manager)
         assert migrator.validate_migration("test") is False
 
-    def test_validate_migration_invalid_preferences_type(self, mock_profile_manager, sample_profile):
-        sample_profile.preferences = [] # Not a dict
+    def test_validate_migration_invalid_preferences_type(
+        self, mock_profile_manager, sample_profile
+    ):
+        sample_profile.preferences = []  # Not a dict
         mock_profile_manager.get_profile.return_value = sample_profile
         migrator = ProfileMigrator(mock_profile_manager)
         assert migrator.validate_migration("test") is False
 
     def test_validate_migration_missing_preference_keys(self, mock_profile_manager, sample_profile):
-        sample_profile.preferences = {"global": {}} # Missing directory_specific
+        sample_profile.preferences = {"global": {}}  # Missing directory_specific
         mock_profile_manager.get_profile.return_value = sample_profile
         migrator = ProfileMigrator(mock_profile_manager)
         assert migrator.validate_migration("test") is False

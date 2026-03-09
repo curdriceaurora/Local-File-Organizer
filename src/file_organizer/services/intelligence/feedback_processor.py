@@ -310,7 +310,9 @@ class FeedbackProcessor:
 
         return None
 
-    def _extract_batch_name_patterns(self, name_changes: list[tuple[str, str]]) -> list[dict[str, Any]]:
+    def _extract_batch_name_patterns(
+        self, name_changes: list[tuple[str, str]]
+    ) -> list[dict[str, Any]]:
         """Extract common naming patterns from batch changes.
 
         Args:
@@ -356,7 +358,9 @@ class FeedbackProcessor:
 
         return patterns
 
-    def _extract_batch_folder_patterns(self, folder_changes: list[tuple[str, str, str]]) -> list[dict[str, Any]]:
+    def _extract_batch_folder_patterns(
+        self, folder_changes: list[tuple[str, str, str]]
+    ) -> list[dict[str, Any]]:
         """Extract common folder patterns from batch changes.
 
         Args:

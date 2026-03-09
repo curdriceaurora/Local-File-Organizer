@@ -138,18 +138,19 @@ class TestCIWorkflow:
 
             # Parse JSON arrays and validate versions
             arrays = [json.loads(match) for match in matches]
-            assert ["3.11"] in arrays, (
-                "Expression must include fromJson('[\"3.11\"]') for PR runs"
-            )
+            assert ["3.11"] in arrays, "Expression must include fromJson('[\"3.11\"]') for PR runs"
             assert ["3.11", "3.12"] in arrays, (
-                "Expression must include fromJson('[\"3.11\", \"3.12\"]') for full runs"
+                'Expression must include fromJson(\'["3.11", "3.12"]\') for full runs'
             )
         else:
             # If it's a static list (shouldn't be in this workflow)
-            python_versions = python_versions_value if isinstance(python_versions_value, list) else [python_versions_value]
+            python_versions = (
+                python_versions_value
+                if isinstance(python_versions_value, list)
+                else [python_versions_value]
+            )
             assert python_versions == ["3.11", "3.12"], (
-                f"CI 'test' job must use exactly [\"3.11\", \"3.12\"], "
-                f"got {python_versions}"
+                f'CI \'test\' job must use exactly ["3.11", "3.12"], got {python_versions}'
             )
 
         # Verify the setup-python step uses the matrix variable

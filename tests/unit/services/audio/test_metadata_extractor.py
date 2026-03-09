@@ -14,6 +14,7 @@ def mock_audio_path(tmp_path):
     audio.write_bytes(b"dummy audio data")
     return audio
 
+
 class TestAudioMetadataExtractor:
     def test_init(self):
         extractor = AudioMetadataExtractor()
@@ -27,7 +28,9 @@ class TestAudioMetadataExtractor:
         with pytest.raises(FileNotFoundError):
             extractor.extract("non_existent_file.mp3")
 
-    @patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor._extract_with_mutagen")
+    @patch(
+        "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor._extract_with_mutagen"
+    )
     def test_extract_uses_mutagen_success(self, mock_mutagen, mock_audio_path):
         extractor = AudioMetadataExtractor()
         mock_metadata = MagicMock(spec=AudioMetadata)
@@ -37,8 +40,12 @@ class TestAudioMetadataExtractor:
         assert result is mock_metadata
         mock_mutagen.assert_called_once_with(mock_audio_path)
 
-    @patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor._extract_with_tinytag")
-    @patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor._extract_with_mutagen")
+    @patch(
+        "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor._extract_with_tinytag"
+    )
+    @patch(
+        "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor._extract_with_mutagen"
+    )
     def test_extract_fallback_to_tinytag(self, mock_mutagen, mock_tinytag, mock_audio_path):
         extractor = AudioMetadataExtractor(use_fallback=True)
         # Force mutagen to fail
@@ -52,7 +59,9 @@ class TestAudioMetadataExtractor:
         mock_mutagen.assert_called_once_with(mock_audio_path)
         mock_tinytag.assert_called_once_with(mock_audio_path)
 
-    @patch("file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor._extract_with_mutagen")
+    @patch(
+        "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor._extract_with_mutagen"
+    )
     def test_extract_no_fallback_raises(self, mock_mutagen, mock_audio_path):
         extractor = AudioMetadataExtractor(use_fallback=False)
         # Force mutagen to fail

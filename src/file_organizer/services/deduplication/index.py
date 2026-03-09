@@ -69,7 +69,9 @@ class DuplicateIndex:
         self._index: dict[str, list[FileMetadata]] = {}
         self._size_index: dict[int, list[Path]] = {}
 
-    def add_file(self, file_path: Path, file_hash: str, metadata: dict[str, Any] | None = None) -> None:
+    def add_file(
+        self, file_path: Path, file_hash: str, metadata: dict[str, Any] | None = None
+    ) -> None:
         """Add a file to the index.
 
         Args:

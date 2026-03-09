@@ -25,9 +25,11 @@ def test_read_spreadsheet_csv_max_rows(tmp_path: Path) -> None:
     content = read_spreadsheet_file(test_file, max_rows=100)
     assert len(content.split("\n")) == 101
 
+
 @patch("file_organizer.utils.file_readers.OPENPYXL_AVAILABLE", True)
 def test_read_spreadsheet_xlsx_max_rows(tmp_path: Path) -> None:
     import openpyxl
+
     test_file = tmp_path / "test.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -36,6 +38,7 @@ def test_read_spreadsheet_xlsx_max_rows(tmp_path: Path) -> None:
     wb.save(test_file)
     content = read_spreadsheet_file(test_file, max_rows=100)
     assert len(content.split("\n")) == 101
+
 
 @patch("file_organizer.utils.file_readers.PPTX_AVAILABLE", True)
 @patch("file_organizer.utils.file_readers.Presentation")
@@ -46,6 +49,7 @@ def test_read_presentation_file_error(mock_prs_cls: MagicMock, tmp_path: Path) -
     with pytest.raises(FileReadError):
         read_presentation_file(test_file)
 
+
 @patch("file_organizer.utils.file_readers.EBOOKLIB_AVAILABLE", True)
 @patch("file_organizer.utils.file_readers.epub.read_epub")
 def test_read_ebook_file_max_chars(mock_read: MagicMock, tmp_path: Path) -> None:
@@ -53,7 +57,7 @@ def test_read_ebook_file_max_chars(mock_read: MagicMock, tmp_path: Path) -> None
     mock_item = MagicMock()
     # ebooklib.ITEM_DOCUMENT is 9
     mock_item.get_type.return_value = 9
-    mock_item.get_content.return_value = (b"A" * 15000)
+    mock_item.get_content.return_value = b"A" * 15000
     mock_book.get_items.return_value = [mock_item]
     mock_read.return_value = mock_book
 
@@ -61,6 +65,7 @@ def test_read_ebook_file_max_chars(mock_read: MagicMock, tmp_path: Path) -> None
     test_file.write_bytes(b"dummy")
     content = read_ebook_file(test_file, max_chars=10000)
     assert len(content) == 10000
+
 
 @patch("file_organizer.utils.file_readers.PY7ZR_AVAILABLE", True)
 @patch("file_organizer.utils.file_readers.py7zr.SevenZipFile")
@@ -81,6 +86,7 @@ def test_read_7z_file_success(mock_7z: MagicMock, tmp_path: Path) -> None:
     assert "Total files: 60" in content
     assert "... and 10 more files" in content
 
+
 @patch("file_organizer.utils.file_readers.RARFILE_AVAILABLE", True)
 @patch("file_organizer.utils.file_readers.rarfile.RarFile")
 def test_read_rar_file_success(mock_rar: MagicMock, tmp_path: Path) -> None:
@@ -99,6 +105,7 @@ def test_read_rar_file_success(mock_rar: MagicMock, tmp_path: Path) -> None:
     assert "RAR Archive" in content
     assert "Total files: 60" in content
     assert "... and 10 more files" in content
+
 
 @patch("file_organizer.utils.file_readers.tarfile.open")
 def test_read_tar_file_max_files(mock_tar_open: MagicMock, tmp_path: Path) -> None:
@@ -140,6 +147,7 @@ def test_read_netcdf_file_max_vars(mock_ds_cls: MagicMock, tmp_path: Path) -> No
     assert len(variables) == 25
     assert "and 5 more variables" in content
 
+
 @patch("file_organizer.utils.file_readers.NETCDF4_AVAILABLE", True)
 @patch("file_organizer.utils.file_readers.netCDF4.Dataset")
 def test_read_netcdf_file_error(mock_ds: MagicMock, tmp_path: Path) -> None:
@@ -148,6 +156,7 @@ def test_read_netcdf_file_error(mock_ds: MagicMock, tmp_path: Path) -> None:
     test_file.write_bytes(b"dummy")
     with pytest.raises(FileReadError):
         read_netcdf_file(test_file)
+
 
 @patch("file_organizer.utils.file_readers.SCIPY_AVAILABLE", True)
 @patch("file_organizer.utils.file_readers.loadmat")
@@ -160,6 +169,7 @@ def test_read_mat_file_max_vars(mock_loadmat: MagicMock, tmp_path: Path) -> None
     content = read_mat_file(test_file)
     assert "and 5 more variables" in content
 
+
 @patch("file_organizer.utils.file_readers.SCIPY_AVAILABLE", True)
 @patch("file_organizer.utils.file_readers.loadmat")
 def test_read_mat_file_error(mock_loadmat: MagicMock, tmp_path: Path) -> None:
@@ -168,6 +178,7 @@ def test_read_mat_file_error(mock_loadmat: MagicMock, tmp_path: Path) -> None:
     test_file.write_bytes(b"dummy")
     with pytest.raises(FileReadError):
         read_mat_file(test_file)
+
 
 @patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", True)
 @patch("file_organizer.utils.file_readers.ezdxf.readfile")
@@ -187,15 +198,19 @@ def test_read_dxf_file_exceptions(mock_readfile: MagicMock, tmp_path: Path) -> N
     content = read_dxf_file(test_file)
     assert "DXF Version" in content
 
+
 @patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", True)
 @patch("file_organizer.utils.file_readers.ezdxf.readfile")
 @patch("file_organizer.utils.file_readers.read_dxf_file")
-def test_read_dwg_file_success(mock_dxf: MagicMock, mock_readfile: MagicMock, tmp_path: Path) -> None:
+def test_read_dwg_file_success(
+    mock_dxf: MagicMock, mock_readfile: MagicMock, tmp_path: Path
+) -> None:
     mock_dxf.return_value = "DXF Data"
     test_file = tmp_path / "test.dwg"
     test_file.write_bytes(b"dummy")
     content = read_dwg_file(test_file)
     assert content == "DXF Data"
+
 
 def test_read_iges_file_entities(tmp_path: Path) -> None:
     test_file = tmp_path / "test.igs"
@@ -204,4 +219,3 @@ def test_read_iges_file_entities(tmp_path: Path) -> None:
     test_file.write_text(line)
     content = read_iges_file(test_file)
     assert "Directory entries found: 1" in content
-

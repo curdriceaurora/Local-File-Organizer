@@ -57,7 +57,9 @@ class TestFilesSorting:
         ],
         ids=["by_name", "by_size", "by_type"],
     )
-    def test_files_sort(self, tmp_path: Path, web_client_builder, sort_by: str, files: dict, expected_order: list) -> None:
+    def test_files_sort(
+        self, tmp_path: Path, web_client_builder, sort_by: str, files: dict, expected_order: list
+    ) -> None:
         """Should handle various file sorting parameters."""
         for filename, content in files.items():
             (tmp_path / filename).write_text(content)
@@ -164,7 +166,9 @@ class TestFilesApi:
 class TestFilesStateAndIntegration:
     """Tests for template rendering and state management (Stream D)."""
 
-    def test_files_template_rendering_with_complex_context(self, tmp_path: Path, web_client_builder) -> None:
+    def test_files_template_rendering_with_complex_context(
+        self, tmp_path: Path, web_client_builder
+    ) -> None:
         """Template should render correctly with complex file listings."""
         # Create files with various properties
         (tmp_path / "document.pdf").write_text("test" * 100)

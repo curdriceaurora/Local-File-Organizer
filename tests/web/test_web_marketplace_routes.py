@@ -32,13 +32,17 @@ def _build_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient
 class TestMarketplacePage:
     """Tests for the main marketplace page."""
 
-    def test_marketplace_page_returns_200(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_page_returns_200(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Marketplace page should return 200 status."""
         client = _build_client(tmp_path, monkeypatch)
         response = client.get("/ui/marketplace")
         assert response.status_code == 200
 
-    def test_marketplace_page_returns_html(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_page_returns_html(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Marketplace page should return HTML."""
         client = _build_client(tmp_path, monkeypatch)
         response = client.get("/ui/marketplace")
@@ -49,19 +53,25 @@ class TestMarketplacePage:
 class TestMarketplaceSearch:
     """Tests for marketplace search functionality."""
 
-    def test_marketplace_search_endpoint(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_search_endpoint(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Search endpoint should be accessible via q parameter."""
         client = _build_client(tmp_path, monkeypatch)
         response = client.get("/ui/marketplace?q=test")
         assert response.status_code == 200
 
-    def test_marketplace_empty_search(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_empty_search(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Empty search should show all plugins."""
         client = _build_client(tmp_path, monkeypatch)
         response = client.get("/ui/marketplace?q=")
         assert response.status_code == 200
 
-    def test_marketplace_search_by_category(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_search_by_category(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Should filter plugins by category parameter."""
         client = _build_client(tmp_path, monkeypatch)
         response = client.get("/ui/marketplace?category=readers")
@@ -72,19 +82,25 @@ class TestMarketplaceSearch:
 class TestMarketplacePagination:
     """Tests for marketplace pagination."""
 
-    def test_marketplace_page_parameter(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_page_parameter(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Should handle page parameter for pagination."""
         client = _build_client(tmp_path, monkeypatch)
         response = client.get("/ui/marketplace?page=1")
         assert response.status_code == 200
 
-    def test_marketplace_per_page_parameter(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_per_page_parameter(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Should handle per_page parameter for items per page."""
         client = _build_client(tmp_path, monkeypatch)
         response = client.get("/ui/marketplace?per_page=10")
         assert response.status_code == 200
 
-    def test_marketplace_pagination_with_search(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_pagination_with_search(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Should combine search and pagination parameters."""
         client = _build_client(tmp_path, monkeypatch)
         response = client.get("/ui/marketplace?q=test&page=1&per_page=20")
@@ -95,14 +111,18 @@ class TestMarketplacePagination:
 class TestMarketplacePluginActions:
     """Tests for plugin action endpoints (install, uninstall, etc)."""
 
-    def test_marketplace_plugin_details(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_plugin_details(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Should show plugin details page."""
         client = _build_client(tmp_path, monkeypatch)
         response = client.get("/ui/marketplace")
         # Details shown on main page
         assert response.status_code == 200
 
-    def test_marketplace_install_button(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_install_button(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Install action should be available."""
         client = _build_client(tmp_path, monkeypatch)
         response = client.get("/ui/marketplace")
@@ -122,14 +142,18 @@ class TestMarketplaceHtmxEndpoints:
         # Should handle HTMX request header
         assert response.status_code == 200
 
-    def test_marketplace_htmx_pagination(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_htmx_pagination(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """HTMX pagination should return marketplace results with updated page."""
         client = _build_client(tmp_path, monkeypatch)
         headers = {"HX-Request": "true"}
         response = client.get("/ui/marketplace?page=2", headers=headers)
         assert response.status_code == 200
 
-    def test_marketplace_plugin_installation_action(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_plugin_installation_action(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Should support plugin installation via HTMX POST request."""
         client = _build_client(tmp_path, monkeypatch)
         # Test the install endpoint with a valid plugin name
@@ -151,7 +175,9 @@ class TestMarketplaceHtmxEndpoints:
 class TestMarketplaceInstallFlow:
     """Tests for plugin installation workflow."""
 
-    def test_marketplace_preinstall_check(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_preinstall_check(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Should validate plugin before installation."""
         client = _build_client(tmp_path, monkeypatch)
         # Test that install endpoint rejects invalid plugin names or missing plugins
@@ -168,7 +194,9 @@ class TestMarketplaceInstallFlow:
         # Should return HTML marketplace page
         assert any(tag in response.text.lower() for tag in ["<html", "<body", "marketplace"])
 
-    def test_marketplace_install_progress(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_marketplace_install_progress(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Should handle installation workflow."""
         client = _build_client(tmp_path, monkeypatch)
         # Test the full install workflow by calling the install endpoint

@@ -16,6 +16,7 @@ def mock_video_path(tmp_path):
     video.write_bytes(b"dummy video data")
     return video
 
+
 class TestSceneDetector:
     def test_init_defaults(self):
         detector = SceneDetector()
@@ -73,12 +74,10 @@ class TestSceneDetector:
         assert len(results) == 1
         assert results[0] is mock_result
 
-    @patch.dict("sys.modules", {
-        "scenedetect": MagicMock(),
-        "scenedetect.detectors": MagicMock()
-    })
+    @patch.dict("sys.modules", {"scenedetect": MagicMock(), "scenedetect.detectors": MagicMock()})
     def test_internal_detect_with_scenedetect(self, mock_video_path):
         import sys
+
         mock_sm = sys.modules["scenedetect"].SceneManager.return_value
         mock_vm = sys.modules["scenedetect"].VideoManager.return_value
         mock_vm.get_framerate.return_value = 30.0
@@ -106,6 +105,7 @@ class TestSceneDetector:
     @patch.dict("sys.modules", {"cv2": MagicMock(), "numpy": MagicMock()})
     def test_internal_detect_with_opencv(self, mock_video_path):
         import sys
+
         mock_cv2 = sys.modules["cv2"]
         mock_cap = MagicMock()
         mock_cv2.VideoCapture.return_value = mock_cap
@@ -117,13 +117,10 @@ class TestSceneDetector:
             if prop == mock_cv2.CAP_PROP_FRAME_COUNT:
                 return 150
             return 0
+
         mock_cap.get.side_effect = mock_get
 
-        mock_cap.read.side_effect = [
-            (True, MagicMock()),
-            (True, MagicMock()),
-            (False, None)
-        ]
+        mock_cap.read.side_effect = [(True, MagicMock()), (True, MagicMock()), (False, None)]
 
         mock_cv2.absdiff.return_value = MagicMock()
         mock_np = sys.modules["numpy"]
@@ -139,13 +136,22 @@ class TestSceneDetector:
         result = SceneDetectionResult(
             video_path=mock_video_path,
             scenes=[
-                Scene(scene_number=1, start_time=0.0, end_time=1.5, start_frame=0, end_frame=45, duration=1.5, score=1.0, frame_count=45),
+                Scene(
+                    scene_number=1,
+                    start_time=0.0,
+                    end_time=1.5,
+                    start_frame=0,
+                    end_frame=45,
+                    duration=1.5,
+                    score=1.0,
+                    frame_count=45,
+                ),
             ],
             total_duration=1.5,
             fps=30.0,
             total_frames=45,
             method=DetectionMethod.CONTENT,
-            parameters={}
+            parameters={},
         )
         out_csv = tmp_path / "scenes.csv"
         SceneDetector.save_scene_list(result, out_csv)
@@ -158,6 +164,7 @@ class TestSceneDetector:
     @patch.dict("sys.modules", {"cv2": MagicMock()})
     def test_extract_scene_thumbnails(self, mock_video_path, tmp_path):
         import sys
+
         mock_cv2 = sys.modules["cv2"]
         mock_cap = MagicMock()
         mock_cv2.VideoCapture.return_value = mock_cap
@@ -169,20 +176,29 @@ class TestSceneDetector:
         result = SceneDetectionResult(
             video_path=mock_video_path,
             scenes=[
-                Scene(scene_number=1, start_time=0.0, end_time=5.0, start_frame=0, end_frame=150, duration=5.0, score=1.0, frame_count=150),
+                Scene(
+                    scene_number=1,
+                    start_time=0.0,
+                    end_time=5.0,
+                    start_frame=0,
+                    end_frame=150,
+                    duration=5.0,
+                    score=1.0,
+                    frame_count=150,
+                ),
             ],
             total_duration=5.0,
             fps=30.0,
             total_frames=150,
             method=DetectionMethod.CONTENT,
-            parameters={}
+            parameters={},
         )
 
         out_dir = tmp_path / "thumbs"
         SceneDetector.extract_scene_thumbnails(mock_video_path, result, out_dir, frame_offset=1.0)
 
         # Verify it seeks to 1.0s * 30fps = frame 30
-        mock_cap.set.assert_called_with(1, 30) # cv2.CAP_PROP_POS_FRAMES = 1
+        mock_cap.set.assert_called_with(1, 30)  # cv2.CAP_PROP_POS_FRAMES = 1
         mock_cv2.imwrite.assert_called_once()
         args, _ = mock_cv2.imwrite.call_args
         assert "scene_001.jpg" in str(args[0])

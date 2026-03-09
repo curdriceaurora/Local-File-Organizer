@@ -14,11 +14,13 @@ def mock_vision_model():
     model.generate.return_value = "Mocked AI response"
     return model
 
+
 @pytest.fixture
 def mock_image_path(tmp_path):
     img = tmp_path / "test_image.jpg"
     img.write_bytes(b"dummy image data")
     return img
+
 
 class TestVisionProcessor:
     def test_init_with_model(self, mock_vision_model):
@@ -75,7 +77,7 @@ class TestVisionProcessor:
             generate_description=True,
             generate_folder=True,
             generate_filename=True,
-            perform_ocr=True
+            perform_ocr=True,
         )
 
         assert result.file_path == mock_image_path
@@ -98,7 +100,12 @@ class TestVisionProcessor:
 
         mock_vision_model.generate.side_effect = mock_generate
 
-        result = processor.process_file(mock_image_path, generate_description=False, generate_folder=False, generate_filename=False)
+        result = processor.process_file(
+            mock_image_path,
+            generate_description=False,
+            generate_folder=False,
+            generate_filename=False,
+        )
 
         assert result.has_text is False
         assert result.extracted_text is None
@@ -130,7 +137,10 @@ class TestVisionProcessor:
         assert processor._clean_ai_generated_name("dog dog cat") == "dog_cat"
 
         # Test max words
-        assert processor._clean_ai_generated_name("one two three four five", max_words=3) == "one_two_three"
+        assert (
+            processor._clean_ai_generated_name("one two three four five", max_words=3)
+            == "one_two_three"
+        )
 
     def test_context_manager(self, mock_vision_model):
         with patch("file_organizer.services.vision_processor.VisionModel") as mock_model_class:

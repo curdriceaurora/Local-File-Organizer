@@ -370,7 +370,9 @@ class ProfileMerger:
             # Check if it's in global preferences
             if key in (source.preferences or {}).get("global", {}):
                 if merged_profile.preferences is not None:
-                    merged_profile.preferences["global"][key] = (source.preferences or {})["global"][key]
+                    merged_profile.preferences["global"][key] = (source.preferences or {})[
+                        "global"
+                    ][key]
                 if merged_profile.confidence_data is not None:
                     merged_profile.confidence_data[key] = data["confidence"]
 
@@ -467,7 +469,9 @@ class ProfileMerger:
             # Check directory-specific preferences
             all_dir_keys: set[str] = set()
             for profile in profiles:
-                all_dir_keys.update((profile.preferences or {}).get("directory_specific", {}).keys())
+                all_dir_keys.update(
+                    (profile.preferences or {}).get("directory_specific", {}).keys()
+                )
 
             for key in all_dir_keys:
                 values = []

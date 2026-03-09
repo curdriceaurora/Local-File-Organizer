@@ -357,7 +357,9 @@ class PreferenceStore:
 
             # Check exact path
             if path_str in self._preferences["directory_preferences"]:
-                return cast(dict[str, Any], self._preferences["directory_preferences"][path_str].copy())
+                return cast(
+                    dict[str, Any], self._preferences["directory_preferences"][path_str].copy()
+                )
 
             # Fallback to parent directories
             if fallback_to_parent:
@@ -366,7 +368,10 @@ class PreferenceStore:
                     current = current.parent
                     current_str = str(current)
                     if current_str in self._preferences["directory_preferences"]:
-                        return cast(dict[str, Any], self._preferences["directory_preferences"][current_str].copy())
+                        return cast(
+                            dict[str, Any],
+                            self._preferences["directory_preferences"][current_str].copy(),
+                        )
 
             # Return global preferences as ultimate fallback
             return cast(dict[str, Any], self._preferences["global_preferences"].copy())

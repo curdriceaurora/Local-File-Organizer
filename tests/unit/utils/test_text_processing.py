@@ -11,7 +11,6 @@ from file_organizer.utils.text_processing import (
 
 
 class TestTextProcessing:
-
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
     def test_ensure_nltk_data_unavailable(self):
         # Should return early without error
@@ -22,7 +21,9 @@ class TestTextProcessing:
     @patch("file_organizer.utils.text_processing.stopwords.words")
     @patch("file_organizer.utils.text_processing.word_tokenize")
     @patch("nltk.corpus.wordnet.synsets")
-    def test_ensure_nltk_data_available_success(self, mock_synsets, mock_tokenize, mock_words, mock_download):
+    def test_ensure_nltk_data_available_success(
+        self, mock_synsets, mock_tokenize, mock_words, mock_download
+    ):
         # No LookUpErrors
         ensure_nltk_data()
         mock_download.assert_not_called()
@@ -31,14 +32,18 @@ class TestTextProcessing:
     @patch("file_organizer.utils.text_processing.nltk.download")
     def test_ensure_nltk_data_lookup_error_download(self, mock_download):
         from file_organizer.utils.text_processing import stopwords
+
         with patch.object(stopwords, "words", side_effect=[LookupError("not found"), True]):
             ensure_nltk_data()
             mock_download.assert_called()
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
-    @patch("file_organizer.utils.text_processing.nltk.download", side_effect=Exception("Network error"))
+    @patch(
+        "file_organizer.utils.text_processing.nltk.download", side_effect=Exception("Network error")
+    )
     def test_ensure_nltk_data_download_error(self, mock_download):
         from file_organizer.utils.text_processing import stopwords
+
         with patch.object(stopwords, "words", side_effect=LookupError("not found")):
             # Should catch exception and not raise
             ensure_nltk_data()
@@ -46,6 +51,7 @@ class TestTextProcessing:
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     def test_ensure_nltk_data_general_error(self):
         from file_organizer.utils.text_processing import stopwords
+
         with patch.object(stopwords, "words", side_effect=Exception("Some other error")):
             # Should catch exception and not raise
             ensure_nltk_data()
@@ -59,6 +65,7 @@ class TestTextProcessing:
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     def test_get_unwanted_words_with_nltk(self):
         from file_organizer.utils.text_processing import stopwords
+
         with patch.object(stopwords, "words", return_value=["teststopword"]):
             words = get_unwanted_words()
             assert "teststopword" in words
@@ -66,6 +73,7 @@ class TestTextProcessing:
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     def test_get_unwanted_words_with_nltk_lookup_error(self):
         from file_organizer.utils.text_processing import stopwords
+
         with patch.object(stopwords, "words", side_effect=LookupError("Not found")):
             words = get_unwanted_words()
             assert "the" in words
@@ -99,7 +107,9 @@ class TestTextProcessing:
         assert "testinglem" in result or "testlem" in result
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
-    @patch("file_organizer.utils.text_processing.WordNetLemmatizer", side_effect=Exception("Failed"))
+    @patch(
+        "file_organizer.utils.text_processing.WordNetLemmatizer", side_effect=Exception("Failed")
+    )
     def test_clean_text_lemmatize_error(self, mock_lemmatizer_class):
         result = clean_text("Test error")
         assert "test" in result
@@ -117,8 +127,12 @@ class TestTextProcessing:
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     def test_extract_keywords_with_nltk(self):
-        with patch("file_organizer.utils.text_processing.word_tokenize", return_value=["apple", "apple", "banana", "the"]):
+        with patch(
+            "file_organizer.utils.text_processing.word_tokenize",
+            return_value=["apple", "apple", "banana", "the"],
+        ):
             from file_organizer.utils.text_processing import stopwords
+
             with patch.object(stopwords, "words", return_value=["the"]):
                 result = extract_keywords("dummy text", top_n=2)
                 assert "apple" in result
@@ -126,7 +140,12 @@ class TestTextProcessing:
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.word_tokenize", side_effect=Exception("Error"))
     def test_extract_keywords_error(self, mock_tokenize):
-        assert extract_keywords("Test",) == []
+        assert (
+            extract_keywords(
+                "Test",
+            )
+            == []
+        )
 
     def test_truncate_text(self):
         assert truncate_text("short test", 100) == "short test"

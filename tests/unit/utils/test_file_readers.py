@@ -168,6 +168,7 @@ class TestFileReaders:
     def test_read_spreadsheet_xlsx(self, tmp_path: Path) -> None:
         """Test reading XLSX spreadsheet."""
         import openpyxl
+
         test_file = tmp_path / "test.xlsx"
         wb = openpyxl.Workbook()
         ws = wb.active

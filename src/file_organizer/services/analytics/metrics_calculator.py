@@ -115,7 +115,11 @@ class MetricsCalculator:
         Returns:
             Dictionary with improvement metrics
         """
-        metrics: dict[str, Any] = {"current_score": current_score, "improvement": 0.0, "trend": "stable"}
+        metrics: dict[str, Any] = {
+            "current_score": current_score,
+            "improvement": 0.0,
+            "trend": "stable",
+        }
 
         if previous_score is not None:
             metrics["improvement"] = current_score - previous_score

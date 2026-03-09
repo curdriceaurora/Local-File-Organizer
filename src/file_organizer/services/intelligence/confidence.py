@@ -40,7 +40,9 @@ class PatternUsageData:
     total_uses: int = 0
     successful_uses: int = 0
 
-    def add_usage(self, timestamp: datetime, success: bool, context: dict[str, Any] | None = None) -> None:
+    def add_usage(
+        self, timestamp: datetime, success: bool, context: dict[str, Any] | None = None
+    ) -> None:
         """Add a usage record."""
         record = UsageRecord(timestamp=timestamp, success=success, context=context or {})
         self.usage_records.append(record)
@@ -453,7 +455,11 @@ class ConfidenceEngine:
         }
 
     def track_usage(
-        self, pattern_id: str, timestamp: datetime, success: bool, context: dict[str, Any] | None = None
+        self,
+        pattern_id: str,
+        timestamp: datetime,
+        success: bool,
+        context: dict[str, Any] | None = None,
     ) -> None:
         """Track a pattern usage for confidence calculations.
 

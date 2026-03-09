@@ -14,6 +14,7 @@ class MinimalApp(App):
         yield CopilotView()
         yield StatusBar()
 
+
 @pytest.mark.asyncio
 async def test_copilot_message_log_add_message():
     app = MinimalApp()
@@ -22,7 +23,9 @@ async def test_copilot_message_log_add_message():
         assert len(log.children) == 1
         # Test USER
         log.add_message(MessageRole.USER, "Hello[world]")
-        assert "Hello\\[world]" in str(log.children[-1].render()) or "Hello[world]" in str(log.children[-1].render())
+        assert "Hello\\[world]" in str(log.children[-1].render()) or "Hello[world]" in str(
+            log.children[-1].render()
+        )
 
         # Test ASSISTANT
         log.add_message(MessageRole.ASSISTANT, "Assistant here")
@@ -31,6 +34,7 @@ async def test_copilot_message_log_add_message():
         # Test SYSTEM
         log.add_message(MessageRole.SYSTEM, "System message")
         assert "System message" in str(log.children[-1].render())
+
 
 @pytest.mark.asyncio
 async def test_copilot_view_input_submitted():
@@ -55,6 +59,7 @@ async def test_copilot_view_input_submitted():
             assert inp.value == ""
             mock_process.assert_called_once_with("Test message")
 
+
 @pytest.mark.asyncio
 async def test_copilot_view_action_clear_input():
     app = MinimalApp()
@@ -65,6 +70,7 @@ async def test_copilot_view_action_clear_input():
         inp.value = "Test Message"
         view.action_clear_input()
         assert inp.value == ""
+
 
 @pytest.mark.asyncio
 async def test_copilot_view_process_message_success():
@@ -85,6 +91,7 @@ async def test_copilot_view_process_message_success():
         log = app.query_one(CopilotMessageLog)
         assert "Response" in str(log.children[-1].render())
 
+
 @pytest.mark.asyncio
 async def test_copilot_view_process_message_error():
     app = MinimalApp()
@@ -101,6 +108,7 @@ async def test_copilot_view_process_message_error():
 
         log = app.query_one(CopilotMessageLog)
         assert "Crash" in str(log.children[-1].render())
+
 
 def test_copilot_view_get_engine():
     with patch("file_organizer.services.copilot.engine.CopilotEngine") as mock_engine_class:

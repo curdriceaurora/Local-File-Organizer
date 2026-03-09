@@ -212,7 +212,9 @@ class StorageAnalyzer:
 
         return wasted
 
-    def _walk_directory(self, path: Path, max_depth: int | None = None, current_depth: int = 0) -> Any:
+    def _walk_directory(
+        self, path: Path, max_depth: int | None = None, current_depth: int = 0
+    ) -> Any:
         """Walk directory with depth limit.
 
         Args:

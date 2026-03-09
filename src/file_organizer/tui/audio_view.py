@@ -206,7 +206,9 @@ class AudioView(Vertical):
         """Set up the audio view to scan the given directory."""
         super().__init__(name=name, id=id, classes=classes)
         self._scan_dir = Path(scan_dir)
-        self._files: list[tuple[Path, AudioMetadata | None, ClassificationResult | None]] = []  # (path, metadata, classification)
+        self._files: list[
+            tuple[Path, AudioMetadata | None, ClassificationResult | None]
+        ] = []  # (path, metadata, classification)
         self._current_index: int = 0
 
     def compose(self) -> ComposeResult:

@@ -34,7 +34,9 @@ def test_models_instantiation():
     flr = FileListResponse(items=[fi], total=1, skip=0, limit=10)
     assert flr.total == 1
 
-    fcr = FileContentResponse(path="test", content="content", encoding="utf-8", truncated=False, size=10)
+    fcr = FileContentResponse(
+        path="test", content="content", encoding="utf-8", truncated=False, size=10
+    )
     assert fcr.size == 10
 
     mfr = MoveFileResponse(source="src", destination="dst", moved=True, dry_run=False)
@@ -50,8 +52,13 @@ def test_models_instantiation():
     assert oe.file == "f"
 
     orr = OrganizationResultResponse(
-        total_files=1, processed_files=1, skipped_files=0, failed_files=0,
-        processing_time=1.0, organized_structure={}, errors=[oe]
+        total_files=1,
+        processed_files=1,
+        skipped_files=0,
+        failed_files=0,
+        processing_time=1.0,
+        organized_structure={},
+        errors=[oe],
     )
     assert orr.total_files == 1
 
@@ -64,16 +71,28 @@ def test_models_instantiation():
     tr = TokenResponse(access_token="acc", refresh_token="ref")
     assert tr.access_token == "acc"
 
-    ur = UserResponse(id="1", username="u", email="e", is_active=True, is_admin=False, created_at=now)
+    ur = UserResponse(
+        id="1", username="u", email="e", is_active=True, is_admin=False, created_at=now
+    )
     assert ur.username == "u"
 
-    ssr = SystemStatusResponse(app="a", version="v", environment="e", disk_total=1, disk_used=1, disk_free=0, active_jobs=0)
+    ssr = SystemStatusResponse(
+        app="a", version="v", environment="e", disk_total=1, disk_used=1, disk_free=0, active_jobs=0
+    )
     assert ssr.app == "a"
 
     cr = ConfigResponse(profile="p", config={}, profiles=[])
     assert cr.profile == "p"
 
-    stsr = StorageStatsResponse(total_size=1, organized_size=1, saved_size=1, file_count=1, directory_count=1, size_by_type={}, largest_files=[])
+    stsr = StorageStatsResponse(
+        total_size=1,
+        organized_size=1,
+        saved_size=1,
+        file_count=1,
+        directory_count=1,
+        size_by_type={},
+        largest_files=[],
+    )
     assert stsr.total_size == 1
 
     dsr = DedupeScanResponse(path="p", duplicates=[], stats={})
