@@ -393,7 +393,11 @@ class TestReleaseWorkflow:
             "publish-pypi job must have id-token: write for OIDC trusted publishing"
         )
         environment = publish_job.get("environment")
-        assert environment == "pypi", (
+        if isinstance(environment, dict):
+            environment_name = environment.get("name")
+        else:
+            environment_name = environment
+        assert environment_name == "pypi", (
             "publish-pypi job must use the 'pypi' GitHub environment for OIDC"
         )
 
