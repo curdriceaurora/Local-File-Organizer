@@ -88,6 +88,16 @@ repos:
         language: system
         pass_filenames: false
 
+      # ----------------------------------------------------------------
+      # Unused dependency detection
+      # ----------------------------------------------------------------
+      - id: deptry
+        name: deptry (unused deps)
+        entry: deptry src/
+        language: system
+        pass_filenames: false
+        files: ^(src/|pyproject\.toml)
+
   # ----------------------------------------------------------------
   # Markdown linting
   # ----------------------------------------------------------------

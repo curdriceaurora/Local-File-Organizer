@@ -40,8 +40,10 @@ dependencies = [
     "beautifulsoup4>=4.12.0",  # HTML parsing for EPUB
     "lxml>=4.9.0",  # Fast HTML/XML parser for BeautifulSoup
 
-    # NLP
+    # NLP and data science
     "nltk>=3.8.0",
+    "numpy>=1.24.0",  # Numerical computing (used in dedup, video, optimization)
+    "tqdm>=4.66.0",  # Progress bars (used in CLI dedup)
 
     # CLI and UI
     "typer[all]>=0.12.0",
@@ -64,7 +66,6 @@ dependencies = [
     "alembic>=1.13.0",
 
     # Task queue
-    "celery>=5.3.0",
     "redis>=5.0.0",
 
     # Configuration
@@ -77,9 +78,10 @@ dependencies = [
     "email-validator>=2.1.0",
     "python-dotenv>=1.0.0",
     "click>=8.1.0",
-    "aiofiles>=23.0.0",
-    "watchfiles>=0.21.0",  # File system watching
     "watchdog>=3.0.0",  # File system event handler
+
+    # System utilities
+    "psutil>=5.9.0",  # System resource monitoring
 
     # Logging
     "loguru>=0.7.0",
@@ -106,6 +108,7 @@ dev = [
     "pytest-benchmark>=4.0",
     "interrogate>=1.5.0",  # Docstring coverage measurement
     "pymarkdownlnt>=0.9.25",  # Markdown linting
+    "deptry>=0.16.0",  # Unused dependency detection
 ]
 
 gui = [
@@ -118,7 +121,6 @@ audio = [
     "mutagen>=1.47.0",  # Audio metadata extraction
     "tinytag>=1.10.0",  # Lightweight audio metadata fallback
     "pydub>=0.25.0",  # Audio manipulation
-    "ffmpeg-python>=0.2.0",  # Audio/video preprocessing
 ]
 
 video = [
@@ -128,6 +130,9 @@ video = [
 
 dedup = [
     "imagededup>=0.3.0",  # Image similarity and duplicate detection
+    "scikit-learn>=1.3.0",  # ML-based text similarity for deduplication
+    "PyPDF2>=3.0.0",  # PDF text extraction fallback in dedup extractor
+    "striprtf>=0.0.26",  # RTF file text extraction in dedup extractor
 ]
 
 archive = [
@@ -331,3 +336,57 @@ exclude = ["tests", "setup.py", "docs"]
 verbose = 1
 quiet = false
 whitelist-regex = []
+
+# deptry: unused dependency detection
+# Run as: deptry src/  (scans source only)
+[tool.deptry]
+# First-party package — suppress DEP001 false positives from src-layout
+known_first_party = ["file_organizer"]
+# Only tool-only groups where packages are never imported in application code
+pep621_dev_dependency_groups = ["dev", "docs", "build"]
+# Map distribution names → import names for packages that differ
+[tool.deptry.package_module_name_map]
+"Pillow" = "PIL"
+"PyMuPDF" = "fitz"
+"python-docx" = "docx"
+"python-pptx" = "pptx"
+"beautifulsoup4" = "bs4"
+"pyyaml" = "yaml"
+"python-jose" = "jose"
+"scikit-learn" = "sklearn"
+"opencv-python" = "cv2"
+"pydantic-settings" = "pydantic_settings"
+"PyPDF2" = "PyPDF2"
+"striprtf" = "striprtf"
+[tool.deptry.per_rule_ignores]
+# starlette: FastAPI transitive dep — direct imports in our middleware are fine
+# netCDF4: in scientific optional group; deptry has mixed-case matching issues
+DEP001 = ["starlette", "netCDF4"]
+# python-multipart: FastAPI uses it for file uploads (no direct import)
+# lxml: used as bs4 parser string "lxml" (not imported directly)
+# email-validator: pydantic uses it for EmailStr (not imported directly)
+# websockets: starlette WebSocket support (must be installed, not imported)
+# python-dotenv: pydantic-settings reads .env files via this package
+# bcrypt: passlib[bcrypt] uses it as backend (not imported directly)
+# jinja2: fastapi.templating wraps it (not imported directly)
+# alembic: used as CLI migration tool (not imported in application code)
+# openpyxl: pandas uses it for Excel I/O (not imported directly)
+# local-file-organizer: self-reference in the [all] optional group
+DEP002 = [
+    "python-multipart",
+    "lxml",
+    "email-validator",
+    "websockets",
+    "python-dotenv",
+    "bcrypt",
+    "jinja2",
+    "alembic",
+    "openpyxl",
+    "local-file-organizer",
+    # pydantic-settings: pydantic's BaseSettings uses it internally; no direct import needed
+    "pydantic-settings",
+    # PyQt6: GUI-only dep; GUI application lives outside src/file_organizer/
+    "PyQt6",
+    # netCDF4: mixed-case name causes deptry matching issues; used in scientific.py
+    "netCDF4",
+]
