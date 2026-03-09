@@ -90,6 +90,9 @@ class OpenAITextModel(BaseModel):
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+            if not response.choices:
+                logger.warning("OpenAI API returned empty choices for model {}", self.config.name)
+                return ""
             content = response.choices[0].message.content or ""
             logger.debug("Generated {} characters", len(content))
             return content.strip()
