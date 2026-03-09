@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import os
 import shutil
 from dataclasses import dataclass, field
@@ -108,6 +109,16 @@ class FileOrganizer:
         ".igs": "CAD",
     }
     _IMAGE_FALLBACK_FOLDER: ClassVar[str] = "Images"
+
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        """Verify fallback map covers all text and CAD extensions."""
+        super().__init_subclass__(**kwargs)
+        missing = (cls.TEXT_EXTENSIONS | cls.CAD_EXTENSIONS) - cls._TEXT_FALLBACK_MAP.keys()
+        if missing:
+            raise TypeError(
+                f"{cls.__name__}._TEXT_FALLBACK_MAP is missing entries for: {missing}. "
+                "Add them to keep fallback organization consistent with extension routing."
+            )
 
     def __init__(
         self,
@@ -268,6 +279,7 @@ class FileOrganizer:
         # Process image files
         if image_files:
             self.console.print(f"\n[bold blue]Processing {len(image_files)} images...[/bold blue]")
+            processed_images: list[ProcessedImage] | list[ProcessedFile]
             if self._ollama_available and self.vision_processor is not None:
                 processed_images = self._process_image_files(image_files)
             else:
@@ -410,8 +422,6 @@ class FileOrganizer:
         Returns:
             List of ProcessedFile with extension-based folder assignment.
         """
-        import datetime
-
         results = []
         for file_path in files:
             ext = file_path.suffix.lower()
@@ -424,7 +434,7 @@ class FileOrganizer:
                             file_path.stat().st_mtime, tz=datetime.UTC
                         ).year
                     )
-                except Exception:
+                except OSError:
                     year = "Unknown"
                 folder = f"{self._IMAGE_FALLBACK_FOLDER}/{year}"
             else:
