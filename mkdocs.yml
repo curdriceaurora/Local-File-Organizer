@@ -119,7 +119,8 @@ nav:
   - Troubleshooting: troubleshooting.md
   - FAQ: faq.md
   - Blog:
-      - PR Churn Pitfalls When Using LLM Tools: blog/2026-03-08-llm-pr-churn-pitfalls.md
+      - "PR Churn Pitfalls When Using LLM Tools":
+          blog/2026-03-08-llm-pr-churn-pitfalls.md
 
 extra:
   social:
