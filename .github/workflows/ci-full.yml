@@ -9,6 +9,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   # Linux Python 3.11/3.12 matrix is owned by ci.yml (runs on push + PR).
   # ci-full.yml covers the extended platform matrix: macOS and Windows.
