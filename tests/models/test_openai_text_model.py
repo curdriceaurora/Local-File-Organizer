@@ -105,10 +105,9 @@ class TestOpenAITextModelInitialize:
         ) as mock_cls:
             model.initialize()
 
-        # Verify client was created with exact api_key and base_url from config
+        # Verify client was created with only the non-None credentials
         mock_cls.assert_called_once_with(
             api_key=openai_config.api_key,
-            base_url=openai_config.api_base_url,
         )
         assert model.client is mock_openai_client
         assert model.is_initialized

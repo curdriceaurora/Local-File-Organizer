@@ -49,6 +49,10 @@ Ollama. This covers hosted providers (OpenAI) and local servers
 Install the optional dependency first:
 
 ```bash
+# From PyPI (installed package)
+pip install "file-organizer[cloud]"
+
+# From source checkout
 pip install -e ".[cloud]"
 ```
 

@@ -33,7 +33,7 @@ def get_current_provider() -> Literal["ollama", "openai"]:
     raw = os.environ.get("FO_PROVIDER", "ollama").strip().lower()
     if raw not in ("ollama", "openai"):
         logger.warning(
-            "FO_PROVIDER=%r is not a recognised value; falling back to 'ollama'. "
+            "FO_PROVIDER={} is not a recognised value; falling back to 'ollama'. "
             "Supported values: 'ollama', 'openai'.",
             raw,
         )
@@ -61,10 +61,12 @@ def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
         return TextModel.get_default_config(), VisionModel.get_default_config()
 
     # --- OpenAI-compatible provider ---
-    api_key: str | None = os.environ.get("FO_OPENAI_API_KEY") or None
-    api_base_url: str | None = os.environ.get("FO_OPENAI_BASE_URL") or None
-    text_model_name = os.environ.get("FO_OPENAI_MODEL", _OPENAI_TEXT_DEFAULT)
-    vision_model_name = os.environ.get("FO_OPENAI_VISION_MODEL") or text_model_name
+    # Strip whitespace and convert empty strings to None so callers receive
+    # clean values (e.g. FO_OPENAI_API_KEY="" is the same as unset).
+    api_key: str | None = (os.environ.get("FO_OPENAI_API_KEY") or "").strip() or None
+    api_base_url: str | None = (os.environ.get("FO_OPENAI_BASE_URL") or "").strip() or None
+    text_model_name = (os.environ.get("FO_OPENAI_MODEL") or "").strip() or _OPENAI_TEXT_DEFAULT
+    vision_model_name = (os.environ.get("FO_OPENAI_VISION_MODEL") or "").strip() or text_model_name
 
     if not api_key and not api_base_url:
         logger.warning(
@@ -89,8 +91,8 @@ def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
     )
 
     logger.info(
-        "Provider configured from env: provider=%s, text_model=%s, vision_model=%s, "
-        "base_url=%s",
+        "Provider configured from env: provider={}, text_model={}, vision_model={}, "
+        "base_url={}",
         provider,
         text_model_name,
         vision_model_name,

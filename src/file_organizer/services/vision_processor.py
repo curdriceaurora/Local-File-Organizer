@@ -10,7 +10,7 @@ from pathlib import Path
 from loguru import logger
 
 from file_organizer.models import VisionModel
-from file_organizer.models.base import BaseModel, ModelConfig
+from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from file_organizer.models.provider_factory import get_vision_model
 
 
@@ -56,6 +56,11 @@ class VisionProcessor:
                 regardless of any global provider setting.
         """
         if vision_model is not None:
+            if vision_model.config.model_type not in (ModelType.VISION, ModelType.VIDEO):
+                raise ValueError(
+                    f"VisionProcessor requires a VISION or VIDEO model, "
+                    f"got {vision_model.config.model_type}"
+                )
             self.vision_model = vision_model
             self._owns_model = False
         else:

@@ -163,7 +163,7 @@ docs = [
 
 
 all = [
-    "file-organizer[dev,gui,audio,video,dedup,archive,scientific,cad,build]",
+    "file-organizer[dev,gui,cloud,audio,video,dedup,archive,scientific,cad,build]",
 ]
 
 [project.scripts]

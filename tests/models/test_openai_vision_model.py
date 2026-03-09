@@ -200,7 +200,6 @@ class TestOpenAIVisionModelInitialize:
 
         mock_cls.assert_called_once_with(
             api_key=openai_vision_config.api_key,
-            base_url=openai_vision_config.api_base_url,
         )
         assert model.client is mock_openai_client
         assert model.is_initialized

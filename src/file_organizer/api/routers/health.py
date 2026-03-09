@@ -55,11 +55,14 @@ async def health(response: Response) -> dict[str, object]:
         payload = {}
 
     # Use the status derived by the facade rather than re-deriving it here.
-    # The facade returns "ok" / "degraded"; we add "error" for total failure.
+    # The facade returns "ok" / "degraded" / "unknown"; we add "error" for
+    # total failure.  "unknown" means the provider has not been probed (e.g.
+    # OpenAI-compatible endpoint) — treat as ready so the sidecar starts.
     status: str = str(payload.get("status", "error")) if payload else "error"
 
     _READINESS_MAP: dict[str, str] = {
         "ok": "ready",
+        "unknown": "ready",   # provider not probed — optimistically ready
         "degraded": "starting",
         "error": "unhealthy",
     }
