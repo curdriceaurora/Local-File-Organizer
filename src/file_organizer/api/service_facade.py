@@ -56,28 +56,36 @@ class ServiceFacade:
 
         The response always contains:
 
-        * ``status`` -- ``"ok"`` when Ollama is reachable,
-          ``"degraded"`` when the backend works but Ollama is unreachable.
+        * ``status`` -- ``"ok"`` when the configured provider is reachable.
+          For ``"ollama"`` provider: ``"ok"`` when Ollama is reachable,
+          ``"degraded"`` when Ollama is unreachable.
+          For ``"openai"`` provider: ``"unknown"`` — no connectivity probe is
+          performed against the OpenAI endpoint at health-check time; the first
+          model call will surface any auth or network errors.
         * ``version`` -- the package version string.
+        * ``provider`` -- the active provider (``"ollama"`` or ``"openai"``).
         * ``ollama`` -- ``True`` when the Ollama service is reachable.
-        * ``capabilities`` -- dict describing which file types are fully
-          supported vs. falling back to rule-based organization.  Present
-          only when ``status`` is ``"degraded"``.
+        * ``capabilities`` -- present only when ``provider`` is ``"ollama"``
+          and ``status`` is ``"degraded"``.  Describes which file types fall
+          back to rule-based organisation when Ollama is unreachable.
 
         Returns:
-            A dictionary with keys ``status`` (str), ``version`` (str),
-            ``ollama`` (bool), and optionally ``capabilities`` (dict).
+            A dictionary with keys ``status``, ``version``, ``provider``,
+            ``ollama``, and optionally ``capabilities``.
         """
         ollama_ok = await self._check_ollama()
         provider = get_current_provider()
-        status = "ok" if (ollama_ok or provider == "openai") else "degraded"
+        if provider == "openai":
+            status = "unknown"  # OpenAI endpoint is not probed at health-check time
+        else:
+            status = "ok" if ollama_ok else "degraded"
         payload: dict[str, Any] = {
             "status": status,
             "version": __version__,
             "provider": provider,
             "ollama": ollama_ok,
         }
-        if not ollama_ok:
+        if provider == "ollama" and not ollama_ok:
             payload["capabilities"] = {
                 "full_ai": [],
                 "rule_based": ["audio", "video", "deduplication"],

@@ -26,7 +26,6 @@ from file_organizer.models.text_model import TextModel
 from file_organizer.models.vision_model import VisionModel
 
 _OPENAI_TEXT_DEFAULT = "gpt-4o-mini"
-_OPENAI_VISION_DEFAULT = "gpt-4o-mini"
 
 
 def get_current_provider() -> Literal["ollama", "openai"]:
