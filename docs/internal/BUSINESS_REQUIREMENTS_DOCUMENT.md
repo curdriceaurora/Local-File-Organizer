@@ -127,7 +127,7 @@ The product addresses a critical pain point: digital file chaos. Users spend an 
 **Market Size:**
 - TAM (Total Addressable Market): 2 billion knowledge workers globally
 - SAM (Serviceable Available Market): 500M privacy-conscious users
-- SOM (Serviceable Obtainable Market): 10M potential users (Year 1-2)
+- SOME (Serviceable Obtainable Market): 10M potential users (Year 1-2)
 
 **Competitive Landscape:**
 - **Traditional Tools**: Windows Explorer, macOS Finder (manual, no AI)

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class Middleware(Protocol):
     """Protocol that all event middleware must satisfy.
 
-    Implementors may define any subset of the four hooks.  Missing
+    Implementers may define any subset of the four hooks.  Missing
     hooks are silently skipped by the :class:`MiddlewarePipeline`.
     """
 
