@@ -1,51 +1,95 @@
 repos:
   - repo: local
     hooks:
+      # ----------------------------------------------------------------
+      # Linting & formatting
+      # ----------------------------------------------------------------
       - id: ruff-check
         name: ruff check
         entry: ruff check .
         language: system
         pass_filenames: false
-      - id: ruff-check-src
-        name: ruff check (src)
-        entry: ruff check src/
+
+      - id: ruff-format-check
+        name: ruff format check
+        entry: ruff format . --check
         language: system
         pass_filenames: false
-      - id: ruff-check-full
-        name: ruff check (full)
-        entry: bash -c "ruff check ."
+
+      - id: ruff-unused-imports
+        name: ruff unused imports (F401)
+        entry: ruff check --select F401 .
         language: system
         pass_filenames: false
-      - id: pytest-websocket
-        name: pytest (websocket validations)
-        entry: bash -c "pytest tests/test_api_websocket.py -q --override-ini=\"addopts=\""
+
+      # ----------------------------------------------------------------
+      # G1: No hardcoded /tmp/ or absolute paths in staged diff
+      # Use tmp_path fixture in tests; ConfigManager in source
+      # ----------------------------------------------------------------
+      - id: no-absolute-paths
+        name: no absolute paths in Python files (G1)
+        entry: bash -c "git diff --cached -- '*.py' | grep -E '^\\+.*(/tmp/|/Users/|/home/|expanduser\\()' | grep -v '^+++' | grep -v '#' && echo 'ERROR: hardcoded path in Python — use tmp_path fixture or ConfigManager' && exit 1 || exit 0"
         language: system
         pass_filenames: false
+
+      # ----------------------------------------------------------------
+      # G2: No f-strings in logger calls
+      # logger.debug(f"...") must become logger.debug("...", var)
+      # ----------------------------------------------------------------
+      - id: no-fstrings-in-logger
+        name: no f-strings in logger calls (G2)
+        entry: bash -c "git diff --cached -- '*.py' | grep -E '^\\+.*logger\\.(debug|info|warning|error|critical)\\(f\"' | grep -v '^+++' && echo 'ERROR: f-string in logger — use: logger.debug(\"msg %s\", var)' && exit 1 || exit 0"
+        language: system
+        pass_filenames: false
+
+      # ----------------------------------------------------------------
+      # No build artifacts committed
+      # ----------------------------------------------------------------
+      - id: no-build-artifacts
+        name: no build artifacts staged
+        entry: bash -c "ARTS=$(git diff --cached --name-only | grep -E '\\.(coverage|bak|pyc|pyo)$|^coverage\\.xml$|^htmlcov/'); if [ -n \"$ARTS\" ]; then echo \"ERROR: build artifacts staged:\\n$ARTS\"; exit 1; fi"
+        language: system
+        pass_filenames: false
+
+      # ----------------------------------------------------------------
+      # Tests: smoke suite must pass before commit
+      # ----------------------------------------------------------------
+      - id: pytest-smoke
+        name: pytest (smoke suite)
+        entry: bash -c "pytest tests/ -m 'smoke' -q --strict-markers --timeout=30 --override-ini='addopts='"
+        language: system
+        pass_filenames: false
+
       - id: pytest-ci-lint
         name: pytest (ci guardrails)
         entry: pytest tests/ci -q --override-ini="addopts="
         language: system
         pass_filenames: false
+
+      - id: pytest-websocket
+        name: pytest (websocket validations)
+        entry: bash -c "pytest tests/test_api_websocket.py -q --override-ini='addopts='"
+        language: system
+        pass_filenames: false
+
       - id: pytest-web-ui
         name: pytest (web ui)
-        entry: bash -c "pytest tests/test_web_ui.py -q --override-ini=\"addopts=\""
+        entry: bash -c "pytest tests/test_web_ui.py -q --override-ini='addopts='"
         language: system
         pass_filenames: false
-      - id: pytest-smoke
-        name: pytest (smoke)
-        entry: bash -c "pytest tests/ -m \"smoke\" -q --strict-markers --timeout=30 --override-ini=\"addopts=\""
-        language: system
-        pass_filenames: false
+
+      # ----------------------------------------------------------------
+      # Spelling
+      # ----------------------------------------------------------------
       - id: codespell
         name: codespell
         entry: bash -c "codespell src/ docs/ --config .codespellrc"
         language: system
         pass_filenames: false
-      - id: absolute-path-check
-        name: absolute path check
-        entry: bash -c "git diff --cached | grep -E '^\\+.*(/Users/|/home/|C:\\\\\\\\Users\\\\\\\\)' | grep -v '.claude/rules/' | grep -v '.claude/scripts/' && exit 1 || exit 0"
-        language: system
-        pass_filenames: false
+
+  # ----------------------------------------------------------------
+  # Markdown linting
+  # ----------------------------------------------------------------
   - repo: https://github.com/jackdewinter/pymarkdown
     rev: v0.9.35
     hooks:
