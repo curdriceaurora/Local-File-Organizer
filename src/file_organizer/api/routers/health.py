@@ -24,7 +24,7 @@ async def health(response: Response) -> dict[str, object]:
     Response shape::
 
         {
-            "status":    "ok" | "degraded" | "error",
+            "status":    "ok" | "degraded" | "unknown" | "error",
             "readiness": "ready" | "starting" | "unhealthy",
             "version":   "<semver string>",
             "ollama":    true | false,
@@ -34,12 +34,13 @@ async def health(response: Response) -> dict[str, object]:
     The ``readiness`` field maps directly from ``status``:
 
     * ``"ok"``       -> ``"ready"``
+    * ``"unknown"``  -> ``"ready"``  (provider not probed, e.g. OpenAI-compatible endpoint)
     * ``"degraded"`` -> ``"starting"``
     * ``"error"``    -> ``"unhealthy"``
 
     HTTP status codes:
 
-    * ``200`` – status is "ok"
+    * ``200`` – status is "ok" or "unknown"
     * ``207`` – status is "degraded" (backend running but Ollama unreachable)
     * ``503`` – status is "error"
     """

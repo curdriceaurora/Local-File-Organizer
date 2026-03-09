@@ -100,6 +100,11 @@ class OpenAITextModel(BaseModel):
     def cleanup(self) -> None:
         """Release the OpenAI client."""
         logger.debug("Cleaning up OpenAI text model {}", self.config.name)
+        if self.client is not None:
+            try:
+                self.client.close()
+            except Exception:
+                pass
         self.client = None
         self._initialized = False
 

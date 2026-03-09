@@ -130,6 +130,36 @@ class TestOpenAITextModelInitialize:
 
         mock_cls.assert_called_once()  # NOT twice
 
+    def test_initialize_with_base_url_and_no_api_key(
+        self,
+        mock_openai_client: MagicMock,
+    ) -> None:
+        """Local LM Studio / vLLM flow: base_url set, no api_key."""
+        local_config = ModelConfig(
+            name="local-model",
+            model_type=ModelType.TEXT,
+            provider="openai",
+            api_key=None,
+            api_base_url="http://localhost:1234/v1",
+        )
+        with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
+            model = OpenAITextModel(local_config)
+
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ) as mock_cls,
+        ):
+            model.initialize()
+
+        # Client must be constructed with base_url only — no api_key kwarg
+        mock_cls.assert_called_once_with(base_url="http://localhost:1234/v1")
+        assert model.client is mock_openai_client
+        assert model.is_initialized
+
     def test_initialize_propagates_exception(self, openai_config: ModelConfig) -> None:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
             model = OpenAITextModel(openai_config)

@@ -166,6 +166,8 @@ class OpenAIVisionModel(BaseModel):
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+            if not response.choices:
+                return ""
             content = response.choices[0].message.content or ""
             logger.debug("Generated {} characters", len(content))
             return content.strip()
@@ -218,6 +220,11 @@ class OpenAIVisionModel(BaseModel):
     def cleanup(self) -> None:
         """Release the OpenAI client."""
         logger.debug("Cleaning up OpenAI vision model {}", self.config.name)
+        if self.client is not None:
+            try:
+                self.client.close()
+            except Exception:
+                pass
         self.client = None
         self._initialized = False
 
