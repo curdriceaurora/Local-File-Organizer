@@ -167,8 +167,8 @@ class TextModel(BaseModel):
     def cleanup(self) -> None:
         """Cleanup model resources."""
         logger.debug(f"Cleaning up text model {self.config.name}")
-        self.client = None
         self._initialized = False
+        self.client = None
 
     @staticmethod
     def get_default_config(model_name: str = "qwen2.5:3b-instruct-q4_K_M") -> ModelConfig:

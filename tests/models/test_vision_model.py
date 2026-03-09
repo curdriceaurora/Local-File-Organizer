@@ -281,13 +281,13 @@ class TestVisionModelMisc:
     def test_cleanup(self, vision_model_config: ModelConfig) -> None:
         """Test cleanup resets client and initialized state."""
         model, _ = _make_initialized_model(vision_model_config)
-        assert model._initialized is True
+        assert model.is_initialized is True
         assert model.client is not None
 
         model.cleanup()
 
         assert model.client is None
-        assert model._initialized is False
+        assert model.is_initialized is False
 
     def test_get_default_config(self) -> None:
         """Test static default config method."""
