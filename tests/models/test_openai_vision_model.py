@@ -191,11 +191,14 @@ class TestOpenAIVisionModelInitialize:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(openai_vision_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            return_value=mock_openai_client,
-        ) as mock_cls:
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ) as mock_cls,
+        ):
             model.initialize()
 
         mock_cls.assert_called_once_with(
@@ -212,11 +215,14 @@ class TestOpenAIVisionModelInitialize:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(openai_vision_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            return_value=mock_openai_client,
-        ) as mock_cls:
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ) as mock_cls,
+        ):
             model.initialize()
             model.initialize()
 
@@ -229,9 +235,7 @@ class TestOpenAIVisionModelInitialize:
 
 
 class TestOpenAIVisionModelGenerateWithPath:
-    def _make_initialized(
-        self, config: ModelConfig, client: MagicMock
-    ) -> OpenAIVisionModel:
+    def _make_initialized(self, config: ModelConfig, client: MagicMock) -> OpenAIVisionModel:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(config)
         model.client = client
@@ -304,9 +308,7 @@ class TestOpenAIVisionModelGenerateWithPath:
 
 
 class TestOpenAIVisionModelGenerateWithBytes:
-    def _make_initialized(
-        self, config: ModelConfig, client: MagicMock
-    ) -> OpenAIVisionModel:
+    def _make_initialized(self, config: ModelConfig, client: MagicMock) -> OpenAIVisionModel:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(config)
         model.client = client
@@ -336,9 +338,7 @@ class TestOpenAIVisionModelGenerateWithBytes:
         model.generate("prompt", image_data=raw)
 
         _, kwargs = mock_openai_client.chat.completions.create.call_args
-        image_block = next(
-            b for b in kwargs["messages"][0]["content"] if b["type"] == "image_url"
-        )
+        image_block = next(b for b in kwargs["messages"][0]["content"] if b["type"] == "image_url")
         url = image_block["image_url"]["url"]
         assert url.startswith("data:image/jpeg;base64,")
         payload = url.split(",", 1)[1]
@@ -351,9 +351,7 @@ class TestOpenAIVisionModelGenerateWithBytes:
 
 
 class TestOpenAIVisionModelGenerateGuards:
-    def _make_initialized(
-        self, config: ModelConfig, client: MagicMock
-    ) -> OpenAIVisionModel:
+    def _make_initialized(self, config: ModelConfig, client: MagicMock) -> OpenAIVisionModel:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(config)
         model.client = client
@@ -399,9 +397,7 @@ class TestOpenAIVisionModelGenerateGuards:
 class TestOpenAIVisionModelAnalyzeImage:
     """analyze_image() delegates to generate() with the correct prompt."""
 
-    def _make_initialized(
-        self, config: ModelConfig, client: MagicMock
-    ) -> OpenAIVisionModel:
+    def _make_initialized(self, config: ModelConfig, client: MagicMock) -> OpenAIVisionModel:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(config)
         model.client = client
@@ -432,12 +428,9 @@ class TestOpenAIVisionModelAnalyzeImage:
         # Verify the API was called with the task-specific prompt
         mock_openai_client.chat.completions.create.assert_called_once()
         _, kwargs = mock_openai_client.chat.completions.create.call_args
-        text_block = next(
-            b for b in kwargs["messages"][0]["content"] if b["type"] == "text"
-        )
+        text_block = next(b for b in kwargs["messages"][0]["content"] if b["type"] == "text")
         assert expected_prompt_fragment in text_block["text"], (
-            f"Expected prompt fragment {expected_prompt_fragment!r} not found "
-            f"for task={task!r}"
+            f"Expected prompt fragment {expected_prompt_fragment!r} not found for task={task!r}"
         )
         assert result == "A photo of a cat"  # from mock fixture
 
@@ -452,9 +445,7 @@ class TestOpenAIVisionModelAnalyzeImage:
         model.analyze_image(sample_image, task="describe", custom_prompt="My custom prompt")
 
         _, kwargs = mock_openai_client.chat.completions.create.call_args
-        text_block = next(
-            b for b in kwargs["messages"][0]["content"] if b["type"] == "text"
-        )
+        text_block = next(b for b in kwargs["messages"][0]["content"] if b["type"] == "text")
         assert text_block["text"] == "My custom prompt"
 
 

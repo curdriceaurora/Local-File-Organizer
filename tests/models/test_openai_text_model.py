@@ -64,9 +64,7 @@ class TestOpenAITextModelInit:
         assert model.client is None
         assert not model.is_initialized
 
-    def test_init_raises_import_error_when_openai_missing(
-        self, openai_config: ModelConfig
-    ) -> None:
+    def test_init_raises_import_error_when_openai_missing(self, openai_config: ModelConfig) -> None:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", False):
             with pytest.raises(ImportError, match="file-organizer\\[cloud\\]"):
                 OpenAITextModel(openai_config)
@@ -98,11 +96,14 @@ class TestOpenAITextModelInitialize:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
             model = OpenAITextModel(openai_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            return_value=mock_openai_client,
-        ) as mock_cls:
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ) as mock_cls,
+        ):
             model.initialize()
 
         # Verify client was created with only the non-None credentials
@@ -120,11 +121,14 @@ class TestOpenAITextModelInitialize:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
             model = OpenAITextModel(openai_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            return_value=mock_openai_client,
-        ) as mock_cls:
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ) as mock_cls,
+        ):
             model.initialize()
             model.initialize()  # second call should be a no-op
 
@@ -155,8 +159,10 @@ class TestOpenAITextModelInitialize:
         ):
             model.initialize()
 
-        # Client must be constructed with base_url only — no api_key kwarg
-        mock_cls.assert_called_once_with(base_url="http://localhost:1234/v1")
+        # Client must be constructed with base_url + placeholder key - no explicit api_key
+        mock_cls.assert_called_once_with(
+            api_key="placeholder-key", base_url="http://localhost:1234/v1"
+        )
         assert model.client is mock_openai_client
         assert model.is_initialized
 
@@ -164,10 +170,13 @@ class TestOpenAITextModelInitialize:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
             model = OpenAITextModel(openai_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            side_effect=RuntimeError("connection refused"),
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                side_effect=RuntimeError("connection refused"),
+            ),
         ):
             with pytest.raises(RuntimeError, match="connection refused"):
                 model.initialize()
@@ -203,9 +212,7 @@ class TestOpenAITextModelGenerate:
     ) -> None:
         choice = MagicMock()
         choice.message.content = "  trimmed response  "
-        mock_openai_client.chat.completions.create.return_value = MagicMock(
-            choices=[choice]
-        )
+        mock_openai_client.chat.completions.create.return_value = MagicMock(choices=[choice])
         model = self._make_initialized(openai_config, mock_openai_client)
 
         result = model.generate("Hello")
@@ -277,9 +284,7 @@ class TestOpenAITextModelGenerate:
         """None message content (refusal / content filter) should return empty string."""
         choice = MagicMock()
         choice.message.content = None
-        mock_openai_client.chat.completions.create.return_value = MagicMock(
-            choices=[choice]
-        )
+        mock_openai_client.chat.completions.create.return_value = MagicMock(choices=[choice])
         model = self._make_initialized(openai_config, mock_openai_client)
 
         result = model.generate("prompt")
@@ -349,10 +354,13 @@ class TestOpenAITextModelContextManager:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
             model = OpenAITextModel(openai_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            return_value=mock_openai_client,
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ),
         ):
             with model:
                 assert model.is_initialized

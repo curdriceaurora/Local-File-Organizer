@@ -9,7 +9,7 @@ from pathlib import Path
 from loguru import logger
 
 from file_organizer.models import TextModel
-from file_organizer.models.base import BaseModel, ModelConfig
+from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from file_organizer.models.provider_factory import get_text_model
 from file_organizer.utils.file_readers import FileReadError, read_file
 from file_organizer.utils.text_processing import (
@@ -59,6 +59,10 @@ class TextProcessor:
                 regardless of any global provider setting.
         """
         if text_model is not None:
+            if text_model.config.model_type != ModelType.TEXT:
+                raise ValueError(
+                    f"TextProcessor requires a TEXT model, got {text_model.config.model_type}"
+                )
             self.text_model = text_model
             self._owns_model = False
         else:

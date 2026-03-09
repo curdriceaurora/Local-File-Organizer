@@ -45,13 +45,28 @@ def create_openai_client(config: ModelConfig, model_type_label: str) -> Any:
         )
 
     logger.info("Initializing OpenAI {} model: {}", model_type_label, config.name)
-    # Only pass api_key when explicitly set — when None, the SDK falls back to
-    # the OPENAI_API_KEY environment variable (standard for local endpoints).
     client_kwargs: dict[str, Any] = {}
-    if config.api_key is not None:
-        client_kwargs["api_key"] = config.api_key
     if config.api_base_url is not None:
+        # Custom / local endpoint (LM Studio, vLLM, etc.).  Always pass base_url.
+        # For local providers that don't require auth, supply a harmless placeholder
+        # so the SDK doesn't reject the call when OPENAI_API_KEY is also unset.
         client_kwargs["base_url"] = config.api_base_url
+        if config.api_key is not None:
+            client_kwargs["api_key"] = config.api_key
+        else:
+            logger.warning(
+                "No api_key set for OpenAI {} model {} with custom base_url; "
+                "using placeholder key — set FO_OPENAI_API_KEY or OPENAI_API_KEY "
+                "if the endpoint requires authentication",
+                model_type_label,
+                config.name,
+            )
+            client_kwargs["api_key"] = "placeholder-key"
+    elif config.api_key is not None:
+        # Cloud endpoint with an explicit key; let the SDK handle everything else.
+        client_kwargs["api_key"] = config.api_key
+    # If neither base_url nor api_key is provided the SDK will pick up
+    # OPENAI_API_KEY from the environment automatically.
     try:
         client = OpenAI(**client_kwargs)
         logger.info("OpenAI {} model {} initialized", model_type_label, config.name)

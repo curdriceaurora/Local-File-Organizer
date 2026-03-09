@@ -26,3 +26,4 @@ def test_health_endpoint_returns_status() -> None:
     assert "readiness" in payload
     assert "version" in payload
     assert "uptime" in payload
+    assert payload.get("provider") in {"ollama", "openai"}
