@@ -24,6 +24,7 @@ def mock_text_model() -> MagicMock:
     """Mocked TextModel instance."""
     model = MagicMock()
     model.is_initialized = True
+    model.config.model_type = ModelType.TEXT
     # Default generate response to something predictable
     model.generate.return_value = "Mocked AI Response"
     return model
@@ -122,6 +123,15 @@ class TestTextProcessor:
         assert processor._owns_model is False
         assert processor.text_model == mock_text_model
         mock_nltk.assert_called_once()
+
+    @patch("file_organizer.services.text_processor.ensure_nltk_data")
+    def test_init_raises_value_error_for_wrong_model_type(self, mock_nltk: MagicMock) -> None:
+        """TextProcessor rejects a non-TEXT model with a clear ValueError."""
+        wrong_model = MagicMock()
+        wrong_model.config.model_type = ModelType.VISION
+
+        with pytest.raises(ValueError, match="TextProcessor requires a TEXT model"):
+            TextProcessor(text_model=wrong_model)
 
     def test_initialize_when_not_initialized(
         self, text_processor: TextProcessor, mock_text_model: MagicMock

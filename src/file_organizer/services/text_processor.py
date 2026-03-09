@@ -59,7 +59,7 @@ class TextProcessor:
                 regardless of any global provider setting.
         """
         if text_model is not None:
-            if text_model.config.model_type != ModelType.TEXT:
+            if text_model.config.model_type not in (ModelType.TEXT,):
                 raise ValueError(
                     f"TextProcessor requires a TEXT model, got {text_model.config.model_type}"
                 )

@@ -18,6 +18,7 @@ class HealthResponse(BaseModel):
     status: str
     readiness: str
     version: str
+    provider: str = "ollama"
     ollama: bool
     uptime: float
 
