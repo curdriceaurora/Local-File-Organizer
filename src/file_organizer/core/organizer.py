@@ -14,8 +14,8 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
+from file_organizer.config.provider_env import get_model_configs_from_env
 from file_organizer.history.models import OperationType
-from file_organizer.models import TextModel, VisionModel
 from file_organizer.models.base import ModelConfig
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor
@@ -142,8 +142,13 @@ class FileOrganizer:
             use_hardlinks: If True, create hardlinks instead of copying
             parallel_workers: Number of parallel workers (default: None = auto)
         """
-        self.text_model_config = text_model_config or TextModel.get_default_config()
-        self.vision_model_config = vision_model_config or VisionModel.get_default_config()
+        if text_model_config is None or vision_model_config is None:
+            env_text, env_vision = get_model_configs_from_env()
+            self.text_model_config = text_model_config or env_text
+            self.vision_model_config = vision_model_config or env_vision
+        else:
+            self.text_model_config = text_model_config
+            self.vision_model_config = vision_model_config
         self.dry_run = dry_run
         self.use_hardlinks = use_hardlinks
         self.console = Console()

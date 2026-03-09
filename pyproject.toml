@@ -108,6 +108,10 @@ dev = [
     "pymarkdownlnt>=0.9.25",  # Markdown linting
 ]
 
+cloud = [
+    "openai>=1.0.0",  # OpenAI-compatible API provider (OpenAI, Groq, LM Studio, vLLM)
+]
+
 gui = [
     "PyQt6>=6.6.0",
 ]

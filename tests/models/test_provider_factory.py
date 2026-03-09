@@ -1,0 +1,134 @@
+"""Unit tests for provider_factory — routes ModelConfig.provider to correct model class."""
+
+from __future__ import annotations
+
+from unittest.mock import patch
+
+import pytest
+
+from file_organizer.models.base import ModelConfig, ModelType
+from file_organizer.models.provider_factory import get_text_model, get_vision_model
+from file_organizer.models.text_model import TextModel
+from file_organizer.models.vision_model import VisionModel
+
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def ollama_text_config() -> ModelConfig:
+    return ModelConfig(name="qwen2.5:3b", model_type=ModelType.TEXT, provider="ollama")
+
+
+@pytest.fixture()
+def ollama_vision_config() -> ModelConfig:
+    return ModelConfig(
+        name="qwen2.5vl:7b", model_type=ModelType.VISION, provider="ollama"
+    )
+
+
+@pytest.fixture()
+def openai_text_config() -> ModelConfig:
+    return ModelConfig(
+        name="gpt-4o-mini",
+        model_type=ModelType.TEXT,
+        provider="openai",
+        api_key="sk-test",
+    )
+
+
+@pytest.fixture()
+def openai_vision_config() -> ModelConfig:
+    return ModelConfig(
+        name="gpt-4o-mini",
+        model_type=ModelType.VISION,
+        provider="openai",
+        api_key="sk-test",
+    )
+
+
+# ---------------------------------------------------------------------------
+# get_text_model
+# ---------------------------------------------------------------------------
+
+
+class TestGetTextModel:
+    def test_ollama_provider_returns_text_model(
+        self, ollama_text_config: ModelConfig
+    ) -> None:
+        with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
+            model = get_text_model(ollama_text_config)
+
+        assert isinstance(model, TextModel)
+        assert model.config is ollama_text_config
+
+    def test_openai_provider_returns_openai_text_model(
+        self, openai_text_config: ModelConfig
+    ) -> None:
+        with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
+            model = get_text_model(openai_text_config)
+
+        # Import here to avoid eager loading in module scope
+        from file_organizer.models.openai_text_model import OpenAITextModel
+
+        assert isinstance(model, OpenAITextModel)
+        assert model.config is openai_text_config
+
+    def test_unknown_provider_raises_value_error(self) -> None:
+        # mypy would catch this at type time; we test the runtime guard too
+        bad_config = ModelConfig(
+            name="some-model",
+            model_type=ModelType.TEXT,
+            provider="ollama",  # start valid then mutate for test
+        )
+        bad_config.provider = "anthropic"  # type: ignore[assignment]
+
+        with pytest.raises(ValueError, match="Unknown provider"):
+            get_text_model(bad_config)
+
+    def test_unknown_provider_error_mentions_supported_values(self) -> None:
+        bad_config = ModelConfig(name="x", model_type=ModelType.TEXT, provider="ollama")
+        bad_config.provider = "invalid"  # type: ignore[assignment]
+
+        with pytest.raises(ValueError, match="'ollama'"):
+            get_text_model(bad_config)
+
+
+# ---------------------------------------------------------------------------
+# get_vision_model
+# ---------------------------------------------------------------------------
+
+
+class TestGetVisionModel:
+    def test_ollama_provider_returns_vision_model(
+        self, ollama_vision_config: ModelConfig
+    ) -> None:
+        with patch("file_organizer.models.vision_model.OLLAMA_AVAILABLE", True):
+            model = get_vision_model(ollama_vision_config)
+
+        assert isinstance(model, VisionModel)
+        assert model.config is ollama_vision_config
+
+    def test_openai_provider_returns_openai_vision_model(
+        self, openai_vision_config: ModelConfig
+    ) -> None:
+        with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
+            model = get_vision_model(openai_vision_config)
+
+        from file_organizer.models.openai_vision_model import OpenAIVisionModel
+
+        assert isinstance(model, OpenAIVisionModel)
+        assert model.config is openai_vision_config
+
+    def test_unknown_provider_raises_value_error(self) -> None:
+        bad_config = ModelConfig(
+            name="x", model_type=ModelType.VISION, provider="ollama"
+        )
+        bad_config.provider = "google"  # type: ignore[assignment]
+
+        with pytest.raises(ValueError, match="Unknown provider"):
+            get_vision_model(bad_config)

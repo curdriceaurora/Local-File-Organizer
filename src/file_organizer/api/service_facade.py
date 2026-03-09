@@ -16,6 +16,7 @@ from loguru import logger
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.routers.config import ConfigResponse
+from file_organizer.config.provider_env import get_current_provider
 from file_organizer.version import __version__
 
 
@@ -68,10 +69,12 @@ class ServiceFacade:
             ``ollama`` (bool), and optionally ``capabilities`` (dict).
         """
         ollama_ok = await self._check_ollama()
-        status = "ok" if ollama_ok else "degraded"
+        provider = get_current_provider()
+        status = "ok" if (ollama_ok or provider == "openai") else "degraded"
         payload: dict[str, Any] = {
             "status": status,
             "version": __version__,
+            "provider": provider,
             "ollama": ollama_ok,
         }
         if not ollama_ok:
@@ -410,8 +413,8 @@ class ServiceFacade:
                 # Path must be pre-validated at API boundary
                 detector.scan_directory(Path(scan_dir))
 
-                stats = detector.get_statistics()
-                groups_raw = detector.get_duplicate_groups()
+                stats = detector.get_statistics()  # type: ignore[no-untyped-call]
+                groups_raw = detector.get_duplicate_groups()  # type: ignore[no-untyped-call]
 
                 # Serialise groups (dict of hash -> DuplicateGroup objects)
                 groups: list[dict[str, Any]] = []
