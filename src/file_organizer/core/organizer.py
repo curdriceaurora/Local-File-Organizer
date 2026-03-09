@@ -172,7 +172,7 @@ class FileOrganizer:
         # Graceful degradation: set to False when Ollama is unreachable
         self._ollama_available: bool = True
 
-        logger.info("FileOrganizer initialized (dry_run=%s, parallel=%s)", dry_run, parallel_workers)
+        logger.info("FileOrganizer initialized (dry_run={}, parallel={})", dry_run, parallel_workers)
 
     def organize(
         self,
