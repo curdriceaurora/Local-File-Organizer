@@ -10,7 +10,7 @@
 
 ## Features
 
-- **AI-Powered Organization**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama — or any OpenAI-compatible endpoint (OpenAI, Groq, LM Studio, vLLM)
+- **AI-Powered Organization**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama — or any OpenAI-compatible endpoint (OpenAI, LM Studio, vLLM)
 - **Audio Transcription**: Local speech-to-text with faster-whisper (GPU-accelerated)
 - **Video Analysis**: Scene detection and keyframe extraction
 - **Copilot Chat**: Natural-language assistant -- "organize ./Downloads", "find report.pdf", "undo"
@@ -69,7 +69,7 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 
 | Pack | Install Command | Features |
 |------|----------------|----------|
-| Cloud | `pip install -e ".[cloud]"` | OpenAI-compatible API provider (OpenAI, Groq, LM Studio) |
+| Cloud | `pip install -e ".[cloud]"` | OpenAI-compatible API provider (OpenAI, LM Studio, vLLM) |
 | Audio | `pip install -e ".[audio]"` | Speech-to-text (faster-whisper, torch) |
 | Video | `pip install -e ".[video]"` | Scene detection (OpenCV, scenedetect) |
 | Dedup | `pip install -e ".[dedup]"` | Image deduplication (perceptual hashing) |
