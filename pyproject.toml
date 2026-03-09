@@ -52,6 +52,7 @@ dependencies = [
 
     # API and async
     "fastapi>=0.109.0",
+    "starlette>=0.36.0",  # Direct imports: BaseHTTPMiddleware, Response, WebSocketState
     "jinja2>=3.1.0",
     "uvicorn[standard]>=0.27.0",
     "websockets>=12.0",
@@ -359,9 +360,8 @@ pep621_dev_dependency_groups = ["dev", "docs", "build"]
 "PyPDF2" = "PyPDF2"
 "striprtf" = "striprtf"
 [tool.deptry.per_rule_ignores]
-# starlette: FastAPI transitive dep — direct imports in our middleware are fine
 # netCDF4: in scientific optional group; deptry has mixed-case matching issues
-DEP001 = ["starlette", "netCDF4"]
+DEP001 = ["netCDF4"]
 # python-multipart: FastAPI uses it for file uploads (no direct import)
 # lxml: used as bs4 parser string "lxml" (not imported directly)
 # email-validator: pydantic uses it for EmailStr (not imported directly)
