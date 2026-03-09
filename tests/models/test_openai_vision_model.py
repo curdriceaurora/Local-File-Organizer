@@ -265,10 +265,9 @@ class TestOpenAIVisionModelGenerateWithPath:
         messages = kwargs["messages"]
         assert len(messages) == 1
         content = messages[0]["content"]
-        # Content should have image_url block and text block
+        # Content should have exactly one image_url block and one text block
         types = [block["type"] for block in content]
-        assert "image_url" in types
-        assert "text" in types
+        assert sorted(types) == ["image_url", "text"]
         # Image url should be a base64 data URL
         image_block = next(b for b in content if b["type"] == "image_url")
         assert image_block["image_url"]["url"].startswith("data:")
@@ -410,8 +409,13 @@ class TestOpenAIVisionModelAnalyzeImage:
         return model
 
     @pytest.mark.parametrize(
-        "task",
-        ["describe", "categorize", "ocr", "filename"],
+        ("task", "expected_prompt_fragment"),
+        [
+            ("describe", "detailed description"),
+            ("categorize", "general category or theme"),
+            ("ocr", "Extract all visible text"),
+            ("filename", "descriptive filename"),
+        ],
     )
     def test_analyze_image_calls_generate_for_each_task(
         self,
@@ -419,13 +423,22 @@ class TestOpenAIVisionModelAnalyzeImage:
         mock_openai_client: MagicMock,
         sample_image: Path,
         task: str,
+        expected_prompt_fragment: str,
     ) -> None:
         model = self._make_initialized(openai_vision_config, mock_openai_client)
 
         result = model.analyze_image(sample_image, task=task)
 
-        # Verify generate was called (via the mock client)
+        # Verify the API was called with the task-specific prompt
         mock_openai_client.chat.completions.create.assert_called_once()
+        _, kwargs = mock_openai_client.chat.completions.create.call_args
+        text_block = next(
+            b for b in kwargs["messages"][0]["content"] if b["type"] == "text"
+        )
+        assert expected_prompt_fragment in text_block["text"], (
+            f"Expected prompt fragment {expected_prompt_fragment!r} not found "
+            f"for task={task!r}"
+        )
         assert result == "A photo of a cat"  # from mock fixture
 
     def test_analyze_image_uses_custom_prompt(

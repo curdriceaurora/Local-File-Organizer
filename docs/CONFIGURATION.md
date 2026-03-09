@@ -62,7 +62,7 @@ Then configure via environment variables — no config file changes needed:
 |----------|-------------|---------|
 | `FO_PROVIDER` | `ollama` or `openai` | `ollama` |
 | `FO_OPENAI_API_KEY` | API key (omit for local endpoints) | — |
-| `FO_OPENAI_BASE_URL` | API base URL | `https://api.openai.com/v1` |
+| `FO_OPENAI_BASE_URL` | API base URL | — (OpenAI SDK default: `https://api.openai.com/v1`) |
 | `FO_OPENAI_MODEL` | Text model name | `gpt-4o-mini` |
 | `FO_OPENAI_VISION_MODEL` | Vision model name (falls back to `FO_OPENAI_MODEL`) | — |
 

@@ -68,11 +68,15 @@ def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
     text_model_name = (os.environ.get("FO_OPENAI_MODEL") or "").strip() or _OPENAI_TEXT_DEFAULT
     vision_model_name = (os.environ.get("FO_OPENAI_VISION_MODEL") or "").strip() or text_model_name
 
-    if not api_key and not api_base_url:
+    # Suppress the warning when the standard OPENAI_API_KEY env var is set —
+    # the SDK will pick it up automatically, so requests will succeed even
+    # without FO_OPENAI_API_KEY or FO_OPENAI_BASE_URL.
+    sdk_key_present = bool(os.environ.get("OPENAI_API_KEY", "").strip())
+    if not api_key and not api_base_url and not sdk_key_present:
         logger.warning(
             "FO_PROVIDER=openai but neither FO_OPENAI_API_KEY nor FO_OPENAI_BASE_URL "
-            "is set.  Requests will likely fail.  For local providers (LM Studio, "
-            "Ollama OpenAI-compat) set FO_OPENAI_BASE_URL."
+            "is set (and OPENAI_API_KEY is also absent).  Requests will likely fail.  "
+            "For local providers (LM Studio, Ollama OpenAI-compat) set FO_OPENAI_BASE_URL."
         )
 
     text_config = ModelConfig(
