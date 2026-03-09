@@ -67,8 +67,8 @@ def _mock_sub_components(learner):
     """Replace sub-components with mocks to work around interface mismatches.
 
     PatternLearner calls methods that don't exist on the real classes
-    (e.g. ``confidence_engine.update_pattern_confidence``,
-    ``preference_tracker.track_operation``, etc.).  We replace those
+    (e.g. ``confidence_engine.track_usage``,
+    ``preference_tracker.track_correction``, etc.).  We replace those
     components with MagicMock objects so the tests can exercise
     PatternLearner's own orchestration logic.
     """
@@ -77,7 +77,7 @@ def _mock_sub_components(learner):
     learner.confidence_engine.clear_stale_patterns.return_value = 0
     learner.confidence_engine.get_stats.return_value = {"patterns": 0}
 
-    # Mock preference tracker (missing: track_correction)
+    # Mock preference tracker
     learner.preference_tracker = MagicMock()
 
     # Mock folder learner so we can control return values
