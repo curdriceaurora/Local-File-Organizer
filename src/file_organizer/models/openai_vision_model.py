@@ -1,0 +1,240 @@
+"""Vision model implementation using OpenAI-compatible API."""
+
+from __future__ import annotations
+
+import base64
+import mimetypes
+from pathlib import Path
+from typing import Any
+
+from loguru import logger
+
+from file_organizer.models._openai_client import OPENAI_AVAILABLE, create_openai_client
+from file_organizer.models.base import BaseModel, ModelConfig, ModelType
+
+# Fallback MIME type when extension is not recognised
+_DEFAULT_IMAGE_MIME = "image/jpeg"
+
+
+def _image_to_data_url(image_path: Path) -> str:
+    """Encode an image file as a base64 data URL.
+
+    Args:
+        image_path: Path to the image file.
+
+    Returns:
+        Data URL string suitable for the OpenAI vision messages API.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        OSError: If the file cannot be read.
+    """
+    mime_type, _ = mimetypes.guess_type(str(image_path))
+    if not mime_type:
+        mime_type = _DEFAULT_IMAGE_MIME
+    with open(image_path, "rb") as fh:
+        encoded = base64.b64encode(fh.read()).decode("utf-8")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def _bytes_to_data_url(image_data: bytes, mime_type: str = _DEFAULT_IMAGE_MIME) -> str:
+    """Encode raw image bytes as a base64 data URL.
+
+    Args:
+        image_data: Raw image bytes.
+        mime_type: MIME type of the image data.
+
+    Returns:
+        Data URL string.
+    """
+    encoded = base64.b64encode(image_data).decode("utf-8")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+class OpenAIVisionModel(BaseModel):
+    """Vision-language model using an OpenAI-compatible API.
+
+    Works with any provider that supports vision in the OpenAI chat format:
+    - OpenAI GPT-4o / GPT-4-vision (https://api.openai.com/v1)
+    - LM Studio with a vision-capable model (http://localhost:1234/v1)
+    - Groq (https://api.groq.com/openai/v1)
+
+    Configure via ``ModelConfig.api_key`` and ``ModelConfig.api_base_url``.
+    """
+
+    def __init__(self, config: ModelConfig) -> None:
+        """Initialize OpenAI vision model.
+
+        Args:
+            config: Model configuration. ``config.api_key`` and
+                ``config.api_base_url`` are used for authentication and
+                endpoint routing.
+
+        Raises:
+            ImportError: If the ``openai`` package is not installed.
+            ValueError: If model type is not VISION or VIDEO.
+        """
+        if not OPENAI_AVAILABLE:
+            raise ImportError(
+                "The 'openai' package is not installed. "
+                "Install it with: pip install 'file-organizer[cloud]'"
+            )
+
+        if config.model_type not in (ModelType.VISION, ModelType.VIDEO):
+            raise ValueError(f"Expected VISION or VIDEO model type, got {config.model_type}")
+
+        super().__init__(config)
+        self.client: Any | None = None  # openai.OpenAI; typed as Any to satisfy mypy without stub
+
+    def initialize(self) -> None:
+        """Create the OpenAI client.
+
+        The client validates connectivity lazily on the first API call.
+        """
+        if self._initialized:
+            logger.debug("OpenAI vision model %s already initialized", self.config.name)
+            return
+
+        self.client = create_openai_client(self.config, "vision")
+        self._initialized = True
+
+    def generate(
+        self,
+        prompt: str,
+        image_path: str | Path | None = None,
+        image_data: bytes | None = None,
+        **kwargs: Any,
+    ) -> str:
+        """Analyse an image using the OpenAI vision chat completions API.
+
+        Args:
+            prompt: Text prompt describing what to analyse.
+            image_path: Path to image file (mutually exclusive with
+                ``image_data``).
+            image_data: Raw image bytes (mutually exclusive with
+                ``image_path``).
+            **kwargs: Override config values:
+                - ``temperature`` (float)
+                - ``max_tokens`` (int)
+
+        Returns:
+            Generated text description, stripped of whitespace.
+
+        Raises:
+            RuntimeError: If the model is not initialised.
+            ValueError: If neither or both of ``image_path`` / ``image_data``
+                are provided.
+            FileNotFoundError: If ``image_path`` does not exist.
+            OSError: If ``image_path`` cannot be read.
+        """
+        if not self._initialized or self.client is None:
+            raise RuntimeError("Model not initialized. Call initialize() first.")
+
+        if (image_path is None and image_data is None) or (
+            image_path is not None and image_data is not None
+        ):
+            raise ValueError("Provide exactly one of image_path or image_data")
+
+        temperature = float(kwargs.get("temperature", self.config.temperature))
+        max_tokens = int(kwargs.get("max_tokens", self.config.max_tokens))
+
+        # Build image URL for the message payload.
+        # EAFP: let _image_to_data_url raise FileNotFoundError / OSError directly
+        # rather than checking existence first (avoids TOCTOU race).
+        if image_path is not None:
+            image_url = _image_to_data_url(Path(image_path))
+        else:
+            if image_data is None:
+                raise ValueError("image_data is None after guard check; this is a caller bug")
+            image_url = _bytes_to_data_url(image_data)
+
+        messages: list[dict[str, Any]] = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ]
+
+        try:
+            logger.debug("Analysing image with OpenAI model %s", self.config.name)
+            response = self.client.chat.completions.create(
+                model=self.config.name,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            content = response.choices[0].message.content or ""
+            logger.debug("Generated %d characters", len(content))
+            return content.strip()
+        except Exception as e:
+            logger.error("Failed to analyse image via OpenAI API: %s", e)
+            raise
+
+    def analyze_image(
+        self,
+        image_path: str | Path,
+        task: str = "describe",
+        **kwargs: Any,
+    ) -> str:
+        """Convenience wrapper matching the ``VisionModel`` interface.
+
+        Args:
+            image_path: Path to image file.
+            task: Analysis task — ``'describe'``, ``'categorize'``,
+                ``'ocr'``, or ``'filename'``.
+            **kwargs: Forwarded to :meth:`generate`.
+
+        Returns:
+            Analysis result as text.
+        """
+        prompts = {
+            "describe": (
+                "Please provide a detailed description of this image, "
+                "focusing on the main subject and any important details."
+            ),
+            "categorize": (
+                "Based on this image, generate a general category or theme "
+                "that best represents the main subject. "
+                "Limit the category to a maximum of 2 words. "
+                "Use nouns and avoid verbs."
+            ),
+            "ocr": (
+                "Extract all visible text from this image. "
+                "Provide the text exactly as it appears, preserving formatting where possible."
+            ),
+            "filename": (
+                "Based on this image, generate a specific and descriptive filename. "
+                "Limit the filename to a maximum of 3 words. "
+                "Use nouns and avoid starting with verbs. "
+                "Use only letters and connect words with underscores."
+            ),
+        }
+        prompt = kwargs.pop("custom_prompt", None) or prompts.get(task, prompts["describe"])
+        return self.generate(prompt=prompt, image_path=image_path, **kwargs)
+
+    def cleanup(self) -> None:
+        """Release the OpenAI client."""
+        logger.debug("Cleaning up OpenAI vision model %s", self.config.name)
+        self.client = None
+        self._initialized = False
+
+    @staticmethod
+    def get_default_config(model_name: str = "gpt-4o-mini") -> ModelConfig:
+        """Return a default ModelConfig for an OpenAI vision model.
+
+        Args:
+            model_name: OpenAI (or compatible) vision model identifier.
+
+        Returns:
+            A ``ModelConfig`` with ``provider="openai"`` and sensible defaults.
+        """
+        return ModelConfig(
+            name=model_name,
+            model_type=ModelType.VISION,
+            provider="openai",
+            temperature=0.3,
+            max_tokens=3000,
+        )

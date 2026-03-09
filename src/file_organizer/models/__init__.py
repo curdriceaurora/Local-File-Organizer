@@ -15,6 +15,9 @@ from file_organizer.models.analytics import (
 )
 from file_organizer.models.audio_model import AudioModel
 from file_organizer.models.base import BaseModel, DeviceType, ModelConfig, ModelType
+from file_organizer.models.openai_text_model import OpenAITextModel
+from file_organizer.models.openai_vision_model import OpenAIVisionModel
+from file_organizer.models.provider_factory import get_text_model, get_vision_model
 from file_organizer.models.suggestion_types import (
     ConfidenceFactors,
     ConfidenceLevel,
@@ -32,6 +35,10 @@ __all__ = [
     "DeviceType",
     "TextModel",
     "VisionModel",
+    "OpenAITextModel",
+    "OpenAIVisionModel",
+    "get_text_model",
+    "get_vision_model",
     "AudioModel",
     "Suggestion",
     "SuggestionType",

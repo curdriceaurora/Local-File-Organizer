@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import types
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 
 class ModelType(Enum):
@@ -45,6 +46,11 @@ class ModelConfig:
     # Framework specific
     framework: str = "ollama"  # ollama, llama_cpp, mlx
 
+    # Provider selection
+    provider: Literal["ollama", "openai"] = "ollama"
+    api_key: str | None = None  # For OpenAI-compatible providers
+    api_base_url: str | None = None  # Custom endpoint (LM Studio, Groq, vLLM, etc.)
+
     # Model paths
     model_path: str | None = None
     local_path: str | None = None
@@ -53,15 +59,21 @@ class ModelConfig:
     extra_params: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
-        """Initialize extra params if None."""
+        """Initialize extra params and sync legacy ``framework`` field."""
         if self.extra_params is None:
             self.extra_params = {}
+        # Keep the legacy ``framework`` field in sync with ``provider``.
+        # ``provider`` is the authoritative routing field used by
+        # ``provider_factory``; ``framework`` is retained for backward
+        # compatibility with code that reads it directly.
+        if self.provider == "openai" and self.framework == "ollama":
+            self.framework = "openai"
 
 
 class BaseModel(ABC):
     """Abstract base class for all AI models."""
 
-    def __init__(self, config: ModelConfig):
+    def __init__(self, config: ModelConfig) -> None:
         """Initialize the model with configuration.
 
         Args:
@@ -105,7 +117,12 @@ class BaseModel(ABC):
             self.initialize()
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> None:
         """Context manager exit."""
         self.cleanup()
 

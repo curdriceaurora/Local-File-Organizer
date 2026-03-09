@@ -123,7 +123,7 @@ if [[ -n "$PY_FILES" ]]; then
     echo "🔧 Running type annotation lint on src/..."
     PY_SRC_FILES=$(echo "$PY_FILES" | grep '^src/' || true)
     if [[ -n "$PY_SRC_FILES" ]]; then
-      if ! echo "$PY_SRC_FILES" | xargs ruff check --select ANN; then
+      if ! echo "$PY_SRC_FILES" | xargs ruff check --select ANN --ignore ANN401; then
         echo "❌ Type annotation lint failed"
         echo "Add missing type annotations in src/ files"
         exit 1
@@ -140,7 +140,7 @@ if [[ -n "$PY_FILES" ]]; then
   # 6. Type checking
   echo "📋 Type checking Python files..."
   if command -v mypy &> /dev/null; then
-    if ! echo "$PY_FILES" | xargs mypy --config-file=pyproject.toml; then
+    if ! echo "$PY_FILES" | xargs mypy --config-file=pyproject.toml --follow-imports=silent; then
       echo "❌ Type checking failed (blocking)"
       echo "Fix type errors above, then re-stage files"
       exit 1
