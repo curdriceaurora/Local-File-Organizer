@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "file-organizer"
-version = "2.0.0-alpha.1"
+version = "2.0.0-alpha.2"
 description = "AI-powered local file management with state-of-the-art models"
 authors = [
     {name = "Local File Organizer Team", email = "noreply@example.com"}

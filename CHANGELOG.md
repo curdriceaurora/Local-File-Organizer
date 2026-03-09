@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-alpha.2] - 2026-03-09
+
 ### Added
 
 - **Copilot Chat Interface** (#26): Natural-language AI assistant for file organisation
