@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 2 (Enhanced UX) is now 100% complete: 24/24 tasks done
 - TUI with 8 navigable views (Files, Organized, Analytics, Methodology, Audio, History, Settings, Copilot)
 - Full CLI with 30+ sub-commands across 8 command groups
-- 3,146 tests passing across Python 3.9-3.12
+- 3,146 tests passing across Python 3.11-3.12
 - ~54,000 LOC across 184 modules
 
 ## [2.0.0-alpha.1] - 2026-01-15

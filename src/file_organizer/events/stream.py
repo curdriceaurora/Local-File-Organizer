@@ -7,6 +7,7 @@ when Redis is unavailable.
 from __future__ import annotations
 
 import logging
+import types
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -15,7 +16,7 @@ from typing import Any
 try:
     import redis
 except ImportError:  # pragma: no cover
-    redis = None
+    redis = None  # type: ignore[assignment]
 
 from file_organizer.events.config import EventConfig
 
@@ -402,7 +403,7 @@ class RedisStreamManager:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: Any,
+        exc_tb: types.TracebackType | None,
     ) -> None:
         """Context manager exit - disconnects from Redis."""
         self.disconnect()
