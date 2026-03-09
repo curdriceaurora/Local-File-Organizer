@@ -27,7 +27,7 @@ found and what it cost us.
 **PR churn** is the iterative back-and-forth between code generation and review
 feedback that follows a predictable loop:
 
-```
+```text
 generate → review → fix → re-review → fix again → ...
 ```
 
@@ -75,9 +75,9 @@ churn.
 | 2    | D1  | INACCURATE_CLAIM     | 94    | DOCS      |
 | 3    | T2  | MISSING_CALL_VERIFY  | 93    | TEST      |
 | 4    | F4  | SECURITY_VULN        | 74    | FEATURE   |
-| 5    | F3  | THREAD_SAFETY        | 64    | FEATURE   |
-| 6    | F2  | TYPE_ANNOTATION      | 63    | FEATURE   |
-| 7    | D2  | STALE_REFERENCE      | 65    | DOCS      |
+| 5    | D2  | STALE_REFERENCE      | 65    | DOCS      |
+| 6    | F3  | THREAD_SAFETY        | 64    | FEATURE   |
+| 7    | F2  | TYPE_ANNOTATION      | 63    | FEATURE   |
 | 8    | T1  | WEAK_ASSERTION       | 54    | TEST      |
 | 9    | F1  | MISSING_ERROR_HANDLING| 53   | FEATURE   |
 | 10   | G1  | ABSOLUTE_PATH        | 53    | ALL       |
@@ -369,8 +369,8 @@ generation workflow *before* the model writes any code:
 
 ### 6.2 Persistent Memory Across Sessions
 
-Rule files committed to the repository (`memory/test-generation-patterns.md`,
-`memory/feature-generation-patterns.md`) travel with the generation prompt
+Rule files committed to the repository (e.g. `.claude/rules/feature-generation-patterns.md`,
+`.claude/rules/test-execution.md`) travel with the generation prompt
 automatically. Unlike a one-time instruction in a chat session, they are
 present for every subsequent generation.
 
