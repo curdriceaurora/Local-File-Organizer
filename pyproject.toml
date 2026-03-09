@@ -52,7 +52,8 @@ dependencies = [
 
     # API and async
     "fastapi>=0.109.0",
-    "starlette>=0.36.0",  # Direct imports: BaseHTTPMiddleware, Response, WebSocketState
+    "starlette>=0.35.0",  # Direct imports: BaseHTTPMiddleware, Response, WebSocketState
+    "aiofiles>=23.0.0",  # Required by Starlette StaticFiles for async file serving
     "jinja2>=3.1.0",
     "uvicorn[standard]>=0.27.0",
     "websockets>=12.0",
@@ -362,6 +363,7 @@ pep621_dev_dependency_groups = ["dev", "docs", "build"]
 [tool.deptry.per_rule_ignores]
 # netCDF4: in scientific optional group; deptry has mixed-case matching issues
 DEP001 = ["netCDF4"]
+# aiofiles: Starlette StaticFiles uses it for async file serving (no direct import)
 # python-multipart: FastAPI uses it for file uploads (no direct import)
 # lxml: used as bs4 parser string "lxml" (not imported directly)
 # email-validator: pydantic uses it for EmailStr (not imported directly)
@@ -373,6 +375,7 @@ DEP001 = ["netCDF4"]
 # openpyxl: pandas uses it for Excel I/O (not imported directly)
 # local-file-organizer: self-reference in the [all] optional group
 DEP002 = [
+    "aiofiles",
     "python-multipart",
     "lxml",
     "email-validator",
