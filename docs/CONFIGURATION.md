@@ -43,7 +43,7 @@ models:
 ### OpenAI-Compatible Provider (Cloud or Local API)
 
 File Organizer can route model calls to any OpenAI-compatible endpoint instead of
-Ollama. This covers hosted providers (OpenAI, Groq, Together.ai) and local servers
+Ollama. This covers hosted providers (OpenAI) and local servers
 (LM Studio, vLLM, Ollama's built-in OpenAI-compat endpoint).
 
 Install the optional dependency first:
@@ -69,13 +69,6 @@ Then configure via environment variables — no config file changes needed:
 FO_PROVIDER=openai \
 FO_OPENAI_API_KEY=sk-... \
 FO_OPENAI_MODEL=gpt-4o \
-fo organize ~/Downloads
-
-# Groq (fast inference, no local GPU needed)
-FO_PROVIDER=openai \
-FO_OPENAI_API_KEY=gsk_... \
-FO_OPENAI_BASE_URL=https://api.groq.com/openai/v1 \
-FO_OPENAI_MODEL=llama-3.1-8b-instant \
 fo organize ~/Downloads
 
 # LM Studio (fully local, no API key)
