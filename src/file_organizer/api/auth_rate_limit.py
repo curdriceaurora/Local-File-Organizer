@@ -93,9 +93,9 @@ class RedisLoginRateLimiter:
 
     def _ttl(self, key: str) -> int:
         ttl = self.redis.ttl(key)
-        if ttl is None or ttl < 0:
+        if ttl is None or int(ttl) < 0:  # type: ignore[arg-type]
             return self.window_seconds
-        return int(ttl)
+        return int(ttl)  # type: ignore[arg-type]
 
     def is_blocked(self, key: str) -> tuple[bool, int]:
         """Return whether the key is currently blocked and retry-after seconds."""
@@ -104,7 +104,7 @@ class RedisLoginRateLimiter:
         if value is None:
             return False, 0
         try:
-            count = int(value)
+            count = int(value)  # type: ignore[arg-type]
         except ValueError:
             self.redis.delete(redis_key)
             return False, 0
@@ -119,7 +119,7 @@ class RedisLoginRateLimiter:
         pipe.incr(redis_key)
         pipe.ttl(redis_key)
         count, ttl = pipe.execute()
-        if ttl is None or ttl < 0:
+        if ttl is None or int(ttl) < 0:
             self.redis.expire(redis_key, self.window_seconds)
             ttl = self.window_seconds
         blocked = int(count) >= self.max_attempts

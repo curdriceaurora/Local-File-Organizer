@@ -101,7 +101,7 @@ class DocumentEmbedder:
                 f"vocabulary_size={len(self.vectorizer.vocabulary_)}"
             )
 
-            return dense_embeddings
+            return np.asarray(dense_embeddings)
 
         except Exception as e:
             logger.error(f"Error during fit_transform: {e}")
@@ -129,7 +129,7 @@ class DocumentEmbedder:
             return self.embedding_cache[doc_hash]
 
         # Transform
-        embedding = self.vectorizer.transform([document]).toarray()[0]
+        embedding: np.ndarray = np.asarray(self.vectorizer.transform([document]).toarray()[0])
 
         # Cache the embedding
         self.embedding_cache[doc_hash] = embedding
@@ -148,7 +148,7 @@ class DocumentEmbedder:
         if not self.is_fitted:
             raise RuntimeError("Vectorizer not fitted. Call fit_transform() first.")
 
-        embeddings = self.vectorizer.transform(documents).toarray()
+        embeddings: np.ndarray = np.asarray(self.vectorizer.transform(documents).toarray())
 
         logger.debug(f"Transformed {len(documents)} documents")
 
@@ -168,10 +168,10 @@ class DocumentEmbedder:
 
         try:
             # Try new API first (sklearn >= 1.0)
-            return self.vectorizer.get_feature_names_out().tolist()
+            return list(self.vectorizer.get_feature_names_out().tolist())
         except AttributeError:
             # Fall back to old API
-            return self.vectorizer.get_feature_names()
+            return list(self.vectorizer.get_feature_names())
 
     def get_vocabulary(self) -> dict[str, int]:
         """Get the vocabulary dictionary.
@@ -182,7 +182,7 @@ class DocumentEmbedder:
         if not self.is_fitted:
             raise RuntimeError("Vectorizer not fitted. Call fit_transform() first.")
 
-        return self.vectorizer.vocabulary_
+        return dict(self.vectorizer.vocabulary_)
 
     def get_top_terms(self, embedding: np.ndarray, top_n: int = 10) -> list[tuple[str, float]]:
         """Get top N terms from an embedding by weight.
@@ -284,7 +284,7 @@ class DocumentEmbedder:
         except Exception as e:
             logger.error(f"Error loading cache: {e}")
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Cleanup: save cache on destruction."""
         # Use getattr with defaults to safely handle cases where __init__ failed
         # before these attributes were set (e.g., sklearn import error)

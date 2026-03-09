@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 
 @dataclass
@@ -21,7 +22,7 @@ class FileMetadata:
     accessed_time: datetime
     hash_value: str
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Ensure path is a Path object."""
         if not isinstance(self.path, Path):
             self.path = Path(self.path)
@@ -63,12 +64,12 @@ class DuplicateIndex:
     Provides O(1) lookup for duplicate detection and various statistics.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize an empty duplicate index."""
         self._index: dict[str, list[FileMetadata]] = {}
         self._size_index: dict[int, list[Path]] = {}
 
-    def add_file(self, file_path: Path, file_hash: str, metadata: dict | None = None) -> None:
+    def add_file(self, file_path: Path, file_hash: str, metadata: dict[str, Any] | None = None) -> None:
         """Add a file to the index.
 
         Args:
@@ -159,7 +160,7 @@ class DuplicateIndex:
         """
         return any(len(files) > 1 for files in self._index.values())
 
-    def get_statistics(self) -> dict:
+    def get_statistics(self) -> dict[str, Any]:
         """Get statistics about the index.
 
         Returns:

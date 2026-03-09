@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import types as _t
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -411,6 +412,11 @@ FILENAME:"""
         self.initialize()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: _t.TracebackType | None,
+    ) -> None:
         """Context manager exit."""
         self.cleanup()

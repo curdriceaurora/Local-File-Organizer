@@ -4,7 +4,7 @@ import json
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 
 def detect_legacy_paths(home: Path, config_home: Path, data_home: Path) -> list[Path]:
@@ -43,7 +43,7 @@ class PathMigrator:
         self.legacy_path = legacy_path
         self.canonical_path = canonical_path
         self.backup_path: Optional[Path] = None
-        self.migration_log: dict = {}
+        self.migration_log: dict[str, Any] = {}
 
     def backup_legacy_path(self) -> Path:
         """Create backup of legacy path before migration.
@@ -77,7 +77,7 @@ class PathMigrator:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(item, target)
 
-    def create_migration_log(self) -> dict:
+    def create_migration_log(self) -> dict[str, Any]:
         """Create migration log entry for audit trail.
 
         Returns:

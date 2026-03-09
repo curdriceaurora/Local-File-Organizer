@@ -35,7 +35,7 @@ class Profile:
     learned_patterns: dict[str, Any] | None = None
     confidence_data: dict[str, Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize default values after dataclass initialization."""
         now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         if self.created is None:
@@ -420,7 +420,7 @@ class ProfileManager:
             active_name = self._get_active_profile_name()
             return self._load_profile_from_disk(active_name)
 
-    def update_profile(self, profile_name: str, **updates) -> bool:
+    def update_profile(self, profile_name: str, **updates: Any) -> bool:
         """Update profile fields.
 
         Args:

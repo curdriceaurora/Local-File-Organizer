@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from loguru import logger
 
 from file_organizer.config.path_manager import get_config_dir

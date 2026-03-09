@@ -117,7 +117,7 @@ class ProfileExporter:
                 return False
 
             # Build selective export data
-            export_data = {
+            export_data: dict[str, Any] = {
                 "profile_name": profile.profile_name,
                 "description": f"Selective export: {', '.join(preferences_list)}",
                 "profile_version": profile.profile_version,
@@ -127,26 +127,29 @@ class ProfileExporter:
                 "included_preferences": preferences_list,
             }
 
+            # Ensure preferences is a dict (not None)
+            profile_preferences: dict[str, Any] = profile.preferences or {}
+
             # Include requested preferences
-            preferences = {}
+            preferences: dict[str, Any] = {}
 
             for pref_type in preferences_list:
                 if pref_type == "global":
-                    preferences["global"] = profile.preferences.get("global", {})
+                    preferences["global"] = profile_preferences.get("global", {})
                 elif pref_type == "directory_specific":
-                    preferences["directory_specific"] = profile.preferences.get(
+                    preferences["directory_specific"] = profile_preferences.get(
                         "directory_specific", {}
                     )
                 elif pref_type == "naming":
                     # Extract naming-related preferences
-                    global_prefs = profile.preferences.get("global", {})
+                    global_prefs = profile_preferences.get("global", {})
                     preferences["global"] = preferences.get("global", {})
                     preferences["global"]["naming_patterns"] = global_prefs.get(
                         "naming_patterns", {}
                     )
                 elif pref_type == "folders":
                     # Extract folder-related preferences
-                    global_prefs = profile.preferences.get("global", {})
+                    global_prefs = profile_preferences.get("global", {})
                     preferences["global"] = preferences.get("global", {})
                     preferences["global"]["folder_mappings"] = global_prefs.get(
                         "folder_mappings", {}
@@ -261,18 +264,21 @@ class ProfileExporter:
                 return None
 
             # Calculate export statistics
+            _prefs = profile.preferences or {}
+            _learned = profile.learned_patterns or {}
+            _confidence = profile.confidence_data or {}
             preview = {
                 "profile_name": profile.profile_name,
                 "description": profile.description,
                 "created": profile.created,
                 "updated": profile.updated,
                 "statistics": {
-                    "global_preferences_count": len(profile.preferences.get("global", {})),
+                    "global_preferences_count": len(_prefs.get("global", {})),
                     "directory_specific_count": len(
-                        profile.preferences.get("directory_specific", {})
+                        _prefs.get("directory_specific", {})
                     ),
-                    "learned_patterns_count": len(profile.learned_patterns),
-                    "confidence_data_count": len(profile.confidence_data),
+                    "learned_patterns_count": len(_learned),
+                    "confidence_data_count": len(_confidence),
                 },
                 "export_size_estimate": self._estimate_export_size(profile),
             }

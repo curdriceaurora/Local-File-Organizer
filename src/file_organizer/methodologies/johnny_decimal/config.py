@@ -10,6 +10,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from .categories import AreaDefinition, CategoryDefinition, NumberingScheme
 
@@ -62,7 +63,7 @@ class JohnnyDecimalConfig:
     compatibility: CompatibilityConfig = field(default_factory=CompatibilityConfig)
     custom_mappings: dict[str, int] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         return {
             "scheme": {
@@ -110,7 +111,7 @@ class JohnnyDecimalConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> JohnnyDecimalConfig:
+    def from_dict(cls, data: dict[str, Any]) -> JohnnyDecimalConfig:
         """Create configuration from dictionary."""
         # Parse scheme
         scheme_data = data.get("scheme", {})

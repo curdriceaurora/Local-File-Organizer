@@ -52,7 +52,7 @@ class FileListResponse(BaseModel):
     skip: int
     limit: int
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def files(self) -> list[FileInfo]:
         """Alias for items field for API compatibility."""

@@ -305,7 +305,7 @@ class AdapterRegistry:
     Manages multiple adapters and routes items to appropriate adapter.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize adapter registry."""
         self._adapters: list[MethodologyAdapter] = []
 

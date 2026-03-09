@@ -29,7 +29,7 @@ class CategoryScore:
     confidence: float  # 0.0 to 1.0
     signals: list[str] = field(default_factory=list)  # What triggered this score
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate score and confidence are in valid range [0.0, 1.0]."""
         if not (0.0 <= self.score <= 1.0):
             raise ValueError(
@@ -64,7 +64,7 @@ class Heuristic(ABC):
         self.weight = weight
 
     @abstractmethod
-    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
         """Evaluate file and return category scores.
 
         Args:
@@ -113,7 +113,7 @@ class TemporalHeuristic(Heuristic):
                 return True
         return False
 
-    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
         """Evaluate based on temporal patterns."""
         import time
         from datetime import UTC, datetime
@@ -272,7 +272,7 @@ class ContentHeuristic(Heuristic):
         pattern = r"\b" + re.escape(keyword) + r"\b"
         return bool(re.search(pattern, text, re.IGNORECASE))
 
-    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
         """Evaluate based on content patterns."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -350,7 +350,7 @@ class StructuralHeuristic(Heuristic):
     - Archive folders → ARCHIVE
     """
 
-    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
         """Evaluate based on file structure."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -411,7 +411,7 @@ class AIHeuristic(Heuristic):
     Can use local LLMs via Ollama for semantic understanding.
     """
 
-    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
         """Evaluate using AI (placeholder for future implementation)."""
         scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
 
@@ -493,7 +493,7 @@ class HeuristicEngine:
             PARACategory.ARCHIVE: self._thresholds.archive,
         }
 
-    def evaluate(self, file_path: Path, metadata: dict | None = None) -> HeuristicResult:
+    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
         """Evaluate file using all enabled heuristics.
 
         Args:
@@ -554,10 +554,10 @@ class HeuristicEngine:
 
         # Determine recommendation based on thresholds
         thresholds_map = self.THRESHOLDS
-        recommended = None
-        for category in scores_list:
-            if category.score >= thresholds_map[category.category]:
-                recommended = category.category
+        recommended: PARACategory | None = None
+        for cat_score in scores_list:
+            if cat_score.score >= thresholds_map[cat_score.category]:
+                recommended = cat_score.category
                 break
 
         # Check if manual review needed

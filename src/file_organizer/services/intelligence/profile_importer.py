@@ -74,8 +74,8 @@ class ProfileImporter:
         Returns:
             ValidationResult with validation status and details
         """
-        errors = []
-        warnings = []
+        errors: list[str] = []
+        warnings: list[str] = []
         profile_data = None
 
         try:
@@ -343,7 +343,7 @@ class ProfileImporter:
 
         # Merge selective preferences
         imported_prefs = data.get("preferences", {})
-        current_prefs = existing_profile.preferences
+        current_prefs: dict[str, Any] = existing_profile.preferences or {}
 
         # Merge global preferences
         if "global" in imported_prefs:
@@ -355,11 +355,15 @@ class ProfileImporter:
 
         # Update learned patterns if included
         if "learned_patterns" in data:
-            existing_profile.learned_patterns.update(data["learned_patterns"])
+            (existing_profile.learned_patterns or {}).update(data["learned_patterns"])
+            if existing_profile.learned_patterns is None:
+                existing_profile.learned_patterns = dict(data["learned_patterns"])
 
         # Update confidence data if included
         if "confidence_data" in data:
-            existing_profile.confidence_data.update(data["confidence_data"])
+            (existing_profile.confidence_data or {}).update(data["confidence_data"])
+            if existing_profile.confidence_data is None:
+                existing_profile.confidence_data = dict(data["confidence_data"])
 
         # Save updated profile
         success = self.profile_manager.update_profile(

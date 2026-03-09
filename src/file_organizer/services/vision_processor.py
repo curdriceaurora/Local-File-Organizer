@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import types as _t
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -113,14 +114,14 @@ class VisionProcessor:
             if perform_ocr:
                 extracted_text = self._extract_text(file_path)
                 has_text = bool(extracted_text and len(extracted_text.strip()) > 10)
-                if has_text:
+                if has_text and extracted_text is not None:
                     logger.debug(f"Extracted {len(extracted_text)} chars of text")
 
             # Generate folder name
             folder_name = ""
             if generate_folder:
                 # Use extracted text if available, otherwise use description
-                context = extracted_text if has_text else description
+                context: str = (extracted_text or description) if has_text else description
                 folder_name = self._generate_folder_name(file_path, context)
                 logger.debug(f"Generated folder name: {folder_name}")
 
@@ -128,7 +129,7 @@ class VisionProcessor:
             filename = ""
             if generate_filename:
                 # Use extracted text if available, otherwise use description
-                context = extracted_text if has_text else description
+                context = (extracted_text or description) if has_text else description
                 filename = self._generate_filename(file_path, context)
                 logger.debug(f"Generated filename: {filename}")
 
@@ -448,6 +449,11 @@ FILENAME:"""
         self.initialize()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: _t.TracebackType | None,
+    ) -> None:
         """Context manager exit."""
         self.cleanup()

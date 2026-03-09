@@ -10,6 +10,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from .content_analyzer import ContentTagAnalyzer
 from .tag_learning import TagLearningEngine
@@ -25,9 +26,9 @@ class TagSuggestion:
     confidence: float  # 0-100
     source: str  # content, behavior, hybrid
     reasoning: str
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "tag": self.tag,
@@ -38,7 +39,7 @@ class TagSuggestion:
         }
 
     @staticmethod
-    def from_dict(data: dict) -> TagSuggestion:
+    def from_dict(data: dict[str, Any]) -> TagSuggestion:
         """Create from dictionary."""
         return TagSuggestion(
             tag=data["tag"],
@@ -67,7 +68,7 @@ class TagRecommendation:
         """Get tags with confidence 40-70%."""
         return [s.tag for s in self.suggestions if 40 <= s.confidence < 70]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "file_path": str(self.file_path),
@@ -348,7 +349,7 @@ class TagRecommender:
 
     def _get_related_suggestions(self, existing_tags: list[str]) -> list[tuple[str, float]]:
         """Get suggestions based on tag relationships."""
-        related_tags = {}
+        related_tags: dict[str, float] = {}
 
         for tag in existing_tags:
             related = self.learning_engine.get_related_tags(tag, max_related=5)

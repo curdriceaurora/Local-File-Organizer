@@ -11,7 +11,7 @@ import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .database import DatabaseManager
 from .models import Operation, OperationStatus, OperationType, Transaction, TransactionStatus
@@ -118,7 +118,7 @@ class OperationHistory:
 
         with self.db.transaction() as conn:
             cursor = conn.execute(query, params)
-            operation_id = cursor.lastrowid
+            operation_id: int = cast(int, cursor.lastrowid)
 
             # Update transaction operation count if in a transaction
             if transaction_id:
@@ -252,7 +252,7 @@ class OperationHistory:
             List of operations matching the filters
         """
         query = "SELECT * FROM operations WHERE 1=1"
-        params = []
+        params: list[Any] = []
 
         if operation_type:
             query += " AND operation_type = ?"
@@ -338,10 +338,10 @@ class OperationHistory:
         """Close database connection."""
         self.db.close()
 
-    def __enter__(self):
+    def __enter__(self) -> OperationHistory:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
         """Context manager exit."""
         self.close()

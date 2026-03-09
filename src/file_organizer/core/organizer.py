@@ -734,7 +734,7 @@ class FileOrganizer:
         Returns:
             Dictionary of folder -> list of files
         """
-        organized = {}
+        organized: dict[str, list[str]] = {}
         output_path.mkdir(parents=True, exist_ok=True)
 
         for result in processed:
@@ -801,7 +801,7 @@ class FileOrganizer:
         Returns:
             Dictionary of folder -> list of files
         """
-        organized = {}
+        organized: dict[str, list[str]] = {}
 
         for result in processed:
             if result.error:

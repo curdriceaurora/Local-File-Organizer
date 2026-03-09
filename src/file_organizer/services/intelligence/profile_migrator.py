@@ -42,7 +42,7 @@ class ProfileMigrator:
             profile_manager: ProfileManager instance
         """
         self.profile_manager = profile_manager
-        self._migration_functions: dict[str, Callable] = {
+        self._migration_functions: dict[str, Callable[..., Any]] = {
             # Future migrations will be registered here
             # e.g., '1.0->2.0': self._migrate_v1_to_v2
         }
@@ -156,7 +156,7 @@ class ProfileMigrator:
             print(f"Error migrating profile: {e}")
             return False
 
-    def _find_migration_path(self, from_version: str, to_version: str) -> list | None:
+    def _find_migration_path(self, from_version: str, to_version: str) -> list[Any] | None:
         """Find migration path between versions.
 
         Args:
@@ -305,7 +305,7 @@ class ProfileMigrator:
             print(f"Error validating migration: {e}")
             return False
 
-    def get_migration_history(self, profile_name: str) -> list | None:
+    def get_migration_history(self, profile_name: str) -> list[Any] | None:
         """Get migration history for a profile.
 
         Args:
@@ -322,13 +322,13 @@ class ProfileMigrator:
 
             # Get migration history from profile data
             profile_dict = profile.to_dict()
-            return profile_dict.get("migration_history", [])
+            return list(profile_dict.get("migration_history", []))
 
         except Exception as e:
             print(f"Error getting migration history: {e}")
             return None
 
-    def list_backups(self, profile_name: str | None = None) -> list:
+    def list_backups(self, profile_name: str | None = None) -> list[Any]:
         """List available migration backups.
 
         Args:
@@ -376,10 +376,10 @@ class ProfileMigrator:
         # - Restructure preferences
         # - Add new required fields
         # - Transform data formats
-        pass
+        return data
 
     def register_migration(
-        self, from_version: str, to_version: str, migration_func: Callable
+        self, from_version: str, to_version: str, migration_func: Callable[..., Any]
     ) -> None:
         """Register a custom migration function.
 

@@ -153,7 +153,7 @@ class AudioTranscriber:
 
         return "cpu"
 
-    def _load_model(self):
+    def _load_model(self) -> Any:
         """Lazy load the Whisper model."""
         if self._model is not None:
             return self._model
@@ -212,7 +212,7 @@ class AudioTranscriber:
         model = self._load_model()
 
         # Prepare transcription parameters
-        transcribe_params = {
+        transcribe_params: dict[str, Any] = {
             "beam_size": options.beam_size,
             "best_of": options.best_of,
             "temperature": options.temperature,
@@ -310,7 +310,7 @@ class AudioTranscriber:
 
         return results
 
-    def unload_model(self):
+    def unload_model(self) -> None:
         """Unload the model to free memory."""
         if self._model is not None:
             del self._model

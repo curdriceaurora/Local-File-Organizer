@@ -27,7 +27,7 @@ class NameStructure:
     char_count: int = 0
     structure_hash: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "original": self.original,
@@ -65,7 +65,7 @@ class NamingAnalyzer:
     # Common word separators
     SEPARATORS = ["_", "-", ".", " "]
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the naming analyzer."""
         self._structure_cache: dict[str, NameStructure] = {}
 
@@ -200,7 +200,7 @@ class NamingAnalyzer:
         struct_orig = self.analyze_structure(original)
         struct_corr = self.analyze_structure(corrected)
 
-        differences = {
+        differences: dict[str, Any] = {
             "delimiter_change": struct_orig.delimiters != struct_corr.delimiters,
             "token_change": struct_orig.tokens != struct_corr.tokens,
             "structure_change": struct_orig.structure_hash != struct_corr.structure_hash,
@@ -297,7 +297,7 @@ class NamingAnalyzer:
         name = Path(filename).stem
         structure = self.analyze_structure(filename)
 
-        components = {
+        components: dict[str, Any] = {
             "base_name": name,
             "tokens": structure.tokens,
             "potential_description": [],
@@ -414,7 +414,7 @@ class NamingAnalyzer:
         if len(str2) == 0:
             return len(str1)
 
-        previous_row = range(len(str2) + 1)
+        previous_row: list[int] = list(range(len(str2) + 1))
         for i, c1 in enumerate(str1):
             current_row = [i + 1]
             for j, c2 in enumerate(str2):

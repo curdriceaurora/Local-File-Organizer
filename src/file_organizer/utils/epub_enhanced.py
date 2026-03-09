@@ -15,6 +15,7 @@ import re
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 try:
     import ebooklib
@@ -98,18 +99,18 @@ class EPUBMetadata:
     publisher: str | None = None
     publication_date: str | None = None
     isbn: str | None = None
-    identifiers: dict[str, str] = None
-    subjects: list[str] = None
+    identifiers: dict[str, str] | None = None
+    subjects: list[str] | None = None
     description: str | None = None
     series: str | None = None
     series_index: float | None = None
     rights: str | None = None
-    contributors: list[str] = None
+    contributors: list[str] | None = None
     has_cover: bool = False
     cover_path: Path | None = None
     epub_version: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize mutable defaults."""
         if self.identifiers is None:
             self.identifiers = {}
@@ -156,7 +157,7 @@ class EnhancedEPUBReader:
         >>> print(f"Chapters: {content.total_chapters}")
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the EPUB reader.
 
         Raises:
@@ -372,7 +373,7 @@ class EnhancedEPUBReader:
 
         return chapters
 
-    def _extract_chapter_title(self, soup: BeautifulSoup, item) -> str:
+    def _extract_chapter_title(self, soup: BeautifulSoup, item: Any) -> str:
         """Extract chapter title from HTML or item metadata.
 
         Args:

@@ -51,7 +51,7 @@ def _plugin_identity(user: UserLike) -> str:
     raw = getattr(user, "id", None)
     if not isinstance(raw, str) or not raw:
         raw = getattr(user, "username", "anonymous")
-    return raw.replace(":", "_")
+    return str(raw).replace(":", "_")
 
 
 def _collect_files(path: Path, recursive: bool, include_hidden: bool) -> list[Path]:

@@ -10,6 +10,7 @@ import hashlib
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from ..models.suggestion_types import ConfidenceFactors, Suggestion, SuggestionType
 from ..models.text_model import TextModel
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 class ConfidenceScorer:
     """Calculates confidence scores for suggestions using multiple factors."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the confidence scorer."""
         pass
 
@@ -31,7 +32,7 @@ class ConfidenceScorer:
         target_path: Path | None,
         suggestion_type: SuggestionType,
         pattern_analysis: PatternAnalysis | None = None,
-        user_history: dict | None = None,
+        user_history: dict[str, Any] | None = None,
     ) -> ConfidenceFactors:
         """Calculate confidence score for a suggestion.
 
@@ -117,7 +118,7 @@ class ConfidenceScorer:
         return similarity
 
     def _calculate_user_history_score(
-        self, file_path: Path, target_path: Path | None, history: dict
+        self, file_path: Path, target_path: Path | None, history: dict[str, Any]
     ) -> float:
         """Calculate score based on user's past actions."""
         if not target_path:
@@ -129,7 +130,7 @@ class ConfidenceScorer:
 
         # Look for similar actions in history
         similar_actions = history.get("move_history", {}).get(file_type, {})
-        target_count = similar_actions.get(target_str, 0)
+        target_count: int = int(similar_actions.get(target_str, 0))
 
         if target_count > 0:
             # User has moved this file type here before
@@ -250,7 +251,7 @@ class SuggestionEngine:
         self,
         files: list[Path],
         pattern_analysis: PatternAnalysis | None = None,
-        user_history: dict | None = None,
+        user_history: dict[str, Any] | None = None,
         max_suggestions: int = 50,
     ) -> list[Suggestion]:
         """Generate suggestions for organizing files.
@@ -292,7 +293,7 @@ class SuggestionEngine:
         return ranked_suggestions[:max_suggestions]
 
     def _suggest_moves(
-        self, files: list[Path], analysis: PatternAnalysis, user_history: dict | None
+        self, files: list[Path], analysis: PatternAnalysis, user_history: dict[str, Any] | None
     ) -> list[Suggestion]:
         """Suggest moving files to better locations."""
         suggestions = []

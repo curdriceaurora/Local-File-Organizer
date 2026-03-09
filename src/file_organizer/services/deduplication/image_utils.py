@@ -367,13 +367,14 @@ def get_best_quality_image(images: list[Path]) -> Path | None:
     if not valid_images:
         return None
 
-    # Get metadata for all valid images
-    metadata_list = [(img, get_image_metadata(img)) for img in valid_images]
+    # Get metadata for all valid images, filtering out None values
+    valid_metadata: list[tuple[Path, ImageMetadata]] = []
+    for img in valid_images:
+        meta = get_image_metadata(img)
+        if meta is not None:
+            valid_metadata.append((img, meta))
 
-    # Filter out images where metadata couldn't be extracted
-    metadata_list = [(img, meta) for img, meta in metadata_list if meta is not None]
-
-    if not metadata_list:
+    if not valid_metadata:
         return None
 
     # Sort by quality criteria
@@ -393,7 +394,7 @@ def get_best_quality_image(images: list[Path]) -> Path | None:
             meta.size_bytes,  # Larger file is better (less compression)
         )
 
-    sorted_images = sorted(metadata_list, key=quality_key, reverse=True)
+    sorted_images = sorted(valid_metadata, key=quality_key, reverse=True)
 
     return sorted_images[0][0]
 
@@ -407,11 +408,12 @@ def format_file_size(size_bytes: int) -> str:
     Returns:
         Formatted string (e.g., "1.5 MB", "234 KB")
     """
+    size: float = float(size_bytes)
     for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024.0
-    return f"{size_bytes:.1f} PB"
+        if size < 1024.0:
+            return f"{size:.1f} {unit}"
+        size /= 1024.0
+    return f"{size:.1f} PB"
 
 
 def get_image_info_string(image_path: Path) -> str:

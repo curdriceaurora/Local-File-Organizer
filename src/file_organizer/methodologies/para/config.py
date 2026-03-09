@@ -13,7 +13,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from .categories import PARACategory
 
@@ -193,7 +193,7 @@ class PARAConfig:
             logger.info("Using default configuration")
             return cls()
 
-    def save_to_yaml(self, config_path: Path):
+    def save_to_yaml(self, config_path: Path) -> None:
         """Save configuration to YAML file.
 
         Args:

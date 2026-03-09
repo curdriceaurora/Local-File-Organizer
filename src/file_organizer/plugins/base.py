@@ -132,7 +132,7 @@ def validate_manifest(
             )
 
     # Optional fields — only type-check if present
-    for field_name, (expected_type, default) in MANIFEST_OPTIONAL_FIELDS.items():
+    for field_name, (expected_type, default) in MANIFEST_OPTIONAL_FIELDS.items():  # type: ignore[assignment]
         if field_name not in manifest:
             continue
         value = manifest[field_name]

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import NoReturn, Optional
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
@@ -131,7 +131,7 @@ def _review_to_response(review: PluginReview) -> MarketplaceReviewResponse:
     )
 
 
-def _raise_marketplace_error(exc: MarketplaceError) -> None:
+def _raise_marketplace_error(exc: MarketplaceError) -> NoReturn:
     message = str(exc)
     lowered = message.lower()
     if "not found" in lowered:
@@ -255,9 +255,10 @@ def add_review(
     raw_user = getattr(user, "id", None)
     if not isinstance(raw_user, str) or not raw_user:
         raw_user = getattr(user, "username", "anonymous")
+    user_id_str: str = str(raw_user) if raw_user is not None else "anonymous"
     review = PluginReview(
         plugin_name=name,
-        user_id=raw_user,
+        user_id=user_id_str,
         rating=request.rating,
         title=request.title,
         content=request.content,

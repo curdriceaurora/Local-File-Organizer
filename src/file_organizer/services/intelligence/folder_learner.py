@@ -11,6 +11,7 @@ import logging
 from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class FolderPreferenceLearner:
         self.pattern_folder_map: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
 
         # Structure: {folder: {metadata}}
-        self.folder_metadata: dict[str, dict] = {}
+        self.folder_metadata: dict[str, dict[str, Any]] = {}
 
         # Total choices tracked
         self.total_choices: int = 0
@@ -54,7 +55,7 @@ class FolderPreferenceLearner:
         self._load_preferences()
 
     def track_folder_choice(
-        self, file_type: str, folder: Path, context: dict | None = None
+        self, file_type: str, folder: Path, context: dict[str, Any] | None = None
     ) -> None:
         """Track a user's folder choice for a file type.
 
@@ -155,13 +156,13 @@ class FolderPreferenceLearner:
 
         return folder_counts.get(folder_str, 0) / total_for_type
 
-    def analyze_organization_patterns(self) -> dict:
+    def analyze_organization_patterns(self) -> dict[str, Any]:
         """Analyze overall organization patterns.
 
         Returns:
             Dictionary with pattern analysis
         """
-        analysis = {
+        analysis: dict[str, Any] = {
             "total_choices": self.total_choices,
             "file_types_tracked": len(self.type_folder_map),
             "folders_used": len(self.folder_metadata),
@@ -191,7 +192,7 @@ class FolderPreferenceLearner:
 
         return analysis
 
-    def suggest_folder_structure(self, file_info: dict, min_confidence: float = 0.5) -> Path | None:
+    def suggest_folder_structure(self, file_info: dict[str, Any], min_confidence: float = 0.5) -> Path | None:
         """Suggest a folder based on file information and learned patterns.
 
         Args:
@@ -222,7 +223,7 @@ class FolderPreferenceLearner:
 
         return None
 
-    def get_folder_stats(self, folder: Path) -> dict:
+    def get_folder_stats(self, folder: Path) -> dict[str, Any]:
         """Get statistics for a specific folder.
 
         Args:

@@ -16,6 +16,7 @@ import shutil
 import tempfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 # fcntl is Unix-only, not available on Windows
 try:
@@ -194,7 +195,7 @@ class BackupManager:
 
         return removed_backups
 
-    def get_backup_info(self, backup_path: Path) -> dict | None:
+    def get_backup_info(self, backup_path: Path) -> dict[str, Any] | None:
         """Get metadata for a specific backup.
 
         Args:
@@ -207,7 +208,7 @@ class BackupManager:
         backup_key = str(Path(backup_path).resolve())
         return manifest.get(backup_key)
 
-    def list_backups(self) -> list[dict]:
+    def list_backups(self) -> list[dict[str, Any]]:
         """List all backups with their metadata.
 
         Returns:
@@ -226,7 +227,7 @@ class BackupManager:
 
         return backups
 
-    def get_statistics(self) -> dict:
+    def get_statistics(self) -> dict[str, Any]:
         """Get statistics about the backup system.
 
         Returns:
@@ -276,7 +277,7 @@ class BackupManager:
 
         return issues
 
-    def _load_manifest(self) -> dict:
+    def _load_manifest(self) -> dict[str, Any]:
         """Load the backup manifest from disk with file locking.
 
         Returns:
@@ -291,7 +292,7 @@ class BackupManager:
                 if HAS_FCNTL:
                     fcntl.flock(f.fileno(), fcntl.LOCK_SH)
                 try:
-                    data = json.load(f)
+                    data: dict[str, Any] = json.load(f)
                 finally:
                     # Release lock (Unix only)
                     if HAS_FCNTL:
@@ -301,7 +302,7 @@ class BackupManager:
             # If manifest is corrupted, start fresh
             return {}
 
-    def _save_manifest(self, manifest: dict) -> None:
+    def _save_manifest(self, manifest: dict[str, Any]) -> None:
         """Save the backup manifest to disk atomically.
 
         Writes to a temp file in the same directory, then uses os.replace()

@@ -30,7 +30,7 @@ def _new_id() -> str:
     return str(uuid.uuid4())
 
 
-class Workspace(Base):
+class Workspace(Base):  # type: ignore[misc]
     """A workspace groups files under a single root directory."""
 
     __tablename__ = "workspaces"
@@ -49,7 +49,7 @@ class Workspace(Base):
         return f"<Workspace {self.name!r} owner={self.owner_id}>"
 
 
-class OrganizationJob(Base):
+class OrganizationJob(Base):  # type: ignore[misc]
     """Tracks an asynchronous file-organization job."""
 
     __tablename__ = "organization_jobs"
@@ -77,7 +77,7 @@ class OrganizationJob(Base):
         return f"<OrganizationJob {self.id} status={self.status}>"
 
 
-class UserSession(Base):
+class UserSession(Base):  # type: ignore[misc]
     """Persistent user session metadata."""
 
     __tablename__ = "user_sessions"
@@ -97,7 +97,7 @@ class UserSession(Base):
         return f"<UserSession {self.id} user={self.user_id}>"
 
 
-class SettingsStore(Base):
+class SettingsStore(Base):  # type: ignore[misc]
     """Key/value settings scoped per user (or global when user_id is NULL)."""
 
     __tablename__ = "settings_store"
@@ -116,7 +116,7 @@ class SettingsStore(Base):
         return f"<SettingsStore key={self.key!r} user={self.user_id}>"
 
 
-class PluginInstallation(Base):
+class PluginInstallation(Base):  # type: ignore[misc]
     """Tracks installed plugins and their configuration."""
 
     __tablename__ = "plugin_installations"
@@ -135,7 +135,7 @@ class PluginInstallation(Base):
         return f"<PluginInstallation {self.plugin_name!r} v={self.version}>"
 
 
-class FileMetadata(Base):
+class FileMetadata(Base):  # type: ignore[misc]
     """Persistent file metadata captured for a workspace."""
 
     __tablename__ = "file_metadata"

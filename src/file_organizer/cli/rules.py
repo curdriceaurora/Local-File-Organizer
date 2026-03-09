@@ -208,7 +208,7 @@ def rules_export(
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file path."),
 ) -> None:
     """Export a rule set to YAML."""
-    import yaml
+    import yaml  # type: ignore[import-untyped]
 
     from file_organizer.services.copilot.rules import RuleManager
 

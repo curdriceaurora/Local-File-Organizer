@@ -88,6 +88,7 @@ class EventMonitor:
         full_name = self._manager.config.get_stream_name(stream)
 
         try:
+            assert self._manager._redis is not None
             info = self._manager._redis.xinfo_stream(full_name)
 
             length = info.get("length", 0)
@@ -132,6 +133,7 @@ class EventMonitor:
 
         try:
             # Get pending entries summary
+            assert self._manager._redis is not None
             pending_info = self._manager._redis.xpending(full_name, group)
             pending = pending_info.get("pending", 0) if pending_info else 0
 
@@ -193,6 +195,7 @@ class EventMonitor:
             end_ms = str(int(now.timestamp() * 1000))
 
             # Count events in the window using XRANGE
+            assert self._manager._redis is not None
             results = self._manager._redis.xrange(
                 full_name,
                 min=start_ms,

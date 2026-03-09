@@ -504,7 +504,7 @@ Examples:
             progress_bar.close()
 
         # Get duplicate groups
-        duplicate_groups = detector.get_duplicate_groups()  # type: ignore[no-untyped-call]
+        duplicate_groups = detector.get_duplicate_groups()
 
         if not duplicate_groups:
             console.print("\n[green]✓ No duplicate files found![/green]")

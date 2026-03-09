@@ -10,6 +10,7 @@ import logging
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class QualityMetrics:
     color_depth: int  # Bits per pixel
     modification_time: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert metrics to dictionary."""
         return {
             "resolution": self.resolution,
@@ -91,6 +92,7 @@ class ImageQualityAnalyzer:
         self._validate_weights()
 
         # Try to import PIL
+        self.Image: Any = None
         try:
             from PIL import Image
 
@@ -98,7 +100,6 @@ class ImageQualityAnalyzer:
             self._pil_available = True
         except ImportError:
             logger.warning("PIL not available, quality analysis will be limited")
-            self.Image = None
             self._pil_available = False
 
     def _validate_weights(self) -> None:

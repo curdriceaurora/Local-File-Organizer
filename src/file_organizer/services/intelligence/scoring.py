@@ -15,14 +15,14 @@ class ScoredPattern:
     """A pattern with its calculated confidence score."""
 
     pattern_id: str
-    pattern_data: dict
+    pattern_data: dict[str, Any]
     confidence: float
     frequency_score: float
     recency_score: float
     consistency_score: float
-    metadata: dict = None
+    metadata: dict[str, Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize default metadata."""
         if self.metadata is None:
             self.metadata = {}
@@ -266,7 +266,7 @@ class ScoreAnalyzer:
         confidences = [p.confidence for p in patterns]
         confidences_sorted = sorted(confidences)
 
-        result = {
+        result: dict[str, Any] = {
             "count": len(confidences),
             "mean": statistics.mean(confidences),
             "median": statistics.median(confidences),

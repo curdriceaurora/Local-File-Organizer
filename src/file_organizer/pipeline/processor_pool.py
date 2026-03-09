@@ -7,7 +7,8 @@ and proper resource cleanup.
 from __future__ import annotations
 
 import logging
-from typing import Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Any, Protocol, cast, runtime_checkable
 
 from .router import ProcessorType
 
@@ -48,13 +49,13 @@ class ProcessorPool:
 
     def __init__(self) -> None:
         """Initialize an empty processor pool."""
-        self._factories: dict[ProcessorType, callable] = {}
+        self._factories: dict[ProcessorType, Callable[..., Any]] = {}
         self._processors: dict[ProcessorType, BaseProcessor] = {}
 
     def register_factory(
         self,
         processor_type: ProcessorType,
-        factory: callable,
+        factory: Callable[..., Any],
     ) -> None:
         """Register a factory function for a processor type.
 
@@ -96,7 +97,8 @@ class ProcessorPool:
             return None
 
         try:
-            processor = factory()
+            raw = factory()
+            processor = cast("BaseProcessor", raw)
             processor.initialize()
             self._processors[processor_type] = processor
             logger.info("Initialized processor for %s", processor_type.value)

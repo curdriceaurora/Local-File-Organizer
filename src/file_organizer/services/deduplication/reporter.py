@@ -9,6 +9,7 @@ import csv
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +17,11 @@ logger = logging.getLogger(__name__)
 class StorageReporter:
     """Generates reports on storage usage and duplicate detection."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the storage reporter."""
         pass
 
-    def calculate_reclamation(self, duplicate_groups: list[dict]) -> dict:
+    def calculate_reclamation(self, duplicate_groups: list[dict[str, Any]]) -> dict[str, Any]:
         """Calculate storage reclamation metrics.
 
         Args:
@@ -47,7 +48,7 @@ class StorageReporter:
 
         return metrics
 
-    def generate_report(self, duplicate_results: dict, output_format: str = "text") -> str:
+    def generate_report(self, duplicate_results: dict[str, Any], output_format: str = "text") -> str:
         """Generate duplicate detection report.
 
         Args:
@@ -88,7 +89,7 @@ class StorageReporter:
 
         return "\n".join(lines)
 
-    def export_to_csv(self, duplicate_groups: list[dict], output_path: Path) -> None:
+    def export_to_csv(self, duplicate_groups: list[dict[str, Any]], output_path: Path) -> None:
         """Export duplicate groups to CSV.
 
         Args:
@@ -130,7 +131,7 @@ class StorageReporter:
             logger.error(f"Error exporting to CSV: {e}")
             raise
 
-    def export_to_json(self, duplicate_results: dict, output_path: Path) -> None:
+    def export_to_json(self, duplicate_results: dict[str, Any], output_path: Path) -> None:
         """Export results to JSON.
 
         Args:

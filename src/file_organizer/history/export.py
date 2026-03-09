@@ -11,6 +11,7 @@ import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from .database import DatabaseManager
 from .models import Operation, OperationStatus, OperationType, Transaction, TransactionStatus
@@ -91,7 +92,7 @@ class HistoryExporter:
         operations = [Operation.from_row(row).to_dict() for row in rows]
 
         # Build export data
-        export_data = {
+        export_data: dict[str, Any] = {
             "export_date": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "operation_count": len(operations),
             "operations": operations,
@@ -300,7 +301,7 @@ class HistoryExporter:
         """
         logger.info(f"Exporting statistics to JSON: {output_path}")
 
-        stats = {}
+        stats: dict[str, Any] = {}
 
         # Overall counts
         stats["total_operations"] = self.db.get_operation_count()

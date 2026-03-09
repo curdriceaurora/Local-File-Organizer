@@ -13,6 +13,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .config import PipelineConfig
 from .processor_pool import BaseProcessor, ProcessorPool
@@ -98,7 +99,7 @@ class PipelineOrchestrator:
 
         self._running = False
         self._lock = threading.Lock()
-        self._monitor = None
+        self._monitor: Any = None
         self._watch_thread: threading.Thread | None = None
         self._executor = ThreadPoolExecutor(max_workers=config.max_concurrent if config else 4)
 
@@ -341,7 +342,7 @@ class PipelineOrchestrator:
             Exception: If the processor fails.
         """
         # Use the processor's process_file method
-        result = processor.process_file(file_path)
+        result = processor.process_file(file_path)  # type: ignore[attr-defined]
 
         # Adapt the result - both ProcessedFile and ProcessedImage
         # have folder_name and filename attributes

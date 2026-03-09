@@ -334,8 +334,8 @@ class DaemonService:
                 self._sig_wakeup_r, self._sig_wakeup_w = os.pipe()
                 os.set_blocking(self._sig_wakeup_r, False)
                 os.set_blocking(self._sig_wakeup_w, False)
-            self._original_sigterm = signal.getsignal(signal.SIGTERM)
-            self._original_sigint = signal.getsignal(signal.SIGINT)
+            self._original_sigterm = signal.getsignal(signal.SIGTERM)  # type: ignore[assignment]
+            self._original_sigint = signal.getsignal(signal.SIGINT)  # type: ignore[assignment]
             signal.signal(signal.SIGTERM, self._handle_signal)
             signal.signal(signal.SIGINT, self._handle_signal)
             logger.debug("Installed SIGTERM and SIGINT handlers")

@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -163,9 +164,9 @@ class AudioMetadataExtractor:
         logger.info(f"Metadata extracted: {duration:.2f}s, {bitrate}bps")
         return metadata
 
-    def _extract_tags_mutagen(self, audio) -> dict:
+    def _extract_tags_mutagen(self, audio: Any) -> dict[str, Any]:
         """Extract tags from mutagen audio object."""
-        tags = {
+        tags: dict[str, Any] = {
             "title": None,
             "artist": None,
             "album": None,
@@ -257,7 +258,7 @@ class AudioMetadataExtractor:
 
         return tags
 
-    def _check_artwork_mutagen(self, audio) -> tuple[bool, int]:
+    def _check_artwork_mutagen(self, audio: Any) -> tuple[bool, int]:
         """Check for embedded artwork."""
         if audio.tags is None:
             return False, 0

@@ -11,7 +11,7 @@ from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 
 
-class User(Base):
+class User(Base):  # type: ignore[misc,valid-type]
     """User model for API authentication."""
 
     __tablename__ = "users"

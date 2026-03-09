@@ -53,7 +53,7 @@ class PreferenceMetadata:
     last_used: datetime | None = None
     source: str = "user_correction"  # Source of the preference
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert metadata to dictionary."""
         return {
             "created": self.created.isoformat(),
@@ -65,7 +65,7 @@ class PreferenceMetadata:
         }
 
     @staticmethod
-    def from_dict(data: dict) -> PreferenceMetadata:
+    def from_dict(data: dict[str, Any]) -> PreferenceMetadata:
         """Create metadata from dictionary."""
         return PreferenceMetadata(
             created=datetime.fromisoformat(data["created"]),
@@ -87,7 +87,7 @@ class Preference:
     metadata: PreferenceMetadata
     context: dict[str, Any] = field(default_factory=dict)  # Additional context
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert preference to dictionary."""
         return {
             "preference_type": self.preference_type.value,
@@ -98,7 +98,7 @@ class Preference:
         }
 
     @staticmethod
-    def from_dict(data: dict) -> Preference:
+    def from_dict(data: dict[str, Any]) -> Preference:
         """Create preference from dictionary."""
         return Preference(
             preference_type=PreferenceType(data["preference_type"]),
@@ -129,7 +129,7 @@ class Correction:
         ]
         return "|".join(key_parts)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert correction to dictionary."""
         return {
             "correction_type": self.correction_type.value,
@@ -148,12 +148,12 @@ class PreferenceTracker:
     confidence scores and usage frequency.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the preference tracker."""
         self._lock = RLock()  # Reentrant lock for thread safety
         self._preferences: dict[str, list[Preference]] = {}  # Key -> List of preferences
         self._corrections: list[Correction] = []  # History of corrections
-        self._statistics = {
+        self._statistics: dict[str, Any] = {
             "total_corrections": 0,
             "total_preferences": 0,
             "successful_applications": 0,
@@ -203,6 +203,7 @@ class PreferenceTracker:
         pattern_key = correction.get_pattern_key()
 
         # Determine preference type based on correction type
+        pref_value: Any
         if correction.correction_type == CorrectionType.FILE_MOVE:
             pref_type = PreferenceType.FOLDER_MAPPING
             pref_key = pattern_key
@@ -399,7 +400,7 @@ class PreferenceTracker:
 
             preference.metadata.updated = now
 
-    def get_statistics(self) -> dict:
+    def get_statistics(self) -> dict[str, Any]:
         """Get statistics about tracked preferences.
 
         Returns:
@@ -457,7 +458,7 @@ class PreferenceTracker:
                 self._statistics["total_preferences"] -= count
                 return count
 
-    def export_data(self) -> dict:
+    def export_data(self) -> dict[str, Any]:
         """Export all preference data for persistence.
 
         Returns:
@@ -473,7 +474,7 @@ class PreferenceTracker:
                 "exported_at": datetime.now(UTC).isoformat(),
             }
 
-    def import_data(self, data: dict) -> None:
+    def import_data(self, data: dict[str, Any]) -> None:
         """Import preference data from persistence.
 
         Args:

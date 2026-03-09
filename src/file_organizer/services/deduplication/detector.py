@@ -10,6 +10,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .hasher import FileHasher, HashAlgorithm
 from .index import DuplicateIndex, FileMetadata
@@ -252,7 +253,7 @@ class DuplicateDetector:
 
         return duplicates
 
-    def get_duplicate_groups(self):
+    def get_duplicate_groups(self) -> dict[str, Any]:
         """Get all groups of duplicate files.
 
         Returns:
@@ -260,7 +261,7 @@ class DuplicateDetector:
         """
         return self.index.get_duplicates()
 
-    def get_statistics(self):
+    def get_statistics(self) -> dict[str, Any]:
         """Get statistics about detected duplicates.
 
         Returns:
@@ -268,6 +269,6 @@ class DuplicateDetector:
         """
         return self.index.get_statistics()
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear the index and start fresh."""
         self.index.clear()

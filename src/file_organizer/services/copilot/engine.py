@@ -208,6 +208,7 @@ class CopilotEngine:
         prompt_parts.append("\nAssistant:")
 
         prompt = "\n".join(prompt_parts)
+        assert self._text_model is not None, "Text model not initialised"
         response: str = self._text_model.generate(prompt, max_tokens=300)
         return response.strip()
 

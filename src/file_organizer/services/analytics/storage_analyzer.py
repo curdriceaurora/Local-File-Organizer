@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from ...models.analytics import FileDistribution, FileInfo, StorageStats
 
@@ -24,10 +25,10 @@ class StorageAnalyzer:
     - Storage trend tracking
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the storage analyzer."""
         self.cache_ttl = 3600  # 1 hour cache TTL
-        self._cache: dict = {}
+        self._cache: dict[str, Any] = {}
 
     def analyze_directory(
         self, path: Path, max_depth: int | None = None, use_cache: bool = True
@@ -51,7 +52,7 @@ class StorageAnalyzer:
             cached_time, cached_stats = self._cache[cache_key]
             if (datetime.now(UTC) - cached_time).seconds < self.cache_ttl:
                 logger.debug(f"Using cached analysis for {path}")
-                return cached_stats
+                return cached_stats  # type: ignore[no-any-return]
 
         logger.info(f"Analyzing directory: {path}")
 
@@ -188,7 +189,7 @@ class StorageAnalyzer:
 
         return large_files[:top_n]
 
-    def get_duplicate_space(self, duplicate_groups: list[dict]) -> int:
+    def get_duplicate_space(self, duplicate_groups: list[dict[str, Any]]) -> int:
         """Calculate space wasted by duplicates.
 
         Args:
@@ -211,7 +212,7 @@ class StorageAnalyzer:
 
         return wasted
 
-    def _walk_directory(self, path: Path, max_depth: int | None = None, current_depth: int = 0):
+    def _walk_directory(self, path: Path, max_depth: int | None = None, current_depth: int = 0) -> Any:
         """Walk directory with depth limit.
 
         Args:

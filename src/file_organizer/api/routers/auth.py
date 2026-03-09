@@ -55,7 +55,7 @@ def _is_local_request(request: Request) -> bool:
     return request.client.host in _LOCALHOSTS
 
 
-def _access_ttl_seconds(settings: ApiSettings, payload: dict) -> int:
+def _access_ttl_seconds(settings: ApiSettings, payload: dict[str, object]) -> int:
     exp = payload.get("exp")
     if not isinstance(exp, (int, float)):
         return settings.auth_access_token_minutes * 60
@@ -124,7 +124,7 @@ def login(
             )
 
     user = db.query(User).filter(User.username == form_data.username).first()
-    if user is None or not verify_password(form_data.password, user.hashed_password):
+    if user is None or not verify_password(form_data.password, str(user.hashed_password)):
         if settings.auth_login_rate_limit_enabled:
             rate_limiter.record_failure(rate_limit_key)
         raise HTTPException(
@@ -141,15 +141,15 @@ def login(
     if settings.auth_login_rate_limit_enabled:
         rate_limiter.reset(rate_limit_key)
 
-    user.last_login = datetime.now(UTC)
+    user.last_login = datetime.now(UTC)  # type: ignore[assignment]
     db.commit()
 
-    token_bundle = create_token_bundle(user.id, user.username, settings)
+    token_bundle = create_token_bundle(str(user.id), str(user.username), settings)
     refresh_ttl = max(
         int((token_bundle.refresh_expires_at - datetime.now(UTC)).total_seconds()),
         1,
     )
-    token_store.store_refresh(token_bundle.refresh_jti, user.id, refresh_ttl)
+    token_store.store_refresh(token_bundle.refresh_jti, str(user.id), refresh_ttl)
     return TokenResponse(
         access_token=token_bundle.access_token,
         refresh_token=token_bundle.refresh_token,
@@ -185,12 +185,12 @@ def refresh(
         raise HTTPException(status_code=401, detail="User not active")
 
     token_store.revoke_refresh(refresh_jti)
-    token_bundle = create_token_bundle(user.id, user.username, settings)
+    token_bundle = create_token_bundle(str(user.id), str(user.username), settings)
     refresh_ttl = max(
         int((token_bundle.refresh_expires_at - datetime.now(UTC)).total_seconds()),
         1,
     )
-    token_store.store_refresh(token_bundle.refresh_jti, user.id, refresh_ttl)
+    token_store.store_refresh(token_bundle.refresh_jti, str(user.id), refresh_ttl)
 
     return TokenResponse(
         access_token=token_bundle.access_token,

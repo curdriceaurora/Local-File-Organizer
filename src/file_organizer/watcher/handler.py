@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -55,10 +56,10 @@ class FileEventHandler(FileSystemEventHandler):
         self._debounce_lock = threading.Lock()
 
         # Callback hooks (optional, for direct notification without queue)
-        self._on_created_callbacks: list[callable] = []
-        self._on_modified_callbacks: list[callable] = []
-        self._on_deleted_callbacks: list[callable] = []
-        self._on_moved_callbacks: list[callable] = []
+        self._on_created_callbacks: list[Callable[..., object]] = []
+        self._on_modified_callbacks: list[Callable[..., object]] = []
+        self._on_deleted_callbacks: list[Callable[..., object]] = []
+        self._on_moved_callbacks: list[Callable[..., object]] = []
 
     def on_created(self, event: FileSystemEvent) -> None:
         """Handle file/directory creation events.
@@ -92,13 +93,14 @@ class FileEventHandler(FileSystemEventHandler):
         """
         dest_path: Path | None = None
         if hasattr(event, "dest_path") and event.dest_path is not None:
-            dest_path = Path(event.dest_path)
+            raw_dest = event.dest_path
+            dest_path = Path(raw_dest.decode() if isinstance(raw_dest, bytes) else raw_dest)
         self._handle_event(event, EventType.MOVED, dest_path=dest_path)
 
     def register_callback(
         self,
         event_type: EventType,
-        callback: callable,
+        callback: Callable[..., object],
     ) -> None:
         """Register a callback for a specific event type.
 
@@ -130,7 +132,8 @@ class FileEventHandler(FileSystemEventHandler):
             event_type: Classified event type.
             dest_path: Destination path for move events.
         """
-        path = Path(event.src_path)
+        raw_src = event.src_path
+        path = Path(raw_src.decode() if isinstance(raw_src, bytes) else raw_src)
         is_directory = isinstance(event, (DirCreatedEvent, DirDeletedEvent, DirMovedEvent))
 
         # Skip directory events for non-directory-aware processing

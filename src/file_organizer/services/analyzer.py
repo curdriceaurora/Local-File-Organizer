@@ -52,7 +52,7 @@ TEXT:
 Output ONLY the category name, nothing else."""
 
     try:
-        response = model.generate(prompt, temperature=0.3, max_tokens=20)  # type: ignore[attr-defined]
+        response = str(model.generate(prompt, temperature=0.3, max_tokens=20))  # type: ignore[attr-defined]
         category = response.strip().lower()
 
         # Extract first word and validate it's in our list

@@ -5,6 +5,9 @@ Intelligent tag suggestion system that learns from user behavior.
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 from .content_analyzer import ContentTagAnalyzer
 from .tag_learning import TagLearningEngine, TagPattern, TagUsage
 from .tag_recommender import TagRecommendation, TagRecommender, TagSuggestion
@@ -27,7 +30,7 @@ class AutoTaggingService:
     Coordinates content analysis, learning, and recommendation.
     """
 
-    def __init__(self, storage_path=None):
+    def __init__(self, storage_path: Path | None = None) -> None:
         """Initialize the auto-tagging service.
 
         Args:
@@ -39,7 +42,12 @@ class AutoTaggingService:
             content_analyzer=self.content_analyzer, learning_engine=self.learning_engine
         )
 
-    def suggest_tags(self, file_path, existing_tags=None, top_n=10):
+    def suggest_tags(
+        self,
+        file_path: Path,
+        existing_tags: list[str] | None = None,
+        top_n: int = 10,
+    ) -> TagRecommendation:
         """Suggest tags for a file.
 
         Args:
@@ -52,7 +60,12 @@ class AutoTaggingService:
         """
         return self.recommender.recommend_tags(file_path, existing_tags=existing_tags, top_n=top_n)
 
-    def record_tag_usage(self, file_path, tags, context=None):
+    def record_tag_usage(
+        self,
+        file_path: Path,
+        tags: list[str],
+        context: dict[str, Any] | None = None,
+    ) -> None:
         """Record when user applies tags.
 
         Args:
@@ -62,7 +75,7 @@ class AutoTaggingService:
         """
         self.learning_engine.record_tag_application(file_path, tags, context=context)
 
-    def provide_feedback(self, feedback_items):
+    def provide_feedback(self, feedback_items: list[dict[str, Any]]) -> None:
         """Update learning model with user feedback.
 
         Args:
@@ -70,10 +83,10 @@ class AutoTaggingService:
         """
         self.learning_engine.update_model(feedback_items)
 
-    def get_popular_tags(self, limit=20):
+    def get_popular_tags(self, limit: int = 20) -> list[tuple[str, int]]:
         """Get most popular tags."""
         return self.learning_engine.get_popular_tags(limit=limit)
 
-    def get_recent_tags(self, days=30, limit=20):
+    def get_recent_tags(self, days: int = 30, limit: int = 20) -> list[str]:
         """Get recently used tags."""
         return self.learning_engine.get_recent_tags(days=days, limit=limit)

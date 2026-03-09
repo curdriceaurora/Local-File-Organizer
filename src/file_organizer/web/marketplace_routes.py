@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from html import escape
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse
@@ -57,7 +57,7 @@ def _render_marketplace_page(
         Rendered marketplace index page.
     """
     error_message: Optional[str] = None
-    plugins = []
+    plugins: list[Any] = []
     total = 0
     installed_names: set[str] = set()
     try:

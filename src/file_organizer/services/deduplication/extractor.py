@@ -23,7 +23,7 @@ class DocumentExtractor:
     - OpenDocument (.odt)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the document extractor."""
         self.supported_extensions = {".pdf", ".docx", ".txt", ".rtf", ".odt", ".md"}
         self._check_dependencies()
@@ -159,7 +159,7 @@ class DocumentExtractor:
         try:
             import docx
 
-            doc = docx.Document(file_path)
+            doc = docx.Document(str(file_path))
 
             # Extract text from all paragraphs
             text_parts = [paragraph.text for paragraph in doc.paragraphs]
@@ -231,7 +231,7 @@ class DocumentExtractor:
                 with open(file_path, encoding="utf-8", errors="ignore") as f:
                     rtf_content = f.read()
 
-                text = rtf_to_text(rtf_content)
+                text = str(rtf_to_text(rtf_content))
                 logger.debug(f"Extracted {len(text)} chars from RTF: {file_path.name}")
 
                 return text

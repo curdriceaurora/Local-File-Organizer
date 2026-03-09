@@ -12,6 +12,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,7 @@ class PatternAnalysis:
     depth_distribution: dict[int, int]
     analyzed_at: datetime
     total_files: int
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class PatternAnalyzer:
@@ -357,7 +358,7 @@ class PatternAnalyzer:
 
     def _analyze_depth_distribution(self, files: list[Path], root: Path) -> dict[int, int]:
         """Analyze distribution of files across directory depths."""
-        depth_counter = Counter()
+        depth_counter: Counter[int] = Counter()
 
         for file_path in files:
             try:
@@ -371,7 +372,7 @@ class PatternAnalyzer:
     def _extract_common_keywords(self, files: list[Path]) -> list[str]:
         """Extract common keywords from filenames."""
         # Split filenames into words
-        word_counter = Counter()
+        word_counter: Counter[str] = Counter()
 
         for file_path in files:
             # Split on common separators

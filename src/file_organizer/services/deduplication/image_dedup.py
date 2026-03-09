@@ -19,7 +19,7 @@ try:
 
     _IMAGEDEDUP_AVAILABLE = True
 except ImportError:
-    AHash = DHash = PHash = None  # type: ignore[assignment,misc]
+    AHash = DHash = PHash = None
     _IMAGEDEDUP_AVAILABLE = False
 
 from .image_utils import SUPPORTED_FORMATS
@@ -117,7 +117,7 @@ class ImageDeduplicator:
         try:
             # imagededup expects string path
             encoding = self.hasher.encode_image(str(image_path))
-            return encoding
+            return str(encoding) if encoding is not None else None
         except OSError as e:
             logger.warning(f"Could not read image {image_path}: {e}")
             return None

@@ -12,6 +12,7 @@ from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class TagPattern:
     contexts: list[str] = field(default_factory=list)
     last_seen: datetime | None = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         data = asdict(self)
         if self.last_seen:
@@ -35,7 +36,7 @@ class TagPattern:
         return data
 
     @staticmethod
-    def from_dict(data: dict) -> TagPattern:
+    def from_dict(data: dict[str, Any]) -> TagPattern:
         """Create from dictionary."""
         if "last_seen" in data and data["last_seen"]:
             dt = datetime.fromisoformat(data["last_seen"])
@@ -56,7 +57,7 @@ class TagUsage:
     file_types: set[str] = field(default_factory=set)
     contexts: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "tag": self.tag,
@@ -68,7 +69,7 @@ class TagUsage:
         }
 
     @staticmethod
-    def from_dict(data: dict) -> TagUsage:
+    def from_dict(data: dict[str, Any]) -> TagUsage:
         """Create from dictionary."""
         first_used = None
         if data.get("first_used"):
@@ -117,9 +118,9 @@ class TagLearningEngine:
 
         # Learning data structures
         self.tag_usage: dict[str, TagUsage] = {}
-        self.tag_cooccurrence: dict[str, Counter] = defaultdict(Counter)
-        self.file_type_tags: dict[str, Counter] = defaultdict(Counter)
-        self.directory_tags: dict[str, Counter] = defaultdict(Counter)
+        self.tag_cooccurrence: dict[str, Counter[str]] = defaultdict(Counter)
+        self.file_type_tags: dict[str, Counter[str]] = defaultdict(Counter)
+        self.directory_tags: dict[str, Counter[str]] = defaultdict(Counter)
 
         # Load existing data
         self._load_data()
@@ -127,7 +128,7 @@ class TagLearningEngine:
         logger.info("TagLearningEngine initialized")
 
     def record_tag_application(
-        self, file_path: Path, tags: list[str], context: dict | None = None
+        self, file_path: Path, tags: list[str], context: dict[str, Any] | None = None
     ) -> None:
         """Record when a user applies tags to a file.
 
@@ -237,7 +238,7 @@ class TagLearningEngine:
         Returns:
             List of (tag, confidence) tuples
         """
-        predictions = {}
+        predictions: dict[str, float] = {}
 
         file_ext = file_path.suffix.lower()
         directory = str(file_path.parent)
@@ -278,7 +279,7 @@ class TagLearningEngine:
         related = self.tag_cooccurrence[tag].most_common(max_related)
         return [t for t, _ in related]
 
-    def update_model(self, feedback: list[dict]) -> None:
+    def update_model(self, feedback: list[dict[str, Any]]) -> None:
         """Update the learning model based on user feedback.
 
         Args:
@@ -306,7 +307,7 @@ class TagLearningEngine:
             for tag in rejected:
                 if tag in self.tag_usage:
                     # Reduce count slightly (but don't go below 1)
-                    self.tag_usage[tag].count = max(1, self.tag_usage[tag].count - 0.5)
+                    self.tag_usage[tag].count = max(1, int(self.tag_usage[tag].count) - 1)
 
         self._save_data()
 

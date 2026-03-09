@@ -248,7 +248,7 @@ class DeploymentMonitor:
         attempts ``shutil.disk_usage`` and falls back to 0.0.
         """
         if self._disk_usage_func is not None:
-            return self._disk_usage_func()  # type: ignore[operator]
+            return float(self._disk_usage_func())  # type: ignore[operator]
 
         try:
             import shutil

@@ -22,7 +22,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 @dataclass
@@ -96,7 +96,7 @@ class NamingPatternExtractor:
     # Common delimiters
     DELIMITERS = ["_", "-", ".", " ", ""]
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the pattern extractor."""
         self._pattern_cache: dict[str, NamingPattern] = {}
 
@@ -125,7 +125,7 @@ class NamingPatternExtractor:
         }
 
         # Extract potential prefix/suffix
-        parts = self._split_by_delimiters(name_without_ext, analysis["delimiters"])
+        parts = self._split_by_delimiters(name_without_ext, cast(list[str], analysis["delimiters"]))
         if len(parts) > 0:
             analysis["potential_prefix"] = parts[0]
             analysis["potential_suffix"] = parts[-1] if len(parts) > 1 else None
@@ -142,7 +142,7 @@ class NamingPatternExtractor:
         Returns:
             List of delimiters found (ordered by frequency)
         """
-        delimiter_counts = Counter()
+        delimiter_counts: Counter[str] = Counter()
 
         for delimiter in self.DELIMITERS:
             if delimiter == "":
@@ -190,7 +190,7 @@ class NamingPatternExtractor:
             return []
 
         # Analyze each filename
-        all_parts = []
+        all_parts: list[set[str]] = []
         for filename in filenames:
             name = Path(filename).stem
             delimiters = self.extract_delimiters(name)
@@ -201,11 +201,11 @@ class NamingPatternExtractor:
         if not all_parts:
             return []
 
-        common = all_parts[0]
-        for parts in all_parts[1:]:
-            common = common.intersection(parts)
+        common_set: set[str] = all_parts[0]
+        for item_set in all_parts[1:]:
+            common_set = common_set.intersection(item_set)
 
-        return sorted(common)
+        return sorted(common_set)
 
     def identify_structure_pattern(self, filenames: list[str]) -> NamingPattern | None:
         """Identify common structural pattern across filenames.
@@ -223,7 +223,7 @@ class NamingPatternExtractor:
         analyses = [self.analyze_filename(f) for f in filenames]
 
         # Find common delimiter
-        delimiter_counts = Counter()
+        delimiter_counts: Counter[str] = Counter()
         for analysis in analyses:
             if analysis["delimiters"]:
                 delimiter_counts[analysis["delimiters"][0]] += 1
@@ -231,7 +231,7 @@ class NamingPatternExtractor:
         common_delimiter = delimiter_counts.most_common(1)[0][0] if delimiter_counts else None
 
         # Find common date format
-        date_format_counts = Counter()
+        date_format_counts: Counter[str] = Counter()
         for analysis in analyses:
             if analysis["date_info"]:
                 date_format_counts[analysis["date_info"]["format"]] += 1
@@ -315,7 +315,7 @@ class NamingPatternExtractor:
 
         # Add extension
         if file_info.get("extension"):
-            filename += file_info["extension"]
+            filename += str(file_info["extension"])
 
         return filename
 
@@ -432,7 +432,7 @@ class NamingPatternExtractor:
         content = "".join(sorted(filenames[:5]))
         return hashlib.md5(content.encode()).hexdigest()[:12]
 
-    def _build_pattern_elements(self, pattern: NamingPattern, analyses: list[dict]) -> None:
+    def _build_pattern_elements(self, pattern: NamingPattern, analyses: list[dict[str, Any]]) -> None:
         """Build pattern elements from analyses."""
         # This is a simplified version - can be expanded
         position = 0

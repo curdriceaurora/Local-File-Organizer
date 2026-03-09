@@ -148,6 +148,7 @@ class HistoryCleanup:
             f"Cleaning up {operations_to_delete} operations to maintain limit of {max_operations}"
         )
 
+        deleted_count: int
         if max_operations == 0:
             # Special case: delete all operations
             delete_query = "DELETE FROM operations"
@@ -385,7 +386,7 @@ class HistoryCleanup:
         Returns:
             Dictionary with various statistics
         """
-        stats = {}
+        stats: dict[str, Any] = {}
 
         # Operation counts
         stats["total_operations"] = self.db.get_operation_count()
@@ -407,10 +408,10 @@ class HistoryCleanup:
         stats["total_transactions"] = result["count"] if result else 0
 
         # Count by transaction status
-        for status in [TransactionStatus.COMPLETED, TransactionStatus.FAILED]:
+        for txn_status in [TransactionStatus.COMPLETED, TransactionStatus.FAILED]:
             query = "SELECT COUNT(*) as count FROM transactions WHERE status = ?"
-            result = self.db.fetch_one(query, (status.value,))
-            stats[f"transactions_{status.value}"] = result["count"] if result else 0
+            result = self.db.fetch_one(query, (txn_status.value,))
+            stats[f"transactions_{txn_status.value}"] = result["count"] if result else 0
 
         # Oldest and newest operations
         query = "SELECT MIN(timestamp) as oldest, MAX(timestamp) as newest FROM operations"

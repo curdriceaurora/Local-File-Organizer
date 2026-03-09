@@ -272,5 +272,5 @@ class AutoScaler:
     def _now(self) -> float:
         """Return current monotonic time (overridable for testing)."""
         if self._clock is not None and hasattr(self._clock, "time"):
-            return self._clock.time()  # type: ignore[union-attr]
+            return float(self._clock.time())
         return time.monotonic()

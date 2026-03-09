@@ -54,7 +54,12 @@ class OperationTransaction:
         logger.debug(f"Entered transaction {self.transaction_id}")
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
         """Exit transaction context.
 
         Automatically commits on success or rolls back on exception.

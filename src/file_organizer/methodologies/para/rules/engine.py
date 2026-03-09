@@ -85,7 +85,7 @@ class RuleCondition:
     subconditions: list[RuleCondition] | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate condition configuration."""
         if self.type == ConditionType.COMPOSITE and not self.subconditions:
             raise ValueError("Composite conditions must have subconditions")
@@ -113,7 +113,7 @@ class RuleAction:
     reason: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate action configuration."""
         if self.type in [ActionType.CATEGORIZE, ActionType.SUGGEST]:
             if not self.category:
@@ -151,7 +151,7 @@ class Rule:
     enabled: bool = True
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate rule configuration."""
         if not self.conditions:
             raise ValueError("Rule must have at least one condition")

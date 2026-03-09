@@ -180,7 +180,7 @@ def _collect_entries(
         files.sort(key=lambda p: p.name.lower(), reverse=reverse)
     elif sort_by == "size":
         files.sort(
-            key=lambda p: file_stats.get(p).st_size if file_stats.get(p) is not None else 0,
+            key=lambda p: (s := file_stats.get(p)) and s.st_size or 0,
             reverse=reverse,
         )
     elif sort_by == "created":
@@ -213,7 +213,7 @@ def _collect_entries(
         files.sort(key=lambda p: p.suffix.lower(), reverse=reverse)
     else:
         files.sort(
-            key=lambda p: file_stats.get(p).st_mtime if file_stats.get(p) is not None else 0,
+            key=lambda p: (s := file_stats.get(p)) and s.st_mtime or 0,
             reverse=reverse,
         )
 

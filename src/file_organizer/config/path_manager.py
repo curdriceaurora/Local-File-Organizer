@@ -88,7 +88,7 @@ def get_canonical_paths() -> dict[str, Path]:
 class PathManager:
     """Manages all application paths with automatic directory creation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize path manager with canonical paths."""
         self.paths = get_canonical_paths()
 

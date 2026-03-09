@@ -50,13 +50,13 @@ class PatternLearner:
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
         # Initialize components
-        self.pattern_extractor = NamingPatternExtractor()  # type: ignore[no-untyped-call]
+        self.pattern_extractor = NamingPatternExtractor()
         self.confidence_engine = ConfidenceEngine()
         self.folder_learner = FolderPreferenceLearner(
             storage_path=storage_path / "folder_prefs.json"
         )
         self.feedback_processor = FeedbackProcessor()
-        self.preference_tracker = PreferenceTracker()  # type: ignore[no-untyped-call]
+        self.preference_tracker = PreferenceTracker()
 
         # Learning state
         self.learning_enabled = True

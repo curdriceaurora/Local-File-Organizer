@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from threading import Lock
+from typing import cast
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +168,7 @@ class DatabaseManager:
         return self._connection
 
     @contextmanager
-    def transaction(self):
+    def transaction(self) -> Generator[sqlite3.Connection, None, None]:
         """Context manager for database transactions.
 
         Yields:
@@ -186,7 +188,7 @@ class DatabaseManager:
                 logger.error(f"Transaction failed: {e}")
                 raise
 
-    def execute_query(self, query: str, params: tuple | None = None) -> sqlite3.Cursor:
+    def execute_query(self, query: str, params: tuple[object, ...] | None = None) -> sqlite3.Cursor:
         """Execute a SQL query with optional parameters.
 
         Args:
@@ -203,7 +205,7 @@ class DatabaseManager:
             else:
                 return conn.execute(query, params)
 
-    def execute_many(self, query: str, params_list: list[tuple]) -> None:
+    def execute_many(self, query: str, params_list: list[tuple[object, ...]]) -> None:
         """Execute a SQL query with multiple parameter sets (batch insert).
 
         Args:
@@ -213,7 +215,7 @@ class DatabaseManager:
         with self.transaction() as conn:
             conn.executemany(query, params_list)
 
-    def fetch_one(self, query: str, params: tuple | None = None) -> sqlite3.Row | None:
+    def fetch_one(self, query: str, params: tuple[object, ...] | None = None) -> sqlite3.Row | None:
         """Execute query and fetch one result.
 
         Args:
@@ -224,9 +226,9 @@ class DatabaseManager:
             Single row result or None
         """
         cursor = self.execute_query(query, params)
-        return cursor.fetchone()
+        return cast("sqlite3.Row | None", cursor.fetchone())
 
-    def fetch_all(self, query: str, params: tuple | None = None) -> list[sqlite3.Row]:
+    def fetch_all(self, query: str, params: tuple[object, ...] | None = None) -> list[sqlite3.Row]:
         """Execute query and fetch all results.
 
         Args:
@@ -275,11 +277,11 @@ class DatabaseManager:
             except Exception as e:
                 logger.error(f"Error closing database connection: {e}")
 
-    def __enter__(self):
+    def __enter__(self) -> DatabaseManager:
         """Context manager entry."""
         self.initialize()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
         """Context manager exit."""
         self.close()

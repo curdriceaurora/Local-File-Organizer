@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from file_organizer._compat import StrEnum
 
@@ -48,7 +49,7 @@ class SceneDetectionResult:
     fps: float
     total_frames: int
     method: DetectionMethod
-    parameters: dict = field(default_factory=dict)
+    parameters: dict[str, Any] = field(default_factory=dict)
 
 
 class SceneDetector:
@@ -92,7 +93,7 @@ class SceneDetector:
         self.min_scene_length = min_scene_length
         self._check_dependencies()
 
-    def _check_dependencies(self):
+    def _check_dependencies(self) -> None:
         """Check if required dependencies are available."""
         try:
             import cv2  # noqa: F401
@@ -269,7 +270,7 @@ class SceneDetector:
                         start_frame=scene_start_frame,
                         end_frame=scene_end_frame,
                         duration=scene_end_time - scene_start_time,
-                        score=min(mean_diff / threshold, 1.0),
+                        score=float(mean_diff / threshold if mean_diff / threshold < 1.0 else 1.0),
                         frame_count=scene_end_frame - scene_start_frame,
                     )
                     scenes.append(scene)
@@ -340,7 +341,7 @@ class SceneDetector:
         return results
 
     @staticmethod
-    def save_scene_list(result: SceneDetectionResult, output_path: str | Path):
+    def save_scene_list(result: SceneDetectionResult, output_path: str | Path) -> None:
         """Save scene detection result to a file.
 
         Args:
@@ -388,7 +389,7 @@ class SceneDetector:
         result: SceneDetectionResult,
         output_dir: str | Path,
         frame_offset: float = 0.5,  # Extract frame at 0.5s into scene
-    ):
+    ) -> None:
         """Extract thumbnail for each detected scene.
 
         Args:

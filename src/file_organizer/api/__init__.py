@@ -4,27 +4,29 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
+
+    from file_organizer.api.config import ApiSettings
 
 __all__ = ["ServiceFacade", "app", "create_app", "get_app"]
 
 # Module-level cache for lazy initialization with thread safety
 _app_cache: Optional[FastAPI] = None
 _app_lock = threading.Lock()
-_create_app_cache: Optional[Callable] = None
+_create_app_cache: Optional[Callable[..., Any]] = None
 
 
-def create_app(settings: Optional[dict] = None) -> FastAPI:
+def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
     """Lazily import and call create_app from main module.
 
     This wrapper breaks the circular dependency and defers app creation.
     It delegates to the real create_app in file_organizer.api.main.
 
     Args:
-        settings: Optional configuration dictionary for the app.
+        settings: Optional ApiSettings configuration for the app.
 
     Returns:
         The initialized FastAPI application instance.
@@ -67,7 +69,8 @@ def get_app() -> FastAPI:
 
             globals()["_app_cache"] = file_organizer.api.main.get_app()
 
-        return _app_cache
+    assert _app_cache is not None, "App cache must be set after initialization"
+    return _app_cache
 
 
 # Keep __getattr__ for backwards compatibility with attribute access

@@ -59,6 +59,9 @@ class UndoManager:
 
         operation = operations[0]
         logger.info(f"Undoing last operation: {operation.id}")
+        if operation.id is None:
+            logger.error("Cannot undo operation with no ID")
+            return False
         return self.undo_operation(operation.id)
 
     def undo_operation(self, operation_id: int) -> bool:
@@ -252,6 +255,9 @@ class UndoManager:
 
         operation = operations[0]
         logger.info(f"Redoing last operation: {operation.id}")
+        if operation.id is None:
+            logger.error("Cannot redo operation with no ID")
+            return False
         return self.redo_operation(operation.id)
 
     def redo_operation(self, operation_id: int) -> bool:

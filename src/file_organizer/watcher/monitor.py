@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections.abc import Callable
 from pathlib import Path
 
 from watchdog.observers import Observer
-from watchdog.observers.api import BaseObserver
+from watchdog.observers.api import BaseObserver, ObservedWatch
 from watchdog.observers.polling import PollingObserver
 
 from .config import WatcherConfig
@@ -56,7 +57,7 @@ class FileMonitor:
         self.handler = FileEventHandler(self.config, self.queue)
 
         self._observer: BaseObserver | None = None
-        self._watches: dict[str, object] = {}
+        self._watches: dict[str, ObservedWatch] = {}
         self._lock = threading.Lock()
         self._running = False
         self._observer_type: str = "none"  # Track which observer is in use
@@ -213,7 +214,7 @@ class FileMonitor:
         batch_size = max_size if max_size is not None else self.config.batch_size
         return self.queue.dequeue_batch_blocking(batch_size, timeout=timeout)
 
-    def on_created(self, callback: callable) -> None:
+    def on_created(self, callback: Callable[..., object]) -> None:
         """Register a callback for file creation events.
 
         Args:
@@ -221,7 +222,7 @@ class FileMonitor:
         """
         self.handler.register_callback(EventType.CREATED, callback)
 
-    def on_modified(self, callback: callable) -> None:
+    def on_modified(self, callback: Callable[..., object]) -> None:
         """Register a callback for file modification events.
 
         Args:
@@ -229,7 +230,7 @@ class FileMonitor:
         """
         self.handler.register_callback(EventType.MODIFIED, callback)
 
-    def on_deleted(self, callback: callable) -> None:
+    def on_deleted(self, callback: Callable[..., object]) -> None:
         """Register a callback for file deletion events.
 
         Args:
@@ -237,7 +238,7 @@ class FileMonitor:
         """
         self.handler.register_callback(EventType.DELETED, callback)
 
-    def on_moved(self, callback: callable) -> None:
+    def on_moved(self, callback: Callable[..., object]) -> None:
         """Register a callback for file move events.
 
         Args:
@@ -291,5 +292,7 @@ class FileMonitor:
             raise FileNotFoundError(f"Watch directory does not exist: {path}")
 
         if self._observer is not None:
-            watch = self._observer.schedule(self.handler, str(path), recursive=recursive)
+            watch: ObservedWatch = self._observer.schedule(
+                self.handler, str(path), recursive=recursive
+            )
             self._watches[path_key] = watch

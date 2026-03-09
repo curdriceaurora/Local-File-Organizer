@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from ...models.analytics import (
     AnalyticsDashboard,
@@ -51,7 +52,7 @@ class AnalyticsService:
     def generate_dashboard(
         self,
         directory: Path,
-        duplicate_groups: list[dict] | None = None,
+        duplicate_groups: list[dict[str, Any]] | None = None,
         max_depth: int | None = None,
     ) -> AnalyticsDashboard:
         """Generate complete analytics dashboard.
@@ -111,7 +112,7 @@ class AnalyticsService:
         stats = self.storage_analyzer.analyze_directory(directory, max_depth)
         return stats
 
-    def get_duplicate_stats(self, duplicate_groups: list[dict], total_size: int) -> DuplicateStats:
+    def get_duplicate_stats(self, duplicate_groups: list[dict[str, Any]], total_size: int) -> DuplicateStats:
         """Get duplication statistics.
 
         Args:

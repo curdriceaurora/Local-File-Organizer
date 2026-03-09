@@ -126,6 +126,10 @@ class RollbackExecutor:
         old_name = operation.source_path
         new_name = operation.destination_path
 
+        if new_name is None:
+            logger.error(f"Cannot rollback rename operation {operation.id}: no destination path")
+            return False
+
         logger.info(f"Rolling back rename: {new_name} -> {old_name}")
 
         try:
@@ -187,6 +191,10 @@ class RollbackExecutor:
         """
         copy_path = operation.destination_path
 
+        if copy_path is None:
+            logger.error(f"Cannot rollback copy operation {operation.id}: no destination path")
+            return False
+
         logger.info(f"Rolling back copy: deleting {copy_path}")
 
         try:
@@ -234,6 +242,10 @@ class RollbackExecutor:
         source = operation.source_path
         destination = operation.destination_path
 
+        if destination is None:
+            logger.error(f"Cannot redo move operation {operation.id}: no destination path")
+            return False
+
         logger.info(f"Redoing move: {source} -> {destination}")
 
         try:
@@ -260,6 +272,10 @@ class RollbackExecutor:
         """
         old_name = operation.source_path
         new_name = operation.destination_path
+
+        if new_name is None:
+            logger.error(f"Cannot redo rename operation {operation.id}: no destination path")
+            return False
 
         logger.info(f"Redoing rename: {old_name} -> {new_name}")
 
@@ -307,6 +323,10 @@ class RollbackExecutor:
         """
         source = operation.source_path
         destination = operation.destination_path
+
+        if destination is None:
+            logger.error(f"Cannot redo copy operation {operation.id}: no destination path")
+            return False
 
         logger.info(f"Redoing copy: {source} -> {destination}")
 
@@ -374,8 +394,8 @@ class RollbackExecutor:
 
         rolled_back = 0
         failed = 0
-        errors = []
-        warnings = []
+        errors: list[tuple[int, str]] = []
+        warnings: list[str] = []
 
         # Rollback operations in reverse order
         for operation in reversed(operations):
@@ -385,10 +405,10 @@ class RollbackExecutor:
                     rolled_back += 1
                 else:
                     failed += 1
-                    errors.append((operation.id, "Rollback operation returned False"))
+                    errors.append((operation.id or 0, "Rollback operation returned False"))
             except Exception as e:
                 failed += 1
-                errors.append((operation.id, str(e)))
+                errors.append((operation.id or 0, str(e)))
                 logger.error(
                     f"Failed to rollback operation {operation.id} in transaction {transaction_id}: {e}"
                 )

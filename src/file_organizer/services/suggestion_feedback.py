@@ -12,6 +12,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from ..models.suggestion_types import Suggestion, SuggestionType
 
@@ -29,9 +30,9 @@ class FeedbackEntry:
     target_path: str | None
     confidence: float
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "suggestion_id": self.suggestion_id,
@@ -47,7 +48,7 @@ class FeedbackEntry:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> FeedbackEntry:
+    def from_dict(cls, data: dict[str, Any]) -> FeedbackEntry:
         """Create from dictionary."""
         return cls(
             suggestion_id=data["suggestion_id"],
@@ -74,9 +75,9 @@ class LearningStats:
     rejection_rate: float = 0.0
     avg_accepted_confidence: float = 0.0
     avg_rejected_confidence: float = 0.0
-    by_type: dict[str, dict] = field(default_factory=dict)
+    by_type: dict[str, dict[str, Any]] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)
 
@@ -108,7 +109,7 @@ class SuggestionFeedback:
         self._load_feedback()
 
     def record_action(
-        self, suggestion: Suggestion, action: str, metadata: dict | None = None
+        self, suggestion: Suggestion, action: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Record user action on a suggestion.
 
@@ -212,7 +213,7 @@ class SuggestionFeedback:
             )
 
         # Stats by type
-        by_type = defaultdict(
+        by_type: defaultdict[str, dict[str, Any]] = defaultdict(
             lambda: {"total": 0, "accepted": 0, "rejected": 0, "acceptance_rate": 0.0}
         )
 
@@ -262,13 +263,13 @@ class SuggestionFeedback:
         # Default: no adjustment
         return 0.0
 
-    def get_user_history(self) -> dict:
+    def get_user_history(self) -> dict[str, Any]:
         """Get user action history for pattern matching.
 
         Returns:
             Dictionary with move history and preferences
         """
-        history = {
+        history: dict[str, Any] = {
             "move_history": defaultdict(lambda: defaultdict(int)),
             "rename_patterns": [],
             "preferred_locations": defaultdict(int),

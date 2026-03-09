@@ -44,7 +44,7 @@ def suggest(
         raise typer.Exit(code=1)
 
     try:
-        service = AutoTaggingService()  # type: ignore[no-untyped-call]
+        service = AutoTaggingService()
     except Exception as exc:
         console.print(f"[red]Error initializing service: {exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -58,7 +58,7 @@ def suggest(
 
     for file_path in files:
         try:
-            recommendation = service.suggest_tags(file_path, top_n=top_n)  # type: ignore[no-untyped-call]
+            recommendation = service.suggest_tags(file_path, top_n=top_n)
         except Exception:
             continue
 
@@ -115,8 +115,8 @@ def apply(
         raise typer.Exit(code=1)
 
     try:
-        service = AutoTaggingService()  # type: ignore[no-untyped-call]
-        service.record_tag_usage(resolved, list(tags))  # type: ignore[no-untyped-call]
+        service = AutoTaggingService()
+        service.record_tag_usage(resolved, list(tags))
     except Exception as exc:
         console.print(f"[red]Error applying tags: {exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -134,8 +134,8 @@ def popular(
     from file_organizer.services.auto_tagging import AutoTaggingService
 
     try:
-        service = AutoTaggingService()  # type: ignore[no-untyped-call]
-        results = service.get_popular_tags(limit=limit)  # type: ignore[no-untyped-call]
+        service = AutoTaggingService()
+        results = service.get_popular_tags(limit=limit)
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -164,8 +164,8 @@ def recent(
     from file_organizer.services.auto_tagging import AutoTaggingService
 
     try:
-        service = AutoTaggingService()  # type: ignore[no-untyped-call]
-        results = service.get_recent_tags(days=days, limit=limit)  # type: ignore[no-untyped-call]
+        service = AutoTaggingService()
+        results = service.get_recent_tags(days=days, limit=limit)
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -200,7 +200,7 @@ def batch(
         raise typer.Exit(code=1)
 
     try:
-        service = AutoTaggingService()  # type: ignore[no-untyped-call]
+        service = AutoTaggingService()
     except Exception as exc:
         console.print(f"[red]Error initializing service: {exc}[/red]")
         raise typer.Exit(code=1) from exc

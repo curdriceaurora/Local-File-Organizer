@@ -539,7 +539,7 @@ class ServiceFacade:
         def _blocking_check() -> bool:
             try:
                 with urllib.request.urlopen(url, timeout=2) as response:
-                    return response.status == 200
+                    return bool(response.status == 200)
             except Exception as exc:
                 logger.debug("Ollama not reachable at {}: {}", url, exc)
                 return False

@@ -93,7 +93,7 @@ class WorkspaceRepository:
             if key in allowed:
                 setattr(workspace, key, value)
 
-        workspace.updated_at = datetime.now(UTC)
+        workspace.updated_at = datetime.now(UTC)  # type: ignore[assignment]
         session.flush()
         return workspace
 

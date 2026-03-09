@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +24,12 @@ class DirectoryPrefs:
     - Efficient lookup with path resolution
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the directory preference manager."""
-        self._preferences: dict[str, dict] = {}
+        self._preferences: dict[str, dict[str, Any]] = {}
         logger.debug("DirectoryPrefs initialized")
 
-    def set_preference(self, path: Path, pref: dict, override_parent: bool = False) -> None:
+    def set_preference(self, path: Path, pref: dict[str, Any], override_parent: bool = False) -> None:
         """Set a preference for a specific directory.
 
         Args:
@@ -52,7 +53,7 @@ class DirectoryPrefs:
         self._preferences[normalized_path] = pref_with_meta
         logger.debug(f"Set preference for {normalized_path}, override_parent={override_parent}")
 
-    def get_preference_with_inheritance(self, path: Path) -> dict | None:
+    def get_preference_with_inheritance(self, path: Path) -> dict[str, Any] | None:
         """Get preference for a path, with inheritance from parent directories.
 
         Walks up the directory tree and merges preferences from parent
@@ -81,7 +82,7 @@ class DirectoryPrefs:
         normalized_path = path.resolve()
 
         # Collect all preferences from root to current path
-        preferences_chain: list[dict] = []
+        preferences_chain: list[dict[str, Any]] = []
         current_path = normalized_path
 
         while True:
@@ -117,7 +118,7 @@ class DirectoryPrefs:
         )
         return result
 
-    def _merge_preferences(self, preferences_chain: list[dict]) -> dict:
+    def _merge_preferences(self, preferences_chain: list[dict[str, Any]]) -> dict[str, Any]:
         """Merge a chain of preferences from parent to child.
 
         Args:
@@ -129,14 +130,14 @@ class DirectoryPrefs:
         if not preferences_chain:
             return {}
 
-        merged = {}
+        merged: dict[str, Any] = {}
 
         for pref in preferences_chain:
             merged = self._deep_merge(merged, pref)
 
         return merged
 
-    def _deep_merge(self, base: dict, overlay: dict) -> dict:
+    def _deep_merge(self, base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
         """Deep merge two dictionaries, with overlay taking precedence.
 
         Args:
@@ -158,7 +159,7 @@ class DirectoryPrefs:
 
         return result
 
-    def list_directory_preferences(self) -> list[tuple[Path, dict]]:
+    def list_directory_preferences(self) -> list[tuple[Path, dict[str, Any]]]:
         """List all directory preferences without inheritance resolution.
 
         Returns:
@@ -224,7 +225,7 @@ class DirectoryPrefs:
         self._preferences.clear()
         logger.info(f"Cleared all directory preferences ({count} entries)")
 
-    def get_statistics(self) -> dict:
+    def get_statistics(self) -> dict[str, Any]:
         """Get statistics about stored preferences.
 
         Returns:

@@ -154,7 +154,7 @@ class Operation:
         )
 
     @classmethod
-    def from_row(cls, row) -> Operation:
+    def from_row(cls, row: Any) -> Operation:
         """Create operation from database row.
 
         Args:
@@ -247,7 +247,7 @@ class Transaction:
         )
 
     @classmethod
-    def from_row(cls, row) -> Transaction:
+    def from_row(cls, row: Any) -> Transaction:
         """Create transaction from database row.
 
         Args:

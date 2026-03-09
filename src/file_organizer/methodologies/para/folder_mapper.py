@@ -115,7 +115,7 @@ class CategoryFolderMapper:
         # Override with rules if available and enabled
         if use_rules and self.rule_engine is not None:
             rule_result = self._evaluate_rules(file_path)
-            if rule_result is not None:
+            if rule_result is not None and rule_result.category is not None:
                 category = PARACategory(rule_result.category)
                 confidence = max(confidence, rule_result.confidence or 0.0)
                 reasoning.insert(0, f"Rule '{rule_result.rule.name}' matched")

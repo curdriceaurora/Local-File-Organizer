@@ -22,10 +22,8 @@ except (
     ImportError,
     ModuleNotFoundError,
 ):  # pragma: no cover - optional dependency runtime fallback
-    Redis = None  # type: ignore[assignment]
-
-    class RedisError(Exception):
-        """Fallback Redis exception type when redis package is unavailable."""
+    Redis = None  # type: ignore[assignment,misc]
+    RedisError = Exception  # type: ignore[assignment,misc]
 
 
 class CacheBackend(Protocol):

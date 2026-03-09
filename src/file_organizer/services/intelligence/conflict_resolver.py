@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import math
 from datetime import UTC, datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ class ConflictResolver:
             f"confidence={self.confidence_weight:.2f}"
         )
 
-    def resolve(self, conflicting_preferences: list[dict]) -> dict:
+    def resolve(self, conflicting_preferences: list[dict[str, Any]]) -> dict[str, Any]:
         """Resolve conflicts between multiple preferences.
 
         Uses weighted scoring to determine the best preference. If preferences
@@ -152,7 +153,7 @@ class ConflictResolver:
 
         return resolved
 
-    def weight_by_recency(self, preferences: list[dict]) -> list[float]:
+    def weight_by_recency(self, preferences: list[dict[str, Any]]) -> list[float]:
         """Calculate recency weights for preferences.
 
         Uses exponential decay: weight = exp(-days_old / decay_factor)
@@ -207,7 +208,7 @@ class ConflictResolver:
 
         return weights
 
-    def weight_by_frequency(self, preferences: list[dict]) -> list[float]:
+    def weight_by_frequency(self, preferences: list[dict[str, Any]]) -> list[float]:
         """Calculate frequency weights for preferences.
 
         Uses correction_count as a proxy for frequency of use.
@@ -256,7 +257,7 @@ class ConflictResolver:
 
         return weights
 
-    def score_confidence(self, preference: dict) -> float:
+    def score_confidence(self, preference: dict[str, Any]) -> float:
         """Calculate confidence score for a preference.
 
         Confidence is a value between 0.0 and 1.0 indicating how
@@ -318,7 +319,7 @@ class ConflictResolver:
             logger.warning(f"Failed to parse timestamp '{timestamp}': {e}")
             return datetime(1970, 1, 1, tzinfo=UTC)
 
-    def get_ambiguity_score(self, conflicting_preferences: list[dict]) -> float:
+    def get_ambiguity_score(self, conflicting_preferences: list[dict[str, Any]]) -> float:
         """Calculate ambiguity score for a set of conflicting preferences.
 
         A score of 0.0 means clear winner, 1.0 means complete ambiguity.
@@ -379,7 +380,7 @@ class ConflictResolver:
         return ambiguity
 
     def needs_user_input(
-        self, conflicting_preferences: list[dict], ambiguity_threshold: float = 0.7
+        self, conflicting_preferences: list[dict[str, Any]], ambiguity_threshold: float = 0.7
     ) -> bool:
         """Determine if user input is needed to resolve conflict.
 

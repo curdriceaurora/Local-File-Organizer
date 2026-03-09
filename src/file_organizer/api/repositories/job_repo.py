@@ -117,9 +117,9 @@ class JobRepository:
         job = session.get(OrganizationJob, job_id)
         if job is None:
             return None
-        job.status = status
-        job.error = error
-        job.updated_at = datetime.now(UTC)
+        job.status = status  # type: ignore[assignment]
+        job.error = error  # type: ignore[assignment]
+        job.updated_at = datetime.now(UTC)  # type: ignore[assignment]
         session.flush()
         return job
 
@@ -146,16 +146,16 @@ class JobRepository:
             return None
 
         if total_files is not None:
-            job.total_files = total_files
+            job.total_files = total_files  # type: ignore[assignment]
         if processed_files is not None:
-            job.processed_files = processed_files
+            job.processed_files = processed_files  # type: ignore[assignment]
         if failed_files is not None:
-            job.failed_files = failed_files
+            job.failed_files = failed_files  # type: ignore[assignment]
         if skipped_files is not None:
-            job.skipped_files = skipped_files
+            job.skipped_files = skipped_files  # type: ignore[assignment]
         if result_json is not None:
-            job.result_json = result_json
+            job.result_json = result_json  # type: ignore[assignment]
 
-        job.updated_at = datetime.now(UTC)
+        job.updated_at = datetime.now(UTC)  # type: ignore[assignment]
         session.flush()
         return job

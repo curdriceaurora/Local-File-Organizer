@@ -225,7 +225,7 @@ class PreferenceDatabaseManager:
         return self._connection
 
     @contextmanager
-    def transaction(self):
+    def transaction(self) -> Any:
         """Context manager for database transactions.
 
         Yields:
@@ -255,7 +255,7 @@ class PreferenceDatabaseManager:
         self.initialize()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
         self.close()
 
@@ -320,7 +320,7 @@ class PreferenceDatabaseManager:
                     ),
                 )
                 row = cursor.fetchone()
-                pref_id = row[0] if row else None
+                pref_id: int | None = int(row[0]) if row else None
                 if pref_id is None:
                     raise RuntimeError("Failed to retrieve preference ID after insert/update")
                 return pref_id
@@ -493,7 +493,7 @@ class PreferenceDatabaseManager:
                     metadata_json,
                 ),
             )
-            return cursor.lastrowid
+            return cursor.lastrowid or 0
 
     def get_corrections(
         self, correction_type: str | None = None, limit: int = 100
@@ -565,7 +565,7 @@ class PreferenceDatabaseManager:
             )
             rows = cursor.fetchall()
 
-            stats = {
+            stats: dict[str, Any] = {
                 "total_preferences": 0,
                 "average_confidence": 0.0,
                 "total_usage_count": 0,

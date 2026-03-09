@@ -96,7 +96,7 @@ class OperationValidator:
             ValidationResult indicating if redo can proceed
         """
         conflicts = []
-        warnings = []
+        warnings: list[str] = []
 
         # Check operation status - must be rolled back to redo
         if operation.status != OperationStatus.ROLLED_BACK:
@@ -137,7 +137,9 @@ class OperationValidator:
         conflicts = []
 
         # Destination should exist (current location)
-        if not self.check_path_exists(operation.destination_path):
+        if operation.destination_path is None or not self.check_path_exists(
+            operation.destination_path
+        ):
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,
@@ -193,7 +195,9 @@ class OperationValidator:
         conflicts = []
 
         # New name should exist (current name)
-        if not self.check_path_exists(operation.destination_path):
+        if operation.destination_path is None or not self.check_path_exists(
+            operation.destination_path
+        ):
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,
@@ -294,7 +298,9 @@ class OperationValidator:
         conflicts = []
 
         # Copy should exist
-        if not self.check_path_exists(operation.destination_path):
+        if operation.destination_path is None or not self.check_path_exists(
+            operation.destination_path
+        ):
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.FILE_MISSING,
@@ -356,7 +362,9 @@ class OperationValidator:
             )
 
         # Destination should be available
-        if not self.check_path_available(operation.destination_path):
+        if operation.destination_path is not None and not self.check_path_available(
+            operation.destination_path
+        ):
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.PATH_OCCUPIED,
@@ -408,7 +416,9 @@ class OperationValidator:
             )
 
         # Destination should be available
-        if not self.check_path_available(operation.destination_path):
+        if operation.destination_path is not None and not self.check_path_available(
+            operation.destination_path
+        ):
             conflicts.append(
                 Conflict(
                     conflict_type=ConflictType.PATH_OCCUPIED,

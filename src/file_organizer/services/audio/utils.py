@@ -216,7 +216,7 @@ def detect_silence_segments(
         )
 
         logger.info(f"Detected {len(silence_ranges)} silence segments")
-        return silence_ranges
+        return list(silence_ranges)
 
     except ImportError:
         logger.warning("pydub not available for silence detection")
@@ -322,7 +322,7 @@ def calculate_audio_checksum(audio_path: str | Path, algorithm: str = "sha256") 
         for chunk in iter(lambda: f.read(4096), b""):
             hash_func.update(chunk)
 
-    return hash_func.hexdigest()
+    return str(hash_func.hexdigest())
 
 
 def get_audio_peak_amplitude(audio_path: str | Path) -> float:
@@ -338,7 +338,7 @@ def get_audio_peak_amplitude(audio_path: str | Path) -> float:
         from pydub import AudioSegment
 
         audio = AudioSegment.from_file(str(audio_path))
-        return audio.max_dBFS
+        return float(audio.max_dBFS)
 
     except ImportError:
         logger.warning("pydub not available for peak amplitude detection")

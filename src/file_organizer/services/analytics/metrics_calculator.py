@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 class MetricsCalculator:
     """Calculates quality metrics and efficiency gains."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the metrics calculator."""
         pass
 
@@ -104,7 +105,7 @@ class MetricsCalculator:
 
     def calculate_improvement_metrics(
         self, current_score: float, previous_score: float | None = None
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Calculate improvement metrics.
 
         Args:
@@ -114,7 +115,7 @@ class MetricsCalculator:
         Returns:
             Dictionary with improvement metrics
         """
-        metrics = {"current_score": current_score, "improvement": 0.0, "trend": "stable"}
+        metrics: dict[str, Any] = {"current_score": current_score, "improvement": 0.0, "trend": "stable"}
 
         if previous_score is not None:
             metrics["improvement"] = current_score - previous_score

@@ -15,7 +15,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 class SchemaVersion(Enum):
@@ -357,7 +357,7 @@ class PreferenceStore:
 
             # Check exact path
             if path_str in self._preferences["directory_preferences"]:
-                return self._preferences["directory_preferences"][path_str].copy()
+                return cast(dict[str, Any], self._preferences["directory_preferences"][path_str].copy())
 
             # Fallback to parent directories
             if fallback_to_parent:
@@ -366,10 +366,10 @@ class PreferenceStore:
                     current = current.parent
                     current_str = str(current)
                     if current_str in self._preferences["directory_preferences"]:
-                        return self._preferences["directory_preferences"][current_str].copy()
+                        return cast(dict[str, Any], self._preferences["directory_preferences"][current_str].copy())
 
             # Return global preferences as ultimate fallback
-            return self._preferences["global_preferences"].copy()
+            return cast(dict[str, Any], self._preferences["global_preferences"].copy())
 
     def update_confidence(self, path: Path, success: bool) -> None:
         """Update confidence score for a directory based on success/failure.
@@ -436,8 +436,8 @@ class PreferenceStore:
             Score value (higher is better)
         """
         # Factors: confidence, correction count, recency
-        confidence = pref.get("confidence", 0.5)
-        correction_count = pref.get("correction_count", 0)
+        confidence: float = float(pref.get("confidence", 0.5))
+        correction_count: int = int(pref.get("correction_count", 0))
 
         # Recency score (more recent = higher score)
         updated = pref.get("updated", "2000-01-01T00:00:00Z")

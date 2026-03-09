@@ -317,10 +317,12 @@ class HistoryViewer:
         """
         all_ops = self.history.get_operations(limit=100000)
 
-        stats = {
+        by_type: dict[str, int] = {}
+        by_status: dict[str, int] = {}
+        stats: dict[str, Any] = {
             "total_operations": len(all_ops),
-            "by_type": {},
-            "by_status": {},
+            "by_type": by_type,
+            "by_status": by_status,
             "latest_operation": None,
             "oldest_operation": None,
         }
@@ -328,12 +330,12 @@ class HistoryViewer:
         # Count by type
         for op_type in OperationType:
             count = sum(1 for op in all_ops if op.operation_type == op_type)
-            stats["by_type"][op_type.value] = count
+            by_type[op_type.value] = count
 
         # Count by status
         for status in OperationStatus:
             count = sum(1 for op in all_ops if op.status == status)
-            stats["by_status"][status.value] = count
+            by_status[status.value] = count
 
         # Get latest and oldest
         if all_ops:
@@ -373,10 +375,10 @@ class HistoryViewer:
         """Close resources."""
         self.history.close()
 
-    def __enter__(self):
+    def __enter__(self) -> HistoryViewer:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
         """Context manager exit."""
         self.close()

@@ -100,6 +100,7 @@ class EventReplayManager:
         try:
             events: list[Event] = []
             last_id = start_ms
+            assert self._manager._redis is not None
             while True:
                 results = self._manager._redis.xrange(
                     full_name,
@@ -170,6 +171,7 @@ class EventReplayManager:
         events: list[Event] = []
 
         try:
+            assert self._manager._redis is not None
             for msg_id in message_ids:
                 results = self._manager._redis.xrange(
                     full_name,

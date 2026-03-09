@@ -36,12 +36,12 @@ class TokenBundle:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Return True if plain_password matches hashed_password."""
-    return _PWD_CONTEXT.verify(plain_password, hashed_password)
+    return bool(_PWD_CONTEXT.verify(plain_password, hashed_password))
 
 
 def hash_password(password: str) -> str:
     """Return the bcrypt hash of password."""
-    return _PWD_CONTEXT.hash(password)
+    return str(_PWD_CONTEXT.hash(password))
 
 
 _COMMON_PASSWORDS: frozenset[str] = frozenset(
@@ -143,11 +143,12 @@ def create_token_bundle(user_id: str, username: str, settings: ApiSettings) -> T
 def decode_token(token: str, settings: ApiSettings) -> dict[str, Any]:
     """Decode and return the JWT payload, raising TokenError if invalid."""
     try:
-        return jwt.decode(
+        result: dict[str, Any] = jwt.decode(
             token,
             settings.auth_jwt_secret.get_secret_value(),
             algorithms=[settings.auth_jwt_algorithm],
         )
+        return result
     except JWTError as exc:
         raise TokenError("Invalid token") from exc
 

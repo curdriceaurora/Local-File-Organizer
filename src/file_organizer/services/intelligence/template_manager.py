@@ -13,7 +13,7 @@ Features:
 from __future__ import annotations
 
 import copy
-from typing import Any
+from typing import Any, cast
 
 from file_organizer.services.intelligence.profile_manager import Profile, ProfileManager
 
@@ -247,7 +247,7 @@ class TemplateManager:
             profile_manager: ProfileManager instance
         """
         self.profile_manager = profile_manager
-        self._templates = copy.deepcopy(self.TEMPLATES)
+        self._templates: dict[str, Any] = copy.deepcopy(self.TEMPLATES)
 
     def list_templates(self) -> list[str]:
         """List all available template names.
@@ -268,7 +268,7 @@ class TemplateManager:
         """
         template_name_lower = template_name.lower()
         if template_name_lower in self._templates:
-            return copy.deepcopy(self._templates[template_name_lower])
+            return cast(dict[str, Any], copy.deepcopy(self._templates[template_name_lower]))
         return None
 
     def preview_template(self, template_name: str) -> dict[str, Any] | None:
@@ -518,9 +518,9 @@ class TemplateManager:
             Comparison dictionary or None on error
         """
         try:
-            comparison = {"templates": [], "differences": []}
+            comparison: dict[str, Any] = {"templates": [], "differences": []}
 
-            templates = []
+            templates: list[dict[str, Any]] = []
             for name in template_names:
                 template = self.get_template(name)
                 if template is None:

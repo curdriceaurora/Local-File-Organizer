@@ -87,7 +87,7 @@ def handle_autotag_command(args: argparse.Namespace) -> None:
         args: Parsed command-line arguments
     """
     # Initialize service
-    service = AutoTaggingService()  # type: ignore[no-untyped-call]
+    service = AutoTaggingService()
 
     if args.autotag_command == "suggest":
         handle_suggest(service, args)
@@ -118,7 +118,7 @@ def handle_suggest(service: AutoTaggingService, args: argparse.Namespace) -> Non
             continue
 
         # Get recommendations
-        recommendation = service.suggest_tags(  # type: ignore[no-untyped-call]
+        recommendation = service.suggest_tags(
             file_path, existing_tags=args.existing_tags, top_n=args.top_n
         )
 
@@ -159,7 +159,7 @@ def handle_apply(service: AutoTaggingService, args: argparse.Namespace) -> None:
         sys.exit(1)
 
     # Record tag application
-    service.record_tag_usage(file_path, args.tags)  # type: ignore[no-untyped-call]
+    service.record_tag_usage(file_path, args.tags)
 
     print(f"✓ Applied tags to {file_path.name}:")
     for tag in args.tags:
@@ -169,7 +169,7 @@ def handle_apply(service: AutoTaggingService, args: argparse.Namespace) -> None:
 
 def handle_popular(service: AutoTaggingService, args: argparse.Namespace) -> None:
     """Handle popular command."""
-    popular = service.get_popular_tags(limit=args.limit)  # type: ignore[no-untyped-call]
+    popular = service.get_popular_tags(limit=args.limit)
 
     if not popular:
         print("No tag usage data yet.")
@@ -185,7 +185,7 @@ def handle_popular(service: AutoTaggingService, args: argparse.Namespace) -> Non
 
 def handle_recent(service: AutoTaggingService, args: argparse.Namespace) -> None:
     """Handle recent command."""
-    recent = service.get_recent_tags(days=args.days, limit=args.limit)  # type: ignore[no-untyped-call]
+    recent = service.get_recent_tags(days=args.days, limit=args.limit)
 
     if not recent:
         print(f"No tags used in the last {args.days} days.")

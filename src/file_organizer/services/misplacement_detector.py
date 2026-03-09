@@ -11,6 +11,7 @@ import mimetypes
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from .pattern_analyzer import PatternAnalysis, PatternAnalyzer
 
@@ -27,10 +28,10 @@ class MisplacedFile:
     mismatch_score: float  # 0-100, higher = more misplaced
     reasons: list[str]
     similar_files: list[Path] = field(default_factory=list)
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     detected_at: datetime = field(default_factory=datetime.now)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "file_path": str(self.file_path),
@@ -58,7 +59,7 @@ class ContextAnalysis:
     parent_category: str
     naming_patterns: list[str]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "file_path": str(self.file_path),

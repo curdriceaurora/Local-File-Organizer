@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from .embedder import DocumentEmbedder
 from .extractor import DocumentExtractor
@@ -42,7 +43,7 @@ class DocumentDeduplicator:
             f"threshold={similarity_threshold}, features={max_features}"
         )
 
-    def find_duplicates(self, file_paths: list[Path], min_text_length: int = 100) -> dict:
+    def find_duplicates(self, file_paths: list[Path], min_text_length: int = 100) -> dict[str, Any]:
         """Find duplicate and similar documents.
 
         Args:
@@ -144,7 +145,7 @@ class DocumentDeduplicator:
             logger.error(f"Error comparing documents: {e}")
             return None
 
-    def _calculate_space_wasted(self, duplicate_groups: list[dict]) -> int:
+    def _calculate_space_wasted(self, duplicate_groups: list[dict[str, Any]]) -> int:
         """Calculate total space wasted by duplicates."""
         wasted = 0
 

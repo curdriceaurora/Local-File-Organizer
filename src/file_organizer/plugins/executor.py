@@ -85,7 +85,7 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
     # 1. Apply resource limits (best-effort; Linux/macOS only)
     # ------------------------------------------------------------------
     try:
-        import resource  # type: ignore[import-not-found]
+        import resource
 
         # Restrict open file descriptors to a safe minimum
         resource.setrlimit(resource.RLIMIT_NOFILE, (64, 64))
@@ -107,7 +107,7 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
 
     module = types.ModuleType(path.stem)
     try:
-        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        spec.loader.exec_module(module)
     except Exception as exc:
         sys.stderr.write(f"Error loading plugin module '{plugin_path}': {exc}\n")
         sys.exit(1)

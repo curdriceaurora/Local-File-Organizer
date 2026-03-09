@@ -533,7 +533,7 @@ class PARAMigrationManager:
         Returns:
             List of backup metadata dictionaries
         """
-        backups = []
+        backups: list[dict[str, Any]] = []
 
         if not self.backup_root.exists():
             return backups

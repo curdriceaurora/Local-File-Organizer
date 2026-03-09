@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -207,11 +208,11 @@ class SemanticAnalyzer:
 
         logger.debug(f"Computed similarity matrix: shape={similarity_matrix.shape}")
 
-        return similarity_matrix
+        return np.asarray(similarity_matrix)
 
     def get_duplicate_groups(
         self, embeddings: np.ndarray, paths: list[Path], min_similarity: float | None = None
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Get groups of duplicate/similar documents with metadata.
 
         Args:
@@ -227,7 +228,7 @@ class SemanticAnalyzer:
         clusters = self.cluster_by_similarity(similar_docs)
 
         # Build group metadata
-        groups = []
+        groups: list[dict[str, Any]] = []
 
         for cluster in clusters:
             if len(cluster) < 2:
@@ -276,7 +277,7 @@ class SemanticAnalyzer:
         self.threshold = threshold
         logger.info(f"Updated similarity threshold to {threshold}")
 
-    def get_statistics(self, similarity_matrix: np.ndarray) -> dict:
+    def get_statistics(self, similarity_matrix: np.ndarray) -> dict[str, Any]:
         """Compute statistics from similarity matrix.
 
         Args:

@@ -44,7 +44,6 @@ class InMemoryRateLimiter:
     ) -> None:
         """Initialize InMemoryRateLimiter with given capacity and sweep interval."""
         self._state: dict[str, RateLimitState] = {}
-        self._state: dict[str, RateLimitState] = {}
         self._last_sweep: int = 0
         self._max_entries = max_entries
         self._sweep_interval_seconds = sweep_interval_seconds
@@ -98,7 +97,7 @@ class RedisRateLimiter:
         local ttl = redis.call("TTL", KEYS[1])
         return {current, ttl}
         """
-        count, ttl = self._redis.eval(script, 1, redis_key, window_seconds)
+        count, ttl = self._redis.eval(script, 1, redis_key, window_seconds)  # type: ignore[misc]
         if ttl is None or int(ttl) < 0:
             ttl = window_seconds
         reset_at = now + int(ttl)

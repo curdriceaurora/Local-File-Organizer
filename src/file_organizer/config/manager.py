@@ -21,7 +21,7 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.config.schema import AppConfig, ModelPreset, UpdateSettings

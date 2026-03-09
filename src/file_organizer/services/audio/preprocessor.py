@@ -10,6 +10,7 @@ import logging
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from file_organizer._compat import StrEnum
 
@@ -59,7 +60,7 @@ class AudioPreprocessor:
         self.config = config or AudioConfig()
         self._check_ffmpeg()
 
-    def _check_ffmpeg(self):
+    def _check_ffmpeg(self) -> None:
         """Check if ffmpeg is available."""
         try:
             import subprocess
@@ -338,7 +339,7 @@ class AudioPreprocessor:
         return current_file
 
     @staticmethod
-    def get_audio_info(audio_path: str | Path) -> dict:
+    def get_audio_info(audio_path: str | Path) -> dict[str, Any]:
         """Get audio file information.
 
         Args:

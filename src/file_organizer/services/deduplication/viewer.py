@@ -300,9 +300,9 @@ class ComparisonViewer:
             ASCII art string or None if preview fails
         """
         try:
-            with Image.open(image_path) as img:
+            with Image.open(image_path) as raw_img:
                 # Convert to grayscale
-                img = img.convert("L")
+                img: Image.Image = raw_img.convert("L")
 
                 # Calculate aspect ratio preserving dimensions
                 aspect_ratio = img.width / img.height

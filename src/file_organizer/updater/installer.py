@@ -91,7 +91,7 @@ class UpdateInstaller:
                     hasher.update(chunk)
                     downloaded += len(chunk)
                     if progress_callback is not None and callable(progress_callback):
-                        progress_callback(downloaded, asset.size)  # type: ignore[operator]
+                        progress_callback(downloaded, asset.size)
 
             tmp.close()
 
