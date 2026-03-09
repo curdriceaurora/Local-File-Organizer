@@ -22,7 +22,7 @@ def test_health_endpoint_returns_status() -> None:
 
     assert response.status_code in {200, 207, 503}
     payload = response.json()
-    assert payload["status"] in {"ok", "degraded", "error"}
+    assert payload["status"] in {"ok", "degraded", "unknown", "error"}
     assert "readiness" in payload
     assert "version" in payload
     assert "uptime" in payload

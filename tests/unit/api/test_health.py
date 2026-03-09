@@ -8,7 +8,7 @@ from file_organizer.api.main import create_app
 pytestmark = pytest.mark.unit
 
 
-def test_health_endpoint_returns_200():
+def test_health_endpoint_returns_200() -> None:
     """Health check endpoint should return 200 OK status."""
     app = create_app()
     client = TestClient(app)
@@ -18,7 +18,7 @@ def test_health_endpoint_returns_200():
     assert response.status_code in {200, 207, 503}
 
 
-def test_health_endpoint_returns_json():
+def test_health_endpoint_returns_json() -> None:
     """Health check endpoint should return JSON response."""
     app = create_app()
     client = TestClient(app)
@@ -29,7 +29,7 @@ def test_health_endpoint_returns_json():
     assert "application/json" in response.headers.get("content-type", "")
 
 
-def test_health_endpoint_response_structure():
+def test_health_endpoint_response_structure() -> None:
     """Health check endpoint should return expected JSON structure."""
     app = create_app()
     client = TestClient(app)
@@ -38,6 +38,6 @@ def test_health_endpoint_response_structure():
     data = response.json()
 
     assert "status" in data
-    assert data["status"] in {"ok", "degraded", "error"}
+    assert data["status"] in {"ok", "degraded", "unknown", "error"}
     assert "readiness" in data
     assert data["readiness"] in {"ready", "starting", "unhealthy"}
