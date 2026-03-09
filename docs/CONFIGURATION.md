@@ -40,6 +40,55 @@ models:
   framework: "ollama"
 ```
 
+### OpenAI-Compatible Provider (Cloud or Local API)
+
+File Organizer can route model calls to any OpenAI-compatible endpoint instead of
+Ollama. This covers hosted providers (OpenAI, Groq, Together.ai) and local servers
+(LM Studio, vLLM, Ollama's built-in OpenAI-compat endpoint).
+
+Install the optional dependency first:
+
+```bash
+pip install -e ".[cloud]"
+```
+
+Then configure via environment variables — no config file changes needed:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `FO_PROVIDER` | `ollama` or `openai` | `ollama` |
+| `FO_OPENAI_API_KEY` | API key (omit for local endpoints) | — |
+| `FO_OPENAI_BASE_URL` | API base URL | `https://api.openai.com/v1` |
+| `FO_OPENAI_MODEL` | Text model name | `gpt-4o-mini` |
+| `FO_OPENAI_VISION_MODEL` | Vision model name (falls back to `FO_OPENAI_MODEL`) | — |
+
+**Examples:**
+
+```bash
+# OpenAI
+FO_PROVIDER=openai \
+FO_OPENAI_API_KEY=sk-... \
+FO_OPENAI_MODEL=gpt-4o \
+fo organize ~/Downloads
+
+# Groq (fast inference, no local GPU needed)
+FO_PROVIDER=openai \
+FO_OPENAI_API_KEY=gsk_... \
+FO_OPENAI_BASE_URL=https://api.groq.com/openai/v1 \
+FO_OPENAI_MODEL=llama-3.1-8b-instant \
+fo organize ~/Downloads
+
+# LM Studio (fully local, no API key)
+FO_PROVIDER=openai \
+FO_OPENAI_BASE_URL=http://localhost:1234/v1 \
+FO_OPENAI_MODEL=your-loaded-model \
+fo organize ~/Downloads
+```
+
+> **Privacy note**: When `FO_PROVIDER=openai`, file content is sent to the
+> configured endpoint. Use a local server (LM Studio, vLLM) to keep data
+> on-device while using the OpenAI-compatible interface.
+
 ### Watcher
 
 Configuration for the file system watcher.
@@ -65,9 +114,16 @@ file-organizer config edit --profile work --methodology para
 
 ### Environment Variables
 
-- `FILE_ORGANIZER_CONFIG`: Custom path to config file.
-- `OLLAMA_HOST`: URL of the Ollama server (default: `http://localhost:11434`).
-- `FO_DISABLE_UPDATE_CHECK`: Set to `1` to disable update checks.
+| Variable | Description |
+|----------|-------------|
+| `FILE_ORGANIZER_CONFIG` | Custom path to config file |
+| `OLLAMA_HOST` | Ollama server URL (default: `http://localhost:11434`) |
+| `FO_DISABLE_UPDATE_CHECK` | Set to `1` to disable update checks |
+| `FO_PROVIDER` | AI provider: `ollama` (default) or `openai` |
+| `FO_OPENAI_API_KEY` | API key for OpenAI-compatible provider |
+| `FO_OPENAI_BASE_URL` | Custom endpoint URL (LM Studio, Groq, vLLM, etc.) |
+| `FO_OPENAI_MODEL` | Text model name when `FO_PROVIDER=openai` |
+| `FO_OPENAI_VISION_MODEL` | Vision model name (defaults to `FO_OPENAI_MODEL`) |
 
 ## Advanced Configuration
 
