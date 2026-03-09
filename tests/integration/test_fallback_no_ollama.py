@@ -16,7 +16,6 @@ import pytest
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.services.text_processor import ProcessedFile
 
-
 pytestmark = pytest.mark.no_ollama
 
 
@@ -129,7 +128,9 @@ class TestFallbackDoesNotCrash:
 class TestFallbackFolderAssignment:
     """_fallback_by_extension assigns the correct folder for each extension."""
 
-    def _fallback_result(self, organizer: FileOrganizer, tmp_path: Path, filename: str) -> ProcessedFile:
+    def _fallback_result(
+        self, organizer: FileOrganizer, tmp_path: Path, filename: str
+    ) -> ProcessedFile:
         """Create a temp file and run _fallback_by_extension on it."""
         f = tmp_path / filename
         f.write_bytes(b"mock content")
@@ -174,12 +175,16 @@ class TestFallbackFolderAssignment:
         r = self._fallback_result(organizer, tmp_path, "drawing.dxf")
         assert r.folder_name == "CAD"
 
-    def test_result_preserves_original_filename(self, organizer: FileOrganizer, tmp_path: Path) -> None:
+    def test_result_preserves_original_filename(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
         """filename field matches the original stem, not a generated name."""
         r = self._fallback_result(organizer, tmp_path, "my-report.pdf")
         assert r.filename == "my-report"
 
-    def test_description_mentions_ollama_unavailable(self, organizer: FileOrganizer, tmp_path: Path) -> None:
+    def test_description_mentions_ollama_unavailable(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
         """description field communicates why extension fallback was used."""
         r = self._fallback_result(organizer, tmp_path, "doc.txt")
         assert "Ollama unavailable" in r.description
@@ -206,7 +211,9 @@ class TestFallbackImageYearFolder:
         assert year_str.isdigit(), f"Expected numeric year, got: {year_str!r}"
         assert 2000 <= int(year_str) <= 2100
 
-    def test_image_folder_unknown_on_stat_failure(self, organizer: FileOrganizer, tmp_path: Path) -> None:
+    def test_image_folder_unknown_on_stat_failure(
+        self, organizer: FileOrganizer, tmp_path: Path
+    ) -> None:
         img = tmp_path / "ghost.jpg"
         img.write_bytes(b"\xff\xd8\xff mock")
 
@@ -273,6 +280,4 @@ class TestHealthResponseWhenDegraded:
             health = await facade.health_check()
 
         assert health["status"] == "ok"
-        assert "capabilities" not in health, (
-            "capabilities key should only appear in degraded state"
-        )
+        assert "capabilities" not in health, "capabilities key should only appear in degraded state"
