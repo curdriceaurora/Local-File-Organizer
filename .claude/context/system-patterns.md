@@ -1,7 +1,7 @@
 ---
 created: 2026-03-08T23:57:34Z
-last_updated: 2026-03-08T23:57:34Z
-version: 1.0
+last_updated: 2026-03-09T07:37:36Z
+version: 1.1
 author: Claude Code PM System
 ---
 
@@ -145,3 +145,30 @@ class PARAStrategy(OrganizationStrategy):
 class JohnnyDecimalStrategy(OrganizationStrategy):
     def categorize(self, metadata: FileMetadata) -> str: ...
 ```
+
+## Provider Factory Pattern (In Progress — Issue #335)
+
+Models are selected via a provider factory rather than direct instantiation, enabling
+Ollama and OpenAI-compatible endpoints (LM Studio, Groq, etc.) to be swapped via config:
+
+```python
+# ModelConfig drives provider selection
+config = ModelConfig(provider="openai", api_base_url="http://localhost:1234/v1", api_key="lm-studio")
+
+# Factory returns correct implementation
+model = provider_factory.get_model(config)
+# provider == "ollama"  → TextModel / VisionModel (existing)
+# provider == "openai"  → OpenAITextModel / OpenAIVisionModel (new)
+
+# Organizer uses factory instead of direct construction
+class FileOrganizer:
+    def organize(self, ...):
+        model = provider_factory.get_model(self.config)
+        ...
+```
+
+Key files (planned):
+- `src/file_organizer/models/base.py` — add `provider`, `api_key`, `api_base_url` to `ModelConfig`
+- `src/file_organizer/models/provider_factory.py` — new factory module
+- `src/file_organizer/models/openai_text_model.py` — new OpenAI wrapper
+- `src/file_organizer/models/openai_vision_model.py` — new OpenAI wrapper

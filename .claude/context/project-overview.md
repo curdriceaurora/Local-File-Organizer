@@ -1,7 +1,7 @@
 ---
 created: 2026-03-08T23:57:34Z
-last_updated: 2026-03-08T23:57:34Z
-version: 1.0
+last_updated: 2026-03-09T07:37:36Z
+version: 1.1
 author: Claude Code PM System
 ---
 
@@ -49,8 +49,9 @@ File Organizer v2.0 is a production-grade, privacy-first AI file management syst
 
 - All phases implemented and tested
 - CI gate: 95% coverage on main branch pushes
-- Active: Issue #611 deferred test implementation (PRs #668, #669, #670 in review)
-- Known gap: `.claude/context/` not yet initialized (this document is the first context file)
+- **New**: OpenAI-compatible provider tier in progress (epic/openai-provider, Issue #335)
+- **Completed**: Issue #611 deferred tests — all PRs #668, #669, #670 merged
+- **Completed**: Ollama graceful degradation (#677) — verifiable offline detection
 
 ## Integration Points
 
