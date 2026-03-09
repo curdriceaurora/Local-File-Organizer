@@ -59,21 +59,6 @@ def organizer() -> FileOrganizer:
 # ---------------------------------------------------------------------------
 
 
-def _ollama_down_patches():
-    """Return a list of context managers that simulate Ollama being unreachable."""
-    conn_err = ConnectionRefusedError("Ollama not running")
-    return [
-        patch(
-            "file_organizer.services.text_processor.TextProcessor.initialize",
-            side_effect=conn_err,
-        ),
-        patch(
-            "file_organizer.services.vision_processor.VisionProcessor.initialize",
-            side_effect=conn_err,
-        ),
-    ]
-
-
 # ---------------------------------------------------------------------------
 # Tests: fallback does not crash
 # ---------------------------------------------------------------------------
@@ -102,10 +87,14 @@ class TestFallbackDoesNotCrash:
         assert result.total_files == expected
         assert result.failed_files == 0
 
-    def test_no_exception_propagated(
+    def test_ollama_recovery_between_calls(
         self, organizer: FileOrganizer, source_dir: Path, output_dir: Path
     ) -> None:
-        """ConnectionRefusedError from Ollama is caught, not re-raised."""
+        """_ollama_available resets to True on each organize() call.
+
+        A second call after Ollama recovers must not be stuck in fallback mode.
+        """
+        # First call: Ollama is down
         with (
             patch(
                 "file_organizer.services.text_processor.TextProcessor.initialize",
@@ -116,8 +105,35 @@ class TestFallbackDoesNotCrash:
                 side_effect=ConnectionRefusedError("down"),
             ),
         ):
-            # Must not raise
             organizer.organize(source_dir, output_dir)
+
+        # Flag was set False during first call
+        assert organizer._ollama_available is False
+
+        # Second call: Ollama has recovered — patches removed, initialize succeeds
+        # We patch initialize to succeed (no-op) and verify the flag resets
+        with (
+            patch(
+                "file_organizer.services.text_processor.TextProcessor.initialize",
+                return_value=None,
+            ),
+            patch(
+                "file_organizer.services.vision_processor.VisionProcessor.initialize",
+                return_value=None,
+            ),
+            patch(
+                "file_organizer.core.organizer.FileOrganizer._process_text_files",
+                return_value=[],
+            ),
+            patch(
+                "file_organizer.core.organizer.FileOrganizer._process_image_files",
+                return_value=[],
+            ),
+        ):
+            organizer.organize(source_dir, output_dir)
+
+        # Flag must be reset True — Ollama is available again
+        assert organizer._ollama_available is True
 
 
 # ---------------------------------------------------------------------------

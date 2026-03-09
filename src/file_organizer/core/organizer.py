@@ -111,7 +111,12 @@ class FileOrganizer:
     _IMAGE_FALLBACK_FOLDER: ClassVar[str] = "Images"
 
     def __init_subclass__(cls, **kwargs: object) -> None:
-        """Verify fallback map covers all text and CAD extensions."""
+        """Verify fallback map covers all text and CAD extensions.
+
+        Fires only for subclasses, not for FileOrganizer itself.
+        Raises TypeError at class-definition time if any extension in
+        TEXT_EXTENSIONS or CAD_EXTENSIONS is missing from _TEXT_FALLBACK_MAP.
+        """
         super().__init_subclass__(**kwargs)
         missing = (cls.TEXT_EXTENSIONS | cls.CAD_EXTENSIONS) - cls._TEXT_FALLBACK_MAP.keys()
         if missing:
@@ -220,6 +225,13 @@ class FileOrganizer:
             text_files, image_files, video_files, audio_files, cad_files, other_files
         )
 
+        # Reset Ollama availability and processors for this organize() call.
+        # A previous call may have marked Ollama unavailable; re-probe each time
+        # so that recovery (user starts Ollama between calls) is detected.
+        self._ollama_available = True
+        self.text_processor = None
+        self.vision_processor = None
+
         # Initialize models
         self.console.print("\n[bold blue]Initializing AI models...[/bold blue]")
 
@@ -229,7 +241,8 @@ class FileOrganizer:
                 self.text_processor = TextProcessor(config=self.text_model_config)
                 self.text_processor.initialize()
                 self.console.print("[green]✓[/green] Text model ready")
-            except Exception as e:
+            except OSError as e:
+                # ConnectionRefusedError, PermissionError, etc. — Ollama not reachable
                 self._ollama_available = False
                 self.console.print(
                     f"[yellow]⚠ Ollama unavailable ({e.__class__.__name__}): "
@@ -245,7 +258,8 @@ class FileOrganizer:
                 self.vision_processor = VisionProcessor(config=self.vision_model_config)
                 self.vision_processor.initialize()
                 self.console.print("[green]✓[/green] Vision model ready")
-            except Exception as e:
+            except OSError as e:
+                # ConnectionRefusedError, PermissionError, etc. — Ollama not reachable
                 self._ollama_available = False
                 self.console.print(
                     f"[yellow]⚠ Ollama unavailable ({e.__class__.__name__}): "
