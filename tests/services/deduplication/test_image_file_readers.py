@@ -34,6 +34,7 @@ sys.modules.setdefault("PIL", _pil_mod)
 sys.modules.setdefault("PIL.Image", _pil_image_mod)
 
 from file_organizer.services.deduplication.image_utils import (  # noqa: E402
+    FORMAT_QUALITY_RANK,
     SUPPORTED_FORMATS,
     ImageMetadata,
     compare_image_quality,
@@ -182,6 +183,16 @@ class TestQualityScoreRanking:
         gif_score = get_format_quality_score(Path("a.gif"))
         for ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"]:
             assert get_format_quality_score(Path(f"x{ext}")) >= gif_score
+
+    def test_full_ranking_is_total_order(self) -> None:
+        """Pin every rank so mid-table regressions (e.g. bmp < webp) are caught."""
+        scores = {ext: get_format_quality_score(Path(f"x{ext}")) for ext in FORMAT_QUALITY_RANK}
+        # Verify the documented ranking: PNG/TIFF (5) > BMP (4) > WEBP (3) > JPEG (2) > GIF (1)
+        assert scores[".png"] == scores[".tiff"] == scores[".tif"]
+        assert scores[".png"] > scores[".bmp"]
+        assert scores[".bmp"] > scores[".webp"]
+        assert scores[".webp"] > scores[".jpg"] == scores[".jpeg"]
+        assert scores[".jpg"] > scores[".gif"]
 
 
 # ---------------------------------------------------------------------------
