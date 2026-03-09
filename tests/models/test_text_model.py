@@ -178,7 +178,7 @@ class TestTextModel:
             model.cleanup()
 
             assert model.client is None
-            assert model._initialized is False
+            assert model.is_initialized is False
 
     @patch("file_organizer.models.text_model.ollama.Client")
     def test_test_connection_success(
