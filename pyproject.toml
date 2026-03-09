@@ -130,7 +130,7 @@ video = [
 
 dedup = [
     "imagededup>=0.3.0",  # Image similarity and duplicate detection
-    "scikit-learn>=1.3.0",  # ML-based text similarity for deduplication
+    "scikit-learn>=1.4.0",  # ML-based text similarity for deduplication
     "PyPDF2>=3.0.0",  # PDF text extraction fallback in dedup extractor
     "striprtf>=0.0.26",  # RTF file text extraction in dedup extractor
 ]
