@@ -361,8 +361,6 @@ pep621_dev_dependency_groups = ["dev", "docs", "build"]
 "PyPDF2" = "PyPDF2"
 "striprtf" = "striprtf"
 [tool.deptry.per_rule_ignores]
-# netCDF4: in scientific optional group; deptry has mixed-case matching issues
-DEP001 = ["netCDF4"]
 # aiofiles: Starlette StaticFiles uses it for async file serving (no direct import)
 # python-multipart: FastAPI uses it for file uploads (no direct import)
 # lxml: used as bs4 parser string "lxml" (not imported directly)
@@ -390,6 +388,4 @@ DEP002 = [
     "pydantic-settings",
     # PyQt6: GUI-only dep; GUI application lives outside src/file_organizer/
     "PyQt6",
-    # netCDF4: mixed-case name causes deptry matching issues; used in scientific.py
-    "netCDF4",
 ]
