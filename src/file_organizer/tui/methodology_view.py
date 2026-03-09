@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from textual import work
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
@@ -180,7 +181,7 @@ class MethodologyView(Vertical):
         self._scan_dir = Path(scan_dir)
         self._methodology = "none"
 
-    def compose(self):  # type: ignore[override]
+    def compose(self) -> ComposeResult:
         """Build the methodology view layout."""
         yield MethodologySelectorPanel()
         yield MethodologyPreviewPanel("[dim]Select a methodology to preview.[/dim]")
@@ -236,7 +237,7 @@ class MethodologyView(Vertical):
             files = [p for p in scan.rglob("*") if p.is_file()][: self._MAX_SAMPLE_FILES]
 
             if not files:
-                self.call_from_thread(
+                self.app.call_from_thread(
                     self.query_one(MethodologyPreviewPanel).show_para_preview,
                     None,
                 )
@@ -252,12 +253,12 @@ class MethodologyView(Vertical):
                 )
                 distribution[cat_name] = distribution.get(cat_name, 0) + 1
 
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(MethodologyPreviewPanel).show_para_preview,
                 distribution,
             )
         except Exception as exc:
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(MethodologyPreviewPanel).show_error,
                 str(exc),
             )
@@ -273,21 +274,21 @@ class MethodologyView(Vertical):
             config = create_default_config()
             scheme = config.scheme
 
-            areas = {num: defn.title for num, defn in scheme.areas.items()} if scheme.areas else {}
+            areas = {num: defn.name for num, defn in scheme.areas.items()} if scheme.areas else {}
 
             categories = (
-                {cat_id: defn.title for cat_id, defn in scheme.categories.items()}
+                {cat_id: defn.name for cat_id, defn in scheme.categories.items()}
                 if scheme.categories
                 else {}
             )
 
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(MethodologyPreviewPanel).show_jd_preview,
                 areas,
                 categories,
             )
         except Exception as exc:
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(MethodologyPreviewPanel).show_error,
                 str(exc),
             )

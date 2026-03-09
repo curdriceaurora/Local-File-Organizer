@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, cast
 
 import typer
 from rich.console import Console
@@ -23,7 +23,7 @@ dedupe_app = typer.Typer(
 )
 
 
-def _get_detector():  # type: ignore[no-untyped-def]
+def _get_detector() -> Any:
     """Lazily import and return a fresh ``DuplicateDetector``."""
     from file_organizer.services.deduplication.detector import DuplicateDetector
 
@@ -38,14 +38,15 @@ def _build_scan_options(
     max_size: Optional[int],
     include: Optional[str],
     exclude: Optional[str],
-):  # type: ignore[no-untyped-def]
+) -> Any:
     """Build ``ScanOptions`` from CLI flags."""
     from file_organizer.services.deduplication.detector import ScanOptions
+    from file_organizer.services.deduplication.hasher import HashAlgorithm
 
     include_patterns = include.split(",") if include else None
     exclude_patterns = exclude.split(",") if exclude else None
     return ScanOptions(
-        algorithm=algorithm,
+        algorithm=cast("HashAlgorithm", algorithm),
         recursive=recursive,
         min_file_size=min_size,
         max_file_size=max_size,
@@ -216,8 +217,9 @@ def report(
     """Scan and display a summary report of duplicates."""
     detector = _get_detector()
     from file_organizer.services.deduplication.detector import ScanOptions
+    from file_organizer.services.deduplication.hasher import HashAlgorithm
 
-    options = ScanOptions(algorithm=algorithm, recursive=recursive)
+    options = ScanOptions(algorithm=cast("HashAlgorithm", algorithm), recursive=recursive)
 
     with console.status("Scanning…"):
         detector.scan_directory(directory, options)

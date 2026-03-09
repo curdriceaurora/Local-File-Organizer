@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -43,7 +44,7 @@ def suggest(
         raise typer.Exit(code=1)
 
     try:
-        service = AutoTaggingService()
+        service = AutoTaggingService()  # type: ignore[no-untyped-call]
     except Exception as exc:
         console.print(f"[red]Error initializing service: {exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -53,11 +54,11 @@ def suggest(
         console.print("[dim]No files found in directory.[/dim]")
         raise typer.Exit(code=0)
 
-    all_results: list[dict] = []
+    all_results: list[dict[str, Any]] = []
 
     for file_path in files:
         try:
-            recommendation = service.suggest_tags(file_path, top_n=top_n)
+            recommendation = service.suggest_tags(file_path, top_n=top_n)  # type: ignore[no-untyped-call]
         except Exception:
             continue
 
@@ -114,8 +115,8 @@ def apply(
         raise typer.Exit(code=1)
 
     try:
-        service = AutoTaggingService()
-        service.record_tag_usage(resolved, list(tags))
+        service = AutoTaggingService()  # type: ignore[no-untyped-call]
+        service.record_tag_usage(resolved, list(tags))  # type: ignore[no-untyped-call]
     except Exception as exc:
         console.print(f"[red]Error applying tags: {exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -133,8 +134,8 @@ def popular(
     from file_organizer.services.auto_tagging import AutoTaggingService
 
     try:
-        service = AutoTaggingService()
-        results = service.get_popular_tags(limit=limit)
+        service = AutoTaggingService()  # type: ignore[no-untyped-call]
+        results = service.get_popular_tags(limit=limit)  # type: ignore[no-untyped-call]
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -163,8 +164,8 @@ def recent(
     from file_organizer.services.auto_tagging import AutoTaggingService
 
     try:
-        service = AutoTaggingService()
-        results = service.get_recent_tags(days=days, limit=limit)
+        service = AutoTaggingService()  # type: ignore[no-untyped-call]
+        results = service.get_recent_tags(days=days, limit=limit)  # type: ignore[no-untyped-call]
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -199,7 +200,7 @@ def batch(
         raise typer.Exit(code=1)
 
     try:
-        service = AutoTaggingService()
+        service = AutoTaggingService()  # type: ignore[no-untyped-call]
     except Exception as exc:
         console.print(f"[red]Error initializing service: {exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -219,7 +220,7 @@ def batch(
         console.print(f"[red]Error during batch processing: {exc}[/red]")
         raise typer.Exit(code=1) from exc
 
-    output_data = []
+    output_data: list[dict[str, Any]] = []
     for fpath, recommendation in results.items():
         output_data.append(
             {

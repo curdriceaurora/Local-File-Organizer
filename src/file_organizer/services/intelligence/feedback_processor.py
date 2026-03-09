@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -23,15 +24,15 @@ class FeedbackProcessor:
     - Learning event triggers
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the feedback processor."""
         self.correction_count = 0
         self.batch_processing_enabled = True
         self.learning_threshold = 5  # Trigger retraining after N corrections
 
     def process_correction(
-        self, original: Path, corrected: Path, context: dict | None = None
-    ) -> dict:
+        self, original: Path, corrected: Path, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Process a single user correction in real-time.
 
         Args:
@@ -42,7 +43,7 @@ class FeedbackProcessor:
         Returns:
             Dictionary with extracted learning insights
         """
-        insights = {
+        insights: dict[str, Any] = {
             "timestamp": datetime.now(UTC).isoformat(),
             "original_path": str(original),
             "corrected_path": str(corrected),
@@ -77,8 +78,8 @@ class FeedbackProcessor:
         return insights
 
     def batch_process_history(
-        self, corrections: list[dict], max_age_days: int | None = None
-    ) -> dict:
+        self, corrections: list[dict[str, Any]], max_age_days: int | None = None
+    ) -> dict[str, Any]:
         """Process historical corrections in batch to extract patterns.
 
         Args:
@@ -137,7 +138,7 @@ class FeedbackProcessor:
 
         return insights
 
-    def update_learning_model(self, insights: dict) -> bool:
+    def update_learning_model(self, insights: dict[str, Any]) -> bool:
         """Update the learning model with new insights.
 
         Args:
@@ -157,7 +158,7 @@ class FeedbackProcessor:
 
         return True
 
-    def trigger_retraining(self) -> dict:
+    def trigger_retraining(self) -> dict[str, Any]:
         """Trigger a full model retraining.
 
         Returns:
@@ -176,7 +177,7 @@ class FeedbackProcessor:
 
         return status
 
-    def _analyze_name_correction(self, original_name: str, corrected_name: str) -> dict:
+    def _analyze_name_correction(self, original_name: str, corrected_name: str) -> dict[str, Any]:
         """Analyze a filename correction to extract patterns.
 
         Args:
@@ -186,7 +187,7 @@ class FeedbackProcessor:
         Returns:
             Dictionary with naming pattern insights
         """
-        insight = {
+        insight: dict[str, Any] = {
             "type": "naming",
             "original": original_name,
             "corrected": corrected_name,
@@ -226,8 +227,8 @@ class FeedbackProcessor:
         return insight
 
     def _analyze_folder_correction(
-        self, original: Path, corrected: Path, context: dict | None
-    ) -> dict:
+        self, original: Path, corrected: Path, context: dict[str, Any] | None
+    ) -> dict[str, Any]:
         """Analyze a folder correction.
 
         Args:
@@ -238,7 +239,7 @@ class FeedbackProcessor:
         Returns:
             Folder pattern insights
         """
-        insight = {
+        insight: dict[str, Any] = {
             "type": "folder",
             "file_type": original.suffix.lower(),
             "from_folder": str(original.parent),
@@ -275,7 +276,7 @@ class FeedbackProcessor:
 
         return insight
 
-    def _extract_context_patterns(self, context: dict) -> dict | None:
+    def _extract_context_patterns(self, context: dict[str, Any]) -> dict[str, Any] | None:
         """Extract patterns from context information.
 
         Args:
@@ -309,7 +310,7 @@ class FeedbackProcessor:
 
         return None
 
-    def _extract_batch_name_patterns(self, name_changes: list[tuple]) -> list[dict]:
+    def _extract_batch_name_patterns(self, name_changes: list[tuple[str, str]]) -> list[dict[str, Any]]:
         """Extract common naming patterns from batch changes.
 
         Args:
@@ -321,7 +322,7 @@ class FeedbackProcessor:
         patterns = []
 
         # Find common delimiter preferences
-        delimiters = {}
+        delimiters: dict[str, int] = {}
         for _, corrected in name_changes:
             delims = self._extract_delimiters(corrected)
             for d in delims:
@@ -338,7 +339,7 @@ class FeedbackProcessor:
             )
 
         # Find common case styles
-        case_styles = {}
+        case_styles: dict[str, int] = {}
         for _, corrected in name_changes:
             style = self._detect_case_style(corrected)
             case_styles[style] = case_styles.get(style, 0) + 1
@@ -355,7 +356,7 @@ class FeedbackProcessor:
 
         return patterns
 
-    def _extract_batch_folder_patterns(self, folder_changes: list[tuple]) -> list[dict]:
+    def _extract_batch_folder_patterns(self, folder_changes: list[tuple[str, str, str]]) -> list[dict[str, Any]]:
         """Extract common folder patterns from batch changes.
 
         Args:
@@ -367,7 +368,7 @@ class FeedbackProcessor:
         patterns = []
 
         # Group by file type
-        type_mappings = {}
+        type_mappings: dict[str, dict[str, int]] = {}
         for _from_folder, to_folder, file_type in folder_changes:
             if file_type not in type_mappings:
                 type_mappings[file_type] = {}
@@ -390,7 +391,7 @@ class FeedbackProcessor:
 
         return patterns
 
-    def _identify_common_operations(self, corrections: list[dict]) -> dict:
+    def _identify_common_operations(self, corrections: list[dict[str, Any]]) -> dict[str, int]:
         """Identify common correction operations.
 
         Args:
@@ -399,7 +400,7 @@ class FeedbackProcessor:
         Returns:
             Dictionary of operation frequencies
         """
-        operations = {}
+        operations: dict[str, int] = {}
 
         for correction in corrections:
             op_type = correction.get("operation", "unknown")

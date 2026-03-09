@@ -31,7 +31,7 @@ def get_profile_manager() -> ProfileManager:
 
 
 @click.group(name="profile")
-def profile_command():
+def profile_command() -> None:
     """Profile management commands."""
     pass
 
@@ -42,7 +42,7 @@ def profile_command():
 
 
 @profile_command.command(name="list")
-def list_profiles():
+def list_profiles() -> None:
     """List all available profiles."""
     try:
         manager = get_profile_manager()
@@ -65,8 +65,9 @@ def list_profiles():
             click.echo(f"  Updated: {profile.updated}")
 
             # Show statistics
-            global_prefs = len(profile.preferences.get("global", {}))
-            dir_prefs = len(profile.preferences.get("directory_specific", {}))
+            prefs = profile.preferences or {}
+            global_prefs = len(prefs.get("global", {}))
+            dir_prefs = len(prefs.get("directory_specific", {}))
             click.echo(f"  Preferences: {global_prefs} global, {dir_prefs} directory-specific")
 
         click.echo("\n" + "=" * 80)
@@ -80,7 +81,7 @@ def list_profiles():
 @click.argument("name", metavar="PROFILE_NAME")
 @click.option("--description", "-d", default="", help="Profile description")
 @click.option("--activate", "-a", is_flag=True, help="Activate profile after creation")
-def create_profile(name: str, description: str, activate: bool):
+def create_profile(name: str, description: str, activate: bool) -> None:
     """Create a new profile."""
     try:
         manager = get_profile_manager()
@@ -108,7 +109,7 @@ def create_profile(name: str, description: str, activate: bool):
 
 @profile_command.command(name="activate")
 @click.argument("name", metavar="PROFILE_NAME")
-def activate_profile(name: str):
+def activate_profile(name: str) -> None:
     """Activate a profile (make it the current active profile)."""
     try:
         manager = get_profile_manager()
@@ -127,7 +128,7 @@ def activate_profile(name: str):
 @profile_command.command(name="delete")
 @click.argument("name", metavar="PROFILE_NAME")
 @click.option("--force", "-f", is_flag=True, help="Force delete even if active")
-def delete_profile(name: str, force: bool):
+def delete_profile(name: str, force: bool) -> None:
     """Delete a profile."""
     try:
         manager = get_profile_manager()
@@ -150,7 +151,7 @@ def delete_profile(name: str, force: bool):
 
 
 @profile_command.command(name="current")
-def show_current():
+def show_current() -> None:
     """Show currently active profile."""
     try:
         manager = get_profile_manager()
@@ -168,10 +169,11 @@ def show_current():
         click.echo(f"Updated: {profile.updated}")
 
         # Show statistics
-        global_prefs = len(profile.preferences.get("global", {}))
-        dir_prefs = len(profile.preferences.get("directory_specific", {}))
-        patterns = len(profile.learned_patterns)
-        confidence = len(profile.confidence_data)
+        prefs = profile.preferences or {}
+        global_prefs = len(prefs.get("global", {}))
+        dir_prefs = len(prefs.get("directory_specific", {}))
+        patterns = len(profile.learned_patterns or {})
+        confidence = len(profile.confidence_data or {})
 
         click.echo("\nStatistics:")
         click.echo(f"  Global preferences: {global_prefs}")
@@ -194,7 +196,7 @@ def show_current():
 @click.argument("name", metavar="PROFILE_NAME")
 @click.option("--output", "-o", type=click.Path(), required=True, help="Output file path")
 @click.option("--selective", "-s", multiple=True, help="Select specific preferences to export")
-def export_profile(name: str, output: str, selective: tuple):
+def export_profile(name: str, output: str, selective: tuple[str, ...]) -> None:
     """Export a profile to JSON file."""
     try:
         manager = get_profile_manager()
@@ -224,7 +226,7 @@ def export_profile(name: str, output: str, selective: tuple):
 @click.argument("file", type=click.Path(exists=True))
 @click.option("--as", "new_name", help="Import with a different name")
 @click.option("--preview", is_flag=True, help="Preview import without applying")
-def import_profile(file: str, new_name: str | None, preview: bool):
+def import_profile(file: str, new_name: str | None, preview: bool) -> None:
     """Import a profile from JSON file."""
     try:
         manager = get_profile_manager()
@@ -300,7 +302,7 @@ def import_profile(file: str, new_name: str | None, preview: bool):
     help="Merge strategy for conflicts",
 )
 @click.option("--show-conflicts", is_flag=True, help="Show conflicts before merging")
-def merge_profiles(profiles: tuple, output: str, strategy: str, show_conflicts: bool):
+def merge_profiles(profiles: tuple[str, ...], output: str, strategy: str, show_conflicts: bool) -> None:
     """Merge multiple profiles into one."""
     try:
         manager = get_profile_manager()
@@ -351,13 +353,13 @@ def merge_profiles(profiles: tuple, output: str, strategy: str, show_conflicts: 
 
 
 @profile_command.group(name="template")
-def template_commands():
+def template_commands() -> None:
     """Template management commands."""
     pass
 
 
 @template_commands.command(name="list")
-def list_templates():
+def list_templates() -> None:
     """List all available templates."""
     try:
         manager = get_profile_manager()
@@ -383,7 +385,7 @@ def list_templates():
 
 @template_commands.command(name="preview")
 @click.argument("name", metavar="TEMPLATE_NAME")
-def preview_template(name: str):
+def preview_template(name: str) -> None:
     """Preview a template."""
     try:
         manager = get_profile_manager()
@@ -422,7 +424,7 @@ def preview_template(name: str):
 @click.argument("template_name")
 @click.argument("profile_name")
 @click.option("--activate", "-a", is_flag=True, help="Activate profile after creation")
-def apply_template(template_name: str, profile_name: str, activate: bool):
+def apply_template(template_name: str, profile_name: str, activate: bool) -> None:
     """Create a profile from a template."""
     try:
         manager = get_profile_manager()
@@ -456,7 +458,7 @@ def apply_template(template_name: str, profile_name: str, activate: bool):
 @click.argument("name", metavar="PROFILE_NAME")
 @click.option("--to-version", required=True, help="Target version")
 @click.option("--no-backup", is_flag=True, help="Skip backup before migration")
-def migrate_profile(name: str, to_version: str, no_backup: bool):
+def migrate_profile(name: str, to_version: str, no_backup: bool) -> None:
     """Migrate a profile to a different version."""
     try:
         manager = get_profile_manager()
@@ -479,7 +481,7 @@ def migrate_profile(name: str, to_version: str, no_backup: bool):
 
 @profile_command.command(name="validate")
 @click.argument("name", metavar="PROFILE_NAME")
-def validate_profile(name: str):
+def validate_profile(name: str) -> None:
     """Validate a profile."""
     try:
         manager = get_profile_manager()

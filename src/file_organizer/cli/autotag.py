@@ -5,6 +5,7 @@ Command-line interface for the auto-tagging system.
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -12,7 +13,7 @@ from pathlib import Path
 from ..services.auto_tagging import AutoTaggingService
 
 
-def setup_autotag_parser(subparsers):
+def setup_autotag_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     """Set up the autotag command parser.
 
     Args:
@@ -79,14 +80,14 @@ def setup_autotag_parser(subparsers):
     batch_parser.add_argument("--output", type=str, help="Output file for results (JSON)")
 
 
-def handle_autotag_command(args):
+def handle_autotag_command(args: argparse.Namespace) -> None:
     """Handle autotag commands.
 
     Args:
         args: Parsed command-line arguments
     """
     # Initialize service
-    service = AutoTaggingService()
+    service = AutoTaggingService()  # type: ignore[no-untyped-call]
 
     if args.autotag_command == "suggest":
         handle_suggest(service, args)
@@ -105,7 +106,7 @@ def handle_autotag_command(args):
         sys.exit(1)
 
 
-def handle_suggest(service: AutoTaggingService, args):
+def handle_suggest(service: AutoTaggingService, args: argparse.Namespace) -> None:
     """Handle suggest command."""
     results = []
 
@@ -117,7 +118,7 @@ def handle_suggest(service: AutoTaggingService, args):
             continue
 
         # Get recommendations
-        recommendation = service.suggest_tags(
+        recommendation = service.suggest_tags(  # type: ignore[no-untyped-call]
             file_path, existing_tags=args.existing_tags, top_n=args.top_n
         )
 
@@ -149,7 +150,7 @@ def handle_suggest(service: AutoTaggingService, args):
         print(json.dumps(results, indent=2))
 
 
-def handle_apply(service: AutoTaggingService, args):
+def handle_apply(service: AutoTaggingService, args: argparse.Namespace) -> None:
     """Handle apply command."""
     file_path = Path(args.file).resolve()
 
@@ -158,7 +159,7 @@ def handle_apply(service: AutoTaggingService, args):
         sys.exit(1)
 
     # Record tag application
-    service.record_tag_usage(file_path, args.tags)
+    service.record_tag_usage(file_path, args.tags)  # type: ignore[no-untyped-call]
 
     print(f"✓ Applied tags to {file_path.name}:")
     for tag in args.tags:
@@ -166,9 +167,9 @@ def handle_apply(service: AutoTaggingService, args):
     print("\nTags recorded for learning.")
 
 
-def handle_popular(service: AutoTaggingService, args):
+def handle_popular(service: AutoTaggingService, args: argparse.Namespace) -> None:
     """Handle popular command."""
-    popular = service.get_popular_tags(limit=args.limit)
+    popular = service.get_popular_tags(limit=args.limit)  # type: ignore[no-untyped-call]
 
     if not popular:
         print("No tag usage data yet.")
@@ -182,9 +183,9 @@ def handle_popular(service: AutoTaggingService, args):
         print(f"{i:2d}. {tag:20s} {count:4d} {bar}")
 
 
-def handle_recent(service: AutoTaggingService, args):
+def handle_recent(service: AutoTaggingService, args: argparse.Namespace) -> None:
     """Handle recent command."""
-    recent = service.get_recent_tags(days=args.days, limit=args.limit)
+    recent = service.get_recent_tags(days=args.days, limit=args.limit)  # type: ignore[no-untyped-call]
 
     if not recent:
         print(f"No tags used in the last {args.days} days.")
@@ -197,7 +198,7 @@ def handle_recent(service: AutoTaggingService, args):
         print(f"{i:2d}. {tag}")
 
 
-def handle_analyze(service: AutoTaggingService, args):
+def handle_analyze(service: AutoTaggingService, args: argparse.Namespace) -> None:
     """Handle analyze command."""
     file_path = Path(args.file).resolve()
 
@@ -229,7 +230,7 @@ def handle_analyze(service: AutoTaggingService, args):
             print(f"  - {entity}")
 
 
-def handle_batch(service: AutoTaggingService, args):
+def handle_batch(service: AutoTaggingService, args: argparse.Namespace) -> None:
     """Handle batch command."""
     directory = Path(args.directory).resolve()
 

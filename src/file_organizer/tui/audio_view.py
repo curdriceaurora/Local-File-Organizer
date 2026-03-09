@@ -7,11 +7,17 @@ and AI-powered classification results.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from textual import work
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
+
+if TYPE_CHECKING:
+    from file_organizer.services.audio.classifier import ClassificationResult
+    from file_organizer.services.audio.metadata_extractor import AudioMetadata
 
 # Audio file extensions to scan for
 _AUDIO_EXTENSIONS = frozenset({".mp3", ".wav", ".flac", ".m4a", ".ogg"})
@@ -61,7 +67,7 @@ class AudioMetadataPanel(Static):
     }
     """
 
-    def set_metadata(self, metadata: object | None) -> None:
+    def set_metadata(self, metadata: AudioMetadata | None) -> None:
         """Update the metadata display.
 
         Args:
@@ -126,7 +132,7 @@ class AudioClassificationPanel(Static):
     }
     """
 
-    def set_classification(self, result: object | None) -> None:
+    def set_classification(self, result: ClassificationResult | None) -> None:
         """Update the classification display.
 
         Args:
@@ -200,10 +206,10 @@ class AudioView(Vertical):
         """Set up the audio view to scan the given directory."""
         super().__init__(name=name, id=id, classes=classes)
         self._scan_dir = Path(scan_dir)
-        self._files: list[tuple[Path, object, object]] = []  # (path, metadata, classification)
+        self._files: list[tuple[Path, AudioMetadata | None, ClassificationResult | None]] = []  # (path, metadata, classification)
         self._current_index: int = 0
 
-    def compose(self):  # type: ignore[override]
+    def compose(self) -> ComposeResult:
         """Build the audio view layout."""
         yield Static("[b]Audio Files[/b]\n", id="audio-header")
         yield AudioFileListPanel("[dim]Scanning...[/dim]")
@@ -260,24 +266,24 @@ class AudioView(Vertical):
                             break
 
             if not audio_paths:
-                self.call_from_thread(
+                self.app.call_from_thread(
                     self.query_one(AudioFileListPanel).set_files,
                     [],
                 )
-                self.call_from_thread(
+                self.app.call_from_thread(
                     self.query_one(AudioMetadataPanel).set_metadata,
                     None,
                 )
-                self.call_from_thread(
+                self.app.call_from_thread(
                     self.query_one(AudioClassificationPanel).set_classification,
                     None,
                 )
-                self.call_from_thread(self._set_status, "No audio files found")
+                self.app.call_from_thread(self._set_status, "No audio files found")
                 return
 
             # Extract metadata and classify each file
             file_entries: list[tuple[str, str, str]] = []
-            file_data: list[tuple[Path, object, object]] = []
+            file_data: list[tuple[Path, AudioMetadata | None, ClassificationResult | None]] = []
 
             for audio_path in audio_paths:
                 try:
@@ -292,7 +298,7 @@ class AudioView(Vertical):
 
             self._files = file_data
 
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(AudioFileListPanel).set_files,
                 file_entries,
             )
@@ -300,17 +306,17 @@ class AudioView(Vertical):
             # Show first file details
             if file_data:
                 self._current_index = 0
-                _, metadata, classification = file_data[0]
-                self.call_from_thread(
+                _, first_metadata, first_classification = file_data[0]
+                self.app.call_from_thread(
                     self.query_one(AudioMetadataPanel).set_metadata,
-                    metadata,
+                    first_metadata,
                 )
-                self.call_from_thread(
+                self.app.call_from_thread(
                     self.query_one(AudioClassificationPanel).set_classification,
-                    classification,
+                    first_classification,
                 )
 
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self._set_status,
                 f"Audio: {len(file_data)} files loaded",
             )
@@ -318,11 +324,11 @@ class AudioView(Vertical):
         except ImportError as exc:
             msg = f"[red]Audio features unavailable:[/red] {exc}\n\n  Install: pip install mutagen"
             for panel_type in (AudioFileListPanel, AudioMetadataPanel, AudioClassificationPanel):
-                self.call_from_thread(self.query_one(panel_type).update, msg)
+                self.app.call_from_thread(self.query_one(panel_type).update, msg)
         except Exception as exc:
             msg = f"[red]Audio scan failed:[/red] {exc}"
             for panel_type in (AudioFileListPanel, AudioMetadataPanel, AudioClassificationPanel):
-                self.call_from_thread(self.query_one(panel_type).update, msg)
+                self.app.call_from_thread(self.query_one(panel_type).update, msg)
 
     def _show_file_details(self, index: int) -> None:
         """Update metadata and classification panels for the file at index.

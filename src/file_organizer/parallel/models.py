@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from file_organizer._compat import StrEnum
 
@@ -46,10 +47,10 @@ class JobState:
     total_files: int = 0
     completed_files: int = 0
     failed_files: int = 0
-    config: dict[str, object] = field(default_factory=dict)
+    config: dict[str, Any] = field(default_factory=dict)
     error: str | None = None
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize job state to a dictionary suitable for JSON storage."""
         return {
             "id": self.id,
@@ -64,17 +65,17 @@ class JobState:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> JobState:
+    def from_dict(cls, data: dict[str, Any]) -> JobState:
         """Deserialize a job state from a dictionary."""
         return cls(
             id=str(data["id"]),
             status=JobStatus(str(data["status"])),
             created=datetime.fromisoformat(str(data["created"])),
             updated=datetime.fromisoformat(str(data["updated"])),
-            total_files=int(data.get("total_files", 0)),  # type: ignore[arg-type]
-            completed_files=int(data.get("completed_files", 0)),  # type: ignore[arg-type]
-            failed_files=int(data.get("failed_files", 0)),  # type: ignore[arg-type]
-            config=dict(data.get("config", {})),  # type: ignore[arg-type]
+            total_files=int(data.get("total_files", 0)),
+            completed_files=int(data.get("completed_files", 0)),
+            failed_files=int(data.get("failed_files", 0)),
+            config=dict(data.get("config", {})),
             error=str(data["error"]) if data.get("error") is not None else None,
         )
 
@@ -131,7 +132,7 @@ class Checkpoint:
     file_hashes: dict[str, str] = field(default_factory=dict)
     last_updated: datetime = field(default_factory=lambda: datetime.now(UTC))
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize checkpoint to a dictionary suitable for JSON storage."""
         return {
             "job_id": self.job_id,
@@ -142,7 +143,7 @@ class Checkpoint:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> Checkpoint:
+    def from_dict(cls, data: dict[str, Any]) -> Checkpoint:
         """Deserialize a checkpoint from a dictionary."""
         completed_raw = data.get("completed_paths", [])
         pending_raw = data.get("pending_paths", [])
@@ -150,8 +151,8 @@ class Checkpoint:
 
         return cls(
             job_id=str(data["job_id"]),
-            completed_paths=[Path(p) for p in completed_raw],  # type: ignore[union-attr]
-            pending_paths=[Path(p) for p in pending_raw],  # type: ignore[union-attr]
-            file_hashes=dict(hashes_raw),  # type: ignore[arg-type]
+            completed_paths=[Path(p) for p in completed_raw],
+            pending_paths=[Path(p) for p in pending_raw],
+            file_hashes=dict(hashes_raw),
             last_updated=datetime.fromisoformat(str(data["last_updated"])),
         )

@@ -11,6 +11,7 @@ import argparse
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 from loguru import logger
 from rich.console import Console
@@ -74,11 +75,12 @@ def format_size(size_bytes: int) -> str:
     Returns:
         Formatted size string (e.g., '1.5 MB')
     """
+    value: float = size_bytes
     for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024.0
-    return f"{size_bytes:.1f} PB"
+        if value < 1024.0:
+            return f"{value:.1f} {unit}"
+        value /= 1024.0
+    return f"{value:.1f} PB"
 
 
 def format_datetime(timestamp: float) -> str:
@@ -95,7 +97,7 @@ def format_datetime(timestamp: float) -> str:
 
 
 def display_duplicate_group(
-    group_id: int, file_hash: str, files: list[dict], total_groups: int
+    group_id: int, file_hash: str, files: list[dict[str, Any]], total_groups: int
 ) -> None:
     """Display a group of duplicate files in a formatted table.
 
@@ -141,7 +143,7 @@ def display_duplicate_group(
     console.print(f"\n[dim]Potential space savings: {format_size(saved_space)}[/dim]")
 
 
-def select_files_to_keep(files: list[dict], strategy: str) -> list[dict]:
+def select_files_to_keep(files: list[dict[str, Any]], strategy: str) -> list[dict[str, Any]]:
     """Apply selection strategy to determine which files to keep/remove.
 
     Args:
@@ -178,7 +180,7 @@ def select_files_to_keep(files: list[dict], strategy: str) -> list[dict]:
     return files
 
 
-def get_user_selection(files: list[dict], strategy: str, batch: bool = False) -> list[int]:
+def get_user_selection(files: list[dict[str, Any]], strategy: str, batch: bool = False) -> list[int]:
     """Get user selection for files to remove.
 
     Args:
@@ -451,6 +453,7 @@ Examples:
         # Import deduplication services
         from file_organizer.services.deduplication.backup import BackupManager
         from file_organizer.services.deduplication.detector import DuplicateDetector, ScanOptions
+        from file_organizer.services.deduplication.hasher import HashAlgorithm
 
         # Initialize services
         detector = DuplicateDetector()
@@ -485,7 +488,7 @@ Examples:
 
         # Scan directory
         scan_options = ScanOptions(
-            algorithm=config.algorithm,
+            algorithm=cast("HashAlgorithm", config.algorithm),
             recursive=config.recursive,
             min_file_size=config.min_size,
             max_file_size=config.max_size,
@@ -501,7 +504,7 @@ Examples:
             progress_bar.close()
 
         # Get duplicate groups
-        duplicate_groups = detector.get_duplicate_groups()
+        duplicate_groups = detector.get_duplicate_groups()  # type: ignore[no-untyped-call]
 
         if not duplicate_groups:
             console.print("\n[green]✓ No duplicate files found![/green]")
@@ -595,7 +598,7 @@ Examples:
         return 1
 
 
-def main():
+def main() -> None:
     """Main entry point for standalone execution."""
     sys.exit(dedupe_command())
 

@@ -12,10 +12,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from textual import on
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.message import Message
 from textual.widgets import DirectoryTree, Input, Static
+from textual.widgets._directory_tree import DirEntry
 
 
 def _format_size(size: int) -> str:
@@ -105,7 +107,8 @@ class FileBrowserTree(DirectoryTree):
             if node.allow_expand:
                 node.toggle()
             else:
-                self.post_message(self.FileSelected(node))
+                if node.data is not None:
+                    self.post_message(self.FileSelected(node, node.data.path))
 
 
 class FileMetadataPanel(Static):
@@ -218,7 +221,7 @@ class FileBrowserView(Vertical):
         super().__init__(name=name, id=id, classes=classes)
         self._root_path = Path(path)
 
-    def compose(self):  # type: ignore[override]
+    def compose(self) -> ComposeResult:
         """Build the file browser layout."""
         yield FilterInput(placeholder="Filter extensions (e.g. .py .txt) …")
         yield FileBrowserTree(self._root_path, id="file-tree")
@@ -227,7 +230,7 @@ class FileBrowserView(Vertical):
     # Event handlers ---------------------------------------------------
 
     @on(DirectoryTree.NodeHighlighted)
-    def _on_node_highlighted(self, event: DirectoryTree.NodeHighlighted) -> None:
+    def _on_node_highlighted(self, event: DirectoryTree.NodeHighlighted[DirEntry]) -> None:
         """Update metadata panel and post FileHighlighted message."""
         node = event.node
         path = node.data.path if node.data else None

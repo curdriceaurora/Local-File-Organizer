@@ -151,24 +151,24 @@ class ProfileMerger:
         Returns:
             Merged preferences dictionary
         """
-        merged = {"global": {}, "directory_specific": {}}
+        merged: dict[str, dict[str, Any]] = {"global": {}, "directory_specific": {}}
 
         # Merge global preferences
-        all_global_keys = set()
+        all_global_keys: set[str] = set()
         for profile in profiles:
-            all_global_keys.update(profile.preferences.get("global", {}).keys())
+            all_global_keys.update((profile.preferences or {}).get("global", {}).keys())
 
         for key in all_global_keys:
             values = []
             for profile in profiles:
-                if key in profile.preferences.get("global", {}):
+                if key in (profile.preferences or {}).get("global", {}):
                     values.append(
                         {
-                            "value": profile.preferences["global"][key],
+                            "value": (profile.preferences or {})["global"][key],
                             "profile": profile,
                             "metadata": {
                                 "updated": profile.updated,
-                                "confidence": profile.confidence_data.get(key, 0.5),
+                                "confidence": (profile.confidence_data or {}).get(key, 0.5),
                             },
                         }
                     )
@@ -178,21 +178,21 @@ class ProfileMerger:
                 merged["global"][key] = resolved_value
 
         # Merge directory-specific preferences
-        all_dir_keys = set()
+        all_dir_keys: set[str] = set()
         for profile in profiles:
-            all_dir_keys.update(profile.preferences.get("directory_specific", {}).keys())
+            all_dir_keys.update((profile.preferences or {}).get("directory_specific", {}).keys())
 
         for dir_key in all_dir_keys:
             values = []
             for profile in profiles:
-                if dir_key in profile.preferences.get("directory_specific", {}):
+                if dir_key in (profile.preferences or {}).get("directory_specific", {}):
                     values.append(
                         {
-                            "value": profile.preferences["directory_specific"][dir_key],
+                            "value": (profile.preferences or {})["directory_specific"][dir_key],
                             "profile": profile,
                             "metadata": {
                                 "updated": profile.updated,
-                                "confidence": profile.confidence_data.get(dir_key, 0.5),
+                                "confidence": (profile.confidence_data or {}).get(dir_key, 0.5),
                             },
                         }
                     )
@@ -218,21 +218,21 @@ class ProfileMerger:
         merged = {}
 
         # Collect all pattern keys
-        all_pattern_keys = set()
+        all_pattern_keys: set[str] = set()
         for profile in profiles:
-            all_pattern_keys.update(profile.learned_patterns.keys())
+            all_pattern_keys.update((profile.learned_patterns or {}).keys())
 
         for key in all_pattern_keys:
             values = []
             for profile in profiles:
-                if key in profile.learned_patterns:
+                if key in (profile.learned_patterns or {}):
                     values.append(
                         {
-                            "value": profile.learned_patterns[key],
+                            "value": (profile.learned_patterns or {})[key],
                             "profile": profile,
                             "metadata": {
                                 "updated": profile.updated,
-                                "confidence": profile.confidence_data.get(key, 0.5),
+                                "confidence": (profile.confidence_data or {}).get(key, 0.5),
                             },
                         }
                     )
@@ -258,16 +258,16 @@ class ProfileMerger:
         merged = {}
 
         # Collect all confidence keys
-        all_conf_keys = set()
+        all_conf_keys: set[str] = set()
         for profile in profiles:
-            all_conf_keys.update(profile.confidence_data.keys())
+            all_conf_keys.update((profile.confidence_data or {}).keys())
 
         for key in all_conf_keys:
             # For confidence scores, we can use different strategies
             confidence_values = []
             for profile in profiles:
-                if key in profile.confidence_data:
-                    confidence_values.append(profile.confidence_data[key])
+                if key in (profile.confidence_data or {}):
+                    confidence_values.append((profile.confidence_data or {})[key])
 
             if confidence_values:
                 if strategy == MergeStrategy.CONFIDENT:
@@ -324,7 +324,7 @@ class ProfileMerger:
 
         elif strategy == MergeStrategy.FREQUENT:
             # Count frequency of each value and pick most common
-            value_counts = {}
+            value_counts: dict[str, int] = {}
             for pref in conflicting_prefs:
                 value_str = str(pref["value"])
                 value_counts[value_str] = value_counts.get(value_str, 0) + 1
@@ -352,10 +352,10 @@ class ProfileMerger:
             confidence_threshold: Minimum confidence to preserve (default 0.8)
         """
         # Collect high-confidence preferences from all sources
-        high_confidence_prefs = {}
+        high_confidence_prefs: dict[str, dict[str, Any]] = {}
 
         for source in source_profiles:
-            for key, confidence in source.confidence_data.items():
+            for key, confidence in (source.confidence_data or {}).items():
                 if confidence >= confidence_threshold:
                     if (
                         key not in high_confidence_prefs
@@ -368,21 +368,27 @@ class ProfileMerger:
             source = data["profile"]
 
             # Check if it's in global preferences
-            if key in source.preferences.get("global", {}):
-                merged_profile.preferences["global"][key] = source.preferences["global"][key]
-                merged_profile.confidence_data[key] = data["confidence"]
+            if key in (source.preferences or {}).get("global", {}):
+                if merged_profile.preferences is not None:
+                    merged_profile.preferences["global"][key] = (source.preferences or {})["global"][key]
+                if merged_profile.confidence_data is not None:
+                    merged_profile.confidence_data[key] = data["confidence"]
 
             # Check if it's in directory-specific preferences
-            elif key in source.preferences.get("directory_specific", {}):
-                merged_profile.preferences["directory_specific"][key] = source.preferences[
-                    "directory_specific"
-                ][key]
-                merged_profile.confidence_data[key] = data["confidence"]
+            elif key in (source.preferences or {}).get("directory_specific", {}):
+                if merged_profile.preferences is not None:
+                    merged_profile.preferences["directory_specific"][key] = (
+                        source.preferences or {}
+                    )["directory_specific"][key]
+                if merged_profile.confidence_data is not None:
+                    merged_profile.confidence_data[key] = data["confidence"]
 
             # Check if it's a learned pattern
-            elif key in source.learned_patterns:
-                merged_profile.learned_patterns[key] = source.learned_patterns[key]
-                merged_profile.confidence_data[key] = data["confidence"]
+            elif key in (source.learned_patterns or {}):
+                if merged_profile.learned_patterns is not None:
+                    merged_profile.learned_patterns[key] = (source.learned_patterns or {})[key]
+                if merged_profile.confidence_data is not None:
+                    merged_profile.confidence_data[key] = data["confidence"]
 
     def create_merged_profile(self, name: str, merged_data: dict[str, Any]) -> Profile | None:
         """Create a new profile from merged data.
@@ -429,7 +435,7 @@ class ProfileMerger:
         Returns:
             Dictionary mapping keys to conflicting values
         """
-        conflicts = {}
+        conflicts: dict[str, list[Any]] = {}
 
         try:
             # Load all profiles
@@ -443,15 +449,15 @@ class ProfileMerger:
                 return conflicts
 
             # Check global preferences
-            all_global_keys = set()
+            all_global_keys: set[str] = set()
             for profile in profiles:
-                all_global_keys.update(profile.preferences.get("global", {}).keys())
+                all_global_keys.update((profile.preferences or {}).get("global", {}).keys())
 
             for key in all_global_keys:
                 values = []
                 for profile in profiles:
-                    if key in profile.preferences.get("global", {}):
-                        value = profile.preferences["global"][key]
+                    if key in (profile.preferences or {}).get("global", {}):
+                        value = (profile.preferences or {})["global"][key]
                         if value not in values:
                             values.append(value)
 
@@ -459,15 +465,15 @@ class ProfileMerger:
                     conflicts[f"global.{key}"] = values
 
             # Check directory-specific preferences
-            all_dir_keys = set()
+            all_dir_keys: set[str] = set()
             for profile in profiles:
-                all_dir_keys.update(profile.preferences.get("directory_specific", {}).keys())
+                all_dir_keys.update((profile.preferences or {}).get("directory_specific", {}).keys())
 
             for key in all_dir_keys:
                 values = []
                 for profile in profiles:
-                    if key in profile.preferences.get("directory_specific", {}):
-                        value = profile.preferences["directory_specific"][key]
+                    if key in (profile.preferences or {}).get("directory_specific", {}):
+                        value = (profile.preferences or {})["directory_specific"][key]
                         if value not in values:
                             values.append(value)
 

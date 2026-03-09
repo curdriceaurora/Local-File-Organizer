@@ -29,6 +29,7 @@ from file_organizer.api.auth_models import Base, User
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.repositories.settings_repo import SettingsRepository
+from file_organizer.api.db_models import Workspace
 from file_organizer.api.repositories.workspace_repo import WorkspaceRepository
 from file_organizer.config.path_manager import get_config_dir
 from file_organizer.web._helpers import base_context, templates
@@ -46,7 +47,7 @@ _DEFAULT_ROLES = {"viewer", "editor", "admin"}
 _PASSWORD_RESET_TOKENS: dict[str, tuple[str, datetime]] = {}
 
 
-class UserApiKey(Base):
+class UserApiKey(Base):  # type: ignore[misc]
     """Per-user API key stored in the auth database."""
 
     __tablename__ = "user_api_keys"
@@ -193,7 +194,7 @@ def _append_notification(state: dict[str, object], message: str) -> None:
     del notifications[100:]
 
 
-def _workspace_context(db: Session, user_id: str) -> tuple[list[object], str]:
+def _workspace_context(db: Session, user_id: str) -> tuple[list[Workspace], str]:
     """Return the user's workspaces and their active workspace ID.
 
     Returns:
@@ -209,7 +210,7 @@ def _workspace_context(db: Session, user_id: str) -> tuple[list[object], str]:
         active = ""
 
     if not active and workspaces:
-        active = workspaces[0].id
+        active = str(workspaces[0].id)
         state["active_workspace_id"] = active
         _save_profile_state(db, user_id, state)
 
@@ -263,7 +264,7 @@ def profile_page(request: Request, settings: ApiSettings = Depends(get_settings)
 
     db = _get_db(settings)
     try:
-        workspaces, active_workspace_id = _workspace_context(db, user.id)
+        workspaces, active_workspace_id = _workspace_context(db, str(user.id))
         context = _make_profile_context(
             request,
             settings,
@@ -301,7 +302,7 @@ def login_submit(
     db = _get_db(settings)
     try:
         user = db.query(User).filter(or_(User.username == username, User.email == username)).first()
-        if user is None or not verify_password(password, user.hashed_password):
+        if user is None or not verify_password(password, str(user.hashed_password)):
             context = _make_profile_context(
                 request,
                 settings,
@@ -319,10 +320,10 @@ def login_submit(
             )
             return templates.TemplateResponse(request, "profile/login.html", context)
 
-        user.last_login = _now()
+        user.last_login = _now()  # type: ignore[assignment]
         db.commit()
 
-        bundle = create_token_bundle(user.id, user.username, settings)
+        bundle = create_token_bundle(str(user.id), str(user.username), settings)
         response = RedirectResponse(url="/ui/profile", status_code=303)
         response.set_cookie(
             key=_SESSION_COOKIE,
@@ -430,7 +431,7 @@ def forgot_password_submit(
             _cleanup_expired_reset_tokens()
             token = secrets.token_urlsafe(24)
             expires = _now() + timedelta(minutes=_RESET_TOKEN_TTL_MINUTES)
-            _PASSWORD_RESET_TOKENS[token] = (user.id, expires)
+            _PASSWORD_RESET_TOKENS[token] = (str(user.id), expires)
             token_preview = token
         context = _make_profile_context(
             request,
@@ -535,7 +536,7 @@ def reset_password_submit(
                 },
             )
             return templates.TemplateResponse(request, "profile/reset_password.html", context)
-        user.hashed_password = hash_password(new_password)
+        user.hashed_password = hash_password(new_password)  # type: ignore[assignment]
         db.commit()
     finally:
         db.close()
@@ -580,7 +581,7 @@ async def profile_avatar_upload(
         return HTMLResponse('<p class="error-text">Avatar file exceeds 5MB limit.</p>')
 
     _AVATAR_DIR.mkdir(parents=True, exist_ok=True)
-    _avatar_path(user.id).write_bytes(raw)
+    _avatar_path(str(user.id)).write_bytes(raw)
     return HTMLResponse('<p class="success-text">Avatar updated.</p>')
 
 
@@ -631,14 +632,14 @@ def profile_edit_submit(
                 )
                 return templates.TemplateResponse(request, "profile/_edit.html", context)
 
-        db_user.full_name = full_name or None
-        db_user.email = email
+        db_user.full_name = full_name or None  # type: ignore[assignment]
+        db_user.email = email  # type: ignore[assignment]
         db.commit()
         db.refresh(db_user)
 
-        state = _load_profile_state(db, db_user.id)
+        state = _load_profile_state(db, str(db_user.id))
         _append_activity(state, "Updated profile details.")
-        _save_profile_state(db, db_user.id, state)
+        _save_profile_state(db, str(db_user.id), state)
 
         context = _make_profile_context(
             request,
@@ -662,7 +663,7 @@ def workspaces_partial(
 
     db = _get_db(settings)
     try:
-        workspaces, active_workspace_id = _workspace_context(db, user.id)
+        workspaces, active_workspace_id = _workspace_context(db, str(user.id))
         context = _make_profile_context(
             request,
             settings,
@@ -692,14 +693,14 @@ def workspace_create(
         WorkspaceRepository.create(
             db,
             name=name.strip(),
-            owner_id=user.id,
+            owner_id=str(user.id),
             root_path=root_path.strip(),
             description=description.strip() or None,
         )
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         _append_activity(state, f"Created workspace '{name.strip()}'.")
         _append_notification(state, f"Workspace '{name.strip()}' was created.")
-        _save_profile_state(db, user.id, state)
+        _save_profile_state(db, str(user.id), state)
         db.commit()
         return workspaces_partial(request, settings)
     finally:
@@ -721,10 +722,10 @@ def workspace_switch(
     try:
         workspace = WorkspaceRepository.get_by_id(db, workspace_id)
         if workspace is not None and workspace.owner_id == user.id:
-            state = _load_profile_state(db, user.id)
+            state = _load_profile_state(db, str(user.id))
             state["active_workspace_id"] = workspace_id
             _append_activity(state, f"Switched to workspace '{workspace.name}'.")
-            _save_profile_state(db, user.id, state)
+            _save_profile_state(db, str(user.id), state)
             db.commit()
         return workspaces_partial(request, settings)
     finally:
@@ -740,7 +741,7 @@ def team_partial(request: Request, settings: ApiSettings = Depends(get_settings)
 
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         context = _make_profile_context(
             request,
             settings,
@@ -767,7 +768,7 @@ def team_invite(
     normalized_role = role if role in _DEFAULT_ROLES else "viewer"
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         team = state.get("team_members")
         if not isinstance(team, list):
             team = []
@@ -782,7 +783,7 @@ def team_invite(
         )
         _append_activity(state, f"Invited {email.strip().lower()} as {normalized_role}.")
         _append_notification(state, f"Invitation created for {email.strip().lower()}.")
-        _save_profile_state(db, user.id, state)
+        _save_profile_state(db, str(user.id), state)
         db.commit()
         return team_partial(request, settings)
     finally:
@@ -804,7 +805,7 @@ def team_update_role(
     normalized_role = role if role in _DEFAULT_ROLES else "viewer"
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         team = state.get("team_members")
         if isinstance(team, list):
             for member in team:
@@ -816,7 +817,7 @@ def team_update_role(
                         f"Updated role for {member.get('email', 'member')} to {normalized_role}.",
                     )
                     break
-        _save_profile_state(db, user.id, state)
+        _save_profile_state(db, str(user.id), state)
         db.commit()
         return team_partial(request, settings)
     finally:
@@ -832,7 +833,7 @@ def shared_partial(request: Request, settings: ApiSettings = Depends(get_setting
 
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         context = _make_profile_context(
             request,
             settings,
@@ -859,7 +860,7 @@ def shared_add(
     normalized_permission = permission if permission in {"view", "edit", "admin"} else "view"
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         shared = state.get("shared_folders")
         if not isinstance(shared, list):
             shared = []
@@ -874,7 +875,7 @@ def shared_add(
         _append_activity(
             state, f"Shared folder '{folder_path.strip()}' as {normalized_permission}."
         )
-        _save_profile_state(db, user.id, state)
+        _save_profile_state(db, str(user.id), state)
         db.commit()
         return shared_partial(request, settings)
     finally:
@@ -894,7 +895,7 @@ def shared_remove(
 
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         shared = state.get("shared_folders")
         if isinstance(shared, list):
             state["shared_folders"] = [
@@ -903,7 +904,7 @@ def shared_remove(
                 if not (isinstance(folder, dict) and folder.get("id") == folder_id)
             ]
             _append_activity(state, "Removed a shared folder entry.")
-        _save_profile_state(db, user.id, state)
+        _save_profile_state(db, str(user.id), state)
         db.commit()
         return shared_partial(request, settings)
     finally:
@@ -921,7 +922,7 @@ def activity_partial(
 
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         context = _make_profile_context(
             request,
             settings,
@@ -944,7 +945,7 @@ def notifications_partial(
 
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         context = _make_profile_context(
             request,
             settings,
@@ -969,14 +970,14 @@ def notification_mark_read(
 
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         notifications = state.get("notifications")
         if isinstance(notifications, list):
             for item in notifications:
                 if isinstance(item, dict) and item.get("id") == notification_id:
                     item["read"] = True
                     break
-        _save_profile_state(db, user.id, state)
+        _save_profile_state(db, str(user.id), state)
         db.commit()
         return notifications_partial(request, settings)
     finally:
@@ -994,7 +995,7 @@ def account_settings_partial(
 
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         context = _make_profile_context(
             request,
             settings,
@@ -1032,7 +1033,7 @@ def account_settings_change_password(
         db_user = db.query(User).filter(User.id == user.id).first()
         if db_user is None:
             return HTMLResponse('<p class="error-text">User not found.</p>')
-        if not verify_password(current_password, db_user.hashed_password):
+        if not verify_password(current_password, str(db_user.hashed_password)):
             context = _make_profile_context(
                 request,
                 settings,
@@ -1066,11 +1067,11 @@ def account_settings_change_password(
             )
             return templates.TemplateResponse(request, "profile/_account_settings.html", context)
 
-        db_user.hashed_password = hash_password(new_password)
-        state = _load_profile_state(db, db_user.id)
+        db_user.hashed_password = hash_password(new_password)  # type: ignore[assignment]
+        state = _load_profile_state(db, str(db_user.id))
         _append_activity(state, "Changed account password.")
         _append_notification(state, "Your password was changed.")
-        _save_profile_state(db, db_user.id, state)
+        _save_profile_state(db, str(db_user.id), state)
         db.commit()
         context = _make_profile_context(
             request,
@@ -1105,12 +1106,12 @@ def account_settings_toggle_2fa(
     toggle = enabled is not None and enabled.strip().lower() in {"1", "true", "yes", "on"}
     db = _get_db(settings)
     try:
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         state["two_factor_enabled"] = toggle
         _append_activity(
             state, f"Set two-factor authentication to {'enabled' if toggle else 'disabled'}."
         )
-        _save_profile_state(db, user.id, state)
+        _save_profile_state(db, str(user.id), state)
         db.commit()
         context = _make_profile_context(
             request,
@@ -1188,10 +1189,10 @@ def api_key_generate(
         )
         db.add(api_key)
 
-        state = _load_profile_state(db, user.id)
+        state = _load_profile_state(db, str(user.id))
         _append_activity(state, f"Generated API key '{label.strip() or 'default'}'.")
         _append_notification(state, "A new API key was generated.")
-        _save_profile_state(db, user.id, state)
+        _save_profile_state(db, str(user.id), state)
         db.commit()
 
         keys = (
@@ -1238,11 +1239,11 @@ def api_key_revoke(
             .first()
         )
         if api_key is not None:
-            api_key.is_active = False
-            state = _load_profile_state(db, user.id)
+            api_key.is_active = False  # type: ignore[assignment]
+            state = _load_profile_state(db, str(user.id))
             _append_activity(state, f"Revoked API key '{api_key.label}'.")
             _append_notification(state, f"API key '{api_key.label}' was revoked.")
-            _save_profile_state(db, user.id, state)
+            _save_profile_state(db, str(user.id), state)
             db.commit()
 
         keys = (

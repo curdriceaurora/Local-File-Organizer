@@ -268,7 +268,7 @@ def history_command(
             viewer.close()
 
 
-def main_undo():
+def main_undo() -> None:
     """Main entry point for undo command."""
     import argparse
 
@@ -290,7 +290,7 @@ def main_undo():
     )
 
 
-def main_redo():
+def main_redo() -> None:
     """Main entry point for redo command."""
     import argparse
 
@@ -306,7 +306,7 @@ def main_redo():
     )
 
 
-def main_history():
+def main_history() -> None:
     """Main entry point for history command."""
     import argparse
 

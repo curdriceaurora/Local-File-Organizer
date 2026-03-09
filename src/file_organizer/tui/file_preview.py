@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from textual import on, work
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.message import Message
@@ -123,7 +124,7 @@ class FilePreviewPanel(Static):
         """
         try:
             if not path.exists():
-                self.call_from_thread(self.update, "[dim]File not found[/dim]")
+                self.app.call_from_thread(self.update, "[dim]File not found[/dim]")
                 return
 
             if path.is_dir():
@@ -139,7 +140,7 @@ class FilePreviewPanel(Static):
             else:
                 content = self._preview_generic(path)
 
-            self.call_from_thread(self.update, content)
+            self.app.call_from_thread(self.update, content)
         except (AttributeError, RuntimeError):
             # Widget may not be fully mounted yet (e.g. during tests)
             pass
@@ -285,7 +286,7 @@ class FilePreviewView(Horizontal):
         self.selection = FileSelectionManager()
         self._current_path: Path | None = None
 
-    def compose(self):  # type: ignore[override]
+    def compose(self) -> ComposeResult:
         """Build the split-pane layout."""
         yield FileBrowserView(self._root_path)
         yield FilePreviewPanel("[dim]Select a file to preview[/dim]")

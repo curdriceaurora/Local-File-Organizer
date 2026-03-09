@@ -7,12 +7,18 @@ so the UI stays responsive.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from textual import work
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Input, Static
 
 from file_organizer.services.copilot.models import MessageRole
+
+if TYPE_CHECKING:
+    from file_organizer.services.copilot.engine import CopilotEngine
 
 
 class CopilotMessageLog(VerticalScroll):
@@ -91,9 +97,9 @@ class CopilotView(Vertical):
     ) -> None:
         """Set up the copilot view with the given Textual widget parameters."""
         super().__init__(name=name, id=id, classes=classes)
-        self._engine: object | None = None
+        self._engine: CopilotEngine | None = None
 
-    def compose(self):  # type: ignore[override]
+    def compose(self) -> ComposeResult:
         """Build the copilot view layout."""
         yield Static(
             "[b]Copilot[/b]  [dim]Ask me to organise, find, move, rename, or undo.[/dim]\n",
@@ -140,22 +146,22 @@ class CopilotView(Vertical):
         """
         try:
             engine = self._get_engine()
-            response = engine.chat(text)  # type: ignore[union-attr]
-            self.call_from_thread(
+            response = engine.chat(text)
+            self.app.call_from_thread(
                 self.query_one(CopilotMessageLog).add_message,
                 MessageRole.ASSISTANT,
                 response,
             )
         except Exception as exc:
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(CopilotMessageLog).add_system_note,
                 f"Error: {exc}",
             )
 
         # Update status bar
-        self.call_from_thread(self._set_status, "Copilot: ready")
+        self.app.call_from_thread(self._set_status, "Copilot: ready")
 
-    def _get_engine(self) -> object:
+    def _get_engine(self) -> CopilotEngine:
         """Lazily initialise the copilot engine.
 
         Returns:

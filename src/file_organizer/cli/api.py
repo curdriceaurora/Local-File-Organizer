@@ -76,7 +76,7 @@ def health(
             return
         console.print(f"[green]Status:[/green] {result.status}")
         console.print(f"[green]Version:[/green] {result.version}")
-        console.print(f"[green]Environment:[/green] {result.environment}")
+        console.print(f"[green]Readiness:[/green] {result.readiness}")
     except ClientError as exc:
         console.print(f"[red]API error:[/red] {exc}")
         raise typer.Exit(code=1) from exc

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from textual import work
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
@@ -145,7 +146,7 @@ class OrganizationPreviewView(Vertical):
         self._input_dir = Path(input_dir)
         self._output_dir = Path(output_dir)
 
-    def compose(self):  # type: ignore[override]
+    def compose(self) -> ComposeResult:
         """Build the preview layout."""
         yield Static("[b]Organization Preview[/b] (dry-run)\n", id="org-header")
         yield BeforeAfterPanel("[dim]Loading preview...[/dim]")
@@ -184,12 +185,12 @@ class OrganizationPreviewView(Vertical):
             panel = self.query_one(BeforeAfterPanel)
             summary = self.query_one(OrganizationSummary)
 
-            self.call_from_thread(
+            self.app.call_from_thread(
                 panel.set_structure,
                 result.organized_structure,
                 str(self._input_dir),
             )
-            self.call_from_thread(
+            self.app.call_from_thread(
                 summary.set_result,
                 total=result.total_files,
                 processed=result.processed_files,
@@ -198,15 +199,15 @@ class OrganizationPreviewView(Vertical):
                 folders=len(result.organized_structure),
                 errors=result.errors,
             )
-            self.call_from_thread(self._set_status, "Preview loaded")
+            self.app.call_from_thread(self._set_status, "Preview loaded")
 
         except Exception as exc:
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(BeforeAfterPanel).update,
                 f"[red]Models unavailable:[/red] {exc}\n\n"
                 "[dim]Ensure Ollama is running with required models.[/dim]",
             )
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(OrganizationSummary).update,
                 "[dim]No data available.[/dim]",
             )

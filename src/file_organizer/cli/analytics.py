@@ -15,6 +15,13 @@ from loguru import logger
 from rich.console import Console
 from rich.table import Table
 
+from ..models.analytics import (
+    DuplicateStats,
+    FileDistribution,
+    QualityMetrics,
+    StorageStats,
+    TimeSavings,
+)
 from ..services.analytics import AnalyticsService
 from ..utils.chart_generator import ChartGenerator
 
@@ -23,11 +30,12 @@ console = Console()
 
 def _format_bytes(size_bytes: int) -> str:
     """Format bytes as human-readable size."""
+    value: float = size_bytes
     for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024.0
-    return f"{size_bytes:.1f} PB"
+        if value < 1024.0:
+            return f"{value:.1f} {unit}"
+        value /= 1024.0
+    return f"{value:.1f} PB"
 
 
 def _format_duration(seconds: float) -> str:
@@ -41,7 +49,7 @@ def _format_duration(seconds: float) -> str:
     return f"{hours:.1f}h"
 
 
-def display_storage_stats(stats, chart_gen: ChartGenerator | None) -> None:
+def display_storage_stats(stats: StorageStats, chart_gen: ChartGenerator | None) -> None:
     """Display storage statistics with optional charts."""
     console.print("\n[bold cyan]STORAGE STATISTICS[/bold cyan]")
     console.print("=" * 70)
@@ -85,7 +93,7 @@ def display_storage_stats(stats, chart_gen: ChartGenerator | None) -> None:
         console.print(file_table)
 
 
-def display_quality_metrics(metrics) -> None:
+def display_quality_metrics(metrics: QualityMetrics) -> None:
     """Display quality metrics."""
     console.print("\n[bold cyan]QUALITY METRICS[/bold cyan]")
     console.print("=" * 70)
@@ -139,7 +147,7 @@ def display_quality_metrics(metrics) -> None:
     console.print(table)
 
 
-def display_duplicate_stats(stats) -> None:
+def display_duplicate_stats(stats: DuplicateStats) -> None:
     """Display duplicate statistics."""
     console.print("\n[bold cyan]DUPLICATE STATISTICS[/bold cyan]")
     console.print("=" * 70)
@@ -174,7 +182,7 @@ def display_duplicate_stats(stats) -> None:
         console.print(type_table)
 
 
-def display_time_savings(savings) -> None:
+def display_time_savings(savings: TimeSavings) -> None:
     """Display time savings information."""
     console.print("\n[bold cyan]TIME SAVINGS[/bold cyan]")
     console.print("=" * 70)
@@ -197,7 +205,7 @@ def display_time_savings(savings) -> None:
     console.print(table)
 
 
-def display_file_distribution(distribution, chart_gen: ChartGenerator | None) -> None:
+def display_file_distribution(distribution: FileDistribution, chart_gen: ChartGenerator | None) -> None:
     """Display file distribution charts."""
     console.print("\n[bold cyan]FILE DISTRIBUTION[/bold cyan]")
     console.print("=" * 70)
@@ -371,7 +379,7 @@ Examples:
         return 1
 
 
-def main():
+def main() -> None:
     """Main entry point for standalone execution."""
     sys.exit(analytics_command())
 

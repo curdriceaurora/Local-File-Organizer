@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -22,14 +23,14 @@ suggest_app = typer.Typer(
 )
 
 
-def _get_engine():  # type: ignore[no-untyped-def]
+def _get_engine() -> Any:
     """Lazily import and return a ``SuggestionEngine``."""
     from file_organizer.services.smart_suggestions import SuggestionEngine
 
     return SuggestionEngine()
 
 
-def _get_analyzer():  # type: ignore[no-untyped-def]
+def _get_analyzer() -> Any:
     """Lazily import and return a ``PatternAnalyzer``."""
     from file_organizer.services.pattern_analyzer import PatternAnalyzer
 

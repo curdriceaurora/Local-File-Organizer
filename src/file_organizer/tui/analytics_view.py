@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from textual import work
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
@@ -198,7 +199,7 @@ class AnalyticsView(Vertical):
         super().__init__(name=name, id=id, classes=classes)
         self._directory = Path(directory)
 
-    def compose(self):  # type: ignore[override]
+    def compose(self) -> ComposeResult:
         """Build the analytics dashboard layout."""
         yield Static("[b]Analytics Dashboard[/b]\n", id="analytics-header")
         yield StorageOverviewPanel("[dim]Loading...[/dim]")
@@ -233,7 +234,7 @@ class AnalyticsView(Vertical):
             dashboard = service.generate_dashboard(self._directory)
 
             ss = dashboard.storage_stats
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(StorageOverviewPanel).set_stats,
                 total_size=ss.formatted_total_size,
                 file_count=ss.file_count,
@@ -242,13 +243,13 @@ class AnalyticsView(Vertical):
                 saved_size=ss.formatted_saved_size,
             )
 
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(FileDistributionPanel).set_distribution,
                 ss.size_by_type,
             )
 
             qm = dashboard.quality_metrics
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(QualityScorePanel).set_metrics,
                 grade=qm.grade,
                 naming=qm.naming_compliance,
@@ -258,14 +259,14 @@ class AnalyticsView(Vertical):
             )
 
             ds = dashboard.duplicate_stats
-            self.call_from_thread(
+            self.app.call_from_thread(
                 self.query_one(DuplicateStatsPanel).set_stats,
                 groups=ds.duplicate_groups,
                 space_wasted=ds.formatted_space_wasted,
                 recoverable=ds.formatted_recoverable,
             )
 
-            self.call_from_thread(self._set_status, "Analytics loaded")
+            self.app.call_from_thread(self._set_status, "Analytics loaded")
 
         except Exception as exc:
             msg = f"[red]Analytics unavailable:[/red] {exc}"
@@ -275,7 +276,7 @@ class AnalyticsView(Vertical):
                 QualityScorePanel,
                 DuplicateStatsPanel,
             ):
-                self.call_from_thread(self.query_one(panel_type).update, msg)
+                self.app.call_from_thread(self.query_one(panel_type).update, msg)
 
     def _set_status(self, message: str) -> None:
         """Update the app status bar if available."""

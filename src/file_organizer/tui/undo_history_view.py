@@ -7,11 +7,16 @@ and aggregate history statistics.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from textual import work
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
+
+if TYPE_CHECKING:
+    from file_organizer.history.models import Operation
 
 
 class OperationHistoryPanel(Static):
@@ -24,7 +29,7 @@ class OperationHistoryPanel(Static):
     }
     """
 
-    def set_operations(self, ops: list[object]) -> None:
+    def set_operations(self, ops: list[Operation]) -> None:
         """Render a table of operations.
 
         Args:
@@ -70,8 +75,8 @@ class UndoRedoStackPanel(Static):
 
     def set_stacks(
         self,
-        undo_stack: list[object],
-        redo_stack: list[object],
+        undo_stack: list[Operation],
+        redo_stack: list[Operation],
     ) -> None:
         """Update undo/redo stack display.
 
@@ -199,7 +204,7 @@ class UndoHistoryView(Vertical):
         """Set up the undo history view with the given Textual widget parameters."""
         super().__init__(name=name, id=id, classes=classes)
 
-    def compose(self):  # type: ignore[override]
+    def compose(self) -> ComposeResult:
         """Build the undo/history layout."""
         yield Static("[b]Undo / Redo & Operation History[/b]\n", id="history-header")
         yield OperationHistoryPanel("[dim]Loading...[/dim]")
@@ -242,27 +247,27 @@ class UndoHistoryView(Vertical):
                 redo_stack = manager.get_redo_stack()
                 stats = viewer.get_statistics()
 
-                self.call_from_thread(
+                self.app.call_from_thread(
                     self.query_one(OperationHistoryPanel).set_operations,
                     recent,
                 )
-                self.call_from_thread(
+                self.app.call_from_thread(
                     self.query_one(UndoRedoStackPanel).set_stacks,
                     undo_stack,
                     redo_stack,
                 )
-                self.call_from_thread(
+                self.app.call_from_thread(
                     self.query_one(HistoryStatsPanel).set_stats,
                     stats,
                 )
-                self.call_from_thread(self._set_status, "History loaded")
+                self.app.call_from_thread(self._set_status, "History loaded")
             finally:
                 history.close()
 
         except Exception as exc:
             msg = f"[red]History unavailable:[/red] {exc}"
             for panel_type in (OperationHistoryPanel, UndoRedoStackPanel, HistoryStatsPanel):
-                self.call_from_thread(self.query_one(panel_type).update, msg)
+                self.app.call_from_thread(self.query_one(panel_type).update, msg)
 
     @work(thread=True)
     def _run_undo(self) -> None:
@@ -276,16 +281,16 @@ class UndoHistoryView(Vertical):
                 manager = UndoManager(history=history)
                 success = manager.undo_last_operation()
                 if success:
-                    self.call_from_thread(self._set_status, "Undo successful")
+                    self.app.call_from_thread(self._set_status, "Undo successful")
                 else:
-                    self.call_from_thread(self._set_status, "Nothing to undo")
+                    self.app.call_from_thread(self._set_status, "Nothing to undo")
             finally:
                 history.close()
         except Exception as exc:
-            self.call_from_thread(self._set_status, f"Undo failed: {exc}")
+            self.app.call_from_thread(self._set_status, f"Undo failed: {exc}")
 
         # Reload history to reflect changes
-        self.call_from_thread(self.action_refresh_history)
+        self.app.call_from_thread(self.action_refresh_history)
 
     @work(thread=True)
     def _run_redo(self) -> None:
@@ -299,16 +304,16 @@ class UndoHistoryView(Vertical):
                 manager = UndoManager(history=history)
                 success = manager.redo_last_operation()
                 if success:
-                    self.call_from_thread(self._set_status, "Redo successful")
+                    self.app.call_from_thread(self._set_status, "Redo successful")
                 else:
-                    self.call_from_thread(self._set_status, "Nothing to redo")
+                    self.app.call_from_thread(self._set_status, "Nothing to redo")
             finally:
                 history.close()
         except Exception as exc:
-            self.call_from_thread(self._set_status, f"Redo failed: {exc}")
+            self.app.call_from_thread(self._set_status, f"Redo failed: {exc}")
 
         # Reload history to reflect changes
-        self.call_from_thread(self.action_refresh_history)
+        self.app.call_from_thread(self.action_refresh_history)
 
     def _set_status(self, message: str) -> None:
         """Update the app status bar if available."""
