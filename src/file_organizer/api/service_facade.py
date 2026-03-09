@@ -59,18 +59,33 @@ class ServiceFacade:
           ``"degraded"`` when the backend works but Ollama is unreachable.
         * ``version`` -- the package version string.
         * ``ollama`` -- ``True`` when the Ollama service is reachable.
+        * ``capabilities`` -- dict describing which file types are fully
+          supported vs. falling back to rule-based organization.  Present
+          only when ``status`` is ``"degraded"``.
 
         Returns:
-            A dictionary with keys ``status`` (str), ``version`` (str) and
-            ``ollama`` (bool).
+            A dictionary with keys ``status`` (str), ``version`` (str),
+            ``ollama`` (bool), and optionally ``capabilities`` (dict).
         """
         ollama_ok = await self._check_ollama()
         status = "ok" if ollama_ok else "degraded"
-        return {
+        payload: dict[str, Any] = {
             "status": status,
             "version": __version__,
             "ollama": ollama_ok,
         }
+        if not ollama_ok:
+            payload["capabilities"] = {
+                "full_ai": [],
+                "rule_based": ["audio", "video", "deduplication"],
+                "extension_fallback": ["text", "images", "cad"],
+                "note": (
+                    "Ollama is unreachable. Audio/video use metadata-based organization. "
+                    "Text/image/CAD files are sorted by file extension. "
+                    "Start Ollama to enable full AI-powered organization."
+                ),
+            }
+        return payload
 
     # ------------------------------------------------------------------
     # Status
