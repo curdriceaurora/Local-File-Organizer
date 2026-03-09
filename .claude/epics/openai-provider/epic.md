@@ -1,10 +1,10 @@
 ---
 name: openai-provider
 title: OpenAI-Compatible Provider Tier (Issue #335)
-status: open
+status: completed
 created: 2026-03-09T07:25:04Z
-updated: 2026-03-09T08:00:54Z
-progress: 67%
+updated: 2026-03-09T08:17:48Z
+progress: 100%
 github: https://github.com/curdriceaurora/Local-File-Organizer/issues/335
 ---
 
