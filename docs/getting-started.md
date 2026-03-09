@@ -119,7 +119,9 @@ When you first access File Organizer, you'll see a welcome screen with:
 
 ### 2. AI Model Configuration
 
-File Organizer requires local AI models:
+File Organizer supports two provider modes:
+
+**Option A — Ollama (default, fully local):**
 
 - **Text Model**: `qwen2.5:3b-instruct-q4_K_M` (~1.9 GB)
 - **Vision Model**: `qwen2.5vl:7b-q4_K_M` (~6.0 GB)
@@ -132,6 +134,26 @@ These are automatically pulled on first run if Ollama is available.
 ollama pull qwen2.5:3b-instruct-q4_K_M
 ollama pull qwen2.5vl:7b-q4_K_M
 ```
+
+**Option B — OpenAI-compatible endpoint (cloud or local API server):**
+
+No Ollama required. Install the `[cloud]` extra and set environment variables:
+
+```bash
+pip install -e ".[cloud]"
+
+# Example: OpenAI
+export FO_PROVIDER=openai
+export FO_OPENAI_API_KEY=sk-...
+export FO_OPENAI_MODEL=gpt-4o-mini
+
+# Example: LM Studio (local, no key needed)
+export FO_PROVIDER=openai
+export FO_OPENAI_BASE_URL=http://localhost:1234/v1
+export FO_OPENAI_MODEL=your-loaded-model
+```
+
+See [Configuration Guide](CONFIGURATION.md#openai-compatible-provider-cloud-or-local-api) for the full list of providers and options.
 
 ### 3. Workspace Configuration
 
