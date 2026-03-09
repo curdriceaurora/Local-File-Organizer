@@ -3,7 +3,8 @@
 [![CI](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml/badge.svg)](https://github.com/curdriceaurora/Local-File-Organizer/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-user%20guide-blue)](docs/USER_GUIDE.md)
 
-> AI-powered local file management. Privacy-first -- runs 100% on your device.
+> AI-powered local file management. Local-first by default (Ollama, no cloud required) --
+> or connect any OpenAI-compatible endpoint when you need it.
 
 **307 tests** | **334 modules** | **48+ file types** | Python 3.11+
 
