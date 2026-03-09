@@ -384,12 +384,17 @@ class TestReleaseWorkflow:
         has_release = any("release" in job_name for job_name in jobs)
         assert has_release, "Release workflow should create a GitHub release"
 
-    def test_release_uses_secrets_for_pypi(self, workflow: dict[str, Any]) -> None:
-        """Verify release uses secrets reference for PyPI token (not hardcoded)."""
-        workflow_text = yaml.dump(workflow)
-        assert "PYPI_TOKEN" in workflow_text, "Release should reference PYPI_TOKEN secret"
-        assert "secrets.PYPI_TOKEN" in workflow_text, (
-            "PYPI_TOKEN must be referenced via secrets context"
+    def test_release_uses_oidc_for_pypi(self, workflow: dict[str, Any]) -> None:
+        """Verify release uses OIDC trusted publishing for PyPI (no API token needed)."""
+        jobs = workflow.get("jobs", {})
+        publish_job = jobs.get("publish-pypi", {})
+        permissions = publish_job.get("permissions", {})
+        assert permissions.get("id-token") == "write", (
+            "publish-pypi job must have id-token: write for OIDC trusted publishing"
+        )
+        environment = publish_job.get("environment")
+        assert environment == "pypi", (
+            "publish-pypi job must use the 'pypi' GitHub environment for OIDC"
         )
 
 
