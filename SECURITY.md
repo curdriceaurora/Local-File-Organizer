@@ -15,7 +15,7 @@ We take the security of Local-File-Organizer seriously. If you believe you have 
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them via email to **security@example.com** (replace with actual security contact or use GitHub Security Advisories). 
+Instead, please report them via email to **security@example.com** (replace with actual security contact or use GitHub Security Advisories).
 
 Please include the following information in your report:
 - Type of vulnerability (e.g., XSS, SQLi, Buffer Overflow, etc.)

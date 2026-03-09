@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from file_organizer.client.models import (
     ConfigResponse,
@@ -24,11 +24,11 @@ from file_organizer.client.models import (
 
 
 def test_models_instantiation():
-    now = datetime.now()
+    now = datetime.now(UTC)
     fi = FileInfo(path="test", name="test", size=10, created=now, modified=now, file_type="txt")
     assert fi.size == 10
 
-    hr = HealthResponse(status="ok", version="1", environment="test", timestamp="now")
+    hr = HealthResponse(status="ok", readiness="ok", version="1", ollama=True, uptime=10.0)
     assert hr.status == "ok"
 
     flr = FileListResponse(items=[fi], total=1, skip=0, limit=10)

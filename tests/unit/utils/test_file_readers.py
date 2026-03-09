@@ -9,11 +9,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from file_organizer.utils import file_readers
+try:
+    import ebooklib
+except ImportError:
+    ebooklib = None  # type: ignore[assignment]
+
 from file_organizer.utils.file_readers import (
     FileReadError,
     FileTooLargeError,
-    _check_file_size,
     read_cad_file,
     read_docx_file,
     read_ebook_file,
@@ -27,10 +30,13 @@ from file_organizer.utils.file_readers import (
     read_text_file,
     read_zip_file,
 )
+from file_organizer.utils.readers._base import _check_file_size
+from file_organizer.utils.readers.ebook import EBOOKLIB_AVAILABLE
 
 pytestmark = [pytest.mark.unit]
 
 
+@pytest.mark.unit
 class TestFileReaders:
     """Tests for individual file readers in utils/file_readers.py."""
 
@@ -75,8 +81,8 @@ class TestFileReaders:
         with pytest.raises(FileReadError):
             read_text_file(missing)
 
-    @patch("file_organizer.utils.file_readers.DOCX_AVAILABLE", True)
-    @patch("file_organizer.utils.file_readers.docx.Document")
+    @patch("file_organizer.utils.readers.documents.DOCX_AVAILABLE", True)
+    @patch("file_organizer.utils.readers.documents.docx.Document")
     def test_read_docx_file_success(self, mock_doc_cls: MagicMock, tmp_path: Path) -> None:
         """Test reading DOCX file."""
         # Setup mock doc
@@ -94,14 +100,14 @@ class TestFileReaders:
         content = read_docx_file(test_file)
         assert "Paragraph 1\nParagraph 2" in content
 
-    @patch("file_organizer.utils.file_readers.DOCX_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.documents.DOCX_AVAILABLE", False)
     def test_read_docx_not_installed(self) -> None:
         """Test DOCX reading when library is missing."""
         with pytest.raises(ImportError, match="python-docx is not installed"):
             read_docx_file("test.docx")
 
-    @patch("file_organizer.utils.file_readers.DOCX_AVAILABLE", True)
-    @patch("file_organizer.utils.file_readers.docx.Document")
+    @patch("file_organizer.utils.readers.documents.DOCX_AVAILABLE", True)
+    @patch("file_organizer.utils.readers.documents.docx.Document")
     def test_read_docx_error(self, mock_doc_cls: MagicMock, tmp_path: Path) -> None:
         """Test reading DOCX file with error."""
         mock_doc_cls.side_effect = Exception("Doc error")
@@ -111,8 +117,8 @@ class TestFileReaders:
         with pytest.raises(FileReadError, match="Failed to read DOCX"):
             read_docx_file(test_file)
 
-    @patch("file_organizer.utils.file_readers.PYMUPDF_AVAILABLE", True)
-    @patch("file_organizer.utils.file_readers.fitz.open")
+    @patch("file_organizer.utils.readers.documents.PYMUPDF_AVAILABLE", True)
+    @patch("file_organizer.utils.readers.documents.fitz.open")
     def test_read_pdf_file_success(self, mock_fitz_open: MagicMock, tmp_path: Path) -> None:
         """Test reading PDF file."""
         mock_doc = MagicMock()
@@ -122,7 +128,8 @@ class TestFileReaders:
         mock_page2 = MagicMock()
         mock_page2.get_text.return_value = "Page 2 content"
         mock_doc.load_page.side_effect = [mock_page1, mock_page2]
-        mock_fitz_open.return_value = mock_doc
+        # fitz.open() is used as a context manager; __enter__ must return mock_doc
+        mock_fitz_open.return_value.__enter__.return_value = mock_doc
 
         test_file = tmp_path / "test.pdf"
         test_file.touch()
@@ -130,16 +137,15 @@ class TestFileReaders:
         content = read_pdf_file(test_file)
         assert "Page 1 content" in content
         assert "Page 2 content" in content
-        mock_doc.close.assert_called_once()
 
-    @patch("file_organizer.utils.file_readers.PYMUPDF_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.documents.PYMUPDF_AVAILABLE", False)
     def test_read_pdf_not_installed(self) -> None:
         """Test PDF reading when missing library."""
         with pytest.raises(ImportError, match="PyMuPDF is not installed"):
             read_pdf_file("test.pdf")
 
-    @patch("file_organizer.utils.file_readers.PYMUPDF_AVAILABLE", True)
-    @patch("file_organizer.utils.file_readers.fitz.open")
+    @patch("file_organizer.utils.readers.documents.PYMUPDF_AVAILABLE", True)
+    @patch("file_organizer.utils.readers.documents.fitz.open")
     def test_read_pdf_error(self, mock_fitz_open: MagicMock, tmp_path: Path) -> None:
         """Test PDF reading error."""
         mock_fitz_open.side_effect = Exception("PDF render error")
@@ -150,16 +156,17 @@ class TestFileReaders:
             read_pdf_file(test_file)
 
     def test_read_spreadsheet_csv(self, tmp_path: Path) -> None:
-        """Test reading CSV spreadsheet with standard csv module."""
+        """Test reading CSV spreadsheet."""
         test_file = tmp_path / "test.csv"
         test_file.write_text("Col1,Col2\nA,B")
 
         content = read_spreadsheet_file(test_file)
-        assert "Col1,Col2\nA,B" in content
+        assert "Col1,Col2" in content
+        assert "A,B" in content
 
-    @patch("file_organizer.utils.file_readers.OPENPYXL_AVAILABLE", True)
+    @patch("file_organizer.utils.readers.documents.OPENPYXL_AVAILABLE", True)
     def test_read_spreadsheet_xlsx(self, tmp_path: Path) -> None:
-        """Test reading XLSX spreadsheet with openpyxl."""
+        """Test reading XLSX spreadsheet."""
         import openpyxl
         test_file = tmp_path / "test.xlsx"
         wb = openpyxl.Workbook()
@@ -171,15 +178,14 @@ class TestFileReaders:
         wb.save(test_file)
 
         content = read_spreadsheet_file(test_file)
-        # Assuming openpyxl extracts string representation
         assert "Col1,Col2" in content
         assert "A,B" in content
 
-    @patch("file_organizer.utils.file_readers.OPENPYXL_AVAILABLE", False)
-    def test_read_spreadsheet_xlsx_not_installed(self, tmp_path: Path) -> None:
+    @patch("file_organizer.utils.readers.documents.OPENPYXL_AVAILABLE", False)
+    def test_read_spreadsheet_not_installed(self, tmp_path: Path) -> None:
         test_file = tmp_path / "test.xlsx"
         test_file.touch()
-        with pytest.raises(FileReadError, match="openpyxl is not installed"):
+        with pytest.raises(ImportError, match="openpyxl is not installed"):
             read_spreadsheet_file(test_file)
 
     def test_read_spreadsheet_bad_format(self, tmp_path: Path) -> None:
@@ -188,8 +194,8 @@ class TestFileReaders:
         with pytest.raises(FileReadError, match="Unsupported spreadsheet"):
             read_spreadsheet_file(test_file)
 
-    @patch("file_organizer.utils.file_readers.PPTX_AVAILABLE", True)
-    @patch("file_organizer.utils.file_readers.Presentation")
+    @patch("file_organizer.utils.readers.documents.PPTX_AVAILABLE", True)
+    @patch("file_organizer.utils.readers.documents.Presentation")
     def test_read_presentation_file(self, mock_prs_cls: MagicMock, tmp_path: Path) -> None:
         """Test reading PPTX."""
         mock_prs = MagicMock()
@@ -207,18 +213,19 @@ class TestFileReaders:
         assert "Slide 1" in content
         assert "Presentation text" in content
 
-    @patch("file_organizer.utils.file_readers.PPTX_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.documents.PPTX_AVAILABLE", False)
     def test_read_presentation_not_installed(self) -> None:
         with pytest.raises(ImportError, match="python-pptx is not installed"):
             read_presentation_file("test.pptx")
 
-    @patch("file_organizer.utils.file_readers.EBOOKLIB_AVAILABLE", True)
-    @patch("file_organizer.utils.file_readers.epub.read_epub")
+    @pytest.mark.skipif(not EBOOKLIB_AVAILABLE, reason="ebooklib not installed")
+    @patch("file_organizer.utils.readers.ebook.EBOOKLIB_AVAILABLE", True)
+    @patch("file_organizer.utils.readers.ebook.epub.read_epub")
     def test_read_ebook_file(self, mock_read_epub: MagicMock, tmp_path: Path) -> None:
         """Test reading EPUB."""
         mock_book = MagicMock()
         mock_item = MagicMock()
-        mock_item.get_type.return_value = file_readers.ebooklib.ITEM_DOCUMENT
+        mock_item.get_type.return_value = ebooklib.ITEM_DOCUMENT if ebooklib is not None else 9
         mock_item.get_content.return_value = b"<html><body>Ebook Content</body></html>"
         mock_book.get_items.return_value = [mock_item]
         mock_read_epub.return_value = mock_book
@@ -229,12 +236,12 @@ class TestFileReaders:
         content = read_ebook_file(test_file)
         assert "Ebook Content" in content
 
-    @patch("file_organizer.utils.file_readers.EBOOKLIB_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.ebook.EBOOKLIB_AVAILABLE", False)
     def test_read_ebook_not_installed(self) -> None:
         with pytest.raises(ImportError, match="ebooklib is not installed"):
             read_ebook_file("test.epub")
 
-    @patch("file_organizer.utils.file_readers.EBOOKLIB_AVAILABLE", True)
+    @patch("file_organizer.utils.readers.ebook.EBOOKLIB_AVAILABLE", True)
     def test_read_ebook_unsupported_format(self, tmp_path: Path) -> None:
         test_file = tmp_path / "test.mobi"
         test_file.touch()
@@ -242,10 +249,11 @@ class TestFileReaders:
             read_ebook_file(test_file)
 
 
+@pytest.mark.unit
 class TestReadFileGeneric:
     """Test the read_file routing function."""
 
-    @patch("file_organizer.utils.file_readers.read_text_file")
+    @patch("file_organizer.utils.readers.read_text_file")
     def test_read_file_text(self, mock_read_text: MagicMock, tmp_path: Path) -> None:
         test_file = tmp_path / "doc.txt"
         test_file.touch()
@@ -254,21 +262,21 @@ class TestReadFileGeneric:
         read_file(test_file)
         mock_read_text.assert_called_once_with(test_file)
 
-    @patch("file_organizer.utils.file_readers.read_docx_file")
+    @patch("file_organizer.utils.readers.read_docx_file")
     def test_read_file_docx(self, mock_read_docx: MagicMock, tmp_path: Path) -> None:
         test_file = tmp_path / "doc.docx"
         test_file.touch()
         read_file(test_file)
         mock_read_docx.assert_called_once()
 
-    @patch("file_organizer.utils.file_readers.read_pdf_file")
+    @patch("file_organizer.utils.readers.read_pdf_file")
     def test_read_file_pdf(self, mock_read_pdf: MagicMock, tmp_path: Path) -> None:
         test_file = tmp_path / "doc.pdf"
         test_file.touch()
         read_file(test_file)
         mock_read_pdf.assert_called_once()
 
-    @patch("file_organizer.utils.file_readers.read_spreadsheet_file")
+    @patch("file_organizer.utils.readers.read_spreadsheet_file")
     def test_read_file_spreadsheet(self, mock_read_csv: MagicMock, tmp_path: Path) -> None:
         test_file = tmp_path / "data.csv"
         test_file.touch()
@@ -286,6 +294,7 @@ class TestReadFileGeneric:
 # ────────────────────────────────────────────────────────────────────────────
 
 
+@pytest.mark.unit
 class TestArchiveReaders:
     """Tests for ZIP and TAR archive readers."""
 
@@ -378,10 +387,11 @@ class TestArchiveReaders:
             read_tar_file(corrupt_tar)
 
 
+@pytest.mark.unit
 class TestScientificReaders:
     """Tests for optional-dependency scientific format readers (unavailable paths)."""
 
-    @patch("file_organizer.utils.file_readers.PY7ZR_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.archives.PY7ZR_AVAILABLE", False)
     def test_read_7z_not_installed(self):
         """py7zr not installed raises ImportError."""
         from file_organizer.utils.file_readers import read_7z_file
@@ -389,7 +399,7 @@ class TestScientificReaders:
         with pytest.raises(ImportError, match="py7zr is not installed"):
             read_7z_file("test.7z")
 
-    @patch("file_organizer.utils.file_readers.RARFILE_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.archives.RARFILE_AVAILABLE", False)
     def test_read_rar_not_installed(self):
         """rarfile not installed raises ImportError."""
         from file_organizer.utils.file_readers import read_rar_file
@@ -397,7 +407,7 @@ class TestScientificReaders:
         with pytest.raises(ImportError, match="rarfile is not installed"):
             read_rar_file("test.rar")
 
-    @patch("file_organizer.utils.file_readers.H5PY_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.scientific.H5PY_AVAILABLE", False)
     def test_read_hdf5_not_installed(self):
         """h5py not installed raises ImportError."""
         from file_organizer.utils.file_readers import read_hdf5_file
@@ -405,7 +415,7 @@ class TestScientificReaders:
         with pytest.raises(ImportError, match="h5py is not installed"):
             read_hdf5_file("test.hdf5")
 
-    @patch("file_organizer.utils.file_readers.NETCDF4_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.scientific.NETCDF4_AVAILABLE", False)
     def test_read_netcdf_not_installed(self):
         """netCDF4 not installed raises ImportError."""
         from file_organizer.utils.file_readers import read_netcdf_file
@@ -413,7 +423,7 @@ class TestScientificReaders:
         with pytest.raises(ImportError, match="netCDF4 is not installed"):
             read_netcdf_file("test.nc")
 
-    @patch("file_organizer.utils.file_readers.SCIPY_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.scientific.SCIPY_AVAILABLE", False)
     def test_read_mat_not_installed(self):
         """scipy not installed raises ImportError."""
         from file_organizer.utils.file_readers import read_mat_file
@@ -421,7 +431,7 @@ class TestScientificReaders:
         with pytest.raises(ImportError, match="scipy is not installed"):
             read_mat_file("test.mat")
 
-    @patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", False)
     def test_read_dxf_not_installed(self):
         """ezdxf not installed raises ImportError for DXF."""
         from file_organizer.utils.file_readers import read_dxf_file
@@ -429,7 +439,7 @@ class TestScientificReaders:
         with pytest.raises(ImportError, match="ezdxf is not installed"):
             read_dxf_file("test.dxf")
 
-    @patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", False)
     def test_read_dwg_not_installed(self):
         """ezdxf not installed raises ImportError for DWG."""
         from file_organizer.utils.file_readers import read_dwg_file
@@ -438,6 +448,7 @@ class TestScientificReaders:
             read_dwg_file("test.dwg")
 
 
+@pytest.mark.unit
 class TestCADReaders:
     """Tests for text-based CAD readers (STEP, IGES) and CAD dispatch."""
 
@@ -481,12 +492,8 @@ class TestCADReaders:
         """Create a minimal IGES file with proper column structure."""
         # IGES format: 80-char lines with section type at column 73
         start_line = "{:<72}S{:>7d}\n".format("Test IGES file", 1)
-        global_line = "{:<72}G{:>7d}\n".format(
-            "1H,,1H;,4Htest,8Htest.igs,8Htest.igs", 1
-        )
-        term_line = "{:<72}T{:>7d}\n".format(
-            "S      1G      1D      0P      0", 1
-        )
+        global_line = "{:<72}G{:>7d}\n".format("1H,,1H;,4Htest,8Htest.igs,8Htest.igs", 1)
+        term_line = "{:<72}T{:>7d}\n".format("S      1G      1D      0P      0", 1)
 
         iges_path = tmp_path / "model.igs"
         iges_path.write_text(start_line + global_line + term_line)
@@ -509,14 +516,15 @@ class TestCADReaders:
         assert "Start Section" not in content
 
     def test_read_cad_file_unsupported(self, tmp_path):
-        """Unsupported CAD extension raises ValueError."""
+        """Unsupported CAD extension raises FileReadError."""
         cad_path = tmp_path / "model.obj"
         cad_path.touch()
 
-        with pytest.raises(ValueError, match="Unsupported CAD file format"):
+        with pytest.raises(FileReadError, match="Unsupported CAD file format"):
             read_cad_file(cad_path)
 
 
+@pytest.mark.unit
 class TestReadFileExpanded:
     """Expanded tests for the read_file dispatch function."""
 
@@ -562,7 +570,7 @@ class TestReadFileExpanded:
         assert content is not None
         assert "STEP File Information" in content
 
-    @patch("file_organizer.utils.file_readers.EZDXF_AVAILABLE", False)
+    @patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", False)
     def test_read_file_dxf(self, tmp_path):
         """Verify .dxf routes to read_cad_file -> read_dxf_file (raises when unavailable)."""
         dxf_path = tmp_path / "drawing.dxf"
