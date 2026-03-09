@@ -140,7 +140,8 @@ ollama pull qwen2.5vl:7b-q4_K_M
 No Ollama required. Install the `[cloud]` extra and set environment variables:
 
 ```bash
-pip install -e ".[cloud]"
+pip install "file-organizer[cloud]"   # from PyPI
+# pip install -e ".[cloud]"           # from source checkout
 
 # Example: OpenAI
 export FO_PROVIDER=openai

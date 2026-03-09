@@ -92,7 +92,7 @@ class OpenAIVisionModel(BaseModel):
         The client validates connectivity lazily on the first API call.
         """
         if self._initialized:
-            logger.debug("OpenAI vision model %s already initialized", self.config.name)
+            logger.debug("OpenAI vision model {} already initialized", self.config.name)
             return
 
         self.client = create_openai_client(self.config, "vision")
@@ -159,7 +159,7 @@ class OpenAIVisionModel(BaseModel):
         ]
 
         try:
-            logger.debug("Analysing image with OpenAI model %s", self.config.name)
+            logger.debug("Analysing image with OpenAI model {}", self.config.name)
             response = self.client.chat.completions.create(
                 model=self.config.name,
                 messages=messages,
@@ -167,10 +167,10 @@ class OpenAIVisionModel(BaseModel):
                 max_tokens=max_tokens,
             )
             content = response.choices[0].message.content or ""
-            logger.debug("Generated %d characters", len(content))
+            logger.debug("Generated {} characters", len(content))
             return content.strip()
         except Exception as e:
-            logger.error("Failed to analyse image via OpenAI API: %s", e)
+            logger.error("Failed to analyse image via OpenAI API: {}", type(e).__name__)
             raise
 
     def analyze_image(
@@ -217,7 +217,7 @@ class OpenAIVisionModel(BaseModel):
 
     def cleanup(self) -> None:
         """Release the OpenAI client."""
-        logger.debug("Cleaning up OpenAI vision model %s", self.config.name)
+        logger.debug("Cleaning up OpenAI vision model {}", self.config.name)
         self.client = None
         self._initialized = False
 

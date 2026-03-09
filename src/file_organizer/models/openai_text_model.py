@@ -55,7 +55,7 @@ class OpenAITextModel(BaseModel):
         ``initialize()`` never makes a network request.
         """
         if self._initialized:
-            logger.debug("OpenAI text model %s already initialized", self.config.name)
+            logger.debug("OpenAI text model {} already initialized", self.config.name)
             return
 
         self.client = create_openai_client(self.config, "text")
@@ -83,7 +83,7 @@ class OpenAITextModel(BaseModel):
         max_tokens = int(kwargs.get("max_tokens", self.config.max_tokens))
 
         try:
-            logger.debug("Generating text with OpenAI model %s", self.config.name)
+            logger.debug("Generating text with OpenAI model {}", self.config.name)
             response = self.client.chat.completions.create(
                 model=self.config.name,
                 messages=[{"role": "user", "content": prompt}],
@@ -91,15 +91,15 @@ class OpenAITextModel(BaseModel):
                 max_tokens=max_tokens,
             )
             content = response.choices[0].message.content or ""
-            logger.debug("Generated %d characters", len(content))
+            logger.debug("Generated {} characters", len(content))
             return content.strip()
         except Exception as e:
-            logger.error("Failed to generate text via OpenAI API: %s", e)
+            logger.error("Failed to generate text via OpenAI API: {}", type(e).__name__)
             raise
 
     def cleanup(self) -> None:
         """Release the OpenAI client."""
-        logger.debug("Cleaning up OpenAI text model %s", self.config.name)
+        logger.debug("Cleaning up OpenAI text model {}", self.config.name)
         self.client = None
         self._initialized = False
 

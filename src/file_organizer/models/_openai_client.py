@@ -44,18 +44,22 @@ def create_openai_client(config: ModelConfig, model_type_label: str) -> Any:
             "Install it with: pip install 'file-organizer[cloud]'"
         )
 
-    logger.info("Initializing OpenAI %s model: %s", model_type_label, config.name)
+    logger.info("Initializing OpenAI {} model: {}", model_type_label, config.name)
+    # Only pass api_key when explicitly set — when None, the SDK falls back to
+    # the OPENAI_API_KEY environment variable (standard for local endpoints).
+    client_kwargs: dict[str, Any] = {}
+    if config.api_key is not None:
+        client_kwargs["api_key"] = config.api_key
+    if config.api_base_url is not None:
+        client_kwargs["base_url"] = config.api_base_url
     try:
-        client = OpenAI(
-            api_key=config.api_key,
-            base_url=config.api_base_url,
-        )
-        logger.info("OpenAI %s model %s initialized", model_type_label, config.name)
+        client = OpenAI(**client_kwargs)
+        logger.info("OpenAI {} model {} initialized", model_type_label, config.name)
         return client
     except Exception as e:
         # Log only the exception type — the message may contain partial api_key fragments.
         logger.error(
-            "Failed to initialize OpenAI %s model %s: %s",
+            "Failed to initialize OpenAI {} model {}: {}",
             model_type_label,
             config.name,
             type(e).__name__,

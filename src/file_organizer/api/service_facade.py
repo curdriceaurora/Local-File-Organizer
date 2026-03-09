@@ -73,8 +73,10 @@ class ServiceFacade:
             A dictionary with keys ``status``, ``version``, ``provider``,
             ``ollama``, and optionally ``capabilities``.
         """
-        ollama_ok = await self._check_ollama()
         provider = get_current_provider()
+        # Skip the Ollama probe entirely when using an OpenAI-compatible provider —
+        # it adds a 2-second timeout for no benefit and can cause spurious failures.
+        ollama_ok = False if provider == "openai" else await self._check_ollama()
         if provider == "openai":
             status = "unknown"  # OpenAI endpoint is not probed at health-check time
         else:
