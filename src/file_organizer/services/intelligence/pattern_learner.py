@@ -15,7 +15,7 @@ from .confidence import ConfidenceEngine
 from .feedback_processor import FeedbackProcessor
 from .folder_learner import FolderPreferenceLearner
 from .pattern_extractor import NamingPatternExtractor
-from .preference_tracker import PreferenceTracker
+from .preference_tracker import CorrectionType, PreferenceTracker
 
 logger = logging.getLogger(__name__)
 
@@ -106,13 +106,16 @@ class PatternLearner:
             results["learned"].append(folder_result)
 
         # Update preference tracker
-        self.preference_tracker.track_operation(  # type: ignore[attr-defined]
-            "correction", {"from": str(original), "to": str(corrected)}
+        correction_type = (
+            CorrectionType.FILE_MOVE
+            if original.parent != corrected.parent
+            else CorrectionType.FILE_RENAME
         )
+        self.preference_tracker.track_correction(original, corrected, correction_type)
 
         # Check if retraining needed
         if insights.get("trigger_retraining"):
-            self.confidence_engine.recalculate_all()  # type: ignore[attr-defined]
+            # ConfidenceEngine scores are computed on demand; mark the flag only.
             results["retraining_triggered"] = True
 
         logger.info(f"Learned {len(results['learned'])} patterns from correction")
@@ -186,7 +189,7 @@ class PatternLearner:
             pattern_id: Pattern identifier
             success: Whether the pattern application was successful
         """
-        self.confidence_engine.update_pattern_confidence(pattern_id, success)  # type: ignore[attr-defined]
+        self.confidence_engine.track_usage(pattern_id, datetime.now(UTC), success)
 
         logger.debug(f"Updated confidence for {pattern_id}: success={success}")
 
@@ -244,7 +247,7 @@ class PatternLearner:
         """
         stats = {
             "timestamp": datetime.now(UTC).isoformat(),
-            "confidence_stats": self.confidence_engine.get_stats(),  # type: ignore[attr-defined]
+            "confidence_stats": self.confidence_engine.get_stats(),
             "folder_stats": self.folder_learner.analyze_organization_patterns(),
             "correction_count": self.feedback_processor.correction_count,
             "learning_enabled": self.learning_enabled,
@@ -299,9 +302,7 @@ class PatternLearner:
         results["folder_preferences_cleared"] = self.folder_learner.clear_old_preferences(days)
 
         # Apply decay to old patterns
-        results["patterns_decayed"] = self.confidence_engine.decay_old_patterns(  # type: ignore[assignment]
-            days  # type: ignore[arg-type]
-        )
+        results["patterns_decayed"] = self.confidence_engine.clear_stale_patterns(days)
 
         logger.info(f"Cleared {results['folder_preferences_cleared']} old preferences")
 

@@ -15,7 +15,7 @@ from typing import Any
 try:
     import redis
 except ImportError:  # pragma: no cover
-    redis = None  # type: ignore[assignment]
+    redis = None
 
 from file_organizer.events.config import EventConfig
 

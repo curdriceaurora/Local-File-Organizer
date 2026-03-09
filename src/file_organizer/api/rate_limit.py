@@ -97,7 +97,7 @@ class RedisRateLimiter:
         local ttl = redis.call("TTL", KEYS[1])
         return {current, ttl}
         """
-        count, ttl = self._redis.eval(script, 1, redis_key, window_seconds)  # type: ignore[misc]
+        count, ttl = self._redis.eval(script, 1, redis_key, window_seconds)
         if ttl is None or int(ttl) < 0:
             ttl = window_seconds
         reset_at = now + int(ttl)

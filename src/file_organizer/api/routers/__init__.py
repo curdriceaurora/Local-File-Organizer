@@ -21,7 +21,7 @@ except ModuleNotFoundError as exc:
     import warnings
 
     warnings.warn("daemon router not available; daemon endpoints disabled", stacklevel=1)
-    daemon_router = None  # type: ignore[assignment]
+    daemon_router = None
 
 __all__ = [
     "analyze_router",

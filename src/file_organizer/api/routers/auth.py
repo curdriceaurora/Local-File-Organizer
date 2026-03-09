@@ -141,7 +141,7 @@ def login(
     if settings.auth_login_rate_limit_enabled:
         rate_limiter.reset(rate_limit_key)
 
-    user.last_login = datetime.now(UTC)  # type: ignore[assignment]
+    user.last_login = datetime.now(UTC)
     db.commit()
 
     token_bundle = create_token_bundle(str(user.id), str(user.username), settings)

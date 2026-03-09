@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from textual import on
 from textual.app import ComposeResult
@@ -17,7 +18,9 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.message import Message
 from textual.widgets import DirectoryTree, Input, Static
-from textual.widgets._directory_tree import DirEntry
+
+if TYPE_CHECKING:
+    from textual.widgets._directory_tree import DirEntry
 
 
 def _format_size(size: int) -> str:

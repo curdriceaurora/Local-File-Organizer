@@ -160,8 +160,8 @@ def setup_middleware(app: FastAPI, settings: ApiSettings) -> None:
         allow_headers=settings.cors_allow_headers,
     )
     app.add_middleware(
-        RateLimitMiddleware,  # type: ignore[arg-type]
+        RateLimitMiddleware,
         settings=settings,
         limiter=build_rate_limiter(settings.auth_redis_url),
     )
-    app.add_middleware(SecurityHeadersMiddleware, settings=settings)  # type: ignore[arg-type]
+    app.add_middleware(SecurityHeadersMiddleware, settings=settings)

@@ -82,7 +82,7 @@ class SessionRepository:
         row = session.get(UserSession, session_id)
         if row is None:
             return False
-        row.revoked_at = datetime.now(UTC)  # type: ignore[assignment]
+        row.revoked_at = datetime.now(UTC)
         session.flush()
         return True
 

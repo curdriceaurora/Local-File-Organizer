@@ -7,6 +7,7 @@ configurable pattern filtering, and event queuing for batch processing.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 from collections.abc import Callable
@@ -94,7 +95,7 @@ class FileEventHandler(FileSystemEventHandler):
         dest_path: Path | None = None
         if hasattr(event, "dest_path") and event.dest_path is not None:
             raw_dest = event.dest_path
-            dest_path = Path(raw_dest.decode() if isinstance(raw_dest, bytes) else raw_dest)
+            dest_path = Path(os.fsdecode(raw_dest))
         self._handle_event(event, EventType.MOVED, dest_path=dest_path)
 
     def register_callback(
@@ -133,7 +134,7 @@ class FileEventHandler(FileSystemEventHandler):
             dest_path: Destination path for move events.
         """
         raw_src = event.src_path
-        path = Path(raw_src.decode() if isinstance(raw_src, bytes) else raw_src)
+        path = Path(os.fsdecode(raw_src))
         is_directory = isinstance(event, (DirCreatedEvent, DirDeletedEvent, DirMovedEvent))
 
         # Skip directory events for non-directory-aware processing

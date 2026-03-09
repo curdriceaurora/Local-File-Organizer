@@ -320,7 +320,7 @@ def login_submit(
             )
             return templates.TemplateResponse(request, "profile/login.html", context)
 
-        user.last_login = _now()  # type: ignore[assignment]
+        user.last_login = _now()
         db.commit()
 
         bundle = create_token_bundle(str(user.id), str(user.username), settings)
@@ -536,7 +536,7 @@ def reset_password_submit(
                 },
             )
             return templates.TemplateResponse(request, "profile/reset_password.html", context)
-        user.hashed_password = hash_password(new_password)  # type: ignore[assignment]
+        user.hashed_password = hash_password(new_password)
         db.commit()
     finally:
         db.close()
@@ -632,8 +632,8 @@ def profile_edit_submit(
                 )
                 return templates.TemplateResponse(request, "profile/_edit.html", context)
 
-        db_user.full_name = full_name or None  # type: ignore[assignment]
-        db_user.email = email  # type: ignore[assignment]
+        db_user.full_name = full_name or None
+        db_user.email = email
         db.commit()
         db.refresh(db_user)
 
@@ -721,7 +721,7 @@ def workspace_switch(
     db = _get_db(settings)
     try:
         workspace = WorkspaceRepository.get_by_id(db, workspace_id)
-        if workspace is not None and workspace.owner_id == user.id:
+        if workspace is not None and workspace.owner_id == str(user.id):
             state = _load_profile_state(db, str(user.id))
             state["active_workspace_id"] = workspace_id
             _append_activity(state, f"Switched to workspace '{workspace.name}'.")
@@ -1067,7 +1067,7 @@ def account_settings_change_password(
             )
             return templates.TemplateResponse(request, "profile/_account_settings.html", context)
 
-        db_user.hashed_password = hash_password(new_password)  # type: ignore[assignment]
+        db_user.hashed_password = hash_password(new_password)
         state = _load_profile_state(db, str(db_user.id))
         _append_activity(state, "Changed account password.")
         _append_notification(state, "Your password was changed.")
@@ -1239,7 +1239,7 @@ def api_key_revoke(
             .first()
         )
         if api_key is not None:
-            api_key.is_active = False  # type: ignore[assignment]
+            api_key.is_active = False
             state = _load_profile_state(db, str(user.id))
             _append_activity(state, f"Revoked API key '{api_key.label}'.")
             _append_notification(state, f"API key '{api_key.label}' was revoked.")

@@ -75,14 +75,14 @@ class FileMetadataRepository:
             )
             session.add(row)
         else:
-            row.path = path  # type: ignore[assignment]
-            row.name = name  # type: ignore[assignment]
-            row.size_bytes = size_bytes  # type: ignore[assignment]
-            row.mime_type = mime_type  # type: ignore[assignment]
-            row.checksum_sha256 = checksum_sha256  # type: ignore[assignment]
-            row.last_modified = last_modified  # type: ignore[assignment]
-            row.extra_json = extra_json  # type: ignore[assignment]
-            row.updated_at = datetime.now(UTC)  # type: ignore[assignment]
+            row.path = path
+            row.name = name
+            row.size_bytes = size_bytes
+            row.mime_type = mime_type
+            row.checksum_sha256 = checksum_sha256
+            row.last_modified = last_modified
+            row.extra_json = extra_json
+            row.updated_at = datetime.now(UTC)
 
         session.flush()
 

@@ -489,3 +489,36 @@ class ConfidenceEngine:
             self._usage_data.clear()
         elif pattern_id in self._usage_data:
             del self._usage_data[pattern_id]
+
+    def get_stats(self) -> dict[str, Any]:
+        """Return summary statistics for tracked patterns.
+
+        Returns:
+            Dictionary with pattern count and aggregate usage totals.
+        """
+        total_uses = sum(d.total_uses for d in self._usage_data.values())
+        successful_uses = sum(d.successful_uses for d in self._usage_data.values())
+        return {
+            "total_patterns": len(self._usage_data),
+            "total_uses": total_uses,
+            "successful_uses": successful_uses,
+        }
+
+    def clear_stale_patterns(self, days: int) -> int:
+        """Remove usage data for patterns not seen within the given number of days.
+
+        Args:
+            days: Age threshold in days.
+
+        Returns:
+            Number of patterns whose usage data was removed.
+        """
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        stale = [
+            pid
+            for pid, data in self._usage_data.items()
+            if data.last_seen is not None and data.last_seen < cutoff
+        ]
+        for pid in stale:
+            del self._usage_data[pid]
+        return len(stale)

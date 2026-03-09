@@ -98,7 +98,9 @@ def prompt_choice(
     """
     if _no_interactive and default is not None:
         return default
-    return Prompt.ask(message, choices=list(choices), default=default or "")
+    if default is not None:
+        return Prompt.ask(message, choices=list(choices), default=default)
+    return Prompt.ask(message, choices=list(choices))
 
 
 def create_progress() -> Progress:

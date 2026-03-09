@@ -71,8 +71,8 @@ class SettingsRepository:
             .first()
         )
         if row is not None:
-            row.value = value  # type: ignore[assignment]
-            row.updated_at = datetime.now(UTC)  # type: ignore[assignment]
+            row.value = value
+            row.updated_at = datetime.now(UTC)
         else:
             row = SettingsStore(key=key, value=value, user_id=user_id)
             session.add(row)
