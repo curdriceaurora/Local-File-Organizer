@@ -81,7 +81,8 @@ class ServiceFacade:
                 "extension_fallback": ["text", "images", "cad"],
                 "note": (
                     "Ollama is unreachable. Audio/video use metadata-based organization. "
-                    "Text/image/CAD files are sorted by file extension. "
+                    "Text/CAD files are sorted by file extension into named folders. "
+                    "Images are placed into Images/<year> based on file modification time. "
                     "Start Ollama to enable full AI-powered organization."
                 ),
             }

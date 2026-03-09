@@ -16,7 +16,7 @@ import pytest
 from file_organizer.core.organizer import FileOrganizer
 from file_organizer.services.text_processor import ProcessedFile
 
-pytestmark = pytest.mark.no_ollama
+pytestmark = [pytest.mark.no_ollama, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
