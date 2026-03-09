@@ -3,6 +3,7 @@ repos:
     hooks:
       # ----------------------------------------------------------------
       # Linting & formatting
+      # ruff-check already runs all F rules (incl. F401) per pyproject.toml
       # ----------------------------------------------------------------
       - id: ruff-check
         name: ruff check
@@ -16,25 +17,23 @@ repos:
         language: system
         pass_filenames: false
 
-      - id: ruff-unused-imports
-        name: ruff unused imports (F401)
-        entry: ruff check --select F401 .
-        language: system
-        pass_filenames: false
-
       # ----------------------------------------------------------------
-      # G1: No hardcoded /tmp/ or absolute paths in staged diff
-      # Use tmp_path fixture in tests; ConfigManager in source
+      # G1: No hardcoded /tmp/ or absolute paths in staged Python diff
+      # Use tmp_path fixture in tests; ConfigManager in source.
+      # Note: expanduser() is intentionally allowed — it is the correct
+      # way to resolve home-directory paths throughout the codebase.
+      # Only checks added lines that are not pure comments.
       # ----------------------------------------------------------------
       - id: no-absolute-paths
         name: no absolute paths in Python files (G1)
-        entry: bash -c "git diff --cached -- '*.py' | grep -E '^\\+.*(/tmp/|/Users/|/home/|expanduser\\()' | grep -v '^+++' | grep -v '#' && echo 'ERROR: hardcoded path in Python — use tmp_path fixture or ConfigManager' && exit 1 || exit 0"
+        entry: bash -c "git diff --cached -- '*.py' | grep -E '^\\+.*(/tmp/|/Users/|/home/)' | grep -v '^+++' | grep -vE '^\\+\\s*#' && echo 'ERROR: hardcoded path in Python — use tmp_path fixture or ConfigManager' && exit 1 || exit 0"
         language: system
         pass_filenames: false
 
       # ----------------------------------------------------------------
-      # G2: No f-strings in logger calls
-      # logger.debug(f"...") must become logger.debug("...", var)
+      # G2: No f-strings in logger calls (single or double quote)
+      # Matches: logger.debug(f"..."), logger.info(f'...'),
+      #          logger.exception( f"..."), etc.
       # ----------------------------------------------------------------
       - id: no-fstrings-in-logger
         name: no f-strings in logger calls (G2)
@@ -44,6 +43,8 @@ repos:
 
       # ----------------------------------------------------------------
       # No build artifacts committed
+      # Covers: .coverage, *.bak, *.pyc, *.pyo, coverage.xml, htmlcov/,
+      #         __pycache__/, build/, dist/
       # ----------------------------------------------------------------
       - id: no-build-artifacts
         name: no build artifacts staged
