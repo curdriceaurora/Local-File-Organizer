@@ -3,9 +3,9 @@ name: 579-stream6-utils
 issue: 579
 stream: 6
 title: "Utils & Data Models"
-status: open
+status: completed
 created: 2026-03-06T21:00:00Z
-updated: 2026-03-06T21:00:00Z
+updated: 2026-03-09T05:58:01Z
 ---
 
 # Task 579.6: Utils & Data Models

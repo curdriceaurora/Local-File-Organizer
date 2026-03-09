@@ -3,9 +3,9 @@ name: 579-stream4-cli
 issue: 579
 stream: 4
 title: "CLI & User-Facing APIs"
-status: open
+status: completed
 created: 2026-03-06T21:00:00Z
-updated: 2026-03-06T21:00:00Z
+updated: 2026-03-09T05:58:01Z
 ---
 
 # Task 579.4: CLI & User-Facing APIs
