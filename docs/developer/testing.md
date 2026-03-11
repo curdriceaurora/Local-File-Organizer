@@ -31,7 +31,7 @@ tests/
 ├── web/              # Web routes and templates (40+ tests)
 ├── models/           # Data models (40+ tests)
 ├── config/           # Configuration (30+ tests)
-├── integration/      # Cross-module workflows (50+ tests)
+├── integration/      # Cross-module workflows (130+ tests)
 └── ci/               # CI/workflow validation (20+ tests)
 ```
 
@@ -193,6 +193,76 @@ async def test_app_loads():
     async with app.run_test() as pilot:
         assert pilot.app.title == "File Organizer"
 ```
+
+### Integration Testing
+
+Integration tests exercise real service instances with only external HTTP (Ollama/OpenAI) mocked at the `model._do_generate()` level. This verifies the wiring between components that unit tests mock away.
+
+```bash
+# Run all integration tests
+pytest -m integration
+
+# Run a specific integration test file
+pytest tests/integration/test_error_propagation.py -v
+```
+
+**Shared fixtures** (from `tests/integration/conftest.py`):
+
+| Fixture | Purpose |
+|---------|---------|
+| `stub_all_models` | Stubs init + generate for both text and vision models |
+| `stub_text_model_init` | Patches `TextModel.initialize()` to skip Ollama client setup |
+| `stub_text_model_generate` | Patches `TextModel._do_generate()` with deterministic responses |
+| `stub_vision_model_init` | Patches `VisionModel.initialize()` to skip Ollama client setup |
+| `stub_vision_model_generate` | Patches `VisionModel._do_generate()` with deterministic responses |
+| `stub_nltk` | No-ops `ensure_nltk_data()` |
+| `integration_source_dir` | Temp directory with `.txt`, `.csv`, `.md` files |
+| `integration_output_dir` | Clean temp output directory |
+| `isolated_config_dir` | Temp config directory (no user config interference) |
+
+**Helpers** (importable from `tests.integration.conftest`):
+
+| Helper | Purpose |
+|--------|---------|
+| `make_text_config(**overrides)` | Build a `ModelConfig` for text models |
+| `make_vision_config(**overrides)` | Build a `ModelConfig` for vision models |
+| `patch_text_generate(side_effect)` | Context manager to patch `TextModel._do_generate` with custom behavior |
+| `minimal_png_bytes()` | Returns a valid 1x1 PNG image for vision tests |
+
+**Example** (from `tests/integration/test_error_propagation.py`):
+
+```python
+@pytest.mark.integration
+class TestModelErrors:
+    def test_model_exception_uses_fallback_values(
+        self,
+        stub_text_model_init: None,
+        stub_nltk: None,
+        integration_source_dir: Path,
+    ) -> None:
+        """When model.generate() raises, TextProcessor uses fallback values."""
+        text_cfg = make_text_config()
+        processor = TextProcessor(config=text_cfg)
+        processor.initialize()
+
+        with patch_text_generate_error(RuntimeError("GPU out of memory")):
+            result = processor.process_file(
+                integration_source_dir / "report.txt"
+            )
+
+        # Graceful degradation — fallback values, not failure
+        assert result.error is None
+        assert result.folder_name == "documents"
+```
+
+**Key design decisions**:
+
+- Mock at `_do_generate()`, not at service level — exercises real service-to-model wiring
+- Real filesystem via `tmp_path` — tests actual file I/O
+- `TextProcessor` uses graceful degradation: model errors produce fallback values (`"documents"`/`"document"`), not `failed_files`
+- All tests marked `@pytest.mark.integration` — CI runs them on main pushes only, not on every PR
+
+See `.claude/epics/integration-test-harness/epic.md` for the full architecture and gap analysis.
 
 ## Test Quality Standards
 

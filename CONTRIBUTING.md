@@ -267,9 +267,37 @@ pytest tests/            # Full suite including regression tests (complete local
 | `@pytest.mark.unit` | Fast unit tests | Both local and CI |
 | `@pytest.mark.smoke` | Critical-path tests for pre-commit (~3.5s, deterministic, fast) | Local pre-commit validation |
 | `@pytest.mark.ci` | PR validation tests | GitHub Actions PR checks |
-| `@pytest.mark.integration` | Integration tests | Full CI runs |
+| `@pytest.mark.integration` | Integration tests (real services, mocked HTTP) | Main branch CI only |
 | `@pytest.mark.regression` | Full regression suite | Complete CI runs, manual testing |
 | `@pytest.mark.slow` | Long-running tests | Skipped in pre-commit and PR CI |
+
+### Integration Tests
+
+Integration tests live in `tests/integration/` and exercise real service wiring with only external HTTP mocked. Use the shared fixtures from `tests/integration/conftest.py`:
+
+```python
+@pytest.mark.integration
+def test_organizer_creates_output(
+    stub_all_models,       # Stubs both text + vision model init and generate
+    stub_nltk,             # No-ops NLTK data download
+    integration_source_dir,  # Temp dir with .txt, .csv, .md files
+    integration_output_dir,  # Clean temp output dir
+):
+    from tests.integration.conftest import make_text_config, make_vision_config
+
+    org = FileOrganizer(
+        text_model_config=make_text_config(),
+        vision_model_config=make_vision_config(),
+        dry_run=False,
+    )
+    result = org.organize(
+        input_path=str(integration_source_dir),
+        output_path=str(integration_output_dir),
+    )
+    assert result.processed_files == 3
+```
+
+Integration tests run on main branch pushes only (`pytest -m integration`), not on every PR. See [Testing Guide](docs/developer/testing.md#integration-testing) for the full fixture reference.
 
 ---
 
