@@ -102,6 +102,56 @@ if [[ -n "$PY_FILES" ]]; then
   echo "✓ No dict-style dataclass access found"
   echo ""
 
+  # 4b. Anti-pattern mechanical guards (from feature-generation & test-generation rules)
+  echo "🔍 Anti-pattern guards..."
+
+  # F1 guard: Flag narrow exception handling in graceful-degradation contexts
+  # Detect `except OSError` or `except ConnectionError` in new code near fallback/init patterns
+  NARROW_EXCEPT=$(echo "$PY_DIFF" | grep -n '^+.*except \(OSError\|ConnectionError\|ConnectionRefusedError\)\b' | grep -v 'test_' || true)
+  if [[ -n "$NARROW_EXCEPT" ]]; then
+    echo "⚠️  F1 warning: Narrow exception handler in new code (may miss non-network failures):"
+    echo "$NARROW_EXCEPT" | sed 's/^/  /'
+    echo "   Consider: Should this be 'except Exception' for graceful degradation?"
+    echo ""
+  fi
+
+  # Test anti-pattern guard: Flag weak call_count assertions without payload verification
+  TEST_DIFF=$(git diff --cached -- 'tests/**/*.py')
+  WEAK_CALL_COUNT=$(echo "$TEST_DIFF" | grep -n '^+.*assert.*\.call_count\s*[><=]' || true)
+  if [[ -n "$WEAK_CALL_COUNT" ]]; then
+    # Check if there's a corresponding assert_called_with nearby
+    HAS_PAYLOAD_CHECK=$(echo "$TEST_DIFF" | grep -c 'assert_called.*with\|call_args' || true)
+    if [[ "$HAS_PAYLOAD_CHECK" -eq 0 ]]; then
+      echo "⚠️  Test anti-pattern: call_count assertion without payload verification:"
+      echo "$WEAK_CALL_COUNT" | sed 's/^/  /'
+      echo "   Consider: Add assert_called_once_with() or check .call_args for payload"
+      echo ""
+    fi
+  fi
+
+  # Test anti-pattern guard: Flag assert X is None without mock context
+  BARE_NONE_ASSERT=$(echo "$TEST_DIFF" | grep -n '^+.*assert.*is None$' || true)
+  if [[ -n "$BARE_NONE_ASSERT" ]]; then
+    echo "  ℹ️  Test pattern: 'assert X is None' found — verify it checks causality, not just state:"
+    echo "$BARE_NONE_ASSERT" | head -5 | sed 's/^/  /'
+    echo ""
+  fi
+
+  # Test anti-pattern guard: Flag mock patches that are never asserted
+  # Look for @patch decorators in new lines, then check if the mock variable is asserted
+  PATCHED_MOCKS=$(echo "$TEST_DIFF" | grep -oE '^\+.*\) as (mock_\w+)' | sed 's/.*as //' || true)
+  for mock_var in $PATCHED_MOCKS; do
+    ASSERT_COUNT=$(echo "$TEST_DIFF" | grep -c "^\+.*${mock_var}\.assert_\|^\+.*assert.*${mock_var}\." || true)
+    if [[ "$ASSERT_COUNT" -eq 0 ]]; then
+      echo "⚠️  Test anti-pattern: Mock '$mock_var' captured but never asserted"
+      echo "   Consider: Add ${mock_var}.assert_called_once_with() or ${mock_var}.assert_not_called()"
+      echo ""
+    fi
+  done
+
+  echo "✓ Anti-pattern guards passed"
+  echo ""
+
   # 5. Run linting on Python files (without --fix to avoid untracked changes)
   echo "🔧 Linting Python files..."
   if command -v ruff &> /dev/null; then
