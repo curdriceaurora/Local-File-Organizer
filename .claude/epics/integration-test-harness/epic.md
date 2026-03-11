@@ -4,7 +4,7 @@
 
 Our 95% unit coverage hides integration blindness — every component works in isolation, but bugs live in the wiring between them. Issues #724 (config overrides ignored) and #726 (vision model race condition) were both missed because unit tests mock away the exact boundaries where these bugs occur.
 
-This epic establishes a systematic integration test harness covering 7 gap patterns identified across 1,737 unit tests and 24 integration tests.
+This epic establishes a systematic integration test harness covering 7 gap patterns identified across 1,737 unit tests and 132 integration tests.
 
 ## Architecture Decisions
 
@@ -108,20 +108,20 @@ Stream A (conftest + P1) ──→ Stream C (P4 + P5) ──→ Stream D (P6 + P
 ## Phase Exit Gates
 
 ### Stream A Exit — Foundation Ready
-- [ ] conftest.py provides all shared fixtures
-- [ ] 6 config-to-runtime tests pass
-- [ ] Fixtures importable by other stream test files
+- [x] conftest.py provides all shared fixtures
+- [x] 8 config-to-runtime tests pass
+- [x] Fixtures importable by other stream test files
 
 ### Stream B+C Exit — Core Integration Verified
-- [ ] 10 cross-service + error propagation tests pass
-- [ ] 6 concurrency + cleanup tests pass
-- [ ] No test flakiness over 3 consecutive runs
+- [x] 14 cross-service + error propagation tests pass
+- [x] 7 concurrency + cleanup tests pass
+- [x] No test flakiness over 3 consecutive runs
 
 ### Stream D Exit — Epic Complete
-- [ ] 6+ CLI + state recovery tests pass
-- [ ] All ~28 integration tests run on main CI
-- [ ] `pytest -m integration` selects exactly the new tests
-- [ ] Zero production code changes required
+- [x] 9 CLI + state recovery tests pass
+- [x] All 132 integration tests run on main CI
+- [x] `pytest -m integration` selects exactly the new tests
+- [x] Zero production code changes required
 
 ## CI Integration
 
