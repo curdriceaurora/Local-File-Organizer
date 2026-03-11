@@ -1,16 +1,24 @@
-"""Read provider configuration from environment variables.
+"""Read provider configuration from environment variables and config profiles.
 
-Supported variables::
+Supported environment variables::
 
     FO_PROVIDER=openai          # "ollama" (default) or "openai"
     FO_OPENAI_API_KEY=sk-...    # Required when FO_PROVIDER=openai and endpoint needs auth
     FO_OPENAI_BASE_URL=https://api.openai.com/v1
     FO_OPENAI_MODEL=gpt-4o      # Text model name
     FO_OPENAI_VISION_MODEL=gpt-4o  # Vision model; falls back to FO_OPENAI_MODEL
+    FO_PROFILE=default          # Config profile name to load (default: "default")
+
+Priority cascade (highest wins)::
+
+    1. Explicit ``ModelConfig`` parameters passed to ``FileOrganizer``
+    2. Environment variables (``FO_PROVIDER``, ``FO_OPENAI_*``)
+    3. Config profile (``~/.config/file-organizer/config.yaml``)
+    4. Hardcoded defaults
 
 Usage::
 
-    text_cfg, vision_cfg = get_model_configs_from_env()
+    text_cfg, vision_cfg = get_model_configs()
     organizer = FileOrganizer(text_model_config=text_cfg, vision_model_config=vision_cfg)
 """
 
@@ -103,3 +111,81 @@ def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
     )
 
     return text_config, vision_config
+
+
+def _get_model_configs_from_profile(
+    profile: str = "default",
+) -> tuple[ModelConfig, ModelConfig] | None:
+    """Try to load model configs from a saved configuration profile.
+
+    Returns:
+        A ``(text_config, vision_config)`` tuple if a profile with
+        non-default model names exists, otherwise *None*.
+    """
+    try:
+        from file_organizer.config.manager import ConfigManager
+        from file_organizer.config.schema import ModelPreset
+
+        mgr = ConfigManager()
+        app_cfg = mgr.load(profile)
+
+        # Only use profile if models were explicitly configured
+        # (i.e. differ from the dataclass defaults).
+        defaults = ModelPreset()
+        if (
+            app_cfg.models.text_model == defaults.text_model
+            and app_cfg.models.vision_model == defaults.vision_model
+        ):
+            return None
+
+        text_cfg = mgr.to_text_model_config(app_cfg)
+        vision_cfg = mgr.to_vision_model_config(app_cfg)
+        logger.info(
+            "Model config loaded from profile '{}': text={}, vision={}",
+            profile,
+            text_cfg.name,
+            vision_cfg.name,
+        )
+        return text_cfg, vision_cfg
+    except Exception:
+        logger.debug("Could not load config profile '{}', skipping", profile, exc_info=True)
+        return None
+
+
+def get_model_configs(
+    profile: str | None = None,
+) -> tuple[ModelConfig, ModelConfig]:
+    """Resolve model configs using the priority cascade.
+
+    Priority (highest wins):
+
+    1. Environment variables (``FO_PROVIDER`` / ``FO_OPENAI_*``)
+    2. Config profile from disk
+    3. Hardcoded defaults
+
+    Args:
+        profile: Config profile name.  Defaults to the ``FO_PROFILE``
+            environment variable, falling back to ``"default"``.
+
+    Returns:
+        A ``(text_config, vision_config)`` tuple.
+    """
+    # If provider env var is explicitly set, env takes precedence
+    if os.environ.get("FO_PROVIDER", "").strip():
+        logger.debug("FO_PROVIDER is set — using environment config")
+        return get_model_configs_from_env()
+
+    # Check for individual model env var overrides (OpenAI-specific)
+    openai_vars = ("FO_OPENAI_MODEL", "FO_OPENAI_VISION_MODEL", "FO_OPENAI_API_KEY")
+    if any(os.environ.get(v, "").strip() for v in openai_vars):
+        logger.debug("OpenAI env vars detected — using environment config")
+        return get_model_configs_from_env()
+
+    # Try config profile
+    profile_name = profile or os.environ.get("FO_PROFILE", "").strip() or "default"
+    profile_configs = _get_model_configs_from_profile(profile_name)
+    if profile_configs is not None:
+        return profile_configs
+
+    # Fall back to env-based defaults (Ollama defaults)
+    return get_model_configs_from_env()

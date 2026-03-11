@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import types
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -122,7 +123,16 @@ class ModelConfig:
 
 
 class BaseModel(ABC):
-    """Abstract base class for all AI models."""
+    """Abstract base class for all AI models.
+
+    Thread-safety: ``_initialized`` and ``client`` are protected by
+    ``_lifecycle_lock``.  A generation counter (``_active_generations``)
+    tracks in-flight ``generate()`` calls so that ``safe_cleanup()``
+    can wait for them to complete before tearing down the client.
+    """
+
+    #: Maximum seconds ``safe_cleanup`` will wait for in-flight generations.
+    CLEANUP_TIMEOUT: float = 30.0
 
     def __init__(self, config: ModelConfig) -> None:
         """Initialize the model with configuration.
@@ -133,6 +143,11 @@ class BaseModel(ABC):
         self.config = config
         self.model: Any | None = None
         self._initialized = False
+
+        # Thread-safety primitives
+        self._lifecycle_lock = threading.Lock()
+        self._active_generations = 0
+        self._generation_done = threading.Condition(self._lifecycle_lock)
 
     @abstractmethod
     def initialize(self) -> None:
@@ -161,6 +176,42 @@ class BaseModel(ABC):
     def is_initialized(self) -> bool:
         """Check if model is initialized."""
         return self._initialized
+
+    # ------------------------------------------------------------------
+    # Thread-safe generation guards
+    # ------------------------------------------------------------------
+
+    def _enter_generate(self) -> None:
+        """Increment active generation count; raises if model is shutting down.
+
+        Must be called at the start of ``generate()`` in subclasses.
+        """
+        with self._lifecycle_lock:
+            if not self._initialized:
+                raise RuntimeError("Model not initialized. Call initialize() first.")
+            self._active_generations += 1
+
+    def _exit_generate(self) -> None:
+        """Decrement active generation count and notify waiters.
+
+        Must be called in a ``finally`` block at the end of ``generate()``.
+        """
+        with self._generation_done:
+            self._active_generations -= 1
+            self._generation_done.notify_all()
+
+    def safe_cleanup(self) -> None:
+        """Wait for in-flight generations to finish, then call ``cleanup()``.
+
+        Waits up to ``CLEANUP_TIMEOUT`` seconds.  If generations are still
+        active after the timeout, cleanup proceeds anyway (best effort).
+        """
+        with self._generation_done:
+            self._generation_done.wait_for(
+                lambda: self._active_generations == 0,
+                timeout=self.CLEANUP_TIMEOUT,
+            )
+        self.cleanup()
 
     def __enter__(self) -> BaseModel:
         """Context manager entry."""

@@ -14,7 +14,6 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
-from file_organizer.config.provider_env import get_model_configs_from_env
 from file_organizer.history.models import OperationType
 from file_organizer.models.base import ModelConfig
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
@@ -143,9 +142,11 @@ class FileOrganizer:
             parallel_workers: Number of parallel workers (default: None = auto)
         """
         if text_model_config is None or vision_model_config is None:
-            env_text, env_vision = get_model_configs_from_env()
-            self.text_model_config = text_model_config or env_text
-            self.vision_model_config = vision_model_config or env_vision
+            from file_organizer.config.provider_env import get_model_configs
+
+            resolved_text, resolved_vision = get_model_configs()
+            self.text_model_config = text_model_config or resolved_text
+            self.vision_model_config = vision_model_config or resolved_vision
         else:
             self.text_model_config = text_model_config
             self.vision_model_config = vision_model_config

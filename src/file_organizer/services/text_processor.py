@@ -412,9 +412,13 @@ FILENAME:"""
             return "document"
 
     def cleanup(self) -> None:
-        """Cleanup resources."""
+        """Cleanup resources.
+
+        Uses ``safe_cleanup()`` to wait for any in-flight generations
+        before tearing down the model client.
+        """
         if self._owns_model:
-            self.text_model.cleanup()
+            self.text_model.safe_cleanup()
             logger.info("Text model cleaned up")
 
     def __enter__(self) -> TextProcessor:

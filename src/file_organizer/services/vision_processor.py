@@ -450,9 +450,13 @@ FILENAME:"""
             return image_path.stem
 
     def cleanup(self) -> None:
-        """Cleanup resources."""
+        """Cleanup resources.
+
+        Uses ``safe_cleanup()`` to wait for any in-flight generations
+        before tearing down the model client.
+        """
         if self._owns_model:
-            self.vision_model.cleanup()
+            self.vision_model.safe_cleanup()
             logger.info("Vision model cleaned up")
 
     def __enter__(self) -> VisionProcessor:

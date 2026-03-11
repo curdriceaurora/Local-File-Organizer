@@ -101,7 +101,15 @@ class TextModel(BaseModel):
                 both the initial attempt and the retry without producing useful
                 output.
         """
-        if not self._initialized or self.client is None:
+        self._enter_generate()
+        try:
+            return self._do_generate(prompt, **kwargs)
+        finally:
+            self._exit_generate()
+
+    def _do_generate(self, prompt: str, **kwargs: Any) -> str:
+        """Internal generate logic, called while generation guard is held."""
+        if self.client is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
 
         # Merge config with kwargs
@@ -228,10 +236,15 @@ class TextModel(BaseModel):
             raise
 
     def cleanup(self) -> None:
-        """Cleanup model resources."""
+        """Cleanup model resources.
+
+        Sets ``_initialized`` to *False* under the lifecycle lock so that
+        concurrent ``generate()`` calls see a consistent state.
+        """
         logger.debug("Cleaning up text model {}", self.config.name)
-        self._initialized = False
-        self.client = None
+        with self._lifecycle_lock:
+            self._initialized = False
+            self.client = None
 
     @staticmethod
     def get_default_config(model_name: str = "qwen2.5:3b-instruct-q4_K_M") -> ModelConfig:

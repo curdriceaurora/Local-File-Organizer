@@ -108,7 +108,21 @@ class VisionModel(BaseModel):
             RuntimeError: If model is not initialized
             ValueError: If neither or both image_path and image_data are provided
         """
-        if not self._initialized or self.client is None:
+        self._enter_generate()
+        try:
+            return self._do_generate(prompt, image_path, image_data, **kwargs)
+        finally:
+            self._exit_generate()
+
+    def _do_generate(
+        self,
+        prompt: str,
+        image_path: str | Path | None = None,
+        image_data: bytes | None = None,
+        **kwargs: Any,
+    ) -> str:
+        """Internal generate logic, called while generation guard is held."""
+        if self.client is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
 
         if (image_path is None and image_data is None) or (
@@ -234,10 +248,15 @@ class VisionModel(BaseModel):
         return self.generate(prompt=prompt, image_path=frame_path, **kwargs)
 
     def cleanup(self) -> None:
-        """Cleanup model resources."""
+        """Cleanup model resources.
+
+        Sets ``_initialized`` to *False* under the lifecycle lock so that
+        concurrent ``generate()`` calls see a consistent state.
+        """
         logger.debug("Cleaning up vision model {}", self.config.name)
-        self._initialized = False
-        self.client = None
+        with self._lifecycle_lock:
+            self._initialized = False
+            self.client = None
 
     @staticmethod
     def get_default_config(

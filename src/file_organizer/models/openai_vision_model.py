@@ -138,7 +138,21 @@ class OpenAIVisionModel(BaseModel):
             FileNotFoundError: If ``image_path`` does not exist.
             OSError: If ``image_path`` cannot be read.
         """
-        if not self._initialized or self.client is None:
+        self._enter_generate()
+        try:
+            return self._do_generate(prompt, image_path, image_data, **kwargs)
+        finally:
+            self._exit_generate()
+
+    def _do_generate(
+        self,
+        prompt: str,
+        image_path: str | Path | None = None,
+        image_data: bytes | None = None,
+        **kwargs: Any,
+    ) -> str:
+        """Internal generate logic, called while generation guard is held."""
+        if self.client is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
 
         if (image_path is None and image_data is None) or (
@@ -232,15 +246,20 @@ class OpenAIVisionModel(BaseModel):
         return self.generate(prompt=prompt, image_path=image_path, **kwargs)
 
     def cleanup(self) -> None:
-        """Release the OpenAI client."""
+        """Release the OpenAI client.
+
+        Sets ``_initialized`` to *False* under the lifecycle lock so that
+        concurrent ``generate()`` calls see a consistent state.
+        """
         logger.debug("Cleaning up OpenAI vision model {}", self.config.name)
-        if self.client is not None:
-            try:
-                self.client.close()
-            except Exception:
-                pass
-        self.client = None
-        self._initialized = False
+        with self._lifecycle_lock:
+            if self.client is not None:
+                try:
+                    self.client.close()
+                except Exception:
+                    pass
+            self.client = None
+            self._initialized = False
 
     @staticmethod
     def get_default_config(model_name: str = "gpt-4o-mini") -> ModelConfig:

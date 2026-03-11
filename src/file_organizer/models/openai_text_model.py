@@ -86,7 +86,15 @@ class OpenAITextModel(BaseModel):
             TokenExhaustionError: If the model exhausts its token budget on
                 both the initial attempt and the retry.
         """
-        if not self._initialized or self.client is None:
+        self._enter_generate()
+        try:
+            return self._do_generate(prompt, **kwargs)
+        finally:
+            self._exit_generate()
+
+    def _do_generate(self, prompt: str, **kwargs: Any) -> str:
+        """Internal generate logic, called while generation guard is held."""
+        if self.client is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
 
         temperature = float(kwargs.get("temperature", self.config.temperature))
@@ -133,15 +141,20 @@ class OpenAITextModel(BaseModel):
             raise
 
     def cleanup(self) -> None:
-        """Release the OpenAI client."""
+        """Release the OpenAI client.
+
+        Sets ``_initialized`` to *False* under the lifecycle lock so that
+        concurrent ``generate()`` calls see a consistent state.
+        """
         logger.debug("Cleaning up OpenAI text model {}", self.config.name)
-        if self.client is not None:
-            try:
-                self.client.close()
-            except Exception:
-                pass
-        self.client = None
-        self._initialized = False
+        with self._lifecycle_lock:
+            if self.client is not None:
+                try:
+                    self.client.close()
+                except Exception:
+                    pass
+            self.client = None
+            self._initialized = False
 
     @staticmethod
     def get_default_config(model_name: str = "gpt-4o-mini") -> ModelConfig:
