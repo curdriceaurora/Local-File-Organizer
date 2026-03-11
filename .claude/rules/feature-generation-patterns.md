@@ -318,6 +318,37 @@ class Config:
 
 ---
 
+## Pattern F10: DOCSTRING_DRIFT — PR #740 finding
+
+**What it is**: Docstring describes old behavior after the implementation changed — e.g., docstring says "On failure (Ollama unavailable)" but code catches all exceptions, not just network errors.
+
+**Bad**:
+```python
+# BAD — docstring says "Ollama unavailable" but except clause catches everything
+def _init_text_processor(self) -> None:
+    """On failure (Ollama unavailable), resets to None."""
+    try:
+        ...
+    except Exception as e:  # catches ValueError, ImportError, etc.
+        self.text_processor = None
+```
+
+**Good**:
+```python
+# GOOD — docstring matches actual exception scope
+def _init_text_processor(self) -> None:
+    """On any initialization failure (Ollama unavailable, config errors,
+    import errors, etc.), resets to None and falls back."""
+    try:
+        ...
+    except Exception as e:
+        self.text_processor = None
+```
+
+**Pre-generation check**: When changing an `except` clause, a return type, or control flow, re-read the docstring and update it to match.
+
+---
+
 ## Rule of Thumb
 
 For every new feature, ask:
@@ -327,3 +358,4 @@ For every new feature, ask:
 4. **F2**: *"Does every function have a concrete return type annotation?"*
 5. **F5**: *"Does ConfigManager already own this value?"*
 6. **F9**: *"Am I using `__import__()` inline? If yes — move to top-level import."*
+7. **F10**: *"Did I change exception handling, return types, or control flow? Does the docstring still match?"*

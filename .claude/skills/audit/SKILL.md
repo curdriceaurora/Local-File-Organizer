@@ -59,6 +59,7 @@ Read `.claude/rules/feature-generation-patterns.md` in full, then audit ALL sour
 - **F7 RESOURCE_NOT_CLOSED**: Flag file handles, connections, or processors not in context managers or missing cleanup.
 - **F8 WRONG_ABSTRACTION**: Flag business logic in route handlers, mixed concerns.
 - **F9 DYNAMIC_IMPORT**: Flag any `__import__()` that should be a top-level import.
+- **F10 DOCSTRING_DRIFT**: When exception handling, return types, or control flow changed, flag docstrings that still describe the old behavior.
 
 For each finding, cite the exact file, line number, and which pattern it violates. Verify against actual source code before reporting.
 

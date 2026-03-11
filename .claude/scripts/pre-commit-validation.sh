@@ -149,6 +149,27 @@ if [[ -n "$PY_FILES" ]]; then
     fi
   done
 
+  # Loguru guard: Flag logger.warning("...: {}", e) where logger.opt(exception=e) preserves traceback
+  LOGURU_NO_TRACEBACK=$(echo "$PY_DIFF" | grep -n '^+.*logger\.\(warning\|error\|critical\).*{.*,\s*e\s*)' | grep -v 'test_' || true)
+  if [[ -n "$LOGURU_NO_TRACEBACK" ]]; then
+    echo "⚠️  Loguru pattern: logger.warning(\"...: {}\", e) loses traceback. Use logger.opt(exception=e).warning(\"...\"):"
+    echo "$LOGURU_NO_TRACEBACK" | sed 's/^/  /'
+    echo ""
+  fi
+
+  # CI marker guard: Flag test files that lack @pytest.mark.ci (CI runs pytest -m "ci")
+  CHANGED_TEST_FILES=$(git diff --cached --name-only -- 'tests/**/*.py' | grep -v 'conftest.py' | grep -v '__init__' || true)
+  for test_file in $CHANGED_TEST_FILES; do
+    if [[ -f "$test_file" ]]; then
+      HAS_CI_MARKER=$(grep -c 'pytest\.mark\.ci\|pytestmark.*ci' "$test_file" || true)
+      if [[ "$HAS_CI_MARKER" -eq 0 ]]; then
+        echo "⚠️  CI marker missing: $test_file has no @pytest.mark.ci — tests won't run in PR CI"
+        echo "   Add: @pytest.mark.ci to the test class or pytestmark = [pytest.mark.ci] at module level"
+        echo ""
+      fi
+    fi
+  done
+
   echo "✓ Anti-pattern guards passed"
   echo ""
 
