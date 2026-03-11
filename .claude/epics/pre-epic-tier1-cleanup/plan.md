@@ -132,8 +132,11 @@ Tier 1 (this branch)          Epic #706 Phase A
 
 ## Exit Criteria
 
-- [ ] All 4 issues addressed (fixed or closed as resolved)
-- [ ] Main CI green
-- [ ] `pre-commit run --all-files` passes
-- [ ] No regressions in `pytest -m ci` suite
+- [x] #691 — Closed (all tests pass on main, CI green)
+- [x] #697 — Fixed (`__init__.py` imports from `version.py`)
+- [ ] #683 — Deferred (blocked on upstream `gtk-rs 0.20+` migration)
+- [x] #725 — Fixed (sequential model init: text → cleanup → vision)
+- [x] Main CI green
+- [x] `pre-commit run --all-files` passes (12/12 hooks)
+- [x] No regressions (132 integration + 37 organizer unit tests pass)
 - [ ] PR created and merged before starting Epic Phase A
