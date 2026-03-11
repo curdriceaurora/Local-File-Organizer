@@ -10,6 +10,7 @@ no real Ollama/OpenAI connection is required.
 from __future__ import annotations
 
 from pathlib import Path
+
 import pytest
 from typer.testing import CliRunner
 
@@ -107,5 +108,7 @@ class TestCLIOrganize:
 
         assert result_quiet.exit_code == 0
         assert result_verbose.exit_code == 0
-        # Verbose output should be at least as long as quiet output
-        assert len(result_verbose.output) >= len(result_quiet.output)
+        # Verbose output should be strictly longer than quiet output
+        assert len(result_verbose.output) > len(result_quiet.output), (
+            "Verbose mode did not produce additional output"
+        )

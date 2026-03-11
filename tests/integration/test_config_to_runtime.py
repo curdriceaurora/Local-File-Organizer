@@ -62,7 +62,7 @@ class TestConfigModelSelection:
         assert vision_cfg.name == "gpt-4o-vision"
 
     def test_profile_switch_changes_model(
-        self, isolated_config_dir: Path
+        self,
     ) -> None:
         """Loading a different profile produces different model names."""
         custom_preset = ModelPreset(

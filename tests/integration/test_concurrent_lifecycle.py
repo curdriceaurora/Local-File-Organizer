@@ -127,7 +127,7 @@ class TestTimeoutHandling:
         org.parallel_config = ParallelConfig(max_workers=1, timeout_per_file=0.5)
 
         def _slow_generate(prompt: str, **kwargs: object) -> str:
-            time.sleep(5)  # Much longer than timeout
+            time.sleep(1.0)  # Slightly longer than 0.5s timeout
             return "should not reach here"
 
         with patch_text_generate(_slow_generate):

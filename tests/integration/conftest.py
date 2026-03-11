@@ -157,6 +157,43 @@ def stub_nltk() -> Iterator[None]:
 
 
 # ---------------------------------------------------------------------------
+# Environment isolation
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _isolate_user_env(tmp_path: Path) -> Iterator[None]:
+    """Isolate integration tests from real user paths and env vars.
+
+    Sets HOME and XDG_* dirs to per-test temp directories so that
+    OperationHistory, ConfigManager, and resolve_legacy_path never
+    touch real user data.  Also clears FO_* env vars.
+    """
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    fake_config = tmp_path / "xdg_config"
+    fake_config.mkdir()
+    fake_data = tmp_path / "xdg_data"
+    fake_data.mkdir()
+    fake_state = tmp_path / "xdg_state"
+    fake_state.mkdir()
+
+    env_overrides = {
+        "HOME": str(fake_home),
+        "XDG_CONFIG_HOME": str(fake_config),
+        "XDG_DATA_HOME": str(fake_data),
+        "XDG_STATE_HOME": str(fake_state),
+    }
+    # Clear FO_* vars that might leak from the real environment
+    env_clears = {
+        "FO_PROFILE": "",
+        "FO_PROVIDER": "",
+    }
+    with patch.dict("os.environ", {**env_overrides, **env_clears}, clear=False):
+        yield
+
+
+# ---------------------------------------------------------------------------
 # Filesystem fixtures
 # ---------------------------------------------------------------------------
 

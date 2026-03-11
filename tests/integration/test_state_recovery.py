@@ -7,7 +7,9 @@ all degrade gracefully instead of crashing.
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
+
 import pytest
 
 from file_organizer.core.organizer import FileOrganizer
@@ -28,7 +30,7 @@ class TestUndoRedo:
         integration_source_dir: Path,
         integration_output_dir: Path,
     ) -> None:
-        """organize() then undo() restores source files."""
+        """organize() then undo() removes output-side files created by organize."""
         text_cfg = make_text_config()
         vision_cfg = make_vision_config()
 
@@ -39,44 +41,42 @@ class TestUndoRedo:
             use_hardlinks=False,
         )
 
-        # Capture initial source state
-        initial_files = sorted(p.name for p in integration_source_dir.iterdir())
-
         result = org.organize(
             input_path=str(integration_source_dir),
             output_path=str(integration_output_dir),
         )
         assert result.processed_files == 3
 
-        # Undo should restore source directory
+        # Verify organize created files in output
+        output_files_before_undo = [
+            f for f in integration_output_dir.rglob("*") if f.is_file()
+        ]
+        assert len(output_files_before_undo) == 3
+
+        # Undo should remove the organized output files
         undo_success = org.undo()
         assert undo_success is True
 
-        # Source files should be restored
-        restored_files = sorted(p.name for p in integration_source_dir.iterdir())
-        assert restored_files == initial_files
+        # Output files should be removed after undo
+        output_files_after_undo = [
+            f for f in integration_output_dir.rglob("*") if f.is_file()
+        ]
+        assert len(output_files_after_undo) == 0
 
 
 class TestCorruptHistoryDb:
     """Corrupt or missing history db is handled gracefully."""
 
-    def test_corrupt_db_file_does_not_crash(
+    def test_corrupt_db_file_raises_database_error(
         self,
         tmp_path: Path,
     ) -> None:
-        """A corrupt SQLite file triggers graceful fallback, not crash."""
+        """A corrupt SQLite file raises DatabaseError, not a segfault."""
         db_path = tmp_path / "corrupt.db"
         db_path.write_text("this is not a sqlite database")
 
-        # OperationHistory should handle corrupt db gracefully
-        # (either re-create or raise a clear error)
-        try:
-            with OperationHistory(db_path=db_path) as history:
-                # If it initializes, the schema was re-created
-                pass
-        except Exception as e:
-            # If it raises, it should be a clear error, not a segfault
-            assert "database" in str(e).lower() or "sqlite" in str(e).lower()
+        with pytest.raises(sqlite3.DatabaseError, match="file is not a database"):
+            OperationHistory(db_path=db_path)
 
     def test_missing_db_creates_new_one(
         self,
@@ -85,7 +85,7 @@ class TestCorruptHistoryDb:
         """A missing db path auto-creates a fresh database."""
         db_path = tmp_path / "subdir" / "new_history.db"
 
-        with OperationHistory(db_path=db_path) as history:
+        with OperationHistory(db_path=db_path):
             # Should auto-create the file
             assert db_path.exists()
 

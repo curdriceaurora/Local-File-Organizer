@@ -212,12 +212,12 @@ class TestOrganizerErrorHandling:
             dry_run=True,
         )
 
-        with patch_text_generate_error(MemoryError("Out of memory")):
+        with patch_text_generate_error(RuntimeError("Out of memory")):
             result = org.organize(
                 input_path=str(integration_source_dir),
                 output_path=str(integration_output_dir),
             )
 
-        # Batch completes without raising
+        # Batch completes — errors degrade to fallback values, not failures
         assert result.total_files == 3
         assert result.processed_files == 3
