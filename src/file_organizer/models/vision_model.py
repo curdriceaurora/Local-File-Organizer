@@ -60,10 +60,10 @@ class VisionModel(BaseModel):
     def initialize(self) -> None:
         """Initialize the Ollama client and pull model if needed."""
         if self._initialized:
-            logger.debug(f"Vision model {self.config.name} already initialized")
+            logger.debug("Vision model {} already initialized", self.config.name)
             return
 
-        logger.info(f"Initializing vision model: {self.config.name}")
+        logger.info("Initializing vision model: {}", self.config.name)
 
         try:
             # Initialize Ollama client
@@ -72,18 +72,18 @@ class VisionModel(BaseModel):
             # Check if model exists locally, pull if not
             try:
                 self.client.show(self.config.name)
-                logger.debug(f"Model {self.config.name} found locally")
+                logger.debug("Model {} found locally", self.config.name)
             except ollama.ResponseError:
-                logger.info(f"Model {self.config.name} not found locally, pulling...")
+                logger.info("Model {} not found locally, pulling...", self.config.name)
                 logger.warning("Downloading large vision model, this may take several minutes...")
                 self.client.pull(self.config.name)
-                logger.info(f"Model {self.config.name} pulled successfully")
+                logger.info("Model {} pulled successfully", self.config.name)
 
             self._initialized = True
-            logger.info(f"Vision model {self.config.name} initialized successfully")
+            logger.info("Vision model {} initialized successfully", self.config.name)
 
         except Exception as e:
-            logger.error(f"Failed to initialize vision model: {e}")
+            logger.error("Failed to initialize vision model: {}", e)
             raise
 
     def generate(
@@ -138,7 +138,7 @@ class VisionModel(BaseModel):
             options.update(self.config.extra_params)
 
         try:
-            logger.debug(f"Analyzing image with model {self.config.name}")
+            logger.debug("Analyzing image with model {}", self.config.name)
             response = self.client.generate(
                 model=self.config.name,
                 prompt=prompt,
@@ -150,7 +150,7 @@ class VisionModel(BaseModel):
             # Detect token exhaustion and retry once with doubled budget
             if is_token_exhausted(response):
                 diag = format_exhaustion_diagnostics(response, self.config.name)
-                logger.warning(f"Token exhaustion detected, retrying: {diag}")
+                logger.warning("Token exhaustion detected, retrying: {}", diag)
 
                 retry_num_predict = compute_retry_num_predict(options["num_predict"])
                 retry_options = {**options, "num_predict": retry_num_predict}
@@ -174,8 +174,9 @@ class VisionModel(BaseModel):
                 raise ValueError(f"Ollama returned empty response for model {self.config.name}")
             generated_text = str(raw_response)
             logger.debug(
-                f"Generated {len(generated_text)} characters "
-                f"in {response.get('total_duration', 0) / 1e9:.2f}s"
+                "Generated {} characters in {:.2f}s",
+                len(generated_text),
+                response.get("total_duration", 0) / 1e9,
             )
 
             return generated_text.strip()
@@ -183,7 +184,7 @@ class VisionModel(BaseModel):
         except (TokenExhaustionError, ValueError):
             raise
         except Exception as e:
-            logger.error(f"Failed to analyze image: {e}")
+            logger.error("Failed to analyze image: {}", e)
             raise
 
     def analyze_image(
@@ -234,7 +235,7 @@ class VisionModel(BaseModel):
 
     def cleanup(self) -> None:
         """Cleanup model resources."""
-        logger.debug(f"Cleaning up vision model {self.config.name}")
+        logger.debug("Cleaning up vision model {}", self.config.name)
         self._initialized = False
         self.client = None
 
@@ -284,7 +285,7 @@ class VisionModel(BaseModel):
                 "status": "connected",
             }
         except Exception as e:
-            logger.error(f"Failed to get model info: {e}")
+            logger.error("Failed to get model info: {}", e)
             return {
                 "name": self.config.name,
                 "type": "vision-language",

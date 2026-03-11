@@ -50,7 +50,7 @@ Install the optional dependency first:
 
 ```bash
 # From PyPI (installed package)
-pip install "file-organizer[cloud]"
+pip install "local-file-organizer[cloud]"
 
 # From source checkout
 pip install -e ".[cloud]"

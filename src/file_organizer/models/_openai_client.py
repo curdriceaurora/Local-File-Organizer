@@ -41,7 +41,7 @@ def create_openai_client(config: ModelConfig, model_type_label: str) -> Any:
     if not OPENAI_AVAILABLE:
         raise ImportError(
             "The 'openai' package is not installed. "
-            "Install it with: pip install 'file-organizer[cloud]'"
+            "Install it with: pip install 'local-file-organizer[cloud]'"
         )
 
     logger.info("Initializing OpenAI {} model: {}", model_type_label, config.name)

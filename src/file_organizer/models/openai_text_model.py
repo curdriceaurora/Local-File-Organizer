@@ -47,7 +47,7 @@ class OpenAITextModel(BaseModel):
         if not OPENAI_AVAILABLE:
             raise ImportError(
                 "The 'openai' package is not installed. "
-                "Install it with: pip install 'file-organizer[cloud]'"
+                "Install it with: pip install 'local-file-organizer[cloud]'"
             )
 
         if config.model_type != ModelType.TEXT:

@@ -15,7 +15,7 @@ from file_organizer.models.base import (
     TokenExhaustionError,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
 
 class TestIsTokenExhausted:
