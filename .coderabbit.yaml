@@ -1,43 +1,20 @@
-## CodeRabbit Configuration
-## Excludes internal Claude Code configuration from review
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 
-# Files and directories to skip during review
+# CodeRabbit Configuration
+# Excludes internal Claude Code configuration from review
+
+language: en
+
 reviews:
-  request_changes_workflow: null
-  auto_review: true
-  auto_reply: true
-  review_status:
-    high_level_summary: true
-    summary_placeholder: true
-    walkthrough: true
+  request_changes_workflow: false
+  auto_review:
+    enabled: true
+  review_status: true
 
 # Paths to exclude from code review
-rules:
-  - exclude:
-      - ".claude/**"
-      - ".vscode/**"
-      - ".idea/**"
-      - ".DS_Store"
-      - "*.log"
-
-# Language-specific settings
-language:
-  python:
-    max_lines_of_code: 500
-    enable_docstring_review: true
-    enable_type_hints_review: true
-
-# Issue rules
-issues:
-  critical:
-    enabled: true
-  major:
-    enabled: true
-  minor:
-    enabled: false
-
-# Comments to suppress
-suppress_comments:
-  - "skip_review"
-  - "wontfix"
-  - "duplicate"
+path_filters:
+  - "!.claude/**"
+  - "!.vscode/**"
+  - "!.idea/**"
+  - "!.DS_Store"
+  - "!*.log"
