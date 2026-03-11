@@ -2,15 +2,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from file_organizer.models import VisionModel
-from file_organizer.models.base import ModelConfig
+from file_organizer.models.base import ModelConfig, ModelType
 from file_organizer.services.vision_processor import ProcessedImage, VisionProcessor
 
 
 @pytest.fixture
 def mock_vision_model():
-    model = MagicMock(spec=VisionModel)
+    model = MagicMock()
     model.is_initialized = True
+    model.config.model_type = ModelType.VISION
     model.generate.return_value = "Mocked AI response"
     return model
 
@@ -28,15 +28,16 @@ class TestVisionProcessor:
         assert processor.vision_model is mock_vision_model
         assert processor._owns_model is False
 
+    @patch("file_organizer.services.vision_processor.get_vision_model")
     @patch("file_organizer.services.vision_processor.VisionModel")
-    def test_init_without_model(self, mock_model_class):
+    def test_init_without_model(self, mock_model_class, mock_get_vision_model):
         mock_config = MagicMock(spec=ModelConfig)
         mock_model_class.get_default_config.return_value = mock_config
 
         processor = VisionProcessor()
 
         mock_model_class.get_default_config.assert_called_once()
-        mock_model_class.assert_called_once_with(mock_config)
+        mock_get_vision_model.assert_called_once_with(mock_config)
         assert processor._owns_model is True
 
     def test_initialize(self, mock_vision_model):
@@ -47,7 +48,9 @@ class TestVisionProcessor:
         mock_vision_model.initialize.assert_called_once()
 
     def test_process_file_not_found(self):
-        processor = VisionProcessor(vision_model=MagicMock())
+        mock = MagicMock()
+        mock.config.model_type = ModelType.VISION
+        processor = VisionProcessor(vision_model=mock)
         result = processor.process_file("non_existent.jpg")
 
         assert isinstance(result, ProcessedImage)
@@ -111,8 +114,9 @@ class TestVisionProcessor:
         assert result.extracted_text is None
 
     def test_process_file_exception(self, mock_image_path):
-        mock_model = MagicMock(spec=VisionModel)
+        mock_model = MagicMock()
         mock_model.is_initialized = True
+        mock_model.config.model_type = ModelType.VISION
 
         processor = VisionProcessor(vision_model=mock_model)
         # Mock an internal method to raise an error so we hit the top-level except block
@@ -125,7 +129,9 @@ class TestVisionProcessor:
         assert result.description == ""
 
     def test_clean_ai_generated_name(self):
-        processor = VisionProcessor(vision_model=MagicMock())
+        mock = MagicMock()
+        mock.config.model_type = ModelType.VISION
+        processor = VisionProcessor(vision_model=mock)
 
         # Test basic cleaning
         assert processor._clean_ai_generated_name("A beautiful Sunset!") == "beautiful_sunset"

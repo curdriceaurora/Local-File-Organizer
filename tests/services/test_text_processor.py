@@ -87,10 +87,10 @@ class TestProcessedFile:
 class TestTextProcessor:
     """Tests for TextProcessor class."""
 
-    @patch("file_organizer.services.text_processor.TextModel")
+    @patch("file_organizer.services.text_processor.get_text_model")
     @patch("file_organizer.services.text_processor.ensure_nltk_data")
     def test_init_creates_own_model(
-        self, mock_nltk: MagicMock, mock_text_model_cls: MagicMock
+        self, mock_nltk: MagicMock, mock_get_text_model: MagicMock
     ) -> None:
         """Test initialization creates its own TextModel if not provided."""
         config = ModelConfig(name="test-model", model_type=ModelType.TEXT)
@@ -98,19 +98,19 @@ class TestTextProcessor:
         processor = TextProcessor(config=config)
 
         assert processor._owns_model is True
-        mock_text_model_cls.assert_called_once_with(config)
+        mock_get_text_model.assert_called_once_with(config)
         mock_nltk.assert_called_once()
 
-    @patch("file_organizer.services.text_processor.TextModel")
+    @patch("file_organizer.services.text_processor.get_text_model")
     @patch("file_organizer.services.text_processor.ensure_nltk_data")
     def test_init_default_config_when_none(
-        self, mock_nltk: MagicMock, mock_text_model_cls: MagicMock
+        self, mock_nltk: MagicMock, mock_get_text_model: MagicMock
     ) -> None:
         """When no model and no config, default config is used."""
         processor = TextProcessor()
 
         assert processor._owns_model is True
-        mock_text_model_cls.assert_called_once()
+        mock_get_text_model.assert_called_once()
 
     @patch("file_organizer.services.text_processor.ensure_nltk_data")
     def test_init_uses_provided_model(
@@ -142,7 +142,7 @@ class TestTextProcessor:
     def test_cleanup_owns_model(self) -> None:
         """Test cleanup delegates to model if owned."""
         mock_model = MagicMock()
-        with patch("file_organizer.services.text_processor.TextModel", return_value=mock_model):
+        with patch("file_organizer.services.text_processor.get_text_model", return_value=mock_model):
             with patch("file_organizer.services.text_processor.ensure_nltk_data"):
                 processor = TextProcessor()
                 processor.cleanup()
@@ -159,7 +159,7 @@ class TestTextProcessor:
         """Test entering and exiting context manager."""
         mock_model = MagicMock()
         mock_model.is_initialized = False
-        with patch("file_organizer.services.text_processor.TextModel", return_value=mock_model):
+        with patch("file_organizer.services.text_processor.get_text_model", return_value=mock_model):
             with patch("file_organizer.services.text_processor.ensure_nltk_data"):
                 with TextProcessor() as processor:
                     assert processor.text_model == mock_model
@@ -170,7 +170,7 @@ class TestTextProcessor:
         """Context manager calls cleanup even when an exception occurs."""
         mock_model = MagicMock()
         mock_model.is_initialized = False
-        with patch("file_organizer.services.text_processor.TextModel", return_value=mock_model):
+        with patch("file_organizer.services.text_processor.get_text_model", return_value=mock_model):
             with patch("file_organizer.services.text_processor.ensure_nltk_data"):
                 with pytest.raises(RuntimeError, match="boom"):
                     with TextProcessor() as _processor:
