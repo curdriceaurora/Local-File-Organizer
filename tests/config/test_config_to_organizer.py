@@ -9,13 +9,9 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
-from file_organizer.config.manager import ConfigManager
 from file_organizer.config.provider_env import (
     _get_model_configs_from_profile,
     get_model_configs,
-    get_model_configs_from_env,
 )
 from file_organizer.config.schema import AppConfig, ModelPreset
 from file_organizer.models.base import ModelConfig, ModelType

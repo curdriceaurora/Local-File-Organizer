@@ -14,7 +14,6 @@ import pytest
 
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 
-
 # ---------------------------------------------------------------------------
 # Concrete stub for testing
 # ---------------------------------------------------------------------------
