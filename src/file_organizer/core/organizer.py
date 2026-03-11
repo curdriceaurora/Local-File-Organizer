@@ -170,9 +170,6 @@ class FileOrganizer:
         self._last_transaction_id: str | None = None
         self._last_output_path: Path | None = None
 
-        # Graceful degradation: set to False when Ollama is unreachable
-        self._ollama_available: bool = True
-
         logger.info(
             "FileOrganizer initialized (dry_run={}, parallel={})", dry_run, parallel_workers
         )
@@ -233,10 +230,8 @@ class FileOrganizer:
             text_files, image_files, video_files, audio_files, cad_files, other_files
         )
 
-        # Reset Ollama availability and processors for this organize() call.
-        # A previous call may have marked Ollama unavailable; re-probe each time
-        # so that recovery (user starts Ollama between calls) is detected.
-        self._ollama_available = True
+        # Reset processors for this organize() call so that recovery
+        # (user starts Ollama between calls) is detected.
         self.text_processor = None
         self.vision_processor = None
 
@@ -467,6 +462,11 @@ class FileOrganizer:
             self.text_processor.initialize()
             self.console.print("[green]✓[/green] Text model ready")
         except Exception as e:  # graceful degradation for any init failure
+            if self.text_processor is not None:
+                try:
+                    self.text_processor.cleanup()
+                except Exception:  # best-effort — don't mask the original error
+                    pass
             self.text_processor = None
             self.console.print(
                 f"[yellow]⚠ Text model unavailable ({e.__class__.__name__}): "
@@ -486,6 +486,11 @@ class FileOrganizer:
             self.vision_processor.initialize()
             self.console.print("[green]✓[/green] Vision model ready")
         except Exception as e:  # graceful degradation for any init failure
+            if self.vision_processor is not None:
+                try:
+                    self.vision_processor.cleanup()
+                except Exception:  # best-effort — don't mask the original error
+                    pass
             self.vision_processor = None
             self.console.print(
                 f"[yellow]⚠ Vision model unavailable ({e.__class__.__name__}): "

@@ -10,11 +10,9 @@ reviews:
   auto_review:
     enabled: true
   review_status: true
-
-# Paths to exclude from code review
-path_filters:
-  - "!.claude/**"
-  - "!.vscode/**"
-  - "!.idea/**"
-  - "!.DS_Store"
-  - "!*.log"
+  path_filters:
+    - "!.claude/**"
+    - "!.vscode/**"
+    - "!.idea/**"
+    - "!.DS_Store"
+    - "!*.log"
