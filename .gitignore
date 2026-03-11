@@ -1,3 +1,6 @@
+# direnv
+.envrc
+
 # Byte-compiled Python files
 __pycache__/
 *.py[cod]

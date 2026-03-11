@@ -13,6 +13,11 @@ from loguru import logger
 from rich.console import Console
 
 from file_organizer.core.display import create_progress
+from file_organizer.core.types import (
+    AUDIO_FALLBACK_FOLDER,
+    ERROR_FALLBACK_FOLDER,
+    VIDEO_FALLBACK_FOLDER,
+)
 from file_organizer.parallel.processor import ParallelProcessor
 from file_organizer.services import ProcessedFile, ProcessedImage, TextProcessor, VisionProcessor
 
@@ -65,7 +70,7 @@ def process_text_files(
                     ProcessedFile(
                         file_path=file_result.path,
                         description="",
-                        folder_name="errors",
+                        folder_name=ERROR_FALLBACK_FOLDER,
                         filename=file_result.path.stem,
                         error=error_msg,
                     )
@@ -127,7 +132,7 @@ def process_image_files(
                     ProcessedImage(
                         file_path=file_result.path,
                         description="",
-                        folder_name="errors",
+                        folder_name=ERROR_FALLBACK_FOLDER,
                         filename=file_result.path.stem,
                         error=error_msg,
                     )
@@ -194,7 +199,7 @@ def process_audio_files(files: list[Path]) -> list[ProcessedFile]:
                 ProcessedFile(
                     file_path=audio_path,
                     description="",
-                    folder_name="Audio/Unsorted",
+                    folder_name=AUDIO_FALLBACK_FOLDER,
                     filename=audio_path.stem,
                     error=str(exc),
                 )
@@ -244,7 +249,7 @@ def process_video_files(files: list[Path]) -> list[ProcessedFile]:
                 ProcessedFile(
                     file_path=video_path,
                     description="",
-                    folder_name="Videos/Unsorted",
+                    folder_name=VIDEO_FALLBACK_FOLDER,
                     filename=video_path.stem,
                     error=str(exc),
                 )

@@ -74,7 +74,7 @@ echo "✓ No absolute paths found"
 echo ""
 
 # 4. Pattern checks on Python files
-PY_FILES=$(git diff --name-only --cached -- '*.py' || true)
+PY_FILES=$(git diff --name-only --cached --diff-filter=ACM -- '*.py' || true)
 if [[ -n "$PY_FILES" ]]; then
   echo "🎯 Pattern validation on Python files..."
   PY_DIFF=$(git diff --cached -- '*.py')

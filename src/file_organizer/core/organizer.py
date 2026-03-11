@@ -58,10 +58,15 @@ class FileOrganizer:
     AUDIO_EXTENSIONS: ClassVar[set[str]] = set(AUDIO_EXTENSIONS)
     CAD_EXTENSIONS: ClassVar[set[str]] = set(CAD_EXTENSIONS)
     _TEXT_FALLBACK_MAP: ClassVar[dict[str, str]] = TEXT_FALLBACK_MAP
-    _IMAGE_FALLBACK_FOLDER: ClassVar[str] = "Images"
 
     def __init_subclass__(cls, **kwargs: object) -> None:
-        """Verify fallback map covers all text and CAD extensions."""
+        """Verify fallback map covers all text and CAD extensions.
+
+        Fires only for subclasses, not for FileOrganizer itself.
+        Raises ``TypeError`` at class-definition time if any extension
+        in TEXT_EXTENSIONS or CAD_EXTENSIONS is missing from
+        ``_TEXT_FALLBACK_MAP``.
+        """
         super().__init_subclass__(**kwargs)
         missing = (cls.TEXT_EXTENSIONS | cls.CAD_EXTENSIONS) - cls._TEXT_FALLBACK_MAP.keys()
         if missing:
@@ -156,17 +161,28 @@ class FileOrganizer:
             self.console.print("[yellow]No files found to organize[/yellow]")
             return result
 
-        # Categorize files
-        text_files = [f for f in files if f.suffix.lower() in TEXT_EXTENSIONS]
-        image_files = [f for f in files if f.suffix.lower() in IMAGE_EXTENSIONS]
-        video_files = [f for f in files if f.suffix.lower() in VIDEO_EXTENSIONS]
-        audio_files = [f for f in files if f.suffix.lower() in AUDIO_EXTENSIONS]
-        cad_files = [f for f in files if f.suffix.lower() in CAD_EXTENSIONS]
-        other_files = [
-            f
-            for f in files
-            if f not in text_files + image_files + video_files + audio_files + cad_files
-        ]
+        # Categorize files (single pass)
+        text_files: list[Path] = []
+        image_files: list[Path] = []
+        video_files: list[Path] = []
+        audio_files: list[Path] = []
+        cad_files: list[Path] = []
+        other_files: list[Path] = []
+
+        for f in files:
+            ext = f.suffix.lower()
+            if ext in TEXT_EXTENSIONS:
+                text_files.append(f)
+            elif ext in IMAGE_EXTENSIONS:
+                image_files.append(f)
+            elif ext in VIDEO_EXTENSIONS:
+                video_files.append(f)
+            elif ext in AUDIO_EXTENSIONS:
+                audio_files.append(f)
+            elif ext in CAD_EXTENSIONS:
+                cad_files.append(f)
+            else:
+                other_files.append(f)
 
         display.show_file_breakdown(
             self.console,
@@ -249,8 +265,6 @@ class FileOrganizer:
                 self.text_processor.cleanup()
             if self.vision_processor:
                 self.vision_processor.cleanup()
-            if self.parallel_processor:
-                self.parallel_processor.shutdown()
 
         # Organize
         if all_processed:

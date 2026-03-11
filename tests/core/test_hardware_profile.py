@@ -91,8 +91,8 @@ class TestHardwareProfile:
         assert d["cpu_cores"] == 8
         assert d["os"] == "Darwin"
         assert d["arch"] == "arm64"
-        assert "recommended_text_model" in d
-        assert "recommended_workers" in d
+        assert d["recommended_text_model"] == profile.recommended_text_model()
+        assert d["recommended_workers"] == profile.recommended_workers()
 
     def test_frozen_dataclass(self) -> None:
         profile = self._make_profile()

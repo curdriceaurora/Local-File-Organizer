@@ -7,6 +7,7 @@ without inheritance changes.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -43,7 +44,7 @@ class BatchProcessorProtocol(Protocol):
     def process_batch(
         self,
         files: list[Path],
-        process_fn: Any,
+        process_fn: Callable[[Path], Any],
     ) -> Any:
         """Process a batch of files using the given processing function."""
         ...

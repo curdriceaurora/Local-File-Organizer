@@ -91,6 +91,7 @@ class TestFileOrganizer:
 
         result = organizer.organize(tmp_path, tmp_path / "out")
 
+        mock_collect.assert_called_once()
         assert result.total_files == 0
 
     def test_extension_classvars_are_sets(self, organizer: FileOrganizer) -> None:
@@ -253,8 +254,10 @@ class TestFileOps:
 class TestDisplay:
     """Tests for core.display module."""
 
-    def test_show_file_breakdown_does_not_crash(self, tmp_path: Path) -> None:
-        """Ensure show_file_breakdown runs without error."""
+    def test_show_file_breakdown_renders_table(self, tmp_path: Path) -> None:
+        """Ensure show_file_breakdown renders a Rich Table."""
+        from rich.table import Table
+
         from file_organizer.core.display import show_file_breakdown
 
         console = MagicMock()
@@ -267,16 +270,19 @@ class TestDisplay:
             cad_files=[tmp_path],
             other_files=[tmp_path],
         )
-        console.print.assert_called()
+        console.print.assert_called_once()
+        printed_arg = console.print.call_args[0][0]
+        assert isinstance(printed_arg, Table)
 
     def test_show_summary_does_not_crash(self, tmp_path: Path) -> None:
-        """Ensure show_summary runs without error."""
+        """Ensure show_summary renders statistics output."""
         from file_organizer.core.display import show_summary
 
         console = MagicMock()
         res = OrganizationResult(total_files=5, processing_time=1.0)
         show_summary(console, res, tmp_path, dry_run=True)
-        console.print.assert_called()
+        # Should print multiple lines of summary stats
+        assert console.print.call_count >= 2
 
 
 # ---------------------------------------------------------------------------

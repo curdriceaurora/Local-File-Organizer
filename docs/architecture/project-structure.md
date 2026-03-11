@@ -40,8 +40,15 @@ Local-File-Organizer/
 │   │   ├── misplacement_detector.py  # Context analysis
 │   │   └── suggestion_feedback.py    # Feedback tracking
 │   │
-│   ├── core/                         # Main orchestrator
-│   │   └── organizer.py              # FileOrganizer class
+│   ├── core/                         # Main orchestrator (Phase A modernization)
+│   │   ├── __init__.py
+│   │   ├── organizer.py              # FileOrganizer thin facade (~390 lines)
+│   │   ├── types.py                  # Core type definitions
+│   │   ├── display.py                # Output/display helpers
+│   │   ├── file_ops.py               # File operation primitives
+│   │   ├── dispatcher.py             # Request dispatching
+│   │   ├── initializer.py            # Service initialization
+│   │   └── hardware_profile.py       # Hardware capability detection
 │   │
 │   ├── cli/                          # Command-line interfaces (18 modules)
 │   │   ├── main.py                   # CLI entrypoint
@@ -71,7 +78,12 @@ Local-File-Organizer/
 │   ├── methodologies/                # PARA, Johnny Decimal, etc.
 │   ├── plugins/                      # Plugin system & marketplace
 │   ├── integrations/                 # Third-party service integrations
-│   ├── interfaces/                   # Common interface definitions
+│   ├── interfaces/                   # Protocol definitions (Phase A modernization)
+│   │   ├── __init__.py
+│   │   ├── model.py                  # TextModelProtocol, VisionModelProtocol, AudioModelProtocol
+│   │   ├── processor.py              # FileProcessorProtocol, BatchProcessorProtocol
+│   │   ├── storage.py                # StorageProtocol, CacheProtocol
+│   │   └── intelligence.py           # LearnerProtocol, ScorerProtocol
 │   ├── optimization/                 # Performance optimization
 │   ├── deploy/                       # Deployment automation
 │   ├── watcher/                      # File system watching
@@ -88,13 +100,14 @@ Local-File-Organizer/
 ├── tests/                            # 237 test files
 │   ├── api/                          # API tests
 │   ├── ci/                           # CI pipeline tests
-│   ├── core/                         # Core tests
+│   ├── core/                         # Core tests (test_organizer.py, test_hardware_profile.py)
 │   ├── daemon/                       # Daemon tests
 │   ├── deploy/                       # Deployment tests
 │   ├── docs/                         # Documentation tests
 │   ├── events/                       # Event bus tests
 │   ├── history/                      # History system tests
 │   ├── integration/                  # Integration tests
+│   ├── interfaces/                   # Protocol conformance tests (test_protocol_conformance.py, 12 tests)
 │   ├── methodologies/                # Methodology tests
 │   ├── models/                       # Model tests
 │   ├── optimization/                 # Optimization tests

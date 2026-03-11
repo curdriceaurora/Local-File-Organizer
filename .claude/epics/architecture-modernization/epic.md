@@ -1,8 +1,8 @@
 ---
 name: architecture-modernization
-status: backlog
+status: in-progress
 created: 2026-03-10T23:53:38Z
-progress: 0%
+progress: 33%
 prd: .claude/prds/architecture-modernization.md
 github: https://github.com/curdriceaurora/Local-File-Organizer/issues/706
 ---
@@ -77,9 +77,9 @@ Phase D (High-effort): Task 9          — depends on Tasks 2, 5
 
 ## Task Breakdown
 
-- [ ] Task 1: Core Decomposition — organizer.py God Object extraction (PRD Topics 1)
-- [ ] Task 2: Interface & Engine Contracts — Protocol definitions + EngineProtocol (PRD Topics 2, 11)
-- [ ] Task 3: Hardware Profiling — startup detection + model auto-selection (PRD Topic 3)
+- [x] Task 1: Core Decomposition — organizer.py God Object extraction (PRD Topics 1)
+- [x] Task 2: Interface & Engine Contracts — Protocol definitions (PRD Topics 2, 11; EngineProtocol deleted — zero implementors)
+- [x] Task 3: Hardware Profiling — startup detection + model auto-selection (PRD Topic 3)
 - [ ] Task 4: Benchmarking Suite — CLI command + statistical reporting (PRD Topic 6)
 - [ ] Task 5: Model Lifecycle — domain registries + hot-swap (PRD Topics 4, 7)
 - [ ] Task 6: Composable Pipeline — stage extraction + orchestrator refactor (PRD Topic 12)
@@ -115,9 +115,9 @@ Phase D (High-effort): Task 9          — depends on Tasks 2, 5
 
 ## Tasks Created
 
-- [ ] #710 - Core Decomposition — organizer.py God Object Extraction (parallel: true, size: L)
-- [ ] #711 - Interface & Engine Contracts — Protocol Definitions (parallel: true, size: M)
-- [ ] #712 - Hardware Profiling — Startup Detection & Model Auto-Selection (parallel: true, size: S)
+- [x] #710 - Core Decomposition — organizer.py God Object Extraction (parallel: true, size: L) ✅ DONE
+- [x] #711 - Interface & Engine Contracts — Protocol Definitions (parallel: true, size: M) ✅ DONE
+- [x] #712 - Hardware Profiling — Startup Detection & Model Auto-Selection (parallel: true, size: S) ✅ DONE
 - [ ] #707 - Benchmarking Suite — CLI Command & Statistical Reporting (parallel: false, depends: #712, size: M)
 - [ ] #708 - Model Lifecycle — Domain Registries & Hot-Swap (parallel: false, depends: #711, size: L)
 - [ ] #709 - Composable Pipeline — Stage Extraction & Orchestrator Refactor (parallel: false, depends: #710, size: M)

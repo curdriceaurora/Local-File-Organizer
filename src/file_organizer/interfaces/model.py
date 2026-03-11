@@ -70,27 +70,6 @@ class VisionModelProtocol(Protocol):
         ...
 
 
-@runtime_checkable
-class AudioModelProtocol(Protocol):
-    """Structural contract for audio-processing models.
-
-    Shares the same lifecycle as text models; the ``generate`` method
-    accepts an audio prompt (or path via kwargs) and returns text output.
-    """
-
-    @property
-    def is_initialized(self) -> bool:
-        """Whether the model has been initialized and is ready."""
-        ...
-
-    def initialize(self) -> None:
-        """Acquire resources and prepare the model for generation."""
-        ...
-
-    def generate(self, prompt: str, **kwargs: Any) -> str:
-        """Generate text from an audio-related prompt."""
-        ...
-
-    def cleanup(self) -> None:
-        """Release resources held by the model."""
-        ...
+# AudioModelProtocol shares the exact same structural contract as
+# TextModelProtocol (initialize / generate / cleanup / is_initialized).
+AudioModelProtocol = TextModelProtocol

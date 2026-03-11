@@ -222,18 +222,12 @@ Local File Organizer v2.0 has grown to ~78,800 LOC across 314 modules. A compara
 
 **Current State**: BaseModel has `initialize()`, `generate()`, `cleanup()` lifecycle. Plugin has `on_load/enable/disable/unload`. Integration has `connect/disconnect`. No unified engine interface across all service types.
 
-**Target State**: `interfaces/engine.py` defines `EngineProtocol` with:
-- `init()` / `shutdown()` — lifecycle
-- `process(input)` → `output` — unified processing
-- `health_check()` → `bool` — readiness probe
-- Provider variants (Ollama engine, OpenAI engine) implement the same protocol
+**Phase A Outcome (2026-03-11)**: `EngineProtocol` was designed but DELETED during implementation — its method names (`init`/`shutdown`/`process`) didn't match any existing implementation (`initialize`/`generate`/`cleanup`). The existing `TextModelProtocol`, `VisionModelProtocol`, and `AudioModelProtocol` already cover the model lifecycle contract. A unified engine protocol is deferred to Phase B/C if cross-cutting lifecycle management is needed.
 
 **Verifiable Artifacts**:
-- [ ] `EngineProtocol` in `interfaces/engine.py` with 4 methods
-- [ ] `BaseModel` satisfies `EngineProtocol` (isinstance check passes)
-- [ ] At least one service (TextProcessor or VisionProcessor) refactored to use EngineProtocol
-- [ ] `health_check()` returns True when model loaded, False otherwise
-- [ ] Test: engine swap between Ollama and OpenAI providers via protocol
+- [x] Evaluated EngineProtocol — determined zero implementors exist
+- [x] Deleted `interfaces/engine.py` (method mismatch with all existing classes)
+- [ ] Deferred: unified engine protocol across service types (Phase B/C if needed)
 
 ### Topic 12: Composable Pipeline Stages
 

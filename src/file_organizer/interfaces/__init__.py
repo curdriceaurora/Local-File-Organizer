@@ -9,12 +9,10 @@ Modules:
     processor: FileProcessorProtocol, BatchProcessorProtocol
     storage: StorageProtocol, CacheProtocol
     intelligence: LearnerProtocol, ScorerProtocol
-    engine: EngineProtocol (unified lifecycle)
 """
 
 from __future__ import annotations
 
-from file_organizer.interfaces.engine import EngineProtocol
 from file_organizer.interfaces.intelligence import LearnerProtocol, ScorerProtocol
 from file_organizer.interfaces.model import (
     AudioModelProtocol,
@@ -31,7 +29,6 @@ __all__ = [
     "AudioModelProtocol",
     "BatchProcessorProtocol",
     "CacheProtocol",
-    "EngineProtocol",
     "FileProcessorProtocol",
     "LearnerProtocol",
     "ScorerProtocol",

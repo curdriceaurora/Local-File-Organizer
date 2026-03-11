@@ -17,6 +17,10 @@ from typing import Any
 
 from loguru import logger
 
+# Model name constants — must match models/registry.py AVAILABLE_MODELS entries
+_DEFAULT_TEXT_MODEL_SMALL = "qwen2.5:3b-instruct-q4_K_M"
+_DEFAULT_TEXT_MODEL_LARGE = "qwen2.5:7b-instruct-q4_K_M"
+
 
 class GpuType(Enum):
     """Detected GPU accelerator type."""
@@ -67,8 +71,8 @@ class HardwareProfile:
         """
         ram_gb = self.ram_gb
         if ram_gb >= 16:
-            return "qwen2.5:7b-instruct-q4_K_M"
-        return "qwen2.5:3b-instruct-q4_K_M"
+            return _DEFAULT_TEXT_MODEL_LARGE
+        return _DEFAULT_TEXT_MODEL_SMALL
 
     def recommended_workers(self) -> int:
         """Suggest a default worker count for parallel processing.
@@ -215,7 +219,7 @@ def _get_system_ram() -> int:
         import psutil
 
         return int(psutil.virtual_memory().total)
-    except ImportError:
+    except (ImportError, OSError):
         pass
 
     # Fallback: sysctl on macOS
@@ -238,7 +242,7 @@ def _get_system_ram() -> int:
             for line in f:
                 if line.startswith("MemTotal:"):
                     return int(line.split()[1]) * 1024
-    except FileNotFoundError:
+    except OSError:
         pass
 
     return 0
