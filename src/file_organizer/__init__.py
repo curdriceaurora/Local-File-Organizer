@@ -6,7 +6,8 @@ categorize, rename, and organize files without sending data to the cloud.
 
 from __future__ import annotations
 
-__version__ = "2.0.0-alpha.2"
+from file_organizer.version import __version__
+
 __author__ = "Local File Organizer Team"
 __license__ = "MIT OR Apache-2.0"
 

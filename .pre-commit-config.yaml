@@ -87,7 +87,7 @@ repos:
       # ----------------------------------------------------------------
       - id: codespell
         name: codespell
-        entry: bash -c "codespell src/ docs/ --config .codespellrc"
+        entry: bash -c ".venv/bin/codespell src/ docs/ --config .codespellrc"
         language: system
         pass_filenames: false
 
@@ -96,7 +96,7 @@ repos:
       # ----------------------------------------------------------------
       - id: deptry
         name: deptry (unused deps)
-        entry: deptry src/
+        entry: .venv/bin/deptry src/
         language: system
         pass_filenames: false
         files: ^(src/|pyproject\.toml)

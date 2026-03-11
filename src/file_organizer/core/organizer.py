@@ -240,45 +240,11 @@ class FileOrganizer:
         self.text_processor = None
         self.vision_processor = None
 
-        # Initialize models
-        self.console.print("\n[bold blue]Initializing AI models...[/bold blue]")
-
-        # Initialize text processor for text and CAD files
-        if text_files or cad_files:
-            try:
-                self.text_processor = TextProcessor(config=self.text_model_config)
-                self.text_processor.initialize()
-                self.console.print("[green]✓[/green] Text model ready")
-            except OSError as e:
-                # ConnectionRefusedError, PermissionError, etc. — Ollama not reachable
-                self._ollama_available = False
-                self.console.print(
-                    f"[yellow]⚠ Ollama unavailable ({e.__class__.__name__}): "
-                    "falling back to extension-based organization[/yellow]"
-                )
-                logger.warning(
-                    "Ollama unavailable for text processing, using extension fallback: {}", e
-                )
-
-        # Initialize vision processor for image files only (video uses metadata now)
-        if image_files:
-            try:
-                self.vision_processor = VisionProcessor(config=self.vision_model_config)
-                self.vision_processor.initialize()
-                self.console.print("[green]✓[/green] Vision model ready")
-            except OSError as e:
-                # ConnectionRefusedError, PermissionError, etc. — Ollama not reachable
-                self._ollama_available = False
-                self.console.print(
-                    f"[yellow]⚠ Ollama unavailable ({e.__class__.__name__}): "
-                    "falling back to extension-based organization for images[/yellow]"
-                )
-                logger.warning(
-                    "Ollama unavailable for vision processing, using extension fallback: {}", e
-                )
-
-        # Process text files
+        # Process text files (initialize text model on demand)
         all_processed: list[ProcessedFile | ProcessedImage] = []
+        if text_files or cad_files:
+            self._init_text_processor()
+
         if text_files:
             self.console.print(
                 f"\n[bold blue]Processing {len(text_files)} text files...[/bold blue]"
@@ -298,8 +264,13 @@ class FileOrganizer:
                 processed_cad = self._fallback_by_extension(cad_files)
             all_processed.extend(processed_cad)
 
-        # Process image files
+        # Release text model VRAM before loading vision model
+        if self.text_processor:
+            self.text_processor.cleanup()
+
+        # Process image files (initialize vision model on demand)
         if image_files:
+            self._init_vision_processor()
             self.console.print(f"\n[bold blue]Processing {len(image_files)} images...[/bold blue]")
             processed_images: list[ProcessedImage] | list[ProcessedFile]
             if self._ollama_available and self.vision_processor is not None:
@@ -367,9 +338,8 @@ class FileOrganizer:
                 self.console.print(f"  [yellow]•[/yellow] {f.name} (unsupported type)")
             self.console.print("\n  [dim]These file types are not yet supported[/dim]")
 
-        # Cleanup
-        if self.text_processor:
-            self.text_processor.cleanup()
+        # Cleanup (text_processor already cleaned up after text/CAD processing
+        # to release VRAM before vision model loads)
         if self.vision_processor:
             self.vision_processor.cleanup()
         if self.parallel_processor:
@@ -473,6 +443,48 @@ class FileOrganizer:
             )
             logger.debug("Fallback organized {} -> {}/{}", file_path.name, folder, file_path.name)
         return results
+
+    def _init_text_processor(self) -> None:
+        """Initialize text processor on demand.
+
+        Creates and initializes the text model. On failure (Ollama unavailable),
+        sets ``_ollama_available = False`` so callers fall back to extension-based
+        organization.
+        """
+        try:
+            self.text_processor = TextProcessor(config=self.text_model_config)
+            self.text_processor.initialize()
+            self.console.print("[green]✓[/green] Text model ready")
+        except OSError as e:
+            self._ollama_available = False
+            self.console.print(
+                f"[yellow]⚠ Ollama unavailable ({e.__class__.__name__}): "
+                "falling back to extension-based organization[/yellow]"
+            )
+            logger.warning(
+                "Ollama unavailable for text processing, using extension fallback: {}", e
+            )
+
+    def _init_vision_processor(self) -> None:
+        """Initialize vision processor on demand.
+
+        Creates and initializes the vision model. On failure (Ollama unavailable),
+        sets ``_ollama_available = False`` so callers fall back to extension-based
+        organization for images.
+        """
+        try:
+            self.vision_processor = VisionProcessor(config=self.vision_model_config)
+            self.vision_processor.initialize()
+            self.console.print("[green]✓[/green] Vision model ready")
+        except OSError as e:
+            self._ollama_available = False
+            self.console.print(
+                f"[yellow]⚠ Ollama unavailable ({e.__class__.__name__}): "
+                "falling back to extension-based organization for images[/yellow]"
+            )
+            logger.warning(
+                "Ollama unavailable for vision processing, using extension fallback: {}", e
+            )
 
     def _process_text_files(self, files: list[Path]) -> list[ProcessedFile]:
         """Process text files with AI.
