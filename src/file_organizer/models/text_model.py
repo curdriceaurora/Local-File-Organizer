@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Any
 
 try:
@@ -26,6 +26,47 @@ from file_organizer.models.base import (
     ModelType,
     TokenExhaustionError,
 )
+
+
+class _GuardedIterator:
+    """Wraps a generator to guarantee a cleanup callback fires on close.
+
+    Unlike a bare generator whose ``finally`` only runs when the iterator is
+    fully consumed or explicitly ``.close()``-d, this wrapper also invokes the
+    callback from ``__del__`` so that abandoned iterators release the
+    generation guard deterministically on garbage collection.
+    """
+
+    __slots__ = ("_inner", "_on_close", "_closed")
+
+    def __init__(self, inner: Iterator[str], on_close: Callable[[], None]) -> None:
+        self._inner = inner
+        self._on_close = on_close
+        self._closed = False
+
+    def __iter__(self) -> _GuardedIterator:
+        return self
+
+    def __next__(self) -> str:
+        try:
+            return next(self._inner)
+        except BaseException:
+            self._finish()
+            raise
+
+    def close(self) -> None:
+        """Explicitly close the iterator and release the generation guard."""
+        self._finish()
+
+    def _finish(self) -> None:
+        if not self._closed:
+            self._closed = True
+            if hasattr(self._inner, "close"):
+                self._inner.close()
+            self._on_close()
+
+    def __del__(self) -> None:
+        self._finish()
 
 
 class TextModel(BaseModel):
@@ -172,6 +213,10 @@ class TextModel(BaseModel):
     def generate_streaming(self, prompt: str, **kwargs: Any) -> Iterator[str]:
         """Generate text response with streaming.
 
+        Returns a :class:`_GuardedIterator` that ensures the generation guard
+        is released even if the caller abandons the iterator without fully
+        consuming it or calling ``.close()``.
+
         .. note::
             Streaming cannot retry on token exhaustion because chunks have
             already been yielded to the caller.  If ``done_reason == "length"``
@@ -181,17 +226,17 @@ class TextModel(BaseModel):
             prompt: Input prompt
             **kwargs: Additional generation parameters
 
-        Yields:
-            Generated text chunks
+        Returns:
+            An iterator of generated text chunks.
 
         Raises:
             RuntimeError: If model is not initialized
         """
         self._enter_generate()
-        try:
-            yield from self._do_generate_streaming(prompt, **kwargs)
-        finally:
-            self._exit_generate()
+        return _GuardedIterator(
+            self._do_generate_streaming(prompt, **kwargs),
+            self._exit_generate,
+        )
 
     def _do_generate_streaming(self, prompt: str, **kwargs: Any) -> Iterator[str]:
         """Internal streaming logic, called while generation guard is held."""

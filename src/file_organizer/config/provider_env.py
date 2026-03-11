@@ -13,7 +13,7 @@ Priority cascade (highest wins)::
 
     1. Explicit ``ModelConfig`` parameters passed to ``FileOrganizer``
     2. Environment variables (``FO_PROVIDER``, ``FO_OPENAI_*``)
-    3. Config profile (``~/.config/file-organizer/config.yaml``)
+    3. Config profile (resolved via ``platformdirs.user_config_dir``)
     4. Hardcoded defaults
 
 Usage::
@@ -143,7 +143,7 @@ def _get_model_configs_from_profile(
         )
         return text_cfg, vision_cfg
     except Exception:
-        logger.debug("Could not load config profile '{}', skipping", profile, exc_info=True)
+        logger.opt(exception=True).debug("Could not load config profile '{}', skipping", profile)
         return None
 
 

@@ -152,7 +152,9 @@ class OpenAITextModel(BaseModel):
                 try:
                     self.client.close()
                 except Exception:
-                    logger.debug("Ignoring exception during OpenAI client close", exc_info=True)
+                    logger.opt(exception=True).debug(
+                        "Ignoring exception during OpenAI client close"
+                    )
             self.client = None
             self._initialized = False
 
