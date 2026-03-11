@@ -67,6 +67,29 @@ def organizer() -> FileOrganizer:
 class TestFallbackDoesNotCrash:
     """FileOrganizer must complete successfully when Ollama is unreachable."""
 
+    def test_non_oserror_falls_back_gracefully(
+        self, organizer: FileOrganizer, source_dir: Path, output_dir: Path
+    ) -> None:
+        """Non-OSError init failures (ValueError, ImportError) also fall back, not crash."""
+        expected = len(list(source_dir.iterdir()))
+        with (
+            patch(
+                "file_organizer.services.text_processor.TextProcessor.initialize",
+                side_effect=ValueError("unsupported model type"),
+            ),
+            patch(
+                "file_organizer.services.vision_processor.VisionProcessor.initialize",
+                side_effect=ImportError("ollama package missing"),
+            ),
+        ):
+            result = organizer.organize(source_dir, output_dir)
+
+        assert result.total_files == expected
+        assert result.failed_files == 0
+        # Processors reset to None on non-OSError failure
+        assert organizer.text_processor is None
+        assert organizer.vision_processor is None
+
     def test_all_files_accounted_for(
         self, organizer: FileOrganizer, source_dir: Path, output_dir: Path
     ) -> None:
@@ -81,11 +104,18 @@ class TestFallbackDoesNotCrash:
                 "file_organizer.services.vision_processor.VisionProcessor.initialize",
                 side_effect=ConnectionRefusedError("down"),
             ),
+            patch.object(
+                FileOrganizer,
+                "_fallback_by_extension",
+                wraps=organizer._fallback_by_extension,
+            ) as mock_fallback,
         ):
             result = organizer.organize(source_dir, output_dir)
 
         assert result.total_files == expected
         assert result.failed_files == 0
+        # Verify fallback path was actually used (not silently skipped)
+        assert mock_fallback.call_count > 0, "Expected fallback to be invoked when Ollama is down"
 
     def test_ollama_recovery_between_calls(
         self, organizer: FileOrganizer, source_dir: Path, output_dir: Path
@@ -132,12 +162,26 @@ class TestFallbackDoesNotCrash:
                 "file_organizer.core.organizer.FileOrganizer._process_image_files",
                 return_value=[],
             ) as mock_image,
+            patch.object(
+                FileOrganizer,
+                "_fallback_by_extension",
+            ) as mock_fallback,
         ):
             organizer.organize(source_dir, output_dir)
 
-        # AI processing paths were called (not fallback)
-        assert mock_text.call_count > 0, "Expected AI text processing, got fallback"
-        assert mock_image.call_count > 0, "Expected AI image processing, got fallback"
+        # AI processing paths were called with actual file lists (not fallback)
+        assert mock_text.call_count >= 1, "Expected AI text processing, got fallback"
+        # Verify files were passed (text_files call + cad_files call)
+        all_text_args = [call.args[0] for call in mock_text.call_args_list]
+        all_text_files = [f for batch in all_text_args for f in batch]
+        assert len(all_text_files) > 0, "AI text processing received no files"
+
+        mock_image.assert_called_once()
+        image_args = mock_image.call_args.args[0]
+        assert len(image_args) == 1, f"Expected 1 image file, got {len(image_args)}"
+
+        # Fallback must NOT have been used when Ollama recovered
+        mock_fallback.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

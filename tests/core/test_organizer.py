@@ -237,6 +237,51 @@ class TestFileOrganizer:
         assert structure == {"docs": ["file_1_1.txt"]}
         mock_copy.assert_called_once_with(f1, out_path / "docs" / "file_1_1.txt")
 
+    @patch("file_organizer.core.organizer.TextProcessor")
+    def test_init_text_processor_success(self, mock_text_cls, organizer):
+        """Successful text processor init sets processor and calls initialize()."""
+        organizer._init_text_processor()
+
+        mock_text_cls.assert_called_once_with(config=organizer.text_model_config)
+        mock_text_cls.return_value.initialize.assert_called_once()
+        assert organizer.text_processor is mock_text_cls.return_value
+
+    @patch("file_organizer.core.organizer.TextProcessor")
+    def test_init_text_processor_oserror(self, mock_text_cls, organizer):
+        """OSError during text init resets processor to None."""
+        mock_text_cls.return_value.initialize.side_effect = ConnectionRefusedError("down")
+
+        organizer._init_text_processor()
+
+        assert organizer.text_processor is None
+
+    @patch("file_organizer.core.organizer.TextProcessor")
+    def test_init_text_processor_non_oserror(self, mock_text_cls, organizer):
+        """Non-OSError exceptions (ValueError, ImportError) also reset to None."""
+        mock_text_cls.return_value.initialize.side_effect = ValueError("bad model")
+
+        organizer._init_text_processor()
+
+        assert organizer.text_processor is None
+
+    @patch("file_organizer.core.organizer.VisionProcessor")
+    def test_init_vision_processor_success(self, mock_vision_cls, organizer):
+        """Successful vision processor init sets processor and calls initialize()."""
+        organizer._init_vision_processor()
+
+        mock_vision_cls.assert_called_once_with(config=organizer.vision_model_config)
+        mock_vision_cls.return_value.initialize.assert_called_once()
+        assert organizer.vision_processor is mock_vision_cls.return_value
+
+    @patch("file_organizer.core.organizer.VisionProcessor")
+    def test_init_vision_processor_failure(self, mock_vision_cls, organizer):
+        """Any exception during vision init resets processor to None."""
+        mock_vision_cls.return_value.initialize.side_effect = ImportError("missing")
+
+        organizer._init_vision_processor()
+
+        assert organizer.vision_processor is None
+
     def test_show_methods_do_not_crash(self, organizer, tmp_path):
         """Ensure UI display methods run without error."""
         organizer._show_file_breakdown(

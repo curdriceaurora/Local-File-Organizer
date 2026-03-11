@@ -466,20 +466,18 @@ class FileOrganizer:
             self.text_processor = TextProcessor(config=self.text_model_config)
             self.text_processor.initialize()
             self.console.print("[green]✓[/green] Text model ready")
-        except OSError as e:
+        except Exception as e:  # graceful degradation for any init failure
             self.text_processor = None
             self.console.print(
-                f"[yellow]⚠ Ollama unavailable ({e.__class__.__name__}): "
+                f"[yellow]⚠ Text model unavailable ({e.__class__.__name__}): "
                 "falling back to extension-based organization[/yellow]"
             )
-            logger.warning(
-                "Ollama unavailable for text processing, using extension fallback: {}", e
-            )
+            logger.warning("Text model init failed, using extension fallback: {}", e)
 
     def _init_vision_processor(self) -> None:
         """Initialize vision processor on demand.
 
-        Creates and initializes the vision model. On failure (Ollama unavailable),
+        Creates and initializes the vision model. On failure,
         resets ``vision_processor`` to *None* so callers fall back to extension-based
         organization for images.
         """
@@ -487,15 +485,13 @@ class FileOrganizer:
             self.vision_processor = VisionProcessor(config=self.vision_model_config)
             self.vision_processor.initialize()
             self.console.print("[green]✓[/green] Vision model ready")
-        except OSError as e:
+        except Exception as e:  # graceful degradation for any init failure
             self.vision_processor = None
             self.console.print(
-                f"[yellow]⚠ Ollama unavailable ({e.__class__.__name__}): "
+                f"[yellow]⚠ Vision model unavailable ({e.__class__.__name__}): "
                 "falling back to extension-based organization for images[/yellow]"
             )
-            logger.warning(
-                "Ollama unavailable for vision processing, using extension fallback: {}", e
-            )
+            logger.warning("Vision model init failed, using extension fallback: {}", e)
 
     def _process_text_files(self, files: list[Path]) -> list[ProcessedFile]:
         """Process text files with AI.
