@@ -152,8 +152,15 @@ class BaseModel(ABC):
 
     @abstractmethod
     def initialize(self) -> None:
-        """Initialize the model. Must be called before inference."""
-        pass
+        """Initialize the model. Must be called before inference.
+
+        Subclasses **must** call ``super().initialize()`` after establishing
+        their resources (client, etc.) to reset ``_shutting_down`` and set
+        ``_initialized``.
+        """
+        with self._lifecycle_lock:
+            self._shutting_down = False
+            self._initialized = True
 
     @abstractmethod
     def generate(self, prompt: str, **kwargs: Any) -> str:

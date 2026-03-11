@@ -79,7 +79,7 @@ class VisionModel(BaseModel):
                 self.client.pull(self.config.name)
                 logger.info("Model {} pulled successfully", self.config.name)
 
-            self._initialized = True
+            super().initialize()
             logger.info("Vision model {} initialized successfully", self.config.name)
 
         except Exception as e:

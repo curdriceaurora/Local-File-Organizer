@@ -31,7 +31,7 @@ class _StubModel(BaseModel):
 
     def initialize(self) -> None:
         self.client = MagicMock()
-        self._initialized = True
+        super().initialize()
 
     def generate(self, prompt: str, **kwargs: Any) -> str:
         self._enter_generate()
@@ -204,3 +204,19 @@ class TestGenerationGuards:
 
         with pytest.raises(RuntimeError, match="not initialized"):
             model.generate("should fail")
+
+    def test_reinitialize_after_safe_cleanup(self) -> None:
+        """Model can be re-initialized and used after safe_cleanup()."""
+        model = _StubModel(_make_config())
+        model.initialize()
+        assert model.generate("first") == "response to: first"
+
+        model.safe_cleanup()
+        assert not model.is_initialized
+        assert model._shutting_down is True
+
+        # Re-initialize should reset _shutting_down and allow generation
+        model.initialize()
+        assert model.is_initialized
+        assert model._shutting_down is False
+        assert model.generate("second") == "response to: second"

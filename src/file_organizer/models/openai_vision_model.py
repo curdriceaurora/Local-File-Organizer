@@ -105,7 +105,7 @@ class OpenAIVisionModel(BaseModel):
             return
 
         self.client = create_openai_client(self.config, "vision")
-        self._initialized = True
+        super().initialize()
 
     def generate(
         self,

@@ -35,7 +35,7 @@ class AudioModel(BaseModel):
     def initialize(self) -> None:
         """Initialize the audio model (not implemented yet)."""
         logger.warning("Audio model not fully implemented yet (Phase 3)")
-        self._initialized = True
+        super().initialize()
 
     def generate(self, prompt: str, **kwargs: Any) -> str:
         """Transcribe audio (not implemented yet).

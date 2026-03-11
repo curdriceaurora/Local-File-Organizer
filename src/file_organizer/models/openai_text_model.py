@@ -67,7 +67,7 @@ class OpenAITextModel(BaseModel):
             return
 
         self.client = create_openai_client(self.config, "text")
-        self._initialized = True
+        super().initialize()
 
     def generate(self, prompt: str, **kwargs: Any) -> str:
         """Generate text using the OpenAI chat completions API.
