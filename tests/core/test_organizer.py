@@ -34,6 +34,7 @@ def organizer(text_config, vision_config):
 
 
 @pytest.mark.unit
+@pytest.mark.ci
 class TestFileOrganizer:
     """Tests for FileOrganizer class."""
 

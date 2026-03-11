@@ -266,6 +266,7 @@ class FileOrganizer:
         # Release text model VRAM before loading vision model (only if vision needed)
         if image_files and self.text_processor:
             self.text_processor.cleanup()
+            self.text_processor = None  # prevent double-cleanup in finally block
 
         # Process image files (initialize vision model on demand)
         if image_files:
@@ -453,9 +454,11 @@ class FileOrganizer:
     def _init_text_processor(self) -> None:
         """Initialize text processor on demand.
 
-        Creates and initializes the text model. On failure (Ollama unavailable),
-        resets ``text_processor`` to *None* so callers fall back to extension-based
-        organization.
+        Creates and initializes the text model. On any initialization failure
+        (for example, Ollama being unavailable, configuration/import errors, or
+        other runtime issues), this method logs a warning, attempts best-effort
+        cleanup, resets ``text_processor`` to *None*, and lets callers fall back
+        to extension-based organization.
         """
         try:
             self.text_processor = TextProcessor(config=self.text_model_config)
@@ -472,7 +475,7 @@ class FileOrganizer:
                 f"[yellow]⚠ Text model unavailable ({e.__class__.__name__}): "
                 "falling back to extension-based organization[/yellow]"
             )
-            logger.warning("Text model init failed, using extension fallback: {}", e)
+            logger.opt(exception=e).warning("Text model init failed, using extension fallback")
 
     def _init_vision_processor(self) -> None:
         """Initialize vision processor on demand.
@@ -496,7 +499,7 @@ class FileOrganizer:
                 f"[yellow]⚠ Vision model unavailable ({e.__class__.__name__}): "
                 "falling back to extension-based organization for images[/yellow]"
             )
-            logger.warning("Vision model init failed, using extension fallback: {}", e)
+            logger.opt(exception=e).warning("Vision model init failed, using extension fallback")
 
     def _process_text_files(self, files: list[Path]) -> list[ProcessedFile]:
         """Process text files with AI.
