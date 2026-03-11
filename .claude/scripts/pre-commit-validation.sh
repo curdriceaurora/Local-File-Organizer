@@ -120,6 +120,14 @@ if [[ -n "$PY_FILES" ]]; then
     fi
     echo "✓ Full ruff check passed"
     echo ""
+    echo "🔧 Checking ruff format..."
+    if ! ruff format . --check; then
+      echo "❌ Format check failed"
+      echo "Run: ruff format . --fix"
+      exit 1
+    fi
+    echo "✓ Format check passed"
+    echo ""
     echo "🔧 Running type annotation lint on src/..."
     PY_SRC_FILES=$(echo "$PY_FILES" | grep '^src/' || true)
     if [[ -n "$PY_SRC_FILES" ]]; then
