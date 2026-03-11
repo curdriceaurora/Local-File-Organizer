@@ -6,8 +6,9 @@ Covers issue #724 — configured model overrides from profile are ignored.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from file_organizer.config.provider_env import (
     _get_model_configs_from_profile,
@@ -16,18 +17,20 @@ from file_organizer.config.provider_env import (
 from file_organizer.config.schema import AppConfig, ModelPreset
 from file_organizer.models.base import ModelConfig, ModelType
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.smoke]
+
 
 class TestGetModelConfigsFromProfile:
     """Verify _get_model_configs_from_profile reads saved profiles."""
 
-    def test_returns_none_when_no_config_file(self, tmp_path: Path) -> None:
+    def test_returns_none_when_no_config_file(self) -> None:
         with patch("file_organizer.config.manager.ConfigManager") as mock_cls:
             mgr = mock_cls.return_value
             mgr.load.return_value = AppConfig()  # all defaults
             result = _get_model_configs_from_profile("default")
         assert result is None
 
-    def test_returns_none_when_models_are_defaults(self, tmp_path: Path) -> None:
+    def test_returns_none_when_models_are_defaults(self) -> None:
         with patch("file_organizer.config.manager.ConfigManager") as mock_cls:
             mgr = mock_cls.return_value
             mgr.load.return_value = AppConfig(
@@ -61,9 +64,7 @@ class TestGetModelConfigsFromProfile:
         custom_preset = ModelPreset(vision_model="custom-vision:latest")
         app_cfg = AppConfig(models=custom_preset)
 
-        text_cfg = ModelConfig(
-            name="qwen2.5:3b-instruct-q4_K_M", model_type=ModelType.TEXT
-        )
+        text_cfg = ModelConfig(name="qwen2.5:3b-instruct-q4_K_M", model_type=ModelType.TEXT)
         vision_cfg = ModelConfig(name="custom-vision:latest", model_type=ModelType.VISION)
 
         with patch("file_organizer.config.manager.ConfigManager") as mock_cls:
@@ -98,18 +99,18 @@ class TestGetModelConfigs:
             "FO_OPENAI_MODEL": "gpt-4o",
         }
         with patch.dict(os.environ, env, clear=False):
-            text, vision = get_model_configs()
+            text, _vision = get_model_configs()
         assert text.provider == "openai"
         assert text.name == "gpt-4o"
 
-    def test_openai_env_vars_take_precedence(self) -> None:
-        """Individual FO_OPENAI_* vars trigger env-based config."""
+    def test_openai_env_vars_without_provider_fall_through(self) -> None:
+        """FO_OPENAI_* vars alone (without FO_PROVIDER) don't trigger env-based config."""
         env = {"FO_OPENAI_MODEL": "custom-model"}
         clear_vars = {"FO_PROVIDER": ""}
         with patch.dict(os.environ, {**env, **clear_vars}, clear=False):
-            text, vision = get_model_configs()
-        # Should use env path (Ollama by default since FO_PROVIDER not set to openai)
-        assert text is not None
+            text, _vision = get_model_configs()
+        # Without FO_PROVIDER set, falls through to profile/defaults (Ollama)
+        assert text.provider == "ollama"
 
     def test_profile_used_when_no_env_vars(self) -> None:
         """When no env vars are set, profile config is used."""
@@ -176,7 +177,7 @@ class TestGetModelConfigs:
                 return_value=(profile_text, profile_vision),
             ) as mock_load,
         ):
-            text, vision = get_model_configs()
+            text, _vision = get_model_configs()
 
         mock_load.assert_called_once_with("work")
         assert text.name == "work-text:latest"

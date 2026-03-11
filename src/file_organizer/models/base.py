@@ -147,6 +147,7 @@ class BaseModel(ABC):
         # Thread-safety primitives
         self._lifecycle_lock = threading.Lock()
         self._active_generations = 0
+        self._shutting_down = False
         self._generation_done = threading.Condition(self._lifecycle_lock)
 
     @abstractmethod
@@ -187,6 +188,8 @@ class BaseModel(ABC):
         Must be called at the start of ``generate()`` in subclasses.
         """
         with self._lifecycle_lock:
+            if self._shutting_down:
+                raise RuntimeError("Model is shutting down.")
             if not self._initialized:
                 raise RuntimeError("Model not initialized. Call initialize() first.")
             self._active_generations += 1
@@ -203,10 +206,12 @@ class BaseModel(ABC):
     def safe_cleanup(self) -> None:
         """Wait for in-flight generations to finish, then call ``cleanup()``.
 
-        Waits up to ``CLEANUP_TIMEOUT`` seconds.  If generations are still
-        active after the timeout, cleanup proceeds anyway (best effort).
+        Sets ``_shutting_down`` under the lock to reject new ``generate()``
+        calls, waits up to ``CLEANUP_TIMEOUT`` seconds for in-flight
+        generations, then delegates to ``cleanup()``.
         """
         with self._generation_done:
+            self._shutting_down = True
             self._generation_done.wait_for(
                 lambda: self._active_generations == 0,
                 timeout=self.CLEANUP_TIMEOUT,
@@ -225,8 +230,8 @@ class BaseModel(ABC):
         exc_val: BaseException | None,
         exc_tb: types.TracebackType | None,
     ) -> None:
-        """Context manager exit."""
-        self.cleanup()
+        """Context manager exit — waits for in-flight generations."""
+        self.safe_cleanup()
 
     def __repr__(self) -> str:
         """String representation."""

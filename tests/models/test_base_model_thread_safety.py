@@ -14,6 +14,8 @@ import pytest
 
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 
+pytestmark = [pytest.mark.unit, pytest.mark.ci, pytest.mark.smoke]
+
 # ---------------------------------------------------------------------------
 # Concrete stub for testing
 # ---------------------------------------------------------------------------

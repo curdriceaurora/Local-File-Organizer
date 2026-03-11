@@ -187,7 +187,15 @@ class TextModel(BaseModel):
         Raises:
             RuntimeError: If model is not initialized
         """
-        if not self._initialized or self.client is None:
+        self._enter_generate()
+        try:
+            yield from self._do_generate_streaming(prompt, **kwargs)
+        finally:
+            self._exit_generate()
+
+    def _do_generate_streaming(self, prompt: str, **kwargs: Any) -> Iterator[str]:
+        """Internal streaming logic, called while generation guard is held."""
+        if self.client is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
 
         options = {

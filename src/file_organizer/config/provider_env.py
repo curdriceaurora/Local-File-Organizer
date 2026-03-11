@@ -129,13 +129,8 @@ def _get_model_configs_from_profile(
         mgr = ConfigManager()
         app_cfg = mgr.load(profile)
 
-        # Only use profile if models were explicitly configured
-        # (i.e. differ from the dataclass defaults).
-        defaults = ModelPreset()
-        if (
-            app_cfg.models.text_model == defaults.text_model
-            and app_cfg.models.vision_model == defaults.vision_model
-        ):
+        # Only fall through when the entire model preset is still at defaults.
+        if app_cfg.models == ModelPreset():
             return None
 
         text_cfg = mgr.to_text_model_config(app_cfg)
@@ -173,12 +168,6 @@ def get_model_configs(
     # If provider env var is explicitly set, env takes precedence
     if os.environ.get("FO_PROVIDER", "").strip():
         logger.debug("FO_PROVIDER is set — using environment config")
-        return get_model_configs_from_env()
-
-    # Check for individual model env var overrides (OpenAI-specific)
-    openai_vars = ("FO_OPENAI_MODEL", "FO_OPENAI_VISION_MODEL", "FO_OPENAI_API_KEY")
-    if any(os.environ.get(v, "").strip() for v in openai_vars):
-        logger.debug("OpenAI env vars detected — using environment config")
         return get_model_configs_from_env()
 
     # Try config profile
