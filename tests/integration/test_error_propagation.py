@@ -87,9 +87,7 @@ class TestModelErrors:
         processor.initialize()
 
         with patch_text_generate_error(RuntimeError("GPU out of memory")):
-            result = processor.process_file(
-                integration_source_dir / "report.txt"
-            )
+            result = processor.process_file(integration_source_dir / "report.txt")
 
         # File still processes — error is handled gracefully with fallbacks
         assert result.error is None

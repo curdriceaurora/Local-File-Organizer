@@ -299,12 +299,7 @@ def minimal_png_bytes() -> bytes:
     raw = b"\x00\xff\x00\x00"
     compressed = zlib.compress(raw)
     idat_crc = zlib.crc32(b"IDAT" + compressed) & 0xFFFFFFFF
-    idat = (
-        struct.pack(">I", len(compressed))
-        + b"IDAT"
-        + compressed
-        + struct.pack(">I", idat_crc)
-    )
+    idat = struct.pack(">I", len(compressed)) + b"IDAT" + compressed + struct.pack(">I", idat_crc)
 
     # IEND
     iend_crc = zlib.crc32(b"IEND") & 0xFFFFFFFF

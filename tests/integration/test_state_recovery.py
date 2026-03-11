@@ -48,9 +48,7 @@ class TestUndoRedo:
         assert result.processed_files == 3
 
         # Verify organize created files in output
-        output_files_before_undo = [
-            f for f in integration_output_dir.rglob("*") if f.is_file()
-        ]
+        output_files_before_undo = [f for f in integration_output_dir.rglob("*") if f.is_file()]
         assert len(output_files_before_undo) == 3
 
         # Undo should remove the organized output files
@@ -58,9 +56,7 @@ class TestUndoRedo:
         assert undo_success is True
 
         # Output files should be removed after undo
-        output_files_after_undo = [
-            f for f in integration_output_dir.rglob("*") if f.is_file()
-        ]
+        output_files_after_undo = [f for f in integration_output_dir.rglob("*") if f.is_file()]
         assert len(output_files_after_undo) == 0
 
 
@@ -147,5 +143,3 @@ class TestInterruptedTransaction:
         # Dry run doesn't create undo state
         result = org.undo()
         assert result is False
-
-
