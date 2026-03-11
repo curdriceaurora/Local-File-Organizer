@@ -14,12 +14,12 @@ pytestmark = pytest.mark.unit
 
 @pytest.fixture()
 def organizer():
-    with (
-        patch("file_organizer.core.organizer.TextModel") as tm,
-        patch("file_organizer.core.organizer.VisionModel") as vm,
+    mock_text_cfg = MagicMock()
+    mock_vision_cfg = MagicMock()
+    with patch(
+        "file_organizer.core.organizer.get_model_configs_from_env",
+        return_value=(mock_text_cfg, mock_vision_cfg),
     ):
-        tm.get_default_config.return_value = MagicMock()
-        vm.get_default_config.return_value = MagicMock()
         org = FileOrganizer(dry_run=True)
     return org
 
