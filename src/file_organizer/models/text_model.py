@@ -14,7 +14,18 @@ except ImportError:
 
 from loguru import logger
 
-from file_organizer.models.base import BaseModel, ModelConfig, ModelType
+from file_organizer.models._ollama_response import (
+    compute_retry_num_predict,
+    format_exhaustion_diagnostics,
+    is_token_exhausted,
+)
+from file_organizer.models.base import (
+    MIN_USEFUL_RESPONSE_LENGTH,
+    BaseModel,
+    ModelConfig,
+    ModelType,
+    TokenExhaustionError,
+)
 
 
 class TextModel(BaseModel):
@@ -85,7 +96,10 @@ class TextModel(BaseModel):
             Generated text response
 
         Raises:
-            RuntimeError: If model is not initialized
+            RuntimeError: If model is not initialized.
+            TokenExhaustionError: If the model exhausts its token budget on
+                both the initial attempt and the retry without producing useful
+                output.
         """
         if not self._initialized or self.client is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
@@ -111,7 +125,28 @@ class TextModel(BaseModel):
                 stream=False,
             )
 
-            generated_text = str(response["response"])
+            # Detect token exhaustion and retry once with doubled budget
+            if is_token_exhausted(response):
+                diag = format_exhaustion_diagnostics(response, self.config.name)
+                logger.warning(f"Token exhaustion detected, retrying: {diag}")
+
+                retry_num_predict = compute_retry_num_predict(options["num_predict"])
+                options["num_predict"] = retry_num_predict
+
+                response = self.client.generate(
+                    model=self.config.name,
+                    prompt=prompt,
+                    options=options,
+                    stream=False,
+                )
+
+                if is_token_exhausted(response):
+                    retry_diag = format_exhaustion_diagnostics(response, self.config.name)
+                    raise TokenExhaustionError(
+                        f"Model exhausted token budget on retry. {retry_diag}"
+                    )
+
+            generated_text = str(response.get("response", "") or "")
             logger.debug(
                 f"Generated {len(generated_text)} characters "
                 f"in {response.get('total_duration', 0) / 1e9:.2f}s"
@@ -119,12 +154,19 @@ class TextModel(BaseModel):
 
             return generated_text.strip()
 
+        except TokenExhaustionError:
+            raise
         except Exception as e:
             logger.error(f"Failed to generate text: {e}")
             raise
 
     def generate_streaming(self, prompt: str, **kwargs: Any) -> Iterator[str]:
         """Generate text response with streaming.
+
+        .. note::
+            Streaming cannot retry on token exhaustion because chunks have
+            already been yielded to the caller.  If ``done_reason == "length"``
+            the method logs a warning (or error for empty output) instead.
 
         Args:
             prompt: Input prompt
@@ -156,9 +198,28 @@ class TextModel(BaseModel):
                 stream=True,
             )
 
+            accumulated_length = 0
+            last_chunk: dict[str, Any] = {}
+
             for chunk in stream:
+                last_chunk = chunk
                 if "response" in chunk:
-                    yield chunk["response"]
+                    text = chunk["response"]
+                    accumulated_length += len(text)
+                    yield text
+
+            # Post-stream: warn if token budget was exhausted
+            if (
+                last_chunk.get("done_reason") == "length"
+                and accumulated_length < MIN_USEFUL_RESPONSE_LENGTH
+            ):
+                diag = format_exhaustion_diagnostics(last_chunk, self.config.name)
+                logger.error(f"Streaming token exhaustion (no useful output): {diag}")
+            elif last_chunk.get("done_reason") == "length":
+                logger.warning(
+                    f"Streaming response truncated at {accumulated_length} chars "
+                    f"(done_reason=length) for model {self.config.name}"
+                )
 
         except Exception as e:
             logger.error(f"Failed to generate streaming text: {e}")

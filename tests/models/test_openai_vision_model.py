@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from file_organizer.models.base import ModelConfig, ModelType
+from file_organizer.models.base import ModelConfig, ModelType, TokenExhaustionError
 from file_organizer.models.openai_vision_model import (
     OpenAIVisionModel,
     _bytes_to_data_url,
@@ -191,11 +191,14 @@ class TestOpenAIVisionModelInitialize:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(openai_vision_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            return_value=mock_openai_client,
-        ) as mock_cls:
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ) as mock_cls,
+        ):
             model.initialize()
 
         mock_cls.assert_called_once_with(
@@ -212,11 +215,14 @@ class TestOpenAIVisionModelInitialize:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(openai_vision_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            return_value=mock_openai_client,
-        ) as mock_cls:
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ) as mock_cls,
+        ):
             model.initialize()
             model.initialize()
 
@@ -229,9 +235,7 @@ class TestOpenAIVisionModelInitialize:
 
 
 class TestOpenAIVisionModelGenerateWithPath:
-    def _make_initialized(
-        self, config: ModelConfig, client: MagicMock
-    ) -> OpenAIVisionModel:
+    def _make_initialized(self, config: ModelConfig, client: MagicMock) -> OpenAIVisionModel:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(config)
         model.client = client
@@ -304,9 +308,7 @@ class TestOpenAIVisionModelGenerateWithPath:
 
 
 class TestOpenAIVisionModelGenerateWithBytes:
-    def _make_initialized(
-        self, config: ModelConfig, client: MagicMock
-    ) -> OpenAIVisionModel:
+    def _make_initialized(self, config: ModelConfig, client: MagicMock) -> OpenAIVisionModel:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(config)
         model.client = client
@@ -336,9 +338,7 @@ class TestOpenAIVisionModelGenerateWithBytes:
         model.generate("prompt", image_data=raw)
 
         _, kwargs = mock_openai_client.chat.completions.create.call_args
-        image_block = next(
-            b for b in kwargs["messages"][0]["content"] if b["type"] == "image_url"
-        )
+        image_block = next(b for b in kwargs["messages"][0]["content"] if b["type"] == "image_url")
         url = image_block["image_url"]["url"]
         assert url.startswith("data:image/jpeg;base64,")
         payload = url.split(",", 1)[1]
@@ -351,9 +351,7 @@ class TestOpenAIVisionModelGenerateWithBytes:
 
 
 class TestOpenAIVisionModelGenerateGuards:
-    def _make_initialized(
-        self, config: ModelConfig, client: MagicMock
-    ) -> OpenAIVisionModel:
+    def _make_initialized(self, config: ModelConfig, client: MagicMock) -> OpenAIVisionModel:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(config)
         model.client = client
@@ -399,9 +397,7 @@ class TestOpenAIVisionModelGenerateGuards:
 class TestOpenAIVisionModelAnalyzeImage:
     """analyze_image() delegates to generate() with the correct prompt."""
 
-    def _make_initialized(
-        self, config: ModelConfig, client: MagicMock
-    ) -> OpenAIVisionModel:
+    def _make_initialized(self, config: ModelConfig, client: MagicMock) -> OpenAIVisionModel:
         with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
             model = OpenAIVisionModel(config)
         model.client = client
@@ -432,12 +428,9 @@ class TestOpenAIVisionModelAnalyzeImage:
         # Verify the API was called with the task-specific prompt
         mock_openai_client.chat.completions.create.assert_called_once()
         _, kwargs = mock_openai_client.chat.completions.create.call_args
-        text_block = next(
-            b for b in kwargs["messages"][0]["content"] if b["type"] == "text"
-        )
+        text_block = next(b for b in kwargs["messages"][0]["content"] if b["type"] == "text")
         assert expected_prompt_fragment in text_block["text"], (
-            f"Expected prompt fragment {expected_prompt_fragment!r} not found "
-            f"for task={task!r}"
+            f"Expected prompt fragment {expected_prompt_fragment!r} not found for task={task!r}"
         )
         assert result == "A photo of a cat"  # from mock fixture
 
@@ -452,9 +445,7 @@ class TestOpenAIVisionModelAnalyzeImage:
         model.analyze_image(sample_image, task="describe", custom_prompt="My custom prompt")
 
         _, kwargs = mock_openai_client.chat.completions.create.call_args
-        text_block = next(
-            b for b in kwargs["messages"][0]["content"] if b["type"] == "text"
-        )
+        text_block = next(b for b in kwargs["messages"][0]["content"] if b["type"] == "text")
         assert text_block["text"] == "My custom prompt"
 
 
@@ -498,3 +489,75 @@ class TestOpenAIVisionModelDefaultConfig:
     def test_custom_model_name(self) -> None:
         cfg = OpenAIVisionModel.get_default_config("gpt-4o")
         assert cfg.name == "gpt-4o"
+
+
+# ---------------------------------------------------------------------------
+# Token exhaustion
+# ---------------------------------------------------------------------------
+
+
+class TestOpenAIVisionModelTokenExhaustion:
+    """Token-exhaustion detection and retry in OpenAIVisionModel.generate()."""
+
+    def _make_initialized(self, config: ModelConfig, client: MagicMock) -> OpenAIVisionModel:
+        with patch("file_organizer.models.openai_vision_model.OPENAI_AVAILABLE", True):
+            model = OpenAIVisionModel(config)
+        model.client = client
+        model._initialized = True
+        return model
+
+    def _exhausted_response(self) -> MagicMock:
+        choice = MagicMock()
+        choice.finish_reason = "length"
+        choice.message.content = ""
+        return MagicMock(choices=[choice])
+
+    def _success_response(self, text: str = "Good content") -> MagicMock:
+        choice = MagicMock()
+        choice.finish_reason = "stop"
+        choice.message.content = text
+        return MagicMock(choices=[choice])
+
+    def test_retries_on_token_exhaustion(
+        self, openai_vision_config: ModelConfig, sample_image: Path
+    ) -> None:
+        client = MagicMock()
+        client.chat.completions.create.side_effect = [
+            self._exhausted_response(),
+            self._success_response(),
+        ]
+        model = self._make_initialized(openai_vision_config, client)
+
+        result = model.generate("describe", image_path=sample_image)
+
+        assert result == "Good content"
+        assert client.chat.completions.create.call_count == 2
+        retry_kwargs = client.chat.completions.create.call_args_list[1][1]
+        assert retry_kwargs["max_tokens"] == openai_vision_config.max_tokens * 2
+
+    def test_raises_on_double_exhaustion(
+        self, openai_vision_config: ModelConfig, sample_image: Path
+    ) -> None:
+        client = MagicMock()
+        client.chat.completions.create.return_value = self._exhausted_response()
+        model = self._make_initialized(openai_vision_config, client)
+
+        with pytest.raises(TokenExhaustionError, match="exhausted token budget"):
+            model.generate("describe", image_path=sample_image)
+
+        assert client.chat.completions.create.call_count == 2
+
+    def test_no_retry_when_response_adequate(
+        self, openai_vision_config: ModelConfig, sample_image: Path
+    ) -> None:
+        client = MagicMock()
+        choice = MagicMock()
+        choice.finish_reason = "length"
+        choice.message.content = "This is a perfectly adequate response from the model"
+        client.chat.completions.create.return_value = MagicMock(choices=[choice])
+        model = self._make_initialized(openai_vision_config, client)
+
+        result = model.generate("describe", image_path=sample_image)
+
+        assert "perfectly adequate" in result
+        assert client.chat.completions.create.call_count == 1

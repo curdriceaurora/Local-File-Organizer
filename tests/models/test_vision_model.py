@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from file_organizer.models.base import ModelConfig, ModelType
+from file_organizer.models.base import ModelConfig, ModelType, TokenExhaustionError
 from file_organizer.models.vision_model import VisionModel
 
 pytestmark = pytest.mark.unit
@@ -346,3 +346,74 @@ class TestVisionModelMisc:
 
             assert info["status"] == "error"
             assert "connection lost" in info["error"]
+
+
+@pytest.mark.unit
+class TestVisionModelTokenExhaustion:
+    """Tests for token-exhaustion detection and retry in VisionModel.generate()."""
+
+    def test_retries_on_token_exhaustion(self, vision_model_config: ModelConfig) -> None:
+        """First call exhausted, retry succeeds."""
+        model, mock_client = _make_initialized_model(vision_model_config)
+
+        exhausted_resp = {"response": "", "done_reason": "length", "total_duration": 1e9}
+        success_resp = {
+            "response": "Good image description here",
+            "done_reason": "stop",
+            "total_duration": 2e9,
+        }
+        mock_client.generate.side_effect = [exhausted_resp, success_resp]
+
+        with patch("pathlib.Path.exists", return_value=True):
+            result = model.generate("describe", image_path="/img.jpg")
+
+        assert result == "Good image description here"
+        assert mock_client.generate.call_count == 2
+        # Verify retry used doubled num_predict
+        retry_call = mock_client.generate.call_args_list[1]
+        assert retry_call[1]["options"]["num_predict"] == 6000
+
+    def test_raises_on_double_exhaustion(self, vision_model_config: ModelConfig) -> None:
+        """Both initial and retry exhausted — raises TokenExhaustionError."""
+        model, mock_client = _make_initialized_model(vision_model_config)
+
+        exhausted_resp = {"response": "", "done_reason": "length", "total_duration": 1e9}
+        mock_client.generate.return_value = exhausted_resp
+
+        with patch("pathlib.Path.exists", return_value=True):
+            with pytest.raises(TokenExhaustionError, match="exhausted token budget on retry"):
+                model.generate("describe", image_path="/img.jpg")
+
+        assert mock_client.generate.call_count == 2
+
+    def test_empty_response_non_length_reason_raises_value_error(
+        self, vision_model_config: ModelConfig
+    ) -> None:
+        """Empty response with done_reason=stop still raises ValueError (backward compat)."""
+        model, mock_client = _make_initialized_model(vision_model_config)
+
+        resp = {"response": "", "done_reason": "stop", "total_duration": 1e9}
+        mock_client.generate.return_value = resp
+
+        with patch("pathlib.Path.exists", return_value=True):
+            with pytest.raises(ValueError, match="empty response"):
+                model.generate("describe", image_path="/img.jpg")
+
+        assert mock_client.generate.call_count == 1
+
+    def test_no_retry_when_response_adequate(self, vision_model_config: ModelConfig) -> None:
+        """Long response with done_reason=length does NOT trigger retry."""
+        model, mock_client = _make_initialized_model(vision_model_config)
+
+        resp = {
+            "response": "This is a perfectly adequate image description from the model",
+            "done_reason": "length",
+            "total_duration": 1e9,
+        }
+        mock_client.generate.return_value = resp
+
+        with patch("pathlib.Path.exists", return_value=True):
+            result = model.generate("describe", image_path="/img.jpg")
+
+        assert "perfectly adequate" in result
+        assert mock_client.generate.call_count == 1

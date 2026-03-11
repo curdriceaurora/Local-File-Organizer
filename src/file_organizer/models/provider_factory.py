@@ -32,9 +32,7 @@ def get_text_model(config: ModelConfig) -> BaseModel:
         return OpenAITextModel(config)
     if config.provider == "ollama":
         return TextModel(config)
-    raise ValueError(
-        f"Unknown provider {config.provider!r}. Supported values: 'ollama', 'openai'."
-    )
+    raise ValueError(f"Unknown provider {config.provider!r}. Supported values: 'ollama', 'openai'.")
 
 
 def get_vision_model(config: ModelConfig) -> BaseModel:
@@ -57,6 +55,4 @@ def get_vision_model(config: ModelConfig) -> BaseModel:
         return OpenAIVisionModel(config)
     if config.provider == "ollama":
         return VisionModel(config)
-    raise ValueError(
-        f"Unknown provider {config.provider!r}. Supported values: 'ollama', 'openai'."
-    )
+    raise ValueError(f"Unknown provider {config.provider!r}. Supported values: 'ollama', 'openai'.")

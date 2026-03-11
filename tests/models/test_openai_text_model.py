@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from file_organizer.models.base import ModelConfig, ModelType
+from file_organizer.models.base import ModelConfig, ModelType, TokenExhaustionError
 from file_organizer.models.openai_text_model import OpenAITextModel
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
@@ -64,9 +64,7 @@ class TestOpenAITextModelInit:
         assert model.client is None
         assert not model.is_initialized
 
-    def test_init_raises_import_error_when_openai_missing(
-        self, openai_config: ModelConfig
-    ) -> None:
+    def test_init_raises_import_error_when_openai_missing(self, openai_config: ModelConfig) -> None:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", False):
             with pytest.raises(ImportError, match="file-organizer\\[cloud\\]"):
                 OpenAITextModel(openai_config)
@@ -98,11 +96,14 @@ class TestOpenAITextModelInitialize:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
             model = OpenAITextModel(openai_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            return_value=mock_openai_client,
-        ) as mock_cls:
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ) as mock_cls,
+        ):
             model.initialize()
 
         # Verify client was created with only the non-None credentials
@@ -120,11 +121,14 @@ class TestOpenAITextModelInitialize:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
             model = OpenAITextModel(openai_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            return_value=mock_openai_client,
-        ) as mock_cls:
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ) as mock_cls,
+        ):
             model.initialize()
             model.initialize()  # second call should be a no-op
 
@@ -164,10 +168,13 @@ class TestOpenAITextModelInitialize:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
             model = OpenAITextModel(openai_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            side_effect=RuntimeError("connection refused"),
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                side_effect=RuntimeError("connection refused"),
+            ),
         ):
             with pytest.raises(RuntimeError, match="connection refused"):
                 model.initialize()
@@ -203,9 +210,7 @@ class TestOpenAITextModelGenerate:
     ) -> None:
         choice = MagicMock()
         choice.message.content = "  trimmed response  "
-        mock_openai_client.chat.completions.create.return_value = MagicMock(
-            choices=[choice]
-        )
+        mock_openai_client.chat.completions.create.return_value = MagicMock(choices=[choice])
         model = self._make_initialized(openai_config, mock_openai_client)
 
         result = model.generate("Hello")
@@ -277,9 +282,7 @@ class TestOpenAITextModelGenerate:
         """None message content (refusal / content filter) should return empty string."""
         choice = MagicMock()
         choice.message.content = None
-        mock_openai_client.chat.completions.create.return_value = MagicMock(
-            choices=[choice]
-        )
+        mock_openai_client.chat.completions.create.return_value = MagicMock(choices=[choice])
         model = self._make_initialized(openai_config, mock_openai_client)
 
         result = model.generate("prompt")
@@ -349,13 +352,96 @@ class TestOpenAITextModelContextManager:
         with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
             model = OpenAITextModel(openai_config)
 
-        with patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),              patch(
-            "file_organizer.models._openai_client.OpenAI",
-            create=True,
-            return_value=mock_openai_client,
+        with (
+            patch("file_organizer.models._openai_client.OPENAI_AVAILABLE", True, create=True),
+            patch(
+                "file_organizer.models._openai_client.OpenAI",
+                create=True,
+                return_value=mock_openai_client,
+            ),
         ):
             with model:
                 assert model.is_initialized
 
         assert not model.is_initialized
         assert model.client is None
+
+
+# ---------------------------------------------------------------------------
+# Token exhaustion
+# ---------------------------------------------------------------------------
+
+
+class TestOpenAITextModelTokenExhaustion:
+    """Token-exhaustion detection and retry in OpenAITextModel.generate()."""
+
+    def _make_initialized(self, config: ModelConfig, client: MagicMock) -> OpenAITextModel:
+        with patch("file_organizer.models.openai_text_model.OPENAI_AVAILABLE", True):
+            model = OpenAITextModel(config)
+        model.client = client
+        model._initialized = True
+        return model
+
+    def _exhausted_response(self) -> MagicMock:
+        choice = MagicMock()
+        choice.finish_reason = "length"
+        choice.message.content = ""
+        return MagicMock(choices=[choice])
+
+    def _success_response(self, text: str = "Good content") -> MagicMock:
+        choice = MagicMock()
+        choice.finish_reason = "stop"
+        choice.message.content = text
+        return MagicMock(choices=[choice])
+
+    def test_retries_on_token_exhaustion(self, openai_config: ModelConfig) -> None:
+        client = MagicMock()
+        client.chat.completions.create.side_effect = [
+            self._exhausted_response(),
+            self._success_response(),
+        ]
+        model = self._make_initialized(openai_config, client)
+
+        result = model.generate("test")
+
+        assert result == "Good content"
+        assert client.chat.completions.create.call_count == 2
+        # Retry uses doubled max_tokens
+        retry_kwargs = client.chat.completions.create.call_args_list[1][1]
+        assert retry_kwargs["max_tokens"] == openai_config.max_tokens * 2
+
+    def test_raises_on_double_exhaustion(self, openai_config: ModelConfig) -> None:
+        client = MagicMock()
+        client.chat.completions.create.return_value = self._exhausted_response()
+        model = self._make_initialized(openai_config, client)
+
+        with pytest.raises(TokenExhaustionError, match="exhausted token budget"):
+            model.generate("test")
+
+        assert client.chat.completions.create.call_count == 2
+
+    def test_no_retry_when_finish_reason_stop(self, openai_config: ModelConfig) -> None:
+        client = MagicMock()
+        choice = MagicMock()
+        choice.finish_reason = "stop"
+        choice.message.content = ""
+        client.chat.completions.create.return_value = MagicMock(choices=[choice])
+        model = self._make_initialized(openai_config, client)
+
+        result = model.generate("test")
+
+        assert result == ""
+        assert client.chat.completions.create.call_count == 1
+
+    def test_no_retry_when_response_adequate(self, openai_config: ModelConfig) -> None:
+        client = MagicMock()
+        choice = MagicMock()
+        choice.finish_reason = "length"
+        choice.message.content = "This is a perfectly adequate response from the model"
+        client.chat.completions.create.return_value = MagicMock(choices=[choice])
+        model = self._make_initialized(openai_config, client)
+
+        result = model.generate("test")
+
+        assert "perfectly adequate" in result
+        assert client.chat.completions.create.call_count == 1

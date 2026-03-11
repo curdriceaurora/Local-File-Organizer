@@ -14,7 +14,18 @@ except ImportError:
 
 from loguru import logger
 
-from file_organizer.models.base import BaseModel, ModelConfig, ModelType
+from file_organizer.models._ollama_response import (
+    compute_retry_num_predict,
+    format_exhaustion_diagnostics,
+    is_token_exhausted,
+)
+from file_organizer.models.base import (
+    IMAGE_ANALYSIS_PROMPTS,
+    BaseModel,
+    ModelConfig,
+    ModelType,
+    TokenExhaustionError,
+)
 
 
 class VisionModel(BaseModel):
@@ -126,15 +137,34 @@ class VisionModel(BaseModel):
         if self.config.extra_params:
             options.update(self.config.extra_params)
 
+        generate_kwargs = {
+            "model": self.config.name,
+            "prompt": prompt,
+            "images": images,
+            "options": options,
+            "stream": False,
+        }
+
         try:
             logger.debug(f"Analyzing image with model {self.config.name}")
-            response = self.client.generate(
-                model=self.config.name,
-                prompt=prompt,
-                images=images,
-                options=options,
-                stream=False,
-            )
+            response = self.client.generate(**generate_kwargs)
+
+            # Detect token exhaustion and retry once with doubled budget
+            if is_token_exhausted(response):
+                diag = format_exhaustion_diagnostics(response, self.config.name)
+                logger.warning(f"Token exhaustion detected, retrying: {diag}")
+
+                retry_num_predict = compute_retry_num_predict(options["num_predict"])
+                retry_options = {**options, "num_predict": retry_num_predict}
+                retry_kwargs = {**generate_kwargs, "options": retry_options}
+
+                response = self.client.generate(**retry_kwargs)
+
+                if is_token_exhausted(response):
+                    retry_diag = format_exhaustion_diagnostics(response, self.config.name)
+                    raise TokenExhaustionError(
+                        f"Model exhausted token budget on retry. {retry_diag}"
+                    )
 
             raw_response = response.get("response")
             if not raw_response:
@@ -147,6 +177,8 @@ class VisionModel(BaseModel):
 
             return generated_text.strip()
 
+        except (TokenExhaustionError, ValueError):
+            raise
         except Exception as e:
             logger.error(f"Failed to analyze image: {e}")
             raise
@@ -167,30 +199,9 @@ class VisionModel(BaseModel):
         Returns:
             Analysis result as text
         """
-        prompts = {
-            "describe": (
-                "Please provide a detailed description of this image, "
-                "focusing on the main subject and any important details."
-            ),
-            "categorize": (
-                "Based on this image, generate a general category or theme "
-                "that best represents the main subject. "
-                "Limit the category to a maximum of 2 words. "
-                "Use nouns and avoid verbs."
-            ),
-            "ocr": (
-                "Extract all visible text from this image. "
-                "Provide the text exactly as it appears, preserving formatting where possible."
-            ),
-            "filename": (
-                "Based on this image, generate a specific and descriptive filename. "
-                "Limit the filename to a maximum of 3 words. "
-                "Use nouns and avoid starting with verbs. "
-                "Use only letters and connect words with underscores."
-            ),
-        }
-
-        prompt = kwargs.pop("custom_prompt", None) or prompts.get(task, prompts["describe"])
+        prompt = kwargs.pop("custom_prompt", None) or IMAGE_ANALYSIS_PROMPTS.get(
+            task, IMAGE_ANALYSIS_PROMPTS["describe"]
+        )
 
         return self.generate(prompt=prompt, image_path=image_path, **kwargs)
 

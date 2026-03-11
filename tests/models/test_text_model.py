@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from file_organizer.models.base import ModelConfig, ModelType
+from file_organizer.models.base import ModelConfig, ModelType, TokenExhaustionError
 from file_organizer.models.text_model import TextModel
 
 pytestmark = [pytest.mark.unit]
@@ -232,3 +232,135 @@ class TestTextModel:
         assert config.name == "custom-model"
         assert config.model_type == ModelType.TEXT
         assert config.quantization == "q4_k_m"
+
+
+@pytest.mark.unit
+class TestTextModelTokenExhaustion:
+    """Tests for token-exhaustion detection and retry in TextModel.generate()."""
+
+    def _make_model(self, config: ModelConfig) -> tuple[TextModel, MagicMock]:
+        with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
+            model = TextModel(config)
+        mock_client = MagicMock()
+        model.client = mock_client
+        model._initialized = True
+        return model, mock_client
+
+    def test_retries_on_token_exhaustion(self, text_model_config: ModelConfig) -> None:
+        """First call exhausted, retry succeeds."""
+        model, mock_client = self._make_model(text_model_config)
+
+        exhausted_resp = {"response": "", "done_reason": "length", "total_duration": 1e9}
+        success_resp = {
+            "response": "Good content here",
+            "done_reason": "stop",
+            "total_duration": 2e9,
+        }
+        mock_client.generate.side_effect = [exhausted_resp, success_resp]
+
+        result = model.generate("test prompt")
+
+        assert result == "Good content here"
+        assert mock_client.generate.call_count == 2
+        # Verify retry used doubled num_predict
+        retry_call = mock_client.generate.call_args_list[1]
+        assert retry_call[1]["options"]["num_predict"] == 6000
+
+    def test_raises_on_double_exhaustion(self, text_model_config: ModelConfig) -> None:
+        """Both initial and retry exhausted — raises TokenExhaustionError."""
+        model, mock_client = self._make_model(text_model_config)
+
+        exhausted_resp = {"response": "", "done_reason": "length", "total_duration": 1e9}
+        mock_client.generate.return_value = exhausted_resp
+
+        with pytest.raises(TokenExhaustionError, match="exhausted token budget on retry"):
+            model.generate("test prompt")
+
+        assert mock_client.generate.call_count == 2
+
+    def test_no_retry_when_done_reason_stop(self, text_model_config: ModelConfig) -> None:
+        """Empty response with done_reason=stop does NOT trigger retry."""
+        model, mock_client = self._make_model(text_model_config)
+
+        resp = {"response": "", "done_reason": "stop", "total_duration": 1e9}
+        mock_client.generate.return_value = resp
+
+        result = model.generate("test prompt")
+
+        assert result == ""
+        assert mock_client.generate.call_count == 1
+
+    def test_no_retry_when_response_adequate(self, text_model_config: ModelConfig) -> None:
+        """Long response with done_reason=length does NOT trigger retry."""
+        model, mock_client = self._make_model(text_model_config)
+
+        resp = {
+            "response": "This is a perfectly adequate response from the model",
+            "done_reason": "length",
+            "total_duration": 1e9,
+        }
+        mock_client.generate.return_value = resp
+
+        result = model.generate("test prompt")
+
+        assert "perfectly adequate" in result
+        assert mock_client.generate.call_count == 1
+
+
+@pytest.mark.unit
+class TestTextModelStreamingExhaustion:
+    """Tests for streaming token-exhaustion warnings."""
+
+    def _make_model(self, config: ModelConfig) -> tuple[TextModel, MagicMock]:
+        with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
+            model = TextModel(config)
+        mock_client = MagicMock()
+        model.client = mock_client
+        model._initialized = True
+        return model, mock_client
+
+    def test_logs_error_on_empty_streaming_exhaustion(self, text_model_config: ModelConfig) -> None:
+        """Streaming with done_reason=length and no useful output logs error."""
+        model, mock_client = self._make_model(text_model_config)
+
+        chunks = [
+            {"response": "", "done": False},
+            {"response": "", "done": True, "done_reason": "length"},
+        ]
+        mock_client.generate.return_value = iter(chunks)
+
+        with patch("file_organizer.models.text_model.logger") as mock_logger:
+            list(model.generate_streaming("test"))
+            mock_logger.error.assert_called_once()
+            assert "token exhaustion" in mock_logger.error.call_args[0][0].lower()
+
+    def test_logs_warning_on_truncated_streaming(self, text_model_config: ModelConfig) -> None:
+        """Streaming with done_reason=length but some content logs warning."""
+        model, mock_client = self._make_model(text_model_config)
+
+        chunks = [
+            {"response": "Some content that is definitely long enough", "done": False},
+            {"response": "", "done": True, "done_reason": "length"},
+        ]
+        mock_client.generate.return_value = iter(chunks)
+
+        with patch("file_organizer.models.text_model.logger") as mock_logger:
+            list(model.generate_streaming("test"))
+            mock_logger.warning.assert_called()
+            warning_text = mock_logger.warning.call_args[0][0].lower()
+            assert "truncated" in warning_text
+
+    def test_no_warning_on_normal_completion(self, text_model_config: ModelConfig) -> None:
+        """Streaming with done_reason=stop logs no warnings."""
+        model, mock_client = self._make_model(text_model_config)
+
+        chunks = [
+            {"response": "Normal output", "done": False},
+            {"response": "", "done": True, "done_reason": "stop"},
+        ]
+        mock_client.generate.return_value = iter(chunks)
+
+        with patch("file_organizer.models.text_model.logger") as mock_logger:
+            list(model.generate_streaming("test"))
+            mock_logger.error.assert_not_called()
+            mock_logger.warning.assert_not_called()

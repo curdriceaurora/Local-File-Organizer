@@ -26,9 +26,7 @@ def ollama_text_config() -> ModelConfig:
 
 @pytest.fixture()
 def ollama_vision_config() -> ModelConfig:
-    return ModelConfig(
-        name="qwen2.5vl:7b", model_type=ModelType.VISION, provider="ollama"
-    )
+    return ModelConfig(name="qwen2.5vl:7b", model_type=ModelType.VISION, provider="ollama")
 
 
 @pytest.fixture()
@@ -57,9 +55,7 @@ def openai_vision_config() -> ModelConfig:
 
 
 class TestGetTextModel:
-    def test_ollama_provider_returns_text_model(
-        self, ollama_text_config: ModelConfig
-    ) -> None:
+    def test_ollama_provider_returns_text_model(self, ollama_text_config: ModelConfig) -> None:
         with patch("file_organizer.models.text_model.OLLAMA_AVAILABLE", True):
             model = get_text_model(ollama_text_config)
 
@@ -104,9 +100,7 @@ class TestGetTextModel:
 
 
 class TestGetVisionModel:
-    def test_ollama_provider_returns_vision_model(
-        self, ollama_vision_config: ModelConfig
-    ) -> None:
+    def test_ollama_provider_returns_vision_model(self, ollama_vision_config: ModelConfig) -> None:
         with patch("file_organizer.models.vision_model.OLLAMA_AVAILABLE", True):
             model = get_vision_model(ollama_vision_config)
 
@@ -125,9 +119,7 @@ class TestGetVisionModel:
         assert model.config is openai_vision_config
 
     def test_unknown_provider_raises_value_error(self) -> None:
-        bad_config = ModelConfig(
-            name="x", model_type=ModelType.VISION, provider="ollama"
-        )
+        bad_config = ModelConfig(name="x", model_type=ModelType.VISION, provider="ollama")
         bad_config.provider = "google"  # type: ignore[assignment]
 
         with pytest.raises(ValueError, match="Unknown provider"):

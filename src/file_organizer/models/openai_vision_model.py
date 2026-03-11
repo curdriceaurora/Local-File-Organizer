@@ -10,7 +10,16 @@ from typing import Any
 from loguru import logger
 
 from file_organizer.models._openai_client import OPENAI_AVAILABLE, create_openai_client
-from file_organizer.models.base import BaseModel, ModelConfig, ModelType
+from file_organizer.models._openai_response import is_openai_token_exhausted
+from file_organizer.models.base import (
+    IMAGE_ANALYSIS_PROMPTS,
+    MAX_NUM_PREDICT,
+    RETRY_MULTIPLIER,
+    BaseModel,
+    ModelConfig,
+    ModelType,
+    TokenExhaustionError,
+)
 
 # Fallback MIME type when extension is not recognised
 _DEFAULT_IMAGE_MIME = "image/jpeg"
@@ -124,6 +133,8 @@ class OpenAIVisionModel(BaseModel):
             RuntimeError: If the model is not initialised.
             ValueError: If neither or both of ``image_path`` / ``image_data``
                 are provided.
+            TokenExhaustionError: If the model exhausts its token budget on
+                both the initial attempt and the retry.
             FileNotFoundError: If ``image_path`` does not exist.
             OSError: If ``image_path`` cannot be read.
         """
@@ -166,11 +177,34 @@ class OpenAIVisionModel(BaseModel):
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+
+            if is_openai_token_exhausted(response):
+                retry_max = min(max_tokens * RETRY_MULTIPLIER, MAX_NUM_PREDICT)
+                logger.warning(
+                    "Token exhaustion detected for OpenAI vision model {}, "
+                    "retrying with max_tokens={}",
+                    self.config.name,
+                    retry_max,
+                )
+                response = self.client.chat.completions.create(
+                    model=self.config.name,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=retry_max,
+                )
+                if is_openai_token_exhausted(response):
+                    raise TokenExhaustionError(
+                        f"OpenAI vision model '{self.config.name}' exhausted token budget "
+                        f"on retry (max_tokens={retry_max})"
+                    )
+
             if not response.choices:
                 return ""
             content = response.choices[0].message.content or ""
             logger.debug("Generated {} characters", len(content))
             return content.strip()
+        except (TokenExhaustionError, ValueError):
+            raise
         except Exception as e:
             logger.error("Failed to analyse image via OpenAI API: {}", type(e).__name__)
             raise
@@ -192,29 +226,9 @@ class OpenAIVisionModel(BaseModel):
         Returns:
             Analysis result as text.
         """
-        prompts = {
-            "describe": (
-                "Please provide a detailed description of this image, "
-                "focusing on the main subject and any important details."
-            ),
-            "categorize": (
-                "Based on this image, generate a general category or theme "
-                "that best represents the main subject. "
-                "Limit the category to a maximum of 2 words. "
-                "Use nouns and avoid verbs."
-            ),
-            "ocr": (
-                "Extract all visible text from this image. "
-                "Provide the text exactly as it appears, preserving formatting where possible."
-            ),
-            "filename": (
-                "Based on this image, generate a specific and descriptive filename. "
-                "Limit the filename to a maximum of 3 words. "
-                "Use nouns and avoid starting with verbs. "
-                "Use only letters and connect words with underscores."
-            ),
-        }
-        prompt = kwargs.pop("custom_prompt", None) or prompts.get(task, prompts["describe"])
+        prompt = kwargs.pop("custom_prompt", None) or IMAGE_ANALYSIS_PROMPTS.get(
+            task, IMAGE_ANALYSIS_PROMPTS["describe"]
+        )
         return self.generate(prompt=prompt, image_path=image_path, **kwargs)
 
     def cleanup(self) -> None:

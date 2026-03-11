@@ -8,6 +8,57 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Literal
 
+# ---------------------------------------------------------------------------
+# Token-exhaustion constants
+# ---------------------------------------------------------------------------
+MIN_USEFUL_RESPONSE_LENGTH: int = 10
+"""Responses shorter than this (chars) are considered effectively empty."""
+
+MAX_NUM_PREDICT: int = 16384
+"""Hard cap for ``num_predict`` / ``max_tokens`` on retry."""
+
+RETRY_MULTIPLIER: int = 2
+"""Factor by which the token budget is multiplied on retry."""
+
+
+# ---------------------------------------------------------------------------
+# Shared image-analysis prompt templates
+# ---------------------------------------------------------------------------
+IMAGE_ANALYSIS_PROMPTS: dict[str, str] = {
+    "describe": (
+        "Please provide a detailed description of this image, "
+        "focusing on the main subject and any important details."
+    ),
+    "categorize": (
+        "Based on this image, generate a general category or theme "
+        "that best represents the main subject. "
+        "Limit the category to a maximum of 2 words. "
+        "Use nouns and avoid verbs."
+    ),
+    "ocr": (
+        "Extract all visible text from this image. "
+        "Provide the text exactly as it appears, preserving formatting where possible."
+    ),
+    "filename": (
+        "Based on this image, generate a specific and descriptive filename. "
+        "Limit the filename to a maximum of 3 words. "
+        "Use nouns and avoid starting with verbs. "
+        "Use only letters and connect words with underscores."
+    ),
+}
+"""Reusable prompt templates for common image analysis tasks."""
+
+
+class TokenExhaustionError(RuntimeError):
+    """Raised when a model exhausts its token budget without producing useful output.
+
+    This typically happens when thinking-enabled models (e.g. qwen3, deepseek-r1)
+    spend all allocated tokens on internal reasoning, or when ``num_predict`` /
+    ``max_tokens`` is too low for the given prompt complexity.
+
+    Callers should either increase the token budget or simplify the prompt.
+    """
+
 
 class ModelType(Enum):
     """Types of AI models supported."""

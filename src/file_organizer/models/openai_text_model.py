@@ -7,7 +7,15 @@ from typing import Any
 from loguru import logger
 
 from file_organizer.models._openai_client import OPENAI_AVAILABLE, create_openai_client
-from file_organizer.models.base import BaseModel, ModelConfig, ModelType
+from file_organizer.models._openai_response import is_openai_token_exhausted
+from file_organizer.models.base import (
+    MAX_NUM_PREDICT,
+    RETRY_MULTIPLIER,
+    BaseModel,
+    ModelConfig,
+    ModelType,
+    TokenExhaustionError,
+)
 
 
 class OpenAITextModel(BaseModel):
@@ -75,6 +83,8 @@ class OpenAITextModel(BaseModel):
 
         Raises:
             RuntimeError: If the model is not initialised.
+            TokenExhaustionError: If the model exhausts its token budget on
+                both the initial attempt and the retry.
         """
         if not self._initialized or self.client is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
@@ -90,12 +100,34 @@ class OpenAITextModel(BaseModel):
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+
+            if is_openai_token_exhausted(response):
+                retry_max = min(max_tokens * RETRY_MULTIPLIER, MAX_NUM_PREDICT)
+                logger.warning(
+                    "Token exhaustion detected for OpenAI model {}, retrying with max_tokens={}",
+                    self.config.name,
+                    retry_max,
+                )
+                response = self.client.chat.completions.create(
+                    model=self.config.name,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=temperature,
+                    max_tokens=retry_max,
+                )
+                if is_openai_token_exhausted(response):
+                    raise TokenExhaustionError(
+                        f"OpenAI model '{self.config.name}' exhausted token budget "
+                        f"on retry (max_tokens={retry_max})"
+                    )
+
             if not response.choices:
                 logger.warning("OpenAI API returned empty choices for model {}", self.config.name)
                 return ""
             content = response.choices[0].message.content or ""
             logger.debug("Generated {} characters", len(content))
             return content.strip()
+        except TokenExhaustionError:
+            raise
         except Exception as e:
             logger.error("Failed to generate text via OpenAI API: {}", type(e).__name__)
             raise
