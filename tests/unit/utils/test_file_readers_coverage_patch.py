@@ -51,11 +51,14 @@ def test_read_presentation_file_error(mock_prs_cls: MagicMock, tmp_path: Path) -
 
 
 @patch("file_organizer.utils.readers.ebook.EBOOKLIB_AVAILABLE", True)
+@patch("file_organizer.utils.readers.ebook.ebooklib", create=True)
 @patch("file_organizer.utils.readers.ebook.epub", create=True)
-def test_read_ebook_file_max_chars(mock_epub: MagicMock, tmp_path: Path) -> None:
+def test_read_ebook_file_max_chars(
+    mock_epub: MagicMock, mock_ebooklib: MagicMock, tmp_path: Path
+) -> None:
+    mock_ebooklib.ITEM_DOCUMENT = 9
     mock_book = MagicMock()
     mock_item = MagicMock()
-    # ebooklib.ITEM_DOCUMENT is 9
     mock_item.get_type.return_value = 9
     mock_item.get_content.return_value = b"A" * 15000
     mock_book.get_items.return_value = [mock_item]
@@ -201,15 +204,18 @@ def test_read_dxf_file_exceptions(mock_ezdxf: MagicMock, tmp_path: Path) -> None
 
 @patch("file_organizer.utils.readers.cad.EZDXF_AVAILABLE", True)
 @patch("file_organizer.utils.readers.cad.ezdxf", create=True)
-@patch("file_organizer.utils.file_readers.read_dxf_file")
-def test_read_dwg_file_success(
-    mock_dxf: MagicMock, mock_ezdxf: MagicMock, tmp_path: Path
-) -> None:
-    mock_dxf.return_value = "DXF Data"
+def test_read_dwg_file_success(mock_ezdxf: MagicMock, tmp_path: Path) -> None:
+    mock_doc = MagicMock()
+    mock_doc.header = MagicMock()
+    mock_doc.layers = []
+    mock_doc.modelspace.return_value = []
+    mock_doc.blocks = []
+    mock_ezdxf.readfile.return_value = mock_doc
     test_file = tmp_path / "test.dwg"
     test_file.write_bytes(b"dummy")
     content = read_dwg_file(test_file)
-    assert "DXF Docu" in content
+    mock_ezdxf.readfile.assert_called_once_with(test_file)
+    assert "DXF" in content
 
 
 def test_read_iges_file_entities(tmp_path: Path) -> None:

@@ -206,7 +206,7 @@ class TestUnboundedReadersSizeGate:
 
         with patch.object(Path, "stat", return_value=huge_stat):
             if avail_target:
-                with patch(avail_target, True):
+                with patch(avail_target, new=True):
                     with pytest.raises(FileTooLargeError):
                         reader(dummy)
             else:
