@@ -82,7 +82,9 @@ class TestOrganizePage:
 class TestOrganizeScan:
     """Tests for scan endpoint with different methodologies."""
 
-    def test_organize_scan_with_default_method(self, tmp_path: Path, mock_file_organizer: Any) -> None:
+    def test_organize_scan_with_default_method(
+        self, tmp_path: Path, mock_file_organizer: Any
+    ) -> None:
         """Should scan with default (content_based) methodology."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"
@@ -120,7 +122,9 @@ class TestOrganizeScan:
         # Verify plan was generated (success path, not error path)
         assert "plan" in response.text.lower()
 
-    def test_organize_scan_with_johnny_decimal_method(self, tmp_path: Path, mock_file_organizer: Any) -> None:
+    def test_organize_scan_with_johnny_decimal_method(
+        self, tmp_path: Path, mock_file_organizer: Any
+    ) -> None:
         """Should scan with Johnny Decimal methodology."""
         (tmp_path / "file.txt").write_text("test")
         output_dir = tmp_path / "organized"

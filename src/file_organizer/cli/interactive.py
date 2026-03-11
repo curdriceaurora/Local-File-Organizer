@@ -91,7 +91,7 @@ def prompt_choice(
     Args:
         message: Prompt text.
         choices: Allowed values.
-        default: Pre-selected value.
+        default: Preselected value.
 
     Returns:
         The chosen string.

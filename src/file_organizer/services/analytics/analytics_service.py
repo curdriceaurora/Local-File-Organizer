@@ -112,7 +112,9 @@ class AnalyticsService:
         stats = self.storage_analyzer.analyze_directory(directory, max_depth)
         return stats
 
-    def get_duplicate_stats(self, duplicate_groups: list[dict[str, Any]], total_size: int) -> DuplicateStats:
+    def get_duplicate_stats(
+        self, duplicate_groups: list[dict[str, Any]], total_size: int
+    ) -> DuplicateStats:
         """Get duplication statistics.
 
         Args:

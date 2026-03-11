@@ -98,9 +98,7 @@ def assert_html_contains(response_text: str, *keywords: str) -> None:
     text_lower = response_text.lower()
     keywords_lower = [k.lower() for k in keywords]
     for keyword_lower in keywords_lower:
-        assert keyword_lower in text_lower, (
-            f"Keyword '{keyword_lower}' not found in response"
-        )
+        assert keyword_lower in text_lower, f"Keyword '{keyword_lower}' not found in response"
 
 
 def assert_html_contains_any(response_text: str, *keywords: str) -> None:
@@ -135,6 +133,4 @@ def assert_html_tag_present(response_text: str, *tags: str) -> None:
     text_lower = response_text.lower()
     tags_lower = [t.lower() for t in tags]
     for tag_lower in tags_lower:
-        assert tag_lower in text_lower, (
-            f"HTML tag '{tag_lower}' not found in response"
-        )
+        assert tag_lower in text_lower, f"HTML tag '{tag_lower}' not found in response"

@@ -116,11 +116,15 @@ class TestMarketplaceHtmxEndpoints:
         # HTMX requests should return HTML fragment with results
         assert_html_contains_any(response.text, "marketplace", "plugin")
 
-    def test_marketplace_plugin_installation_action(self, web_client_builder, mock_marketplace_service) -> None:
+    def test_marketplace_plugin_installation_action(
+        self, web_client_builder, mock_marketplace_service
+    ) -> None:
         """Should support plugin installation via HTMX POST request."""
         client = web_client_builder(allowed_paths=[])
         # Mock the MarketplaceService.install method
-        with patch("file_organizer.web.marketplace_routes.MarketplaceService") as mock_service_class:
+        with patch(
+            "file_organizer.web.marketplace_routes.MarketplaceService"
+        ) as mock_service_class:
             mock_service_class.return_value = mock_marketplace_service
 
             # Test the install endpoint with a valid plugin name
@@ -145,11 +149,15 @@ class TestMarketplaceHtmxEndpoints:
 class TestMarketplaceInstallFlow:
     """Tests for plugin installation workflow."""
 
-    def test_marketplace_preinstall_check(self, web_client_builder, mock_marketplace_service) -> None:
+    def test_marketplace_preinstall_check(
+        self, web_client_builder, mock_marketplace_service
+    ) -> None:
         """Should validate plugin before installation and handle errors."""
         client = web_client_builder(allowed_paths=[])
         # Mock the MarketplaceService to simulate error for nonexistent plugin
-        with patch("file_organizer.web.marketplace_routes.MarketplaceService") as mock_service_class:
+        with patch(
+            "file_organizer.web.marketplace_routes.MarketplaceService"
+        ) as mock_service_class:
             # Configure mock to raise error for nonexistent plugin
             mock_marketplace_service.install.side_effect = MarketplaceError("Plugin not found")
             mock_service_class.return_value = mock_marketplace_service
@@ -171,11 +179,15 @@ class TestMarketplaceInstallFlow:
             # Verify install was called with the nonexistent plugin name
             mock_marketplace_service.install.assert_called_once_with("nonexistent-plugin")
 
-    def test_marketplace_install_progress(self, web_client_builder, mock_marketplace_service) -> None:
+    def test_marketplace_install_progress(
+        self, web_client_builder, mock_marketplace_service
+    ) -> None:
         """Should handle installation workflow."""
         client = web_client_builder(allowed_paths=[])
         # Mock the MarketplaceService to track install progress
-        with patch("file_organizer.web.marketplace_routes.MarketplaceService") as mock_service_class:
+        with patch(
+            "file_organizer.web.marketplace_routes.MarketplaceService"
+        ) as mock_service_class:
             mock_service_class.return_value = mock_marketplace_service
 
             # Test the full install workflow by calling the install endpoint
@@ -215,7 +227,9 @@ class TestMarketplaceInputValidation:
         # 422 is correct for pagination validation failure (page >= 1)
         assert response.status_code == 422
 
-    def test_marketplace_filter_result_count_accuracy(self, web_client_builder, mock_marketplace_service) -> None:
+    def test_marketplace_filter_result_count_accuracy(
+        self, web_client_builder, mock_marketplace_service
+    ) -> None:
         """Filter results should accurately represent filtered content."""
         client = web_client_builder(allowed_paths=[])
 
@@ -241,7 +255,9 @@ class TestMarketplaceInputValidation:
         mock_marketplace_service.list_plugins.return_value = reader_plugins
 
         # Search for specific category
-        with patch("file_organizer.web.marketplace_routes.MarketplaceService") as mock_service_class:
+        with patch(
+            "file_organizer.web.marketplace_routes.MarketplaceService"
+        ) as mock_service_class:
             mock_service_class.return_value = mock_marketplace_service
             response = client.get("/ui/marketplace?category=readers")
 

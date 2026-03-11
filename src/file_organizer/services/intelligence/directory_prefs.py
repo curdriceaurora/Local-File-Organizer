@@ -29,7 +29,9 @@ class DirectoryPrefs:
         self._preferences: dict[str, dict[str, Any]] = {}
         logger.debug("DirectoryPrefs initialized")
 
-    def set_preference(self, path: Path, pref: dict[str, Any], override_parent: bool = False) -> None:
+    def set_preference(
+        self, path: Path, pref: dict[str, Any], override_parent: bool = False
+    ) -> None:
         """Set a preference for a specific directory.
 
         Args:

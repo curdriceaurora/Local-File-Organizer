@@ -19,11 +19,9 @@ except ImportError:
     DOCX_AVAILABLE = False
 
 try:
-    import pandas as pd
-
-    PANDAS_AVAILABLE = True
+    OPENPYXL_AVAILABLE = True
 except ImportError:
-    PANDAS_AVAILABLE = False
+    OPENPYXL_AVAILABLE = False
 
 try:
     from pptx import Presentation
@@ -137,27 +135,53 @@ def read_spreadsheet_file(file_path: str | Path, max_rows: int = 100) -> str:
 
     Raises:
         FileReadError: If file cannot be read
-        ImportError: If pandas is not installed
+        ImportError: If openpyxl is not installed (for Excel files)
     """
-    if not PANDAS_AVAILABLE:
-        raise ImportError("pandas is not installed. Install with: pip install pandas openpyxl")
-
     file_path = Path(file_path)
     _check_file_size(file_path)
     try:
-        # Determine file type and read
         if file_path.suffix.lower() == ".csv":
-            df = pd.read_csv(file_path, nrows=max_rows)
+            import csv
+
+            rows = []
+            with open(file_path, newline="", encoding="utf-8", errors="ignore") as f:
+                reader = csv.reader(f)
+                for i, row in enumerate(reader):
+                    if i >= max_rows:
+                        break
+                    rows.append(",".join(row))
+            text = "\n".join(rows)
+            logger.debug(
+                f"Extracted {len(text)} characters from {len(rows)} rows of {file_path.name}"
+            )
+            return text
+
         elif file_path.suffix.lower() in (".xlsx", ".xls"):
-            df = pd.read_excel(file_path, nrows=max_rows)
+            if not OPENPYXL_AVAILABLE:
+                raise ImportError("openpyxl is not installed. Install with: pip install openpyxl")
+            import openpyxl
+
+            wb = openpyxl.load_workbook(file_path, data_only=True, read_only=True)
+            ws = wb.active
+            rows = []
+            for i, row in enumerate(ws.iter_rows(values_only=True)):
+                if i >= max_rows:
+                    break
+                # Only keep non-empty values
+                row_str = ",".join(str(cell) if cell is not None else "" for cell in row)
+                if row_str.strip(","):
+                    rows.append(row_str)
+            text = "\n".join(rows)
+            logger.debug(
+                f"Extracted {len(text)} characters from {len(rows)} rows of {file_path.name}"
+            )
+            return text
+
         else:
             raise FileReadError(f"Unsupported spreadsheet format: {file_path.suffix}")
 
-        # Convert to string, limiting size
-        text = str(df.to_string(max_rows=max_rows))
-
-        logger.debug(f"Extracted {len(text)} characters from {len(df)} rows of {file_path.name}")
-        return text
+    except ImportError:
+        raise
     except Exception as e:
         raise FileReadError(f"Failed to read spreadsheet file {file_path}: {e}") from e
 

@@ -432,7 +432,9 @@ class NamingPatternExtractor:
         content = "".join(sorted(filenames[:5]))
         return hashlib.md5(content.encode()).hexdigest()[:12]
 
-    def _build_pattern_elements(self, pattern: NamingPattern, analyses: list[dict[str, Any]]) -> None:
+    def _build_pattern_elements(
+        self, pattern: NamingPattern, analyses: list[dict[str, Any]]
+    ) -> None:
         """Build pattern elements from analyses."""
         # This is a simplified version - can be expanded
         position = 0

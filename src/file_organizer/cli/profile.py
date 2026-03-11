@@ -302,7 +302,9 @@ def import_profile(file: str, new_name: str | None, preview: bool) -> None:
     help="Merge strategy for conflicts",
 )
 @click.option("--show-conflicts", is_flag=True, help="Show conflicts before merging")
-def merge_profiles(profiles: tuple[str, ...], output: str, strategy: str, show_conflicts: bool) -> None:
+def merge_profiles(
+    profiles: tuple[str, ...], output: str, strategy: str, show_conflicts: bool
+) -> None:
     """Merge multiple profiles into one."""
     try:
         manager = get_profile_manager()

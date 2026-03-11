@@ -48,7 +48,9 @@ class StorageReporter:
 
         return metrics
 
-    def generate_report(self, duplicate_results: dict[str, Any], output_format: str = "text") -> str:
+    def generate_report(
+        self, duplicate_results: dict[str, Any], output_format: str = "text"
+    ) -> str:
         """Generate duplicate detection report.
 
         Args:

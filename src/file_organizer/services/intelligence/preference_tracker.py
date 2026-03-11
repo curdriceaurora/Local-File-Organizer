@@ -335,9 +335,18 @@ class PreferenceTracker:
                 best_pref.metadata.last_used = datetime.now(UTC)
                 return best_pref
 
+            # Map preference type to correction type prefix for key matching
+            prefix_map = {
+                PreferenceType.FOLDER_MAPPING: CorrectionType.FILE_MOVE.value,
+                PreferenceType.NAMING_PATTERN: CorrectionType.FILE_RENAME.value,
+                PreferenceType.CATEGORY_OVERRIDE: CorrectionType.CATEGORY_CHANGE.value,
+                PreferenceType.CUSTOM: CorrectionType.MANUAL_OVERRIDE.value,
+            }
+            prefix = prefix_map.get(preference_type, preference_type.value)
+
             # For other preference types, use exact pattern matching
             pattern_parts = [
-                preference_type.value,
+                prefix,
                 file_path.suffix.lower() if file_path.suffix else "no_ext",
                 file_path.parent.name if file_path.parent else "root",
             ]

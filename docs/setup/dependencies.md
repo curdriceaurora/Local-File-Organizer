@@ -43,7 +43,7 @@ pip install -e ".[build]"       # Executable packaging (PyInstaller)
 pip install -e ".[all]"         # Everything
 ```
 
-> **Note**: Additional extras (`gui`, `docs`, `dev`) are available in `pyproject.toml` for GUI support, documentation building, and development tooling.
+> **Note**: Additional extras (`gui`, `docs`, `dev`, `web`, `parsers`) are available in `pyproject.toml` for GUI support, documentation building, and development tooling.
 
 ## CLI Entrypoints
 

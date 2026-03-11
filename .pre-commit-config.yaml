@@ -26,7 +26,8 @@ repos:
       # ----------------------------------------------------------------
       - id: no-absolute-paths
         name: no absolute paths in Python files (G1)
-        entry: bash -c "git diff --cached -- '*.py' | grep -E '^\\+.*(/tmp/|/Users/|/home/)' | grep -v '^+++' | grep -vE '^\\+\\s*#' && echo 'ERROR: hardcoded path in Python — use tmp_path fixture or ConfigManager' && exit 1 || exit 0"
+        entry: >
+          bash -c "git diff --cached -- '*.py' | grep -E '^\+.*(/tmp/|/Users/|/home/)' | grep -v '^+++' | grep -vE '^\+\s*#' && echo 'ERROR: hardcoded path in Python — use tmp_path fixture or ConfigManager' && exit 1 || exit 0"
         language: system
         pass_filenames: false
 
@@ -37,7 +38,8 @@ repos:
       # ----------------------------------------------------------------
       - id: no-fstrings-in-logger
         name: no f-strings in logger calls (G2)
-        entry: bash -c "git diff --cached -- '*.py' | grep -E \"^\\+.*logger\\s*\\.\\s*(debug|info|warning|error|critical|exception)\\s*\\(\\s*f['\\\"]\" | grep -v '^+++' && echo 'ERROR: f-string in logger — use: logger.debug(\"msg %s\", var)' && exit 1 || exit 0"
+        entry: >
+          bash -c "git diff --cached -- '*.py' | grep -E \"^\+.*logger\s*\.\s*(debug|info|warning|error|critical|exception)\s*\(\s*f['\\\"]\" | grep -v '^+++' && echo 'ERROR: f-string in logger — use: logger.debug(\"msg %s\", var)' && exit 1 || exit 0"
         language: system
         pass_filenames: false
 
@@ -48,7 +50,8 @@ repos:
       # ----------------------------------------------------------------
       - id: no-build-artifacts
         name: no build artifacts staged
-        entry: bash -c "ARTS=$(git diff --cached --name-only | grep -E '\\.(coverage|bak|pyc|pyo)$|^\\.coverage$|(^|/)(__pycache__|build|dist)(/|$)|^coverage\\.xml$|^htmlcov/'); if [ -n \"$ARTS\" ]; then printf 'ERROR: build artifacts staged:\\n%s\\n' \"$ARTS\"; exit 1; fi"
+        entry: >
+          bash -c "ARTS=$(git diff --cached --name-only | grep -E '\\.(coverage|bak|pyc|pyo)$|^\\.coverage$|(^|/)(__pycache__|build|dist)(/|$)|^coverage\\.xml$|^htmlcov/'); if [ -n \"$ARTS\" ]; then printf 'ERROR: build artifacts staged:\\n%s\\n' \"$ARTS\"; exit 1; fi"
         language: system
         pass_filenames: false
 

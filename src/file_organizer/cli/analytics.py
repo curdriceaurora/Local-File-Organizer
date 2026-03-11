@@ -205,7 +205,9 @@ def display_time_savings(savings: TimeSavings) -> None:
     console.print(table)
 
 
-def display_file_distribution(distribution: FileDistribution, chart_gen: ChartGenerator | None) -> None:
+def display_file_distribution(
+    distribution: FileDistribution, chart_gen: ChartGenerator | None
+) -> None:
     """Display file distribution charts."""
     console.print("\n[bold cyan]FILE DISTRIBUTION[/bold cyan]")
     console.print("=" * 70)

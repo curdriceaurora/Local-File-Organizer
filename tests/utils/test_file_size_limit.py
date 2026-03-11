@@ -195,6 +195,20 @@ class TestUnboundedReadersSizeGate:
 
         huge_stat = _make_stat(MAX_FILE_SIZE_BYTES + 1)
 
+        # Patch availability flags so readers don't raise ImportError before
+        # reaching the file size check (optional deps may not be installed).
+        _availability_patches = {
+            "read_docx_file": "file_organizer.utils.readers.documents.DOCX_AVAILABLE",
+            "read_presentation_file": "file_organizer.utils.readers.documents.PPTX_AVAILABLE",
+            "read_ebook_file": "file_organizer.utils.readers.ebook.EBOOKLIB_AVAILABLE",
+        }
+        avail_target = _availability_patches.get(reader_name)
+
         with patch.object(Path, "stat", return_value=huge_stat):
-            with pytest.raises(FileTooLargeError):
-                reader(dummy)
+            if avail_target:
+                with patch(avail_target, new=True):
+                    with pytest.raises(FileTooLargeError):
+                        reader(dummy)
+            else:
+                with pytest.raises(FileTooLargeError):
+                    reader(dummy)

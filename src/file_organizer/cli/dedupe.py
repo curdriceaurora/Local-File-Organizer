@@ -180,7 +180,9 @@ def select_files_to_keep(files: list[dict[str, Any]], strategy: str) -> list[dic
     return files
 
 
-def get_user_selection(files: list[dict[str, Any]], strategy: str, batch: bool = False) -> list[int]:
+def get_user_selection(
+    files: list[dict[str, Any]], strategy: str, batch: bool = False
+) -> list[int]:
     """Get user selection for files to remove.
 
     Args:

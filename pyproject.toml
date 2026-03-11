@@ -29,16 +29,8 @@ dependencies = [
     # Core AI inference
     "ollama>=0.1.0",
 
-    # File processing
+    # File processing (core image only)
     "Pillow>=10.0.0",
-    "PyMuPDF>=1.23.0",
-    "python-docx>=1.0.0",
-    "pandas>=2.0.0",
-    "openpyxl>=3.1.0",
-    "python-pptx>=0.6.0",
-    "ebooklib>=0.18",  # New: ebook support
-    "beautifulsoup4>=4.12.0",  # HTML parsing for EPUB
-    "lxml>=4.9.0",  # Fast HTML/XML parser for BeautifulSoup
 
     # NLP and data science
     "nltk>=3.8.0",
@@ -62,14 +54,12 @@ dependencies = [
     "python-jose>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "bcrypt>=4.0.0,<5.0.0",
-
     # Database
     "sqlalchemy>=2.0.0",
     "alembic>=1.13.0",
 
     # Task queue
     "redis>=5.0.0",
-
     # Configuration
     "pyyaml>=6.0.0",  # YAML config parsing
     "platformdirs>=3.0.0",  # Cross-platform config/data directory resolution
@@ -80,6 +70,7 @@ dependencies = [
     "email-validator>=2.1.0",
     "python-dotenv>=1.0.0",
     "click>=8.1.0",
+    "aiofiles>=23.0.0",
     "watchdog>=3.0.0",  # File system event handler
 
     # System utilities
@@ -89,8 +80,31 @@ dependencies = [
     "loguru>=0.7.0",
 ]
 
-
 [project.optional-dependencies]
+parsers = [
+    "PyMuPDF>=1.23.0",
+    "python-docx>=1.0.0",
+    "openpyxl>=3.1.0",
+    "python-pptx>=0.6.0",
+    "ebooklib>=0.18",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.0",
+]
+
+web = [
+    "fastapi>=0.109.0",
+    "jinja2>=3.1.0",
+    "uvicorn[standard]>=0.27.0",
+    "websockets>=12.0",
+    "httpx>=0.26.0",
+    "python-multipart>=0.0.9",
+    "python-jose>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.0.0,<5.0.0",
+
+    "redis>=5.0.0",
+]
+
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.23.0",
@@ -164,9 +178,8 @@ docs = [
     "mkdocstrings[python]>=0.24.0",
 ]
 
-
 all = [
-    "local-file-organizer[dev,gui,audio,video,dedup,archive,scientific,cad,build]",
+    "local-file-organizer[dev,gui,audio,video,dedup,archive,scientific,cad,build,parsers,web]",
 ]
 
 [project.scripts]

@@ -100,7 +100,6 @@ class TestResponseHeaders:
         content_type = response.headers.get("content-type", "")
         assert "text/html" in content_type
 
-
     def test_response_headers_etag_for_static_content(self, web_client_builder) -> None:
         """Responses may include ETag header for cache validation."""
         client = web_client_builder(allowed_paths=[])
@@ -180,5 +179,6 @@ class TestRateLimitingAndIntegration:
             responses = [client.get(endpoint) for _ in range(3)]
             status_codes = [r.status_code for r in responses]
             # All requests to same endpoint should return consistent successful status
-            assert all(code in [200, 303, 404] for code in status_codes), \
+            assert all(code in [200, 303, 404] for code in status_codes), (
                 f"Inconsistent responses for {endpoint}: {status_codes}"
+            )

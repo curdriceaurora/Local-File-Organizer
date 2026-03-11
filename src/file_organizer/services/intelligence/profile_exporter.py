@@ -274,9 +274,7 @@ class ProfileExporter:
                 "updated": profile.updated,
                 "statistics": {
                     "global_preferences_count": len(_prefs.get("global", {})),
-                    "directory_specific_count": len(
-                        _prefs.get("directory_specific", {})
-                    ),
+                    "directory_specific_count": len(_prefs.get("directory_specific", {})),
                     "learned_patterns_count": len(_learned),
                     "confidence_data_count": len(_confidence),
                 },

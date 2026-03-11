@@ -192,7 +192,9 @@ class FolderPreferenceLearner:
 
         return analysis
 
-    def suggest_folder_structure(self, file_info: dict[str, Any], min_confidence: float = 0.5) -> Path | None:
+    def suggest_folder_structure(
+        self, file_info: dict[str, Any], min_confidence: float = 0.5
+    ) -> Path | None:
         """Suggest a folder based on file information and learned patterns.
 
         Args:
