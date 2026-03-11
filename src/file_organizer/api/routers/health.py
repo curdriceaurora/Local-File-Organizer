@@ -27,6 +27,7 @@ async def health(response: Response) -> dict[str, object]:
             "status":    "ok" | "degraded" | "unknown" | "error",
             "readiness": "ready" | "starting" | "unhealthy",
             "version":   "<semver string>",
+            "provider":  "ollama" | "openai",
             "ollama":    true | false,
             "uptime":    <float seconds since startup>
         }
@@ -72,6 +73,7 @@ async def health(response: Response) -> dict[str, object]:
         "status": status,
         "readiness": _READINESS_MAP.get(status, "unhealthy"),
         "version": payload.get("version", ""),
+        "provider": payload.get("provider", "ollama"),
         "ollama": bool(payload.get("ollama", False)),
         "uptime": time.time() - _startup_time,
     }
