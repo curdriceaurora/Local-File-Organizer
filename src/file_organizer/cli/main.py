@@ -131,6 +131,34 @@ def launch_tui() -> None:
     run_tui()
 
 
+@app.command(name="hardware-info")
+def hardware_info(
+    json_out: bool = typer.Option(False, "--json", help="Output as JSON."),
+) -> None:
+    """Detect and display hardware capabilities."""
+    from file_organizer.core.hardware_profile import detect_hardware
+
+    profile = detect_hardware()
+
+    if json_out or _g.json_output:
+        import json
+
+        console.print_json(json.dumps(profile.to_dict()))
+    else:
+        console.print("[bold]Hardware Profile[/bold]")
+        console.print(f"  GPU type:            {profile.gpu_type.value}")
+        console.print(f"  GPU name:            {profile.gpu_name or 'N/A'}")
+        console.print(f"  VRAM:                {profile.vram_gb} GB")
+        console.print(f"  System RAM:          {profile.ram_gb} GB")
+        console.print(f"  CPU cores:           {profile.cpu_cores}")
+        console.print(f"  OS:                  {profile.os_name}")
+        console.print(f"  Architecture:        {profile.arch}")
+        console.print()
+        console.print("[bold]Recommendations[/bold]")
+        console.print(f"  Text model:          {profile.recommended_text_model()}")
+        console.print(f"  Parallel workers:    {profile.recommended_workers()}")
+
+
 # ---------------------------------------------------------------------------
 # Sub-apps (config, model, and third-party integrations)
 # ---------------------------------------------------------------------------

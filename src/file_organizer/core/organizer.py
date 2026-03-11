@@ -1,64 +1,47 @@
-"""Main file organizer orchestrator."""
+"""Main file organizer orchestrator (facade).
+
+``FileOrganizer`` is the public API for the organize workflow.  It
+delegates to extracted modules for specific concerns:
+
+- ``core.types``: ``OrganizationResult`` and extension constants
+- ``core.initializer``: Processor startup and dependency wiring
+- ``core.dispatcher``: Per-type file processing pipelines
+- ``core.file_ops``: File collection, copy/link, simulation, cleanup
+- ``core.display``: Rich UI output (progress, summary, tables)
+"""
 
 from __future__ import annotations
 
-import datetime
-import os
-import shutil
-from dataclasses import dataclass, field
+import time
 from pathlib import Path
 from typing import ClassVar
 
 from loguru import logger
 from rich.console import Console
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-from rich.table import Table
 
-from file_organizer.history.models import OperationType
+from file_organizer.core import dispatcher, display, file_ops, initializer
+from file_organizer.core.types import (
+    AUDIO_EXTENSIONS,
+    CAD_EXTENSIONS,
+    IMAGE_EXTENSIONS,
+    TEXT_EXTENSIONS,
+    TEXT_FALLBACK_MAP,
+    VIDEO_EXTENSIONS,
+    OrganizationResult,
+)
 from file_organizer.models.base import ModelConfig
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor
 from file_organizer.services import ProcessedFile, ProcessedImage, TextProcessor, VisionProcessor
-from file_organizer.services.audio.classifier import AudioClassifier
-from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
-from file_organizer.services.audio.organizer import AudioOrganizer
-from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
-from file_organizer.services.video.organizer import VideoOrganizer
 from file_organizer.undo import UndoManager
-
-
-@dataclass
-class OrganizationResult:
-    """Result of organizing files.
-
-    Attributes:
-        total_files: Total number of files found
-        processed_files: Number of files successfully processed
-        skipped_files: Number of files skipped (unsupported types)
-        failed_files: Number of files that failed processing
-        processing_time: Total time taken in seconds
-        organized_structure: Dictionary mapping folder names to file lists
-        errors: List of (file_path, error_message) tuples
-    """
-
-    total_files: int = 0
-    processed_files: int = 0
-    skipped_files: int = 0
-    failed_files: int = 0
-    processing_time: float = 0.0
-    organized_structure: dict[str, list[str]] = field(default_factory=dict)
-    errors: list[tuple[str, str]] = field(default_factory=list)  # (file, error)
 
 
 class FileOrganizer:
     """Main file organizer that orchestrates the entire process.
 
-    This class:
-    - Scans directories for files
-    - Processes text-based files (PDF, DOCX, TXT, etc.)
-    - Organizes files into folder structure
-    - Handles errors gracefully
-    - Provides progress feedback
+    This class scans directories for files, routes them to the
+    appropriate processor (text, image, audio, video), organizes
+    results into a folder structure, and provides progress feedback.
 
     Attributes:
         TEXT_EXTENSIONS: Supported text file extensions
@@ -68,54 +51,17 @@ class FileOrganizer:
         CAD_EXTENSIONS: Supported CAD file extensions
     """
 
-    # Supported file extensions
-    TEXT_EXTENSIONS: ClassVar[set[str]] = {
-        ".txt",
-        ".md",
-        ".docx",
-        ".doc",
-        ".pdf",
-        ".csv",
-        ".xlsx",
-        ".xls",
-        ".ppt",
-        ".pptx",
-        ".epub",
-    }
-    IMAGE_EXTENSIONS: ClassVar[set[str]] = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"}
-    VIDEO_EXTENSIONS: ClassVar[set[str]] = {".mp4", ".avi", ".mkv", ".mov", ".wmv"}
-    AUDIO_EXTENSIONS: ClassVar[set[str]] = {".mp3", ".wav", ".flac", ".m4a", ".ogg"}
-    CAD_EXTENSIONS: ClassVar[set[str]] = {".dwg", ".dxf", ".step", ".stp", ".iges", ".igs"}
-
-    # Extension -> folder name mapping used when Ollama is unavailable
-    _TEXT_FALLBACK_MAP: ClassVar[dict[str, str]] = {
-        ".pdf": "PDFs",
-        ".doc": "Documents",
-        ".docx": "Documents",
-        ".txt": "Documents",
-        ".md": "Documents",
-        ".csv": "Spreadsheets",
-        ".xlsx": "Spreadsheets",
-        ".xls": "Spreadsheets",
-        ".ppt": "Presentations",
-        ".pptx": "Presentations",
-        ".epub": "eBooks",
-        ".dwg": "CAD",
-        ".dxf": "CAD",
-        ".step": "CAD",
-        ".stp": "CAD",
-        ".iges": "CAD",
-        ".igs": "CAD",
-    }
+    # ClassVars re-exported from core.types for backward compatibility
+    TEXT_EXTENSIONS: ClassVar[set[str]] = set(TEXT_EXTENSIONS)
+    IMAGE_EXTENSIONS: ClassVar[set[str]] = set(IMAGE_EXTENSIONS)
+    VIDEO_EXTENSIONS: ClassVar[set[str]] = set(VIDEO_EXTENSIONS)
+    AUDIO_EXTENSIONS: ClassVar[set[str]] = set(AUDIO_EXTENSIONS)
+    CAD_EXTENSIONS: ClassVar[set[str]] = set(CAD_EXTENSIONS)
+    _TEXT_FALLBACK_MAP: ClassVar[dict[str, str]] = TEXT_FALLBACK_MAP
     _IMAGE_FALLBACK_FOLDER: ClassVar[str] = "Images"
 
     def __init_subclass__(cls, **kwargs: object) -> None:
-        """Verify fallback map covers all text and CAD extensions.
-
-        Fires only for subclasses, not for FileOrganizer itself.
-        Raises TypeError at class-definition time if any extension in
-        TEXT_EXTENSIONS or CAD_EXTENSIONS is missing from _TEXT_FALLBACK_MAP.
-        """
+        """Verify fallback map covers all text and CAD extensions."""
         super().__init_subclass__(**kwargs)
         missing = (cls.TEXT_EXTENSIONS | cls.CAD_EXTENSIONS) - cls._TEXT_FALLBACK_MAP.keys()
         if missing:
@@ -153,19 +99,17 @@ class FileOrganizer:
         self.dry_run = dry_run
         self.use_hardlinks = use_hardlinks
         self.console = Console()
-        self.text_processor: TextProcessor | None = None
-        self.vision_processor: VisionProcessor | None = None
 
-        # Initialize parallel processor
         self.parallel_config = ParallelConfig(
             max_workers=parallel_workers,
-            executor_type=ExecutorType.THREAD,  # IO-bound (Ollama HTTP calls)
+            executor_type=ExecutorType.THREAD,
             timeout_per_file=60.0,
             retry_count=1,
         )
         self.parallel_processor = ParallelProcessor(self.parallel_config)
 
-        # Undo/redo support (lazy-initialized on first non-dry-run organize call)
+        self.text_processor: TextProcessor | None = None
+        self.vision_processor: VisionProcessor | None = None
         self._undo_manager: UndoManager | None = None
         self._last_transaction_id: str | None = None
         self._last_output_path: Path | None = None
@@ -173,6 +117,10 @@ class FileOrganizer:
         logger.info(
             "FileOrganizer initialized (dry_run={}, parallel={})", dry_run, parallel_workers
         )
+
+    # ------------------------------------------------------------------
+    # Main orchestration
+    # ------------------------------------------------------------------
 
     def organize(
         self,
@@ -193,121 +141,125 @@ class FileOrganizer:
         Raises:
             ValueError: If input path does not exist
         """
-        import time
-
         start_time = time.time()
         input_path = Path(input_path)
         output_path = Path(output_path)
 
-        # Validate paths
         if not input_path.exists():
             raise ValueError(f"Input path does not exist: {input_path}")
 
-        # Collect files
         self.console.print(f"\n[bold blue]Scanning:[/bold blue] {input_path}")
-        files = self._collect_files(input_path)
+        files = file_ops.collect_files(input_path, self.console)
 
         result = OrganizationResult(total_files=len(files))
-
         if not files:
             self.console.print("[yellow]No files found to organize[/yellow]")
             return result
 
-        # Categorize files by type
-        text_files = [f for f in files if f.suffix.lower() in self.TEXT_EXTENSIONS]
-        image_files = [f for f in files if f.suffix.lower() in self.IMAGE_EXTENSIONS]
-        video_files = [f for f in files if f.suffix.lower() in self.VIDEO_EXTENSIONS]
-        audio_files = [f for f in files if f.suffix.lower() in self.AUDIO_EXTENSIONS]
-        cad_files = [f for f in files if f.suffix.lower() in self.CAD_EXTENSIONS]
+        # Categorize files
+        text_files = [f for f in files if f.suffix.lower() in TEXT_EXTENSIONS]
+        image_files = [f for f in files if f.suffix.lower() in IMAGE_EXTENSIONS]
+        video_files = [f for f in files if f.suffix.lower() in VIDEO_EXTENSIONS]
+        audio_files = [f for f in files if f.suffix.lower() in AUDIO_EXTENSIONS]
+        cad_files = [f for f in files if f.suffix.lower() in CAD_EXTENSIONS]
         other_files = [
             f
             for f in files
             if f not in text_files + image_files + video_files + audio_files + cad_files
         ]
 
-        # Show file type breakdown
-        self._show_file_breakdown(
-            text_files, image_files, video_files, audio_files, cad_files, other_files
+        display.show_file_breakdown(
+            self.console,
+            text_files=text_files,
+            image_files=image_files,
+            video_files=video_files,
+            audio_files=audio_files,
+            cad_files=cad_files,
+            other_files=other_files,
         )
 
-        # Reset processors for this organize() call so that recovery
-        # (user starts Ollama between calls) is detected.
+        # Process each file type
+        all_processed: list[ProcessedFile | ProcessedImage] = []
         self.text_processor = None
         self.vision_processor = None
 
-        # Process text files (initialize text model on demand)
-        all_processed: list[ProcessedFile | ProcessedImage] = []
-        if text_files or cad_files:
-            self._init_text_processor()
+        try:
+            # Text + CAD
+            if text_files or cad_files:
+                self._init_text_processor()
 
-        text_ready = (
-            self.text_processor is not None and self.text_processor.text_model.is_initialized
-        )
-
-        if text_files:
-            self.console.print(
-                f"\n[bold blue]Processing {len(text_files)} text files...[/bold blue]"
+            text_ready = (
+                self.text_processor is not None and self.text_processor.text_model.is_initialized
             )
-            if text_ready:
-                processed_text = self._process_text_files(text_files)
-            else:
-                processed_text = self._fallback_by_extension(text_files)
-            all_processed.extend(processed_text)
 
-        # Process CAD files (treat as text files - extract metadata)
-        if cad_files:
-            self.console.print(f"\n[bold blue]Processing {len(cad_files)} CAD files...[/bold blue]")
-            if text_ready:
-                processed_cad = self._process_text_files(cad_files)
-            else:
-                processed_cad = self._fallback_by_extension(cad_files)
-            all_processed.extend(processed_cad)
+            if text_files:
+                self.console.print(
+                    f"\n[bold blue]Processing {len(text_files)} text files...[/bold blue]"
+                )
+                if text_ready:
+                    all_processed.extend(self._process_text_files(text_files))
+                else:
+                    all_processed.extend(self._fallback_by_extension(text_files))
 
-        # Release text model VRAM before loading vision model (only if vision needed)
-        if image_files and self.text_processor:
-            self.text_processor.cleanup()
-            self.text_processor = None  # prevent double-cleanup in finally block
+            if cad_files:
+                self.console.print(
+                    f"\n[bold blue]Processing {len(cad_files)} CAD files...[/bold blue]"
+                )
+                if text_ready:
+                    all_processed.extend(self._process_text_files(cad_files))
+                else:
+                    all_processed.extend(self._fallback_by_extension(cad_files))
 
-        # Process image files (initialize vision model on demand)
-        if image_files:
-            self._init_vision_processor()
-            vision_ready = (
-                self.vision_processor is not None
-                and self.vision_processor.vision_model.is_initialized
-            )
-            self.console.print(f"\n[bold blue]Processing {len(image_files)} images...[/bold blue]")
-            processed_images: list[ProcessedImage] | list[ProcessedFile]
-            if vision_ready:
-                processed_images = self._process_image_files(image_files)
-            else:
-                processed_images = self._fallback_by_extension(image_files)
-            all_processed.extend(processed_images)
+            # Release text model VRAM before loading vision model
+            if image_files and self.text_processor:
+                self.text_processor.cleanup()
+                self.text_processor = None
 
-        # Process audio files via metadata pipeline (no AI model required)
-        if audio_files:
-            self.console.print(
-                f"\n[bold blue]Processing {len(audio_files)} audio files...[/bold blue]"
-            )
-            processed_audio = self._process_audio_files(audio_files)
-            all_processed.extend(processed_audio)
+            # Images
+            if image_files:
+                self._init_vision_processor()
+                vision_ready = (
+                    self.vision_processor is not None
+                    and self.vision_processor.vision_model.is_initialized
+                )
+                self.console.print(
+                    f"\n[bold blue]Processing {len(image_files)} images...[/bold blue]"
+                )
+                if vision_ready:
+                    all_processed.extend(self._process_image_files(image_files))
+                else:
+                    all_processed.extend(self._fallback_by_extension(image_files))
 
-        # Process video files via metadata pipeline (no AI model required)
-        if video_files:
-            self.console.print(f"\n[bold blue]Processing {len(video_files)} videos...[/bold blue]")
-            processed_videos = self._process_video_files(video_files)
-            all_processed.extend(processed_videos)
+            # Audio
+            if audio_files:
+                self.console.print(
+                    f"\n[bold blue]Processing {len(audio_files)} audio files...[/bold blue]"
+                )
+                all_processed.extend(self._process_audio_files(audio_files))
 
-        # Organize all files
+            # Video
+            if video_files:
+                self.console.print(
+                    f"\n[bold blue]Processing {len(video_files)} videos...[/bold blue]"
+                )
+                all_processed.extend(self._process_video_files(video_files))
+
+        finally:
+            if self.text_processor:
+                self.text_processor.cleanup()
+            if self.vision_processor:
+                self.vision_processor.cleanup()
+            if self.parallel_processor:
+                self.parallel_processor.shutdown()
+
+        # Organize
         if all_processed:
-            # Calculate statistics
             failed_cnt = len([p for p in all_processed if p.error])
-            success_cnt = len(all_processed) - failed_cnt
-            result.processed_files = success_cnt
+            result.processed_files = len(all_processed) - failed_cnt
             result.failed_files = failed_cnt
 
             if not self.dry_run:
                 self.console.print("\n[bold blue]Organizing files...[/bold blue]")
-                # Initialize undo manager and start a transaction for this organize session
                 if self._undo_manager is None:
                     self._undo_manager = UndoManager()
                 self._last_transaction_id = self._undo_manager.history.start_transaction(
@@ -316,7 +268,14 @@ class FileOrganizer:
                 self._last_output_path = output_path
 
                 try:
-                    organized = self._organize_files(all_processed, output_path, skip_existing)
+                    organized = file_ops.organize_files(
+                        all_processed,
+                        output_path,
+                        skip_existing,
+                        use_hardlinks=self.use_hardlinks,
+                        undo_manager=self._undo_manager,
+                        transaction_id=self._last_transaction_id,
+                    )
                 except Exception:
                     logger.exception(
                         "Error while organizing files; leaving transaction {} uncommitted",
@@ -324,17 +283,17 @@ class FileOrganizer:
                     )
                     raise
                 else:
-                    # Commit the transaction so it's undoable
                     self._undo_manager.history.commit_transaction(self._last_transaction_id)
                     result.organized_structure = organized
             else:
                 self.console.print(
                     "\n[bold yellow]DRY RUN - Simulating organization...[/bold yellow]"
                 )
-                simulated = self._simulate_organization(all_processed, output_path)
-                result.organized_structure = simulated
+                result.organized_structure = file_ops.simulate_organization(
+                    all_processed, output_path
+                )
 
-        # Handle unsupported files (audio and video are now processed above)
+        # Skipped files
         if other_files:
             result.skipped_files = len(other_files)
             self.console.print("\n[bold yellow]Skipped Files:[/bold yellow]")
@@ -342,416 +301,43 @@ class FileOrganizer:
                 self.console.print(f"  [yellow]•[/yellow] {f.name} (unsupported type)")
             self.console.print("\n  [dim]These file types are not yet supported[/dim]")
 
-        # Cleanup remaining processors.
-        # text_processor is cleaned up earlier (before vision init) when images
-        # are present; otherwise clean it up here.
-        if self.text_processor:
-            self.text_processor.cleanup()
-        if self.vision_processor:
-            self.vision_processor.cleanup()
-        if self.parallel_processor:
-            self.parallel_processor.shutdown()
-
-        # Final statistics
         result.processing_time = time.time() - start_time
-        self._show_summary(result, output_path)
+        display.show_summary(self.console, result, output_path, dry_run=self.dry_run)
 
         return result
 
+    # ------------------------------------------------------------------
+    # Undo / Redo
+    # ------------------------------------------------------------------
+
+    def undo(self) -> bool:
+        """Undo the last organize session."""
+        if self._undo_manager is None or self._last_transaction_id is None:
+            logger.warning("No organize session to undo")
+            return False
+
+        success = self._undo_manager.undo_transaction(self._last_transaction_id)
+        if success and self._last_output_path is not None:
+            file_ops.cleanup_empty_dirs(self._last_output_path)
+        return success
+
+    def redo(self) -> bool:
+        """Redo the last undone organize session."""
+        if self._undo_manager is None or self._last_transaction_id is None:
+            logger.warning("No organize session to redo")
+            return False
+
+        return self._undo_manager.redo_transaction(self._last_transaction_id)
+
+    # ------------------------------------------------------------------
+    # Backward-compatible delegation (used by existing tests)
+    # ------------------------------------------------------------------
+
     def _collect_files(self, path: Path) -> list[Path]:
-        """Collect all files from path.
-
-        Args:
-            path: Directory to scan or file to include
-
-        Returns:
-            List of file paths found
-        """
-        files = []
-        if path.is_file():
-            files.append(path)
-        else:
-            for root, _, filenames in os.walk(path):
-                for filename in filenames:
-                    if not filename.startswith("."):  # Skip hidden files
-                        files.append(Path(root) / filename)
-
-        self.console.print(f"[green]✓[/green] Found {len(files)} files")
-        return files
-
-    def _show_file_breakdown(
-        self,
-        text_files: list[Path],
-        image_files: list[Path],
-        video_files: list[Path],
-        audio_files: list[Path],
-        cad_files: list[Path],
-        other_files: list[Path],
-    ) -> None:
-        """Show breakdown of file types.
-
-        Args:
-            text_files: List of text files found
-            image_files: List of image files found
-            video_files: List of video files found
-            audio_files: List of audio files found
-            cad_files: List of CAD files found
-            other_files: List of other (unsupported) files found
-        """
-        table = Table(title="File Type Breakdown", show_header=True)
-        table.add_column("Type", style="cyan")
-        table.add_column("Count", justify="right", style="green")
-        table.add_column("Status", style="yellow")
-
-        table.add_row("Text files", str(len(text_files)), "✓ Will process")
-        table.add_row("Images", str(len(image_files)), "✓ Will process")
-        table.add_row("Videos", str(len(video_files)), "✓ Will process (metadata)")
-        table.add_row("Audio", str(len(audio_files)), "✓ Will process (metadata)")
-        table.add_row("CAD files", str(len(cad_files)), "✓ Will process")
-        table.add_row("Other", str(len(other_files)), "⊘ Skip (unsupported)")
-
-        self.console.print(table)
+        return file_ops.collect_files(path, self.console)
 
     def _fallback_by_extension(self, files: list[Path]) -> list[ProcessedFile]:
-        """Organize files by extension when Ollama is unavailable.
-
-        Args:
-            files: List of file paths to organize.
-
-        Returns:
-            List of ProcessedFile with extension-based folder assignment.
-        """
-        results = []
-        for file_path in files:
-            ext = file_path.suffix.lower()
-            if ext in self._TEXT_FALLBACK_MAP:
-                folder = self._TEXT_FALLBACK_MAP[ext]
-            elif ext in self.IMAGE_EXTENSIONS:
-                try:
-                    year = str(
-                        datetime.datetime.fromtimestamp(
-                            file_path.stat().st_mtime, tz=datetime.UTC
-                        ).year
-                    )
-                except OSError:
-                    year = "Unknown"
-                folder = f"{self._IMAGE_FALLBACK_FOLDER}/{year}"
-            else:
-                folder = "Other"
-
-            results.append(
-                ProcessedFile(
-                    file_path=file_path,
-                    description=f"Extension-based organization (Ollama unavailable): {ext}",
-                    folder_name=folder,
-                    filename=file_path.stem,
-                    error=None,
-                )
-            )
-            logger.debug("Fallback organized {} -> {}/{}", file_path.name, folder, file_path.name)
-        return results
-
-    def _init_text_processor(self) -> None:
-        """Initialize text processor on demand.
-
-        Creates and initializes the text model. On any initialization failure
-        (for example, Ollama being unavailable, configuration/import errors, or
-        other runtime issues), this method logs a warning, attempts best-effort
-        cleanup, resets ``text_processor`` to *None*, and lets callers fall back
-        to extension-based organization.
-        """
-        try:
-            self.text_processor = TextProcessor(config=self.text_model_config)
-            self.text_processor.initialize()
-            self.console.print("[green]✓[/green] Text model ready")
-        except Exception as e:  # graceful degradation for any init failure
-            if self.text_processor is not None:
-                try:
-                    self.text_processor.cleanup()
-                except Exception:  # best-effort — don't mask the original error
-                    pass
-            self.text_processor = None
-            self.console.print(
-                f"[yellow]⚠ Text model unavailable ({e.__class__.__name__}): "
-                "falling back to extension-based organization[/yellow]"
-            )
-            logger.opt(exception=e).warning("Text model init failed, using extension fallback")
-
-    def _init_vision_processor(self) -> None:
-        """Initialize vision processor on demand.
-
-        Creates and initializes the vision model. On failure,
-        resets ``vision_processor`` to *None* so callers fall back to extension-based
-        organization for images.
-        """
-        try:
-            self.vision_processor = VisionProcessor(config=self.vision_model_config)
-            self.vision_processor.initialize()
-            self.console.print("[green]✓[/green] Vision model ready")
-        except Exception as e:  # graceful degradation for any init failure
-            if self.vision_processor is not None:
-                try:
-                    self.vision_processor.cleanup()
-                except Exception:  # best-effort — don't mask the original error
-                    pass
-            self.vision_processor = None
-            self.console.print(
-                f"[yellow]⚠ Vision model unavailable ({e.__class__.__name__}): "
-                "falling back to extension-based organization for images[/yellow]"
-            )
-            logger.opt(exception=e).warning("Vision model init failed, using extension fallback")
-
-    def _process_text_files(self, files: list[Path]) -> list[ProcessedFile]:
-        """Process text files with AI.
-
-        Args:
-            files: List of text file paths
-
-        Returns:
-            List of processed file results
-        """
-        processed = []
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeElapsedColumn(),
-            console=self.console,
-        ) as progress:
-            task = progress.add_task("Processing files...", total=len(files))
-
-            # Helper for pickling
-            def _process_one(path: Path) -> ProcessedFile:
-                """Process a single text file with the text processor.
-
-                Args:
-                    path: Path to the text file to process
-
-                Returns:
-                    ProcessedFile with extracted content and metadata
-                """
-                # self.text_processor is initialized before this call
-                assert self.text_processor is not None
-                return self.text_processor.process_file(path)
-
-            for file_result in self.parallel_processor.process_batch_iter(files, _process_one):
-                if file_result.success:
-                    result = file_result.result
-                    processed.append(result)
-
-                    if not result.error:
-                        progress.update(
-                            task, advance=1, description=f"[green]✓[/green] {file_result.path.name}"
-                        )
-                    else:
-                        progress.update(
-                            task,
-                            advance=1,
-                            description=f"[red]✗[/red] {file_result.path.name} (Error)",
-                        )
-                else:
-                    # Infrastructure failure (timeout, etc)
-                    error_msg = file_result.error or "Unknown error"
-                    logger.error(f"Failed to process {file_result.path}: {error_msg}")
-                    processed.append(
-                        ProcessedFile(
-                            file_path=file_result.path,
-                            description="",
-                            folder_name="errors",
-                            filename=file_result.path.stem,
-                            error=error_msg,
-                        )
-                    )
-                    progress.update(
-                        task,
-                        advance=1,
-                        description=f"[red]✗[/red] {file_result.path.name} (Failed)",
-                    )
-
-        return processed
-
-    def _process_image_files(self, files: list[Path]) -> list[ProcessedImage]:
-        """Process image files with AI.
-
-        Args:
-            files: List of image file paths
-
-        Returns:
-            List of processed image results
-        """
-        processed = []
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeElapsedColumn(),
-            console=self.console,
-        ) as progress:
-            task = progress.add_task("Processing images...", total=len(files))
-
-            # Helper for pickling
-            def _process_one_image(path: Path) -> ProcessedImage:
-                """Process a single image file with the vision processor.
-
-                Args:
-                    path: Path to the image file to process
-
-                Returns:
-                    ProcessedImage with extracted content and metadata
-                """
-                # self.vision_processor is initialized before this call
-                assert self.vision_processor is not None
-                return self.vision_processor.process_file(path)
-
-            for file_result in self.parallel_processor.process_batch_iter(
-                files, _process_one_image
-            ):
-                if file_result.success:
-                    result = file_result.result
-                    processed.append(result)
-
-                    if not result.error:
-                        progress.update(
-                            task, advance=1, description=f"[green]✓[/green] {file_result.path.name}"
-                        )
-                    else:
-                        progress.update(
-                            task,
-                            advance=1,
-                            description=f"[red]✗[/red] {file_result.path.name} (Error)",
-                        )
-                else:
-                    # Infrastructure failure
-                    error_msg = file_result.error or "Unknown error"
-                    logger.error(f"Failed to process {file_result.path}: {error_msg}")
-                    processed.append(
-                        ProcessedImage(
-                            file_path=file_result.path,
-                            description="",
-                            folder_name="errors",
-                            filename=file_result.path.stem,
-                            error=error_msg,
-                        )
-                    )
-                    progress.update(
-                        task,
-                        advance=1,
-                        description=f"[red]✗[/red] {file_result.path.name} (Failed)",
-                    )
-
-        return processed
-
-    def _process_audio_files(self, files: list[Path]) -> list[ProcessedFile]:
-        """Process audio files using metadata pipeline (no AI model required).
-
-        Args:
-            files: List of audio file paths
-
-        Returns:
-            List of processed file results
-        """
-        extractor = AudioMetadataExtractor()
-        classifier = AudioClassifier()
-        organizer = AudioOrganizer()
-        processed = []
-
-        for audio_path in files:
-            try:
-                metadata = extractor.extract(audio_path)
-                classification = classifier.classify(metadata)
-                dest_path = organizer.generate_path(classification.audio_type, metadata)
-
-                # dest_path includes the extension (e.g. "Music/Artist/Album/01 - Track.mp3")
-                # Split into folder_name and filename stem for ProcessedFile compatibility
-                folder_name = dest_path.parent.as_posix()
-                filename_stem = dest_path.stem
-
-                # Build human-readable description
-                parts = [classification.audio_type.value.capitalize()]
-                if metadata.artist:
-                    parts.append(metadata.artist)
-                if metadata.title:
-                    parts.append(metadata.title)
-                description = (
-                    ": ".join(parts[:1]) + " " + " - ".join(parts[1:])
-                    if len(parts) > 1
-                    else parts[0]
-                )
-
-                processed.append(
-                    ProcessedFile(
-                        file_path=audio_path,
-                        description=description,
-                        folder_name=folder_name,
-                        filename=filename_stem,
-                        error=None,
-                    )
-                )
-                logger.debug(f"Audio processed: {audio_path.name} → {folder_name}/{filename_stem}")
-
-            except Exception as exc:
-                logger.warning(f"Audio metadata extraction failed for {audio_path.name}: {exc}")
-                processed.append(
-                    ProcessedFile(
-                        file_path=audio_path,
-                        description="",
-                        folder_name="Audio/Unsorted",
-                        filename=audio_path.stem,
-                        error=str(exc),
-                    )
-                )
-
-        return processed
-
-    def _process_video_files(self, files: list[Path]) -> list[ProcessedFile]:
-        """Process video files using metadata pipeline (no AI model required).
-
-        Args:
-            files: List of video file paths
-
-        Returns:
-            List of processed file results
-        """
-        extractor = VideoMetadataExtractor()
-        organizer = VideoOrganizer()
-        processed = []
-
-        for video_path in files:
-            try:
-                metadata = extractor.extract(video_path)
-                folder_name, filename_stem = organizer.generate_path(metadata)
-                description = organizer.generate_description(metadata)
-
-                processed.append(
-                    ProcessedFile(
-                        file_path=video_path,
-                        description=description,
-                        folder_name=folder_name,
-                        filename=filename_stem,
-                        error=None,
-                    )
-                )
-                logger.debug(f"Video processed: {video_path.name} → {folder_name}/{filename_stem}")
-
-            except FileNotFoundError:
-                raise
-            except Exception as exc:
-                logger.warning(f"Video metadata extraction failed for {video_path.name}: {exc}")
-                processed.append(
-                    ProcessedFile(
-                        file_path=video_path,
-                        description="",
-                        folder_name="Videos/Unsorted",
-                        filename=video_path.stem,
-                        error=str(exc),
-                    )
-                )
-
-        return processed
+        return file_ops.fallback_by_extension(files)
 
     def _organize_files(
         self,
@@ -759,181 +345,44 @@ class FileOrganizer:
         output_path: Path,
         skip_existing: bool,
     ) -> dict[str, list[str]]:
-        """Actually organize files into output directory.
-
-        Args:
-            processed: List of processed files (text or images)
-            output_path: Output directory
-            skip_existing: Skip existing files
-
-        Returns:
-            Dictionary of folder -> list of files
-        """
-        organized: dict[str, list[str]] = {}
-        output_path.mkdir(parents=True, exist_ok=True)
-
-        for result in processed:
-            if result.error:
-                continue
-
-            # Create folder path
-            folder_path = output_path / result.folder_name
-            folder_path.mkdir(parents=True, exist_ok=True)
-
-            # Create new filename
-            new_filename = f"{result.filename}{result.file_path.suffix}"
-            new_path = folder_path / new_filename
-
-            # Handle existing files
-            if new_path.exists() and skip_existing:
-                logger.debug(f"Skipping existing file: {new_path}")
-                continue
-
-            # Handle duplicate names
-            counter = 1
-            while new_path.exists():
-                new_filename = f"{result.filename}_{counter}{result.file_path.suffix}"
-                new_path = folder_path / new_filename
-                counter += 1
-
-            # Copy or link file
-            try:
-                if self.use_hardlinks:
-                    os.link(result.file_path, new_path)
-                else:
-                    shutil.copy2(result.file_path, new_path)
-
-                # Log the operation for undo/redo support
-                if self._undo_manager is not None and self._last_transaction_id is not None:
-                    self._undo_manager.history.log_operation(
-                        OperationType.COPY,
-                        source_path=result.file_path,
-                        destination_path=new_path,
-                        transaction_id=self._last_transaction_id,
-                    )
-
-                # Track in structure
-                if result.folder_name not in organized:
-                    organized[result.folder_name] = []
-                organized[result.folder_name].append(new_filename)
-
-            except Exception as e:
-                logger.error(f"Failed to organize {result.file_path}: {e}")
-
-        return organized
+        return file_ops.organize_files(
+            processed,
+            output_path,
+            skip_existing,
+            use_hardlinks=self.use_hardlinks,
+            undo_manager=self._undo_manager,
+            transaction_id=self._last_transaction_id,
+        )
 
     def _simulate_organization(
         self,
         processed: list[ProcessedFile | ProcessedImage],
         output_path: Path,
     ) -> dict[str, list[str]]:
-        """Simulate organization without actually moving files.
+        return file_ops.simulate_organization(processed, output_path)
 
-        Args:
-            processed: List of processed files (text or images)
-            output_path: Output directory
+    def _init_text_processor(self) -> None:
+        self.text_processor = initializer.init_text_processor(self.text_model_config, self.console)
 
-        Returns:
-            Dictionary of folder -> list of files
-        """
-        organized: dict[str, list[str]] = {}
+    def _init_vision_processor(self) -> None:
+        self.vision_processor = initializer.init_vision_processor(
+            self.vision_model_config, self.console
+        )
 
-        for result in processed:
-            if result.error:
-                continue
+    def _process_text_files(self, files: list[Path]) -> list[ProcessedFile]:
+        assert self.text_processor is not None
+        return dispatcher.process_text_files(
+            files, self.text_processor, self.parallel_processor, self.console
+        )
 
-            new_filename = f"{result.filename}{result.file_path.suffix}"
+    def _process_image_files(self, files: list[Path]) -> list[ProcessedImage]:
+        assert self.vision_processor is not None
+        return dispatcher.process_image_files(
+            files, self.vision_processor, self.parallel_processor, self.console
+        )
 
-            if result.folder_name not in organized:
-                organized[result.folder_name] = []
-            organized[result.folder_name].append(new_filename)
+    def _process_audio_files(self, files: list[Path]) -> list[ProcessedFile]:
+        return dispatcher.process_audio_files(files)
 
-        return organized
-
-    def _show_summary(self, result: OrganizationResult, output_path: Path) -> None:
-        """Show final summary.
-
-        Args:
-            result: Organization result with statistics
-            output_path: Output path where files were organized
-        """
-        self.console.print("\n" + "=" * 70)
-        self.console.print("[bold green]Organization Complete![/bold green]")
-        self.console.print("=" * 70)
-
-        # Statistics
-        self.console.print("\n[bold]Statistics:[/bold]")
-        self.console.print(f"  Total files scanned: {result.total_files}")
-        self.console.print(f"  [green]Processed: {result.processed_files}[/green]")
-        self.console.print(f"  [yellow]Skipped: {result.skipped_files}[/yellow]")
-        self.console.print(f"  [red]Failed: {result.failed_files}[/red]")
-        self.console.print(f"  Processing time: {result.processing_time:.2f}s")
-
-        # Show structure
-        if result.organized_structure:
-            self.console.print("\n[bold]Organized Structure:[/bold]")
-            self.console.print(f"[cyan]{output_path}/[/cyan]")
-
-            for folder, files in sorted(result.organized_structure.items()):
-                self.console.print(f"  [cyan]├── {folder}/[/cyan]")
-                for i, filename in enumerate(sorted(files)):
-                    prefix = "└──" if i == len(files) - 1 else "├──"
-                    self.console.print(f"       {prefix} {filename}")
-
-        if self.dry_run:
-            self.console.print("\n[yellow]⚠️  DRY RUN - No files were actually moved[/yellow]")
-            self.console.print("[dim]Run without --dry-run to perform actual organization[/dim]")
-        else:
-            self.console.print(f"\n[green]✓ Files organized in: {output_path}[/green]")
-
-    # ------------------------------------------------------------------
-    # Undo / Redo public API
-    # ------------------------------------------------------------------
-
-    def undo(self) -> bool:
-        """Undo the last organize session.
-
-        Returns:
-            True if undo succeeded, False otherwise
-        """
-        if self._undo_manager is None or self._last_transaction_id is None:
-            logger.warning("No organize session to undo")
-            return False
-
-        success = self._undo_manager.undo_transaction(self._last_transaction_id)
-
-        # After rolling back file copies, remove any leftover empty directories
-        if success and self._last_output_path is not None:
-            self._cleanup_empty_dirs(self._last_output_path)
-
-        return success
-
-    def redo(self) -> bool:
-        """Redo the last undone organize session.
-
-        Returns:
-            True if redo succeeded, False otherwise
-        """
-        if self._undo_manager is None or self._last_transaction_id is None:
-            logger.warning("No organize session to redo")
-            return False
-
-        return self._undo_manager.redo_transaction(self._last_transaction_id)
-
-    def _cleanup_empty_dirs(self, root: Path) -> None:
-        """Remove empty directories under *root*, bottom-up.
-
-        Only directories strictly below *root* are removed; the root itself
-        is left in place (it was pre-existing before organize was called).
-
-        Args:
-            root: The output directory that was used during organize.
-        """
-        # Collect all subdirectories sorted deepest-first so we can safely
-        # rmdir leaves before their parents.
-        for dirpath in sorted(root.rglob("*"), reverse=True):
-            if dirpath.is_dir() and dirpath != root:
-                try:
-                    dirpath.rmdir()  # Succeeds only when the directory is empty
-                except OSError:
-                    pass  # Not empty, or permission error – leave it in place
+    def _process_video_files(self, files: list[Path]) -> list[ProcessedFile]:
+        return dispatcher.process_video_files(files)
