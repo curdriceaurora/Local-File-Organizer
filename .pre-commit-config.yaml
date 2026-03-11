@@ -87,7 +87,7 @@ repos:
       # ----------------------------------------------------------------
       - id: codespell
         name: codespell
-        entry: bash -c ".venv/bin/codespell src/ docs/ --config .codespellrc"
+        entry: bash -c "CODESPELL=$(.venv/bin/codespell --version >/dev/null 2>&1 && echo .venv/bin/codespell || echo codespell); $CODESPELL src/ docs/ --config .codespellrc"
         language: system
         pass_filenames: false
 
@@ -96,7 +96,7 @@ repos:
       # ----------------------------------------------------------------
       - id: deptry
         name: deptry (unused deps)
-        entry: .venv/bin/deptry src/
+        entry: bash -c "DEPTRY=$(.venv/bin/deptry --version >/dev/null 2>&1 && echo .venv/bin/deptry || echo deptry); $DEPTRY src/"
         language: system
         pass_filenames: false
         files: ^(src/|pyproject\.toml)
