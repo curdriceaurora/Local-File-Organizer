@@ -90,11 +90,12 @@ class TestFallbackDoesNotCrash:
     def test_ollama_recovery_between_calls(
         self, organizer: FileOrganizer, source_dir: Path, output_dir: Path
     ) -> None:
-        """_ollama_available resets to True on each organize() call.
+        """After Ollama recovers, a second organize() call uses AI, not fallback.
 
-        A second call after Ollama recovers must not be stuck in fallback mode.
+        Verifies the organizer doesn't stay stuck in fallback mode after a
+        previous call failed to connect.
         """
-        # First call: Ollama is down
+        # First call: Ollama is down — processors fail to initialize
         with (
             patch(
                 "file_organizer.services.text_processor.TextProcessor.initialize",
@@ -107,33 +108,36 @@ class TestFallbackDoesNotCrash:
         ):
             organizer.organize(source_dir, output_dir)
 
-        # Flag was set False during first call
-        assert organizer._ollama_available is False
+        # After failed init, processors should be None (not half-initialized)
+        assert organizer.text_processor is None
+        assert organizer.vision_processor is None
 
-        # Second call: Ollama has recovered — patches removed, initialize succeeds
-        # We patch initialize to succeed (no-op) and verify the flag resets
+        # Second call: Ollama has recovered — use stub init that sets _initialized
+        from tests.integration.conftest import _fake_model_init
+
         with (
             patch(
-                "file_organizer.services.text_processor.TextProcessor.initialize",
-                return_value=None,
+                "file_organizer.models.text_model.TextModel.initialize",
+                _fake_model_init,
             ),
             patch(
-                "file_organizer.services.vision_processor.VisionProcessor.initialize",
-                return_value=None,
+                "file_organizer.models.vision_model.VisionModel.initialize",
+                _fake_model_init,
             ),
             patch(
                 "file_organizer.core.organizer.FileOrganizer._process_text_files",
                 return_value=[],
-            ),
+            ) as mock_text,
             patch(
                 "file_organizer.core.organizer.FileOrganizer._process_image_files",
                 return_value=[],
-            ),
+            ) as mock_image,
         ):
             organizer.organize(source_dir, output_dir)
 
-        # Flag must be reset True — Ollama is available again
-        assert organizer._ollama_available is True
+        # AI processing paths were called (not fallback)
+        assert mock_text.call_count > 0, "Expected AI text processing, got fallback"
+        assert mock_image.call_count > 0, "Expected AI image processing, got fallback"
 
 
 # ---------------------------------------------------------------------------

@@ -242,7 +242,6 @@ class TestFileOrganizer:
         organizer._show_file_breakdown(
             [tmp_path], [tmp_path], [tmp_path], [tmp_path], [tmp_path], [tmp_path]
         )
-        organizer._show_skipped_files([tmp_path], [tmp_path], [tmp_path])
 
         res = OrganizationResult(total_files=5, processing_time=1.0)
         organizer._show_summary(res, tmp_path)
