@@ -45,11 +45,17 @@ Run after all implementation work is done, before `/pr` or `gh pr create`.
    - If tests were written in streams/phases, verify they compose correctly
 
 4. **Run `/audit` on all changed code**
-   - Checks against project anti-pattern rules (F1-F9 feature patterns, test patterns, CI patterns)
+   - Checks against project anti-pattern rules (F1-F10 feature patterns, test patterns, CI patterns)
    - Catches project-specific issues that /simplify's generic review misses
    - Fix findings, re-run tests
 
-5. **Run `/simplify` on all changed code**
+5. **Verify docstring-code alignment** (F10 DOCSTRING_DRIFT)
+   - For every function whose exception handling, return type, or control flow changed on this branch, verify its docstring still matches
+   - Run: `git diff main -- '*.py' | grep -B5 'except\|return\|raise'` to find changed flow
+   - For each match, read the function's docstring and verify it describes the current behavior
+   - Common drift: docstring says "raises X" but code now catches X; docstring says "returns None on failure" but code now raises
+
+6. **Run `/simplify` on all changed code**
    - Launch code reuse, quality, and efficiency review agents
    - Verify each finding against actual source before applying (agents can hallucinate)
    - Apply valid findings, skip false positives
@@ -57,31 +63,31 @@ Run after all implementation work is done, before `/pr` or `gh pr create`.
 
 ### Phase 3: Documentation Completeness
 
-6. **Check user-facing docs for gaps**
+7. **Check user-facing docs for gaps**
    - Search `docs/`, `CONTRIBUTING.md`, `README.md` for references to the area you changed
    - Are new features/patterns documented for contributors?
    - Are existing docs stale? (old counts, removed features, renamed classes)
    - Use the Agent tool to search broadly — don't guess
 
-7. **Check internal docs for staleness**
+8. **Check internal docs for staleness**
    - Epic planning docs: do estimates match actuals? (test counts, file counts, exit gates)
    - `.claude/rules/` files: any references to old patterns?
    - `memory/MEMORY.md`: any stale entries?
 
-8. **Verify cross-references**
+9. **Verify cross-references**
    - Do docs reference files that exist? Run `bash .claude/scripts/pre-commit-validation.sh` (includes broken-link check)
    - Do test counts in docs match actual `pytest --collect-only -q` counts?
    - Do feature claims in docs match actual implementation?
 
 ### Phase 4: Final Verification
 
-9. **Run pre-commit validation**
+10. **Run pre-commit validation**
    ```bash
    bash .claude/scripts/pre-commit-validation.sh
    ```
    - Must pass before proceeding
 
-10. **Produce readiness summary**
+11. **Produce readiness summary**
    - List what was verified and what was fixed
    - Confirm branch is ready for PR creation
 
