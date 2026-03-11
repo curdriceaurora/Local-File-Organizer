@@ -28,16 +28,12 @@ class TestGetCurrentProvider:
 
         assert get_current_provider() == "openai"
 
-    def test_returns_ollama_when_set_explicitly(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_ollama_when_set_explicitly(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_PROVIDER", "ollama")
 
         assert get_current_provider() == "ollama"
 
-    def test_falls_back_to_ollama_on_unknown_value(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_falls_back_to_ollama_on_unknown_value(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_PROVIDER", "anthropic")
 
         # Should not raise — returns safe default
@@ -91,9 +87,7 @@ class TestGetModelConfigsFromEnvOllama:
 
 
 class TestGetModelConfigsFromEnvOpenAI:
-    def test_openai_provider_sets_provider_field(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_openai_provider_sets_provider_field(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_PROVIDER", "openai")
         monkeypatch.setenv("FO_OPENAI_API_KEY", "sk-abc")
         monkeypatch.delenv("FO_OPENAI_BASE_URL", raising=False)
@@ -105,9 +99,7 @@ class TestGetModelConfigsFromEnvOpenAI:
         assert text_cfg.provider == "openai"
         assert vision_cfg.provider == "openai"
 
-    def test_api_key_propagated_to_both_configs(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_api_key_propagated_to_both_configs(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_PROVIDER", "openai")
         monkeypatch.setenv("FO_OPENAI_API_KEY", "sk-secret")
         monkeypatch.delenv("FO_OPENAI_BASE_URL", raising=False)
@@ -117,9 +109,7 @@ class TestGetModelConfigsFromEnvOpenAI:
         assert text_cfg.api_key == "sk-secret"
         assert vision_cfg.api_key == "sk-secret"
 
-    def test_base_url_propagated_to_both_configs(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_base_url_propagated_to_both_configs(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_PROVIDER", "openai")
         monkeypatch.setenv("FO_OPENAI_BASE_URL", "http://localhost:1234/v1")
         monkeypatch.delenv("FO_OPENAI_API_KEY", raising=False)
@@ -165,9 +155,7 @@ class TestGetModelConfigsFromEnvOpenAI:
         assert text_cfg.name == "gpt-4o-mini"
         assert vision_cfg.name == "gpt-4o"
 
-    def test_model_types_correct_for_openai_configs(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_model_types_correct_for_openai_configs(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_PROVIDER", "openai")
         monkeypatch.setenv("FO_OPENAI_API_KEY", "sk-test")
 

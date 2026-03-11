@@ -137,17 +137,15 @@ class VisionModel(BaseModel):
         if self.config.extra_params:
             options.update(self.config.extra_params)
 
-        generate_kwargs = {
-            "model": self.config.name,
-            "prompt": prompt,
-            "images": images,
-            "options": options,
-            "stream": False,
-        }
-
         try:
             logger.debug(f"Analyzing image with model {self.config.name}")
-            response = self.client.generate(**generate_kwargs)
+            response = self.client.generate(
+                model=self.config.name,
+                prompt=prompt,
+                images=images,
+                options=options,
+                stream=False,
+            )
 
             # Detect token exhaustion and retry once with doubled budget
             if is_token_exhausted(response):
@@ -156,9 +154,14 @@ class VisionModel(BaseModel):
 
                 retry_num_predict = compute_retry_num_predict(options["num_predict"])
                 retry_options = {**options, "num_predict": retry_num_predict}
-                retry_kwargs = {**generate_kwargs, "options": retry_options}
 
-                response = self.client.generate(**retry_kwargs)
+                response = self.client.generate(
+                    model=self.config.name,
+                    prompt=prompt,
+                    images=images,
+                    options=retry_options,
+                    stream=False,
+                )
 
                 if is_token_exhausted(response):
                     retry_diag = format_exhaustion_diagnostics(response, self.config.name)

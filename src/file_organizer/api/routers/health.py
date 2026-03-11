@@ -63,7 +63,7 @@ async def health(response: Response) -> dict[str, object]:
 
     _READINESS_MAP: dict[str, str] = {
         "ok": "ready",
-        "unknown": "ready",   # provider not probed — optimistically ready
+        "unknown": "ready",  # provider not probed — optimistically ready
         "degraded": "starting",
         "error": "unhealthy",
     }

@@ -95,8 +95,7 @@ def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
     )
 
     logger.info(
-        "Provider configured from env: provider={}, text_model={}, vision_model={}, "
-        "base_url={}",
+        "Provider configured from env: provider={}, text_model={}, vision_model={}, base_url={}",
         provider,
         text_model_name,
         vision_model_name,

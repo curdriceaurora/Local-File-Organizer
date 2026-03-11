@@ -199,7 +199,7 @@ class TextModel(BaseModel):
             )
 
             accumulated_length = 0
-            last_chunk: dict[str, Any] = {}
+            last_chunk: Any = {}
 
             for chunk in stream:
                 last_chunk = chunk

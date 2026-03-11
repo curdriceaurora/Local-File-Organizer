@@ -142,7 +142,9 @@ class TestTextProcessor:
     def test_cleanup_owns_model(self) -> None:
         """Test cleanup delegates to model if owned."""
         mock_model = MagicMock()
-        with patch("file_organizer.services.text_processor.get_text_model", return_value=mock_model):
+        with patch(
+            "file_organizer.services.text_processor.get_text_model", return_value=mock_model
+        ):
             with patch("file_organizer.services.text_processor.ensure_nltk_data"):
                 processor = TextProcessor()
                 processor.cleanup()
@@ -159,7 +161,9 @@ class TestTextProcessor:
         """Test entering and exiting context manager."""
         mock_model = MagicMock()
         mock_model.is_initialized = False
-        with patch("file_organizer.services.text_processor.get_text_model", return_value=mock_model):
+        with patch(
+            "file_organizer.services.text_processor.get_text_model", return_value=mock_model
+        ):
             with patch("file_organizer.services.text_processor.ensure_nltk_data"):
                 with TextProcessor() as processor:
                     assert processor.text_model == mock_model
@@ -170,7 +174,9 @@ class TestTextProcessor:
         """Context manager calls cleanup even when an exception occurs."""
         mock_model = MagicMock()
         mock_model.is_initialized = False
-        with patch("file_organizer.services.text_processor.get_text_model", return_value=mock_model):
+        with patch(
+            "file_organizer.services.text_processor.get_text_model", return_value=mock_model
+        ):
             with patch("file_organizer.services.text_processor.ensure_nltk_data"):
                 with pytest.raises(RuntimeError, match="boom"):
                     with TextProcessor() as _processor:

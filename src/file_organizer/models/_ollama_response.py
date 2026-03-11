@@ -17,7 +17,7 @@ from file_organizer.models.base import (
 
 
 def is_token_exhausted(
-    response: dict[str, Any],
+    response: Any,
     min_length: int = MIN_USEFUL_RESPONSE_LENGTH,
 ) -> bool:
     """Return ``True`` when *response* indicates token-budget exhaustion.
@@ -57,7 +57,7 @@ def compute_retry_num_predict(
 
 
 def format_exhaustion_diagnostics(
-    response: dict[str, Any],
+    response: Any,
     model_name: str,
 ) -> str:
     """Format a human-readable diagnostic string for token exhaustion.
