@@ -16,8 +16,12 @@ from loguru import logger
 from rich.console import Console
 
 from file_organizer.core.types import (
+    AUDIO_EXTENSIONS,
+    AUDIO_FALLBACK_FOLDER,
     IMAGE_FALLBACK_FOLDER,
     TEXT_FALLBACK_MAP,
+    VIDEO_EXTENSIONS,
+    VIDEO_FALLBACK_FOLDER,
 )
 from file_organizer.history.models import OperationType
 from file_organizer.services import ProcessedFile, ProcessedImage
@@ -38,7 +42,8 @@ def collect_files(path: Path, console: Console) -> list[Path]:
     if path.is_file():
         files.append(path)
     else:
-        for root, _, filenames in os.walk(path):
+        for root, dirnames, filenames in os.walk(path):
+            dirnames[:] = [d for d in dirnames if not d.startswith(".")]
             for filename in filenames:
                 if not filename.startswith("."):
                     files.append(Path(root) / filename)
@@ -56,14 +61,14 @@ def fallback_by_extension(files: list[Path]) -> list[ProcessedFile]:
     Returns:
         List of ``ProcessedFile`` with extension-based folder assignment.
     """
-    from file_organizer.core.types import IMAGE_EXTENSIONS
+    from file_organizer.core.types import IMAGE_EXTENSIONS as _IMG_EXT
 
     results: list[ProcessedFile] = []
     for file_path in files:
         ext = file_path.suffix.lower()
         if ext in TEXT_FALLBACK_MAP:
             folder = TEXT_FALLBACK_MAP[ext]
-        elif ext in IMAGE_EXTENSIONS:
+        elif ext in _IMG_EXT:
             try:
                 year = str(
                     datetime.datetime.fromtimestamp(file_path.stat().st_mtime, tz=datetime.UTC).year
@@ -71,6 +76,10 @@ def fallback_by_extension(files: list[Path]) -> list[ProcessedFile]:
             except OSError:
                 year = "Unknown"
             folder = f"{IMAGE_FALLBACK_FOLDER}/{year}"
+        elif ext in AUDIO_EXTENSIONS:
+            folder = AUDIO_FALLBACK_FOLDER
+        elif ext in VIDEO_EXTENSIONS:
+            folder = VIDEO_FALLBACK_FOLDER
         else:
             folder = "Other"
 

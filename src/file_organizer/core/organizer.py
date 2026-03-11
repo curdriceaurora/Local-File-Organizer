@@ -171,15 +171,15 @@ class FileOrganizer:
 
         for f in files:
             ext = f.suffix.lower()
-            if ext in TEXT_EXTENSIONS:
+            if ext in self.TEXT_EXTENSIONS:
                 text_files.append(f)
-            elif ext in IMAGE_EXTENSIONS:
+            elif ext in self.IMAGE_EXTENSIONS:
                 image_files.append(f)
-            elif ext in VIDEO_EXTENSIONS:
+            elif ext in self.VIDEO_EXTENSIONS:
                 video_files.append(f)
-            elif ext in AUDIO_EXTENSIONS:
+            elif ext in self.AUDIO_EXTENSIONS:
                 audio_files.append(f)
-            elif ext in CAD_EXTENSIONS:
+            elif ext in self.CAD_EXTENSIONS:
                 cad_files.append(f)
             else:
                 other_files.append(f)

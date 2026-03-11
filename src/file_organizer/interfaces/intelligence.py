@@ -50,7 +50,7 @@ class ScorerProtocol(Protocol):
         min_val: float = ...,
         max_val: float = ...,
     ) -> float:
-        """Normalize *score* to a 0–1 range."""
+        """Normalize *score* to a 0-1 range."""
         ...
 
     @staticmethod

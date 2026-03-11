@@ -19,6 +19,7 @@ from file_organizer.interfaces import (
     FileProcessorProtocol,
     LearnerProtocol,
     ScorerProtocol,
+    StorageProtocol,
     TextModelProtocol,
     VisionModelProtocol,
 )
@@ -207,3 +208,35 @@ class TestIntelligenceProtocolConformance:
 
         scorer = PatternScorer()
         assert isinstance(scorer, ScorerProtocol)
+
+
+# ---------------------------------------------------------------------------
+# Storage protocol conformance
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestStorageProtocolConformance:
+    """Verify that a minimal implementation satisfies StorageProtocol.
+
+    No concrete StorageProtocol implementation exists yet (forward-looking
+    contract).  This test uses a stub to confirm the protocol shape is
+    structurally sound and that ``isinstance()`` works at runtime.
+    """
+
+    def test_stub_satisfies_storage_protocol(self) -> None:
+        class _StubStorage:
+            def get(self, key: str) -> object | None:
+                return None
+
+            def put(self, key: str, value: object) -> None:
+                pass
+
+            def delete(self, key: str) -> bool:
+                return False
+
+            def exists(self, key: str) -> bool:
+                return False
+
+        assert isinstance(_StubStorage(), StorageProtocol)

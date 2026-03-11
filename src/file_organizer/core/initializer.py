@@ -41,8 +41,10 @@ def init_text_processor(
         if processor is not None:
             try:
                 processor.cleanup()
-            except Exception:
-                pass
+            except Exception as cleanup_err:
+                logger.opt(exception=cleanup_err).warning(
+                    "Text processor cleanup failed after init error"
+                )
         console.print(
             f"[yellow]⚠ Text model unavailable ({e.__class__.__name__}): "
             "falling back to extension-based organization[/yellow]"
@@ -77,8 +79,10 @@ def init_vision_processor(
         if processor is not None:
             try:
                 processor.cleanup()
-            except Exception:
-                pass
+            except Exception as cleanup_err:
+                logger.opt(exception=cleanup_err).warning(
+                    "Vision processor cleanup failed after init error"
+                )
         console.print(
             f"[yellow]⚠ Vision model unavailable ({e.__class__.__name__}): "
             "falling back to extension-based organization for images[/yellow]"
