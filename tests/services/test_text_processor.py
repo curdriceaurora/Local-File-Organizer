@@ -23,6 +23,7 @@ pytestmark = [pytest.mark.unit]
 def mock_text_model() -> MagicMock:
     """Mocked TextModel instance."""
     model = MagicMock()
+    model.config.model_type = ModelType.TEXT
     model.is_initialized = True
     # Default generate response to something predictable
     model.generate.return_value = "Mocked AI Response"

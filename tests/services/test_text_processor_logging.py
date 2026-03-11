@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from file_organizer.models.base import ModelType
 from file_organizer.services.text_processor import TextProcessor
 
 # ---------------------------------------------------------------------------
@@ -21,6 +22,7 @@ from file_organizer.services.text_processor import TextProcessor
 def mock_text_model():
     """Return a MagicMock that stands in for TextModel."""
     model = MagicMock()
+    model.config.model_type = ModelType.TEXT
     model.is_initialized = True
     # First call: description, second: folder name, third: filename
     model.generate.side_effect = [
