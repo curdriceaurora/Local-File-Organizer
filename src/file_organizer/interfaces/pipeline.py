@@ -54,10 +54,7 @@ class StageContext:
     def _validate_path_component(field_name: str, value: str) -> str:
         """Reject traversal sequences, separators, and Windows drive anchors."""
         if value and (
-            ".." in value
-            or "/" in value
-            or "\\" in value
-            or bool(PureWindowsPath(value).drive)
+            ".." in value or "/" in value or "\\" in value or bool(PureWindowsPath(value).drive)
         ):
             raise ValueError(f"Invalid {field_name}: {value!r}")
         return value
