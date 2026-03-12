@@ -293,10 +293,10 @@ class FeedbackCollector:
                 data = json.load(f)
             return [FeedbackEvent.from_dict(item) for item in data]
         except (json.JSONDecodeError, KeyError, TypeError) as e:
-            logger.error("Failed to load feedback events: %s", e)
+            logger.error("Failed to load feedback events: %s", e, exc_info=True)
             return []
         except OSError as e:
-            logger.error("Cannot read feedback file: %s", e)
+            logger.error("Cannot read feedback file: %s", e, exc_info=True)
             return []
 
     def _save_events(self) -> None:
@@ -307,7 +307,7 @@ class FeedbackCollector:
             with open(self._feedback_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
         except OSError as e:
-            logger.error("Failed to save feedback events: %s", e)
+            logger.error("Failed to save feedback events: %s", e, exc_info=True)
 
 
 class PatternLearner:

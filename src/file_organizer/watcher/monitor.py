@@ -87,6 +87,7 @@ class FileMonitor:
                 logger.warning(
                     "Native observer failed to initialize: %s. Falling back to polling observer.",
                     e,
+                    exc_info=True,
                 )
                 self._observer = PollingObserver(timeout=1.0)
                 self._observer_type = "polling"

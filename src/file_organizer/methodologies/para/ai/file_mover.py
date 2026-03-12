@@ -220,7 +220,7 @@ class PARAFileMover:
                 dry_run=False,
             )
         except OSError as e:
-            logger.error("Failed to move %s -> %s: %s", source, destination, e)
+            logger.error("Failed to move %s -> %s: %s", source, destination, e, exc_info=True)
             return MoveResult(
                 success=False,
                 source=source,
@@ -289,7 +289,7 @@ class PARAFileMover:
                     report.errors += 1
 
             except Exception as e:
-                logger.error("Error processing %s: %s", file_path, e)
+                logger.error("Error processing %s: %s", file_path, e, exc_info=True)
                 report.errors += 1
 
         return report
@@ -322,7 +322,7 @@ class PARAFileMover:
         try:
             files = [f for f in directory.rglob("*") if f.is_file()]
         except OSError as e:
-            logger.error("Cannot scan directory %s: %s", directory, e)
+            logger.error("Cannot scan directory %s: %s", directory, e, exc_info=True)
             return suggestions
 
         for file_path in files:
@@ -350,7 +350,7 @@ class PARAFileMover:
                         )
                     )
             except OSError as e:
-                logger.warning("Cannot stat file %s: %s", file_path, e)
+                logger.warning("Cannot stat file %s: %s", file_path, e, exc_info=True)
 
         # Sort by inactivity (most inactive first)
         suggestions.sort(key=lambda s: s.confidence, reverse=True)

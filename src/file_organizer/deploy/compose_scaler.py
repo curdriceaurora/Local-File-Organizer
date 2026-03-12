@@ -121,7 +121,7 @@ class ComposeScaler:
                 return False
             return True
         except (subprocess.SubprocessError, FileNotFoundError, OSError) as exc:
-            logger.error("Command execution error: %s", exc)
+            logger.error("Command execution error: %s", exc, exc_info=True)
             return False
 
     def _run_command_output(self, cmd: list[str]) -> str | None:
@@ -148,5 +148,5 @@ class ComposeScaler:
                 return None
             return result.stdout
         except (subprocess.SubprocessError, FileNotFoundError, OSError) as exc:
-            logger.error("Command execution error: %s", exc)
+            logger.error("Command execution error: %s", exc, exc_info=True)
             return None

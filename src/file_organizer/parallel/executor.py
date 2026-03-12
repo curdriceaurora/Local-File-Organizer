@@ -46,6 +46,7 @@ def create_executor(
                 "ProcessPoolExecutor initialization failed: %s. "
                 "Falling back to ThreadPoolExecutor.",
                 e,
+                exc_info=True,
             )
             thread_executor = ThreadPoolExecutor(max_workers=max_workers)
             logger.info(

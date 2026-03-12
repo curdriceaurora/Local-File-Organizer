@@ -216,7 +216,7 @@ class DuplicateDetector:
 
                 except (FileNotFoundError, PermissionError, ValueError) as e:
                     # Log error but continue
-                    logger.warning("Could not process %s: %s", file_path, e)
+                    logger.warning("Could not process %s: %s", file_path, e, exc_info=True)
                     continue
 
     def find_duplicates_of_file(

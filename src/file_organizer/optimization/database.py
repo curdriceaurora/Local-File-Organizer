@@ -256,7 +256,7 @@ class DatabaseOptimizer:
                 created += 1
                 logger.debug("Created index %s on %s(%s)", idx_name, table, columns)
             except sqlite3.OperationalError as exc:
-                logger.warning("Failed to create index %s: %s", idx_name, exc)
+                logger.warning("Failed to create index %s: %s", idx_name, exc, exc_info=True)
 
         conn.commit()
         logger.info("Created %d indexes", created)
@@ -349,7 +349,7 @@ class DatabaseOptimizer:
                     )
                 )
         except sqlite3.OperationalError as exc:
-            logger.error("Failed to explain query: %s", exc)
+            logger.error("Failed to explain query: %s", exc, exc_info=True)
             return QueryPlan(query=query, steps=[], estimated_cost=-1.0)
 
         # Simple heuristic: each SCAN step is expensive (100), SEARCH is
@@ -426,7 +426,7 @@ class DatabaseOptimizer:
                     effective,
                 )
             except sqlite3.OperationalError as exc:
-                logger.warning("Failed to set PRAGMA %s: %s", pragma_name, exc)
+                logger.warning("Failed to set PRAGMA %s: %s", pragma_name, exc, exc_info=True)
                 pragmas[pragma_name] = f"ERROR: {exc}"
 
         logger.info("Optimised %d PRAGMAs", len(pragmas))

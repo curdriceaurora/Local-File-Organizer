@@ -133,7 +133,7 @@ class CheckpointManager:
             data = json.loads(raw)
             return Checkpoint.from_dict(data)
         except (json.JSONDecodeError, KeyError, ValueError) as exc:
-            logger.warning("Failed to load checkpoint %s: %s", job_id, exc)
+            logger.warning("Failed to load checkpoint %s: %s", job_id, exc, exc_info=True)
             return None
 
     def save_checkpoint(self, checkpoint: Checkpoint) -> None:

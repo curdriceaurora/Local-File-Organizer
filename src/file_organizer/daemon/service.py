@@ -340,7 +340,7 @@ class DaemonService:
             signal.signal(signal.SIGINT, self._handle_signal)
             logger.debug("Installed SIGTERM and SIGINT handlers")
         except (OSError, ValueError) as exc:
-            logger.warning("Could not install signal handlers: %s", exc)
+            logger.warning("Could not install signal handlers: %s", exc, exc_info=True)
             # Close pipe fds if they were created before the failure
             if self._sig_wakeup_r is not None:
                 os.close(self._sig_wakeup_r)
@@ -363,7 +363,7 @@ class DaemonService:
                 self._original_sigint = None
             logger.debug("Restored original signal handlers")
         except (OSError, ValueError) as exc:
-            logger.warning("Could not restore signal handlers: %s", exc)
+            logger.warning("Could not restore signal handlers: %s", exc, exc_info=True)
         finally:
             # Always close pipe fds and clear attributes, even if signal restoration fails
             if self._sig_wakeup_r is not None:

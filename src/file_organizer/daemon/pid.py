@@ -69,7 +69,7 @@ class PidFileManager:
                 return None
             return int(content)
         except (ValueError, OSError) as exc:
-            logger.warning("Failed to read PID from %s: %s", pid_file, exc)
+            logger.warning("Failed to read PID from %s: %s", pid_file, exc, exc_info=True)
             return None
 
     def remove_pid(self, pid_file: Path) -> bool:
@@ -92,7 +92,7 @@ class PidFileManager:
             logger.debug("Removed PID file: %s", pid_file)
             return True
         except OSError as exc:
-            logger.warning("Failed to remove PID file %s: %s", pid_file, exc)
+            logger.warning("Failed to remove PID file %s: %s", pid_file, exc, exc_info=True)
             return False
 
     def is_running(self, pid_file: Path) -> bool:

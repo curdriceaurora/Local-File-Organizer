@@ -244,7 +244,7 @@ class PARASuggestionEngine:
                 suggestion = self.suggest(path)
                 suggestions.append(suggestion)
             except Exception as e:
-                logger.error("Failed to generate suggestion for %s: %s", path, e)
+                logger.error("Failed to generate suggestion for %s: %s", path, e, exc_info=True)
                 # Return a low-confidence fallback
                 suggestions.append(
                     PARASuggestion(
@@ -308,7 +308,7 @@ class PARASuggestionEngine:
         try:
             return self._heuristic_engine.evaluate(file_path)
         except Exception as e:
-            logger.error("Heuristic evaluation failed for %s: %s", file_path, e)
+            logger.error("Heuristic evaluation failed for %s: %s", file_path, e, exc_info=True)
             from ..detection.heuristics import CategoryScore
 
             return HeuristicResult(

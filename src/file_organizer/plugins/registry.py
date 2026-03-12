@@ -298,7 +298,13 @@ class PluginRegistry:
             try:
                 results[name] = record.executor.call(method, *args, **kwargs)
             except Exception as exc:
-                logger.warning("Plugin '%s' raised an error in '%s': %s", name, method, exc)
+                logger.warning(
+                    "Plugin '%s' raised an error in '%s': %s",
+                    name,
+                    method,
+                    exc,
+                    exc_info=True,
+                )
                 results[name] = exc
         return results
 
@@ -313,7 +319,12 @@ class PluginRegistry:
             try:
                 self.unload_plugin(plugin_name)
             except Exception as exc:
-                logger.warning("Error while unloading plugin '%s': %s", plugin_name, exc)
+                logger.warning(
+                    "Error while unloading plugin '%s': %s",
+                    plugin_name,
+                    exc,
+                    exc_info=True,
+                )
 
     # ------------------------------------------------------------------
     # Internal helpers

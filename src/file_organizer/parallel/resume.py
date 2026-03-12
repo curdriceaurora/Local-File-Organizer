@@ -249,7 +249,7 @@ class ResumableProcessor:
                     files_since_save = 0
 
         except Exception as exc:
-            logger.error("Job %s failed with error: %s", job.id, exc)
+            logger.error("Job %s failed with error: %s", job.id, exc, exc_info=True)
             job.status = JobStatus.FAILED
             job.error = str(exc)
             job.updated = datetime.now(UTC)

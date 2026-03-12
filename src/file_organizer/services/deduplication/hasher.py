@@ -123,7 +123,7 @@ class FileHasher:
                 results[file_path] = hash_value
             except (FileNotFoundError, PermissionError, ValueError) as e:
                 # Log error but continue processing
-                logger.warning("Could not hash %s: %s", file_path, e)
+                logger.warning("Could not hash %s: %s", file_path, e, exc_info=True)
                 continue
 
         return results

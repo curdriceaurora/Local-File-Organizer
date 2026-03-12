@@ -106,7 +106,7 @@ class JobPersistence:
             data = json.loads(raw)
             return JobState.from_dict(data)
         except (json.JSONDecodeError, KeyError, ValueError) as exc:
-            logger.warning("Failed to load job %s: %s", job_id, exc)
+            logger.warning("Failed to load job %s: %s", job_id, exc, exc_info=True)
             return None
 
     def list_jobs(self, status: JobStatus | None = None) -> list[JobSummary]:
@@ -131,7 +131,7 @@ class JobPersistence:
                     continue
                 summaries.append(JobSummary.from_job_state(job))
             except (json.JSONDecodeError, KeyError, ValueError) as exc:
-                logger.warning("Skipping invalid job file %s: %s", path, exc)
+                logger.warning("Skipping invalid job file %s: %s", path, exc, exc_info=True)
                 continue
 
         summaries.sort(key=lambda s: s.created, reverse=True)

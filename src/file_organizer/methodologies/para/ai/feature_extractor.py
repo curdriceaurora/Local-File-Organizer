@@ -309,7 +309,7 @@ class FeatureExtractor:
         try:
             stat = file_path.stat()
         except OSError as e:
-            logger.error("Cannot stat file %s: %s", file_path, e)
+            logger.error("Cannot stat file %s: %s", file_path, e, exc_info=True)
             return MetadataFeatures(file_type=file_path.suffix.lower())
 
         now = time.time()
