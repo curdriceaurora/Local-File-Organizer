@@ -137,11 +137,14 @@ class PipelineOrchestrator:
                 using I/O threads while the current file's compute stages
                 run.  Set to 0 to disable prefetch (sequential fallback).
                 Defaults to 2.
-            prefetch_stages: How many leading stages to treat as I/O
-                stages and run in the prefetch thread pool.  The
-                remaining stages run on the calling thread.  Defaults
-                to 1 (prefetch the first stage, typically
-                :class:`~file_organizer.pipeline.stages.PreprocessorStage`).
+            prefetch_stages: Requested number of leading stages to treat
+                as I/O stages.  For thread-safety, the current
+                implementation caps the effective prefetched stage count
+                at 1, so only the first stage (typically
+                :class:`~file_organizer.pipeline.stages.PreprocessorStage`)
+                runs in the prefetch thread pool; remaining stages run on
+                the calling thread.  Values greater than 1 currently log
+                a warning and are treated as 1.  Defaults to 1.
             memory_limiter: Optional limiter that gates whether a new
                 prefetch slot may be opened.  When ``limiter.check()``
                 returns *False*, no new prefetch futures are submitted

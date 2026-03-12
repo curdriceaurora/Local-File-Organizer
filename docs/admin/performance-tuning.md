@@ -107,7 +107,7 @@ latency behind LLM inference time.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `prefetch_depth` | `2` | Files to pre-process ahead of current file. `0` disables prefetch. |
-| `prefetch_stages` | `1` | Leading stages treated as I/O-bound and run in the prefetch thread pool. |
+| `prefetch_stages` | `1` | Requested number of leading stages to prefetch. The current implementation only supports the first stage; values greater than `1` log a warning and are effectively treated as `1`. |
 | `memory_limiter` | `None` | Optional `MemoryLimiter`; gates whether a new prefetch slot opens. |
 
 ### Tuning Tips
@@ -116,6 +116,8 @@ latency behind LLM inference time.
 - Keep `prefetch_depth=2` (default) for typical SSD + Ollama workloads
 - Set `prefetch_depth=0` to disable overlap and process files sequentially (useful
   for debugging or on memory-constrained systems)
+- Keep `prefetch_stages=1`; higher values are currently capped to the first
+  stage for thread-safety
 - Pass a `MemoryLimiter` to automatically back off prefetch when RSS approaches
   a configured ceiling
 - Note: `--no-prefetch` on the `file-organizer organize` CLI is currently a no-op
