@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+import ast
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+from file_organizer.review_regressions.framework import (
+    Violation,
+    fingerprint_ast_node,
+    iter_python_files,
+    render_report_json,
+    run_audit,
+)
+
+
+@dataclass
+class _Detector:
+    detector_id: str
+    rule_class: str
+    description: str
+    findings: list[Violation]
+
+    def find_violations(self, root: Path) -> list[Violation]:
+        return list(self.findings)
+
+
+def test_violation_fingerprint_is_stable_for_unchanged_finding(tmp_path: Path) -> None:
+    root = tmp_path
+    path = root / "pkg" / "module.py"
+    path.parent.mkdir(parents=True)
+    path.write_text("x = 1\n", encoding="utf-8")
+
+    first = Violation.from_path(
+        detector_id="test.detector",
+        rule_class="test-quality",
+        rule_id="weak-assertion",
+        root=root,
+        path=path,
+        message="Weak assertion",
+        line=1,
+        fingerprint_basis="assert mock.call_count >= 1",
+    )
+    second = Violation.from_path(
+        detector_id="test.detector",
+        rule_class="test-quality",
+        rule_id="weak-assertion",
+        root=root,
+        path=path,
+        message="Weak assertion",
+        line=1,
+        fingerprint_basis="assert mock.call_count >= 1",
+    )
+
+    assert first.fingerprint == second.fingerprint
+
+
+def test_run_audit_and_render_report_are_deterministic(tmp_path: Path) -> None:
+    root = tmp_path
+    (root / "b.py").write_text("print('b')\n", encoding="utf-8")
+    (root / "a.py").write_text("print('a')\n", encoding="utf-8")
+
+    findings = [
+        Violation.from_path(
+            detector_id="detector.z",
+            rule_class="correctness",
+            rule_id="z-rule",
+            root=root,
+            path=root / "b.py",
+            message="second",
+            line=9,
+        ),
+        Violation.from_path(
+            detector_id="detector.a",
+            rule_class="correctness",
+            rule_id="a-rule",
+            root=root,
+            path=root / "a.py",
+            message="first",
+            line=3,
+        ),
+    ]
+    detector = _Detector(
+        detector_id="detector.pack",
+        rule_class="correctness",
+        description="fixture detector",
+        findings=list(reversed(findings)),
+    )
+
+    report_one = run_audit(root, [detector])
+    report_two = run_audit(root, [detector])
+
+    json_one = render_report_json(report_one)
+    json_two = render_report_json(report_two)
+
+    assert json_one == json_two
+    payload = json.loads(json_one)
+    assert [finding["path"] for finding in payload["findings"]] == ["a.py", "b.py"]
+
+
+def test_iter_python_files_excludes_cache_and_orders_results(tmp_path: Path) -> None:
+    root = tmp_path
+    (root / "pkg").mkdir()
+    (root / "pkg" / "z.py").write_text("", encoding="utf-8")
+    (root / "pkg" / "a.py").write_text("", encoding="utf-8")
+    (root / "__pycache__").mkdir()
+    (root / "__pycache__" / "ignored.py").write_text("", encoding="utf-8")
+
+    assert [path.relative_to(root).as_posix() for path in iter_python_files(root)] == [
+        "pkg/a.py",
+        "pkg/z.py",
+    ]
+
+
+def test_ast_fingerprint_is_resilient_to_harmless_formatting_changes() -> None:
+    compact_node = ast.parse("value = foo(1, 2)\n").body[0]
+    expanded_node = ast.parse("value = foo(\n    1,\n    2,\n)\n").body[0]
+
+    assert fingerprint_ast_node(compact_node) == fingerprint_ast_node(expanded_node)
