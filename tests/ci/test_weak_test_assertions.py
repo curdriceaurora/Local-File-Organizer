@@ -95,6 +95,7 @@ def _find_weak_call_count_assertions(source: str, path: str = "<string>") -> lis
     - assert mock.call_count >= 1
     - assert mock.call_count > 0
     - assert 1 <= mock.call_count
+    - assert 0 < mock.call_count
     """
     tree = ast.parse(source, filename=path)
     violations: list[str] = []
@@ -274,6 +275,7 @@ def test_changed_test_files_includes_renames_in_diff_filter(
         ("assert mock.call_count >= 1\n", ["<string>:1"]),
         ("assert mock.call_count > 0\n", ["<string>:1"]),
         ("assert 1 <= mock.call_count\n", ["<string>:1"]),
+        ("assert 0 < mock.call_count\n", ["<string>:1"]),
     ],
 )
 def test_detector_flags_weak_mock_call_count_lower_bounds(source: str, expected: list[str]) -> None:
