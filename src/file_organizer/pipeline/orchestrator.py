@@ -454,7 +454,12 @@ class PipelineOrchestrator:
                     try:
                         ctx = future.result()
                     except Exception as exc:
-                        logger.warning("Prefetch future failed for %s: %s", files[i], exc)
+                        logger.warning(
+                            "Prefetch future failed for %s: %s",
+                            files[i],
+                            exc,
+                            exc_info=True,
+                        )
                         ctx = self._make_context(files[i])
                         ctx.error = str(exc)
                 else:

@@ -240,19 +240,23 @@ class TestPrefetchMemoryBound:
     def test_prefetch_proceeds_when_memory_available(self, tmp_path: Path) -> None:
         """When memory_limiter.check() always returns True, prefetch runs normally."""
         files = _make_files(tmp_path, count=4, size_bytes=256, seed=3)
+        prefetch_depth = 2
 
         limiter = _MemoryAvailable()
         orchestrator = PipelineOrchestrator(
             stages=[_SlowIOStage(), _SlowComputeStage(delay_s=0.0)],
-            prefetch_depth=2,
+            prefetch_depth=prefetch_depth,
             memory_limiter=limiter,
         )
         results = orchestrator.process_batch(files)
 
         assert len(results) == 4
         assert all(r.success for r in results)
-        # check() was called at least once per file slot
-        assert limiter.check_call_count >= 1
+        expected_min_checks = min(prefetch_depth, len(files)) + max(
+            0,
+            len(files) - prefetch_depth,
+        )
+        assert limiter.check_call_count >= expected_min_checks
 
 
 # ---------------------------------------------------------------------------
@@ -316,7 +320,7 @@ class TestPrefetchErrorHandling:
         real_files = _make_files(tmp_path, count=3, size_bytes=256, seed=6)
         ghost = tmp_path / "ghost.bin"  # never created
 
-        all_files = real_files[:1] + [ghost] + real_files[1:]
+        all_files = [*real_files[:1], ghost, *real_files[1:]]
 
         orchestrator = PipelineOrchestrator(
             stages=[PreprocessorStage(), _SlowComputeStage(delay_s=0.0)],
