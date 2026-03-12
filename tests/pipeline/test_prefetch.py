@@ -154,7 +154,7 @@ class TestPrefetchPerformance:
     def test_prefetch_faster_than_sequential(self, tmp_path: Path) -> None:
         """Prefetch depth=2 must be >= 20% faster than no-prefetch baseline.
 
-        Uses 10 × 1 MB files (seed=42), controlled sleep values to make
+        Uses 10 x 1 MB files (seed=42), controlled sleep values to make
         the I/O-compute overlap measurable in CI without flakiness.
         """
         files = _make_files(tmp_path, count=10, size_bytes=1024 * 1024, seed=42)
