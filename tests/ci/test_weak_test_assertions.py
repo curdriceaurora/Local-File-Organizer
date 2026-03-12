@@ -66,7 +66,7 @@ def _git_ref_exists(ref: str) -> bool:
     return result.returncode == 0
 
 
-def _fetch_base_ref(base_branch: str) -> None:
+def _fetch_base_ref(base_branch: str) -> str | None:
     """Fetch the PR base branch into a usable remote-tracking ref."""
     try:
         subprocess.run(
@@ -84,7 +84,9 @@ def _fetch_base_ref(base_branch: str) -> None:
             timeout=5,
         )
     except subprocess.TimeoutExpired:
-        return
+        return f"git fetch origin {base_branch!r} timed out after 5 seconds"
+
+    return None
 
 
 def _merge_base_from_candidates() -> str:
@@ -195,10 +197,10 @@ def _resolve_diff_base() -> str | None:
 
     if base_branch:
         base_parent = _github_pr_base_parent()
-        if base_parent:
+        if base_parent and _git_ref_exists(base_parent):
             return base_parent
 
-        _fetch_base_ref(base_branch)
+        fetch_error = _fetch_base_ref(base_branch)
         merge_base = _merge_base_from_candidates()
         if merge_base:
             return merge_base
@@ -210,6 +212,11 @@ def _resolve_diff_base() -> str | None:
                 return merge_base
 
     if base_branch:
+        if fetch_error:
+            pytest.fail(
+                "Unable to determine changed test files for PR guardrail checks. "
+                f"Base branch fetch failed: {fetch_error}."
+            )
         return None
 
     head_parent = _git_stdout("rev-parse", "--verify", "--quiet", "HEAD^1", check=False)
@@ -399,6 +406,7 @@ def test_resolve_diff_base_prefers_github_pr_base_parent_before_fetch(
 
     monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: "")
     monkeypatch.setattr(MODULE, "_github_pr_base_parent", lambda: "base-parent-sha")
+    monkeypatch.setattr(MODULE, "_git_ref_exists", lambda ref: ref == "base-parent-sha")
     monkeypatch.setattr(
         MODULE,
         "_fetch_base_ref",
@@ -407,6 +415,26 @@ def test_resolve_diff_base_prefers_github_pr_base_parent_before_fetch(
 
     assert _resolve_diff_base() == "base-parent-sha"
     assert fetch_calls == []
+
+
+def test_resolve_diff_base_fetches_when_github_pr_base_parent_missing_locally(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_BASE_REF", "main")
+    fetch_calls: list[str] = []
+    merge_bases = iter(["", "fetched-base-sha"])
+
+    monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: next(merge_bases))
+    monkeypatch.setattr(MODULE, "_github_pr_base_parent", lambda: "base-parent-sha")
+    monkeypatch.setattr(MODULE, "_git_ref_exists", lambda ref: False)
+    monkeypatch.setattr(
+        MODULE,
+        "_fetch_base_ref",
+        lambda branch: fetch_calls.append(branch),
+    )
+
+    assert _resolve_diff_base() == "fetched-base-sha"
+    assert fetch_calls == ["main"]
 
 
 def test_github_pr_base_parent_uses_event_payload_to_pick_base_parent(
@@ -468,6 +496,23 @@ def test_resolve_diff_base_returns_none_in_pr_context_when_no_base_is_available(
     monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "")
 
     assert _resolve_diff_base() is None
+
+
+def test_resolve_diff_base_fails_with_fetch_timeout_details_in_pr_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_BASE_REF", "main")
+    monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: "")
+    monkeypatch.setattr(MODULE, "_github_pr_base_parent", lambda: "")
+    monkeypatch.setattr(
+        MODULE,
+        "_fetch_base_ref",
+        lambda branch: "git fetch origin 'main' timed out after 5 seconds",
+    )
+    monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "")
+
+    with pytest.raises(pytest.fail.Exception, match="timed out after 5 seconds"):
+        _resolve_diff_base()
 
 
 def test_changed_test_files_returns_empty_when_no_distinct_diff_base(
