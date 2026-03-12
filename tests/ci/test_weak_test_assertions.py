@@ -165,25 +165,47 @@ def _find_weak_call_count_assertions(source: str, path: str = "<string>") -> lis
 
 
 def _changed_test_files() -> list[Path]:
-    """Return changed test files relative to the best available diff base."""
+    """Return changed test files from CI and local pre-commit contexts."""
     diff_base = _resolve_diff_base()
     head_sha = _git_stdout("rev-parse", "HEAD")
-    if diff_base == head_sha:
-        return []
+    rel_paths: set[str] = set()
 
-    diff_output = _git_stdout(
+    if diff_base != head_sha:
+        diff_output = _git_stdout(
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMR",
+            f"{diff_base}...HEAD",
+            "--",
+            "tests/**/*.py",
+            "tests/*.py",
+        )
+        rel_paths.update(path for path in diff_output.splitlines() if path)
+
+    staged_diff_output = _git_stdout(
         "diff",
+        "--cached",
         "--name-only",
         "--diff-filter=ACMR",
-        f"{diff_base}...HEAD",
         "--",
         "tests/**/*.py",
         "tests/*.py",
     )
+    rel_paths.update(path for path in staged_diff_output.splitlines() if path)
+
+    worktree_diff_output = _git_stdout(
+        "diff",
+        "--name-only",
+        "--diff-filter=ACMR",
+        "--",
+        "tests/**/*.py",
+        "tests/*.py",
+    )
+    rel_paths.update(path for path in worktree_diff_output.splitlines() if path)
 
     return [
         FO_ROOT / rel_path
-        for rel_path in diff_output.splitlines()
+        for rel_path in sorted(rel_paths)
         if rel_path and (FO_ROOT / rel_path).is_file()
     ]
 
@@ -267,7 +289,7 @@ def test_changed_test_files_returns_empty_when_no_distinct_diff_base(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: "head-sha")
-    monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "head-sha")
+    monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "")
     assert _changed_test_files() == []
 
 
@@ -297,6 +319,42 @@ def test_changed_test_files_includes_renames_in_diff_filter(
         "tests/**/*.py",
         "tests/*.py",
     ) in recorded_calls
+
+
+def test_changed_test_files_includes_staged_and_worktree_diffs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_git_stdout(*args: str, check: bool = True) -> str:
+        if args == ("rev-parse", "HEAD"):
+            return "head-sha"
+        if args == (
+            "diff",
+            "--cached",
+            "--name-only",
+            "--diff-filter=ACMR",
+            "--",
+            "tests/**/*.py",
+            "tests/*.py",
+        ):
+            return "tests/ci/test_weak_test_assertions.py\n"
+        if args == (
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMR",
+            "--",
+            "tests/**/*.py",
+            "tests/*.py",
+        ):
+            return "tests/ci/test_review_regressions.py\n"
+        return ""
+
+    monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: "head-sha")
+    monkeypatch.setattr(MODULE, "_git_stdout", fake_git_stdout)
+
+    assert _changed_test_files() == [
+        FO_ROOT / "tests" / "ci" / "test_review_regressions.py",
+        FO_ROOT / "tests" / "ci" / "test_weak_test_assertions.py",
+    ]
 
 
 @pytest.mark.parametrize(
