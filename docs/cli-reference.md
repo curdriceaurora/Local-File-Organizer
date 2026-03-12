@@ -62,7 +62,7 @@ file-organizer organize ~/Downloads ~/Organized --dry-run
 # Verbose output
 file-organizer organize ~/Downloads ~/Organized --verbose
 
-# Disable prefetch for sequential debugging
+# Reserved flag: currently a no-op for `organize` (emits a warning only)
 file-organizer organize ~/Downloads ~/Organized --no-prefetch
 ```
 
