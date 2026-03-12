@@ -270,7 +270,8 @@ class PipelineOrchestrator:
     def process_batch(self, files: list[Path]) -> list[ProcessingResult]:
         """Process a batch of files through the pipeline.
 
-        When stages are configured and ``prefetch_depth > 0``, the first
+        When stages are configured, ``prefetch_depth > 0``,
+        ``prefetch_stages > 0``, and ``len(files) > 1``, the first
         configured stage may be run in a background thread pool so that I/O
         for file *N+1* overlaps with compute for file *N*. Values of
         ``prefetch_stages`` greater than 1 currently log a warning and are

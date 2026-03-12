@@ -64,7 +64,7 @@ repos:
       - id: no-weak-test-counter-assertions
         name: no weak test counter assertions
         entry: >
-          bash -c "git diff --cached -- 'tests/**/*.py' | grep -E '^\+.*assert .*(_call_count|call_count)\s*>=\s*1([[:space:]]|$)' | grep -v '^+++' && echo 'ERROR: weak test counter assertion — derive and assert a meaningful minimum or exact expected value' && exit 1 || exit 0"
+          bash -c "git diff --cached -- 'tests/**/*.py' | grep -vE '^\+\s*#' | grep -E '^\+.*assert .*(_call_count|call_count)\s*>=\s*1([[:space:],)]|$)' | grep -v '^+++' && echo 'ERROR: weak test counter assertion — derive and assert a meaningful minimum or exact expected value' && exit 1 || exit 0"
         language: system
         pass_filenames: false
 

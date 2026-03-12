@@ -174,10 +174,11 @@ def test_pipeline_prefetch_docs_match_stage_cap() -> None:
     init_doc = inspect.getdoc(PipelineOrchestrator.__init__) or ""
     batch_doc = inspect.getdoc(PipelineOrchestrator.process_batch) or ""
     performance_doc = PERFORMANCE_TUNING_DOC.read_text(encoding="utf-8")
+    normalized_init_doc = " ".join(init_doc.split())
 
     assert "effective prefetched stage count" in init_doc
     assert "at 1" in init_doc
-    assert "log" in init_doc
+    assert ("log a warning" in normalized_init_doc) or ("logs a warning" in normalized_init_doc)
     assert "treated as 1" in init_doc
     assert "effectively capped to 1 for thread-safety" in batch_doc
     assert "only supports the first stage" in performance_doc
