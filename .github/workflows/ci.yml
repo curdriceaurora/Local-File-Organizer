@@ -28,12 +28,11 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   lint:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -43,6 +42,8 @@ jobs:
       - run: pip install pre-commit
       - run: pip install -e ".[dev]"
       - run: pre-commit run --all-files
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   unused-deps:
     runs-on: ubuntu-latest
@@ -105,8 +106,6 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
         python-version: ${{ github.event_name == 'pull_request' && fromJson('["3.11"]') || fromJson('["3.11", "3.12"]') }}
@@ -135,6 +134,8 @@ jobs:
         # punkt_tab required by NLTK 3.9+ — word_tokenize() loads it internally
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             pytest tests/ -m "ci" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
