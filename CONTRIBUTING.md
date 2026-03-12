@@ -103,7 +103,7 @@ bash .claude/scripts/pre-commit-validation.sh
 This command orchestrates the real enforcement layers:
 - `pre-commit validate-config`
 - `pre-commit run --files ...` for changed files, or `--all-files` when nothing is staged
-- `pytest tests/ci -q --no-cov`
+- `pytest tests/ci -q --no-cov --override-ini="addopts="`
 
 It is intentionally not a second policy engine. If you need a new blocking rule,
 add it to `.pre-commit-config.yaml` or `tests/ci`, then let this script invoke it.

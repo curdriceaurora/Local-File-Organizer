@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -38,13 +39,15 @@ def test_pre_pr_script_is_not_a_second_policy_engine() -> None:
         "NARROW_EXCEPT=",
         "LOGURU_NO_TRACEBACK=",
         "ruff check .",
-        "mypy",
     ]
     for fragment in banned_fragments:
         assert fragment not in source, (
             "The pre-PR script should orchestrate enforced guardrails, not duplicate "
             f"blocking policy. Found banned fragment: {fragment}"
         )
+    assert not re.search(r"(?m)^\s*(?:if\s+!\s+)?(?:python(?:3)?\s+-m\s+)?mypy(?:\s|$)", source), (
+        "The pre-PR script should orchestrate enforced guardrails, not run mypy directly"
+    )
 
 
 def test_guardrail_docs_define_canonical_homes_and_conventions() -> None:
