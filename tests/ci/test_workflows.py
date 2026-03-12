@@ -188,6 +188,45 @@ class TestCIWorkflow:
         """Verify CI workflow has concurrency settings to cancel stale runs."""
         assert "concurrency" in workflow, "CI workflow should set concurrency to cancel stale runs"
 
+    def test_ci_exposes_permissions_and_token_for_ci_only_guardrails(
+        self, workflow: dict[str, Any]
+    ) -> None:
+        """Verify CI-only guardrails have the workflow support they require."""
+        permissions = workflow.get("permissions", {})
+        assert permissions.get("pull-requests") == "read", (
+            "ci.yml must grant pull-requests: read so PR guardrails can query PR files"
+        )
+
+        jobs = workflow.get("jobs", {})
+        lint_steps = jobs.get("lint", {}).get("steps", [])
+        test_steps = jobs.get("test", {}).get("steps", [])
+
+        lint_pre_commit_step = next(
+            (
+                step
+                for step in lint_steps
+                if isinstance(step, dict) and step.get("run") == "pre-commit run --all-files"
+            ),
+            None,
+        )
+        assert lint_pre_commit_step is not None, "lint job must run pre-commit across the repo"
+        assert (
+            lint_pre_commit_step.get("env", {}).get("GITHUB_TOKEN") == "${{ secrets.GITHUB_TOKEN }}"
+        ), "lint pre-commit step must expose GITHUB_TOKEN for CI-only PR guardrails"
+
+        test_run_step = next(
+            (
+                step
+                for step in test_steps
+                if isinstance(step, dict) and step.get("name") == "Run tests"
+            ),
+            None,
+        )
+        assert test_run_step is not None, "test job must have a Run tests step"
+        assert test_run_step.get("env", {}).get("GITHUB_TOKEN") == "${{ secrets.GITHUB_TOKEN }}", (
+            "test job must expose GITHUB_TOKEN for CI-only PR guardrails"
+        )
+
     def test_ci_has_frontend_test_job(self, workflow: dict[str, Any]) -> None:
         """Verify CI workflow includes frontend testing capability.
 

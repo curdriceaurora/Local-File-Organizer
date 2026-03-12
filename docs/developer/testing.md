@@ -176,7 +176,7 @@ runner = CliRunner()
 def test_organize_command():
     result = runner.invoke(app, ["organize", "/tmp/files"])
     assert result.exit_code == 0
-    assert "organized" in result.stdout
+    assert "organized" in result.output
 ```
 
 ### TUI Testing
@@ -305,11 +305,15 @@ Before committing, run the smoke test suite:
 # Fast pre-commit validation (< 30 seconds, matches actual gate)
 pytest tests/ -m "smoke" -q --strict-markers --timeout=30 --override-ini="addopts="
 
-# Or use the full validation script
+# Or use the canonical pre-PR guardrail orchestrator
 bash .claude/scripts/pre-commit-validation.sh
 ```
 
 Both must pass before committing code changes.
+
+For CLI help and usage assertions, prefer `result.output` instead of
+`result.stdout`. Typer and Rich can render styled help text differently across
+environments, so normalize rendered output before asserting exact help content.
 
 ## CI/CD Testing
 

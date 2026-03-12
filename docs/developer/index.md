@@ -50,6 +50,7 @@ python -m uvicorn main:app --reload
 - Code style and standards
 - Pull request process
 - Unit and integration testing
+- [Guardrail Workflow](guardrails.md) - Where new guardrails belong and how to validate them
 
 ## Architecture
 

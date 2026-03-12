@@ -89,7 +89,7 @@ bash .claude/scripts/pre-commit-validation.sh
 
 - `.claude/rules/code-quality-validation.md` — Validation patterns (MUST READ before commit)
 - `.claude/rules/quick-validation-checklist.md` — Quick reference
-- `.claude/scripts/pre-commit-validation.sh` — Automated validation script
+- `.claude/scripts/pre-commit-validation.sh` — Canonical pre-PR orchestrator for enforced guardrails
 - `.claude/rules/github-operations.md` — GitHub integration rules
 - `.claude/rules/datetime.md` — Timestamp requirements
 

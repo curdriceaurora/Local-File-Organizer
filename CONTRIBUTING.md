@@ -56,14 +56,15 @@ pre-commit install
 | **absolute-path-check** | Hardcoded absolute paths | `/Users/`, `/home/`, `C:\Users\` paths |
 | **pytest** (multiple) | CI guardrails, web UI, websocket tests | Test failures block commit |
 
-**Additional Checks** (via `bash .claude/scripts/pre-commit-validation.sh`):
+**Pre-PR Orchestration** (via `bash .claude/scripts/pre-commit-validation.sh`):
 
-| Check | Purpose | Catches |
-|-------|---------|---------|
-| **mypy** | Type safety (strict mode) | Type errors block commit |
-| **broken-link-check** | Documentation links | Broken references to files |
-| **dict-style access** | Dataclass pattern validation | Dict-style access on dataclasses |
-| **mock target validation** | Mock patch targets | Invalid `@patch()` targets |
+| Layer | Canonical owner | Purpose |
+|-------|-----------------|---------|
+| **Staged-file guardrails** | `.pre-commit-config.yaml` | Mechanical checks, focused pytest gates, and changed-file validation |
+| **Semantic guardrails** | `tests/ci/` | Behavior, contract, and review-regression checks |
+| **CI runtime support** | `.github/workflows/ci.yml` | Permissions and environment required by CI-only guardrails |
+| **Pre-PR orchestration** | `.claude/scripts/pre-commit-validation.sh` | Runs the enforced layers above before push/PR |
+| **Reference guidance** | anti-pattern docs under `memory/` and `.claude/rules/` | Explains why a guard exists; not a blocking policy source |
 
 **Manual Validation**:
 
@@ -75,7 +76,7 @@ pre-commit run --all-files
 pre-commit run ruff-check --all-files
 pre-commit run codespell --all-files
 
-# Run full validation script (includes hooks + additional checks)
+# Run the canonical pre-PR guardrail orchestrator
 bash .claude/scripts/pre-commit-validation.sh
 ```
 
@@ -92,19 +93,20 @@ git commit --no-verify
 
 ## Pre-Push Checklist
 
-**MANDATORY**: Before EVERY push, run the pre-commit validation script:
+**MANDATORY**: Before EVERY push, run the canonical pre-PR guardrail orchestrator:
 
 ```bash
 bash .claude/scripts/pre-commit-validation.sh
 # Must pass (exit code 0) before proceeding to push
 ```
 
-This script validates:
-- Code linting (ruff)
-- Type checking (mypy strict)
-- Test suite (smoke tests for speed)
-- Pattern validation (dict-style dataclass access, imports, etc.)
-- Documentation (links, markers, coverage gate claims)
+This command orchestrates the real enforcement layers:
+- `pre-commit validate-config`
+- `pre-commit run --files ...` for changed files, or `--all-files` when nothing is staged
+- `pytest tests/ci -q --no-cov`
+
+It is intentionally not a second policy engine. If you need a new blocking rule,
+add it to `.pre-commit-config.yaml` or `tests/ci`, then let this script invoke it.
 
 **Do not push if validation fails.** Fix violations and re-run until it passes.
 
@@ -206,6 +208,18 @@ The `.actrc` file in the project root pins the Docker image and architecture aut
 
 `scripts/test-local-matrix.sh` mirrors the Python matrix locally on the host OS.
 `act` mirrors the full workflow inside Docker for ubuntu-latest parity.
+
+## Guardrail Ownership
+
+Guardrails now have one canonical home each:
+
+- Add staged diff or mechanical checks to `.pre-commit-config.yaml`.
+- Add semantic or contract regressions to `tests/ci/`.
+- Add workflow permissions or environment support to `.github/workflows/ci.yml`.
+- Use `.claude/scripts/pre-commit-validation.sh` only to orchestrate those layers before a PR.
+- Keep anti-pattern docs explanatory; they should not be the only place a blocking rule exists.
+
+For the current conventions and examples, see [Developer Guardrails](docs/developer/guardrails.md).
 
 ---
 

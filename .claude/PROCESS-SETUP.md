@@ -12,8 +12,8 @@ This document describes the three phases that enable autonomous PR execution wit
 
 1. **Phase 1: Pre-Commit Validation** ✅ Complete
    - Automated checks prevent bad code from ever reaching GitHub
-   - ~750 lines of validation rules built into `.claude/scripts/pre-commit-validation.sh`
-   - Status: Running on every commit to catch issues locally
+   - `.claude/scripts/pre-commit-validation.sh` is now the canonical pre-PR orchestrator
+   - Status: Runs enforced hooks and `tests/ci` locally before push/PR
 
 2. **Phase 2: Auto-Merge Configuration** ✅ Complete
    - GitHub automatically merges PRs when conditions are met
@@ -29,63 +29,22 @@ This document describes the three phases that enable autonomous PR execution wit
 
 ## Phase 1: Pre-Commit Validation ✅
 
-**What It Does**: Runs before every commit to prevent bad code from reaching GitHub.
+**What It Does**: Runs the enforced guardrail layers before push or PR creation.
 
-**Location**: `.claude/scripts/pre-commit-validation.sh` (758 lines)
+**Location**: `.claude/scripts/pre-commit-validation.sh`
 
-**Validation Checks** (in order):
+**Canonical Flow**:
 
-1. **Branch Verification** (2 sec)
-   - Confirms you're on correct branch
-   - Checks for CCPM tracking awareness
-   - Warns if issue tracking not started
+1. `pre-commit validate-config`
+2. `pre-commit run --files ...` for changed files, or `--all-files` when nothing is staged
+3. `pytest tests/ci -q --no-cov`
 
-2. **Build Artifact Detection** (1 sec)
-   - Blocks `.coverage`, `*.bak`, `*.pyc`, `*.pyo` files
-   - Prevents bloat in repository
+**Policy Ownership**:
 
-3. **Absolute Path Detection** (1 sec)
-   - Blocks hardcoded paths like `/Users/username/...`
-   - Enforces relative paths for portability
-
-4. **Python Pattern Validation** (2 sec)
-   - Dict-style dataclass access (❌ `if "field" in obj`)
-   - Bracket access on dataclasses (❌ `obj["field"]`)
-   - Known anti-patterns from code review
-
-5. **Linting** (ruff check) (10-30 sec)
-   - Code style and lint rules
-   - Type annotations in `src/` files
-
-6. **Type Checking** (mypy) (10-30 sec)
-   - Full type safety validation
-   - Uses strict mode
-
-7. **Code Quality Requirements** (advisory)
-   - Detects significant changes (>50 lines)
-   - Requires `/simplify` and `/code-reviewer` quality gates
-   - Prevents pushing untested code
-
-8. **Markdown Validation** (5-10 sec)
-   - Link verification (no broken links)
-   - Markdown linting (MD022, MD040, etc.)
-   - Docs format conformity
-
-9. **Documentation Content Verification** (10-20 sec)
-   - Verifies coverage percentage claims
-   - Checks method examples exist in code
-   - Detects contradictions
-
-10. **Test Execution** (10-60 sec depending on count)
-    - Runs tests for modified modules
-    - Validates mock @patch targets
-    - Runs security-focused tests
-    - Runs CLI docs accuracy tests
-
-11. **Datetime Timezone Safety** (2 sec)
-    - Blocks naive `datetime.now()`
-    - Blocks deprecated `utcnow()`
-    - Enforces UTC timezone safety
+- `.pre-commit-config.yaml` owns staged-file and mechanical blocking checks
+- `tests/ci/` owns semantic and contract guardrails
+- `.github/workflows/ci.yml` owns CI runtime permissions and environment support
+- `.claude/scripts/pre-commit-validation.sh` orchestrates those layers but does not define duplicate blocking policy
 
 **When It Runs**:
 ```bash
