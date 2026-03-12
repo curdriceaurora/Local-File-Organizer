@@ -167,6 +167,35 @@ if [[ -n "$PY_FILES" ]]; then
     fi
   done
 
+  # Cross-file validated-setter bypass check (PR #749 lesson)
+  # When a dataclass defines __setattr__ or __post_init__ to validate specific fields,
+  # direct object.__setattr__() calls in OTHER files bypass that guard entirely.
+  # This check fires whenever a file with such validation is staged.
+  if echo "$PY_DIFF" | grep -qE 'def __setattr__|def __post_init__'; then
+    # Scan all src/ files for object.__setattr__ patterns on context/dataclass instances
+    BYPASS_VIOLATIONS=$(grep -rn "object\.__setattr__" src/ 2>/dev/null | grep -v "def __setattr__" || true)
+    if [[ -n "$BYPASS_VIOLATIONS" ]]; then
+      echo "❌ object.__setattr__ bypass detected — violates validated-setter contract:"
+      echo "$BYPASS_VIOLATIONS" | sed 's/^/  /'
+      echo ""
+      echo "Fix: Use direct attribute assignment (ctx.field = value) so __setattr__ validation runs."
+      exit 1
+    fi
+    echo "✓ No validated-setter bypasses found"
+    echo ""
+  fi
+
+  # Mixed-type dict semantic check (PR #749 lesson)
+  # dict[str, object] storing a str/int instead of a model instance is type-safe but semantically wrong.
+  # Flag any new code that stores a plain string into a dict annotated for model instances.
+  MIXED_DICT=$(echo "$PY_DIFF" | grep -nE '^\+.*_active_models\[.*\]\s*=\s*(new_model_id|[a-z_]+_id|"[^"]+")' | grep -v 'test_' || true)
+  if [[ -n "$MIXED_DICT" ]]; then
+    echo "⚠️  Semantic dict type warning: storing a model ID string in a dict meant for model instances:"
+    echo "$MIXED_DICT" | sed 's/^/  /'
+    echo "   Fix: Use a separate _active_model_ids dict for IDs, keep _active_models for live instances."
+    echo ""
+  fi
+
   # Loguru guard: Flag logger.warning("...: {}", e) where logger.opt(exception=e) preserves traceback
   LOGURU_NO_TRACEBACK=$(echo "$PY_DIFF" | grep -n '^+.*logger\.\(warning\|error\|critical\).*{.*,\s*e\s*)' | grep -v 'test_' || true)
   if [[ -n "$LOGURU_NO_TRACEBACK" ]]; then
