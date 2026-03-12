@@ -216,7 +216,7 @@ file-organizer hardware-info [OPTIONS]
 ```
 
 **Options:**
-- `--json` - Output the hardware profile as JSON
+- `--json` — Output the hardware profile as JSON
 
 **Examples:**
 
