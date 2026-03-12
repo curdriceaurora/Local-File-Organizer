@@ -379,7 +379,7 @@ class PipelineOrchestrator:
     ) -> ProcessingResult:
         """Run *file_path* through the configured stages."""
         start_time = time.monotonic()
-        context = self._make_context(Path(file_path))
+        context = self._make_context(file_path)
         context = self._run_stages(context, stages)
         return self._finalize_result(context, start_time)
 
@@ -430,7 +430,7 @@ class PipelineOrchestrator:
             ctx = self._make_context(files[idx])
             return self._run_stages(ctx, io_stages)
 
-        futures: dict[int, Future[StageContext]] = {}
+        futures: dict[int, tuple[Future[StageContext], float]] = {}
         results: list[ProcessingResult] = []
 
         with ThreadPoolExecutor(max_workers=self._prefetch_depth) as io_exec:
@@ -439,25 +439,26 @@ class PipelineOrchestrator:
                 if self._memory_limiter is not None and not self._memory_limiter.check():
                     logger.warning("Prefetch depth capped at %d due to memory limit", i)
                     break
-                futures[i] = io_exec.submit(_run_io, i)
+                futures[i] = (io_exec.submit(_run_io, i), time.monotonic())
 
             for i in range(len(files)):
                 # Enqueue the next lookahead file as we consume one slot.
                 next_i = i + self._prefetch_depth
                 if next_i < len(files) and next_i not in futures:
                     if self._memory_limiter is None or self._memory_limiter.check():
-                        futures[next_i] = io_exec.submit(_run_io, next_i)
+                        futures[next_i] = (io_exec.submit(_run_io, next_i), time.monotonic())
 
                 # Retrieve the prefetched I/O context (or compute inline).
-                start_time = time.monotonic()
                 if i in futures:
+                    future, start_time = futures.pop(i)
                     try:
-                        ctx = futures.pop(i).result()
+                        ctx = future.result()
                     except Exception as exc:
                         logger.warning("Prefetch future failed for %s: %s", files[i], exc)
                         ctx = self._make_context(files[i])
                         ctx.error = str(exc)
                 else:
+                    start_time = time.monotonic()
                     ctx = _run_io(i)
 
                 # Run compute stages on the calling thread.

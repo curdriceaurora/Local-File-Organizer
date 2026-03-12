@@ -137,6 +137,11 @@ pipeline = PipelineOrchestrator(
 results = pipeline.process_batch(files)
 ```
 
+`PipelineOrchestrator` uses `MemoryLimiter.check()` only to decide whether to
+open another prefetch slot, so the `LimitAction` configured on `MemoryLimiter`
+in this example does not affect prefetch gating; it only changes what happens
+when you call `limiter.enforce()` or use the guarded context manager.
+
 ## Adaptive Batch Sizing
 
 `AdaptiveBatchSizer` calculates how many files to process per batch based on

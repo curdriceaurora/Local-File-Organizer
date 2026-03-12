@@ -189,6 +189,26 @@ class TestPrefetchPerformance:
         assert len(results) == 3
         assert all(r.success for r in results)
 
+    def test_prefetched_result_duration_includes_io_time(self, tmp_path: Path) -> None:
+        """Per-file timing should start when prefetched I/O is submitted."""
+        files = _make_files(tmp_path, count=3, size_bytes=1024, seed=10)
+        io_delay = 0.04
+        compute_delay = 0.03
+
+        orchestrator = PipelineOrchestrator(
+            stages=[
+                _SlowIOStage(delay_s=io_delay),
+                _SlowComputeStage(delay_s=compute_delay),
+            ],
+            prefetch_depth=2,
+            prefetch_stages=1,
+        )
+
+        results = orchestrator.process_batch(files)
+
+        assert results[0].success
+        assert results[0].duration_ms >= (io_delay + compute_delay) * 1000
+
 
 # ---------------------------------------------------------------------------
 # Memory limiter tests
