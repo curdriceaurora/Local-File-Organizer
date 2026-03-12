@@ -45,6 +45,17 @@ def get_triggers(workflow: dict[str, Any]) -> dict[str, Any]:
     return triggers
 
 
+def get_effective_env(
+    workflow: dict[str, Any], job: dict[str, Any], step: dict[str, Any]
+) -> dict[str, Any]:
+    """Return the combined workflow, job, and step env maps for a step."""
+    effective_env: dict[str, Any] = {}
+    for env_source in (workflow.get("env", {}), job.get("env", {}), step.get("env", {})):
+        if isinstance(env_source, dict):
+            effective_env.update(env_source)
+    return effective_env
+
+
 @pytest.mark.unit
 class TestWorkflowDirectory:
     """Tests for the workflows directory structure."""
@@ -198,21 +209,27 @@ class TestCIWorkflow:
         )
 
         jobs = workflow.get("jobs", {})
-        lint_steps = jobs.get("lint", {}).get("steps", [])
-        test_steps = jobs.get("test", {}).get("steps", [])
+        lint_job = jobs.get("lint", {})
+        test_job = jobs.get("test", {})
+        lint_steps = lint_job.get("steps", [])
+        test_steps = test_job.get("steps", [])
 
         lint_pre_commit_step = next(
             (
                 step
                 for step in lint_steps
-                if isinstance(step, dict) and step.get("run") == "pre-commit run --all-files"
+                if isinstance(step, dict)
+                and isinstance(step.get("run"), str)
+                and "pre-commit run" in step["run"]
+                and "--all-files" in step["run"]
             ),
             None,
         )
         assert lint_pre_commit_step is not None, "lint job must run pre-commit across the repo"
-        assert (
-            lint_pre_commit_step.get("env", {}).get("GITHUB_TOKEN") == "${{ secrets.GITHUB_TOKEN }}"
-        ), "lint pre-commit step must expose GITHUB_TOKEN for CI-only PR guardrails"
+        lint_env = get_effective_env(workflow, lint_job, lint_pre_commit_step)
+        assert lint_env.get("GITHUB_TOKEN") == "${{ secrets.GITHUB_TOKEN }}", (
+            "lint pre-commit step must expose GITHUB_TOKEN for CI-only PR guardrails"
+        )
 
         test_run_step = next(
             (
@@ -223,7 +240,8 @@ class TestCIWorkflow:
             None,
         )
         assert test_run_step is not None, "test job must have a Run tests step"
-        assert test_run_step.get("env", {}).get("GITHUB_TOKEN") == "${{ secrets.GITHUB_TOKEN }}", (
+        test_env = get_effective_env(workflow, test_job, test_run_step)
+        assert test_env.get("GITHUB_TOKEN") == "${{ secrets.GITHUB_TOKEN }}", (
             "test job must expose GITHUB_TOKEN for CI-only PR guardrails"
         )
 
