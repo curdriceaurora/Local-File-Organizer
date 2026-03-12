@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import ast
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 FO_ROOT = Path(__file__).resolve().parents[2]
+MODULE = sys.modules[__name__]
 
 pytestmark = pytest.mark.ci
 
@@ -19,6 +22,65 @@ def _is_literal_int(node: ast.AST, value: int) -> bool:
 
 def _is_mock_call_count_attr(node: ast.AST) -> bool:
     return isinstance(node, ast.Attribute) and node.attr == "call_count"
+
+
+def _git_stdout(*args: str, check: bool = True) -> str:
+    """Run git and return stripped stdout."""
+    result = subprocess.run(
+        ["git", *args],
+        cwd=FO_ROOT,
+        check=check,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def _candidate_base_refs() -> list[str]:
+    """Return ordered base-ref candidates for local and GitHub PR environments."""
+    base_branch = os.environ.get("GITHUB_BASE_REF")
+    candidates: list[str] = []
+
+    if base_branch:
+        candidates.extend(
+            [f"origin/{base_branch}", f"refs/remotes/origin/{base_branch}", base_branch]
+        )
+
+    candidates.extend(["origin/main", "refs/remotes/origin/main", "main"])
+
+    # Preserve order while dropping duplicates.
+    return list(dict.fromkeys(candidates))
+
+
+def _git_ref_exists(ref: str) -> bool:
+    """Return whether *ref* resolves to a commit in the local checkout."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        cwd=FO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
+def _resolve_diff_base() -> str:
+    """Resolve a commit-ish usable as the changed-files diff base."""
+    for candidate in _candidate_base_refs():
+        if not _git_ref_exists(candidate):
+            continue
+
+        merge_base = _git_stdout("merge-base", "HEAD", candidate, check=False)
+        if merge_base:
+            return merge_base
+
+    # In GitHub PR jobs, HEAD is often a synthetic merge commit even when the
+    # base branch ref itself is not available locally.
+    head_parent = _git_stdout("rev-parse", "--verify", "--quiet", "HEAD^1", check=False)
+    if head_parent:
+        return head_parent
+
+    return _git_stdout("rev-parse", "HEAD")
 
 
 def _find_weak_call_count_assertions(source: str, path: str = "<string>") -> list[str]:
@@ -61,37 +123,85 @@ def _find_weak_call_count_assertions(source: str, path: str = "<string>") -> lis
 
 
 def _changed_test_files() -> list[Path]:
-    """Return changed test files relative to origin/main...HEAD."""
-    merge_base = subprocess.run(
-        ["git", "merge-base", "HEAD", "origin/main"],
-        cwd=FO_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
+    """Return changed test files relative to the best available diff base."""
+    diff_base = _resolve_diff_base()
+    head_sha = _git_stdout("rev-parse", "HEAD")
+    if diff_base == head_sha:
+        return []
 
-    diff_output = subprocess.run(
-        [
-            "git",
-            "diff",
-            "--name-only",
-            "--diff-filter=ACM",
-            f"{merge_base}...HEAD",
-            "--",
-            "tests/**/*.py",
-            "tests/*.py",
-        ],
-        cwd=FO_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
+    diff_output = _git_stdout(
+        "diff",
+        "--name-only",
+        "--diff-filter=ACM",
+        f"{diff_base}...HEAD",
+        "--",
+        "tests/**/*.py",
+        "tests/*.py",
+    )
 
     return [
         FO_ROOT / rel_path
         for rel_path in diff_output.splitlines()
         if rel_path and (FO_ROOT / rel_path).is_file()
     ]
+
+
+@pytest.mark.parametrize(
+    ("base_branch", "expected"),
+    [
+        ("main", ["origin/main", "refs/remotes/origin/main", "main"]),
+        (
+            "release",
+            [
+                "origin/release",
+                "refs/remotes/origin/release",
+                "release",
+                "origin/main",
+                "refs/remotes/origin/main",
+                "main",
+            ],
+        ),
+    ],
+)
+def test_candidate_base_refs_cover_local_and_github_pr_context(
+    monkeypatch: pytest.MonkeyPatch, base_branch: str, expected: list[str]
+) -> None:
+    monkeypatch.setenv("GITHUB_BASE_REF", base_branch)
+    assert _candidate_base_refs() == expected
+
+
+def test_candidate_base_refs_default_to_main_when_github_base_ref_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GITHUB_BASE_REF", raising=False)
+    assert _candidate_base_refs() == ["origin/main", "refs/remotes/origin/main", "main"]
+
+
+def test_resolve_diff_base_falls_back_to_head_parent_when_remote_base_ref_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        MODULE,
+        "_candidate_base_refs",
+        lambda: ["origin/main", "main"],
+    )
+    monkeypatch.setattr(MODULE, "_git_ref_exists", lambda ref: False)
+    monkeypatch.setattr(
+        MODULE,
+        "_git_stdout",
+        lambda *args, check=True: (
+            "parent-sha" if args == ("rev-parse", "--verify", "--quiet", "HEAD^1") else "head-sha"
+        ),
+    )
+    assert _resolve_diff_base() == "parent-sha"
+
+
+def test_changed_test_files_returns_empty_when_no_distinct_diff_base(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: "head-sha")
+    monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "head-sha")
+    assert _changed_test_files() == []
 
 
 @pytest.mark.parametrize(
