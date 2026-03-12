@@ -278,14 +278,13 @@ class PipelineOrchestrator:
         Returns:
             List of ProcessingResult instances, one per file, in order.
         """
-        if (
-            self._stages
-            and self._prefetch_depth > 0
-            and self._prefetch_stages > 0
-            and len(files) > 1
-        ):
-            return self._process_batch_prefetch(files)
-        return [self.process_file(f) for f in files]
+        # Snapshot once; set_stages() may replace self._stages concurrently.
+        stages = self._stages
+        if stages and self._prefetch_depth > 0 and self._prefetch_stages > 0 and len(files) > 1:
+            return self._process_batch_prefetch(files, stages)
+        if stages:
+            return [self._process_file_staged(f, stages) for f in files]
+        return [self._process_file_legacy(f) for f in files]
 
     @property
     def is_running(self) -> bool:
@@ -384,14 +383,17 @@ class PipelineOrchestrator:
         context = self._run_stages(context, stages)
         return self._finalize_result(context, start_time)
 
-    def _process_batch_prefetch(self, files: list[Path]) -> list[ProcessingResult]:
+    def _process_batch_prefetch(
+        self, files: list[Path], stages: list[PipelineStage]
+    ) -> list[ProcessingResult]:
         """Process a batch with I/O-compute overlap via a prefetch queue.
 
-        Splits the stage list at ``self._prefetch_stages``: the first
-        *n* stages (I/O stages) are submitted to a dedicated
-        :class:`~concurrent.futures.ThreadPoolExecutor` for upcoming
-        files while the remaining stages (compute stages) run on the
-        calling thread for the current file.
+        Splits *stages* at ``effective_prefetch_stages`` (capped at 1 for
+        thread-safety — shared components such as ``ProcessorPool`` are not
+        safe for concurrent initialisation): the I/O stages are submitted to
+        a dedicated :class:`~concurrent.futures.ThreadPoolExecutor` for
+        upcoming files while the compute stages run on the calling thread for
+        the current file.
 
         At most ``self._prefetch_depth`` I/O futures are outstanding at
         any time.  If a ``memory_limiter`` is configured, no new futures
@@ -404,13 +406,25 @@ class PipelineOrchestrator:
 
         Args:
             files: Ordered list of file paths to process.
+            stages: Snapshot of the stage list taken by the caller.
 
         Returns:
             List of :class:`ProcessingResult` instances in the same
             order as *files*.
         """
-        io_stages = self._stages[: self._prefetch_stages]
-        compute_stages = self._stages[self._prefetch_stages :]
+        # Cap at 1: stages beyond the first (e.g. AnalyzerStage) rely on
+        # shared components (ProcessorPool) that are not thread-safe for
+        # concurrent initialisation.
+        effective_prefetch_stages = min(self._prefetch_stages, 1)
+        if self._prefetch_stages > 1:
+            logger.warning(
+                "prefetch_stages=%d is not fully supported; "
+                "capping effective prefetch stages to %d for thread-safety",
+                self._prefetch_stages,
+                effective_prefetch_stages,
+            )
+        io_stages = stages[:effective_prefetch_stages]
+        compute_stages = stages[effective_prefetch_stages:]
 
         def _run_io(idx: int) -> StageContext:
             ctx = self._make_context(files[idx])

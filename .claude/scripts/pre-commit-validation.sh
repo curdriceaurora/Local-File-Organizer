@@ -657,8 +657,9 @@ if [[ -n "$PY_FILES" ]]; then
 
       if [[ -f "$TEST_FILE" ]]; then
         echo "  Testing $TEST_FILE..."
-        # Capture pytest output and exit code separately
-        if ! pytest "$TEST_FILE" --tb=line -q; then
+        # --override-ini="addopts=": suppress coverage gate on single-module runs (gate only
+        # applies on full-suite main-push runs, not per-file pre-commit checks)
+        if ! pytest "$TEST_FILE" --tb=line -q --override-ini="addopts="; then
           echo "❌ Tests failed for $file"
           TEST_FAILED=1
         fi
@@ -670,7 +671,7 @@ if [[ -n "$PY_FILES" ]]; then
 
         if [[ -f "$ALT_TEST" ]]; then
           echo "  Testing $ALT_TEST..."
-          if ! pytest "$ALT_TEST" --tb=line -q; then
+          if ! pytest "$ALT_TEST" --tb=line -q --override-ini="addopts="; then
             echo "❌ Tests failed for $file"
             TEST_FAILED=1
           fi

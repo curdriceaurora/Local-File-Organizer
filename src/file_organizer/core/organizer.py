@@ -113,8 +113,8 @@ class FileOrganizer:
         if no_prefetch:
             logger.warning(
                 "no_prefetch=True has no effect: FileOrganizer uses ParallelProcessor, "
-                "not PipelineOrchestrator. Pass prefetch_depth=0 to PipelineOrchestrator "
-                "directly if you need to disable I/O-compute overlap."
+                "not PipelineOrchestrator. To control prefetch behaviour, construct "
+                "PipelineOrchestrator directly with prefetch_depth=0."
             )
         self.console = Console()
 

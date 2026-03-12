@@ -20,7 +20,10 @@ def organize(
     no_prefetch: bool = typer.Option(
         False,
         "--no-prefetch",
-        help="Disable I/O-compute overlap (stage-based pipeline only). Useful for debugging.",
+        help=(
+            "Reserved for future stage-based pipeline debugging. "
+            "Currently has no effect for this command (uses ParallelProcessor, not PipelineOrchestrator)."
+        ),
     ),
 ) -> None:
     """Organize files in a directory using AI models."""

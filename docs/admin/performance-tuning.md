@@ -118,7 +118,9 @@ latency behind LLM inference time.
   for debugging or on memory-constrained systems)
 - Pass a `MemoryLimiter` to automatically back off prefetch when RSS approaches
   a configured ceiling
-- Use `--no-prefetch` on the CLI for one-off sequential runs without code changes
+- Note: `--no-prefetch` on the `file-organizer organize` CLI is currently a no-op
+  (that command uses `ParallelProcessor`). To disable prefetch, set `prefetch_depth=0`
+  when constructing `PipelineOrchestrator` directly
 
 ```python
 from file_organizer.optimization.memory_limiter import MemoryLimiter, LimitAction

@@ -48,7 +48,7 @@ file-organizer organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 
 - `--dry-run` — Preview without moving files
 - `--verbose, -v` — Verbose output
-- `--no-prefetch` — Disable I/O-compute overlap (stage-based pipeline only). Useful for debugging.
+- `--no-prefetch` — Reserved for future stage-based pipeline debugging. Currently has no effect for `file-organizer organize` (which uses the legacy `ParallelProcessor` path) and only emits a warning.
 
 **Examples:**
 
