@@ -54,6 +54,14 @@ class TestStageContext:
         with pytest.raises(ValueError, match="Invalid filename"):
             StageContext(file_path=Path("input/file.txt"), filename="../../etc/passwd")
 
+    def test_rejects_windows_drive_in_category(self) -> None:
+        with pytest.raises(ValueError, match="Invalid category"):
+            StageContext(file_path=Path("input/file.txt"), category="C:")
+
+    def test_rejects_windows_drive_in_filename(self) -> None:
+        with pytest.raises(ValueError, match="Invalid filename"):
+            StageContext(file_path=Path("input/file.txt"), filename="C:")
+
 
 # ---------------------------------------------------------------------------
 # PreprocessorStage

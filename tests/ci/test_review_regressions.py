@@ -128,6 +128,32 @@ def test_stage_context_assignment_enforces_path_traversal_guard() -> None:
     assert ctx.filename == "my_report"
 
 
+def test_stage_context_rejects_windows_drive_components() -> None:
+    """Windows drive-qualified path components (e.g. 'C:') must be rejected.
+
+    'C:' contains no slash or backslash, so it bypassed the original guard and
+    could cause ``output_dir / "C:"`` to escape the intended output directory on
+    Windows.  Regression test for the fix introduced in PR #749.
+    """
+    from pathlib import Path
+
+    from file_organizer.interfaces.pipeline import StageContext
+
+    with pytest.raises(ValueError, match="Invalid category"):
+        StageContext(file_path=Path("input/file.txt"), category="C:")
+
+    with pytest.raises(ValueError, match="Invalid filename"):
+        StageContext(file_path=Path("input/file.txt"), filename="C:")
+
+    ctx = StageContext(file_path=Path("input/file.txt"))
+
+    with pytest.raises(ValueError, match="Invalid category"):
+        ctx.category = "C:"
+
+    with pytest.raises(ValueError, match="Invalid filename"):
+        ctx.filename = "C:"
+
+
 def test_no_object_setattr_bypass_in_source() -> None:
     """No source file should bypass StageContext validation via object.__setattr__."""
     pattern = re.compile(

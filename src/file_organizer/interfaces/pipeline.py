@@ -8,7 +8,7 @@ into a configurable pipeline.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Protocol, runtime_checkable
 
 
@@ -29,7 +29,8 @@ class StageContext:
         destination: Final destination path computed by the
             postprocessor stage.
         category: Folder/category name assigned to the file.
-            Validated on every assignment to reject traversal sequences.
+            Validated on every assignment to reject traversal sequences
+            and Windows drive/anchor components (e.g. ``C:``).
         filename: Suggested filename (without extension).
             Validated on every assignment — same rules as *category*.
         dry_run: Whether this is a simulation (no file moves).
@@ -51,8 +52,13 @@ class StageContext:
 
     @staticmethod
     def _validate_path_component(field_name: str, value: str) -> str:
-        """Reject traversal sequences and separators in a path component."""
-        if value and (".." in value or "/" in value or "\\" in value):
+        """Reject traversal sequences, separators, and Windows drive anchors."""
+        if value and (
+            ".." in value
+            or "/" in value
+            or "\\" in value
+            or bool(PureWindowsPath(value).drive)
+        ):
             raise ValueError(f"Invalid {field_name}: {value!r}")
         return value
 
