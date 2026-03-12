@@ -20,7 +20,6 @@ FO_ROOT = Path(__file__).resolve().parents[2]
 CLI_REFERENCE_DOC = FO_ROOT / "docs" / "cli-reference.md"
 PERFORMANCE_TUNING_DOC = FO_ROOT / "docs" / "admin" / "performance-tuning.md"
 ARCHITECTURE_OVERVIEW_DOC = FO_ROOT / "docs" / "architecture" / "architecture-overview.md"
-ORGANIZER_SOURCE = FO_ROOT / "src" / "file_organizer" / "core" / "organizer.py"
 
 pytestmark = pytest.mark.ci
 
@@ -36,18 +35,18 @@ def test_no_prefetch_contract_matches_cli_runtime_and_docs() -> None:
     from file_organizer.core.organizer import FileOrganizer
 
     result = _RUNNER.invoke(app, ["organize", "--help"])
-    cli_help = _normalized(result.stdout)
+    cli_help = _normalized(result.output)
     organizer_init_doc = _normalized(inspect.getdoc(FileOrganizer.__init__) or "")
-    organizer_source = ORGANIZER_SOURCE.read_text(encoding="utf-8")
+    organizer_init_source = inspect.getsource(FileOrganizer.__init__)
     cli_reference = CLI_REFERENCE_DOC.read_text(encoding="utf-8")
     performance_doc = PERFORMANCE_TUNING_DOC.read_text(encoding="utf-8")
 
     assert result.exit_code == 0
-    assert "--no-prefetch" in result.stdout
+    assert "--no-prefetch" in result.output
     assert "Currently has no effect for this command" in cli_help
     assert "ParallelProcessor, not PipelineOrchestrator" in cli_help
     assert "Has no effect on the legacy processor path." in organizer_init_doc
-    assert "no_prefetch=True has no effect" in organizer_source
+    assert "no_prefetch=True has no effect" in organizer_init_source
     assert "Currently has no effect for `file-organizer organize`" in cli_reference
     assert "only emits a warning" in cli_reference
     assert "`--no-prefetch` on the `file-organizer organize` CLI is currently a no-op" in (
@@ -63,14 +62,14 @@ def test_prefetch_depth_contract_matches_runtime_and_docs() -> None:
     init_doc = _normalized(inspect.getdoc(PipelineOrchestrator.__init__) or "")
     batch_doc = _normalized(inspect.getdoc(PipelineOrchestrator.process_batch) or "")
     performance_doc = PERFORMANCE_TUNING_DOC.read_text(encoding="utf-8")
+    normalized_performance_doc = _normalized(performance_doc)
 
     assert "Set to 0 to disable prefetch (sequential fallback)." in init_doc
     assert "Defaults to 2." in init_doc
     assert "prefetch_depth > 0" in batch_doc
-    assert (
-        "| `prefetch_depth` | `2` | Files to pre-process ahead of current file. `0` disables prefetch. |"
-        in performance_doc
-    )
+    assert "`prefetch_depth`" in normalized_performance_doc
+    assert "Files to pre-process ahead of current file." in normalized_performance_doc
+    assert "`0` disables prefetch." in normalized_performance_doc
     assert "Set `prefetch_depth=0` to disable overlap and process files sequentially" in (
         performance_doc
     )

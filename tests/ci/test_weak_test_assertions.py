@@ -68,19 +68,23 @@ def _git_ref_exists(ref: str) -> bool:
 
 def _fetch_base_ref(base_branch: str) -> None:
     """Fetch the PR base branch into a usable remote-tracking ref."""
-    subprocess.run(
-        [
-            "git",
-            "fetch",
-            "--depth=1000",
-            "origin",
-            base_branch,
-        ],
-        cwd=FO_ROOT,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        subprocess.run(
+            [
+                "git",
+                "fetch",
+                "--depth=1000",
+                "origin",
+                base_branch,
+            ],
+            cwd=FO_ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except subprocess.TimeoutExpired:
+        return
 
 
 def _merge_base_from_candidates() -> str:
@@ -190,6 +194,10 @@ def _resolve_diff_base() -> str | None:
         return merge_base
 
     if base_branch:
+        base_parent = _github_pr_base_parent()
+        if base_parent:
+            return base_parent
+
         _fetch_base_ref(base_branch)
         merge_base = _merge_base_from_candidates()
         if merge_base:
@@ -202,10 +210,6 @@ def _resolve_diff_base() -> str | None:
                 return merge_base
 
     if base_branch:
-        base_parent = _github_pr_base_parent()
-        if base_parent:
-            return base_parent
-
         return None
 
     head_parent = _git_stdout("rev-parse", "--verify", "--quiet", "HEAD^1", check=False)
@@ -385,6 +389,24 @@ def test_resolve_diff_base_fetches_base_branch_when_missing_locally(
     )
     assert _resolve_diff_base() == "fetched-base-sha"
     assert fetch_calls == ["main"]
+
+
+def test_resolve_diff_base_prefers_github_pr_base_parent_before_fetch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_BASE_REF", "main")
+    fetch_calls: list[str] = []
+
+    monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: "")
+    monkeypatch.setattr(MODULE, "_github_pr_base_parent", lambda: "base-parent-sha")
+    monkeypatch.setattr(
+        MODULE,
+        "_fetch_base_ref",
+        lambda branch: fetch_calls.append(branch),
+    )
+
+    assert _resolve_diff_base() == "base-parent-sha"
+    assert fetch_calls == []
 
 
 def test_github_pr_base_parent_uses_event_payload_to_pick_base_parent(
