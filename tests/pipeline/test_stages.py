@@ -46,6 +46,14 @@ class TestStageContext:
         assert ctx.dry_run is True
         assert ctx.extra == {}
 
+    def test_rejects_path_traversal_in_category(self) -> None:
+        with pytest.raises(ValueError, match="Invalid category"):
+            StageContext(file_path=Path("input/file.txt"), category="../etc")
+
+    def test_rejects_path_traversal_in_filename(self) -> None:
+        with pytest.raises(ValueError, match="Invalid filename"):
+            StageContext(file_path=Path("input/file.txt"), filename="../../etc/passwd")
+
 
 # ---------------------------------------------------------------------------
 # PreprocessorStage
@@ -229,30 +237,6 @@ class TestPostprocessorStage:
         ctx = StageContext(file_path=Path("x.txt"), error="prior")
         result = stage.process(ctx)
         assert result.destination is None
-
-    def test_rejects_path_traversal_in_category(self, tmp_path: Path) -> None:
-        stage = PostprocessorStage(output_directory=tmp_path / "out")
-        ctx = StageContext(
-            file_path=Path("input/file.txt"),
-            category="../etc",
-            filename="file",
-        )
-        result = stage.process(ctx)
-        assert result.failed
-        assert result.error is not None
-        assert "Invalid path component" in result.error
-
-    def test_rejects_path_traversal_in_filename(self, tmp_path: Path) -> None:
-        stage = PostprocessorStage(output_directory=tmp_path / "out")
-        ctx = StageContext(
-            file_path=Path("input/file.txt"),
-            category="Docs",
-            filename="../../etc/passwd",
-        )
-        result = stage.process(ctx)
-        assert result.failed
-        assert result.error is not None
-        assert "Invalid path component" in result.error
 
 
 # ---------------------------------------------------------------------------

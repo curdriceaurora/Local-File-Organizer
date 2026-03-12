@@ -69,7 +69,7 @@ class AnalyzerStage:
             context.analysis = result
             context.category = result.get("category", "uncategorized")
             context.filename = result.get("filename", context.filename)
-            context.extra["processor_type"] = processor_type
+            context.extra["analyzer.processor_type"] = processor_type
         except Exception as exc:
             logger.exception("Analyzer failed for %s", context.file_path)
             context.error = str(exc)

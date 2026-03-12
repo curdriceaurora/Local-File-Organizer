@@ -9,11 +9,18 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Protocol, cast, runtime_checkable
+from typing import Any, Protocol, TypedDict, cast, runtime_checkable
 
 from .router import ProcessorType
 
 logger = logging.getLogger(__name__)
+
+
+class ProcessorResult(TypedDict):
+    """Normalised output from any file processor."""
+
+    category: str
+    filename: str
 
 
 @runtime_checkable
@@ -161,7 +168,7 @@ class ProcessorPool:
         return list(self._factories.keys())
 
 
-def normalize_processor_result(file_path: Path, result: object) -> dict[str, str]:
+def normalize_processor_result(file_path: Path, result: Any) -> ProcessorResult:
     """Normalize a processor result into a ``{category, filename}`` dict.
 
     Works with any result object that exposes ``folder_name``,
@@ -188,4 +195,4 @@ def normalize_processor_result(file_path: Path, result: object) -> dict[str, str
     if hasattr(result, "error") and result.error:
         raise RuntimeError(f"Processor reported error: {result.error}")
 
-    return {"category": category, "filename": filename}
+    return ProcessorResult(category=category, filename=filename)

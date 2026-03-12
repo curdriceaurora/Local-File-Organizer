@@ -346,6 +346,12 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
 - `results.throughput_fps` — Throughput in files per second (based on median)
 - `results.iterations` — Number of measured iterations
 
+When `--compare` is used, JSON also includes:
+
+- `comparison.deltas_pct.*` — Percentage delta versus the baseline for each metric
+- `comparison.regression` — `true` if current p95 crossed the regression threshold
+- `comparison.threshold` — Threshold multiplier used for regression detection (default 1.2)
+
 **Regression Detection:**
 
 When `--compare` is provided, compares current results against a baseline JSON

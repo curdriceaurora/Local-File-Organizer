@@ -43,7 +43,7 @@
 - Step 1: Extract findings
 - Step 2: Verify & categorize (APPLY/SKIP/CLARIFY/DEFER)
 - Step 3: Apply fixes locally
-- Step 4: Run quality gates (pre-commit → code-reviewer → simplify)
+- Step 4: Run quality gates (pre-commit → code-reviewer → simplify[opt] → audit[opt])
 - Step 5: Prepare commit
 
 **Before Step 5 (Commit)**: Transition to CHECKING
@@ -170,17 +170,20 @@
 When in PAUSED state, Step 4 (Quality Gates):
 
 ```
-Step 4a: bash .claude/scripts/pre-commit-validation.sh (REQUIRED - fast)
+Step 4a: bash .claude/scripts/pre-commit-validation.sh (REQUIRED - fast, deterministic)
   ↓ Fix violations until passing
 
-Step 4b: /code-reviewer (REQUIRED - medium)
-  ↓ Address findings
+Step 4b: /code-reviewer (REQUIRED - logic, design, consistency)
+  ↓ Address findings; include suggested refactoring in this PR
 
-Step 4c: /simplify (OPTIONAL - suggestions)
+Step 4c: /simplify (OPTIONAL - run when touching shared utilities or extractable helpers)
   ↓ Include valuable suggestions, defer rest
+
+Step 4d: /audit (OPTIONAL - run when touching auth, file paths, or new public APIs)
+  ↓ Apply F4/F1 risk-area findings
 ```
 
-**Philosophy**: Fail fast on cheap checks before expensive ones.
+**Philosophy**: Fail fast on cheap checks before expensive ones. `/simplify` and `/audit` are optional — skip if unavailable or not applicable.
 
 ---
 

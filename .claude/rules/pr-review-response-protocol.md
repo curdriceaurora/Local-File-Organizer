@@ -98,21 +98,29 @@ For each finding:
 
 ---
 
-## Step 4: Run Full Quality Gate Sequence
+## Step 4: Run Quality Gate Sequence
 
-All three gates are MANDATORY. Execute in order:
+Execute in order (fail fast — cheap checks first):
 
 ```bash
-/simplify                     # Review changes for efficiency/reuse (REQUIRED)
-/code-reviewer                # Validate changes against standards (REQUIRED)
-bash .claude/scripts/pre-commit-validation.sh  # Must pass (REQUIRED)
+# Step 4a: Pre-commit validation (REQUIRED — deterministic, fast)
+bash .claude/scripts/pre-commit-validation.sh
+
+# Step 4b: Code reviewer (REQUIRED — logic, design, consistency)
+/code-reviewer
+
+# Step 4c: Simplify (OPTIONAL — run when touching shared utilities or extractable helpers)
+/simplify
+
+# Step 4d: Audit (OPTIONAL — run when touching auth, file paths, or new public APIs)
+/audit
 ```
 
 ### Quality Gate Expectations
 
-**If /simplify is unavailable**: Hard blocker - cannot proceed without it
+**If /code-reviewer is unavailable**: Hard blocker — cannot proceed without it
 
-**If /code-reviewer is unavailable**: Hard blocker - cannot proceed without it
+**If /simplify or /audit is unavailable**: Skip and proceed.
 
 **If /code-reviewer suggests refactoring**: Include it in this PR (don't defer)
 - It's part of the quality gate validation

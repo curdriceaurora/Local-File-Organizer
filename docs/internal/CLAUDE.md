@@ -422,6 +422,15 @@ now, implement the elegant solution"
 4. **Explain Changes**: High-level summary at each step
 5. **Document Results**: Add review to 'tasks/todo.md'
 6. **Capture Lessons**: Update 'tasks/lessons.md' after corrections
+
+## PR Scope Rule
+
+One logical task per PR. A "task" corresponds to one epic task ID (e.g., Task 4, Task 5).
+
+Bundling tasks is allowed **only** when they have a hard dependency (Task B cannot be tested without Task A shipping first). Document the dependency in the PR description when bundling.
+
+**Why**: Bundling 3 tasks in one PR creates a large diff surface that generates 15-25 review findings. Single-task PRs produce 3-5.
+
 ## Core Principles
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
 - **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.

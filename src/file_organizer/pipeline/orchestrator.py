@@ -20,7 +20,12 @@ from typing import Any
 from file_organizer.interfaces.pipeline import PipelineStage, StageContext
 
 from .config import PipelineConfig
-from .processor_pool import BaseProcessor, ProcessorPool, normalize_processor_result
+from .processor_pool import (
+    BaseProcessor,
+    ProcessorPool,
+    ProcessorResult,
+    normalize_processor_result,
+)
 from .router import FileRouter, ProcessorType
 
 logger = logging.getLogger(__name__)
@@ -233,8 +238,9 @@ class PipelineOrchestrator:
         Returns:
             ProcessingResult with processing outcome and metadata.
         """
-        if self._stages:
-            return self._process_file_staged(file_path)
+        stages = self._stages  # snapshot once; set_stages() may replace list concurrently
+        if stages:
+            return self._process_file_staged(file_path, stages)
         return self._process_file_legacy(file_path)
 
     def process_batch(self, files: list[Path]) -> list[ProcessingResult]:
@@ -260,32 +266,40 @@ class PipelineOrchestrator:
     # Stage-based processing (new)
     # ------------------------------------------------------------------
 
-    def _process_file_staged(self, file_path: Path) -> ProcessingResult:
+    def _process_file_staged(
+        self, file_path: Path, stages: list[PipelineStage]
+    ) -> ProcessingResult:
         """Run *file_path* through the configured stages.
 
         Each stage is wrapped in a try/except so that an unexpected
         exception is recorded on the context rather than crashing the
-        caller.
+        caller.  A custom stage returning ``None`` is also treated as a
+        failure so downstream stages are not passed a ``None`` context.
         """
         start_time = time.monotonic()
         file_path = Path(file_path)
 
         context = StageContext(
             file_path=file_path,
-            dry_run=self.config.dry_run,
+            dry_run=not self.config.should_move_files,
         )
 
-        for stage in self._stages:
+        for stage in stages:
             try:
-                context = stage.process(context)
+                returned = stage.process(context)
             except Exception as exc:
                 logger.exception("Stage %s raised for %s", stage.name, file_path)
                 context.error = str(exc)
                 break
+            if returned is None:
+                logger.error("Stage %s returned None for %s", stage.name, file_path)
+                context.error = f"Stage {stage.name!r} returned None"
+                break
+            context = returned
 
         duration_ms = (time.monotonic() - start_time) * 1000
 
-        processor_type = context.extra.get("processor_type", ProcessorType.UNKNOWN)
+        processor_type = context.extra.get("analyzer.processor_type", ProcessorType.UNKNOWN)
 
         # Update stats (thread-safe for watch mode)
         with self._stats_lock:
@@ -445,7 +459,7 @@ class PipelineOrchestrator:
         file_path: Path,
         processor: BaseProcessor,
         processor_type: ProcessorType,
-    ) -> dict[str, str]:
+    ) -> ProcessorResult:
         """Process a file and return normalised ``{category, filename}`` dict.
 
         Args:

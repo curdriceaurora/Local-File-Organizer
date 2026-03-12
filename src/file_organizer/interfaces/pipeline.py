@@ -47,6 +47,12 @@ class StageContext:
     error: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        """Reject path-traversal characters in category and filename at construction time."""
+        for field_name, value in (("category", self.category), ("filename", self.filename)):
+            if value and (".." in value or "/" in value or "\\" in value):
+                raise ValueError(f"Invalid {field_name}: {value!r}")
+
     @property
     def failed(self) -> bool:
         """Return ``True`` if a stage has recorded an error."""

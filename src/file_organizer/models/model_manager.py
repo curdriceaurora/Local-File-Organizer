@@ -11,6 +11,7 @@ import json
 import logging
 import subprocess
 import threading
+from collections.abc import Callable
 
 from rich.console import Console
 from rich.table import Table
@@ -184,25 +185,28 @@ class ModelManager:
         model_type: str,
         new_model_id: str,
         *,
-        model_factory: object | None = None,  # callable or instance
+        model_factory: Callable[[], object] | None = None,
     ) -> bool:
         """Atomically swap the active model for *model_type*.
 
         Swap sequence (under lock):
 
         1. Pre-warm the new model synchronously via *model_factory*.
-        2. Drain the old model via ``safe_cleanup()`` (if supported).
-        3. Atomic reference swap (old -> new).
+        2. Atomic reference swap (old -> new) so callers immediately see
+           the new model; no drain window where the old model is visible
+           but already shutting down.
+        3. Drain the old model via ``safe_cleanup()`` (if supported).
 
-        On failure at any step the lock is released and the old model
-        remains active (rollback).
+        On failure at step 1, the old model remains active (rollback).
+        On drain failure at step 3, the swap is already committed; the
+        drain error is logged but does not affect the return value.
 
         Args:
             model_type: ``"text"``, ``"vision"``, or ``"audio"``.
             new_model_id: Model identifier to swap to.
-            model_factory: Optional callable that returns a new
-                model instance.  When *None*, the swap is recorded
-                in the registry but no live model is loaded.
+            model_factory: Optional factory callable that returns a new
+                model instance.  When *None*, the swap is recorded in
+                the registry but no live model is loaded.
 
         Returns:
             ``True`` on success, ``False`` on rollback.
@@ -217,9 +221,7 @@ class ModelManager:
             new_model: object | None = None
             if model_factory is not None:
                 try:
-                    new_model = model_factory
-                    if callable(model_factory):
-                        new_model = model_factory()
+                    new_model = model_factory()
                     if hasattr(new_model, "initialize"):
                         new_model.initialize()
                 except Exception:
@@ -236,24 +238,21 @@ class ModelManager:
                             logger.debug("Cleanup of partial model failed", exc_info=True)
                     return False
 
-            # Step 2: Drain old model
-            if old_model is not None and hasattr(old_model, "safe_cleanup"):
-                try:
-                    old_model.safe_cleanup()
-                except Exception:
-                    logger.exception("Drain failed for old %s model", model_type)
-                    # Rollback: clean up new model if we created one
-                    if new_model is not None and hasattr(new_model, "cleanup"):
-                        new_model.cleanup()
-                    return False
-
-            # Step 3: Atomic swap
+            # Step 2: Atomic swap — callers see new model before old is drained
             if new_model is not None:
                 self._active_models[model_type] = new_model
             else:
                 self._active_models[model_type] = new_model_id  # record swap
 
             logger.info("Swapped %s model to %s", model_type, new_model_id)
+
+            # Step 3: Drain old model (best-effort; swap already committed)
+            if old_model is not None and hasattr(old_model, "safe_cleanup"):
+                try:
+                    old_model.safe_cleanup()
+                except Exception:
+                    logger.exception("Drain failed for old %s model (swap committed)", model_type)
+
             return True
 
         finally:

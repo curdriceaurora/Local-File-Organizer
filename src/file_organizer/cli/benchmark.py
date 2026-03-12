@@ -14,7 +14,7 @@ import statistics
 import time
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import typer
 
@@ -23,6 +23,30 @@ benchmark_app = typer.Typer(
     help="Benchmark file processing performance.",
     no_args_is_help=True,
 )
+
+
+# ---------------------------------------------------------------------------
+# Result types
+# ---------------------------------------------------------------------------
+
+
+class BenchmarkStats(TypedDict):
+    """Statistical results from a benchmark run."""
+
+    median_ms: float
+    p95_ms: float
+    p99_ms: float
+    stddev_ms: float
+    throughput_fps: float
+    iterations: int
+
+
+class ComparisonResult(TypedDict):
+    """Baseline comparison output."""
+
+    deltas_pct: dict[str, float]
+    regression: bool
+    threshold: float
 
 
 # ---------------------------------------------------------------------------
@@ -41,21 +65,21 @@ def _percentile(sorted_data: Sequence[float], pct: float) -> float:
     return sorted_data[k]
 
 
-def compute_stats(times_ms: list[float], file_count: int) -> dict[str, float | int]:
+def compute_stats(times_ms: list[float], file_count: int) -> BenchmarkStats:
     """Return a statistics dict from a list of iteration times in ms.
 
     Keys: ``median_ms``, ``p95_ms``, ``p99_ms``, ``stddev_ms``,
     ``throughput_fps``, ``iterations``.
     """
     if not times_ms:
-        return {
-            "median_ms": 0.0,
-            "p95_ms": 0.0,
-            "p99_ms": 0.0,
-            "stddev_ms": 0.0,
-            "throughput_fps": 0.0,
-            "iterations": 0,
-        }
+        return BenchmarkStats(
+            median_ms=0.0,
+            p95_ms=0.0,
+            p99_ms=0.0,
+            stddev_ms=0.0,
+            throughput_fps=0.0,
+            iterations=0,
+        )
 
     sorted_t = sorted(times_ms)
     median = statistics.median(sorted_t)
@@ -66,24 +90,24 @@ def compute_stats(times_ms: list[float], file_count: int) -> dict[str, float | i
     # Throughput: files per second based on median iteration time
     throughput = (file_count / (median / 1000.0)) if median > 0 else 0.0
 
-    return {
-        "median_ms": round(median, 3),
-        "p95_ms": round(p95, 3),
-        "p99_ms": round(p99, 3),
-        "stddev_ms": round(stddev, 3),
-        "throughput_fps": round(throughput, 2),
-        "iterations": len(sorted_t),
-    }
+    return BenchmarkStats(
+        median_ms=round(median, 3),
+        p95_ms=round(p95, 3),
+        p99_ms=round(p99, 3),
+        stddev_ms=round(stddev, 3),
+        throughput_fps=round(throughput, 2),
+        iterations=len(sorted_t),
+    )
 
 
 def compare_results(
     current: dict[str, Any],
     baseline: dict[str, Any],
     threshold: float = 1.2,
-) -> dict[str, Any]:
+) -> ComparisonResult:
     """Compare *current* results against *baseline*.
 
-    Returns a dict with ``deltas`` and a ``regression`` flag
+    Returns a dict with ``deltas_pct`` and a ``regression`` flag
     (True if p95 exceeds *threshold* x baseline p95).
     """
     cur = current.get("results", current)
@@ -100,11 +124,11 @@ def compare_results(
 
     regression = cur.get("p95_ms", 0.0) > threshold * base.get("p95_ms", 1.0)
 
-    return {
-        "deltas_pct": deltas,
-        "regression": regression,
-        "threshold": threshold,
-    }
+    return ComparisonResult(
+        deltas_pct=deltas,
+        regression=regression,
+        threshold=threshold,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -117,7 +141,7 @@ def _run_io_suite(files: list[Path]) -> None:
     for file_path in files:
         try:
             _ = file_path.stat()
-        except Exception:
+        except OSError:
             pass
 
 
@@ -137,7 +161,7 @@ _SUITE_RUNNERS: dict[str, Any] = {
 
 
 def _print_table(
-    console: Any, suite: str, warmup: int, stats: dict[str, Any], file_count: int
+    console: Any, suite: str, warmup: int, stats: BenchmarkStats, file_count: int
 ) -> None:
     """Print benchmark results as a Rich table."""
     from rich.table import Table
@@ -197,7 +221,7 @@ def run(
         10,
         "--iterations",
         "-i",
-        help="Total iterations to run (measured iterations = total - warmup).",
+        help="Number of measured iterations to run (excluding warmup). Total runs = warmup + iterations.",
         min=1,
     ),
     warmup: int = typer.Option(
@@ -247,7 +271,24 @@ def run(
 
     if not files:
         if json_output:
-            console.print(json.dumps({"suite": suite, "results": compute_stats([], 0)}))
+            hw_profile_empty: dict[str, Any] = {}
+            try:
+                from file_organizer.core.hardware_profile import detect_hardware
+
+                hw_profile_empty = detect_hardware().to_dict()
+            except Exception:
+                hw_profile_empty = {"error": "Hardware detection unavailable"}
+            console.print(
+                json.dumps(
+                    {
+                        "suite": suite,
+                        "files_count": 0,
+                        "hardware_profile": hw_profile_empty,
+                        "results": compute_stats([], 0),
+                    },
+                    indent=2,
+                )
+            )
         else:
             console.print("[yellow]No files found in the specified path.[/yellow]")
         return
@@ -302,12 +343,7 @@ def run(
         "results": stats,
     }
 
-    if json_output:
-        console.print(json.dumps(output, indent=2))
-    else:
-        _print_table(console, suite, warmup, stats, len(files))
-
-    # Comparison
+    # Comparison (must be built before JSON print to emit a single document)
     if compare_path is not None:
         try:
             baseline = json.loads(compare_path.read_text())
@@ -317,7 +353,11 @@ def run(
 
         comp = compare_results(output, baseline)
         output["comparison"] = comp
-        _print_comparison(console, comp, json_output=json_output)
 
-    if not json_output:
+    if json_output:
+        console.print(json.dumps(output, indent=2))
+    else:
+        _print_table(console, suite, warmup, stats, len(files))
+        if compare_path is not None:
+            _print_comparison(console, output["comparison"], json_output=False)
         console.print("\n[bold green]Benchmark completed[/bold green]")

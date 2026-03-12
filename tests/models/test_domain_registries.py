@@ -209,8 +209,13 @@ class TestModelHotSwap:
         assert success is True
         old_model.safe_cleanup.assert_called_once()
 
-    def test_swap_rollback_on_drain_failure(self) -> None:
-        """If drain fails, new model is cleaned up and old stays."""
+    def test_drain_failure_is_best_effort(self) -> None:
+        """Drain failure after swap is logged but does not roll back.
+
+        The reference swap is committed before draining the old model
+        so callers never observe a shutting-down model.  If the drain
+        raises, the new model is already active and ``True`` is returned.
+        """
         mgr = self._make_manager()
 
         old_model = MagicMock()
@@ -222,8 +227,9 @@ class TestModelHotSwap:
         factory = MagicMock(return_value=new_model)
 
         success = mgr.swap_model("text", "new-model", model_factory=factory)
-        assert success is False
-        new_model.cleanup.assert_called_once()
+        assert success is True  # swap committed despite drain failure
+        assert mgr._active_models["text"] is new_model  # new model is active
+        new_model.cleanup.assert_not_called()  # new model not cleaned up
 
     def test_prewarm_failure_cleans_up_partial_model(self) -> None:
         """If initialize() fails, partially created model is cleaned up."""
@@ -292,6 +298,7 @@ class TestModelHotSwap:
 
         for t in threads:
             t.join(timeout=5.0)
+            assert not t.is_alive(), f"Thread {t.name} did not terminate within 5 s"
 
         assert len(errors) == 0, f"Got errors during concurrent swap: {errors}"
         # Verify swap actually happened
