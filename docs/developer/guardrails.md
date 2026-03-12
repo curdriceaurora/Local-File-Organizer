@@ -27,11 +27,12 @@ Run this before opening or updating a PR:
 bash .claude/scripts/pre-commit-validation.sh
 ```
 
-That command must:
+That command must expand to this canonical command set:
 
-1. Validate `.pre-commit-config.yaml`
-2. Run `pre-commit` on changed files, or `--all-files` when there is no diff
-3. Run `pytest tests/ci -q --no-cov --override-ini="addopts="`
+1. `pre-commit validate-config`
+2. `pre-commit run --files <changed-files>` when a diff exists
+3. `pre-commit run --all-files` when there is no diff
+4. `pytest tests/ci -q --no-cov --override-ini="addopts="`
 
 Why this split:
 - `pre-commit` is the staged-file gate

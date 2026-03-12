@@ -14,19 +14,26 @@ CONTRIBUTING_DOC = PROJECT_ROOT / "CONTRIBUTING.md"
 
 pytestmark = pytest.mark.ci
 
+CANONICAL_PRE_PR_COMMANDS = [
+    "pre-commit validate-config",
+    "pre-commit run --files",
+    "pre-commit run --all-files",
+    'pytest tests/ci -q --no-cov --override-ini="addopts="',
+]
+
 
 def test_pre_pr_script_runs_canonical_enforced_layers() -> None:
     assert PRE_PR_SCRIPT.exists(), f"Pre-PR script not found: {PRE_PR_SCRIPT}"
     source = PRE_PR_SCRIPT.read_text(encoding="utf-8")
 
-    assert "pre-commit validate-config" in source
-    assert "pre-commit run --files" in source, (
+    assert CANONICAL_PRE_PR_COMMANDS[0] in source
+    assert CANONICAL_PRE_PR_COMMANDS[1] in source, (
         "Pre-PR script must run pre-commit on changed files when a diff exists"
     )
-    assert "pre-commit run --all-files" in source, (
+    assert CANONICAL_PRE_PR_COMMANDS[2] in source, (
         "Pre-PR script must fall back to --all-files when no changed files are detected"
     )
-    assert 'pytest tests/ci -q --no-cov --override-ini="addopts="' in source
+    assert CANONICAL_PRE_PR_COMMANDS[3] in source
     assert "git ls-files --others --exclude-standard" in source
 
 
@@ -67,6 +74,9 @@ def test_guardrail_docs_define_canonical_homes_and_conventions() -> None:
     ]
     for fragment in required_fragments:
         assert fragment in source, f"Expected guardrail doc fragment missing: {fragment}"
+
+    for command in CANONICAL_PRE_PR_COMMANDS:
+        assert command in source, f"Expected canonical pre-PR command missing from docs: {command}"
 
 
 def test_contributing_points_to_guardrail_workflow() -> None:
