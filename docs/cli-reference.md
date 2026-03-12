@@ -205,6 +205,33 @@ file-organizer tui
 
 ---
 
+### `hardware-info`
+
+Detect hardware capabilities and print model-sizing recommendations.
+
+**Usage:**
+
+```bash
+file-organizer hardware-info [OPTIONS]
+```
+
+**Options:**
+- `--json` — Output the hardware profile as JSON
+
+**Examples:**
+
+```bash
+# Human-readable hardware summary
+file-organizer hardware-info
+
+# JSON output for automation or debugging
+file-organizer hardware-info --json
+```
+
+> **Why it exists:** This command exposes the same hardware profile the app uses to choose sane defaults for model size and worker count, which helps explain performance differences across machines.
+
+---
+
 ### `undo`
 
 Undo file operations.

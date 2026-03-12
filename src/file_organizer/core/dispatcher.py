@@ -8,6 +8,7 @@ and handles progress display for each batch.  Extracted from
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from loguru import logger
 from rich.console import Console
@@ -20,6 +21,10 @@ from file_organizer.core.types import (
 )
 from file_organizer.parallel.processor import ParallelProcessor
 from file_organizer.services import ProcessedFile, ProcessedImage, TextProcessor, VisionProcessor
+
+if TYPE_CHECKING:
+    from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
+    from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
 
 
 def process_text_files(
@@ -146,11 +151,17 @@ def process_image_files(
     return processed
 
 
-def process_audio_files(files: list[Path]) -> list[ProcessedFile]:
+def process_audio_files(
+    files: list[Path],
+    *,
+    extractor_cls: type[AudioMetadataExtractor] | None = None,
+) -> list[ProcessedFile]:
     """Process audio files using the metadata pipeline (no AI model required).
 
     Args:
         files: Audio file paths to process.
+        extractor_cls: Optional extractor class override so organizer-level
+            patch targets continue to intercept metadata extraction in tests.
 
     Returns:
         List of processed file results.
@@ -159,7 +170,8 @@ def process_audio_files(files: list[Path]) -> list[ProcessedFile]:
     from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
     from file_organizer.services.audio.organizer import AudioOrganizer
 
-    extractor = AudioMetadataExtractor()
+    extractor_type = extractor_cls or AudioMetadataExtractor
+    extractor = extractor_type()
     classifier = AudioClassifier()
     organizer = AudioOrganizer()
     processed: list[ProcessedFile] = []
@@ -208,11 +220,17 @@ def process_audio_files(files: list[Path]) -> list[ProcessedFile]:
     return processed
 
 
-def process_video_files(files: list[Path]) -> list[ProcessedFile]:
+def process_video_files(
+    files: list[Path],
+    *,
+    extractor_cls: type[VideoMetadataExtractor] | None = None,
+) -> list[ProcessedFile]:
     """Process video files using the metadata pipeline (no AI model required).
 
     Args:
         files: Video file paths to process.
+        extractor_cls: Optional extractor class override so organizer-level
+            patch targets continue to intercept metadata extraction in tests.
 
     Returns:
         List of processed file results.
@@ -220,7 +238,8 @@ def process_video_files(files: list[Path]) -> list[ProcessedFile]:
     from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
     from file_organizer.services.video.organizer import VideoOrganizer
 
-    extractor = VideoMetadataExtractor()
+    extractor_type = extractor_cls or VideoMetadataExtractor
+    extractor = extractor_type()
     organizer = VideoOrganizer()
     processed: list[ProcessedFile] = []
 
