@@ -17,7 +17,7 @@ pytestmark = pytest.mark.ci
 
 
 def _is_literal_int(node: ast.AST, value: int) -> bool:
-    return isinstance(node, ast.Constant) and node.value == value
+    return isinstance(node, ast.Constant) and type(node.value) is int and node.value == value
 
 
 def _is_mock_call_count_attr(node: ast.AST) -> bool:
@@ -220,6 +220,7 @@ def test_detector_flags_weak_mock_call_count_lower_bounds(source: str, expected:
     "source",
     [
         "assert mock.call_count == 2\n",
+        "assert mock.call_count >= True\n",
         "assert limiter.check_call_count >= expected_min_checks\n",
         "call_count = 0\nassert call_count >= 1\n",
     ],
