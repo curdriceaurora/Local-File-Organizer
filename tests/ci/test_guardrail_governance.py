@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import shlex
 from pathlib import Path
 
 import pytest
@@ -14,26 +15,47 @@ CONTRIBUTING_DOC = PROJECT_ROOT / "CONTRIBUTING.md"
 
 pytestmark = pytest.mark.ci
 
-CANONICAL_PRE_PR_COMMANDS = [
-    "pre-commit validate-config",
-    "pre-commit run --files",
-    "pre-commit run --all-files",
-    'pytest tests/ci -q --no-cov --override-ini="addopts="',
-]
+
+def _canonical_commands_from_script(source: str) -> list[str]:
+    commands: list[str] = []
+    for line in source.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("run_step "):
+            continue
+
+        parts = shlex.split(stripped)
+        command = " ".join(parts[2:])
+        command = command.replace("${changed_files[@]}", "<changed-files>")
+        command = command.replace("--override-ini=addopts=", '--override-ini="addopts="')
+        commands.append(command)
+
+    return commands
+
+
+def _canonical_commands_from_docs(source: str) -> list[str]:
+    section_match = re.search(
+        r"## Canonical Pre-PR Flow\n(?P<section>.*?)(?:\n## |\Z)",
+        source,
+        flags=re.DOTALL,
+    )
+    assert section_match, "Guardrail doc must define a Canonical Pre-PR Flow section"
+
+    commands = re.findall(r"(?m)^\d+\.\s+`([^`]+)`", section_match.group("section"))
+    assert commands, "Canonical Pre-PR Flow section must enumerate the command list"
+    return commands
 
 
 def test_pre_pr_script_runs_canonical_enforced_layers() -> None:
     assert PRE_PR_SCRIPT.exists(), f"Pre-PR script not found: {PRE_PR_SCRIPT}"
     source = PRE_PR_SCRIPT.read_text(encoding="utf-8")
+    commands = _canonical_commands_from_script(source)
 
-    assert CANONICAL_PRE_PR_COMMANDS[0] in source
-    assert CANONICAL_PRE_PR_COMMANDS[1] in source, (
-        "Pre-PR script must run pre-commit on changed files when a diff exists"
-    )
-    assert CANONICAL_PRE_PR_COMMANDS[2] in source, (
-        "Pre-PR script must fall back to --all-files when no changed files are detected"
-    )
-    assert CANONICAL_PRE_PR_COMMANDS[3] in source
+    assert commands == [
+        "pre-commit validate-config",
+        "pre-commit run --files <changed-files>",
+        "pre-commit run --all-files",
+        'pytest tests/ci -q --no-cov --override-ini="addopts="',
+    ]
     assert "git ls-files --others --exclude-standard" in source
 
 
@@ -62,6 +84,8 @@ def test_pre_pr_script_is_not_a_second_policy_engine() -> None:
 def test_guardrail_docs_define_canonical_homes_and_conventions() -> None:
     assert GUARDRAIL_DOC.exists(), f"Guardrail doc not found: {GUARDRAIL_DOC}"
     source = GUARDRAIL_DOC.read_text(encoding="utf-8")
+    script_commands = _canonical_commands_from_script(PRE_PR_SCRIPT.read_text(encoding="utf-8"))
+    doc_commands = _canonical_commands_from_docs(source)
 
     required_fragments = [
         ".pre-commit-config.yaml",
@@ -75,8 +99,9 @@ def test_guardrail_docs_define_canonical_homes_and_conventions() -> None:
     for fragment in required_fragments:
         assert fragment in source, f"Expected guardrail doc fragment missing: {fragment}"
 
-    for command in CANONICAL_PRE_PR_COMMANDS:
-        assert command in source, f"Expected canonical pre-PR command missing from docs: {command}"
+    assert doc_commands == script_commands, (
+        "Canonical Pre-PR Flow docs must match the orchestrator command list in order"
+    )
 
 
 def test_contributing_points_to_guardrail_workflow() -> None:
