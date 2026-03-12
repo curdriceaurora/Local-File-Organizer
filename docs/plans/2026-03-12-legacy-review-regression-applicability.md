@@ -52,7 +52,7 @@ The epic is applicable because:
 
 1. All three first-wave rule classes have some forward coverage, but none has a
    repo-wide zero-finding proof.
-2. At least one first-wave class already has demonstrated legacy findings in
+2. At least one first-wave class has already demonstrated legacy findings in
    `main`: the weak-assertion class still has historical violations outside the
    changed-file guard.
 3. The current forward guardrails are deliberately optimized to stop new churn,
