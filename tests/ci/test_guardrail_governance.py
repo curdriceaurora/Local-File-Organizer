@@ -18,7 +18,12 @@ def test_pre_pr_script_runs_canonical_enforced_layers() -> None:
     source = PRE_PR_SCRIPT.read_text(encoding="utf-8")
 
     assert "pre-commit validate-config" in source
-    assert "pre-commit run --files" in source or "pre-commit run --all-files" in source
+    assert "pre-commit run --files" in source, (
+        "Pre-PR script must run pre-commit on changed files when a diff exists"
+    )
+    assert "pre-commit run --all-files" in source, (
+        "Pre-PR script must fall back to --all-files when no changed files are detected"
+    )
     assert 'pytest tests/ci -q --no-cov --override-ini="addopts="' in source
     assert "git ls-files --others --exclude-standard" in source
 

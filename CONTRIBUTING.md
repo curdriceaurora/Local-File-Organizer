@@ -211,15 +211,11 @@ The `.actrc` file in the project root pins the Docker image and architecture aut
 
 ## Guardrail Ownership
 
-Guardrails now have one canonical home each:
-
-- Add staged diff or mechanical checks to `.pre-commit-config.yaml`.
-- Add semantic or contract regressions to `tests/ci/`.
-- Add workflow permissions or environment support to `.github/workflows/ci.yml`.
-- Use `.claude/scripts/pre-commit-validation.sh` only to orchestrate those layers before a PR.
-- Keep anti-pattern docs explanatory; they should not be the only place a blocking rule exists.
-
-For the current conventions and examples, see [Developer Guardrails](docs/developer/guardrails.md).
+The canonical ownership rules and examples live in
+[Developer Guardrails](docs/developer/guardrails.md). Use
+`.pre-commit-config.yaml` for staged-file checks, `tests/ci/` for semantic
+guardrails, `.github/workflows/ci.yml` for CI-only runtime support, and
+`.claude/scripts/pre-commit-validation.sh` only as the pre-PR orchestrator.
 
 ---
 
