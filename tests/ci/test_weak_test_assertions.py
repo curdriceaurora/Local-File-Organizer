@@ -64,15 +64,46 @@ def _git_ref_exists(ref: str) -> bool:
     return result.returncode == 0
 
 
-def _resolve_diff_base() -> str | None:
-    """Resolve a commit-ish usable as the changed-files diff base."""
-    base_branch = os.environ.get("GITHUB_BASE_REF")
+def _fetch_base_ref(base_branch: str) -> None:
+    """Fetch the PR base branch into a usable remote-tracking ref."""
+    subprocess.run(
+        [
+            "git",
+            "fetch",
+            "--depth=1000",
+            "origin",
+            f"{base_branch}:refs/remotes/origin/{base_branch}",
+        ],
+        cwd=FO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
 
+
+def _merge_base_from_candidates() -> str:
+    """Return the first merge base found from known base-ref candidates."""
     for candidate in _candidate_base_refs():
         if not _git_ref_exists(candidate):
             continue
 
         merge_base = _git_stdout("merge-base", "HEAD", candidate, check=False)
+        if merge_base:
+            return merge_base
+
+    return ""
+
+
+def _resolve_diff_base() -> str | None:
+    """Resolve a commit-ish usable as the changed-files diff base."""
+    base_branch = os.environ.get("GITHUB_BASE_REF")
+    merge_base = _merge_base_from_candidates()
+    if merge_base:
+        return merge_base
+
+    if base_branch:
+        _fetch_base_ref(base_branch)
+        merge_base = _merge_base_from_candidates()
         if merge_base:
             return merge_base
 
@@ -83,7 +114,12 @@ def _resolve_diff_base() -> str | None:
         return head_parent
 
     if base_branch:
-        return None
+        pytest.fail(
+            "Unable to resolve a git diff base for PR guardrail checks. "
+            f"GITHUB_BASE_REF={base_branch!r} is set, but no suitable base ref "
+            "or HEAD^1 commit could be found in the checkout, even after "
+            "attempting to fetch the base branch."
+        )
 
     return _git_stdout("rev-parse", "HEAD")
 
@@ -128,17 +164,9 @@ def _find_weak_call_count_assertions(source: str, path: str = "<string>") -> lis
     return violations
 
 
-def _all_test_files() -> list[Path]:
-    """Return all repository test files for full-scan fallbacks."""
-    return sorted(path for path in (FO_ROOT / "tests").rglob("*.py") if path.is_file())
-
-
 def _changed_test_files() -> list[Path]:
-    """Return changed tests, or all tests when PR checkout metadata is too shallow."""
+    """Return changed test files relative to the best available diff base."""
     diff_base = _resolve_diff_base()
-    if diff_base is None:
-        return _all_test_files()
-
     head_sha = _git_stdout("rev-parse", "HEAD")
     if diff_base == head_sha:
         return []
@@ -194,12 +222,8 @@ def test_candidate_base_refs_default_to_main_when_github_base_ref_missing(
 def test_resolve_diff_base_falls_back_to_head_parent_when_remote_base_ref_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        MODULE,
-        "_candidate_base_refs",
-        lambda: ["origin/main", "main"],
-    )
-    monkeypatch.setattr(MODULE, "_git_ref_exists", lambda ref: False)
+    monkeypatch.delenv("GITHUB_BASE_REF", raising=False)
+    monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: "")
     monkeypatch.setattr(
         MODULE,
         "_git_stdout",
@@ -210,18 +234,33 @@ def test_resolve_diff_base_falls_back_to_head_parent_when_remote_base_ref_missin
     assert _resolve_diff_base() == "parent-sha"
 
 
-def test_resolve_diff_base_returns_none_in_pr_context_when_no_base_is_available(
+def test_resolve_diff_base_fetches_base_branch_when_missing_locally(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("GITHUB_BASE_REF", "main")
-    monkeypatch.setattr(MODULE, "_candidate_base_refs", lambda: ["origin/main", "main"])
-    monkeypatch.setattr(MODULE, "_git_ref_exists", lambda ref: False)
+    fetch_calls: list[str] = []
+    merge_bases = iter(["", "fetched-base-sha"])
+
+    monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: next(merge_bases))
     monkeypatch.setattr(
         MODULE,
-        "_git_stdout",
-        lambda *args, check=True: "",
+        "_fetch_base_ref",
+        lambda branch: fetch_calls.append(branch),
     )
-    assert _resolve_diff_base() is None
+    assert _resolve_diff_base() == "fetched-base-sha"
+    assert fetch_calls == ["main"]
+
+
+def test_resolve_diff_base_fails_loudly_in_pr_context_when_no_base_is_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_BASE_REF", "main")
+    monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: "")
+    monkeypatch.setattr(MODULE, "_fetch_base_ref", lambda branch: None)
+    monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "")
+
+    with pytest.raises(pytest.fail.Exception, match="attempting to fetch the base branch"):
+        _resolve_diff_base()
 
 
 def test_changed_test_files_returns_empty_when_no_distinct_diff_base(
@@ -230,15 +269,6 @@ def test_changed_test_files_returns_empty_when_no_distinct_diff_base(
     monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: "head-sha")
     monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "head-sha")
     assert _changed_test_files() == []
-
-
-def test_changed_test_files_falls_back_to_all_tests_in_shallow_pr_checkouts(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    fallback_files = [FO_ROOT / "tests" / "ci" / "test_weak_test_assertions.py"]
-    monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: None)
-    monkeypatch.setattr(MODULE, "_all_test_files", lambda: fallback_files)
-    assert _changed_test_files() == fallback_files
 
 
 def test_changed_test_files_includes_renames_in_diff_filter(
