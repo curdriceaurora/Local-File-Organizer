@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from urllib import error, request
 
 import pytest
 
@@ -73,7 +74,7 @@ def _fetch_base_ref(base_branch: str) -> None:
             "fetch",
             "--depth=1000",
             "origin",
-            f"{base_branch}:refs/remotes/origin/{base_branch}",
+            base_branch,
         ],
         cwd=FO_ROOT,
         check=False,
@@ -126,6 +127,56 @@ def _github_pr_base_parent() -> str:
     return ""
 
 
+def _github_pr_changed_test_files() -> list[Path]:
+    """Return changed test files from GitHub's PR files API when available."""
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if not event_path:
+        return []
+
+    try:
+        event = json.loads(Path(event_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    pull_request = event.get("pull_request")
+    if not isinstance(pull_request, dict):
+        return []
+
+    pr_url = pull_request.get("url")
+    if not isinstance(pr_url, str) or not pr_url:
+        return []
+
+    rel_paths: set[str] = set()
+    page = 1
+
+    while True:
+        try:
+            with request.urlopen(f"{pr_url}/files?per_page=100&page={page}") as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except (OSError, json.JSONDecodeError, error.URLError):
+            return []
+
+        if not isinstance(payload, list) or not payload:
+            break
+
+        for file_info in payload:
+            if not isinstance(file_info, dict):
+                continue
+            filename = file_info.get("filename")
+            if (
+                isinstance(filename, str)
+                and filename.startswith("tests/")
+                and filename.endswith(".py")
+            ):
+                rel_paths.add(filename)
+
+        if len(payload) < 100:
+            break
+        page += 1
+
+    return [FO_ROOT / rel_path for rel_path in sorted(rel_paths) if (FO_ROOT / rel_path).is_file()]
+
+
 def _resolve_diff_base() -> str | None:
     """Resolve a commit-ish usable as the changed-files diff base."""
     base_branch = os.environ.get("GITHUB_BASE_REF")
@@ -139,17 +190,18 @@ def _resolve_diff_base() -> str | None:
         if merge_base:
             return merge_base
 
+        fetch_head = _git_stdout("rev-parse", "--verify", "--quiet", "FETCH_HEAD", check=False)
+        if fetch_head:
+            merge_base = _git_stdout("merge-base", "HEAD", "FETCH_HEAD", check=False)
+            if merge_base:
+                return merge_base
+
     if base_branch:
         base_parent = _github_pr_base_parent()
         if base_parent:
             return base_parent
 
-        pytest.fail(
-            "Unable to resolve a git diff base for PR guardrail checks. "
-            f"GITHUB_BASE_REF={base_branch!r} is set, but no suitable base ref "
-            "or PR base parent could be found in the checkout, even after "
-            "attempting to fetch the base branch."
-        )
+        return None
 
     head_parent = _git_stdout("rev-parse", "--verify", "--quiet", "HEAD^1", check=False)
     if head_parent:
@@ -201,6 +253,17 @@ def _find_weak_call_count_assertions(source: str, path: str = "<string>") -> lis
 def _changed_test_files() -> list[Path]:
     """Return changed test files from CI and local pre-commit contexts."""
     diff_base = _resolve_diff_base()
+    if diff_base is None:
+        changed_files = _github_pr_changed_test_files()
+        if changed_files:
+            return changed_files
+
+        pytest.fail(
+            "Unable to determine changed test files for PR guardrail checks. "
+            "Git-based diff-base resolution failed and the GitHub PR files API "
+            "did not provide a usable fallback."
+        )
+
     head_sha = _git_stdout("rev-parse", "HEAD")
     rel_paths: set[str] = set()
 
@@ -296,13 +359,24 @@ def test_resolve_diff_base_fetches_base_branch_when_missing_locally(
 ) -> None:
     monkeypatch.setenv("GITHUB_BASE_REF", "main")
     fetch_calls: list[str] = []
-    merge_bases = iter(["", "fetched-base-sha"])
+    merge_bases = iter(["", ""])
 
     monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: next(merge_bases))
     monkeypatch.setattr(
         MODULE,
         "_fetch_base_ref",
         lambda branch: fetch_calls.append(branch),
+    )
+    monkeypatch.setattr(
+        MODULE,
+        "_git_stdout",
+        lambda *args, check=True: (
+            "fetch-head-sha"
+            if args == ("rev-parse", "--verify", "--quiet", "FETCH_HEAD")
+            else "fetched-base-sha"
+            if args == ("merge-base", "HEAD", "FETCH_HEAD")
+            else ""
+        ),
     )
     assert _resolve_diff_base() == "fetched-base-sha"
     assert fetch_calls == ["main"]
@@ -325,24 +399,37 @@ def test_github_pr_base_parent_uses_event_payload_to_pick_base_parent(
     assert _github_pr_base_parent() == "base-sha"
 
 
-def test_resolve_diff_base_fails_loudly_in_pr_context_when_no_base_is_available(
+def test_resolve_diff_base_returns_none_in_pr_context_when_no_base_is_available(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("GITHUB_BASE_REF", "main")
     monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: "")
     monkeypatch.setattr(MODULE, "_fetch_base_ref", lambda branch: None)
     monkeypatch.setattr(MODULE, "_github_pr_base_parent", lambda: "")
+    monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "")
 
-    with pytest.raises(pytest.fail.Exception, match="attempting to fetch the base branch"):
-        _resolve_diff_base()
+    assert _resolve_diff_base() is None
 
 
 def test_changed_test_files_returns_empty_when_no_distinct_diff_base(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: "head-sha")
-    monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "")
+    monkeypatch.setattr(
+        MODULE,
+        "_git_stdout",
+        lambda *args, check=True: "head-sha" if args == ("rev-parse", "HEAD") else "",
+    )
     assert _changed_test_files() == []
+
+
+def test_changed_test_files_use_github_pr_api_when_git_diff_base_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fallback_files = [FO_ROOT / "tests" / "ci" / "test_weak_test_assertions.py"]
+    monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: None)
+    monkeypatch.setattr(MODULE, "_github_pr_changed_test_files", lambda: fallback_files)
+    assert _changed_test_files() == fallback_files
 
 
 def test_changed_test_files_includes_renames_in_diff_filter(
