@@ -56,6 +56,11 @@ def get_effective_env(
     return effective_env
 
 
+def is_supported_github_token(value: Any) -> bool:
+    """Return whether *value* is a supported GitHub Actions token expression."""
+    return value in {"${{ secrets.GITHUB_TOKEN }}", "${{ github.token }}"}
+
+
 @pytest.mark.unit
 class TestWorkflowDirectory:
     """Tests for the workflows directory structure."""
@@ -227,7 +232,7 @@ class TestCIWorkflow:
         )
         assert lint_pre_commit_step is not None, "lint job must run pre-commit across the repo"
         lint_env = get_effective_env(workflow, lint_job, lint_pre_commit_step)
-        assert lint_env.get("GITHUB_TOKEN") == "${{ secrets.GITHUB_TOKEN }}", (
+        assert is_supported_github_token(lint_env.get("GITHUB_TOKEN")), (
             "lint pre-commit step must expose GITHUB_TOKEN for CI-only PR guardrails"
         )
 
@@ -241,7 +246,7 @@ class TestCIWorkflow:
         )
         assert test_run_step is not None, "test job must have a Run tests step"
         test_env = get_effective_env(workflow, test_job, test_run_step)
-        assert test_env.get("GITHUB_TOKEN") == "${{ secrets.GITHUB_TOKEN }}", (
+        assert is_supported_github_token(test_env.get("GITHUB_TOKEN")), (
             "test job must expose GITHUB_TOKEN for CI-only PR guardrails"
         )
 

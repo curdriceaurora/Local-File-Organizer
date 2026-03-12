@@ -16,6 +16,7 @@ pytestmark = pytest.mark.ci
 
 
 def test_pre_pr_script_runs_canonical_enforced_layers() -> None:
+    assert PRE_PR_SCRIPT.exists(), f"Pre-PR script not found: {PRE_PR_SCRIPT}"
     source = PRE_PR_SCRIPT.read_text(encoding="utf-8")
 
     assert "pre-commit validate-config" in source
@@ -30,6 +31,7 @@ def test_pre_pr_script_runs_canonical_enforced_layers() -> None:
 
 
 def test_pre_pr_script_is_not_a_second_policy_engine() -> None:
+    assert PRE_PR_SCRIPT.exists(), f"Pre-PR script not found: {PRE_PR_SCRIPT}"
     source = PRE_PR_SCRIPT.read_text(encoding="utf-8")
 
     banned_fragments = [
@@ -51,6 +53,7 @@ def test_pre_pr_script_is_not_a_second_policy_engine() -> None:
 
 
 def test_guardrail_docs_define_canonical_homes_and_conventions() -> None:
+    assert GUARDRAIL_DOC.exists(), f"Guardrail doc not found: {GUARDRAIL_DOC}"
     source = GUARDRAIL_DOC.read_text(encoding="utf-8")
 
     required_fragments = [
@@ -67,6 +70,7 @@ def test_guardrail_docs_define_canonical_homes_and_conventions() -> None:
 
 
 def test_contributing_points_to_guardrail_workflow() -> None:
+    assert CONTRIBUTING_DOC.exists(), f"Contributing doc not found: {CONTRIBUTING_DOC}"
     source = CONTRIBUTING_DOC.read_text(encoding="utf-8")
 
     assert "docs/developer/guardrails.md" in source
