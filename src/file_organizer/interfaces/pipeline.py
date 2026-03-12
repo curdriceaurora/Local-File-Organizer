@@ -29,7 +29,9 @@ class StageContext:
         destination: Final destination path computed by the
             postprocessor stage.
         category: Folder/category name assigned to the file.
+            Validated on every assignment to reject traversal sequences.
         filename: Suggested filename (without extension).
+            Validated on every assignment — same rules as *category*.
         dry_run: Whether this is a simulation (no file moves).
         error: Error message if a stage fails, ``None`` otherwise.
         extra: Arbitrary per-stage data that doesn't fit the
@@ -47,11 +49,18 @@ class StageContext:
     error: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self) -> None:
-        """Reject path-traversal characters in category and filename at construction time."""
-        for field_name, value in (("category", self.category), ("filename", self.filename)):
-            if value and (".." in value or "/" in value or "\\" in value):
-                raise ValueError(f"Invalid {field_name}: {value!r}")
+    @staticmethod
+    def _validate_path_component(field_name: str, value: str) -> str:
+        """Reject traversal sequences and separators in a path component."""
+        if value and (".." in value or "/" in value or "\\" in value):
+            raise ValueError(f"Invalid {field_name}: {value!r}")
+        return value
+
+    def __setattr__(self, name: str, value: object) -> None:
+        """Validate ``category`` and ``filename`` on every assignment."""
+        if name in ("category", "filename") and isinstance(value, str):
+            value = self._validate_path_component(name, value)
+        object.__setattr__(self, name, value)
 
     @property
     def failed(self) -> bool:

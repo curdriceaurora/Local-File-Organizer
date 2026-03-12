@@ -377,7 +377,7 @@ When `--compare` is used, JSON also includes:
 
 - `comparison.deltas_pct.*` — Percentage delta versus the baseline for each metric
 - `comparison.regression` — `true` if current p95 crossed the regression threshold
-- `comparison.threshold` — Threshold multiplier used for regression detection (default 1.2)
+- `comparison.threshold` — Threshold multiplier used for regression detection — fixed at `1.2` for the CLI (not user-configurable; emitted in the JSON for consumer reference)
 
 **Regression Detection:**
 

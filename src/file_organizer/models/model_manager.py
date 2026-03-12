@@ -40,7 +40,8 @@ class ModelManager:
         """Initialize ModelManager with optional Rich console."""
         self._console = console or Console()
         self._swap_lock = threading.Lock()
-        self._active_models: dict[str, object] = {}  # model_type -> model instance
+        self._active_models: dict[str, object] = {}  # model_type -> live model instance
+        self._active_model_ids: dict[str, str] = {}  # model_type -> selected model id
 
     # ------------------------------------------------------------------
     # Installed model detection
@@ -239,10 +240,11 @@ class ModelManager:
                     return False
 
             # Step 2: Atomic swap — callers see new model before old is drained
+            self._active_model_ids[model_type] = new_model_id
             if new_model is not None:
                 self._active_models[model_type] = new_model
             else:
-                self._active_models[model_type] = new_model_id  # record swap
+                self._active_models.pop(model_type, None)
 
             logger.info("Swapped %s model to %s", model_type, new_model_id)
 
@@ -259,12 +261,21 @@ class ModelManager:
             self._swap_lock.release()
 
     def get_active_model(self, model_type: str) -> object | None:
-        """Return the currently active model instance for *model_type*.
+        """Return the currently loaded model instance for *model_type*.
 
         Returns:
-            The model instance, or ``None`` if no model is active.
+            The loaded model instance, or ``None`` if no model is loaded.
         """
         return self._active_models.get(model_type)
+
+    def get_active_model_id(self, model_type: str) -> str | None:
+        """Return the selected model ID for *model_type*, whether loaded or not.
+
+        Returns:
+            The model ID string most recently swapped to, or ``None`` if
+            no swap has been performed for *model_type*.
+        """
+        return self._active_model_ids.get(model_type)
 
     # ------------------------------------------------------------------
     # Cache info

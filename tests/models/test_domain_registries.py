@@ -258,11 +258,14 @@ class TestModelHotSwap:
             mgr._swap_lock.release()
 
     def test_swap_without_factory(self) -> None:
-        """Swap without factory records the model ID."""
+        """Swap without factory records the model ID but loads no live instance."""
         mgr = self._make_manager()
         success = mgr.swap_model("text", "recorded-model")
         assert success is True
-        assert mgr.get_active_model("text") == "recorded-model"
+        # No live model is loaded — get_active_model returns None
+        assert mgr.get_active_model("text") is None
+        # The selected ID is still tracked via get_active_model_id
+        assert mgr.get_active_model_id("text") == "recorded-model"
 
     def test_concurrent_generate_during_swap(self) -> None:
         """Thread-safety: concurrent generate() calls during swap don't crash."""
