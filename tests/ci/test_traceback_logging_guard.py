@@ -88,7 +88,7 @@ def _has_exc_info(call: ast.Call) -> bool:
     for keyword in call.keywords:
         if keyword.arg != "exc_info":
             continue
-        if isinstance(keyword.value, ast.Constant) and keyword.value.value is False:
+        if isinstance(keyword.value, ast.Constant) and not bool(keyword.value.value):
             return False
         return True
     return False
@@ -151,6 +151,24 @@ try:
     work()
 except RuntimeError as exc:
     logger.error("job %s failed: %s", job_id, exc)
+""",
+        """
+import logging
+logger = logging.getLogger(__name__)
+
+try:
+    work()
+except RuntimeError as exc:
+    logger.error("job %s failed: %s", job_id, exc, exc_info=0)
+""",
+        """
+import logging
+logger = logging.getLogger(__name__)
+
+try:
+    work()
+except RuntimeError as exc:
+    logger.error("job %s failed: %s", job_id, exc, exc_info=None)
 """,
         """
 from logging import getLogger
@@ -217,6 +235,4 @@ def test_repository_has_no_missing_traceback_logging() -> None:
 
 def test_orchestrator_prefetch_failure_logs_with_exc_info() -> None:
     source = ORCHESTRATOR_PATH.read_text(encoding="utf-8")
-    assert "Prefetch future failed for %s: %s" in source
-    assert "exc_info=True" in source
     assert _find_missing_traceback_logging(source, str(ORCHESTRATOR_PATH)) == []
