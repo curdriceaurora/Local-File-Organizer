@@ -32,6 +32,8 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -103,6 +105,8 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
         python-version: ${{ github.event_name == 'pull_request' && fromJson('["3.11"]') || fromJson('["3.11", "3.12"]') }}

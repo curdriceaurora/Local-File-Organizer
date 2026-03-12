@@ -151,7 +151,12 @@ def _github_pr_changed_test_files() -> list[Path]:
 
     while True:
         try:
-            with request.urlopen(f"{pr_url}/files?per_page=100&page={page}") as response:
+            api_request = request.Request(f"{pr_url}/files?per_page=100&page={page}")
+            token = os.environ.get("GITHUB_TOKEN")
+            if token:
+                api_request.add_header("Authorization", f"token {token}")
+
+            with request.urlopen(api_request) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except (OSError, json.JSONDecodeError, error.URLError):
             return []
@@ -397,6 +402,38 @@ def test_github_pr_base_parent_uses_event_payload_to_pick_base_parent(
         lambda *args, check=True: "merge-sha feature-sha base-sha",
     )
     assert _github_pr_base_parent() == "base-sha"
+
+
+def test_github_pr_changed_test_files_adds_auth_header_when_token_present(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    event_path = tmp_path / "event.json"
+    event_path.write_text(
+        json.dumps({"pull_request": {"url": "https://api.github.com/repos/o/r/pulls/773"}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+    monkeypatch.setenv("GITHUB_TOKEN", "secret-token")
+
+    class _FakeResponse:
+        def __enter__(self) -> _FakeResponse:
+            return self
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b"[]"
+
+    captured_headers: dict[str, str] = {}
+
+    def fake_urlopen(req: request.Request) -> _FakeResponse:
+        captured_headers.update(dict(req.header_items()))
+        return _FakeResponse()
+
+    monkeypatch.setattr(request, "urlopen", fake_urlopen)
+    assert _github_pr_changed_test_files() == []
+    assert captured_headers["Authorization"] == "token secret-token"
 
 
 def test_resolve_diff_base_returns_none_in_pr_context_when_no_base_is_available(
