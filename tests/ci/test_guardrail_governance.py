@@ -83,6 +83,7 @@ def test_pre_pr_script_is_not_a_second_policy_engine() -> None:
 
 def test_guardrail_docs_define_canonical_homes_and_conventions() -> None:
     assert GUARDRAIL_DOC.exists(), f"Guardrail doc not found: {GUARDRAIL_DOC}"
+    assert PRE_PR_SCRIPT.exists(), f"Pre-PR script not found: {PRE_PR_SCRIPT}"
     source = GUARDRAIL_DOC.read_text(encoding="utf-8")
     script_commands = _canonical_commands_from_script(PRE_PR_SCRIPT.read_text(encoding="utf-8"))
     doc_commands = _canonical_commands_from_docs(source)
