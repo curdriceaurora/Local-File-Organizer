@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import os
 import subprocess
 import sys
@@ -94,6 +95,37 @@ def _merge_base_from_candidates() -> str:
     return ""
 
 
+def _github_pr_base_parent() -> str:
+    """Return the base parent of GitHub's synthetic PR merge commit when available."""
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if not event_path:
+        return ""
+
+    try:
+        event = json.loads(Path(event_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+
+    pull_request = event.get("pull_request")
+    if not isinstance(pull_request, dict):
+        return ""
+
+    head_sha = pull_request.get("head", {}).get("sha")
+    if not isinstance(head_sha, str) or not head_sha:
+        return ""
+
+    parents = _git_stdout("rev-list", "--parents", "-n", "1", "HEAD", check=False).split()
+    if len(parents) < 3:
+        return ""
+
+    _, first_parent, second_parent, *_ = parents
+    if first_parent == head_sha:
+        return second_parent
+    if second_parent == head_sha:
+        return first_parent
+    return ""
+
+
 def _resolve_diff_base() -> str | None:
     """Resolve a commit-ish usable as the changed-files diff base."""
     base_branch = os.environ.get("GITHUB_BASE_REF")
@@ -107,19 +139,21 @@ def _resolve_diff_base() -> str | None:
         if merge_base:
             return merge_base
 
-    # In GitHub PR jobs, HEAD is often a synthetic merge commit even when the
-    # base branch ref itself is not available locally.
-    head_parent = _git_stdout("rev-parse", "--verify", "--quiet", "HEAD^1", check=False)
-    if head_parent:
-        return head_parent
-
     if base_branch:
+        base_parent = _github_pr_base_parent()
+        if base_parent:
+            return base_parent
+
         pytest.fail(
             "Unable to resolve a git diff base for PR guardrail checks. "
             f"GITHUB_BASE_REF={base_branch!r} is set, but no suitable base ref "
-            "or HEAD^1 commit could be found in the checkout, even after "
+            "or PR base parent could be found in the checkout, even after "
             "attempting to fetch the base branch."
         )
+
+    head_parent = _git_stdout("rev-parse", "--verify", "--quiet", "HEAD^1", check=False)
+    if head_parent:
+        return head_parent
 
     return _git_stdout("rev-parse", "HEAD")
 
@@ -246,6 +280,7 @@ def test_resolve_diff_base_falls_back_to_head_parent_when_remote_base_ref_missin
 ) -> None:
     monkeypatch.delenv("GITHUB_BASE_REF", raising=False)
     monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: "")
+    monkeypatch.setattr(MODULE, "_github_pr_base_parent", lambda: "")
     monkeypatch.setattr(
         MODULE,
         "_git_stdout",
@@ -273,13 +308,30 @@ def test_resolve_diff_base_fetches_base_branch_when_missing_locally(
     assert fetch_calls == ["main"]
 
 
+def test_github_pr_base_parent_uses_event_payload_to_pick_base_parent(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    event_path = tmp_path / "event.json"
+    event_path.write_text(
+        json.dumps({"pull_request": {"head": {"sha": "feature-sha"}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+    monkeypatch.setattr(
+        MODULE,
+        "_git_stdout",
+        lambda *args, check=True: "merge-sha feature-sha base-sha",
+    )
+    assert _github_pr_base_parent() == "base-sha"
+
+
 def test_resolve_diff_base_fails_loudly_in_pr_context_when_no_base_is_available(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("GITHUB_BASE_REF", "main")
     monkeypatch.setattr(MODULE, "_merge_base_from_candidates", lambda: "")
     monkeypatch.setattr(MODULE, "_fetch_base_ref", lambda branch: None)
-    monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "")
+    monkeypatch.setattr(MODULE, "_github_pr_base_parent", lambda: "")
 
     with pytest.raises(pytest.fail.Exception, match="attempting to fetch the base branch"):
         _resolve_diff_base()
