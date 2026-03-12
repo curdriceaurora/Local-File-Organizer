@@ -17,6 +17,8 @@ from file_organizer.services import TextProcessor, VisionProcessor
 def init_text_processor(
     config: ModelConfig,
     console: Console,
+    *,
+    processor_cls: type[TextProcessor] | None = None,
 ) -> TextProcessor | None:
     """Create and initialize a text processor.
 
@@ -27,13 +29,16 @@ def init_text_processor(
     Args:
         config: Model configuration for the text model.
         console: Rich console for status output.
+        processor_cls: Optional processor class override used to preserve
+            patchable seams in tests while keeping construction centralized.
 
     Returns:
         Initialized ``TextProcessor``, or ``None`` on failure.
     """
     processor: TextProcessor | None = None
     try:
-        processor = TextProcessor(config=config)
+        processor_type = processor_cls or TextProcessor
+        processor = processor_type(config=config)
         processor.initialize()
         console.print("[green]✓[/green] Text model ready")
         return processor
@@ -56,6 +61,8 @@ def init_text_processor(
 def init_vision_processor(
     config: ModelConfig,
     console: Console,
+    *,
+    processor_cls: type[VisionProcessor] | None = None,
 ) -> VisionProcessor | None:
     """Create and initialize a vision processor.
 
@@ -65,13 +72,16 @@ def init_vision_processor(
     Args:
         config: Model configuration for the vision model.
         console: Rich console for status output.
+        processor_cls: Optional processor class override used to preserve
+            patchable seams in tests while keeping construction centralized.
 
     Returns:
         Initialized ``VisionProcessor``, or ``None`` on failure.
     """
     processor: VisionProcessor | None = None
     try:
-        processor = VisionProcessor(config=config)
+        processor_type = processor_cls or VisionProcessor
+        processor = processor_type(config=config)
         processor.initialize()
         console.print("[green]✓[/green] Vision model ready")
         return processor

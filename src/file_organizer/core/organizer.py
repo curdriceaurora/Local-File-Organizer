@@ -33,6 +33,8 @@ from file_organizer.models.base import ModelConfig
 from file_organizer.parallel.config import ExecutorType, ParallelConfig
 from file_organizer.parallel.processor import ParallelProcessor
 from file_organizer.services import ProcessedFile, ProcessedImage, TextProcessor, VisionProcessor
+from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
+from file_organizer.services.video.metadata_extractor import VideoMetadataExtractor
 from file_organizer.undo import UndoManager
 
 
@@ -375,12 +377,21 @@ class FileOrganizer:
     ) -> dict[str, list[str]]:
         return file_ops.simulate_organization(processed, output_path)
 
+    def _cleanup_empty_dirs(self, root: Path) -> None:
+        file_ops.cleanup_empty_dirs(root)
+
     def _init_text_processor(self) -> None:
-        self.text_processor = initializer.init_text_processor(self.text_model_config, self.console)
+        self.text_processor = initializer.init_text_processor(
+            self.text_model_config,
+            self.console,
+            processor_cls=TextProcessor,
+        )
 
     def _init_vision_processor(self) -> None:
         self.vision_processor = initializer.init_vision_processor(
-            self.vision_model_config, self.console
+            self.vision_model_config,
+            self.console,
+            processor_cls=VisionProcessor,
         )
 
     def _process_text_files(self, files: list[Path]) -> list[ProcessedFile]:
@@ -396,7 +407,7 @@ class FileOrganizer:
         )
 
     def _process_audio_files(self, files: list[Path]) -> list[ProcessedFile]:
-        return dispatcher.process_audio_files(files)
+        return dispatcher.process_audio_files(files, extractor_cls=AudioMetadataExtractor)
 
     def _process_video_files(self, files: list[Path]) -> list[ProcessedFile]:
-        return dispatcher.process_video_files(files)
+        return dispatcher.process_video_files(files, extractor_cls=VideoMetadataExtractor)
