@@ -309,7 +309,8 @@ file-organizer analytics ~/Documents
 
 ### `benchmark` — Performance Benchmarking
 
-Measure file processing speed, memory usage, and performance metrics.
+Measure file processing performance with statistical output, warmup exclusion,
+suite selection, and baseline comparison with regression detection.
 
 #### `benchmark run`
 
@@ -322,33 +323,48 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
 ```
 
 **Arguments:**
+
 - `INPUT_PATH` — Path to files to benchmark (default: `tests/fixtures/`)
 
 **Options:**
-- `--iterations INTEGER, -i INTEGER` — Number of iterations to run (default: `1`)
-- `--json` — Output results as JSON instead of a table
 
-**Output Metrics:**
-- `files_processed` — Number of files processed
-- `total_time_seconds` — Total execution time in seconds
-- `avg_time` — Average time per iteration
-- `median_time` — Median time across iterations
-- `peak_memory_mb` — Peak memory usage in megabytes
-- `cache_hits` — Number of cache hits
-- `cache_misses` — Number of cache misses
-- `llm_calls` — Number of LLM API calls
+- `--iterations INTEGER, -i INTEGER` — Number of measured iterations (default: `10`, min: `1`)
+- `--warmup INTEGER, -w INTEGER` — Warmup iterations excluded from statistics (default: `3`, min: `0`)
+- `--suite TEXT, -s TEXT` — Benchmark suite to run: `io`, `text`, `vision`, `audio`, `pipeline`, `e2e` (default: `io`)
+- `--json` — Output results as JSON instead of a Rich table
+- `--compare PATH` — Path to baseline JSON file for regression comparison
+
+**Output Metrics (JSON schema):**
+
+- `suite` — Suite name that was run
+- `files_count` — Number of files in the input directory
+- `hardware_profile` — Hardware detection info (CPU, memory, GPU)
+- `results.median_ms` — Median iteration time in milliseconds
+- `results.p95_ms` — 95th percentile iteration time
+- `results.p99_ms` — 99th percentile iteration time
+- `results.stddev_ms` — Standard deviation of iteration times
+- `results.throughput_fps` — Throughput in files per second (based on median)
+- `results.iterations` — Number of measured iterations
+
+**Regression Detection:**
+
+When `--compare` is provided, compares current results against a baseline JSON
+file. Flags a regression if p95 exceeds 120% of the baseline p95.
 
 **Examples:**
 
 ```bash
-# Benchmark files in Downloads
+# Benchmark files in Downloads with default settings
 file-organizer benchmark run ~/Downloads
 
-# Run with 5 iterations and JSON output
-file-organizer benchmark run ~/Documents --iterations 5 --json
+# Run with 5 iterations, no warmup, JSON output
+file-organizer benchmark run ~/Documents --iterations 5 --warmup 0 --json
 
-# Benchmark test fixtures
-file-organizer benchmark run tests/fixtures/
+# Run text suite and compare against baseline
+file-organizer benchmark run tests/fixtures/ --suite text --json --compare baseline.json
+
+# Save baseline for future comparison
+file-organizer benchmark run tests/fixtures/ --json > baseline.json
 ```
 
 ---

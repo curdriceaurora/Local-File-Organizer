@@ -1,7 +1,10 @@
-"""Model registry — catalogue of available AI models.
+"""Model registry - catalogue of available AI models.
 
-Provides a static catalogue of known Ollama models for file
-organization, with their types, sizes, and descriptions.
+Provides a static catalogue of known models for file organization,
+with their types, sizes, and descriptions.  Acts as a **facade** over
+the domain-specific registries (text, vision, audio) so callers that
+don't need domain metadata can continue to use the unified
+``AVAILABLE_MODELS`` list.
 """
 
 from __future__ import annotations
@@ -15,7 +18,7 @@ class ModelInfo:
 
     Args:
         name: Ollama model tag (e.g. ``qwen2.5:3b-instruct-q4_K_M``).
-        model_type: Category — ``text``, ``vision``, or ``audio``.
+        model_type: Category - ``text``, ``vision``, or ``audio``.
         size: Approximate download size (e.g. ``"1.9 GB"``).
         quantization: Quantization level (e.g. ``"q4_K_M"``).
         description: Short human-readable description.
@@ -30,48 +33,31 @@ class ModelInfo:
     installed: bool = False
 
 
-# Static catalogue of recommended models.
-AVAILABLE_MODELS: list[ModelInfo] = [
-    ModelInfo(
-        name="qwen2.5:3b-instruct-q4_K_M",
-        model_type="text",
-        size="1.9 GB",
-        quantization="q4_K_M",
-        description="Default text model — fast file description & naming.",
-    ),
-    ModelInfo(
-        name="qwen2.5:7b-instruct-q4_K_M",
-        model_type="text",
-        size="4.4 GB",
-        quantization="q4_K_M",
-        description="Larger text model — higher quality, slower.",
-    ),
-    ModelInfo(
-        name="qwen2.5vl:7b-q4_K_M",
-        model_type="vision",
-        size="6.0 GB",
-        quantization="q4_K_M",
-        description="Default vision model — image & video understanding.",
-    ),
-    ModelInfo(
-        name="llava:7b-v1.6-q4_K_M",
-        model_type="vision",
-        size="4.7 GB",
-        quantization="q4_K_M",
-        description="Alternative vision model — LLaVA v1.6.",
-    ),
-    ModelInfo(
-        name="whisper:base",
-        model_type="audio",
-        size="0.1 GB",
-        quantization="fp16",
-        description="Audio transcription — base accuracy.",
-    ),
-    ModelInfo(
-        name="whisper:small",
-        model_type="audio",
-        size="0.5 GB",
-        quantization="fp16",
-        description="Audio transcription — better accuracy.",
-    ),
-]
+def get_text_models() -> list[ModelInfo]:
+    """Return all registered text models with domain metadata."""
+    from file_organizer.models.text_registry import TEXT_MODELS
+
+    return list(TEXT_MODELS)
+
+
+def get_vision_models() -> list[ModelInfo]:
+    """Return all registered vision models with domain metadata."""
+    from file_organizer.models.vision_registry import VISION_MODELS
+
+    return list(VISION_MODELS)
+
+
+def get_audio_models() -> list[ModelInfo]:
+    """Return all registered audio models with domain metadata."""
+    from file_organizer.models.audio_registry import AUDIO_MODELS
+
+    return list(AUDIO_MODELS)
+
+
+def get_all_models() -> list[ModelInfo]:
+    """Return all models across all domains."""
+    return get_text_models() + get_vision_models() + get_audio_models()
+
+
+# Backward-compatible static list — populated from domain registries.
+AVAILABLE_MODELS: list[ModelInfo] = get_all_models()

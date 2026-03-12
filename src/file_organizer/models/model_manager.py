@@ -1,7 +1,8 @@
-"""Model manager — list, pull, and inspect AI models.
+"""Model manager - list, pull, inspect, and hot-swap AI models.
 
-Wraps the Ollama CLI and the static model registry to provide
-user-facing model operations.
+Wraps the Ollama CLI and the model registry to provide user-facing
+model operations, including atomic model swapping with drain and
+rollback semantics.
 """
 
 from __future__ import annotations
@@ -9,11 +10,18 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
+import threading
 
 from rich.console import Console
 from rich.table import Table
 
-from file_organizer.models.registry import AVAILABLE_MODELS, ModelInfo
+from file_organizer.models.registry import (
+    ModelInfo,
+    get_all_models,
+    get_audio_models,
+    get_text_models,
+    get_vision_models,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,14 +29,17 @@ logger = logging.getLogger(__name__)
 class ModelManager:
     """Manage AI models for File Organizer.
 
-    Combines the static :data:`AVAILABLE_MODELS` registry with live
-    ``ollama list`` data to show installed status, and delegates to
-    ``ollama pull`` for downloading new models.
+    Combines the static model registry with live ``ollama list`` data
+    to show installed status, and delegates to ``ollama pull`` for
+    downloading new models.  Supports atomic model hot-swapping with
+    drain/pre-warm/rollback semantics.
     """
 
     def __init__(self, console: Console | None = None) -> None:
         """Initialize ModelManager with optional Rich console."""
         self._console = console or Console()
+        self._swap_lock = threading.Lock()
+        self._active_models: dict[str, object] = {}  # model_type -> model instance
 
     # ------------------------------------------------------------------
     # Installed model detection
@@ -96,12 +107,20 @@ class ModelManager:
             List of ModelInfo with ``installed`` populated.
         """
         installed = self.check_installed()
-        models = []
-        for m in AVAILABLE_MODELS:
-            if type_filter and m.model_type != type_filter:
-                continue
+
+        if type_filter == "text":
+            models = get_text_models()
+        elif type_filter == "vision":
+            models = get_vision_models()
+        elif type_filter == "audio":
+            models = get_audio_models()
+        elif type_filter is None:
+            models = get_all_models()
+        else:
+            models = [m for m in get_all_models() if m.model_type == type_filter]
+
+        for m in models:
             m.installed = self._is_installed(m.name, installed)
-            models.append(m)
         return models
 
     def display_models(self, type_filter: str | None = None) -> None:
@@ -155,6 +174,92 @@ class ModelManager:
         except subprocess.TimeoutExpired:
             self._console.print("[red]Pull timed out.[/red]")
             return False
+
+    # ------------------------------------------------------------------
+    # Hot-swap
+    # ------------------------------------------------------------------
+
+    def swap_model(
+        self,
+        model_type: str,
+        new_model_id: str,
+        *,
+        model_factory: object | None = None,  # callable or instance
+    ) -> bool:
+        """Atomically swap the active model for *model_type*.
+
+        Swap sequence (under lock):
+
+        1. Pre-warm the new model synchronously via *model_factory*.
+        2. Drain the old model via ``safe_cleanup()`` (if supported).
+        3. Atomic reference swap (old -> new).
+
+        On failure at any step the lock is released and the old model
+        remains active (rollback).
+
+        Args:
+            model_type: ``"text"``, ``"vision"``, or ``"audio"``.
+            new_model_id: Model identifier to swap to.
+            model_factory: Optional callable that returns a new
+                model instance.  When *None*, the swap is recorded
+                in the registry but no live model is loaded.
+
+        Returns:
+            ``True`` on success, ``False`` on rollback.
+        """
+        if not self._swap_lock.acquire(blocking=False):
+            logger.warning("Swap already in progress for %s", model_type)
+            return False
+
+        try:
+            old_model = self._active_models.get(model_type)
+            # Step 1: Pre-warm new model
+            new_model: object | None = None
+            if model_factory is not None:
+                try:
+                    new_model = model_factory
+                    if callable(model_factory):
+                        new_model = model_factory()
+                    if hasattr(new_model, "initialize"):
+                        new_model.initialize()
+                except Exception:
+                    logger.exception(
+                        "Failed to pre-warm new model %s for %s",
+                        new_model_id,
+                        model_type,
+                    )
+                    return False
+
+            # Step 2: Drain old model
+            if old_model is not None and hasattr(old_model, "safe_cleanup"):
+                try:
+                    old_model.safe_cleanup()
+                except Exception:
+                    logger.exception("Drain failed for old %s model", model_type)
+                    # Rollback: clean up new model if we created one
+                    if new_model is not None and hasattr(new_model, "cleanup"):
+                        new_model.cleanup()
+                    return False
+
+            # Step 3: Atomic swap
+            if new_model is not None:
+                self._active_models[model_type] = new_model
+            else:
+                self._active_models[model_type] = new_model_id  # record swap
+
+            logger.info("Swapped %s model to %s", model_type, new_model_id)
+            return True
+
+        finally:
+            self._swap_lock.release()
+
+    def get_active_model(self, model_type: str) -> object | None:
+        """Return the currently active model instance for *model_type*.
+
+        Returns:
+            The model instance, or ``None`` if no model is active.
+        """
+        return self._active_models.get(model_type)
 
     # ------------------------------------------------------------------
     # Cache info

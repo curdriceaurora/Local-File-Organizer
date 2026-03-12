@@ -107,7 +107,8 @@ if [[ -n "$PY_FILES" ]]; then
   fi
 
   # Check for bracket-style access on known dataclasses
-  BRACKET_ACCESS=$(echo "$PY_DIFF" | grep -n '+.*\(metadata\|result\|config\)\["' || true)
+  # Note: excludes .metadata["..."] and .analysis["..."] — these are dict fields on StageContext
+  BRACKET_ACCESS=$(echo "$PY_DIFF" | grep -n '+.*\(result\|config\)\["' | grep -v '\.metadata\["' | grep -v '\.analysis\["' | grep -v '\.extra\["' || true)
   if [[ -n "$BRACKET_ACCESS" ]]; then
     echo "❌ Found bracket-style access on dataclass:"
     echo "$BRACKET_ACCESS"

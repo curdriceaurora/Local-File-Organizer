@@ -1,13 +1,14 @@
 """Processor pool for lazy-loading and managing file processors.
 
-Provides centralized access to processor instances with lazy initialization
-and proper resource cleanup.
+Provides centralized access to processor instances with lazy initialization,
+proper resource cleanup, and shared result normalization.
 """
 
 from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, Protocol, cast, runtime_checkable
 
 from .router import ProcessorType
@@ -26,6 +27,10 @@ class BaseProcessor(Protocol):
 
     def initialize(self) -> None:
         """Initialize the processor and its resources."""
+        ...
+
+    def process_file(self, file_path: Path) -> Any:
+        """Process a file and return a result object."""
         ...
 
     def cleanup(self) -> None:
@@ -154,3 +159,33 @@ class ProcessorPool:
     def registered_types(self) -> list[ProcessorType]:
         """Return list of processor types with registered factories."""
         return list(self._factories.keys())
+
+
+def normalize_processor_result(file_path: Path, result: object) -> dict[str, str]:
+    """Normalize a processor result into a ``{category, filename}`` dict.
+
+    Works with any result object that exposes ``folder_name``,
+    ``filename``, and/or ``error`` attributes (e.g. ``ProcessedFile``,
+    ``ProcessedImage``).
+
+    Args:
+        file_path: Original file path (used as filename fallback).
+        result: Return value of ``processor.process_file()``.
+
+    Returns:
+        Dict with ``"category"`` and ``"filename"`` keys.
+
+    Raises:
+        RuntimeError: If the result carries a non-empty ``error`` attribute.
+    """
+    category = "uncategorized"
+    filename = file_path.stem
+
+    if hasattr(result, "folder_name") and result.folder_name:
+        category = result.folder_name
+    if hasattr(result, "filename") and result.filename:
+        filename = result.filename
+    if hasattr(result, "error") and result.error:
+        raise RuntimeError(f"Processor reported error: {result.error}")
+
+    return {"category": category, "filename": filename}

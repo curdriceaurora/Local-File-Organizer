@@ -16,10 +16,13 @@
 | Component | Purpose | Location | Status |
 |-----------|---------|----------|--------|
 | **BaseModel** | Abstract AI model interface | `models/base.py` | ✅ Core |
-| **ModelManager** | Unified model lifecycle | `models/model_manager.py` | ✅ Active |
+| **ModelManager** | Model lifecycle + hot-swap | `models/model_manager.py` | ✅ Active |
 | **TextModel** | Ollama text generation | `models/text_model.py` | ✅ Active |
 | **VisionModel** | Vision-language wrapper | `models/vision_model.py` | ✅ Active |
 | **AudioModel** | Audio transcription | `models/audio_model.py` | ✅ Active |
+| **DomainRegistries** | Text/Vision/Audio model metadata | `models/{text,vision,audio}_registry.py` | ✅ Active |
+| **PipelineStage** | Composable processing protocol | `interfaces/pipeline.py` | ✅ Active |
+| **Pipeline Stages** | Preprocessor/Analyzer/Postprocessor/Writer | `pipeline/stages/` | ✅ Active |
 | **TextProcessor** | Text file pipeline | `services/text_processor.py` | ✅ Active |
 | **VisionProcessor** | Image/video pipeline | `services/vision_processor.py` | ✅ Active |
 | **FileOrganizer** | Main orchestrator | `src/file_organizer/core/organizer.py` | ✅ Active |
@@ -40,15 +43,19 @@
 ## Data Flow
 
 ```text
-Input File → FileOrganizer → File Type Detection
+Input File → FileOrganizer → PipelineOrchestrator
     ↓
-Text Files: TextProcessor → TextModel (Qwen 2.5 3B)
-Image/Video: VisionProcessor → VisionModel (Qwen 2.5-VL 7B)
-Audio: AudioModel/AudioTranscriber → faster-whisper
+Stage-Based Pipeline (composable):
+  PreprocessorStage → File validation + metadata extraction
+  AnalyzerStage → FileRouter → Processor (Text/Vision/Audio)
+  PostprocessorStage → Destination path computation
+  WriterStage → File copy/move (skipped in dry-run)
 
-All Processors → PatternAnalyzer → SuggestionEngine
-    ↓
-Intelligence Services → User Preference Learning
+Legacy Pipeline (backward compatible):
+  File Type Detection → TextProcessor / VisionProcessor / AudioModel
+  → PatternAnalyzer → SuggestionEngine
+
+All Paths → Intelligence Services → User Preference Learning
 EventBus → Daemon / Web UI / TUI notifications
 
 Final Output: Organized files + Operation history

@@ -1,7 +1,8 @@
 """Pipeline orchestrator for auto-organization.
 
 Coordinates file discovery (via watcher or batch), routing, processing,
-and organization into a cohesive pipeline.
+and organization into a cohesive pipeline.  Supports composable stages
+via :class:`~file_organizer.interfaces.PipelineStage`.
 """
 
 from __future__ import annotations
@@ -10,13 +11,16 @@ import logging
 import shutil
 import threading
 import time
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from file_organizer.interfaces.pipeline import PipelineStage, StageContext
+
 from .config import PipelineConfig
-from .processor_pool import BaseProcessor, ProcessorPool
+from .processor_pool import BaseProcessor, ProcessorPool, normalize_processor_result
 from .router import FileRouter, ProcessorType
 
 logger = logging.getLogger(__name__)
@@ -69,39 +73,94 @@ class PipelineStats:
 class PipelineOrchestrator:
     """Orchestrates the auto-organization pipeline.
 
-    Connects file discovery to processing and organization. Supports
+    Connects file discovery to processing and organization.  Supports
     both batch mode (process a list of files) and watch mode (react
-    to file system events in real-time).
+    to file-system events in real-time).
 
-    Dry-run mode is enabled by default for safety. Files are only
-    moved when both dry_run=False and auto_organize=True in config.
+    The orchestrator can operate in two modes:
 
-    Example:
-        >>> config = PipelineConfig(
-        ...     output_directory=Path("/tmp/organized"),
-        ...     dry_run=True,
-        ... )
-        >>> pipeline = PipelineOrchestrator(config)
-        >>> result = pipeline.process_file(Path("document.pdf"))
-        >>> print(result.category)
+    1. **Stage-based** (new): supply a ``stages`` list of
+       :class:`~file_organizer.interfaces.PipelineStage` instances.
+       Each file flows through the stages in order.
+    2. **Legacy** (default): uses the built-in router, processor pool,
+       and ``_process_with_processor`` / ``_organize_file`` helpers
+       for backward compatibility.
+
+    Dry-run mode is enabled by default for safety.  Files are only
+    moved when both ``dry_run=False`` and ``auto_organize=True`` in
+    config.
+
+    Example::
+
+        from file_organizer.pipeline.stages import (
+            PreprocessorStage, AnalyzerStage,
+            PostprocessorStage, WriterStage,
+        )
+        config = PipelineConfig(
+            output_directory=Path("organized"),
+            dry_run=True,
+        )
+        pipeline = PipelineOrchestrator(
+            config,
+            stages=[
+                PreprocessorStage(),
+                AnalyzerStage(),
+                PostprocessorStage(output_directory=config.output_directory),
+                WriterStage(),
+            ],
+        )
+        result = pipeline.process_file(Path("document.pdf"))
     """
 
-    def __init__(self, config: PipelineConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: PipelineConfig | None = None,
+        stages: Sequence[PipelineStage] | None = None,
+    ) -> None:
         """Initialize the pipeline orchestrator.
 
         Args:
-            config: Pipeline configuration. Uses safe defaults if None.
+            config: Pipeline configuration.  Uses safe defaults if *None*.
+            stages: Optional list of composable pipeline stages.
+                When provided, ``process_file`` delegates to these stages
+                instead of the legacy router/pool path.
         """
         self.config = config or PipelineConfig()
         self.router = FileRouter()
         self.processor_pool = ProcessorPool()
         self.stats = PipelineStats()
+        self._stats_lock = threading.Lock()
+        self._stages: list[PipelineStage] = list(stages) if stages else []
 
         self._running = False
         self._lock = threading.Lock()
         self._monitor: Any = None
         self._watch_thread: threading.Thread | None = None
-        self._executor = ThreadPoolExecutor(max_workers=config.max_concurrent if config else 4)
+        self._executor = ThreadPoolExecutor(
+            max_workers=config.max_concurrent if config else 4,
+        )
+
+    # ------------------------------------------------------------------
+    # Stage management
+    # ------------------------------------------------------------------
+
+    @property
+    def stages(self) -> list[PipelineStage]:
+        """Return the current stage list (mutable copy)."""
+        return list(self._stages)
+
+    def set_stages(self, stages: Sequence[PipelineStage]) -> None:
+        """Replace the stage list at runtime (thread-safe).
+
+        Args:
+            stages: New ordered list of pipeline stages.
+        """
+        with self._lock:
+            self._stages = list(stages)
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
 
     def start(self) -> None:
         """Start the pipeline, including watch mode if configured.
@@ -158,11 +217,15 @@ class PipelineOrchestrator:
 
             logger.info("Pipeline stopped")
 
+    # ------------------------------------------------------------------
+    # Processing
+    # ------------------------------------------------------------------
+
     def process_file(self, file_path: Path) -> ProcessingResult:
         """Process a single file through the pipeline.
 
-        Routes the file to the appropriate processor, processes it,
-        and optionally organizes it into the output directory.
+        If ``stages`` were provided, each stage is executed in order.
+        Otherwise, falls back to the legacy router/pool path.
 
         Args:
             file_path: Path to the file to process.
@@ -170,6 +233,88 @@ class PipelineOrchestrator:
         Returns:
             ProcessingResult with processing outcome and metadata.
         """
+        if self._stages:
+            return self._process_file_staged(file_path)
+        return self._process_file_legacy(file_path)
+
+    def process_batch(self, files: list[Path]) -> list[ProcessingResult]:
+        """Process a batch of files through the pipeline.
+
+        Files are processed sequentially. Each file is routed, processed,
+        and optionally organized independently.
+
+        Args:
+            files: List of file paths to process.
+
+        Returns:
+            List of ProcessingResult instances, one per file.
+        """
+        return [self.process_file(f) for f in files]
+
+    @property
+    def is_running(self) -> bool:
+        """Return True if the pipeline is currently running."""
+        return self._running
+
+    # ------------------------------------------------------------------
+    # Stage-based processing (new)
+    # ------------------------------------------------------------------
+
+    def _process_file_staged(self, file_path: Path) -> ProcessingResult:
+        """Run *file_path* through the configured stages.
+
+        Each stage is wrapped in a try/except so that an unexpected
+        exception is recorded on the context rather than crashing the
+        caller.
+        """
+        start_time = time.monotonic()
+        file_path = Path(file_path)
+
+        context = StageContext(
+            file_path=file_path,
+            dry_run=self.config.dry_run,
+        )
+
+        for stage in self._stages:
+            try:
+                context = stage.process(context)
+            except Exception as exc:
+                logger.exception("Stage %s raised for %s", stage.name, file_path)
+                context.error = str(exc)
+                break
+
+        duration_ms = (time.monotonic() - start_time) * 1000
+
+        processor_type = context.extra.get("processor_type", ProcessorType.UNKNOWN)
+
+        # Update stats (thread-safe for watch mode)
+        with self._stats_lock:
+            self.stats.total_processed += 1
+            self.stats.total_duration_ms += duration_ms
+            if context.failed:
+                self.stats.failed += 1
+            else:
+                self.stats.successful += 1
+
+        self._notify(file_path, not context.failed)
+
+        return ProcessingResult(
+            file_path=file_path,
+            success=not context.failed,
+            category=context.category,
+            destination=context.destination,
+            duration_ms=duration_ms,
+            error=context.error,
+            processor_type=processor_type,
+            dry_run=context.dry_run,
+        )
+
+    # ------------------------------------------------------------------
+    # Legacy processing (backward compatible)
+    # ------------------------------------------------------------------
+
+    def _process_file_legacy(self, file_path: Path) -> ProcessingResult:
+        """Original monolithic processing path."""
         start_time = time.monotonic()
         file_path = Path(file_path)
 
@@ -193,7 +338,8 @@ class PipelineOrchestrator:
         # Check if extension is supported
         if not self.config.is_supported(file_path):
             duration_ms = (time.monotonic() - start_time) * 1000
-            self.stats.skipped += 1
+            with self._stats_lock:
+                self.stats.skipped += 1
             return ProcessingResult(
                 file_path=file_path,
                 success=False,
@@ -207,7 +353,8 @@ class PipelineOrchestrator:
 
         if processor_type == ProcessorType.UNKNOWN:
             duration_ms = (time.monotonic() - start_time) * 1000
-            self.stats.skipped += 1
+            with self._stats_lock:
+                self.stats.skipped += 1
             return ProcessingResult(
                 file_path=file_path,
                 success=False,
@@ -222,7 +369,8 @@ class PipelineOrchestrator:
 
         if processor is None:
             duration_ms = (time.monotonic() - start_time) * 1000
-            self.stats.failed += 1
+            with self._stats_lock:
+                self.stats.failed += 1
             return ProcessingResult(
                 file_path=file_path,
                 success=False,
@@ -247,9 +395,10 @@ class PipelineOrchestrator:
                 self._organize_file(file_path, destination)
 
             # Update stats
-            self.stats.total_processed += 1
-            self.stats.successful += 1
-            self.stats.total_duration_ms += duration_ms
+            with self._stats_lock:
+                self.stats.total_processed += 1
+                self.stats.successful += 1
+                self.stats.total_duration_ms += duration_ms
 
             processing_result = ProcessingResult(
                 file_path=file_path,
@@ -261,30 +410,19 @@ class PipelineOrchestrator:
                 dry_run=self.config.dry_run,
             )
 
-            # Notification callback
-            if self.config.notification_callback is not None:
-                try:
-                    self.config.notification_callback(file_path, True)
-                except Exception:
-                    logger.exception("Notification callback failed for %s", file_path)
-
+            self._notify(file_path, True)
             return processing_result
 
         except Exception as e:
             duration_ms = (time.monotonic() - start_time) * 1000
-            self.stats.total_processed += 1
-            self.stats.failed += 1
-            self.stats.total_duration_ms += duration_ms
+            with self._stats_lock:
+                self.stats.total_processed += 1
+                self.stats.failed += 1
+                self.stats.total_duration_ms += duration_ms
 
             logger.exception("Failed to process %s", file_path)
 
-            # Notification callback for failure
-            if self.config.notification_callback is not None:
-                try:
-                    self.config.notification_callback(file_path, False)
-                except Exception:
-                    logger.exception("Notification callback failed for %s", file_path)
-
+            self._notify(file_path, False)
             return ProcessingResult(
                 file_path=file_path,
                 success=False,
@@ -294,30 +432,13 @@ class PipelineOrchestrator:
                 dry_run=self.config.dry_run,
             )
 
-    def process_batch(self, files: list[Path]) -> list[ProcessingResult]:
-        """Process a batch of files through the pipeline.
-
-        Files are processed sequentially. Each file is routed, processed,
-        and optionally organized independently.
-
-        Args:
-            files: List of file paths to process.
-
-        Returns:
-            List of ProcessingResult instances, one per file.
-        """
-        results: list[ProcessingResult] = []
-
-        for file_path in files:
-            result = self.process_file(file_path)
-            results.append(result)
-
-        return results
-
-    @property
-    def is_running(self) -> bool:
-        """Return True if the pipeline is currently running."""
-        return self._running
+    def _notify(self, file_path: Path, success: bool) -> None:
+        """Fire the notification callback, swallowing exceptions."""
+        if self.config.notification_callback is not None:
+            try:
+                self.config.notification_callback(file_path, success)
+            except Exception:
+                logger.exception("Notification callback failed for %s", file_path)
 
     def _process_with_processor(
         self,
@@ -325,10 +446,7 @@ class PipelineOrchestrator:
         processor: BaseProcessor,
         processor_type: ProcessorType,
     ) -> dict[str, str]:
-        """Process a file using the given processor.
-
-        Adapts the processor's output into a standardized dictionary
-        with 'category' and 'filename' keys.
+        """Process a file and return normalised ``{category, filename}`` dict.
 
         Args:
             file_path: Path to the file to process.
@@ -339,26 +457,10 @@ class PipelineOrchestrator:
             Dictionary with 'category' and 'filename' keys.
 
         Raises:
-            Exception: If the processor fails.
+            RuntimeError: If the processor reports an error.
         """
-        # Use the processor's process_file method
-        result = processor.process_file(file_path)  # type: ignore[attr-defined]
-
-        # Adapt the result - both ProcessedFile and ProcessedImage
-        # have folder_name and filename attributes
-        category = "uncategorized"
-        filename = file_path.stem
-
-        if hasattr(result, "folder_name") and result.folder_name:
-            category = result.folder_name
-        if hasattr(result, "filename") and result.filename:
-            filename = result.filename
-
-        # Check for processing errors in the result
-        if hasattr(result, "error") and result.error:
-            raise RuntimeError(f"Processor reported error: {result.error}")
-
-        return {"category": category, "filename": filename}
+        raw = processor.process_file(file_path)
+        return normalize_processor_result(file_path, raw)
 
     def _organize_file(self, source: Path, destination: Path) -> None:
         """Move or copy a file to its destination.
@@ -401,7 +503,8 @@ class PipelineOrchestrator:
     def _watch_loop(self) -> None:
         """Background loop that polls the monitor for events and processes them.
 
-        Uses a thread pool executor to process files without blocking the event loop.
+        Uses a thread pool executor to process files without blocking
+        the event loop.
         """
         while self._running and self._monitor is not None:
             try:

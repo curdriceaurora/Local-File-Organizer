@@ -28,7 +28,7 @@ Every task has definitely verifiable acceptance criteria — measurable line cou
 
 **Task 1: Core Decomposition** — Break `organizer.py` (934 lines, 7 concerns) into 5 focused modules. FileOrganizer becomes thin facade < 200 lines. Eliminates God Object anti-pattern.
 
-**Task 2: Interface & Engine Contracts** — Populate empty `interfaces/` directory with Protocol classes for models, processors, storage, intelligence, and a unified `EngineProtocol` lifecycle (init/process/shutdown/health_check). Additive — no existing code changes.
+**Task 2: Interface & Engine Contracts** — Populate empty `interfaces/` directory with Protocol classes for models, processors, storage, intelligence, and pipeline stages. Additive — no existing code changes. (EngineProtocol was planned but deleted — zero implementors.)
 
 **Task 3: Hardware Profiling** — New `core/hardware_profile.py` + CLI command. Detects GPU/RAM/cores, recommends model size and worker count. Extends existing `ResourceMonitor` (which only covers NVIDIA + basic memory).
 
@@ -80,9 +80,9 @@ Phase D (High-effort): Task 9          — depends on Tasks 2, 5
 - [x] Task 1: Core Decomposition — organizer.py God Object extraction (PRD Topics 1)
 - [x] Task 2: Interface & Engine Contracts — Protocol definitions (PRD Topics 2, 11; EngineProtocol deleted — zero implementors)
 - [x] Task 3: Hardware Profiling — startup detection + model auto-selection (PRD Topic 3)
-- [ ] Task 4: Benchmarking Suite — CLI command + statistical reporting (PRD Topic 6)
-- [ ] Task 5: Model Lifecycle — domain registries + hot-swap (PRD Topics 4, 7)
-- [ ] Task 6: Composable Pipeline — stage extraction + orchestrator refactor (PRD Topic 12)
+- [x] Task 4: Benchmarking Suite — CLI command + statistical reporting (PRD Topic 6)
+- [x] Task 5: Model Lifecycle — domain registries + hot-swap (PRD Topics 4, 7)
+- [x] Task 6: Composable Pipeline — stage extraction + orchestrator refactor (PRD Topic 12)
 - [ ] Task 7: Double-Buffered Processing — I/O-compute overlap (PRD Topic 9)
 - [ ] Task 8: Proactive Memory Management — buffer pool + batch_sizer integration (PRD Topic 8)
 - [ ] Task 9: Hybrid Retrieval + Embedding Cache — BM25 + vector + cache (PRD Topics 5, 14)
@@ -118,9 +118,9 @@ Phase D (High-effort): Task 9          — depends on Tasks 2, 5
 - [x] #710 - Core Decomposition — organizer.py God Object Extraction (parallel: true, size: L) ✅ DONE
 - [x] #711 - Interface & Engine Contracts — Protocol Definitions (parallel: true, size: M) ✅ DONE
 - [x] #712 - Hardware Profiling — Startup Detection & Model Auto-Selection (parallel: true, size: S) ✅ DONE
-- [ ] #707 - Benchmarking Suite — CLI Command & Statistical Reporting (parallel: false, depends: #712, size: M)
-- [ ] #708 - Model Lifecycle — Domain Registries & Hot-Swap (parallel: false, depends: #711, size: L)
-- [ ] #709 - Composable Pipeline — Stage Extraction & Orchestrator Refactor (parallel: false, depends: #710, size: M)
+- [x] #707 - Benchmarking Suite — CLI Command & Statistical Reporting (parallel: false, depends: #712, size: M) ✅ DONE
+- [x] #708 - Model Lifecycle — Domain Registries & Hot-Swap (parallel: false, depends: #711, size: L) ✅ DONE
+- [x] #709 - Composable Pipeline — Stage Extraction & Orchestrator Refactor (parallel: false, depends: #710, size: M) ✅ DONE
 - [ ] #713 - Double-Buffered Processing — I/O-Compute Overlap (parallel: true, depends: #709, size: M)
 - [ ] #714 - Proactive Memory Management — Buffer Pool & Batch Sizer Integration (parallel: true, depends: #712, size: M)
 - [ ] #715 - Hybrid Retrieval with Embedding Cache — BM25 + Vector Search (parallel: false, depends: #711+#708, size: XL)

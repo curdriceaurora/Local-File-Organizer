@@ -9,6 +9,7 @@ Modules:
     processor: FileProcessorProtocol, BatchProcessorProtocol
     storage: StorageProtocol, CacheProtocol
     intelligence: LearnerProtocol, ScorerProtocol
+    pipeline: PipelineStage, StageContext
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from file_organizer.interfaces.model import (
     TextModelProtocol,
     VisionModelProtocol,
 )
+from file_organizer.interfaces.pipeline import PipelineStage, StageContext
 from file_organizer.interfaces.processor import (
     BatchProcessorProtocol,
     FileProcessorProtocol,
@@ -31,7 +33,9 @@ __all__ = [
     "CacheProtocol",
     "FileProcessorProtocol",
     "LearnerProtocol",
+    "PipelineStage",
     "ScorerProtocol",
+    "StageContext",
     "StorageProtocol",
     "TextModelProtocol",
     "VisionModelProtocol",

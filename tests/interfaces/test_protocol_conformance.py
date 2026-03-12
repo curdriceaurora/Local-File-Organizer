@@ -18,7 +18,9 @@ from file_organizer.interfaces import (
     CacheProtocol,
     FileProcessorProtocol,
     LearnerProtocol,
+    PipelineStage,
     ScorerProtocol,
+    StageContext,
     StorageProtocol,
     TextModelProtocol,
     VisionModelProtocol,
@@ -240,3 +242,49 @@ class TestStorageProtocolConformance:
                 return False
 
         assert isinstance(_StubStorage(), StorageProtocol)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline stage protocol conformance
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestPipelineStageProtocolConformance:
+    """Verify that pipeline stage implementations satisfy PipelineStage."""
+
+    def test_stub_satisfies_pipeline_stage_protocol(self) -> None:
+        """A minimal stub with name + process satisfies the protocol."""
+
+        class _StubStage:
+            @property
+            def name(self) -> str:
+                return "stub"
+
+            def process(self, context: StageContext) -> StageContext:
+                return context
+
+        stage = _StubStage()
+        assert isinstance(stage, PipelineStage)
+
+    def test_all_built_in_stages_satisfy_protocol(self) -> None:
+        """All four extracted pipeline stages satisfy PipelineStage."""
+        from pathlib import Path
+
+        from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+        from file_organizer.pipeline.stages.postprocessor import PostprocessorStage
+        from file_organizer.pipeline.stages.preprocessor import PreprocessorStage
+        from file_organizer.pipeline.stages.writer import WriterStage
+
+        preprocessor = PreprocessorStage()
+        assert isinstance(preprocessor, PipelineStage)
+
+        analyzer = AnalyzerStage()
+        assert isinstance(analyzer, PipelineStage)
+
+        postprocessor = PostprocessorStage(output_directory=Path("out"))
+        assert isinstance(postprocessor, PipelineStage)
+
+        writer = WriterStage()
+        assert isinstance(writer, PipelineStage)

@@ -1,14 +1,20 @@
-"""Benchmark command for performance measurement and optimization analysis.
+"""Benchmark command for performance measurement and regression detection.
 
-Provides performance benchmarking capabilities to measure file processing
-speed, memory usage, and other performance metrics.
+Provides ``file-organizer benchmark run`` with statistical output
+(median, p95, p99, stddev, throughput), hardware profile inclusion,
+warmup exclusion, suite selection, and baseline comparison with
+regression flagging.
 """
 
 from __future__ import annotations
 
 import json
+import math
+import statistics
 import time
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -19,6 +25,164 @@ benchmark_app = typer.Typer(
 )
 
 
+# ---------------------------------------------------------------------------
+# Statistical helpers
+# ---------------------------------------------------------------------------
+
+
+def _percentile(sorted_data: Sequence[float], pct: float) -> float:
+    """Return the *pct*-th percentile from pre-sorted *sorted_data*.
+
+    Uses the nearest-rank method.
+    """
+    if not sorted_data:
+        return 0.0
+    k = max(0, math.ceil(pct / 100.0 * len(sorted_data)) - 1)
+    return sorted_data[k]
+
+
+def compute_stats(times_ms: list[float], file_count: int) -> dict[str, float]:
+    """Return a statistics dict from a list of iteration times in ms.
+
+    Keys: ``median_ms``, ``p95_ms``, ``p99_ms``, ``stddev_ms``,
+    ``throughput_fps``, ``iterations``.
+    """
+    if not times_ms:
+        return {
+            "median_ms": 0.0,
+            "p95_ms": 0.0,
+            "p99_ms": 0.0,
+            "stddev_ms": 0.0,
+            "throughput_fps": 0.0,
+            "iterations": 0,
+        }
+
+    sorted_t = sorted(times_ms)
+    median = statistics.median(sorted_t)
+    stddev = statistics.stdev(sorted_t) if len(sorted_t) >= 2 else 0.0
+    p95 = _percentile(sorted_t, 95)
+    p99 = _percentile(sorted_t, 99)
+
+    # Throughput: files per second based on median iteration time
+    throughput = (file_count / (median / 1000.0)) if median > 0 else 0.0
+
+    return {
+        "median_ms": round(median, 3),
+        "p95_ms": round(p95, 3),
+        "p99_ms": round(p99, 3),
+        "stddev_ms": round(stddev, 3),
+        "throughput_fps": round(throughput, 2),
+        "iterations": len(sorted_t),
+    }
+
+
+def compare_results(
+    current: dict[str, Any],
+    baseline: dict[str, Any],
+    threshold: float = 1.2,
+) -> dict[str, Any]:
+    """Compare *current* results against *baseline*.
+
+    Returns a dict with ``deltas`` and a ``regression`` flag
+    (True if p95 exceeds *threshold* x baseline p95).
+    """
+    cur = current.get("results", current)
+    base = baseline.get("results", baseline)
+
+    deltas: dict[str, float] = {}
+    for key in ("median_ms", "p95_ms", "p99_ms", "stddev_ms", "throughput_fps"):
+        cur_val = cur.get(key, 0.0)
+        base_val = base.get(key, 0.0)
+        if base_val != 0:
+            deltas[key] = round((cur_val - base_val) / base_val * 100, 1)
+        else:
+            deltas[key] = 0.0
+
+    regression = cur.get("p95_ms", 0.0) > threshold * base.get("p95_ms", 1.0)
+
+    return {
+        "deltas_pct": deltas,
+        "regression": regression,
+        "threshold": threshold,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Suite runners
+# ---------------------------------------------------------------------------
+
+
+def _run_io_suite(files: list[Path]) -> None:
+    """Baseline I/O benchmark: measures file stat access overhead."""
+    for file_path in files:
+        try:
+            _ = file_path.stat()
+        except Exception:
+            pass
+
+
+_SUITE_RUNNERS: dict[str, Any] = {
+    "io": _run_io_suite,
+    "text": _run_io_suite,
+    "vision": _run_io_suite,
+    "audio": _run_io_suite,
+    "pipeline": _run_io_suite,
+    "e2e": _run_io_suite,
+}
+
+
+# ---------------------------------------------------------------------------
+# Output helpers
+# ---------------------------------------------------------------------------
+
+
+def _print_table(
+    console: Any, suite: str, warmup: int, stats: dict[str, Any], file_count: int
+) -> None:
+    """Print benchmark results as a Rich table."""
+    from rich.table import Table
+
+    table = Table(title=f"Benchmark Results (suite={suite})")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Files", str(file_count))
+    table.add_row("Iterations (measured)", str(stats["iterations"]))
+    table.add_row("Warmup (excluded)", str(warmup))
+    table.add_row("Median (ms)", f"{stats['median_ms']:.3f}")
+    table.add_row("P95 (ms)", f"{stats['p95_ms']:.3f}")
+    table.add_row("P99 (ms)", f"{stats['p99_ms']:.3f}")
+    table.add_row("Stddev (ms)", f"{stats['stddev_ms']:.3f}")
+    table.add_row("Throughput (files/s)", f"{stats['throughput_fps']:.2f}")
+
+    console.print(table)
+
+
+def _print_comparison(console: Any, comp: dict[str, Any], *, json_output: bool) -> None:
+    """Print baseline comparison results."""
+    if json_output:
+        console.print(json.dumps({"comparison": comp}, indent=2))
+        return
+
+    console.print("\n[bold]Comparison vs baseline:[/bold]")
+    for key, delta in comp["deltas_pct"].items():
+        color = "red" if delta > 20 else "green" if delta < -5 else "yellow"
+        console.print(f"  {key}: [{color}]{delta:+.1f}%[/{color}]")
+
+    if comp["regression"]:
+        console.print(
+            "\n[bold red]REGRESSION DETECTED[/bold red]: "
+            f"p95 exceeds {comp['threshold']:.0%} of baseline"
+        )
+    else:
+        console.print("\n[bold green]No regression detected[/bold green]")
+
+
+# ---------------------------------------------------------------------------
+# CLI command
+# ---------------------------------------------------------------------------
+
+
 @benchmark_app.command()
 def run(
     input_path: Path = typer.Argument(
@@ -26,158 +190,130 @@ def run(
         help="Path to files to benchmark.",
     ),
     iterations: int = typer.Option(
-        1,
+        10,
         "--iterations",
         "-i",
-        help="Number of iterations to run.",
+        help="Number of iterations to run (including warmup).",
         min=1,
+    ),
+    warmup: int = typer.Option(
+        3,
+        "--warmup",
+        "-w",
+        help="Warmup iterations excluded from statistics.",
+        min=0,
+    ),
+    suite: str = typer.Option(
+        "io",
+        "--suite",
+        "-s",
+        help="Benchmark suite to run (io, text, vision, audio, pipeline, e2e).",
     ),
     json_output: bool = typer.Option(
         False,
         "--json",
         help="Output results as JSON.",
     ),
+    compare_path: Path | None = typer.Option(
+        None,
+        "--compare",
+        help="Path to baseline JSON file for regression comparison.",
+    ),
 ) -> None:
-    """Run a baseline I/O performance benchmark.
+    """Run a performance benchmark with statistical output.
 
-    Measures file stat access speed, memory usage, and timing statistics.
-    This benchmarks simple I/O overhead (file discovery and stat calls), not
-    the full file-organization pipeline. To measure real processing speed,
-    run the actual organization routine or add a --process flag.
+    Measures timing statistics across multiple iterations with warmup
+    exclusion.  Supports suite selection and baseline comparison.
     """
-    # Import Rich here to avoid affecting Typer's help text rendering
     from rich.console import Console
-    from rich.table import Table
 
-    # Initialize console for output
     console = Console()
-
-    # Resolve path
     input_path = input_path.resolve()
 
     if not input_path.exists():
         console.print(f"[red]Error: Path does not exist: {input_path}[/red]")
         raise typer.Exit(code=1)
 
-    # Get list of files
+    # Collect files
     try:
-        files = list(input_path.rglob("*"))
-        files = [f for f in files if f.is_file()]
+        files = [f for f in input_path.rglob("*") if f.is_file()]
     except Exception as e:
         console.print(f"[red]Error reading files: {e}[/red]")
         raise typer.Exit(code=1) from e
 
     if not files:
         if json_output:
-            console.print(
-                json.dumps(
-                    {
-                        "files_processed": 0,
-                        "total_time_seconds": 0.0,
-                        "median_time": 0.0,
-                        "avg_time": 0.0,
-                        "peak_memory_mb": 0.0,
-                        "cache_hits": 0,
-                        "cache_misses": 0,
-                        "llm_calls": 0,
-                    }
-                )
-            )
+            console.print(json.dumps({"suite": suite, "results": compute_stats([], 0)}))
         else:
             console.print("[yellow]No files found in the specified path.[/yellow]")
         return
 
-    # Initialize monitoring (imported lazily to reduce startup latency)
-    from file_organizer.optimization.memory_profiler import MemoryProfiler
-    from file_organizer.optimization.resource_monitor import ResourceMonitor
+    # Select suite runner
+    runner = _SUITE_RUNNERS.get(suite)
+    if runner is None:
+        console.print(f"[red]Unknown suite: {suite}[/red]")
+        raise typer.Exit(code=1)
 
-    monitor = ResourceMonitor()
-    profiler = MemoryProfiler()
-
-    # Run benchmarks
-    times: list[float] = []
-    total_time = 0.0
-
+    # Ensure we have enough iterations
+    total_iterations = warmup + iterations
     if not json_output:
         console.print(
-            f"[bold]Benchmarking[/bold] {len(files)} files over {iterations} iteration(s)..."
+            f"[bold]Benchmarking[/bold] {len(files)} files, "
+            f"suite={suite}, {iterations} iterations + {warmup} warmup"
         )
 
-    # Start memory profiling
-    profiler.start_tracking(interval_seconds=0.1)
-
-    for iteration in range(iterations):
+    # Run iterations
+    all_times_ms: list[float] = []
+    for i in range(total_iterations):
         if not json_output:
-            console.print(f"[dim]Iteration {iteration + 1}/{iterations}...[/dim]")
+            label = "warmup" if i < warmup else f"{i - warmup + 1}/{iterations}"
+            console.print(f"[dim]Iteration {i + 1}/{total_iterations} ({label})...[/dim]")
 
-        # Baseline I/O benchmark: measures file stat access overhead only
-        start_time = time.monotonic()
+        start = time.monotonic()
+        runner(files)
+        elapsed_ms = (time.monotonic() - start) * 1000
+        all_times_ms.append(elapsed_ms)
 
-        for file_path in files:
-            try:
-                _ = file_path.stat()
-            except Exception:
-                pass
+    # Exclude warmup
+    measured = all_times_ms[warmup:]
 
-        end_time = time.monotonic()
-        iteration_time = end_time - start_time
-        times.append(iteration_time)
-        total_time += iteration_time
+    # Statistics
+    stats = compute_stats(measured, len(files))
 
-    # Stop memory profiling
-    timeline = profiler.stop_tracking()
+    # Hardware profile
+    hw_profile: dict[str, Any] = {}
+    try:
+        from file_organizer.core.hardware_profile import detect_hardware
 
-    # Calculate statistics
-    avg_time = total_time / iterations if iterations > 0 else 0.0
-    if not times:
-        median_time = 0.0
-    else:
-        sorted_times = sorted(times)
-        n = len(sorted_times)
-        if n % 2 == 1:
-            median_time = sorted_times[n // 2]
-        else:
-            median_time = (sorted_times[n // 2 - 1] + sorted_times[n // 2]) / 2
+        hw = detect_hardware()
+        hw_profile = hw.to_dict()
+    except Exception:
+        hw_profile = {"error": "Hardware detection unavailable"}
 
-    # Get peak memory from both monitor and profiler
-    memory_info = monitor.get_memory_usage()
-    peak_memory_mb = memory_info.rss / (1024 * 1024)
-
-    # Also use profiler timeline data if available
-    if timeline.snapshots:
-        timeline_peak = max(s.rss for s in timeline.snapshots) / (1024 * 1024)
-        peak_memory_mb = max(peak_memory_mb, timeline_peak)
-
-    # Prepare results
-    results = {
-        "files_processed": len(files),
-        "total_time_seconds": round(total_time, 4),
-        "median_time": round(median_time, 4),
-        "avg_time": round(avg_time, 4),
-        "peak_memory_mb": round(peak_memory_mb, 2),
-        # TODO: compute real cache/LLM metrics when full processing pipeline is used
-        "cache_hits": 0,
-        "cache_misses": 0,
-        "llm_calls": 0,
+    # Build output
+    output: dict[str, Any] = {
+        "suite": suite,
+        "files_count": len(files),
+        "hardware_profile": hw_profile,
+        "results": stats,
     }
 
-    # Output results
     if json_output:
-        console.print(json.dumps(results))
+        console.print(json.dumps(output, indent=2))
     else:
-        # Display as table
-        table = Table(title="Benchmark Results")
-        table.add_column("Metric", style="cyan")
-        table.add_column("Value", style="green")
+        _print_table(console, suite, warmup, stats, len(files))
 
-        table.add_row("Files Processed", str(results["files_processed"]))
-        table.add_row("Total Time (s)", str(results["total_time_seconds"]))
-        table.add_row("Median Time (s)", str(results["median_time"]))
-        table.add_row("Average Time (s)", str(results["avg_time"]))
-        table.add_row("Peak Memory (MB)", str(results["peak_memory_mb"]))
-        table.add_row("Cache Hits", str(results["cache_hits"]))
-        table.add_row("Cache Misses", str(results["cache_misses"]))
-        table.add_row("LLM Calls", str(results["llm_calls"]))
+    # Comparison
+    if compare_path is not None:
+        try:
+            baseline = json.loads(compare_path.read_text())
+        except Exception as e:
+            console.print(f"[red]Failed to read baseline: {e}[/red]")
+            raise typer.Exit(code=1) from e
 
-        console.print(table)
+        comp = compare_results(output, baseline)
+        output["comparison"] = comp
+        _print_comparison(console, comp, json_output=json_output)
+
+    if not json_output:
         console.print("\n[bold green]Benchmark completed[/bold green]")

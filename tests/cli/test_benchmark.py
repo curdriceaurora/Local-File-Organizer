@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -14,6 +13,7 @@ from file_organizer.cli.main import app
 runner = CliRunner()
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 def test_benchmark_command_exists() -> None:
     """Test that benchmark command exists in CLI."""
@@ -27,197 +27,110 @@ def test_benchmark_command_exists() -> None:
     assert "json" in help_text, "Help should document --json parameter"
 
 
-@pytest.mark.integration
+@pytest.mark.ci
+@pytest.mark.unit
 def test_benchmark_runs_with_fixtures(tmp_path: Path) -> None:
     """Test benchmark command runs with fixture directory."""
-    # Create test fixtures
     fixtures_dir = tmp_path / "fixtures"
     fixtures_dir.mkdir()
-
-    # Create some test files
     (fixtures_dir / "test1.txt").write_text("test content 1")
     (fixtures_dir / "test2.txt").write_text("test content 2")
 
-    with (
-        patch("file_organizer.optimization.resource_monitor.ResourceMonitor") as mock_monitor_cls,
-        patch("file_organizer.optimization.memory_profiler.MemoryProfiler") as mock_profiler_cls,
-    ):
-        # Mock the monitor
-        mock_monitor = MagicMock()
-        mock_monitor.get_memory_usage.return_value.rss = 1000000
-        mock_monitor.get_memory_usage.return_value.vms = 2000000
-        mock_monitor.get_memory_usage.return_value.percent = 10.0
-        mock_monitor_cls.return_value = mock_monitor
+    result = runner.invoke(
+        app,
+        ["benchmark", "run", str(fixtures_dir), "--iterations", "1", "--warmup", "0"],
+    )
 
-        # Mock the profiler with timeline snapshots
-        mock_profiler = MagicMock()
-        mock_timeline = MagicMock()
-        # Create mock snapshots with rss values
-        mock_snapshot = MagicMock()
-        mock_snapshot.rss = 1500000
-        mock_timeline.snapshots = [mock_snapshot]
-        mock_profiler.stop_tracking.return_value = mock_timeline
-        mock_profiler_cls.return_value = mock_profiler
-
-        result = runner.invoke(
-            app,
-            ["benchmark", "run", str(fixtures_dir), "--iterations", "1"],
-        )
-
-        assert result.exit_code == 0
-        assert "Benchmark completed" in result.stdout or "files processed" in result.stdout.lower()
+    assert result.exit_code == 0
+    assert "Benchmark completed" in result.stdout or "benchmark" in result.stdout.lower()
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 def test_benchmark_json_output(tmp_path: Path) -> None:
-    """Test benchmark command JSON output."""
-    # Create test fixtures
-    fixtures_dir = tmp_path / "fixtures"
-    fixtures_dir.mkdir()
-
-    (fixtures_dir / "test1.txt").write_text("test content")
-
-    with (
-        patch("file_organizer.optimization.resource_monitor.ResourceMonitor") as mock_monitor_cls,
-        patch("file_organizer.optimization.memory_profiler.MemoryProfiler") as mock_profiler_cls,
-    ):
-        # Mock the monitor
-        mock_monitor = MagicMock()
-        mock_monitor.get_memory_usage.return_value.rss = 1000000
-        mock_monitor.get_memory_usage.return_value.vms = 2000000
-        mock_monitor.get_memory_usage.return_value.percent = 10.0
-        mock_monitor_cls.return_value = mock_monitor
-
-        # Mock the profiler with timeline snapshots
-        mock_profiler = MagicMock()
-        mock_timeline = MagicMock()
-        mock_snapshot = MagicMock()
-        mock_snapshot.rss = 1500000
-        mock_timeline.snapshots = [mock_snapshot]
-        mock_profiler.stop_tracking.return_value = mock_timeline
-        mock_profiler_cls.return_value = mock_profiler
-
-        result = runner.invoke(
-            app,
-            ["benchmark", "run", str(fixtures_dir), "--json"],
-        )
-
-        assert result.exit_code == 0
-
-        # Parse and verify JSON output
-        try:
-            output_json = json.loads(result.stdout)
-            assert "files_processed" in output_json
-            assert "total_time_seconds" in output_json
-            assert isinstance(output_json["files_processed"], int)
-            assert isinstance(output_json["total_time_seconds"], (int, float))
-        except json.JSONDecodeError:
-            pytest.fail(f"JSON output is not valid JSON: {result.stdout}")
-
-
-@pytest.mark.unit
-def test_benchmark_tracks_cache_hits(tmp_path: Path) -> None:
-    """Test that benchmark tracks cache hits metric."""
+    """Test benchmark command JSON output has required schema."""
     fixtures_dir = tmp_path / "fixtures"
     fixtures_dir.mkdir()
     (fixtures_dir / "test1.txt").write_text("test content")
 
-    with (
-        patch("file_organizer.optimization.resource_monitor.ResourceMonitor") as mock_monitor_cls,
-        patch("file_organizer.optimization.memory_profiler.MemoryProfiler") as mock_profiler_cls,
-    ):
-        # Mock the monitor
-        mock_monitor = MagicMock()
-        mock_monitor.get_memory_usage.return_value.rss = 1000000
-        mock_monitor_cls.return_value = mock_monitor
+    result = runner.invoke(
+        app,
+        ["benchmark", "run", str(fixtures_dir), "--json", "--iterations", "2", "--warmup", "0"],
+    )
 
-        # Mock the profiler with timeline snapshots
-        mock_profiler = MagicMock()
-        mock_timeline = MagicMock()
-        mock_timeline.snapshots = []  # Empty snapshots list for this test
-        mock_profiler.stop_tracking.return_value = mock_timeline
-        mock_profiler_cls.return_value = mock_profiler
+    assert result.exit_code == 0
 
-        result = runner.invoke(
-            app,
-            ["benchmark", "run", str(fixtures_dir), "--json"],
-        )
-
-        assert result.exit_code == 0
+    try:
         output_json = json.loads(result.stdout)
-        assert "cache_hits" in output_json
-        assert isinstance(output_json["cache_hits"], int)
-        assert output_json["cache_hits"] >= 0
+        assert "suite" in output_json
+        assert "results" in output_json
+        assert "files_count" in output_json
+        assert "hardware_profile" in output_json
+        assert isinstance(output_json["files_count"], int)
+        assert output_json["files_count"] >= 1
+    except json.JSONDecodeError:
+        pytest.fail(f"JSON output is not valid JSON: {result.stdout}")
 
 
+@pytest.mark.ci
 @pytest.mark.unit
-def test_benchmark_json_includes_cache_metrics(tmp_path: Path) -> None:
-    """Test that JSON output includes cache and LLM metrics."""
+def test_benchmark_results_have_statistics(tmp_path: Path) -> None:
+    """Test that JSON results include statistical metrics."""
     fixtures_dir = tmp_path / "fixtures"
     fixtures_dir.mkdir()
     (fixtures_dir / "test1.txt").write_text("test content")
 
-    with (
-        patch("file_organizer.optimization.resource_monitor.ResourceMonitor") as mock_monitor_cls,
-        patch("file_organizer.optimization.memory_profiler.MemoryProfiler") as mock_profiler_cls,
-    ):
-        # Mock the monitor
-        mock_monitor = MagicMock()
-        mock_monitor.get_memory_usage.return_value.rss = 1000000
-        mock_monitor_cls.return_value = mock_monitor
+    result = runner.invoke(
+        app,
+        ["benchmark", "run", str(fixtures_dir), "--json", "--iterations", "3", "--warmup", "0"],
+    )
 
-        # Mock the profiler with timeline snapshots
-        mock_profiler = MagicMock()
-        mock_timeline = MagicMock()
-        mock_timeline.snapshots = []  # Empty snapshots list for this test
-        mock_profiler.stop_tracking.return_value = mock_timeline
-        mock_profiler_cls.return_value = mock_profiler
+    assert result.exit_code == 0
+    output_json = json.loads(result.stdout)
+    results = output_json["results"]
 
-        result = runner.invoke(
-            app,
-            ["benchmark", "run", str(fixtures_dir), "--json"],
-        )
-
-        assert result.exit_code == 0
-        output_json = json.loads(result.stdout)
-        assert "cache_hits" in output_json
-        assert "cache_misses" in output_json
-        assert "llm_calls" in output_json
-        assert isinstance(output_json["cache_hits"], int)
-        assert isinstance(output_json["cache_misses"], int)
-        assert isinstance(output_json["llm_calls"], int)
+    assert "median_ms" in results
+    assert "p95_ms" in results
+    assert "p99_ms" in results
+    assert "stddev_ms" in results
+    assert "throughput_fps" in results
+    assert "iterations" in results
+    assert isinstance(results["median_ms"], (int, float))
+    assert isinstance(results["throughput_fps"], (int, float))
 
 
+@pytest.mark.ci
+@pytest.mark.unit
+def test_benchmark_hardware_profile_included(tmp_path: Path) -> None:
+    """Test that hardware profile is present in JSON output."""
+    fixtures_dir = tmp_path / "fixtures"
+    fixtures_dir.mkdir()
+    (fixtures_dir / "test1.txt").write_text("test content")
+
+    result = runner.invoke(
+        app,
+        ["benchmark", "run", str(fixtures_dir), "--json", "--iterations", "1", "--warmup", "0"],
+    )
+
+    assert result.exit_code == 0
+    output_json = json.loads(result.stdout)
+    assert "hardware_profile" in output_json
+    assert isinstance(output_json["hardware_profile"], dict)
+
+
+@pytest.mark.ci
 @pytest.mark.unit
 def test_benchmark_llm_call_count(tmp_path: Path) -> None:
-    """Test that benchmark tracks LLM call count metric."""
+    """Test that benchmark produces valid iteration count."""
     fixtures_dir = tmp_path / "fixtures"
     fixtures_dir.mkdir()
     (fixtures_dir / "test1.txt").write_text("test content")
 
-    with (
-        patch("file_organizer.optimization.resource_monitor.ResourceMonitor") as mock_monitor_cls,
-        patch("file_organizer.optimization.memory_profiler.MemoryProfiler") as mock_profiler_cls,
-    ):
-        # Mock the monitor
-        mock_monitor = MagicMock()
-        mock_monitor.get_memory_usage.return_value.rss = 1000000
-        mock_monitor_cls.return_value = mock_monitor
+    result = runner.invoke(
+        app,
+        ["benchmark", "run", str(fixtures_dir), "--json", "--iterations", "5", "--warmup", "0"],
+    )
 
-        # Mock the profiler with timeline snapshots
-        mock_profiler = MagicMock()
-        mock_timeline = MagicMock()
-        mock_timeline.snapshots = []  # Empty snapshots list for this test
-        mock_profiler.stop_tracking.return_value = mock_timeline
-        mock_profiler_cls.return_value = mock_profiler
-
-        result = runner.invoke(
-            app,
-            ["benchmark", "run", str(fixtures_dir), "--json"],
-        )
-
-        assert result.exit_code == 0
-        output_json = json.loads(result.stdout)
-        assert "llm_calls" in output_json
-        assert isinstance(output_json["llm_calls"], int)
-        assert output_json["llm_calls"] >= 0
+    assert result.exit_code == 0
+    output_json = json.loads(result.stdout)
+    assert output_json["results"]["iterations"] == 5
