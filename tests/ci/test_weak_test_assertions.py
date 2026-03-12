@@ -173,7 +173,10 @@ def _github_pr_changed_test_files() -> list[Path] | None:
         except (OSError, json.JSONDecodeError, error.URLError):
             return None
 
-        if not isinstance(payload, list) or not payload:
+        if not isinstance(payload, list):
+            return None
+
+        if not payload:
             break
 
         for file_info in payload:
@@ -495,6 +498,31 @@ def test_github_pr_changed_test_files_adds_auth_header_when_token_present(
     monkeypatch.setattr(request, "urlopen", fake_urlopen)
     assert _github_pr_changed_test_files() == []
     assert captured_headers["Authorization"] == "token secret-token"
+
+
+def test_github_pr_changed_test_files_returns_none_for_non_list_payload(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    event_path = tmp_path / "event.json"
+    event_path.write_text(
+        json.dumps({"pull_request": {"url": "https://api.github.com/repos/o/r/pulls/773"}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+
+    class _FakeResponse:
+        def __enter__(self) -> _FakeResponse:
+            return self
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b'{"message": "rate limited"}'
+
+    monkeypatch.setattr(request, "urlopen", lambda req: _FakeResponse())
+
+    assert _github_pr_changed_test_files() is None
 
 
 def test_changed_test_files_returns_empty_when_pr_api_has_no_test_files(
