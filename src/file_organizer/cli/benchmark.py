@@ -145,8 +145,22 @@ def _run_io_suite(files: list[Path]) -> None:
             pass
 
 
+# Suites with a distinct processor-level runner (Phase C).
+# Until those integrations are stable, every suite falls back to
+# ``_run_io_suite`` so that the command is exercisable end-to-end.
+# Suites that have not yet been implemented are listed here together with
+# a human-readable note that is emitted in CLI output and JSON payloads.
+_IO_ONLY_SUITES: frozenset[str] = frozenset({"text", "vision", "audio", "pipeline", "e2e"})
+_IO_ONLY_NOTE = (
+    "Suite-specific processor runner not yet implemented; "
+    "measuring I/O overhead only (file stat access). "
+    "Dedicated runners will be added once processor integrations (Phase C) are stable."
+)
+
 _SUITE_RUNNERS: dict[str, Any] = {
     "io": _run_io_suite,
+    # The entries below intentionally fall back to _run_io_suite until the
+    # corresponding processor integrations (Phase C) are stable.
     "text": _run_io_suite,
     "vision": _run_io_suite,
     "audio": _run_io_suite,
@@ -235,7 +249,12 @@ def run(
         "io",
         "--suite",
         "-s",
-        help="Benchmark suite to run (io, text, vision, audio, pipeline, e2e).",
+        help=(
+            "Benchmark suite to run: io, text, vision, audio, pipeline, e2e. "
+            "NOTE: only 'io' has a dedicated runner; all other suites currently "
+            "fall back to I/O overhead measurement (file stat access) until the "
+            "corresponding processor integrations are stable (Phase C)."
+        ),
     ),
     json_output: bool = typer.Option(
         False,
@@ -278,7 +297,7 @@ def run(
                 hw_profile_empty = detect_hardware().to_dict()
             except Exception:
                 hw_profile_empty = {"error": "Hardware detection unavailable"}
-            console.print(
+            typer.echo(
                 json.dumps(
                     {
                         "suite": suite,
@@ -298,6 +317,14 @@ def run(
     if runner is None:
         console.print(f"[red]Unknown suite: {suite}[/red]")
         raise typer.Exit(code=1)
+
+    # Warn when running a suite that hasn't yet been given a dedicated runner
+    if suite in _IO_ONLY_SUITES and not json_output:
+        console.print(
+            f"[yellow]Note:[/yellow] '{suite}' suite is not yet implemented. "
+            "Falling back to I/O overhead measurement (file stat access). "
+            "Dedicated runners will be added once processor integrations (Phase C) are stable."
+        )
 
     # Ensure we have enough iterations
     total_iterations = warmup + iterations
@@ -342,6 +369,8 @@ def run(
         "hardware_profile": hw_profile,
         "results": stats,
     }
+    if suite in _IO_ONLY_SUITES:
+        output["suite_note"] = _IO_ONLY_NOTE
 
     # Comparison (must be built before JSON print to emit a single document)
     if compare_path is not None:
@@ -355,7 +384,7 @@ def run(
         output["comparison"] = comp
 
     if json_output:
-        console.print(json.dumps(output, indent=2))
+        typer.echo(json.dumps(output, indent=2))
     else:
         _print_table(console, suite, warmup, stats, len(files))
         if compare_path is not None:

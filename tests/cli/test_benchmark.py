@@ -134,3 +134,102 @@ def test_benchmark_llm_call_count(tmp_path: Path) -> None:
     assert result.exit_code == 0
     output_json = json.loads(result.stdout)
     assert output_json["results"]["iterations"] == 5
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+@pytest.mark.parametrize("suite", ["text", "vision", "audio", "pipeline", "e2e"])
+def test_benchmark_non_io_suite_json_includes_suite_note(tmp_path: Path, suite: str) -> None:
+    """Non-io suites include a suite_note in JSON output documenting the fallback."""
+    (tmp_path / "sample.txt").write_text("content")
+
+    result = runner.invoke(
+        app,
+        [
+            "benchmark",
+            "run",
+            str(tmp_path),
+            "--json",
+            "--suite",
+            suite,
+            "--iterations",
+            "1",
+            "--warmup",
+            "0",
+        ],
+    )
+
+    assert result.exit_code == 0, f"CLI failed for suite={suite}: {result.output}"
+    output_json = json.loads(result.stdout)
+    assert output_json["suite"] == suite
+    assert "suite_note" in output_json, f"Expected suite_note for suite={suite}"
+    assert "I/O" in output_json["suite_note"] or "io" in output_json["suite_note"].lower()
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_benchmark_io_suite_json_has_no_suite_note(tmp_path: Path) -> None:
+    """The 'io' suite does NOT include a suite_note in JSON output."""
+    (tmp_path / "sample.txt").write_text("content")
+
+    result = runner.invoke(
+        app,
+        [
+            "benchmark",
+            "run",
+            str(tmp_path),
+            "--json",
+            "--suite",
+            "io",
+            "--iterations",
+            "1",
+            "--warmup",
+            "0",
+        ],
+    )
+
+    assert result.exit_code == 0
+    output_json = json.loads(result.stdout)
+    assert "suite_note" not in output_json
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_benchmark_non_io_suite_table_mode_prints_warning(tmp_path: Path) -> None:
+    """Non-io suite in table mode prints a yellow note about the fallback."""
+    (tmp_path / "sample.txt").write_text("content")
+
+    result = runner.invoke(
+        app,
+        [
+            "benchmark",
+            "run",
+            str(tmp_path),
+            "--suite",
+            "text",
+            "--iterations",
+            "1",
+            "--warmup",
+            "0",
+        ],
+    )
+
+    assert result.exit_code == 0
+    # The note should mention the suite name and the I/O fallback
+    assert "text" in result.stdout
+    assert "not yet implemented" in result.stdout or "Falling back" in result.stdout
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_benchmark_help_documents_suite_limitation() -> None:
+    """benchmark run --help mentions that only 'io' has a dedicated runner."""
+    result = runner.invoke(app, ["benchmark", "run", "--help"])
+    assert result.exit_code == 0
+    help_text = result.stdout.lower()
+    # The updated help text should mention the fallback and Phase C
+    assert "fall" in help_text, "Help should mention 'fall back' behaviour"
+    assert "io" in help_text, "Help should reference the 'io' suite"
+    assert "phase" in help_text or "processor" in help_text, (
+        "Help should reference processor integrations or Phase C"
+    )

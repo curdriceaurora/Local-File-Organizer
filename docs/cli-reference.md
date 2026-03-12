@@ -361,9 +361,20 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
 - `--json` — Output results as JSON instead of a Rich table
 - `--compare PATH` — Path to baseline JSON file for regression comparison
 
+> **⚠ Suite implementation status:** Only the `io` suite has a dedicated runner
+> (file `stat` access overhead). The suites `text`, `vision`, `audio`, `pipeline`,
+> and `e2e` are **not yet implemented** — they fall back to the same I/O overhead
+> measurement as `io`. Dedicated processor-level runners will be added once the
+> processor integrations (Phase C) are stable.
+>
+> When a non-`io` suite is selected in table mode the CLI prints a yellow
+> note. In `--json` mode the response includes a `suite_note` field with the
+> same message.
+
 **Output Metrics (JSON schema):**
 
 - `suite` — Suite name that was run
+- `suite_note` — *(non-`io` suites only)* Human-readable note explaining that the suite falls back to I/O measurement
 - `files_count` — Number of files in the input directory
 - `hardware_profile` — Hardware detection info (CPU, memory, GPU)
 - `results.median_ms` — Median iteration time in milliseconds
@@ -394,6 +405,7 @@ file-organizer benchmark run ~/Downloads
 file-organizer benchmark run ~/Documents --iterations 5 --warmup 0 --json
 
 # Run text suite and compare against baseline
+# NOTE: 'text' currently falls back to I/O overhead measurement
 file-organizer benchmark run tests/fixtures/ --suite text --json --compare baseline.json
 
 # Save baseline for future comparison
