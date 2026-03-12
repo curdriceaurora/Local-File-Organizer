@@ -135,24 +135,28 @@ def _github_pr_base_parent() -> str:
     return ""
 
 
-def _github_pr_changed_test_files() -> list[Path]:
-    """Return changed test files from GitHub's PR files API when available."""
+def _github_pr_changed_test_files() -> list[Path] | None:
+    """Return changed test files from GitHub's PR files API when available.
+
+    Returns ``None`` when the GitHub PR context or API response is unusable.
+    Returns a list, which may be empty, when the API call succeeds.
+    """
     event_path = os.environ.get("GITHUB_EVENT_PATH")
     if not event_path:
-        return []
+        return None
 
     try:
         event = json.loads(Path(event_path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return []
+        return None
 
     pull_request = event.get("pull_request")
     if not isinstance(pull_request, dict):
-        return []
+        return None
 
     pr_url = pull_request.get("url")
     if not isinstance(pr_url, str) or not pr_url:
-        return []
+        return None
 
     rel_paths: set[str] = set()
     page = 1
@@ -167,7 +171,7 @@ def _github_pr_changed_test_files() -> list[Path]:
             with request.urlopen(api_request) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except (OSError, json.JSONDecodeError, error.URLError):
-            return []
+            return None
 
         if not isinstance(payload, list) or not payload:
             break
@@ -271,7 +275,7 @@ def _changed_test_files() -> list[Path]:
     diff_base = _resolve_diff_base()
     if diff_base is None:
         changed_files = _github_pr_changed_test_files()
-        if changed_files:
+        if changed_files is not None:
             return changed_files
 
         if _LAST_DIFF_BASE_ERROR:
@@ -493,6 +497,16 @@ def test_github_pr_changed_test_files_adds_auth_header_when_token_present(
     assert captured_headers["Authorization"] == "token secret-token"
 
 
+def test_changed_test_files_returns_empty_when_pr_api_has_no_test_files(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: None)
+    monkeypatch.setattr(MODULE, "_LAST_DIFF_BASE_ERROR", None)
+    monkeypatch.setattr(MODULE, "_github_pr_changed_test_files", lambda: [])
+
+    assert _changed_test_files() == []
+
+
 def test_resolve_diff_base_returns_none_in_pr_context_when_no_base_is_available(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -552,7 +566,7 @@ def test_changed_test_files_reports_fetch_timeout_when_api_fallback_fails(
         "_LAST_DIFF_BASE_ERROR",
         "git fetch origin 'main' timed out after 5 seconds",
     )
-    monkeypatch.setattr(MODULE, "_github_pr_changed_test_files", lambda: [])
+    monkeypatch.setattr(MODULE, "_github_pr_changed_test_files", lambda: None)
 
     with pytest.raises(pytest.fail.Exception, match="timed out after 5 seconds"):
         _changed_test_files()

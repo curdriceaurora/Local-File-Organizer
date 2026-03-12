@@ -18,6 +18,7 @@ does not implement detectors, remediate findings, or change CI enforcement.
 - `.pre-commit-config.yaml`
 - `.claude/scripts/pre-commit-validation.sh`
 - `tests/ci/test_path_security_contract.py`
+- `tests/ci/test_prefetch_contracts.py`
 - `tests/ci/test_review_regressions.py`
 - `tests/ci/test_traceback_logging_guard.py`
 - `tests/ci/test_weak_test_assertions.py`
