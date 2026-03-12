@@ -84,6 +84,7 @@ class FileOrganizer:
         dry_run: bool = True,
         use_hardlinks: bool = True,
         parallel_workers: int | None = None,
+        no_prefetch: bool = False,
     ) -> None:
         """Initialize file organizer.
 
@@ -93,6 +94,9 @@ class FileOrganizer:
             dry_run: If True, only simulate operations
             use_hardlinks: If True, create hardlinks instead of copying
             parallel_workers: Number of parallel workers (default: None = auto)
+            no_prefetch: If True, disable I/O-compute overlap when using
+                the stage-based pipeline (``PipelineOrchestrator``).
+                Has no effect on the legacy processor path.
         """
         if text_model_config is None or vision_model_config is None:
             from file_organizer.config.provider_env import get_model_configs
@@ -105,6 +109,13 @@ class FileOrganizer:
             self.vision_model_config = vision_model_config
         self.dry_run = dry_run
         self.use_hardlinks = use_hardlinks
+        self.no_prefetch = no_prefetch
+        if no_prefetch:
+            logger.warning(
+                "no_prefetch=True has no effect: FileOrganizer uses ParallelProcessor, "
+                "not PipelineOrchestrator. Pass prefetch_depth=0 to PipelineOrchestrator "
+                "directly if you need to disable I/O-compute overlap."
+            )
         self.console = Console()
 
         self.parallel_config = ParallelConfig(

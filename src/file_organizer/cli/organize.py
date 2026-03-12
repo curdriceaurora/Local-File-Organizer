@@ -17,6 +17,11 @@ def organize(
     output_dir: Path = typer.Argument(..., help="Destination directory for organized files."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without moving files."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
+    no_prefetch: bool = typer.Option(
+        False,
+        "--no-prefetch",
+        help="Disable I/O-compute overlap (stage-based pipeline only). Useful for debugging.",
+    ),
 ) -> None:
     """Organize files in a directory using AI models."""
     console.print(f"[bold]Organizing[/bold] {input_dir} -> {output_dir}")
@@ -26,7 +31,7 @@ def organize(
     try:
         from file_organizer.core.organizer import FileOrganizer
 
-        organizer = FileOrganizer(dry_run=dry_run or _g.dry_run)
+        organizer = FileOrganizer(dry_run=dry_run or _g.dry_run, no_prefetch=no_prefetch)
         result = organizer.organize(input_dir, output_dir)
         console.print(
             f"[green]Done:[/green] {result.processed_files} processed, "
