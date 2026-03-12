@@ -41,6 +41,12 @@ class PostprocessorStage:
         filename = context.filename or context.file_path.stem
         suffix = context.file_path.suffix
 
+        # Sanitize path parts to prevent directory traversal
+        for part in (category, filename):
+            if ".." in part or "/" in part or "\\" in part:
+                context.error = f"Invalid path component: {part!r}"
+                return context
+
         destination = self._output_directory / category / f"{filename}{suffix}"
 
         # Deduplicate

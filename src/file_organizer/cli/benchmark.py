@@ -41,7 +41,7 @@ def _percentile(sorted_data: Sequence[float], pct: float) -> float:
     return sorted_data[k]
 
 
-def compute_stats(times_ms: list[float], file_count: int) -> dict[str, float]:
+def compute_stats(times_ms: list[float], file_count: int) -> dict[str, float | int]:
     """Return a statistics dict from a list of iteration times in ms.
 
     Keys: ``median_ms``, ``p95_ms``, ``p99_ms``, ``stddev_ms``,
@@ -166,7 +166,11 @@ def _print_comparison(console: Any, comp: dict[str, Any], *, json_output: bool) 
 
     console.print("\n[bold]Comparison vs baseline:[/bold]")
     for key, delta in comp["deltas_pct"].items():
-        color = "red" if delta > 20 else "green" if delta < -5 else "yellow"
+        # For throughput, higher is better; for latency metrics, lower is better
+        if key == "throughput_fps":
+            color = "green" if delta > 5 else "red" if delta < -20 else "yellow"
+        else:
+            color = "red" if delta > 20 else "green" if delta < -5 else "yellow"
         console.print(f"  {key}: [{color}]{delta:+.1f}%[/{color}]")
 
     if comp["regression"]:
@@ -193,7 +197,7 @@ def run(
         10,
         "--iterations",
         "-i",
-        help="Number of iterations to run (including warmup).",
+        help="Total iterations to run (measured iterations = total - warmup).",
         min=1,
     ),
     warmup: int = typer.Option(

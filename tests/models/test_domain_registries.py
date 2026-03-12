@@ -225,6 +225,19 @@ class TestModelHotSwap:
         assert success is False
         new_model.cleanup.assert_called_once()
 
+    def test_prewarm_failure_cleans_up_partial_model(self) -> None:
+        """If initialize() fails, partially created model is cleaned up."""
+        mgr = self._make_manager()
+
+        new_model = MagicMock()
+        new_model.initialize = MagicMock(side_effect=RuntimeError("init boom"))
+        new_model.cleanup = MagicMock()
+        factory = MagicMock(return_value=new_model)
+
+        success = mgr.swap_model("text", "bad-model", model_factory=factory)
+        assert success is False
+        new_model.cleanup.assert_called_once()
+
     def test_concurrent_swap_rejected(self) -> None:
         """Second concurrent swap is rejected (lock held)."""
         mgr = self._make_manager()

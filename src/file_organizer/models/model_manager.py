@@ -228,6 +228,12 @@ class ModelManager:
                         new_model_id,
                         model_type,
                     )
+                    # Clean up partially initialized model
+                    if new_model is not None and hasattr(new_model, "cleanup"):
+                        try:
+                            new_model.cleanup()
+                        except Exception:
+                            logger.debug("Cleanup of partial model failed", exc_info=True)
                     return False
 
             # Step 2: Drain old model

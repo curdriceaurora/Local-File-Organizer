@@ -110,6 +110,11 @@ class TestPreprocessorStage:
         result = PreprocessorStage().process(ctx)
         assert not result.failed
 
+    def test_skips_when_already_failed(self) -> None:
+        ctx = StageContext(file_path=Path("x.txt"), error="prior error")
+        result = PreprocessorStage().process(ctx)
+        assert result.error == "prior error"
+
 
 # ---------------------------------------------------------------------------
 # AnalyzerStage
@@ -225,6 +230,30 @@ class TestPostprocessorStage:
         result = stage.process(ctx)
         assert result.destination is None
 
+    def test_rejects_path_traversal_in_category(self, tmp_path: Path) -> None:
+        stage = PostprocessorStage(output_directory=tmp_path / "out")
+        ctx = StageContext(
+            file_path=Path("input/file.txt"),
+            category="../etc",
+            filename="file",
+        )
+        result = stage.process(ctx)
+        assert result.failed
+        assert result.error is not None
+        assert "Invalid path component" in result.error
+
+    def test_rejects_path_traversal_in_filename(self, tmp_path: Path) -> None:
+        stage = PostprocessorStage(output_directory=tmp_path / "out")
+        ctx = StageContext(
+            file_path=Path("input/file.txt"),
+            category="Docs",
+            filename="../../etc/passwd",
+        )
+        result = stage.process(ctx)
+        assert result.failed
+        assert result.error is not None
+        assert "Invalid path component" in result.error
+
 
 # ---------------------------------------------------------------------------
 # WriterStage
@@ -316,6 +345,7 @@ class TestPipelineComposition:
         assert not ctx.failed
         assert ctx.destination is not None
         assert ctx.destination.exists()
+        assert ctx.destination.read_text() == "hello"
 
     def test_custom_stage_without_orchestrator_changes(self, tmp_path: Path) -> None:
         """Adding a custom stage doesn't require orchestrator changes."""

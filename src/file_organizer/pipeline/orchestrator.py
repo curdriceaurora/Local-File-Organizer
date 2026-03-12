@@ -137,7 +137,7 @@ class PipelineOrchestrator:
         self._monitor: Any = None
         self._watch_thread: threading.Thread | None = None
         self._executor = ThreadPoolExecutor(
-            max_workers=config.max_concurrent if config else 4,
+            max_workers=self.config.max_concurrent,
         )
 
     # ------------------------------------------------------------------

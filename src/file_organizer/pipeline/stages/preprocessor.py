@@ -41,6 +41,9 @@ class PreprocessorStage:
 
     def process(self, context: StageContext) -> StageContext:
         """Validate file and extract metadata into *context*."""
+        if context.failed:
+            return context
+
         path = context.file_path
 
         if not path.exists():
