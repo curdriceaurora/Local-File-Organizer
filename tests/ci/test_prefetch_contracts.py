@@ -9,6 +9,7 @@ These tests intentionally cover the public contract from multiple angles:
 from __future__ import annotations
 
 import inspect
+import re
 from pathlib import Path
 
 import pytest
@@ -24,25 +25,32 @@ ARCHITECTURE_OVERVIEW_DOC = FO_ROOT / "docs" / "architecture" / "architecture-ov
 pytestmark = pytest.mark.ci
 
 _RUNNER = CliRunner()
+_ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def _normalized(text: str) -> str:
     return " ".join(text.split())
 
 
+def _rendered_text(text: str) -> str:
+    """Remove terminal styling so contract checks assert on CLI semantics."""
+    return _ANSI_ESCAPE.sub("", text)
+
+
 def test_no_prefetch_contract_matches_cli_runtime_and_docs() -> None:
     """Covered surfaces: CLI help, FileOrganizer runtime docs, CLI/admin docs."""
     from file_organizer.core.organizer import FileOrganizer
 
-    result = _RUNNER.invoke(app, ["organize", "--help"])
-    cli_help = _normalized(result.output)
+    result = _RUNNER.invoke(app, ["organize", "--help"], terminal_width=120)
+    rendered_help = _rendered_text(result.output)
+    cli_help = _normalized(rendered_help)
     organizer_init_doc = _normalized(inspect.getdoc(FileOrganizer.__init__) or "")
     organizer_init_source = inspect.getsource(FileOrganizer.__init__)
     cli_reference = CLI_REFERENCE_DOC.read_text(encoding="utf-8")
     performance_doc = PERFORMANCE_TUNING_DOC.read_text(encoding="utf-8")
 
     assert result.exit_code == 0
-    assert "--no-prefetch" in result.output
+    assert "--no-prefetch" in rendered_help
     assert "Currently has no effect for this command" in cli_help
     assert "ParallelProcessor, not PipelineOrchestrator" in cli_help
     assert "Has no effect on the legacy processor path." in organizer_init_doc
