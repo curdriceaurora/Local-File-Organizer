@@ -45,10 +45,10 @@
 ```text
 Input File → FileOrganizer → PipelineOrchestrator
     ↓
-Stage-Based Pipeline (composable):
-  PreprocessorStage → File validation + metadata extraction
-  AnalyzerStage → FileRouter → Processor (Text/Vision/Audio)
-  PostprocessorStage → Destination path computation
+Stage-Based Pipeline (composable, double-buffered by default):
+  PreprocessorStage → File validation + metadata extraction  ┐ prefetched
+  AnalyzerStage → FileRouter → Processor (Text/Vision/Audio) ┘ in I/O thread pool
+  PostprocessorStage → Destination path computation              (prefetch_depth=2)
   WriterStage → File copy/move (skipped in dry-run)
 
 Legacy Pipeline (backward compatible):

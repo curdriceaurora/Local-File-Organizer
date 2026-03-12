@@ -361,9 +361,16 @@ if [[ -n "$MD_FILES" ]]; then
   echo "📝 Running full markdown linting with pymarkdown..."
 
   if command -v pymarkdown &> /dev/null; then
-    # Use pymarkdown with .pymarkdown.json config
-    # Double-quote variable to prevent globbing and word splitting (SC2086)
-    if ! pymarkdown -c .pymarkdown.json scan "${MD_FILES}"; then
+    # Use pymarkdown with .pymarkdown.json config.
+    # Pass files one-by-one: MD_FILES is newline-separated and pymarkdown
+    # does not accept a single argument with embedded newlines.
+    MARKDOWN_FAILED=0
+    while IFS= read -r md_file; do
+      if [[ -n "$md_file" ]] && ! pymarkdown -c .pymarkdown.json scan "$md_file"; then
+        MARKDOWN_FAILED=1
+      fi
+    done <<< "$MD_FILES"
+    if [[ "$MARKDOWN_FAILED" -eq 1 ]]; then
       echo ""
       echo "❌ Markdown linting failed"
       echo "Fix markdown issues above and try again"
@@ -472,14 +479,18 @@ if [[ -n "$DOCS_FILES" ]]; then
     fi
 
     # Check 4: Verify coverage percentages are realistic
-    # Extracted coverage % values should be between 0-100
-    COVERAGE_PERCENTAGES=$(grep -oE '[0-9]{1,3}%' "$doc_file" | sed 's/%//' | sort -u)
-    for pct in $COVERAGE_PERCENTAGES; do
-      if [[ $pct -gt 100 ]]; then
-        echo "❌ $doc_file: Found unrealistic coverage percentage: $pct%"
-        DOC_VERIFICATION_FAILED=1
+    # Only flag percentages > 100 on lines that mention "coverage" (avoids
+    # false-positives from benchmark thresholds like "p95 exceeds 120%").
+    while IFS= read -r line; do
+      if echo "$line" | grep -qi 'coverage'; then
+        while IFS= read -r pct; do
+          if [[ $pct -gt 100 ]]; then
+            echo "❌ $doc_file: Found unrealistic coverage percentage: $pct%"
+            DOC_VERIFICATION_FAILED=1
+          fi
+        done < <(echo "$line" | grep -oE '[0-9]{1,3}%' | sed 's/%//')
       fi
-    done
+    done < "$doc_file"
 
     # Check 5: Verify section categorization consistency
     # E.g., "Medium Coverage (70-89%)" should only contain 70-89 values

@@ -83,7 +83,7 @@ Phase D (High-effort): Task 9          — depends on Tasks 2, 5
 - [x] Task 4: Benchmarking Suite — CLI command + statistical reporting (PRD Topic 6)
 - [x] Task 5: Model Lifecycle — domain registries + hot-swap (PRD Topics 4, 7)
 - [x] Task 6: Composable Pipeline — stage extraction + orchestrator refactor (PRD Topic 12)
-- [ ] Task 7: Double-Buffered Processing — I/O-compute overlap (PRD Topic 9)
+- [x] Task 7: Double-Buffered Processing — I/O-compute overlap (PRD Topic 9)
 - [ ] Task 8: Proactive Memory Management — buffer pool + batch_sizer integration (PRD Topic 8)
 - [ ] Task 9: Hybrid Retrieval + Embedding Cache — BM25 + vector + cache (PRD Topics 5, 14)
 
@@ -121,7 +121,7 @@ Phase D (High-effort): Task 9          — depends on Tasks 2, 5
 - [x] #707 - Benchmarking Suite — CLI Command & Statistical Reporting (parallel: false, depends: #712, size: M) ✅ DONE
 - [x] #708 - Model Lifecycle — Domain Registries & Hot-Swap (parallel: false, depends: #711, size: L) ✅ DONE
 - [x] #709 - Composable Pipeline — Stage Extraction & Orchestrator Refactor (parallel: false, depends: #710, size: M) ✅ DONE
-- [ ] #713 - Double-Buffered Processing — I/O-Compute Overlap (parallel: true, depends: #709, size: M)
+- [x] #713 - Double-Buffered Processing — I/O-Compute Overlap (parallel: true, depends: #709, size: M) ✅ DONE
 - [ ] #714 - Proactive Memory Management — Buffer Pool & Batch Sizer Integration (parallel: true, depends: #712, size: M)
 - [ ] #715 - Hybrid Retrieval with Embedding Cache — BM25 + Vector Search (parallel: false, depends: #711+#708, size: XL)
 

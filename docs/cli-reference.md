@@ -45,8 +45,10 @@ file-organizer organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 - `OUTPUT_DIR` — Destination directory for organized files
 
 **Options:**
+
 - `--dry-run` — Preview without moving files
 - `--verbose, -v` — Verbose output
+- `--no-prefetch` — Disable I/O-compute overlap (stage-based pipeline only). Useful for debugging.
 
 **Examples:**
 
@@ -59,6 +61,9 @@ file-organizer organize ~/Downloads ~/Organized --dry-run
 
 # Verbose output
 file-organizer organize ~/Downloads ~/Organized --verbose
+
+# Disable prefetch for sequential debugging
+file-organizer organize ~/Downloads ~/Organized --no-prefetch
 ```
 
 > **Note:** To set a default methodology (PARA, Johnny Decimal, etc.) or override AI models, use `file-organizer config edit` before running organize.

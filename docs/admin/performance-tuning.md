@@ -97,6 +97,44 @@ config = ParallelConfig(
 )
 ```
 
+## Pipeline Prefetch (I/O-Compute Overlap)
+
+`PipelineOrchestrator` supports double-buffered processing: I/O stages (e.g.
+`PreprocessorStage`) run ahead in a thread pool while the compute stage (e.g.
+`AnalyzerStage` / LLM inference) runs on the current file. This hides file-read
+latency behind LLM inference time.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `prefetch_depth` | `2` | Files to pre-process ahead of current file. `0` disables prefetch. |
+| `prefetch_stages` | `1` | Leading stages treated as I/O-bound and run in the prefetch thread pool. |
+| `memory_limiter` | `None` | Optional `MemoryLimiter`; gates whether a new prefetch slot opens. |
+
+### Tuning Tips
+
+- Increase `prefetch_depth` (3–5) when files are large and disk I/O is the bottleneck
+- Keep `prefetch_depth=2` (default) for typical SSD + Ollama workloads
+- Set `prefetch_depth=0` to disable overlap and process files sequentially (useful
+  for debugging or on memory-constrained systems)
+- Pass a `MemoryLimiter` to automatically back off prefetch when RSS approaches
+  a configured ceiling
+- Use `--no-prefetch` on the CLI for one-off sequential runs without code changes
+
+```python
+from file_organizer.optimization.memory_limiter import MemoryLimiter, LimitAction
+from file_organizer.pipeline.orchestrator import PipelineOrchestrator
+from file_organizer.pipeline.stages import PreprocessorStage, AnalyzerStage
+
+# Prefetch depth=3 with a 2 GB memory ceiling
+limiter = MemoryLimiter(max_memory_mb=2048, action=LimitAction.WARN)
+pipeline = PipelineOrchestrator(
+    stages=[PreprocessorStage(), AnalyzerStage()],
+    prefetch_depth=3,
+    memory_limiter=limiter,
+)
+results = pipeline.process_batch(files)
+```
+
 ## Adaptive Batch Sizing
 
 `AdaptiveBatchSizer` calculates how many files to process per batch based on
