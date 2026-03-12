@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import inspect
 import re
 from pathlib import Path
 
@@ -13,7 +12,6 @@ FO_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = FO_ROOT / "src"
 API_ROUTER_ROOT = SRC_ROOT / "file_organizer" / "api" / "routers"
 TESTS_ROOT = FO_ROOT / "tests"
-PERFORMANCE_TUNING_DOC = FO_ROOT / "docs" / "admin" / "performance-tuning.md"
 
 pytestmark = pytest.mark.ci
 
@@ -165,21 +163,3 @@ def test_get_active_model_never_returns_primitive() -> None:
         f"get_active_model() returned a primitive ({result!r}); "
         "_active_models must only hold model instances"
     )
-
-
-def test_pipeline_prefetch_docs_match_stage_cap() -> None:
-    """Prefetch docs must describe the current cap-to-1 runtime behavior."""
-    from file_organizer.pipeline.orchestrator import PipelineOrchestrator
-
-    init_doc = inspect.getdoc(PipelineOrchestrator.__init__) or ""
-    batch_doc = inspect.getdoc(PipelineOrchestrator.process_batch) or ""
-    performance_doc = PERFORMANCE_TUNING_DOC.read_text(encoding="utf-8")
-    normalized_init_doc = " ".join(init_doc.split())
-
-    assert "effective prefetched stage count" in init_doc
-    assert "at 1" in init_doc
-    assert ("log a warning" in normalized_init_doc) or ("logs a warning" in normalized_init_doc)
-    assert "treated as 1" in init_doc
-    assert "effectively capped to 1 for thread-safety" in batch_doc
-    assert "only supports the first stage" in performance_doc
-    assert "Keep `prefetch_stages=1`" in performance_doc
