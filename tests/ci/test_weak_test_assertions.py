@@ -20,7 +20,7 @@ def _is_literal_int(node: ast.AST, value: int) -> bool:
     return isinstance(node, ast.Constant) and type(node.value) is int and node.value == value
 
 
-def _is_mock_call_count_attr(node: ast.AST) -> bool:
+def _is_call_count_attr(node: ast.AST) -> bool:
     return isinstance(node, ast.Attribute) and node.attr == "call_count"
 
 
@@ -66,6 +66,8 @@ def _git_ref_exists(ref: str) -> bool:
 
 def _resolve_diff_base() -> str:
     """Resolve a commit-ish usable as the changed-files diff base."""
+    base_branch = os.environ.get("GITHUB_BASE_REF")
+
     for candidate in _candidate_base_refs():
         if not _git_ref_exists(candidate):
             continue
@@ -79,6 +81,15 @@ def _resolve_diff_base() -> str:
     head_parent = _git_stdout("rev-parse", "--verify", "--quiet", "HEAD^1", check=False)
     if head_parent:
         return head_parent
+
+    if base_branch:
+        pytest.fail(
+            "Unable to resolve a git diff base for PR guardrail checks. "
+            f"GITHUB_BASE_REF={base_branch!r} is set, but no suitable base ref "
+            "or HEAD^1 commit could be found in the checkout. Ensure the base "
+            "ref is fetched or increase actions/checkout.fetch-depth so "
+            "changed-test detection is reliable."
+        )
 
     return _git_stdout("rev-parse", "HEAD")
 
@@ -107,11 +118,11 @@ def _find_weak_call_count_assertions(source: str, path: str = "<string>") -> lis
         op = test.ops[0]
         right = test.comparators[0]
 
-        is_weak_forward = _is_mock_call_count_attr(left) and (
+        is_weak_forward = _is_call_count_attr(left) and (
             (isinstance(op, ast.GtE) and _is_literal_int(right, 1))
             or (isinstance(op, ast.Gt) and _is_literal_int(right, 0))
         )
-        is_weak_reverse = _is_mock_call_count_attr(right) and (
+        is_weak_reverse = _is_call_count_attr(right) and (
             (isinstance(op, ast.LtE) and _is_literal_int(left, 1))
             or (isinstance(op, ast.Lt) and _is_literal_int(left, 0))
         )
@@ -132,7 +143,7 @@ def _changed_test_files() -> list[Path]:
     diff_output = _git_stdout(
         "diff",
         "--name-only",
-        "--diff-filter=ACM",
+        "--diff-filter=ACMR",
         f"{diff_base}...HEAD",
         "--",
         "tests/**/*.py",
@@ -196,12 +207,56 @@ def test_resolve_diff_base_falls_back_to_head_parent_when_remote_base_ref_missin
     assert _resolve_diff_base() == "parent-sha"
 
 
+def test_resolve_diff_base_fails_loudly_in_pr_context_when_no_base_is_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_BASE_REF", "main")
+    monkeypatch.setattr(MODULE, "_candidate_base_refs", lambda: ["origin/main", "main"])
+    monkeypatch.setattr(MODULE, "_git_ref_exists", lambda ref: False)
+    monkeypatch.setattr(
+        MODULE,
+        "_git_stdout",
+        lambda *args, check=True: "",
+    )
+
+    with pytest.raises(pytest.fail.Exception, match="Unable to resolve a git diff base"):
+        _resolve_diff_base()
+
+
 def test_changed_test_files_returns_empty_when_no_distinct_diff_base(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: "head-sha")
     monkeypatch.setattr(MODULE, "_git_stdout", lambda *args, check=True: "head-sha")
     assert _changed_test_files() == []
+
+
+def test_changed_test_files_includes_renames_in_diff_filter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recorded_calls: list[tuple[str, ...]] = []
+
+    def fake_git_stdout(*args: str, check: bool = True) -> str:
+        recorded_calls.append(args)
+        if args == ("rev-parse", "HEAD"):
+            return "head-sha"
+        if args[:2] == ("diff", "--name-only"):
+            return ""
+        return "base-sha"
+
+    monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: "base-sha")
+    monkeypatch.setattr(MODULE, "_git_stdout", fake_git_stdout)
+
+    assert _changed_test_files() == []
+    assert (
+        "diff",
+        "--name-only",
+        "--diff-filter=ACMR",
+        "base-sha...HEAD",
+        "--",
+        "tests/**/*.py",
+        "tests/*.py",
+    ) in recorded_calls
 
 
 @pytest.mark.parametrize(
