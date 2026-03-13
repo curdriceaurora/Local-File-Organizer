@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import ast
 import json
-from dataclasses import dataclass
+from dataclasses import FrozenInstanceError, dataclass
 from pathlib import Path
 
 import pytest
 
 from file_organizer.review_regressions.framework import (
+    DetectorDescriptor,
     Violation,
     fingerprint_ast_node,
     iter_python_files,
@@ -86,8 +87,10 @@ def test_violation_fingerprint_distinguishes_none_from_zero_line_numbers(tmp_pat
     assert zero_line.fingerprint != none_line.fingerprint
 
 
-def test_run_audit_and_render_report_are_deterministic(tmp_path: Path) -> None:
-    root = tmp_path
+def test_run_audit_and_render_report_are_deterministic(tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "audit-root"
+    root.mkdir()
+    monkeypatch.chdir(tmp_path)
     (root / "b.py").write_text("print('b')\n", encoding="utf-8")
     (root / "a.py").write_text("print('a')\n", encoding="utf-8")
 
@@ -126,8 +129,28 @@ def test_run_audit_and_render_report_are_deterministic(tmp_path: Path) -> None:
 
     assert json_one == json_two
     payload = json.loads(json_one)
-    assert payload["root"] == "."
+    assert payload["root"] == "audit-root"
     assert [finding["path"] for finding in payload["findings"]] == ["a.py", "b.py"]
+
+
+def test_run_audit_uses_immutable_detector_descriptors(tmp_path: Path) -> None:
+    report = run_audit(
+        tmp_path,
+        [
+            _Detector(
+                detector_id="detector.pack",
+                rule_class="correctness",
+                description="fixture detector",
+                findings=[],
+            )
+        ],
+    )
+
+    descriptor = report.detectors[0]
+
+    assert isinstance(descriptor, DetectorDescriptor)
+    with pytest.raises(FrozenInstanceError):
+        descriptor.description = "mutated"
 
 
 def test_iter_python_files_excludes_cache_and_orders_results(tmp_path: Path) -> None:

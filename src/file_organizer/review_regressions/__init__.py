@@ -2,6 +2,7 @@
 
 from file_organizer.review_regressions.framework import (
     AuditReport,
+    DetectorDescriptor,
     ReviewRegressionDetector,
     Violation,
     fingerprint_ast_node,
@@ -13,6 +14,7 @@ from file_organizer.review_regressions.framework import (
 
 __all__ = [
     "AuditReport",
+    "DetectorDescriptor",
     "ReviewRegressionDetector",
     "Violation",
     "fingerprint_ast_node",

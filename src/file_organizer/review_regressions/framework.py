@@ -36,21 +36,28 @@ def _stable_hash(parts: Iterable[str]) -> str:
 
 
 def _normalized_relative_path(path: Path, root: Path) -> str:
+    # Normalize the audit root once so every candidate is compared against the same base.
     resolved_root = root.resolve()
     if path.is_absolute():
+        # Absolute paths need only one interpretation.
         candidates = [path]
     elif root.parts and path.parts[: len(root.parts)] == root.parts:
+        # Some callers pass a root-prefixed relative path; try it as-is first.
         candidates = [path, root / path]
     else:
+        # The common case is a path relative to the audit root, with a cwd-relative
+        # fallback for callers that already resolved against the current process.
         candidates = [root / path, path]
 
     for candidate in candidates:
+        # Resolve each interpretation and keep the first one that lands under root.
         resolved_candidate = candidate.resolve()
         try:
             return resolved_candidate.relative_to(resolved_root).as_posix()
         except ValueError:
             continue
 
+    # Use the first attempted interpretation in the error so failures stay understandable.
     display_path = candidates[0].resolve().as_posix()
     raise ValueError(
         f"Path {display_path!r} is outside audit root {resolved_root.as_posix()!r}"
@@ -157,11 +164,28 @@ class ReviewRegressionDetector(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
+class DetectorDescriptor:
+    """Immutable metadata describing one loaded detector."""
+
+    detector_id: str
+    rule_class: str
+    description: str
+
+    def to_dict(self) -> dict[str, str]:
+        """Convert to stable JSON-friendly structure."""
+        return {
+            "detector_id": self.detector_id,
+            "rule_class": self.rule_class,
+            "description": self.description,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class AuditReport:
     """Deterministic report emitted by the audit entrypoint."""
 
     root: str
-    detectors: tuple[dict[str, str], ...]
+    detectors: tuple[DetectorDescriptor, ...]
     findings: tuple[Violation, ...]
 
     def to_dict(self) -> dict[str, object]:
@@ -171,7 +195,7 @@ class AuditReport:
             "root": self.root,
             "detector_count": len(self.detectors),
             "finding_count": len(self.findings),
-            "detectors": list(self.detectors),
+            "detectors": [detector.to_dict() for detector in self.detectors],
             "findings": [finding.to_dict() for finding in self.findings],
         }
 
@@ -215,25 +239,26 @@ def fingerprint_ast_node(node: ast.AST) -> str:
 def run_audit(root: Path, detectors: Iterable[ReviewRegressionDetector]) -> AuditReport:
     """Run detector audit and return a deterministic report."""
     normalized_root = root.resolve()
+    report_root = Path(os.path.relpath(normalized_root, Path.cwd().resolve())).as_posix()
     ordered_detectors = sorted(
         detectors,
         key=lambda detector: (detector.rule_class, detector.detector_id),
     )
 
     findings: list[Violation] = []
-    detector_descriptors: list[dict[str, str]] = []
+    detector_descriptors: list[DetectorDescriptor] = []
     for detector in ordered_detectors:
         detector_descriptors.append(
-            {
-                "detector_id": detector.detector_id,
-                "rule_class": detector.rule_class,
-                "description": detector.description,
-            }
+            DetectorDescriptor(
+                detector_id=detector.detector_id,
+                rule_class=detector.rule_class,
+                description=detector.description,
+            )
         )
         findings.extend(detector.find_violations(normalized_root))
 
     return AuditReport(
-        root=".",
+        root=report_root,
         detectors=tuple(detector_descriptors),
         findings=tuple(sorted(findings, key=Violation.sort_key)),
     )
