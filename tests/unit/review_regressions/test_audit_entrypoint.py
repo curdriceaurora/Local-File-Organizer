@@ -150,6 +150,18 @@ def test_load_detectors_wraps_missing_module_with_value_error(monkeypatch) -> No
         audit.load_detectors(["missing:detector"])
 
 
+def test_load_detectors_wraps_missing_parent_package_for_dotted_module(monkeypatch) -> None:
+    def _raise_missing_parent(name: str) -> None:
+        error = ModuleNotFoundError("No module named 'missing_pkg'")
+        error.name = "missing_pkg"
+        raise error
+
+    monkeypatch.setattr(audit.importlib, "import_module", _raise_missing_parent)
+
+    with pytest.raises(ValueError, match="Invalid detector spec 'missing_pkg.sub:detector'"):
+        audit.load_detectors(["missing_pkg.sub:detector"])
+
+
 def test_load_detectors_preserves_dependency_import_errors(monkeypatch) -> None:
     def _raise_dependency_error(name: str) -> None:
         error = ModuleNotFoundError("No module named 'dependency'")

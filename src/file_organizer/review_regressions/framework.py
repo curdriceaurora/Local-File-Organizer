@@ -41,13 +41,15 @@ def _normalized_relative_path(path: Path, root: Path) -> str:
     if path.is_absolute():
         # Absolute paths need only one interpretation.
         candidates = [path]
-    elif root.parts and path.parts[: len(root.parts)] == root.parts:
-        # Some callers pass a root-prefixed relative path; try it as-is first.
-        candidates = [path, root / path]
+    elif path.parts and resolved_root.name and path.parts[0] == resolved_root.name:
+        # Some callers pass a root-prefixed relative path like ``repo/pkg/file.py``.
+        # Try the cwd-relative interpretation first, then strip the repeated root name.
+        stripped_path = Path(*path.parts[1:]) if len(path.parts) > 1 else Path()
+        candidates = [path, resolved_root / stripped_path]
     else:
         # The common case is a path relative to the audit root, with a cwd-relative
         # fallback for callers that already resolved against the current process.
-        candidates = [root / path, path]
+        candidates = [resolved_root / path, path]
 
     for candidate in candidates:
         # Resolve each interpretation and keep the first one that lands under root.

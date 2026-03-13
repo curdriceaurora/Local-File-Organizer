@@ -66,7 +66,10 @@ def load_detectors(import_specs: Sequence[str]) -> list[ReviewRegressionDetector
         try:
             module = importlib.import_module(module_name)
         except ModuleNotFoundError as exc:
-            if exc.name != module_name:
+            missing_module = exc.name
+            if not isinstance(missing_module, str) or (
+                missing_module != module_name and not module_name.startswith(f"{missing_module}.")
+            ):
                 raise
             raise ValueError(
                 f"Invalid detector spec {spec!r}; expected 'module:attribute' resolving to "

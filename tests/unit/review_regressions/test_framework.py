@@ -269,6 +269,29 @@ def test_violation_from_path_accepts_relative_paths_that_include_root(
     assert violation.path == "pkg/module.py"
 
 
+def test_violation_from_path_accepts_root_prefixed_relative_paths_with_absolute_root(
+    tmp_path: Path, monkeypatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    root = workspace / "repo"
+    root.mkdir(parents=True)
+    nested = root / "pkg" / "module.py"
+    nested.parent.mkdir()
+    nested.write_text("x = 1\n", encoding="utf-8")
+    monkeypatch.chdir(workspace)
+
+    violation = Violation.from_path(
+        detector_id="test.detector",
+        rule_class="correctness",
+        rule_id="absolute-root-prefixed",
+        root=root,
+        path=Path("repo/pkg/module.py"),
+        message="root-prefixed relative path with absolute root",
+    )
+
+    assert violation.path == "pkg/module.py"
+
+
 def test_parse_python_ast_supports_pep_263_source_encoding(tmp_path: Path) -> None:
     source = "# -*- coding: latin-1 -*-\nvalue = 'caf\xe9'\n".encode("latin-1")
     path = tmp_path / "encoded.py"
