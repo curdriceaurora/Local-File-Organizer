@@ -10,3 +10,11 @@ def test_strong_assertions_are_not_flagged() -> None:
 def test_non_mock_counter_is_not_flagged() -> None:
     call_count = 0
     assert call_count >= 1
+
+
+def test_non_mock_object_call_count_attr_is_not_flagged() -> None:
+    class Counter:
+        call_count = 1
+
+    counter = Counter()
+    assert counter.call_count >= 1

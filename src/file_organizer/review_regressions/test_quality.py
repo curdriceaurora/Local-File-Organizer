@@ -28,7 +28,26 @@ def _is_literal_int(node: ast.AST, value: int) -> bool:
 
 
 def _is_call_count_attr(node: ast.AST) -> bool:
-    return isinstance(node, ast.Attribute) and node.attr == "call_count"
+    if not isinstance(node, ast.Attribute) or node.attr != "call_count":
+        return False
+    value = node.value
+    if isinstance(value, ast.Name):
+        base = value.id.lower()
+        return any(token in base for token in ("mock", "spy", "stub", "patch"))
+    if isinstance(value, ast.Attribute):
+        chain = value.attr.lower()
+        if any(token in chain for token in ("mock", "spy", "stub", "patch")):
+            return True
+        if isinstance(value.value, ast.Name):
+            base = value.value.id.lower()
+            return any(token in base for token in ("mock", "spy", "stub", "patch", "mocker"))
+    if isinstance(value, ast.Call):
+        func = value.func
+        if isinstance(func, ast.Name):
+            return func.id in {"Mock", "MagicMock", "AsyncMock", "create_autospec"}
+        if isinstance(func, ast.Attribute):
+            return func.attr in {"Mock", "MagicMock", "AsyncMock", "patch", "spy"}
+    return False
 
 
 def _is_test_python_path(root: Path, path: Path) -> bool:
@@ -36,14 +55,21 @@ def _is_test_python_path(root: Path, path: Path) -> bool:
         rel = path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
         return False
-    return rel.startswith("tests/") and rel.endswith(".py")
+    name = Path(rel).name
+    if rel.startswith("tests/fixtures/") or name == "conftest.py":
+        return False
+    return (
+        rel.startswith("tests/")
+        and name.endswith(".py")
+        and (name.startswith("test_") or name.endswith("_test.py"))
+    )
 
 
 def _iter_test_python_files(root: Path) -> list[Path]:
     tests_root = root / "tests"
     if not tests_root.exists():
         return []
-    return iter_python_files(tests_root)
+    return [path for path in iter_python_files(tests_root) if _is_test_python_path(root, path)]
 
 
 def _git_stdout(root: Path, *args: str) -> str:
@@ -136,10 +162,24 @@ def discover_changed_test_files(root: Path) -> list[Path]:
         if path
     )
 
+    rel_paths.update(
+        path
+        for path in _git_stdout(
+            root,
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            "tests/**/*.py",
+            "tests/*.py",
+        ).splitlines()
+        if path
+    )
+
     return [
         root / rel_path
         for rel_path in sorted(rel_paths)
-        if rel_path and (root / rel_path).is_file()
+        if rel_path and (root / rel_path).is_file() and _is_test_python_path(root, root / rel_path)
     ]
 
 
