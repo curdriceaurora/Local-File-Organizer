@@ -60,15 +60,15 @@ def test_active_model_detector_flags_primitive_registry_store() -> None:
     ] == [
         (
             "src/file_organizer/models/model_manager_positive.py",
-            7,
+            8,
             "primitive-active-model-store",
-            "_active_models stores new_model_id; registry entries must hold live model instances or be removed.",
+            "_active_models stores selected_model; registry entries must hold live model instances or be removed.",
         ),
         (
             "src/file_organizer/models/model_manager_positive.py",
-            10,
+            12,
             "primitive-active-model-store",
-            "_active_models stores 'fallback-id'; registry entries must hold live model instances or be removed.",
+            "_active_models stores fallback_model; registry entries must hold live model instances or be removed.",
         ),
     ]
 
