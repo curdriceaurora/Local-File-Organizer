@@ -22,10 +22,15 @@ def test_direct_path_detector_flags_unreviewed_path_construction() -> None:
 
     assert [(finding.path, finding.line, finding.rule_id) for finding in findings] == [
         (
+            "src/file_organizer/api/direct_path_allowed_roots_missing_codeql.py",
+            15,
+            "unguarded-direct-path",
+        ),
+        (
             "src/file_organizer/api/direct_path_positive.py",
             16,
             "unguarded-direct-path",
-        )
+        ),
     ]
 
 
@@ -49,6 +54,18 @@ def test_validation_bypass_detector_flags_raw_request_reuse_after_validation() -
     assert [
         (finding.path, finding.line, finding.rule_id, finding.message) for finding in findings
     ] == [
+        (
+            "src/file_organizer/api/validation_bypass_positional_positive.py",
+            26,
+            "raw-field-after-validation",
+            "Route validates request.destination with resolve_path() but later passes raw request.destination to move_files().",
+        ),
+        (
+            "src/file_organizer/api/validation_bypass_positional_positive.py",
+            26,
+            "raw-field-after-validation",
+            "Route validates request.source with resolve_path() but later passes raw request.source to move_files().",
+        ),
         (
             "src/file_organizer/api/validation_bypass_positive.py",
             35,

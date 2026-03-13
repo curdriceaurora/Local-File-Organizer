@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Protocol
 
+from file_organizer.api.models import FileInfo
 from file_organizer.api.utils import file_info_from_path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -20,7 +21,7 @@ class _HasPath(Protocol):
     path: str
 
 
-def info_path(info: _HasPath) -> object:
+def info_path(info: _HasPath) -> FileInfo:
     return file_info_from_path(Path(info.path))
 
 

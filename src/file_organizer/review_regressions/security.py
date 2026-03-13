@@ -79,15 +79,11 @@ def _is_resolve_path_call(node: ast.AST) -> bool:
 
 
 def _is_allowed_paths_expr(node: ast.AST) -> bool:
-    return (
-        isinstance(node, ast.Name)
-        and node.id == "allowed_paths"
-        or (
-            isinstance(node, ast.Attribute)
-            and isinstance(node.value, ast.Name)
-            and node.value.id == "settings"
-            and node.attr == "allowed_paths"
-        )
+    return (isinstance(node, ast.Name) and node.id == "allowed_paths") or (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "settings"
+        and node.attr == "allowed_paths"
     )
 
 
@@ -167,7 +163,9 @@ def _is_allowed_direct_path_call(
         return True
     if _is_basename_extraction(node, parents):
         return True
-    if _is_allowed_config_root_path(node, parents):
+    if _is_allowed_config_root_path(node, parents) and _window_has_codeql_suppression(
+        lines, node.lineno
+    ):
         return True
     if _is_allowed_file_info_wrapper(node, parents):
         return True
@@ -252,6 +250,15 @@ def _is_sensitive_validation_sink(call: ast.Call) -> bool:
     if call_name in _VALIDATION_BYPASS_SINKS:
         return True
     return isinstance(call_name, str) and call_name.startswith("_run_")
+
+
+def _is_request_model_construction(call: ast.Call) -> bool:
+    return (
+        isinstance(call.func, ast.Name)
+        and bool(call.func.id)
+        and call.func.id[0].isupper()
+        and call.func.id.endswith("Request")
+    )
 
 
 class GuardedContextDirectPathDetector:
@@ -346,65 +353,154 @@ class ValidatedPathBypassDetector:
                 or _is_safe_model_copy_call(child)
             ):
                 continue
-            if not _is_sensitive_validation_sink(child):
-                continue
 
             call_name = _call_name(child) or "call"
+            sensitive_sink = _is_sensitive_validation_sink(child)
 
             for request_name in request_names:
-                if any(
-                    isinstance(arg, ast.Name) and arg.id == request_name
-                    for arg in [*child.args, *[kw.value for kw in child.keywords]]
-                ):
-                    if child.lineno <= earliest_validation_line[request_name]:
-                        continue
-                    key = ("raw-request", child.lineno, request_name)
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    findings.append(
-                        Violation.from_path(
-                            detector_id=self.detector_id,
-                            rule_class=self.rule_class,
-                            rule_id="raw-request-after-validation",
-                            root=root,
-                            path=path,
-                            line=child.lineno,
-                            message=(
-                                f"Route validates {request_name} path fields with resolve_path() "
-                                f"but later passes the raw {request_name} object to {call_name}()."
-                            ),
-                            fingerprint_basis=fingerprint_ast_node(child),
-                        )
-                    )
-
-                for keyword in child.keywords:
-                    if keyword.arg not in _PATH_LIKE_KEYWORDS:
-                        continue
-                    for ref in _iter_request_field_refs(keyword.value, request_name=request_name):
-                        validated_field = validated.get((request_name, ref.attr))
-                        if validated_field is None or child.lineno <= validated_field.line:
-                            continue
-                        key = ("raw-field", ref.lineno, f"{request_name}.{ref.attr}")
-                        if key in seen:
-                            continue
-                        seen.add(key)
-                        findings.append(
-                            Violation.from_path(
-                                detector_id=self.detector_id,
-                                rule_class=self.rule_class,
-                                rule_id="raw-field-after-validation",
-                                root=root,
-                                path=path,
-                                line=ref.lineno,
-                                message=(
-                                    f"Route validates {request_name}.{ref.attr} with resolve_path() "
-                                    f"but later passes raw {request_name}.{ref.attr} to {call_name}()."
-                                ),
-                                fingerprint_basis=fingerprint_ast_node(keyword.value),
-                            )
-                        )
+                self._append_raw_request_findings(
+                    findings=findings,
+                    seen=seen,
+                    root=root,
+                    path=path,
+                    child=child,
+                    request_name=request_name,
+                    call_name=call_name,
+                    sensitive_sink=sensitive_sink,
+                    earliest_validation_line=earliest_validation_line[request_name],
+                )
+                self._append_raw_field_findings(
+                    findings=findings,
+                    seen=seen,
+                    root=root,
+                    path=path,
+                    child=child,
+                    request_name=request_name,
+                    call_name=call_name,
+                    validated=validated,
+                )
         return findings
+
+    def _append_raw_request_findings(
+        self,
+        *,
+        findings: list[Violation],
+        seen: set[tuple[str, int, str]],
+        root: Path,
+        path: Path,
+        child: ast.Call,
+        request_name: str,
+        call_name: str,
+        sensitive_sink: bool,
+        earliest_validation_line: int,
+    ) -> None:
+        if not sensitive_sink:
+            return
+        if not any(
+            isinstance(arg, ast.Name) and arg.id == request_name
+            for arg in [*child.args, *[kw.value for kw in child.keywords]]
+        ):
+            return
+        if child.lineno <= earliest_validation_line:
+            return
+        key = ("raw-request", child.lineno, request_name)
+        if key in seen:
+            return
+        seen.add(key)
+        findings.append(
+            Violation.from_path(
+                detector_id=self.detector_id,
+                rule_class=self.rule_class,
+                rule_id="raw-request-after-validation",
+                root=root,
+                path=path,
+                line=child.lineno,
+                message=(
+                    f"Route validates {request_name} path fields with resolve_path() "
+                    f"but later passes the raw {request_name} object to {call_name}()."
+                ),
+                fingerprint_basis=fingerprint_ast_node(child),
+            )
+        )
+
+    def _append_raw_field_findings(
+        self,
+        *,
+        findings: list[Violation],
+        seen: set[tuple[str, int, str]],
+        root: Path,
+        path: Path,
+        child: ast.Call,
+        request_name: str,
+        call_name: str,
+        validated: dict[tuple[str, str], _ValidatedField],
+    ) -> None:
+        if _is_request_model_construction(child):
+            return
+        for arg in child.args:
+            self._append_field_findings_from_expr(
+                findings=findings,
+                seen=seen,
+                root=root,
+                path=path,
+                child=child,
+                expr=arg,
+                request_name=request_name,
+                call_name=call_name,
+                validated=validated,
+            )
+
+        for keyword in child.keywords:
+            if keyword.arg not in _PATH_LIKE_KEYWORDS:
+                continue
+            self._append_field_findings_from_expr(
+                findings=findings,
+                seen=seen,
+                root=root,
+                path=path,
+                child=child,
+                expr=keyword.value,
+                request_name=request_name,
+                call_name=call_name,
+                validated=validated,
+            )
+
+    def _append_field_findings_from_expr(
+        self,
+        *,
+        findings: list[Violation],
+        seen: set[tuple[str, int, str]],
+        root: Path,
+        path: Path,
+        child: ast.Call,
+        expr: ast.AST,
+        request_name: str,
+        call_name: str,
+        validated: dict[tuple[str, str], _ValidatedField],
+    ) -> None:
+        for ref in _iter_request_field_refs(expr, request_name=request_name):
+            validated_field = validated.get((request_name, ref.attr))
+            if validated_field is None or child.lineno <= validated_field.line:
+                continue
+            key = ("raw-field", ref.lineno, f"{request_name}.{ref.attr}")
+            if key in seen:
+                continue
+            seen.add(key)
+            findings.append(
+                Violation.from_path(
+                    detector_id=self.detector_id,
+                    rule_class=self.rule_class,
+                    rule_id="raw-field-after-validation",
+                    root=root,
+                    path=path,
+                    line=ref.lineno,
+                    message=(
+                        f"Route validates {request_name}.{ref.attr} with resolve_path() "
+                        f"but later passes raw {request_name}.{ref.attr} to {call_name}()."
+                    ),
+                    fingerprint_basis=fingerprint_ast_node(expr),
+                )
+            )
 
 
 SECURITY_DETECTORS: tuple[ReviewRegressionDetector, ...] = (
