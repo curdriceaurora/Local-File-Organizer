@@ -87,6 +87,7 @@ def test_final_first_wave_artifact_is_zero_findings_with_full_detector_set() -> 
 
 def test_first_wave_closeout_metadata_reconciles_initial_fixed_and_final_counts() -> None:
     assert BASELINE_PATH.is_file(), f"Missing baseline first-wave audit artifact: {BASELINE_PATH}"
+    assert FINAL_PATH.is_file(), f"Missing final first-wave audit artifact: {FINAL_PATH}"
     assert CLOSEOUT_REPORT_PATH.is_file(), (
         f"Missing first-wave closeout report: {CLOSEOUT_REPORT_PATH}"
     )
