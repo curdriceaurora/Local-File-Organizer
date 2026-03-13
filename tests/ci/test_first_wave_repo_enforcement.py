@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 
 from file_organizer.review_regressions.correctness import CORRECTNESS_DETECTORS
-from file_organizer.review_regressions.framework import Violation, run_audit
+from file_organizer.review_regressions.framework import (
+    ReviewRegressionDetector,
+    Violation,
+    run_audit,
+)
 from file_organizer.review_regressions.security import SECURITY_DETECTORS
 from file_organizer.review_regressions.test_quality import TEST_QUALITY_DETECTORS
 
@@ -54,6 +58,21 @@ def _assert_formatted_violations_have_required_structure(lines: list[str]) -> No
     )
 
 
+def _assert_each_detector_reports_findings(
+    *,
+    detectors: tuple[ReviewRegressionDetector, ...],
+    findings: tuple[Violation, ...],
+    rule_class: str,
+) -> None:
+    expected_detector_ids = {detector.detector_id for detector in detectors}
+    reported_detector_ids = {violation.detector_id for violation in findings}
+    missing_detector_ids = sorted(expected_detector_ids - reported_detector_ids)
+    assert not missing_detector_ids, (
+        f"Expected seeded {rule_class} fixtures to exercise every detector; missing findings for: "
+        + ", ".join(missing_detector_ids)
+    )
+
+
 def test_first_wave_repo_enforcement_reports_zero_findings() -> None:
     """Main repo must stay at zero findings for all first-wave detectors."""
     report = run_audit(FO_ROOT, ALL_FIRST_WAVE_DETECTORS)
@@ -74,12 +93,17 @@ def test_first_wave_repo_enforcement_reports_zero_findings() -> None:
 def test_seeded_fixture_violations_are_detected_for_each_first_wave_class(
     rule_class: str,
     fixture_subdir: str,
-    detectors: tuple[object, ...],
+    detectors: tuple[ReviewRegressionDetector, ...],
 ) -> None:
     """Seeded fixture violations prove each first-wave class fails when regressed."""
     report = run_audit(FIXTURES_ROOT / fixture_subdir, detectors)
     assert report.findings, f"Expected seeded {rule_class} fixture violations"
     assert all(violation.rule_class == rule_class for violation in report.findings)
+    _assert_each_detector_reports_findings(
+        detectors=detectors,
+        findings=report.findings,
+        rule_class=rule_class,
+    )
 
     formatted = [_format_violation(violation) for violation in report.findings]
     _assert_formatted_violations_have_required_structure(formatted)
