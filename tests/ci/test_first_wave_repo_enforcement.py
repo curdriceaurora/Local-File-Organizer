@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -25,6 +26,9 @@ EXPECTED_FIRST_WAVE_DETECTOR_IDS = {
     "security.validated-path-bypass",
     "test-quality.weak-mock-call-count-lower-bound",
 }
+FORMATTED_VIOLATION_PATTERN = re.compile(
+    r"^rule_id=(?P<rule_id>\S+) path=(?P<path>.+?) line=(?P<line>-|\d+) reason=(?P<reason>.+)$"
+)
 
 
 def _format_violation(violation: Violation) -> str:
@@ -39,6 +43,15 @@ def _assert_no_findings(*, context: str, findings: tuple[Violation, ...]) -> Non
         return
     details = "\n".join(_format_violation(violation) for violation in findings)
     pytest.fail(f"{context}: expected zero findings, found {len(findings)}\n{details}")
+
+
+def _assert_formatted_violations_have_required_structure(lines: list[str]) -> None:
+    invalid_lines = [line for line in lines if FORMATTED_VIOLATION_PATTERN.fullmatch(line) is None]
+    assert not invalid_lines, (
+        "Expected every formatted violation to match "
+        "'rule_id=<id> path=<path> line=<line|-> reason=<message>' structure.\n"
+        + "\n".join(invalid_lines)
+    )
 
 
 def test_first_wave_repo_enforcement_reports_zero_findings() -> None:
@@ -69,7 +82,4 @@ def test_seeded_fixture_violations_are_detected_for_each_first_wave_class(
     assert all(violation.rule_class == rule_class for violation in report.findings)
 
     formatted = [_format_violation(violation) for violation in report.findings]
-    assert all(
-        "rule_id=" in line and "path=" in line and "line=" in line and "reason=" in line
-        for line in formatted
-    )
+    _assert_formatted_violations_have_required_structure(formatted)

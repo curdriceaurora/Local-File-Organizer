@@ -25,6 +25,7 @@ def _load_json(path: Path) -> dict[str, object]:
 
 
 def _typed_findings(report: Mapping[str, object], *, source: str) -> list[dict[str, object]]:
+    """Return findings as typed dict entries and fail with source-aware diagnostics."""
     findings = report.get("findings")
     assert isinstance(findings, list), (
         f"{source}: expected 'findings' to be a list, got {type(findings).__name__}"
@@ -49,6 +50,7 @@ def _typed_detectors(report: Mapping[str, object], *, source: str) -> list[dict[
 
 
 def _rule_class_counts(report: Mapping[str, object], *, source: str) -> dict[str, int]:
+    """Compute normalized finding counts by first-wave rule class."""
     detectors = _typed_detectors(report, source=source)
     findings = _typed_findings(report, source=source)
     classes = {detector.get("rule_class") for detector in detectors}
