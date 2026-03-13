@@ -93,3 +93,23 @@ def test_load_detectors_rejects_invalid_detector_surface(monkeypatch) -> None:
         TypeError, match="detector_id, rule_class, description, and find_violations"
     ):
         audit.load_detectors(["pkg:broken"])
+
+
+def test_load_detectors_wraps_missing_module_with_value_error(monkeypatch) -> None:
+    def _raise_missing_module(name: str) -> None:
+        raise ModuleNotFoundError(name)
+
+    monkeypatch.setattr(audit.importlib, "import_module", _raise_missing_module)
+
+    with pytest.raises(ValueError, match="Invalid detector spec 'missing:detector'"):
+        audit.load_detectors(["missing:detector"])
+
+
+def test_load_detectors_wraps_missing_attribute_with_value_error(monkeypatch) -> None:
+    class _Module:
+        present = object()
+
+    monkeypatch.setattr(audit.importlib, "import_module", lambda name: _Module)
+
+    with pytest.raises(ValueError, match="Invalid detector spec 'pkg:missing'"):
+        audit.load_detectors(["pkg:missing"])

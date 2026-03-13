@@ -5,10 +5,13 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
+
 from file_organizer.review_regressions.framework import (
     Violation,
     fingerprint_ast_node,
     iter_python_files,
+    parse_python_ast,
     render_report_json,
     run_audit,
 )
@@ -156,6 +159,36 @@ def test_iter_python_files_only_scopes_exclusions_under_root(tmp_path: Path) -> 
     target.write_text("", encoding="utf-8")
 
     assert iter_python_files(root) == [target]
+
+
+def test_violation_from_path_rejects_paths_outside_audit_root(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    outside = tmp_path / "outside.py"
+    outside.write_text("x = 1\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="outside audit root"):
+        Violation.from_path(
+            detector_id="test.detector",
+            rule_class="correctness",
+            rule_id="outside-root",
+            root=root,
+            path=outside,
+            message="outside path",
+        )
+
+
+def test_parse_python_ast_supports_pep_263_source_encoding(tmp_path: Path) -> None:
+    source = "# -*- coding: latin-1 -*-\nvalue = 'caf\xe9'\n".encode("latin-1")
+    path = tmp_path / "encoded.py"
+    path.write_bytes(source)
+
+    tree = parse_python_ast(path)
+
+    assign = tree.body[0]
+    assert isinstance(assign, ast.Assign)
+    assert isinstance(assign.value, ast.Constant)
+    assert assign.value.value == "café"
 
 
 def test_ast_fingerprint_is_resilient_to_harmless_formatting_changes() -> None:

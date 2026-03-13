@@ -5,6 +5,8 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import os
+import tokenize
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,7 +39,9 @@ def _normalized_relative_path(path: Path, root: Path) -> str:
     try:
         return path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
-        return path.resolve().as_posix()
+        raise ValueError(
+            f"Path {path.resolve().as_posix()!r} is outside audit root {root.resolve().as_posix()!r}"
+        ) from None
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,18 +178,20 @@ def iter_python_files(
     """Return project Python files in deterministic order."""
     excluded = _DEFAULT_EXCLUDE_DIRS if exclude_dirs is None else exclude_dirs
     results: list[Path] = []
-    for path in root.rglob("*.py"):
-        relative_parts = path.relative_to(root).parts[:-1]
-        if any(part in excluded for part in relative_parts):
-            continue
-        if path.is_file():
-            results.append(path)
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(name for name in dirnames if not excluded or name not in excluded)
+        current_dir = Path(dirpath)
+        for filename in sorted(name for name in filenames if name.endswith(".py")):
+            path = current_dir / filename
+            if path.is_file():
+                results.append(path)
     return sorted(results, key=lambda item: item.as_posix())
 
 
 def parse_python_ast(path: Path) -> ast.AST:
     """Parse a Python file into an AST."""
-    return ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    with tokenize.open(path) as handle:
+        return ast.parse(handle.read(), filename=str(path))
 
 
 def fingerprint_ast_node(node: ast.AST) -> str:
