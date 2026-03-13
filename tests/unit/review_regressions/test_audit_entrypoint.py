@@ -4,6 +4,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
+
 from file_organizer.review_regressions import audit
 from file_organizer.review_regressions.framework import Violation
 
@@ -87,9 +89,7 @@ def test_load_detectors_rejects_invalid_detector_surface(monkeypatch) -> None:
 
     monkeypatch.setattr(audit.importlib, "import_module", lambda name: _Module)
 
-    try:
+    with pytest.raises(
+        TypeError, match="detector_id, rule_class, description, and find_violations"
+    ):
         audit.load_detectors(["pkg:broken"])
-    except TypeError as exc:
-        assert "detector_id, rule_class, description, and find_violations" in str(exc)
-    else:
-        raise AssertionError("Expected invalid detector surface to raise TypeError")
