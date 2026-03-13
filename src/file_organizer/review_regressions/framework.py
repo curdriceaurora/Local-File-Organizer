@@ -65,8 +65,8 @@ class Violation:
                     self.rule_class,
                     self.rule_id,
                     self.path,
-                    str(self.line or ""),
-                    str(self.end_line or ""),
+                    "" if self.line is None else str(self.line),
+                    "" if self.end_line is None else str(self.end_line),
                     self.fingerprint_basis or self.message,
                 ]
             ),
@@ -98,15 +98,17 @@ class Violation:
             fingerprint_basis=fingerprint_basis,
         )
 
-    def sort_key(self) -> tuple[str, str, str, int, int, str]:
+    def sort_key(self) -> tuple[str, str, str, int, int, str, str, str]:
         """Return deterministic ordering key for serialized output."""
         return (
             self.rule_class,
             self.detector_id,
             self.path,
-            self.line or 0,
-            self.end_line or 0,
+            self.line if self.line is not None else -1,
+            self.end_line if self.end_line is not None else -1,
             self.message,
+            self.rule_id,
+            self.fingerprint,
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -147,14 +149,13 @@ class AuditReport:
 
     def to_dict(self) -> dict[str, object]:
         """Convert to stable JSON-friendly structure."""
-        sorted_findings = tuple(sorted(self.findings, key=Violation.sort_key))
         return {
             "format_version": 1,
             "root": self.root,
             "detector_count": len(self.detectors),
-            "finding_count": len(sorted_findings),
+            "finding_count": len(self.findings),
             "detectors": list(self.detectors),
-            "findings": [finding.to_dict() for finding in sorted_findings],
+            "findings": [finding.to_dict() for finding in self.findings],
         }
 
 
@@ -171,10 +172,11 @@ def iter_python_files(
     exclude_dirs: set[str] | None = None,
 ) -> list[Path]:
     """Return project Python files in deterministic order."""
-    excluded = exclude_dirs or _DEFAULT_EXCLUDE_DIRS
+    excluded = _DEFAULT_EXCLUDE_DIRS if exclude_dirs is None else exclude_dirs
     results: list[Path] = []
     for path in root.rglob("*.py"):
-        if any(part in excluded for part in path.parts):
+        relative_parts = path.relative_to(root).parts[:-1]
+        if any(part in excluded for part in relative_parts):
             continue
         if path.is_file():
             results.append(path)

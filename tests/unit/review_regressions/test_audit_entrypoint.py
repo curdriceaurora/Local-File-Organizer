@@ -71,3 +71,25 @@ def test_load_detectors_accepts_factory_and_iterable(monkeypatch) -> None:
     detectors = audit.load_detectors(["pkg:one", "pkg:many"])
 
     assert [detector.detector_id for detector in detectors] == ["one", "two", "three"]
+
+
+def test_load_detectors_rejects_invalid_detector_surface(monkeypatch) -> None:
+    class _InvalidDetector:
+        detector_id = "broken"
+
+        def find_violations(self, root: Path) -> tuple[Violation, ...]:
+            return ()
+
+    class _Module:
+        @staticmethod
+        def broken() -> _InvalidDetector:
+            return _InvalidDetector()
+
+    monkeypatch.setattr(audit.importlib, "import_module", lambda name: _Module)
+
+    try:
+        audit.load_detectors(["pkg:broken"])
+    except TypeError as exc:
+        assert "detector_id, rule_class, description, and find_violations" in str(exc)
+    else:
+        raise AssertionError("Expected invalid detector surface to raise TypeError")

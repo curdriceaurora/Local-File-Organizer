@@ -55,6 +55,34 @@ def test_violation_fingerprint_is_stable_for_unchanged_finding(tmp_path: Path) -
     assert first.fingerprint == second.fingerprint
 
 
+def test_violation_fingerprint_distinguishes_none_from_zero_line_numbers(tmp_path: Path) -> None:
+    root = tmp_path
+    path = root / "pkg" / "module.py"
+    path.parent.mkdir(parents=True)
+    path.write_text("x = 1\n", encoding="utf-8")
+
+    zero_line = Violation.from_path(
+        detector_id="test.detector",
+        rule_class="test-quality",
+        rule_id="weak-assertion",
+        root=root,
+        path=path,
+        message="Weak assertion",
+        line=0,
+    )
+    none_line = Violation.from_path(
+        detector_id="test.detector",
+        rule_class="test-quality",
+        rule_id="weak-assertion",
+        root=root,
+        path=path,
+        message="Weak assertion",
+        line=None,
+    )
+
+    assert zero_line.fingerprint != none_line.fingerprint
+
+
 def test_run_audit_and_render_report_are_deterministic(tmp_path: Path) -> None:
     root = tmp_path
     (root / "b.py").write_text("print('b')\n", encoding="utf-8")
@@ -110,6 +138,24 @@ def test_iter_python_files_excludes_cache_and_orders_results(tmp_path: Path) -> 
         "pkg/a.py",
         "pkg/z.py",
     ]
+
+
+def test_iter_python_files_allows_empty_exclusion_set(tmp_path: Path) -> None:
+    root = tmp_path
+    (root / "__pycache__").mkdir()
+    cached_file = root / "__pycache__" / "included.py"
+    cached_file.write_text("", encoding="utf-8")
+
+    assert iter_python_files(root, exclude_dirs=set()) == [cached_file]
+
+
+def test_iter_python_files_only_scopes_exclusions_under_root(tmp_path: Path) -> None:
+    root = tmp_path / "build" / "project"
+    root.mkdir(parents=True)
+    target = root / "module.py"
+    target.write_text("", encoding="utf-8")
+
+    assert iter_python_files(root) == [target]
 
 
 def test_ast_fingerprint_is_resilient_to_harmless_formatting_changes() -> None:

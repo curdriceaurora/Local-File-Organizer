@@ -16,16 +16,40 @@ from file_organizer.review_regressions.framework import (
 )
 
 
+def _is_detector(value: Any) -> bool:
+    """Return whether *value* satisfies the detector surface expected by the framework."""
+    if not callable(getattr(value, "find_violations", None)):
+        return False
+
+    detector_id = getattr(value, "detector_id", None)
+    rule_class = getattr(value, "rule_class", None)
+    description = getattr(value, "description", None)
+    return (
+        isinstance(detector_id, str)
+        and bool(detector_id)
+        and isinstance(rule_class, str)
+        and bool(rule_class)
+        and isinstance(description, str)
+        and bool(description)
+    )
+
+
 def _coerce_detectors(obj: Any) -> list[ReviewRegressionDetector]:
-    if hasattr(obj, "find_violations"):
+    if _is_detector(obj):
         return [obj]
     if isinstance(obj, Iterable) and not isinstance(obj, (str, bytes)):
         items = list(obj)
-        detectors = [item for item in items if hasattr(item, "find_violations")]
+        detectors = [item for item in items if _is_detector(item)]
         if len(detectors) != len(items):
-            raise TypeError("Iterable import spec must contain only detector instances")
+            raise TypeError(
+                "Iterable import spec must contain only detector instances with "
+                "detector_id, rule_class, description, and find_violations"
+            )
         return detectors
-    raise TypeError("Import spec must resolve to a detector, detector iterable, or factory")
+    raise TypeError(
+        "Import spec must resolve to a detector, detector iterable, or factory "
+        "with detector_id, rule_class, description, and find_violations"
+    )
 
 
 def load_detectors(import_specs: Sequence[str]) -> list[ReviewRegressionDetector]:
