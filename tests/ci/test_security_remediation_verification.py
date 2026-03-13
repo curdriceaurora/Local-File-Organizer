@@ -29,6 +29,11 @@ def _security_finding_count(report: dict[str, object]) -> int:
     return sum(1 for finding in findings if finding["rule_class"] == "security")  # type: ignore[index]
 
 
+def _suppression_count(report: dict[str, object]) -> int:
+    findings = report.get("findings", [])
+    return sum(1 for finding in findings if finding.get("suppressed") is True)  # type: ignore[union-attr]
+
+
 def _extract_metadata(text: str) -> dict[str, object]:
     match = re.search(
         r"<!-- REVIEW_REGRESSION_SECURITY_REMEDIATION_METADATA_START -->\s*```json\s*(.*?)\s*```"
@@ -46,6 +51,7 @@ def test_security_artifact_is_security_only_and_zero_findings() -> None:
 
     assert artifact["format_version"] == 1
     assert artifact["finding_count"] == 0
+    assert artifact["findings"] == []
     assert _security_finding_count(artifact) == 0
     assert all(detector["rule_class"] == "security" for detector in artifact["detectors"])  # type: ignore[index]
 
@@ -58,6 +64,7 @@ def test_security_remediation_metadata_reconciles_with_artifacts() -> None:
 
     baseline_security_count = _security_finding_count(baseline)
     post_security_count = _security_finding_count(security)
+    expected_new_suppressions = max(0, _suppression_count(security) - _suppression_count(baseline))
 
     assert metadata["baseline_artifact"] == (
         "docs/plans/review-regressions/2026-03-13-first-wave-audit.json"
@@ -69,4 +76,4 @@ def test_security_remediation_metadata_reconciles_with_artifacts() -> None:
     assert metadata["post_remediation_security_finding_count"] == post_security_count
     assert post_security_count <= baseline_security_count
     assert metadata["monotonic_non_increase_verified"] is True
-    assert metadata["new_suppressions_introduced"] == 0
+    assert metadata["new_suppressions_introduced"] == expected_new_suppressions
