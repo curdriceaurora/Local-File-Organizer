@@ -60,7 +60,12 @@ def _security_finding_count(report: Mapping[str, object], *, source: str) -> int
 
 def _suppression_count(report: Mapping[str, object], *, source: str) -> int:
     findings = _typed_findings(report, source=source)
-    return sum(1 for finding in findings if finding.get("suppressed") is True)
+    return sum(
+        1
+        for finding in findings
+        if finding.get("suppressed") is True
+        and (finding.get("rule_class") == "security" or finding.get("class") == "security")
+    )
 
 
 def _extract_metadata(text: str) -> dict[str, object]:
@@ -89,6 +94,8 @@ def test_security_artifact_is_security_only_and_zero_findings() -> None:
 
     assert artifact["format_version"] == 1
     assert artifact["root"] == "."
+    assert detectors, "Security audit artifact must declare at least one detector"
+    assert artifact["detector_count"] > 0
     assert artifact["detector_count"] == len(detectors)
     assert {detector.get("detector_id") for detector in detectors} == EXPECTED_SECURITY_DETECTOR_IDS
     assert all(detector.get("rule_class") == "security" for detector in detectors)
