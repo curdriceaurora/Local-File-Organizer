@@ -105,6 +105,18 @@ This command orchestrates the real enforcement layers:
 - `pre-commit run --files ...` for changed files, or `--all-files` when nothing is staged
 - `pytest tests/ci -q --no-cov --override-ini="addopts="`
 
+For first-wave review-regression CI parity, you can run the same audit command
+used by the standing enforcement checks:
+
+```bash
+python3 -m file_organizer.review_regressions.audit \
+  --root . \
+  --detector file_organizer.review_regressions.security:SECURITY_DETECTORS \
+  --detector file_organizer.review_regressions.correctness:CORRECTNESS_DETECTORS \
+  --detector file_organizer.review_regressions.test_quality:TEST_QUALITY_DETECTORS \
+  --fail-on-findings
+```
+
 It is intentionally not a second policy engine. If you need a new blocking rule,
 add it to `.pre-commit-config.yaml` or `tests/ci`, then let this script invoke it.
 

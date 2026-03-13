@@ -1,0 +1,75 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from file_organizer.review_regressions.correctness import CORRECTNESS_DETECTORS
+from file_organizer.review_regressions.framework import Violation, run_audit
+from file_organizer.review_regressions.security import SECURITY_DETECTORS
+from file_organizer.review_regressions.test_quality import TEST_QUALITY_DETECTORS
+
+pytestmark = pytest.mark.ci
+
+FO_ROOT = Path(__file__).resolve().parents[2]
+FIXTURES_ROOT = FO_ROOT / "tests" / "fixtures" / "review_regressions"
+ALL_FIRST_WAVE_DETECTORS = (
+    *CORRECTNESS_DETECTORS,
+    *SECURITY_DETECTORS,
+    *TEST_QUALITY_DETECTORS,
+)
+EXPECTED_FIRST_WAVE_DETECTOR_IDS = {
+    "correctness.active-model-primitive-store",
+    "correctness.stage-context-validation-bypass",
+    "security.guarded-context-direct-path",
+    "security.validated-path-bypass",
+    "test-quality.weak-mock-call-count-lower-bound",
+}
+
+
+def _format_violation(violation: Violation) -> str:
+    line = violation.line if violation.line is not None else "-"
+    return (
+        f"rule_id={violation.rule_id} path={violation.path} line={line} reason={violation.message}"
+    )
+
+
+def _assert_no_findings(*, context: str, findings: tuple[Violation, ...]) -> None:
+    if not findings:
+        return
+    details = "\n".join(_format_violation(violation) for violation in findings)
+    pytest.fail(f"{context}: expected zero findings, found {len(findings)}\n{details}")
+
+
+def test_first_wave_repo_enforcement_reports_zero_findings() -> None:
+    """Main repo must stay at zero findings for all first-wave detectors."""
+    report = run_audit(FO_ROOT, ALL_FIRST_WAVE_DETECTORS)
+    detector_ids = {detector.detector_id for detector in report.detectors}
+
+    assert detector_ids == EXPECTED_FIRST_WAVE_DETECTOR_IDS
+    _assert_no_findings(context="First-wave enforcement", findings=report.findings)
+
+
+@pytest.mark.parametrize(
+    ("rule_class", "fixture_subdir", "detectors"),
+    [
+        ("security", "security", SECURITY_DETECTORS),
+        ("correctness", "correctness", CORRECTNESS_DETECTORS),
+        ("test-quality", "test_quality", TEST_QUALITY_DETECTORS),
+    ],
+)
+def test_seeded_fixture_violations_are_detected_for_each_first_wave_class(
+    rule_class: str,
+    fixture_subdir: str,
+    detectors: tuple[object, ...],
+) -> None:
+    """Seeded fixture violations prove each first-wave class fails when regressed."""
+    report = run_audit(FIXTURES_ROOT / fixture_subdir, detectors)
+    assert report.findings, f"Expected seeded {rule_class} fixture violations"
+    assert all(violation.rule_class == rule_class for violation in report.findings)
+
+    formatted = [_format_violation(violation) for violation in report.findings]
+    assert all(
+        "rule_id=" in line and "path=" in line and "line=" in line and "reason=" in line
+        for line in formatted
+    )
