@@ -1,0 +1,19 @@
+{
+  "detector_count": 2,
+  "detectors": [
+    {
+      "description": "Flags direct Path(...) construction in guarded API/web contexts unless the usage matches a documented approved safe pattern.",
+      "detector_id": "security.guarded-context-direct-path",
+      "rule_class": "security"
+    },
+    {
+      "description": "Flags route handlers that call resolve_path() and then pass the raw request object or raw request path fields to downstream calls.",
+      "detector_id": "security.validated-path-bypass",
+      "rule_class": "security"
+    }
+  ],
+  "finding_count": 0,
+  "findings": [],
+  "format_version": 1,
+  "root": "."
+}
