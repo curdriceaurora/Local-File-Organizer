@@ -18,6 +18,8 @@ from file_organizer.review_regressions.framework import (
 
 def _is_detector(value: Any) -> bool:
     """Return whether *value* satisfies the detector surface expected by the framework."""
+    if isinstance(value, type):
+        return False
     if not callable(getattr(value, "find_violations", None)):
         return False
 

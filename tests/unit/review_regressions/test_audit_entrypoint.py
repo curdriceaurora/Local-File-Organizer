@@ -92,6 +92,26 @@ def test_load_detectors_does_not_call_detector_instances(monkeypatch) -> None:
     assert detectors == [detector]
 
 
+def test_load_detectors_treats_detector_classes_as_factories(monkeypatch) -> None:
+    class _ClassDetector:
+        detector_id = "class.detector"
+        rule_class = "correctness"
+        description = "class-backed detector"
+
+        def find_violations(self, root: Path) -> tuple[Violation, ...]:
+            return ()
+
+    class _Module:
+        detector = _ClassDetector
+
+    monkeypatch.setattr(audit.importlib, "import_module", lambda name: _Module)
+
+    detectors = audit.load_detectors(["pkg:detector"])
+
+    assert len(detectors) == 1
+    assert isinstance(detectors[0], _ClassDetector)
+
+
 def test_load_detectors_rejects_invalid_detector_surface(monkeypatch) -> None:
     class _InvalidDetector:
         detector_id = "broken"
