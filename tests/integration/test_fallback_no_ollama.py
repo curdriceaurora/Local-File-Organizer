@@ -115,7 +115,10 @@ class TestFallbackDoesNotCrash:
         assert result.total_files == expected
         assert result.failed_files == 0
         # Verify fallback path was actually used (not silently skipped)
-        assert mock_fallback.call_count > 0, "Expected fallback to be invoked when Ollama is down"
+        assert mock_fallback.called, "Expected fallback to be invoked when Ollama is down"
+        assert any(call.args and call.args[0] for call in mock_fallback.call_args_list), (
+            "Fallback was invoked but never with a non-empty batch of files"
+        )
 
     def test_ollama_recovery_between_calls(
         self, organizer: FileOrganizer, source_dir: Path, output_dir: Path
@@ -170,7 +173,7 @@ class TestFallbackDoesNotCrash:
             organizer.organize(source_dir, output_dir)
 
         # AI processing paths were called with actual file lists (not fallback)
-        assert mock_text.call_count >= 1, "Expected AI text processing, got fallback"
+        assert mock_text.called, "Expected AI text processing, got fallback"
         # Verify files were passed (text_files call + cad_files call)
         all_text_args = [call.args[0] for call in mock_text.call_args_list]
         all_text_files = [f for batch in all_text_args for f in batch]

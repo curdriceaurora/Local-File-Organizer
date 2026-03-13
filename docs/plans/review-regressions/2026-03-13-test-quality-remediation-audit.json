@@ -1,0 +1,14 @@
+{
+  "detector_count": 1,
+  "detectors": [
+    {
+      "description": "Flags weak lower-bound call_count assertions in tests (>= 1, > 0, 1 <=, 0 <).",
+      "detector_id": "test-quality.weak-mock-call-count-lower-bound",
+      "rule_class": "test-quality"
+    }
+  ],
+  "finding_count": 0,
+  "findings": [],
+  "format_version": 1,
+  "root": "."
+}

@@ -551,7 +551,11 @@ class TestScanAudioFiles:
             self._scan_unwrapped(view)
 
         # All three panels updated with error message
-        assert mock_panel.update.call_count >= 1
+        assert mock_panel.update.call_count == 3
+        assert all(
+            call.args[0].startswith("[red]Audio features unavailable:[/red]")
+            for call in mock_panel.update.call_args_list
+        )
 
     def test_scan_extraction_exception(self, tmp_path):
         """When extraction fails for a file, it still appears with fallback data."""
@@ -623,7 +627,11 @@ class TestScanAudioFiles:
         ):
             self._scan_unwrapped(view)
 
-        assert mock_panel.update.call_count >= 1
+        assert mock_panel.update.call_count == 3
+        assert all(
+            call.args[0].startswith("[red]Audio scan failed:[/red]")
+            for call in mock_panel.update.call_args_list
+        )
 
 
 @pytest.mark.unit

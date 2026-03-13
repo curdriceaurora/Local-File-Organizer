@@ -7,7 +7,7 @@ _set_status with exception paths, and HistoryStatsPanel edge cases.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import pytest
 
@@ -201,7 +201,11 @@ class TestUndoHistoryViewLoadHistory:
             UndoHistoryView._load_history.__wrapped__(view)
 
         # Should have called update on panels with error message
-        assert mock_app.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count == 3
+        assert all(
+            call_args.args[1].startswith("[red]History unavailable:[/red]")
+            for call_args in mock_app.call_from_thread.call_args_list
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -274,7 +278,12 @@ class TestUndoHistoryViewRunUndo:
             UndoHistoryView._run_undo.__wrapped__(view)
 
         # Should set failure status
-        assert mock_app.call_from_thread.call_count >= 1
+        mock_app.call_from_thread.assert_has_calls(
+            [
+                call(view._set_status, "Undo failed: db error"),
+                call(view.action_refresh_history),
+            ]
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -344,4 +353,9 @@ class TestUndoHistoryViewRunRedo:
         ):
             UndoHistoryView._run_redo.__wrapped__(view)
 
-        assert mock_app.call_from_thread.call_count >= 1
+        mock_app.call_from_thread.assert_has_calls(
+            [
+                call(view._set_status, "Redo failed: db error"),
+                call(view.action_refresh_history),
+            ]
+        )

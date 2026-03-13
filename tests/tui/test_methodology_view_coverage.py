@@ -127,6 +127,7 @@ class TestLoadParaPreview:
 
         mock_mapper = MagicMock()
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
@@ -137,7 +138,7 @@ class TestLoadParaPreview:
             MethodologyView._load_para_preview.__wrapped__(view)
 
         # Should call show_para_preview with None (no files)
-        assert mock_app.call_from_thread.call_count >= 1
+        mock_preview.show_para_preview.assert_called_once_with(None)
 
     def test_para_preview_with_files(self, tmp_path: Path) -> None:
         f1 = tmp_path / "a.txt"
@@ -154,6 +155,7 @@ class TestLoadParaPreview:
         mock_mapper.map_batch.return_value = [mock_result, mock_result]
 
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
@@ -163,7 +165,7 @@ class TestLoadParaPreview:
         ):
             MethodologyView._load_para_preview.__wrapped__(view)
 
-        assert mock_app.call_from_thread.call_count >= 1
+        mock_preview.show_para_preview.assert_called_once_with({"Resources": 2})
 
     def test_para_preview_with_plain_category(self, tmp_path: Path) -> None:
         """Test when target_category doesn't have .value attribute."""
@@ -179,6 +181,7 @@ class TestLoadParaPreview:
         mock_mapper.map_batch.return_value = [mock_result]
 
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
@@ -188,7 +191,7 @@ class TestLoadParaPreview:
         ):
             MethodologyView._load_para_preview.__wrapped__(view)
 
-        assert mock_app.call_from_thread.call_count >= 1
+        mock_preview.show_para_preview.assert_called_once_with({"Projects": 1})
 
     def test_para_preview_exception(self, tmp_path: Path) -> None:
         view = MethodologyView(scan_dir=tmp_path)
@@ -196,6 +199,7 @@ class TestLoadParaPreview:
         view.query_one = MagicMock(return_value=mock_preview)
 
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.methodologies.para.folder_mapper.CategoryFolderMapper",
@@ -206,7 +210,7 @@ class TestLoadParaPreview:
             MethodologyView._load_para_preview.__wrapped__(view)
 
         # Should call show_error
-        assert mock_app.call_from_thread.call_count >= 1
+        mock_preview.show_error.assert_called_once_with("import error")
 
 
 # ---------------------------------------------------------------------------
@@ -223,10 +227,11 @@ class TestLoadJdPreview:
         view.query_one = MagicMock(return_value=mock_preview)
 
         mock_config = MagicMock()
-        mock_config.scheme.areas = {10: SimpleNamespace(title="Finance")}
-        mock_config.scheme.categories = {"10": SimpleNamespace(title="Banking")}
+        mock_config.scheme.areas = {10: SimpleNamespace(name="Finance")}
+        mock_config.scheme.categories = {"10": SimpleNamespace(name="Banking")}
 
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.methodologies.johnny_decimal.config.create_default_config",
@@ -236,7 +241,10 @@ class TestLoadJdPreview:
         ):
             MethodologyView._load_jd_preview.__wrapped__(view)
 
-        assert mock_app.call_from_thread.call_count >= 1
+        mock_preview.show_jd_preview.assert_called_once_with(
+            {10: "Finance"},
+            {"10": "Banking"},
+        )
 
     def test_jd_preview_no_areas(self) -> None:
         view = MethodologyView()
@@ -248,6 +256,7 @@ class TestLoadJdPreview:
         mock_config.scheme.categories = None
 
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.methodologies.johnny_decimal.config.create_default_config",
@@ -257,7 +266,7 @@ class TestLoadJdPreview:
         ):
             MethodologyView._load_jd_preview.__wrapped__(view)
 
-        assert mock_app.call_from_thread.call_count >= 1
+        mock_preview.show_jd_preview.assert_called_once_with({}, {})
 
     def test_jd_preview_exception(self) -> None:
         view = MethodologyView()
@@ -265,6 +274,7 @@ class TestLoadJdPreview:
         view.query_one = MagicMock(return_value=mock_preview)
 
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.methodologies.johnny_decimal.config.create_default_config",
@@ -274,7 +284,7 @@ class TestLoadJdPreview:
         ):
             MethodologyView._load_jd_preview.__wrapped__(view)
 
-        assert mock_app.call_from_thread.call_count >= 1
+        mock_preview.show_error.assert_called_once_with("no jd module")
 
 
 # ---------------------------------------------------------------------------

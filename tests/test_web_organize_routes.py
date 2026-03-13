@@ -99,8 +99,8 @@ class TestOrganizeScan:
         # Verify plan was generated (success path, not error path)
         assert "Plan generated" in response.text
         # Verify FileOrganizer was instantiated and organize() was called
-        assert mock_file_organizer.call_count > 0
-        assert mock_file_organizer.return_value.organize.call_count > 0
+        mock_file_organizer.assert_called_once_with(dry_run=True, use_hardlinks=True)
+        mock_file_organizer.return_value.organize.assert_called_once()
 
 
 @pytest.mark.unit

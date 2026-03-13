@@ -103,7 +103,11 @@ class TestAnalyticsViewLoadAnalytics:
             AnalyticsView._load_analytics.__wrapped__(view)
 
         # Should call update on all panels with error message
-        assert mock_app.call_from_thread.call_count >= 1
+        assert mock_app.call_from_thread.call_count == 4
+        assert all(
+            call.args[1].startswith("[red]Analytics unavailable:[/red]")
+            for call in mock_app.call_from_thread.call_args_list
+        )
 
     def test_action_refresh_analytics(self) -> None:
         view = AnalyticsView()
