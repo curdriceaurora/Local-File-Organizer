@@ -22,6 +22,13 @@ BACKLOG_PATH = (
 )
 _ALLOWED_GAP_CATEGORIES = {"legacy-only gap", "forward-gap and legacy-gap"}
 _ALLOWED_SEVERITIES = {"high", "medium", "low"}
+_RULE_SEVERITY = {
+    "unguarded-direct-path": "high",
+    "validated-path-bypass": "high",
+    "validated-field-setattr-bypass": "high",
+    "primitive-active-model-store": "high",
+    "weak-mock-call-count-lower-bound": "medium",
+}
 
 
 def _load_artifact() -> dict[str, object]:
@@ -58,6 +65,12 @@ def _extract_backlog_rows(text: str) -> list[dict[str, str]]:
             }
         )
     return rows
+
+
+def _expected_severity_for_finding(finding: dict[str, object]) -> str:
+    rule_id = str(finding["rule_id"])
+    assert rule_id in _RULE_SEVERITY, f"No severity mapping defined for rule_id={rule_id!r}"
+    return _RULE_SEVERITY[rule_id]
 
 
 def test_review_regression_artifact_schema_and_counts() -> None:
@@ -118,6 +131,14 @@ def test_backlog_metadata_reconciles_with_artifact() -> None:
     assert isinstance(severity_totals, dict)
     assert set(severity_totals) == _ALLOWED_SEVERITIES
     assert sum(severity_totals.values()) == artifact["finding_count"]
+    artifact_severity_counts = Counter(
+        _expected_severity_for_finding(finding)
+        for finding in artifact["findings"]  # type: ignore[index]
+    )
+    assert severity_totals == {
+        severity: artifact_severity_counts.get(severity, 0)
+        for severity in sorted(_ALLOWED_SEVERITIES)
+    }
 
 
 def test_backlog_rows_cover_every_fingerprint_exactly_once_with_mece_gap_categories() -> None:
@@ -150,6 +171,7 @@ def test_backlog_rows_cover_every_fingerprint_exactly_once_with_mece_gap_categor
         assert row["subsystem_module"]
 
         assert row["severity"] in _ALLOWED_SEVERITIES
+        assert row["severity"] == _expected_severity_for_finding(finding)
         severity_counts[row["severity"]] += 1
 
         rule_class_counts[row["rule_class"]] += 1
