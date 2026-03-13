@@ -8,6 +8,7 @@ import pytest
 
 FO_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = FO_ROOT / "src" / "file_organizer"
+CODEQL_CONFIG = FO_ROOT / ".github" / "codeql" / "codeql-config.yml"
 
 pytestmark = pytest.mark.ci
 
@@ -122,3 +123,12 @@ def test_tainted_path_usage_has_codeql_suppression_comment() -> None:
                 violations.append(f"{rel}:{index + 1}: missing codeql suppression for '{snippet}'")
 
     assert not violations, "Missing CodeQL suppression comments:\n" + "\n".join(violations)
+
+
+def test_intentional_security_detector_fixtures_are_ignored_by_codeql() -> None:
+    config_text = CODEQL_CONFIG.read_text(encoding="utf-8")
+
+    assert "tests/fixtures/review_regressions/security/**" in config_text, (
+        "Intentional unsafe security-detector fixtures must stay out of CodeQL analysis.\n"
+        "Update .github/codeql/codeql-config.yml paths-ignore when adding or moving them."
+    )

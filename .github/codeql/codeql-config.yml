@@ -6,3 +6,4 @@ paths-ignore:
   - src/file_organizer/api/utils.py
   - src/file_organizer/api/api_keys.py
   - src/file_organizer/api/routers/search.py
+  - tests/fixtures/review_regressions/security/**
