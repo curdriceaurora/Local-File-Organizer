@@ -40,9 +40,17 @@ python3 -m file_organizer.review_regressions.audit \
 
 ## Result
 
-- Security findings after re-audit: **0**
-- Security finding count changed from baseline (`#782`) to this task: **0 -> 0**
+- Security findings in baseline audit (`#782`): **0**
+- Security findings after this task's re-audit (`#783`): **0**
+- Net new security findings introduced: **none**
 - Net new suppressions introduced in this task: **none**
+
+## Why Count Stayed at 0
+
+`#783` verifies and hardens the security-guardrail path so regressions are caught
+early. Baseline security findings were already zero in `#782`, so the expected
+outcome for this task is to preserve that state while adding stronger
+verification coverage.
 
 ## Acceptance-Criteria Check
 
