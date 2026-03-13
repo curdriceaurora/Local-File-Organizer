@@ -28,6 +28,15 @@ def _is_call_count_attr(node: ast.AST) -> bool:
     return isinstance(node, ast.Attribute) and node.attr == "call_count"
 
 
+def _is_guarded_test_path(rel_path: str) -> bool:
+    """Return whether rel_path is a test file covered by this guardrail."""
+    return (
+        rel_path.startswith("tests/")
+        and rel_path.endswith(".py")
+        and not rel_path.startswith("tests/fixtures/")
+    )
+
+
 def _git_stdout(*args: str, check: bool = True) -> str:
     """Run git and return stripped stdout."""
     result = subprocess.run(
@@ -183,11 +192,7 @@ def _github_pr_changed_test_files() -> list[Path] | None:
             if not isinstance(file_info, dict):
                 continue
             filename = file_info.get("filename")
-            if (
-                isinstance(filename, str)
-                and filename.startswith("tests/")
-                and filename.endswith(".py")
-            ):
+            if isinstance(filename, str) and _is_guarded_test_path(filename):
                 rel_paths.add(filename)
 
         if len(payload) < 100:
@@ -333,7 +338,7 @@ def _changed_test_files() -> list[Path]:
     return [
         FO_ROOT / rel_path
         for rel_path in sorted(rel_paths)
-        if rel_path and (FO_ROOT / rel_path).is_file()
+        if rel_path and _is_guarded_test_path(rel_path) and (FO_ROOT / rel_path).is_file()
     ]
 
 
@@ -662,6 +667,33 @@ def test_changed_test_files_includes_staged_and_worktree_diffs(
         FO_ROOT / "tests" / "ci" / "test_review_regressions.py",
         FO_ROOT / "tests" / "ci" / "test_weak_test_assertions.py",
     ]
+
+
+def test_changed_test_files_excludes_fixture_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_git_stdout(*args: str, check: bool = True) -> str:
+        if args == ("rev-parse", "HEAD"):
+            return "head-sha"
+        if args == (
+            "diff",
+            "--cached",
+            "--name-only",
+            "--diff-filter=ACMR",
+            "--",
+            "tests/**/*.py",
+            "tests/*.py",
+        ):
+            return (
+                "tests/fixtures/review_regressions/test_quality/tests/weak_assertions_positive.py\n"
+                "tests/ci/test_weak_test_assertions.py\n"
+            )
+        return ""
+
+    monkeypatch.setattr(MODULE, "_resolve_diff_base", lambda: "head-sha")
+    monkeypatch.setattr(MODULE, "_git_stdout", fake_git_stdout)
+
+    assert _changed_test_files() == [FO_ROOT / "tests" / "ci" / "test_weak_test_assertions.py"]
 
 
 @pytest.mark.parametrize(

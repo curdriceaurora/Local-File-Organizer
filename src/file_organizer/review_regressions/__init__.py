@@ -21,6 +21,11 @@ from file_organizer.review_regressions.security import (
     GuardedContextDirectPathDetector,
     ValidatedPathBypassDetector,
 )
+from file_organizer.review_regressions.test_quality import (
+    TEST_QUALITY_DETECTORS,
+    WeakMockCallCountAssertionDetector,
+    changed_test_quality_detectors,
+)
 
 __all__ = [
     "AuditReport",
@@ -30,9 +35,12 @@ __all__ = [
     "ActiveModelPrimitiveStoreDetector",
     "CORRECTNESS_DETECTORS",
     "GuardedContextDirectPathDetector",
+    "TEST_QUALITY_DETECTORS",
     "ValidatedPathBypassDetector",
     "StageContextValidationBypassDetector",
     "SECURITY_DETECTORS",
+    "WeakMockCallCountAssertionDetector",
+    "changed_test_quality_detectors",
     "fingerprint_ast_node",
     "iter_python_files",
     "parse_python_ast",

@@ -53,6 +53,7 @@ python -m uvicorn main:app --reload
 - [Guardrail Workflow](guardrails.md) - Where new guardrails belong and how to validate them
 - [Legacy Security Rules](review-regression-security-rules.md) - Approved safe path patterns for review-regression audits
 - [Legacy Correctness Rules](review-regression-correctness-rules.md) - Runtime invariants owned by the correctness detector pack
+- [Legacy Test-Quality Rules](review-regression-test-quality-rules.md) - Weak-assertion patterns owned by the test-quality detector pack
 
 ## Architecture
 
