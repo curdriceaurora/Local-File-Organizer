@@ -75,6 +75,23 @@ def test_load_detectors_accepts_factory_and_iterable(monkeypatch) -> None:
     assert [detector.detector_id for detector in detectors] == ["one", "two", "three"]
 
 
+def test_load_detectors_does_not_call_detector_instances(monkeypatch) -> None:
+    class _CallableDetector(_Detector):
+        def __call__(self) -> _Detector:
+            raise AssertionError("detector instances should not be invoked")
+
+    detector = _CallableDetector(detector_id="callable-instance")
+
+    class _Module:
+        direct = detector
+
+    monkeypatch.setattr(audit.importlib, "import_module", lambda name: _Module)
+
+    detectors = audit.load_detectors(["pkg:direct"])
+
+    assert detectors == [detector]
+
+
 def test_load_detectors_rejects_invalid_detector_surface(monkeypatch) -> None:
     class _InvalidDetector:
         detector_id = "broken"
@@ -97,12 +114,26 @@ def test_load_detectors_rejects_invalid_detector_surface(monkeypatch) -> None:
 
 def test_load_detectors_wraps_missing_module_with_value_error(monkeypatch) -> None:
     def _raise_missing_module(name: str) -> None:
-        raise ModuleNotFoundError(name)
+        error = ModuleNotFoundError(f"No module named '{name}'")
+        error.name = name
+        raise error
 
     monkeypatch.setattr(audit.importlib, "import_module", _raise_missing_module)
 
     with pytest.raises(ValueError, match="Invalid detector spec 'missing:detector'"):
         audit.load_detectors(["missing:detector"])
+
+
+def test_load_detectors_preserves_dependency_import_errors(monkeypatch) -> None:
+    def _raise_dependency_error(name: str) -> None:
+        error = ModuleNotFoundError("No module named 'dependency'")
+        error.name = "dependency"
+        raise error
+
+    monkeypatch.setattr(audit.importlib, "import_module", _raise_dependency_error)
+
+    with pytest.raises(ModuleNotFoundError, match="dependency"):
+        audit.load_detectors(["pkg:detector"])
 
 
 def test_load_detectors_wraps_missing_attribute_with_value_error(monkeypatch) -> None:

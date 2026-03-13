@@ -61,14 +61,23 @@ def load_detectors(import_specs: Sequence[str]) -> list[ReviewRegressionDetector
         module_name, attr_name = spec.split(":", 1)
         try:
             module = importlib.import_module(module_name)
-            target = getattr(module, attr_name)
-        except (AttributeError, ModuleNotFoundError) as exc:
+        except ModuleNotFoundError as exc:
+            if exc.name != module_name:
+                raise
             raise ValueError(
                 f"Invalid detector spec {spec!r}; expected 'module:attribute' resolving to "
                 "a detector, detector iterable, or factory with detector_id, rule_class, "
                 "description, and find_violations"
             ) from exc
-        loaded = target() if callable(target) else target
+        try:
+            target = getattr(module, attr_name)
+        except AttributeError as exc:
+            raise ValueError(
+                f"Invalid detector spec {spec!r}; expected 'module:attribute' resolving to "
+                "a detector, detector iterable, or factory with detector_id, rule_class, "
+                "description, and find_violations"
+            ) from exc
+        loaded = target() if callable(target) and not _is_detector(target) else target
         detectors.extend(_coerce_detectors(loaded))
     return detectors
 

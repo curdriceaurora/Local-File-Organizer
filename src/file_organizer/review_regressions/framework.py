@@ -36,11 +36,12 @@ def _stable_hash(parts: Iterable[str]) -> str:
 
 
 def _normalized_relative_path(path: Path, root: Path) -> str:
+    candidate = path if path.is_absolute() else root / path
     try:
-        return path.resolve().relative_to(root.resolve()).as_posix()
+        return candidate.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
         raise ValueError(
-            f"Path {path.resolve().as_posix()!r} is outside audit root {root.resolve().as_posix()!r}"
+            f"Path {candidate.resolve().as_posix()!r} is outside audit root {root.resolve().as_posix()!r}"
         ) from None
 
 
@@ -220,7 +221,7 @@ def run_audit(root: Path, detectors: Iterable[ReviewRegressionDetector]) -> Audi
         findings.extend(detector.find_violations(normalized_root))
 
     return AuditReport(
-        root=normalized_root.as_posix(),
+        root=".",
         detectors=tuple(detector_descriptors),
         findings=tuple(sorted(findings, key=Violation.sort_key)),
     )

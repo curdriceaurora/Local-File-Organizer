@@ -126,6 +126,7 @@ def test_run_audit_and_render_report_are_deterministic(tmp_path: Path) -> None:
 
     assert json_one == json_two
     payload = json.loads(json_one)
+    assert payload["root"] == "."
     assert [finding["path"] for finding in payload["findings"]] == ["a.py", "b.py"]
 
 
@@ -176,6 +177,26 @@ def test_violation_from_path_rejects_paths_outside_audit_root(tmp_path: Path) ->
             path=outside,
             message="outside path",
         )
+
+
+def test_violation_from_path_accepts_root_relative_paths(tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    nested = root / "pkg" / "module.py"
+    nested.parent.mkdir()
+    nested.write_text("x = 1\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    violation = Violation.from_path(
+        detector_id="test.detector",
+        rule_class="correctness",
+        rule_id="relative-path",
+        root=root,
+        path=Path("pkg/module.py"),
+        message="relative path",
+    )
+
+    assert violation.path == "pkg/module.py"
 
 
 def test_parse_python_ast_supports_pep_263_source_encoding(tmp_path: Path) -> None:
