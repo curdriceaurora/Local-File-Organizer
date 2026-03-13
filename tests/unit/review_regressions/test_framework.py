@@ -153,6 +153,31 @@ def test_run_audit_uses_immutable_detector_descriptors(tmp_path: Path) -> None:
         descriptor.description = "mutated"
 
 
+def test_run_audit_falls_back_to_absolute_root_when_relpath_is_unavailable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = tmp_path / "audit-root"
+    root.mkdir()
+    monkeypatch.setattr(
+        "file_organizer.review_regressions.framework.os.path.relpath",
+        lambda path, start: (_ for _ in ()).throw(ValueError("different drive")),
+    )
+
+    report = run_audit(
+        root,
+        [
+            _Detector(
+                detector_id="detector.pack",
+                rule_class="correctness",
+                description="fixture detector",
+                findings=[],
+            )
+        ],
+    )
+
+    assert report.root == root.resolve().as_posix()
+
+
 def test_iter_python_files_excludes_cache_and_orders_results(tmp_path: Path) -> None:
     root = tmp_path
     (root / "pkg").mkdir()

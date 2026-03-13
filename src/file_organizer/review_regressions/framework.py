@@ -239,7 +239,11 @@ def fingerprint_ast_node(node: ast.AST) -> str:
 def run_audit(root: Path, detectors: Iterable[ReviewRegressionDetector]) -> AuditReport:
     """Run detector audit and return a deterministic report."""
     normalized_root = root.resolve()
-    report_root = Path(os.path.relpath(normalized_root, Path.cwd().resolve())).as_posix()
+    cwd = Path.cwd().resolve()
+    try:
+        report_root = Path(os.path.relpath(normalized_root, cwd)).as_posix()
+    except ValueError:
+        report_root = normalized_root.as_posix()
     ordered_detectors = sorted(
         detectors,
         key=lambda detector: (detector.rule_class, detector.detector_id),
