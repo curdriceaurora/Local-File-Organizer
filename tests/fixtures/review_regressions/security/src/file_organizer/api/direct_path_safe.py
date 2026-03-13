@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Protocol
 
 from file_organizer.api.utils import file_info_from_path
 
@@ -15,7 +16,11 @@ def config_roots(allowed_paths: list[str]) -> list[str]:
     return [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]
 
 
-def info_path(info: object) -> object:
+class _HasPath(Protocol):
+    path: str
+
+
+def info_path(info: _HasPath) -> object:
     return file_info_from_path(Path(info.path))
 
 

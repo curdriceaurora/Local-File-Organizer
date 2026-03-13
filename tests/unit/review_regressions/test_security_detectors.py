@@ -46,21 +46,26 @@ def test_validation_bypass_detector_flags_raw_request_reuse_after_validation() -
 
     findings = detector.find_violations(_fixture_root())
 
-    assert [(finding.path, finding.line, finding.rule_id) for finding in findings] == [
+    assert [
+        (finding.path, finding.line, finding.rule_id, finding.message) for finding in findings
+    ] == [
         (
             "src/file_organizer/api/validation_bypass_positive.py",
             35,
             "raw-request-after-validation",
+            "Route validates request path fields with resolve_path() but later passes the raw request object to add_task().",
         ),
         (
             "src/file_organizer/api/validation_bypass_positive.py",
             36,
             "raw-field-after-validation",
+            "Route validates request.input_dir with resolve_path() but later passes raw request.input_dir to organize().",
         ),
         (
             "src/file_organizer/api/validation_bypass_positive.py",
             36,
             "raw-field-after-validation",
+            "Route validates request.output_dir with resolve_path() but later passes raw request.output_dir to organize().",
         ),
     ]
 

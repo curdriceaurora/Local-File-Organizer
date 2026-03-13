@@ -19,6 +19,10 @@ def run_job(job_id: str, request: OrganizeRequest) -> None:
     raise NotImplementedError
 
 
+def preview_job(request: OrganizeRequest) -> None:
+    raise NotImplementedError
+
+
 class Organizer:
     def organize(self, *, input_path: str, output_path: str) -> None:
         raise NotImplementedError
@@ -39,4 +43,20 @@ def safe_execute(
         update={"input_dir": str(input_path), "output_dir": str(output_path)}
     )
     background_tasks.add_task(run_job, "job-1", safe_request)
+    organizer.organize(input_path=str(input_path), output_path=str(output_path))
+
+
+@router.post("/organize-preview")
+def safe_preview(
+    request: OrganizeRequest,
+    background_tasks: BackgroundTasks,
+    settings: ApiSettings = Depends(get_settings),
+) -> None:
+    background_tasks.add_task(preview_job, request)
+    input_path = resolve_path(request.input_dir, settings.allowed_paths)
+    output_path = resolve_path(request.output_dir, settings.allowed_paths)
+    safe_request = request.model_copy(
+        update={"input_dir": str(input_path), "output_dir": str(output_path)}
+    )
+    background_tasks.add_task(run_job, "job-2", safe_request)
     organizer.organize(input_path=str(input_path), output_path=str(output_path))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import tokenize
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,7 +12,6 @@ from file_organizer.review_regressions.framework import (
     Violation,
     fingerprint_ast_node,
     iter_python_files,
-    parse_python_ast,
 )
 
 _GUARDED_SOURCE_ROOTS = (
@@ -61,6 +61,11 @@ def _iter_guarded_python_files(root: Path) -> list[Path]:
     return sorted(files, key=lambda path: path.as_posix())
 
 
+def _read_python_source(path: Path) -> str:
+    with tokenize.open(path) as handle:
+        return handle.read()
+
+
 def _is_path_call(node: ast.AST) -> bool:
     return isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "Path"
 
@@ -102,23 +107,14 @@ def _window_has_prevalidated_marker(lines: list[str], lineno: int) -> bool:
 
 def _is_basename_extraction(node: ast.Call, parents: dict[ast.AST, ast.AST]) -> bool:
     parent = parents.get(node)
-    if isinstance(parent, ast.Attribute) and parent.attr in _SAFE_PATH_ATTRS:
-        return True
-    if (
-        isinstance(parent, ast.Attribute)
-        and parent.attr in _SAFE_PATH_ATTRS
-        and isinstance(parents.get(parent), ast.Call)
-    ):
-        return True
-    if (
-        isinstance(parent, ast.Attribute)
-        and parent.attr in _SAFE_PATH_ATTRS
-        and isinstance(grandparent := parents.get(parent), ast.Call)
-        and isinstance(grandparent.func, ast.Attribute)
-        and grandparent.func.attr == "strip"
-    ):
-        return True
-    return False
+    if not (isinstance(parent, ast.Attribute) and parent.attr in _SAFE_PATH_ATTRS):
+        return False
+
+    grandparent = parents.get(parent)
+    if isinstance(grandparent, ast.Attribute) and grandparent.attr == "strip":
+        return isinstance(parents.get(grandparent), ast.Call)
+
+    return True
 
 
 def _is_allowed_config_root_path(node: ast.Call, parents: dict[ast.AST, ast.AST]) -> bool:
@@ -272,8 +268,9 @@ class GuardedContextDirectPathDetector:
         """Return direct-path findings under the guarded API/web source roots."""
         violations: list[Violation] = []
         for path in _iter_guarded_python_files(root):
-            lines = path.read_text(encoding="utf-8").splitlines()
-            tree = parse_python_ast(path)
+            source = _read_python_source(path)
+            lines = source.splitlines()
+            tree = ast.parse(source, filename=str(path))
             parents = _parent_map(tree)
             for node in ast.walk(tree):
                 if not _is_path_call(node):
@@ -312,7 +309,8 @@ class ValidatedPathBypassDetector:
         """Return request-path bypass findings under guarded route handlers."""
         violations: list[Violation] = []
         for path in _iter_guarded_python_files(root):
-            tree = parse_python_ast(path)
+            source = _read_python_source(path)
+            tree = ast.parse(source, filename=str(path))
             for node in ast.walk(tree):
                 if not isinstance(
                     node, (ast.FunctionDef, ast.AsyncFunctionDef)
@@ -334,6 +332,12 @@ class ValidatedPathBypassDetector:
         findings: list[Violation] = []
         seen: set[tuple[str, int, str]] = set()
         request_names = {item.request_name for item in validated.values()}
+        earliest_validation_line = {
+            request_name: min(
+                field.line for field in validated.values() if field.request_name == request_name
+            )
+            for request_name in request_names
+        }
 
         for child in ast.walk(node):
             if (
@@ -352,6 +356,8 @@ class ValidatedPathBypassDetector:
                     isinstance(arg, ast.Name) and arg.id == request_name
                     for arg in [*child.args, *[kw.value for kw in child.keywords]]
                 ):
+                    if child.lineno <= earliest_validation_line[request_name]:
+                        continue
                     key = ("raw-request", child.lineno, request_name)
                     if key in seen:
                         continue
