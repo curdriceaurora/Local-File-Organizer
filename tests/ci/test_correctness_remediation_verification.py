@@ -115,6 +115,7 @@ def test_correctness_artifact_is_correctness_only_and_zero_findings() -> None:
 def test_correctness_remediation_metadata_reconciles_with_artifacts() -> None:
     """Verify report metadata matches artifacts and enforces non-increasing correctness findings."""
     assert REPORT_PATH.is_file(), f"Missing correctness remediation report: {REPORT_PATH}"
+    assert BASELINE_PATH.is_file(), f"Missing baseline audit artifact: {BASELINE_PATH}"
     baseline = _load_json(BASELINE_PATH)
     correctness = _load_json(CORRECTNESS_PATH)
     metadata = _extract_metadata(REPORT_PATH.read_text(encoding="utf-8"))
