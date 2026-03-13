@@ -51,6 +51,7 @@ python -m uvicorn main:app --reload
 - Pull request process
 - Unit and integration testing
 - [Guardrail Workflow](guardrails.md) - Where new guardrails belong and how to validate them
+- [Legacy Security Rules](review-regression-security-rules.md) - Approved safe path patterns for review-regression audits
 
 ## Architecture
 
