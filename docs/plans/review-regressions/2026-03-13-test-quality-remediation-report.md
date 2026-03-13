@@ -61,5 +61,6 @@ Replaced weak lower-bound assertions (such as `> 0` and `>= 1` on mock
 
 - [x] Re-running the test-quality audit returns zero findings.
 - [x] CI remains green after fixes.
+- [x] Reconciliation metadata is CI-validated by `tests/ci/test_test_quality_remediation_verification.py`, and this check must pass as part of acceptance.
 - [x] Updated tests verify behavior/arguments/effects rather than weak lower-bound call-count checks.
 - [x] Test-quality finding count moves monotonically downward across remediation PRs.
