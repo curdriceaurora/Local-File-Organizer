@@ -40,14 +40,14 @@ def test_stage_context_detector_flags_validated_field_bypass() -> None:
 
 def test_stage_context_detector_skips_safe_assignment_paths() -> None:
     detector = StageContextValidationBypassDetector()
+    root = _fixture_root()
+    safe_path = "src/file_organizer/pipeline/stage_context_bypass_safe.py"
 
-    findings = [
-        finding
-        for finding in detector.find_violations(_fixture_root())
-        if finding.path == "src/file_organizer/pipeline/stage_context_bypass_safe.py"
-    ]
+    assert (root / safe_path).exists(), f"Missing fixture: {safe_path}"
 
-    assert findings == []
+    findings = [finding for finding in detector.find_violations(root) if finding.path == safe_path]
+
+    assert not findings, f"Unexpected findings for {safe_path}: {findings}"
 
 
 def test_active_model_detector_flags_primitive_registry_store() -> None:
@@ -75,14 +75,14 @@ def test_active_model_detector_flags_primitive_registry_store() -> None:
 
 def test_active_model_detector_skips_live_model_store_and_pop() -> None:
     detector = ActiveModelPrimitiveStoreDetector()
+    root = _fixture_root()
+    safe_path = "src/file_organizer/models/model_manager_safe.py"
 
-    findings = [
-        finding
-        for finding in detector.find_violations(_fixture_root())
-        if finding.path == "src/file_organizer/models/model_manager_safe.py"
-    ]
+    assert (root / safe_path).exists(), f"Missing fixture: {safe_path}"
 
-    assert findings == []
+    findings = [finding for finding in detector.find_violations(root) if finding.path == safe_path]
+
+    assert not findings, f"Unexpected findings for {safe_path}: {findings}"
 
 
 def test_correctness_detector_pack_exports_first_wave_correctness_detectors() -> None:

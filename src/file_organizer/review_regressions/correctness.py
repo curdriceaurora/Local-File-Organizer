@@ -208,6 +208,15 @@ def _enclosing_scope(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> ast.AST:
     raise ValueError("AST node has no enclosing scope")
 
 
+def _enclosing_class_name(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> str | None:
+    current: ast.AST | None = node
+    while current is not None:
+        current = parents.get(current)
+        if isinstance(current, ast.ClassDef):
+            return current.name
+    return None
+
+
 def _is_primitive_model_assignment(value: ast.AST, primitive_names: set[str]) -> bool:
     if isinstance(value, ast.Constant):
         return isinstance(value.value, (str, int, float, bool))
@@ -279,6 +288,8 @@ class ActiveModelPrimitiveStoreDetector:
                     continue
                 target = node.targets[0]
                 if not _is_active_models_target(target):
+                    continue
+                if _enclosing_class_name(node, parents) != "ModelManager":
                     continue
                 scope = _enclosing_scope(node, parents)
                 primitive_names = primitive_names_by_scope.setdefault(
