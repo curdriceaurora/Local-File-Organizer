@@ -10,23 +10,16 @@ import pytest
 pytestmark = pytest.mark.ci
 
 FO_ROOT = Path(__file__).resolve().parents[2]
-BASELINE_PATH = (
-    FO_ROOT / "docs" / "plans" / "review-regressions" / "2026-03-13-first-wave-audit.json"
+BASELINE_ARTIFACT_REL = "docs/plans/review-regressions/2026-03-13-first-wave-audit.json"
+CORRECTNESS_REMEDIATION_ARTIFACT_REL = (
+    "docs/plans/review-regressions/2026-03-13-correctness-remediation-audit.json"
 )
-CORRECTNESS_PATH = (
-    FO_ROOT
-    / "docs"
-    / "plans"
-    / "review-regressions"
-    / "2026-03-13-correctness-remediation-audit.json"
+CORRECTNESS_REMEDIATION_REPORT_REL = (
+    "docs/plans/review-regressions/2026-03-13-correctness-remediation-report.md"
 )
-REPORT_PATH = (
-    FO_ROOT
-    / "docs"
-    / "plans"
-    / "review-regressions"
-    / "2026-03-13-correctness-remediation-report.md"
-)
+BASELINE_PATH = FO_ROOT / BASELINE_ARTIFACT_REL
+CORRECTNESS_PATH = FO_ROOT / CORRECTNESS_REMEDIATION_ARTIFACT_REL
+REPORT_PATH = FO_ROOT / CORRECTNESS_REMEDIATION_REPORT_REL
 EXPECTED_CORRECTNESS_DETECTOR_IDS = {
     "correctness.active-model-primitive-store",
     "correctness.stage-context-validation-bypass",
@@ -134,12 +127,11 @@ def test_correctness_remediation_metadata_reconciles_with_artifacts() -> None:
         - _suppression_count(baseline, source=str(BASELINE_PATH)),
     )
 
-    assert metadata["baseline_artifact"] == (
-        "docs/plans/review-regressions/2026-03-13-first-wave-audit.json"
-    )
-    assert metadata["correctness_remediation_artifact"] == (
-        "docs/plans/review-regressions/2026-03-13-correctness-remediation-audit.json"
-    )
+    # These metadata path fields pin the report to the exact audited artifacts.
+    assert metadata["baseline_artifact"] == BASELINE_ARTIFACT_REL
+    assert metadata["correctness_remediation_artifact"] == CORRECTNESS_REMEDIATION_ARTIFACT_REL
+
+    # These metadata values must be mechanically derived from artifacts, not hand-edited.
     assert metadata["baseline_correctness_finding_count"] == baseline_correctness_count
     assert metadata["post_remediation_correctness_finding_count"] == post_correctness_count
     assert post_correctness_count <= baseline_correctness_count
