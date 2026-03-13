@@ -132,6 +132,12 @@ def test_load_detectors_rejects_invalid_detector_surface(monkeypatch) -> None:
         audit.load_detectors(["pkg:broken"])
 
 
+def test_load_detectors_rejects_specs_with_empty_module_or_attribute() -> None:
+    for spec in (":detector", "pkg:"):
+        with pytest.raises(ValueError, match=f"Invalid detector spec '{spec}'"):
+            audit.load_detectors([spec])
+
+
 def test_load_detectors_wraps_missing_module_with_value_error(monkeypatch) -> None:
     def _raise_missing_module(name: str) -> None:
         error = ModuleNotFoundError(f"No module named '{name}'")

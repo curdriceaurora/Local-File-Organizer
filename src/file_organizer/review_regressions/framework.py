@@ -36,13 +36,25 @@ def _stable_hash(parts: Iterable[str]) -> str:
 
 
 def _normalized_relative_path(path: Path, root: Path) -> str:
-    candidate = path if path.is_absolute() else root / path
-    try:
-        return candidate.resolve().relative_to(root.resolve()).as_posix()
-    except ValueError:
-        raise ValueError(
-            f"Path {candidate.resolve().as_posix()!r} is outside audit root {root.resolve().as_posix()!r}"
-        ) from None
+    resolved_root = root.resolve()
+    if path.is_absolute():
+        candidates = [path]
+    elif root.parts and path.parts[: len(root.parts)] == root.parts:
+        candidates = [path, root / path]
+    else:
+        candidates = [root / path, path]
+
+    for candidate in candidates:
+        resolved_candidate = candidate.resolve()
+        try:
+            return resolved_candidate.relative_to(resolved_root).as_posix()
+        except ValueError:
+            continue
+
+    display_path = candidates[0].resolve().as_posix()
+    raise ValueError(
+        f"Path {display_path!r} is outside audit root {resolved_root.as_posix()!r}"
+    ) from None
 
 
 @dataclass(frozen=True, slots=True)
