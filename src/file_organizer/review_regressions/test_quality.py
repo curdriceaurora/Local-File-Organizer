@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import logging
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -21,6 +22,7 @@ _RULE_MESSAGE = (
     "Weak lower-bound call_count assertion; use an exact call assertion or assert concrete "
     "arguments/order/effects."
 )
+_LOGGER = logging.getLogger(__name__)
 
 
 def _is_literal_int(node: ast.AST, value: int) -> bool:
@@ -241,8 +243,29 @@ class WeakMockCallCountAssertionDetector:
         for path in sorted({candidate.resolve() for candidate in self._candidate_files(root)}):
             if not path.is_file() or not _is_test_python_path(root, path):
                 continue
-            source = path.read_text(encoding="utf-8")
-            for node in _weak_assert_nodes(source, str(path)):
+            try:
+                source = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError) as exc:
+                _LOGGER.warning(
+                    "Skipping weak call-count scan for unreadable test file %s: %s",
+                    path,
+                    exc,
+                    exc_info=True,
+                )
+                continue
+
+            try:
+                weak_nodes = _weak_assert_nodes(source, str(path))
+            except (SyntaxError, ValueError) as exc:
+                _LOGGER.warning(
+                    "Skipping weak call-count scan for unparsable test file %s: %s",
+                    path,
+                    exc,
+                    exc_info=True,
+                )
+                continue
+
+            for node in weak_nodes:
                 findings.append(
                     Violation.from_path(
                         detector_id=self.detector_id,
