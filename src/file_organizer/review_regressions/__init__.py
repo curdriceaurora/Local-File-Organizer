@@ -1,5 +1,10 @@
 """Framework for detector-based review-regression audits."""
 
+from file_organizer.review_regressions.correctness import (
+    CORRECTNESS_DETECTORS,
+    ActiveModelPrimitiveStoreDetector,
+    StageContextValidationBypassDetector,
+)
 from file_organizer.review_regressions.framework import (
     AuditReport,
     DetectorDescriptor,
@@ -22,8 +27,11 @@ __all__ = [
     "DetectorDescriptor",
     "ReviewRegressionDetector",
     "Violation",
+    "ActiveModelPrimitiveStoreDetector",
+    "CORRECTNESS_DETECTORS",
     "GuardedContextDirectPathDetector",
     "ValidatedPathBypassDetector",
+    "StageContextValidationBypassDetector",
     "SECURITY_DETECTORS",
     "fingerprint_ast_node",
     "iter_python_files",
