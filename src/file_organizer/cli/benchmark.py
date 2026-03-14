@@ -56,7 +56,7 @@ class ComparisonResult(TypedDict):
 class _SuiteRunner(TypedDict):
     """Metadata for a benchmark suite runner."""
 
-    run: Callable[[list[Path]], None]
+    run: Callable[[list[Path]], int]
     description: str
 
 
@@ -145,6 +145,16 @@ def compare_results(
     )
 
 
+def _resolve_processed_count(processed_counts: list[int], warmup: int) -> int:
+    """Return processed file count from measured iterations, with safe fallback."""
+    measured = processed_counts[warmup:]
+    if measured:
+        return measured[-1]
+    if processed_counts:
+        return processed_counts[-1]
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Suite runners
 # ---------------------------------------------------------------------------
@@ -228,20 +238,22 @@ def _suite_candidates(
     return selected[: min(cap, len(selected))]
 
 
-def _run_io_suite(files: list[Path]) -> None:
+def _run_io_suite(files: list[Path]) -> int:
     """Baseline I/O benchmark: measures file stat access overhead."""
-    for file_path in _suite_candidates(files, set(), fallback_to_all=True):
+    candidates = _suite_candidates(files, set(), fallback_to_all=True)
+    for file_path in candidates:
         try:
             _ = file_path.stat()
         except OSError:
             pass
+    return len(candidates)
 
 
-def _run_text_suite(files: list[Path]) -> None:
+def _run_text_suite(files: list[Path]) -> int:
     """Benchmark text processing path via TextProcessor.process_file()."""
     candidates = _suite_candidates(files, _TEXT_EXTENSIONS, fallback_to_all=True)
     if not candidates:
-        return
+        return 0
 
     from file_organizer.models.base import ModelType
     from file_organizer.services import TextProcessor
@@ -261,13 +273,14 @@ def _run_text_suite(files: list[Path]) -> None:
             processor.process_file(file_path)
     finally:
         processor.cleanup()
+    return len(candidates)
 
 
-def _run_vision_suite(files: list[Path]) -> None:
+def _run_vision_suite(files: list[Path]) -> int:
     """Benchmark vision processing path via VisionProcessor.process_file()."""
     candidates = _suite_candidates(files, _VISION_EXTENSIONS, fallback_to_all=True)
     if not candidates:
-        return
+        return 0
 
     from file_organizer.models.base import ModelType
     from file_organizer.services import VisionProcessor
@@ -287,6 +300,7 @@ def _run_vision_suite(files: list[Path]) -> None:
             processor.process_file(file_path, perform_ocr=False)
     finally:
         processor.cleanup()
+    return len(candidates)
 
 
 def _synthesized_audio_metadata(file_path: Path) -> Any:
@@ -305,13 +319,12 @@ def _synthesized_audio_metadata(file_path: Path) -> Any:
     )
 
 
-def _run_audio_suite(files: list[Path]) -> None:
+def _run_audio_suite(files: list[Path]) -> int:
     """Benchmark audio metadata + classification path."""
     candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
     if not candidates:
         typer.echo("Warning: no audio files found; falling back to IO-only benchmark.", err=True)
-        _run_io_suite(files)
-        return
+        return _run_io_suite(files)
 
     from file_organizer.services.audio.classifier import AudioClassifier
     from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
@@ -326,13 +339,14 @@ def _run_audio_suite(files: list[Path]) -> None:
         except Exception as exc:
             raise RuntimeError(f"Audio benchmark runner failed for {file_path}: {exc}") from exc
         _ = classifier.classify(metadata)
+    return len(candidates)
 
 
-def _run_pipeline_suite(files: list[Path]) -> None:
+def _run_pipeline_suite(files: list[Path]) -> int:
     """Benchmark the PipelineOrchestrator stage path end-to-end."""
     candidates = _suite_candidates(files, set(), fallback_to_all=True)
     if not candidates:
-        return
+        return 0
 
     from file_organizer.pipeline.config import PipelineConfig
     from file_organizer.pipeline.orchestrator import PipelineOrchestrator
@@ -369,9 +383,10 @@ def _run_pipeline_suite(files: list[Path]) -> None:
         finally:
             orchestrator.stop()
             pool.cleanup()
+    return len(candidates)
 
 
-def _run_e2e_suite(files: list[Path]) -> None:
+def _run_e2e_suite(files: list[Path]) -> int:
     """Benchmark full organizer flow including file writes."""
     preferred_extensions = _VISION_EXTENSIONS | _AUDIO_EXTENSIONS
     preferred = _suite_candidates(
@@ -387,7 +402,7 @@ def _run_e2e_suite(files: list[Path]) -> None:
         cap=_MAX_E2E_FILES,
     )
     if not candidates:
-        return
+        return 0
 
     from file_organizer.core.organizer import FileOrganizer
 
@@ -408,7 +423,7 @@ def _run_e2e_suite(files: list[Path]) -> None:
                 continue
 
         if not copied:
-            return
+            return 0
 
         organizer = FileOrganizer(
             dry_run=False,
@@ -426,6 +441,7 @@ def _run_e2e_suite(files: list[Path]) -> None:
                 organizer.organize(input_dir, output_dir, skip_existing=False)
         except Exception as exc:
             raise RuntimeError(f"E2E benchmark runner failed: {exc}") from exc
+    return len(copied)
 
 
 _SUITE_RUNNERS: dict[str, _SuiteRunner] = {
@@ -498,6 +514,30 @@ def _check_baseline_profile_compatibility(
     if not json_output:
         console.print(f"[yellow]{warning}[/yellow]")
     return warning
+
+
+def _execute_suite_iteration(
+    *,
+    runner: Callable[[list[Path]], int],
+    files: list[Path],
+    suite: str,
+    console: Any,
+) -> tuple[float, int]:
+    """Run one suite iteration and validate returned processed count."""
+    start = time.monotonic()
+    try:
+        processed_count = runner(files)
+    except Exception as e:
+        console.print(f"[red]Benchmark suite '{suite}' failed: {e}[/red]")
+        raise typer.Exit(code=1) from e
+    if processed_count < 0:
+        console.print(
+            f"[red]Benchmark suite '{suite}' returned invalid processed count: {processed_count}[/red]"
+        )
+        raise typer.Exit(code=1)
+
+    elapsed_ms = (time.monotonic() - start) * 1000
+    return elapsed_ms, processed_count
 
 
 def _print_table(
@@ -648,31 +688,33 @@ def run(
 
     # Run iterations
     all_times_ms: list[float] = []
+    processed_counts: list[int] = []
     for i in range(total_iterations):
         if not json_output:
             label = "warmup" if i < warmup else f"{i - warmup + 1}/{iterations}"
             console.print(f"[dim]Iteration {i + 1}/{total_iterations} ({label})...[/dim]")
 
-        start = time.monotonic()
-        try:
-            runner(files)
-        except Exception as e:
-            console.print(f"[red]Benchmark suite '{suite}' failed: {e}[/red]")
-            raise typer.Exit(code=1) from e
-        elapsed_ms = (time.monotonic() - start) * 1000
+        elapsed_ms, processed_count = _execute_suite_iteration(
+            runner=runner,
+            files=files,
+            suite=suite,
+            console=console,
+        )
         all_times_ms.append(elapsed_ms)
+        processed_counts.append(processed_count)
 
     # Exclude warmup
     measured = all_times_ms[warmup:]
+    actual_processed_count = _resolve_processed_count(processed_counts, warmup)
 
     # Statistics
-    stats = compute_stats(measured, len(files))
+    stats = compute_stats(measured, actual_processed_count)
 
     # Build output
     output: dict[str, Any] = {
         "suite": suite,
         "runner_profile_version": _RUNNER_PROFILE_VERSION,
-        "files_count": len(files),
+        "files_count": actual_processed_count,
         "hardware_profile": _detect_hardware_profile(),
         "results": stats,
     }
@@ -699,7 +741,7 @@ def run(
     if json_output:
         console.print(json.dumps(output, indent=2))
     else:
-        _print_table(console, suite, warmup, stats, len(files))
+        _print_table(console, suite, warmup, stats, actual_processed_count)
         if compare_path is not None:
             _print_comparison(console, output["comparison"], json_output=False)
         console.print("\n[bold green]Benchmark completed[/bold green]")
