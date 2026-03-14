@@ -84,9 +84,10 @@ class FileOrganizer:
         dry_run: bool = True,
         use_hardlinks: bool = True,
         parallel_workers: int | None = None,
+        no_prefetch: bool = False,
+        *,
         prefetch_depth: int = 2,
         enable_vision: bool = True,
-        no_prefetch: bool = False,
     ) -> None:
         """Initialize file organizer.
 

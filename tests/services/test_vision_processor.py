@@ -287,10 +287,32 @@ class TestVisionProcessorProcessFile:
         second = processor.process_file(img2)
 
         assert call_count == 1
-        assert first.error is None
-        assert second.error is None
+        assert first.error is not None
+        assert second.error is not None
+        assert "Vision backend unavailable" in first.error
+        assert "Vision backend unavailable" in second.error
         assert second.folder_name == "images"
         assert second.filename == "second"
+
+    def test_process_file_nonfatal_500_does_not_trip_circuit(
+        self, mock_vision_model: MagicMock, tmp_path: Path
+    ) -> None:
+        """Generic provider 500s alone should not trigger fatal backend circuit."""
+        img = tmp_path / "sample.jpg"
+        img.write_bytes(b"\xff\xd8")
+
+        mock_vision_model.generate.side_effect = RuntimeError(
+            "provider response (status code: 500)"
+        )
+        processor = VisionProcessor(
+            vision_model=mock_vision_model,
+            backend_cooldown_seconds=120.0,
+        )
+
+        result = processor.process_file(img)
+
+        assert result.error is None
+        assert processor._is_circuit_open() is False
 
 
 @pytest.mark.unit

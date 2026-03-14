@@ -47,7 +47,6 @@ class VisionProcessor:
         "dial tcp",
         "health resp",
         "runner has unexpectedly stopped",
-        "status code: 500",
         "failed to connect",
     )
 
@@ -128,11 +127,13 @@ class VisionProcessor:
                     "Vision backend circuit open; skipping model calls for {}",
                     file_path.name,
                 )
+                error_message = self._circuit_open_error()
                 return ProcessedImage(
                     file_path=file_path,
                     description=f"Image from {file_path.name}",
                     folder_name="images",
                     filename=file_path.stem,
+                    error=error_message,
                 )
 
             # Validate file exists
@@ -152,11 +153,13 @@ class VisionProcessor:
                 description = self._generate_description(file_path)
                 logger.debug(f"Generated description ({len(description)} chars)")
                 if self._is_circuit_open():
+                    error_message = self._circuit_open_error()
                     return ProcessedImage(
                         file_path=file_path,
                         description=description or f"Image from {file_path.name}",
                         folder_name="images",
                         filename=file_path.stem,
+                        error=error_message,
                     )
 
             # Extract text if needed
@@ -530,6 +533,11 @@ FILENAME:"""
             self._circuit_opened_at = None
             self._circuit_reason = None
             return False
+
+    def _circuit_open_error(self) -> str:
+        """Return a stable, user-visible degradation message."""
+        reason = self._circuit_reason or "vision backend unavailable"
+        return f"Vision backend unavailable: {reason}"
 
     def cleanup(self) -> None:
         """Cleanup resources.

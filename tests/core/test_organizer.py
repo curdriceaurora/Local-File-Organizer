@@ -87,6 +87,18 @@ class TestFileOrganizer:
         )
         assert no_prefetch_org.parallel_config.prefetch_depth == 0
 
+        # Backward-compat positional shape: (..., parallel_workers, no_prefetch)
+        legacy_positional = FileOrganizer(
+            text_config,
+            vision_config,
+            True,
+            True,
+            None,
+            True,
+        )
+        assert legacy_positional.no_prefetch is True
+        assert legacy_positional.prefetch_depth == 0
+
     def test_organize_input_missing(self, organizer: FileOrganizer, tmp_path: Path) -> None:
         """Test organizing fails when input path does not exist."""
         with pytest.raises(ValueError, match="Input path does not exist"):
