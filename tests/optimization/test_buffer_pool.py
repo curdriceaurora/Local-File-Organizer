@@ -108,11 +108,14 @@ class TestBufferPoolAcquireRelease:
                 raise MemoryError("synthetic allocation failure")
             return original_bytearray(size)
 
-        monkeypatch.setattr(buffer_pool_module, "bytearray", flaky_bytearray, raising=False)
+        monkeypatch.setitem(
+            buffer_pool_module.BufferPool.resize.__globals__, "bytearray", flaky_bytearray
+        )
 
         with pytest.raises(MemoryError, match="synthetic allocation failure"):
             pool.resize(4)
 
+        assert calls == 2
         assert pool.total_buffers == baseline_total
         assert pool.available_buffers == baseline_available
 
