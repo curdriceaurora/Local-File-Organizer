@@ -60,6 +60,15 @@ class _PassThroughStage:
         return context
 
 
+class _ReplacingStage:
+    @property
+    def name(self) -> str:
+        return "replace"
+
+    def process(self, context: StageContext) -> StageContext:
+        return StageContext(file_path=context.file_path, dry_run=context.dry_run)
+
+
 def _make_files(tmp_path: Path, count: int) -> list[Path]:
     files: list[Path] = []
     for i in range(count):
@@ -131,6 +140,29 @@ def test_staged_batch_processing_returns_buffers_to_pool(tmp_path: Path) -> None
         PipelineConfig(output_directory=tmp_path / "out"),
         stages=[_PassThroughStage()],
         prefetch_depth=0,
+        batch_sizer=sizer,  # type: ignore[arg-type]
+        buffer_pool=pool,
+        resource_monitor=monitor,  # type: ignore[arg-type]
+    )
+
+    results = orchestrator.process_batch(files)
+
+    assert len(results) == len(files)
+    assert all(result.success for result in results)
+    assert pool.in_use_count == 0
+    assert pool.available_buffers == pool.total_buffers
+
+
+def test_prefetch_with_replacement_stage_still_releases_buffers(tmp_path: Path) -> None:
+    files = _make_files(tmp_path, 4)
+    pool = BufferPool(buffer_size=128, initial_buffers=2, max_buffers=6)
+    monitor = _MonitorStub(should_evict_value=False)
+    sizer = _FixedBatchSizer(chunk_size=4, adjusted_size=4)
+    orchestrator = PipelineOrchestrator(
+        PipelineConfig(output_directory=tmp_path / "out"),
+        stages=[_ReplacingStage()],
+        prefetch_depth=2,
+        prefetch_stages=1,
         batch_sizer=sizer,  # type: ignore[arg-type]
         buffer_pool=pool,
         resource_monitor=monitor,  # type: ignore[arg-type]

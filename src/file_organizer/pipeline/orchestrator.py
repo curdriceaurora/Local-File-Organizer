@@ -578,19 +578,22 @@ class PipelineOrchestrator:
         io_stages = stages[:effective_prefetch_stages]
         compute_stages = stages[effective_prefetch_stages:]
 
-        def _run_io(idx: int) -> StageContext:
+        def _run_io(idx: int) -> tuple[StageContext, bytearray | None]:
             file_path = files[idx]
             buffer = self._acquire_buffer(file_path)
             try:
                 ctx = self._make_context(file_path)
                 if buffer is not None:
                     ctx.extra[_BUFFER_KEY] = buffer
-                return self._run_stages(ctx, io_stages)
+                io_ctx = self._run_stages(ctx, io_stages)
+                if buffer is not None:
+                    io_ctx.extra[_BUFFER_KEY] = buffer
+                return io_ctx, buffer
             except Exception:
                 self._release_buffer(file_path, buffer)
                 raise
 
-        futures: dict[int, tuple[Future[StageContext], float]] = {}
+        futures: dict[int, tuple[Future[tuple[StageContext, bytearray | None]], float]] = {}
         results: list[ProcessingResult] = []
 
         with ThreadPoolExecutor(max_workers=self._prefetch_depth) as io_exec:
@@ -612,7 +615,7 @@ class PipelineOrchestrator:
                 if i in futures:
                     future, start_time = futures.pop(i)
                     try:
-                        ctx = future.result()
+                        ctx, buffer = future.result()
                     except Exception as exc:
                         logger.warning(
                             "Prefetch future failed for %s: %s",
@@ -622,19 +625,18 @@ class PipelineOrchestrator:
                         )
                         ctx = self._make_context(files[i])
                         ctx.error = str(exc)
+                        buffer = None
                 else:
                     start_time = time.monotonic()
-                    ctx = _run_io(i)
+                    ctx, buffer = _run_io(i)
 
                 # Run compute stages on the calling thread.
                 try:
                     ctx = self._run_stages(ctx, compute_stages)
                     results.append(self._finalize_result(ctx, start_time))
                 finally:
-                    buffer = ctx.extra.get(_BUFFER_KEY)
-                    if isinstance(buffer, bytearray):
-                        self._release_buffer(files[i], buffer)
-                        ctx.extra.pop(_BUFFER_KEY, None)
+                    self._release_buffer(files[i], buffer)
+                    ctx.extra.pop(_BUFFER_KEY, None)
 
         return results
 
