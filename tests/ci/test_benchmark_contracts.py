@@ -16,10 +16,11 @@ PERF_DOC_PATH = REPO_ROOT / "docs" / "admin" / "performance-tuning.md"
 
 
 def _assert_suite_non_alias_contract(runners: dict[str, dict[str, object]]) -> None:
-    """Assert non-io suites do not alias to the io runner implementation."""
-    io_runner = runners["io"]["run"]
-    for suite in ("text", "vision", "audio", "pipeline", "e2e"):
-        assert runners[suite]["run"] is not io_runner
+    """Assert every suite uses a distinct runner implementation."""
+    suites = ("io", "text", "vision", "audio", "pipeline", "e2e")
+    for idx, left_suite in enumerate(suites):
+        for right_suite in suites[idx + 1 :]:
+            assert runners[left_suite]["run"] is not runners[right_suite]["run"]
 
 
 def _assert_baseline_schema_contract(payload: dict[str, object]) -> None:

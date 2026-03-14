@@ -305,6 +305,7 @@ def _run_audio_suite(files: list[Path]) -> None:
     """Benchmark audio metadata + classification path."""
     candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
     if not candidates:
+        typer.echo("Warning: no audio files found; falling back to IO-only benchmark.", err=True)
         _run_io_suite(files)
         return
 
@@ -465,7 +466,7 @@ def _detect_hardware_profile() -> dict[str, Any]:
         from file_organizer.core.hardware_profile import detect_hardware
 
         return detect_hardware().to_dict()
-    except Exception:
+    except (ImportError, ModuleNotFoundError, OSError, RuntimeError):
         return {"error": "Hardware detection unavailable"}
 
 
