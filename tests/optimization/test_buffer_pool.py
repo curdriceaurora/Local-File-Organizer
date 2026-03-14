@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
+import file_organizer.optimization.buffer_pool as buffer_pool_module
 from file_organizer.optimization.buffer_pool import BufferPool
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
@@ -78,17 +79,42 @@ class TestBufferPoolAcquireRelease:
         with pytest.raises(ValueError, match="not owned by this pool"):
             pool.release(bytearray(64))
 
-    def test_release_of_resized_pooled_buffer_raises_and_decrements_capacity(self) -> None:
+    def test_release_of_resized_pooled_buffer_drops_capacity_without_raising(self) -> None:
         pool = BufferPool(buffer_size=64, initial_buffers=2, max_buffers=4)
         pooled = pool.acquire()
         pooled.extend(b"x")
 
-        with pytest.raises(ValueError, match="resized buffer not owned by this pool"):
-            pool.release(pooled)
+        pool.release(pooled)
 
         assert pool.in_use_count == 0
         assert pool.total_buffers == 1
         assert pool.available_buffers == 1
+
+    def test_resize_grow_is_atomic_on_allocation_failure(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        pool = BufferPool(buffer_size=64, initial_buffers=2, max_buffers=4)
+        baseline_total = pool.total_buffers
+        baseline_available = pool.available_buffers
+
+        calls = 0
+        original_bytearray = bytearray
+
+        def flaky_bytearray(size: int) -> bytearray:
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise MemoryError("synthetic allocation failure")
+            return original_bytearray(size)
+
+        monkeypatch.setattr(buffer_pool_module, "bytearray", flaky_bytearray, raising=False)
+
+        with pytest.raises(MemoryError, match="synthetic allocation failure"):
+            pool.resize(4)
+
+        assert pool.total_buffers == baseline_total
+        assert pool.available_buffers == baseline_available
 
 
 class TestBufferPoolThreadSafety:

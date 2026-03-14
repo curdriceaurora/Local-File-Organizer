@@ -165,9 +165,9 @@ class BufferPool:
 
             if is_pooled:
                 self._pooled_ids.remove(buffer_id)
-                self._total_buffers = max(0, self._total_buffers - 1)
+                self._total_buffers -= 1
                 self._cv.notify_all()
-                raise ValueError("Attempted to release a resized buffer not owned by this pool")
+                return
 
     def resize(self, target_total_buffers: int) -> int:
         """Resize pooled capacity toward *target_total_buffers*.
@@ -189,11 +189,11 @@ class BufferPool:
             )
 
             if clamped_target > self._total_buffers:
-                for _ in range(clamped_target - self._total_buffers):
-                    buffer = bytearray(self._buffer_size)
-                    self._available.append(buffer)
-                    self._pooled_ids.add(id(buffer))
-                self._total_buffers = clamped_target
+                growth = clamped_target - self._total_buffers
+                new_buffers = [bytearray(self._buffer_size) for _ in range(growth)]
+                self._available.extend(new_buffers)
+                self._pooled_ids.update(id(buffer) for buffer in new_buffers)
+                self._total_buffers += growth
                 self._cv.notify_all()
                 return self._total_buffers
 
