@@ -25,11 +25,11 @@ _ALLOWED_PATH_SNIPPETS: dict[str, set[str]] = {
         "path = Path(config_path).expanduser()",
     },
     "api/utils.py": {
-        "resolved = Path(path_value).expanduser()",
-        "roots = [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]",
-        "return Path(resolved_str)",
+        "resolved = Path(path_value).expanduser().resolve()",
+        "roots = [Path(root).expanduser().resolve() for root in allowed_paths]",
+        "return resolved",
         # Multi-line variants (formatter may break long lines)
-        "os.path.realpath(Path(root).expanduser())",
+        "Path(root).expanduser().resolve() for root in allowed_paths",
     },
     "api/routers/system.py": {
         "file_info_from_path(Path(info.path))",
@@ -74,8 +74,8 @@ _CODEQL_SUPPRESSED_SNIPPETS: dict[str, set[str]] = {
         "path = Path(config_path).expanduser()",
     },
     "api/utils.py": {
-        "resolved = Path(path_value).expanduser()",
-        "roots = [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]",
+        "resolved = Path(path_value).expanduser().resolve()",
+        "roots = [Path(root).expanduser().resolve() for root in allowed_paths]",
     },
 }
 

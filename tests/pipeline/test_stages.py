@@ -54,6 +54,34 @@ class TestStageContext:
         with pytest.raises(ValueError, match="Invalid filename"):
             StageContext(file_path=Path("input/file.txt"), filename="../../etc/passwd")
 
+    def test_rejects_windows_drive_in_category(self) -> None:
+        # Regression for #760: "C:" has no slash but still escapes output_dir / category
+        # on Windows via PureWindowsPath.drive being non-empty.
+        with pytest.raises(ValueError, match="Invalid category"):
+            StageContext(file_path=Path("input/file.txt"), category="C:")
+
+    def test_rejects_windows_drive_with_path_in_category(self) -> None:
+        # Drive-qualified path without a separator also escapes containment.
+        with pytest.raises(ValueError, match="Invalid category"):
+            StageContext(file_path=Path("input/file.txt"), category="C:docs")
+
+    def test_rejects_windows_drive_in_filename(self) -> None:
+        with pytest.raises(ValueError, match="Invalid filename"):
+            StageContext(file_path=Path("input/file.txt"), filename="C:")
+
+    def test_rejects_windows_drive_in_filename_via_setattr(self) -> None:
+        ctx = StageContext(file_path=Path("input/file.txt"))
+        with pytest.raises(ValueError, match="Invalid filename"):
+            ctx.filename = "C:evil"
+
+    def test_accepts_normal_category(self) -> None:
+        ctx = StageContext(file_path=Path("input/file.txt"), category="Documents")
+        assert ctx.category == "Documents"
+
+    def test_accepts_normal_filename(self) -> None:
+        ctx = StageContext(file_path=Path("input/file.txt"), filename="report_2026")
+        assert ctx.filename == "report_2026"
+
 
 # ---------------------------------------------------------------------------
 # PreprocessorStage

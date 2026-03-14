@@ -419,8 +419,10 @@ class PARAFileMover:
         try:
             file_resolved = file_path.resolve()
             expected_resolved = expected_parent.resolve()
-            return str(file_resolved).startswith(str(expected_resolved))
-        except OSError:
+            return file_resolved == expected_resolved or file_resolved.is_relative_to(
+                expected_resolved
+            )
+        except (OSError, ValueError):
             return False
 
     def _resolve_collision(self, destination: Path) -> Path:
