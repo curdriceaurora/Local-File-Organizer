@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -78,7 +79,10 @@ def _make_files(tmp_path: Path, count: int) -> list[Path]:
     return files
 
 
-def test_process_batch_uses_adaptive_batch_sizer_for_legacy_path(tmp_path: Path) -> None:
+def test_process_batch_uses_adaptive_batch_sizer_for_legacy_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     files = _make_files(tmp_path, 5)
     sizer = _FixedBatchSizer(chunk_size=2, adjusted_size=2)
     monitor = _MonitorStub(should_evict_value=False)
@@ -88,11 +92,14 @@ def test_process_batch_uses_adaptive_batch_sizer_for_legacy_path(tmp_path: Path)
         resource_monitor=monitor,  # type: ignore[arg-type]
     )
 
-    orchestrator._process_file_legacy = lambda path: ProcessingResult(  # type: ignore[method-assign]
-        file_path=path,
-        success=True,
-        dry_run=True,
+    legacy_stub = Mock(
+        side_effect=lambda path: ProcessingResult(
+            file_path=path,
+            success=True,
+            dry_run=True,
+        )
     )
+    monkeypatch.setattr(orchestrator, "_process_file_legacy", legacy_stub)
 
     results = orchestrator.process_batch(files)
 
@@ -103,7 +110,10 @@ def test_process_batch_uses_adaptive_batch_sizer_for_legacy_path(tmp_path: Path)
     assert sizer.calculate_calls[0][0] == [path.stat().st_size for path in files]
 
 
-def test_memory_pressure_shrinks_buffer_pool(tmp_path: Path) -> None:
+def test_memory_pressure_shrinks_buffer_pool(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     files = _make_files(tmp_path, 3)
     sizer = _FixedBatchSizer(chunk_size=2, adjusted_size=2)
     monitor = _MonitorStub(should_evict_value=True)
@@ -118,11 +128,14 @@ def test_memory_pressure_shrinks_buffer_pool(tmp_path: Path) -> None:
         resource_monitor=monitor,  # type: ignore[arg-type]
         memory_pressure_threshold_percent=85.0,
     )
-    orchestrator._process_file_legacy = lambda path: ProcessingResult(  # type: ignore[method-assign]
-        file_path=path,
-        success=True,
-        dry_run=True,
+    legacy_stub = Mock(
+        side_effect=lambda path: ProcessingResult(
+            file_path=path,
+            success=True,
+            dry_run=True,
+        )
     )
+    monkeypatch.setattr(orchestrator, "_process_file_legacy", legacy_stub)
 
     orchestrator.process_batch(files)
 

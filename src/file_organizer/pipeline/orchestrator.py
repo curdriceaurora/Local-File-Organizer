@@ -327,6 +327,9 @@ class PipelineOrchestrator:
             1,
             self._batch_sizer.calculate_batch_size(
                 file_sizes,
+                # BufferPool allocates at least ``buffer_size`` per file and may
+                # allocate larger buffers for oversized files; using the base
+                # pool buffer size here keeps sizing conservative and stable.
                 overhead_per_file=self._buffer_pool.buffer_size,
             ),
         )
@@ -647,7 +650,6 @@ class PipelineOrchestrator:
     def _process_file_legacy(self, file_path: Path) -> ProcessingResult:
         """Original monolithic processing path."""
         start_time = time.monotonic()
-        file_path = Path(file_path)
         buffer = self._acquire_buffer(file_path)
 
         try:
