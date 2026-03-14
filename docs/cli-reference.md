@@ -379,7 +379,7 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
   - `io`: file stat/read overhead baseline
   - `text`: `TextProcessor.process_file()` path with deterministic benchmark model stubs
   - `vision`: `VisionProcessor.process_file()` path with deterministic benchmark model stubs
-  - `audio`: audio metadata extraction + rule-based classification path
+  - `audio`: audio metadata extraction + rule-based classification path (uses synthetic metadata only when optional extractor dependencies are unavailable)
   - `pipeline`: `PipelineOrchestrator.process_batch()` staged path
   - `e2e`: full `FileOrganizer.organize()` pass with real writes in an isolated temp workspace
 - `--json` — Output results as JSON instead of a Rich table

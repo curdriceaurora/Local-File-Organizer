@@ -17,7 +17,6 @@ import statistics
 import tempfile
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -166,7 +165,6 @@ _TEXT_EXTENSIONS = {
 }
 _VISION_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff"}
 _AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".ogg", ".aac", ".wma", ".opus"}
-_VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".webm"}
 
 
 class _BenchmarkModelStub:
@@ -253,10 +251,7 @@ def _run_text_suite(files: list[Path]) -> None:
     processor = TextProcessor(text_model=model)
     try:
         for file_path in candidates:
-            try:
-                processor.process_file(file_path)
-            except Exception:
-                _ = file_path.stat()
+            processor.process_file(file_path)
     finally:
         processor.cleanup()
 
@@ -282,12 +277,25 @@ def _run_vision_suite(files: list[Path]) -> None:
     processor = VisionProcessor(vision_model=model)
     try:
         for file_path in candidates:
-            try:
-                processor.process_file(file_path, perform_ocr=False)
-            except Exception:
-                _ = file_path.stat()
+            processor.process_file(file_path, perform_ocr=False)
     finally:
         processor.cleanup()
+
+
+def _synthesized_audio_metadata(file_path: Path) -> Any:
+    """Return minimal audio metadata when optional extractors are unavailable."""
+    from file_organizer.services.audio.metadata_extractor import AudioMetadata
+
+    stat = file_path.stat()
+    return AudioMetadata(
+        file_path=file_path,
+        file_size=stat.st_size,
+        format=file_path.suffix[1:].upper() if file_path.suffix else "UNKNOWN",
+        duration=0.0,
+        bitrate=0,
+        sample_rate=0,
+        channels=0,
+    )
 
 
 def _run_audio_suite(files: list[Path]) -> None:
@@ -305,64 +313,11 @@ def _run_audio_suite(files: list[Path]) -> None:
     for file_path in candidates:
         try:
             metadata = extractor.extract(file_path)
-            _ = classifier.classify(metadata)
-        except Exception:
-            try:
-                _ = file_path.stat()
-            except OSError:
-                pass
-
-
-def _suite_category_for(path: Path) -> str:
-    suffix = path.suffix.lower()
-    if suffix in _TEXT_EXTENSIONS:
-        return "documents"
-    if suffix in _VISION_EXTENSIONS:
-        return "images"
-    if suffix in _AUDIO_EXTENSIONS:
-        return "audio"
-    if suffix in _VIDEO_EXTENSIONS:
-        return "video"
-    return "other"
-
-
-class _BenchmarkPreprocessStage:
-    @property
-    def name(self) -> str:
-        return "benchmark.preprocess"
-
-    def process(self, context: Any) -> Any:
-        context.metadata["file_size"] = context.file_path.stat().st_size
-        context.metadata["extension"] = context.file_path.suffix.lower()
-        return context
-
-
-class _BenchmarkAnalyzeStage:
-    @property
-    def name(self) -> str:
-        return "benchmark.analyze"
-
-    def process(self, context: Any) -> Any:
-        context.category = _suite_category_for(context.file_path)
-        context.filename = context.file_path.stem or "benchmark_file"
-        return context
-
-
-@dataclass
-class _BenchmarkPostprocessStage:
-    output_directory: Path
-
-    @property
-    def name(self) -> str:
-        return "benchmark.postprocess"
-
-    def process(self, context: Any) -> Any:
-        context.destination = (
-            self.output_directory
-            / context.category
-            / f"{context.filename}{context.file_path.suffix}"
-        )
-        return context
+        except ImportError:
+            metadata = _synthesized_audio_metadata(file_path)
+        except Exception as exc:
+            raise RuntimeError(f"Audio benchmark runner failed for {file_path}: {exc}") from exc
+        _ = classifier.classify(metadata)
 
 
 def _run_pipeline_suite(files: list[Path]) -> None:
@@ -373,10 +328,18 @@ def _run_pipeline_suite(files: list[Path]) -> None:
 
     from file_organizer.pipeline.config import PipelineConfig
     from file_organizer.pipeline.orchestrator import PipelineOrchestrator
+    from file_organizer.pipeline.processor_pool import ProcessorPool
+    from file_organizer.pipeline.router import FileRouter
+    from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+    from file_organizer.pipeline.stages.postprocessor import PostprocessorStage
+    from file_organizer.pipeline.stages.preprocessor import PreprocessorStage
+    from file_organizer.pipeline.stages.writer import WriterStage
 
     with tempfile.TemporaryDirectory(prefix="fo-benchmark-pipeline-") as tmp:
         output_dir = Path(tmp) / "pipeline_output"
         output_dir.mkdir(parents=True, exist_ok=True)
+        router = FileRouter()
+        pool = ProcessorPool()
         orchestrator = PipelineOrchestrator(
             config=PipelineConfig(
                 output_directory=output_dir,
@@ -385,9 +348,10 @@ def _run_pipeline_suite(files: list[Path]) -> None:
                 max_concurrent=2,
             ),
             stages=[
-                _BenchmarkPreprocessStage(),
-                _BenchmarkAnalyzeStage(),
-                _BenchmarkPostprocessStage(output_dir),
+                PreprocessorStage(),
+                AnalyzerStage(router=router, processor_pool=pool),
+                PostprocessorStage(output_dir),
+                WriterStage(),
             ],
             prefetch_depth=1,
             prefetch_stages=1,
@@ -396,6 +360,7 @@ def _run_pipeline_suite(files: list[Path]) -> None:
             _ = orchestrator.process_batch(candidates)
         finally:
             orchestrator.stop()
+            pool.cleanup()
 
 
 def _run_e2e_suite(files: list[Path]) -> None:
@@ -451,8 +416,8 @@ def _run_e2e_suite(files: list[Path]) -> None:
                 contextlib.redirect_stderr(io.StringIO()),
             ):
                 organizer.organize(input_dir, output_dir, skip_existing=False)
-        except Exception:
-            _run_io_suite(copied)
+        except Exception as exc:
+            raise RuntimeError(f"E2E benchmark runner failed: {exc}") from exc
 
 
 _SUITE_RUNNERS: dict[str, _SuiteRunner] = {
@@ -470,11 +435,14 @@ _SUITE_RUNNERS: dict[str, _SuiteRunner] = {
     },
     "audio": {
         "run": _run_audio_suite,
-        "description": "Audio metadata extraction + classification path.",
+        "description": (
+            "Audio metadata extraction + classification path "
+            "(synthetic metadata fallback only when optional extractor deps are missing)."
+        ),
     },
     "pipeline": {
         "run": _run_pipeline_suite,
-        "description": "PipelineOrchestrator staged processing path.",
+        "description": "PipelineOrchestrator real staged processing path (pre/analyze/post/write).",
     },
     "e2e": {
         "run": _run_e2e_suite,
@@ -486,6 +454,16 @@ _SUITE_RUNNERS: dict[str, _SuiteRunner] = {
 # ---------------------------------------------------------------------------
 # Output helpers
 # ---------------------------------------------------------------------------
+
+
+def _detect_hardware_profile() -> dict[str, Any]:
+    """Return hardware profile dict with a stable fallback payload."""
+    try:
+        from file_organizer.core.hardware_profile import detect_hardware
+
+        return detect_hardware().to_dict()
+    except Exception:
+        return {"error": "Hardware detection unavailable"}
 
 
 def _print_table(
@@ -602,19 +580,12 @@ def run(
 
     if not files:
         if json_output:
-            hw_profile_empty: dict[str, Any] = {}
-            try:
-                from file_organizer.core.hardware_profile import detect_hardware
-
-                hw_profile_empty = detect_hardware().to_dict()
-            except Exception:
-                hw_profile_empty = {"error": "Hardware detection unavailable"}
             console.print(
                 json.dumps(
                     {
                         "suite": suite,
                         "files_count": 0,
-                        "hardware_profile": hw_profile_empty,
+                        "hardware_profile": _detect_hardware_profile(),
                         "results": compute_stats([], 0),
                     },
                     indent=2,
@@ -648,7 +619,11 @@ def run(
             console.print(f"[dim]Iteration {i + 1}/{total_iterations} ({label})...[/dim]")
 
         start = time.monotonic()
-        runner(files)
+        try:
+            runner(files)
+        except Exception as e:
+            console.print(f"[red]Benchmark suite '{suite}' failed: {e}[/red]")
+            raise typer.Exit(code=1) from e
         elapsed_ms = (time.monotonic() - start) * 1000
         all_times_ms.append(elapsed_ms)
 
@@ -658,21 +633,11 @@ def run(
     # Statistics
     stats = compute_stats(measured, len(files))
 
-    # Hardware profile
-    hw_profile: dict[str, Any] = {}
-    try:
-        from file_organizer.core.hardware_profile import detect_hardware
-
-        hw = detect_hardware()
-        hw_profile = hw.to_dict()
-    except Exception:
-        hw_profile = {"error": "Hardware detection unavailable"}
-
     # Build output
     output: dict[str, Any] = {
         "suite": suite,
         "files_count": len(files),
-        "hardware_profile": hw_profile,
+        "hardware_profile": _detect_hardware_profile(),
         "results": stats,
     }
 
