@@ -128,6 +128,11 @@ class VisionProcessor:
                     file_path.name,
                 )
                 error_message = self._circuit_open_error()
+                logger.debug(
+                    "Circuit-open fallback for {} with error={}",
+                    file_path.name,
+                    error_message,
+                )
                 return ProcessedImage(
                     file_path=file_path,
                     description=f"Image from {file_path.name}",
