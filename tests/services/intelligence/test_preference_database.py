@@ -383,6 +383,21 @@ class TestConcurrency:
         expected_count = worker_count * prefs_per_worker
         assert len(prefs) == expected_count
         assert sum(int(pref["frequency"]) for pref in prefs) == expected_count
+        assert all(int(pref["frequency"]) == 1 for pref in prefs)
+
+        expected_keys = {
+            f"key_worker{worker_id}_{i}"
+            for worker_id in range(worker_count)
+            for i in range(prefs_per_worker)
+        }
+        actual_keys = {str(pref["key"]) for pref in prefs}
+        assert actual_keys == expected_keys
+
+        worker_counts = dict.fromkeys(range(worker_count), 0)
+        for key in actual_keys:
+            worker_id = int(key.removeprefix("key_worker").split("_", 1)[0])
+            worker_counts[worker_id] += 1
+        assert worker_counts == dict.fromkeys(range(worker_count), prefs_per_worker)
 
 
 @pytest.mark.unit
