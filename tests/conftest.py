@@ -16,6 +16,10 @@ import pytest
 
 from file_organizer.api.realtime import realtime_manager
 
+# Review-regression fixtures include intentionally failing `test_*.py` files used as detector input.
+# Ignore them in normal pytest discovery so they don't execute as real tests in full-suite CI runs.
+collect_ignore_glob = ["fixtures/review_regressions/**/tests/test_*.py"]
+
 # ---------------------------------------------------------------------------
 # Version-aware fixtures
 # ---------------------------------------------------------------------------

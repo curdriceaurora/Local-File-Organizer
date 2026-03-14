@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import logging
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -194,43 +194,35 @@ def test_discover_changed_test_files_includes_untracked_test_modules(
     assert discover_changed_test_files(tmp_path) == [tmp_path / "tests" / "test_untracked.py"]
 
 
-def test_find_violations_skips_unreadable_test_files(
-    caplog: pytest.LogCaptureFixture,
-    tmp_path: Path,
-) -> None:
+def test_find_violations_skips_unreadable_test_files(tmp_path: Path) -> None:
     tests_dir = tmp_path / "tests"
     tests_dir.mkdir()
     unreadable_test = tests_dir / "test_bad.py"
     unreadable_test.write_bytes(b"\xff\xfe\x00")
     detector = WeakMockCallCountAssertionDetector(scan_mode="full_repo")
 
-    with caplog.at_level(logging.WARNING):
+    with patch.object(MODULE, "_LOGGER") as logger_mock:
         findings = detector.find_violations(tmp_path)
 
     assert findings == []
-    assert any(
-        "Skipping weak call-count scan for unreadable test file" in record.message
-        and "test_bad.py" in record.message
-        for record in caplog.records
-    )
+    logger_mock.warning.assert_called_once()
+    warning_call = logger_mock.warning.call_args
+    assert "Skipping weak call-count scan for unreadable test file" in warning_call.args[0]
+    assert "test_bad.py" in str(warning_call.args[1])
 
 
-def test_find_violations_skips_unparsable_test_files(
-    caplog: pytest.LogCaptureFixture,
-    tmp_path: Path,
-) -> None:
+def test_find_violations_skips_unparsable_test_files(tmp_path: Path) -> None:
     tests_dir = tmp_path / "tests"
     tests_dir.mkdir()
     unparsable_test = tests_dir / "test_broken.py"
     unparsable_test.write_text("def test_broken(:\n    pass\n", encoding="utf-8")
     detector = WeakMockCallCountAssertionDetector(scan_mode="full_repo")
 
-    with caplog.at_level(logging.WARNING):
+    with patch.object(MODULE, "_LOGGER") as logger_mock:
         findings = detector.find_violations(tmp_path)
 
     assert findings == []
-    assert any(
-        "Skipping weak call-count scan for unparsable test file" in record.message
-        and "test_broken.py" in record.message
-        for record in caplog.records
-    )
+    logger_mock.warning.assert_called_once()
+    warning_call = logger_mock.warning.call_args
+    assert "Skipping weak call-count scan for unparsable test file" in warning_call.args[0]
+    assert "test_broken.py" in str(warning_call.args[1])

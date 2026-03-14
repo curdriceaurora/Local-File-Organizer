@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -44,7 +45,8 @@ class TestBenchmarkErrors:
         app = _get_app()
         result = runner.invoke(app, ["benchmark", "run", str(tmp_path), "--json"])
         assert result.exit_code == 0
-        assert "files_processed" in result.output
+        payload = json.loads(result.output)
+        assert payload["files_count"] == 0
 
     def test_no_files_plain(self, tmp_path: Path) -> None:
         """No files found with plain output."""
@@ -88,4 +90,5 @@ class TestBenchmarkEvenIterations:
             )
 
         assert result.exit_code == 0
-        assert "files_processed" in result.output
+        payload = json.loads(result.output)
+        assert payload["files_count"] == 1
