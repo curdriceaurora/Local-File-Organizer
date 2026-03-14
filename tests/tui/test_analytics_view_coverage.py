@@ -13,6 +13,10 @@ import pytest
 
 from file_organizer.tui.analytics_view import (
     AnalyticsView,
+    DuplicateStatsPanel,
+    FileDistributionPanel,
+    QualityScorePanel,
+    StorageOverviewPanel,
     _format_bytes,
 )
 
@@ -47,7 +51,21 @@ class TestAnalyticsViewLoadAnalytics:
 
     def test_load_analytics_success(self) -> None:
         view = AnalyticsView()
-        view.query_one = MagicMock()
+        storage_panel = MagicMock()
+        distribution_panel = MagicMock()
+        quality_panel = MagicMock()
+        duplicate_panel = MagicMock()
+
+        def _query_side_effect(panel_type):
+            mapping = {
+                StorageOverviewPanel: storage_panel,
+                FileDistributionPanel: distribution_panel,
+                QualityScorePanel: quality_panel,
+                DuplicateStatsPanel: duplicate_panel,
+            }
+            return mapping[panel_type]
+
+        view.query_one = MagicMock(side_effect=_query_side_effect)
 
         mock_dashboard = SimpleNamespace(
             storage_stats=SimpleNamespace(
@@ -76,6 +94,7 @@ class TestAnalyticsViewLoadAnalytics:
         mock_service.generate_dashboard.return_value = mock_dashboard
 
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.services.analytics.analytics_service.AnalyticsService",
@@ -85,14 +104,32 @@ class TestAnalyticsViewLoadAnalytics:
         ):
             AnalyticsView._load_analytics.__wrapped__(view)
 
-        # Should call call_from_thread multiple times for each panel
+        storage_panel.set_stats.assert_called_once()
+        distribution_panel.set_distribution.assert_called_once_with({".txt": 1000, ".py": 2000})
+        quality_panel.set_metrics.assert_called_once()
+        duplicate_panel.set_stats.assert_called_once()
         assert mock_app.call_from_thread.call_count >= 5
 
     def test_load_analytics_exception(self) -> None:
         view = AnalyticsView()
-        view.query_one = MagicMock()
+        storage_panel = MagicMock()
+        distribution_panel = MagicMock()
+        quality_panel = MagicMock()
+        duplicate_panel = MagicMock()
+
+        def _query_side_effect(panel_type):
+            mapping = {
+                StorageOverviewPanel: storage_panel,
+                FileDistributionPanel: distribution_panel,
+                QualityScorePanel: quality_panel,
+                DuplicateStatsPanel: duplicate_panel,
+            }
+            return mapping[panel_type]
+
+        view.query_one = MagicMock(side_effect=_query_side_effect)
 
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.services.analytics.analytics_service.AnalyticsService",
@@ -102,12 +139,10 @@ class TestAnalyticsViewLoadAnalytics:
         ):
             AnalyticsView._load_analytics.__wrapped__(view)
 
-        # Should call update on all panels with error message
         assert mock_app.call_from_thread.call_count == 4
-        assert all(
-            call.args[1].startswith("[red]Analytics unavailable:[/red]")
-            for call in mock_app.call_from_thread.call_args_list
-        )
+        for panel in (storage_panel, distribution_panel, quality_panel, duplicate_panel):
+            panel.update.assert_called_once()
+            assert panel.update.call_args.args[0].startswith("[red]Analytics unavailable:[/red]")
 
     def test_action_refresh_analytics(self) -> None:
         view = AnalyticsView()

@@ -55,6 +55,21 @@ def _make_config() -> ModelConfig:
     return ModelConfig(name="test-model", model_type=ModelType.TEXT)
 
 
+def _wait_for_active_generations(
+    model: _StubModel,
+    minimum: int = 1,
+    timeout_seconds: float = 1.0,
+) -> bool:
+    """Wait until the model reaches the requested in-flight generation count."""
+    wake = threading.Event()
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if model._active_generations >= minimum:
+            return True
+        wake.wait(0.01)
+    return model._active_generations >= minimum
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -102,9 +117,9 @@ class TestGenerationGuards:
         gen_thread = threading.Thread(target=_generate_in_thread)
         gen_thread.start()
 
-        # Give the thread a moment to enter generate()
-        time.sleep(0.05)
-        assert model._active_generations == 1
+        assert _wait_for_active_generations(model, minimum=1), (
+            "generation thread never entered the active state"
+        )
 
         # safe_cleanup should wait for the generation to finish
         cleanup_start = time.monotonic()
@@ -155,9 +170,9 @@ class TestGenerationGuards:
         for t in threads:
             t.start()
 
-        # All should be in-flight at some point
-        time.sleep(0.05)
-        assert model._active_generations >= 1
+        assert _wait_for_active_generations(model, minimum=1), (
+            "no generation thread reached active state"
+        )
 
         for t in threads:
             t.join(timeout=5.0)
@@ -183,7 +198,9 @@ class TestGenerationGuards:
         # Start a long-running generation
         gen_thread = threading.Thread(target=_slow_generate, daemon=True)
         gen_thread.start()
-        time.sleep(0.05)
+        assert _wait_for_active_generations(model, minimum=1), (
+            "slow generation thread never entered active state"
+        )
 
         # safe_cleanup should timeout and proceed
         start = time.monotonic()

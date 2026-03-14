@@ -153,7 +153,19 @@ class TestUndoHistoryViewLoadHistory:
     def test_load_history_success(self) -> None:
         """Test successful history load path."""
         view = UndoHistoryView()
-        view.query_one = MagicMock()
+        operation_panel = MagicMock()
+        stack_panel = MagicMock()
+        stats_panel = MagicMock()
+
+        def _query_side_effect(panel_type):
+            mapping = {
+                OperationHistoryPanel: operation_panel,
+                UndoRedoStackPanel: stack_panel,
+                HistoryStatsPanel: stats_panel,
+            }
+            return mapping[panel_type]
+
+        view.query_one = MagicMock(side_effect=_query_side_effect)
 
         mock_history = MagicMock()
         mock_manager = MagicMock()
@@ -164,6 +176,7 @@ class TestUndoHistoryViewLoadHistory:
         mock_viewer.get_statistics.return_value = {}
 
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.history.tracker.OperationHistory",
@@ -184,13 +197,29 @@ class TestUndoHistoryViewLoadHistory:
 
         assert mock_app.call_from_thread.call_count >= 4
         mock_history.close.assert_called_once()
+        operation_panel.set_operations.assert_called_once_with([])
+        stack_panel.set_stacks.assert_called_once_with([], [])
+        stats_panel.set_stats.assert_called_once_with({})
 
     def test_load_history_exception(self) -> None:
         """Test history load with exception."""
         view = UndoHistoryView()
-        view.query_one = MagicMock()
+        operation_panel = MagicMock()
+        stack_panel = MagicMock()
+        stats_panel = MagicMock()
+
+        def _query_side_effect(panel_type):
+            mapping = {
+                OperationHistoryPanel: operation_panel,
+                UndoRedoStackPanel: stack_panel,
+                HistoryStatsPanel: stats_panel,
+            }
+            return mapping[panel_type]
+
+        view.query_one = MagicMock(side_effect=_query_side_effect)
 
         mock_app = MagicMock()
+        mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
                 "file_organizer.history.tracker.OperationHistory",
@@ -200,12 +229,10 @@ class TestUndoHistoryViewLoadHistory:
         ):
             UndoHistoryView._load_history.__wrapped__(view)
 
-        # Should have called update on panels with error message
         assert mock_app.call_from_thread.call_count == 3
-        assert all(
-            call_args.args[1].startswith("[red]History unavailable:[/red]")
-            for call_args in mock_app.call_from_thread.call_args_list
-        )
+        for panel in (operation_panel, stack_panel, stats_panel):
+            panel.update.assert_called_once()
+            assert panel.update.call_args.args[0].startswith("[red]History unavailable:[/red]")
 
 
 # ---------------------------------------------------------------------------

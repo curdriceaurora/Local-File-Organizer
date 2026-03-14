@@ -13,12 +13,14 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.services.intelligence.pattern_learner import PatternLearner
+from file_organizer.services.intelligence.preference_tracker import CorrectionType
 
 pytestmark = [pytest.mark.unit]
 
@@ -206,8 +208,14 @@ class TestLearnFromCorrection:
         original = Path("/docs/old_file.txt")
         corrected = Path("/docs/new_file.txt")
 
-        result = learner.learn_from_correction(original, corrected)
+        with patch.object(
+            learner.feedback_processor,
+            "process_correction",
+            wraps=learner.feedback_processor.process_correction,
+        ) as mock_process:
+            result = learner.learn_from_correction(original, corrected)
 
+        mock_process.assert_called_once_with(original, corrected, None)
         assert "timestamp" in result
         assert result["original"] == str(original)
         assert result["corrected"] == str(corrected)
@@ -261,8 +269,14 @@ class TestLearnFromCorrection:
         corrected = Path("/archive/file.txt")
         context = {"operation": "archive"}
 
-        result = learner.learn_from_correction(original, corrected, context)
+        with patch.object(
+            learner.feedback_processor,
+            "process_correction",
+            wraps=learner.feedback_processor.process_correction,
+        ) as mock_process:
+            result = learner.learn_from_correction(original, corrected, context)
 
+        mock_process.assert_called_once_with(original, corrected, context)
         assert "timestamp" in result
 
     def test_preference_tracker_called(self, learner):
@@ -272,7 +286,11 @@ class TestLearnFromCorrection:
 
         learner.learn_from_correction(original, corrected)
 
-        learner.preference_tracker.track_correction.assert_called_once()
+        learner.preference_tracker.track_correction.assert_called_once_with(
+            original,
+            corrected,
+            CorrectionType.FILE_MOVE,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -364,6 +382,8 @@ class TestUpdateConfidence:
         learner.confidence_engine.track_usage.assert_called_once()
         args = learner.confidence_engine.track_usage.call_args[0]
         assert args[0] == "test_pattern"
+        assert isinstance(args[1], datetime)
+        assert args[1].tzinfo is UTC
         assert args[2] is True
 
     def test_failure_update(self, learner):
@@ -373,6 +393,8 @@ class TestUpdateConfidence:
         learner.confidence_engine.track_usage.assert_called_once()
         args = learner.confidence_engine.track_usage.call_args[0]
         assert args[0] == "test_pattern"
+        assert isinstance(args[1], datetime)
+        assert args[1].tzinfo is UTC
         assert args[2] is False
 
 
@@ -563,6 +585,8 @@ class TestClearOldPatterns:
         assert "patterns_decayed" in result
         assert result["folder_preferences_cleared"] == 0
         assert result["patterns_decayed"] == 0
+        learner.folder_learner.clear_old_preferences.assert_called_once_with(90)
+        learner.confidence_engine.clear_stale_patterns.assert_called_once_with(90)
 
     def test_clear_with_custom_days(self, learner):
         """Test clearing with custom day threshold."""
@@ -573,6 +597,7 @@ class TestClearOldPatterns:
 
         assert result["folder_preferences_cleared"] == 3
         assert result["patterns_decayed"] == 2
+        learner.folder_learner.clear_old_preferences.assert_called_once_with(30)
         learner.confidence_engine.clear_stale_patterns.assert_called_once_with(30)
 
 

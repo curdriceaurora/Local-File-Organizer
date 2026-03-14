@@ -91,6 +91,8 @@ def stub_text_model_generate() -> Iterator[MagicMock]:
 
     Also patches ``_enter_generate`` / ``_exit_generate`` to no-op so the
     lifecycle lock isn't required.
+    Trade-off: integration tests stay deterministic and focus on service wiring,
+    while lifecycle-lock correctness is covered separately by thread-safety tests.
     """
     with (
         patch(
@@ -123,6 +125,8 @@ def stub_vision_model_generate() -> Iterator[MagicMock]:
 
     Also patches ``_enter_generate`` / ``_exit_generate`` to no-op so the
     lifecycle lock isn't required.
+    Trade-off: keeps these tests focused on integration behavior, not model
+    lifecycle synchronization internals validated in dedicated unit tests.
     """
     with (
         patch(

@@ -49,7 +49,7 @@ def output_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture()
-def organizer() -> FileOrganizer:
+def organizer(stub_nltk: None) -> FileOrganizer:
     """FileOrganizer in dry-run mode."""
     return FileOrganizer(dry_run=True)
 
@@ -114,11 +114,14 @@ class TestFallbackDoesNotCrash:
 
         assert result.total_files == expected
         assert result.failed_files == 0
-        # Verify fallback path was actually used (not silently skipped)
+        # Verify fallback path was used with exactly the collected source files.
         assert mock_fallback.called, "Expected fallback to be invoked when Ollama is down"
-        assert any(call.args and call.args[0] for call in mock_fallback.call_args_list), (
-            "Fallback was invoked but never with a non-empty batch of files"
-        )
+        fallback_files = {
+            file_path
+            for call in mock_fallback.call_args_list
+            for file_path in (call.args[0] if call.args else [])
+        }
+        assert fallback_files == set(source_dir.iterdir())
 
     def test_ollama_recovery_between_calls(
         self, organizer: FileOrganizer, source_dir: Path, output_dir: Path

@@ -193,3 +193,5 @@ class TestFallbackChain:
         # Should still process files via extension fallback
         assert result.total_files == 3
         assert result.failed_files == 0
+        assert "Documents" in result.organized_structure
+        assert "Spreadsheets" in result.organized_structure
