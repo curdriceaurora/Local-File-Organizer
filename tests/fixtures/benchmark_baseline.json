@@ -1,0 +1,15 @@
+{
+  "suite": "io",
+  "files_count": 5,
+  "hardware_profile": {
+    "benchmark_note": "Reference schema fixture for benchmark governance checks."
+  },
+  "results": {
+    "median_ms": 1.0,
+    "p95_ms": 1.0,
+    "p99_ms": 1.0,
+    "stddev_ms": 0.0,
+    "throughput_fps": 1000.0,
+    "iterations": 5
+  }
+}

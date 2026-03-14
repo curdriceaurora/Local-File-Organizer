@@ -376,6 +376,12 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
 - `--iterations INTEGER, -i INTEGER` — Number of measured iterations (default: `10`, min: `1`)
 - `--warmup INTEGER, -w INTEGER` — Warmup iterations excluded from statistics (default: `3`, min: `0`)
 - `--suite TEXT, -s TEXT` — Benchmark suite to run: `io`, `text`, `vision`, `audio`, `pipeline`, `e2e` (default: `io`)
+  - `io`: file stat/read overhead baseline
+  - `text`: `TextProcessor.process_file()` path with deterministic benchmark model stubs
+  - `vision`: `VisionProcessor.process_file()` path with deterministic benchmark model stubs
+  - `audio`: audio metadata extraction + rule-based classification path
+  - `pipeline`: `PipelineOrchestrator.process_batch()` staged path
+  - `e2e`: full `FileOrganizer.organize()` pass with real writes in an isolated temp workspace
 - `--json` — Output results as JSON instead of a Rich table
 - `--compare PATH` — Path to baseline JSON file for regression comparison
 

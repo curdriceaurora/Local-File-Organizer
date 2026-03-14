@@ -1,0 +1,2 @@
+Benchmark fixture text file.
+Used to exercise text and end-to-end benchmark suites.

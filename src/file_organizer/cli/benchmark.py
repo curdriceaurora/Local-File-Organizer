@@ -8,11 +8,16 @@ regression flagging.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import math
+import shutil
 import statistics
+import tempfile
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -47,6 +52,13 @@ class ComparisonResult(TypedDict):
     deltas_pct: dict[str, float]
     regression: bool
     threshold: float
+
+
+class _SuiteRunner(TypedDict):
+    """Metadata for a benchmark suite runner."""
+
+    run: Callable[[list[Path]], None]
+    description: str
 
 
 # ---------------------------------------------------------------------------
@@ -135,23 +147,339 @@ def compare_results(
 # Suite runners
 # ---------------------------------------------------------------------------
 
+_MAX_SUITE_FILES = 50
+_MAX_E2E_FILES = 25
+
+_TEXT_EXTENSIONS = {
+    ".txt",
+    ".md",
+    ".rst",
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".csv",
+    ".tsv",
+    ".json",
+    ".xml",
+    ".yaml",
+    ".yml",
+}
+_VISION_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff"}
+_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".ogg", ".aac", ".wma", ".opus"}
+_VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".webm"}
+
+
+class _BenchmarkModelStub:
+    """In-memory model stub used by benchmark suite runners.
+
+    Why this exists:
+    - Benchmark suite selection should exercise real processor code paths.
+    - CI and local developer environments cannot assume Ollama/API backends.
+    - A deterministic stub keeps suite behavior stable and comparable.
+    """
+
+    def __init__(
+        self,
+        *,
+        model_type: Any,
+        prompt_responses: dict[str, str],
+        default_response: str,
+    ) -> None:
+        from file_organizer.models.base import ModelConfig
+
+        self.config = ModelConfig(name="benchmark-stub", model_type=model_type)
+        self._prompt_responses = prompt_responses
+        self._default_response = default_response
+        self._initialized = True
+
+    @property
+    def is_initialized(self) -> bool:
+        return self._initialized
+
+    def initialize(self) -> None:
+        self._initialized = True
+
+    def generate(self, prompt: str, **_: Any) -> str:
+        lowered = prompt.lower()
+        for needle, response in self._prompt_responses.items():
+            if needle in lowered:
+                return response
+        return self._default_response
+
+    def cleanup(self) -> None:
+        self._initialized = False
+
+
+def _suite_candidates(
+    files: list[Path],
+    extensions: set[str],
+    *,
+    fallback_to_all: bool,
+    cap: int = _MAX_SUITE_FILES,
+) -> list[Path]:
+    """Return a capped file list for a benchmark suite."""
+    matches = [path for path in files if path.suffix.lower() in extensions]
+    selected = matches if matches else files if fallback_to_all else []
+    return selected[: min(cap, len(selected))]
+
 
 def _run_io_suite(files: list[Path]) -> None:
     """Baseline I/O benchmark: measures file stat access overhead."""
-    for file_path in files:
+    for file_path in _suite_candidates(files, set(), fallback_to_all=True):
         try:
             _ = file_path.stat()
         except OSError:
             pass
 
 
-_SUITE_RUNNERS: dict[str, Any] = {
-    "io": _run_io_suite,
-    "text": _run_io_suite,
-    "vision": _run_io_suite,
-    "audio": _run_io_suite,
-    "pipeline": _run_io_suite,
-    "e2e": _run_io_suite,
+def _run_text_suite(files: list[Path]) -> None:
+    """Benchmark text processing path via TextProcessor.process_file()."""
+    candidates = _suite_candidates(files, _TEXT_EXTENSIONS, fallback_to_all=True)
+    if not candidates:
+        return
+
+    from file_organizer.models.base import ModelType
+    from file_organizer.services import TextProcessor
+
+    model = _BenchmarkModelStub(
+        model_type=ModelType.TEXT,
+        prompt_responses={
+            "summary:": "Synthetic benchmark summary for deterministic text runs.",
+            "category:": "benchmark_docs",
+            "filename:": "benchmark_text_file",
+        },
+        default_response="Synthetic benchmark response",
+    )
+    processor = TextProcessor(text_model=model)
+    try:
+        for file_path in candidates:
+            try:
+                processor.process_file(file_path)
+            except Exception:
+                _ = file_path.stat()
+    finally:
+        processor.cleanup()
+
+
+def _run_vision_suite(files: list[Path]) -> None:
+    """Benchmark vision processing path via VisionProcessor.process_file()."""
+    candidates = _suite_candidates(files, _VISION_EXTENSIONS, fallback_to_all=True)
+    if not candidates:
+        return
+
+    from file_organizer.models.base import ModelType
+    from file_organizer.services import VisionProcessor
+
+    model = _BenchmarkModelStub(
+        model_type=ModelType.VISION,
+        prompt_responses={
+            "extract all visible text": "NO_TEXT",
+            "category:": "benchmark_images",
+            "filename:": "benchmark_image_file",
+        },
+        default_response="Synthetic benchmark image description.",
+    )
+    processor = VisionProcessor(vision_model=model)
+    try:
+        for file_path in candidates:
+            try:
+                processor.process_file(file_path, perform_ocr=False)
+            except Exception:
+                _ = file_path.stat()
+    finally:
+        processor.cleanup()
+
+
+def _run_audio_suite(files: list[Path]) -> None:
+    """Benchmark audio metadata + classification path."""
+    candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
+    if not candidates:
+        _run_io_suite(files)
+        return
+
+    from file_organizer.services.audio.classifier import AudioClassifier
+    from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
+
+    extractor = AudioMetadataExtractor(use_fallback=True)
+    classifier = AudioClassifier()
+    for file_path in candidates:
+        try:
+            metadata = extractor.extract(file_path)
+            _ = classifier.classify(metadata)
+        except Exception:
+            try:
+                _ = file_path.stat()
+            except OSError:
+                pass
+
+
+def _suite_category_for(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in _TEXT_EXTENSIONS:
+        return "documents"
+    if suffix in _VISION_EXTENSIONS:
+        return "images"
+    if suffix in _AUDIO_EXTENSIONS:
+        return "audio"
+    if suffix in _VIDEO_EXTENSIONS:
+        return "video"
+    return "other"
+
+
+class _BenchmarkPreprocessStage:
+    @property
+    def name(self) -> str:
+        return "benchmark.preprocess"
+
+    def process(self, context: Any) -> Any:
+        context.metadata["file_size"] = context.file_path.stat().st_size
+        context.metadata["extension"] = context.file_path.suffix.lower()
+        return context
+
+
+class _BenchmarkAnalyzeStage:
+    @property
+    def name(self) -> str:
+        return "benchmark.analyze"
+
+    def process(self, context: Any) -> Any:
+        context.category = _suite_category_for(context.file_path)
+        context.filename = context.file_path.stem or "benchmark_file"
+        return context
+
+
+@dataclass
+class _BenchmarkPostprocessStage:
+    output_directory: Path
+
+    @property
+    def name(self) -> str:
+        return "benchmark.postprocess"
+
+    def process(self, context: Any) -> Any:
+        context.destination = (
+            self.output_directory
+            / context.category
+            / f"{context.filename}{context.file_path.suffix}"
+        )
+        return context
+
+
+def _run_pipeline_suite(files: list[Path]) -> None:
+    """Benchmark the PipelineOrchestrator stage path end-to-end."""
+    candidates = _suite_candidates(files, set(), fallback_to_all=True)
+    if not candidates:
+        return
+
+    from file_organizer.pipeline.config import PipelineConfig
+    from file_organizer.pipeline.orchestrator import PipelineOrchestrator
+
+    with tempfile.TemporaryDirectory(prefix="fo-benchmark-pipeline-") as tmp:
+        output_dir = Path(tmp) / "pipeline_output"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        orchestrator = PipelineOrchestrator(
+            config=PipelineConfig(
+                output_directory=output_dir,
+                dry_run=True,
+                auto_organize=False,
+                max_concurrent=2,
+            ),
+            stages=[
+                _BenchmarkPreprocessStage(),
+                _BenchmarkAnalyzeStage(),
+                _BenchmarkPostprocessStage(output_dir),
+            ],
+            prefetch_depth=1,
+            prefetch_stages=1,
+        )
+        try:
+            _ = orchestrator.process_batch(candidates)
+        finally:
+            orchestrator.stop()
+
+
+def _run_e2e_suite(files: list[Path]) -> None:
+    """Benchmark full organizer flow including file writes."""
+    preferred_extensions = _VISION_EXTENSIONS | _AUDIO_EXTENSIONS
+    preferred = _suite_candidates(
+        files,
+        preferred_extensions,
+        fallback_to_all=False,
+        cap=_MAX_E2E_FILES,
+    )
+    candidates = preferred or _suite_candidates(
+        files,
+        set(),
+        fallback_to_all=True,
+        cap=_MAX_E2E_FILES,
+    )
+    if not candidates:
+        return
+
+    from file_organizer.core.organizer import FileOrganizer
+
+    with tempfile.TemporaryDirectory(prefix="fo-benchmark-e2e-") as tmp:
+        workspace = Path(tmp)
+        input_dir = workspace / "input"
+        output_dir = workspace / "output"
+        input_dir.mkdir(parents=True, exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        copied: list[Path] = []
+        for index, source in enumerate(candidates):
+            target = input_dir / f"{index:03d}_{source.name}"
+            try:
+                shutil.copy2(source, target)
+                copied.append(target)
+            except OSError:
+                continue
+
+        if not copied:
+            return
+
+        organizer = FileOrganizer(
+            dry_run=False,
+            use_hardlinks=False,
+            parallel_workers=1,
+            no_prefetch=True,
+            prefetch_depth=0,
+            enable_vision=False,
+        )
+        try:
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                organizer.organize(input_dir, output_dir, skip_existing=False)
+        except Exception:
+            _run_io_suite(copied)
+
+
+_SUITE_RUNNERS: dict[str, _SuiteRunner] = {
+    "io": {
+        "run": _run_io_suite,
+        "description": "File stat/read overhead only.",
+    },
+    "text": {
+        "run": _run_text_suite,
+        "description": "TextProcessor stack with deterministic benchmark model.",
+    },
+    "vision": {
+        "run": _run_vision_suite,
+        "description": "VisionProcessor stack with deterministic benchmark model.",
+    },
+    "audio": {
+        "run": _run_audio_suite,
+        "description": "Audio metadata extraction + classification path.",
+    },
+    "pipeline": {
+        "run": _run_pipeline_suite,
+        "description": "PipelineOrchestrator staged processing path.",
+    },
+    "e2e": {
+        "run": _run_e2e_suite,
+        "description": "Full FileOrganizer run including output writes in temp workspace.",
+    },
 }
 
 
@@ -235,7 +563,10 @@ def run(
         "io",
         "--suite",
         "-s",
-        help="Benchmark suite to run (io, text, vision, audio, pipeline, e2e).",
+        help=(
+            "Benchmark suite to run (io, text, vision, audio, pipeline, e2e). "
+            "Each suite executes a dedicated runner."
+        ),
     ),
     json_output: bool = typer.Option(
         False,
@@ -294,10 +625,11 @@ def run(
         return
 
     # Select suite runner
-    runner = _SUITE_RUNNERS.get(suite)
-    if runner is None:
+    suite_spec = _SUITE_RUNNERS.get(suite)
+    if suite_spec is None:
         console.print(f"[red]Unknown suite: {suite}[/red]")
         raise typer.Exit(code=1)
+    runner = suite_spec["run"]
 
     # Ensure we have enough iterations
     total_iterations = warmup + iterations
@@ -306,6 +638,7 @@ def run(
             f"[bold]Benchmarking[/bold] {len(files)} files, "
             f"suite={suite}, {iterations} iterations + {warmup} warmup"
         )
+        console.print(f"[dim]Suite profile: {suite_spec['description']}[/dim]")
 
     # Run iterations
     all_times_ms: list[float] = []

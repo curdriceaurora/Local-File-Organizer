@@ -1,0 +1,22 @@
+{
+  "suites": {
+    "audio": {
+      "min_files": 1
+    },
+    "e2e": {
+      "min_files": 1
+    },
+    "io": {
+      "min_files": 1
+    },
+    "pipeline": {
+      "min_files": 1
+    },
+    "text": {
+      "min_files": 1
+    },
+    "vision": {
+      "min_files": 1
+    }
+  }
+}
