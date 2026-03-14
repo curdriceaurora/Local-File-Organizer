@@ -187,7 +187,7 @@ class PipelineOrchestrator:
         self._prefetch_stages = max(0, prefetch_stages)
         self._memory_limiter = memory_limiter
         self._batch_sizer = batch_sizer or AdaptiveBatchSizer()
-        self._buffer_pool = buffer_pool or BufferPool()
+        self._buffer_pool: BufferPool | None = buffer_pool
         self._resource_monitor = resource_monitor or ResourceMonitor()
         self._memory_pressure_threshold_percent = memory_pressure_threshold_percent
 
@@ -211,6 +211,10 @@ class PipelineOrchestrator:
     @property
     def buffer_pool(self) -> BufferPool:
         """Return the orchestrator's shared buffer pool."""
+        if self._buffer_pool is None:
+            with self._lock:
+                if self._buffer_pool is None:
+                    self._buffer_pool = BufferPool()
         return self._buffer_pool
 
     def set_stages(self, stages: Sequence[PipelineStage]) -> None:
@@ -322,6 +326,9 @@ class PipelineOrchestrator:
         if not files:
             return []
 
+        # Snapshot once; set_stages() may replace self._stages concurrently.
+        stages = self._stages
+        overhead_per_file = self.buffer_pool.buffer_size if stages else 0
         file_sizes = [self._safe_file_size(path) for path in files]
         batch_size = max(
             1,
@@ -330,12 +337,10 @@ class PipelineOrchestrator:
                 # BufferPool allocates at least ``buffer_size`` per file and may
                 # allocate larger buffers for oversized files; using the base
                 # pool buffer size here keeps sizing conservative and stable.
-                overhead_per_file=self._buffer_pool.buffer_size,
+                overhead_per_file=overhead_per_file,
             ),
         )
 
-        # Snapshot once; set_stages() may replace self._stages concurrently.
-        stages = self._stages
         if stages and self._prefetch_depth > 0 and self._prefetch_stages > 0 and len(files) > 1:
             # Keep prefetch behavior deterministic (Issue #713 contracts) while
             # still applying proactive memory feedback to the shared buffer pool.
@@ -348,12 +353,17 @@ class PipelineOrchestrator:
         while index < len(files):
             upper = min(index + batch_size, len(files))
             batch_files = files[index:upper]
+            chunk_start_rss = self._safe_current_rss()
             results.extend(self._process_batch_chunk(batch_files, stages))
             self._rebalance_buffer_pool()
 
             if upper < len(files):
-                rss_bytes = self._safe_current_rss()
-                adjusted = self._batch_sizer.adjust_from_feedback(rss_bytes, len(batch_files))
+                chunk_end_rss = self._safe_current_rss()
+                chunk_rss_delta = max(0, chunk_end_rss - chunk_start_rss)
+                adjusted = self._batch_sizer.adjust_from_feedback(
+                    chunk_rss_delta,
+                    len(batch_files),
+                )
                 batch_size = max(1, adjusted)
             index = upper
 
@@ -382,6 +392,10 @@ class PipelineOrchestrator:
 
     def _rebalance_buffer_pool(self) -> None:
         """Resize buffer pool in response to memory pressure and utilization."""
+        pool = self._buffer_pool
+        if pool is None:
+            return
+
         try:
             under_pressure = self._resource_monitor.should_evict(
                 threshold_percent=self._memory_pressure_threshold_percent,
@@ -391,8 +405,8 @@ class PipelineOrchestrator:
             return
 
         if under_pressure:
-            target = max(self._buffer_pool.initial_buffers, self._buffer_pool.in_use_count)
-            new_size = self._buffer_pool.resize(target)
+            target = max(pool.initial_buffers, pool.in_use_count)
+            new_size = pool.resize(target)
             logger.info(
                 "Memory pressure detected; resized buffer pool to %d buffers (target=%d)",
                 new_size,
@@ -400,15 +414,10 @@ class PipelineOrchestrator:
             )
             return
 
-        if (
-            self._buffer_pool.utilization >= 0.9
-            and self._buffer_pool.total_buffers < self._buffer_pool.max_buffers
-        ):
-            growth_step = max(1, self._buffer_pool.initial_buffers // 2)
-            target = min(
-                self._buffer_pool.max_buffers, self._buffer_pool.total_buffers + growth_step
-            )
-            new_size = self._buffer_pool.resize(target)
+        if pool.utilization >= 0.9 and pool.total_buffers < pool.max_buffers:
+            growth_step = max(1, pool.initial_buffers // 2)
+            target = min(pool.max_buffers, pool.total_buffers + growth_step)
+            new_size = pool.resize(target)
             logger.debug("Increased buffer pool capacity to %d buffers", new_size)
 
     def _process_batch_chunk(
@@ -507,9 +516,10 @@ class PipelineOrchestrator:
     def _acquire_buffer(self, file_path: Path) -> bytearray | None:
         """Acquire a reusable buffer for processing *file_path*."""
         file_size = self._safe_file_size(file_path)
-        requested = max(self._buffer_pool.buffer_size, file_size)
+        pool = self.buffer_pool
+        requested = max(pool.buffer_size, file_size)
         try:
-            return self._buffer_pool.acquire(size=requested)
+            return pool.acquire(size=requested)
         except Exception:
             logger.warning("Failed to acquire buffer for %s", file_path, exc_info=True)
             return None
@@ -518,8 +528,11 @@ class PipelineOrchestrator:
         """Release a previously acquired processing buffer, if any."""
         if buffer is None:
             return
+        pool = self._buffer_pool
+        if pool is None:
+            return
         try:
-            self._buffer_pool.release(buffer)
+            pool.release(buffer)
         except Exception:
             logger.warning("Failed to release buffer for %s", file_path, exc_info=True)
 
@@ -650,126 +663,119 @@ class PipelineOrchestrator:
     def _process_file_legacy(self, file_path: Path) -> ProcessingResult:
         """Original monolithic processing path."""
         start_time = time.monotonic()
-        buffer = self._acquire_buffer(file_path)
+        # Validate file exists
+        if not file_path.exists():
+            return ProcessingResult(
+                file_path=file_path,
+                success=False,
+                error=f"File not found: {file_path}",
+                dry_run=self.config.dry_run,
+            )
 
+        if not file_path.is_file():
+            return ProcessingResult(
+                file_path=file_path,
+                success=False,
+                error=f"Not a file: {file_path}",
+                dry_run=self.config.dry_run,
+            )
+
+        # Check if extension is supported
+        if not self.config.is_supported(file_path):
+            duration_ms = (time.monotonic() - start_time) * 1000
+            with self._stats_lock:
+                self.stats.skipped += 1
+            return ProcessingResult(
+                file_path=file_path,
+                success=False,
+                error=f"Unsupported file extension: {file_path.suffix}",
+                duration_ms=duration_ms,
+                dry_run=self.config.dry_run,
+            )
+
+        # Route to processor
+        processor_type = self.router.route(file_path)
+
+        if processor_type == ProcessorType.UNKNOWN:
+            duration_ms = (time.monotonic() - start_time) * 1000
+            with self._stats_lock:
+                self.stats.skipped += 1
+            return ProcessingResult(
+                file_path=file_path,
+                success=False,
+                error="No processor available for this file type",
+                processor_type=processor_type,
+                duration_ms=duration_ms,
+                dry_run=self.config.dry_run,
+            )
+
+        # Get processor from pool
+        processor = self.processor_pool.get_processor(processor_type)
+
+        if processor is None:
+            duration_ms = (time.monotonic() - start_time) * 1000
+            with self._stats_lock:
+                self.stats.failed += 1
+            return ProcessingResult(
+                file_path=file_path,
+                success=False,
+                error=f"Failed to initialize {processor_type.value} processor",
+                processor_type=processor_type,
+                duration_ms=duration_ms,
+                dry_run=self.config.dry_run,
+            )
+
+        # Process the file
         try:
-            # Validate file exists
-            if not file_path.exists():
-                return ProcessingResult(
-                    file_path=file_path,
-                    success=False,
-                    error=f"File not found: {file_path}",
-                    dry_run=self.config.dry_run,
-                )
+            result = self._process_with_processor(file_path, processor, processor_type)
+            duration_ms = (time.monotonic() - start_time) * 1000
 
-            if not file_path.is_file():
-                return ProcessingResult(
-                    file_path=file_path,
-                    success=False,
-                    error=f"Not a file: {file_path}",
-                    dry_run=self.config.dry_run,
-                )
+            # Build destination path
+            category = result.get("category", "uncategorized")
+            filename = result.get("filename", file_path.stem)
+            destination = self.config.output_directory / category / f"{filename}{file_path.suffix}"
 
-            # Check if extension is supported
-            if not self.config.is_supported(file_path):
-                duration_ms = (time.monotonic() - start_time) * 1000
-                with self._stats_lock:
-                    self.stats.skipped += 1
-                return ProcessingResult(
-                    file_path=file_path,
-                    success=False,
-                    error=f"Unsupported file extension: {file_path.suffix}",
-                    duration_ms=duration_ms,
-                    dry_run=self.config.dry_run,
-                )
+            # Organize file if configured
+            if self.config.should_move_files:
+                self._organize_file(file_path, destination)
 
-            # Route to processor
-            processor_type = self.router.route(file_path)
+            # Update stats
+            with self._stats_lock:
+                self.stats.total_processed += 1
+                self.stats.successful += 1
+                self.stats.total_duration_ms += duration_ms
 
-            if processor_type == ProcessorType.UNKNOWN:
-                duration_ms = (time.monotonic() - start_time) * 1000
-                with self._stats_lock:
-                    self.stats.skipped += 1
-                return ProcessingResult(
-                    file_path=file_path,
-                    success=False,
-                    error="No processor available for this file type",
-                    processor_type=processor_type,
-                    duration_ms=duration_ms,
-                    dry_run=self.config.dry_run,
-                )
+            processing_result = ProcessingResult(
+                file_path=file_path,
+                success=True,
+                category=category,
+                destination=destination,
+                duration_ms=duration_ms,
+                processor_type=processor_type,
+                dry_run=self.config.dry_run,
+            )
 
-            # Get processor from pool
-            processor = self.processor_pool.get_processor(processor_type)
+            self._notify(file_path, True)
+            return processing_result
 
-            if processor is None:
-                duration_ms = (time.monotonic() - start_time) * 1000
-                with self._stats_lock:
-                    self.stats.failed += 1
-                return ProcessingResult(
-                    file_path=file_path,
-                    success=False,
-                    error=f"Failed to initialize {processor_type.value} processor",
-                    processor_type=processor_type,
-                    duration_ms=duration_ms,
-                    dry_run=self.config.dry_run,
-                )
+        except Exception as e:
+            duration_ms = (time.monotonic() - start_time) * 1000
+            with self._stats_lock:
+                self.stats.total_processed += 1
+                self.stats.failed += 1
+                self.stats.total_duration_ms += duration_ms
 
-            # Process the file
-            try:
-                result = self._process_with_processor(file_path, processor, processor_type)
-                duration_ms = (time.monotonic() - start_time) * 1000
+            logger.exception("Failed to process %s", file_path)
 
-                # Build destination path
-                category = result.get("category", "uncategorized")
-                filename = result.get("filename", file_path.stem)
-                destination = (
-                    self.config.output_directory / category / f"{filename}{file_path.suffix}"
-                )
-
-                # Organize file if configured
-                if self.config.should_move_files:
-                    self._organize_file(file_path, destination)
-
-                # Update stats
-                with self._stats_lock:
-                    self.stats.total_processed += 1
-                    self.stats.successful += 1
-                    self.stats.total_duration_ms += duration_ms
-
-                processing_result = ProcessingResult(
-                    file_path=file_path,
-                    success=True,
-                    category=category,
-                    destination=destination,
-                    duration_ms=duration_ms,
-                    processor_type=processor_type,
-                    dry_run=self.config.dry_run,
-                )
-
-                self._notify(file_path, True)
-                return processing_result
-
-            except Exception as e:
-                duration_ms = (time.monotonic() - start_time) * 1000
-                with self._stats_lock:
-                    self.stats.total_processed += 1
-                    self.stats.failed += 1
-                    self.stats.total_duration_ms += duration_ms
-
-                logger.exception("Failed to process %s", file_path)
-
-                self._notify(file_path, False)
-                return ProcessingResult(
-                    file_path=file_path,
-                    success=False,
-                    error=str(e),
-                    processor_type=processor_type,
-                    duration_ms=duration_ms,
-                    dry_run=self.config.dry_run,
-                )
-        finally:
-            self._release_buffer(file_path, buffer)
+            self._notify(file_path, False)
+            return ProcessingResult(
+                file_path=file_path,
+                success=False,
+                error=str(e),
+                processor_type=processor_type,
+                duration_ms=duration_ms,
+                dry_run=self.config.dry_run,
+            )
 
     def _notify(self, file_path: Path, success: bool) -> None:
         """Fire the notification callback, swallowing exceptions."""

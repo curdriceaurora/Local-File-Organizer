@@ -140,6 +140,8 @@ def test_memory_pressure_shrinks_buffer_pool(
     orchestrator.process_batch(files)
 
     assert pool.total_buffers == pool.initial_buffers
+    assert pool.in_use_count == 0
+    assert pool.available_buffers == pool.total_buffers
     assert monitor.should_evict_calls
     assert all(threshold == 85.0 for threshold in monitor.should_evict_calls)
 

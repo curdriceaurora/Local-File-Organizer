@@ -78,6 +78,18 @@ class TestBufferPoolAcquireRelease:
         with pytest.raises(ValueError, match="not owned by this pool"):
             pool.release(bytearray(64))
 
+    def test_release_of_resized_pooled_buffer_raises_and_decrements_capacity(self) -> None:
+        pool = BufferPool(buffer_size=64, initial_buffers=2, max_buffers=4)
+        pooled = pool.acquire()
+        pooled.extend(b"x")
+
+        with pytest.raises(ValueError, match="resized buffer not owned by this pool"):
+            pool.release(pooled)
+
+        assert pool.in_use_count == 0
+        assert pool.total_buffers == 1
+        assert pool.available_buffers == 1
+
 
 class TestBufferPoolThreadSafety:
     """Concurrent usage should not leak buffers or corrupt counters."""

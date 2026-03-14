@@ -45,6 +45,7 @@ class BufferPool:
         self._max_buffers = resolved_max
         self._available: list[bytearray] = [bytearray(buffer_size) for _ in range(initial_buffers)]
         self._total_buffers = initial_buffers
+        self._pooled_ids: set[int] = {id(buffer) for buffer in self._available}
         self._in_use_ids: set[int] = set()
         self._peak_in_use = 0
         self._cv = threading.Condition()
@@ -121,16 +122,28 @@ class BufferPool:
             if self._total_buffers < self._max_buffers:
                 buffer = bytearray(self._buffer_size)
                 self._total_buffers += 1
+                self._pooled_ids.add(id(buffer))
                 self._mark_in_use(buffer)
                 return buffer
 
             if timeout is not None and timeout < 0:
                 raise ValueError(f"timeout must be >= 0, got {timeout}")
 
-            waited = self._cv.wait_for(lambda: bool(self._available), timeout=timeout)
+            waited = self._cv.wait_for(
+                lambda: bool(self._available) or self._total_buffers < self._max_buffers,
+                timeout=timeout,
+            )
             if not waited:
                 raise TimeoutError("Timed out waiting for an available buffer")
-            buffer = self._available.pop()
+
+            if self._available:
+                buffer = self._available.pop()
+                self._mark_in_use(buffer)
+                return buffer
+
+            buffer = bytearray(self._buffer_size)
+            self._total_buffers += 1
+            self._pooled_ids.add(id(buffer))
             self._mark_in_use(buffer)
             return buffer
 
@@ -142,10 +155,18 @@ class BufferPool:
                 raise ValueError("Attempted to release a buffer not owned by this pool")
 
             self._in_use_ids.remove(buffer_id)
+            is_pooled = buffer_id in self._pooled_ids
 
-            if len(buffer) == self._buffer_size and len(self._available) < self._total_buffers:
+            if is_pooled and len(buffer) == self._buffer_size:
                 self._available.append(buffer)
                 self._cv.notify()
+                return
+
+            if is_pooled:
+                self._pooled_ids.remove(buffer_id)
+                self._total_buffers = max(0, self._total_buffers - 1)
+                self._cv.notify_all()
+                raise ValueError("Attempted to release a resized buffer not owned by this pool")
 
     def resize(self, target_total_buffers: int) -> int:
         """Resize pooled capacity toward *target_total_buffers*.
@@ -168,7 +189,9 @@ class BufferPool:
 
             if clamped_target > self._total_buffers:
                 for _ in range(clamped_target - self._total_buffers):
-                    self._available.append(bytearray(self._buffer_size))
+                    buffer = bytearray(self._buffer_size)
+                    self._available.append(buffer)
+                    self._pooled_ids.add(id(buffer))
                 self._total_buffers = clamped_target
                 self._cv.notify_all()
                 return self._total_buffers
@@ -176,8 +199,10 @@ class BufferPool:
             desired_removal = self._total_buffers - clamped_target
             removable = min(desired_removal, len(self._available))
             if removable > 0:
-                del self._available[-removable:]
-                self._total_buffers -= removable
+                for _ in range(removable):
+                    removed = self._available.pop()
+                    self._pooled_ids.discard(id(removed))
+                    self._total_buffers -= 1
 
             return self._total_buffers
 
