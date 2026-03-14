@@ -59,6 +59,12 @@ def show_summary(
     console.print(f"  [green]Processed: {result.processed_files}[/green]")
     console.print(f"  [yellow]Skipped: {result.skipped_files}[/yellow]")
     console.print(f"  [red]Failed: {result.failed_files}[/red]")
+    if result.errors:
+        for file_str, err in result.errors[:10]:
+            file_name = Path(file_str).name
+            console.print(f"    [red]✗[/red] {file_name}: {err}")
+        if len(result.errors) > 10:
+            console.print(f"    ... and {len(result.errors) - 10} more")
     console.print(f"  Processing time: {result.processing_time:.2f}s")
 
     if result.organized_structure:

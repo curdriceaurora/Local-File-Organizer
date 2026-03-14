@@ -570,6 +570,13 @@ class PipelineOrchestrator:
         is returned and the compute stages are still attempted (they will
         short-circuit on ``context.failed``).
 
+        Per-file ``ProcessingResult.duration_ms`` is measured from the
+        moment the I/O future is *submitted* (not when it completes), so
+        the reported wall-clock time covers prefetched I/O latency as well
+        as compute time.  For files that fall through to the sequential
+        inline path (no outstanding future), timing starts just before
+        ``_run_io`` is called.
+
         Args:
             files: Ordered list of file paths to process.
             stages: Snapshot of the stage list taken by the caller.

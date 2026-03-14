@@ -260,8 +260,17 @@ def process_video_files(
             )
             logger.debug("Video processed: {} → {}/{}", video_path.name, folder_name, filename_stem)
 
-        except FileNotFoundError:
-            raise
+        except FileNotFoundError as exc:
+            logger.warning("Video file not found: {}: {}", video_path.name, exc)
+            processed.append(
+                ProcessedFile(
+                    file_path=video_path,
+                    description="",
+                    folder_name=VIDEO_FALLBACK_FOLDER,
+                    filename=video_path.stem,
+                    error=str(exc),
+                )
+            )
         except Exception as exc:
             logger.warning("Video metadata extraction failed for {}: {}", video_path.name, exc)
             processed.append(
