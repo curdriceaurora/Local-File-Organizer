@@ -9,6 +9,7 @@ and leak detection capabilities.
 from __future__ import annotations
 
 from .batch_sizer import AdaptiveBatchSizer
+from .buffer_pool import BufferPool
 from .connection_pool import ConnectionPool, PoolStats
 from .database import DatabaseOptimizer, QueryPlan, TableStats
 from .lazy_loader import LazyModelLoader
@@ -27,6 +28,7 @@ from .warmup import ModelWarmup, WarmupResult
 
 __all__ = [
     "AdaptiveBatchSizer",
+    "BufferPool",
     "CachedResult",
     "CacheStats",
     "ConnectionPool",
