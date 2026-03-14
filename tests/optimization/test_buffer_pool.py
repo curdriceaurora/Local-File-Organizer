@@ -27,7 +27,7 @@ class TestBufferPoolInitialization:
             BufferPool(buffer_size=0)
         with pytest.raises(ValueError, match="initial_buffers must be > 0"):
             BufferPool(initial_buffers=0)
-        with pytest.raises(ValueError, match="max_buffers .* must be >= initial_buffers"):
+        with pytest.raises(ValueError, match=r"max_buffers .* must be >= initial_buffers"):
             BufferPool(initial_buffers=4, max_buffers=3)
 
 

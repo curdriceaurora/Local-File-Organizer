@@ -95,7 +95,8 @@ class BufferPool:
         with self._cv:
             if self._total_buffers <= 0:
                 return 0.0
-            return len(self._in_use_ids) / float(self._total_buffers)
+            pooled_in_use = len(self._in_use_ids.intersection(self._pooled_ids))
+            return pooled_in_use / float(self._total_buffers)
 
     def acquire(self, size: int | None = None, timeout: float | None = None) -> bytearray:
         """Acquire a buffer of at least *size* bytes.
