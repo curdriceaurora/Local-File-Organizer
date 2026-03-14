@@ -18,7 +18,10 @@ from pathlib import Path
 from typing import Any
 
 from file_organizer.interfaces.pipeline import PipelineStage, StageContext
+from file_organizer.optimization.batch_sizer import AdaptiveBatchSizer
+from file_organizer.optimization.buffer_pool import BufferPool
 from file_organizer.optimization.memory_limiter import MemoryLimiter
+from file_organizer.optimization.resource_monitor import ResourceMonitor
 
 from .config import PipelineConfig
 from .processor_pool import (
@@ -30,6 +33,7 @@ from .processor_pool import (
 from .router import FileRouter, ProcessorType
 
 logger = logging.getLogger(__name__)
+_BUFFER_KEY = "pipeline.buffer"
 
 
 @dataclass(frozen=True)
@@ -125,6 +129,10 @@ class PipelineOrchestrator:
         prefetch_depth: int = 2,
         prefetch_stages: int = 1,
         memory_limiter: MemoryLimiter | None = None,
+        batch_sizer: AdaptiveBatchSizer | None = None,
+        buffer_pool: BufferPool | None = None,
+        resource_monitor: ResourceMonitor | None = None,
+        memory_pressure_threshold_percent: float = 85.0,
     ) -> None:
         """Initialize the pipeline orchestrator.
 
@@ -149,7 +157,25 @@ class PipelineOrchestrator:
                 prefetch slot may be opened.  When ``limiter.check()``
                 returns *False*, no new prefetch futures are submitted
                 until memory is available.
+            batch_sizer: Optional adaptive batch sizer used by
+                ``process_batch`` to chunk large inputs based on estimated
+                memory budget. When omitted, a default
+                :class:`~file_organizer.optimization.batch_sizer.AdaptiveBatchSizer`
+                is used.
+            buffer_pool: Optional shared byte-buffer pool used to reduce
+                allocation churn across file processing.
+            resource_monitor: Optional monitor used to detect memory pressure
+                and trigger buffer-pool resizing.
+            memory_pressure_threshold_percent: Threshold passed to
+                ``resource_monitor.should_evict()`` for proactive buffer-pool
+                shrink decisions. Must be between 0 and 100.
         """
+        if not 0.0 <= memory_pressure_threshold_percent <= 100.0:
+            raise ValueError(
+                "memory_pressure_threshold_percent must be between 0 and 100, "
+                f"got {memory_pressure_threshold_percent}"
+            )
+
         self.config = config or PipelineConfig()
         self.router = FileRouter()
         self.processor_pool = ProcessorPool()
@@ -160,6 +186,10 @@ class PipelineOrchestrator:
         self._prefetch_depth = max(0, prefetch_depth)
         self._prefetch_stages = max(0, prefetch_stages)
         self._memory_limiter = memory_limiter
+        self._batch_sizer = batch_sizer or AdaptiveBatchSizer()
+        self._buffer_pool = buffer_pool or BufferPool()
+        self._resource_monitor = resource_monitor or ResourceMonitor()
+        self._memory_pressure_threshold_percent = memory_pressure_threshold_percent
 
         self._running = False
         self._lock = threading.Lock()
@@ -175,14 +205,30 @@ class PipelineOrchestrator:
 
     @property
     def stages(self) -> list[PipelineStage]:
-        """Return the current stage list (mutable copy)."""
+        """
+        Get a mutable copy of the configured pipeline stages.
+        
+        Returns:
+            list[PipelineStage]: A list of the current PipelineStage instances. Modifying the returned list does not alter the orchestrator's internal stage order.
+        """
         return list(self._stages)
 
-    def set_stages(self, stages: Sequence[PipelineStage]) -> None:
-        """Replace the stage list at runtime (thread-safe).
+    @property
+    def buffer_pool(self) -> BufferPool:
+        """
+        Access the orchestrator's shared buffer pool.
+        
+        Returns:
+            BufferPool: The shared BufferPool instance used for allocating reusable I/O buffers.
+        """
+        return self._buffer_pool
 
-        Args:
-            stages: New ordered list of pipeline stages.
+    def set_stages(self, stages: Sequence[PipelineStage]) -> None:
+        """
+        Replace the orchestrator's pipeline stages with a new ordered list in a thread-safe manner.
+        
+        Parameters:
+        	stages (Sequence[PipelineStage]): Ordered sequence of PipelineStage instances to use for subsequent processing.
         """
         with self._lock:
             self._stages = list(stages)
@@ -284,18 +330,134 @@ class PipelineOrchestrator:
         Returns:
             List of ProcessingResult instances, one per file, in order.
         """
+        if not files:
+            return []
+
+        file_sizes = [self._safe_file_size(path) for path in files]
+        batch_size = max(
+            1,
+            self._batch_sizer.calculate_batch_size(
+                file_sizes,
+                # BufferPool allocates at least ``buffer_size`` per file and may
+                # allocate larger buffers for oversized files; using the base
+                # pool buffer size here keeps sizing conservative and stable.
+                overhead_per_file=self._buffer_pool.buffer_size,
+            ),
+        )
+
         # Snapshot once; set_stages() may replace self._stages concurrently.
         stages = self._stages
         if stages and self._prefetch_depth > 0 and self._prefetch_stages > 0 and len(files) > 1:
-            return self._process_batch_prefetch(files, stages)
-        if stages:
-            return [self._process_file_staged(f, stages) for f in files]
-        return [self._process_file_legacy(f) for f in files]
+            # Keep prefetch behavior deterministic (Issue #713 contracts) while
+            # still applying proactive memory feedback to the shared buffer pool.
+            results = self._process_batch_prefetch(files, stages)
+            self._rebalance_buffer_pool()
+            return results
+
+        results: list[ProcessingResult] = []
+        index = 0
+        while index < len(files):
+            upper = min(index + batch_size, len(files))
+            batch_files = files[index:upper]
+            results.extend(self._process_batch_chunk(batch_files, stages))
+            self._rebalance_buffer_pool()
+
+            if upper < len(files):
+                rss_bytes = self._safe_current_rss()
+                adjusted = self._batch_sizer.adjust_from_feedback(rss_bytes, len(batch_files))
+                batch_size = max(1, adjusted)
+            index = upper
+
+        return results
 
     @property
     def is_running(self) -> bool:
-        """Return True if the pipeline is currently running."""
+        """
+        Indicates whether the pipeline is currently running.
+        
+        Returns:
+            `true` if the pipeline is running, `false` otherwise.
+        """
         return self._running
+
+    def _safe_file_size(self, file_path: Path) -> int:
+        """
+        Get the size of a file in bytes or 0 if the size cannot be determined.
+        
+        Returns:
+            file_size (int): Size of the file in bytes, or 0 when the file size is unavailable.
+        """
+        try:
+            return file_path.stat().st_size
+        except OSError:
+            logger.debug("Unable to stat %s for adaptive batching", file_path, exc_info=True)
+            return 0
+
+    def _safe_current_rss(self) -> int:
+        """
+        Get the current process resident set size (RSS).
+        
+        Returns:
+            int: Current RSS in bytes, or 0 if the value cannot be determined.
+        """
+        try:
+            return self._resource_monitor.get_memory_usage().rss
+        except Exception:
+            logger.debug("Unable to read current RSS for adaptive batching", exc_info=True)
+            return 0
+
+    def _rebalance_buffer_pool(self) -> None:
+        """
+        Adjust the shared buffer pool size based on current memory pressure and utilization.
+        
+        If the resource monitor reports memory pressure, reduce the pool to at least the number
+        of buffers currently in use (but not below the pool's initial size). If there is no
+        memory pressure and utilization is high (>= 0.9) while the pool is below its maximum,
+        increase the pool capacity by a bounded growth step.
+        """
+        try:
+            under_pressure = self._resource_monitor.should_evict(
+                threshold_percent=self._memory_pressure_threshold_percent,
+            )
+        except Exception:
+            logger.debug("Failed to evaluate memory pressure for buffer pool", exc_info=True)
+            return
+
+        if under_pressure:
+            target = max(self._buffer_pool.initial_buffers, self._buffer_pool.in_use_count)
+            new_size = self._buffer_pool.resize(target)
+            logger.info(
+                "Memory pressure detected; resized buffer pool to %d buffers (target=%d)",
+                new_size,
+                target,
+            )
+            return
+
+        if (
+            self._buffer_pool.utilization >= 0.9
+            and self._buffer_pool.total_buffers < self._buffer_pool.max_buffers
+        ):
+            growth_step = max(1, self._buffer_pool.initial_buffers // 2)
+            target = min(
+                self._buffer_pool.max_buffers, self._buffer_pool.total_buffers + growth_step
+            )
+            new_size = self._buffer_pool.resize(target)
+            logger.debug("Increased buffer pool capacity to %d buffers", new_size)
+
+    def _process_batch_chunk(
+        self,
+        files: list[Path],
+        stages: list[PipelineStage],
+    ) -> list[ProcessingResult]:
+        """
+        Process a chunk of files through either the staged pipeline or the legacy processor while preserving input order.
+        
+        Returns:
+            results (list[ProcessingResult]): ProcessingResult for each input file, in the same order as `files`.
+        """
+        if stages:
+            return [self._process_file_staged(path, stages) for path in files]
+        return [self._process_file_legacy(path) for path in files]
 
     # ------------------------------------------------------------------
     # Stage-based processing (new)
@@ -369,25 +531,71 @@ class PipelineOrchestrator:
         )
 
     def _make_context(self, file_path: Path) -> StageContext:
-        """Create a fresh :class:`StageContext` for *file_path*.
-
-        Centralises the ``dry_run`` derivation so all three entry points
-        (``_process_file_staged``, the prefetch priming loop, and the
-        prefetch fallback path) stay in sync.
+        """
+        Create a new StageContext for the given file path.
+        
+        The returned context is initialized with `dry_run` set to the inverse of the orchestrator's
+        `config.should_move_files` flag.
+        
+        Returns:
+            StageContext: Context for `file_path` with `dry_run` configured from the pipeline config.
         """
         return StageContext(
             file_path=file_path,
             dry_run=not self.config.should_move_files,
         )
 
+    def _acquire_buffer(self, file_path: Path) -> bytearray | None:
+        """
+        Acquire a reusable bytearray buffer sized for the given file.
+        
+        Returns:
+            `bytearray` if a buffer was successfully acquired (sized at least to the file or the pool's buffer size), `None` if acquisition failed.
+        """
+        file_size = self._safe_file_size(file_path)
+        requested = max(self._buffer_pool.buffer_size, file_size)
+        try:
+            return self._buffer_pool.acquire(size=requested)
+        except Exception:
+            logger.warning("Failed to acquire buffer for %s", file_path, exc_info=True)
+            return None
+
+    def _release_buffer(self, file_path: Path, buffer: bytearray | None) -> None:
+        """
+        Release a previously acquired processing buffer back to the shared BufferPool. If `buffer` is `None`, the call is a no-op; failures during release are logged and suppressed.
+        
+        Parameters:
+            file_path (Path): Path of the file associated with the buffer (used for logging on errors).
+            buffer (bytearray | None): The buffer to return to the pool, or `None` to indicate no buffer.
+        """
+        if buffer is None:
+            return
+        try:
+            self._buffer_pool.release(buffer)
+        except Exception:
+            logger.warning("Failed to release buffer for %s", file_path, exc_info=True)
+
     def _process_file_staged(
         self, file_path: Path, stages: list[PipelineStage]
     ) -> ProcessingResult:
-        """Run *file_path* through the configured stages."""
+        """
+        Process a single file through the provided pipeline stages.
+        
+        If a reusable buffer is available, it is attached to the stage context for stages to use and is released when processing completes.
+        
+        Returns:
+            ProcessingResult: Outcome and metadata for the processed file, including category, destination, duration_ms, success state, and any error information.
+        """
         start_time = time.monotonic()
-        context = self._make_context(file_path)
-        context = self._run_stages(context, stages)
-        return self._finalize_result(context, start_time)
+        buffer = self._acquire_buffer(file_path)
+        try:
+            context = self._make_context(file_path)
+            if buffer is not None:
+                context.extra[_BUFFER_KEY] = buffer
+            context = self._run_stages(context, stages)
+            return self._finalize_result(context, start_time)
+        finally:
+            self._release_buffer(file_path, buffer)
 
     def _process_batch_prefetch(
         self, files: list[Path], stages: list[PipelineStage]
@@ -432,11 +640,33 @@ class PipelineOrchestrator:
         io_stages = stages[:effective_prefetch_stages]
         compute_stages = stages[effective_prefetch_stages:]
 
-        def _run_io(idx: int) -> StageContext:
-            ctx = self._make_context(files[idx])
-            return self._run_stages(ctx, io_stages)
+        def _run_io(idx: int) -> tuple[StageContext, bytearray | None]:
+            """
+            Run the I/O stages for the file at the given batch index and return the post-I/O StageContext with its acquired buffer.
+            
+            If a buffer is acquired, it is attached to the returned context under ctx.extra[_BUFFER_KEY]. If an exception occurs while running I/O stages, any acquired buffer is released before the exception is propagated.
+            
+            Parameters:
+                idx (int): Index of the file within the surrounding `files` batch to process.
+            
+            Returns:
+                tuple[StageContext, bytearray | None]: A tuple of the StageContext after running I/O stages and the acquired buffer (`bytearray`) if one was obtained, or `None` if no buffer was acquired.
+            """
+            file_path = files[idx]
+            buffer = self._acquire_buffer(file_path)
+            try:
+                ctx = self._make_context(file_path)
+                if buffer is not None:
+                    ctx.extra[_BUFFER_KEY] = buffer
+                io_ctx = self._run_stages(ctx, io_stages)
+                if buffer is not None:
+                    io_ctx.extra[_BUFFER_KEY] = buffer
+                return io_ctx, buffer
+            except Exception:
+                self._release_buffer(file_path, buffer)
+                raise
 
-        futures: dict[int, tuple[Future[StageContext], float]] = {}
+        futures: dict[int, tuple[Future[tuple[StageContext, bytearray | None]], float]] = {}
         results: list[ProcessingResult] = []
 
         with ThreadPoolExecutor(max_workers=self._prefetch_depth) as io_exec:
@@ -458,7 +688,7 @@ class PipelineOrchestrator:
                 if i in futures:
                     future, start_time = futures.pop(i)
                     try:
-                        ctx = future.result()
+                        ctx, buffer = future.result()
                     except Exception as exc:
                         logger.warning(
                             "Prefetch future failed for %s: %s",
@@ -468,13 +698,18 @@ class PipelineOrchestrator:
                         )
                         ctx = self._make_context(files[i])
                         ctx.error = str(exc)
+                        buffer = None
                 else:
                     start_time = time.monotonic()
-                    ctx = _run_io(i)
+                    ctx, buffer = _run_io(i)
 
                 # Run compute stages on the calling thread.
-                ctx = self._run_stages(ctx, compute_stages)
-                results.append(self._finalize_result(ctx, start_time))
+                try:
+                    ctx = self._run_stages(ctx, compute_stages)
+                    results.append(self._finalize_result(ctx, start_time))
+                finally:
+                    self._release_buffer(files[i], buffer)
+                    ctx.extra.pop(_BUFFER_KEY, None)
 
         return results
 
@@ -483,126 +718,144 @@ class PipelineOrchestrator:
     # ------------------------------------------------------------------
 
     def _process_file_legacy(self, file_path: Path) -> ProcessingResult:
-        """Original monolithic processing path."""
+        """
+        Process a single file using the legacy (non-staged) routing and processor pipeline.
+        
+        This method routes the file to an appropriate processor, invokes processing, updates pipeline statistics, and optionally moves the file to the configured output location. It also sends success/failure notifications and returns a ProcessingResult summarizing the outcome.
+        
+        Returns:
+            ProcessingResult: Describes the file's processing outcome — `success` status, `category`, `destination` path if created, `duration_ms`, `error` message if any, `processor_type`, and `dry_run` flag.
+        """
         start_time = time.monotonic()
-        file_path = Path(file_path)
+        buffer = self._acquire_buffer(file_path)
 
-        # Validate file exists
-        if not file_path.exists():
-            return ProcessingResult(
-                file_path=file_path,
-                success=False,
-                error=f"File not found: {file_path}",
-                dry_run=self.config.dry_run,
-            )
-
-        if not file_path.is_file():
-            return ProcessingResult(
-                file_path=file_path,
-                success=False,
-                error=f"Not a file: {file_path}",
-                dry_run=self.config.dry_run,
-            )
-
-        # Check if extension is supported
-        if not self.config.is_supported(file_path):
-            duration_ms = (time.monotonic() - start_time) * 1000
-            with self._stats_lock:
-                self.stats.skipped += 1
-            return ProcessingResult(
-                file_path=file_path,
-                success=False,
-                error=f"Unsupported file extension: {file_path.suffix}",
-                duration_ms=duration_ms,
-                dry_run=self.config.dry_run,
-            )
-
-        # Route to processor
-        processor_type = self.router.route(file_path)
-
-        if processor_type == ProcessorType.UNKNOWN:
-            duration_ms = (time.monotonic() - start_time) * 1000
-            with self._stats_lock:
-                self.stats.skipped += 1
-            return ProcessingResult(
-                file_path=file_path,
-                success=False,
-                error="No processor available for this file type",
-                processor_type=processor_type,
-                duration_ms=duration_ms,
-                dry_run=self.config.dry_run,
-            )
-
-        # Get processor from pool
-        processor = self.processor_pool.get_processor(processor_type)
-
-        if processor is None:
-            duration_ms = (time.monotonic() - start_time) * 1000
-            with self._stats_lock:
-                self.stats.failed += 1
-            return ProcessingResult(
-                file_path=file_path,
-                success=False,
-                error=f"Failed to initialize {processor_type.value} processor",
-                processor_type=processor_type,
-                duration_ms=duration_ms,
-                dry_run=self.config.dry_run,
-            )
-
-        # Process the file
         try:
-            result = self._process_with_processor(file_path, processor, processor_type)
-            duration_ms = (time.monotonic() - start_time) * 1000
+            # Validate file exists
+            if not file_path.exists():
+                return ProcessingResult(
+                    file_path=file_path,
+                    success=False,
+                    error=f"File not found: {file_path}",
+                    dry_run=self.config.dry_run,
+                )
 
-            # Build destination path
-            category = result.get("category", "uncategorized")
-            filename = result.get("filename", file_path.stem)
-            destination = self.config.output_directory / category / f"{filename}{file_path.suffix}"
+            if not file_path.is_file():
+                return ProcessingResult(
+                    file_path=file_path,
+                    success=False,
+                    error=f"Not a file: {file_path}",
+                    dry_run=self.config.dry_run,
+                )
 
-            # Organize file if configured
-            if self.config.should_move_files:
-                self._organize_file(file_path, destination)
+            # Check if extension is supported
+            if not self.config.is_supported(file_path):
+                duration_ms = (time.monotonic() - start_time) * 1000
+                with self._stats_lock:
+                    self.stats.skipped += 1
+                return ProcessingResult(
+                    file_path=file_path,
+                    success=False,
+                    error=f"Unsupported file extension: {file_path.suffix}",
+                    duration_ms=duration_ms,
+                    dry_run=self.config.dry_run,
+                )
 
-            # Update stats
-            with self._stats_lock:
-                self.stats.total_processed += 1
-                self.stats.successful += 1
-                self.stats.total_duration_ms += duration_ms
+            # Route to processor
+            processor_type = self.router.route(file_path)
 
-            processing_result = ProcessingResult(
-                file_path=file_path,
-                success=True,
-                category=category,
-                destination=destination,
-                duration_ms=duration_ms,
-                processor_type=processor_type,
-                dry_run=self.config.dry_run,
-            )
+            if processor_type == ProcessorType.UNKNOWN:
+                duration_ms = (time.monotonic() - start_time) * 1000
+                with self._stats_lock:
+                    self.stats.skipped += 1
+                return ProcessingResult(
+                    file_path=file_path,
+                    success=False,
+                    error="No processor available for this file type",
+                    processor_type=processor_type,
+                    duration_ms=duration_ms,
+                    dry_run=self.config.dry_run,
+                )
 
-            self._notify(file_path, True)
-            return processing_result
+            # Get processor from pool
+            processor = self.processor_pool.get_processor(processor_type)
 
-        except Exception as e:
-            duration_ms = (time.monotonic() - start_time) * 1000
-            with self._stats_lock:
-                self.stats.total_processed += 1
-                self.stats.failed += 1
-                self.stats.total_duration_ms += duration_ms
+            if processor is None:
+                duration_ms = (time.monotonic() - start_time) * 1000
+                with self._stats_lock:
+                    self.stats.failed += 1
+                return ProcessingResult(
+                    file_path=file_path,
+                    success=False,
+                    error=f"Failed to initialize {processor_type.value} processor",
+                    processor_type=processor_type,
+                    duration_ms=duration_ms,
+                    dry_run=self.config.dry_run,
+                )
 
-            logger.exception("Failed to process %s", file_path)
+            # Process the file
+            try:
+                result = self._process_with_processor(file_path, processor, processor_type)
+                duration_ms = (time.monotonic() - start_time) * 1000
 
-            self._notify(file_path, False)
-            return ProcessingResult(
-                file_path=file_path,
-                success=False,
-                error=str(e),
-                processor_type=processor_type,
-                duration_ms=duration_ms,
-                dry_run=self.config.dry_run,
-            )
+                # Build destination path
+                category = result.get("category", "uncategorized")
+                filename = result.get("filename", file_path.stem)
+                destination = (
+                    self.config.output_directory / category / f"{filename}{file_path.suffix}"
+                )
+
+                # Organize file if configured
+                if self.config.should_move_files:
+                    self._organize_file(file_path, destination)
+
+                # Update stats
+                with self._stats_lock:
+                    self.stats.total_processed += 1
+                    self.stats.successful += 1
+                    self.stats.total_duration_ms += duration_ms
+
+                processing_result = ProcessingResult(
+                    file_path=file_path,
+                    success=True,
+                    category=category,
+                    destination=destination,
+                    duration_ms=duration_ms,
+                    processor_type=processor_type,
+                    dry_run=self.config.dry_run,
+                )
+
+                self._notify(file_path, True)
+                return processing_result
+
+            except Exception as e:
+                duration_ms = (time.monotonic() - start_time) * 1000
+                with self._stats_lock:
+                    self.stats.total_processed += 1
+                    self.stats.failed += 1
+                    self.stats.total_duration_ms += duration_ms
+
+                logger.exception("Failed to process %s", file_path)
+
+                self._notify(file_path, False)
+                return ProcessingResult(
+                    file_path=file_path,
+                    success=False,
+                    error=str(e),
+                    processor_type=processor_type,
+                    duration_ms=duration_ms,
+                    dry_run=self.config.dry_run,
+                )
+        finally:
+            self._release_buffer(file_path, buffer)
 
     def _notify(self, file_path: Path, success: bool) -> None:
-        """Fire the notification callback, swallowing exceptions."""
+        """
+        Invoke the configured notification callback for a file and swallow any exceptions raised by the callback.
+        
+        Parameters:
+            file_path (Path): Path of the file that was processed.
+            success (bool): `True` if processing succeeded, `False` otherwise.
+        """
         if self.config.notification_callback is not None:
             try:
                 self.config.notification_callback(file_path, success)
