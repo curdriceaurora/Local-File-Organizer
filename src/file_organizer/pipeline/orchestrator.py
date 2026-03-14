@@ -386,7 +386,7 @@ class PipelineOrchestrator:
         """Return current process RSS in bytes, or 0 when unavailable."""
         try:
             return self._resource_monitor.get_memory_usage().rss
-        except (OSError, RuntimeError):
+        except (OSError, RuntimeError, ValueError):
             logger.debug("Unable to read current RSS for adaptive batching", exc_info=True)
             return 0
 
@@ -400,7 +400,7 @@ class PipelineOrchestrator:
             under_pressure = self._resource_monitor.should_evict(
                 threshold_percent=self._memory_pressure_threshold_percent,
             )
-        except (OSError, RuntimeError):
+        except (OSError, RuntimeError, ValueError):
             logger.debug("Failed to evaluate memory pressure for buffer pool", exc_info=True)
             return
 

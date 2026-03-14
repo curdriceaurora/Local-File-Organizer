@@ -7,7 +7,7 @@ action_refresh_preview, action_confirm, action_cancel, _set_status.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import pytest
 
@@ -131,9 +131,23 @@ class TestOrganizationPreviewViewLoadPreview:
         ):
             OrganizationPreviewView._load_preview.__wrapped__(view)
 
-        assert mock_app.call_from_thread.call_count >= 3
-        before_after_panel.set_structure.assert_called_once()
-        summary_panel.set_result.assert_called_once()
+        assert mock_app.call_from_thread.call_count == 3
+        before_after_panel.set_structure.assert_called_once_with(
+            {"Docs": ["a.pdf"]},
+            str(view._input_dir),
+        )
+        summary_panel.set_result.assert_called_once_with(
+            total=10,
+            processed=8,
+            skipped=1,
+            failed=1,
+            folders=1,
+            errors=[("bad.txt", "corrupt")],
+        )
+        assert mock_app.call_from_thread.call_args_list[-1] == call(
+            view._set_status,
+            "Preview loaded",
+        )
 
     def test_load_preview_exception(self) -> None:
         view = OrganizationPreviewView()
@@ -160,8 +174,11 @@ class TestOrganizationPreviewViewLoadPreview:
         ):
             OrganizationPreviewView._load_preview.__wrapped__(view)
 
-        assert mock_app.call_from_thread.call_count >= 2
-        before_after_panel.update.assert_called_once()
+        assert mock_app.call_from_thread.call_count == 2
+        before_after_panel.update.assert_called_once_with(
+            "[red]Models unavailable:[/red] model not found\n\n"
+            "[dim]Ensure Ollama is running with required models.[/dim]"
+        )
         summary_panel.update.assert_called_once_with("[dim]No data available.[/dim]")
 
     def test_action_refresh_preview(self) -> None:

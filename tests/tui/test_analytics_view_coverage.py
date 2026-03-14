@@ -7,7 +7,7 @@ action_refresh_analytics, and _set_status.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import pytest
 
@@ -104,11 +104,31 @@ class TestAnalyticsViewLoadAnalytics:
         ):
             AnalyticsView._load_analytics.__wrapped__(view)
 
-        storage_panel.set_stats.assert_called_once()
+        storage_panel.set_stats.assert_called_once_with(
+            total_size="10 GB",
+            file_count=100,
+            dir_count=10,
+            organized_size=_format_bytes(5_000_000),
+            saved_size="2 GB",
+        )
         distribution_panel.set_distribution.assert_called_once_with({".txt": 1000, ".py": 2000})
-        quality_panel.set_metrics.assert_called_once()
-        duplicate_panel.set_stats.assert_called_once()
-        assert mock_app.call_from_thread.call_count >= 5
+        quality_panel.set_metrics.assert_called_once_with(
+            grade="B",
+            naming=0.8,
+            structure=0.7,
+            metadata=0.6,
+            categorization=0.9,
+        )
+        duplicate_panel.set_stats.assert_called_once_with(
+            groups=3,
+            space_wasted="500 MB",
+            recoverable="300 MB",
+        )
+        assert mock_app.call_from_thread.call_count == 5
+        assert mock_app.call_from_thread.call_args_list[-1] == call(
+            view._set_status,
+            "Analytics loaded",
+        )
 
     def test_load_analytics_exception(self) -> None:
         view = AnalyticsView()
