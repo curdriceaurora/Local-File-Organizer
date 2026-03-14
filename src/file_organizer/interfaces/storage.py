@@ -7,13 +7,13 @@ storage backends.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import Any, Final, Protocol, TypeVar, runtime_checkable
 
 T = TypeVar("T")
 
 #: Sentinel used by :meth:`StorageProtocol.get` to distinguish a stored
 #: ``None`` value from a missing key.
-MISSING: Any = object()
+MISSING: Final[object] = object()
 
 
 @runtime_checkable

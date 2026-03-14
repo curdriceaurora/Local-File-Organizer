@@ -8,11 +8,13 @@ validate structural conformance only.
 
 from __future__ import annotations
 
+import inspect
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from file_organizer.interfaces import (
+    MISSING,
     AudioModelProtocol,
     BatchProcessorProtocol,
     CacheProtocol,
@@ -229,8 +231,8 @@ class TestStorageProtocolConformance:
 
     def test_stub_satisfies_storage_protocol(self) -> None:
         class _StubStorage:
-            def get(self, key: str) -> object | None:
-                return None
+            def get(self, key: str, default: object = MISSING) -> object:
+                return default
 
             def put(self, key: str, value: object) -> None:
                 pass
@@ -241,6 +243,12 @@ class TestStorageProtocolConformance:
             def exists(self, key: str) -> bool:
                 return False
 
+        protocol_params = list(inspect.signature(StorageProtocol.get).parameters.values())
+        stub_params = list(inspect.signature(_StubStorage.get).parameters.values())
+        assert len(stub_params) == len(protocol_params)
+        assert [param.name for param in stub_params] == [param.name for param in protocol_params]
+        assert [param.kind for param in stub_params] == [param.kind for param in protocol_params]
+        assert stub_params[-1].default is MISSING
         assert isinstance(_StubStorage(), StorageProtocol)
 
 
