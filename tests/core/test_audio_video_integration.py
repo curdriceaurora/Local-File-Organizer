@@ -161,11 +161,19 @@ class TestProcessVideoFiles:
         assert results[0].error is not None
         assert results[0].folder_name == "Videos/Unsorted"
 
-    def test_missing_video_file_raises(self, tmp_path: Path) -> None:
-        """FileNotFoundError propagates — calling code should validate first."""
+    def test_missing_video_file_returns_fallback_result(self, tmp_path: Path) -> None:
+        """Missing files should produce an error result, not raise."""
         organizer = FileOrganizer()
-        with pytest.raises(FileNotFoundError):
-            organizer._process_video_files([tmp_path / "nonexistent.mp4"])
+        missing = tmp_path / "nonexistent.mp4"
+
+        results = organizer._process_video_files([missing])
+
+        assert len(results) == 1
+        assert results[0].file_path == missing
+        assert results[0].error is not None
+        assert "not found" in results[0].error.lower()
+        assert results[0].folder_name == "Videos/Unsorted"
+        assert results[0].filename == "nonexistent"
 
 
 # ---------------------------------------------------------------------------
