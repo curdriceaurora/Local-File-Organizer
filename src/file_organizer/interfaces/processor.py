@@ -18,6 +18,12 @@ class FileProcessorProtocol(Protocol):
 
     Implementations accept a file path and return a processed-file
     dataclass (``ProcessedFile``, ``ProcessedImage``, etc.).
+
+    The three keyword arguments below are the common subset shared by
+    every concrete processor (``TextProcessor``, ``VisionProcessor``, etc.).
+    Individual implementations may expose additional keyword-only parameters
+    (e.g. ``perform_ocr`` on ``VisionProcessor``) without violating this
+    protocol.
     """
 
     def initialize(self) -> None:
@@ -27,9 +33,24 @@ class FileProcessorProtocol(Protocol):
     def process_file(
         self,
         file_path: str | Path,
-        **kwargs: Any,
+        *,
+        generate_description: bool = True,
+        generate_folder: bool = True,
+        generate_filename: bool = True,
     ) -> Any:
-        """Process a single file and return a result dataclass."""
+        """Process a single file and return a result dataclass.
+
+        Args:
+            file_path: Path to the file to process.
+            generate_description: Whether to generate a natural-language
+                description of the file's content.
+            generate_folder: Whether to suggest a target folder name.
+            generate_filename: Whether to suggest a new filename.
+
+        Returns:
+            A processed-file dataclass (e.g. ``ProcessedFile``,
+            ``ProcessedImage``) containing the generated metadata.
+        """
         ...
 
 
