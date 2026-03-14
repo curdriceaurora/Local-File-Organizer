@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tracemalloc
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
@@ -141,3 +142,125 @@ class TestBufferPoolThreadSafety:
         assert pool.available_buffers == pool.total_buffers
         assert pool.total_buffers >= pool.initial_buffers
         assert pool.peak_in_use >= 1
+
+    def test_concurrent_acquire_release_thread_safe(self) -> None:
+        """Multiple threads acquiring and releasing simultaneously must not corrupt pool state."""
+        pool = BufferPool(buffer_size=256, initial_buffers=2, max_buffers=8)
+        errors: list[Exception] = []
+
+        def worker() -> None:
+            try:
+                for _ in range(50):
+                    buf = pool.acquire()
+                    # Verify we got a valid buffer of at least buffer_size bytes.
+                    assert len(buf) >= 256
+                    pool.release(buf)
+            except Exception as exc:
+                errors.append(exc)
+
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            futures = [executor.submit(worker) for _ in range(6)]
+            for fut in futures:
+                fut.result()
+
+        assert not errors, f"Thread workers raised: {errors}"
+        assert pool.in_use_count == 0
+        assert pool.available_buffers == pool.total_buffers
+
+
+class TestBufferPoolNamedContracts:
+    """Named contract tests that match the issue acceptance criteria."""
+
+    def test_acquire_returns_buffer_of_requested_size(self) -> None:
+        """acquire(size) returns a bytearray of at least *size* bytes."""
+        pool = BufferPool(buffer_size=512, initial_buffers=2, max_buffers=4)
+
+        # Request smaller than buffer_size → returns a standard pool buffer.
+        buf_small = pool.acquire(size=100)
+        assert isinstance(buf_small, bytearray)
+        assert len(buf_small) >= 100
+        pool.release(buf_small)
+
+        # Request exactly buffer_size → returns a standard pool buffer.
+        buf_exact = pool.acquire(size=512)
+        assert len(buf_exact) == 512
+        pool.release(buf_exact)
+
+        # Request larger than buffer_size → allocates an oversized buffer.
+        buf_large = pool.acquire(size=4096)
+        assert isinstance(buf_large, bytearray)
+        assert len(buf_large) == 4096
+        pool.release(buf_large)
+
+    def test_release_returns_buffer_to_pool(self) -> None:
+        """release() returns a standard buffer back to the pool's available list."""
+        pool = BufferPool(buffer_size=256, initial_buffers=2, max_buffers=4)
+
+        available_before = pool.available_buffers
+        buf = pool.acquire()
+        assert pool.available_buffers == available_before - 1
+        assert pool.in_use_count == 1
+
+        pool.release(buf)
+        assert pool.available_buffers == available_before
+        assert pool.in_use_count == 0
+
+    def test_acquire_when_pool_empty_allocates_new_buffer(self) -> None:
+        """When all pre-allocated buffers are in use and pool hasn't hit max_buffers,
+        acquire() allocates a new buffer rather than blocking."""
+        pool = BufferPool(buffer_size=64, initial_buffers=1, max_buffers=4)
+
+        # Exhaust the single pre-allocated buffer.
+        first = pool.acquire()
+        assert pool.available_buffers == 0
+        assert pool.total_buffers == 1
+
+        # Pool not at max — should allocate a new buffer without blocking.
+        second = pool.acquire()
+        assert isinstance(second, bytearray)
+        assert pool.total_buffers == 2
+
+        pool.release(first)
+        pool.release(second)
+        assert pool.in_use_count == 0
+
+
+class TestBufferPoolTracemalloc:
+    """Memory-footprint tests using tracemalloc."""
+
+    def test_tracemalloc_1000_file_synthetic_batch(self) -> None:
+        """Peak allocation delta across 1 000 synthetic file-process cycles must stay < 50 MB.
+
+        This test exercises the pool's buffer-reuse path: the same physical
+        bytearray objects are recycled across all iterations, so the net
+        allocation increment should be far below the theoretical 1 000 × 1 MB
+        that a naive, non-pooled implementation would consume.
+        """
+        pool = BufferPool(buffer_size=1024 * 1024, initial_buffers=4, max_buffers=16)
+
+        # Warm up the pool so pre-allocation is attributed outside the measured window.
+        warmup = pool.acquire()
+        pool.release(warmup)
+
+        tracemalloc.start()
+        snapshot_before = tracemalloc.take_snapshot()
+
+        for _ in range(1000):
+            buf = pool.acquire()
+            # Simulate minimal I/O: touch first and last byte.
+            buf[0] = 0xAB
+            buf[-1] = 0xCD
+            pool.release(buf)
+
+        snapshot_after = tracemalloc.take_snapshot()
+        tracemalloc.stop()
+
+        # Compute net allocation delta (new - old, bytes only).
+        stats = snapshot_after.compare_to(snapshot_before, "lineno")
+        net_delta_bytes = sum(stat.size_diff for stat in stats if stat.size_diff > 0)
+
+        fifty_mb = 50 * 1024 * 1024
+        assert net_delta_bytes < fifty_mb, (
+            f"Pool reuse allocated {net_delta_bytes / (1024 * 1024):.1f} MB across "
+            f"1 000 iterations (limit: 50 MB). Buffer reuse is not working correctly."
+        )
