@@ -57,6 +57,13 @@ class TestOrganize:
         assert result.exit_code == 0
         assert "8 processed" in result.output
         assert "1 skipped" in result.output
+        mock_cls.assert_called_once_with(
+            dry_run=False,
+            parallel_workers=None,
+            prefetch_depth=2,
+            enable_vision=True,
+            no_prefetch=False,
+        )
 
     @patch("file_organizer.core.organizer.FileOrganizer")
     def test_organize_dry_run(self, mock_cls: MagicMock, tmp_path: Path) -> None:
@@ -72,6 +79,99 @@ class TestOrganize:
         result = runner.invoke(app, ["organize", str(input_dir), str(output_dir), "--dry-run"])
         assert result.exit_code == 0
         assert "dry run" in result.output.lower() or "Dry run" in result.output
+        mock_cls.assert_called_once_with(
+            dry_run=True,
+            parallel_workers=None,
+            prefetch_depth=2,
+            enable_vision=True,
+            no_prefetch=False,
+        )
+
+    @patch("file_organizer.core.organizer.FileOrganizer")
+    def test_organize_parallel_controls(self, mock_cls: MagicMock, tmp_path: Path) -> None:
+        """CLI parallel controls should be wired into runtime config."""
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        input_dir.mkdir()
+        output_dir.mkdir()
+
+        mock_org = MagicMock()
+        mock_cls.return_value = mock_org
+        mock_org.organize.return_value = _mock_result()
+
+        result = runner.invoke(
+            app,
+            [
+                "organize",
+                str(input_dir),
+                str(output_dir),
+                "--max-workers",
+                "3",
+                "--prefetch-depth",
+                "1",
+                "--no-vision",
+            ],
+        )
+        assert result.exit_code == 0
+        mock_cls.assert_called_once_with(
+            dry_run=False,
+            parallel_workers=3,
+            prefetch_depth=1,
+            enable_vision=False,
+            no_prefetch=False,
+        )
+
+    @patch("file_organizer.core.organizer.FileOrganizer")
+    def test_organize_sequential_forces_single_worker(
+        self, mock_cls: MagicMock, tmp_path: Path
+    ) -> None:
+        """--sequential should force one worker and disable queue-ahead."""
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        input_dir.mkdir()
+        output_dir.mkdir()
+
+        mock_org = MagicMock()
+        mock_cls.return_value = mock_org
+        mock_org.organize.return_value = _mock_result()
+
+        result = runner.invoke(
+            app,
+            ["organize", str(input_dir), str(output_dir), "--sequential"],
+        )
+        assert result.exit_code == 0
+        mock_cls.assert_called_once_with(
+            dry_run=False,
+            parallel_workers=1,
+            prefetch_depth=0,
+            enable_vision=True,
+            no_prefetch=False,
+        )
+
+    @patch("file_organizer.core.organizer.FileOrganizer")
+    def test_organize_rejects_incompatible_worker_flags(
+        self, mock_cls: MagicMock, tmp_path: Path
+    ) -> None:
+        """--sequential and --max-workers>1 should fail fast."""
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        input_dir.mkdir()
+        output_dir.mkdir()
+
+        result = runner.invoke(
+            app,
+            [
+                "organize",
+                str(input_dir),
+                str(output_dir),
+                "--sequential",
+                "--max-workers",
+                "4",
+            ],
+        )
+        assert result.exit_code == 2
+        assert "--sequential cannot be combined with --max-workers > 1" in result.output
+        mock_cls.assert_not_called()
 
     @patch(
         "file_organizer.core.organizer.FileOrganizer",

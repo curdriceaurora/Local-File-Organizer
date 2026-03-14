@@ -193,10 +193,13 @@ class ParallelProcessor:
         completed_count = 0
         total = len(files)
 
-        # Use a bounded set of futures to control memory usage (backpressure)
-        # Keep at most 2 * max_workers pending futures to cap memory growth.
-        # Timeout is measured from task start (future.running()), not submission time.
-        limit = max_workers * 2
+        # Use a bounded set of futures to control memory usage (backpressure).
+        # ``prefetch_depth`` controls how far ahead we queue work per worker.
+        # Depth 0 is an explicit no-prefetch mode with sequential submit/consume.
+        if self._config.prefetch_depth == 0:
+            limit = 1
+        else:
+            limit = max_workers * self._config.prefetch_depth
         submit_round = min(limit, self._config.chunk_size)
         timeout = self._config.timeout_per_file
         # Poll more frequently for short timeouts to reduce timeout-detection drift.

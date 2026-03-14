@@ -51,16 +51,15 @@ def test_no_prefetch_contract_matches_cli_runtime_and_docs() -> None:
 
     assert result.exit_code == 0
     assert "--no-prefetch" in rendered_help
-    assert "Currently has no effect for this command" in cli_help
-    assert "ParallelProcessor, not PipelineOrchestrator" in cli_help
-    assert "Has no effect on the legacy processor path." in organizer_init_doc
-    assert "no_prefetch=True has no effect" in organizer_init_source
-    assert "Currently has no effect for `file-organizer organize`" in cli_reference
-    assert "only emits a warning" in cli_reference
-    assert "`--no-prefetch` on the `file-organizer organize` CLI is currently a no-op" in (
-        performance_doc
-    )
-    assert "set `prefetch_depth=0`" in performance_doc
+    assert "--prefetch-depth" in rendered_help
+    assert "Backward-compatible" in cli_help
+    assert "alias for" in cli_help
+    assert "--prefetch-depth 0." in cli_help
+    assert "Backward-compatible alias for ``prefetch_depth=0``." in organizer_init_doc
+    assert "no_prefetch=True overrides prefetch_depth" in organizer_init_source
+    assert "`--no-prefetch`" in cli_reference
+    assert "alias for `--prefetch-depth 0`" in cli_reference
+    assert "alias for `--prefetch-depth 0`" in performance_doc
 
 
 def test_prefetch_depth_contract_matches_runtime_and_docs() -> None:

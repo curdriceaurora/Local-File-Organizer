@@ -37,7 +37,13 @@ def test_organize_command_live(mock_organizer_cls, tmp_path):
 
     assert result.exit_code == 0
     assert "Organizing" in result.stdout
-    mock_organizer_cls.assert_called_once_with(dry_run=False, no_prefetch=False)
+    mock_organizer_cls.assert_called_once_with(
+        dry_run=False,
+        parallel_workers=None,
+        prefetch_depth=2,
+        enable_vision=True,
+        no_prefetch=False,
+    )
     mock_instance.organize.assert_called_once_with(in_dir, out_dir)
 
 
@@ -56,7 +62,13 @@ def test_organize_command_dry_run(mock_organizer_cls, tmp_path):
 
     assert result.exit_code == 0
     assert "Dry run mode" in result.stdout
-    mock_organizer_cls.assert_called_once_with(dry_run=True, no_prefetch=False)
+    mock_organizer_cls.assert_called_once_with(
+        dry_run=True,
+        parallel_workers=None,
+        prefetch_depth=2,
+        enable_vision=True,
+        no_prefetch=False,
+    )
     mock_instance.organize.assert_called_once_with(in_dir, out_dir)
 
 

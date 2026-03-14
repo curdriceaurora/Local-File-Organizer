@@ -257,6 +257,41 @@ class TestVisionProcessorProcessFile:
         assert result.has_text is True
         assert len(result.extracted_text) == 500
 
+    def test_process_file_trips_circuit_on_fatal_backend_error(
+        self, mock_vision_model: MagicMock, tmp_path: Path
+    ) -> None:
+        """Fatal backend errors should open circuit and stop repeated model calls."""
+        img1 = tmp_path / "first.jpg"
+        img2 = tmp_path / "second.jpg"
+        img1.write_bytes(b"\xff\xd8")
+        img2.write_bytes(b"\xff\xd8")
+
+        call_count = 0
+
+        def _fatal_generate(**_: object) -> str:
+            nonlocal call_count
+            call_count += 1
+            raise RuntimeError(
+                "model runner has unexpectedly stopped; "
+                "health resp: dial tcp 127.0.0.1:6948 connect: connection refused "
+                "(status code: 500)"
+            )
+
+        mock_vision_model.generate.side_effect = _fatal_generate
+        processor = VisionProcessor(
+            vision_model=mock_vision_model,
+            backend_cooldown_seconds=120.0,
+        )
+
+        first = processor.process_file(img1)
+        second = processor.process_file(img2)
+
+        assert call_count == 1
+        assert first.error is None
+        assert second.error is None
+        assert second.folder_name == "images"
+        assert second.filename == "second"
+
 
 @pytest.mark.unit
 class TestVisionProcessorCleanName:

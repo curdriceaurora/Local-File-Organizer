@@ -48,7 +48,11 @@ file-organizer organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 
 - `--dry-run` — Preview without moving files
 - `--verbose, -v` — Verbose output
-- `--no-prefetch` — Reserved for future stage-based pipeline debugging. Currently has no effect for `file-organizer organize` (which uses the legacy `ParallelProcessor` path) and only emits a warning.
+- `--max-workers INTEGER` — Cap parallel worker count
+- `--sequential` — Force single-worker sequential processing
+- `--no-vision`, `--text-only` — Disable vision model loading and use extension fallback for images
+- `--prefetch-depth INTEGER` — Parallel task queue-ahead depth (`0` disables prefetch queueing)
+- `--no-prefetch` — Backward-compatible alias for `--prefetch-depth 0`
 
 **Examples:**
 
@@ -62,7 +66,16 @@ file-organizer organize ~/Downloads ~/Organized --dry-run
 # Verbose output
 file-organizer organize ~/Downloads ~/Organized --verbose
 
-# Reserved flag: currently a no-op for `organize` (emits a warning only)
+# Limit CPU/IO pressure on constrained machines
+file-organizer organize ~/Downloads ~/Organized --max-workers 2 --prefetch-depth 1
+
+# Strict sequential mode for deterministic debugging
+file-organizer organize ~/Downloads ~/Organized --sequential
+
+# Disable AI vision processing and use extension-based image fallback
+file-organizer organize ~/Downloads ~/Organized --no-vision
+
+# Backward-compatible alias
 file-organizer organize ~/Downloads ~/Organized --no-prefetch
 ```
 
