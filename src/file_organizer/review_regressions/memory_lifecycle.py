@@ -25,6 +25,9 @@ _POOL_FUNCTION_NAMES = {"acquire", "release", "_get_buffer"}
 # Class names where buffer-ownership via len() is forbidden
 _POOL_CLASS_NAMES = {"BufferPool"}
 
+_BUFFER_NAME_TOKENS = ("buf", "buffer")
+_FEEDBACK_METHOD_NAMES = {"adjust_from_feedback"}
+
 
 def _iter_memory_lifecycle_python_files(root: Path) -> list[Path]:
     source_root = root / _SOURCE_ROOT
@@ -87,13 +90,19 @@ def _is_buffer_pool_call(node: ast.AST) -> bool:
     return False
 
 
-def _has_subtraction_parent(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> bool:
-    """Return True if node is the direct operand of a subtraction expression."""
-    parent = parents.get(node)
-    if parent is None:
-        return False
-    if isinstance(parent, ast.BinOp) and isinstance(parent.op, ast.Sub):
-        return True
+def _is_buffer_like_name(name: str) -> bool:
+    """Return True when *name* looks like a buffer variable."""
+    lowered = name.lower()
+    return any(token in lowered for token in _BUFFER_NAME_TOKENS)
+
+
+def _has_subtraction_ancestor(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> bool:
+    """Return True when node is contained in a subtraction expression."""
+    current: ast.AST | None = node
+    while current is not None:
+        current = parents.get(current)
+        if isinstance(current, ast.BinOp) and isinstance(current.op, ast.Sub):
+            return True
     return False
 
 
@@ -109,6 +118,54 @@ def _is_rss_access(node: ast.AST) -> bool:
     func = value.func
     if isinstance(func, ast.Attribute) and func.attr == "memory_info":
         return True
+    return False
+
+
+def _nearest_assignment_ancestor(
+    node: ast.AST, parents: dict[ast.AST, ast.AST]
+) -> ast.Assign | ast.AnnAssign | None:
+    """Return the nearest assignment node containing *node*."""
+    current: ast.AST | None = node
+    while current is not None:
+        current = parents.get(current)
+        if isinstance(current, (ast.Assign, ast.AnnAssign)):
+            return current
+    return None
+
+
+def _assignment_target_names(node: ast.Assign | ast.AnnAssign) -> set[str]:
+    """Return simple assignment target names for Assign/AnnAssign nodes."""
+    names: set[str] = set()
+    targets = [node.target] if isinstance(node, ast.AnnAssign) else node.targets
+    for target in targets:
+        if isinstance(target, ast.Name):
+            names.add(target.id)
+        elif isinstance(target, ast.Attribute):
+            names.add(target.attr)
+    return names
+
+
+def _is_baseline_assignment(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> bool:
+    """Return True if *node* is assigned into a baseline variable."""
+    assign = _nearest_assignment_ancestor(node, parents)
+    if assign is None:
+        return False
+    names = _assignment_target_names(assign)
+    return any("baseline" in name.lower() for name in names)
+
+
+def _is_adjust_feedback_argument(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> bool:
+    """Return True when *node* is passed to adjust_from_feedback(...)."""
+    current: ast.AST | None = node
+    while current is not None:
+        current = parents.get(current)
+        if not isinstance(current, ast.Call):
+            continue
+        func = current.func
+        if isinstance(func, ast.Name) and func.id in _FEEDBACK_METHOD_NAMES:
+            return True
+        if isinstance(func, ast.Attribute) and func.attr in _FEEDBACK_METHOD_NAMES:
+            return True
     return False
 
 
@@ -137,7 +194,7 @@ class PooledBufferOwnershipViaLengthDetector:
                 cls_name = _enclosing_class_name(node, parents)
                 in_pool_function = fn_name in _POOL_FUNCTION_NAMES
                 in_pool_class = cls_name in _POOL_CLASS_NAMES
-                if not (in_pool_function or in_pool_class):
+                if not (in_pool_function or in_pool_class) or not _is_buffer_like_name(var_name):
                     continue
                 findings.append(
                     Violation.from_path(
@@ -238,25 +295,14 @@ class AbsoluteRSSInBatchFeedbackDetector:
                 if not _is_rss_access(node):
                     continue
                 # The RSS access is fine when it appears as an operand of subtraction
-                # (either left or right side). Flag it only when the parent is NOT a Sub BinOp.
-                if _has_subtraction_parent(node, parents):
+                # (either left or right side).
+                if _has_subtraction_ancestor(node, parents):
                     continue
-                # Only flag when this node appears on the RHS of an assignment
-                # (i.e., the value is being stored, not just read as part of a larger expr
-                # that might still be a delta).  We walk up to the nearest assignment.
-                parent = parents.get(node)
-                # If the immediate parent is already a BinOp with Sub, handled above.
-                # Flag when the node's value is directly assigned or used without subtraction.
-                if parent is None:
+                if _is_baseline_assignment(node, parents):
                     continue
-                # Flag only when the rss attribute access is at the "top level" of an
-                # assignment value (i.e., parent is Assign or AnnAssign, or parent is a
-                # BinOp but NOT a Sub).
-                is_direct_assign = isinstance(parent, (ast.Assign, ast.AnnAssign))
-                is_non_sub_binop = isinstance(parent, ast.BinOp) and not isinstance(
-                    parent.op, ast.Sub
-                )
-                if is_direct_assign or is_non_sub_binop:
+                in_assignment = _nearest_assignment_ancestor(node, parents) is not None
+                in_feedback_call = _is_adjust_feedback_argument(node, parents)
+                if in_assignment or in_feedback_call:
                     findings.append(
                         Violation.from_path(
                             detector_id=self.detector_id,
@@ -286,10 +332,15 @@ def _get_name_from_call_result(node: ast.Assign) -> str | None:
 
 
 def _consume_pending_by_source(pending: dict[str, ast.Call], stmt: ast.stmt) -> None:
-    """Remove any pending acquire variables that appear in *stmt*'s unparsed source."""
-    stmt_source = ast.unparse(stmt)
+    """Remove pending acquire variables referenced by identifier in *stmt*."""
+    identifiers: set[str] = set()
+    for node in ast.walk(stmt):
+        if isinstance(node, ast.Name):
+            identifiers.add(node.id)
+        elif isinstance(node, ast.Attribute):
+            identifiers.add(node.attr)
     for var in list(pending.keys()):
-        if var in stmt_source:
+        if var in identifiers:
             del pending[var]
 
 
