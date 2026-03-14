@@ -210,6 +210,10 @@ class _BenchmarkModelStub:
     def cleanup(self) -> None:
         self._initialized = False
 
+    def safe_cleanup(self) -> None:
+        """Compatibility alias for processors expecting BaseModel.safe_cleanup()."""
+        self.cleanup()
+
 
 def _suite_candidates(
     files: list[Path],

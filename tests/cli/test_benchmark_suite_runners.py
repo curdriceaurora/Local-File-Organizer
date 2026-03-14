@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 
 from file_organizer.cli import benchmark as benchmark_cli
 from file_organizer.cli.main import app
+from file_organizer.models.base import ModelType
 
 runner = CliRunner()
 
@@ -34,6 +35,21 @@ def test_suite_runner_map_uses_dedicated_functions() -> None:
     io_runner = benchmark_cli._SUITE_RUNNERS["io"]["run"]
     for suite_name in ("text", "vision", "audio", "pipeline", "e2e"):
         assert benchmark_cli._SUITE_RUNNERS[suite_name]["run"] is not io_runner
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_benchmark_model_stub_exposes_safe_cleanup() -> None:
+    """Benchmark model stub should support cleanup interface used by processors."""
+    model = benchmark_cli._BenchmarkModelStub(
+        model_type=ModelType.TEXT,
+        prompt_responses={},
+        default_response="ok",
+    )
+
+    assert model.is_initialized is True
+    model.safe_cleanup()
+    assert model.is_initialized is False
 
 
 @pytest.mark.ci
