@@ -351,11 +351,11 @@ class TestConcurrency:
 
         worker_count = 3
         prefs_per_worker = 10
-        start_gate = threading.Event()
+        start_barrier = threading.Barrier(worker_count + 1)
 
         def add_prefs(worker_id: int) -> None:
-            # Synchronize worker start to exercise real concurrent writes.
-            start_gate.wait()
+            # Rendezvous with main thread so all workers start together.
+            start_barrier.wait(timeout=5)
 
             for i in range(prefs_per_worker):
                 db_manager.add_preference(
@@ -372,7 +372,8 @@ class TestConcurrency:
         for t in threads:
             t.start()
 
-        start_gate.set()
+        # Release all worker threads at once once startup has completed.
+        start_barrier.wait(timeout=5)
 
         # Wait for completion
         for t in threads:
