@@ -64,6 +64,70 @@ class TestResolvePath:
         result = resolve_path(str(f), allowed_paths=[str(tmp_path)])
         assert result == f.resolve()
 
+    def test_path_prefix_attack_blocked(self, tmp_path: Path) -> None:
+        # Regression for #672: str.startswith() would allow "/allowed_dir_suffix"
+        # to pass when "/allowed_dir" is the allowed root.
+        # Path.is_relative_to() correctly rejects this because the directory
+        # boundary is respected (it's not a child path).
+        allowed = tmp_path / "data"
+        allowed.mkdir()
+        attack = tmp_path / "data_extra"
+        attack.mkdir()
+        with pytest.raises(ApiError) as exc_info:
+            resolve_path(str(attack), allowed_paths=[str(allowed)])
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.error == "path_not_allowed"
+
+    def test_dotdot_traversal_via_subdirectory_blocked(self, tmp_path: Path) -> None:
+        # Ensure that a path with embedded ".." that would escape the root is blocked.
+        allowed = tmp_path / "allowed"
+        allowed.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        # Construct a path that goes through the allowed root and back out
+        traversal = str(allowed) + "/../outside"
+        with pytest.raises(ApiError) as exc_info:
+            resolve_path(traversal, allowed_paths=[str(allowed)])
+        assert exc_info.value.status_code == 403
+
+    def test_symlink_escaping_allowed_root_blocked(self, tmp_path: Path) -> None:
+        # A symlink inside the allowed root that points outside must be blocked.
+        allowed = tmp_path / "allowed"
+        allowed.mkdir()
+        outside = tmp_path / "secret"
+        outside.mkdir()
+        # Create a symlink inside allowed that points to outside
+        link = allowed / "escape_link"
+        link.symlink_to(outside)
+        with pytest.raises(ApiError) as exc_info:
+            resolve_path(str(link), allowed_paths=[str(allowed)])
+        assert exc_info.value.status_code == 403
+
+    def test_windows_drive_qualified_path_blocked(self, tmp_path: Path) -> None:
+        # Drive-qualified input must never be accepted when it is outside the
+        # configured allowlist root (Windows and non-Windows behavior alike).
+        allowed = tmp_path / "allowed"
+        allowed.mkdir()
+        with pytest.raises(ApiError) as exc_info:
+            resolve_path(r"C:\Windows\System32", allowed_paths=[str(allowed)])
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.error == "path_not_allowed"
+
+    def test_unc_path_blocked_when_outside_allowlist(self, tmp_path: Path) -> None:
+        # UNC-style paths are treated as out-of-scope unless explicitly under an
+        # allowed root; this guards Windows network-share escape cases.
+        allowed = tmp_path / "allowed"
+        allowed.mkdir()
+        with pytest.raises(ApiError) as exc_info:
+            resolve_path(r"\\server\share\secret.txt", allowed_paths=[str(allowed)])
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.error == "path_not_allowed"
+
+    def test_returns_path_object(self, tmp_path: Path) -> None:
+        result = resolve_path(str(tmp_path), allowed_paths=[str(tmp_path)])
+        assert isinstance(result, Path)
+        assert result.is_absolute()
+
 
 # ---------------------------------------------------------------------------
 # is_hidden

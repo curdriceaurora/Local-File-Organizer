@@ -25,7 +25,7 @@ from file_organizer.interfaces.processor import (
     BatchProcessorProtocol,
     FileProcessorProtocol,
 )
-from file_organizer.interfaces.storage import CacheProtocol, StorageProtocol
+from file_organizer.interfaces.storage import MISSING, CacheProtocol, StorageProtocol
 
 __all__ = [
     "AudioModelProtocol",
@@ -33,6 +33,7 @@ __all__ = [
     "CacheProtocol",
     "FileProcessorProtocol",
     "LearnerProtocol",
+    "MISSING",
     "PipelineStage",
     "ScorerProtocol",
     "StageContext",

@@ -8,7 +8,7 @@ into a configurable pipeline.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Protocol, runtime_checkable
 
 
@@ -51,8 +51,21 @@ class StageContext:
 
     @staticmethod
     def _validate_path_component(field_name: str, value: str) -> str:
-        """Reject traversal sequences and separators in a path component."""
-        if value and (".." in value or "/" in value or "\\" in value):
+        r"""Reject traversal sequences, separators, and Windows drive qualifiers.
+
+        Checks for ``..``, POSIX ``/``, Windows ``\``, and any Windows
+        drive letter or UNC anchor (``PureWindowsPath.drive`` or ``.anchor``
+        being non-empty), so that ``output_dir / value`` cannot escape the
+        intended output directory on any platform.
+        """
+        if not value:
+            return value
+        if ".." in value or "/" in value or "\\" in value:
+            raise ValueError(f"Invalid {field_name}: {value!r}")
+        # Reject Windows drive-qualified values such as "C:" or "C:docs"
+        # which have no slash but still produce an absolute PureWindowsPath.
+        win_path = PureWindowsPath(value)
+        if win_path.drive or win_path.anchor:
             raise ValueError(f"Invalid {field_name}: {value!r}")
         return value
 

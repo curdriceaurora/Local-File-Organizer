@@ -13,10 +13,14 @@ from file_organizer.api.models import FileInfo
 
 
 def resolve_path(path_value: str, allowed_paths: Optional[list[str]] = None) -> Path:
-    """Expand and normalize a filesystem path."""
+    """Expand and normalize a filesystem path, then enforce allowed-root policy.
+
+    Uses ``Path.resolve()`` + ``Path.is_relative_to()`` to evaluate containment,
+    which correctly handles symlinks, ``..`` sequences, and Windows drive-qualified
+    paths — unlike a bare ``str.startswith`` or ``os.path.commonpath`` comparison.
+    """
     # Path is validated against allowed roots below.
-    resolved = Path(path_value).expanduser()  # codeql[py/path-injection]
-    resolved_str = os.path.realpath(resolved)
+    resolved = Path(path_value).expanduser().resolve()  # codeql[py/path-injection]
     if not allowed_paths:
         raise ApiError(
             status_code=403,
@@ -26,7 +30,7 @@ def resolve_path(path_value: str, allowed_paths: Optional[list[str]] = None) -> 
 
     # Allowed roots are configuration-controlled.
     # codeql[py/path-injection]
-    roots = [os.path.realpath(Path(root).expanduser()) for root in allowed_paths]
+    roots = [Path(root).expanduser().resolve() for root in allowed_paths]
     if not roots:
         raise ApiError(
             status_code=403,
@@ -34,7 +38,7 @@ def resolve_path(path_value: str, allowed_paths: Optional[list[str]] = None) -> 
             message="No allowed paths configured for this API instance.",
         )
     try:
-        allowed = any(os.path.commonpath([resolved_str, root]) == root for root in roots)
+        allowed = any(resolved == root or resolved.is_relative_to(root) for root in roots)
     except ValueError:
         allowed = False
     if not allowed:
@@ -44,7 +48,7 @@ def resolve_path(path_value: str, allowed_paths: Optional[list[str]] = None) -> 
             message="Path is outside allowed roots.",
         )
 
-    return Path(resolved_str)
+    return resolved
 
 
 def is_hidden(path: Path) -> bool:
