@@ -257,6 +257,204 @@ class TestVisionProcessorProcessFile:
         assert result.has_text is True
         assert len(result.extracted_text) == 500
 
+    def test_process_file_trips_circuit_on_fatal_backend_error(
+        self, mock_vision_model: MagicMock, tmp_path: Path
+    ) -> None:
+        """Fatal backend errors should open circuit and stop repeated model calls."""
+        img1 = tmp_path / "first.jpg"
+        img2 = tmp_path / "second.jpg"
+        img1.write_bytes(b"\xff\xd8")
+        img2.write_bytes(b"\xff\xd8")
+
+        call_count = 0
+
+        def _fatal_generate(**_: object) -> str:
+            nonlocal call_count
+            call_count += 1
+            raise RuntimeError(
+                "model runner has unexpectedly stopped; "
+                "health resp: dial tcp 127.0.0.1:6948 connect: connection refused "
+                "(status code: 500)"
+            )
+
+        mock_vision_model.generate.side_effect = _fatal_generate
+        processor = VisionProcessor(
+            vision_model=mock_vision_model,
+            backend_cooldown_seconds=120.0,
+        )
+
+        first = processor.process_file(img1)
+        second = processor.process_file(img2)
+
+        assert call_count == 1
+        assert first.error is None
+        assert second.error is None
+        assert second.folder_name == "images"
+        assert second.filename == "second"
+
+
+@pytest.mark.unit
+class TestVisionProcessorCircuitBreaker:
+    """Tests for the fatal-error circuit-breaker added in this PR."""
+
+    def test_circuit_closed_initially(self, mock_vision_model: MagicMock) -> None:
+        """Circuit should be open=False on a fresh processor."""
+        processor = VisionProcessor(vision_model=mock_vision_model)
+        assert processor._is_circuit_open() is False
+
+    def test_trip_circuit_opens_it(self, mock_vision_model: MagicMock) -> None:
+        """_trip_backend_circuit() should open the circuit."""
+        processor = VisionProcessor(
+            vision_model=mock_vision_model, backend_cooldown_seconds=60.0
+        )
+        processor._trip_backend_circuit(RuntimeError("connection refused"))
+        assert processor._is_circuit_open() is True
+
+    def test_trip_circuit_records_reason(self, mock_vision_model: MagicMock) -> None:
+        """_trip_backend_circuit() stores the exception message."""
+        processor = VisionProcessor(
+            vision_model=mock_vision_model, backend_cooldown_seconds=60.0
+        )
+        processor._trip_backend_circuit(RuntimeError("connection refused: detail"))
+        assert processor._circuit_reason is not None
+        assert "connection refused: detail" in processor._circuit_reason
+
+    def test_circuit_resets_after_cooldown(self, mock_vision_model: MagicMock) -> None:
+        """Circuit should auto-reset once the cooldown window expires."""
+        import time as _time
+
+        processor = VisionProcessor(
+            vision_model=mock_vision_model, backend_cooldown_seconds=0.05
+        )
+        processor._trip_backend_circuit(RuntimeError("connection refused"))
+        assert processor._is_circuit_open() is True
+        _time.sleep(0.1)
+        assert processor._is_circuit_open() is False
+
+    def test_is_fatal_backend_error_connection_refused(
+        self, mock_vision_model: MagicMock
+    ) -> None:
+        """'connection refused' in message → fatal."""
+        processor = VisionProcessor(vision_model=mock_vision_model)
+        assert processor._is_fatal_backend_error(RuntimeError("connection refused")) is True
+
+    def test_is_fatal_backend_error_runner_stopped(
+        self, mock_vision_model: MagicMock
+    ) -> None:
+        """'runner has unexpectedly stopped' in message → fatal."""
+        processor = VisionProcessor(vision_model=mock_vision_model)
+        exc = RuntimeError("runner has unexpectedly stopped")
+        assert processor._is_fatal_backend_error(exc) is True
+
+    def test_is_fatal_backend_error_status_500(self, mock_vision_model: MagicMock) -> None:
+        """'status code: 500' in message → fatal."""
+        processor = VisionProcessor(vision_model=mock_vision_model)
+        assert processor._is_fatal_backend_error(RuntimeError("status code: 500")) is True
+
+    def test_is_fatal_backend_error_failed_to_connect(
+        self, mock_vision_model: MagicMock
+    ) -> None:
+        """'failed to connect' in message → fatal."""
+        processor = VisionProcessor(vision_model=mock_vision_model)
+        assert processor._is_fatal_backend_error(RuntimeError("failed to connect")) is True
+
+    def test_is_fatal_backend_error_non_fatal(self, mock_vision_model: MagicMock) -> None:
+        """A regular model error should NOT be treated as fatal."""
+        processor = VisionProcessor(vision_model=mock_vision_model)
+        assert processor._is_fatal_backend_error(ValueError("unexpected output")) is False
+
+    def test_is_fatal_backend_error_case_insensitive(
+        self, mock_vision_model: MagicMock
+    ) -> None:
+        """Fatal marker matching should be case-insensitive."""
+        processor = VisionProcessor(vision_model=mock_vision_model)
+        assert (
+            processor._is_fatal_backend_error(RuntimeError("Connection Refused: host down"))
+            is True
+        )
+
+    def test_guarded_generate_short_circuits_when_open(
+        self, mock_vision_model: MagicMock, tmp_path: Path
+    ) -> None:
+        """_guarded_generate raises immediately when circuit is open."""
+        processor = VisionProcessor(
+            vision_model=mock_vision_model, backend_cooldown_seconds=60.0
+        )
+        processor._trip_backend_circuit(RuntimeError("dial tcp 127.0.0.1: connection refused"))
+        with pytest.raises(RuntimeError, match="Vision backend circuit open"):
+            processor._guarded_generate(prompt="test", image_path=tmp_path / "x.jpg")
+        # The underlying model should NOT have been called
+        mock_vision_model.generate.assert_not_called()
+
+    def test_guarded_generate_does_not_trip_for_non_fatal_error(
+        self, mock_vision_model: MagicMock, tmp_path: Path
+    ) -> None:
+        """Non-fatal model errors should propagate without opening the circuit."""
+        mock_vision_model.generate.side_effect = ValueError("unexpected token in response")
+        processor = VisionProcessor(
+            vision_model=mock_vision_model, backend_cooldown_seconds=60.0
+        )
+        with pytest.raises(ValueError):
+            processor._guarded_generate(prompt="test", image_path=tmp_path / "x.jpg")
+        # Circuit should still be closed
+        assert processor._is_circuit_open() is False
+
+    def test_guarded_generate_trips_for_fatal_error(
+        self, mock_vision_model: MagicMock, tmp_path: Path
+    ) -> None:
+        """Fatal backend errors should open the circuit on first failure."""
+        mock_vision_model.generate.side_effect = RuntimeError(
+            "health resp: runner has unexpectedly stopped"
+        )
+        processor = VisionProcessor(
+            vision_model=mock_vision_model, backend_cooldown_seconds=60.0
+        )
+        with pytest.raises(RuntimeError):
+            processor._guarded_generate(prompt="test", image_path=tmp_path / "x.jpg")
+        assert processor._is_circuit_open() is True
+
+    def test_circuit_blocks_all_subsequent_process_file_calls(
+        self, mock_vision_model: MagicMock, tmp_path: Path
+    ) -> None:
+        """After circuit trips, subsequent process_file calls skip model entirely."""
+        call_count = 0
+
+        def _fatal(**_: object) -> str:
+            nonlocal call_count
+            call_count += 1
+            raise RuntimeError("actively refused by remote host")
+
+        mock_vision_model.generate.side_effect = _fatal
+        processor = VisionProcessor(
+            vision_model=mock_vision_model, backend_cooldown_seconds=120.0
+        )
+
+        imgs = [tmp_path / f"img{i}.jpg" for i in range(4)]
+        for img in imgs:
+            img.write_bytes(b"\xff\xd8")
+
+        results = [processor.process_file(img) for img in imgs]
+
+        # Only the very first file should have hit generate; rest should be skipped
+        assert call_count == 1
+        # All results should be graceful fallbacks (no error field set)
+        for r in results:
+            assert r.error is None
+
+    def test_backend_cooldown_seconds_custom_value_stored(
+        self, mock_vision_model: MagicMock
+    ) -> None:
+        """backend_cooldown_seconds kwarg should be stored on the processor."""
+        processor = VisionProcessor(
+            vision_model=mock_vision_model, backend_cooldown_seconds=42.5
+        )
+        assert processor._backend_cooldown_seconds == 42.5
+
+    def test_default_cooldown_is_20_seconds(self, mock_vision_model: MagicMock) -> None:
+        """Default backend_cooldown_seconds should be 20.0."""
+        processor = VisionProcessor(vision_model=mock_vision_model)
+        assert processor._backend_cooldown_seconds == 20.0
+
 
 @pytest.mark.unit
 class TestVisionProcessorCleanName:

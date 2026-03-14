@@ -6,6 +6,7 @@ covering thread/process executors, timeouts, retries, progress
 callbacks, error handling, and graceful shutdown.
 """
 
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -86,6 +87,54 @@ class TestExecuteWithTiming(unittest.TestCase):
 
 
 @pytest.mark.ci
+class TestParallelConfigPrefetchDepth(unittest.TestCase):
+    """Tests for ParallelConfig.prefetch_depth field (added in this PR)."""
+
+    def test_default_prefetch_depth_is_two(self) -> None:
+        """prefetch_depth defaults to 2."""
+        config = ParallelConfig()
+        self.assertEqual(config.prefetch_depth, 2)
+
+    def test_prefetch_depth_zero_is_valid(self) -> None:
+        """prefetch_depth=0 (no-prefetch) must not raise."""
+        config = ParallelConfig(prefetch_depth=0)
+        self.assertEqual(config.prefetch_depth, 0)
+
+    def test_prefetch_depth_one_is_valid(self) -> None:
+        """prefetch_depth=1 should be accepted."""
+        config = ParallelConfig(prefetch_depth=1)
+        self.assertEqual(config.prefetch_depth, 1)
+
+    def test_prefetch_depth_large_value_is_valid(self) -> None:
+        """Large prefetch depths should be accepted."""
+        config = ParallelConfig(prefetch_depth=100)
+        self.assertEqual(config.prefetch_depth, 100)
+
+    def test_prefetch_depth_negative_raises(self) -> None:
+        """prefetch_depth < 0 should raise ValueError."""
+        with self.assertRaises(ValueError, msg="prefetch_depth must be >= 0"):
+            ParallelConfig(prefetch_depth=-1)
+
+    def test_prefetch_depth_minus_two_raises(self) -> None:
+        """Large negative prefetch_depth should also raise ValueError."""
+        with self.assertRaises(ValueError):
+            ParallelConfig(prefetch_depth=-999)
+
+    def test_prefetch_depth_error_message_contains_value(self) -> None:
+        """ValueError message should include the bad value."""
+        with self.assertRaises(ValueError) as ctx:
+            ParallelConfig(prefetch_depth=-3)
+        self.assertIn("-3", str(ctx.exception))
+
+    def test_prefetch_depth_stored_independently_of_other_fields(self) -> None:
+        """prefetch_depth should be orthogonal to chunk_size/max_workers."""
+        config = ParallelConfig(max_workers=2, chunk_size=5, prefetch_depth=3)
+        self.assertEqual(config.prefetch_depth, 3)
+        self.assertEqual(config.max_workers, 2)
+        self.assertEqual(config.chunk_size, 5)
+
+
+@pytest.mark.ci
 class TestParallelProcessorInit(unittest.TestCase):
     """Test ParallelProcessor initialization."""
 
@@ -109,6 +158,126 @@ class TestParallelProcessorInit(unittest.TestCase):
         self.assertEqual(processor.config.max_workers, 4)
         self.assertEqual(processor.config.executor_type, ExecutorType.PROCESS)
         self.assertEqual(processor.config.chunk_size, 5)
+
+
+@pytest.mark.ci
+class TestPrefetchDepthScheduling(unittest.TestCase):
+    """Verify prefetch depth controls queue-ahead and effective concurrency."""
+
+    def test_prefetch_depth_zero_forces_single_inflight_task(self) -> None:
+        active = 0
+        max_active = 0
+        state_lock = threading.Lock()
+
+        def tracked(path: Path) -> str:
+            nonlocal active, max_active
+            with state_lock:
+                active += 1
+                max_active = max(max_active, active)
+            time.sleep(0.01)
+            with state_lock:
+                active -= 1
+            return path.name
+
+        config = ParallelConfig(max_workers=4, executor_type=ExecutorType.THREAD, prefetch_depth=0)
+        processor = ParallelProcessor(config=config)
+        files = [Path(f"f{i}.txt") for i in range(8)]
+
+        result = processor.process_batch(files, tracked)
+        assert result.failed == 0
+        assert max_active == 1
+
+    def test_prefetch_depth_allows_parallel_inflight_tasks(self) -> None:
+        active = 0
+        max_active = 0
+        state_lock = threading.Lock()
+
+        def tracked(path: Path) -> str:
+            nonlocal active, max_active
+            with state_lock:
+                active += 1
+                max_active = max(max_active, active)
+            time.sleep(0.01)
+            with state_lock:
+                active -= 1
+            return path.name
+
+        config = ParallelConfig(max_workers=4, executor_type=ExecutorType.THREAD, prefetch_depth=2)
+        processor = ParallelProcessor(config=config)
+        files = [Path(f"f{i}.txt") for i in range(8)]
+
+        result = processor.process_batch(files, tracked)
+        assert result.failed == 0
+        assert max_active >= 2
+
+    def test_prefetch_depth_one_limits_queue_to_max_workers(self) -> None:
+        """With prefetch_depth=1, limit == max_workers (one in-flight per worker)."""
+        active = 0
+        max_active = 0
+        state_lock = threading.Lock()
+
+        def tracked(path: Path) -> str:
+            nonlocal active, max_active
+            with state_lock:
+                active += 1
+                max_active = max(max_active, active)
+            time.sleep(0.01)
+            with state_lock:
+                active -= 1
+            return path.name
+
+        config = ParallelConfig(max_workers=2, executor_type=ExecutorType.THREAD, prefetch_depth=1)
+        processor = ParallelProcessor(config=config)
+        files = [Path(f"f{i}.txt") for i in range(6)]
+
+        result = processor.process_batch(files, tracked)
+        assert result.failed == 0
+        # With prefetch_depth=1 and max_workers=2 the limit is 2; we shouldn't
+        # see more than 2 tasks simultaneously in-flight.
+        assert max_active <= 2
+
+
+@pytest.mark.ci
+class TestPrefetchDepthLimitCalculation(unittest.TestCase):
+    """Unit-level checks that the limit formula is applied correctly."""
+
+    def _count_max_pending(
+        self, max_workers: int, prefetch_depth: int, num_files: int = 20
+    ) -> int:
+        """Run a batch and return the maximum simultaneous pending count."""
+        active = 0
+        peak = 0
+        lock = threading.Lock()
+        barrier = threading.Barrier(1)  # dummy, used only for lock ordering
+
+        def tracked(path: Path) -> str:
+            nonlocal active, peak
+            with lock:
+                active += 1
+                peak = max(peak, active)
+            time.sleep(0.005)
+            with lock:
+                active -= 1
+            return path.name
+
+        config = ParallelConfig(
+            max_workers=max_workers,
+            executor_type=ExecutorType.THREAD,
+            prefetch_depth=prefetch_depth,
+        )
+        proc = ParallelProcessor(config=config)
+        proc.process_batch([Path(f"f{i}.txt") for i in range(num_files)], tracked)
+        return peak
+
+    def test_depth_zero_peak_is_one(self) -> None:
+        """prefetch_depth=0 → limit=1 → at most 1 task in-flight."""
+        peak = self._count_max_pending(max_workers=4, prefetch_depth=0, num_files=10)
+        self.assertEqual(peak, 1)
+
+    def test_depth_nonzero_allows_multiple_inflight(self) -> None:
+        """prefetch_depth>0 → limit = max_workers * depth → parallelism possible."""
+        peak = self._count_max_pending(max_workers=4, prefetch_depth=2, num_files=12)
+        self.assertGreater(peak, 1)
 
 
 class TestProcessBatch(unittest.TestCase):

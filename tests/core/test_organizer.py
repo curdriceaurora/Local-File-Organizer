@@ -71,11 +71,21 @@ class TestFileOrganizer:
             dry_run=False,
             use_hardlinks=True,
             parallel_workers=2,
+            prefetch_depth=3,
         )
         assert org.text_model_config == text_config
         assert org.dry_run is False
         assert org.use_hardlinks is True
         assert org.parallel_config.max_workers == 2
+        assert org.parallel_config.prefetch_depth == 3
+
+        no_prefetch_org = FileOrganizer(
+            text_model_config=text_config,
+            vision_model_config=vision_config,
+            no_prefetch=True,
+            prefetch_depth=5,
+        )
+        assert no_prefetch_org.parallel_config.prefetch_depth == 0
 
     def test_organize_input_missing(self, organizer: FileOrganizer, tmp_path: Path) -> None:
         """Test organizing fails when input path does not exist."""
@@ -102,6 +112,115 @@ class TestFileOrganizer:
         assert ".mp4" in FileOrganizer.VIDEO_EXTENSIONS
         assert ".mp3" in FileOrganizer.AUDIO_EXTENSIONS
         assert ".dwg" in FileOrganizer.CAD_EXTENSIONS
+
+    def test_no_vision_uses_extension_fallback_for_images(self, tmp_path: Path) -> None:
+        """When vision is disabled, image files should route through fallback."""
+        src = tmp_path / "src"
+        src.mkdir()
+        image = src / "photo.jpg"
+        image.write_bytes(b"\xff\xd8\xff\xe0")
+
+        out = tmp_path / "out"
+        organizer = FileOrganizer(dry_run=True, enable_vision=False)
+
+        with (
+            patch.object(
+                organizer,
+                "_fallback_by_extension",
+                wraps=organizer._fallback_by_extension,
+            ) as mock_fallback,
+            patch.object(organizer, "_process_image_files") as mock_process_images,
+        ):
+            result = organizer.organize(src, out)
+
+        assert result.failed_files == 0
+        mock_process_images.assert_not_called()
+        mock_fallback.assert_called_once()
+        assert mock_fallback.call_args.args[0] == [image]
+
+    def test_enable_vision_true_is_default(
+        self, text_config: ModelConfig, vision_config: ModelConfig
+    ) -> None:
+        """enable_vision should default to True."""
+        org = FileOrganizer(
+            text_model_config=text_config,
+            vision_model_config=vision_config,
+        )
+        assert org.enable_vision is True
+
+    def test_enable_vision_false_stored(
+        self, text_config: ModelConfig, vision_config: ModelConfig
+    ) -> None:
+        """enable_vision=False should be stored and not overridden."""
+        org = FileOrganizer(
+            text_model_config=text_config,
+            vision_model_config=vision_config,
+            enable_vision=False,
+        )
+        assert org.enable_vision is False
+
+    def test_prefetch_depth_default_is_two(
+        self, text_config: ModelConfig, vision_config: ModelConfig
+    ) -> None:
+        """prefetch_depth defaults to 2 and is reflected in parallel_config."""
+        org = FileOrganizer(
+            text_model_config=text_config,
+            vision_model_config=vision_config,
+        )
+        assert org.prefetch_depth == 2
+        assert org.parallel_config.prefetch_depth == 2
+
+    def test_no_prefetch_false_does_not_override_prefetch_depth(
+        self, text_config: ModelConfig, vision_config: ModelConfig
+    ) -> None:
+        """no_prefetch=False with explicit prefetch_depth should leave depth unchanged."""
+        org = FileOrganizer(
+            text_model_config=text_config,
+            vision_model_config=vision_config,
+            no_prefetch=False,
+            prefetch_depth=4,
+        )
+        assert org.prefetch_depth == 4
+        assert org.parallel_config.prefetch_depth == 4
+
+    def test_no_prefetch_true_overrides_nonzero_prefetch_depth(
+        self, text_config: ModelConfig, vision_config: ModelConfig
+    ) -> None:
+        """no_prefetch=True must set prefetch_depth to 0 even when depth was given."""
+        org = FileOrganizer(
+            text_model_config=text_config,
+            vision_model_config=vision_config,
+            no_prefetch=True,
+            prefetch_depth=10,
+        )
+        assert org.prefetch_depth == 0
+        assert org.parallel_config.prefetch_depth == 0
+
+    def test_no_prefetch_true_with_zero_depth_no_override_needed(
+        self, text_config: ModelConfig, vision_config: ModelConfig
+    ) -> None:
+        """no_prefetch=True with prefetch_depth=0 should remain 0 without any warning."""
+        org = FileOrganizer(
+            text_model_config=text_config,
+            vision_model_config=vision_config,
+            no_prefetch=True,
+            prefetch_depth=0,
+        )
+        assert org.prefetch_depth == 0
+
+    def test_no_vision_init_vision_processor_not_called(
+        self, tmp_path: Path
+    ) -> None:
+        """With enable_vision=False, _init_vision_processor should never be called."""
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "photo.jpg").write_bytes(b"\xff\xd8")
+
+        organizer = FileOrganizer(dry_run=True, enable_vision=False)
+        with patch.object(organizer, "_init_vision_processor") as mock_init_vision:
+            organizer.organize(src, tmp_path / "out")
+
+        mock_init_vision.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
