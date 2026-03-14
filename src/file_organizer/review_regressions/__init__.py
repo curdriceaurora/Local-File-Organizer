@@ -16,6 +16,13 @@ from file_organizer.review_regressions.framework import (
     render_report_json,
     run_audit,
 )
+from file_organizer.review_regressions.memory_lifecycle import (
+    MEMORY_LIFECYCLE_DETECTORS,
+    AbsoluteRSSInBatchFeedbackDetector,
+    EagerBufferPoolAllocationDetector,
+    LegacyAcquireReleaseWithoutConsumeDetector,
+    PooledBufferOwnershipViaLengthDetector,
+)
 from file_organizer.review_regressions.security import (
     SECURITY_DETECTORS,
     GuardedContextDirectPathDetector,
@@ -32,9 +39,14 @@ __all__ = [
     "DetectorDescriptor",
     "ReviewRegressionDetector",
     "Violation",
+    "AbsoluteRSSInBatchFeedbackDetector",
     "ActiveModelPrimitiveStoreDetector",
     "CORRECTNESS_DETECTORS",
+    "EagerBufferPoolAllocationDetector",
     "GuardedContextDirectPathDetector",
+    "LegacyAcquireReleaseWithoutConsumeDetector",
+    "MEMORY_LIFECYCLE_DETECTORS",
+    "PooledBufferOwnershipViaLengthDetector",
     "TEST_QUALITY_DETECTORS",
     "ValidatedPathBypassDetector",
     "StageContextValidationBypassDetector",
