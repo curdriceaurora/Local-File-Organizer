@@ -18,9 +18,14 @@ import tempfile
 import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import typer
+
+from file_organizer.models.base import ModelType
+
+if TYPE_CHECKING:
+    from file_organizer.services.audio.metadata_extractor import AudioMetadata
 
 benchmark_app = typer.Typer(
     name="benchmark",
@@ -192,7 +197,7 @@ class _BenchmarkModelStub:
     def __init__(
         self,
         *,
-        model_type: Any,
+        model_type: ModelType,
         prompt_responses: dict[str, str],
         default_response: str,
     ) -> None:
@@ -303,7 +308,7 @@ def _run_vision_suite(files: list[Path]) -> int:
     return len(candidates)
 
 
-def _synthesized_audio_metadata(file_path: Path) -> Any:
+def _synthesized_audio_metadata(file_path: Path) -> AudioMetadata:
     """Return minimal audio metadata when optional extractors are unavailable."""
     from file_organizer.services.audio.metadata_extractor import AudioMetadata
 

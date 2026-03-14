@@ -54,6 +54,7 @@ def test_benchmark_model_stub_exposes_safe_cleanup() -> None:
 
 @pytest.mark.ci
 @pytest.mark.unit
+@pytest.mark.smoke
 @pytest.mark.parametrize("suite_name", sorted(_EXPECTATIONS["suites"].keys()))
 def test_benchmark_suite_smoke_outputs_expected_schema(suite_name: str) -> None:
     """Each suite should run against fixture corpus and emit stable JSON schema."""
