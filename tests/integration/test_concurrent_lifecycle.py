@@ -125,10 +125,11 @@ class TestTimeoutHandling:
         )
         # Override the parallel processor config with a short timeout
         org.parallel_config = ParallelConfig(max_workers=1, timeout_per_file=0.5)
+        slow_generate_gate = threading.Event()
 
         def _slow_generate(prompt: str, **kwargs: object) -> str:
-            # Use an event wait instead of sleep to avoid time.sleep anti-patterns in tests.
-            threading.Event().wait(1.0)  # Slightly longer than 0.5s timeout
+            # Intentionally block longer than the per-file timeout to exercise timeout handling.
+            slow_generate_gate.wait(1.0)
             return "should not reach here"
 
         with patch_text_generate(_slow_generate):

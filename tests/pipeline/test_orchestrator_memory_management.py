@@ -108,6 +108,7 @@ def test_process_batch_uses_adaptive_batch_sizer_for_legacy_path(
     assert len(sizer.calculate_calls) == 1
     assert len(sizer.adjust_calls) == 2
     assert sizer.calculate_calls[0][0] == [path.stat().st_size for path in files]
+    assert sizer.calculate_calls[0][1] == 0
 
 
 def test_memory_pressure_shrinks_buffer_pool(

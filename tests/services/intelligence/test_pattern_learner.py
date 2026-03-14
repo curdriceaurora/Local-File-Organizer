@@ -11,6 +11,7 @@ so we can exercise PatternLearner's own logic without hitting those bugs.
 
 from __future__ import annotations
 
+import inspect
 import shutil
 import tempfile
 from datetime import UTC, datetime
@@ -19,6 +20,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from file_organizer.services.intelligence.confidence import ConfidenceEngine
 from file_organizer.services.intelligence.pattern_learner import PatternLearner
 from file_organizer.services.intelligence.preference_tracker import CorrectionType
 
@@ -380,22 +382,34 @@ class TestUpdateConfidence:
         learner.update_confidence("test_pattern", True)
 
         learner.confidence_engine.track_usage.assert_called_once()
-        args = learner.confidence_engine.track_usage.call_args[0]
-        assert args[0] == "test_pattern"
-        assert isinstance(args[1], datetime)
-        assert args[1].tzinfo is UTC
-        assert args[2] is True
+        call_args = learner.confidence_engine.track_usage.call_args
+        bound_call = inspect.signature(ConfidenceEngine.track_usage).bind(
+            learner.confidence_engine,
+            *call_args.args,
+            **call_args.kwargs,
+        )
+        assert bound_call.arguments["pattern_id"] == "test_pattern"
+        recorded_at = bound_call.arguments["timestamp"]
+        assert isinstance(recorded_at, datetime)
+        assert recorded_at.tzinfo is UTC
+        assert bound_call.arguments["success"] is True
 
     def test_failure_update(self, learner):
         """Test updating confidence with failure."""
         learner.update_confidence("test_pattern", False)
 
         learner.confidence_engine.track_usage.assert_called_once()
-        args = learner.confidence_engine.track_usage.call_args[0]
-        assert args[0] == "test_pattern"
-        assert isinstance(args[1], datetime)
-        assert args[1].tzinfo is UTC
-        assert args[2] is False
+        call_args = learner.confidence_engine.track_usage.call_args
+        bound_call = inspect.signature(ConfidenceEngine.track_usage).bind(
+            learner.confidence_engine,
+            *call_args.args,
+            **call_args.kwargs,
+        )
+        assert bound_call.arguments["pattern_id"] == "test_pattern"
+        recorded_at = bound_call.arguments["timestamp"]
+        assert isinstance(recorded_at, datetime)
+        assert recorded_at.tzinfo is UTC
+        assert bound_call.arguments["success"] is False
 
 
 # ---------------------------------------------------------------------------
