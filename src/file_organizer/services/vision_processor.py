@@ -8,6 +8,7 @@ import time
 import types as _t
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from loguru import logger
 
@@ -497,7 +498,7 @@ FILENAME:"""
             logger.error(f"Failed to generate filename: {e}")
             return image_path.stem
 
-    def _guarded_generate(self, **kwargs: _t.Any) -> str:
+    def _guarded_generate(self, **kwargs: Any) -> str:
         """Run model.generate behind a fatal-error circuit-breaker.
 
         The circuit opens only for known backend fatal failures (connection
