@@ -349,18 +349,30 @@ class TestConcurrency:
         """Test concurrent preference additions."""
         import threading
 
-        def add_prefs():
-            for i in range(10):
+        worker_count = 3
+        prefs_per_worker = 10
+        start_gate = threading.Event()
+
+        def add_prefs(worker_id: int) -> None:
+            # Synchronize worker start to exercise real concurrent writes.
+            start_gate.wait()
+
+            for i in range(prefs_per_worker):
                 db_manager.add_preference(
-                    "folder_mapping", f"key_{threading.get_ident()}_{i}", f"value_{i}", 0.5
+                    "folder_mapping", f"key_worker{worker_id}_{i}", f"value_{i}", 0.5
                 )
 
         # Create multiple threads
-        threads = [threading.Thread(target=add_prefs) for _ in range(3)]
+        threads = [
+            threading.Thread(target=add_prefs, args=(worker_id,))
+            for worker_id in range(worker_count)
+        ]
 
         # Start all threads
         for t in threads:
             t.start()
+
+        start_gate.set()
 
         # Wait for completion
         for t in threads:
@@ -368,7 +380,9 @@ class TestConcurrency:
 
         # Verify all preferences were added
         prefs = db_manager.get_preferences_by_type("folder_mapping")
-        assert len(prefs) == 30  # 3 threads * 10 prefs each
+        expected_count = worker_count * prefs_per_worker
+        assert len(prefs) == expected_count
+        assert sum(int(pref["frequency"]) for pref in prefs) == expected_count
 
 
 @pytest.mark.unit
