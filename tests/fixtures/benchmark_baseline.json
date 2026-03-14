@@ -1,5 +1,6 @@
 {
   "suite": "io",
+  "runner_profile_version": "2026-03-14-v1",
   "files_count": 5,
   "hardware_profile": {
     "benchmark_note": "Reference schema fixture for benchmark governance checks."

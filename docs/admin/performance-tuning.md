@@ -364,6 +364,7 @@ Why this matters:
 - `io` gives a floor for disk-only overhead.
 - `text`/`vision`/`audio` isolate processor-stack latency without requiring live model backends.
 - `pipeline` and `e2e` capture orchestration overhead and write-path behavior.
+- Baseline JSON now includes `runner_profile_version`; treat baseline comparisons as valid only when this version matches.
 
 ## Environment Variables
 

@@ -388,6 +388,7 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
 **Output Metrics (JSON schema):**
 
 - `suite` — Suite name that was run
+- `runner_profile_version` — Benchmark runner semantics profile version for baseline compatibility checks
 - `files_count` — Number of files in the input directory
 - `hardware_profile` — Hardware detection info (CPU, memory, GPU)
 - `results.median_ms` — Median iteration time in milliseconds
@@ -402,6 +403,7 @@ When `--compare` is used, JSON also includes:
 - `comparison.deltas_pct.*` — Percentage delta versus the baseline for each metric
 - `comparison.regression` — `true` if current p95 crossed the regression threshold
 - `comparison.threshold` — Threshold multiplier used for regression detection — fixed at `1.2` for the CLI (not user-configurable; emitted in the JSON for consumer reference)
+- `comparison_profile_warning` — Present when comparing against a baseline built with a different `runner_profile_version`
 
 **Regression Detection:**
 
@@ -423,6 +425,9 @@ file-organizer benchmark run tests/fixtures/ --suite text --json --compare basel
 # Save baseline for future comparison
 file-organizer benchmark run tests/fixtures/ --json > baseline.json
 ```
+
+Audio suite behavior note:
+- `audio` intentionally differs from `text`/`vision`: it exercises real metadata extraction + classification and only falls back to synthetic metadata when optional extractor dependencies are unavailable.
 
 ---
 

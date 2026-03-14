@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
@@ -61,9 +62,24 @@ def test_benchmark_suite_smoke_outputs_expected_schema(suite_name: str) -> None:
     expected = _EXPECTATIONS["suites"][suite_name]
 
     assert payload["suite"] == suite_name
+    assert payload["runner_profile_version"] == benchmark_cli._RUNNER_PROFILE_VERSION
     assert payload["files_count"] >= expected["min_files"]
     assert payload["results"]["iterations"] == 1
     assert payload["results"]["median_ms"] >= 0.0
     assert payload["results"]["p95_ms"] >= 0.0
     assert payload["results"]["p99_ms"] >= 0.0
     assert payload["results"]["throughput_fps"] >= 0.0
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_vision_suite_does_not_require_backend_model_pull() -> None:
+    """Vision suite should execute with deterministic stubs even without backend models."""
+    image_file = _CORPUS_DIR / "sample_photo.jpg"
+    assert image_file.is_file(), f"Missing fixture image: {image_file}"
+
+    with patch(
+        "file_organizer.services.vision_processor.get_vision_model",
+        side_effect=RuntimeError("backend model pull should not be used in suite runner"),
+    ):
+        benchmark_cli._run_vision_suite([image_file])

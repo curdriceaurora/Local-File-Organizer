@@ -60,6 +60,9 @@ class _SuiteRunner(TypedDict):
     description: str
 
 
+_RUNNER_PROFILE_VERSION = "2026-03-14-v1"
+
+
 # ---------------------------------------------------------------------------
 # Statistical helpers
 # ---------------------------------------------------------------------------
@@ -466,6 +469,32 @@ def _detect_hardware_profile() -> dict[str, Any]:
         return {"error": "Hardware detection unavailable"}
 
 
+def _check_baseline_profile_compatibility(
+    baseline: dict[str, Any],
+    *,
+    suite: str,
+    console: Any,
+    json_output: bool,
+) -> str | None:
+    """Validate runner-profile compatibility between current and baseline output.
+
+    Returns a warning string when the baseline declares a different profile
+    version, otherwise ``None``.
+    """
+    baseline_profile = baseline.get("runner_profile_version")
+    if baseline_profile is None or baseline_profile == _RUNNER_PROFILE_VERSION:
+        return None
+
+    warning = (
+        "Baseline runner profile mismatch "
+        f"(baseline={baseline_profile}, current={_RUNNER_PROFILE_VERSION}, suite={suite}). "
+        "Comparisons may mix non-equivalent benchmark semantics."
+    )
+    if not json_output:
+        console.print(f"[yellow]{warning}[/yellow]")
+    return warning
+
+
 def _print_table(
     console: Any, suite: str, warmup: int, stats: BenchmarkStats, file_count: int
 ) -> None:
@@ -584,6 +613,7 @@ def run(
                 json.dumps(
                     {
                         "suite": suite,
+                        "runner_profile_version": _RUNNER_PROFILE_VERSION,
                         "files_count": 0,
                         "hardware_profile": _detect_hardware_profile(),
                         "results": compute_stats([], 0),
@@ -636,6 +666,7 @@ def run(
     # Build output
     output: dict[str, Any] = {
         "suite": suite,
+        "runner_profile_version": _RUNNER_PROFILE_VERSION,
         "files_count": len(files),
         "hardware_profile": _detect_hardware_profile(),
         "results": stats,
@@ -649,8 +680,16 @@ def run(
             console.print(f"[red]Failed to read baseline: {e}[/red]")
             raise typer.Exit(code=1) from e
 
+        profile_warning = _check_baseline_profile_compatibility(
+            baseline,
+            suite=suite,
+            console=console,
+            json_output=json_output,
+        )
         comp = compare_results(output, baseline)
         output["comparison"] = comp
+        if profile_warning is not None:
+            output["comparison_profile_warning"] = profile_warning
 
     if json_output:
         console.print(json.dumps(output, indent=2))

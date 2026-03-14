@@ -63,6 +63,7 @@ def test_benchmark_json_output(tmp_path: Path) -> None:
     try:
         output_json = json.loads(result.stdout)
         assert "suite" in output_json
+        assert "runner_profile_version" in output_json
         assert "results" in output_json
         assert "files_count" in output_json
         assert "hardware_profile" in output_json
