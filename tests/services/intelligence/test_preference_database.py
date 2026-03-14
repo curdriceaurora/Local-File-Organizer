@@ -377,7 +377,8 @@ class TestConcurrency:
 
         # Wait for completion
         for t in threads:
-            t.join()
+            t.join(timeout=5)
+            assert not t.is_alive()
 
         # Verify all preferences were added
         prefs = db_manager.get_preferences_by_type("folder_mapping")
@@ -391,11 +392,12 @@ class TestConcurrency:
             for worker_id in range(worker_count)
             for i in range(prefs_per_worker)
         }
-        actual_keys = {str(pref["key"]) for pref in prefs}
+        actual_keys = {pref["key"] for pref in prefs}
         assert actual_keys == expected_keys
 
         worker_counts = dict.fromkeys(range(worker_count), 0)
         for key in actual_keys:
+            assert isinstance(key, str)
             worker_id = int(key.removeprefix("key_worker").split("_", 1)[0])
             worker_counts[worker_id] += 1
         assert worker_counts == dict.fromkeys(range(worker_count), prefs_per_worker)
