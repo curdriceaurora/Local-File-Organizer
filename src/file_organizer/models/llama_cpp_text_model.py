@@ -183,7 +183,9 @@ class LlamaCppTextModel(BaseModel):
         """Release the Llama client and free model memory.
 
         Sets ``_initialized`` to *False* under the lifecycle lock so that
-        concurrent ``generate()`` calls see a consistent state.
+        concurrent ``generate()`` calls see a consistent state.  Unlike some
+        providers, this class does not set a ``_shutting_down`` flag; cleanup
+        is idempotent and can be called multiple times safely.
         """
         logger.debug("Cleaning up llama.cpp text model {}", self.config.name)
         with self._lifecycle_lock:
@@ -203,6 +205,10 @@ class LlamaCppTextModel(BaseModel):
             return int(extra["n_gpu_layers"])
         if self.config.device in _GPU_DEVICE_TYPES:
             return -1
+        logger.debug(
+            "Device '{}' is not a GPU type; defaulting to CPU-only inference (n_gpu_layers=0)",
+            self.config.device,
+        )
         return 0  # CPU and AUTO
 
     @staticmethod

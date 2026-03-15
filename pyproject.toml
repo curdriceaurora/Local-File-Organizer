@@ -187,7 +187,7 @@ docs = [
 ]
 
 all = [
-    "local-file-organizer[dev,gui,cloud,audio,video,dedup,archive,scientific,cad,build,parsers,web]",
+    "local-file-organizer[dev,gui,cloud,llama,audio,video,dedup,archive,scientific,cad,build,parsers,web]",
 ]
 
 [project.scripts]

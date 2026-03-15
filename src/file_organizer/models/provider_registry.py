@@ -122,6 +122,17 @@ class ProviderRegistry:
         with self._lock:
             return sorted(set(self._text_factories) | set(self._vision_factories))
 
+    def _reset_for_testing(self) -> None:
+        """Clear all registered factories.
+
+        **For test use only.**  Resets the registry to an empty state so that
+        test suites can register custom providers without polluting the
+        singleton across tests.
+        """
+        with self._lock:
+            self._text_factories.clear()
+            self._vision_factories.clear()
+
 
 # ---------------------------------------------------------------------------
 # Built-in factory helpers (lazy imports so optional packages load on demand)

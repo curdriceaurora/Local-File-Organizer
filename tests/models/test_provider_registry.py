@@ -197,10 +197,18 @@ class TestGetVisionModel:
 
 
 class TestRegisterProviderFunction:
-    def test_registers_on_singleton_via_convenience_function(self) -> None:
+    def test_registers_on_singleton_via_convenience_function(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         factory = MagicMock(return_value=MagicMock())
-        cfg = ModelConfig(name="m", model_type=ModelType.TEXT, provider="convenience_test")
-        register_provider("convenience_test", text_factory=factory)
+        cfg = ModelConfig(name="m", model_type=ModelType.TEXT, provider="convenience_test_mp")
+
+        # Isolate from the global singleton so this test does not leak state.
+        monkeypatch.setattr(
+            "file_organizer.models.provider_registry._registry._text_factories",
+            {},
+        )
+        register_provider("convenience_test_mp", text_factory=factory)
 
         result = _registry.get_text_model(cfg)
         factory.assert_called_once_with(cfg)

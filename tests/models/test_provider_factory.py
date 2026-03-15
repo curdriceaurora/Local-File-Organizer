@@ -112,8 +112,12 @@ class TestGetTextModel:
         bad_config.provider = "invalid"  # type: ignore[assignment]
 
         # All three built-in providers should appear in the error message
-        with pytest.raises(ValueError, match="ollama"):
+        with pytest.raises(ValueError) as exc_info:
             get_text_model(bad_config)
+        error_msg = str(exc_info.value)
+        assert "ollama" in error_msg
+        assert "openai" in error_msg
+        assert "llama_cpp" in error_msg
 
 
 # ---------------------------------------------------------------------------

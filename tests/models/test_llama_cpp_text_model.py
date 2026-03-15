@@ -74,7 +74,7 @@ class TestConstruction:
         with patch("file_organizer.models.llama_cpp_text_model.LLAMA_CPP_AVAILABLE", True):
             from file_organizer.models.llama_cpp_text_model import LlamaCppTextModel
 
-            with pytest.raises(ValueError, match="ModelType.TEXT"):
+            with pytest.raises(ValueError, match=r"ModelType\.TEXT"):
                 LlamaCppTextModel(cfg)
 
     def test_raises_if_model_path_is_empty_string(self) -> None:

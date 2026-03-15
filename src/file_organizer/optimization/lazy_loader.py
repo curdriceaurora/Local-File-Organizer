@@ -168,6 +168,13 @@ class LazyModelLoader:
             model.initialize()
             return model
 
+        if framework in ("openai", "llama_cpp"):
+            from file_organizer.models.provider_factory import get_text_model
+
+            model = get_text_model(config)
+            model.initialize()
+            return model
+
         raise ValueError(
             f"Unsupported framework '{framework}' for lazy loading. "
             f"Provide a custom loader callable."
