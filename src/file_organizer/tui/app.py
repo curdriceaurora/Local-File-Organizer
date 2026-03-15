@@ -243,7 +243,11 @@ class FileOrganizerApp(App[None]):
 
             return CopilotView(id="view")
 
-        # Settings remains a placeholder for now
+        if name == "settings":
+            from file_organizer.tui.settings_view import SettingsView
+
+            return SettingsView(id="view")
+
         titles = {
             "settings": "[b]Settings[/b]\n\nConfigure models, paths, and preferences.",
         }

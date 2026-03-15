@@ -20,6 +20,7 @@ from file_organizer.tui.app import (
 from file_organizer.tui.audio_view import AudioView
 from file_organizer.tui.methodology_view import MethodologyView
 from file_organizer.tui.organization_preview import OrganizationPreviewView
+from file_organizer.tui.settings_view import SettingsView
 from file_organizer.tui.undo_history_view import UndoHistoryView
 
 pytestmark = [pytest.mark.unit]
@@ -113,9 +114,9 @@ class TestFileOrganizerApp:
         app = FileOrganizerApp()
         assert app._current_view == "files"
 
-    def test_create_view_settings_returns_placeholder(self) -> None:
+    def test_create_view_settings_returns_settings_view(self) -> None:
         widget = FileOrganizerApp._create_view("settings")
-        assert isinstance(widget, PlaceholderView)
+        assert isinstance(widget, SettingsView)
 
     def test_create_view_settings_has_view_id(self) -> None:
         widget = FileOrganizerApp._create_view("settings")
@@ -182,13 +183,13 @@ async def test_switch_to_organized_view() -> None:
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_switch_to_settings_view() -> None:
-    """Switching to settings view should mount a PlaceholderView."""
+    """Switching to settings view should mount SettingsView."""
     app = FileOrganizerApp()
     async with app.run_test() as pilot:
         await app.action_switch_view("settings")
         await pilot.pause()
         assert app._current_view == "settings"
-        assert app.query_one("#view", PlaceholderView) is not None
+        assert app.query_one("#view", SettingsView) is not None
 
 
 @pytest.mark.integration
