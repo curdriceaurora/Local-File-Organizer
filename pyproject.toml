@@ -131,6 +131,10 @@ cloud = [
     "openai>=1.0.0",  # OpenAI-compatible API provider (OpenAI, Groq, LM Studio, vLLM)
 ]
 
+llama = [
+    "llama-cpp-python>=0.2.0",  # llama.cpp C bindings — direct GGUF inference, no Ollama server
+]
+
 gui = [
     "PyQt6>=6.6.0",
 ]
@@ -378,6 +382,7 @@ pep621_dev_dependency_groups = ["dev", "docs", "build"]
 "pydantic-settings" = "pydantic_settings"
 "PyPDF2" = "PyPDF2"
 "striprtf" = "striprtf"
+"llama-cpp-python" = "llama_cpp"
 [tool.deptry.per_rule_ignores]
 # netCDF4: in scientific optional group; deptry has mixed-case matching issues
 DEP001 = ["netCDF4"]

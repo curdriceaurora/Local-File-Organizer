@@ -49,6 +49,16 @@ def openai_vision_config() -> ModelConfig:
     )
 
 
+@pytest.fixture()
+def llama_cpp_text_config() -> ModelConfig:
+    return ModelConfig(
+        name="llama-cpp",
+        model_type=ModelType.TEXT,
+        provider="llama_cpp",
+        model_path="/fake/model.gguf",
+    )
+
+
 # ---------------------------------------------------------------------------
 # get_text_model
 # ---------------------------------------------------------------------------
@@ -74,6 +84,17 @@ class TestGetTextModel:
         assert isinstance(model, OpenAITextModel)
         assert model.config is openai_text_config
 
+    def test_llama_cpp_provider_returns_llama_cpp_text_model(
+        self, llama_cpp_text_config: ModelConfig
+    ) -> None:
+        with patch("file_organizer.models.llama_cpp_text_model.LLAMA_CPP_AVAILABLE", True):
+            model = get_text_model(llama_cpp_text_config)
+
+        from file_organizer.models.llama_cpp_text_model import LlamaCppTextModel
+
+        assert isinstance(model, LlamaCppTextModel)
+        assert model.config is llama_cpp_text_config
+
     def test_unknown_provider_raises_value_error(self) -> None:
         # mypy would catch this at type time; we test the runtime guard too
         bad_config = ModelConfig(
@@ -86,11 +107,12 @@ class TestGetTextModel:
         with pytest.raises(ValueError, match="Unknown provider"):
             get_text_model(bad_config)
 
-    def test_unknown_provider_error_mentions_supported_values(self) -> None:
+    def test_unknown_provider_error_mentions_registered_providers(self) -> None:
         bad_config = ModelConfig(name="x", model_type=ModelType.TEXT, provider="ollama")
         bad_config.provider = "invalid"  # type: ignore[assignment]
 
-        with pytest.raises(ValueError, match="'ollama'"):
+        # All three built-in providers should appear in the error message
+        with pytest.raises(ValueError, match="ollama"):
             get_text_model(bad_config)
 
 
@@ -124,3 +146,14 @@ class TestGetVisionModel:
 
         with pytest.raises(ValueError, match="Unknown provider"):
             get_vision_model(bad_config)
+
+    def test_llama_cpp_vision_raises_value_error(self, llama_cpp_text_config: ModelConfig) -> None:
+        """llama_cpp has no vision factory in Phase 1."""
+        vision_cfg = ModelConfig(
+            name="llama-cpp",
+            model_type=ModelType.VISION,
+            provider="llama_cpp",
+            model_path="/fake/model.gguf",
+        )
+        with pytest.raises(ValueError, match="llama_cpp"):
+            get_vision_model(vision_cfg)

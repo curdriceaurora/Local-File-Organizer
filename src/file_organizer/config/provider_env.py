@@ -2,17 +2,19 @@
 
 Supported environment variables::
 
-    FO_PROVIDER=openai          # "ollama" (default) or "openai"
+    FO_PROVIDER=openai          # "ollama" (default), "openai", or "llama_cpp"
     FO_OPENAI_API_KEY=sk-...    # Required when FO_PROVIDER=openai and endpoint needs auth
     FO_OPENAI_BASE_URL=https://api.openai.com/v1
     FO_OPENAI_MODEL=gpt-4o      # Text model name
     FO_OPENAI_VISION_MODEL=gpt-4o  # Vision model; falls back to FO_OPENAI_MODEL
+    FO_LLAMA_CPP_MODEL_PATH=/path/to/model.gguf  # Required when FO_PROVIDER=llama_cpp
+    FO_LLAMA_CPP_N_GPU_LAYERS=0  # Optional; overrides device-based default
     FO_PROFILE=default          # Config profile name to load (default: "default")
 
 Priority cascade (highest wins)::
 
     1. Explicit ``ModelConfig`` parameters passed to ``FileOrganizer``
-    2. Environment variables (``FO_PROVIDER``, ``FO_OPENAI_*``)
+    2. Environment variables (``FO_PROVIDER``, ``FO_OPENAI_*``, ``FO_LLAMA_CPP_*``)
     3. Config profile (resolved via ``platformdirs.user_config_dir``)
     4. Hardcoded defaults
 
@@ -36,17 +38,72 @@ from file_organizer.models.vision_model import VisionModel
 _OPENAI_TEXT_DEFAULT = "gpt-4o-mini"
 
 
-def get_current_provider() -> Literal["ollama", "openai"]:
+def get_current_provider() -> Literal["ollama", "openai", "llama_cpp"]:
     """Return the active provider from env, validated against known values."""
     raw = os.environ.get("FO_PROVIDER", "ollama").strip().lower()
-    if raw not in ("ollama", "openai"):
+    if raw not in ("ollama", "openai", "llama_cpp"):
         logger.warning(
             "FO_PROVIDER={} is not a recognised value; falling back to 'ollama'. "
-            "Supported values: 'ollama', 'openai'.",
+            "Supported values: 'ollama', 'openai', 'llama_cpp'.",
             raw,
         )
         return "ollama"
     return raw  # type: ignore[return-value]
+
+
+def _get_llama_cpp_configs() -> tuple[ModelConfig, ModelConfig]:
+    """Build llama.cpp text and vision ``ModelConfig`` objects from env vars.
+
+    Reads ``FO_LLAMA_CPP_MODEL_PATH`` and optionally
+    ``FO_LLAMA_CPP_N_GPU_LAYERS``.  Emits a warning if the model path is
+    not set, as requests will fail at ``initialize()`` time.
+
+    Returns:
+        A ``(text_config, vision_config)`` tuple.  Both share the same
+        ``model_path``; vision config is included for API parity even though
+        the llama_cpp vision factory is not yet registered (Phase 2).
+    """
+    model_path = (os.environ.get("FO_LLAMA_CPP_MODEL_PATH") or "").strip()
+    n_gpu_layers_raw = (os.environ.get("FO_LLAMA_CPP_N_GPU_LAYERS") or "").strip()
+
+    if not model_path:
+        logger.warning(
+            "FO_PROVIDER=llama_cpp but FO_LLAMA_CPP_MODEL_PATH is not set. "
+            "LlamaCppTextModel.initialize() will raise ValueError. "
+            "Set FO_LLAMA_CPP_MODEL_PATH to the path of your .gguf model file."
+        )
+
+    extra_params: dict[str, int] = {}
+    if n_gpu_layers_raw:
+        try:
+            extra_params["n_gpu_layers"] = int(n_gpu_layers_raw)
+        except ValueError:
+            logger.warning(
+                "FO_LLAMA_CPP_N_GPU_LAYERS={} is not a valid integer; ignoring.",
+                n_gpu_layers_raw,
+            )
+
+    text_config = ModelConfig(
+        name="llama-cpp",
+        model_type=ModelType.TEXT,
+        provider="llama_cpp",
+        model_path=model_path,
+        extra_params=extra_params if extra_params else None,
+    )
+    vision_config = ModelConfig(
+        name="llama-cpp",
+        model_type=ModelType.VISION,
+        provider="llama_cpp",
+        model_path=model_path,
+        extra_params=extra_params if extra_params else None,
+    )
+
+    logger.info(
+        "Provider configured from env: provider=llama_cpp, model_path={}",
+        model_path or "(unset)",
+    )
+
+    return text_config, vision_config
 
 
 def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
@@ -57,6 +114,9 @@ def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
         ``"ollama"`` (or unset), the Ollama defaults are returned unchanged.
         When ``FO_PROVIDER=openai`` the OpenAI-compatible defaults are used,
         overridden by any ``FO_OPENAI_*`` variables that are set.
+        When ``FO_PROVIDER=llama_cpp`` the llama.cpp defaults are used,
+        driven by ``FO_LLAMA_CPP_MODEL_PATH`` and optionally
+        ``FO_LLAMA_CPP_N_GPU_LAYERS``.
 
     Note:
         This function reads environment variables at call time and must **not**
@@ -67,6 +127,9 @@ def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
 
     if provider == "ollama":
         return TextModel.get_default_config(), VisionModel.get_default_config()
+
+    if provider == "llama_cpp":
+        return _get_llama_cpp_configs()
 
     # --- OpenAI-compatible provider ---
     # Strip whitespace and convert empty strings to None so callers receive
@@ -154,7 +217,7 @@ def get_model_configs(
 
     Priority (highest wins):
 
-    1. Environment variables (``FO_PROVIDER`` / ``FO_OPENAI_*``)
+    1. Environment variables (``FO_PROVIDER`` / ``FO_OPENAI_*`` / ``FO_LLAMA_CPP_*``)
     2. Config profile from disk
     3. Hardcoded defaults
 
