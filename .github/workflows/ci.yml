@@ -54,12 +54,9 @@ jobs:
               - ".github/workflows/ci.yml"
             desktop:
               - "desktop/**"
-              - "desktop/src-tauri/Cargo.toml"
-              - "desktop/src-tauri/Cargo.lock"
               - ".github/workflows/ci.yml"
 
   lint:
-    needs: changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -74,7 +71,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   unused-deps:
-    needs: changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -87,7 +83,6 @@ jobs:
       - run: deptry src/
 
   type-check:
-    needs: changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -100,7 +95,6 @@ jobs:
         run: mypy src/file_organizer/models/
 
   link-integrity:
-    needs: changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
