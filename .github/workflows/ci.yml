@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         with:
           filters: |
             benchmark:
@@ -174,7 +174,7 @@ jobs:
         run: interrogate -v src/ --fail-under 90
       - name: Upload coverage
         if: matrix.python-version == '3.11' && github.event_name != 'pull_request'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238
         with:
           file: coverage.xml
           fail_ci_if_error: false
@@ -205,7 +205,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7
       - name: Install Tauri Linux dependencies
         run: |
           sudo apt-get update
