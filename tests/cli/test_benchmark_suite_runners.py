@@ -131,12 +131,14 @@ def test_audio_suite_warns_when_falling_back_to_io() -> None:
     """Audio suite should emit a warning when no audio candidates are available."""
     expected_result = 7
     with patch("file_organizer.cli.benchmark._run_io_suite") as mocked_io_suite:
-        mocked_io_suite.return_value = expected_result
+        mocked_io_suite.return_value = benchmark_cli._SuiteIterationOutcome(
+            processed_count=expected_result
+        )
         with patch("file_organizer.cli.benchmark.typer.echo") as mocked_echo:
             result = benchmark_cli._run_audio_suite([_CORPUS_DIR / "sample_notes.txt"])
 
     mocked_io_suite.assert_called_once_with([_CORPUS_DIR / "sample_notes.txt"])
-    assert result == expected_result
+    assert result.processed_count == expected_result
     mocked_echo.assert_called_once_with(
         "Warning: no audio files found; falling back to IO-only benchmark.",
         err=True,
@@ -150,7 +152,7 @@ def test_text_suite_warns_and_skips_when_no_text_candidates() -> None:
     with patch("file_organizer.cli.benchmark.typer.echo") as mocked_echo:
         result = benchmark_cli._run_text_suite([_CORPUS_DIR / "sample_photo.jpg"])
 
-    assert result == 0
+    assert result.processed_count == 0
     mocked_echo.assert_called_once_with(
         "Warning: no text files found for text suite; skipping benchmark.",
         err=True,
@@ -164,7 +166,7 @@ def test_vision_suite_warns_and_skips_when_no_vision_candidates() -> None:
     with patch("file_organizer.cli.benchmark.typer.echo") as mocked_echo:
         result = benchmark_cli._run_vision_suite([_CORPUS_DIR / "sample_notes.txt"])
 
-    assert result == 0
+    assert result.processed_count == 0
     mocked_echo.assert_called_once_with(
         "Warning: no vision files found for vision suite; skipping benchmark.",
         err=True,
@@ -177,7 +179,9 @@ def test_classify_e2e_suite_marks_no_processed_candidates_as_degraded() -> None:
     """E2E classification should mark zero processed candidates as degraded."""
     files = [_CORPUS_DIR / "sample_notes.txt"]
 
-    classification = benchmark_cli._classify_e2e_suite(files, processed_count=0)
+    classification = benchmark_cli._classify_e2e_suite(
+        files, benchmark_cli._SuiteIterationOutcome(processed_count=0)
+    )
 
     assert classification.effective_suite == "e2e"
     assert classification.degraded is True
@@ -191,11 +195,11 @@ def test_execute_suite_iteration_measures_runner_before_classification() -> None
     observed_call_counts: list[int] = []
     console = MagicMock()
 
-    def _runner(_: list[Path]) -> int:
-        return 1
+    def _runner(_: list[Path]) -> benchmark_cli._SuiteIterationOutcome:
+        return benchmark_cli._SuiteIterationOutcome(processed_count=1)
 
     def _classifier(
-        _: list[Path], _processed_count: int
+        _: list[Path], _outcome: benchmark_cli._SuiteIterationOutcome
     ) -> benchmark_cli._SuiteExecutionClassification:
         observed_call_counts.append(mocked_monotonic.call_count)
         return benchmark_cli._SuiteExecutionClassification(effective_suite="io", degraded=False)
@@ -225,11 +229,11 @@ def test_execute_suite_iteration_wraps_classifier_failure() -> None:
     """Classifier failures should use the same typed exit flow as runner failures."""
     console = MagicMock()
 
-    def _runner(_: list[Path]) -> int:
-        return 1
+    def _runner(_: list[Path]) -> benchmark_cli._SuiteIterationOutcome:
+        return benchmark_cli._SuiteIterationOutcome(processed_count=1)
 
     def _classifier(
-        _: list[Path], _processed_count: int
+        _: list[Path], _outcome: benchmark_cli._SuiteIterationOutcome
     ) -> benchmark_cli._SuiteExecutionClassification:
         raise RuntimeError("classification exploded")
 
