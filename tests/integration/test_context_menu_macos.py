@@ -1,10 +1,14 @@
 """Tests for macOS Finder context menu Quick Action."""
 
 import stat
+import sys
 import unittest
 from pathlib import Path
 
+import pytest
 
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only test")
 class TestMacOSQuickAction(unittest.TestCase):
     def setUp(self):
         self.macos_dir = Path("desktop/context-menus/macos")

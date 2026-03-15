@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import os
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -154,12 +155,14 @@ class CheckpointManager:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, path)
-            # Fsync directory to persist rename metadata
-            dir_fd = os.open(str(path.parent), os.O_RDONLY)
-            try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
+            # Fsync directory to persist rename metadata (POSIX only; Windows
+            # does not support opening directories with os.open)
+            if sys.platform != "win32":
+                dir_fd = os.open(str(path.parent), os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
             logger.debug("Saved checkpoint for job %s", checkpoint.job_id)
         except Exception:
             if temp_path.exists():

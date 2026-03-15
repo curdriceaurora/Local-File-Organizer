@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -84,12 +85,14 @@ class UpdateStateStore:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, self._state_path)
-            # Fsync directory to persist rename metadata
-            dir_fd = os.open(str(self._state_path.parent), os.O_RDONLY)
-            try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
+            # Fsync directory to persist rename metadata (POSIX only; Windows
+            # does not support opening directories with os.open)
+            if sys.platform != "win32":
+                dir_fd = os.open(str(self._state_path.parent), os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
         except Exception:
             if temp_path.exists():
                 temp_path.unlink()

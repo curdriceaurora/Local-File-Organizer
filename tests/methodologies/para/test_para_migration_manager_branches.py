@@ -8,6 +8,7 @@ generate_preview with >20 files.
 from __future__ import annotations
 
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -96,6 +97,7 @@ class TestExecuteMigration:
         report = manager.execute_migration(plan, dry_run=False, create_backup=False)
         assert len(report.skipped) == 1
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="relies on /proc being unwritable")
     def test_execute_migration_move_failure(
         self, manager: PARAMigrationManager, tmp_path: Path
     ) -> None:

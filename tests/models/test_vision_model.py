@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -67,7 +68,7 @@ class TestVisionModel:
                     assert kwargs["model"] == vision_model_config.name
                     assert kwargs["prompt"] == "Describe this image"
                     # Note: We check if images list contains the path string
-                    assert str(kwargs["images"][0]) == "/path/to/image.jpg"
+                    assert kwargs["images"][0] == Path("/path/to/image.jpg")
 
     def test_generate_from_image_error(self, vision_model_config: ModelConfig) -> None:
         """Test image generation error handling."""

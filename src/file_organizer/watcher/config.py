@@ -115,11 +115,17 @@ def _matches_pattern(path_str: str, pattern: str) -> bool:
     import fnmatch
     from pathlib import PurePosixPath
 
+    # Normalize path separators so Windows backslashes are treated as POSIX
+    # forward slashes — required for PurePosixPath and fnmatch to work correctly
+    # on Windows where str(Path(...)) uses backslashes.
+    normalized = path_str.replace("\\", "/")
+
     # Check against the full path and each individual component
-    path_parts = PurePosixPath(path_str).parts
+    posix_path = PurePosixPath(normalized)
+    path_parts = posix_path.parts
 
     # Match against the full path
-    if fnmatch.fnmatch(path_str, pattern):
+    if fnmatch.fnmatch(normalized, pattern):
         return True
 
     # Match against each path component
@@ -128,8 +134,7 @@ def _matches_pattern(path_str: str, pattern: str) -> bool:
             return True
 
     # Match against the filename
-    filename = PurePosixPath(path_str).name
-    if fnmatch.fnmatch(filename, pattern):
+    if fnmatch.fnmatch(posix_path.name, pattern):
         return True
 
     return False

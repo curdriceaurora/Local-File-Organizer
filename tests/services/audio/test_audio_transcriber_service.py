@@ -331,7 +331,7 @@ class TestLoadModel:
             t._load_model()
 
         call_kwargs = mock_fw.WhisperModel.call_args
-        assert call_kwargs[1]["download_root"] == "/tmp/models"
+        assert call_kwargs[1]["download_root"] == str(t.cache_dir)
 
 
 # ---------------------------------------------------------------------------

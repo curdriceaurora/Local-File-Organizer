@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 from pathlib import Path
 
 from file_organizer.config.path_manager import get_data_dir
@@ -74,12 +75,14 @@ class JobPersistence:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, path)
-            # Fsync directory to persist rename metadata
-            dir_fd = os.open(str(path.parent), os.O_RDONLY)
-            try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
+            # Fsync directory to persist rename metadata (POSIX only; Windows
+            # does not support opening directories with os.open)
+            if sys.platform != "win32":
+                dir_fd = os.open(str(path.parent), os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
             logger.debug("Saved job %s to %s", job.id, path)
         except Exception:
             # Clean up temp file if something went wrong

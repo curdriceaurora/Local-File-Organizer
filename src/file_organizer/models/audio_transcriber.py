@@ -409,10 +409,13 @@ class AudioTranscriber:
             processing_time = time.time() - start_time
             duration = info.duration
 
-            logger.info(
-                f"Transcription complete: {duration:.1f}s audio in {processing_time:.1f}s "
-                f"({duration / processing_time:.2f}x realtime)"
-            )
+            if processing_time > 0:
+                logger.info(
+                    f"Transcription complete: {duration:.1f}s audio in {processing_time:.1f}s "
+                    f"({duration / processing_time:.2f}x realtime)"
+                )
+            else:
+                logger.info("Transcription complete: {:.1f}s audio", duration)
 
             return TranscriptionResult(
                 text=full_text,

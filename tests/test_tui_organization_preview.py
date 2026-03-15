@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -88,14 +89,16 @@ class TestOrganizationPreviewView:
         assert str(view._input_dir) == "."
         assert str(view._output_dir) == "organized_output"
 
-    def test_custom_dirs(self) -> None:
+    def test_custom_dirs(self, tmp_path: Path) -> None:
+        in_dir = tmp_path / "input"
+        out_dir = tmp_path / "output"
         view = OrganizationPreviewView(
-            input_dir="/tmp/input",
-            output_dir="/tmp/output",
+            input_dir=str(in_dir),
+            output_dir=str(out_dir),
             id="view",
         )
-        assert str(view._input_dir) == "/tmp/input"
-        assert str(view._output_dir) == "/tmp/output"
+        assert view._input_dir == in_dir
+        assert view._output_dir == out_dir
 
 
 @pytest.mark.asyncio
