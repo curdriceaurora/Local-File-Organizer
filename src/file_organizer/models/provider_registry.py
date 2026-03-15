@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
-from typing import Any
 
 from file_organizer.models.base import BaseModel, ModelConfig
 
@@ -191,8 +190,8 @@ _register_builtins()
 def register_provider(
     name: str,
     *,
-    text_factory: Any | None = None,
-    vision_factory: Any | None = None,
+    text_factory: TextModelFactory | None = None,
+    vision_factory: VisionModelFactory | None = None,
 ) -> None:
     """Register a custom provider on the module-level singleton registry.
 

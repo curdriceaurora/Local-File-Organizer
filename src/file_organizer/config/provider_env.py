@@ -88,14 +88,14 @@ def _get_llama_cpp_configs() -> tuple[ModelConfig, ModelConfig]:
         model_type=ModelType.TEXT,
         provider="llama_cpp",
         model_path=model_path,
-        extra_params=extra_params if extra_params else None,
+        extra_params=extra_params,
     )
     vision_config = ModelConfig(
         name="llama-cpp",
         model_type=ModelType.VISION,
         provider="llama_cpp",
         model_path=model_path,
-        extra_params=extra_params if extra_params else None,
+        extra_params=extra_params,
     )
 
     logger.info(
