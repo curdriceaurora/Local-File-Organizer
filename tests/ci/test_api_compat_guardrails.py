@@ -60,6 +60,7 @@ def test_api_compat_repo_enforcement_reports_zero_findings() -> None:
 
 def test_seeded_api_compat_fixtures_trigger_expected_rules() -> None:
     report = run_audit(FIXTURE_ROOT, (_fixture_detector(),))
+    assert len(report.findings) == 2
     found_rule_ids = {finding.rule_id for finding in report.findings}
     found_paths = {finding.path for finding in report.findings}
 
