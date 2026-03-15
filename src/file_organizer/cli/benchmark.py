@@ -11,6 +11,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import logging
 import math
 import shutil
 import statistics
@@ -32,6 +33,7 @@ benchmark_app = typer.Typer(
     help="Benchmark file processing performance.",
     no_args_is_help=True,
 )
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -421,13 +423,26 @@ def _run_e2e_suite(files: list[Path]) -> int:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         copied: list[Path] = []
+        copy_failures: list[tuple[Path, str]] = []
         for index, source in enumerate(candidates):
             target = input_dir / f"{index:03d}_{source.name}"
             try:
                 shutil.copy2(source, target)
                 copied.append(target)
-            except OSError:
+            except OSError as exc:
+                copy_failures.append((source, str(exc)))
+                logger.debug(
+                    "Skipping e2e benchmark candidate copy; source=%s error=%s",
+                    source,
+                    exc,
+                )
                 continue
+        if copy_failures:
+            logger.debug(
+                "E2E benchmark setup skipped %d candidate copies out of %d",
+                len(copy_failures),
+                len(candidates),
+            )
 
         if not copied:
             return 0
