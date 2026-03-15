@@ -54,9 +54,8 @@ jobs:
               - ".github/workflows/ci.yml"
             desktop:
               - "desktop/**"
-              - "**/Cargo.toml"
-              - "**/Cargo.lock"
-              - "Dockerfile"
+              - "desktop/src-tauri/Cargo.toml"
+              - "desktop/src-tauri/Cargo.lock"
               - ".github/workflows/ci.yml"
 
   lint:
