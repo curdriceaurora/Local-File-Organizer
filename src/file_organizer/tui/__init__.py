@@ -19,6 +19,7 @@ from file_organizer.tui.file_preview import (
 )
 from file_organizer.tui.methodology_view import MethodologyView
 from file_organizer.tui.organization_preview import OrganizationPreviewView
+from file_organizer.tui.settings_view import SettingsView
 from file_organizer.tui.undo_history_view import UndoHistoryView
 
 __all__ = [
@@ -35,6 +36,7 @@ __all__ = [
     "FilterInput",
     "MethodologyView",
     "OrganizationPreviewView",
+    "SettingsView",
     "UndoHistoryView",
     "run_tui",
 ]

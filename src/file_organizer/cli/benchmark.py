@@ -8,21 +8,32 @@ regression flagging.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
+import logging
 import math
+import shutil
 import statistics
+import tempfile
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import typer
+
+from file_organizer.models.base import ModelType
+
+if TYPE_CHECKING:
+    from file_organizer.services.audio.metadata_extractor import AudioMetadata
 
 benchmark_app = typer.Typer(
     name="benchmark",
     help="Benchmark file processing performance.",
     no_args_is_help=True,
 )
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -47,6 +58,16 @@ class ComparisonResult(TypedDict):
     deltas_pct: dict[str, float]
     regression: bool
     threshold: float
+
+
+class _SuiteRunner(TypedDict):
+    """Metadata for a benchmark suite runner."""
+
+    run: Callable[[list[Path]], int]
+    description: str
+
+
+_RUNNER_PROFILE_VERSION = "2026-03-14-v1"
 
 
 # ---------------------------------------------------------------------------
@@ -131,33 +152,414 @@ def compare_results(
     )
 
 
+def _resolve_processed_count(processed_counts: list[int], warmup: int) -> int:
+    """Return processed file count from measured iterations, with safe fallback."""
+    measured = processed_counts[warmup:]
+    if measured:
+        return measured[-1]
+    if processed_counts:
+        return processed_counts[-1]
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Suite runners
 # ---------------------------------------------------------------------------
 
+_MAX_SUITE_FILES = 50
+_MAX_E2E_FILES = 25
 
-def _run_io_suite(files: list[Path]) -> None:
+_TEXT_EXTENSIONS = {
+    ".txt",
+    ".md",
+    ".rst",
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".csv",
+    ".tsv",
+    ".json",
+    ".xml",
+    ".yaml",
+    ".yml",
+}
+_VISION_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff"}
+_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".ogg", ".aac", ".wma", ".opus"}
+
+
+class _BenchmarkModelStub:
+    """In-memory model stub used by benchmark suite runners.
+
+    Why this exists:
+    - Benchmark suite selection should exercise real processor code paths.
+    - CI and local developer environments cannot assume Ollama/API backends.
+    - A deterministic stub keeps suite behavior stable and comparable.
+    """
+
+    def __init__(
+        self,
+        *,
+        model_type: ModelType,
+        prompt_responses: dict[str, str],
+        default_response: str,
+    ) -> None:
+        from file_organizer.models.base import ModelConfig
+
+        self.config = ModelConfig(name="benchmark-stub", model_type=model_type)
+        self._prompt_responses = prompt_responses
+        self._default_response = default_response
+        self._initialized = True
+
+    @property
+    def is_initialized(self) -> bool:
+        return self._initialized
+
+    def initialize(self) -> None:
+        self._initialized = True
+
+    def generate(self, prompt: str, **_: Any) -> str:
+        lowered = prompt.lower()
+        for needle, response in self._prompt_responses.items():
+            if needle in lowered:
+                return response
+        return self._default_response
+
+    def cleanup(self) -> None:
+        self._initialized = False
+
+    def safe_cleanup(self) -> None:
+        """Compatibility alias for processors expecting BaseModel.safe_cleanup()."""
+        self.cleanup()
+
+
+def _suite_candidates(
+    files: list[Path],
+    extensions: set[str],
+    *,
+    fallback_to_all: bool = False,
+    cap: int = _MAX_SUITE_FILES,
+) -> list[Path]:
+    """Return a capped file list for a benchmark suite."""
+    matches = [path for path in files if path.suffix.lower() in extensions]
+    selected = matches if matches else files if fallback_to_all else []
+    return selected[: min(cap, len(selected))]
+
+
+def _run_io_suite(files: list[Path]) -> int:
     """Baseline I/O benchmark: measures file stat access overhead."""
-    for file_path in files:
+    candidates = _suite_candidates(files, set(), fallback_to_all=True)
+    for file_path in candidates:
         try:
             _ = file_path.stat()
         except OSError:
             pass
+    return len(candidates)
 
 
-_SUITE_RUNNERS: dict[str, Any] = {
-    "io": _run_io_suite,
-    "text": _run_io_suite,
-    "vision": _run_io_suite,
-    "audio": _run_io_suite,
-    "pipeline": _run_io_suite,
-    "e2e": _run_io_suite,
+def _run_text_suite(files: list[Path]) -> int:
+    """Benchmark text processing path via TextProcessor.process_file()."""
+    candidates = _suite_candidates(files, _TEXT_EXTENSIONS)
+    if not candidates:
+        typer.echo("Warning: no text files found for text suite; skipping benchmark.", err=True)
+        return 0
+
+    from file_organizer.models.base import ModelType
+    from file_organizer.services import TextProcessor
+
+    model = _BenchmarkModelStub(
+        model_type=ModelType.TEXT,
+        prompt_responses={
+            "summary:": "Synthetic benchmark summary for deterministic text runs.",
+            "category:": "benchmark_docs",
+            "filename:": "benchmark_text_file",
+        },
+        default_response="Synthetic benchmark response",
+    )
+    processor = TextProcessor(text_model=model)
+    try:
+        for file_path in candidates:
+            processor.process_file(file_path)
+    finally:
+        processor.cleanup()
+    return len(candidates)
+
+
+def _run_vision_suite(files: list[Path]) -> int:
+    """Benchmark vision processing path via VisionProcessor.process_file()."""
+    candidates = _suite_candidates(files, _VISION_EXTENSIONS)
+    if not candidates:
+        typer.echo("Warning: no vision files found for vision suite; skipping benchmark.", err=True)
+        return 0
+
+    from file_organizer.models.base import ModelType
+    from file_organizer.services import VisionProcessor
+
+    model = _BenchmarkModelStub(
+        model_type=ModelType.VISION,
+        prompt_responses={
+            "extract all visible text": "NO_TEXT",
+            "category:": "benchmark_images",
+            "filename:": "benchmark_image_file",
+        },
+        default_response="Synthetic benchmark image description.",
+    )
+    processor = VisionProcessor(vision_model=model)
+    try:
+        for file_path in candidates:
+            processor.process_file(file_path, perform_ocr=False)
+    finally:
+        processor.cleanup()
+    return len(candidates)
+
+
+def _synthesized_audio_metadata(file_path: Path) -> AudioMetadata:
+    """Return minimal audio metadata when optional extractors are unavailable."""
+    from file_organizer.services.audio.metadata_extractor import AudioMetadata
+
+    stat = file_path.stat()
+    return AudioMetadata(
+        file_path=file_path,
+        file_size=stat.st_size,
+        format=file_path.suffix[1:].upper() if file_path.suffix else "UNKNOWN",
+        duration=0.0,
+        bitrate=0,
+        sample_rate=0,
+        channels=0,
+    )
+
+
+def _run_audio_suite(files: list[Path]) -> int:
+    """Benchmark audio metadata + classification path."""
+    candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
+    if not candidates:
+        typer.echo("Warning: no audio files found; falling back to IO-only benchmark.", err=True)
+        return _run_io_suite(files)
+
+    from file_organizer.services.audio.classifier import AudioClassifier
+    from file_organizer.services.audio.metadata_extractor import AudioMetadataExtractor
+
+    extractor = AudioMetadataExtractor(use_fallback=True)
+    classifier = AudioClassifier()
+    for file_path in candidates:
+        try:
+            metadata = extractor.extract(file_path)
+        except ImportError:
+            metadata = _synthesized_audio_metadata(file_path)
+        except Exception as exc:
+            raise RuntimeError(f"Audio benchmark runner failed for {file_path}: {exc}") from exc
+        _ = classifier.classify(metadata)
+    return len(candidates)
+
+
+def _run_pipeline_suite(files: list[Path]) -> int:
+    """Benchmark the PipelineOrchestrator stage path end-to-end."""
+    candidates = _suite_candidates(files, set(), fallback_to_all=True)
+    if not candidates:
+        return 0
+
+    from file_organizer.pipeline.config import PipelineConfig
+    from file_organizer.pipeline.orchestrator import PipelineOrchestrator
+    from file_organizer.pipeline.processor_pool import ProcessorPool
+    from file_organizer.pipeline.router import FileRouter
+    from file_organizer.pipeline.stages.analyzer import AnalyzerStage
+    from file_organizer.pipeline.stages.postprocessor import PostprocessorStage
+    from file_organizer.pipeline.stages.preprocessor import PreprocessorStage
+    from file_organizer.pipeline.stages.writer import WriterStage
+
+    with tempfile.TemporaryDirectory(prefix="fo-benchmark-pipeline-") as tmp:
+        output_dir = Path(tmp) / "pipeline_output"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        router = FileRouter()
+        pool = ProcessorPool()
+        orchestrator = PipelineOrchestrator(
+            config=PipelineConfig(
+                output_directory=output_dir,
+                dry_run=True,
+                auto_organize=False,
+                max_concurrent=2,
+            ),
+            stages=[
+                PreprocessorStage(),
+                AnalyzerStage(router=router, processor_pool=pool),
+                PostprocessorStage(output_dir),
+                WriterStage(),
+            ],
+            prefetch_depth=1,
+            prefetch_stages=1,
+        )
+        try:
+            _ = orchestrator.process_batch(candidates)
+        finally:
+            orchestrator.stop()
+            pool.cleanup()
+    return len(candidates)
+
+
+def _run_e2e_suite(files: list[Path]) -> int:
+    """Benchmark full organizer flow including file writes."""
+    preferred_extensions = _VISION_EXTENSIONS | _AUDIO_EXTENSIONS
+    preferred = _suite_candidates(
+        files,
+        preferred_extensions,
+        fallback_to_all=False,
+        cap=_MAX_E2E_FILES,
+    )
+    candidates = preferred or _suite_candidates(
+        files,
+        set(),
+        fallback_to_all=True,
+        cap=_MAX_E2E_FILES,
+    )
+    if not candidates:
+        return 0
+
+    from file_organizer.core.organizer import FileOrganizer
+
+    with tempfile.TemporaryDirectory(prefix="fo-benchmark-e2e-") as tmp:
+        workspace = Path(tmp)
+        input_dir = workspace / "input"
+        output_dir = workspace / "output"
+        input_dir.mkdir(parents=True, exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        copied: list[Path] = []
+        copy_failures: list[tuple[Path, str]] = []
+        for index, source in enumerate(candidates):
+            target = input_dir / f"{index:03d}_{source.name}"
+            try:
+                shutil.copy2(source, target)
+                copied.append(target)
+            except OSError as exc:
+                copy_failures.append((source, str(exc)))
+                logger.debug(
+                    "Skipping e2e benchmark candidate copy; source=%s error=%s",
+                    source,
+                    exc,
+                )
+                continue
+        if copy_failures:
+            logger.debug(
+                "E2E benchmark setup skipped %d candidate copies out of %d",
+                len(copy_failures),
+                len(candidates),
+            )
+
+        if not copied:
+            return 0
+
+        organizer = FileOrganizer(
+            dry_run=False,
+            use_hardlinks=False,
+            parallel_workers=1,
+            no_prefetch=True,
+            prefetch_depth=0,
+            enable_vision=False,
+        )
+        try:
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                organizer.organize(input_dir, output_dir, skip_existing=False)
+        except Exception as exc:
+            raise RuntimeError(f"E2E benchmark runner failed: {exc}") from exc
+    return len(copied)
+
+
+_SUITE_RUNNERS: dict[str, _SuiteRunner] = {
+    "io": {
+        "run": _run_io_suite,
+        "description": "File stat/read overhead only.",
+    },
+    "text": {
+        "run": _run_text_suite,
+        "description": "TextProcessor stack with deterministic benchmark model.",
+    },
+    "vision": {
+        "run": _run_vision_suite,
+        "description": "VisionProcessor stack with deterministic benchmark model.",
+    },
+    "audio": {
+        "run": _run_audio_suite,
+        "description": (
+            "Audio metadata extraction + classification path "
+            "(synthetic metadata fallback only when optional extractor deps are missing)."
+        ),
+    },
+    "pipeline": {
+        "run": _run_pipeline_suite,
+        "description": "PipelineOrchestrator real staged processing path (pre/analyze/post/write).",
+    },
+    "e2e": {
+        "run": _run_e2e_suite,
+        "description": "Full FileOrganizer run including output writes in temp workspace.",
+    },
 }
 
 
 # ---------------------------------------------------------------------------
 # Output helpers
 # ---------------------------------------------------------------------------
+
+
+def _detect_hardware_profile() -> dict[str, Any]:
+    """Return hardware profile dict with a stable fallback payload."""
+    try:
+        from file_organizer.core.hardware_profile import detect_hardware
+
+        return detect_hardware().to_dict()
+    except (ImportError, ModuleNotFoundError, OSError, RuntimeError):
+        return {"error": "Hardware detection unavailable"}
+
+
+def _check_baseline_profile_compatibility(
+    baseline: dict[str, Any],
+    *,
+    suite: str,
+    console: Any,
+    json_output: bool,
+) -> str | None:
+    """Validate runner-profile compatibility between current and baseline output.
+
+    Returns a warning string when the baseline declares a different profile
+    version, otherwise ``None``.
+    """
+    baseline_profile = baseline.get("runner_profile_version")
+    if baseline_profile is None or baseline_profile == _RUNNER_PROFILE_VERSION:
+        return None
+
+    warning = (
+        "Baseline runner profile mismatch "
+        f"(baseline={baseline_profile}, current={_RUNNER_PROFILE_VERSION}, suite={suite}). "
+        "Comparisons may mix non-equivalent benchmark semantics."
+    )
+    if not json_output:
+        console.print(f"[yellow]{warning}[/yellow]")
+    return warning
+
+
+def _execute_suite_iteration(
+    *,
+    runner: Callable[[list[Path]], int],
+    files: list[Path],
+    suite: str,
+    console: Any,
+) -> tuple[float, int]:
+    """Run one suite iteration and validate returned processed count."""
+    start = time.monotonic()
+    try:
+        processed_count = runner(files)
+    except Exception as e:
+        console.print(f"[red]Benchmark suite '{suite}' failed: {e}[/red]")
+        raise typer.Exit(code=1) from e
+    if processed_count < 0:
+        console.print(
+            f"[red]Benchmark suite '{suite}' returned invalid processed count: {processed_count}[/red]"
+        )
+        raise typer.Exit(code=1)
+
+    elapsed_ms = (time.monotonic() - start) * 1000
+    return elapsed_ms, processed_count
 
 
 def _print_table(
@@ -235,7 +637,10 @@ def run(
         "io",
         "--suite",
         "-s",
-        help="Benchmark suite to run (io, text, vision, audio, pipeline, e2e).",
+        help=(
+            "Benchmark suite to run (io, text, vision, audio, pipeline, e2e). "
+            "Each suite executes a dedicated runner."
+        ),
     ),
     json_output: bool = typer.Option(
         False,
@@ -271,19 +676,13 @@ def run(
 
     if not files:
         if json_output:
-            hw_profile_empty: dict[str, Any] = {}
-            try:
-                from file_organizer.core.hardware_profile import detect_hardware
-
-                hw_profile_empty = detect_hardware().to_dict()
-            except Exception:
-                hw_profile_empty = {"error": "Hardware detection unavailable"}
             console.print(
                 json.dumps(
                     {
                         "suite": suite,
+                        "runner_profile_version": _RUNNER_PROFILE_VERSION,
                         "files_count": 0,
-                        "hardware_profile": hw_profile_empty,
+                        "hardware_profile": _detect_hardware_profile(),
                         "results": compute_stats([], 0),
                     },
                     indent=2,
@@ -294,10 +693,11 @@ def run(
         return
 
     # Select suite runner
-    runner = _SUITE_RUNNERS.get(suite)
-    if runner is None:
+    suite_spec = _SUITE_RUNNERS.get(suite)
+    if suite_spec is None:
         console.print(f"[red]Unknown suite: {suite}[/red]")
         raise typer.Exit(code=1)
+    runner = suite_spec["run"]
 
     # Ensure we have enough iterations
     total_iterations = warmup + iterations
@@ -306,40 +706,38 @@ def run(
             f"[bold]Benchmarking[/bold] {len(files)} files, "
             f"suite={suite}, {iterations} iterations + {warmup} warmup"
         )
+        console.print(f"[dim]Suite profile: {suite_spec['description']}[/dim]")
 
     # Run iterations
     all_times_ms: list[float] = []
+    processed_counts: list[int] = []
     for i in range(total_iterations):
         if not json_output:
             label = "warmup" if i < warmup else f"{i - warmup + 1}/{iterations}"
             console.print(f"[dim]Iteration {i + 1}/{total_iterations} ({label})...[/dim]")
 
-        start = time.monotonic()
-        runner(files)
-        elapsed_ms = (time.monotonic() - start) * 1000
+        elapsed_ms, processed_count = _execute_suite_iteration(
+            runner=runner,
+            files=files,
+            suite=suite,
+            console=console,
+        )
         all_times_ms.append(elapsed_ms)
+        processed_counts.append(processed_count)
 
     # Exclude warmup
     measured = all_times_ms[warmup:]
+    actual_processed_count = _resolve_processed_count(processed_counts, warmup)
 
     # Statistics
-    stats = compute_stats(measured, len(files))
-
-    # Hardware profile
-    hw_profile: dict[str, Any] = {}
-    try:
-        from file_organizer.core.hardware_profile import detect_hardware
-
-        hw = detect_hardware()
-        hw_profile = hw.to_dict()
-    except Exception:
-        hw_profile = {"error": "Hardware detection unavailable"}
+    stats = compute_stats(measured, actual_processed_count)
 
     # Build output
     output: dict[str, Any] = {
         "suite": suite,
-        "files_count": len(files),
-        "hardware_profile": hw_profile,
+        "runner_profile_version": _RUNNER_PROFILE_VERSION,
+        "files_count": actual_processed_count,
+        "hardware_profile": _detect_hardware_profile(),
         "results": stats,
     }
 
@@ -351,13 +749,21 @@ def run(
             console.print(f"[red]Failed to read baseline: {e}[/red]")
             raise typer.Exit(code=1) from e
 
+        profile_warning = _check_baseline_profile_compatibility(
+            baseline,
+            suite=suite,
+            console=console,
+            json_output=json_output,
+        )
         comp = compare_results(output, baseline)
         output["comparison"] = comp
+        if profile_warning is not None:
+            output["comparison_profile_warning"] = profile_warning
 
     if json_output:
         console.print(json.dumps(output, indent=2))
     else:
-        _print_table(console, suite, warmup, stats, len(files))
+        _print_table(console, suite, warmup, stats, actual_processed_count)
         if compare_path is not None:
             _print_comparison(console, output["comparison"], json_output=False)
         console.print("\n[bold green]Benchmark completed[/bold green]")

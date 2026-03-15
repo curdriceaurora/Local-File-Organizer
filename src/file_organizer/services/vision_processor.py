@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import re
+import threading
+import time
 import types as _t
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from loguru import logger
 
@@ -39,10 +42,21 @@ class VisionProcessor:
     - Handles video frames
     """
 
+    _FATAL_BACKEND_MARKERS: tuple[str, ...] = (
+        "connection refused",
+        "actively refused",
+        "dial tcp",
+        "health resp",
+        "runner has unexpectedly stopped",
+        "failed to connect",
+    )
+
     def __init__(
         self,
         vision_model: BaseModel | None = None,
         config: ModelConfig | None = None,
+        *,
+        backend_cooldown_seconds: float = 20.0,
     ) -> None:
         """Initialize vision processor.
 
@@ -54,6 +68,8 @@ class VisionProcessor:
                 The ``config.provider`` field controls which backend is used.
                 If omitted, the Ollama default configuration is applied
                 regardless of any global provider setting.
+            backend_cooldown_seconds: Cooldown period for fatal backend
+                failures before retrying model calls.
         """
         if vision_model is not None:
             if vision_model.config.model_type not in (ModelType.VISION, ModelType.VIDEO):
@@ -67,6 +83,11 @@ class VisionProcessor:
             config = config or VisionModel.get_default_config()
             self.vision_model = get_vision_model(config)
             self._owns_model = True
+
+        self._backend_cooldown_seconds = backend_cooldown_seconds
+        self._circuit_lock = threading.Lock()
+        self._circuit_opened_at: float | None = None
+        self._circuit_reason: str | None = None
 
         logger.info("VisionProcessor initialized")
 
@@ -102,6 +123,25 @@ class VisionProcessor:
         start_time = time.time()
 
         try:
+            if self._is_circuit_open():
+                logger.warning(
+                    "Vision backend circuit open; skipping model calls for {}",
+                    file_path.name,
+                )
+                error_message = self._circuit_open_error()
+                logger.debug(
+                    "Circuit-open fallback for {} with error={}",
+                    file_path.name,
+                    error_message,
+                )
+                return ProcessedImage(
+                    file_path=file_path,
+                    description=f"Image from {file_path.name}",
+                    folder_name="images",
+                    filename=file_path.stem,
+                    error=error_message,
+                )
+
             # Validate file exists
             if not file_path.exists():
                 return ProcessedImage(
@@ -118,6 +158,15 @@ class VisionProcessor:
                 logger.debug(f"Analyzing image: {file_path.name}")
                 description = self._generate_description(file_path)
                 logger.debug(f"Generated description ({len(description)} chars)")
+                if self._is_circuit_open():
+                    error_message = self._circuit_open_error()
+                    return ProcessedImage(
+                        file_path=file_path,
+                        description=description or f"Image from {file_path.name}",
+                        folder_name="images",
+                        filename=file_path.stem,
+                        error=error_message,
+                    )
 
             # Extract text if needed
             extracted_text = None
@@ -244,7 +293,7 @@ class VisionProcessor:
 Provide a clear, descriptive paragraph (100-150 words)."""
 
         try:
-            response = self.vision_model.generate(
+            response = self._guarded_generate(
                 prompt=prompt,
                 image_path=image_path,
                 temperature=0.5,
@@ -275,7 +324,7 @@ Provide ONLY the text, preserving the order but not necessarily the formatting.
 If there's no readable text, respond with "NO_TEXT"."""
 
         try:
-            response = self.vision_model.generate(
+            response = self._guarded_generate(
                 prompt=prompt,
                 image_path=image_path,
                 temperature=0.1,
@@ -330,7 +379,7 @@ IMAGE ANALYSIS:
 CATEGORY:"""
 
         try:
-            response = self.vision_model.generate(
+            response = self._guarded_generate(
                 prompt=prompt,
                 image_path=image_path,
                 temperature=0.3,
@@ -404,7 +453,7 @@ IMAGE ANALYSIS:
 FILENAME:"""
 
         try:
-            response = self.vision_model.generate(
+            response = self._guarded_generate(
                 prompt=prompt,
                 image_path=image_path,
                 temperature=0.3,
@@ -448,6 +497,53 @@ FILENAME:"""
         except Exception as e:
             logger.error(f"Failed to generate filename: {e}")
             return image_path.stem
+
+    def _guarded_generate(self, **kwargs: Any) -> str:
+        """Run model.generate behind a fatal-error circuit-breaker.
+
+        The circuit opens only for known backend fatal failures (connection
+        refused, runner stopped, health endpoint refusal). While open, calls
+        are short-circuited so we do not keep hammering an unhealthy backend.
+        """
+        if self._is_circuit_open():
+            reason = self._circuit_reason or "backend unavailable"
+            raise RuntimeError(f"Vision backend circuit open: {reason}")
+
+        try:
+            return self.vision_model.generate(**kwargs)
+        except Exception as exc:
+            if self._is_fatal_backend_error(exc):
+                self._trip_backend_circuit(exc)
+            raise
+
+    def _is_fatal_backend_error(self, exc: Exception) -> bool:
+        """Return True when an exception indicates backend process failure."""
+        text = str(exc).lower()
+        return any(marker in text for marker in self._FATAL_BACKEND_MARKERS)
+
+    def _trip_backend_circuit(self, exc: Exception) -> None:
+        """Open the backend circuit for a cooldown window."""
+        with self._circuit_lock:
+            self._circuit_opened_at = time.monotonic()
+            self._circuit_reason = str(exc)
+        logger.warning("Vision backend circuit opened: {}", exc)
+
+    def _is_circuit_open(self) -> bool:
+        """Return True while backend circuit cooldown is active."""
+        with self._circuit_lock:
+            opened_at = self._circuit_opened_at
+            if opened_at is None:
+                return False
+            if (time.monotonic() - opened_at) < self._backend_cooldown_seconds:
+                return True
+            self._circuit_opened_at = None
+            self._circuit_reason = None
+            return False
+
+    def _circuit_open_error(self) -> str:
+        """Return a stable, user-visible degradation message."""
+        reason = self._circuit_reason or "vision backend unavailable"
+        return f"Vision backend unavailable: {reason}"
 
     def cleanup(self) -> None:
         """Cleanup resources.

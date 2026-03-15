@@ -15,6 +15,8 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
 
+from file_organizer.tui.settings_view import load_parallel_runtime_settings
+
 
 class BeforeAfterPanel(Static):
     """Two-column display: current path -> proposed destination.
@@ -176,7 +178,12 @@ class OrganizationPreviewView(Vertical):
         try:
             from file_organizer.core.organizer import FileOrganizer
 
-            organizer = FileOrganizer(dry_run=True)
+            runtime_settings = load_parallel_runtime_settings()
+            organizer = FileOrganizer(
+                dry_run=True,
+                parallel_workers=runtime_settings.max_workers,
+                prefetch_depth=runtime_settings.prefetch_depth,
+            )
             result = organizer.organize(
                 input_path=self._input_dir,
                 output_path=self._output_dir,

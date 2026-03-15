@@ -31,6 +31,31 @@ permissions:
   pull-requests: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      benchmark: ${{ steps.filter.outputs.benchmark }}
+      desktop: ${{ steps.filter.outputs.desktop }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: filter
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
+        with:
+          filters: |
+            benchmark:
+              - "src/file_organizer/cli/benchmark.py"
+              - "tests/ci/test_benchmark_contracts.py"
+              - "tests/cli/test_benchmark*.py"
+              - "tests/e2e/**"
+              - "tests/fixtures/benchmark*"
+              - "tests/fixtures/benchmark*/**"
+              - "docs/admin/performance-tuning.md"
+              - "docs/cli-reference.md"
+              - ".github/workflows/ci.yml"
+            desktop:
+              - "desktop/**"
+              - ".github/workflows/ci.yml"
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -105,6 +130,8 @@ jobs:
           echo "✅ All documentation links are valid"
 
   test:
+    name: Test non-benchmark suite
+    needs: changes
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -138,16 +165,64 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pytest tests/ -m "ci" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
+            pytest tests/ -m "ci and not benchmark" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
           else
-            pytest tests/ --cov=file_organizer --cov-fail-under=95 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
+            pytest tests/ -m "not benchmark" --cov=file_organizer --cov-fail-under=95 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
           fi
       - name: Check docstring coverage
         if: matrix.python-version == '3.11'
         run: interrogate -v src/ --fail-under 90
       - name: Upload coverage
         if: matrix.python-version == '3.11' && github.event_name != 'pull_request'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238
         with:
           file: coverage.xml
           fail_ci_if_error: false
+
+  test-benchmark:
+    name: Test benchmark-only suite (no xdist)
+    needs: changes
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.benchmark == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
+      - name: Run benchmark suite
+        run: pytest tests/ -m benchmark --benchmark-only --strict-markers --timeout=30 --override-ini="addopts="
+
+  rust-check:
+    name: Rust desktop build
+    needs: changes
+    if: ${{ needs.changes.outputs.desktop == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Prepare sidecar placeholder for cargo check
+        working-directory: desktop/src-tauri
+        run: |
+          target_triple="$(rustc -vV | grep '^host:' | awk '{print $2}')"
+          sidecar_path="binaries/file-organizer-backend-${target_triple}"
+          mkdir -p binaries
+          if [ ! -f "${sidecar_path}" ]; then
+            printf '#!/usr/bin/env bash\nexit 0\n' > "${sidecar_path}"
+            chmod +x "${sidecar_path}"
+          fi
+      - name: Run cargo check
+        working-directory: desktop/src-tauri
+        run: cargo check --locked
+      - name: Run cargo tests
+        working-directory: desktop/src-tauri
+        run: cargo test --locked

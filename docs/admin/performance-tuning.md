@@ -73,6 +73,7 @@ DeviceType.METAL
 |-----------|---------|-------------|
 | `max_workers` | `None` (CPU count) | Maximum worker threads or processes |
 | `executor_type` | `THREAD` | `THREAD` (I/O-bound) or `PROCESS` (CPU-bound) |
+| `prefetch_depth` | `2` | Queue-ahead depth per worker for task scheduling (`0` = no prefetch queueing). |
 | `chunk_size` | `10` | Files submitted per scheduling round |
 | `timeout_per_file` | `60.0` | Seconds before a file processing times out |
 | `retry_count` | `2` | Retry attempts for failed files |
@@ -81,6 +82,7 @@ DeviceType.METAL
 
 - For Ollama-based inference (I/O-bound), use `THREAD` executor
 - For local model inference with GPU, `max_workers=1` prevents GPU contention
+- Lower `prefetch_depth` (or use `0`) to reduce queued work and memory pressure
 - Increase `timeout_per_file` for large PDFs or videos (120-300s)
 - Increase `chunk_size` for many small files (50-100)
 - Set `retry_count=0` to fail fast during bulk operations
@@ -91,6 +93,7 @@ from file_organizer.parallel.config import ParallelConfig, ExecutorType
 config = ParallelConfig(
     max_workers=4,
     executor_type=ExecutorType.THREAD,
+    prefetch_depth=2,
     chunk_size=20,
     timeout_per_file=120.0,
     retry_count=1,
@@ -120,9 +123,9 @@ latency behind LLM inference time.
   stage for thread-safety
 - Pass a `MemoryLimiter` to automatically back off prefetch when RSS approaches
   a configured ceiling
-- Note: `--no-prefetch` on the `file-organizer organize` CLI is currently a no-op
-  (that command uses `ParallelProcessor`). To disable prefetch, set `prefetch_depth=0`
-  when constructing `PipelineOrchestrator` directly
+- Note: on `file-organizer organize`, `--no-prefetch` is a backward-compatible
+  alias for `--prefetch-depth 0` in the legacy `ParallelProcessor` path. For
+  stage-based pipeline overlap, set `prefetch_depth=0` on `PipelineOrchestrator`.
 
 ```python
 from file_organizer.optimization.memory_limiter import MemoryLimiter, LimitAction
@@ -342,17 +345,26 @@ with limiter.guarded():
 
 ## Benchmarking
 
-Use the built-in startup benchmark to measure initialization time:
+Use the benchmark CLI to profile specific processing surfaces:
 
 ```bash
-python scripts/benchmark_startup.py
+# Baseline file-system overhead
+file-organizer benchmark run ~/test-files --suite io --json
+
+# Text and vision processor paths
+file-organizer benchmark run ~/test-files --suite text --json
+file-organizer benchmark run ~/test-files --suite vision --json
+
+# Pipeline and full organizer passes
+file-organizer benchmark run ~/test-files --suite pipeline --json
+file-organizer benchmark run ~/test-files --suite e2e --json
 ```
 
-For per-file processing benchmarks, use the CLI with `--dry-run`:
-
-```bash
-file-organizer organize ~/test-files ~/organized-output --dry-run
-```
+Why this matters:
+- `io` gives a floor for disk-only overhead.
+- `text`/`vision`/`audio` isolate processor-stack latency without requiring live model backends.
+- `pipeline` and `e2e` capture orchestration overhead and write-path behavior.
+- Baseline JSON now includes `runner_profile_version`; treat baseline comparisons as valid only when this version matches.
 
 ## Environment Variables
 

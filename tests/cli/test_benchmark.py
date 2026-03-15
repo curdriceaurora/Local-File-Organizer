@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,8 @@ from typer.testing import CliRunner
 from file_organizer.cli.main import app
 
 runner = CliRunner()
+_FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
+_CORPUS_DIR = _FIXTURES_DIR / "benchmark_suite_corpus"
 
 
 @pytest.mark.ci
@@ -63,6 +66,7 @@ def test_benchmark_json_output(tmp_path: Path) -> None:
     try:
         output_json = json.loads(result.stdout)
         assert "suite" in output_json
+        assert "runner_profile_version" in output_json
         assert "results" in output_json
         assert "files_count" in output_json
         assert "hardware_profile" in output_json
@@ -134,3 +138,37 @@ def test_benchmark_llm_call_count(tmp_path: Path) -> None:
     assert result.exit_code == 0
     output_json = json.loads(result.stdout)
     assert output_json["results"]["iterations"] == 5
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_benchmark_reports_processed_subset_count_for_filtered_suite(tmp_path: Path) -> None:
+    """Files count should reflect the suite-processed subset, not all discovered files."""
+    fixtures_dir = tmp_path / "fixtures"
+    fixtures_dir.mkdir()
+    (fixtures_dir / "notes1.txt").write_text("test content 1")
+    (fixtures_dir / "notes2.txt").write_text("test content 2")
+
+    sample_image = _CORPUS_DIR / "sample_photo.jpg"
+    assert sample_image.is_file(), f"Missing fixture image: {sample_image}"
+    shutil.copy2(sample_image, fixtures_dir / "sample_photo.jpg")
+
+    result = runner.invoke(
+        app,
+        [
+            "benchmark",
+            "run",
+            str(fixtures_dir),
+            "--suite",
+            "vision",
+            "--json",
+            "--iterations",
+            "1",
+            "--warmup",
+            "0",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    output_json = json.loads(result.stdout)
+    assert output_json["files_count"] == 1

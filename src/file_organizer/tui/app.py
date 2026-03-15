@@ -243,11 +243,12 @@ class FileOrganizerApp(App[None]):
 
             return CopilotView(id="view")
 
-        # Settings remains a placeholder for now
-        titles = {
-            "settings": "[b]Settings[/b]\n\nConfigure models, paths, and preferences.",
-        }
-        return PlaceholderView(titles.get(name, f"[b]{name.capitalize()}[/b]"), id="view")
+        if name == "settings":
+            from file_organizer.tui.settings_view import SettingsView
+
+            return SettingsView(id="view")
+
+        return PlaceholderView(f"[b]{name.capitalize()}[/b]", id="view")
 
 
 def run_tui() -> None:

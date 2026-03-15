@@ -6,6 +6,7 @@ covering thread/process executors, timeouts, retries, progress
 callbacks, error handling, and graceful shutdown.
 """
 
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -109,6 +110,57 @@ class TestParallelProcessorInit(unittest.TestCase):
         self.assertEqual(processor.config.max_workers, 4)
         self.assertEqual(processor.config.executor_type, ExecutorType.PROCESS)
         self.assertEqual(processor.config.chunk_size, 5)
+
+
+@pytest.mark.ci
+class TestPrefetchDepthScheduling(unittest.TestCase):
+    """Verify prefetch depth controls queue-ahead and effective concurrency."""
+
+    def test_prefetch_depth_zero_forces_single_inflight_task(self) -> None:
+        active = 0
+        max_active = 0
+        state_lock = threading.Lock()
+
+        def tracked(path: Path) -> str:
+            nonlocal active, max_active
+            with state_lock:
+                active += 1
+                max_active = max(max_active, active)
+            time.sleep(0.01)
+            with state_lock:
+                active -= 1
+            return path.name
+
+        config = ParallelConfig(max_workers=4, executor_type=ExecutorType.THREAD, prefetch_depth=0)
+        processor = ParallelProcessor(config=config)
+        files = [Path(f"f{i}.txt") for i in range(8)]
+
+        result = processor.process_batch(files, tracked)
+        assert result.failed == 0
+        assert max_active == 1
+
+    def test_prefetch_depth_allows_parallel_inflight_tasks(self) -> None:
+        active = 0
+        max_active = 0
+        state_lock = threading.Lock()
+
+        def tracked(path: Path) -> str:
+            nonlocal active, max_active
+            with state_lock:
+                active += 1
+                max_active = max(max_active, active)
+            time.sleep(0.01)
+            with state_lock:
+                active -= 1
+            return path.name
+
+        config = ParallelConfig(max_workers=4, executor_type=ExecutorType.THREAD, prefetch_depth=2)
+        processor = ParallelProcessor(config=config)
+        files = [Path(f"f{i}.txt") for i in range(8)]
+
+        result = processor.process_batch(files, tracked)
+        assert result.failed == 0
+        assert max_active >= 2
 
 
 class TestProcessBatch(unittest.TestCase):

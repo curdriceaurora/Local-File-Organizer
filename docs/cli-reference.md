@@ -48,7 +48,11 @@ file-organizer organize INPUT_DIR OUTPUT_DIR [OPTIONS]
 
 - `--dry-run` — Preview without moving files
 - `--verbose, -v` — Verbose output
-- `--no-prefetch` — Reserved for future stage-based pipeline debugging. Currently has no effect for `file-organizer organize` (which uses the legacy `ParallelProcessor` path) and only emits a warning.
+- `--max-workers INTEGER` — Cap parallel worker count
+- `--sequential` — Force single-worker sequential processing
+- `--no-vision`, `--text-only` — Disable vision model loading and use extension fallback for images
+- `--prefetch-depth INTEGER` — Parallel task queue-ahead depth (`0` disables prefetch queueing)
+- `--no-prefetch` — Backward-compatible alias for `--prefetch-depth 0`
 
 **Examples:**
 
@@ -62,7 +66,16 @@ file-organizer organize ~/Downloads ~/Organized --dry-run
 # Verbose output
 file-organizer organize ~/Downloads ~/Organized --verbose
 
-# Reserved flag: currently a no-op for `organize` (emits a warning only)
+# Limit CPU/IO pressure on constrained machines
+file-organizer organize ~/Downloads ~/Organized --max-workers 2 --prefetch-depth 1
+
+# Strict sequential mode for deterministic debugging
+file-organizer organize ~/Downloads ~/Organized --sequential
+
+# Disable AI vision processing and use extension-based image fallback
+file-organizer organize ~/Downloads ~/Organized --no-vision
+
+# Backward-compatible alias
 file-organizer organize ~/Downloads ~/Organized --no-prefetch
 ```
 
@@ -363,12 +376,19 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
 - `--iterations INTEGER, -i INTEGER` — Number of measured iterations (default: `10`, min: `1`)
 - `--warmup INTEGER, -w INTEGER` — Warmup iterations excluded from statistics (default: `3`, min: `0`)
 - `--suite TEXT, -s TEXT` — Benchmark suite to run: `io`, `text`, `vision`, `audio`, `pipeline`, `e2e` (default: `io`)
+  - `io`: file stat/read overhead baseline
+  - `text`: `TextProcessor.process_file()` path with deterministic benchmark model stubs
+  - `vision`: `VisionProcessor.process_file()` path with deterministic benchmark model stubs
+  - `audio`: audio metadata extraction + rule-based classification path (uses synthetic metadata only when optional extractor dependencies are unavailable)
+  - `pipeline`: `PipelineOrchestrator.process_batch()` staged path
+  - `e2e`: full `FileOrganizer.organize()` pass with real writes in an isolated temp workspace
 - `--json` — Output results as JSON instead of a Rich table
 - `--compare PATH` — Path to baseline JSON file for regression comparison
 
 **Output Metrics (JSON schema):**
 
 - `suite` — Suite name that was run
+- `runner_profile_version` — Benchmark runner semantics profile version for baseline compatibility checks
 - `files_count` — Number of files in the input directory
 - `hardware_profile` — Hardware detection info (CPU, memory, GPU)
 - `results.median_ms` — Median iteration time in milliseconds
@@ -383,6 +403,7 @@ When `--compare` is used, JSON also includes:
 - `comparison.deltas_pct.*` — Percentage delta versus the baseline for each metric
 - `comparison.regression` — `true` if current p95 crossed the regression threshold
 - `comparison.threshold` — Threshold multiplier used for regression detection — fixed at `1.2` for the CLI (not user-configurable; emitted in the JSON for consumer reference)
+- `comparison_profile_warning` — Present when comparing against a baseline built with a different `runner_profile_version`
 
 **Regression Detection:**
 
@@ -404,6 +425,9 @@ file-organizer benchmark run tests/fixtures/ --suite text --json --compare basel
 # Save baseline for future comparison
 file-organizer benchmark run tests/fixtures/ --json > baseline.json
 ```
+
+Audio suite behavior note:
+- `audio` intentionally differs from `text`/`vision`: it exercises real metadata extraction + classification and only falls back to synthetic metadata when optional extractor dependencies are unavailable.
 
 ---
 

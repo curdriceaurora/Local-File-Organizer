@@ -85,6 +85,9 @@ class FileOrganizer:
         use_hardlinks: bool = True,
         parallel_workers: int | None = None,
         no_prefetch: bool = False,
+        *,
+        prefetch_depth: int = 2,
+        enable_vision: bool = True,
     ) -> None:
         """Initialize file organizer.
 
@@ -94,9 +97,11 @@ class FileOrganizer:
             dry_run: If True, only simulate operations
             use_hardlinks: If True, create hardlinks instead of copying
             parallel_workers: Number of parallel workers (default: None = auto)
-            no_prefetch: If True, disable I/O-compute overlap when using
-                the stage-based pipeline (``PipelineOrchestrator``).
-                Has no effect on the legacy processor path.
+            prefetch_depth: Queue-ahead depth for parallel task scheduling.
+                ``0`` disables prefetch and forces sequential submission.
+            enable_vision: If False, skip vision model initialization and
+                organize images with extension-based fallbacks.
+            no_prefetch: Backward-compatible alias for ``prefetch_depth=0``.
         """
         if text_model_config is None or vision_model_config is None:
             from file_organizer.config.provider_env import get_model_configs
@@ -109,18 +114,23 @@ class FileOrganizer:
             self.vision_model_config = vision_model_config
         self.dry_run = dry_run
         self.use_hardlinks = use_hardlinks
+        self.enable_vision = enable_vision
         self.no_prefetch = no_prefetch
-        if no_prefetch:
+        self.prefetch_depth = prefetch_depth
+        if no_prefetch and prefetch_depth != 0:
             logger.warning(
-                "no_prefetch=True has no effect: FileOrganizer uses ParallelProcessor, "
-                "not PipelineOrchestrator. To control prefetch behaviour, construct "
-                "PipelineOrchestrator directly with prefetch_depth=0."
+                "no_prefetch=True overrides prefetch_depth={} to 0 for backward compatibility",
+                prefetch_depth,
             )
+            self.prefetch_depth = 0
+        if no_prefetch:
+            logger.info("Prefetch disabled (no_prefetch=True)")
         self.console = Console()
 
         self.parallel_config = ParallelConfig(
             max_workers=parallel_workers,
             executor_type=ExecutorType.THREAD,
+            prefetch_depth=self.prefetch_depth,
             timeout_per_file=60.0,
             retry_count=1,
         )
@@ -133,7 +143,12 @@ class FileOrganizer:
         self._last_output_path: Path | None = None
 
         logger.info(
-            "FileOrganizer initialized (dry_run={}, parallel={})", dry_run, parallel_workers
+            "FileOrganizer initialized (dry_run={}, parallel_workers={}, prefetch_depth={}, "
+            "enable_vision={})",
+            dry_run,
+            parallel_workers,
+            self.prefetch_depth,
+            enable_vision,
         )
 
     # ------------------------------------------------------------------
@@ -246,17 +261,24 @@ class FileOrganizer:
 
             # Images
             if image_files:
-                self._init_vision_processor()
-                vision_ready = (
-                    self.vision_processor is not None
-                    and self.vision_processor.vision_model.is_initialized
-                )
                 self.console.print(
                     f"\n[bold blue]Processing {len(image_files)} images...[/bold blue]"
                 )
-                if vision_ready:
-                    all_processed.extend(self._process_image_files(image_files))
+                if self.enable_vision:
+                    self._init_vision_processor()
+                    vision_ready = (
+                        self.vision_processor is not None
+                        and self.vision_processor.vision_model.is_initialized
+                    )
+                    if vision_ready:
+                        all_processed.extend(self._process_image_files(image_files))
+                    else:
+                        all_processed.extend(self._fallback_by_extension(image_files))
                 else:
+                    self.console.print(
+                        "[yellow]⚠ Vision processing disabled (--no-vision/--text-only): "
+                        "using extension-based organization for images[/yellow]"
+                    )
                     all_processed.extend(self._fallback_by_extension(image_files))
 
             # Audio

@@ -16,6 +16,7 @@ from file_organizer.tui.organization_preview import (
     OrganizationPreviewView,
     OrganizationSummary,
 )
+from file_organizer.tui.settings_view import ParallelRuntimeSettings
 
 pytestmark = pytest.mark.unit
 
@@ -124,13 +125,22 @@ class TestOrganizationPreviewViewLoadPreview:
         mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
             patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings",
+                return_value=ParallelRuntimeSettings(max_workers=2, prefetch_depth=1),
+            ),
+            patch(
                 "file_organizer.core.organizer.FileOrganizer",
                 return_value=mock_organizer,
-            ),
+            ) as mock_org_cls,
             patch.object(type(view), "app", new_callable=PropertyMock, return_value=mock_app),
         ):
             OrganizationPreviewView._load_preview.__wrapped__(view)
 
+        mock_org_cls.assert_called_once_with(
+            dry_run=True,
+            parallel_workers=2,
+            prefetch_depth=1,
+        )
         assert mock_app.call_from_thread.call_count == 3
         before_after_panel.set_structure.assert_called_once_with(
             {"Docs": ["a.pdf"]},
@@ -166,6 +176,10 @@ class TestOrganizationPreviewViewLoadPreview:
         mock_app = MagicMock()
         mock_app.call_from_thread.side_effect = lambda fn, *a, **kw: fn(*a, **kw)
         with (
+            patch(
+                "file_organizer.tui.organization_preview.load_parallel_runtime_settings",
+                return_value=ParallelRuntimeSettings(max_workers=None, prefetch_depth=2),
+            ),
             patch(
                 "file_organizer.core.organizer.FileOrganizer",
                 side_effect=RuntimeError("model not found"),

@@ -29,6 +29,9 @@ class ParallelConfig:
             None means use os.cpu_count().
         executor_type: Whether to use process or thread pool.
             Use "process" for CPU-bound work, "thread" for IO-bound work.
+        prefetch_depth: Number of scheduling windows queued ahead per worker.
+            ``0`` disables queue-ahead and forces strictly sequential
+            submission/consumption. ``1`` keeps one in-flight task per worker.
         chunk_size: Number of files to submit per scheduling round.
         timeout_per_file: Maximum seconds allowed per file before timeout.
         retry_count: Number of retry attempts for failed files.
@@ -38,6 +41,7 @@ class ParallelConfig:
 
     max_workers: int | None = None
     executor_type: ExecutorType = ExecutorType.THREAD
+    prefetch_depth: int = 2
     chunk_size: int = 10
     timeout_per_file: float = 60.0
     retry_count: int = 2
@@ -47,6 +51,8 @@ class ParallelConfig:
         """Validate configuration values after initialization."""
         if self.max_workers is not None and self.max_workers < 1:
             raise ValueError(f"max_workers must be >= 1, got {self.max_workers}")
+        if self.prefetch_depth < 0:
+            raise ValueError(f"prefetch_depth must be >= 0, got {self.prefetch_depth}")
         if self.chunk_size < 1:
             raise ValueError(f"chunk_size must be >= 1, got {self.chunk_size}")
         if self.timeout_per_file <= 0:

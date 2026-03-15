@@ -221,6 +221,7 @@ class TestBenchmarkCLI:
         assert result.exit_code == 0, f"CLI failed: {result.output}"
         output = json.loads(result.stdout)
         assert "suite" in output
+        assert "runner_profile_version" in output
         assert "results" in output
         assert "hardware_profile" in output
 
