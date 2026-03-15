@@ -26,11 +26,22 @@ _EXPECTATIONS = json.loads(_EXPECTATIONS_PATH.read_text(encoding="utf-8"))
 def test_suite_runner_map_uses_dedicated_functions() -> None:
     """Each suite must map to its dedicated runner function."""
     assert benchmark_cli._SUITE_RUNNERS["io"]["run"] is benchmark_cli._run_io_suite
+    assert benchmark_cli._SUITE_RUNNERS["io"]["classify"] is benchmark_cli._classify_io_suite
     assert benchmark_cli._SUITE_RUNNERS["text"]["run"] is benchmark_cli._run_text_suite
+    assert benchmark_cli._SUITE_RUNNERS["text"]["classify"] is benchmark_cli._classify_text_suite
     assert benchmark_cli._SUITE_RUNNERS["vision"]["run"] is benchmark_cli._run_vision_suite
+    assert (
+        benchmark_cli._SUITE_RUNNERS["vision"]["classify"] is benchmark_cli._classify_vision_suite
+    )
     assert benchmark_cli._SUITE_RUNNERS["audio"]["run"] is benchmark_cli._run_audio_suite
+    assert benchmark_cli._SUITE_RUNNERS["audio"]["classify"] is benchmark_cli._classify_audio_suite
     assert benchmark_cli._SUITE_RUNNERS["pipeline"]["run"] is benchmark_cli._run_pipeline_suite
+    assert (
+        benchmark_cli._SUITE_RUNNERS["pipeline"]["classify"]
+        is benchmark_cli._classify_pipeline_suite
+    )
     assert benchmark_cli._SUITE_RUNNERS["e2e"]["run"] is benchmark_cli._run_e2e_suite
+    assert benchmark_cli._SUITE_RUNNERS["e2e"]["classify"] is benchmark_cli._classify_e2e_suite
 
     io_runner = benchmark_cli._SUITE_RUNNERS["io"]["run"]
     for suite_name in ("text", "vision", "audio", "pipeline", "e2e"):
@@ -79,6 +90,9 @@ def test_benchmark_suite_smoke_outputs_expected_schema(suite_name: str) -> None:
     expected = _EXPECTATIONS["suites"][suite_name]
 
     assert payload["suite"] == suite_name
+    assert payload["effective_suite"] == suite_name
+    assert payload["degraded"] is False
+    assert payload["degradation_reasons"] == []
     assert payload["runner_profile_version"] == benchmark_cli._RUNNER_PROFILE_VERSION
     assert payload["files_count"] >= expected["min_files"]
     assert isinstance(payload["hardware_profile"], dict)

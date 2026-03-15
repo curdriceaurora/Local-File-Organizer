@@ -388,8 +388,11 @@ file-organizer benchmark run [INPUT_PATH] [OPTIONS]
 **Output Metrics (JSON schema):**
 
 - `suite` — Suite name that was run
+- `effective_suite` — Effective suite semantics used for execution (for example, `audio` may degrade to `io` semantics when no audio candidates are available)
+- `degraded` — `true` when the run used degraded semantics (skip/fallback), otherwise `false`
+- `degradation_reasons` — Stable machine-readable degradation reason codes; empty when `degraded` is `false`
 - `runner_profile_version` — Benchmark runner semantics profile version for baseline compatibility checks
-- `files_count` — Number of files in the input directory
+- `files_count` — Number of files actually processed by the selected suite semantics
 - `hardware_profile` — Hardware detection info (CPU, memory, GPU)
 - `results.median_ms` — Median iteration time in milliseconds
 - `results.p95_ms` — 95th percentile iteration time

@@ -66,10 +66,16 @@ def test_benchmark_json_output(tmp_path: Path) -> None:
     try:
         output_json = json.loads(result.stdout)
         assert "suite" in output_json
+        assert "effective_suite" in output_json
+        assert "degraded" in output_json
+        assert "degradation_reasons" in output_json
         assert "runner_profile_version" in output_json
         assert "results" in output_json
         assert "files_count" in output_json
         assert "hardware_profile" in output_json
+        assert isinstance(output_json["effective_suite"], str)
+        assert isinstance(output_json["degraded"], bool)
+        assert isinstance(output_json["degradation_reasons"], list)
         assert isinstance(output_json["files_count"], int)
         assert output_json["files_count"] >= 1
     except json.JSONDecodeError:
@@ -171,4 +177,7 @@ def test_benchmark_reports_processed_subset_count_for_filtered_suite(tmp_path: P
 
     assert result.exit_code == 0, result.output
     output_json = json.loads(result.stdout)
+    assert output_json["effective_suite"] == "vision"
+    assert output_json["degraded"] is False
+    assert output_json["degradation_reasons"] == []
     assert output_json["files_count"] == 1

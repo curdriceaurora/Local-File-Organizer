@@ -46,6 +46,9 @@ class TestBenchmarkErrors:
         result = runner.invoke(app, ["benchmark", "run", str(tmp_path), "--json"])
         assert result.exit_code == 0
         payload = json.loads(result.output)
+        assert payload["effective_suite"] == "io"
+        assert payload["degraded"] is False
+        assert payload["degradation_reasons"] == []
         assert payload["files_count"] == 0
 
     def test_no_files_plain(self, tmp_path: Path) -> None:
@@ -91,4 +94,7 @@ class TestBenchmarkEvenIterations:
 
         assert result.exit_code == 0
         payload = json.loads(result.output)
+        assert payload["effective_suite"] == "io"
+        assert payload["degraded"] is False
+        assert payload["degradation_reasons"] == []
         assert payload["files_count"] == 1
