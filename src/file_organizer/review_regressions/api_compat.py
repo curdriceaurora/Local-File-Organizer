@@ -280,11 +280,12 @@ class PublicApiCompatibilityDetector:
                 continue
 
             all_params = _parameters_for_callable(callable_node, is_bound_method=is_bound_method)
-            positional_params = tuple(
-                param.name
+            positional_infos = [
+                param
                 for param in all_params
                 if param.kind in {_POSITIONAL_ONLY, _POSITIONAL_OR_KEYWORD}
-            )
+            ]
+            positional_params = tuple(param.name for param in positional_infos)
 
             prefix_changed = _prefix_mismatch(positional_params, contract.legacy_positional_params)
             if prefix_changed:
@@ -306,9 +307,7 @@ class PublicApiCompatibilityDetector:
                 )
                 continue
 
-            for position, param in enumerate(all_params):
-                if param.kind not in {_POSITIONAL_ONLY, _POSITIONAL_OR_KEYWORD}:
-                    continue
+            for position, param in enumerate(positional_infos):
                 if position < len(contract.legacy_positional_params):
                     continue
                 if not param.has_default:

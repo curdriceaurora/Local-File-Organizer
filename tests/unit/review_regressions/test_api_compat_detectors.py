@@ -84,3 +84,33 @@ def test_api_compat_detector_pack_exports_detector() -> None:
     assert [detector.detector_id for detector in API_COMPAT_DETECTORS] == [
         "api-compat.public-callable-signature-contracts",
     ]
+
+
+def test_api_compat_detector_flags_missing_allowlisted_targets() -> None:
+    detector = PublicApiCompatibilityDetector(
+        contracts=(
+            PublicCallableContract(
+                path=Path("src/file_organizer/public/does_not_exist.py"),
+                qualname="PipelineOrchestrator.__init__",
+                legacy_positional_params=("config",),
+            ),
+            PublicCallableContract(
+                path=Path("src/file_organizer/public/process_batch_safe.py"),
+                qualname="PipelineOrchestrator.missing_method",
+                legacy_positional_params=("files",),
+            ),
+        )
+    )
+
+    findings = detector.find_violations(_fixture_root())
+
+    assert [(finding.path, finding.rule_id) for finding in findings] == [
+        (
+            "src/file_organizer/public/does_not_exist.py",
+            "allowlisted-callable-missing",
+        ),
+        (
+            "src/file_organizer/public/process_batch_safe.py",
+            "allowlisted-callable-missing",
+        ),
+    ]
