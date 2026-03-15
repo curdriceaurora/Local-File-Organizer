@@ -234,7 +234,7 @@ def _suite_candidates(
     files: list[Path],
     extensions: set[str],
     *,
-    fallback_to_all: bool,
+    fallback_to_all: bool = False,
     cap: int = _MAX_SUITE_FILES,
 ) -> list[Path]:
     """Return a capped file list for a benchmark suite."""
@@ -256,8 +256,9 @@ def _run_io_suite(files: list[Path]) -> int:
 
 def _run_text_suite(files: list[Path]) -> int:
     """Benchmark text processing path via TextProcessor.process_file()."""
-    candidates = _suite_candidates(files, _TEXT_EXTENSIONS, fallback_to_all=True)
+    candidates = _suite_candidates(files, _TEXT_EXTENSIONS)
     if not candidates:
+        typer.echo("Warning: no text files found for text suite; skipping benchmark.", err=True)
         return 0
 
     from file_organizer.models.base import ModelType
@@ -283,8 +284,9 @@ def _run_text_suite(files: list[Path]) -> int:
 
 def _run_vision_suite(files: list[Path]) -> int:
     """Benchmark vision processing path via VisionProcessor.process_file()."""
-    candidates = _suite_candidates(files, _VISION_EXTENSIONS, fallback_to_all=True)
+    candidates = _suite_candidates(files, _VISION_EXTENSIONS)
     if not candidates:
+        typer.echo("Warning: no vision files found for vision suite; skipping benchmark.", err=True)
         return 0
 
     from file_organizer.models.base import ModelType

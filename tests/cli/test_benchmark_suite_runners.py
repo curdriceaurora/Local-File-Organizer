@@ -110,12 +110,43 @@ def test_vision_suite_does_not_require_backend_model_pull() -> None:
 @pytest.mark.unit
 def test_audio_suite_warns_when_falling_back_to_io() -> None:
     """Audio suite should emit a warning when no audio candidates are available."""
+    expected_result = 7
     with patch("file_organizer.cli.benchmark._run_io_suite") as mocked_io_suite:
+        mocked_io_suite.return_value = expected_result
         with patch("file_organizer.cli.benchmark.typer.echo") as mocked_echo:
-            benchmark_cli._run_audio_suite([_CORPUS_DIR / "sample_notes.txt"])
+            result = benchmark_cli._run_audio_suite([_CORPUS_DIR / "sample_notes.txt"])
 
-    mocked_io_suite.assert_called_once()
+    mocked_io_suite.assert_called_once_with([_CORPUS_DIR / "sample_notes.txt"])
+    assert result == expected_result
     mocked_echo.assert_called_once_with(
         "Warning: no audio files found; falling back to IO-only benchmark.",
+        err=True,
+    )
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_text_suite_warns_and_skips_when_no_text_candidates() -> None:
+    """Text suite should skip when no text candidates are available."""
+    with patch("file_organizer.cli.benchmark.typer.echo") as mocked_echo:
+        result = benchmark_cli._run_text_suite([_CORPUS_DIR / "sample_photo.jpg"])
+
+    assert result == 0
+    mocked_echo.assert_called_once_with(
+        "Warning: no text files found for text suite; skipping benchmark.",
+        err=True,
+    )
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_vision_suite_warns_and_skips_when_no_vision_candidates() -> None:
+    """Vision suite should skip when no vision candidates are available."""
+    with patch("file_organizer.cli.benchmark.typer.echo") as mocked_echo:
+        result = benchmark_cli._run_vision_suite([_CORPUS_DIR / "sample_notes.txt"])
+
+    assert result == 0
+    mocked_echo.assert_called_once_with(
+        "Warning: no vision files found for vision suite; skipping benchmark.",
         err=True,
     )
