@@ -318,12 +318,13 @@ class TestLoadModel:
             with pytest.raises(RuntimeError, match="model load error"):
                 transcriber._load_model()
 
-    def test_cache_dir_passed(self):
+    def test_cache_dir_passed(self, tmp_path: Path):
+        cache_dir = tmp_path / "models"
         with patch.object(AudioTranscriber, "_detect_device", return_value="cpu"):
             t = AudioTranscriber(
                 model_size=ModelSize.TINY,
                 device="cpu",
-                cache_dir=Path("/tmp/models"),
+                cache_dir=cache_dir,
             )
 
         mock_fw = MagicMock()
@@ -331,9 +332,10 @@ class TestLoadModel:
             t._load_model()
 
         call_kwargs = mock_fw.WhisperModel.call_args
-        # Compare against the normalised path stored on the instance, not a
-        # raw string, so the assertion is correct on Windows too.
-        assert call_kwargs[1]["download_root"] == str(t.cache_dir)
+        # Build an independent expected value and resolve both sides so the
+        # assertion is path-normalisation-agnostic across all platforms.
+        expected = cache_dir.resolve()
+        assert Path(call_kwargs[1]["download_root"]).resolve() == expected
 
 
 # ---------------------------------------------------------------------------

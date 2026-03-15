@@ -219,7 +219,6 @@ class TestUpdateInstaller:
             assert asset is not None
             assert "setup" not in asset.name.lower()
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="Unix binary naming assumed")
     def test_install_new_binary(self, tmp_path: Path) -> None:
         installer = UpdateInstaller(install_dir=tmp_path)
 
@@ -227,10 +226,11 @@ class TestUpdateInstaller:
         downloaded = tmp_path / "new-binary"
         downloaded.write_bytes(b"new-content")
 
+        expected_name = "file-organizer.exe" if sys.platform == "win32" else "file-organizer"
         result = installer.install(downloaded, target_name="file-organizer")
         assert result.success is True
-        assert (tmp_path / "file-organizer").exists()
-        assert (tmp_path / "file-organizer").read_bytes() == b"new-content"
+        assert (tmp_path / expected_name).exists()
+        assert (tmp_path / expected_name).read_bytes() == b"new-content"
 
     def test_install_uses_appimage_env(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -248,12 +248,13 @@ class TestUpdateInstaller:
         assert appimage.read_bytes() == b"new-content"
         assert (tmp_path / "file-organizer-2.0.0-linux-x86_64.AppImage.bak").exists()
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="Unix binary naming assumed")
     def test_install_creates_backup(self, tmp_path: Path) -> None:
         installer = UpdateInstaller(install_dir=tmp_path)
 
+        expected_name = "file-organizer.exe" if sys.platform == "win32" else "file-organizer"
+
         # Create existing binary
-        existing = tmp_path / "file-organizer"
+        existing = tmp_path / expected_name
         existing.write_bytes(b"old-content")
 
         # Create download
@@ -262,18 +263,19 @@ class TestUpdateInstaller:
 
         result = installer.install(downloaded, target_name="file-organizer")
         assert result.success is True
-        assert (tmp_path / "file-organizer.bak").read_bytes() == b"old-content"
-        assert (tmp_path / "file-organizer").read_bytes() == b"new-content"
+        assert (tmp_path / f"{expected_name}.bak").read_bytes() == b"old-content"
+        assert (tmp_path / expected_name).read_bytes() == b"new-content"
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="Unix binary naming assumed")
     def test_rollback(self, tmp_path: Path) -> None:
         installer = UpdateInstaller(install_dir=tmp_path)
 
+        expected_name = "file-organizer.exe" if sys.platform == "win32" else "file-organizer"
+
         # Create backup
-        (tmp_path / "file-organizer.bak").write_bytes(b"old-content")
+        (tmp_path / f"{expected_name}.bak").write_bytes(b"old-content")
 
         assert installer.rollback() is True
-        assert (tmp_path / "file-organizer").read_bytes() == b"old-content"
+        assert (tmp_path / expected_name).read_bytes() == b"old-content"
 
     def test_rollback_no_backup(self, tmp_path: Path) -> None:
         installer = UpdateInstaller(install_dir=tmp_path)
@@ -316,10 +318,10 @@ class TestUpdateManager:
         s = UpdateStatus(available=True, current_version="1.0.0", latest_version="2.0.0")
         assert "Update available" in s.message
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="Unix binary naming assumed")
     def test_rollback_delegates(self, tmp_path: Path) -> None:
         mgr = UpdateManager(install_dir=tmp_path)
-        (tmp_path / "file-organizer.bak").write_bytes(b"old")
+        expected_name = "file-organizer.exe" if sys.platform == "win32" else "file-organizer"
+        (tmp_path / f"{expected_name}.bak").write_bytes(b"old")
         assert mgr.rollback() is True
 
 

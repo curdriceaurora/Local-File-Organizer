@@ -85,10 +85,10 @@ class TestSignalHandlerWritesToPipe:
 
 
 @pytest.mark.ci
-@pytest.mark.skipif(sys.platform == "win32", reason="signal pipe not available on Windows")
 class TestRunLoopExitsOnPipeSignal:
     """TestRunLoopExitsOnPipeSignal test suite."""
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="signal pipe not available on Windows")
     def test_run_loop_exits_on_pipe_signal(self) -> None:
         """Verify run loop exits when signal is written to pipe."""
         daemon = DaemonService(_make_config())

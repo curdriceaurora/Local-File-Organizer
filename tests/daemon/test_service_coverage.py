@@ -49,7 +49,11 @@ class TestDaemonServiceStartBackground:
         daemon.start_background()
         try:
             assert daemon.is_running is True
-            assert daemon.uptime_seconds >= 0
+            initial_uptime = daemon.uptime_seconds
+            time.sleep(0.05)
+            assert daemon.uptime_seconds > initial_uptime, (
+                "uptime_seconds should increase while daemon is running"
+            )
         finally:
             daemon.stop()
         assert daemon.is_running is False

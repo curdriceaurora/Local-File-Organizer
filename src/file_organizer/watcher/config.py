@@ -117,18 +117,21 @@ def _matches_pattern(path_str: str, pattern: str) -> bool:
     # forward slashes — required for PurePosixPath and fnmatch to work correctly
     # on Windows where str(Path(...)) uses backslashes.
     normalized = path_str.replace("\\", "/")
+    # Also normalize the pattern so Windows-style patterns (e.g. from config
+    # files edited on Windows) match the normalized path string.
+    normalized_pattern = pattern.replace("\\", "/")
 
     # Check against the full path and each individual component
     posix_path = PurePosixPath(normalized)
     path_parts = posix_path.parts
 
     # Match against the full path
-    if fnmatch.fnmatch(normalized, pattern):
+    if fnmatch.fnmatch(normalized, normalized_pattern):
         return True
 
     # Match against each path component (including the filename as the last part)
     for part in path_parts:
-        if fnmatch.fnmatch(part, pattern):
+        if fnmatch.fnmatch(part, normalized_pattern):
             return True
 
     return False
