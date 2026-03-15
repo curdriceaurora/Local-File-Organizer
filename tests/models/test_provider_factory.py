@@ -151,7 +151,7 @@ class TestGetVisionModel:
         with pytest.raises(ValueError, match="Unknown provider"):
             get_vision_model(bad_config)
 
-    def test_llama_cpp_vision_raises_value_error(self, llama_cpp_text_config: ModelConfig) -> None:
+    def test_llama_cpp_vision_raises_value_error(self) -> None:
         """llama_cpp has no vision factory in Phase 1."""
         vision_cfg = ModelConfig(
             name="llama-cpp",
