@@ -187,12 +187,16 @@ def _validate_payload_identity_fields(payload: dict[str, Any]) -> None:
         if not value:
             raise ValueError(f"Benchmark payload field '{key}' must be non-empty.")
 
-    if not isinstance(payload["degraded"], bool):
-        raise TypeError("Benchmark payload field 'degraded' must be a bool.")
-
 
 def _validate_payload_degradation_reasons(payload: dict[str, Any]) -> None:
     """Validate degradation reasons contract for degraded and non-degraded runs."""
+    degraded = payload["degraded"]
+    if not isinstance(degraded, bool):
+        raise TypeError(
+            "Benchmark payload fields 'degraded' and 'degradation_reasons' require "
+            "'degraded' to be a bool."
+        )
+
     degradation_reasons = payload["degradation_reasons"]
     if not isinstance(degradation_reasons, list):
         raise TypeError("Benchmark payload field 'degradation_reasons' must be a list.")
@@ -201,6 +205,17 @@ def _validate_payload_degradation_reasons(payload: dict[str, Any]) -> None:
             raise ValueError(
                 f"Benchmark payload field 'degradation_reasons[{idx}]' must be a non-empty string."
             )
+
+    if degraded and not degradation_reasons:
+        raise ValueError(
+            "Benchmark payload fields 'degraded' and 'degradation_reasons' are inconsistent: "
+            "when 'degraded' is True, 'degradation_reasons' must be non-empty."
+        )
+    if not degraded and degradation_reasons:
+        raise ValueError(
+            "Benchmark payload fields 'degraded' and 'degradation_reasons' are inconsistent: "
+            "when 'degraded' is False, 'degradation_reasons' must be empty."
+        )
 
 
 def _validate_payload_results(results: dict[str, Any]) -> None:

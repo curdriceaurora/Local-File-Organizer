@@ -138,6 +138,78 @@ def test_baseline_schema_validator_rejects_missing_metric() -> None:
         _assert_baseline_schema_contract(bad_payload)
 
 
+def test_baseline_schema_validator_rejects_degraded_true_with_empty_reasons() -> None:
+    """Contract helper should fail when degraded payload omits degradation reasons."""
+    bad_payload = {
+        "suite": "io",
+        "effective_suite": "io",
+        "degraded": True,
+        "degradation_reasons": [],
+        "runner_profile_version": benchmark_cli._RUNNER_PROFILE_VERSION,
+        "files_count": 1,
+        "hardware_profile": {},
+        "results": {
+            "median_ms": 1.0,
+            "p95_ms": 1.0,
+            "p99_ms": 1.0,
+            "stddev_ms": 0.0,
+            "throughput_fps": 100.0,
+            "iterations": 1,
+        },
+    }
+
+    with pytest.raises(ValueError, match="degraded.*degradation_reasons"):
+        _assert_baseline_schema_contract(bad_payload)
+
+
+def test_baseline_schema_validator_rejects_degraded_false_with_reasons() -> None:
+    """Contract helper should fail when non-degraded payload includes reasons."""
+    bad_payload = {
+        "suite": "io",
+        "effective_suite": "io",
+        "degraded": False,
+        "degradation_reasons": ["audio-no-candidates-fallback-to-io"],
+        "runner_profile_version": benchmark_cli._RUNNER_PROFILE_VERSION,
+        "files_count": 1,
+        "hardware_profile": {},
+        "results": {
+            "median_ms": 1.0,
+            "p95_ms": 1.0,
+            "p99_ms": 1.0,
+            "stddev_ms": 0.0,
+            "throughput_fps": 100.0,
+            "iterations": 1,
+        },
+    }
+
+    with pytest.raises(ValueError, match="degraded.*degradation_reasons"):
+        _assert_baseline_schema_contract(bad_payload)
+
+
+def test_baseline_schema_validator_rejects_non_boolean_degraded_flag() -> None:
+    """Contract helper should fail when degraded is not a boolean."""
+    bad_payload = {
+        "suite": "io",
+        "effective_suite": "io",
+        "degraded": "false",
+        "degradation_reasons": [],
+        "runner_profile_version": benchmark_cli._RUNNER_PROFILE_VERSION,
+        "files_count": 1,
+        "hardware_profile": {},
+        "results": {
+            "median_ms": 1.0,
+            "p95_ms": 1.0,
+            "p99_ms": 1.0,
+            "stddev_ms": 0.0,
+            "throughput_fps": 100.0,
+            "iterations": 1,
+        },
+    }
+
+    with pytest.raises(TypeError, match="degraded.*degradation_reasons"):
+        _assert_baseline_schema_contract(bad_payload)
+
+
 def test_audio_suite_fallback_is_explicit_in_json_output(tmp_path: Path) -> None:
     """Audio fallback must report degraded mode and the effective fallback suite."""
     text_file = tmp_path / "note.txt"
