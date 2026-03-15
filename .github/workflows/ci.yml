@@ -216,6 +216,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Prepare sidecar placeholder for cargo check
+        working-directory: desktop/src-tauri
+        run: |
+          target_triple="$(rustc -vV | grep '^host:' | awk '{print $2}')"
+          sidecar_path="binaries/file-organizer-backend-${target_triple}"
+          mkdir -p binaries
+          if [ ! -f "${sidecar_path}" ]; then
+            printf '#!/usr/bin/env bash\nexit 0\n' > "${sidecar_path}"
+            chmod +x "${sidecar_path}"
+          fi
       - name: Run cargo check
         working-directory: desktop/src-tauri
         run: cargo check --locked
