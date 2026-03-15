@@ -180,17 +180,18 @@ def _resolve_processed_count(
 ) -> int:
     """Return processed file count, failing fast when measured counts drift."""
     measured = processed_counts[warmup:]
-    relevant = measured if measured else processed_counts
-    if relevant:
-        expected_count = relevant[-1]
-        if any(count != expected_count for count in relevant):
+    if measured:
+        expected_count = measured[-1]
+        if any(count != expected_count for count in measured):
             console.print(
                 "[red]Benchmark suite "
                 f"'{suite}' produced inconsistent processed counts across iterations: "
-                f"{relevant}[/red]"
+                f"{measured}[/red]"
             )
             raise typer.Exit(code=1)
         return expected_count
+    if processed_counts:
+        return processed_counts[-1]
     return 0
 
 

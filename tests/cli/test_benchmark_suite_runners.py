@@ -285,3 +285,20 @@ def test_resolve_processed_count_fails_when_measured_counts_drift() -> None:
     assert exc.value.exit_code == 1
     printed_message = console.print.call_args.args[0]
     assert "inconsistent processed counts" in printed_message
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_resolve_processed_count_does_not_check_warmup_only_drift() -> None:
+    """When measured window is empty, warmup-only counts should not trigger drift failure."""
+    console = MagicMock()
+
+    count = benchmark_cli._resolve_processed_count(
+        [3, 1],
+        warmup=2,
+        suite="vision",
+        console=console,
+    )
+
+    assert count == 1
+    console.print.assert_not_called()
