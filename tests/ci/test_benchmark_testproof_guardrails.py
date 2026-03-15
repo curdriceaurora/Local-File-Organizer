@@ -18,15 +18,18 @@ def _parse_python_ast(path: Path) -> ast.Module:
 
 
 def _find_function(tree: ast.Module, name: str) -> ast.FunctionDef:
-    """Find function by name, searching pytest-collected test definitions only."""
+    """Find function by name, honoring module execution order for shadowed defs."""
+    matches: list[ast.FunctionDef] = []
     for node in tree.body:
         if isinstance(node, ast.FunctionDef) and node.name == name:
-            return node
-    for node in tree.body:
-        if isinstance(node, ast.ClassDef) and _is_pytest_collected_test_class(node):
+            matches.append(node)
+        elif isinstance(node, ast.ClassDef) and _is_pytest_collected_test_class(node):
             for item in node.body:
                 if isinstance(item, ast.FunctionDef) and item.name == name:
-                    return item
+                    matches.append(item)
+    if matches:
+        # Pytest executes the last module binding for a redefined test name.
+        return matches[-1]
     raise AssertionError(f"Missing required benchmark guardrail test function: {name}")
 
 
@@ -94,7 +97,7 @@ def _is_structured_delegation_argument(node: ast.expr) -> bool:
 
 
 def _iter_statement_nodes_excluding_nested_defs(statement: ast.stmt) -> ast.AST:
-    """Yield statement subtree nodes while skipping nested defs and dead constant branches."""
+    """Yield statement subtree nodes while skipping deferred/nested executable bodies."""
     stack: list[ast.AST] = [statement]
     while stack:
         node = stack.pop()
@@ -110,7 +113,7 @@ def _iter_statement_nodes_excluding_nested_defs(statement: ast.stmt) -> ast.AST:
             children = list(ast.iter_child_nodes(node))
 
         for child in reversed(children):
-            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
                 continue
             stack.append(child)
 
@@ -326,6 +329,23 @@ def test_find_function_rejects_test_class_with_init() -> None:
         _find_function(module, "test_target")
 
 
+def test_find_function_prefers_last_shadowed_module_definition() -> None:
+    """When test names are redefined, guardrails must inspect the executed binding."""
+    module = ast.parse(
+        textwrap.dedent(
+            """
+            def test_target() -> None:
+                pass
+
+            def test_target() -> None:
+                assert True
+            """
+        )
+    )
+    function = _find_function(module, "test_target")
+    assert function.lineno == 5
+
+
 def test_smoke_schema_test_has_required_pytest_markers() -> None:
     """Deterministic benchmark smoke contracts must keep smoke+ci+unit markers."""
     tree = _parse_python_ast(SUITE_RUNNERS_TEST_PATH)
@@ -453,6 +473,18 @@ def test_mock_assert_guardrail_ignores_non_bool_constant_false_branch_assertions
     assert _has_mock_assert_called_once_with(function, mock_name="mocked_io_suite") is False
 
 
+def test_mock_assert_guardrail_ignores_lambda_body_assertions() -> None:
+    """Deferred lambda bodies must not satisfy delegation guardrails."""
+    function = _parse_single_function(
+        """
+        def subject() -> None:
+            _hidden = lambda: mocked_io_suite.assert_called_once_with([candidate])
+            pass
+        """
+    )
+    assert _has_mock_assert_called_once_with(function, mock_name="mocked_io_suite") is False
+
+
 @pytest.mark.parametrize(
     ("body", "expected"),
     [
@@ -516,6 +548,13 @@ def test_mock_assert_guardrail_ignores_non_bool_constant_false_branch_assertions
             result = benchmark_cli._run_audio_suite(files)
             if None:
                 assert result.processed_count == expected_result
+            """,
+            False,
+        ),
+        (
+            """
+            result = benchmark_cli._run_audio_suite(files)
+            _hidden = lambda: (result.processed_count == expected_result)
             """,
             False,
         ),
@@ -649,6 +688,16 @@ def test_processed_count_guardrail_binds_to_run_audio_result(body: str, expected
                 assert model.is_initialized is True
                 model.safe_cleanup()
                 assert model.is_initialized is False
+            """,
+            False,
+        ),
+        (
+            """
+            _hidden = lambda: (
+                model.is_initialized is True,
+                model.safe_cleanup(),
+                model.is_initialized is False,
+            )
             """,
             False,
         ),
