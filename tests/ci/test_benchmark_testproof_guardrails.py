@@ -43,6 +43,14 @@ def _pytest_markers(function: ast.FunctionDef) -> set[str]:
     return markers
 
 
+def _is_non_empty_sequence_expr(node: ast.expr) -> bool:
+    if isinstance(node, ast.List):
+        return len(node.elts) > 0
+    if isinstance(node, ast.Tuple):
+        return len(node.elts) > 0
+    return False
+
+
 def _has_mock_assert_called_once_with(function: ast.FunctionDef, *, mock_name: str) -> bool:
     for node in ast.walk(function):
         if (
@@ -52,22 +60,35 @@ def _has_mock_assert_called_once_with(function: ast.FunctionDef, *, mock_name: s
             and isinstance(node.func.value, ast.Name)
             and node.func.value.id == mock_name
         ):
-            return True
+            if not node.args:
+                continue
+            # Require a structured candidate payload assertion such as
+            # assert_called_once_with([path_expr, ...]) instead of no-arg/weak calls.
+            if _is_non_empty_sequence_expr(node.args[0]):
+                return True
     return False
 
 
-def _assert_mentions_result_processed_count(function: ast.FunctionDef) -> bool:
+def _has_strong_processed_count_assert(function: ast.FunctionDef) -> bool:
+    def _is_result_processed_count(node: ast.AST) -> bool:
+        return (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id == "result"
+            and node.attr == "processed_count"
+        )
+
     for node in ast.walk(function):
-        if not isinstance(node, ast.Assert):
+        if not isinstance(node, ast.Assert) or not isinstance(node.test, ast.Compare):
             continue
-        for expr in ast.walk(node.test):
-            if (
-                isinstance(expr, ast.Attribute)
-                and isinstance(expr.value, ast.Name)
-                and expr.value.id == "result"
-                and expr.attr == "processed_count"
-            ):
-                return True
+        compare = node.test
+        if len(compare.ops) != 1 or not isinstance(compare.ops[0], ast.Eq):
+            continue
+        if len(compare.comparators) != 1:
+            continue
+        left, right = compare.left, compare.comparators[0]
+        if _is_result_processed_count(left) or _is_result_processed_count(right):
+            return True
     return False
 
 
@@ -125,11 +146,12 @@ def test_audio_fallback_test_proves_delegation_call_and_result_contract() -> Non
 
     assert _has_mock_assert_called_once_with(function, mock_name="mocked_io_suite"), (
         "Audio fallback delegation test must assert delegated runner call arguments with "
-        "mocked_io_suite.assert_called_once_with(...)."
+        "a structured non-empty candidate payload via mocked_io_suite.assert_called_once_with(...)."
     )
-    assert _assert_mentions_result_processed_count(function), (
-        "Audio fallback delegation test must assert the returned processed_count payload "
-        "from the delegated runner result."
+    assert _has_strong_processed_count_assert(function), (
+        "Audio fallback delegation test must assert returned payload strength with "
+        "an equality assertion involving result.processed_count (for example, "
+        "result.processed_count == expected_result)."
     )
 
 
