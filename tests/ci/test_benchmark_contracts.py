@@ -157,6 +157,83 @@ def test_text_suite_skip_is_explicit_in_json_output(tmp_path: Path) -> None:
     assert payload["effective_suite"] == "text"
     assert payload["degraded"] is True
     assert payload["degradation_reasons"] == ["text-no-candidates-skip"]
+    assert payload["files_count"] == 0
+
+
+def test_vision_suite_skip_is_explicit_in_json_output(tmp_path: Path) -> None:
+    """Vision skip must report degraded mode with an explicit skip reason."""
+    text_file = tmp_path / "note.txt"
+    text_file.write_text("benchmark data", encoding="utf-8")
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "benchmark",
+            "run",
+            str(tmp_path),
+            "--suite",
+            "vision",
+            "--iterations",
+            "1",
+            "--warmup",
+            "0",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+
+    assert payload["suite"] == "vision"
+    assert payload["effective_suite"] == "vision"
+    assert payload["degraded"] is True
+    assert payload["degradation_reasons"] == ["vision-no-candidates-skip"]
+    assert payload["files_count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("suite_name", "filenames", "expected_count"),
+    [
+        ("text", ("doc.txt", "photo.jpg", "clip.mp4"), 1),
+        ("vision", ("doc.txt", "photo.jpg", "note.md"), 1),
+    ],
+)
+def test_scoped_suite_files_count_uses_filtered_candidates(
+    tmp_path: Path,
+    suite_name: str,
+    filenames: tuple[str, ...],
+    expected_count: int,
+) -> None:
+    """Scoped suites must report processed count from filtered candidates, not all files."""
+    for name in filenames:
+        path = tmp_path / name
+        if path.suffix.lower() in {".jpg", ".jpeg", ".png"}:
+            path.write_bytes(b"\xff\xd8\xff\xe0test")
+        else:
+            path.write_text("benchmark data", encoding="utf-8")
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "benchmark",
+            "run",
+            str(tmp_path),
+            "--suite",
+            suite_name,
+            "--iterations",
+            "1",
+            "--warmup",
+            "0",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+
+    assert payload["suite"] == suite_name
+    assert payload["effective_suite"] == suite_name
+    assert payload["degraded"] is False
+    assert payload["degradation_reasons"] == []
+    assert payload["files_count"] == expected_count
 
 
 def test_audio_synthesized_metadata_fallback_is_explicit_in_json_output(tmp_path: Path) -> None:
@@ -190,6 +267,30 @@ def test_audio_synthesized_metadata_fallback_is_explicit_in_json_output(tmp_path
     assert payload["effective_suite"] == "audio"
     assert payload["degraded"] is True
     assert payload["degradation_reasons"] == ["audio-synthesized-metadata-fallback"]
+
+
+def test_degraded_plain_output_surfaces_reason_to_user(tmp_path: Path) -> None:
+    """Non-JSON output should make degraded suite mode and reason visible."""
+    image_file = tmp_path / "image.jpg"
+    image_file.write_bytes(b"\xff\xd8\xff\xe0test")
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "benchmark",
+            "run",
+            str(tmp_path),
+            "--suite",
+            "text",
+            "--iterations",
+            "1",
+            "--warmup",
+            "0",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Degraded suite mode:" in result.output
+    assert "text-no-candidates-skip" in result.output
 
 
 def test_benchmark_docs_describe_suite_specific_behavior() -> None:

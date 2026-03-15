@@ -249,3 +249,39 @@ def test_execute_suite_iteration_wraps_classifier_failure() -> None:
     assert exc.value.exit_code == 1
     printed_message = console.print.call_args.args[0]
     assert "classification failed" in printed_message
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_resolve_processed_count_uses_measured_window() -> None:
+    """Processed count should be resolved from measured iterations, not warmup values."""
+    console = MagicMock()
+
+    count = benchmark_cli._resolve_processed_count(
+        [0, 2, 2],
+        warmup=1,
+        suite="text",
+        console=console,
+    )
+
+    assert count == 2
+    console.print.assert_not_called()
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_resolve_processed_count_fails_when_measured_counts_drift() -> None:
+    """Benchmark should fail fast when measured processed counts are inconsistent."""
+    console = MagicMock()
+
+    with pytest.raises(typer.Exit) as exc:
+        benchmark_cli._resolve_processed_count(
+            [2, 1, 2],
+            warmup=0,
+            suite="io",
+            console=console,
+        )
+
+    assert exc.value.exit_code == 1
+    printed_message = console.print.call_args.args[0]
+    assert "inconsistent processed counts" in printed_message
