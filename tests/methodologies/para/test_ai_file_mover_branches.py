@@ -28,7 +28,7 @@ class TestMoveSuggestionValidation:
     """Cover MoveSuggestion.__post_init__ — lines 43-44."""
 
     def test_confidence_too_high(self) -> None:
-        with pytest.raises(ValueError, match="between 0.0 and 1.0"):
+        with pytest.raises(ValueError, match=r"between 0.0 and 1.0"):
             MoveSuggestion(
                 file_path=Path("/x.txt"),
                 target_category=PARACategory.PROJECT,
@@ -37,7 +37,7 @@ class TestMoveSuggestionValidation:
             )
 
     def test_confidence_too_low(self) -> None:
-        with pytest.raises(ValueError, match="between 0.0 and 1.0"):
+        with pytest.raises(ValueError, match=r"between 0.0 and 1.0"):
             MoveSuggestion(
                 file_path=Path("/x.txt"),
                 target_category=PARACategory.PROJECT,

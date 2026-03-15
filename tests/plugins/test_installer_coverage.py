@@ -256,7 +256,7 @@ class TestPluginInstallerLocateRoot:
         extracted.mkdir()
         repo = MagicMock()
         installer = PluginInstaller(tmp_path / "plugins", repo)
-        with pytest.raises(MarketplaceInstallError, match="plugin.py"):
+        with pytest.raises(MarketplaceInstallError, match=r"plugin.py"):
             installer._locate_plugin_root(extracted)
 
 

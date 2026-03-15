@@ -16,6 +16,7 @@ from file_organizer.cli.benchmark import (
     _percentile,
     compare_results,
     compute_stats,
+    validate_benchmark_payload,
 )
 
 # ---------------------------------------------------------------------------
@@ -203,7 +204,7 @@ class TestBenchmarkCLI:
     """Test CLI command integration."""
 
     def test_benchmark_json_output_schema(self, tmp_path: Path) -> None:
-        """JSON output has required schema keys."""
+        """JSON output matches benchmark payload schema and metric contracts."""
         from typer.testing import CliRunner
 
         from file_organizer.cli.main import app
@@ -220,18 +221,17 @@ class TestBenchmarkCLI:
 
         assert result.exit_code == 0, f"CLI failed: {result.output}"
         output = json.loads(result.stdout)
-        assert "suite" in output
-        assert "runner_profile_version" in output
-        assert "results" in output
-        assert "hardware_profile" in output
+        validate_benchmark_payload(output)
+        assert isinstance(output["hardware_profile"], dict)
 
         results = output["results"]
-        assert "median_ms" in results
-        assert "p95_ms" in results
-        assert "p99_ms" in results
-        assert "stddev_ms" in results
-        assert "throughput_fps" in results
-        assert "iterations" in results
+        for key in ("median_ms", "p95_ms", "p99_ms", "stddev_ms", "throughput_fps"):
+            assert isinstance(results[key], (int, float)) and not isinstance(results[key], bool)
+            assert results[key] >= 0
+        assert isinstance(results["iterations"], int) and not isinstance(
+            results["iterations"], bool
+        )
+        assert results["iterations"] >= 0
 
     def test_benchmark_warmup_exclusion(self, tmp_path: Path) -> None:
         """Warmup iterations are excluded from results."""

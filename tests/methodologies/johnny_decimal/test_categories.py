@@ -176,7 +176,7 @@ class TestAreaDefinition:
                 description="Test",
             )
 
-        with pytest.raises(ValueError, match="Area start.*must be <= end"):
+        with pytest.raises(ValueError, match=r"Area start.*must be <= end"):
             AreaDefinition(
                 area_range_start=20,
                 area_range_end=10,
@@ -315,7 +315,7 @@ class TestNumberingResult:
         """Test result validation."""
         number = JohnnyDecimalNumber(area=10)
 
-        with pytest.raises(ValueError, match="confidence must be between 0.0 and 1.0"):
+        with pytest.raises(ValueError, match=r"confidence must be between 0.0 and 1.0"):
             NumberingResult(
                 file_path=Path("/test/file.txt"),
                 number=number,

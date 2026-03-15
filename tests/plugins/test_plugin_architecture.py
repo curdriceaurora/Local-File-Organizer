@@ -122,7 +122,7 @@ def test_plugin_registry_load_error_on_missing_manifest(tmp_path: Path) -> None:
     empty_dir.mkdir()
     (empty_dir / "plugin.py").write_text("# empty\n", encoding="utf-8")
 
-    with pytest.raises(PluginLoadError, match="plugin.json"):
+    with pytest.raises(PluginLoadError, match=r"plugin.json"):
         registry.load_plugin(empty_dir)
 
 

@@ -18,12 +18,12 @@ def _parse_python_ast(path: Path) -> ast.Module:
 
 
 def _find_function(tree: ast.Module, name: str) -> ast.FunctionDef:
-    """Find function by name, searching both module-level and inside classes."""
+    """Find function by name, searching pytest-collected test definitions only."""
     for node in tree.body:
         if isinstance(node, ast.FunctionDef) and node.name == name:
             return node
-        # Also search inside classes
-        if isinstance(node, ast.ClassDef):
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and _is_pytest_collected_test_class(node):
             for item in node.body:
                 if isinstance(item, ast.FunctionDef) and item.name == name:
                     return item
@@ -41,6 +41,16 @@ def _marker_from_decorator(decorator: ast.expr) -> str | None:
     ):
         return node.attr
     return None
+
+
+def _is_pytest_collected_test_class(node: ast.ClassDef) -> bool:
+    """Return True when class matches pytest's class collection contract."""
+    if not node.name.startswith("Test"):
+        return False
+    return not any(
+        isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == "__init__"
+        for item in node.body
+    )
 
 
 def _pytest_markers(function: ast.FunctionDef) -> set[str]:
@@ -90,12 +100,12 @@ def _iter_statement_nodes_excluding_nested_defs(statement: ast.stmt) -> ast.AST:
         node = stack.pop()
         yield node
 
-        # Prune branches proven unreachable by literal bool conditions.
+        # Prune branches proven unreachable by constant-condition truthiness.
         if isinstance(node, ast.If) and isinstance(node.test, ast.Constant):
-            if isinstance(node.test.value, bool):
-                children = list(node.body if node.test.value else node.orelse)
-            else:
-                children = list(ast.iter_child_nodes(node))
+            children = list(node.body if bool(node.test.value) else node.orelse)
+        elif isinstance(node, ast.While) and isinstance(node.test, ast.Constant):
+            # while <const>: body executes iff truthy constant; orelse runs on normal completion.
+            children = list(node.body if bool(node.test.value) else node.orelse)
         else:
             children = list(ast.iter_child_nodes(node))
 
@@ -268,6 +278,54 @@ def _parse_single_function(source: str, function_name: str = "subject") -> ast.F
     return function
 
 
+def test_find_function_ignores_non_test_class_methods() -> None:
+    """Class methods should be discoverable only for pytest-collected test classes."""
+    module = ast.parse(
+        textwrap.dedent(
+            """
+            class Helper:
+                def test_target(self) -> None:
+                    pass
+            """
+        )
+    )
+    with pytest.raises(AssertionError):
+        _find_function(module, "test_target")
+
+
+def test_find_function_accepts_pytest_collected_test_class_methods() -> None:
+    """Methods on pytest-collected classes should remain discoverable."""
+    module = ast.parse(
+        textwrap.dedent(
+            """
+            class TestSuite:
+                def test_target(self) -> None:
+                    pass
+            """
+        )
+    )
+    function = _find_function(module, "test_target")
+    assert function.name == "test_target"
+
+
+def test_find_function_rejects_test_class_with_init() -> None:
+    """Pytest does not collect test classes that define __init__."""
+    module = ast.parse(
+        textwrap.dedent(
+            """
+            class TestSuite:
+                def __init__(self) -> None:
+                    self.x = 1
+
+                def test_target(self) -> None:
+                    pass
+            """
+        )
+    )
+    with pytest.raises(AssertionError):
+        _find_function(module, "test_target")
+
+
 def test_smoke_schema_test_has_required_pytest_markers() -> None:
     """Deterministic benchmark smoke contracts must keep smoke+ci+unit markers."""
     tree = _parse_python_ast(SUITE_RUNNERS_TEST_PATH)
@@ -379,6 +437,22 @@ def test_mock_assert_guardrail_ignores_unreachable_branch_assertions() -> None:
     assert _has_mock_assert_called_once_with(function, mock_name="mocked_io_suite") is False
 
 
+@pytest.mark.parametrize("constant_expr", ["0", "''", "None"])
+def test_mock_assert_guardrail_ignores_non_bool_constant_false_branch_assertions(
+    constant_expr: str,
+) -> None:
+    """Assertions in falsy constant branches must not satisfy delegation guardrails."""
+    function = _parse_single_function(
+        f"""
+        def subject() -> None:
+            if {constant_expr}:
+                mocked_io_suite.assert_called_once_with([candidate])
+            pass
+        """
+    )
+    assert _has_mock_assert_called_once_with(function, mock_name="mocked_io_suite") is False
+
+
 @pytest.mark.parametrize(
     ("body", "expected"),
     [
@@ -417,6 +491,30 @@ def test_mock_assert_guardrail_ignores_unreachable_branch_assertions() -> None:
             """
             result = benchmark_cli._run_audio_suite(files)
             if False:
+                assert result.processed_count == expected_result
+            """,
+            False,
+        ),
+        (
+            """
+            result = benchmark_cli._run_audio_suite(files)
+            if 0:
+                assert result.processed_count == expected_result
+            """,
+            False,
+        ),
+        (
+            """
+            result = benchmark_cli._run_audio_suite(files)
+            if "":
+                assert result.processed_count == expected_result
+            """,
+            False,
+        ),
+        (
+            """
+            result = benchmark_cli._run_audio_suite(files)
+            if None:
                 assert result.processed_count == expected_result
             """,
             False,
@@ -521,6 +619,33 @@ def test_processed_count_guardrail_binds_to_run_audio_result(body: str, expected
         (
             """
             if False:
+                assert model.is_initialized is True
+                model.safe_cleanup()
+                assert model.is_initialized is False
+            """,
+            False,
+        ),
+        (
+            """
+            if 0:
+                assert model.is_initialized is True
+                model.safe_cleanup()
+                assert model.is_initialized is False
+            """,
+            False,
+        ),
+        (
+            """
+            if "":
+                assert model.is_initialized is True
+                model.safe_cleanup()
+                assert model.is_initialized is False
+            """,
+            False,
+        ),
+        (
+            """
+            if None:
                 assert model.is_initialized is True
                 model.safe_cleanup()
                 assert model.is_initialized is False

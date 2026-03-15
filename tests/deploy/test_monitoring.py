@@ -131,12 +131,12 @@ class TestAlertThresholds:
 
     def test_invalid_cpu_thresholds(self) -> None:
         """Test that cpu_warning >= cpu_critical raises ValueError."""
-        with pytest.raises(ValueError, match="cpu_warning.*must be < cpu_critical"):
+        with pytest.raises(ValueError, match=r"cpu_warning.*must be < cpu_critical"):
             AlertThresholds(cpu_warning=90.0, cpu_critical=70.0)
 
     def test_invalid_memory_thresholds(self) -> None:
         """Test that memory_warning >= memory_critical raises ValueError."""
-        with pytest.raises(ValueError, match="memory_warning.*must be < memory_critical"):
+        with pytest.raises(ValueError, match=r"memory_warning.*must be < memory_critical"):
             AlertThresholds(memory_warning=95.0, memory_critical=90.0)
 
 

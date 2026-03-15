@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from file_organizer.cli import benchmark as benchmark_cli
 from file_organizer.cli.main import app
 
 runner = CliRunner()
@@ -65,18 +66,8 @@ def test_benchmark_json_output(tmp_path: Path) -> None:
 
     try:
         output_json = json.loads(result.stdout)
-        assert "suite" in output_json
-        assert "effective_suite" in output_json
-        assert "degraded" in output_json
-        assert "degradation_reasons" in output_json
-        assert "runner_profile_version" in output_json
-        assert "results" in output_json
-        assert "files_count" in output_json
-        assert "hardware_profile" in output_json
-        assert isinstance(output_json["effective_suite"], str)
-        assert isinstance(output_json["degraded"], bool)
-        assert isinstance(output_json["degradation_reasons"], list)
-        assert isinstance(output_json["files_count"], int)
+        benchmark_cli.validate_benchmark_payload(output_json)
+        assert isinstance(output_json["hardware_profile"], dict)
         assert output_json["files_count"] >= 1
     except json.JSONDecodeError:
         pytest.fail(f"JSON output is not valid JSON: {result.stdout}")
@@ -97,16 +88,14 @@ def test_benchmark_results_have_statistics(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     output_json = json.loads(result.stdout)
+    benchmark_cli.validate_benchmark_payload(output_json)
     results = output_json["results"]
 
-    assert "median_ms" in results
-    assert "p95_ms" in results
-    assert "p99_ms" in results
-    assert "stddev_ms" in results
-    assert "throughput_fps" in results
-    assert "iterations" in results
-    assert isinstance(results["median_ms"], (int, float))
-    assert isinstance(results["throughput_fps"], (int, float))
+    for key in ("median_ms", "p95_ms", "p99_ms", "stddev_ms", "throughput_fps"):
+        assert isinstance(results[key], (int, float)) and not isinstance(results[key], bool)
+        assert results[key] >= 0
+    assert isinstance(results["iterations"], int) and not isinstance(results["iterations"], bool)
+    assert results["iterations"] >= 0
 
 
 @pytest.mark.ci
@@ -124,6 +113,7 @@ def test_benchmark_hardware_profile_included(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     output_json = json.loads(result.stdout)
+    benchmark_cli.validate_benchmark_payload(output_json)
     assert "hardware_profile" in output_json
     assert isinstance(output_json["hardware_profile"], dict)
 

@@ -63,7 +63,7 @@ class TestScalingConfig:
 
     def test_invalid_max_less_than_min(self) -> None:
         """Test that max_replicas < min_replicas raises ValueError."""
-        with pytest.raises(ValueError, match="max_replicas.*must be >= min_replicas"):
+        with pytest.raises(ValueError, match=r"max_replicas.*must be >= min_replicas"):
             ScalingConfig(min_replicas=5, max_replicas=3)
 
     def test_invalid_thresholds_reversed(self) -> None:

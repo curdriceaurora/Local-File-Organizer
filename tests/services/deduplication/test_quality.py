@@ -129,7 +129,7 @@ class TestImageQualityAnalyzerInit:
             "color_depth": 0.1,
             "has_transparency": 0.1,
         }
-        with pytest.raises(ValueError, match="Weights must sum to 1.0"):
+        with pytest.raises(ValueError, match=r"Weights must sum to 1.0"):
             ImageQualityAnalyzer(weights=bad)
 
     def test_pil_available(self):

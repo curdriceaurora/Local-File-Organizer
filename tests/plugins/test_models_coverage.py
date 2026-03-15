@@ -97,7 +97,7 @@ class TestPluginPackageFromDict:
             PluginPackage.from_dict(_pkg_dict(size_bytes=-1))
 
     def test_rating_out_of_range(self):
-        with pytest.raises(MarketplaceSchemaError, match="between 0.0"):
+        with pytest.raises(MarketplaceSchemaError, match=r"between 0.0"):
             PluginPackage.from_dict(_pkg_dict(rating=6.0))
 
     def test_negative_downloads(self):
