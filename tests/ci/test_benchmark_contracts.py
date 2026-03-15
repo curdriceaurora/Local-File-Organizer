@@ -293,6 +293,52 @@ def test_degraded_plain_output_surfaces_reason_to_user(tmp_path: Path) -> None:
     assert "text-no-candidates-skip" in result.output
 
 
+def test_cli_fails_when_processed_counts_drift_across_measured_iterations(tmp_path: Path) -> None:
+    """Benchmark CLI should fail fast when measured processed counts are inconsistent."""
+    file_path = tmp_path / "doc.txt"
+    file_path.write_text("benchmark data", encoding="utf-8")
+
+    outcomes = [
+        benchmark_cli._SuiteIterationOutcome(processed_count=1),
+        benchmark_cli._SuiteIterationOutcome(processed_count=2),
+        benchmark_cli._SuiteIterationOutcome(processed_count=1),
+    ]
+    call_index = 0
+
+    def _drifting_runner(_: list[Path]) -> benchmark_cli._SuiteIterationOutcome:
+        nonlocal call_index
+        outcome = outcomes[call_index]
+        call_index += 1
+        return outcome
+
+    with patch.dict(
+        benchmark_cli._SUITE_RUNNERS,
+        {
+            "io": {
+                **benchmark_cli._SUITE_RUNNERS["io"],
+                "run": _drifting_runner,
+            }
+        },
+    ):
+        result = RUNNER.invoke(
+            app,
+            [
+                "benchmark",
+                "run",
+                str(tmp_path),
+                "--suite",
+                "io",
+                "--iterations",
+                "2",
+                "--warmup",
+                "1",
+            ],
+        )
+
+    assert result.exit_code == 1
+    assert "inconsistent processed counts across iterations" in result.output
+
+
 def test_benchmark_docs_describe_suite_specific_behavior() -> None:
     """User/admin docs should describe suite-specific benchmark behavior."""
     cli_doc = CLI_DOC_PATH.read_text(encoding="utf-8")
