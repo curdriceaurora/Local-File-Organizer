@@ -115,3 +115,20 @@ def test_settings_view_save_action_handles_persistence_failure() -> None:
         view.action_save_settings()
 
     mock_set_status.assert_called_once_with("Failed to save settings: config is read-only")
+
+
+def test_settings_view_reload_action_handles_load_failure() -> None:
+    """Reload action should surface load failures without raising."""
+    view = SettingsView()
+
+    with (
+        patch(
+            "file_organizer.tui.settings_view.load_parallel_runtime_settings",
+            side_effect=RuntimeError("config is unreadable"),
+        ),
+        patch.object(view, "_refresh_panel"),
+        patch.object(view, "_set_status") as mock_set_status,
+    ):
+        view.action_reload_settings()
+
+    mock_set_status.assert_called_once_with("Failed to load settings: config is unreadable")

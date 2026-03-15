@@ -38,18 +38,18 @@ class ParallelRuntimeSettings:
         return self.max_workers == 1 and self.prefetch_depth == 0
 
 
-def _coerce_positive_int(value: Any, *, allow_none: bool) -> int | None:
-    """Coerce value to a positive integer, or None when allowed/invalid."""
+def _coerce_positive_int(value: Any) -> int | None:
+    """Coerce value to a positive integer, or None for invalid values."""
     if value is None:
-        return None if allow_none else 0
+        return None
     if isinstance(value, bool):
-        return None if allow_none else 0
+        return None
     try:
         parsed = int(value)
     except (TypeError, ValueError):
-        return None if allow_none else 0
+        return None
     if parsed < 1:
-        return None if allow_none else 0
+        return None
     return parsed
 
 
@@ -74,7 +74,7 @@ def load_parallel_runtime_settings(
     config = resolved_manager.load(profile=profile)
     parallel = config.parallel or {}
 
-    max_workers = _coerce_positive_int(parallel.get("max_workers"), allow_none=True)
+    max_workers = _coerce_positive_int(parallel.get("max_workers"))
     prefetch_depth = _coerce_non_negative_int(
         parallel.get("prefetch_depth"),
         default=_DEFAULT_PREFETCH_DEPTH,
@@ -222,12 +222,16 @@ class SettingsView(Vertical):
 
     def action_reload_settings(self) -> None:
         """Reload persisted settings from configuration."""
-        loaded = load_parallel_runtime_settings(profile=self._profile)
-        self._max_workers = loaded.max_workers
-        self._prefetch_depth = loaded.prefetch_depth
-        if not loaded.sequential:
-            self._record_non_sequential_snapshot()
-        self._set_status("Settings loaded.")
+        try:
+            loaded = load_parallel_runtime_settings(profile=self._profile)
+        except Exception as exc:
+            self._set_status(f"Failed to load settings: {exc}")
+        else:
+            self._max_workers = loaded.max_workers
+            self._prefetch_depth = loaded.prefetch_depth
+            if not loaded.sequential:
+                self._record_non_sequential_snapshot()
+            self._set_status("Settings loaded.")
         self._refresh_panel()
 
     def action_save_settings(self) -> None:

@@ -248,10 +248,7 @@ class FileOrganizerApp(App[None]):
 
             return SettingsView(id="view")
 
-        titles = {
-            "settings": "[b]Settings[/b]\n\nConfigure models, paths, and preferences.",
-        }
-        return PlaceholderView(titles.get(name, f"[b]{name.capitalize()}[/b]"), id="view")
+        return PlaceholderView(f"[b]{name.capitalize()}[/b]", id="view")
 
 
 def run_tui() -> None:
