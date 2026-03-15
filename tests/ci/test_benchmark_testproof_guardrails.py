@@ -233,21 +233,23 @@ def _safe_cleanup_call_events(function: ast.FunctionDef) -> list[tuple[int, str]
 
 
 def _has_initialized_state_transition_around_cleanup(function: ast.FunctionDef) -> bool:
-    """Require receiver-matched True-before and False-after cleanup assertions."""
+    """Require receiver-matched True-before and False-after assertions for every cleanup call."""
     cleanup_events = _safe_cleanup_call_events(function)
     if not cleanup_events:
         return False
-    cleanup_line, cleanup_receiver = cleanup_events[0]
     state_events = _asserted_model_initialized_state_events(function)
-    has_true_before = any(
-        state is True and line < cleanup_line and receiver == cleanup_receiver
-        for line, receiver, state in state_events
-    )
-    has_false_after = any(
-        state is False and line > cleanup_line and receiver == cleanup_receiver
-        for line, receiver, state in state_events
-    )
-    return has_true_before and has_false_after
+    for cleanup_line, cleanup_receiver in cleanup_events:
+        has_true_before = any(
+            state is True and line < cleanup_line and receiver == cleanup_receiver
+            for line, receiver, state in state_events
+        )
+        has_false_after = any(
+            state is False and line > cleanup_line and receiver == cleanup_receiver
+            for line, receiver, state in state_events
+        )
+        if not (has_true_before and has_false_after):
+            return False
+    return True
 
 
 def _parse_single_function(source: str, function_name: str = "subject") -> ast.FunctionDef:
@@ -462,6 +464,27 @@ def test_processed_count_guardrail_binds_to_run_audio_result(body: str, expected
                     assert model.is_initialized is True
                     model.safe_cleanup()
                     assert model.is_initialized is False
+            """,
+            False,
+        ),
+        (
+            """
+            assert model.is_initialized is True
+            model.safe_cleanup()
+            assert model.is_initialized is False
+            assert other.is_initialized is True
+            other.safe_cleanup()
+            assert other.is_initialized is False
+            """,
+            True,
+        ),
+        (
+            """
+            assert model.is_initialized is True
+            model.safe_cleanup()
+            assert model.is_initialized is False
+            other.safe_cleanup()
+            assert other.is_initialized is False
             """,
             False,
         ),
