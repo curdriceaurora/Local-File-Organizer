@@ -28,6 +28,7 @@ PR-2 established degraded/fallback metadata, but this PR tightens runtime invari
   - `test_resolve_processed_count_uses_measured_window`
   - `test_resolve_processed_count_fails_when_measured_counts_drift`
 - `tests/ci/test_benchmark_contracts.py`
+  - `test_cli_fails_when_processed_counts_drift_across_measured_iterations`
   - `test_text_suite_skip_is_explicit_in_json_output`
   - `test_vision_suite_skip_is_explicit_in_json_output`
   - `test_scoped_suite_files_count_uses_filtered_candidates`
