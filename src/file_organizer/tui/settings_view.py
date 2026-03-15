@@ -12,6 +12,7 @@ can be reused by TUI workflows such as Organization Preview.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Any
 
@@ -23,6 +24,7 @@ from textual.widgets import Static
 from file_organizer.config.manager import ConfigManager
 
 _DEFAULT_PREFETCH_DEPTH = 2
+_MAX_WORKERS_CAP = max(1, os.cpu_count() or 1)
 
 
 @dataclass(frozen=True)
@@ -38,8 +40,8 @@ class ParallelRuntimeSettings:
         return self.max_workers == 1 and self.prefetch_depth == 0
 
 
-def _coerce_positive_int(value: Any) -> int | None:
-    """Coerce value to a positive integer, or None for invalid values."""
+def _coerce_positive_int(value: Any, *, max_value: int | None = None) -> int | None:
+    """Coerce value to a positive integer, optionally clamped to *max_value*."""
     if value is None:
         return None
     if isinstance(value, bool):
@@ -50,6 +52,8 @@ def _coerce_positive_int(value: Any) -> int | None:
         return None
     if parsed < 1:
         return None
+    if max_value is not None:
+        parsed = min(parsed, max_value)
     return parsed
 
 
@@ -74,7 +78,7 @@ def load_parallel_runtime_settings(
     config = resolved_manager.load(profile=profile)
     parallel = config.parallel or {}
 
-    max_workers = _coerce_positive_int(parallel.get("max_workers"))
+    max_workers = _coerce_positive_int(parallel.get("max_workers"), max_value=_MAX_WORKERS_CAP)
     prefetch_depth = _coerce_non_negative_int(
         parallel.get("prefetch_depth"),
         default=_DEFAULT_PREFETCH_DEPTH,
@@ -99,10 +103,21 @@ def save_parallel_runtime_settings(
     if settings.max_workers is None:
         parallel.pop("max_workers", None)
     else:
-        parallel["max_workers"] = settings.max_workers
-    parallel["prefetch_depth"] = settings.prefetch_depth
+        normalized_workers = _coerce_positive_int(
+            settings.max_workers,
+            max_value=_MAX_WORKERS_CAP,
+        )
+        if normalized_workers is None:
+            parallel.pop("max_workers", None)
+        else:
+            parallel["max_workers"] = normalized_workers
 
-    config.parallel = parallel
+    if settings.prefetch_depth == _DEFAULT_PREFETCH_DEPTH:
+        parallel.pop("prefetch_depth", None)
+    else:
+        parallel["prefetch_depth"] = settings.prefetch_depth
+
+    config.parallel = parallel or None
     resolved_manager.save(config, profile=profile)
 
 
@@ -164,6 +179,10 @@ class SettingsView(Vertical):
             self._set_status("Disable sequential mode before changing workers.")
             return
         current = self._max_workers or 1
+        if current >= _MAX_WORKERS_CAP:
+            self._set_status(f"Max workers capped at {_MAX_WORKERS_CAP} for this machine.")
+            self._refresh_panel()
+            return
         self._max_workers = current + 1
         self._record_non_sequential_snapshot()
         self._refresh_panel()

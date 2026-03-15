@@ -44,6 +44,20 @@ def test_load_parallel_runtime_settings_uses_overrides() -> None:
     assert settings.sequential is True
 
 
+def test_load_parallel_runtime_settings_caps_workers_to_cpu_count() -> None:
+    """Worker override should be capped to machine CPU count."""
+    mock_manager = MagicMock()
+    config = AppConfig()
+    config.parallel = {"max_workers": 9999, "prefetch_depth": 1}
+    mock_manager.load.return_value = config
+
+    with patch("file_organizer.tui.settings_view._MAX_WORKERS_CAP", 4):
+        settings = load_parallel_runtime_settings(manager=mock_manager)
+
+    assert settings.max_workers == 4
+    assert settings.prefetch_depth == 1
+
+
 def test_save_parallel_runtime_settings_persists_values() -> None:
     """Saving should update ``AppConfig.parallel`` and persist via manager."""
     mock_manager = MagicMock()
@@ -57,6 +71,22 @@ def test_save_parallel_runtime_settings_persists_values() -> None:
     )
 
     assert config.parallel == {"prefetch_depth": 0}
+    mock_manager.save.assert_called_once_with(config, profile="default")
+
+
+def test_save_parallel_runtime_settings_omits_default_prefetch_override() -> None:
+    """Default prefetch depth should not be persisted as an explicit override."""
+    mock_manager = MagicMock()
+    config = AppConfig()
+    config.parallel = {"max_workers": 3, "prefetch_depth": 4}
+    mock_manager.load.return_value = config
+
+    save_parallel_runtime_settings(
+        ParallelRuntimeSettings(max_workers=None, prefetch_depth=2),
+        manager=mock_manager,
+    )
+
+    assert config.parallel is None
     mock_manager.save.assert_called_once_with(config, profile="default")
 
 
@@ -132,3 +162,20 @@ def test_settings_view_reload_action_handles_load_failure() -> None:
         view.action_reload_settings()
 
     mock_set_status.assert_called_once_with("Failed to load settings: config is unreadable")
+
+
+def test_settings_view_workers_up_respects_cpu_cap() -> None:
+    """Workers-up action should stop at the machine cap."""
+    view = SettingsView()
+    view._max_workers = 4
+    view._prefetch_depth = 2
+
+    with (
+        patch("file_organizer.tui.settings_view._MAX_WORKERS_CAP", 4),
+        patch.object(view, "_refresh_panel"),
+        patch.object(view, "_set_status") as mock_set_status,
+    ):
+        view.action_workers_up()
+
+    assert view._max_workers == 4
+    mock_set_status.assert_called_once_with("Max workers capped at 4 for this machine.")
