@@ -6,8 +6,9 @@ including directory selection, filtering, debouncing, and batching.
 
 from __future__ import annotations
 
+import fnmatch
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 # Default patterns to exclude from watching
 DEFAULT_EXCLUDE_PATTERNS: list[str] = [
@@ -112,24 +113,22 @@ def _matches_pattern(path_str: str, pattern: str) -> bool:
     Returns:
         True if the path matches the pattern.
     """
-    import fnmatch
-    from pathlib import PurePosixPath
+    # Normalize path separators so Windows backslashes are treated as POSIX
+    # forward slashes — required for PurePosixPath and fnmatch to work correctly
+    # on Windows where str(Path(...)) uses backslashes.
+    normalized = path_str.replace("\\", "/")
 
     # Check against the full path and each individual component
-    path_parts = PurePosixPath(path_str).parts
+    posix_path = PurePosixPath(normalized)
+    path_parts = posix_path.parts
 
     # Match against the full path
-    if fnmatch.fnmatch(path_str, pattern):
+    if fnmatch.fnmatch(normalized, pattern):
         return True
 
-    # Match against each path component
+    # Match against each path component (including the filename as the last part)
     for part in path_parts:
         if fnmatch.fnmatch(part, pattern):
             return True
-
-    # Match against the filename
-    filename = PurePosixPath(path_str).name
-    if fnmatch.fnmatch(filename, pattern):
-        return True
 
     return False

@@ -8,6 +8,7 @@ and file change detection.
 from __future__ import annotations
 
 import hashlib
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -442,6 +443,7 @@ class TestCheckpointFsync(unittest.TestCase):
 
         shutil.rmtree(self._tmpdir, ignore_errors=True)
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="directory fsync is a no-op on Windows")
     def test_save_checkpoint_calls_fsync(self) -> None:
         """Verify os.fsync is called during save_checkpoint (file + directory)."""
         ckpt = Checkpoint(job_id="fsync-test", file_hashes={})

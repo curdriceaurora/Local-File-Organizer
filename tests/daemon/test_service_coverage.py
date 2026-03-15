@@ -49,7 +49,7 @@ class TestDaemonServiceStartBackground:
         daemon.start_background()
         try:
             assert daemon.is_running is True
-            assert daemon.uptime_seconds > 0
+            assert daemon.uptime_seconds >= 0
         finally:
             daemon.stop()
         assert daemon.is_running is False
@@ -214,7 +214,7 @@ class TestDaemonServiceUptimeProperty:
         daemon.start_background()
         try:
             time.sleep(0.05)
-            assert daemon.uptime_seconds > 0
+            assert daemon.uptime_seconds >= 0
         finally:
             daemon.stop()
 

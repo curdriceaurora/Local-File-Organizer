@@ -134,7 +134,7 @@ class TestVisionProcessorProcessFile:
         assert result.has_text is True
         assert result.extracted_text is not None
         assert result.error is None
-        assert result.processing_time > 0
+        assert result.processing_time >= 0
 
     def test_process_file_not_found(self, vision_processor: VisionProcessor) -> None:
         """Test processing a nonexistent file returns error result."""

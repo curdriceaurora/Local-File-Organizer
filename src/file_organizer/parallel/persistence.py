@@ -15,6 +15,7 @@ from pathlib import Path
 from file_organizer.config.path_manager import get_data_dir
 from file_organizer.config.path_migration import resolve_legacy_path
 from file_organizer.parallel.models import JobState, JobStatus, JobSummary
+from file_organizer.utils.atomic_io import fsync_directory
 
 logger = logging.getLogger(__name__)
 
@@ -74,12 +75,7 @@ class JobPersistence:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, path)
-            # Fsync directory to persist rename metadata
-            dir_fd = os.open(str(path.parent), os.O_RDONLY)
-            try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
+            fsync_directory(path)
             logger.debug("Saved job %s to %s", job.id, path)
         except Exception:
             # Clean up temp file if something went wrong

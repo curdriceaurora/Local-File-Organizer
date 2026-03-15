@@ -8,7 +8,7 @@ import shutil
 import stat
 import tempfile
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Optional
 
 from file_organizer.plugins.marketplace.errors import MarketplaceInstallError
@@ -177,9 +177,13 @@ class PluginInstaller:
 
         with zipfile.ZipFile(archive_path, "r") as archive:
             for info in archive.infolist():
-                member = Path(info.filename)
-                if member.is_absolute() or ".." in member.parts:
+                # Use PurePosixPath to detect POSIX-style absolute paths (e.g.
+                # "/etc/passwd") in ZIP entries regardless of the host OS —
+                # Path("/etc/passwd").is_absolute() returns False on Windows.
+                member_posix = PurePosixPath(info.filename)
+                if member_posix.is_absolute() or ".." in member_posix.parts:
                     raise MarketplaceInstallError("Plugin archive contains unsafe paths.")
+                member = Path(info.filename)
 
                 mode = info.external_attr >> 16
                 if stat.S_ISLNK(mode):

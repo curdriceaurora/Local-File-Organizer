@@ -16,6 +16,7 @@ Tests cover:
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import threading
 import time
@@ -506,6 +507,10 @@ class TestImportExport:
         assert data["version"] == "1.0"
         assert str(test_path.resolve()) in data["directory_preferences"]
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="POSIX path keys in JSON don't round-trip via Path() on Windows",
+    )
     def test_import_json(self, store, temp_storage):
         """Test importing preferences from JSON"""
         # Create export file

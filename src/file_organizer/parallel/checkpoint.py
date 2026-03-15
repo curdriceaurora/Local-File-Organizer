@@ -16,6 +16,7 @@ from pathlib import Path
 
 from file_organizer.config.path_manager import get_data_dir
 from file_organizer.parallel.models import Checkpoint
+from file_organizer.utils.atomic_io import fsync_directory
 
 logger = logging.getLogger(__name__)
 
@@ -154,12 +155,7 @@ class CheckpointManager:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, path)
-            # Fsync directory to persist rename metadata
-            dir_fd = os.open(str(path.parent), os.O_RDONLY)
-            try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
+            fsync_directory(path)
             logger.debug("Saved checkpoint for job %s", checkpoint.job_id)
         except Exception:
             if temp_path.exists():

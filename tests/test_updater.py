@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -218,6 +219,7 @@ class TestUpdateInstaller:
             assert asset is not None
             assert "setup" not in asset.name.lower()
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Unix binary naming assumed")
     def test_install_new_binary(self, tmp_path: Path) -> None:
         installer = UpdateInstaller(install_dir=tmp_path)
 
@@ -246,6 +248,7 @@ class TestUpdateInstaller:
         assert appimage.read_bytes() == b"new-content"
         assert (tmp_path / "file-organizer-2.0.0-linux-x86_64.AppImage.bak").exists()
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Unix binary naming assumed")
     def test_install_creates_backup(self, tmp_path: Path) -> None:
         installer = UpdateInstaller(install_dir=tmp_path)
 
@@ -262,6 +265,7 @@ class TestUpdateInstaller:
         assert (tmp_path / "file-organizer.bak").read_bytes() == b"old-content"
         assert (tmp_path / "file-organizer").read_bytes() == b"new-content"
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Unix binary naming assumed")
     def test_rollback(self, tmp_path: Path) -> None:
         installer = UpdateInstaller(install_dir=tmp_path)
 
@@ -312,6 +316,7 @@ class TestUpdateManager:
         s = UpdateStatus(available=True, current_version="1.0.0", latest_version="2.0.0")
         assert "Update available" in s.message
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Unix binary naming assumed")
     def test_rollback_delegates(self, tmp_path: Path) -> None:
         mgr = UpdateManager(install_dir=tmp_path)
         (tmp_path / "file-organizer.bak").write_bytes(b"old")

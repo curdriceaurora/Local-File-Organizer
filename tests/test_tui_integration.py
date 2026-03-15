@@ -11,10 +11,11 @@ from unittest.mock import patch
 import pytest
 
 from file_organizer.tui.analytics_view import AnalyticsView
-from file_organizer.tui.app import FileOrganizerApp, PlaceholderView, Sidebar, StatusBar
+from file_organizer.tui.app import FileOrganizerApp, Sidebar, StatusBar
 from file_organizer.tui.audio_view import AudioView
 from file_organizer.tui.copilot_view import CopilotView
 from file_organizer.tui.organization_preview import OrganizationPreviewView
+from file_organizer.tui.settings_view import SettingsView
 from file_organizer.tui.undo_history_view import UndoHistoryView
 
 # ---------------------------------------------------------------------------
@@ -32,7 +33,7 @@ async def test_round_trip_files_to_settings_and_back() -> None:
         await app.action_switch_view("settings")
         await pilot.pause()
         assert app._current_view == "settings"
-        assert app.query_one("#view", PlaceholderView) is not None
+        assert app.query_one("#view", SettingsView) is not None
 
         await app.action_switch_view("files")
         await pilot.pause()

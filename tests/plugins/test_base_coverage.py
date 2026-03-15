@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -75,6 +76,7 @@ class TestLoadManifest:
         assert result["license"] == "Apache-2.0"
         assert result["homepage"] == "https://example.com"
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="chmod does not restrict reads on Windows")
     def test_unreadable_manifest_raises(self, tmp_path):
         plugin_dir = tmp_path / "plugin"
         plugin_dir.mkdir()

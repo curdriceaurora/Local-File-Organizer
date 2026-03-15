@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -90,12 +91,12 @@ class TestOrganizationPreviewView:
 
     def test_custom_dirs(self) -> None:
         view = OrganizationPreviewView(
-            input_dir="/tmp/input",
-            output_dir="/tmp/output",
+            input_dir="custom_input",
+            output_dir="custom_output",
             id="view",
         )
-        assert str(view._input_dir) == "/tmp/input"
-        assert str(view._output_dir) == "/tmp/output"
+        assert view._input_dir == Path("custom_input")
+        assert view._output_dir == Path("custom_output")
 
 
 @pytest.mark.asyncio

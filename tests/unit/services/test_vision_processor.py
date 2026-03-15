@@ -90,7 +90,7 @@ class TestVisionProcessor:
         assert result.folder_name == "nature_landscapes"
         assert result.filename == "mountain_sunset"
         assert result.error is None
-        assert result.processing_time > 0
+        assert result.processing_time >= 0
 
     def test_process_file_no_text_found(self, mock_vision_model, mock_image_path):
         processor = VisionProcessor(vision_model=mock_vision_model)

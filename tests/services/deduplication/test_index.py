@@ -51,7 +51,7 @@ class TestFileMetadata:
         )
 
         assert isinstance(metadata.path, Path)
-        assert str(metadata.path) == "/test/file.txt"
+        assert metadata.path == Path("/test/file.txt")
 
 
 @pytest.mark.unit

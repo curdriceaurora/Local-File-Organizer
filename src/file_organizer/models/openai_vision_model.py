@@ -21,6 +21,9 @@ from file_organizer.models.base import (
     TokenExhaustionError,
 )
 
+# Ensure .webp is registered — it is absent from the Windows MIME registry
+mimetypes.add_type("image/webp", ".webp")
+
 # Fallback MIME type when extension is not recognised
 _DEFAULT_IMAGE_MIME = "image/jpeg"
 

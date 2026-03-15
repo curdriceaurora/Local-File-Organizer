@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from file_organizer.config.manager import DEFAULT_CONFIG_DIR
+from file_organizer.utils.atomic_io import fsync_directory
 
 
 @dataclass
@@ -84,12 +85,7 @@ class UpdateStateStore:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temp_path, self._state_path)
-            # Fsync directory to persist rename metadata
-            dir_fd = os.open(str(self._state_path.parent), os.O_RDONLY)
-            try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
+            fsync_directory(self._state_path)
         except Exception:
             if temp_path.exists():
                 temp_path.unlink()
