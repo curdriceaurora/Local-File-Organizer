@@ -158,7 +158,7 @@ def test_load_detectors_wraps_missing_parent_package_for_dotted_module(monkeypat
 
     monkeypatch.setattr(audit.importlib, "import_module", _raise_missing_parent)
 
-    with pytest.raises(ValueError, match="Invalid detector spec 'missing_pkg.sub:detector'"):
+    with pytest.raises(ValueError, match=r"Invalid detector spec 'missing_pkg.sub:detector'"):
         audit.load_detectors(["missing_pkg.sub:detector"])
 
 

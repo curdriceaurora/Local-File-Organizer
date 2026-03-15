@@ -19,6 +19,33 @@ PERF_DOC_PATH = REPO_ROOT / "docs" / "admin" / "performance-tuning.md"
 RUNNER = CliRunner()
 
 
+def _build_contract_payload(
+    *,
+    degraded: object = False,
+    degradation_reasons: object = (),
+) -> dict[str, object]:
+    """Return a minimally valid benchmark payload for contract-matrix tests."""
+    return {
+        "suite": "io",
+        "effective_suite": "io",
+        "degraded": degraded,
+        "degradation_reasons": list(degradation_reasons)
+        if isinstance(degradation_reasons, tuple)
+        else degradation_reasons,
+        "runner_profile_version": benchmark_cli._RUNNER_PROFILE_VERSION,
+        "files_count": 1,
+        "hardware_profile": {},
+        "results": {
+            "median_ms": 1.0,
+            "p95_ms": 1.0,
+            "p99_ms": 1.0,
+            "stddev_ms": 0.0,
+            "throughput_fps": 100.0,
+            "iterations": 1,
+        },
+    }
+
+
 def _assert_suite_non_alias_contract(runners: dict[str, dict[str, object]]) -> None:
     """Assert every suite uses a distinct runner implementation."""
     suites = ("io", "text", "vision", "audio", "pipeline", "e2e")
@@ -29,6 +56,7 @@ def _assert_suite_non_alias_contract(runners: dict[str, dict[str, object]]) -> N
 
 def _assert_baseline_schema_contract(payload: dict[str, object]) -> None:
     """Assert required benchmark baseline schema and types."""
+    benchmark_cli.validate_benchmark_payload(payload)
     assert payload["suite"] == "io"
     assert payload["effective_suite"] == "io"
     assert payload["degraded"] is False
@@ -47,6 +75,42 @@ def _assert_baseline_schema_contract(payload: dict[str, object]) -> None:
     iterations = results["iterations"]
     assert isinstance(iterations, int)
     assert iterations > 0
+
+
+def test_live_benchmark_payload_contains_required_runtime_fields(tmp_path: Path) -> None:
+    """Live benchmark output must include required schema keys and metric fields."""
+    text_file = tmp_path / "note.txt"
+    text_file.write_text("benchmark data", encoding="utf-8")
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "benchmark",
+            "run",
+            str(tmp_path),
+            "--suite",
+            "io",
+            "--iterations",
+            "1",
+            "--warmup",
+            "0",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    benchmark_cli.validate_benchmark_payload(payload)
+
+    assert isinstance(payload["hardware_profile"], dict)
+    assert payload["hardware_profile"], "hardware_profile should not be empty"
+    assert isinstance(payload["results"], dict)
+    for key in ("median_ms", "p95_ms", "p99_ms", "stddev_ms", "throughput_fps"):
+        value = payload["results"][key]
+        assert isinstance(value, (int, float)) and not isinstance(value, bool)
+        assert value >= 0
+    iterations = payload["results"]["iterations"]
+    assert isinstance(iterations, int) and not isinstance(iterations, bool)
+    assert iterations >= 0
 
 
 def test_benchmark_suite_runners_are_distinct() -> None:
@@ -99,6 +163,36 @@ def test_baseline_schema_validator_rejects_missing_metric() -> None:
 
     with pytest.raises(KeyError):
         _assert_baseline_schema_contract(bad_payload)
+
+
+@pytest.mark.parametrize(
+    ("degraded", "degradation_reasons", "expected_exception"),
+    [
+        (False, [], None),
+        (True, ["audio-no-candidates-fallback-to-io"], None),
+        (True, [], ValueError),
+        (False, ["text-no-candidates-skip"], ValueError),
+        ("false", [], TypeError),
+        (1, [], TypeError),
+    ],
+)
+def test_baseline_schema_validator_enforces_degraded_reason_invariant_matrix(
+    degraded: object,
+    degradation_reasons: object,
+    expected_exception: type[BaseException] | None,
+) -> None:
+    """Contract helper should enforce degraded/reason semantics across edge cases."""
+    payload = _build_contract_payload(
+        degraded=degraded,
+        degradation_reasons=degradation_reasons,
+    )
+
+    if expected_exception is None:
+        benchmark_cli.validate_benchmark_payload(payload)
+        return
+
+    with pytest.raises(expected_exception, match=r"degraded.*degradation_reasons"):
+        benchmark_cli.validate_benchmark_payload(payload)
 
 
 def test_audio_suite_fallback_is_explicit_in_json_output(tmp_path: Path) -> None:
@@ -188,6 +282,74 @@ def test_vision_suite_skip_is_explicit_in_json_output(tmp_path: Path) -> None:
     assert payload["degraded"] is True
     assert payload["degradation_reasons"] == ["vision-no-candidates-skip"]
     assert payload["files_count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("suite_name", "effective_suite", "degraded", "degradation_reasons"),
+    [
+        ("io", "io", False, []),
+        ("text", "text", True, ["text-no-candidates-skip"]),
+        ("vision", "vision", True, ["vision-no-candidates-skip"]),
+        ("audio", "io", True, ["audio-no-candidates-fallback-to-io"]),
+        ("pipeline", "pipeline", False, []),
+        ("e2e", "e2e", False, []),
+    ],
+)
+def test_empty_directory_json_payload_uses_suite_classifier_contract(
+    tmp_path: Path,
+    suite_name: str,
+    effective_suite: str,
+    degraded: bool,
+    degradation_reasons: list[str],
+) -> None:
+    """Empty-input JSON path should preserve suite classifier semantics."""
+    result = RUNNER.invoke(
+        app,
+        ["benchmark", "run", str(tmp_path), "--suite", suite_name, "--json"],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+
+    assert payload["suite"] == suite_name
+    assert payload["effective_suite"] == effective_suite
+    assert payload["degraded"] is degraded
+    assert payload["degradation_reasons"] == degradation_reasons
+    assert payload["files_count"] == 0
+
+
+def test_empty_directory_json_payload_preserves_compare_output(tmp_path: Path) -> None:
+    """Empty-input JSON path should still include --compare comparison fields."""
+    benchmark_input = tmp_path / "benchmark-input"
+    benchmark_input.mkdir()
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(_build_contract_payload()), encoding="utf-8")
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "benchmark",
+            "run",
+            str(benchmark_input),
+            "--suite",
+            "io",
+            "--json",
+            "--compare",
+            str(baseline_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    comparison = payload["comparison"]
+    assert isinstance(comparison, dict)
+    assert "deltas_pct" in comparison
+    assert "regression" in comparison
+    assert "threshold" in comparison
+    assert isinstance(comparison["deltas_pct"], dict)
+    assert isinstance(comparison["regression"], bool)
+    threshold = comparison["threshold"]
+    assert threshold is None or (
+        isinstance(threshold, (int, float)) and not isinstance(threshold, bool)
+    )
 
 
 @pytest.mark.parametrize(

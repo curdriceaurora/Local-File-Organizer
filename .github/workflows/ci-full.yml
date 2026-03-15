@@ -19,6 +19,8 @@ jobs:
   test-macos:
     name: Test macOS (Python 3.12)
     runs-on: macos-latest
+    env:
+      PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -30,11 +32,15 @@ jobs:
       - name: Download NLTK data
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
-        run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts="
+        # Full repo tests include Linux- and POSIX-assumption suites.
+        # CI Full's cross-platform contract is to validate the portable CI/smoke subset on macOS/Windows.
+        run: pytest tests/ --strict-markers --timeout=30 -n=auto --override-ini="addopts=" -m "ci or smoke"
 
   test-windows:
     name: Test Windows (Python 3.12)
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -46,4 +52,6 @@ jobs:
       - name: Download NLTK data
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run tests
-        run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts="
+        # Full repo tests include Linux- and POSIX-assumption suites.
+        # CI Full's cross-platform contract is to validate the portable CI/smoke subset on macOS/Windows.
+        run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts=" -m "ci or smoke"

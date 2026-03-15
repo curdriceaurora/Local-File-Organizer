@@ -66,7 +66,7 @@ class TestAdaptiveBatchSizerBounds:
     def test_invalid_max_less_than_min(self) -> None:
         """Test that max_size < min_size raises ValueError."""
         sizer = AdaptiveBatchSizer()
-        with pytest.raises(ValueError, match="max_size.*must be >= min_size"):
+        with pytest.raises(ValueError, match=r"max_size.*must be >= min_size"):
             sizer.set_bounds(min_size=10, max_size=5)
 
 
