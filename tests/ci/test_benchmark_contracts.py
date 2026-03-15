@@ -29,6 +29,7 @@ def _assert_suite_non_alias_contract(runners: dict[str, dict[str, object]]) -> N
 
 def _assert_baseline_schema_contract(payload: dict[str, object]) -> None:
     """Assert required benchmark baseline schema and types."""
+    benchmark_cli.validate_benchmark_payload(payload)
     assert payload["suite"] == "io"
     assert payload["effective_suite"] == "io"
     assert payload["degraded"] is False
@@ -71,24 +72,18 @@ def test_live_benchmark_payload_contains_required_runtime_fields(tmp_path: Path)
     )
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
-
-    for key in (
-        "suite",
-        "effective_suite",
-        "degraded",
-        "degradation_reasons",
-        "runner_profile_version",
-        "files_count",
-        "hardware_profile",
-        "results",
-    ):
-        assert key in payload, f"Missing benchmark payload key: {key}"
+    benchmark_cli.validate_benchmark_payload(payload)
 
     assert isinstance(payload["hardware_profile"], dict)
     assert payload["hardware_profile"], "hardware_profile should not be empty"
     assert isinstance(payload["results"], dict)
-    for key in ("median_ms", "p95_ms", "p99_ms", "stddev_ms", "throughput_fps", "iterations"):
-        assert key in payload["results"], f"Missing benchmark results key: {key}"
+    for key in ("median_ms", "p95_ms", "p99_ms", "stddev_ms", "throughput_fps"):
+        value = payload["results"][key]
+        assert isinstance(value, (int, float)) and not isinstance(value, bool)
+        assert value >= 0
+    iterations = payload["results"]["iterations"]
+    assert isinstance(iterations, int) and not isinstance(iterations, bool)
+    assert iterations >= 0
 
 
 def test_benchmark_suite_runners_are_distinct() -> None:

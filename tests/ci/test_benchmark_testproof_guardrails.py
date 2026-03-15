@@ -49,20 +49,20 @@ def _pytest_markers(function: ast.FunctionDef) -> set[str]:
     return markers
 
 
-def _is_non_empty_sequence_expr(node: ast.expr) -> bool:
+def _is_explicit_empty_sequence_literal(node: ast.expr) -> bool:
     if isinstance(node, ast.List):
-        return len(node.elts) > 0
+        return len(node.elts) == 0
     if isinstance(node, ast.Tuple):
-        return len(node.elts) > 0
+        return len(node.elts) == 0
     return False
 
 
 def _has_mock_assert_called_once_with(function: ast.FunctionDef, *, mock_name: str) -> bool:
-    """Check for mock.assert_called_once_with(...) call with non-empty arguments.
+    """Check for mock.assert_called_once_with(...) call with strong argument payload.
 
-    Accepts any first argument (literal, variable, or expression) as long as at least
-    one argument is provided. This enforces the assertion happens but doesn't force
-    literal list syntax, allowing more flexible test patterns.
+    Accepts any non-empty argument form (names, calls, comprehensions, literals),
+    but explicitly rejects empty list/tuple literals such as ``[]`` or ``()`` to
+    avoid weak delegation-assert patterns.
     """
     for node in ast.walk(function):
         if (
@@ -72,8 +72,7 @@ def _has_mock_assert_called_once_with(function: ast.FunctionDef, *, mock_name: s
             and isinstance(node.func.value, ast.Name)
             and node.func.value.id == mock_name
         ):
-            # Require at least one argument to prevent weak no-arg assertions
-            if node.args:
+            if node.args and not any(_is_explicit_empty_sequence_literal(arg) for arg in node.args):
                 return True
     return False
 

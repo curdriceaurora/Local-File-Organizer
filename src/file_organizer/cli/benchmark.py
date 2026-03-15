@@ -61,6 +61,19 @@ class ComparisonResult(TypedDict):
     threshold: float
 
 
+class BenchmarkPayload(TypedDict):
+    """Canonical JSON payload emitted by benchmark CLI."""
+
+    suite: str
+    effective_suite: str
+    degraded: bool
+    degradation_reasons: list[str]
+    runner_profile_version: str
+    files_count: int
+    hardware_profile: dict[str, Any]
+    results: BenchmarkStats
+
+
 @dataclass(frozen=True, slots=True)
 class _SuiteExecutionClassification:
     """Runtime classification for one suite iteration."""
@@ -138,6 +151,107 @@ def compute_stats(times_ms: list[float], file_count: int) -> BenchmarkStats:
         throughput_fps=round(throughput, 2),
         iterations=len(sorted_t),
     )
+
+
+def _require_non_negative_numeric_field(value: Any, *, field: str) -> None:
+    """Validate numeric payload field while rejecting bool coercion edge cases."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"Benchmark payload field '{field}' must be numeric.")
+    if value < 0:
+        raise ValueError(f"Benchmark payload field '{field}' must be non-negative.")
+
+
+def _require_payload_fields(payload: dict[str, Any]) -> None:
+    """Ensure all required top-level benchmark payload fields are present."""
+    required_top_level = (
+        "suite",
+        "effective_suite",
+        "degraded",
+        "degradation_reasons",
+        "runner_profile_version",
+        "files_count",
+        "hardware_profile",
+        "results",
+    )
+    missing_top_level = [field for field in required_top_level if field not in payload]
+    if missing_top_level:
+        raise KeyError(f"Missing benchmark payload fields: {', '.join(sorted(missing_top_level))}")
+
+
+def _validate_payload_identity_fields(payload: dict[str, Any]) -> None:
+    """Validate top-level payload identity and suite execution metadata."""
+    for key in ("suite", "effective_suite", "runner_profile_version"):
+        value = payload[key]
+        if not isinstance(value, str):
+            raise TypeError(f"Benchmark payload field '{key}' must be a string.")
+        if not value:
+            raise ValueError(f"Benchmark payload field '{key}' must be non-empty.")
+
+    if not isinstance(payload["degraded"], bool):
+        raise TypeError("Benchmark payload field 'degraded' must be a bool.")
+
+
+def _validate_payload_degradation_reasons(payload: dict[str, Any]) -> None:
+    """Validate degradation reasons contract for degraded and non-degraded runs."""
+    degradation_reasons = payload["degradation_reasons"]
+    if not isinstance(degradation_reasons, list):
+        raise TypeError("Benchmark payload field 'degradation_reasons' must be a list.")
+    for idx, reason in enumerate(degradation_reasons):
+        if not isinstance(reason, str) or not reason:
+            raise ValueError(
+                f"Benchmark payload field 'degradation_reasons[{idx}]' must be a non-empty string."
+            )
+
+
+def _validate_payload_results(results: dict[str, Any]) -> None:
+    """Validate benchmark result metrics contract for JSON payload output."""
+    required_result_fields = (
+        "median_ms",
+        "p95_ms",
+        "p99_ms",
+        "stddev_ms",
+        "throughput_fps",
+        "iterations",
+    )
+    missing_result_fields = [field for field in required_result_fields if field not in results]
+    if missing_result_fields:
+        raise KeyError(
+            f"Missing benchmark payload results fields: {', '.join(missing_result_fields)}"
+        )
+
+    for field in required_result_fields:
+        _require_non_negative_numeric_field(results[field], field=f"results.{field}")
+
+    if isinstance(results["iterations"], bool) or not isinstance(results["iterations"], int):
+        raise TypeError("Benchmark payload field 'results.iterations' must be an int.")
+
+
+def validate_benchmark_payload(payload: dict[str, Any]) -> None:
+    """Validate the canonical benchmark JSON payload contract.
+
+    Why this exists:
+    - Benchmark JSON is consumed by CI contract tests and regression tooling.
+    - A single validator prevents schema drift between runtime and tests.
+    - Fail-fast validation makes regressions explicit instead of silently tolerated.
+    """
+    _require_payload_fields(payload)
+    _validate_payload_identity_fields(payload)
+    _validate_payload_degradation_reasons(payload)
+
+    files_count = payload["files_count"]
+    if isinstance(files_count, bool) or not isinstance(files_count, int):
+        raise TypeError("Benchmark payload field 'files_count' must be an int.")
+    if files_count < 0:
+        raise ValueError("Benchmark payload field 'files_count' must be non-negative.")
+
+    hardware_profile = payload["hardware_profile"]
+    if not isinstance(hardware_profile, dict):
+        raise TypeError("Benchmark payload field 'hardware_profile' must be a dict.")
+
+    results = payload["results"]
+    if not isinstance(results, dict):
+        raise TypeError("Benchmark payload field 'results' must be a dict.")
+    _validate_payload_results(results)
 
 
 def compare_results(
@@ -853,21 +967,18 @@ def run(
 
     if not files:
         if json_output:
-            console.print(
-                json.dumps(
-                    {
-                        "suite": suite,
-                        "effective_suite": suite,
-                        "degraded": False,
-                        "degradation_reasons": [],
-                        "runner_profile_version": _RUNNER_PROFILE_VERSION,
-                        "files_count": 0,
-                        "hardware_profile": _detect_hardware_profile(),
-                        "results": compute_stats([], 0),
-                    },
-                    indent=2,
-                )
-            )
+            output: dict[str, Any] = {
+                "suite": suite,
+                "effective_suite": suite,
+                "degraded": False,
+                "degradation_reasons": [],
+                "runner_profile_version": _RUNNER_PROFILE_VERSION,
+                "files_count": 0,
+                "hardware_profile": _detect_hardware_profile(),
+                "results": compute_stats([], 0),
+            }
+            validate_benchmark_payload(output)
+            console.print(json.dumps(output, indent=2))
         else:
             console.print("[yellow]No files found in the specified path.[/yellow]")
         return
@@ -937,6 +1048,7 @@ def run(
         "hardware_profile": _detect_hardware_profile(),
         "results": stats,
     }
+    validate_benchmark_payload(output)
 
     output = _maybe_attach_comparison_output(
         output=output,
