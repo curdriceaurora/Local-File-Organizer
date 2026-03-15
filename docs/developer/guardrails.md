@@ -65,6 +65,33 @@ Implementation detail:
 - Detector implementation lives in `src/file_organizer/review_regressions/api_compat.py`.
 - Deterministic positive/safe proofs live in `tests/unit/review_regressions/test_api_compat_detectors.py`.
 
+### Custom API-Compat Contracts
+
+When defining custom allowlists, import from the detector module directly:
+
+```python
+from pathlib import Path
+
+from file_organizer.review_regressions.api_compat import (
+    PublicApiCompatibilityDetector,
+    PublicCallableContract,
+)
+
+custom_detector = PublicApiCompatibilityDetector(
+    contracts=(
+        PublicCallableContract(
+            path=Path("src/file_organizer/core/organizer.py"),
+            qualname="FileOrganizer.__init__",
+            legacy_positional_params=("text_model_config", "vision_model_config"),
+        ),
+    )
+)
+```
+
+Why direct module import:
+- avoids ambiguity between pack-level exports and detector-specific types
+- keeps custom-contract code aligned with the detector's canonical module
+
 ## CLI Contract Test Conventions
 
 Typer and Rich render help text differently across terminals and CI. For CLI

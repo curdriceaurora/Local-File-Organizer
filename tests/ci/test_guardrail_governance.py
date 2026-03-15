@@ -94,6 +94,7 @@ def test_guardrail_docs_define_canonical_homes_and_conventions() -> None:
         ".github/workflows/ci.yml",
         ".claude/scripts/pre-commit-validation.sh",
         "tests/ci/test_api_compat_guardrails.py",
+        "from file_organizer.review_regressions.api_compat import",
         "legacy-positional-prefix-changed",
         "new-optional-param-must-be-keyword-only",
         "allowlisted-callable-missing",
