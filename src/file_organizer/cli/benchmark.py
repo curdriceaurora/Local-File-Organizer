@@ -980,24 +980,6 @@ def run(
         console.print(f"[red]Error reading files: {e}[/red]")
         raise typer.Exit(code=1) from e
 
-    if not files:
-        if json_output:
-            output: dict[str, Any] = {
-                "suite": suite,
-                "effective_suite": suite,
-                "degraded": False,
-                "degradation_reasons": [],
-                "runner_profile_version": _RUNNER_PROFILE_VERSION,
-                "files_count": 0,
-                "hardware_profile": _detect_hardware_profile(),
-                "results": compute_stats([], 0),
-            }
-            validate_benchmark_payload(output)
-            console.print(json.dumps(output, indent=2))
-        else:
-            console.print("[yellow]No files found in the specified path.[/yellow]")
-        return
-
     # Select suite runner
     suite_spec = _SUITE_RUNNERS.get(suite)
     if suite_spec is None:
@@ -1005,6 +987,33 @@ def run(
         raise typer.Exit(code=1)
     runner = suite_spec["run"]
     classifier = suite_spec["classify"]
+
+    if not files:
+        if json_output:
+            empty_outcome = _SuiteIterationOutcome(processed_count=0)
+            classification = classifier([], empty_outcome)
+            output: dict[str, Any] = {
+                "suite": suite,
+                "effective_suite": classification.effective_suite,
+                "degraded": classification.degraded,
+                "degradation_reasons": sorted(set(classification.degradation_reasons)),
+                "runner_profile_version": _RUNNER_PROFILE_VERSION,
+                "files_count": 0,
+                "hardware_profile": _detect_hardware_profile(),
+                "results": compute_stats([], 0),
+            }
+            validate_benchmark_payload(output)
+            output = _maybe_attach_comparison_output(
+                output=output,
+                compare_path=compare_path,
+                suite=suite,
+                console=console,
+                json_output=json_output,
+            )
+            console.print(json.dumps(output, indent=2))
+        else:
+            console.print("[yellow]No files found in the specified path.[/yellow]")
+        return
 
     # Ensure we have enough iterations
     total_iterations = warmup + iterations

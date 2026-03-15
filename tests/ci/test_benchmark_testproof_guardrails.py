@@ -83,6 +83,18 @@ def _is_structured_delegation_argument(node: ast.expr) -> bool:
     return False
 
 
+def _iter_top_level_statement_nodes(function: ast.FunctionDef) -> ast.AST:
+    """Yield AST nodes from executable top-level statements only.
+
+    Nested ``def``/``class`` bodies are intentionally skipped so dead helper
+    code cannot satisfy guardrail requirements.
+    """
+    for statement in function.body:
+        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        yield from ast.walk(statement)
+
+
 def _has_mock_assert_called_once_with(function: ast.FunctionDef, *, mock_name: str) -> bool:
     """Check for mock.assert_called_once_with(...) call with strong argument payload.
 
@@ -91,7 +103,7 @@ def _has_mock_assert_called_once_with(function: ast.FunctionDef, *, mock_name: s
     list/tuple literals while preserving flexibility for variables and
     computed payload expressions.
     """
-    for node in ast.walk(function):
+    for node in _iter_top_level_statement_nodes(function):
         if (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
@@ -109,16 +121,40 @@ def _has_mock_assert_called_once_with(function: ast.FunctionDef, *, mock_name: s
 
 
 def _has_strong_processed_count_assert(function: ast.FunctionDef) -> bool:
-    """Check for any assert with .processed_count == value (variable-name agnostic)."""
+    """Check for assert on processed_count tied to the direct suite-run result."""
+
+    result_names: set[str] = set()
+    for node in _iter_top_level_statement_nodes(function):
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
+            call = node.value.func
+            if (
+                isinstance(call, ast.Attribute)
+                and call.attr == "_run_audio_suite"
+                and len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)
+            ):
+                result_names.add(node.targets[0].id)
+        if isinstance(node, ast.AnnAssign) and isinstance(node.value, ast.Call):
+            call = node.value.func
+            if (
+                isinstance(call, ast.Attribute)
+                and call.attr == "_run_audio_suite"
+                and isinstance(node.target, ast.Name)
+            ):
+                result_names.add(node.target.id)
+
+    if not result_names:
+        return False
 
     def _is_processed_count_attr(node: ast.AST) -> bool:
         return (
             isinstance(node, ast.Attribute)
             and isinstance(node.value, ast.Name)
             and node.attr == "processed_count"
+            and node.value.id in result_names
         )
 
-    for node in ast.walk(function):
+    for node in _iter_top_level_statement_nodes(function):
         if not isinstance(node, ast.Assert) or not isinstance(node.test, ast.Compare):
             continue
         compare = node.test
@@ -133,8 +169,8 @@ def _has_strong_processed_count_assert(function: ast.FunctionDef) -> bool:
 
 
 def _has_model_safe_cleanup_call(function: ast.FunctionDef) -> bool:
-    """Check for any .safe_cleanup() call on any variable (variable-name agnostic)."""
-    for node in ast.walk(function):
+    """Check for any top-level .safe_cleanup() call on a named receiver."""
+    for node in _iter_top_level_statement_nodes(function):
         if (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
@@ -145,10 +181,12 @@ def _has_model_safe_cleanup_call(function: ast.FunctionDef) -> bool:
     return False
 
 
-def _asserted_model_initialized_state_events(function: ast.FunctionDef) -> list[tuple[int, bool]]:
-    """Collect ``is_initialized is <bool>`` assertion events with source line ordering."""
-    events: list[tuple[int, bool]] = []
-    for node in ast.walk(function):
+def _asserted_model_initialized_state_events(
+    function: ast.FunctionDef,
+) -> list[tuple[int, str, bool]]:
+    """Collect ``<receiver>.is_initialized is <bool>`` events with line ordering."""
+    events: list[tuple[int, str, bool]] = []
+    for node in _iter_top_level_statement_nodes(function):
         if not isinstance(node, ast.Assert):
             continue
         test = node.test
@@ -163,33 +201,39 @@ def _asserted_model_initialized_state_events(function: ast.FunctionDef) -> list[
             and isinstance(test.comparators[0], ast.Constant)
             and isinstance(test.comparators[0].value, bool)
         ):
-            events.append((node.lineno, test.comparators[0].value))
+            events.append((node.lineno, test.left.value.id, test.comparators[0].value))
     return sorted(events, key=lambda entry: entry[0])
 
 
-def _safe_cleanup_call_lines(function: ast.FunctionDef) -> list[int]:
-    """Collect source lines containing ``*.safe_cleanup()`` invocations."""
-    lines: list[int] = []
-    for node in ast.walk(function):
+def _safe_cleanup_call_events(function: ast.FunctionDef) -> list[tuple[int, str]]:
+    """Collect source lines and receivers for top-level ``*.safe_cleanup()`` calls."""
+    events: list[tuple[int, str]] = []
+    for node in _iter_top_level_statement_nodes(function):
         if (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
             and isinstance(node.func.value, ast.Name)
             and node.func.attr == "safe_cleanup"
         ):
-            lines.append(node.lineno)
-    return sorted(lines)
+            events.append((node.lineno, node.func.value.id))
+    return sorted(events, key=lambda entry: entry[0])
 
 
 def _has_initialized_state_transition_around_cleanup(function: ast.FunctionDef) -> bool:
-    """Require ``is_initialized`` to be asserted True before cleanup and False after."""
-    cleanup_lines = _safe_cleanup_call_lines(function)
-    if not cleanup_lines:
+    """Require receiver-matched True-before and False-after cleanup assertions."""
+    cleanup_events = _safe_cleanup_call_events(function)
+    if not cleanup_events:
         return False
-    cleanup_line = cleanup_lines[0]
+    cleanup_line, cleanup_receiver = cleanup_events[0]
     state_events = _asserted_model_initialized_state_events(function)
-    has_true_before = any(state is True and line < cleanup_line for line, state in state_events)
-    has_false_after = any(state is False and line > cleanup_line for line, state in state_events)
+    has_true_before = any(
+        state is True and line < cleanup_line and receiver == cleanup_receiver
+        for line, receiver, state in state_events
+    )
+    has_false_after = any(
+        state is False and line > cleanup_line and receiver == cleanup_receiver
+        for line, receiver, state in state_events
+    )
     return has_true_before and has_false_after
 
 
@@ -271,6 +315,54 @@ def test_mock_assert_guardrail_rejects_weak_or_non_structured_payloads(
     assert _has_mock_assert_called_once_with(function, mock_name="mocked_io_suite") is expected
 
 
+def test_mock_assert_guardrail_ignores_nested_helper_assertions() -> None:
+    """Nested helper assertions must not satisfy top-level delegation guardrails."""
+    function = _parse_single_function(
+        """
+        def subject() -> None:
+            def hidden() -> None:
+                mocked_io_suite.assert_called_once_with([candidate])
+            pass
+        """
+    )
+    assert _has_mock_assert_called_once_with(function, mock_name="mocked_io_suite") is False
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        (
+            """
+            result = benchmark_cli._run_audio_suite(files)
+            assert result.processed_count == expected_result
+            """,
+            True,
+        ),
+        (
+            """
+            result = benchmark_cli._run_audio_suite(files)
+            assert other.processed_count == expected_result
+            """,
+            False,
+        ),
+        (
+            """
+            result = benchmark_cli._run_audio_suite(files)
+            def hidden() -> None:
+                assert result.processed_count == expected_result
+            """,
+            False,
+        ),
+    ],
+)
+def test_processed_count_guardrail_binds_to_run_audio_result(body: str, expected: bool) -> None:
+    """Processed-count guardrail must bind to the direct suite-run result variable."""
+    function_body = textwrap.indent(textwrap.dedent(body).strip(), "    ")
+    source = f"def subject() -> None:\n{function_body}\n"
+    function = _parse_single_function(source)
+    assert _has_strong_processed_count_assert(function) is expected
+
+
 @pytest.mark.parametrize(
     ("body", "expected"),
     [
@@ -308,6 +400,22 @@ def test_mock_assert_guardrail_rejects_weak_or_non_structured_payloads(
             """
             assert model.is_initialized is True
             assert model.is_initialized is False
+            """,
+            False,
+        ),
+        (
+            """
+            assert model.is_initialized is True
+            other.safe_cleanup()
+            assert model.is_initialized is False
+            """,
+            False,
+        ),
+        (
+            """
+            assert other.is_initialized is True
+            model.safe_cleanup()
+            assert other.is_initialized is False
             """,
             False,
         ),

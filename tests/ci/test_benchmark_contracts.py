@@ -191,7 +191,7 @@ def test_baseline_schema_validator_enforces_degraded_reason_invariant_matrix(
         benchmark_cli.validate_benchmark_payload(payload)
         return
 
-    with pytest.raises(expected_exception, match="degraded.*degradation_reasons"):
+    with pytest.raises(expected_exception, match=r"degraded.*degradation_reasons"):
         benchmark_cli.validate_benchmark_payload(payload)
 
 
@@ -282,6 +282,63 @@ def test_vision_suite_skip_is_explicit_in_json_output(tmp_path: Path) -> None:
     assert payload["degraded"] is True
     assert payload["degradation_reasons"] == ["vision-no-candidates-skip"]
     assert payload["files_count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("suite_name", "effective_suite", "degraded", "degradation_reasons"),
+    [
+        ("io", "io", False, []),
+        ("text", "text", True, ["text-no-candidates-skip"]),
+        ("vision", "vision", True, ["vision-no-candidates-skip"]),
+        ("audio", "io", True, ["audio-no-candidates-fallback-to-io"]),
+        ("pipeline", "pipeline", False, []),
+        ("e2e", "e2e", False, []),
+    ],
+)
+def test_empty_directory_json_payload_uses_suite_classifier_contract(
+    tmp_path: Path,
+    suite_name: str,
+    effective_suite: str,
+    degraded: bool,
+    degradation_reasons: list[str],
+) -> None:
+    """Empty-input JSON path should preserve suite classifier semantics."""
+    result = RUNNER.invoke(
+        app,
+        ["benchmark", "run", str(tmp_path), "--suite", suite_name, "--json"],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+
+    assert payload["suite"] == suite_name
+    assert payload["effective_suite"] == effective_suite
+    assert payload["degraded"] is degraded
+    assert payload["degradation_reasons"] == degradation_reasons
+    assert payload["files_count"] == 0
+
+
+def test_empty_directory_json_payload_preserves_compare_output(tmp_path: Path) -> None:
+    """Empty-input JSON path should still include --compare comparison fields."""
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(_build_contract_payload()), encoding="utf-8")
+
+    result = RUNNER.invoke(
+        app,
+        [
+            "benchmark",
+            "run",
+            str(tmp_path),
+            "--suite",
+            "io",
+            "--json",
+            "--compare",
+            str(baseline_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert "comparison" in payload
+    assert "deltas_pct" in payload["comparison"]
 
 
 @pytest.mark.parametrize(
