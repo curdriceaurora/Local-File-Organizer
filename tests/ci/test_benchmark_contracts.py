@@ -339,8 +339,17 @@ def test_empty_directory_json_payload_preserves_compare_output(tmp_path: Path) -
     )
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
-    assert "comparison" in payload
-    assert "deltas_pct" in payload["comparison"]
+    comparison = payload["comparison"]
+    assert isinstance(comparison, dict)
+    assert "deltas_pct" in comparison
+    assert "regression" in comparison
+    assert "threshold" in comparison
+    assert isinstance(comparison["deltas_pct"], dict)
+    assert isinstance(comparison["regression"], bool)
+    threshold = comparison["threshold"]
+    assert threshold is None or (
+        isinstance(threshold, (int, float)) and not isinstance(threshold, bool)
+    )
 
 
 @pytest.mark.parametrize(
