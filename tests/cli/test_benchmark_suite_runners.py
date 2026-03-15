@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from file_organizer.cli import benchmark as benchmark_cli
@@ -90,9 +91,13 @@ def test_benchmark_suite_smoke_outputs_expected_schema(suite_name: str) -> None:
     expected = _EXPECTATIONS["suites"][suite_name]
 
     assert payload["suite"] == suite_name
-    assert payload["effective_suite"] == suite_name
-    assert payload["degraded"] is False
-    assert payload["degradation_reasons"] == []
+    if suite_name == "audio" and payload["degraded"] is True:
+        assert payload["effective_suite"] == "audio"
+        assert payload["degradation_reasons"] == ["audio-synthesized-metadata-fallback"]
+    else:
+        assert payload["effective_suite"] == suite_name
+        assert payload["degraded"] is False
+        assert payload["degradation_reasons"] == []
     assert payload["runner_profile_version"] == benchmark_cli._RUNNER_PROFILE_VERSION
     assert payload["files_count"] >= expected["min_files"]
     assert isinstance(payload["hardware_profile"], dict)
@@ -177,3 +182,66 @@ def test_classify_e2e_suite_marks_no_processed_candidates_as_degraded() -> None:
     assert classification.effective_suite == "e2e"
     assert classification.degraded is True
     assert classification.degradation_reasons == ("e2e-no-candidates-processed",)
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_execute_suite_iteration_measures_runner_before_classification() -> None:
+    """Iteration timing should stop after runner execution, before classifier bookkeeping."""
+    observed_call_counts: list[int] = []
+    console = MagicMock()
+
+    def _runner(_: list[Path]) -> int:
+        return 1
+
+    def _classifier(
+        _: list[Path], _processed_count: int
+    ) -> benchmark_cli._SuiteExecutionClassification:
+        observed_call_counts.append(mocked_monotonic.call_count)
+        return benchmark_cli._SuiteExecutionClassification(effective_suite="io", degraded=False)
+
+    with patch(
+        "file_organizer.cli.benchmark.time.monotonic",
+        side_effect=[10.0, 10.25],
+    ) as mocked_monotonic:
+        elapsed_ms, processed_count, classification = benchmark_cli._execute_suite_iteration(
+            runner=_runner,
+            classifier=_classifier,
+            files=[_CORPUS_DIR / "sample_notes.txt"],
+            suite="io",
+            console=console,
+        )
+
+    assert observed_call_counts == [2]
+    assert elapsed_ms == pytest.approx(250.0)
+    assert processed_count == 1
+    assert classification.effective_suite == "io"
+    assert classification.degraded is False
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_execute_suite_iteration_wraps_classifier_failure() -> None:
+    """Classifier failures should use the same typed exit flow as runner failures."""
+    console = MagicMock()
+
+    def _runner(_: list[Path]) -> int:
+        return 1
+
+    def _classifier(
+        _: list[Path], _processed_count: int
+    ) -> benchmark_cli._SuiteExecutionClassification:
+        raise RuntimeError("classification exploded")
+
+    with pytest.raises(typer.Exit) as exc:
+        benchmark_cli._execute_suite_iteration(
+            runner=_runner,
+            classifier=_classifier,
+            files=[_CORPUS_DIR / "sample_notes.txt"],
+            suite="io",
+            console=console,
+        )
+
+    assert exc.value.exit_code == 1
+    printed_message = console.print.call_args.args[0]
+    assert "classification failed" in printed_message

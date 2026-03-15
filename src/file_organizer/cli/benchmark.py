@@ -80,6 +80,10 @@ class _SuiteRunner(TypedDict):
 
 _RUNNER_PROFILE_VERSION = "2026-03-14-v1"
 
+# Audio classification consumes this per-iteration runtime signal from _run_audio_suite.
+# The benchmark CLI executes suites sequentially, so module-level iteration state is safe here.
+_AUDIO_SUITE_USED_SYNTHETIC_METADATA = False
+
 
 # ---------------------------------------------------------------------------
 # Statistical helpers
@@ -341,6 +345,8 @@ def _synthesized_audio_metadata(file_path: Path) -> AudioMetadata:
 
 def _run_audio_suite(files: list[Path]) -> int:
     """Benchmark audio metadata + classification path."""
+    global _AUDIO_SUITE_USED_SYNTHETIC_METADATA
+    _AUDIO_SUITE_USED_SYNTHETIC_METADATA = False
     candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
     if not candidates:
         typer.echo("Warning: no audio files found; falling back to IO-only benchmark.", err=True)
@@ -355,6 +361,7 @@ def _run_audio_suite(files: list[Path]) -> int:
         try:
             metadata = extractor.extract(file_path)
         except ImportError:
+            _AUDIO_SUITE_USED_SYNTHETIC_METADATA = True
             metadata = _synthesized_audio_metadata(file_path)
         except Exception as exc:
             raise RuntimeError(f"Audio benchmark runner failed for {file_path}: {exc}") from exc
@@ -515,6 +522,12 @@ def _classify_audio_suite(
             degraded=True,
             degradation_reasons=("audio-no-candidates-fallback-to-io",),
         )
+    if _AUDIO_SUITE_USED_SYNTHETIC_METADATA:
+        return _SuiteExecutionClassification(
+            effective_suite="audio",
+            degraded=True,
+            degradation_reasons=("audio-synthesized-metadata-fallback",),
+        )
     return _SuiteExecutionClassification(effective_suite="audio", degraded=False)
 
 
@@ -630,9 +643,12 @@ def _execute_suite_iteration(
             f"[red]Benchmark suite '{suite}' returned invalid processed count: {processed_count}[/red]"
         )
         raise typer.Exit(code=1)
-    classification = classifier(files, processed_count)
-
     elapsed_ms = (time.monotonic() - start) * 1000
+    try:
+        classification = classifier(files, processed_count)
+    except Exception as e:
+        console.print(f"[red]Benchmark suite '{suite}' classification failed: {e}[/red]")
+        raise typer.Exit(code=1) from e
     return elapsed_ms, processed_count, classification
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
@@ -156,6 +157,39 @@ def test_text_suite_skip_is_explicit_in_json_output(tmp_path: Path) -> None:
     assert payload["effective_suite"] == "text"
     assert payload["degraded"] is True
     assert payload["degradation_reasons"] == ["text-no-candidates-skip"]
+
+
+def test_audio_synthesized_metadata_fallback_is_explicit_in_json_output(tmp_path: Path) -> None:
+    """Audio metadata synthesis fallback must be visible in JSON degradation metadata."""
+    audio_file = tmp_path / "sample.wav"
+    audio_file.write_bytes(b"RIFF\x00\x00\x00\x00WAVE")
+
+    with patch(
+        "file_organizer.services.audio.metadata_extractor.AudioMetadataExtractor.extract",
+        side_effect=ImportError("optional audio extractors missing"),
+    ):
+        result = RUNNER.invoke(
+            app,
+            [
+                "benchmark",
+                "run",
+                str(tmp_path),
+                "--suite",
+                "audio",
+                "--iterations",
+                "1",
+                "--warmup",
+                "0",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["suite"] == "audio"
+    assert payload["effective_suite"] == "audio"
+    assert payload["degraded"] is True
+    assert payload["degradation_reasons"] == ["audio-synthesized-metadata-fallback"]
 
 
 def test_benchmark_docs_describe_suite_specific_behavior() -> None:
