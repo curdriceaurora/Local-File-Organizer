@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import ast
+import textwrap
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SUITE_RUNNERS_TEST_PATH = REPO_ROOT / "tests" / "cli" / "test_benchmark_suite_runners.py"
@@ -190,6 +193,13 @@ def _has_initialized_state_transition_around_cleanup(function: ast.FunctionDef) 
     return has_true_before and has_false_after
 
 
+def _parse_single_function(source: str, function_name: str = "subject") -> ast.FunctionDef:
+    """Parse and return a single function from source text."""
+    module = ast.parse(textwrap.dedent(source))
+    function = _find_function(module, function_name)
+    return function
+
+
 def test_smoke_schema_test_has_required_pytest_markers() -> None:
     """Deterministic benchmark smoke contracts must keep smoke+ci+unit markers."""
     tree = _parse_python_ast(SUITE_RUNNERS_TEST_PATH)
@@ -231,3 +241,83 @@ def test_benchmark_stub_cleanup_parity_test_enforces_pre_and_post_state() -> Non
         "Benchmark model-stub cleanup test must assert model.is_initialized is True "
         "before safe_cleanup() and model.is_initialized is False after safe_cleanup()."
     )
+
+
+@pytest.mark.parametrize(
+    ("call_expr", "expected"),
+    [
+        ("mocked_io_suite.assert_called_once_with([candidate])", True),
+        ("mocked_io_suite.assert_called_once_with(candidates)", True),
+        ("mocked_io_suite.assert_called_once_with(build_candidates())", True),
+        ("mocked_io_suite.assert_called_once_with([p for p in candidates])", True),
+        ("mocked_io_suite.assert_called_once_with([])", False),
+        ("mocked_io_suite.assert_called_once_with(())", False),
+        ("mocked_io_suite.assert_called_once_with(1)", False),
+        ("mocked_io_suite.assert_called_once_with('candidate')", False),
+        ("mocked_io_suite.assert_called_once_with()", False),
+        ("different_mock.assert_called_once_with([candidate])", False),
+    ],
+)
+def test_mock_assert_guardrail_rejects_weak_or_non_structured_payloads(
+    call_expr: str, expected: bool
+) -> None:
+    """Guardrail must accept structured candidate payload assertions only."""
+    function = _parse_single_function(
+        f"""
+        def subject() -> None:
+            {call_expr}
+        """
+    )
+    assert _has_mock_assert_called_once_with(function, mock_name="mocked_io_suite") is expected
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        (
+            """
+            assert model.is_initialized is True
+            model.safe_cleanup()
+            assert model.is_initialized is False
+            """,
+            True,
+        ),
+        (
+            """
+            assert model.is_initialized is False
+            model.safe_cleanup()
+            assert model.is_initialized is True
+            """,
+            False,
+        ),
+        (
+            """
+            assert model.is_initialized is True
+            model.safe_cleanup()
+            """,
+            False,
+        ),
+        (
+            """
+            model.safe_cleanup()
+            assert model.is_initialized is False
+            """,
+            False,
+        ),
+        (
+            """
+            assert model.is_initialized is True
+            assert model.is_initialized is False
+            """,
+            False,
+        ),
+    ],
+)
+def test_cleanup_transition_guardrail_enforces_ordered_pre_post_assertions(
+    body: str, expected: bool
+) -> None:
+    """Guardrail must enforce True-before and False-after around safe_cleanup()."""
+    function_body = textwrap.indent(textwrap.dedent(body).strip(), "    ")
+    source = f"def subject() -> None:\n{function_body}\n"
+    function = _parse_single_function(source)
+    assert _has_initialized_state_transition_around_cleanup(function) is expected
