@@ -12,6 +12,7 @@ can be reused by TUI workflows such as Organization Preview.
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -25,6 +26,7 @@ from file_organizer.config.manager import ConfigManager
 
 _DEFAULT_PREFETCH_DEPTH = 2
 _MAX_WORKERS_CAP = max(1, os.cpu_count() or 1)
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -303,4 +305,4 @@ class SettingsView(Vertical):
 
             self.app.query_one(StatusBar).set_status(message)
         except Exception:
-            pass
+            logger.debug("Failed to set status message on StatusBar.", exc_info=True)

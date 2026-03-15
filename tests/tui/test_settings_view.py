@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -56,6 +60,43 @@ def test_load_parallel_runtime_settings_caps_workers_to_cpu_count() -> None:
 
     assert settings.max_workers == 4
     assert settings.prefetch_depth == 1
+
+
+def test_load_parallel_runtime_settings_uses_cpu_count_fallback_when_unavailable() -> None:
+    """Module-level worker cap should fall back to 1 when ``os.cpu_count()`` is unavailable."""
+    code = """
+from unittest.mock import MagicMock, patch
+import importlib
+
+from file_organizer.config.schema import AppConfig
+import file_organizer.tui.settings_view as settings_view_module
+
+mock_manager = MagicMock()
+config = AppConfig()
+config.parallel = {"max_workers": 9999, "prefetch_depth": 3}
+mock_manager.load.return_value = config
+
+with patch("os.cpu_count", return_value=None):
+    importlib.reload(settings_view_module)
+    settings = settings_view_module.load_parallel_runtime_settings(manager=mock_manager)
+
+    print(f"{settings.max_workers},{settings.prefetch_depth}")
+"""
+    src_root = Path(__file__).resolve().parents[2] / "src"
+    existing_pythonpath = os.environ.get("PYTHONPATH", "")
+    merged_pythonpath = (
+        f"{src_root}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else str(src_root)
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        env={**os.environ, "PYTHONPATH": merged_pythonpath},
+        check=True,
+        text=True,
+    )
+
+    assert result.stdout.strip() == "1,3"
 
 
 def test_save_parallel_runtime_settings_persists_values() -> None:
@@ -122,10 +163,11 @@ def test_settings_view_save_action_persists_current_values() -> None:
     ):
         view.action_save_settings()
 
-    mock_save.assert_called_once_with(
-        ParallelRuntimeSettings(max_workers=6, prefetch_depth=2),
-        profile="default",
-    )
+    mock_save.assert_called_once()
+    persisted = mock_save.call_args.args[0]
+    assert persisted.max_workers == 6
+    assert persisted.prefetch_depth == 2
+    assert mock_save.call_args.kwargs == {"profile": "default"}
 
 
 def test_settings_view_save_action_handles_persistence_failure() -> None:
