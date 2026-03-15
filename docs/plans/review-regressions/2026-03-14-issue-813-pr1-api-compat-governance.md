@@ -11,23 +11,23 @@ This scaffold covers **Workstream A (Public API Compatibility Guards)** and
 
 ## Implementation Checklist
 
-- [ ] Add a new review-regression detector module for public API compatibility.
-- [ ] Implement allowlist-driven detection for:
-  - [ ] insertion of new params before legacy params on public callables
-  - [ ] newly added optional params that are not keyword-only
-- [ ] Add detector fixtures (positive + safe) under `tests/fixtures/review_regressions/`.
-- [ ] Add detector unit tests under `tests/unit/review_regressions/`.
-- [ ] Add/extend CI semantic tests in `tests/ci/` to enforce deterministic policy mapping.
-- [ ] Update governance checks so each new blocking rule has one canonical layer.
-- [ ] Update developer guardrail docs with the canonical home for these rules.
+- [x] Add a new review-regression detector module for public API compatibility.
+- [x] Implement allowlist-driven detection for:
+  - [x] insertion of new params before legacy params on public callables
+  - [x] newly added optional params that are not keyword-only
+- [x] Add detector fixtures (positive + safe) under `tests/fixtures/review_regressions/`.
+- [x] Add detector unit tests under `tests/unit/review_regressions/`.
+- [x] Add/extend CI semantic tests in `tests/ci/` to enforce deterministic policy mapping.
+- [x] Update governance checks so each new blocking rule has one canonical layer.
+- [x] Update developer guardrail docs with the canonical home for these rules.
 
 ## Acceptance Mapping (PR-1 subset)
 
-- [ ] Reintroducing constructor parameter insertion before legacy args fails CI.
-- [ ] Reintroducing non-keyword-only optional public constructor params on allowlist fails CI.
-- [ ] Canonical policy mapping is enforced (no duplicate stricter rule in shell wrapper).
-- [ ] `pytest tests/ci -q --no-cov --override-ini="addopts="` passes.
-- [ ] `bash .claude/scripts/pre-commit-validation.sh` passes.
+- [x] Reintroducing constructor parameter insertion before legacy args fails CI.
+- [x] Reintroducing non-keyword-only optional public constructor params on allowlist fails CI.
+- [x] Canonical policy mapping is enforced (no duplicate stricter rule in shell wrapper).
+- [x] `pytest tests/ci -q --no-cov --override-ini="addopts="` passes.
+- [x] `bash .claude/scripts/pre-commit-validation.sh` passes.
 
 ## Guardrail Ownership
 
@@ -42,4 +42,3 @@ bash .claude/scripts/pre-commit-validation.sh
 python3 -m pytest tests/unit/review_regressions -q --no-cov --override-ini="addopts="
 python3 -m pytest tests/ci -q --no-cov --override-ini="addopts="
 ```
-

@@ -1,5 +1,9 @@
 """Framework for detector-based review-regression audits."""
 
+from file_organizer.review_regressions.api_compat import (
+    API_COMPAT_DETECTORS,
+    PublicApiCompatibilityDetector,
+)
 from file_organizer.review_regressions.correctness import (
     CORRECTNESS_DETECTORS,
     ActiveModelPrimitiveStoreDetector,
@@ -41,6 +45,7 @@ __all__ = [
     "Violation",
     "AbsoluteRSSInBatchFeedbackDetector",
     "ActiveModelPrimitiveStoreDetector",
+    "API_COMPAT_DETECTORS",
     "CORRECTNESS_DETECTORS",
     "EagerBufferPoolAllocationDetector",
     "GuardedContextDirectPathDetector",
@@ -50,6 +55,7 @@ __all__ = [
     "TEST_QUALITY_DETECTORS",
     "ValidatedPathBypassDetector",
     "StageContextValidationBypassDetector",
+    "PublicApiCompatibilityDetector",
     "SECURITY_DETECTORS",
     "WeakMockCallCountAssertionDetector",
     "changed_test_quality_detectors",

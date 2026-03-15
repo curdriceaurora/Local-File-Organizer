@@ -50,6 +50,21 @@ Add a new rule to the narrowest layer that can enforce it cleanly:
 
 Do not add new blocking policy directly to `.claude/scripts/pre-commit-validation.sh`.
 
+## API Compatibility Rule Index
+
+Issue `#813` adds allowlisted public-signature compatibility checks. These are
+semantic checks and therefore belong in CI tests, not shell-script heuristics.
+
+| Rule ID | Canonical enforced layer | Why this home |
+|---------|--------------------------|---------------|
+| `legacy-positional-prefix-changed` | `tests/ci/test_api_compat_guardrails.py` | Protects positional-call compatibility on allowlisted public callables |
+| `new-optional-param-must-be-keyword-only` | `tests/ci/test_api_compat_guardrails.py` | Prevents accidental API drift from newly optional positional parameters |
+| `allowlisted-callable-missing` | `tests/ci/test_api_compat_guardrails.py` | Fails fast when a tracked public API surface is renamed or removed without contract updates |
+
+Implementation detail:
+- Detector implementation lives in `src/file_organizer/review_regressions/api_compat.py`.
+- Deterministic positive/safe proofs live in `tests/unit/review_regressions/test_api_compat_detectors.py`.
+
 ## CLI Contract Test Conventions
 
 Typer and Rich render help text differently across terminals and CI. For CLI
