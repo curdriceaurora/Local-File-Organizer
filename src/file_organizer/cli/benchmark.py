@@ -61,21 +61,21 @@ class ComparisonResult(TypedDict):
     threshold: float
 
 
-class _SuiteRunner(TypedDict):
-    """Metadata for a benchmark suite runner."""
-
-    run: Callable[[list[Path]], int]
-    classify: Callable[[list[Path], int], _SuiteExecutionClassification]
-    description: str
-
-
 @dataclass(frozen=True, slots=True)
 class _SuiteExecutionClassification:
     """Runtime classification for one suite iteration."""
 
     effective_suite: str
     degraded: bool
-    degradation_reason: str | None = None
+    degradation_reasons: tuple[str, ...] = ()
+
+
+class _SuiteRunner(TypedDict):
+    """Metadata for a benchmark suite runner."""
+
+    run: Callable[[list[Path]], int]
+    classify: Callable[[list[Path], int], _SuiteExecutionClassification]
+    description: str
 
 
 _RUNNER_PROFILE_VERSION = "2026-03-14-v1"
@@ -477,44 +477,48 @@ def _run_e2e_suite(files: list[Path]) -> int:
     return len(copied)
 
 
-def _classify_io_suite(_: list[Path], __: int) -> _SuiteExecutionClassification:
+def _classify_io_suite(_: list[Path], _processed_count: int) -> _SuiteExecutionClassification:
     return _SuiteExecutionClassification(effective_suite="io", degraded=False)
 
 
-def _classify_text_suite(files: list[Path], __: int) -> _SuiteExecutionClassification:
+def _classify_text_suite(files: list[Path], _processed_count: int) -> _SuiteExecutionClassification:
     candidates = _suite_candidates(files, _TEXT_EXTENSIONS)
     if not candidates:
         return _SuiteExecutionClassification(
             effective_suite="text",
             degraded=True,
-            degradation_reason="text-no-candidates-skip",
+            degradation_reasons=("text-no-candidates-skip",),
         )
     return _SuiteExecutionClassification(effective_suite="text", degraded=False)
 
 
-def _classify_vision_suite(files: list[Path], __: int) -> _SuiteExecutionClassification:
+def _classify_vision_suite(
+    files: list[Path], _processed_count: int
+) -> _SuiteExecutionClassification:
     candidates = _suite_candidates(files, _VISION_EXTENSIONS)
     if not candidates:
         return _SuiteExecutionClassification(
             effective_suite="vision",
             degraded=True,
-            degradation_reason="vision-no-candidates-skip",
+            degradation_reasons=("vision-no-candidates-skip",),
         )
     return _SuiteExecutionClassification(effective_suite="vision", degraded=False)
 
 
-def _classify_audio_suite(files: list[Path], __: int) -> _SuiteExecutionClassification:
+def _classify_audio_suite(
+    files: list[Path], _processed_count: int
+) -> _SuiteExecutionClassification:
     candidates = _suite_candidates(files, _AUDIO_EXTENSIONS, fallback_to_all=False)
     if not candidates:
         return _SuiteExecutionClassification(
             effective_suite="io",
             degraded=True,
-            degradation_reason="audio-no-candidates-fallback-to-io",
+            degradation_reasons=("audio-no-candidates-fallback-to-io",),
         )
     return _SuiteExecutionClassification(effective_suite="audio", degraded=False)
 
 
-def _classify_pipeline_suite(_: list[Path], __: int) -> _SuiteExecutionClassification:
+def _classify_pipeline_suite(_: list[Path], _processed_count: int) -> _SuiteExecutionClassification:
     return _SuiteExecutionClassification(effective_suite="pipeline", degraded=False)
 
 
@@ -523,7 +527,7 @@ def _classify_e2e_suite(files: list[Path], processed_count: int) -> _SuiteExecut
         return _SuiteExecutionClassification(
             effective_suite="e2e",
             degraded=True,
-            degradation_reason="e2e-no-candidates-processed",
+            degradation_reasons=("e2e-no-candidates-processed",),
         )
     return _SuiteExecutionClassification(effective_suite="e2e", degraded=False)
 
@@ -642,9 +646,10 @@ def _summarize_suite_classifications(
     measured = classifications[warmup:]
     degradation_reasons = sorted(
         {
-            classification.degradation_reason
+            reason
             for classification in measured
-            if classification.degraded and classification.degradation_reason is not None
+            if classification.degraded
+            for reason in classification.degradation_reasons
         }
     )
     degraded = any(classification.degraded for classification in measured)

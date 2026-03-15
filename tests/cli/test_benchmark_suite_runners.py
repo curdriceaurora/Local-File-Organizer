@@ -164,3 +164,16 @@ def test_vision_suite_warns_and_skips_when_no_vision_candidates() -> None:
         "Warning: no vision files found for vision suite; skipping benchmark.",
         err=True,
     )
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+def test_classify_e2e_suite_marks_no_processed_candidates_as_degraded() -> None:
+    """E2E classification should mark zero processed candidates as degraded."""
+    files = [_CORPUS_DIR / "sample_notes.txt"]
+
+    classification = benchmark_cli._classify_e2e_suite(files, processed_count=0)
+
+    assert classification.effective_suite == "e2e"
+    assert classification.degraded is True
+    assert classification.degradation_reasons == ("e2e-no-candidates-processed",)
