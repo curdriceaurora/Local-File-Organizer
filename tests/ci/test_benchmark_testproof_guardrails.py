@@ -57,12 +57,36 @@ def _is_explicit_empty_sequence_literal(node: ast.expr) -> bool:
     return False
 
 
+def _is_structured_delegation_argument(node: ast.expr) -> bool:
+    """Accept structured payload expressions and reject scalar literals."""
+    if _is_explicit_empty_sequence_literal(node):
+        return False
+    if isinstance(node, (ast.List, ast.Tuple)):
+        return True
+    if isinstance(
+        node,
+        (
+            ast.Name,
+            ast.Attribute,
+            ast.Subscript,
+            ast.Call,
+            ast.ListComp,
+            ast.GeneratorExp,
+            ast.SetComp,
+            ast.DictComp,
+        ),
+    ):
+        return True
+    return False
+
+
 def _has_mock_assert_called_once_with(function: ast.FunctionDef, *, mock_name: str) -> bool:
     """Check for mock.assert_called_once_with(...) call with strong argument payload.
 
-    Accepts any non-empty argument form (names, calls, comprehensions, literals),
-    but explicitly rejects empty list/tuple literals such as ``[]`` or ``()`` to
-    avoid weak delegation-assert patterns.
+    Requires at least one structured, non-empty candidate payload argument.
+    This rejects scalar literals (for example, ``1``) and explicit empty
+    list/tuple literals while preserving flexibility for variables and
+    computed payload expressions.
     """
     for node in ast.walk(function):
         if (
@@ -72,7 +96,11 @@ def _has_mock_assert_called_once_with(function: ast.FunctionDef, *, mock_name: s
             and isinstance(node.func.value, ast.Name)
             and node.func.value.id == mock_name
         ):
-            if node.args and not any(_is_explicit_empty_sequence_literal(arg) for arg in node.args):
+            if (
+                node.args
+                and _is_structured_delegation_argument(node.args[0])
+                and not any(_is_explicit_empty_sequence_literal(arg) for arg in node.args)
+            ):
                 return True
     return False
 
@@ -114,9 +142,9 @@ def _has_model_safe_cleanup_call(function: ast.FunctionDef) -> bool:
     return False
 
 
-def _asserted_model_initialized_states(function: ast.FunctionDef) -> set[bool]:
-    """Collect all is_initialized state assertions on any variable (variable-name agnostic)."""
-    states: set[bool] = set()
+def _asserted_model_initialized_state_events(function: ast.FunctionDef) -> list[tuple[int, bool]]:
+    """Collect ``is_initialized is <bool>`` assertion events with source line ordering."""
+    events: list[tuple[int, bool]] = []
     for node in ast.walk(function):
         if not isinstance(node, ast.Assert):
             continue
@@ -132,8 +160,34 @@ def _asserted_model_initialized_states(function: ast.FunctionDef) -> set[bool]:
             and isinstance(test.comparators[0], ast.Constant)
             and isinstance(test.comparators[0].value, bool)
         ):
-            states.add(test.comparators[0].value)
-    return states
+            events.append((node.lineno, test.comparators[0].value))
+    return sorted(events, key=lambda entry: entry[0])
+
+
+def _safe_cleanup_call_lines(function: ast.FunctionDef) -> list[int]:
+    """Collect source lines containing ``*.safe_cleanup()`` invocations."""
+    lines: list[int] = []
+    for node in ast.walk(function):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.attr == "safe_cleanup"
+        ):
+            lines.append(node.lineno)
+    return sorted(lines)
+
+
+def _has_initialized_state_transition_around_cleanup(function: ast.FunctionDef) -> bool:
+    """Require ``is_initialized`` to be asserted True before cleanup and False after."""
+    cleanup_lines = _safe_cleanup_call_lines(function)
+    if not cleanup_lines:
+        return False
+    cleanup_line = cleanup_lines[0]
+    state_events = _asserted_model_initialized_state_events(function)
+    has_true_before = any(state is True and line < cleanup_line for line, state in state_events)
+    has_false_after = any(state is False and line > cleanup_line for line, state in state_events)
+    return has_true_before and has_false_after
 
 
 def test_smoke_schema_test_has_required_pytest_markers() -> None:
@@ -173,8 +227,7 @@ def test_benchmark_stub_cleanup_parity_test_enforces_pre_and_post_state() -> Non
         "Benchmark model-stub test must call model.safe_cleanup() to enforce "
         "processor cleanup interface parity."
     )
-    states = _asserted_model_initialized_states(function)
-    assert states == {False, True}, (
-        "Benchmark model-stub cleanup test must assert pre/post initialization states "
-        "(True before cleanup and False after cleanup)."
+    assert _has_initialized_state_transition_around_cleanup(function), (
+        "Benchmark model-stub cleanup test must assert model.is_initialized is True "
+        "before safe_cleanup() and model.is_initialized is False after safe_cleanup()."
     )
