@@ -102,6 +102,10 @@ def _get_llama_cpp_configs() -> tuple[ModelConfig, ModelConfig]:
         "Provider configured from env: provider=llama_cpp, model_path={}",
         model_path or "(unset)",
     )
+    logger.warning(
+        "llama_cpp vision support is not yet available (Phase 2). "
+        "Image files will fall back to extension-based organization."
+    )
 
     return text_config, vision_config
 
