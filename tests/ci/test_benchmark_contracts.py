@@ -319,6 +319,8 @@ def test_empty_directory_json_payload_uses_suite_classifier_contract(
 
 def test_empty_directory_json_payload_preserves_compare_output(tmp_path: Path) -> None:
     """Empty-input JSON path should still include --compare comparison fields."""
+    benchmark_input = tmp_path / "benchmark-input"
+    benchmark_input.mkdir()
     baseline_path = tmp_path / "baseline.json"
     baseline_path.write_text(json.dumps(_build_contract_payload()), encoding="utf-8")
 
@@ -327,7 +329,7 @@ def test_empty_directory_json_payload_preserves_compare_output(tmp_path: Path) -
         [
             "benchmark",
             "run",
-            str(tmp_path),
+            str(benchmark_input),
             "--suite",
             "io",
             "--json",

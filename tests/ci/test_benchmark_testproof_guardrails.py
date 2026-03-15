@@ -83,6 +83,19 @@ def _is_structured_delegation_argument(node: ast.expr) -> bool:
     return False
 
 
+def _iter_statement_nodes_excluding_nested_defs(statement: ast.stmt) -> ast.AST:
+    """Yield statement subtree nodes while skipping nested def/class bodies."""
+    stack: list[ast.AST] = [statement]
+    while stack:
+        node = stack.pop()
+        yield node
+        children = list(ast.iter_child_nodes(node))
+        for child in reversed(children):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue
+            stack.append(child)
+
+
 def _iter_top_level_statement_nodes(function: ast.FunctionDef) -> ast.AST:
     """Yield AST nodes from executable top-level statements only.
 
@@ -92,7 +105,7 @@ def _iter_top_level_statement_nodes(function: ast.FunctionDef) -> ast.AST:
     for statement in function.body:
         if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             continue
-        yield from ast.walk(statement)
+        yield from _iter_statement_nodes_excluding_nested_defs(statement)
 
 
 def _has_mock_assert_called_once_with(function: ast.FunctionDef, *, mock_name: str) -> bool:
@@ -328,6 +341,20 @@ def test_mock_assert_guardrail_ignores_nested_helper_assertions() -> None:
     assert _has_mock_assert_called_once_with(function, mock_name="mocked_io_suite") is False
 
 
+def test_mock_assert_guardrail_ignores_nested_helper_assertions_in_conditionals() -> None:
+    """Nested helper assertions inside top-level conditionals must be ignored."""
+    function = _parse_single_function(
+        """
+        def subject() -> None:
+            if True:
+                def hidden() -> None:
+                    mocked_io_suite.assert_called_once_with([candidate])
+            pass
+        """
+    )
+    assert _has_mock_assert_called_once_with(function, mock_name="mocked_io_suite") is False
+
+
 @pytest.mark.parametrize(
     ("body", "expected"),
     [
@@ -350,6 +377,15 @@ def test_mock_assert_guardrail_ignores_nested_helper_assertions() -> None:
             result = benchmark_cli._run_audio_suite(files)
             def hidden() -> None:
                 assert result.processed_count == expected_result
+            """,
+            False,
+        ),
+        (
+            """
+            result = benchmark_cli._run_audio_suite(files)
+            if True:
+                def hidden() -> None:
+                    assert result.processed_count == expected_result
             """,
             False,
         ),
@@ -416,6 +452,16 @@ def test_processed_count_guardrail_binds_to_run_audio_result(body: str, expected
             assert other.is_initialized is True
             model.safe_cleanup()
             assert other.is_initialized is False
+            """,
+            False,
+        ),
+        (
+            """
+            if True:
+                def hidden() -> None:
+                    assert model.is_initialized is True
+                    model.safe_cleanup()
+                    assert model.is_initialized is False
             """,
             False,
         ),
