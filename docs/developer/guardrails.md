@@ -50,6 +50,48 @@ Add a new rule to the narrowest layer that can enforce it cleanly:
 
 Do not add new blocking policy directly to `.claude/scripts/pre-commit-validation.sh`.
 
+## API Compatibility Rule Index
+
+Issue `#813` adds allowlisted public-signature compatibility checks. These are
+semantic checks and therefore belong in CI tests, not shell-script heuristics.
+
+| Rule ID | Canonical enforced layer | Why this home |
+|---------|--------------------------|---------------|
+| `legacy-positional-prefix-changed` | `tests/ci/test_api_compat_guardrails.py` | Protects positional-call compatibility on allowlisted public callables |
+| `new-optional-param-must-be-keyword-only` | `tests/ci/test_api_compat_guardrails.py` | Prevents accidental API drift from newly optional positional parameters |
+| `allowlisted-callable-missing` | `tests/ci/test_api_compat_guardrails.py` | Fails fast when a tracked public API surface is renamed or removed without contract updates |
+
+Implementation detail:
+- Detector implementation lives in `src/file_organizer/review_regressions/api_compat.py`.
+- Deterministic positive/safe proofs live in `tests/unit/review_regressions/test_api_compat_detectors.py`.
+
+### Custom API-Compat Contracts
+
+When defining custom allowlists, import from the detector module directly:
+
+```python
+from pathlib import Path
+
+from file_organizer.review_regressions.api_compat import (
+    PublicApiCompatibilityDetector,
+    PublicCallableContract,
+)
+
+custom_detector = PublicApiCompatibilityDetector(
+    contracts=(
+        PublicCallableContract(
+            path=Path("src/file_organizer/core/organizer.py"),
+            qualname="FileOrganizer.__init__",
+            legacy_positional_params=("text_model_config", "vision_model_config"),
+        ),
+    )
+)
+```
+
+Why direct module import:
+- avoids ambiguity between pack-level exports and detector-specific types
+- keeps custom-contract code aligned with the detector's canonical module
+
 ## CLI Contract Test Conventions
 
 Typer and Rich render help text differently across terminals and CI. For CLI

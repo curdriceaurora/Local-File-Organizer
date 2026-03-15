@@ -93,6 +93,11 @@ def test_guardrail_docs_define_canonical_homes_and_conventions() -> None:
         "tests/ci/",
         ".github/workflows/ci.yml",
         ".claude/scripts/pre-commit-validation.sh",
+        "tests/ci/test_api_compat_guardrails.py",
+        "from file_organizer.review_regressions.api_compat import",
+        "legacy-positional-prefix-changed",
+        "new-optional-param-must-be-keyword-only",
+        "allowlisted-callable-missing",
         "result.output",
         "GITHUB_*",
         "pull-requests: read",
@@ -111,3 +116,18 @@ def test_contributing_points_to_guardrail_workflow() -> None:
 
     assert "docs/developer/guardrails.md" in source
     assert "canonical pre-PR guardrail orchestrator" in source
+
+
+def test_api_compat_rules_are_not_duplicated_in_shell_orchestrator() -> None:
+    assert PRE_PR_SCRIPT.exists(), f"Pre-PR script not found: {PRE_PR_SCRIPT}"
+    source = PRE_PR_SCRIPT.read_text(encoding="utf-8")
+
+    for rule_id in (
+        "legacy-positional-prefix-changed",
+        "new-optional-param-must-be-keyword-only",
+        "allowlisted-callable-missing",
+    ):
+        assert rule_id not in source, (
+            "API-compat semantic policy must stay in tests/ci, not in the shell orchestrator. "
+            f"Found rule id in script: {rule_id}"
+        )
