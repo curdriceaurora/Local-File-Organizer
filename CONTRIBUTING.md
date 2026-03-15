@@ -206,7 +206,7 @@ The `.actrc` file in the project root pins the Docker image and architecture aut
 
 | Workflow | File | Triggers | What it runs |
 |----------|------|----------|-------------|
-| **CI** | `.github/workflows/ci.yml` | push to `main`, PRs | Lint + test (Linux 3.11/3.12) + docstring coverage gate |
+| **CI** | `.github/workflows/ci.yml` | push to `main`, PRs | Lint + non-benchmark tests (Linux 3.11/3.12), benchmark-only lane (no xdist), docstring coverage, Rust desktop checks for desktop-related changes |
 | **CI Full Matrix** | `.github/workflows/ci-full.yml` | daily (06:00 UTC), manual | Extended platform: macOS + Windows (Python 3.12) |
 | **Security** | `.github/workflows/security.yml` | weekly (Monday), PRs | pip-audit + bandit + CodeQL |
 
@@ -214,6 +214,10 @@ The `.actrc` file in the project root pins the Docker image and architecture aut
 
 - `ci.yml` is the *fast-path gate*: runs on every push and PR, covers the primary
   Linux matrix. Coverage, lint, and docstring thresholds live here.
+- `ci.yml` test split:
+  - non-benchmark lane uses xdist (`-n=auto`) and excludes benchmark tests
+  - benchmark-only lane runs without xdist (`--benchmark-only`)
+  - on PRs, benchmark lane runs when benchmark surfaces change; on `main`, it runs as a dedicated lane
 - `ci-full.yml` is the *breadth gate*: runs daily to catch platform-specific regressions
   on macOS and Windows. It does **not** duplicate the Linux matrix.
 - `security.yml` owns all security tooling.
