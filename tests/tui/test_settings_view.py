@@ -96,3 +96,22 @@ def test_settings_view_save_action_persists_current_values() -> None:
         ParallelRuntimeSettings(max_workers=6, prefetch_depth=2),
         profile="default",
     )
+
+
+def test_settings_view_save_action_handles_persistence_failure() -> None:
+    """Save action should surface save failures without raising."""
+    view = SettingsView()
+    view._max_workers = 2
+    view._prefetch_depth = 1
+
+    with (
+        patch(
+            "file_organizer.tui.settings_view.save_parallel_runtime_settings",
+            side_effect=RuntimeError("config is read-only"),
+        ),
+        patch.object(view, "_refresh_panel"),
+        patch.object(view, "_set_status") as mock_set_status,
+    ):
+        view.action_save_settings()
+
+    mock_set_status.assert_called_once_with("Failed to save settings: config is read-only")

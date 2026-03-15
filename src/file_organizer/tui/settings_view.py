@@ -232,14 +232,18 @@ class SettingsView(Vertical):
 
     def action_save_settings(self) -> None:
         """Persist current settings to configuration."""
-        save_parallel_runtime_settings(
-            ParallelRuntimeSettings(
-                max_workers=self._max_workers,
-                prefetch_depth=self._prefetch_depth,
-            ),
-            profile=self._profile,
-        )
-        self._set_status("Settings saved.")
+        try:
+            save_parallel_runtime_settings(
+                ParallelRuntimeSettings(
+                    max_workers=self._max_workers,
+                    prefetch_depth=self._prefetch_depth,
+                ),
+                profile=self._profile,
+            )
+        except Exception as exc:
+            self._set_status(f"Failed to save settings: {exc}")
+        else:
+            self._set_status("Settings saved.")
         self._refresh_panel()
 
     @property
