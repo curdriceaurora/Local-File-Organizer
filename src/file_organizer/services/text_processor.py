@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import types as _t
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,6 +31,41 @@ class ProcessedFile:
     original_content: str | None = None
     processing_time: float = 0.0
     error: str | None = None
+
+
+# Stop-words and noise words filtered from AI-generated names.
+# Defined at module level to avoid recreation on every call.
+_CLEAN_NAME_STOP_WORDS: frozenset[str] = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "with",
+        "about",
+        "very",
+        "here",
+        "words",
+        "document",
+        "file",
+        "text",
+        "untitled",
+        "unknown",
+    }
+)
 
 
 class TextProcessor:
@@ -174,9 +210,10 @@ class TextProcessor:
             )
 
     def _clean_ai_generated_name(self, name: str, max_words: int = 3) -> str:
-        """Clean AI-generated folder/file names with lighter filtering.
+        """Clean AI-generated folder/file names by stripping stop-words and noise.
 
-        This uses minimal filtering since AI output is already clean.
+        Filters common stop-words (articles, prepositions, filler adjectives) and
+        generic noise words (file, document, untitled) so only meaningful terms remain.
 
         Args:
             name: AI-generated name
@@ -185,8 +222,6 @@ class TextProcessor:
         Returns:
             Cleaned name
         """
-        import re
-
         # Convert underscores and hyphens to spaces
         name = name.replace("_", " ").replace("-", " ")
 
@@ -196,37 +231,11 @@ class TextProcessor:
         # Split into words
         words = name.split()
 
-        # Only filter out truly problematic words (very minimal list)
-        bad_words = {
-            "the",
-            "a",
-            "an",
-            "and",
-            "or",
-            "but",
-            "in",
-            "on",
-            "at",
-            "to",
-            "for",
-            "of",
-            "is",
-            "are",
-            "was",
-            "were",
-            "be",
-            "document",
-            "file",
-            "text",
-            "untitled",
-            "unknown",
-        }
-
         # Filter and deduplicate
         filtered = []
         seen = set()
         for word in words:
-            if word and word not in bad_words and word not in seen and len(word) > 1:
+            if word and word not in _CLEAN_NAME_STOP_WORDS and word not in seen and len(word) > 1:
                 filtered.append(word)
                 seen.add(word)
 

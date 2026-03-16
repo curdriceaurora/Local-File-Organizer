@@ -114,6 +114,13 @@ def run_benchmark(model_name: str | None, verbose: bool, threshold: float) -> in
         return 1
 
     processor = TextProcessor()
+    try:
+        processor.initialize()
+    except Exception as exc:
+        print(f"ERROR: model not initialized / Ollama not reachable: {exc}")
+        print("       Ensure Ollama is running before executing this benchmark.")
+        return 2
+
     total = 0
     passed = 0
     failures: list[str] = []
