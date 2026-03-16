@@ -57,8 +57,10 @@ def test_search_service_has_no_broad_except_handlers() -> None:
     debugging search regressions significantly harder.  Use specific types
     such as ``sqlite3.Error``, ``ValueError``, or ``OSError`` instead.
     """
-    if not SEARCH_SRC.exists():
-        pytest.skip("Search service directory not found")
+    assert SEARCH_SRC.exists(), (
+        f"Search service directory not found: {SEARCH_SRC}\n"
+        "This indicates a misconfigured test environment or incorrect path constant."
+    )
 
     violations: list[str] = []
     for path in SEARCH_SRC.rglob("*.py"):
