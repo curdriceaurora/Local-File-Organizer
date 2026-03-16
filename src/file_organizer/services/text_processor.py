@@ -130,13 +130,17 @@ class TextProcessor:
             # Generate folder name
             folder_name = ""
             if generate_folder:
-                folder_name = self._generate_folder_name(description or content)
+                folder_name = self._generate_folder_name(
+                    description or content, original_stem=file_path.stem
+                )
                 logger.debug("Generated folder name ({} chars)", len(folder_name))
 
             # Generate filename
             filename = ""
             if generate_filename:
-                filename = self._generate_filename(description or content)
+                filename = self._generate_filename(
+                    description or content, original_stem=file_path.stem
+                )
                 logger.debug("Generated filename ({} chars)", len(filename))
 
             processing_time = time.time() - start_time
@@ -186,8 +190,8 @@ class TextProcessor:
         # Convert underscores and hyphens to spaces
         name = name.replace("_", " ").replace("-", " ")
 
-        # Remove special characters and numbers (keep letters and spaces)
-        name = re.sub(r"[^a-z\s]", "", name.lower())
+        # Remove special characters (keep letters, digits and spaces)
+        name = re.sub(r"[^a-z0-9\s]", "", name.lower())
 
         # Split into words
         words = name.split()
@@ -262,15 +266,22 @@ SUMMARY:"""
             logger.error(f"Failed to generate description: {e}")
             return f"Content about {content[:100]}..."
 
-    def _generate_folder_name(self, text: str) -> str:
+    def _generate_folder_name(self, text: str, original_stem: str | None = None) -> str:
         """Generate a folder name from text.
 
         Args:
             text: Description or content
+            original_stem: Original filename stem (without extension) used as an
+                additional hint for small models with limited context.
 
         Returns:
             Folder name (max 2 words)
         """
+        hint_line = (
+            f"\nFILENAME HINT: {original_stem} (original filename — use only if helpful)\n"
+            if original_stem
+            else ""
+        )
         prompt = f"""Based on the text below, generate a general category or theme.
 
 RULES:
@@ -286,7 +297,7 @@ EXAMPLES:
 - Text about Python coding → "programming"
 - Text about chocolate recipes → "recipes"
 - Text about financial planning → "finance"
-
+{hint_line}
 TEXT:
 {text[:1000]}
 
@@ -334,15 +345,22 @@ CATEGORY:"""
             logger.error(f"Failed to generate folder name: {e}")
             return "documents"
 
-    def _generate_filename(self, text: str) -> str:
+    def _generate_filename(self, text: str, original_stem: str | None = None) -> str:
         """Generate a filename from text.
 
         Args:
             text: Description or content
+            original_stem: Original filename stem (without extension) used as an
+                additional hint for small models with limited context.
 
         Returns:
             Filename (max 3 words, no extension)
         """
+        hint_line = (
+            f"\nFILENAME HINT: {original_stem} (original filename — use only if helpful)\n"
+            if original_stem
+            else ""
+        )
         prompt = f"""Based on the text below, generate a specific descriptive filename.
 
 RULES:
@@ -358,7 +376,7 @@ EXAMPLES:
 - Text about Python coding tips → "python_coding_guide"
 - Text about chocolate chip cookies → "chocolate_chip_cookies"
 - Text about 2023 budget → "budget_2023"
-
+{hint_line}
 TEXT:
 {text[:1000]}
 
