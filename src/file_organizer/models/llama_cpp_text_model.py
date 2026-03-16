@@ -32,7 +32,7 @@ try:
 
     LLAMA_CPP_AVAILABLE = True
 except ImportError:
-    Llama = None  # type: ignore[assignment,misc]
+    Llama = None
     LLAMA_CPP_AVAILABLE = False
 
 

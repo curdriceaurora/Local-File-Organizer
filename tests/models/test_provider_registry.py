@@ -7,7 +7,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from file_organizer.models.base import ModelConfig, ModelType
-from file_organizer.models.provider_registry import ProviderRegistry, _registry, register_provider
+from file_organizer.models.provider_registry import (
+    ProviderRegistry,
+    _register_builtins,
+    _registry,
+    register_provider,
+)
 
 pytestmark = [pytest.mark.unit, pytest.mark.ci]
 
@@ -203,8 +208,13 @@ class TestRegisterProviderFunction:
 
         # Isolate from the global singleton so this test does not leak state.
         _registry._reset_for_testing()
-        register_provider("convenience_test_mp", text_factory=factory)
+        try:
+            register_provider("convenience_test_mp", text_factory=factory)
 
-        result = _registry.get_text_model(cfg)
-        factory.assert_called_once_with(cfg)
-        assert result is factory.return_value
+            result = _registry.get_text_model(cfg)
+            factory.assert_called_once_with(cfg)
+            assert result is factory.return_value
+        finally:
+            # Restore built-in providers so tests running after this one are unaffected
+            # (pytest-randomly may execute this test before TestBuiltinRegistration).
+            _register_builtins()
