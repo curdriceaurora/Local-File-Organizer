@@ -12,6 +12,30 @@ import file_organizer.cli._globals as _g
 console = Console()
 
 
+def _resolve_parallel_settings(
+    sequential: bool,
+    max_workers: int | None,
+    prefetch_depth: int,
+) -> tuple[int | None, int]:
+    """Validate and resolve parallel worker/prefetch settings.
+
+    Args:
+        sequential: Whether to force single-worker sequential processing.
+        max_workers: Requested worker count, or None for auto.
+        prefetch_depth: Requested prefetch queue depth.
+
+    Returns:
+        Tuple of (resolved_workers, resolved_prefetch_depth).
+
+    Raises:
+        typer.Exit: With code 2 if --sequential and --max-workers > 1 conflict.
+    """
+    if sequential and max_workers not in (None, 1):
+        console.print("[red]Error: --sequential cannot be combined with --max-workers > 1[/red]")
+        raise typer.Exit(code=2)
+    return (1 if sequential else max_workers, 0 if sequential else prefetch_depth)
+
+
 def organize(
     input_dir: Path = typer.Argument(..., help="Directory containing files to organize."),
     output_dir: Path = typer.Argument(..., help="Destination directory for organized files."),
@@ -53,12 +77,9 @@ def organize(
     console.print(f"[bold]Organizing[/bold] {input_dir} -> {output_dir}")
     if dry_run or _g.dry_run:
         console.print("[yellow]Dry run mode — no files will be moved.[/yellow]")
-    if sequential and max_workers not in (None, 1):
-        console.print("[red]Error: --sequential cannot be combined with --max-workers > 1[/red]")
-        raise typer.Exit(code=2)
-
-    resolved_workers = 1 if sequential else max_workers
-    resolved_prefetch_depth = 0 if sequential else prefetch_depth
+    resolved_workers, resolved_prefetch_depth = _resolve_parallel_settings(
+        sequential, max_workers, prefetch_depth
+    )
 
     try:
         from file_organizer.core.organizer import FileOrganizer
@@ -116,12 +137,9 @@ def preview(
 ) -> None:
     """Preview how files would be organized (dry-run)."""
     console.print(f"[bold]Previewing[/bold] {input_dir}")
-    if sequential and max_workers not in (None, 1):
-        console.print("[red]Error: --sequential cannot be combined with --max-workers > 1[/red]")
-        raise typer.Exit(code=2)
-
-    resolved_workers = 1 if sequential else max_workers
-    resolved_prefetch_depth = 0 if sequential else prefetch_depth
+    resolved_workers, resolved_prefetch_depth = _resolve_parallel_settings(
+        sequential, max_workers, prefetch_depth
+    )
 
     try:
         from file_organizer.core.organizer import FileOrganizer
