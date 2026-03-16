@@ -1,4 +1,19 @@
 repos:
+  # ----------------------------------------------------------------
+  # Standard pre-commit hooks: trailing newlines, whitespace, syntax
+  # ----------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer      # every file ends with exactly one newline
+      - id: trailing-whitespace    # strip trailing spaces/tabs
+      - id: check-toml             # pyproject.toml syntax validation
+      - id: check-yaml             # workflow / config YAML syntax
+        exclude: ^mkdocs\.yml$     # mkdocs uses custom Python YAML tags
+      - id: check-json             # fixture JSON syntax validation
+      - id: check-added-large-files  # blocks accidental binary/model commits
+        args: ["--maxkb=500"]
+
   - repo: local
     hooks:
       # ----------------------------------------------------------------

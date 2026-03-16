@@ -19,4 +19,3 @@ DeviceType.METAL   # Apple Silicon (MLX)
 ```
 
 ---
-

@@ -2,7 +2,7 @@
 
 ## Why This PR Exists
 
-Workstream **F** in #813 owns runtime benchmark truth semantics.  
+Workstream **F** in #813 owns runtime benchmark truth semantics.
 PR-2 established degraded/fallback metadata, but this PR tightens runtime invariants so benchmark output cannot silently drift from what was actually processed.
 
 ## Runtime Invariants Enforced

@@ -13,4 +13,3 @@
 **Total**: 48+ file types supported
 
 ---
-

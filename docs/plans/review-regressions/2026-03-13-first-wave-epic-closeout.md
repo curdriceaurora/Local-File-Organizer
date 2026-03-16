@@ -1,8 +1,8 @@
 # First-Wave Review-Regression Epic Closeout (Issue #787)
 
-Date: `2026-03-13`  
-Epic: `#776`  
-Task: `#787`  
+Date: `2026-03-13`
+Epic: `#776`
+Task: `#787`
 Depends on: `#783`, `#784`, `#785`, `#786`
 
 ## Purpose

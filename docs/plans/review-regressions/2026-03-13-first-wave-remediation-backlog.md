@@ -1,8 +1,8 @@
 # First-Wave Legacy Review Regression Backlog (Issue #782)
 
-Date: `2026-03-13`  
-Epic: `#776`  
-Task: `#782`  
+Date: `2026-03-13`
+Epic: `#776`
+Task: `#782`
 Audit artifact: `docs/plans/review-regressions/2026-03-13-first-wave-audit.json`
 
 ## Why This Document Exists

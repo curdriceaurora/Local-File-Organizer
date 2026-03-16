@@ -1,7 +1,7 @@
 # Legacy Review Regression Applicability Review
 
-Issue: `#777`  
-Epic: `#776`  
+Issue: `#777`
+Epic: `#776`
 Date: `2026-03-12`
 
 ## Purpose

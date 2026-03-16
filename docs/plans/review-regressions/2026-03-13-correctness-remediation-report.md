@@ -1,8 +1,8 @@
 # Correctness Remediation Verification (Issue #784)
 
-Date: `2026-03-13`  
-Epic: `#776`  
-Task: `#784`  
+Date: `2026-03-13`
+Epic: `#776`
+Task: `#784`
 Depends on: `#782`
 
 ## Purpose

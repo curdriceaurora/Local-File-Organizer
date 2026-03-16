@@ -1,6 +1,6 @@
 # Issue #813 PR-5 + #822 Closeout Reconciliation
 
-Date: `2026-03-15`  
+Date: `2026-03-15`
 Issues: `#813`, `#822`
 
 ## Purpose

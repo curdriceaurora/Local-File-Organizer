@@ -1,8 +1,8 @@
 # Security Remediation Verification (Issue #783)
 
-Date: `2026-03-13`  
-Epic: `#776`  
-Task: `#783`  
+Date: `2026-03-13`
+Epic: `#776`
+Task: `#783`
 Depends on: `#782`
 
 ## Purpose

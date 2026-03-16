@@ -57,4 +57,3 @@ fo = "file_organizer.cli:main"
 ```
 
 ---
-
