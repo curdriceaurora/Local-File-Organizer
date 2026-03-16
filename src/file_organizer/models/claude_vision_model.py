@@ -206,6 +206,16 @@ class ClaudeVisionModel(BaseModel):
         except (TokenExhaustionError, ValueError):
             raise
         except Exception as e:
+            if ANTHROPIC_AVAILABLE:
+                import anthropic
+
+                if isinstance(e, anthropic.APIError):
+                    logger.error(
+                        "Claude API error ({}): {}",
+                        type(e).__name__,
+                        e,
+                    )
+                    raise
             logger.error("Failed to analyse image via Claude API: {}", type(e).__name__)
             raise
 

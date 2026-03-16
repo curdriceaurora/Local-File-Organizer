@@ -168,10 +168,21 @@ class LazyModelLoader:
             model.initialize()
             return model
 
-        if framework in ("openai", "llama_cpp", "mlx", "claude"):
+        if framework in ("openai", "llama_cpp", "mlx"):
             from file_organizer.models.provider_factory import get_text_model
 
             model = get_text_model(config)
+            model.initialize()
+            return model
+
+        if framework == "claude":
+            from file_organizer.models.base import ModelType
+            from file_organizer.models.provider_factory import get_text_model, get_vision_model
+
+            if config.model_type == ModelType.VISION:
+                model = get_vision_model(config)
+            else:
+                model = get_text_model(config)
             model.initialize()
             return model
 

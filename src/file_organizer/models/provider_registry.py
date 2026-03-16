@@ -228,12 +228,14 @@ def _mlx_text_factory(config: ModelConfig) -> BaseModel:
 
 
 def _claude_text_factory(config: ModelConfig) -> BaseModel:
+    """Return a ClaudeTextModel configured with the given ModelConfig."""
     from file_organizer.models.claude_text_model import ClaudeTextModel
 
     return ClaudeTextModel(config)
 
 
 def _claude_vision_factory(config: ModelConfig) -> BaseModel:
+    """Return a ClaudeVisionModel configured with the given ModelConfig."""
     from file_organizer.models.claude_vision_model import ClaudeVisionModel
 
     return ClaudeVisionModel(config)
