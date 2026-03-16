@@ -168,7 +168,7 @@ class LazyModelLoader:
             model.initialize()
             return model
 
-        if framework in ("openai", "llama_cpp"):
+        if framework in ("openai", "llama_cpp", "mlx"):
             from file_organizer.models.provider_factory import get_text_model
 
             model = get_text_model(config)

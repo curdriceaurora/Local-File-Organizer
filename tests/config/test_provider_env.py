@@ -33,6 +33,11 @@ class TestGetCurrentProvider:
 
         assert get_current_provider() == "ollama"
 
+    def test_returns_mlx_when_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("FO_PROVIDER", "mlx")
+
+        assert get_current_provider() == "mlx"
+
     def test_falls_back_to_ollama_on_unknown_value(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_PROVIDER", "anthropic")
 
@@ -158,6 +163,52 @@ class TestGetModelConfigsFromEnvOpenAI:
     def test_model_types_correct_for_openai_configs(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_PROVIDER", "openai")
         monkeypatch.setenv("FO_OPENAI_API_KEY", "sk-test")
+
+        text_cfg, vision_cfg = get_model_configs_from_env()
+
+        assert text_cfg.model_type == ModelType.TEXT
+        assert vision_cfg.model_type == ModelType.VISION
+
+
+# ---------------------------------------------------------------------------
+# get_model_configs_from_env — mlx path
+# ---------------------------------------------------------------------------
+
+
+class TestGetModelConfigsFromEnvMLX:
+    def test_mlx_provider_sets_provider_field(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("FO_PROVIDER", "mlx")
+        monkeypatch.setenv("FO_MLX_MODEL_PATH", "mlx-community/Qwen2.5-3B-Instruct-4bit")
+
+        text_cfg, vision_cfg = get_model_configs_from_env()
+
+        assert text_cfg.provider == "mlx"
+        assert vision_cfg.provider == "mlx"
+
+    def test_mlx_model_path_propagates_to_text_and_vision(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("FO_PROVIDER", "mlx")
+        monkeypatch.setenv("FO_MLX_MODEL_PATH", "/models/mlx")
+
+        text_cfg, vision_cfg = get_model_configs_from_env()
+
+        assert text_cfg.model_path == "/models/mlx"
+        assert vision_cfg.model_path == "/models/mlx"
+
+    def test_missing_mlx_model_path_does_not_crash(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("FO_PROVIDER", "mlx")
+        monkeypatch.delenv("FO_MLX_MODEL_PATH", raising=False)
+
+        text_cfg, vision_cfg = get_model_configs_from_env()
+
+        assert text_cfg.provider == "mlx"
+        assert vision_cfg.provider == "mlx"
+        assert text_cfg.model_path == ""
+
+    def test_model_types_correct_for_mlx_configs(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("FO_PROVIDER", "mlx")
+        monkeypatch.setenv("FO_MLX_MODEL_PATH", "mlx-community/Qwen2.5-3B-Instruct-4bit")
 
         text_cfg, vision_cfg = get_model_configs_from_env()
 

@@ -12,6 +12,8 @@ Built-in providers:
   :class:`~file_organizer.models.openai_vision_model.OpenAIVisionModel`
 - ``"llama_cpp"`` — :class:`~file_organizer.models.llama_cpp_text_model.LlamaCppTextModel`
   (text only; vision deferred to Phase 2)
+- ``"mlx"`` — :class:`~file_organizer.models.mlx_text_model.MLXTextModel`
+  (text only; vision deferred to Phase 3)
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ class ProviderRegistry:
     """Thread-safe registry mapping provider names to model factory callables.
 
     Factory callables are stored as plain callables (not class references) so
-    that optional packages (openai, llama_cpp) are imported lazily — only when
+    that optional packages (openai, llama_cpp, mlx_lm) are imported lazily — only when
     a model instance is actually requested.
     """
 
@@ -169,6 +171,12 @@ def _llama_cpp_text_factory(config: ModelConfig) -> BaseModel:
     return LlamaCppTextModel(config)
 
 
+def _mlx_text_factory(config: ModelConfig) -> BaseModel:
+    from file_organizer.models.mlx_text_model import MLXTextModel
+
+    return MLXTextModel(config)
+
+
 # ---------------------------------------------------------------------------
 # Module-level singleton
 # ---------------------------------------------------------------------------
@@ -192,6 +200,11 @@ def _register_builtins() -> None:
     _registry.register(
         "llama_cpp",
         text_factory=_llama_cpp_text_factory,
+    )
+    # mlx: text only in Phase 2; vision factory added in Phase 3
+    _registry.register(
+        "mlx",
+        text_factory=_mlx_text_factory,
     )
 
 

@@ -2,13 +2,14 @@
 
 Supported environment variables::
 
-    FO_PROVIDER=openai          # "ollama" (default), "openai", or "llama_cpp"
+    FO_PROVIDER=openai          # "ollama" (default), "openai", "llama_cpp", or "mlx"
     FO_OPENAI_API_KEY=sk-...    # Required when FO_PROVIDER=openai and endpoint needs auth
     FO_OPENAI_BASE_URL=https://api.openai.com/v1
     FO_OPENAI_MODEL=gpt-4o      # Text model name
     FO_OPENAI_VISION_MODEL=gpt-4o  # Vision model; falls back to FO_OPENAI_MODEL
     FO_LLAMA_CPP_MODEL_PATH=/path/to/model.gguf  # Required when FO_PROVIDER=llama_cpp
     FO_LLAMA_CPP_N_GPU_LAYERS=0  # Optional; overrides device-based default
+    FO_MLX_MODEL_PATH=mlx-community/Qwen2.5-3B-Instruct-4bit  # Required when FO_PROVIDER=mlx
     FO_PROFILE=default          # Config profile name to load (default: "default")
 
 Priority cascade (highest wins)::
@@ -38,13 +39,13 @@ from file_organizer.models.vision_model import VisionModel
 _OPENAI_TEXT_DEFAULT = "gpt-4o-mini"
 
 
-def get_current_provider() -> Literal["ollama", "openai", "llama_cpp"]:
+def get_current_provider() -> Literal["ollama", "openai", "llama_cpp", "mlx"]:
     """Return the active provider from env, validated against known values."""
     raw = os.environ.get("FO_PROVIDER", "ollama").strip().lower()
-    if raw not in ("ollama", "openai", "llama_cpp"):
+    if raw not in ("ollama", "openai", "llama_cpp", "mlx"):
         logger.warning(
             "FO_PROVIDER={} is not a recognised value; falling back to 'ollama'. "
-            "Supported values: 'ollama', 'openai', 'llama_cpp'.",
+            "Supported values: 'ollama', 'openai', 'llama_cpp', 'mlx'.",
             raw,
         )
         return "ollama"
@@ -110,6 +111,50 @@ def _get_llama_cpp_configs() -> tuple[ModelConfig, ModelConfig]:
     return text_config, vision_config
 
 
+def _get_mlx_configs() -> tuple[ModelConfig, ModelConfig]:
+    """Build MLX text and vision ``ModelConfig`` objects from env vars.
+
+    Reads ``FO_MLX_MODEL_PATH`` (Hugging Face repo or local path). Emits a
+    warning if the model path is not set, as requests will fail at
+    ``initialize()`` time.
+
+    Returns:
+        A ``(text_config, vision_config)`` tuple. Vision is returned for API
+        parity even though an MLX vision factory is not yet registered.
+    """
+    model_path = (os.environ.get("FO_MLX_MODEL_PATH") or "").strip()
+    if not model_path:
+        logger.warning(
+            "FO_PROVIDER=mlx but FO_MLX_MODEL_PATH is not set. "
+            "MLXTextModel.initialize() will raise ValueError. "
+            "Set FO_MLX_MODEL_PATH to a local model path or Hugging Face repo id."
+        )
+
+    text_config = ModelConfig(
+        name="mlx-lm",
+        model_type=ModelType.TEXT,
+        provider="mlx",
+        model_path=model_path,
+    )
+    vision_config = ModelConfig(
+        name="mlx-lm",
+        model_type=ModelType.VISION,
+        provider="mlx",
+        model_path=model_path,
+    )
+
+    logger.info(
+        "Provider configured from env: provider=mlx, model_path={}",
+        model_path or "(unset)",
+    )
+    logger.warning(
+        "mlx vision support is not yet available (Phase 3). "
+        "Image files will fall back to extension-based organization."
+    )
+
+    return text_config, vision_config
+
+
 def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
     """Build text and vision ``ModelConfig`` objects from environment variables.
 
@@ -121,6 +166,8 @@ def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
         When ``FO_PROVIDER=llama_cpp`` the llama.cpp defaults are used,
         driven by ``FO_LLAMA_CPP_MODEL_PATH`` and optionally
         ``FO_LLAMA_CPP_N_GPU_LAYERS``.
+        When ``FO_PROVIDER=mlx`` MLX defaults are used, driven by
+        ``FO_MLX_MODEL_PATH``.
 
     Note:
         This function reads environment variables at call time and must **not**
@@ -134,6 +181,9 @@ def get_model_configs_from_env() -> tuple[ModelConfig, ModelConfig]:
 
     if provider == "llama_cpp":
         return _get_llama_cpp_configs()
+
+    if provider == "mlx":
+        return _get_mlx_configs()
 
     # --- OpenAI-compatible provider ---
     # Strip whitespace and convert empty strings to None so callers receive

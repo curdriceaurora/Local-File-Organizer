@@ -59,6 +59,16 @@ def llama_cpp_text_config() -> ModelConfig:
     )
 
 
+@pytest.fixture()
+def mlx_text_config() -> ModelConfig:
+    return ModelConfig(
+        name="mlx-lm",
+        model_type=ModelType.TEXT,
+        provider="mlx",
+        model_path="mlx-community/Qwen2.5-3B-Instruct-4bit",
+    )
+
+
 # ---------------------------------------------------------------------------
 # get_text_model
 # ---------------------------------------------------------------------------
@@ -95,6 +105,15 @@ class TestGetTextModel:
         assert isinstance(model, LlamaCppTextModel)
         assert model.config is llama_cpp_text_config
 
+    def test_mlx_provider_returns_mlx_text_model(self, mlx_text_config: ModelConfig) -> None:
+        with patch("file_organizer.models.mlx_text_model.MLX_LM_AVAILABLE", True):
+            model = get_text_model(mlx_text_config)
+
+        from file_organizer.models.mlx_text_model import MLXTextModel
+
+        assert isinstance(model, MLXTextModel)
+        assert model.config is mlx_text_config
+
     def test_unknown_provider_raises_value_error(self) -> None:
         # mypy would catch this at type time; we test the runtime guard too
         bad_config = ModelConfig(
@@ -118,6 +137,7 @@ class TestGetTextModel:
         assert "ollama" in error_msg
         assert "openai" in error_msg
         assert "llama_cpp" in error_msg
+        assert "mlx" in error_msg
 
 
 # ---------------------------------------------------------------------------
@@ -160,4 +180,15 @@ class TestGetVisionModel:
             model_path="/fake/model.gguf",
         )
         with pytest.raises(ValueError, match="llama_cpp"):
+            get_vision_model(vision_cfg)
+
+    def test_mlx_vision_raises_value_error(self) -> None:
+        """mlx has no vision factory in Phase 3."""
+        vision_cfg = ModelConfig(
+            name="mlx-lm",
+            model_type=ModelType.VISION,
+            provider="mlx",
+            model_path="mlx-community/Qwen2.5-3B-Instruct-4bit",
+        )
+        with pytest.raises(ValueError, match="mlx"):
             get_vision_model(vision_cfg)

@@ -53,6 +53,9 @@ class TestBuiltinRegistration:
     def test_registered_providers_includes_llama_cpp(self) -> None:
         assert "llama_cpp" in _registry.registered_providers
 
+    def test_registered_providers_includes_mlx(self) -> None:
+        assert "mlx" in _registry.registered_providers
+
     def test_registered_providers_is_sorted(self) -> None:
         providers = _registry.registered_providers
         assert providers == sorted(providers)
@@ -152,6 +155,19 @@ class TestGetTextModel:
 
         assert isinstance(model, LlamaCppTextModel)
 
+    def test_dispatches_mlx_to_mlx_text_model(self) -> None:
+        cfg = ModelConfig(
+            name="mlx-lm",
+            model_type=ModelType.TEXT,
+            provider="mlx",
+            model_path="mlx-community/Qwen2.5-3B-Instruct-4bit",
+        )
+        with patch("file_organizer.models.mlx_text_model.MLX_LM_AVAILABLE", True):
+            model = _registry.get_text_model(cfg)
+        from file_organizer.models.mlx_text_model import MLXTextModel
+
+        assert isinstance(model, MLXTextModel)
+
 
 # ---------------------------------------------------------------------------
 # ProviderRegistry.get_vision_model()
@@ -186,6 +202,17 @@ class TestGetVisionModel:
             model_path="/fake/model.gguf",
         )
         with pytest.raises(ValueError, match="llama_cpp"):
+            _registry.get_vision_model(cfg)
+
+    def test_mlx_has_no_vision_factory(self) -> None:
+        """mlx vision is deferred to Phase 3 — registry should have no factory."""
+        cfg = ModelConfig(
+            name="mlx-lm",
+            model_type=ModelType.VISION,
+            provider="mlx",
+            model_path="mlx-community/Qwen2.5-3B-Instruct-4bit",
+        )
+        with pytest.raises(ValueError, match="mlx"):
             _registry.get_vision_model(cfg)
 
     def test_dispatches_ollama_to_vision_model(self, vision_config: ModelConfig) -> None:

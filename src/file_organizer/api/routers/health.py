@@ -27,7 +27,7 @@ async def health(response: Response) -> dict[str, object]:
             "status":    "ok" | "degraded" | "unknown" | "error",
             "readiness": "ready" | "starting" | "unhealthy",
             "version":   "<semver string>",
-            "provider":  "ollama" | "openai" | "llama_cpp",
+            "provider":  "ollama" | "openai" | "llama_cpp" | "mlx",
             "ollama":    true | false,
             "uptime":    <float seconds since startup>
         }
@@ -35,7 +35,7 @@ async def health(response: Response) -> dict[str, object]:
     The ``readiness`` field maps directly from ``status``:
 
     * ``"ok"``       -> ``"ready"``
-    * ``"unknown"``  -> ``"ready"``  (provider not probed, e.g. OpenAI/llama_cpp endpoints)
+    * ``"unknown"``  -> ``"ready"``  (provider not probed, e.g. OpenAI/llama_cpp/mlx endpoints)
     * ``"degraded"`` -> ``"starting"``
     * ``"error"``    -> ``"unhealthy"``
 

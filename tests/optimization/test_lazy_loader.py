@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import threading
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -232,3 +232,23 @@ class TestLazyModelLoaderThreadSafety:
         # All threads should get the same model
         assert len(results) == 3
         assert all(r is results[0] for r in results)
+
+
+@pytest.mark.unit
+class TestLazyModelLoaderDefaultLoader:
+    """Tests for framework-based default loader routing."""
+
+    def test_default_loader_routes_mlx_to_provider_factory(self) -> None:
+        cfg = ModelConfig(name="mlx-lm", model_type=ModelType.TEXT, framework="mlx", provider="mlx")
+        mock_model = _make_mock_model("mlx-lm")
+        mock_model.initialize = MagicMock()
+
+        with patch(
+            "file_organizer.models.provider_factory.get_text_model",
+            return_value=mock_model,
+        ) as mock_get_text_model:
+            model = LazyModelLoader._default_loader(cfg)
+
+        mock_get_text_model.assert_called_once_with(cfg)
+        mock_model.initialize.assert_called_once_with()
+        assert model is mock_model

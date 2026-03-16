@@ -135,6 +135,10 @@ llama = [
     "llama-cpp-python>=0.2.0",  # llama.cpp C bindings — direct GGUF inference, no Ollama server
 ]
 
+mlx = [
+    "mlx-lm>=0.0.19",  # Apple Silicon local inference via MLX
+]
+
 gui = [
     "PyQt6>=6.6.0",
 ]
@@ -187,7 +191,7 @@ docs = [
 ]
 
 all = [
-    "local-file-organizer[dev,gui,cloud,llama,audio,video,dedup,archive,scientific,cad,build,parsers,web]",
+    "local-file-organizer[dev,gui,cloud,llama,mlx,audio,video,dedup,archive,scientific,cad,build,parsers,web]",
 ]
 
 [project.scripts]
@@ -383,6 +387,7 @@ pep621_dev_dependency_groups = ["dev", "docs", "build"]
 "PyPDF2" = "PyPDF2"
 "striprtf" = "striprtf"
 "llama-cpp-python" = "llama_cpp"
+"mlx-lm" = "mlx_lm"
 [tool.deptry.per_rule_ignores]
 # netCDF4: in scientific optional group; deptry has mixed-case matching issues
 DEP001 = ["netCDF4"]

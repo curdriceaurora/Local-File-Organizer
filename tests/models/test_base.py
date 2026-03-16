@@ -143,6 +143,15 @@ class TestModelConfig:
         assert config.model_path == "/models/custom.gguf"
         assert config.local_path == "/local/custom"
 
+    def test_provider_mlx_syncs_framework_from_default(self) -> None:
+        """provider='mlx' should update framework from legacy default 'ollama'."""
+        config = ModelConfig(
+            name="mlx-lm",
+            model_type=ModelType.TEXT,
+            provider="mlx",
+        )
+        assert config.framework == "mlx"
+
 
 @pytest.mark.unit
 class TestBaseModel:

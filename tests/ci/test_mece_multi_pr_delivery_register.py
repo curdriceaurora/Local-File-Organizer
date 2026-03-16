@@ -109,7 +109,7 @@ def test_register_reconciliation_claims_match_repository_evidence() -> None:
     assert '"llama_cpp"' in provider_registry_text
     assert "_llama_cpp_text_factory" in provider_registry_text
     assert "FO_PROVIDER=llama_cpp" in provider_env_text
-    assert 'Literal["ollama", "openai", "llama_cpp"]' in provider_env_text
+    assert 'Literal["ollama", "openai", "llama_cpp", "mlx"]' in provider_env_text
 
     assert "name: Test non-benchmark suite" in ci_workflow_text
     assert 'pytest tests/ -m "not benchmark"' in ci_workflow_text
