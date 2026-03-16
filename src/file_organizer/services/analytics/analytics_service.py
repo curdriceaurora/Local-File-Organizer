@@ -186,6 +186,14 @@ class AnalyticsService:
     ) -> QualityMetrics:
         """Calculate organization quality metrics.
 
+        Computes four scores:
+        - naming_compliance: fraction of files following lowercase/delimiter conventions
+        - structure_consistency: fraction of files placed in subdirectories
+        - metadata_completeness: fraction of files with a recognized extension and
+          non-trivial stem (proxy for content-type discoverability)
+        - categorization_accuracy: fraction of files in subdirectories that have
+          at least 2 sibling files (proxy for intentional grouping)
+
         Args:
             directory: Directory to analyze
             total_files: Total number of files
@@ -209,12 +217,64 @@ class AnalyticsService:
         organized_files = sum(1 for f in file_paths if len(f.relative_to(directory).parts) > 1)
         structure_consistency = organized_files / max(total_files, 1)
 
-        # Metadata completeness: estimate based on file properties
-        # In a real implementation, this would check for tags, descriptions, etc.
-        metadata_completeness = 0.5  # Placeholder
+        # Metadata completeness: fraction of files with a recognized extension and
+        # a non-trivial stem (not purely numeric).  Files that match both criteria
+        # carry enough content-type metadata for reliable downstream processing.
+        _known_extensions = {
+            ".txt",
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".md",
+            ".rst",
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".svg",
+            ".webp",
+            ".mp3",
+            ".wav",
+            ".mp4",
+            ".mov",
+            ".avi",
+            ".py",
+            ".js",
+            ".ts",
+            ".java",
+            ".go",
+            ".rs",
+            ".cpp",
+            ".c",
+            ".h",
+            ".csv",
+            ".json",
+            ".xml",
+            ".yaml",
+            ".yml",
+            ".toml",
+            ".zip",
+            ".tar",
+            ".gz",
+        }
+        files_with_metadata = sum(
+            1
+            for f in file_paths
+            if f.suffix.lower() in _known_extensions and f.stem and not f.stem.isdigit()
+        )
+        metadata_completeness = files_with_metadata / max(len(file_paths), 1)
 
-        # Categorization accuracy: estimate based on directory structure
-        categorization_accuracy = 0.7  # Placeholder
+        # Categorization accuracy: fraction of files that are in subdirectories
+        # with at least 2 sibling files.  Single-file "folders" suggest random
+        # scatter rather than intentional grouping; directories with multiple
+        # files suggest the organizer placed related content together.
+        dir_file_counts: dict[Path, int] = {}
+        for f in file_paths:
+            dir_file_counts[f.parent] = dir_file_counts.get(f.parent, 0) + 1
+        well_categorized = sum(
+            1 for f in file_paths if f.parent != directory and dir_file_counts.get(f.parent, 0) >= 2
+        )
+        categorization_accuracy = well_categorized / max(len(file_paths), 1)
 
         # Calculate overall quality score
         quality_score = self.metrics_calculator.calculate_quality_score(
