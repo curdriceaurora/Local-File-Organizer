@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 import typer
@@ -157,9 +157,7 @@ def test_io_suite_logs_oserror_traceback_for_failed_stat() -> None:
         result = benchmark_cli._run_io_suite([fake_path])
 
     assert result.processed_count == 1
-    mocked_debug.assert_called_once()
-    _, kwargs = mocked_debug.call_args
-    assert kwargs.get("exc_info") is True
+    mocked_debug.assert_called_once_with(ANY, fake_path, exc_info=True)
 
 
 @pytest.mark.ci

@@ -73,6 +73,7 @@ def test_issue_813_822_closeout_metadata_recomputes_and_meets_target() -> None:
 
 
 def test_issue_813_822_closeout_finding_map_references_live_tests() -> None:
+    assert CLOSEOUT_REPORT_PATH.is_file(), f"Missing closeout report: {CLOSEOUT_REPORT_PATH}"
     metadata = _extract_metadata(CLOSEOUT_REPORT_PATH.read_text(encoding="utf-8"))
 
     finding_map = metadata["finding_map"]
