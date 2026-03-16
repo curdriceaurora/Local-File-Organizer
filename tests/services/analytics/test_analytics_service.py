@@ -321,48 +321,44 @@ class TestGetQualityMetrics:
     def test_basic_quality_metrics(self, temp_directory):
         """Test basic quality metrics calculation."""
         service = AnalyticsService()
-        metrics = service.get_quality_metrics(temp_directory, total_files=6, organized_size=1000)
+        metrics = service.get_quality_metrics(temp_directory)
 
         assert isinstance(metrics, QualityMetrics)
         assert 0 <= metrics.quality_score <= 100
         assert 0 <= metrics.naming_compliance <= 1
         assert 0 <= metrics.structure_consistency <= 1
-        assert metrics.metadata_completeness == 0.5
-        assert metrics.categorization_accuracy == 0.7
+        assert 0 <= metrics.metadata_completeness <= 1
+        assert 0 <= metrics.categorization_accuracy <= 1
 
     def test_quality_with_mocked_dependencies(self, mock_service, temp_directory):
         """Test quality metrics with mocked calculator."""
-        metrics = mock_service.get_quality_metrics(
-            temp_directory, total_files=10, organized_size=500
-        )
+        metrics = mock_service.get_quality_metrics(temp_directory)
 
         assert isinstance(metrics, QualityMetrics)
         assert metrics.quality_score == 75.0
         assert metrics.naming_compliance == 0.85
 
-    def test_quality_zero_total_files(self, temp_directory):
-        """Test quality metrics when total_files is zero."""
+    def test_quality_zero_files_directory(self, temp_directory):
+        """Test quality metrics use file count from traversal, not a caller-supplied total."""
         service = AnalyticsService()
-        metrics = service.get_quality_metrics(temp_directory, total_files=0, organized_size=0)
+        metrics = service.get_quality_metrics(temp_directory)
 
         assert isinstance(metrics, QualityMetrics)
-        # structure_consistency uses max(total_files, 1) to avoid division by zero
-        assert metrics.structure_consistency >= 0
+        # Denominators are derived from the actual traversal — no division by zero
+        assert 0 <= metrics.structure_consistency <= 1
 
     def test_quality_score_boundaries(self, temp_directory):
-        """Test quality score stays within valid range."""
+        """Test quality score stays within valid range regardless of depth."""
         service = AnalyticsService()
-        for total_files in [0, 1, 10, 100, 1000]:
-            metrics = service.get_quality_metrics(
-                temp_directory, total_files=total_files, organized_size=100
-            )
+        for max_depth in [None, 0, 1, 2, 100]:
+            metrics = service.get_quality_metrics(temp_directory, max_depth=max_depth)
             assert 0 <= metrics.quality_score <= 100
 
     def test_empty_directory_quality(self):
         """Test quality metrics for empty directory."""
         with tempfile.TemporaryDirectory() as tmpdir:
             service = AnalyticsService()
-            metrics = service.get_quality_metrics(Path(tmpdir), total_files=0, organized_size=0)
+            metrics = service.get_quality_metrics(Path(tmpdir))
             assert isinstance(metrics, QualityMetrics)
 
 
