@@ -222,7 +222,7 @@ class TestOrganize:
         mock_cls.assert_called_once_with(
             dry_run=False,
             parallel_workers=None,
-            prefetch_depth=2,
+            prefetch_depth=0,
             enable_vision=True,
             no_prefetch=True,
         )
@@ -403,7 +403,7 @@ class TestPreview:
         mock_cls.assert_called_once_with(
             dry_run=True,
             parallel_workers=None,
-            prefetch_depth=2,
+            prefetch_depth=0,
             enable_vision=True,
             no_prefetch=True,
         )

@@ -16,6 +16,7 @@ def _resolve_parallel_settings(
     sequential: bool,
     max_workers: int | None,
     prefetch_depth: int,
+    no_prefetch: bool = False,
 ) -> tuple[int | None, int]:
     """Validate and resolve parallel worker/prefetch settings.
 
@@ -23,6 +24,7 @@ def _resolve_parallel_settings(
         sequential: Whether to force single-worker sequential processing.
         max_workers: Requested worker count, or None for auto.
         prefetch_depth: Requested prefetch queue depth.
+        no_prefetch: Backward-compatible alias for prefetch_depth=0.
 
     Returns:
         Tuple of (resolved_workers, resolved_prefetch_depth).
@@ -33,7 +35,7 @@ def _resolve_parallel_settings(
     if sequential and max_workers not in (None, 1):
         console.print("[red]Error: --sequential cannot be combined with --max-workers > 1[/red]")
         raise typer.Exit(code=2)
-    return (1 if sequential else max_workers, 0 if sequential else prefetch_depth)
+    return (1 if sequential else max_workers, 0 if (sequential or no_prefetch) else prefetch_depth)
 
 
 def organize(
@@ -78,7 +80,7 @@ def organize(
     if dry_run or _g.dry_run:
         console.print("[yellow]Dry run mode — no files will be moved.[/yellow]")
     resolved_workers, resolved_prefetch_depth = _resolve_parallel_settings(
-        sequential, max_workers, prefetch_depth
+        sequential, max_workers, prefetch_depth, no_prefetch
     )
 
     try:
@@ -138,7 +140,7 @@ def preview(
     """Preview how files would be organized (dry-run)."""
     console.print(f"[bold]Previewing[/bold] {input_dir}")
     resolved_workers, resolved_prefetch_depth = _resolve_parallel_settings(
-        sequential, max_workers, prefetch_depth
+        sequential, max_workers, prefetch_depth, no_prefetch
     )
 
     try:
