@@ -30,12 +30,11 @@ bash .claude/scripts/pre-commit-validation.sh
 That command must expand to this canonical command set:
 
 1. `pre-commit validate-config`
-2. `pre-commit run --files <changed-files>` when a diff exists
-3. `pre-commit run --all-files` when there is no diff
-4. `pytest tests/ci -q --no-cov --override-ini="addopts="`
+2. `pre-commit run --all-files`
+3. `pytest tests/ci -q --no-cov --override-ini="addopts="`
 
 Why this split:
-- `pre-commit` is the staged-file gate
+- `pre-commit` is the staged-file gate — `--all-files` ensures local and CI run the same hooks
 - `tests/ci` is the semantic gate
 - the shell script is just the orchestrator
 

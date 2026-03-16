@@ -60,13 +60,7 @@ echo ""
 
 run_step "Validate pre-commit configuration" pre-commit validate-config
 
-if ((${#changed_files[@]} > 0)); then
-  run_step "Run pre-commit on changed files" pre-commit run --files "${changed_files[@]}"
-else
-  echo "ℹ No changed files detected; running full pre-commit sweep instead."
-  echo ""
-  run_step "Run pre-commit on all files" pre-commit run --all-files
-fi
+run_step "Run pre-commit on all files" pre-commit run --all-files
 
 run_step "Run semantic CI guardrails" pytest tests/ci -q --no-cov --override-ini="addopts="
 

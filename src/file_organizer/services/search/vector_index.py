@@ -94,7 +94,7 @@ class VectorIndex:
 
         try:
             query_vec = self._embedder.transform(query)
-        except Exception as exc:
+        except ValueError as exc:
             logger.warning("VectorIndex: failed to embed query: {}", exc)
             return []
 

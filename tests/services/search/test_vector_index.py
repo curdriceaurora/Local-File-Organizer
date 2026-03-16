@@ -96,7 +96,8 @@ class TestVectorIndex:
         idx = VectorIndex()
         idx.index(_CORPUS, _make_paths(len(_CORPUS)))
         results = idx.search("report", top_k=3)
-        assert len(results) <= 3
+        assert results, "Expected results for 'report' in a 10-doc corpus"
+        assert len(results) == 3
 
     def test_results_sorted_descending(self) -> None:
         idx = VectorIndex()

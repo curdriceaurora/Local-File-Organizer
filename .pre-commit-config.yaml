@@ -87,7 +87,7 @@ repos:
 
       - id: pytest-ci-lint
         name: pytest (ci guardrails)
-        entry: pytest tests/ci -q --override-ini="addopts="
+        entry: bash -c "pytest tests/ci -q --override-ini='addopts='"
         language: system
         pass_filenames: false
 
@@ -110,6 +110,16 @@ repos:
         name: codespell
         entry: bash -c "CODESPELL=$(.venv/bin/codespell --version >/dev/null 2>&1 && echo .venv/bin/codespell || echo codespell); $CODESPELL src/ docs/ --config .codespellrc"
         language: system
+        pass_filenames: false
+
+      # ----------------------------------------------------------------
+      # PyPI version validation
+      # ----------------------------------------------------------------
+      - id: pypi-version-check
+        name: Verify pyproject.toml minimum versions exist on PyPI
+        entry: bash -c "python .claude/scripts/check_pypi_versions.py"
+        language: system
+        files: ^pyproject\.toml$
         pass_filenames: false
 
       # ----------------------------------------------------------------
