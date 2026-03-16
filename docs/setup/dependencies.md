@@ -40,6 +40,7 @@ pip install -e ".[archive]"     # Archive support (7z, RAR)
 pip install -e ".[scientific]"  # Scientific formats (HDF5, NetCDF, MATLAB)
 pip install -e ".[cad]"         # CAD formats (ezdxf)
 pip install -e ".[build]"       # Executable packaging (PyInstaller)
+pip install -e ".[llama]"       # llama.cpp provider — direct GGUF inference (no Ollama server)
 pip install -e ".[all]"         # Everything
 ```
 
