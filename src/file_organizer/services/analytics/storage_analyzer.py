@@ -246,9 +246,17 @@ class StorageAnalyzer:
             path: Directory path
             max_depth: Maximum depth (None = unlimited)
 
+        Raises:
+            FileNotFoundError: If ``path`` does not exist.
+            NotADirectoryError: If ``path`` exists but is not a directory.
+
         Yields:
             Path objects for all items up to max_depth
         """
+        if not path.exists():
+            raise FileNotFoundError(f"Directory not found: {path}")
+        if not path.is_dir():
+            raise NotADirectoryError(f"Not a directory: {path}")
         return self._walk_directory(path, max_depth)
 
     def clear_cache(self) -> None:
