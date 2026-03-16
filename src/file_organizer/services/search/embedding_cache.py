@@ -47,7 +47,7 @@ def _now_iso() -> str:
 
 def _array_to_blob(arr: np.ndarray) -> bytes:
     buf = io.BytesIO()
-    np.save(buf, arr)
+    np.save(buf, arr, allow_pickle=False)
     return buf.getvalue()
 
 
@@ -189,7 +189,7 @@ class EmbeddingCache:
         try:
             self._conn.commit()
             self._conn.close()
-        except Exception as exc:  # best-effort cleanup; errors on close are non-actionable
+        except sqlite3.Error as exc:  # best-effort cleanup; errors on close are non-actionable
             logger.debug("EmbeddingCache: error during close (ignored): {}", exc)
 
     # ------------------------------------------------------------------
@@ -203,10 +203,12 @@ class EmbeddingCache:
 
     def stats(self) -> dict[str, Any]:
         """Return basic cache statistics."""
-        row = self._conn.execute("SELECT COUNT(*), model FROM embeddings GROUP BY model").fetchone()
-        if row is None:
-            return {"entries": 0, "model": self._model}
-        return {"entries": row[0], "model": row[1]}
+        row = self._conn.execute(
+            "SELECT COUNT(*) FROM embeddings WHERE model = ?",
+            (self._model,),
+        ).fetchone()
+        entries = int(row[0]) if row is not None else 0
+        return {"entries": entries, "model": self._model}
 
     def __enter__(self) -> EmbeddingCache:
         """Return self for use as a context manager."""
