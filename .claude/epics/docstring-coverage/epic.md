@@ -35,7 +35,7 @@ Reach 90% docstring coverage threshold via interrogate across all public APIs.
 - **Scope**: File metadata, pipeline, config
 - **Effort**: ~4-5 hours
 
-### Stream 2: Services Layer  
+### Stream 2: Services Layer
 - **Files**: `services/**/*.py` (12+ services)
 - **Scope**: File readers, processors, organizers
 - **Effort**: ~6-8 hours

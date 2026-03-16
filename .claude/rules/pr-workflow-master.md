@@ -271,4 +271,3 @@ A: Usually means PR branch is behind main (another PR merged after yours was cre
 **Type**: Navigation & Reference (load this during workflow)
 **Context Load**: ~300 lines (optimize Claude token usage)
 **Detailed Protocols**: Link to when needed
-
