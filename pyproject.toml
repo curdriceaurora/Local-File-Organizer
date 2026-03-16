@@ -136,7 +136,7 @@ llama = [
 ]
 
 mlx = [
-    "mlx-lm>=0.0.19",  # Apple Silicon local inference via MLX
+    "mlx-lm>=0.0.19; platform_system == 'Darwin'",  # MLX runtime is only supported on Darwin
 ]
 
 gui = [

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
 from file_organizer.config.provider_env import get_current_provider, get_model_configs_from_env
@@ -200,11 +202,15 @@ class TestGetModelConfigsFromEnvMLX:
         monkeypatch.setenv("FO_PROVIDER", "mlx")
         monkeypatch.delenv("FO_MLX_MODEL_PATH", raising=False)
 
-        text_cfg, vision_cfg = get_model_configs_from_env()
+        with patch("file_organizer.config.provider_env.logger.warning") as mock_warning:
+            text_cfg, vision_cfg = get_model_configs_from_env()
 
         assert text_cfg.provider == "mlx"
         assert vision_cfg.provider == "mlx"
         assert text_cfg.model_path == ""
+        assert vision_cfg.model_path == ""
+        warning_messages = " ".join(str(call.args[0]) for call in mock_warning.call_args_list)
+        assert "FO_MLX_MODEL_PATH" in warning_messages
 
     def test_model_types_correct_for_mlx_configs(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_PROVIDER", "mlx")

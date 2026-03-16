@@ -61,6 +61,7 @@ class MLXTextModel(BaseModel):
         super().__init__(config)
         self._model: Any | None = None
         self._tokenizer: Any | None = None
+        self._working_variant_idx: int | None = None
 
     def initialize(self) -> None:
         """Load model/tokenizer pair via ``mlx_lm.load``.
@@ -72,7 +73,8 @@ class MLXTextModel(BaseModel):
             logger.debug("MLX text model {} already initialized", self.config.name)
             return
 
-        assert mlx_load is not None  # guarded by MLX_LM_AVAILABLE in __init__
+        if mlx_load is None:  # guarded by MLX_LM_AVAILABLE in __init__; belt-and-suspenders
+            raise RuntimeError("mlx_load is None — mlx-lm is required; should not be reachable")
         try:
             loaded = mlx_load(self.config.model_path)
         except Exception as exc:
@@ -107,7 +109,7 @@ class MLXTextModel(BaseModel):
             self._exit_generate()
 
     def _do_generate(self, prompt: str, **kwargs: Any) -> str:
-        """Internal generate logic executed under generation guard."""
+        """Internal generate logic; called by ``generate()`` while the generation guard is held."""
         if self._model is None or self._tokenizer is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
 
@@ -116,7 +118,8 @@ class MLXTextModel(BaseModel):
         top_p = float(kwargs.get("top_p", self.config.top_p))
         top_k = int(kwargs.get("top_k", self.config.top_k))
 
-        assert mlx_generate is not None  # guarded by MLX_LM_AVAILABLE in __init__
+        if mlx_generate is None:  # guarded by MLX_LM_AVAILABLE in __init__; belt-and-suspenders
+            raise RuntimeError("mlx_generate is None — mlx-lm is required; should not be reachable")
         try:
             response = self._call_generate(
                 prompt=prompt,
@@ -145,8 +148,11 @@ class MLXTextModel(BaseModel):
 
         ``mlx_lm`` has changed keyword names across versions. We first try the
         most expressive call and gracefully fall back for older signatures.
+        The successful variant is cached on the instance so subsequent calls
+        skip the probe loop entirely.
         """
-        assert mlx_generate is not None
+        if mlx_generate is None:  # guarded by MLX_LM_AVAILABLE in __init__; belt-and-suspenders
+            raise RuntimeError("mlx_generate is None — mlx-lm is required; should not be reachable")
         call_variants = (
             {"max_tokens": max_tokens, "temp": temperature, "top_p": top_p, "top_k": top_k},
             {"max_tokens": max_tokens, "temperature": temperature, "top_p": top_p, "top_k": top_k},
@@ -155,21 +161,53 @@ class MLXTextModel(BaseModel):
             {"max_tokens": max_tokens},
         )
 
+        # Fast path: reuse the variant that succeeded on the first call.
+        if self._working_variant_idx is not None:
+            return mlx_generate(
+                self._model, self._tokenizer, prompt, **call_variants[self._working_variant_idx]
+            )
+
         last_error: TypeError | None = None
-        for variant in call_variants:
+        for idx, variant in enumerate(call_variants):
             try:
-                return mlx_generate(self._model, self._tokenizer, prompt, **variant)
+                result = mlx_generate(self._model, self._tokenizer, prompt, **variant)
+                self._working_variant_idx = idx  # cache for all subsequent calls
+                return result
             except TypeError as exc:
+                if not self._is_signature_mismatch_type_error(exc):
+                    raise
                 last_error = exc
-                continue
         if last_error is not None:
             raise last_error
-        return mlx_generate(self._model, self._tokenizer, prompt, max_tokens=max_tokens)
+        raise RuntimeError("All mlx_lm.generate signature variants failed unexpectedly")
+
+    @staticmethod
+    def _is_signature_mismatch_type_error(exc: TypeError) -> bool:
+        """Return True when ``TypeError`` indicates call-signature mismatch."""
+        message = str(exc).lower()
+        signature_markers = (
+            "unexpected keyword argument",
+            "got an unexpected keyword",
+            "required positional argument",
+            "positional arguments but",
+            "takes no keyword arguments",
+        )
+        return any(marker in message for marker in signature_markers)
 
     def cleanup(self) -> None:
         """Release references to loaded model/tokenizer resources."""
         logger.debug("Cleaning up MLX text model {}", self.config.name)
-        with self._lifecycle_lock:
+        with self._generation_done:
+            self._shutting_down = True
+            drained = self._generation_done.wait_for(
+                lambda: self._active_generations == 0,
+                timeout=self.CLEANUP_TIMEOUT,
+            )
+            if not drained:
+                logger.warning(
+                    "Timed out waiting for {} in-flight MLX generation(s) before cleanup",
+                    self._active_generations,
+                )
             self._model = None
             self._tokenizer = None
             self._initialized = False
