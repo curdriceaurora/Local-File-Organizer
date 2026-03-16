@@ -56,9 +56,36 @@ class TestBuiltinRegistration:
     def test_registered_providers_includes_mlx(self) -> None:
         assert "mlx" in _registry.registered_providers
 
+    def test_registered_providers_includes_claude(self) -> None:
+        assert "claude" in _registry.registered_providers
+
     def test_registered_providers_is_sorted(self) -> None:
         providers = _registry.registered_providers
         assert providers == sorted(providers)
+
+    def test_dispatches_claude_to_claude_text_model(self) -> None:
+        cfg = ModelConfig(
+            name="claude-3-5-sonnet-20241022",
+            model_type=ModelType.TEXT,
+            provider="claude",
+        )
+        with patch("file_organizer.models.claude_text_model.ANTHROPIC_AVAILABLE", True):
+            model = _registry.get_text_model(cfg)
+        from file_organizer.models.claude_text_model import ClaudeTextModel
+
+        assert isinstance(model, ClaudeTextModel)
+
+    def test_dispatches_claude_vision_to_claude_vision_model(self) -> None:
+        cfg = ModelConfig(
+            name="claude-3-5-sonnet-20241022",
+            model_type=ModelType.VISION,
+            provider="claude",
+        )
+        with patch("file_organizer.models.claude_vision_model.ANTHROPIC_AVAILABLE", True):
+            model = _registry.get_vision_model(cfg)
+        from file_organizer.models.claude_vision_model import ClaudeVisionModel
+
+        assert isinstance(model, ClaudeVisionModel)
 
 
 # ---------------------------------------------------------------------------

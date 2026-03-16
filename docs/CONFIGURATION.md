@@ -86,6 +86,44 @@ fo organize ~/Downloads
 > configured endpoint. Use a local server (LM Studio, vLLM) to keep data
 > on-device while using the OpenAI-compatible interface.
 
+### Anthropic Claude Provider
+
+File Organizer supports Anthropic's Claude models for both text and vision analysis.
+Claude provides strong reasoning and vision capabilities via Anthropic's hosted API.
+
+Install the optional dependency first:
+
+```bash
+# From PyPI (installed package)
+pip install "local-file-organizer[claude]"
+
+# From source checkout
+pip install -e ".[claude]"
+```
+
+Then configure via environment variables — no config file changes needed:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `FO_PROVIDER` | Set to `claude` | `ollama` |
+| `FO_CLAUDE_API_KEY` | Anthropic API key | falls back to `ANTHROPIC_API_KEY` env var |
+| `FO_CLAUDE_MODEL` | Text model name | `claude-3-5-sonnet-20241022` |
+| `FO_CLAUDE_VISION_MODEL` | Vision model name (falls back to `FO_CLAUDE_MODEL`) | — |
+
+**Example:**
+
+```bash
+# Anthropic Claude
+FO_PROVIDER=claude \
+FO_CLAUDE_API_KEY=sk-ant-... \
+FO_CLAUDE_MODEL=claude-3-5-sonnet-20241022 \
+fo organize ~/Downloads
+```
+
+> **Privacy note**: When `FO_PROVIDER=claude`, file content (including image data
+> for vision tasks) is sent to Anthropic's API. Review
+> [Anthropic's privacy policy](https://www.anthropic.com/privacy) before use.
+
 ### Watcher
 
 Configuration for the file system watcher.
@@ -116,11 +154,14 @@ file-organizer config edit --profile work --methodology para
 | `FILE_ORGANIZER_CONFIG` | Custom path to config file |
 | `OLLAMA_HOST` | Ollama server URL (default: `http://localhost:11434`) |
 | `FO_DISABLE_UPDATE_CHECK` | Set to `1` to disable update checks |
-| `FO_PROVIDER` | AI provider: `ollama` (default) or `openai` |
+| `FO_PROVIDER` | AI provider: `ollama` (default), `openai`, or `claude` |
 | `FO_OPENAI_API_KEY` | API key for OpenAI-compatible provider |
 | `FO_OPENAI_BASE_URL` | Custom endpoint URL (LM Studio, Groq, vLLM, etc.) |
 | `FO_OPENAI_MODEL` | Text model name when `FO_PROVIDER=openai` |
 | `FO_OPENAI_VISION_MODEL` | Vision model name (defaults to `FO_OPENAI_MODEL`) |
+| `FO_CLAUDE_API_KEY` | Anthropic API key (falls back to `ANTHROPIC_API_KEY`) |
+| `FO_CLAUDE_MODEL` | Text model name when `FO_PROVIDER=claude` |
+| `FO_CLAUDE_VISION_MODEL` | Vision model name (defaults to `FO_CLAUDE_MODEL`) |
 
 ## Advanced Configuration
 

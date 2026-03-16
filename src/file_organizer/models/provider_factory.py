@@ -13,6 +13,8 @@ Built-in providers (registered at import time in ``provider_registry.py``):
   :class:`~file_organizer.models.openai_vision_model.OpenAIVisionModel`
 - ``"llama_cpp"`` — :class:`~file_organizer.models.llama_cpp_text_model.LlamaCppTextModel`
   (text only; vision deferred to Phase 2)
+- ``"claude"``   — :class:`~file_organizer.models.claude_text_model.ClaudeTextModel` /
+  :class:`~file_organizer.models.claude_vision_model.ClaudeVisionModel`
 """
 
 from __future__ import annotations

@@ -99,7 +99,7 @@ class ModelConfig:
     framework: str = "ollama"  # ollama, llama_cpp, mlx
 
     # Provider selection
-    provider: Literal["ollama", "openai", "llama_cpp", "mlx"] = "ollama"
+    provider: Literal["ollama", "openai", "llama_cpp", "mlx", "claude"] = "ollama"
     api_key: str | None = None  # For OpenAI-compatible providers
     api_base_url: str | None = None  # Custom endpoint (LM Studio, Groq, vLLM, etc.)
 
@@ -124,6 +124,8 @@ class ModelConfig:
             self.framework = "llama_cpp"
         elif self.provider == "mlx" and self.framework == "ollama":
             self.framework = "mlx"
+        elif self.provider == "claude" and self.framework == "ollama":
+            self.framework = "claude"
 
 
 class BaseModel(ABC):

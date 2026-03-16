@@ -4,13 +4,13 @@
 [![Docs](https://img.shields.io/badge/docs-user%20guide-blue)](docs/USER_GUIDE.md)
 
 > AI-powered local file management. Local-first by default (Ollama, no cloud required) --
-> or connect any OpenAI-compatible endpoint when you need it.
+> or connect any OpenAI-compatible endpoint or Anthropic Claude when you need it.
 
 **307 tests** | **334 modules** | **48+ file types** | Python 3.11+
 
 ## Features
 
-- **AI-Powered Organization**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama — or any OpenAI-compatible endpoint (OpenAI, LM Studio, vLLM)
+- **AI-Powered Organization**: Qwen 2.5 3B (text) + Qwen 2.5-VL 7B (vision) via Ollama — or any OpenAI-compatible endpoint (OpenAI, LM Studio, vLLM) — or Anthropic Claude
 - **Audio Transcription**: Local speech-to-text with faster-whisper (GPU-accelerated)
 - **Video Analysis**: Scene detection and keyframe extraction
 - **Copilot Chat**: Natural-language assistant -- "organize ./Downloads", "find report.pdf", "undo"
@@ -70,6 +70,8 @@ Then visit `http://localhost:8000/ui/` for the HTMX interface.
 | Pack | Install Command | Features |
 |------|----------------|----------|
 | Cloud | `pip install -e ".[cloud]"` | OpenAI-compatible API provider (OpenAI, LM Studio, vLLM) |
+| Claude | `pip install -e ".[claude]"` | Anthropic Claude API provider (text + vision) |
+| LLaMA | `pip install -e ".[llama]"` | Local llama.cpp inference (GGUF models, no Ollama needed) |
 | Audio | `pip install -e ".[audio]"` | Speech-to-text (faster-whisper, torch) |
 | Video | `pip install -e ".[video]"` | Scene detection (OpenCV, scenedetect) |
 | Dedup | `pip install -e ".[dedup]"` | Image deduplication (perceptual hashing) |

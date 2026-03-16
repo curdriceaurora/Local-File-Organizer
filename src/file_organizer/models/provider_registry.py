@@ -14,6 +14,8 @@ Built-in providers:
   (text only; vision deferred to Phase 2)
 - ``"mlx"`` — :class:`~file_organizer.models.mlx_text_model.MLXTextModel`
   (text only; vision deferred to Phase 3)
+- ``"claude"``   — :class:`~file_organizer.models.claude_text_model.ClaudeTextModel` /
+  :class:`~file_organizer.models.claude_vision_model.ClaudeVisionModel`
 """
 
 from __future__ import annotations
@@ -225,6 +227,18 @@ def _mlx_text_factory(config: ModelConfig) -> BaseModel:
     return MLXTextModel(config)
 
 
+def _claude_text_factory(config: ModelConfig) -> BaseModel:
+    from file_organizer.models.claude_text_model import ClaudeTextModel
+
+    return ClaudeTextModel(config)
+
+
+def _claude_vision_factory(config: ModelConfig) -> BaseModel:
+    from file_organizer.models.claude_vision_model import ClaudeVisionModel
+
+    return ClaudeVisionModel(config)
+
+
 # ---------------------------------------------------------------------------
 # Module-level singleton
 # ---------------------------------------------------------------------------
@@ -253,6 +267,12 @@ def _register_builtins() -> None:
     _registry.register(
         "mlx",
         text_factory=_mlx_text_factory,
+    )
+    # claude: both text and vision supported in Phase 1
+    _registry.register(
+        "claude",
+        text_factory=_claude_text_factory,
+        vision_factory=_claude_vision_factory,
     )
 
 

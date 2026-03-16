@@ -139,6 +139,10 @@ mlx = [
     "mlx-lm>=0.0.19; platform_system == 'Darwin'",  # MLX runtime is only supported on Darwin
 ]
 
+claude = [
+    "anthropic>=0.20.0",  # Anthropic Claude API provider (Claude 3.x text and vision)
+]
+
 gui = [
     "PyQt6>=6.6.0",
 ]
@@ -191,7 +195,7 @@ docs = [
 ]
 
 all = [
-    "local-file-organizer[dev,gui,cloud,llama,mlx,audio,video,dedup,archive,scientific,cad,build,parsers,web]",
+    "local-file-organizer[dev,gui,cloud,llama,mlx,claude,audio,video,dedup,archive,scientific,cad,build,parsers,web]",
 ]
 
 [project.scripts]

@@ -41,6 +41,9 @@ Extend functionality by installing optional dependency groups:
 
 | Pack | Install Command | Features |
 |------|----------------|----------|
+| Cloud | `pip install -e ".[cloud]"` | OpenAI-compatible API provider (OpenAI, LM Studio, vLLM) |
+| Claude | `pip install -e ".[claude]"` | Anthropic Claude API provider (text + vision) |
+| LLaMA | `pip install -e ".[llama]"` | Local llama.cpp inference (GGUF models, no Ollama needed) |
 | Audio | `pip install -e ".[audio]"` | Speech-to-text transcription (faster-whisper, torch) |
 | Video | `pip install -e ".[video]"` | Scene detection, keyframe extraction (OpenCV) |
 | Dedup | `pip install -e ".[dedup]"` | Image deduplication (perceptual hashing) |

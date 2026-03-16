@@ -154,7 +154,22 @@ export FO_OPENAI_BASE_URL=http://localhost:1234/v1
 export FO_OPENAI_MODEL=your-loaded-model
 ```
 
-See [Configuration Guide](CONFIGURATION.md#openai-compatible-provider-cloud-or-local-api) for the full list of providers and options.
+**Option C — Anthropic Claude:**
+
+No Ollama required. Install the `[claude]` extra and set environment variables:
+
+```bash
+pip install "local-file-organizer[claude]"  # from PyPI
+# pip install -e ".[claude]"          # from source checkout
+
+export FO_PROVIDER=claude
+export FO_CLAUDE_API_KEY=sk-ant-...
+export FO_CLAUDE_MODEL=claude-3-5-sonnet-20241022
+```
+
+Claude supports both text and vision tasks natively — no separate vision model configuration is required (though you can override with `FO_CLAUDE_VISION_MODEL`).
+
+See [Configuration Guide](CONFIGURATION.md) for the full list of providers and options.
 
 ### 3. Workspace Configuration
 
