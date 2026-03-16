@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hmac
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
@@ -18,6 +19,7 @@ from file_organizer.api.dependencies import get_db, get_settings, get_token_stor
 from file_organizer.api.realtime import realtime_manager
 
 router = APIRouter(tags=["realtime"])
+logger = logging.getLogger(__name__)
 
 
 def _jwt_valid(
@@ -88,6 +90,7 @@ async def _heartbeat(websocket: WebSocket, interval: int, stop: asyncio.Event) -
         try:
             await websocket.send_json({"type": "ping"})
         except Exception:
+            logger.debug("Websocket heartbeat ping failed; ending heartbeat loop", exc_info=True)
             break
 
 
@@ -100,7 +103,7 @@ async def _send_error(websocket: WebSocket, message: str) -> None:
             websocket,
         )
     except Exception:
-        pass
+        logger.debug("Failed to send websocket error message", exc_info=True)
 
 
 @router.websocket("/ws/{client_id}")

@@ -11,6 +11,7 @@ This module provides safe backup management for file operations, including:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import tempfile
@@ -25,6 +26,8 @@ try:
     HAS_FCNTL = True
 except ImportError:
     HAS_FCNTL = False
+
+logger = logging.getLogger(__name__)
 
 
 class BackupManager:
@@ -184,8 +187,12 @@ class BackupManager:
                         backup_path.unlink()
                         removed_backups.append(backup_path)
                     except Exception:
-                        # Continue even if deletion fails
-                        pass
+                        # Keep retention cleanup non-fatal but observable.
+                        logger.debug(
+                            "Failed to remove old backup file %s during cleanup",
+                            backup_path,
+                            exc_info=True,
+                        )
 
                 # Remove from manifest
                 del manifest[backup_key]

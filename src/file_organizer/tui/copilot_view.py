@@ -7,6 +7,7 @@ so the UI stays responsive.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from textual import work
@@ -19,6 +20,8 @@ from file_organizer.services.copilot.models import MessageRole
 
 if TYPE_CHECKING:
     from file_organizer.services.copilot.engine import CopilotEngine
+
+logger = logging.getLogger(__name__)
 
 
 class CopilotMessageLog(VerticalScroll):
@@ -180,7 +183,7 @@ class CopilotView(Vertical):
 
             self.app.query_one(StatusBar).set_status(message)
         except Exception:
-            pass
+            logger.debug("CopilotView status bar unavailable", exc_info=True)
 
 
 def _escape(text: str) -> str:

@@ -6,6 +6,7 @@ and AI-powered classification results.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,6 +19,8 @@ from textual.widgets import Static
 if TYPE_CHECKING:
     from file_organizer.services.audio.classifier import ClassificationResult
     from file_organizer.services.audio.metadata_extractor import AudioMetadata
+
+logger = logging.getLogger(__name__)
 
 # Audio file extensions to scan for
 _AUDIO_EXTENSIONS = frozenset({".mp3", ".wav", ".flac", ".m4a", ".ogg"})
@@ -351,7 +354,7 @@ class AudioView(Vertical):
 
             self.app.query_one(StatusBar).set_status(message)
         except Exception:
-            pass
+            logger.debug("AudioView status bar unavailable", exc_info=True)
 
 
 def _truncate(text: str, max_len: int) -> str:

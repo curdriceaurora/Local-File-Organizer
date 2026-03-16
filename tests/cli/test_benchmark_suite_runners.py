@@ -147,6 +147,23 @@ def test_audio_suite_warns_when_falling_back_to_io() -> None:
 
 @pytest.mark.ci
 @pytest.mark.unit
+def test_io_suite_logs_oserror_traceback_for_failed_stat() -> None:
+    """I/O suite should keep OSError non-fatal while preserving traceback breadcrumbs."""
+    fake_path = MagicMock(spec=Path)
+    fake_path.suffix = ".txt"
+    fake_path.stat.side_effect = OSError("permission denied")
+
+    with patch("file_organizer.cli.benchmark.logger.debug") as mocked_debug:
+        result = benchmark_cli._run_io_suite([fake_path])
+
+    assert result.processed_count == 1
+    mocked_debug.assert_called_once()
+    _, kwargs = mocked_debug.call_args
+    assert kwargs.get("exc_info") is True
+
+
+@pytest.mark.ci
+@pytest.mark.unit
 def test_text_suite_warns_and_skips_when_no_text_candidates() -> None:
     """Text suite should skip when no text candidates are available."""
     with patch("file_organizer.cli.benchmark.typer.echo") as mocked_echo:

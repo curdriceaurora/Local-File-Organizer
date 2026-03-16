@@ -6,6 +6,7 @@ and duplicate statistics in a scrollable panel layout.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from textual import work
@@ -13,6 +14,8 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
+
+logger = logging.getLogger(__name__)
 
 
 class StorageOverviewPanel(Static):
@@ -285,7 +288,7 @@ class AnalyticsView(Vertical):
 
             self.app.query_one(StatusBar).set_status(message)
         except Exception:
-            pass
+            logger.debug("AnalyticsView status bar unavailable", exc_info=True)
 
 
 def _format_bytes(num_bytes: int) -> str:

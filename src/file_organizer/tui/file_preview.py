@@ -6,6 +6,7 @@ type-dispatched preview panel on the right, plus multi-file selection.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from textual import on, work
@@ -16,6 +17,8 @@ from textual.message import Message
 from textual.widgets import Static
 
 from file_organizer.tui.file_browser import FileBrowserView
+
+logger = logging.getLogger(__name__)
 
 
 class FileSelectionManager:
@@ -334,4 +337,4 @@ class FilePreviewView(Horizontal):
                 f"{count} file{'s' if count != 1 else ''} selected" if count else "Ready"
             )
         except Exception:
-            pass
+            logger.debug("FilePreviewView status bar unavailable", exc_info=True)

@@ -30,6 +30,7 @@ Typical usage::
 from __future__ import annotations
 
 import json
+import logging
 import queue
 import select
 import subprocess
@@ -47,6 +48,8 @@ from file_organizer.plugins.ipc import (
     encode_call,
 )
 from file_organizer.plugins.security import PluginSecurityPolicy
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Worker entrypoint (runs inside the child process)
@@ -94,7 +97,7 @@ def _worker(plugin_path: str, policy_dict: dict[str, Any]) -> None:  # pragma: n
     except (ImportError, ValueError):
         pass  # Windows or kernel limit already tighter — silently skip
     except Exception:
-        pass
+        logger.debug("Failed to apply plugin worker resource limits", exc_info=True)
 
     # ------------------------------------------------------------------
     # 2. Dynamically load the plugin module
@@ -273,7 +276,7 @@ class PluginExecutor:
                     try:
                         pipe.close()
                     except Exception:
-                        pass
+                        logger.debug("Failed to close plugin worker pipe cleanly", exc_info=True)
             self._proc.terminate()
             try:
                 self._proc.wait(timeout=5)

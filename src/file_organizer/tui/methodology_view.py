@@ -6,6 +6,7 @@ or none) and preview how files would be categorized under the selected scheme.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -14,6 +15,8 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Static
+
+logger = logging.getLogger(__name__)
 
 
 class MethodologySelectorPanel(Static):
@@ -300,4 +303,4 @@ class MethodologyView(Vertical):
 
             self.app.query_one(StatusBar).set_status(message)
         except Exception:
-            pass
+            logger.debug("MethodologyView status bar unavailable", exc_info=True)

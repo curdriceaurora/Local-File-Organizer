@@ -7,6 +7,7 @@ providing ``suggest``, ``apply``, ``popular``, ``recent``, and ``batch`` command
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,7 @@ autotag_app = typer.Typer(
 )
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +62,9 @@ def suggest(
         try:
             recommendation = service.suggest_tags(file_path, top_n=top_n)
         except Exception:
+            logger.debug(
+                "Skipping file during auto-tag suggest due to inference error", exc_info=True
+            )
             continue
 
         filtered = [s for s in recommendation.suggestions if s.confidence >= min_confidence]

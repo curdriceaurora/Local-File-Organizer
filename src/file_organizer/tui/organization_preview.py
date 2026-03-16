@@ -6,6 +6,7 @@ along with an organization summary with file counts and status.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -16,6 +17,8 @@ from textual.containers import Vertical
 from textual.widgets import Static
 
 from file_organizer.tui.settings_view import load_parallel_runtime_settings
+
+logger = logging.getLogger(__name__)
 
 
 class BeforeAfterPanel(Static):
@@ -226,4 +229,4 @@ class OrganizationPreviewView(Vertical):
 
             self.app.query_one(StatusBar).set_status(message)
         except Exception:
-            pass
+            logger.debug("OrganizationPreviewView status bar unavailable", exc_info=True)

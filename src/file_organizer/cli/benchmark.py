@@ -414,7 +414,7 @@ def _run_io_suite(files: list[Path]) -> _SuiteIterationOutcome:
         try:
             _ = file_path.stat()
         except OSError:
-            pass
+            logger.debug("I/O benchmark failed to stat candidate %s", file_path, exc_info=True)
     return _SuiteIterationOutcome(processed_count=len(candidates))
 
 

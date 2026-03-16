@@ -6,6 +6,7 @@ and aggregate history statistics.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -17,6 +18,8 @@ from textual.widgets import Static
 
 if TYPE_CHECKING:
     from file_organizer.history.models import Operation
+
+logger = logging.getLogger(__name__)
 
 
 class OperationHistoryPanel(Static):
@@ -322,7 +325,7 @@ class UndoHistoryView(Vertical):
 
             self.app.query_one(StatusBar).set_status(message)
         except Exception:
-            pass
+            logger.debug("UndoHistoryView status bar unavailable", exc_info=True)
 
 
 def _format_timestamp(ts: datetime | None) -> str:
