@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import io
 import sqlite3
+import threading
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -57,9 +58,11 @@ def _blob_to_array(blob: bytes) -> np.ndarray:
 class EmbeddingCache:
     """SQLite-backed embedding cache implementing :class:`EmbeddingCacheProtocol`.
 
-    Thread-safety: each call acquires a short-lived connection; the
-    underlying SQLite file is opened in WAL mode so concurrent readers
-    do not block writes.
+    Thread-safety: a :class:`threading.Lock` serializes all write operations
+    (INSERT/UPDATE and prune deletes) on the shared SQLite connection.  The
+    underlying file is opened in WAL mode so concurrent readers do not block
+    writers, but callers must not share one ``EmbeddingCache`` instance across
+    processes.
 
     Example::
 
@@ -73,6 +76,9 @@ class EmbeddingCache:
     def __init__(self, db_path: Path, model: str = "tfidf") -> None:
         """Open (or create) the SQLite cache at *db_path*.
 
+        Orphan rows (entries whose file no longer exists) are pruned
+        automatically on open.
+
         Args:
             db_path: Path to the SQLite database file.  Parent directory
                 must exist.
@@ -81,10 +87,14 @@ class EmbeddingCache:
         """
         self._db_path = db_path
         self._model = model
+        self._lock = threading.Lock()
         self._conn = sqlite3.connect(str(db_path), check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute(_CREATE_TABLE)
         self._conn.commit()
+        pruned = self.prune()
+        if pruned:
+            logger.debug("EmbeddingCache pruned {} orphan rows on open", pruned)
         logger.debug("EmbeddingCache opened at {}", db_path)
 
     # ------------------------------------------------------------------
@@ -139,19 +149,20 @@ class EmbeddingCache:
         embedding = compute(text)
 
         blob = _array_to_blob(embedding)
-        self._conn.execute(
-            """
-            INSERT INTO embeddings (file_path, embedding, model, mtime, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(file_path) DO UPDATE SET
-                embedding  = excluded.embedding,
-                model      = excluded.model,
-                mtime      = excluded.mtime,
-                updated_at = excluded.updated_at
-            """,
-            (key, blob, self._model, current_mtime, _now_iso()),
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                """
+                INSERT INTO embeddings (file_path, embedding, model, mtime, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(file_path) DO UPDATE SET
+                    embedding  = excluded.embedding,
+                    model      = excluded.model,
+                    mtime      = excluded.mtime,
+                    updated_at = excluded.updated_at
+                """,
+                (key, blob, self._model, current_mtime, _now_iso()),
+            )
+            self._conn.commit()
         logger.debug("EmbeddingCache stored: {}", path.name)
         return embedding
 
@@ -164,11 +175,12 @@ class EmbeddingCache:
         rows = self._conn.execute("SELECT file_path FROM embeddings").fetchall()
         stale = [row[0] for row in rows if not Path(row[0]).exists()]
         if stale:
-            self._conn.executemany(
-                "DELETE FROM embeddings WHERE file_path = ?",
-                [(p,) for p in stale],
-            )
-            self._conn.commit()
+            with self._lock:
+                self._conn.executemany(
+                    "DELETE FROM embeddings WHERE file_path = ?",
+                    [(p,) for p in stale],
+                )
+                self._conn.commit()
             logger.debug("EmbeddingCache pruned {} orphan rows", len(stale))
         return len(stale)
 

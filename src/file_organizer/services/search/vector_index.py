@@ -98,14 +98,13 @@ class VectorIndex:
             logger.warning("VectorIndex: failed to embed query: {}", exc)
             return []
 
-        ranked: list[tuple[Path, float]] = self._analyzer.find_similar_to_query(
+        return self._analyzer.find_similar_to_query(
             query_embedding=query_vec,
             document_embeddings=self._matrix,
             paths=self._paths,
             top_k=top_k,
             min_similarity=self._analyzer.threshold,
         )
-        return ranked[:top_k]
 
     # ------------------------------------------------------------------
     # Convenience

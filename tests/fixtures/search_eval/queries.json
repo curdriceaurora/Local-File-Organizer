@@ -5,7 +5,7 @@
     {
       "id": "q01",
       "query": "quarterly budget finance report",
-      "relevant": ["q3_budget_2023", "annual_finance_report_2022", "invoice_acme_4821", "q4_revenue_summary"]
+      "relevant": ["q3_budget_2023", "annual_finance_report_2022", "q4_revenue_summary"]
     },
     {
       "id": "q02",
@@ -50,7 +50,7 @@
     {
       "id": "q10",
       "query": "product roadmap presentation 2023",
-      "relevant": ["q4_roadmap_deck", "product_strategy_2024", "investor_pitch_deck", "feature_planning_q1"]
+      "relevant": ["q4_roadmap_deck", "product_strategy_2024", "feature_planning_q1"]
     }
   ]
 }

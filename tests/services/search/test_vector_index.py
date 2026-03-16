@@ -107,19 +107,31 @@ class TestVectorIndex:
 
     def test_re_index_replaces_previous(self) -> None:
         idx = VectorIndex()
-        idx.index(_CORPUS, _make_paths(len(_CORPUS)))
+        old_paths = _make_paths(len(_CORPUS))
+        idx.index(_CORPUS, old_paths)
         # Use 2+ docs to satisfy scikit-learn min_df/max_df constraints
         tmp = Path(tempfile.gettempdir())
         new_paths = [tmp / "new_a.txt", tmp / "new_b.txt"]
         idx.index(["completely different document one", "another new document two"], new_paths)
         assert idx.size == 2
+        # Old paths must not survive re-index
+        results = idx.search("finance budget quarterly", top_k=5)
+        returned = [p for p, _ in results]
+        for old_path in old_paths:
+            assert old_path not in returned, f"{old_path.name} survived re-index"
 
     def test_threshold_filters_low_scores(self) -> None:
-        # With a high threshold, dissimilar query should return nothing
-        idx = VectorIndex(similarity_threshold=0.99)
-        idx.index(_CORPUS, _make_paths(len(_CORPUS)))
-        results = idx.search("xyzzy zork nonsense")
-        # All scores should be below 0.99 for a nonsense query
+        paths = _make_paths(len(_CORPUS))
+        # Control: loose threshold returns results for a relevant query
+        loose_idx = VectorIndex(similarity_threshold=0.0)
+        loose_idx.index(_CORPUS, paths)
+        assert loose_idx.search("finance budget quarterly"), "Loose threshold should return results"
+
+        # Strict threshold: same query must be filtered out
+        strict_idx = VectorIndex(similarity_threshold=0.99)
+        strict_idx.index(_CORPUS, paths)
+        results = strict_idx.search("xyzzy zork nonsense")
+        # All returned scores must satisfy the threshold
         for _, score in results:
             assert score >= 0.99, f"Score {score} below threshold"
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import time
+import os
 from pathlib import Path
 
 import numpy as np
@@ -95,11 +95,10 @@ class TestStaleness:
         cache = EmbeddingCache(tmp_path / "cache.db")
         first = cache.get_or_compute(f, compute=_dummy_compute)
 
-        # Modify the file and bump mtime
-        time.sleep(0.01)
+        # Modify content and force a guaranteed mtime bump via os.utime
         f.write_text("version 2 different content entirely")
-        # Force mtime to change by touching
-        f.touch()
+        new_mtime = f.stat().st_mtime + 2.0
+        os.utime(f, (new_mtime, new_mtime))
 
         second = cache.get_or_compute(f, compute=_dummy_compute)
         # Content changed → different embedding

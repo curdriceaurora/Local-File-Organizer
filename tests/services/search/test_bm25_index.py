@@ -98,8 +98,17 @@ class TestBM25Index:
 
     def test_scores_are_positive(self) -> None:
         idx = BM25Index()
-        idx.index(["machine learning python", "legal contract software"], _make_paths(2))
-        results = idx.search("machine learning")
+        idx.index(
+            [
+                "machine learning python neural network",
+                "legal contract software agreement",
+                "recipe baking chocolate cookie",
+                "finance budget quarterly report",
+            ],
+            _make_paths(4),
+        )
+        results = idx.search("machine learning python")
+        assert results, "Expected at least one match for overlapping query terms"
         assert all(score > 0 for _, score in results)
 
     def test_top_k_limits_results(self) -> None:
@@ -107,7 +116,7 @@ class TestBM25Index:
         idx = BM25Index()
         idx.index(docs, _make_paths(20))
         results = idx.search("document topic", top_k=5)
-        assert len(results) <= 5
+        assert len(results) == 5, "All 20 docs match the query; expected exactly top_k=5 results"
 
     def test_empty_query_returns_empty(self) -> None:
         idx = BM25Index()
@@ -126,13 +135,19 @@ class TestBM25Index:
         idx.index(["first corpus alpha", "first corpus beta"], _make_paths(2))
         assert idx.size == 2
         # Re-index with different paths — old corpus must be gone
+        # Use 3+ docs: rank-bm25 needs N>2 to produce positive IDF scores
         tmp = Path(tempfile.gettempdir())
-        new_paths = [tmp / "new_a.txt", tmp / "new_b.txt"]
-        idx.index(["finance budget report", "legal contract agreement"], new_paths)
-        assert idx.size == 2
-        # Old paths must not appear in results
+        new_paths = [tmp / "new_a.txt", tmp / "new_b.txt", tmp / "new_c.txt"]
+        idx.index(
+            ["finance budget report", "legal contract agreement", "recipe baking chocolate"],
+            new_paths,
+        )
+        assert idx.size == 3
+        # Old paths must not appear in results; new corpus must be reachable
         results = idx.search("finance budget")
+        assert results, "Expected results from re-indexed corpus"
         returned_paths = [p for p, _ in results]
         old_paths = _make_paths(2)
         assert old_paths[0] not in returned_paths
         assert old_paths[1] not in returned_paths
+        assert new_paths[0] in returned_paths

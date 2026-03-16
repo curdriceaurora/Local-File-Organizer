@@ -195,7 +195,8 @@ docs = [
 ]
 
 search = [
-    "rank-bm25>=0.7.2",
+    "rank-bm25>=0.2.0",
+    "scikit-learn>=1.4.0",
 ]
 
 all = [
