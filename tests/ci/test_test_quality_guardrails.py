@@ -154,7 +154,7 @@ def _github_pr_changed_test_files() -> list[Path] | None:
             token = os.environ.get("GITHUB_TOKEN")
             if token:
                 api_request.add_header("Authorization", f"token {token}")
-            with request.urlopen(api_request) as response:
+            with request.urlopen(api_request, timeout=5) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except (OSError, json.JSONDecodeError, error.URLError):
             return None
