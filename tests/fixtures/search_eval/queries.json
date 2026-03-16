@@ -1,0 +1,56 @@
+{
+  "description": "Eval corpus for hybrid retrieval recall@10 benchmark. 10 queries with ground-truth relevant file stems.",
+  "corpus_dir": "corpus/",
+  "queries": [
+    {
+      "id": "q01",
+      "query": "quarterly budget finance report",
+      "relevant": ["q3_budget_2023", "annual_finance_report_2022", "invoice_acme_4821", "q4_revenue_summary"]
+    },
+    {
+      "id": "q02",
+      "query": "machine learning python tutorial",
+      "relevant": ["ml_intro_python", "deep_learning_guide", "scikit_learn_tutorial", "neural_network_basics"]
+    },
+    {
+      "id": "q03",
+      "query": "patient discharge medical summary",
+      "relevant": ["discharge_summary_diabetes", "mri_knee_report", "blood_test_results", "clinical_notes_2024"]
+    },
+    {
+      "id": "q04",
+      "query": "software license legal contract",
+      "relevant": ["contract_acme_widget", "nda_confidential_2024", "terms_of_service_v2", "software_agreement"]
+    },
+    {
+      "id": "q05",
+      "query": "engineering standup meeting notes",
+      "relevant": ["standup_notes_march", "engineering_retrospective", "sprint_planning_notes", "team_sync_agenda"]
+    },
+    {
+      "id": "q06",
+      "query": "recipe chocolate cookies baking",
+      "relevant": ["chocolate_chip_cookies", "brownie_recipe", "oatmeal_cookie_recipe", "baking_guide"]
+    },
+    {
+      "id": "q07",
+      "query": "japan travel itinerary tokyo",
+      "relevant": ["japan_trip_2024", "tokyo_hotel_booking", "kyoto_day_trip", "asia_packing_list"]
+    },
+    {
+      "id": "q08",
+      "query": "transformer attention research paper",
+      "relevant": ["attention_is_all_you_need", "bert_paper_notes", "transformer_architecture_review", "nlp_survey_2023"]
+    },
+    {
+      "id": "q09",
+      "query": "docker nginx server configuration",
+      "relevant": ["nginx_config_prod", "docker_compose_dev", "kubernetes_deployment", "server_setup_guide"]
+    },
+    {
+      "id": "q10",
+      "query": "product roadmap presentation 2023",
+      "relevant": ["q4_roadmap_deck", "product_strategy_2024", "investor_pitch_deck", "feature_planning_q1"]
+    }
+  ]
+}
