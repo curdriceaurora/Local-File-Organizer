@@ -21,9 +21,9 @@ Scope covered in this register:
 | PR Stream | Issues | Type | Priority | Quick Win | Wave | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | PR-A: Provider/CI/Epic closeout reconciliation | #723, #816, #706 | Governance closeout | P0 | Yes | 1 | No new provider runtime behavior; reconciles completion claims and dependencies |
-| PR-B: MLX provider | #819 | Feature | P1 | Medium | 2 | Provider integration for Apple-local inference path |
-| PR-C: Claude provider | #820 | Feature | P1 | Medium | 2 | Anthropic cloud provider path |
-| PR-D: User-facing parallelism/resource controls | #727 | Feature | P1 | Medium | 1 | CLI/TUI runtime controls |
+| PR-B: MLX provider | #819 | Feature | P1 | No | 2 | Provider integration for Apple-local inference path |
+| PR-C: Claude provider | #820 | Feature | P1 | No | 2 | Anthropic cloud provider path |
+| PR-D: User-facing parallelism/resource controls | #727 | Feature | P1 | No | 1 | CLI/TUI runtime controls |
 | PR-E: Semantic naming quality investigation | #719 | Feature/Experiment | P2 | Yes | 1 | Corpus + benchmark + fallback experiments |
 | PR-F: TUI analytics completion | #720 | Feature | P3 | No | 1 | Low-priority UX completion |
 | PR-G: Hybrid retrieval + embedding cache | #715 | Feature | P1 | No | 3 | Largest scope; architecture bottleneck for epic closeout |

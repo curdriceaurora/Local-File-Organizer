@@ -14,6 +14,15 @@ REGISTER_REL = "docs/plans/2026-03-16-mece-multi-pr-delivery-register.md"
 REGISTER_PATH = FO_ROOT / REGISTER_REL
 EXPECTED_ISSUES = {706, 715, 719, 720, 723, 727, 816, 819, 820}
 EXPECTED_PRIORITIES = {"P0", "P1", "P2", "P3"}
+EXPECTED_STREAM_VALUES: dict[str, dict[str, object]] = {
+    "PR-A": {"priority": "P0", "wave": 1, "quick_win": True},
+    "PR-B": {"priority": "P1", "wave": 2, "quick_win": False},
+    "PR-C": {"priority": "P1", "wave": 2, "quick_win": False},
+    "PR-D": {"priority": "P1", "wave": 1, "quick_win": False},
+    "PR-E": {"priority": "P2", "wave": 1, "quick_win": True},
+    "PR-F": {"priority": "P3", "wave": 1, "quick_win": False},
+    "PR-G": {"priority": "P1", "wave": 3, "quick_win": False},
+}
 
 
 def _extract_metadata(text: str) -> dict[str, object]:
@@ -54,9 +63,15 @@ def test_delivery_register_has_mece_partition_and_valid_wave_plan() -> None:
         assert isinstance(stream, dict)
         stream_id = str(stream["id"])
         stream_ids.add(stream_id)
+        expected = EXPECTED_STREAM_VALUES.get(stream_id)
+        assert expected is not None, f"Unexpected stream id in metadata: {stream_id}"
+
         assert stream["priority"] in EXPECTED_PRIORITIES
+        assert stream["priority"] == expected["priority"]
         assert isinstance(stream["quick_win"], bool)
+        assert stream["quick_win"] is expected["quick_win"]
         assert int(stream["wave"]) in {1, 2, 3}
+        assert int(stream["wave"]) == expected["wave"]
 
         issues = stream["issues"]
         assert isinstance(issues, list)
