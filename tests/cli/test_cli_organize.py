@@ -222,7 +222,7 @@ class TestOrganize:
         mock_cls.assert_called_once_with(
             dry_run=False,
             parallel_workers=None,
-            prefetch_depth=2,
+            prefetch_depth=0,
             enable_vision=True,
             no_prefetch=True,
         )
@@ -320,8 +320,100 @@ class TestPreview:
         result = runner.invoke(app, ["preview", str(tmp_path)])
         assert result.exit_code == 0
         assert "15" in result.output
-        # FileOrganizer should be instantiated with dry_run=True
-        mock_cls.assert_called_once_with(dry_run=True)
+        mock_cls.assert_called_once_with(
+            dry_run=True,
+            parallel_workers=None,
+            prefetch_depth=2,
+            enable_vision=True,
+            no_prefetch=False,
+        )
+
+    @patch("file_organizer.core.organizer.FileOrganizer")
+    def test_preview_max_workers(self, mock_cls: MagicMock, tmp_path: Path) -> None:
+        mock_org = MagicMock()
+        mock_cls.return_value = mock_org
+        mock_org.organize.return_value = _mock_result(total=5)
+
+        result = runner.invoke(app, ["preview", str(tmp_path), "--max-workers", "4"])
+        assert result.exit_code == 0
+        mock_cls.assert_called_once_with(
+            dry_run=True,
+            parallel_workers=4,
+            prefetch_depth=2,
+            enable_vision=True,
+            no_prefetch=False,
+        )
+
+    @patch("file_organizer.core.organizer.FileOrganizer")
+    def test_preview_sequential(self, mock_cls: MagicMock, tmp_path: Path) -> None:
+        mock_org = MagicMock()
+        mock_cls.return_value = mock_org
+        mock_org.organize.return_value = _mock_result(total=5)
+
+        result = runner.invoke(app, ["preview", str(tmp_path), "--sequential"])
+        assert result.exit_code == 0
+        mock_cls.assert_called_once_with(
+            dry_run=True,
+            parallel_workers=1,
+            prefetch_depth=0,
+            enable_vision=True,
+            no_prefetch=False,
+        )
+
+    @patch("file_organizer.core.organizer.FileOrganizer")
+    def test_preview_no_vision(self, mock_cls: MagicMock, tmp_path: Path) -> None:
+        mock_org = MagicMock()
+        mock_cls.return_value = mock_org
+        mock_org.organize.return_value = _mock_result(total=5)
+
+        result = runner.invoke(app, ["preview", str(tmp_path), "--no-vision"])
+        assert result.exit_code == 0
+        mock_cls.assert_called_once_with(
+            dry_run=True,
+            parallel_workers=None,
+            prefetch_depth=2,
+            enable_vision=False,
+            no_prefetch=False,
+        )
+
+    @patch("file_organizer.core.organizer.FileOrganizer")
+    def test_preview_text_only_alias(self, mock_cls: MagicMock, tmp_path: Path) -> None:
+        mock_org = MagicMock()
+        mock_cls.return_value = mock_org
+        mock_org.organize.return_value = _mock_result(total=5)
+
+        result = runner.invoke(app, ["preview", str(tmp_path), "--text-only"])
+        assert result.exit_code == 0
+        mock_cls.assert_called_once_with(
+            dry_run=True,
+            parallel_workers=None,
+            prefetch_depth=2,
+            enable_vision=False,
+            no_prefetch=False,
+        )
+
+    @patch("file_organizer.core.organizer.FileOrganizer")
+    def test_preview_no_prefetch(self, mock_cls: MagicMock, tmp_path: Path) -> None:
+        mock_org = MagicMock()
+        mock_cls.return_value = mock_org
+        mock_org.organize.return_value = _mock_result(total=5)
+
+        result = runner.invoke(app, ["preview", str(tmp_path), "--no-prefetch"])
+        assert result.exit_code == 0
+        mock_cls.assert_called_once_with(
+            dry_run=True,
+            parallel_workers=None,
+            prefetch_depth=0,
+            enable_vision=True,
+            no_prefetch=True,
+        )
+
+    def test_preview_sequential_conflicts_with_max_workers(self, tmp_path: Path) -> None:
+        result = runner.invoke(
+            app, ["preview", str(tmp_path), "--sequential", "--max-workers", "4"]
+        )
+        assert result.exit_code == 2
+        assert "--sequential" in result.output
 
     @patch(
         "file_organizer.core.organizer.FileOrganizer",
