@@ -142,36 +142,84 @@ class ProviderRegistry:
 
 
 def _ollama_text_factory(config: ModelConfig) -> BaseModel:
+    """Lazy factory for Ollama text models.
+
+    Args:
+        config: Model configuration.
+
+    Returns:
+        A new ``TextModel`` instance.
+    """
     from file_organizer.models.text_model import TextModel
 
     return TextModel(config)
 
 
 def _ollama_vision_factory(config: ModelConfig) -> BaseModel:
+    """Lazy factory for Ollama vision models.
+
+    Args:
+        config: Model configuration.
+
+    Returns:
+        A new ``VisionModel`` instance.
+    """
     from file_organizer.models.vision_model import VisionModel
 
     return VisionModel(config)
 
 
 def _openai_text_factory(config: ModelConfig) -> BaseModel:
+    """Lazy factory for OpenAI text models.
+
+    Args:
+        config: Model configuration.
+
+    Returns:
+        A new ``OpenAITextModel`` instance.
+    """
     from file_organizer.models.openai_text_model import OpenAITextModel
 
     return OpenAITextModel(config)
 
 
 def _openai_vision_factory(config: ModelConfig) -> BaseModel:
+    """Lazy factory for OpenAI vision models.
+
+    Args:
+        config: Model configuration.
+
+    Returns:
+        A new ``OpenAIVisionModel`` instance.
+    """
     from file_organizer.models.openai_vision_model import OpenAIVisionModel
 
     return OpenAIVisionModel(config)
 
 
 def _llama_cpp_text_factory(config: ModelConfig) -> BaseModel:
+    """Lazy factory for llama.cpp text models.
+
+    Args:
+        config: Model configuration.
+
+    Returns:
+        A new ``LlamaCppTextModel`` instance.
+    """
     from file_organizer.models.llama_cpp_text_model import LlamaCppTextModel
 
     return LlamaCppTextModel(config)
 
 
 def _mlx_text_factory(config: ModelConfig) -> BaseModel:
+    """Lazy factory for MLX text models on Apple Silicon.
+
+    Args:
+        config: Model configuration.
+
+    Returns:
+        A new ``MLXTextModel`` instance.
+    """
     from file_organizer.models.mlx_text_model import MLXTextModel
 
     return MLXTextModel(config)
