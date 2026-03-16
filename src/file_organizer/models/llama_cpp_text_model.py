@@ -189,6 +189,13 @@ class LlamaCppTextModel(BaseModel):
         """
         logger.debug("Cleaning up llama.cpp text model {}", self.config.name)
         with self._lifecycle_lock:
+            if self.client is not None:
+                try:
+                    self.client.close()
+                except Exception:
+                    logger.opt(exception=True).debug(
+                        "Ignoring exception during llama.cpp client close"
+                    )
             self.client = None
             self._initialized = False
 

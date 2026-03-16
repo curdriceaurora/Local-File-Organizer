@@ -311,6 +311,22 @@ class TestCleanup:
 
         assert not model.is_initialized
 
+    def test_cleanup_calls_close_on_client(self) -> None:
+        """cleanup() must call client.close() to deterministically free native resources."""
+        mock_llama = MagicMock()
+        with (
+            patch("file_organizer.models.llama_cpp_text_model.LLAMA_CPP_AVAILABLE", True),
+            patch("file_organizer.models.llama_cpp_text_model.Llama", mock_llama),
+        ):
+            from file_organizer.models.llama_cpp_text_model import LlamaCppTextModel
+
+            model = LlamaCppTextModel(_make_config())
+            model.initialize()
+            client = model.client  # capture before cleanup nulls it
+            model.cleanup()
+
+        client.close.assert_called_once()
+
 
 # ---------------------------------------------------------------------------
 # _device_to_gpu_layers()
