@@ -77,6 +77,28 @@ class TestHealthEndpoint:
             assert body["readiness"] == "starting"
             assert body["ollama"] is False
 
+    def test_health_llama_cpp_unknown_maps_to_ready(self) -> None:
+        """llama_cpp provider should surface unknown status as ready readiness."""
+        _, client = _build_app()
+
+        with patch("file_organizer.api.service_facade.ServiceFacade") as mock_facade_class:
+            mock_facade = AsyncMock()
+            mock_facade_class.return_value = mock_facade
+            mock_facade.health_check.return_value = {
+                "status": "unknown",
+                "version": "2.0.0",
+                "provider": "llama_cpp",
+                "ollama": False,
+            }
+
+            resp = client.get("/api/v1/health")
+            assert resp.status_code == 200
+            body = resp.json()
+            assert body["status"] == "unknown"
+            assert body["readiness"] == "ready"
+            assert body["provider"] == "llama_cpp"
+            assert body["ollama"] is False
+
     def test_health_error(self) -> None:
         """Test health check with error status."""
         _, client = _build_app()
@@ -143,6 +165,7 @@ class TestHealthEndpoint:
         test_cases = [
             ("ok", 200, "ready"),
             ("degraded", 207, "starting"),
+            ("unknown", 200, "ready"),
             ("error", 503, "unhealthy"),
         ]
 

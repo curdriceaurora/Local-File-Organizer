@@ -59,11 +59,11 @@ class ServiceFacade:
         * ``status`` -- ``"ok"`` when the configured provider is reachable.
           For ``"ollama"`` provider: ``"ok"`` when Ollama is reachable,
           ``"degraded"`` when Ollama is unreachable.
-          For ``"openai"`` provider: ``"unknown"`` — no connectivity probe is
+          For ``"openai"`` or ``"llama_cpp"`` provider: ``"unknown"`` — no connectivity probe is
           performed against the OpenAI endpoint at health-check time; the first
           model call will surface any auth or network errors.
         * ``version`` -- the package version string.
-        * ``provider`` -- the active provider (``"ollama"`` or ``"openai"``).
+        * ``provider`` -- the active provider (``"ollama"``, ``"openai"``, or ``"llama_cpp"``).
         * ``ollama`` -- ``True`` when the Ollama service is reachable.
         * ``capabilities`` -- present only when ``provider`` is ``"ollama"``
           and ``status`` is ``"degraded"``.  Describes which file types fall
@@ -74,11 +74,13 @@ class ServiceFacade:
             ``ollama``, and optionally ``capabilities``.
         """
         provider = get_current_provider()
-        # Skip the Ollama probe entirely when using an OpenAI-compatible provider —
+        # Skip the Ollama probe entirely when using providers that do not require
+        # the Ollama daemon for inference.
         # it adds a 2-second timeout for no benefit and can cause spurious failures.
-        ollama_ok = False if provider == "openai" else await self._check_ollama()
-        if provider == "openai":
-            status = "unknown"  # OpenAI endpoint is not probed at health-check time
+        provider_not_probed = provider in {"openai", "llama_cpp"}
+        ollama_ok = False if provider_not_probed else await self._check_ollama()
+        if provider_not_probed:
+            status = "unknown"  # Provider endpoint is not probed at health-check time
         else:
             status = "ok" if ollama_ok else "degraded"
         payload: dict[str, Any] = {

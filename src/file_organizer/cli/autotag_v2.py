@@ -63,7 +63,9 @@ def suggest(
             recommendation = service.suggest_tags(file_path, top_n=top_n)
         except Exception:
             logger.debug(
-                "Skipping file during auto-tag suggest due to inference error", exc_info=True
+                "Skipping file during auto-tag suggest due to inference error: %s",
+                file_path,
+                exc_info=True,
             )
             continue
 

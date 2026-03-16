@@ -126,6 +126,25 @@ class TestHealthCheck:
 
         assert result["ollama"] is False
 
+    @pytest.mark.asyncio
+    async def test_status_unknown_when_llama_cpp_provider(self) -> None:
+        """health_check.status is 'unknown' when provider is llama_cpp."""
+        facade = _make_facade()
+        with (
+            patch(
+                "file_organizer.api.service_facade.get_current_provider", return_value="llama_cpp"
+            ),
+            patch.object(
+                facade, "_check_ollama", new_callable=AsyncMock, return_value=False
+            ) as check,
+        ):
+            result = await facade.health_check()
+
+        assert result["provider"] == "llama_cpp"
+        assert result["status"] == "unknown"
+        assert result["ollama"] is False
+        check.assert_not_awaited()
+
 
 # ---------------------------------------------------------------------------
 # get_status

@@ -42,7 +42,9 @@ def _process_dxf_doc(doc: Any, file_path: Path, max_layers: int = 20) -> str:
             if title:
                 metadata_parts.append(f"Title: {title}")
         except Exception:
-            logger.opt(exception=True).debug("Failed to read DXF $TITLE header")
+            logger.opt(exception=True).debug(
+                "Failed to read DXF $TITLE header for {}", file_path.name
+            )
 
         try:
             author = doc.header.get("$AUTHOR", "")
@@ -50,7 +52,9 @@ def _process_dxf_doc(doc: Any, file_path: Path, max_layers: int = 20) -> str:
                 author = doc.header.get("$LASTSAVEDBY", "Unknown")
             metadata_parts.append(f"Author: {author}")
         except Exception:
-            logger.opt(exception=True).debug("Failed to read DXF author metadata")
+            logger.opt(exception=True).debug(
+                "Failed to read DXF author metadata for {}", file_path.name
+            )
 
     # DXF version
     metadata_parts.append(f"DXF Version: {doc.dxfversion}")

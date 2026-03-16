@@ -51,6 +51,11 @@ def _is_silent_statement(statement: ast.stmt) -> bool:
         return True
     if isinstance(statement, ast.Return) and statement.value is None:
         return True
+    if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant):
+        if statement.value.value is Ellipsis:
+            return True
+        if isinstance(statement.value.value, (str, bytes)):
+            return True
     return False
 
 
@@ -187,6 +192,18 @@ try:
     run()
 except Exception:
     logger.debug("recovering")
+""",
+        """
+try:
+    run()
+except Exception:
+    ...
+""",
+        """
+try:
+    run()
+except Exception:
+    "ignored"
 """,
     ],
 )
