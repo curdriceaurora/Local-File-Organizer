@@ -10,6 +10,7 @@ Install the optional dependency::
 
 from __future__ import annotations
 
+import threading
 from typing import Any
 
 from loguru import logger
@@ -62,34 +63,44 @@ class MLXTextModel(BaseModel):
         self._model: Any | None = None
         self._tokenizer: Any | None = None
         self._working_variant_idx: int | None = None
+        self._init_lock = threading.Lock()
 
     def initialize(self) -> None:
         """Load model/tokenizer pair via ``mlx_lm.load``.
 
+        Uses double-checked locking to prevent concurrent initialization races.
+
         Raises:
             RuntimeError: If model loading fails.
         """
+        # First check (without lock for performance)
         if self._initialized:
             logger.debug("MLX text model {} already initialized", self.config.name)
             return
 
-        if mlx_load is None:  # guarded by MLX_LM_AVAILABLE in __init__; belt-and-suspenders
-            raise RuntimeError("mlx_load is None — mlx-lm is required; should not be reachable")
-        try:
-            loaded = mlx_load(self.config.model_path)
-        except Exception as exc:
-            raise RuntimeError(
-                f"Could not load MLX model from '{self.config.model_path}': {exc}"
-            ) from exc
+        # Acquire lock for critical section
+        with self._init_lock:
+            # Second check (after acquiring lock)
+            if self._initialized:
+                return
 
-        if not isinstance(loaded, tuple) or len(loaded) < 2:
-            raise RuntimeError(
-                "mlx_lm.load() returned an unexpected value; expected (model, tokenizer)"
-            )
+            if mlx_load is None:  # guarded by MLX_LM_AVAILABLE in __init__; belt-and-suspenders
+                raise RuntimeError("mlx_load is None — mlx-lm is required; should not be reachable")
+            try:
+                loaded = mlx_load(self.config.model_path)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Could not load MLX model from '{self.config.model_path}': {exc}"
+                ) from exc
 
-        self._model = loaded[0]
-        self._tokenizer = loaded[1]
-        super().initialize()
+            if not isinstance(loaded, tuple) or len(loaded) < 2:
+                raise RuntimeError(
+                    "mlx_lm.load() returned an unexpected value; expected (model, tokenizer)"
+                )
+
+            self._model = loaded[0]
+            self._tokenizer = loaded[1]
+            super().initialize()
 
     def generate(self, prompt: str, **kwargs: Any) -> str:
         """Generate text from prompt via ``mlx_lm.generate``.
