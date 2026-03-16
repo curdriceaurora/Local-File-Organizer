@@ -47,7 +47,10 @@ def test_issue_822_discovery_artifact_schema_and_counts() -> None:
         path, line = _split_location(location)
         assert path.is_file(), f"Discovery location points to missing file: {path}"
         assert line > 0
-
+        max_line = len(path.read_text(encoding="utf-8").splitlines())
+        assert line <= max_line, (
+            f"Discovery location line is out of range: {location!r} (max line {max_line})"
+        )
     import_defaults = discovery["import_time_derived_defaults"]
     assert isinstance(import_defaults, dict)
     sites = import_defaults["sites"]
