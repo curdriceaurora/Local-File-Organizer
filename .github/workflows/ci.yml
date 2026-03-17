@@ -138,6 +138,10 @@ jobs:
         python-version: ${{ github.event_name == 'pull_request' && fromJson('["3.11"]') || fromJson('["3.11", "3.12"]') }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          # fetch-depth: 0 is required for the diff-cover step on PRs —
+          # shallow clones lack the merge-base needed to compute the changed-line diff.
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -178,8 +182,6 @@ jobs:
         if: github.event_name == 'pull_request' && matrix.python-version == '3.11'
         run: |
           pip install diff-cover --quiet
-          rm -f .git/shallow.lock
-          git fetch origin main
           diff-cover coverage.xml --compare-branch=origin/main --fail-under=80
       - name: Check docstring coverage
         if: matrix.python-version == '3.11' && github.event_name != 'pull_request'
