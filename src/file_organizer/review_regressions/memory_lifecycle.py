@@ -30,12 +30,14 @@ _FEEDBACK_METHOD_NAMES = {"adjust_from_feedback"}
 
 
 def _iter_memory_lifecycle_python_files(root: Path) -> list[Path]:
+    """Return all Python files under the source root (or *root* if absent)."""
     source_root = root / _SOURCE_ROOT
     scan_root = source_root if source_root.exists() else root
     return iter_python_files(scan_root)
 
 
 def _parent_map(tree: ast.AST) -> dict[ast.AST, ast.AST]:
+    """Build a child → parent mapping for every node in *tree*."""
     parents: dict[ast.AST, ast.AST] = {}
     for parent in ast.walk(tree):
         for child in ast.iter_child_nodes(parent):

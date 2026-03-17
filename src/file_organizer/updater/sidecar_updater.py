@@ -172,6 +172,7 @@ def coordinated_update(
     result = CoordinatedUpdateResult()
 
     def emit(event: str, payload: object = None) -> None:
+        """Record *event* in the result log and forward it to any registered callback."""
         result.events.append(event)
         logger.info("Event: {} — {}", event, payload)
         if event_callback is not None:

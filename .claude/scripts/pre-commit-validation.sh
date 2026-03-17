@@ -70,8 +70,8 @@ run_step "Run semantic CI guardrails" pytest tests/ci -q --no-cov --override-ini
 # the ratchet epic (#857) raises them to final targets.
 # ---------------------------------------------------------------------------
 
-echo "▶ Docstring coverage gate (≥90%)"
-interrogate -v src/ --fail-under 90 -q
+echo "▶ Docstring coverage gate (≥95%)"
+interrogate -v src/ --fail-under 95 -q
 echo "✓ Docstring coverage"
 echo ""
 

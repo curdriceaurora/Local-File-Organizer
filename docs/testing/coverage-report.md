@@ -13,7 +13,7 @@ Epic #571 "Desktop UI Test Coverage" increased project **docstring coverage from
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
 | Test count | 500+ | 916+ | ✅ +83% |
-| Docstring coverage | 90% | 96.8% | ✅ +6.8% |
+| Docstring coverage | 95% | 95.0% | ✅ |
 | API module coverage | 80% | 92% | ✅ +12% |
 | Services coverage | 80% | 82% | ✅ +2% |
 | Models coverage | 90% | 90% | ✅ Met |

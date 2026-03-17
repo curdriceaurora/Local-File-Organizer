@@ -25,6 +25,7 @@ class WorkflowIntegration(Integration):
         super().__init__(config)
 
     def _output_dir(self) -> Path:
+        """Return the configured output directory, falling back to the default config path."""
         raw = str(self.config.settings.get("output_dir", "")).strip()
         if raw:
             return Path(raw).expanduser()

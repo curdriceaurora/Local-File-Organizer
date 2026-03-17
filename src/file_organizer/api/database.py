@@ -61,6 +61,7 @@ def resolve_database_url(database: str) -> str:
 
 
 def _is_sqlite_url(url: str) -> bool:
+    """Return True if *url* is a SQLite connection string."""
     return url.startswith("sqlite")
 
 

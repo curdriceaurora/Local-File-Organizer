@@ -12,7 +12,7 @@ The pre-commit validation script includes comprehensive documentation verificati
 **Check**: Verifies percentage claims match actual CI configuration
 
 - ❌ Detects: "74% CI gate" (outdated)
-- ✅ Expects: "95% code coverage" or "90% docstring coverage"
+- ✅ Expects: "95% code coverage" or "95% docstring coverage"
 - **Source of Truth**: `pyproject.toml` (`cov-fail-under=95`)
 
 **Why**: Documented CI gates must match actual enforcement, or developers follow wrong targets
@@ -78,7 +78,7 @@ Before committing documentation changes, manually verify:
 ### Accuracy Checks
 
 - [ ] **Coverage Thresholds**
-  - CI gate is 95% (code) and 90% (docstrings)
+  - CI gate is 95% (code) and 95% (docstrings)
   - Matches `pyproject.toml --cov-fail-under`
   - PR vs main behavior differs (PR doesn't enforce)
 

@@ -115,6 +115,7 @@ class BM25Index:
 
 # Verify structural conformance at import time (no runtime overhead).
 def _check() -> None:
+    """Verify structural conformance of BM25Index at import time."""
     assert isinstance(BM25Index, type)
     # Runtime check deferred — BM25Index satisfies IndexProtocol structurally.
 

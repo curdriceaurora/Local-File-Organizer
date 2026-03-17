@@ -83,7 +83,7 @@ pytest -m ci
 | **web/** | 1,800+ | 1,400+ | 78% | 80% 🔶 |
 | **models/** | 500+ | 450+ | 90% | 90% ✅ |
 | **config/** | 400+ | 380+ | 95% | 90% ✅ |
-| **Docstrings** | 3,624 items | 3,508 | 96.8% | 90% ✅ |
+| **Docstrings** | 4,130 items | 3,924 | 95.0% | 95% ✅ |
 
 **Overall**: 916+ tests, ~95%+ on tested modules, 96.8% docstring coverage
 
@@ -108,7 +108,7 @@ pytest --cov=file_organizer --cov-report=html
 # Open htmlcov/index.html to view
 
 # Docstring coverage (requires interrogate)
-interrogate -v src/file_organizer --fail-under 90
+interrogate -v src/file_organizer --fail-under 95
 ```
 
 ## Testing Patterns
@@ -327,7 +327,7 @@ GitHub Actions runs automated checks on every PR and push to main:
 
 **Main Branch Pushes:**
 - Full test suite passes (`pytest`)
-- Coverage must be ≥ 95% (code) or ≥ 90% (docstrings)
+- Coverage must be ≥ 95% (code) or ≥ 95% (docstrings)
 - Linting must pass (ruff and markdownlint)
 - Type checking must pass (mypy)
 

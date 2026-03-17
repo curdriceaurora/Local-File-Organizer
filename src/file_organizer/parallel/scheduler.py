@@ -85,6 +85,7 @@ class TaskScheduler:
         """
 
         def _safe_size(path: Path) -> int:
+            """Return file size in bytes, or 0 if the stat call fails."""
             try:
                 return path.stat().st_size
             except OSError:

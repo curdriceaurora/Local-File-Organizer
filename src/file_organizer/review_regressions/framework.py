@@ -28,6 +28,7 @@ _DEFAULT_EXCLUDE_DIRS = {
 
 
 def _stable_hash(parts: Iterable[str]) -> str:
+    """Return a 16-char hex digest over *parts*, stable across Python processes."""
     digest = hashlib.sha256()
     for part in parts:
         digest.update(part.encode("utf-8"))
@@ -36,6 +37,7 @@ def _stable_hash(parts: Iterable[str]) -> str:
 
 
 def _normalized_relative_path(path: Path, root: Path) -> str:
+    """Return *path* as a POSIX string relative to *root*, normalising absolute and relative inputs."""
     # Normalize the audit root once so every candidate is compared against the same base.
     resolved_root = root.resolve()
     if path.is_absolute():
