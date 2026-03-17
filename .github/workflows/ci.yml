@@ -144,8 +144,10 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: |
-          # Install core package with dev dependencies
-          pip install -e ".[dev]"
+          # Install core package with dev dependencies + search (rank-bm25, scikit-learn)
+          # search is required for TestBM25Index, TestVectorIndexRecall, TestHybridRetriever,
+          # and related CLI/API/copilot tests — not in dev because it is an optional runtime extra.
+          pip install -e ".[dev,search]"
 
           # Explicitly install pytest-asyncio and faker to ensure they're available
           # This fixes installation order issues on Python 3.11 where pytest might load before pytest-asyncio

@@ -389,10 +389,10 @@ class TestCleanAiGeneratedName:
         """Single-character words are removed (len(word) > 1 check)."""
         assert text_processor._clean_ai_generated_name("a b c data") == "data"
 
-    def test_numbers_removed(self, text_processor: TextProcessor) -> None:
-        """Numbers and special chars are stripped."""
+    def test_digits_preserved(self, text_processor: TextProcessor) -> None:
+        """Digits are preserved; special chars (non-alphanumeric) are stripped."""
         result = text_processor._clean_ai_generated_name("report 2023 budget")
-        assert result == "report_budget"
+        assert result == "report_2023_budget"
 
     def test_underscores_and_hyphens_converted(self, text_processor: TextProcessor) -> None:
         """Underscores and hyphens are treated as spaces."""
@@ -567,10 +567,11 @@ class TestGenerateFolderName:
     def test_long_name_truncated(
         self, text_processor: TextProcessor, mock_text_model: MagicMock
     ) -> None:
-        """Folder name is truncated to 50 characters."""
-        mock_text_model.generate.return_value = "very " * 20 + "long"
+        """Folder name is truncated to exactly 50 characters when AI response is very long."""
+        # Two unique 26-char words joined = 53 chars, which the [:50] slice trims to 50.
+        mock_text_model.generate.return_value = "a" * 26 + " " + "b" * 26
         folder = text_processor._generate_folder_name("Content")
-        assert len(folder) <= 50
+        assert len(folder) == 50
 
     def test_multiline_response_handled(
         self, text_processor: TextProcessor, mock_text_model: MagicMock
@@ -753,10 +754,11 @@ class TestGenerateFilename:
     def test_long_name_truncated(
         self, text_processor: TextProcessor, mock_text_model: MagicMock
     ) -> None:
-        """Filename is truncated to 50 characters."""
-        mock_text_model.generate.return_value = "very " * 20 + "long"
+        """Filename is truncated to exactly 50 characters when AI response is very long."""
+        # Two unique 26-char words joined = 53 chars, which the [:50] slice trims to 50.
+        mock_text_model.generate.return_value = "a" * 26 + " " + "b" * 26
         filename = text_processor._generate_filename("Content")
-        assert len(filename) <= 50
+        assert len(filename) == 50
 
     def test_multiline_response_handled(
         self, text_processor: TextProcessor, mock_text_model: MagicMock

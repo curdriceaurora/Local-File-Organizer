@@ -97,7 +97,13 @@ def test_preview_command(mock_organizer_cls, tmp_path):
 
     assert result.exit_code == 0
     assert "Previewing" in result.stdout
-    mock_organizer_cls.assert_called_once_with(dry_run=True)
+    mock_organizer_cls.assert_called_once_with(
+        dry_run=True,
+        parallel_workers=None,
+        prefetch_depth=2,
+        enable_vision=True,
+        no_prefetch=False,
+    )
     mock_instance.organize.assert_called_once_with(Path("in_dir"), Path("in_dir"))
 
 
