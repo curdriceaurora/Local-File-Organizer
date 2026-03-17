@@ -217,7 +217,7 @@ jobs:
       - name: "Integration coverage gate (floor: 70%)"
         # Ratchet floor — bump threshold in the PR that closes each gap.
         # Current floor: 70%. Target per issue #856: 90%.
-        run: pytest tests/ -m "integration" --cov=file_organizer --cov-fail-under=70 --cov-report=term-missing --cov-report=xml --timeout=60 --override-ini="addopts="
+        run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-fail-under=70 --cov-report=term-missing --cov-report=xml --timeout=60 --override-ini="addopts="
 
   rust-check:
     name: Rust desktop build
