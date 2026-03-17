@@ -27,6 +27,11 @@ def search(
     limit: int = typer.Option(50, "--limit", "-n", help="Max results to show."),
     recursive: bool = typer.Option(True, help="Search subdirectories."),
     json_out: bool = typer.Option(False, "--json", help="Output as JSON array."),
+    semantic: bool = typer.Option(
+        False,
+        "--semantic",
+        help="Use hybrid BM25+vector semantic search instead of filename matching.",
+    ),
 ) -> None:
     """Search for files by name pattern with optional type filtering."""
     from datetime import UTC, datetime
@@ -125,6 +130,105 @@ def search(
             f"Choose from: {', '.join(sorted(type_extensions))}[/red]"
         )
         raise typer.Exit(code=1)
+
+    # ------------------------------------------------------------------
+    # Semantic path — hybrid BM25 + vector retrieval
+    # ------------------------------------------------------------------
+    if semantic:
+        try:
+            from file_organizer.services.search.hybrid_retriever import HybridRetriever
+        except ImportError as exc:
+            console.print(f"[red]Error: Semantic search unavailable: {exc}[/red]")
+            raise typer.Exit(code=1) from exc
+
+        _BINARY_PEEK = 512
+        _TEXT_LIMIT = 4096
+
+        documents: list[str] = []
+        sem_paths: list[Path] = []
+
+        gen = search_dir.rglob("*") if recursive else search_dir.glob("*")
+        for entry in gen:
+            if not entry.is_file():
+                continue
+            # Skip binary files
+            try:
+                header = entry.read_bytes()[:_BINARY_PEEK]
+            except OSError:
+                continue
+            text = ""
+            if b"\x00" not in header:
+                try:
+                    text = entry.read_text(errors="replace")[:_TEXT_LIMIT]
+                except OSError:
+                    pass
+            doc = f"{entry.stem} {' '.join(entry.parts)} {text}".strip()
+            documents.append(doc)
+            sem_paths.append(entry)
+
+        if not sem_paths:
+            if json_out:
+                typer.echo("[]")
+            else:
+                console.print("[dim]No files found for semantic indexing.[/dim]")
+            raise typer.Exit(code=0)
+
+        retriever = HybridRetriever()
+        try:
+            retriever.index(documents, sem_paths)
+        except Exception as exc:
+            console.print(f"[red]Error: Failed to build semantic index: {exc}[/red]")
+            raise typer.Exit(code=1) from exc
+
+        raw_results = retriever.retrieve(query, top_k=limit)
+
+        # Apply type filter
+        if type_filter is not None:
+            type_exts = type_extensions.get(type_filter, set())
+            raw_results = [(p, s) for p, s in raw_results if p.suffix.lower() in type_exts]
+
+        if not raw_results:
+            if json_out:
+                typer.echo("[]")
+            else:
+                console.print("[dim]No files found matching the query.[/dim]")
+            raise typer.Exit(code=0)
+
+        if json_out:
+            records = []
+            for p, score in raw_results[:limit]:
+                stat = p.stat()
+                records.append(
+                    {
+                        "path": str(p),
+                        "score": round(score, 6),
+                        "size": stat.st_size,
+                        "modified": datetime.fromtimestamp(stat.st_mtime, tz=UTC).strftime(
+                            "%Y-%m-%dT%H:%M:%SZ"
+                        ),
+                    }
+                )
+            typer.echo(json_mod.dumps(records, indent=2))
+        else:
+            typer.echo(f"Found {len(raw_results)} file(s) [semantic]:")
+            for p, score in raw_results[:limit]:
+                stat = p.stat()
+                size = stat.st_size
+                if size < 1024:
+                    size_str = f"{size} B"
+                elif size < 1024 * 1024:
+                    size_str = f"{size / 1024:.1f} KB"
+                else:
+                    size_str = f"{size / (1024 * 1024):.1f} MB"
+                mtime = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+                typer.echo(
+                    f"  {p}  {size_str}  {mtime.strftime('%Y-%m-%dT%H:%M:%SZ')}  score={score:.4f}"
+                )
+        raise typer.Exit(code=0)
+
+    # ------------------------------------------------------------------
+    # Default path — glob pattern or filename keyword matching
+    # ------------------------------------------------------------------
 
     # Determine if query is a glob pattern or keyword
     is_glob = any(c in query for c in ("*", "?", "["))

@@ -211,3 +211,93 @@ class TestSearch:
         # Optional fields that should be present
         assert "type" in result
         assert "size" in result
+
+
+@pytest.mark.unit
+class TestSemanticSearch:
+    """Tests for GET /api/v1/search?semantic=true."""
+
+    def test_semantic_false_is_default(self, tmp_path: Path) -> None:
+        """Default search (no semantic param) uses keyword path — result set unchanged."""
+        (tmp_path / "report.txt").write_text("quarterly finance report")
+        _, client = _build_app(tmp_path)
+
+        resp_default = client.get("/api/v1/search?q=report")
+        resp_explicit = client.get("/api/v1/search?q=report&semantic=false")
+        assert resp_default.status_code == 200
+        assert resp_explicit.status_code == 200
+        assert resp_default.json() == resp_explicit.json()
+
+    def test_semantic_true_returns_200(self, tmp_path: Path) -> None:
+        """semantic=true returns HTTP 200 and a list."""
+        (tmp_path / "finance.txt").write_text("quarterly finance report summary")
+        (tmp_path / "notes.txt").write_text("meeting notes agenda items")
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?q=finance&semantic=true")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
+
+    def test_semantic_true_empty_dir_returns_empty_list(self, tmp_path: Path) -> None:
+        """Semantic search over an empty directory returns []."""
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?q=anything&semantic=true")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_semantic_true_result_schema(self, tmp_path: Path) -> None:
+        """Semantic results contain the same fields as keyword results."""
+        (tmp_path / "doc.txt").write_text("finance budget quarterly report")
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?q=finance&semantic=true")
+        assert resp.status_code == 200
+        results = resp.json()
+        if results:
+            result = results[0]
+            assert "filename" in result
+            assert "path" in result
+            assert "score" in result
+            assert "type" in result
+            assert "size" in result
+
+    def test_semantic_true_missing_query_returns_400(self, tmp_path: Path) -> None:
+        """semantic=true still requires the q param."""
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?semantic=true")
+        assert resp.status_code == 400
+
+    def test_semantic_true_keyword_path_unchanged(self, tmp_path: Path) -> None:
+        """Existing keyword search path is unaffected when semantic=false."""
+        (tmp_path / "myfile.txt").write_text("hello world")
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?q=myfile&semantic=false")
+        assert resp.status_code == 200
+        results = resp.json()
+        assert any(r["filename"] == "myfile.txt" for r in results)
+
+    def test_semantic_true_with_type_filter(self, tmp_path: Path) -> None:
+        """semantic=true respects the type filter parameter."""
+        (tmp_path / "report.txt").write_text("finance quarterly report")
+        (tmp_path / "data.csv").write_text("col1,col2\n1,2")
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?q=report&semantic=true&type=txt")
+        assert resp.status_code == 200
+        results = resp.json()
+        # All returned files must be .txt
+        for r in results:
+            assert r["type"] == "txt"
+
+    def test_semantic_true_limit_param_respected(self, tmp_path: Path) -> None:
+        """semantic=true honours the limit query parameter."""
+        for i in range(6):
+            (tmp_path / f"file_{i}.txt").write_text(f"document {i} about finance")
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?q=finance&semantic=true&limit=2")
+        assert resp.status_code == 200
+        assert len(resp.json()) <= 2

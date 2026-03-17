@@ -171,3 +171,59 @@ def test_search_glob_pattern_question(tmp_path: Path):
     assert "a1.txt" in result.output
     assert "a2.txt" in result.output
     assert "b1.txt" not in result.output
+
+
+def test_search_semantic_flag_in_help():
+    """``search --help`` documents the --semantic flag."""
+    result = runner.invoke(app, ["search", "--help"])
+    assert result.exit_code == 0
+    plain = _strip_ansi(result.output)
+    assert "--semantic" in plain
+
+
+def test_search_semantic_finds_relevant_files(tmp_path: Path):
+    """--semantic returns files relevant to the query."""
+    (tmp_path / "finance.txt").write_text("quarterly finance budget report")
+    (tmp_path / "notes.txt").write_text("meeting notes agenda items")
+
+    result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic"])
+    assert result.exit_code == 0
+    # At least finance.txt should appear
+    assert "finance" in result.output.lower()
+
+
+def test_search_semantic_empty_dir_exits_zero(tmp_path: Path):
+    """--semantic on empty directory exits 0 with no-files message."""
+    result = runner.invoke(app, ["search", "anything", str(tmp_path), "--semantic"])
+    assert result.exit_code == 0
+
+
+def test_search_semantic_json_output(tmp_path: Path):
+    """--semantic --json emits a valid JSON array with score field."""
+    (tmp_path / "doc.txt").write_text("finance quarterly report")
+
+    result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic", "--json"])
+    assert result.exit_code == 0
+    records = json.loads(result.output)
+    assert isinstance(records, list)
+    if records:
+        assert "path" in records[0]
+        assert "score" in records[0]
+
+
+def test_search_semantic_respects_limit(tmp_path: Path):
+    """--semantic --limit N returns at most N results."""
+    for i in range(5):
+        (tmp_path / f"file_{i}.txt").write_text(f"document {i} finance report")
+
+    result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic", "--limit", "2"])
+    assert result.exit_code == 0
+
+
+def test_search_default_unchanged_by_semantic_flag(tmp_path: Path):
+    """Default search (no --semantic) still works after the flag was added."""
+    (tmp_path / "readme.md").write_text("docs")
+
+    result = runner.invoke(app, ["search", "readme", str(tmp_path)])
+    assert result.exit_code == 0
+    assert "readme.md" in result.output

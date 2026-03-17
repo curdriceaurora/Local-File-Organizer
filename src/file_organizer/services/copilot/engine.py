@@ -6,7 +6,7 @@ parses responses into structured output.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -20,6 +20,9 @@ from file_organizer.services.copilot.models import (
     Intent,
     MessageRole,
 )
+
+if TYPE_CHECKING:
+    from file_organizer.interfaces.search import RetrieverProtocol
 
 # Default system prompt that describes the copilot's capabilities.
 _SYSTEM_PROMPT = """\
@@ -62,8 +65,19 @@ class CopilotEngine:
         working_directory: str | None = None,
         system_prompt: str | None = None,
         max_history_turns: int = _MAX_HISTORY_TURNS,
+        retriever: RetrieverProtocol | None = None,
     ) -> None:
-        """Initialize CopilotEngine."""
+        """Initialize CopilotEngine.
+
+        Args:
+            text_model: Optional LLM for natural-language response generation.
+            working_directory: Default directory context for file operations.
+            system_prompt: Override the built-in system prompt.
+            max_history_turns: Number of conversation turns to retain.
+            retriever: Optional :class:`RetrieverProtocol` for semantic FIND
+                context gathering.  When supplied and initialised, FIND intents
+                use hybrid BM25+vector retrieval instead of filename scanning.
+        """
         self._system_prompt = system_prompt or _SYSTEM_PROMPT
         self._max_history_turns = max_history_turns
 
@@ -72,7 +86,10 @@ class CopilotEngine:
             token_budget=_MAX_CONTEXT_TOKENS,
         )
         self._intent_parser = IntentParser()
-        self._executor = CommandExecutor(working_directory=working_directory)
+        self._executor = CommandExecutor(
+            working_directory=working_directory,
+            retriever=retriever,
+        )
 
         self._text_model = text_model
         self._session = CopilotSession(working_directory=working_directory)
