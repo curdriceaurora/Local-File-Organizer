@@ -1,44 +1,60 @@
 # Search Endpoints
 
-!!! warning "Coming Soon"
-The Search API is currently under development and not yet available.
-The endpoints documented below represent the planned API surface.
+## `GET /api/v1/search`
 
-## Planned Endpoints
+Search for files by keyword or hybrid BM25+vector semantic relevance.
 
-The following endpoints are planned for a future release:
+**Query Parameters:**
 
-- `GET /api/v1/search` — Full-text search across files
-- `POST /api/v1/search/advanced` — Advanced search with filters
-- `GET /api/v1/search/saved` — Retrieve saved searches
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | Yes | Search query |
+| `type` | string | No | Filter by file extension (e.g. `pdf`, `.txt`) |
+| `limit` | integer | No | Maximum results to return |
+| `offset` | integer | No | Pagination offset |
+| `path` | string | No | Restrict search to a specific directory |
+| `semantic` | boolean | No | Use hybrid BM25+vector search (default: `false`) |
 
-## Planned Query Parameters
+**Keyword search** (`semantic=false`, default): ranks results by filename and
+path relevance using scoring tiers (exact match → stem contains → extension
+match → path contains).
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `q` | string | Search query (required) |
-| `type` | string | Filter by file type |
-| `size` | string | Filter by size range |
-| `date` | string | Filter by date range |
-| `page` | integer | Page number |
-| `limit` | integer | Results per page |
+**Semantic search** (`semantic=true`): indexes file content using BM25 and
+TF-IDF vector representations, then fuses both rankings with Reciprocal Rank
+Fusion (RRF, k=60) to return content-relevant results. Each result includes an
+`rrf_score` field.
 
-## Planned Response Format
+**Response:** `200 OK` — array of search result objects.
 
 ```json
-{
-  "results": [
-    {
-      "id": "file_1",
-      "name": "report.pdf",
-      "relevance": 0.95
-    }
-  ],
-  "total": 10,
-  "page": 1
-}
+[
+  {
+    "filename": "quarterly_budget.txt",
+    "path": "/home/user/docs/quarterly_budget.txt",
+    "score": 0.030769,
+    "type": "txt",
+    "size": 4096,
+    "created": "2026-01-15T10:30:00Z"
+  }
+]
 ```
 
-______________________________________________________________________
+**Error responses:**
+- `400 Bad Request` — `q` parameter missing or empty
 
-See [API Reference](index.md) for currently available endpoints.
+**Examples:**
+
+```bash
+# Keyword search
+curl "http://localhost:8000/api/v1/search?q=report&limit=10"
+
+# Semantic search with type filter
+curl "http://localhost:8000/api/v1/search?q=quarterly+budget+forecast&semantic=true&type=txt"
+
+# Paginated results
+curl "http://localhost:8000/api/v1/search?q=invoice&limit=20&offset=40"
+```
+
+---
+
+See [API Reference](index.md) for authentication and other endpoints.

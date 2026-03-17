@@ -140,7 +140,8 @@ file-organizer serve --workers 4
 
 ### `search`
 
-Search for files by name pattern with optional type filtering.
+Search for files by name pattern with optional type filtering, or use hybrid
+BM25+vector semantic search to find files by content relevance.
 
 **Usage:**
 
@@ -149,7 +150,8 @@ file-organizer search QUERY [DIRECTORY] [OPTIONS]
 ```
 
 **Arguments:**
-- `QUERY` — Search query (glob pattern like `*.pdf` or keyword like `report`)
+- `QUERY` — Search query (glob pattern like `*.pdf`, keyword like `report`, or
+  a natural-language phrase when using `--semantic`)
 - `DIRECTORY` — Directory to search in (default: current directory)
 
 **Options:**
@@ -157,6 +159,8 @@ file-organizer search QUERY [DIRECTORY] [OPTIONS]
 - `--limit, -n INTEGER` — Max results to show (default: 50)
 - `--recursive / --no-recursive` — Search subdirectories (default: recursive)
 - `--json` — Output as JSON array
+- `--semantic` — Use hybrid BM25+vector semantic search instead of filename
+  matching; ranks results by content relevance using Reciprocal Rank Fusion
 
 **Examples:**
 
@@ -175,6 +179,12 @@ file-organizer search "*.log" /var/log --no-recursive --limit 10
 
 # JSON output for scripting
 file-organizer search "*.py" ./src --json
+
+# Semantic search — finds files by content relevance, not just filename
+file-organizer search "quarterly budget forecast" ~/Documents --semantic
+
+# Semantic search with type filter and JSON output
+file-organizer search "meeting notes" ~/work --semantic --type text --json
 ```
 
 ---
