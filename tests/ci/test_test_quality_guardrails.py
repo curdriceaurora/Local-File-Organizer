@@ -266,6 +266,8 @@ def _find_time_sleep(path: Path) -> list[str]:
     """Return ``file:line`` strings for actual ``time.sleep()`` call nodes in *path*.
 
     Uses AST parsing to detect real calls, not mentions in docstrings or strings.
+    Handles all common import forms: ``import time``, ``import time as t``,
+    ``from time import sleep``, and ``from time import sleep as delay``.
     """
     source = path.read_text(encoding="utf-8")
     try:
@@ -273,18 +275,31 @@ def _find_time_sleep(path: Path) -> list[str]:
     except SyntaxError:
         return []
 
+    time_aliases: set[str] = set()
+    sleep_aliases: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "time":
+                    time_aliases.add(alias.asname or alias.name)
+        elif isinstance(node, ast.ImportFrom) and node.module == "time":
+            for alias in node.names:
+                if alias.name == "sleep":
+                    sleep_aliases.add(alias.asname or alias.name)
+
     violations: list[str] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         func = node.func
-        # Match time.sleep(...)
+        # Match time.sleep(...), import time as t; t.sleep(...),
+        # and from time import sleep; sleep(...)
         if (
             isinstance(func, ast.Attribute)
             and func.attr == "sleep"
             and isinstance(func.value, ast.Name)
-            and func.value.id == "time"
-        ):
+            and func.value.id in time_aliases
+        ) or (isinstance(func, ast.Name) and func.id in sleep_aliases):
             violations.append(f"{path}:{node.lineno}")
     return violations
 
@@ -324,11 +339,29 @@ def _find_vacuous_len_lte_assertions(source: str, path: str = "<string>") -> lis
     These are vacuous upper bounds: when a test corpus guarantees N results
     (e.g. ``top_k=N`` with enough documents), ``<=`` always passes even if
     the index returns zero matches.  Use ``==`` for exact-count assertions.
+
+    Also catches named-variable bounds where the variable is assigned a literal
+    integer in the same file (e.g. ``expected = 5; assert len(results) <= expected``).
     """
     try:
         tree = ast.parse(source, filename=path)
     except SyntaxError:
         return []
+
+    # Collect simple name → literal-int assignments (e.g. ``expected = 5``)
+    int_names: set[str] = set()
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and isinstance(node.value, ast.Constant)
+            and type(node.value.value) is int
+        ):
+            int_names.add(node.targets[0].id)
+
+    def _is_int_bound(n: ast.AST) -> bool:
+        return _is_literal_int(n) or (isinstance(n, ast.Name) and n.id in int_names)
 
     violations: list[str] = []
     for node in ast.walk(tree):
@@ -350,7 +383,7 @@ def _find_vacuous_len_lte_assertions(source: str, path: str = "<string>") -> lis
             and isinstance(left.func, ast.Name)
             and left.func.id == "len"
             and isinstance(op, ast.LtE)
-            and _is_literal_int(right)
+            and _is_int_bound(right)
         )
         # assert N >= len(...)  (reverse — less common but still vacuous)
         reverse = (
@@ -358,7 +391,7 @@ def _find_vacuous_len_lte_assertions(source: str, path: str = "<string>") -> lis
             and isinstance(right.func, ast.Name)
             and right.func.id == "len"
             and isinstance(op, ast.GtE)
-            and _is_literal_int(left)
+            and _is_int_bound(left)
         )
 
         if forward or reverse:
@@ -376,6 +409,9 @@ def _find_vacuous_len_lte_assertions(source: str, path: str = "<string>") -> lis
         ("assert len(results) == 5\n", 0),
         ("assert len(results) < 5\n", 0),  # strict less-than is intentional
         ("assert len(results) >= 1\n", 0),  # lower bound is fine
+        # Named-variable bounds are equally vacuous
+        ("expected = 5\nassert len(results) <= expected\n", 1),
+        ("expected = 5\nassert expected >= len(results)\n", 1),
     ],
 )
 def test_detector_flags_vacuous_len_lte(source: str, expected_count: int) -> None:
