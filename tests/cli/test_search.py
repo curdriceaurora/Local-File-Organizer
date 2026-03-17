@@ -206,9 +206,9 @@ def test_search_semantic_json_output(tmp_path: Path):
     assert result.exit_code == 0
     records = json.loads(result.output)
     assert isinstance(records, list)
-    if records:
-        assert "path" in records[0]
-        assert "score" in records[0]
+    assert len(records) >= 1, "single-file corpus with matching query must return ≥1 result"
+    assert "path" in records[0]
+    assert "score" in records[0]
 
 
 def test_search_semantic_respects_limit(tmp_path: Path):
@@ -218,6 +218,9 @@ def test_search_semantic_respects_limit(tmp_path: Path):
 
     result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic", "--limit", "2"])
     assert result.exit_code == 0
+    # Count result lines — each result line starts with two spaces
+    result_lines = [ln for ln in result.output.splitlines() if ln.startswith("  ")]
+    assert len(result_lines) == 2
 
 
 def test_search_default_unchanged_by_semantic_flag(tmp_path: Path):

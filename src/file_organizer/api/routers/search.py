@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.utils import is_hidden, resolve_path
-from file_organizer.services.search.hybrid_retriever import read_text_safe
+from file_organizer.services.search.hybrid_retriever import HybridRetriever, read_text_safe
 
 logger = logging.getLogger(__name__)
 
@@ -172,8 +172,6 @@ def _semantic_search(
     Returns:
         List of :class:`SearchResult` sorted by descending RRF score.
     """
-    from file_organizer.services.search.hybrid_retriever import HybridRetriever
-
     documents, paths = _build_semantic_corpus(roots)
     if not paths:
         return []

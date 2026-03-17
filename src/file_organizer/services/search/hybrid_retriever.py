@@ -181,9 +181,10 @@ class HybridRetriever:
         After this call :attr:`is_initialized` is ``True`` and
         :meth:`retrieve` may be called.
 
-        If the vector index fails to build (e.g. corpus too small for the
-        TF-IDF vectorizer), the retriever falls back to BM25-only mode and
-        logs a warning rather than raising.
+        If the vector index raises ``ValueError`` during build (e.g. corpus too
+        small for the TF-IDF vectorizer, or all terms pruned by ``max_df``),
+        the retriever falls back to BM25-only mode and logs a warning rather
+        than raising.
 
         Args:
             documents: Textual representation of each file (name + content).
@@ -203,7 +204,7 @@ class HybridRetriever:
         self._bm25.index(documents, paths)
         try:
             self._vector.index(documents, paths)
-        except Exception as exc:
+        except ValueError as exc:
             # Corpus may be too small for the TF-IDF vectorizer (e.g. < 2 documents,
             # or max_df pruning removes all terms).  Fall back to BM25-only retrieval.
             logger.warning(

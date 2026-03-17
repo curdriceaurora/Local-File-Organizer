@@ -254,13 +254,13 @@ class TestSemanticSearch:
         resp = client.get("/api/v1/search?q=finance&semantic=true")
         assert resp.status_code == 200
         results = resp.json()
-        if results:
-            result = results[0]
-            assert "filename" in result
-            assert "path" in result
-            assert "score" in result
-            assert "type" in result
-            assert "size" in result
+        assert len(results) >= 1, "single-file corpus with matching query must return ≥1 result"
+        result = results[0]
+        assert "filename" in result
+        assert "path" in result
+        assert isinstance(result["score"], float)
+        assert "type" in result
+        assert "size" in result
 
     def test_semantic_true_missing_query_returns_400(self, tmp_path: Path) -> None:
         """semantic=true still requires the q param."""
@@ -300,4 +300,4 @@ class TestSemanticSearch:
 
         resp = client.get("/api/v1/search?q=finance&semantic=true&limit=2")
         assert resp.status_code == 200
-        assert len(resp.json()) <= 2
+        assert len(resp.json()) == 2

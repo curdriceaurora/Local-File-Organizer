@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import ANY, MagicMock
 
 import pytest
 
@@ -186,11 +186,13 @@ class TestHybridRetrieverRetrieve:
         r = _make_retriever_with_corpus(docs, paths)
         results = r.retrieve("quarterly report")
         assert isinstance(results, list)
+        assert len(results) > 0, "query 'quarterly report' should match at least one document"
         for item in results:
             assert isinstance(item, tuple)
             assert len(item) == 2
             assert isinstance(item[0], Path)
             assert isinstance(item[1], float)
+            assert item[0] in paths, "returned path must be from the indexed corpus"
 
     def test_retrieve_top_k_limits_output(self) -> None:
         paths = _make_paths(10)
@@ -208,7 +210,7 @@ class TestHybridRetrieverRetrieve:
         ]
         r = _make_retriever_with_corpus(docs, paths)
         results = r.retrieve("finance report", top_k=3)
-        assert len(results) <= 3
+        assert len(results) == 3
 
     def test_retrieve_scores_are_positive(self) -> None:
         paths = _make_paths(5)
@@ -273,8 +275,8 @@ class TestHybridRetrieverMocked:
 
         results = r.retrieve("test query", top_k=5)
 
-        bm25_mock.search.assert_called_once()
-        vector_mock.search.assert_called_once()
+        bm25_mock.search.assert_called_once_with("test query", top_k=ANY)
+        vector_mock.search.assert_called_once_with("test query", top_k=ANY)
 
         # paths[1] is in both lists — should appear exactly once in output
         result_paths = [p for p, _ in results]
