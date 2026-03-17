@@ -391,7 +391,7 @@ class TestCleanAiGeneratedName:
 
     def test_digits_preserved(self, text_processor: TextProcessor) -> None:
         """Digits are preserved; special chars (non-alphanumeric) are stripped."""
-        result = text_processor._clean_ai_generated_name("report 2023 budget")
+        result = text_processor._clean_ai_generated_name("report 2023-budget!")
         assert result == "report_2023_budget"
 
     def test_underscores_and_hyphens_converted(self, text_processor: TextProcessor) -> None:
@@ -572,6 +572,7 @@ class TestGenerateFolderName:
         mock_text_model.generate.return_value = "a" * 26 + " " + "b" * 26
         folder = text_processor._generate_folder_name("Content")
         assert len(folder) == 50
+        assert folder == "a" * 26 + "_" + "b" * 23
 
     def test_multiline_response_handled(
         self, text_processor: TextProcessor, mock_text_model: MagicMock
@@ -759,6 +760,7 @@ class TestGenerateFilename:
         mock_text_model.generate.return_value = "a" * 26 + " " + "b" * 26
         filename = text_processor._generate_filename("Content")
         assert len(filename) == 50
+        assert filename == "a" * 26 + "_" + "b" * 23
 
     def test_multiline_response_handled(
         self, text_processor: TextProcessor, mock_text_model: MagicMock
