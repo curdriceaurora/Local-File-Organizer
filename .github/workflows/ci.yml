@@ -178,6 +178,7 @@ jobs:
         if: github.event_name == 'pull_request' && matrix.python-version == '3.11'
         run: |
           pip install diff-cover --quiet
+          rm -f .git/shallow.lock
           git fetch origin main --depth=1
           diff-cover coverage.xml --compare-branch=origin/main --fail-under=80
       - name: Check docstring coverage
