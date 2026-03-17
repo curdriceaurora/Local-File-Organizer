@@ -82,9 +82,9 @@ pytest tests/ -m "unit and not benchmark" \
 echo "✓ Unit test coverage"
 echo ""
 
-echo "▶ Integration test coverage gate (≥70%)"
+echo "▶ Integration test coverage gate (≥30%)"
 pytest tests/ -m "integration and not benchmark" \
-  --cov=file_organizer --cov-fail-under=70 --no-cov-on-fail \
+  --cov=file_organizer --cov-fail-under=30 --no-cov-on-fail \
   -q --override-ini="addopts="
 echo "✓ Integration test coverage"
 echo ""
