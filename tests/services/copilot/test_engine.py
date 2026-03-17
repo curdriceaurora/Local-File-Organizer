@@ -571,7 +571,10 @@ class TestCopilotEngineRetriever:
         retriever.is_initialized = True
         retriever.retrieve.return_value = [(mock_path, 0.05)]
 
-        engine = CopilotEngine(retriever=retriever)
+        engine = CopilotEngine(
+            working_directory=str(tmp_path),
+            retriever=retriever,
+        )
 
         intent = Intent(
             intent_type=IntentType.FIND,
@@ -640,7 +643,9 @@ class TestCopilotEngineRetrieverIntegration:
                 read_text_safe,
             )
         except ImportError:
-            pytest.skip("search dependencies not installed")
+            pytest.fail(
+                "search dependencies not installed — run: pip install 'file-organizer[search]'"
+            )
 
         finance_file = tmp_path / "finance_report.txt"
         other_file = tmp_path / "meeting_notes.txt"
@@ -675,7 +680,9 @@ class TestCopilotEngineRetrieverIntegration:
                 HybridRetriever,  # noqa: F401
             )
         except ImportError:
-            pytest.skip("search dependencies not installed")
+            pytest.fail(
+                "search dependencies not installed — run: pip install 'file-organizer[search]'"
+            )
 
         finance_file = tmp_path / "finance_report.txt"
         other_file = tmp_path / "meeting_notes.txt"

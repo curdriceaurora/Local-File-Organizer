@@ -142,7 +142,8 @@ def _build_semantic_corpus(
             continue
         try:
             for entry in root.rglob("*"):
-                if total >= max_files:
+                total += 1
+                if total > max_files:
                     done = True
                     break
                 if entry.is_symlink() or not entry.is_file() or is_hidden(entry):
@@ -151,7 +152,6 @@ def _build_semantic_corpus(
                 doc = f"{entry.stem} {' '.join(entry.parts)} {text}".strip()
                 documents.append(doc)
                 paths.append(entry)
-                total += 1
         except PermissionError:
             logger.debug("Permission denied traversing %s", root)
 
@@ -190,7 +190,10 @@ def _semantic_search(
         logger.warning("Semantic index build failed: %s", exc, exc_info=True)
         return []
 
-    raw_results = retriever.retrieve(query, top_k=top_k * 2)
+    # When filtering by type, overfetch the full traversal budget so that
+    # post-filter slicing can fill top_k results even if mixed-type hits dominate.
+    fetch_k = _MAX_TRAVERSAL if file_type else top_k * 2
+    raw_results = retriever.retrieve(query, top_k=fetch_k)
 
     ext_filter: Optional[str] = None
     if file_type:
@@ -260,15 +263,26 @@ def search(
     # Semantic path — hybrid BM25 + vector retrieval
     # ------------------------------------------------------------------
     if semantic:
-        skip = offset or 0
-        if limit is not None and limit > 0:
-            # Fetch skip + limit so pagination works correctly
-            results = _semantic_search(search_roots, q, type, top_k=skip + limit)
-            return results[skip : skip + limit]
-        else:
-            # limit=0 or limit=None → no explicit cap (consistent with keyword path)
-            results = _semantic_search(search_roots, q, type, top_k=_MAX_TRAVERSAL)
-            return results[skip:]
+        skip = max(0, offset or 0)
+        try:
+            if limit is not None and limit > 0:
+                # Fetch skip + limit so pagination works correctly
+                results = _semantic_search(search_roots, q, type, top_k=skip + limit)
+                return results[skip : skip + limit]
+            else:
+                # limit=0 or limit=None → no explicit cap (consistent with keyword path)
+                results = _semantic_search(search_roots, q, type, top_k=_MAX_TRAVERSAL)
+                return results[skip:]
+        except ImportError:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "detail": (
+                        "Semantic search is not available: search dependencies not installed. "
+                        "Install with: pip install 'file-organizer[search]'"
+                    )
+                },
+            )
 
     # ------------------------------------------------------------------
     # Default keyword path — unchanged

@@ -202,6 +202,8 @@ class HybridRetriever:
                 f"documents ({len(documents)}) and paths ({len(paths)}) must have equal length"
             )
         if not documents:
+            self._bm25 = BM25Index()
+            self._vector = VectorIndex()
             self._initialized = True
             logger.debug("HybridRetriever: indexed 0 documents (empty corpus)")
             return

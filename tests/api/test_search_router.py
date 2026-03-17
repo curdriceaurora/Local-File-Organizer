@@ -291,6 +291,7 @@ class TestSemanticSearch:
         resp = client.get("/api/v1/search?q=report&semantic=true&type=txt")
         assert resp.status_code == 200
         results = resp.json()
+        assert results, "expected at least one .txt result for query 'report'"
         # All returned files must be .txt
         for r in results:
             assert r["type"] == "txt"
