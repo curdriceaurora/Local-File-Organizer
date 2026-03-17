@@ -4,7 +4,7 @@
 
 Our 95% unit coverage hides integration blindness — every component works in isolation, but bugs live in the wiring between them. Issues #724 (config overrides ignored) and #726 (vision model race condition) were both missed because unit tests mock away the exact boundaries where these bugs occur.
 
-This epic establishes a systematic integration test harness covering 7 gap patterns identified across 1,737 unit tests and 132 integration tests.
+This epic establishes a systematic integration test harness covering 7 gap patterns identified across 1,737 unit tests and 132 integration tests (now 2,527 as of 2026-03-17).
 
 ## Architecture Decisions
 
@@ -119,7 +119,7 @@ Stream A (conftest + P1) ──→ Stream C (P4 + P5) ──→ Stream D (P6 + P
 
 ### Stream D Exit — Epic Complete
 - [x] 9 CLI + state recovery tests pass
-- [x] All 132 integration tests run on main CI
+- [x] All 2,527 integration tests run on main CI (132 at epic close; grown via #856)
 - [x] `pytest -m integration` selects exactly the new tests
 - [x] Zero production code changes required
 
