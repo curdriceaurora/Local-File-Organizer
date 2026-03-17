@@ -34,24 +34,28 @@ CORPUS_BINARY_PEEK: int = 512
 def read_text_safe(path: Path, limit: int = CORPUS_TEXT_LIMIT) -> str:
     """Read up to *limit* bytes from *path* as text, skipping binary files.
 
-    Reads the file once: inspects the first :data:`CORPUS_BINARY_PEEK` bytes
-    for null bytes (binary sentinel), then decodes the leading *limit* bytes.
+    Reads only what is needed: opens the file in binary mode, reads at most
+    *limit* bytes, inspects the first :data:`CORPUS_BINARY_PEEK` bytes for
+    null bytes (binary sentinel), then decodes.
 
     Args:
         path: File to read.
-        limit: Maximum number of characters to return.
+        limit: Maximum number of bytes to read (may yield fewer characters for
+            multi-byte encodings).
 
     Returns:
         Decoded text content, or an empty string if the file is binary or
         unreadable.
     """
     try:
-        raw = path.read_bytes()
+        with path.open("rb") as fh:
+            raw = fh.read(limit)
     except OSError:
         return ""
-    if b"\x00" in raw[:CORPUS_BINARY_PEEK]:
+    peek_size = min(CORPUS_BINARY_PEEK, len(raw))
+    if b"\x00" in raw[:peek_size]:
         return ""  # binary file — skip content extraction
-    return raw[:limit].decode(errors="replace")
+    return raw.decode(errors="replace")
 
 
 def _rrf_fuse(
@@ -223,4 +227,9 @@ class HybridRetriever:
 # Verify structural conformance at import time.
 # NOTE: issubclass() cannot be used with RetrieverProtocol because it has a
 # property member (is_initialized); isinstance() on an instance is used instead.
-assert isinstance(HybridRetriever(), RetrieverProtocol)
+# Guarded by ImportError so the module can be imported when optional search
+# dependencies (rank-bm25, scikit-learn) are not installed.
+try:
+    assert isinstance(HybridRetriever(), RetrieverProtocol)
+except ImportError:
+    pass  # optional deps absent — skip conformance check
