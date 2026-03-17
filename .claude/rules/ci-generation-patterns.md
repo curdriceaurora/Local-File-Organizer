@@ -13,6 +13,7 @@ Sourced from CodeRabbit and Copilot review comments — 84 classified CI finding
 - [ ] Verify coverage threshold against `pyproject.toml` `cov-fail-under` value BEFORE documenting it
 - [ ] Check `@lru_cache` decorators on functions that read env vars — remove if found
 - [ ] No wall-clock time limits in CI (`< 1s`, `< 5s`) — use relative assertions or skip entirely
+- [ ] Measuring integration coverage? Run `bash .claude/scripts/measure-integration-coverage.sh` (erases `.coverage` first)
 
 ---
 
@@ -229,10 +230,38 @@ strategy:
 
 ---
 
+## Pattern C7: STALE_COVERAGE_BASELINE — 1 confirmed finding (PR #867 / issue #870)
+
+**What it is**: Setting a `--cov-fail-under` ratchet floor from a local measurement taken without erasing `.coverage` first. `pytest-cov` accumulates data across runs — a stale file from unit tests inflates the integration coverage number, and the floor is set too high. CI fails because it starts clean.
+
+**Bad**:
+```bash
+# BAD — stale .coverage from unit runs pollutes the measurement
+pytest tests/ -m "integration" --cov=file_organizer --cov-report=term-missing
+# Reports 51% — but unit test data is mixed in
+# → You set --cov-fail-under=51, CI fails with 35%
+```
+
+**Good**:
+```bash
+# GOOD — always erase first so the measurement is clean
+bash .claude/scripts/measure-integration-coverage.sh
+# Equivalent to: coverage erase && pytest tests/ -m "integration" --cov=file_organizer ...
+```
+
+**Pre-generation check**: Before setting or bumping any `--cov-fail-under` floor, run:
+```bash
+bash .claude/scripts/measure-integration-coverage.sh
+```
+Use only the `TOTAL` line from that output. Never use a number from a run that did not start with `coverage erase`.
+
+---
+
 ## Rule of Thumb
 
 Before writing any CI config:
 1. **C4**: `grep "cov-fail-under" pyproject.toml` — use this exact number everywhere
-2. **C3**: Search `@lru_cache` + `environ` — remove cache if found
-3. **C2**: Add `if: github.event_name == 'push'` guard to external write actions
-4. **C1**: No wall-clock time assertions in tests (`assert duration < N`)
+2. **C7**: Measure integration coverage with `bash .claude/scripts/measure-integration-coverage.sh` — never from a dirty local env
+3. **C3**: Search `@lru_cache` + `environ` — remove cache if found
+4. **C2**: Add `if: github.event_name == 'push'` guard to external write actions
+5. **C1**: No wall-clock time assertions in tests (`assert duration < N`)
