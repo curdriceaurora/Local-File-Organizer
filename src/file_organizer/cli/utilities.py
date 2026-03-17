@@ -136,13 +136,13 @@ def search(
     # ------------------------------------------------------------------
     if semantic:
         try:
-            from file_organizer.services.search.hybrid_retriever import HybridRetriever
+            from file_organizer.services.search.hybrid_retriever import (
+                HybridRetriever,
+                read_text_safe,
+            )
         except ImportError as exc:
             console.print(f"[red]Error: Semantic search unavailable: {exc}[/red]")
             raise typer.Exit(code=1) from exc
-
-        _BINARY_PEEK = 512
-        _TEXT_LIMIT = 4096
 
         documents: list[str] = []
         sem_paths: list[Path] = []
@@ -151,17 +151,7 @@ def search(
         for entry in gen:
             if not entry.is_file():
                 continue
-            # Skip binary files
-            try:
-                header = entry.read_bytes()[:_BINARY_PEEK]
-            except OSError:
-                continue
-            text = ""
-            if b"\x00" not in header:
-                try:
-                    text = entry.read_text(errors="replace")[:_TEXT_LIMIT]
-                except OSError:
-                    pass
+            text = read_text_safe(entry)
             doc = f"{entry.stem} {' '.join(entry.parts)} {text}".strip()
             documents.append(doc)
             sem_paths.append(entry)

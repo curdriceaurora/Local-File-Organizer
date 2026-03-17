@@ -15,11 +15,7 @@ from pydantic import BaseModel
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.utils import is_hidden, resolve_path
-
-# Maximum bytes read per file when building the semantic search corpus.
-_SEMANTIC_TEXT_LIMIT = 4096
-# Sentinel for binary file detection (null byte in first 512 bytes).
-_BINARY_PEEK = 512
+from file_organizer.services.search.hybrid_retriever import read_text_safe
 
 logger = logging.getLogger(__name__)
 
@@ -116,28 +112,6 @@ def _collect_matching_files(
         logger.debug("Permission denied traversing %s", root)
 
 
-def _read_text_safe(path: Path, limit: int = _SEMANTIC_TEXT_LIMIT) -> str:
-    """Read up to *limit* bytes from *path* as text, skipping binary files.
-
-    Args:
-        path: File to read.
-        limit: Maximum number of bytes to read.
-
-    Returns:
-        Text content, or an empty string if the file is binary or unreadable.
-    """
-    try:
-        header = path.read_bytes()[:_BINARY_PEEK]
-    except OSError:
-        return ""
-    if b"\x00" in header:
-        return ""  # binary file — skip content extraction
-    try:
-        return path.read_text(errors="replace")[:limit]
-    except OSError:
-        return ""
-
-
 def _build_semantic_corpus(
     roots: list[Path],
     max_files: int = _MAX_TRAVERSAL,
@@ -158,17 +132,19 @@ def _build_semantic_corpus(
     documents: list[str] = []
     paths: list[Path] = []
     total = 0
+    done = False
 
     for root in roots:
-        if not root.exists() or not root.is_dir():
+        if done or not root.exists() or not root.is_dir():
             continue
         try:
             for entry in root.rglob("*"):
                 if total >= max_files:
+                    done = True
                     break
                 if entry.is_symlink() or not entry.is_file() or is_hidden(entry):
                     continue
-                text = _read_text_safe(entry)
+                text = read_text_safe(entry)
                 doc = f"{entry.stem} {' '.join(entry.parts)} {text}".strip()
                 documents.append(doc)
                 paths.append(entry)

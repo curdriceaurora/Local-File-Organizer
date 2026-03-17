@@ -5,6 +5,10 @@ Reciprocal Rank Fusion to produce a single fused ranking.
 
 RRF formula:  score(d) = sum over indices i of  1 / (k + rank_i(d))
 where k=60 is the standard smoothing constant (Cormack et al., 2009).
+
+This module also exposes :func:`read_text_safe`, a shared helper used by
+both the API router and the CLI to extract text from files for corpus
+building.
 """
 
 from __future__ import annotations
@@ -16,6 +20,38 @@ from loguru import logger
 from file_organizer.interfaces.search import RetrieverProtocol
 from file_organizer.services.search.bm25_index import BM25Index
 from file_organizer.services.search.vector_index import VectorIndex
+
+# ---------------------------------------------------------------------------
+# Corpus helpers (shared by API router and CLI)
+# ---------------------------------------------------------------------------
+
+#: Maximum number of bytes read from each file for corpus building.
+CORPUS_TEXT_LIMIT: int = 4096
+#: Number of bytes inspected to decide whether a file is binary.
+CORPUS_BINARY_PEEK: int = 512
+
+
+def read_text_safe(path: Path, limit: int = CORPUS_TEXT_LIMIT) -> str:
+    """Read up to *limit* bytes from *path* as text, skipping binary files.
+
+    Reads the file once: inspects the first :data:`CORPUS_BINARY_PEEK` bytes
+    for null bytes (binary sentinel), then decodes the leading *limit* bytes.
+
+    Args:
+        path: File to read.
+        limit: Maximum number of characters to return.
+
+    Returns:
+        Decoded text content, or an empty string if the file is binary or
+        unreadable.
+    """
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return ""
+    if b"\x00" in raw[:CORPUS_BINARY_PEEK]:
+        return ""  # binary file — skip content extraction
+    return raw[:limit].decode(errors="replace")
 
 
 def _rrf_fuse(
