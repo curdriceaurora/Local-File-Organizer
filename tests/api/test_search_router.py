@@ -249,6 +249,9 @@ class TestSemanticSearch:
     def test_semantic_true_result_schema(self, tmp_path: Path) -> None:
         """Semantic results contain the same fields as keyword results."""
         (tmp_path / "doc.txt").write_text("finance budget quarterly report")
+        (tmp_path / "other.txt").write_text(
+            "meeting notes agenda items"
+        )  # 2nd doc prevents TF-IDF ValueError
         _, client = _build_app(tmp_path)
 
         resp = client.get("/api/v1/search?q=finance&semantic=true")

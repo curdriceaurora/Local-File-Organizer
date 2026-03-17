@@ -146,9 +146,12 @@ def search(
 
         documents: list[str] = []
         sem_paths: list[Path] = []
+        max_docs = max(limit * 10, 200)  # cap corpus; retrieve extras for type-filter headroom
 
         gen = search_dir.rglob("*") if recursive else search_dir.glob("*")
         for entry in gen:
+            if len(documents) >= max_docs:
+                break
             if not entry.is_file():
                 continue
             text = read_text_safe(entry)
@@ -170,12 +173,15 @@ def search(
             console.print(f"[red]Error: Failed to build semantic index: {exc}[/red]")
             raise typer.Exit(code=1) from exc
 
-        raw_results = retriever.retrieve(query, top_k=limit)
+        # Fetch a larger candidate set so type filtering doesn't under-deliver
+        candidate_k = limit * 4 if type_filter is not None else limit
+        raw_results = retriever.retrieve(query, top_k=candidate_k)
 
-        # Apply type filter
+        # Apply type filter, then cap at the requested limit
         if type_filter is not None:
             type_exts = type_extensions.get(type_filter, set())
             raw_results = [(p, s) for p, s in raw_results if p.suffix.lower() in type_exts]
+        raw_results = raw_results[:limit]
 
         if not raw_results:
             if json_out:

@@ -15,7 +15,6 @@ from pydantic import BaseModel
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
 from file_organizer.api.utils import is_hidden, resolve_path
-from file_organizer.services.search.hybrid_retriever import HybridRetriever, read_text_safe
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +128,10 @@ def _build_semantic_corpus(
         ``(documents, paths)`` lists of equal length, ready for
         :meth:`HybridRetriever.index`.
     """
+    from file_organizer.services.search.hybrid_retriever import (
+        read_text_safe,
+    )  # lazy — optional dep
+
     documents: list[str] = []
     paths: list[Path] = []
     total = 0
@@ -172,6 +175,10 @@ def _semantic_search(
     Returns:
         List of :class:`SearchResult` sorted by descending RRF score.
     """
+    from file_organizer.services.search.hybrid_retriever import (
+        HybridRetriever,
+    )  # lazy — optional dep
+
     documents, paths = _build_semantic_corpus(roots)
     if not paths:
         return []
@@ -179,7 +186,7 @@ def _semantic_search(
     retriever = HybridRetriever()
     try:
         retriever.index(documents, paths)
-    except Exception as exc:  # pragma: no cover — defensive; index() rarely raises
+    except ValueError as exc:  # pragma: no cover — defensive; index() rarely raises ValueError
         logger.warning("Semantic index build failed: %s", exc, exc_info=True)
         return []
 
@@ -253,10 +260,15 @@ def search(
     # Semantic path — hybrid BM25 + vector retrieval
     # ------------------------------------------------------------------
     if semantic:
-        top_k = limit if (limit is not None and limit > 0) else 10
         skip = offset or 0
-        results = _semantic_search(search_roots, q, type, top_k=skip + top_k)
-        return results[skip : skip + top_k] if limit is not None and limit > 0 else results[skip:]
+        if limit is not None and limit > 0:
+            # Fetch skip + limit so pagination works correctly
+            results = _semantic_search(search_roots, q, type, top_k=skip + limit)
+            return results[skip : skip + limit]
+        else:
+            # limit=0 or limit=None → no explicit cap (consistent with keyword path)
+            results = _semantic_search(search_roots, q, type, top_k=_MAX_TRAVERSAL)
+            return results[skip:]
 
     # ------------------------------------------------------------------
     # Default keyword path — unchanged

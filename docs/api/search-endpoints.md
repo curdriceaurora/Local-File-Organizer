@@ -21,8 +21,8 @@ match → path contains).
 
 **Semantic search** (`semantic=true`): indexes file content using BM25 and
 TF-IDF vector representations, then fuses both rankings with Reciprocal Rank
-Fusion (RRF, k=60) to return content-relevant results. Each result includes an
-`rrf_score` field.
+Fusion (RRF, k=60) to return content-relevant results. The `score` field
+contains the RRF score.
 
 **Response:** `200 OK` — array of search result objects.
 

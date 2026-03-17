@@ -205,11 +205,56 @@ class CommandExecutor:
         except OSError as exc:
             return ExecutionResult(success=False, message=f"Rename failed: {exc}")
 
+    def _build_retriever_for_root(self, search_root: Path) -> RetrieverProtocol | None:
+        """Auto-build a HybridRetriever indexed on *search_root* (lazy optional dep).
+
+        Returns ``None`` when search dependencies are unavailable or the corpus
+        is too small to index.
+
+        Args:
+            search_root: Directory to index.
+
+        Returns:
+            An initialised :class:`HybridRetriever`, or ``None`` on failure.
+        """
+        try:
+            from file_organizer.services.search.hybrid_retriever import (
+                HybridRetriever,
+                read_text_safe,
+            )
+        except ImportError:
+            return None  # search deps not installed
+
+        retriever = HybridRetriever()
+        docs: list[str] = []
+        paths: list[Path] = []
+        try:
+            for entry in search_root.rglob("*"):
+                if entry.is_symlink() or not entry.is_file():
+                    continue
+                text = read_text_safe(entry)
+                docs.append(f"{entry.stem} {' '.join(entry.parts)} {text}".strip())
+                paths.append(entry)
+                if len(docs) >= 500:  # cap corpus for interactive use
+                    break
+        except PermissionError:
+            pass
+        if not docs:
+            return None
+        try:
+            retriever.index(docs, paths)
+        except ValueError:
+            return None  # corpus too small — fall through to filename scan
+        return retriever
+
     def _handle_find(self, intent: Intent) -> ExecutionResult:
         """Find files matching a query.
 
         When a :class:`RetrieverProtocol` instance was supplied at construction
         and is initialised, it is used for semantic context gathering.
+        When no retriever was injected, a :class:`HybridRetriever` is
+        auto-built from *search_root* if the optional search dependencies are
+        available.  Results are scoped to *search_root* in both cases.
         Otherwise the default filename-scan fallback is used.
 
         Args:
@@ -232,12 +277,15 @@ class CommandExecutor:
             search_root = self._working_dir
 
         # ------------------------------------------------------------------
-        # Semantic path — use HybridRetriever when available and initialised
+        # Semantic path — use injected retriever or auto-build from search_root
         # ------------------------------------------------------------------
-        if self._retriever is not None and self._retriever.is_initialized:
+        retriever = self._retriever or self._build_retriever_for_root(search_root)
+
+        if retriever is not None and retriever.is_initialized:
             try:
-                results = self._retriever.retrieve(query, top_k=20)
-                matches = [str(p) for p, _ in results]
+                results = retriever.retrieve(query, top_k=20)
+                # Scope results to search_root only
+                matches = [str(p) for p, _ in results if Path(p).is_relative_to(search_root)]
             except Exception as exc:
                 logger.warning("Retriever failed in _handle_find, falling back: {}", exc)
                 matches = []

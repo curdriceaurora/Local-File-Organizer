@@ -626,3 +626,71 @@ class TestCopilotEngineRetriever:
         result = engine._executor.execute(intent)
         assert result.success is True
         assert any("notes" in f for f in result.affected_files)
+
+
+@pytest.mark.unit
+class TestCopilotEngineRetrieverIntegration:
+    """Integration tests with a real HybridRetriever (no mocks)."""
+
+    def test_find_with_injected_real_retriever(self, tmp_path) -> None:
+        """FIND intent returns scoped results using a real HybridRetriever."""
+        try:
+            from file_organizer.services.search.hybrid_retriever import (
+                HybridRetriever,
+                read_text_safe,
+            )
+        except ImportError:
+            pytest.skip("search dependencies not installed")
+
+        finance_file = tmp_path / "finance_report.txt"
+        other_file = tmp_path / "meeting_notes.txt"
+        finance_file.write_text("quarterly finance budget summary")
+        other_file.write_text("meeting agenda notes items")
+
+        retriever = HybridRetriever()
+        docs = [read_text_safe(p) for p in [finance_file, other_file]]
+        retriever.index(docs, [finance_file, other_file])
+
+        engine = CopilotEngine(
+            working_directory=str(tmp_path),
+            retriever=retriever,
+        )
+        intent = Intent(
+            intent_type=IntentType.FIND,
+            confidence=0.9,
+            parameters={"query": "finance", "paths": [str(tmp_path)]},
+        )
+        result = engine._executor.execute(intent)
+
+        assert result.success is True
+        assert any("finance" in f for f in result.affected_files)
+        # Results must be scoped to tmp_path
+        for f in result.affected_files:
+            assert str(tmp_path) in f
+
+    def test_find_auto_builds_retriever_when_none_injected(self, tmp_path) -> None:
+        """FIND auto-builds a HybridRetriever from search_root when none is injected."""
+        try:
+            from file_organizer.services.search.hybrid_retriever import (
+                HybridRetriever,  # noqa: F401
+            )
+        except ImportError:
+            pytest.skip("search dependencies not installed")
+
+        finance_file = tmp_path / "finance_report.txt"
+        other_file = tmp_path / "meeting_notes.txt"
+        finance_file.write_text("quarterly finance budget summary")
+        other_file.write_text("meeting agenda notes items")
+
+        # No retriever injected — executor must auto-build from search_root
+        engine = CopilotEngine(working_directory=str(tmp_path))
+        intent = Intent(
+            intent_type=IntentType.FIND,
+            confidence=0.9,
+            parameters={"query": "finance", "paths": [str(tmp_path)]},
+        )
+        result = engine._executor.execute(intent)
+
+        assert result.success is True
+        # Either semantic or filename scan succeeds — either way finance_report should appear
+        assert any("finance" in f for f in result.affected_files)
