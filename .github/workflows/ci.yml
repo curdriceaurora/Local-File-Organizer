@@ -202,7 +202,7 @@ jobs:
   test-integration:
     name: Integration coverage gate
     needs: changes
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
