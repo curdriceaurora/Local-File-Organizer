@@ -64,6 +64,31 @@ run_step "Run pre-commit on all files" pre-commit run --all-files
 
 run_step "Run semantic CI guardrails" pytest tests/ci -q --no-cov --override-ini="addopts="
 
+# ---------------------------------------------------------------------------
+# Coverage ratchet gates (local enforcement — catches drift before CI sees it)
+# Gates are set just below the actual baseline to prevent regression while
+# the ratchet epic (#857) raises them to final targets.
+# ---------------------------------------------------------------------------
+
+echo "▶ Docstring coverage gate (≥90%)"
+interrogate -v src/ --fail-under 90 -q
+echo "✓ Docstring coverage"
+echo ""
+
+echo "▶ Unit test code coverage gate (≥95%)"
+pytest tests/ -m "unit and not benchmark" \
+  --cov=file_organizer --cov-fail-under=95 --no-cov-on-fail \
+  -q -n=auto --override-ini="addopts="
+echo "✓ Unit test coverage"
+echo ""
+
+echo "▶ Integration test coverage gate (≥70%)"
+pytest tests/ -m "integration and not benchmark" \
+  --cov=file_organizer --cov-fail-under=70 --no-cov-on-fail \
+  -q --override-ini="addopts="
+echo "✓ Integration test coverage"
+echo ""
+
 if git diff --cached -- '*.py' '.github/workflows/*.yml' 2>/dev/null | grep -q 'GITHUB_'; then
   echo "ℹ Detected GitHub-environment branching in staged changes."
   echo "  Guardrail tests in tests/ci must cover both local and PR CI contexts."
