@@ -56,7 +56,7 @@ dependencies = [
     # Revisit if auth_jwt_algorithm is ever changed to ES256/ES384/ES512.
     "python-jose>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
-    "bcrypt>=4.0.0,<5.0.0",
+    "bcrypt>=4.0.0,<6.0.0",
     # Database
     "sqlalchemy>=2.0.0",
     "alembic>=1.13.0",
@@ -106,7 +106,7 @@ web = [
     # Revisit if auth_jwt_algorithm is ever changed to ES256/ES384/ES512.
     "python-jose>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
-    "bcrypt>=4.0.0,<5.0.0",
+    "bcrypt>=4.0.0,<6.0.0",
 
     "redis>=5.0.0",
 ]
