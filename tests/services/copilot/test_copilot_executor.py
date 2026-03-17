@@ -284,7 +284,8 @@ class TestHandleFind:
     def test_find_matches(self, executor, tmp_path):
         (tmp_path / "hello.txt").write_text("x")
         (tmp_path / "world.txt").write_text("y")
-        result = executor.execute(_intent(IntentType.FIND, query="hello"))
+        with patch.object(executor, "_build_retriever_for_root", return_value=None):
+            result = executor.execute(_intent(IntentType.FIND, query="hello"))
         assert result.success
         assert len(result.affected_files) == 1
 
