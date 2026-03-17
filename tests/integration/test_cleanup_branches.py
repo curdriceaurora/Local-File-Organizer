@@ -63,7 +63,7 @@ class TestShouldCleanupSizeBranch:
         """auto_cleanup_enabled=False always returns False."""
         from file_organizer.history.cleanup import HistoryCleanupConfig
 
-        db, cleanup = _make_cleanup(
+        _, cleanup = _make_cleanup(
             tmp_path, config=HistoryCleanupConfig(auto_cleanup_enabled=False)
         )
         assert cleanup.should_cleanup() is False
@@ -96,7 +96,7 @@ class TestShouldCleanupSizeBranch:
         """Returns False when both count and size are within limits."""
         from file_organizer.history.cleanup import HistoryCleanupConfig
 
-        db, cleanup = _make_cleanup(
+        _, cleanup = _make_cleanup(
             tmp_path,
             config=HistoryCleanupConfig(max_operations=10000, max_size_mb=500),
         )
@@ -177,13 +177,13 @@ class TestCleanupByCountBranches:
 class TestCleanupBySizeBranches:
     def test_cleanup_by_size_within_limit_returns_zero(self, tmp_path: Path) -> None:
         """DB size <= max_size_mb → returns 0 (line 200-204)."""
-        db, cleanup = _make_cleanup(tmp_path)
+        _, cleanup = _make_cleanup(tmp_path)
         deleted = cleanup.cleanup_by_size(max_size_mb=1000)
         assert deleted == 0
 
     def test_cleanup_by_size_uses_config_default(self, tmp_path: Path) -> None:
         """max_size_mb=None uses config.max_size_mb."""
-        db, cleanup = _make_cleanup(tmp_path)
+        _, cleanup = _make_cleanup(tmp_path)
         # Config default is 100MB; fresh DB is well under that
         deleted = cleanup.cleanup_by_size()
         assert deleted == 0
@@ -208,7 +208,7 @@ class TestCleanupBySizeBranches:
 
         Uses max_size_mb=0 to enter the loop, then `if not rows: break` exits.
         """
-        db, cleanup = _make_cleanup(tmp_path)
+        _, cleanup = _make_cleanup(tmp_path)
         # No operations — loop enters but immediately breaks (no rows)
         deleted = cleanup.cleanup_by_size(max_size_mb=0)
         assert deleted == 0
@@ -224,7 +224,7 @@ class TestAutoCleanupBranches:
         """should_cleanup() returns False → early return with zero stats (lines 325-327)."""
         from file_organizer.history.cleanup import HistoryCleanupConfig
 
-        db, cleanup = _make_cleanup(
+        _, cleanup = _make_cleanup(
             tmp_path,
             config=HistoryCleanupConfig(
                 max_operations=10000, max_size_mb=500, auto_cleanup_enabled=True

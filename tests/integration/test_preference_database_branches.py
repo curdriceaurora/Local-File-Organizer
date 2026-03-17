@@ -130,8 +130,10 @@ class TestPreferenceDatabaseInitialize:
             t2_ready.set()  # tell Thread-1 we're committed
             # acquire lock — blocks until Thread-1 releases it
             original_initialize(db)
-            # If inner guard fired, _initialized was True and we returned early
-            inner_guard_hit.append(True)
+            # Record only when _initialized is already True, confirming the inner
+            # guard (line 149-150) returned early rather than running setup again
+            if db._initialized:
+                inner_guard_hit.append(True)
 
         t1 = threading.Thread(target=t1_init)
         t2 = threading.Thread(target=t2_init)
