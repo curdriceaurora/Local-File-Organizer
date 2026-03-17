@@ -167,7 +167,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pytest tests/ -m "ci and not benchmark" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
+            pytest tests/ -m "ci and not benchmark" --cov=file_organizer --cov-fail-under=80 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
           else
             pytest tests/ -m "not benchmark" --cov=file_organizer --cov-fail-under=95 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
           fi
@@ -198,6 +198,26 @@ jobs:
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
       - name: Run benchmark suite
         run: pytest tests/ -m benchmark --benchmark-only --strict-markers --timeout=30 --override-ini="addopts="
+
+  test-integration:
+    name: Integration coverage gate
+    needs: changes
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -e ".[dev,search]"
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
+      - name: "Integration coverage gate (floor: 70%)"
+        # Ratchet floor — bump threshold in the PR that closes each gap.
+        # Current floor: 70%. Target per issue #856: 90%.
+        run: pytest tests/ -m "integration" --cov=file_organizer --cov-fail-under=70 --cov-report=term-missing --cov-report=xml --timeout=60 --override-ini="addopts="
 
   rust-check:
     name: Rust desktop build
