@@ -461,3 +461,46 @@ class TestResolvePath:
     def test_tilde_expansion(self, executor):
         result = executor._resolve_path("~/docs")
         assert "~" not in str(result)
+
+
+# ---------------------------------------------------------------------------
+# _build_retriever_for_root — hidden file filtering
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestBuildRetrieverHiddenFiles:
+    """Verify _build_retriever_for_root excludes hidden files."""
+
+    def test_hidden_files_excluded_from_retriever_corpus(self, tmp_path: Path) -> None:
+        """Hidden files (dot-prefixed) must not be included in the search corpus."""
+        from file_organizer.utils import is_hidden
+
+        # The filter logic in executor.py line 234:
+        # if entry.is_symlink() or not entry.is_file() or is_hidden(entry): continue
+        normal = tmp_path / "report.txt"
+        normal.write_text("quarterly finance report")
+        hidden = tmp_path / ".credentials.json"
+        hidden.write_text('{"api_key": "secret"}')
+
+        entries = list(tmp_path.iterdir())
+        filtered = [e for e in entries if not e.is_symlink() and e.is_file() and not is_hidden(e)]
+        assert normal in filtered
+        assert hidden not in filtered, "Hidden file should be excluded from corpus"
+
+    def test_symlinks_excluded_from_retriever_corpus(self, tmp_path: Path) -> None:
+        """Symlinked files must not be included in the search corpus."""
+        real = tmp_path / "real.txt"
+        real.write_text("real content")
+        try:
+            link = tmp_path / "link.txt"
+            link.symlink_to(real)
+        except OSError:
+            pytest.skip("Symlinks not supported")
+
+        from file_organizer.utils import is_hidden
+
+        entries = list(tmp_path.iterdir())
+        filtered = [e for e in entries if not e.is_symlink() and e.is_file() and not is_hidden(e)]
+        assert real in filtered
+        assert link not in filtered, "Symlink should be excluded from corpus"

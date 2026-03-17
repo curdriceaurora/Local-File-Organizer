@@ -86,6 +86,8 @@ class BM25Index:
         Returns:
             List of (path, score) tuples sorted by descending score.
         """
+        if top_k <= 0:
+            return []
         if self._bm25 is None or not self._paths:
             return []
 

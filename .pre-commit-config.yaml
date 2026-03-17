@@ -117,7 +117,7 @@ repos:
       # ----------------------------------------------------------------
       - id: pypi-version-check
         name: Verify pyproject.toml minimum versions exist on PyPI
-        entry: bash -c "python3 .claude/scripts/check_pypi_versions.py"
+        entry: python3 .claude/scripts/check_pypi_versions.py
         language: system
         files: ^pyproject\.toml$
         pass_filenames: false

@@ -83,6 +83,14 @@ class TestRrfFuse:
         # But absolute scores differ
         assert result_small_k[0][1] > result_large_k[0][1]
 
+    def test_k_zero_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="positive"):
+            _rrf_fuse([], top_k=5, k=0)
+
+    def test_k_negative_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="positive"):
+            _rrf_fuse([], top_k=5, k=-1)
+
     def test_fuse_deduplicates_paths(self) -> None:
         """A path appearing in multiple lists should appear only once in output."""
         paths = _make_paths(2)
@@ -123,6 +131,14 @@ class TestHybridRetrieverInit:
         r.initialize()
         r.cleanup()
         assert r.is_initialized is False
+
+    def test_k_zero_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="positive"):
+            HybridRetriever(k=0)
+
+    def test_k_negative_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="positive"):
+            HybridRetriever(k=-1)
 
     def test_custom_bm25_and_vector_injected(self) -> None:
         from file_organizer.services.search.bm25_index import BM25Index
@@ -308,3 +324,46 @@ class TestHybridRetrieverMocked:
         r = HybridRetriever(bm25=bm25_mock, vector=vector_mock)
         r.initialize()
         assert r.retrieve("anything") == []
+
+
+@pytest.mark.unit
+class TestHybridRetrieverThreadSafety:
+    """Verify concurrent access does not crash."""
+
+    def test_concurrent_index_and_retrieve(self) -> None:
+        import threading
+
+        bm25_mock = MagicMock()
+        vector_mock = MagicMock()
+        bm25_mock.search.return_value = []
+        vector_mock.search.return_value = []
+        bm25_mock.size = 0
+
+        r = HybridRetriever(bm25=bm25_mock, vector=vector_mock)
+        r.initialize()
+
+        errors: list[Exception] = []
+
+        def _retrieve() -> None:
+            try:
+                for _ in range(50):
+                    r.retrieve("query")
+            except Exception as exc:
+                errors.append(exc)
+
+        def _cleanup() -> None:
+            try:
+                for _ in range(50):
+                    r.cleanup()
+                    r.initialize()
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=_retrieve) for _ in range(3)]
+        threads.append(threading.Thread(target=_cleanup))
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=10)
+
+        assert not errors, f"Thread safety errors: {errors}"

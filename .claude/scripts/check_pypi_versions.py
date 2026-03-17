@@ -21,7 +21,7 @@ import re
 import sys
 import tomllib
 from pathlib import Path
-from urllib import error, request
+from urllib import error, parse, request
 
 
 def _version_is_pre_1(version: str) -> bool:
@@ -40,7 +40,7 @@ def _get_all_versions(package: str) -> list[str] | None:
 
     Returns None on network error; the caller should skip the check.
     """
-    url = f"https://pypi.org/pypi/{package}/json"
+    url = f"https://pypi.org/pypi/{parse.quote(package, safe='')}/json"
     try:
         with request.urlopen(url, timeout=8) as resp:
             data = json.loads(resp.read().decode("utf-8"))

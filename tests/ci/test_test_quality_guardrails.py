@@ -146,6 +146,8 @@ def _github_pr_changed_test_files() -> list[Path] | None:
     pr_url = pull_request.get("url")
     if not isinstance(pr_url, str) or not pr_url:
         return None
+    if not pr_url.startswith("https://api.github.com/"):
+        return None
     rel_paths: set[str] = set()
     page = 1
     while True:

@@ -10,6 +10,7 @@ from typing import Optional
 
 from file_organizer.api.exceptions import ApiError
 from file_organizer.api.models import FileInfo
+from file_organizer.utils import is_hidden as is_hidden
 
 
 def resolve_path(path_value: str, allowed_paths: Optional[list[str]] = None) -> Path:
@@ -49,11 +50,6 @@ def resolve_path(path_value: str, allowed_paths: Optional[list[str]] = None) -> 
         )
 
     return resolved
-
-
-def is_hidden(path: Path) -> bool:
-    """Return True if any part of the path is hidden."""
-    return any(part.startswith(".") for part in path.parts)
 
 
 def file_info_from_path(path: Path) -> FileInfo:

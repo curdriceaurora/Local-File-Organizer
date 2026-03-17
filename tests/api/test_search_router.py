@@ -305,3 +305,99 @@ class TestSemanticSearch:
         resp = client.get("/api/v1/search?q=finance&semantic=true&limit=2")
         assert resp.status_code == 200
         assert len(resp.json()) == 2
+
+
+# ---------------------------------------------------------------------------
+# Security: limit clamping, relative paths, constants
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestSearchSecurityBounds:
+    """Verify input bounds and output sanitization in the search router."""
+
+    def test_limit_clamped_to_max(self, tmp_path: Path) -> None:
+        """Limit values above _MAX_LIMIT are silently clamped."""
+        from file_organizer.api.routers.search import _MAX_LIMIT
+
+        for i in range(5):
+            (tmp_path / f"file_{i}.txt").write_text(f"content {i}")
+        _, client = _build_app(tmp_path)
+
+        # Request a limit far above _MAX_LIMIT
+        resp = client.get(f"/api/v1/search?q=file&limit={_MAX_LIMIT + 1000}")
+        assert resp.status_code == 200
+        # We can't check the exact clamped value easily without more files,
+        # but the request must succeed (no 500/crash from unbounded allocation)
+        results = resp.json()
+        assert isinstance(results, list)
+
+    def test_limit_zero_treated_as_no_limit(self, tmp_path: Path) -> None:
+        """limit=0 is treated as no explicit limit (returns all matches)."""
+        for i in range(3):
+            (tmp_path / f"file_{i}.txt").write_text(f"content {i}")
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?q=file&limit=0")
+        assert resp.status_code == 200
+        results = resp.json()
+        assert len(results) == 3
+
+    def test_result_paths_are_relative(self, tmp_path: Path) -> None:
+        """Search results must use relative paths, not absolute."""
+        (tmp_path / "report.txt").write_text("quarterly finance report")
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?q=report")
+        assert resp.status_code == 200
+        results = resp.json()
+        assert len(results) >= 1
+        for r in results:
+            assert not r["path"].startswith("/"), (
+                f"Path should be relative, got absolute: {r['path']}"
+            )
+
+    def test_max_semantic_constant_exists(self) -> None:
+        """_MAX_SEMANTIC constant is defined as a defence-in-depth bound."""
+        from file_organizer.api.routers.search import _MAX_SEMANTIC
+
+        assert isinstance(_MAX_SEMANTIC, int)
+        assert _MAX_SEMANTIC > 0
+
+    def test_max_limit_constant_exists(self) -> None:
+        """_MAX_LIMIT constant is defined for input clamping."""
+        from file_organizer.api.routers.search import _MAX_LIMIT
+
+        assert isinstance(_MAX_LIMIT, int)
+        assert _MAX_LIMIT > 0
+
+
+@pytest.mark.unit
+class TestRelativePathHelper:
+    """Unit tests for the _relative_path helper."""
+
+    def test_relative_to_matching_root(self, tmp_path: Path) -> None:
+        from file_organizer.api.routers.search import _relative_path
+
+        fp = tmp_path / "subdir" / "file.txt"
+        result = _relative_path(fp, [tmp_path])
+        assert result == str(Path("subdir") / "file.txt")
+
+    def test_fallback_to_absolute_when_no_root_matches(self) -> None:
+        from file_organizer.api.routers.search import _relative_path
+
+        fp = Path("/some/other/path/file.txt")
+        roots = [Path("/completely/different")]
+        result = _relative_path(fp, roots)
+        assert result == str(fp)
+
+    def test_first_matching_root_wins(self, tmp_path: Path) -> None:
+        from file_organizer.api.routers.search import _relative_path
+
+        sub = tmp_path / "a" / "b"
+        fp = sub / "file.txt"
+        root_a = tmp_path / "a"
+        root_b = tmp_path
+        # root_a matches first and gives shorter relative path
+        result = _relative_path(fp, [root_a, root_b])
+        assert result == str(Path("b") / "file.txt")

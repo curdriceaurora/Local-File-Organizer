@@ -56,6 +56,14 @@ class TestVectorIndex:
         idx = VectorIndex()
         assert idx.search("anything") == []
 
+    def test_search_top_k_zero_returns_empty(self) -> None:
+        idx = VectorIndex()
+        assert idx.search("anything", top_k=0) == []
+
+    def test_search_top_k_negative_returns_empty(self) -> None:
+        idx = VectorIndex()
+        assert idx.search("anything", top_k=-1) == []
+
     def test_size_zero_before_index(self) -> None:
         assert VectorIndex().size == 0
 

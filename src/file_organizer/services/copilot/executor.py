@@ -19,6 +19,7 @@ from file_organizer.services.copilot.models import (
     Intent,
     IntentType,
 )
+from file_organizer.utils import is_hidden
 
 if TYPE_CHECKING:
     from file_organizer.interfaces.search import RetrieverProtocol
@@ -230,7 +231,7 @@ class CommandExecutor:
         paths: list[Path] = []
         try:
             for entry in search_root.rglob("*"):
-                if entry.is_symlink() or not entry.is_file():
+                if entry.is_symlink() or not entry.is_file() or is_hidden(entry):
                     continue
                 text = read_text_safe(entry)
                 docs.append(f"{entry.stem} {' '.join(entry.parts)} {text}".strip())

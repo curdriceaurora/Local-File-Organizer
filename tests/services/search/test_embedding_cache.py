@@ -207,6 +207,60 @@ class TestPersistence:
 
 
 @pytest.mark.unit
+class TestTOCTOU:
+    """Verify TOCTOU race-condition fix: no pre-existence check."""
+
+    def test_nonexistent_file_raises_immediately(self, tmp_path: Path) -> None:
+        cache = EmbeddingCache(tmp_path / "cache.db")
+        missing = tmp_path / "no_such_file.txt"
+        with pytest.raises(FileNotFoundError, match="File not found"):
+            cache.get_or_compute(missing, compute=_dummy_compute)
+        cache.close()
+
+    def test_file_deleted_between_stat_and_read(self, tmp_path: Path) -> None:
+        """Simulate file disappearing after stat succeeds."""
+        f = tmp_path / "ephemeral.txt"
+        f.write_text("here now")
+        cache = EmbeddingCache(tmp_path / "cache.db")
+
+        original_read_text = Path.read_text
+
+        def _delete_then_read(self_path: Path, *args: object, **kwargs: object) -> str:
+            if self_path == f:
+                f.unlink()  # delete file before reading
+            return original_read_text(self_path, *args, **kwargs)  # type: ignore[arg-type]
+
+        import unittest.mock
+
+        with unittest.mock.patch.object(Path, "read_text", _delete_then_read):
+            with pytest.raises((FileNotFoundError, OSError)):
+                cache.get_or_compute(f, compute=_dummy_compute)
+        cache.close()
+
+
+@pytest.mark.unit
+class TestBatchedPrune:
+    """Verify prune uses batched iteration."""
+
+    def test_prune_handles_many_entries(self, tmp_path: Path) -> None:
+        cache = EmbeddingCache(tmp_path / "cache.db")
+        # Insert entries directly, then delete backing files
+        for i in range(10):
+            f = tmp_path / f"file_{i}.txt"
+            f.write_text(f"content {i}")
+            cache.get_or_compute(f, compute=_dummy_compute)
+
+        # Delete half the files
+        for i in range(5):
+            (tmp_path / f"file_{i}.txt").unlink()
+
+        pruned = cache.prune()
+        assert pruned == 5
+        assert cache.stats()["entries"] == 5
+        cache.close()
+
+
+@pytest.mark.unit
 class TestContextManager:
     def test_context_manager_closes(self, tmp_path: Path) -> None:
         f = tmp_path / "doc.txt"
