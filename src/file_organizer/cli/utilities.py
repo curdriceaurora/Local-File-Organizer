@@ -153,10 +153,11 @@ def search(
         for entry in gen:
             if len(documents) >= max_docs:
                 break
-            if entry.is_symlink() or not entry.is_file() or is_hidden(entry):
+            rel_entry = entry.relative_to(search_dir)
+            if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
                 continue
             text = read_text_safe(entry)
-            doc = f"{entry.stem} {' '.join(entry.parts)} {text}".strip()
+            doc = f"{entry.stem} {' '.join(rel_entry.parts)} {text}".strip()
             documents.append(doc)
             sem_paths.append(entry)
 

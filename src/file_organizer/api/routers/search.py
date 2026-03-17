@@ -117,7 +117,11 @@ def _collect_matching_files(
             if ext_filter and entry.suffix.lower() != ext_filter:
                 continue
             # Check if query matches name or path
-            if q_lower in entry.name.lower() or q_lower in str(entry).lower():
+            try:
+                rel = entry.relative_to(root)
+            except ValueError:
+                rel = entry
+            if q_lower in entry.name.lower() or q_lower in str(rel).lower():
                 yield entry
     except PermissionError:
         logger.debug("Permission denied traversing %s", root)
@@ -158,10 +162,14 @@ def _build_semantic_corpus(
                 if total > max_files:
                     done = True
                     break
-                if entry.is_symlink() or not entry.is_file() or is_hidden(entry):
+                try:
+                    rel_entry = entry.relative_to(root)
+                except ValueError:
+                    rel_entry = entry
+                if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
                     continue
                 text = read_text_safe(entry)
-                doc = f"{entry.stem} {' '.join(entry.parts)} {text}".strip()
+                doc = f"{entry.stem} {' '.join(rel_entry.parts)} {text}".strip()
                 documents.append(doc)
                 paths.append(entry)
         except PermissionError:
@@ -204,7 +212,7 @@ def _semantic_search(
 
     # When filtering by type, overfetch the full semantic budget so that
     # post-filter slicing can fill top_k results even if mixed-type hits dominate.
-    fetch_k = _MAX_SEMANTIC if file_type else top_k * 2
+    fetch_k = _MAX_SEMANTIC if file_type else min(top_k * 2, _MAX_SEMANTIC)
     raw_results = retriever.retrieve(query, top_k=fetch_k)
 
     ext_filter: Optional[str] = None
@@ -284,10 +292,13 @@ def search(
     # ------------------------------------------------------------------
     if semantic:
         skip = max(0, offset or 0)
+        if skip >= _MAX_SEMANTIC:
+            return []
         try:
             if effective_limit is not None:
-                # Fetch skip + limit so pagination works correctly
-                results = _semantic_search(search_roots, q, type, top_k=skip + effective_limit)
+                # Fetch skip + limit so pagination works correctly, but cap at _MAX_SEMANTIC
+                top_k = min(skip + effective_limit, _MAX_SEMANTIC)
+                results = _semantic_search(search_roots, q, type, top_k=top_k)
                 return results[skip : skip + effective_limit]
             else:
                 # limit=0 or limit=None → no explicit cap (consistent with keyword path)

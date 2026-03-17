@@ -135,13 +135,16 @@ class TestCorpusExceptionNarrowing:
         # (there may be other handlers elsewhere in the module that are fine)
         # Check specifically around the "Failed to build semantic index" message
         for node in ast.walk(tree):
-            if isinstance(node, ast.ExceptHandler) and node.type is not None:
-                if isinstance(node.type, ast.Name) and node.type.id == "Exception":
+            if isinstance(node, ast.ExceptHandler):
+                is_broad = node.type is None or (
+                    isinstance(node.type, ast.Name) and node.type.id == "Exception"
+                )
+                if is_broad:
                     # Check if this handler's body contains the semantic index error
                     for child in ast.walk(node):
                         if isinstance(child, ast.Constant) and isinstance(child.value, str):
                             if "semantic index" in child.value.lower():
                                 pytest.fail(
                                     f"Line {node.lineno}: Semantic index builder uses broad "
-                                    f"'except Exception' — should use narrowed exceptions"
+                                    f"'except Exception' or bare 'except' — should use narrowed exceptions"
                                 )

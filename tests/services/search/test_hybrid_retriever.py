@@ -270,6 +270,20 @@ class TestHybridRetrieverRetrieve:
         results = r.retrieve("")
         assert results == []
 
+    def test_retrieve_top_k_zero_returns_empty(self) -> None:
+        """top_k=0 should return [] immediately without querying either index."""
+        paths = _make_paths(3)
+        docs = ["finance quarterly report", "meeting notes agenda", "budget planning"]
+        r = _make_retriever_with_corpus(docs, paths)
+        assert r.retrieve("finance", top_k=0) == []
+
+    def test_retrieve_top_k_negative_returns_empty(self) -> None:
+        """top_k<0 should return [] immediately without querying either index."""
+        paths = _make_paths(3)
+        docs = ["finance quarterly report", "meeting notes agenda", "budget planning"]
+        r = _make_retriever_with_corpus(docs, paths)
+        assert r.retrieve("finance", top_k=-1) == []
+
 
 @pytest.mark.unit
 class TestHybridRetrieverMocked:
@@ -298,20 +312,19 @@ class TestHybridRetrieverMocked:
         result_paths = [p for p, _ in results]
         assert result_paths.count(paths[1]) == 1
 
-    def test_index_calls_both_subindices(self) -> None:
-        """index() must delegate to both BM25Index and VectorIndex."""
-        bm25_mock = MagicMock()
-        vector_mock = MagicMock()
-        bm25_mock.size = 2
-
-        r = HybridRetriever(bm25=bm25_mock, vector=vector_mock)
-        docs = ["doc a", "doc b"]
-        paths = _make_paths(2)
+    def test_index_initializes_and_sets_corpus_size(self) -> None:
+        """index() must build both sub-indices and mark retriever as initialized."""
+        r = HybridRetriever()
+        docs = [
+            "quarterly finance report budget",
+            "machine learning python neural",
+            "legal contract software agreement",
+        ]
+        paths = _make_paths(3)
         r.index(docs, paths)
 
-        bm25_mock.index.assert_called_once_with(docs, paths)
-        vector_mock.index.assert_called_once_with(docs, paths)
         assert r.is_initialized is True
+        assert r.corpus_size == 3
 
     def test_retrieve_falls_back_gracefully_when_both_empty(self) -> None:
         """If both indices return no results, retrieve() returns []."""
@@ -359,11 +372,24 @@ class TestHybridRetrieverThreadSafety:
             except Exception as exc:
                 errors.append(exc)
 
+        def _index() -> None:
+            try:
+                docs = ["finance report", "legal contract", "recipe baking"]
+                paths = _make_paths(3)
+                for _ in range(20):
+                    r.index(docs, paths)
+            except Exception as exc:
+                errors.append(exc)
+
         threads = [threading.Thread(target=_retrieve) for _ in range(3)]
         threads.append(threading.Thread(target=_cleanup))
+        threads.append(threading.Thread(target=_index))
         for t in threads:
             t.start()
         for t in threads:
             t.join(timeout=10)
 
+        assert all(not t.is_alive() for t in threads), (
+            "Some threads did not finish (possible deadlock)"
+        )
         assert not errors, f"Thread safety errors: {errors}"

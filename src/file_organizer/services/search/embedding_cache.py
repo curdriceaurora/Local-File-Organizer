@@ -199,7 +199,7 @@ class EmbeddingCache:
         offset = 0
         while True:
             rows = self._conn.execute(
-                "SELECT file_path FROM embeddings LIMIT ? OFFSET ?",
+                "SELECT file_path FROM embeddings ORDER BY file_path LIMIT ? OFFSET ?",
                 (batch_size, offset),
             ).fetchall()
             if not rows:

@@ -158,6 +158,9 @@ class HybridRetriever:
         Returns:
             RRF-fused list of (path, score) tuples sorted by descending score.
         """
+        if top_k <= 0:
+            return []
+
         with self._lock:
             if not self._initialized:
                 logger.warning("HybridRetriever.retrieve called before index(); returning []")

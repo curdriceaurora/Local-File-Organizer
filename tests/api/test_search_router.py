@@ -306,6 +306,39 @@ class TestSemanticSearch:
         assert resp.status_code == 200
         assert len(resp.json()) == 2
 
+    def test_semantic_offset_beyond_max_returns_empty(self, tmp_path: Path) -> None:
+        """semantic=true with offset >= _MAX_SEMANTIC returns [] immediately."""
+        from file_organizer.api.routers.search import _MAX_SEMANTIC
+
+        (tmp_path / "doc.txt").write_text("finance report content")
+        _, client = _build_app(tmp_path)
+
+        resp = client.get(f"/api/v1/search?q=finance&semantic=true&offset={_MAX_SEMANTIC}")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_semantic_offset_and_limit_within_max(self, tmp_path: Path) -> None:
+        """semantic=true with offset+limit capped at _MAX_SEMANTIC returns results."""
+        for i in range(4):
+            (tmp_path / f"doc_{i}.txt").write_text(f"finance budget report document {i}")
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?q=finance&semantic=true&offset=1&limit=2")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
+
+    def test_semantic_no_limit_returns_all_within_max(self, tmp_path: Path) -> None:
+        """semantic=true without limit returns all results up to _MAX_SEMANTIC."""
+        for i in range(4):
+            (tmp_path / f"doc_{i}.txt").write_text(f"finance budget quarterly {i}")
+        _, client = _build_app(tmp_path)
+
+        resp = client.get("/api/v1/search?q=finance&semantic=true")
+        assert resp.status_code == 200
+        results = resp.json()
+        assert isinstance(results, list)
+        assert len(results) >= 1
+
 
 # ---------------------------------------------------------------------------
 # Security: limit clamping, relative paths, constants
@@ -317,20 +350,19 @@ class TestSearchSecurityBounds:
     """Verify input bounds and output sanitization in the search router."""
 
     def test_limit_clamped_to_max(self, tmp_path: Path) -> None:
-        """Limit values above _MAX_LIMIT are silently clamped."""
+        """Limit values above _MAX_LIMIT are silently clamped to _MAX_LIMIT."""
         from file_organizer.api.routers.search import _MAX_LIMIT
 
-        for i in range(5):
+        for i in range(_MAX_LIMIT + 1):
             (tmp_path / f"file_{i}.txt").write_text(f"content {i}")
         _, client = _build_app(tmp_path)
 
         # Request a limit far above _MAX_LIMIT
         resp = client.get(f"/api/v1/search?q=file&limit={_MAX_LIMIT + 1000}")
         assert resp.status_code == 200
-        # We can't check the exact clamped value easily without more files,
-        # but the request must succeed (no 500/crash from unbounded allocation)
         results = resp.json()
         assert isinstance(results, list)
+        assert len(results) == _MAX_LIMIT
 
     def test_limit_zero_treated_as_no_limit(self, tmp_path: Path) -> None:
         """limit=0 is treated as no explicit limit (returns all matches)."""
@@ -353,7 +385,7 @@ class TestSearchSecurityBounds:
         results = resp.json()
         assert len(results) >= 1
         for r in results:
-            assert not r["path"].startswith("/"), (
+            assert not Path(r["path"]).is_absolute(), (
                 f"Path should be relative, got absolute: {r['path']}"
             )
 

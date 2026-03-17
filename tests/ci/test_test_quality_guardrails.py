@@ -24,7 +24,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from urllib import error, request
+from urllib import error, parse, request
 
 import pytest
 
@@ -146,7 +146,10 @@ def _github_pr_changed_test_files() -> list[Path] | None:
     pr_url = pull_request.get("url")
     if not isinstance(pr_url, str) or not pr_url:
         return None
-    if not pr_url.startswith("https://api.github.com/"):
+    expected_api_base = os.environ.get("GITHUB_API_URL", "https://api.github.com")
+    parsed = parse.urlparse(pr_url)
+    expected_parsed = parse.urlparse(expected_api_base)
+    if parsed.scheme != "https" or parsed.netloc != expected_parsed.netloc:
         return None
     rel_paths: set[str] = set()
     page = 1

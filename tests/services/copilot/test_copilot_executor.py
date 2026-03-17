@@ -504,3 +504,32 @@ class TestBuildRetrieverHiddenFiles:
         filtered = [e for e in entries if not e.is_symlink() and e.is_file() and not is_hidden(e)]
         assert real in filtered
         assert link not in filtered, "Symlink should be excluded from corpus"
+
+    def test_build_retriever_uses_relative_path_for_hidden_check(self, tmp_path: Path) -> None:
+        """_build_retriever_for_root uses relative path for is_hidden to avoid false positives."""
+        from unittest.mock import patch
+
+        from file_organizer.services.copilot.executor import CommandExecutor
+
+        (tmp_path / "report.txt").write_text("quarterly budget finance report")
+        (tmp_path / "notes.txt").write_text("meeting agenda items budget")
+        hidden_dir = tmp_path / ".config"
+        hidden_dir.mkdir()
+        (hidden_dir / "settings.txt").write_text("settings config data")
+
+        executor = CommandExecutor()
+        try:
+            with patch(
+                "file_organizer.services.search.hybrid_retriever.HybridRetriever"
+            ) as mock_cls:
+                mock_instance = mock_cls.return_value
+                mock_instance.index.return_value = None
+                executor._build_retriever_for_root(tmp_path)
+                if mock_instance.index.called:
+                    args = mock_instance.index.call_args[0]
+                    docs_list = args[0]
+                    assert all("settings config data" not in d for d in docs_list), (
+                        "Hidden file should be excluded from corpus"
+                    )
+        except ImportError:
+            pytest.skip("Search dependencies not installed")

@@ -81,6 +81,38 @@ class TestGetOrCompute:
             cache.get_or_compute(tmp_path / "nonexistent.txt", compute=_dummy_compute)
         cache.close()
 
+    def test_file_deleted_between_stat_and_read_raises(self, tmp_path: Path) -> None:
+        """FileNotFoundError propagated when file vanishes after stat() but before read_text()."""
+        from unittest.mock import patch
+
+        f = tmp_path / "vanishing.txt"
+        f.write_text("hello")
+        cache = EmbeddingCache(tmp_path / "cache.db")
+
+        original_stat = f.stat()
+
+        def _raise_on_read_text(*args: object, **kwargs: object) -> str:
+            raise FileNotFoundError(f"File not found: {f}")
+
+        with patch.object(type(f), "read_text", _raise_on_read_text):
+            with pytest.raises(FileNotFoundError):
+                cache.get_or_compute(f, compute=_dummy_compute)
+        cache.close()
+        _ = original_stat  # suppress unused variable warning
+
+    def test_oserror_on_stat_raises(self, tmp_path: Path) -> None:
+        """OSError from stat() is re-raised as OSError."""
+        from unittest.mock import patch
+
+        f = tmp_path / "inaccessible.txt"
+        f.write_text("data")
+        cache = EmbeddingCache(tmp_path / "cache.db")
+
+        with patch.object(type(f), "stat", side_effect=OSError("permission denied")):
+            with pytest.raises(OSError):
+                cache.get_or_compute(f, compute=_dummy_compute)
+        cache.close()
+
 
 # ---------------------------------------------------------------------------
 # Staleness / invalidation
@@ -244,19 +276,21 @@ class TestBatchedPrune:
 
     def test_prune_handles_many_entries(self, tmp_path: Path) -> None:
         cache = EmbeddingCache(tmp_path / "cache.db")
-        # Insert entries directly, then delete backing files
-        for i in range(10):
+        # Insert 1200 entries directly, exceeding the batch_size=500 threshold
+        n_total = 1200
+        n_delete = 600
+        for i in range(n_total):
             f = tmp_path / f"file_{i}.txt"
             f.write_text(f"content {i}")
             cache.get_or_compute(f, compute=_dummy_compute)
 
-        # Delete half the files
-        for i in range(5):
+        # Delete 600 of the files
+        for i in range(n_delete):
             (tmp_path / f"file_{i}.txt").unlink()
 
         pruned = cache.prune()
-        assert pruned == 5
-        assert cache.stats()["entries"] == 5
+        assert pruned == n_delete
+        assert cache.stats()["entries"] == n_total - n_delete
         cache.close()
 
 
