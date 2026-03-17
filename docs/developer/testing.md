@@ -85,7 +85,7 @@ pytest -m ci
 | **config/** | 400+ | 380+ | 95% | 90% ✅ |
 | **Docstrings** | 4,130 items | 3,924 | 95.0% | 95% ✅ |
 
-**Overall**: 916+ tests, ~95%+ on tested modules, 96.8% docstring coverage
+**Overall**: 916+ tests, ~95%+ on tested modules, 95.0% docstring coverage
 
 ### Coverage Gaps
 
@@ -327,7 +327,7 @@ GitHub Actions runs automated checks on every PR and push to main:
 
 **Main Branch Pushes:**
 - Full test suite passes (`pytest`)
-- Coverage must be ≥ 95% (code) or ≥ 95% (docstrings)
+- Coverage must be ≥ 95% (code) and ≥ 95% (docstrings) — both gates must pass
 - Linting must pass (ruff and markdownlint)
 - Type checking must pass (mypy)
 

@@ -89,9 +89,9 @@ Epic #571 "Desktop UI Test Coverage" increased project **docstring coverage from
 
 #### Task #579: Docstring Coverage
 
-- **Metric**: 96.8% (3,508 of 3,624 items)
-- **Target**: 90%
-- **Status**: ✅ Complete (+6.8% above target)
+- **Metric**: 96.8% (3,508 of 3,624 items) at epic close; gate subsequently raised to 95% via #854
+- **Target**: 95% (was 90% at epic close)
+- **Status**: ✅ Complete
 
 ## Coverage by Module
 
@@ -233,7 +233,7 @@ Tests are integrated with GitHub Actions:
 4. **Adding Docstrings**
    ```bash
    # Check docstring coverage
-   interrogate -v src/file_organizer --fail-under 90
+   interrogate -v src/file_organizer --fail-under 95
    ```
 
 ## Phase C Roadmap
@@ -264,7 +264,7 @@ Work remaining to reach 100% code coverage:
 ### Highlights
 
 - ✅ 916+ tests passing consistently
-- ✅ 96.8% docstring coverage (exceeds 90% target)
+- ✅ 96.8% docstring coverage (exceeded 90% target at epic close; gate now 95% via #854)
 - ✅ 92%+ on critical modules (API, services, models)
 - ✅ Comprehensive test patterns documented
 - ✅ CI/CD integration complete

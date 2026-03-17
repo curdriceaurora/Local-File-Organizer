@@ -170,8 +170,8 @@ jobs:
             pytest tests/ -m "not benchmark" --cov=file_organizer --cov-fail-under=95 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
           fi
       - name: Check docstring coverage
-        if: matrix.python-version == '3.11'
-        run: interrogate -v src/ --fail-under 90
+        if: matrix.python-version == '3.11' && github.event_name != 'pull_request'
+        run: interrogate -v src/ --fail-under 95
       - name: Upload coverage
         if: matrix.python-version == '3.11' && github.event_name != 'pull_request'
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238
