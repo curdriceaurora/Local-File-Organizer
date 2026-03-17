@@ -3,7 +3,7 @@
 # Full-featured image with dev tools, debugging, and live reload
 # =============================================================================
 
-FROM python:3.11
+FROM python:3.14
 
 # OCI Image Labels
 LABEL org.opencontainers.image.title="File Organizer v2 (Development)" \

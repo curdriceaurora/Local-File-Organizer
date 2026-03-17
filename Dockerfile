@@ -6,7 +6,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Builder - Install dependencies into isolated virtual environment
 # ---------------------------------------------------------------------------
-FROM python:3.11-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Avoid interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -37,7 +37,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
 # ---------------------------------------------------------------------------
 # Stage 2: Runtime - Minimal image with only runtime dependencies
 # ---------------------------------------------------------------------------
-FROM python:3.11-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # OCI Image Labels (https://github.com/opencontainers/image-spec/blob/main/annotations.md)
 LABEL org.opencontainers.image.title="File Organizer v2" \
