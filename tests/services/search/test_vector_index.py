@@ -39,6 +39,7 @@ _CORPUS = [
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestVectorIndexProtocol:
     def test_implements_index_protocol(self) -> None:
@@ -50,6 +51,7 @@ class TestVectorIndexProtocol:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestVectorIndex:
     def test_search_before_index_returns_empty(self) -> None:
@@ -152,6 +154,7 @@ class TestVectorIndex:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestVectorIndexRecall:
     """Smoke-test that semantically related queries find the right category."""

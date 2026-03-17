@@ -27,6 +27,7 @@ def _dummy_compute(text: str) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestEmbeddingCacheProtocol:
     def test_implements_protocol(self, tmp_path: Path) -> None:
@@ -40,6 +41,7 @@ class TestEmbeddingCacheProtocol:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestGetOrCompute:
     def test_computes_on_miss(self, tmp_path: Path) -> None:
@@ -119,6 +121,7 @@ class TestGetOrCompute:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestStaleness:
     def test_recomputes_on_mtime_change(self, tmp_path: Path) -> None:
@@ -163,6 +166,7 @@ class TestStaleness:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestPrune:
     def test_prune_removes_deleted_files(self, tmp_path: Path) -> None:
@@ -196,6 +200,7 @@ class TestPrune:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestPersistence:
     def test_cache_survives_restart(self, tmp_path: Path) -> None:
@@ -238,6 +243,7 @@ class TestPersistence:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestTOCTOU:
     """Verify TOCTOU race-condition fix: no pre-existence check."""
@@ -270,6 +276,7 @@ class TestTOCTOU:
         cache.close()
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestBatchedPrune:
     """Verify prune uses batched iteration."""
@@ -294,6 +301,72 @@ class TestBatchedPrune:
         cache.close()
 
 
+@pytest.mark.ci
+@pytest.mark.unit
+class TestExceptionPaths:
+    """Verify all exception-handling paths are covered."""
+
+    def test_get_or_compute_stat_permission_error(self, tmp_path: Path) -> None:
+        """Test OSError when path.stat() fails."""
+        f = tmp_path / "restricted.txt"
+        f.write_text("secret")
+        cache = EmbeddingCache(tmp_path / "cache.db")
+
+        import unittest.mock
+
+        original_stat = Path.stat
+
+        def _raise_on_stat(self_path: Path) -> object:
+            if self_path == f:
+                raise OSError("Permission denied")
+            return original_stat(self_path)
+
+        with unittest.mock.patch.object(Path, "stat", _raise_on_stat):
+            with pytest.raises(OSError, match="Cannot access.*Permission denied"):
+                cache.get_or_compute(f, compute=_dummy_compute)
+        cache.close()
+
+    def test_get_or_compute_read_permission_error(self, tmp_path: Path) -> None:
+        """Test OSError when path.read_text() fails."""
+        f = tmp_path / "readable_stat.txt"
+        f.write_text("content")
+        cache = EmbeddingCache(tmp_path / "cache.db")
+
+        import unittest.mock
+
+        original_read = Path.read_text
+
+        def _raise_on_read(self_path: Path, *args: object, **kwargs: object) -> str:
+            if self_path == f:
+                raise OSError("Permission denied on read")
+            return original_read(self_path, *args, **kwargs)  # type: ignore[arg-type]
+
+        with unittest.mock.patch.object(Path, "read_text", _raise_on_read):
+            with pytest.raises(OSError, match="Cannot read.*Permission denied on read"):
+                cache.get_or_compute(f, compute=_dummy_compute)
+        cache.close()
+
+    def test_prune_batching_logic(self, tmp_path: Path) -> None:
+        """Verify batched iteration in prune (tests loop continuation)."""
+        cache = EmbeddingCache(tmp_path / "cache.db")
+        # Insert more than batch_size (500) entries
+        for i in range(520):
+            f = tmp_path / f"file_{i:03d}.txt"
+            f.write_text(f"content {i}")
+            cache.get_or_compute(f, compute=_dummy_compute)
+
+        # Delete all files
+        for i in range(520):
+            (tmp_path / f"file_{i:03d}.txt").unlink()
+
+        # Prune should iterate through multiple batches
+        pruned = cache.prune()
+        assert pruned == 520
+        assert cache.stats()["entries"] == 0
+        cache.close()
+
+
+@pytest.mark.ci
 @pytest.mark.unit
 class TestContextManager:
     def test_context_manager_closes(self, tmp_path: Path) -> None:

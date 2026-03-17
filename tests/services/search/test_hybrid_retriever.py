@@ -35,6 +35,7 @@ def _make_retriever_with_corpus(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestRrfFuse:
     def test_empty_lists(self) -> None:
@@ -106,6 +107,7 @@ class TestRrfFuse:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverInit:
     def test_not_initialized_before_index(self) -> None:
@@ -151,6 +153,7 @@ class TestHybridRetrieverInit:
         assert r._vector is vector
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverIndex:
     def test_index_sets_initialized(self) -> None:
@@ -189,6 +192,7 @@ class TestHybridRetrieverIndex:
         assert r.is_initialized is True
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverRetrieve:
     def test_retrieve_before_index_returns_empty(self) -> None:
@@ -285,6 +289,7 @@ class TestHybridRetrieverRetrieve:
         assert r.retrieve("finance", top_k=-1) == []
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverMocked:
     """Tests that verify RRF fusion without depending on real BM25/vector."""
@@ -339,6 +344,7 @@ class TestHybridRetrieverMocked:
         assert r.retrieve("anything") == []
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverThreadSafety:
     """Verify concurrent access does not crash."""

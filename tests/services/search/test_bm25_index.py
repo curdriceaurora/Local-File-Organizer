@@ -25,6 +25,7 @@ def _make_paths(n: int) -> list[Path]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestTokenise:
     def test_lowercases(self) -> None:
@@ -50,6 +51,7 @@ class TestTokenise:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestBM25IndexProtocol:
     def test_implements_index_protocol(self) -> None:
@@ -61,6 +63,7 @@ class TestBM25IndexProtocol:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestBM25Index:
     def test_search_before_index_returns_empty(self) -> None:

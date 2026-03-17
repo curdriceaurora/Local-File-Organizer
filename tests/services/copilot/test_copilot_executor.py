@@ -46,6 +46,7 @@ def _intent(intent_type: IntentType, **params) -> Intent:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestCommandExecutorInit:
     """Test CommandExecutor.__init__."""
@@ -64,6 +65,7 @@ class TestCommandExecutorInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestExecuteDispatch:
     """Test the execute() dispatch logic."""
@@ -89,6 +91,7 @@ class TestExecuteDispatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleOrganize:
     """Test the organize handler."""
@@ -176,6 +179,7 @@ class TestHandleOrganize:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleMove:
     """Test the move handler."""
@@ -223,6 +227,7 @@ class TestHandleMove:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleRename:
     """Test the rename handler."""
@@ -266,6 +271,7 @@ class TestHandleRename:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleFind:
     """Test the find handler."""
@@ -316,6 +322,7 @@ class TestHandleFind:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleUndoRedo:
     """Test undo and redo handlers."""
@@ -380,6 +387,7 @@ class TestHandleUndoRedo:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandlePreview:
     """Test the preview handler."""
@@ -405,6 +413,7 @@ class TestHandlePreview:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleSuggest:
     """Test the suggest handler."""
@@ -442,6 +451,7 @@ class TestHandleSuggest:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestResolvePath:
     """Test the _resolve_path helper."""
@@ -468,6 +478,7 @@ class TestResolvePath:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestBuildRetrieverHiddenFiles:
     """Verify _build_retriever_for_root excludes hidden files."""

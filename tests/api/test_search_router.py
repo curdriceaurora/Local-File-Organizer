@@ -27,6 +27,7 @@ def _build_app(tmp_path: Path | None = None) -> tuple[FastAPI, TestClient]:
     return app, client
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestSearch:
     """Tests for GET /api/v1/search."""
@@ -213,6 +214,7 @@ class TestSearch:
         assert "size" in result
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestSemanticSearch:
     """Tests for GET /api/v1/search?semantic=true."""
@@ -345,6 +347,7 @@ class TestSemanticSearch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestSearchSecurityBounds:
     """Verify input bounds and output sanitization in the search router."""
@@ -404,6 +407,7 @@ class TestSearchSecurityBounds:
         assert _MAX_LIMIT > 0
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestRelativePathHelper:
     """Unit tests for the _relative_path helper."""
