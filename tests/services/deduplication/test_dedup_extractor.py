@@ -1,7 +1,7 @@
 """Tests for DocumentExtractor class.
 
 Tests text extraction from PDF, DOCX, TXT, MD, RTF, and ODT document formats.
-All external dependencies (PyPDF2, docx, striprtf) are mocked.
+All external dependencies (pypdf, docx, striprtf) are mocked.
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ class TestDocumentExtractorInit:
         original_import = builtins.__import__
 
         def selective_import(name, *args, **kwargs):
-            if name in ("PyPDF2", "docx"):
+            if name in ("pypdf", "docx"):
                 raise ImportError(f"no {name}")
             return original_import(name, *args, **kwargs)
 
@@ -188,11 +188,11 @@ class TestExtractPdf:
         mock_reader = MagicMock()
         mock_reader.pages = [mock_page]
 
-        with patch.dict("sys.modules", {"PyPDF2": MagicMock()}):
+        with patch.dict("sys.modules", {"pypdf": MagicMock()}):
             with patch("builtins.open", mock_open(read_data=b"fake")):
                 import sys
 
-                sys.modules["PyPDF2"].PdfReader.return_value = mock_reader
+                sys.modules["pypdf"].PdfReader.return_value = mock_reader
                 result = extractor._extract_pdf(p)
 
         assert "Page one text" in result
@@ -201,7 +201,7 @@ class TestExtractPdf:
         p = tmp_path / "doc.pdf"
         p.write_bytes(b"fake pdf")
 
-        with patch("builtins.__import__", side_effect=ImportError("no PyPDF2")):
+        with patch("builtins.__import__", side_effect=ImportError("no pypdf")):
             result = extractor._extract_pdf(p)
 
         assert result == ""

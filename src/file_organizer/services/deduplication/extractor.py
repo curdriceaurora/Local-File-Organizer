@@ -121,12 +121,12 @@ class DocumentExtractor:
             Extracted text
         """
         try:
-            import PyPDF2
+            import pypdf
 
             text_parts = []
 
             with open(file_path, "rb") as f:
-                pdf_reader = PyPDF2.PdfReader(f)
+                pdf_reader = pypdf.PdfReader(f)
 
                 # Extract text from each page
                 for page_num in range(len(pdf_reader.pages)):
@@ -141,7 +141,7 @@ class DocumentExtractor:
             return full_text
 
         except ImportError:
-            logger.error("PyPDF2 not installed. Install with: pip install PyPDF2")
+            logger.error("pypdf not installed. Install with: pip install pypdf")
             return ""
         except Exception as e:
             logger.error(f"Error extracting PDF {file_path}: {e}")
@@ -310,7 +310,7 @@ class DocumentExtractor:
     def _check_dependencies(self) -> None:
         """Check if required dependencies are installed."""
         dependencies = {
-            "PyPDF2": "PDF extraction",
+            "pypdf": "PDF extraction",
             "docx": "DOCX extraction",
         }
 

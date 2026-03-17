@@ -367,7 +367,7 @@ class ContentTagAnalyzer:
             # This is simplified - full implementation would use libraries like:
             # - Pillow for image EXIF
             # - python-docx for Word documents
-            # - PyPDF2 for PDFs
+            # - pypdf for PDFs
 
         except Exception as e:
             logger.debug(f"Could not extract metadata from {file_path}: {e}")

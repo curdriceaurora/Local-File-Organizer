@@ -51,6 +51,9 @@ dependencies = [
     "websockets>=12.0",
     "httpx>=0.26.0",
     "python-multipart>=0.0.9",
+    # Security note (2026-03-16): ecdsa 0.19.1 (GHSA-wj6h-64fc-37mp) is a transitive dep
+    # of python-jose. Risk accepted: JWT algorithm is HS256 (HMAC), ecdsa is never invoked.
+    # Revisit if auth_jwt_algorithm is ever changed to ES256/ES384/ES512.
     "python-jose>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "bcrypt>=4.0.0,<5.0.0",
@@ -98,6 +101,9 @@ web = [
     "websockets>=12.0",
     "httpx>=0.26.0",
     "python-multipart>=0.0.9",
+    # Security note (2026-03-16): ecdsa 0.19.1 (GHSA-wj6h-64fc-37mp) is a transitive dep
+    # of python-jose. Risk accepted: JWT algorithm is HS256 (HMAC), ecdsa is never invoked.
+    # Revisit if auth_jwt_algorithm is ever changed to ES256/ES384/ES512.
     "python-jose>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "bcrypt>=4.0.0,<5.0.0",
@@ -132,6 +138,9 @@ cloud = [
 ]
 
 llama = [
+    # Security note (2026-03-16): diskcache 5.6.3 (GHSA-w8v5-vhqr-4h9v) is a transitive
+    # dep of llama-cpp-python. Risk accepted: diskcache is never imported or called by
+    # application code. No patched version exists upstream.
     "llama-cpp-python>=0.2.0",  # llama.cpp C bindings — direct GGUF inference, no Ollama server
 ]
 
@@ -163,7 +172,7 @@ video = [
 dedup = [
     "imagededup>=0.3.0",  # Image similarity and duplicate detection
     "scikit-learn>=1.4.0",  # ML-based text similarity for deduplication
-    "PyPDF2>=3.0.0",  # PDF text extraction fallback in dedup extractor
+    "pypdf>=4.0.0",  # PDF text extraction fallback in dedup extractor
     "striprtf>=0.0.26",  # RTF file text extraction in dedup extractor
 ]
 
@@ -393,7 +402,7 @@ pep621_dev_dependency_groups = ["dev", "docs", "build"]
 "scikit-learn" = "sklearn"
 "opencv-python" = "cv2"
 "pydantic-settings" = "pydantic_settings"
-"PyPDF2" = "PyPDF2"
+"pypdf" = "pypdf"
 "striprtf" = "striprtf"
 "llama-cpp-python" = "llama_cpp"
 "mlx-lm" = "mlx_lm"

@@ -134,8 +134,8 @@ class TestExtractPdf:
     def test_pdf_import_error(self, extractor, tmp_path):
         f = tmp_path / "test.pdf"
         f.write_bytes(b"%PDF-1.4")
-        with patch.dict("sys.modules", {"PyPDF2": None}):
-            with patch("builtins.__import__", side_effect=ImportError("no PyPDF2")):
+        with patch.dict("sys.modules", {"pypdf": None}):
+            with patch("builtins.__import__", side_effect=ImportError("no pypdf")):
                 result = extractor._extract_pdf(f)
         assert result == ""
 
