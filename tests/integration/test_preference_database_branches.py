@@ -115,6 +115,11 @@ class TestPreferenceDatabaseInitialize:
 
         original_initialize = PreferenceDatabaseManager.initialize
 
+        # Spy on get_connection — only called when init proceeds past the inner guard.
+        # Thread-2 hitting the inner guard must result in call_count == 1 (Thread-1 only).
+        mock_get_connection = MagicMock(side_effect=db.get_connection)
+        db.get_connection = mock_get_connection  # type: ignore[method-assign]
+
         def t1_init() -> None:
             """Hold the lock until Thread-2 is ready, then complete initialization."""
             with db._lock:
@@ -130,8 +135,10 @@ class TestPreferenceDatabaseInitialize:
             t2_ready.set()  # tell Thread-1 we're committed
             # acquire lock — blocks until Thread-1 releases it
             original_initialize(db)
-            # If inner guard fired, _initialized was True and we returned early
-            inner_guard_hit.append(True)
+            # get_connection count == 1 proves Thread-2 returned via the inner guard
+            # without running setup again (get_connection is called only past line 149-150).
+            if mock_get_connection.call_count == 1:
+                inner_guard_hit.append(True)
 
         t1 = threading.Thread(target=t1_init)
         t2 = threading.Thread(target=t2_init)
@@ -142,7 +149,7 @@ class TestPreferenceDatabaseInitialize:
         t2.join(timeout=10)
 
         assert db._initialized is True
-        # Both threads completed without error
+        assert mock_get_connection.call_count == 1  # only Thread-1 ran past the inner guard
         assert len(inner_guard_hit) == 1
 
     def test_first_time_schema_version_inserted(self, tmp_path: Path) -> None:

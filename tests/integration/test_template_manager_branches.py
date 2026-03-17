@@ -81,14 +81,14 @@ class TestCreateProfileFromTemplateBranches:
 
     def test_successful_creation_from_template(self, tmp_path: Path) -> None:
         """Happy-path: creates profile from template with correct data."""
-        pm, tm = _make_manager(tmp_path)
+        _, tm = _make_manager(tmp_path)
         profile = tm.create_profile_from_template("work", "WorkProfile")
         assert profile is not None
         assert profile.profile_name == "WorkProfile"
 
     def test_create_with_customizations_applied(self, tmp_path: Path) -> None:
         """customize param triggers _apply_customizations (line 336)."""
-        pm, tm = _make_manager(tmp_path)
+        _, tm = _make_manager(tmp_path)
         customize: dict[str, Any] = {
             "naming_patterns": {"separator": "__"},
             "folder_mappings": {"custom_dir": "Custom/Dir"},
