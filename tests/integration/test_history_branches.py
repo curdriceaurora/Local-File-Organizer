@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +296,8 @@ class TestHistoryExporterTimezoneBranches:
         aware_start = datetime(2020, 1, 1, tzinfo=tokyo)
 
         result = exporter.export_to_json(tmp_path / "out.json", start_date=aware_start)
-        assert "operations_exported" in result
+        # 1 operation was inserted; start_date is in 2020 so it falls within range
+        assert result["operations_exported"] == 1
 
     def test_export_json_aware_end_date(self, tmp_path: Path) -> None:
         """export_to_json with tz-aware end_date hits else branch (line 84)."""
@@ -305,7 +306,8 @@ class TestHistoryExporterTimezoneBranches:
         aware_end = datetime(2030, 12, 31, tzinfo=paris)
 
         result = exporter.export_to_json(tmp_path / "out2.json", end_date=aware_end)
-        assert "operations_exported" in result
+        # end_date is in 2030 so the inserted operation is within range
+        assert result["operations_exported"] == 1
 
     def test_export_json_aware_start_and_end(self, tmp_path: Path) -> None:
         """export_to_json with both aware dates hits both else branches."""
@@ -317,7 +319,8 @@ class TestHistoryExporterTimezoneBranches:
         result = exporter.export_to_json(
             tmp_path / "out3.json", start_date=aware_start, end_date=aware_end
         )
-        assert "operations_exported" in result
+        # Both dates bracket the inserted operation
+        assert result["operations_exported"] == 1
 
     def test_export_csv_aware_start_date(self, tmp_path: Path) -> None:
         """export_to_csv with tz-aware start_date hits else branch (lines 162-163)."""
@@ -326,7 +329,8 @@ class TestHistoryExporterTimezoneBranches:
         aware_start = datetime(2020, 1, 1, tzinfo=tokyo)
 
         count = exporter.export_to_csv(tmp_path / "ops.csv", start_date=aware_start)
-        assert count >= 0
+        # start_date is in 2020; the inserted operation falls within range
+        assert count == 1
 
     def test_export_csv_aware_end_date(self, tmp_path: Path) -> None:
         """export_to_csv with tz-aware end_date hits else branch (lines 170-171)."""
@@ -335,7 +339,8 @@ class TestHistoryExporterTimezoneBranches:
         aware_end = datetime(2030, 12, 31, tzinfo=paris)
 
         count = exporter.export_to_csv(tmp_path / "ops2.csv", end_date=aware_end)
-        assert count >= 0
+        # end_date is in 2030; the inserted operation falls within range
+        assert count == 1
 
     def test_export_csv_aware_both_dates(self, tmp_path: Path) -> None:
         """export_to_csv with both aware dates hits both else branches."""
@@ -347,4 +352,5 @@ class TestHistoryExporterTimezoneBranches:
         count = exporter.export_to_csv(
             tmp_path / "ops3.csv", start_date=aware_start, end_date=aware_end
         )
-        assert count >= 0
+        # Both dates bracket the inserted operation
+        assert count == 1

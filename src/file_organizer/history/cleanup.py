@@ -156,14 +156,16 @@ class HistoryCleanup:
                 cursor = conn.execute(delete_query)
                 deleted_count = cursor.rowcount
         else:
-            # Get the timestamp of the Nth most recent operation
-            # Use OFFSET to find the cutoff point, then delete within same transaction
+            # Get the timestamp of the Nth most recent operation (the last one to keep).
+            # OFFSET = max_operations - 1 puts us at index N-1 (0-based DESC), i.e.
+            # the oldest of the N rows we want to retain.
+            # DELETE WHERE timestamp < that value removes exactly the excess rows.
             query = """
             SELECT timestamp FROM operations
             ORDER BY timestamp DESC
             LIMIT 1 OFFSET ?
             """
-            result = self.db.fetch_one(query, (max_operations,))
+            result = self.db.fetch_one(query, (max_operations - 1,))
 
             if result is None:
                 logger.warning("Could not determine cutoff timestamp")

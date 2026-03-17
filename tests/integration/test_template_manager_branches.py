@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 import pytest
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +97,10 @@ class TestCreateProfileFromTemplateBranches:
         }
         profile = tm.create_profile_from_template("work", "CustomWork", customize=customize)
         assert profile is not None
+        # Verify the customization payload was actually applied, not ignored
+        prefs = profile.preferences.get("global", {})
+        assert prefs.get("folder_mappings", {}).get("custom_dir") == "Custom/Dir"
+        assert prefs.get("category_overrides", {}).get("my_ext") == "custom_category"
 
 
 # ---------------------------------------------------------------------------

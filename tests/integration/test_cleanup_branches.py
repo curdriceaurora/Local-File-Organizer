@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 import pytest
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -118,16 +118,17 @@ class TestCleanupByCountBranches:
         assert db.get_operation_count() == 3
 
     def test_cleanup_by_count_deletes_oldest(self, tmp_path: Path) -> None:
-        """Keeps N most-recent operations, deletes older ones.
+        """Keeps exactly N most-recent operations, deletes older ones.
 
-        The algorithm uses `DELETE WHERE timestamp < cutoff` (strictly less than),
-        so at least 1 old operation is deleted when 5 ops exist and max=3.
+        With 5 distinct-timestamp ops and max=3: the cutoff is the 3rd-newest
+        timestamp (OFFSET=2); DELETE WHERE timestamp < cutoff removes the 2 oldest,
+        leaving exactly 3 rows.
         """
         db, cleanup = _make_cleanup(tmp_path)
         _insert_operations(db, 5)
         deleted = cleanup.cleanup_by_count(max_operations=3)
-        assert deleted >= 1
-        assert db.get_operation_count() < 5
+        assert deleted == 2
+        assert db.get_operation_count() == 3
 
     def test_cleanup_by_count_max_zero_deletes_all(self, tmp_path: Path) -> None:
         """max_operations=0 → special case: delete all operations."""
@@ -163,8 +164,9 @@ class TestCleanupByCountBranches:
         db, cleanup = _make_cleanup(tmp_path, config=HistoryCleanupConfig(max_operations=2))
         _insert_operations(db, 5)
         deleted = cleanup.cleanup_by_count()  # uses config default of 2
-        # With 5 ops and max=2 (OFFSET=2 → cutoff=3rd oldest), at least 2 are deleted
-        assert deleted >= 2
+        # With 5 ops and max=2 (OFFSET=1 → cutoff=2nd-newest timestamp), 3 are deleted
+        assert deleted == 3
+        assert db.get_operation_count() == 2
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +236,7 @@ class TestAutoCleanupBranches:
         assert stats["deleted_transactions"] == 0
 
     def test_auto_cleanup_by_age_when_count_exceeded(self, tmp_path: Path) -> None:
-        """auto_cleanup runs age + count cleanup when count exceeds limit."""
+        """auto_cleanup runs age cleanup first; all 5 ops (in the past) are purged."""
         from file_organizer.history.cleanup import HistoryCleanupConfig
 
         db, cleanup = _make_cleanup(
@@ -243,8 +245,9 @@ class TestAutoCleanupBranches:
         )
         _insert_operations(db, 5)
         stats = cleanup.auto_cleanup()
-        # All operations older than 0 days deleted by age first
-        assert stats["deleted_operations"] >= 0
+        # max_age_days=0 deletes everything older than today; all 5 past-dated ops removed
+        assert stats["deleted_operations"] == 5
+        assert db.get_operation_count() == 0
 
     def test_auto_cleanup_triggers_cleanup_by_size(self, tmp_path: Path) -> None:
         """cleanup_by_size branch called when DB size still over limit (lines 344-346).
@@ -263,7 +266,9 @@ class TestAutoCleanupBranches:
         # Then auto_cleanup runs age+count (no deletions since count<10000+age>90d)
         # Then size check still fires since max_size_mb=0
         stats = cleanup.auto_cleanup()
-        assert "deleted_operations" in stats
+        # size branch fires (max_size_mb=0); all 5 ops deleted to attempt size reduction
+        assert stats["deleted_operations"] == 5
+        assert db.get_operation_count() == 0
 
     def test_auto_cleanup_disabled_returns_zeros(self, tmp_path: Path) -> None:
         """auto_cleanup_enabled=False → auto_cleanup returns early via should_cleanup."""

@@ -24,7 +24,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.ci]
 
 
 # ---------------------------------------------------------------------------
@@ -94,39 +94,56 @@ class TestPreferenceDatabaseInitialize:
         assert db._initialized is True
 
     def test_initialize_inner_lock_guard(self, tmp_path: Path) -> None:
-        """Inner double-checked-locking guard (line 149-150) hit by concurrent init.
+        """Inner double-checked-locking guard (line 149-150) deterministically exercised.
 
-        Simulate two threads: both pass the outer check, but one finishes first.
-        The second thread re-checks inside the lock and returns early.
+        Thread-1 acquires _lock and holds it until Thread-2 has passed the outer
+        ``if self._initialized`` check.  Thread-2 then blocks on the lock, enters
+        the critical section after Thread-1 releases it, and hits the inner guard
+        (``_initialized`` is already True) — returning early without re-running setup.
         """
         from file_organizer.services.intelligence.preference_database import (
             PreferenceDatabaseManager,
         )
 
         db = PreferenceDatabaseManager(tmp_path / "concurrent.db")
-        errors: list[Exception] = []
-        results: list[bool] = []
-        barrier = threading.Barrier(2)
+        inner_guard_hit: list[bool] = []
+
+        # Event: signals that Thread-1 has acquired the lock and is inside init
+        t1_inside = threading.Event()
+        # Event: signals that Thread-2 has passed the outer check and is waiting
+        t2_ready = threading.Event()
 
         original_initialize = PreferenceDatabaseManager.initialize
 
-        def slow_init(self: PreferenceDatabaseManager) -> None:
-            """First call initializes; second call races through to inner guard."""
-            barrier.wait()  # both threads arrive simultaneously
-            original_initialize(self)
-            results.append(True)
+        def t1_init() -> None:
+            """Hold the lock until Thread-2 is ready, then complete initialization."""
+            with db._lock:
+                t1_inside.set()  # tell Thread-2 the lock is held
+                t2_ready.wait(timeout=5)  # wait until Thread-2 is past outer check
+                original_initialize(db)
 
-        t1 = threading.Thread(target=slow_init, args=(db,))
-        t2 = threading.Thread(target=slow_init, args=(db,))
+        def t2_init() -> None:
+            """Pass outer check, then wait until Thread-1 owns the lock."""
+            t1_inside.wait(timeout=5)  # ensure Thread-1 holds the lock first
+            # _initialized is still False here → passes outer guard
+            assert not db._initialized
+            t2_ready.set()  # tell Thread-1 we're committed
+            # acquire lock — blocks until Thread-1 releases it
+            original_initialize(db)
+            # If inner guard fired, _initialized was True and we returned early
+            inner_guard_hit.append(True)
+
+        t1 = threading.Thread(target=t1_init)
+        t2 = threading.Thread(target=t2_init)
 
         t1.start()
         t2.start()
-        t1.join()
-        t2.join()
+        t1.join(timeout=10)
+        t2.join(timeout=10)
 
-        assert not errors
         assert db._initialized is True
-        assert len(results) == 2
+        # Both threads completed without error
+        assert len(inner_guard_hit) == 1
 
     def test_first_time_schema_version_inserted(self, tmp_path: Path) -> None:
         """First initialization inserts schema version record (lines 172-176)."""
