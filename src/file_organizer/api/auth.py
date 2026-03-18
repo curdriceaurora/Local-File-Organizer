@@ -34,7 +34,10 @@ class TokenBundle:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Return True if plain_password matches hashed_password."""
-    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
+    try:
+        return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
+    except (ValueError, TypeError):
+        return False
 
 
 def hash_password(password: str) -> str:
