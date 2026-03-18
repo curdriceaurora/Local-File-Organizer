@@ -89,6 +89,32 @@ pytest tests/ -m "integration and not benchmark" \
 echo "✓ Integration test coverage"
 echo ""
 
+# Diff coverage gate (only on branches with main for comparison)
+# Detects if we're in a branch context (not detached HEAD)
+current_branch=$(git branch --show-current 2>/dev/null)
+if [[ -n "$current_branch" && "$current_branch" != "HEAD" && -f coverage.xml ]]; then
+  echo "▶ Diff coverage gate (≥80% on changed lines)"
+
+  # Ensure origin/main is available for comparison
+  if ! git rev-parse origin/main >/dev/null 2>&1; then
+    git fetch origin main:main 2>/dev/null || true
+  fi
+
+  # Run diff-cover if available
+  if command -v diff-cover &>/dev/null; then
+    diff-cover coverage.xml --compare-branch=origin/main --fail-under=80
+    echo "✓ Diff coverage gate"
+    echo ""
+  else
+    echo "ℹ diff-cover not installed (optional; skipping local check)"
+    echo "  Install: pip install diff-cover"
+    echo ""
+  fi
+else
+  echo "ℹ Skipping diff coverage gate (no branch context or no coverage.xml)"
+  echo ""
+fi
+
 if git diff --cached -- '*.py' '.github/workflows/*.yml' 2>/dev/null | grep -q 'GITHUB_'; then
   echo "ℹ Detected GitHub-environment branching in staged changes."
   echo "  Guardrail tests in tests/ci must cover both local and PR CI contexts."

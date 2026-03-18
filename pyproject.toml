@@ -129,6 +129,7 @@ dev = [
     "interrogate>=1.5.0",  # Docstring coverage measurement
     "pymarkdownlnt>=0.9.25",  # Markdown linting
     "deptry>=0.16.0",  # Unused dependency detection
+    "diff-cover>=7.0.0",  # Diff coverage gate (local pre-commit + CI validation)
 ]
 
 cloud = [
