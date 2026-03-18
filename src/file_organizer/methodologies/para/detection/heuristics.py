@@ -6,16 +6,26 @@ Uses temporal, content, structural, and AI-based heuristics.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+try:
+    import ollama
+
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    ollama = None  # type: ignore[assignment]
+    OLLAMA_AVAILABLE = False
+
 from ..categories import PARACategory
-from ..config import CategoryThresholds
+from ..config import AIHeuristicConfig, CategoryThresholds
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +60,7 @@ class HeuristicResult:
     recommended_category: PARACategory | None = None
     needs_manual_review: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
+    abstained: bool = False
 
 
 class Heuristic(ABC):
@@ -405,31 +416,286 @@ class StructuralHeuristic(Heuristic):
 
 
 class AIHeuristic(Heuristic):
-    """AI-powered heuristic using semantic analysis.
+    """AI-powered heuristic using Ollama for semantic PARA classification.
 
-    This is a placeholder for future AI integration.
-    Can use local LLMs via Ollama for semantic understanding.
+    Uses a local LLM via Ollama to analyze file content and classify it
+    into PARA categories. Gracefully degrades when Ollama is unavailable
+    by returning neutral (zero) scores.
     """
 
-    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
-        """Evaluate using AI (placeholder for future implementation)."""
-        scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
+    # Confidence damping factor — prevents the AI heuristic from
+    # dominating when other heuristics are uncertain.
+    _CONFIDENCE_DAMPING: float = 0.8
 
-        # TODO: Implement AI-based evaluation using Ollama
-        # This would involve:
-        # 1. Extract file content or metadata
-        # 2. Generate semantic embedding
-        # 3. Compare with PARA category embeddings
-        # 4. Return similarity scores
+    _PROMPT_TEMPLATE: str = (
+        "You are a file organization assistant using the PARA methodology.\n"
+        "Classify the following file into PARA categories by assigning a score "
+        "to each category.\n\n"
+        "Categories:\n"
+        "- PROJECT: Time-bound efforts with specific goals, deadlines, or deliverables\n"
+        "- AREA: Ongoing responsibilities requiring continuous maintenance (no end date)\n"
+        "- RESOURCE: Reference materials, knowledge, and information for future use\n"
+        "- ARCHIVE: Inactive or completed items no longer actively used\n\n"
+        "File path: {file_path}\n"
+        "File name: {file_name}\n"
+        "File extension: {file_ext}\n\n"
+        "Content preview:\n{content}\n\n"
+        "Respond with ONLY a JSON object (no markdown, no explanation):\n"
+        '{{"project": 0.0, "area": 0.0, "resource": 0.0, "archive": 0.0, '
+        '"reasoning": "brief explanation"}}\n\n'
+        "Rules:\n"
+        "- Scores must sum to approximately 1.0\n"
+        "- Each score must be between 0.0 and 1.0\n"
+        "- Base your assessment on the file content, name, and path\n"
+    )
 
-        logger.info("AI heuristic not yet implemented")
+    def __init__(self, weight: float = 1.0, config: AIHeuristicConfig | None = None) -> None:
+        """Initialize AI heuristic.
 
+        Args:
+            weight: Weight of this heuristic in final scoring (0.0 to 1.0)
+            config: AI heuristic configuration. Uses defaults if not provided.
+        """
+        super().__init__(weight=weight)
+        self.config = config or AIHeuristicConfig()
+        self._client: Any = None
+        self._available: bool | None = None
+        self._init_lock = threading.Lock()
+
+    def _ensure_client(self) -> bool:
+        """Lazily create the Ollama client (thread-safe).
+
+        Uses a double-check locking pattern so the Ollama connectivity test
+        runs at most once per instance even under concurrent access.
+
+        Returns:
+            True if client is available, False otherwise.
+        """
+        if self._available is not None:
+            return self._available
+
+        with self._init_lock:
+            # Re-check after acquiring the lock in case another thread already
+            # completed initialization while this thread was waiting.
+            if self._available is not None:
+                return self._available
+
+            if not OLLAMA_AVAILABLE:
+                self._available = False
+                return False
+
+            try:
+                self._client = ollama.Client(
+                    host=self.config.ollama_url,
+                    timeout=self.config.timeout,
+                )
+                self._client.list()
+                self._available = True
+            except Exception:
+                logger.warning("Ollama unavailable at %s", self.config.ollama_url, exc_info=True)
+                self._available = False
+
+        return self._available
+
+    def _extract_content(self, file_path: Path, metadata: dict[str, Any] | None) -> str:
+        """Extract text content from a file for the classification prompt.
+
+        For text-readable files, reads the first ``max_content_chars``
+        characters. For binary or unreadable files, returns a summary
+        built from the file path and any supplied metadata.
+
+        Args:
+            file_path: Path to the file.
+            metadata: Optional pre-extracted metadata dict.
+
+        Returns:
+            A string suitable for inclusion in the LLM prompt.
+        """
+        try:
+            with file_path.open("rb") as f:
+                raw = f.read(self.config.max_content_chars)
+            # Fast path: valid UTF-8 is text regardless of byte values.
+            try:
+                content = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                # Not valid UTF-8 — count low control bytes (null + non-whitespace
+                # controls) as binary indicators.  Bytes ≥ 128 are NOT counted here
+                # because they appear in Latin-1 and other single-byte encodings
+                # that may still be human-readable.
+                non_text = sum(1 for b in raw if b == 0 or (b < 32 and b not in (9, 10, 13)))
+                if raw and non_text / len(raw) > 0.30:
+                    raise ValueError("binary content") from None
+                content = raw.decode("utf-8", errors="replace")
+            if content.strip():
+                return content
+        except (OSError, ValueError):
+            pass
+
+        # Fallback: describe the file from path and metadata
+        parts = [f"[Binary or unreadable file: {file_path.name}]"]
+        if metadata:
+            for key, value in metadata.items():
+                parts.append(f"{key}: {value}")
+        return "\n".join(parts)
+
+    def _build_prompt(self, file_path: Path, content: str) -> str:
+        """Build the PARA classification prompt.
+
+        Args:
+            file_path: Path to the file being classified.
+            content: Extracted text content or metadata summary.
+
+        Returns:
+            The formatted prompt string.
+        """
+        return self._PROMPT_TEMPLATE.format(
+            file_path=file_path,
+            file_name=file_path.name,
+            file_ext=file_path.suffix or "(none)",
+            content=content,
+        )
+
+    def _parse_response(self, response_text: str) -> dict[str, Any] | None:
+        """Parse LLM response into category scores.
+
+        Handles responses wrapped in markdown code fences and normalises
+        scores so they sum to 1.0.
+
+        Args:
+            response_text: Raw text from the LLM.
+
+        Returns:
+            Dict with keys ``project``, ``area``, ``resource``, ``archive``
+            (float) and ``reasoning`` (str), or ``None`` on parse failure.
+        """
+        # Locate the outermost JSON object in the response, regardless of
+        # whether the LLM wrapped it in markdown code fences or prose.
+        start = response_text.find("{")
+        end = response_text.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            return None
+        text = response_text[start : end + 1]
+
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            return None
+
+        categories = ["project", "area", "resource", "archive"]
+        if not all(cat in data for cat in categories):
+            return None
+
+        # Validate and clamp scores
+        scores: dict[str, Any] = {}
+        for cat in categories:
+            try:
+                val = float(data[cat])
+            except (TypeError, ValueError):
+                return None
+            scores[cat] = max(0.0, min(1.0, val))
+
+        # Normalise so scores sum to 1.0
+        total = sum(scores[cat] for cat in categories)
+        if total > 0:
+            for cat in categories:
+                scores[cat] = scores[cat] / total
+
+        scores["reasoning"] = str(data.get("reasoning", ""))
+        return scores
+
+    @staticmethod
+    def _zero_result(metadata_reason: str) -> HeuristicResult:
+        """Return a neutral (all-zero) result with the given metadata reason.
+
+        Sets ``abstained=True`` so the engine excludes this heuristic's weight
+        from the denominator and avoids diluting scores from other heuristics.
+        """
         return HeuristicResult(
-            scores=scores,
+            scores={cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory},
             overall_confidence=0.0,
             recommended_category=None,
             needs_manual_review=True,
-            metadata={"ai_analysis": "not_implemented"},
+            metadata={"ai_analysis": metadata_reason},
+            abstained=True,
+        )
+
+    def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
+        """Evaluate a file using Ollama LLM semantic analysis.
+
+        Calls the configured Ollama model with the file content and a PARA
+        classification prompt. On any failure (Ollama not installed, server
+        unavailable, malformed response), returns neutral zero scores so that
+        the heuristic pipeline is never blocked.
+
+        Args:
+            file_path: Path to the file to evaluate.
+            metadata: Optional pre-extracted metadata.
+
+        Returns:
+            HeuristicResult with per-category scores from the LLM.
+        """
+        if not OLLAMA_AVAILABLE:
+            logger.debug("ollama package not installed — skipping AI heuristic")
+            return self._zero_result("ollama_not_installed")
+
+        if not self._ensure_client():
+            return self._zero_result("ollama_unavailable")
+
+        content = self._extract_content(file_path, metadata)
+        prompt = self._build_prompt(file_path, content)
+
+        try:
+            response = self._client.generate(
+                model=self.config.model,
+                prompt=prompt,
+                options={
+                    "temperature": self.config.temperature,
+                    "num_predict": self.config.max_tokens,
+                },
+                stream=False,
+            )
+            response_text: str = response.get("response", "") or ""
+        except Exception:
+            logger.warning("Ollama generate failed", exc_info=True)
+            return self._zero_result("ollama_error")
+
+        parsed = self._parse_response(response_text)
+        if parsed is None:
+            logger.warning(
+                "Failed to parse AI heuristic response from model %s (response length: %d)",
+                self.config.model,
+                len(response_text),
+            )
+            return self._zero_result("parse_error")
+
+        # Map parsed scores to CategoryScore objects.
+        # Derive the key → category mapping from PARACategory.value so that
+        # if the enum gains or renames values the map stays in sync.
+        category_map: dict[str, PARACategory] = {cat.value: cat for cat in PARACategory}
+        reasoning = parsed.get("reasoning", "")
+        max_key = max(category_map, key=lambda k: parsed[k])
+        max_score = parsed[max_key]
+        confidence = max_score * self._CONFIDENCE_DAMPING
+
+        scores: dict[PARACategory, CategoryScore] = {}
+        for key, para_cat in category_map.items():
+            signals = [f"AI: {reasoning}"] if key == max_key and reasoning else []
+            scores[para_cat] = CategoryScore(
+                category=para_cat,
+                score=parsed[key],
+                confidence=confidence,
+                signals=signals,
+            )
+
+        sorted_scores = sorted(scores.values(), key=lambda s: s.score, reverse=True)
+        recommended = sorted_scores[0].category if sorted_scores[0].score > 0.3 else None
+
+        return HeuristicResult(
+            scores=scores,
+            overall_confidence=confidence,
+            recommended_category=recommended,
+            needs_manual_review=confidence < 0.5,
+            metadata={"ai_analysis": "complete"},
         )
 
 
@@ -453,6 +719,7 @@ class HeuristicEngine:
         enable_structural: bool = True,
         enable_ai: bool = False,
         thresholds: CategoryThresholds | None = None,
+        ai_config: AIHeuristicConfig | None = None,
     ):
         """Initialize heuristic engine.
 
@@ -463,6 +730,8 @@ class HeuristicEngine:
             enable_ai: Enable AI heuristic
             thresholds: Category-specific confidence thresholds; uses
                 ``CategoryThresholds`` defaults when not provided.
+            ai_config: Configuration for the AI heuristic. Uses defaults
+                when not provided.
         """
         self._thresholds = thresholds or self._DEFAULT_THRESHOLDS
         self.heuristics: list[Heuristic] = []
@@ -477,7 +746,7 @@ class HeuristicEngine:
             self.heuristics.append(StructuralHeuristic(weight=0.30))
 
         if enable_ai:
-            self.heuristics.append(AIHeuristic(weight=0.10))
+            self.heuristics.append(AIHeuristic(weight=0.10, config=ai_config))
 
     @property
     def THRESHOLDS(self) -> dict[PARACategory, float]:
@@ -523,11 +792,16 @@ class HeuristicEngine:
                 needs_manual_review=True,
             )
 
-        # Combine scores using weighted average
+        # Combine scores using weighted average.
+        # Heuristics that abstained (e.g. AI when Ollama is unavailable) are
+        # excluded from the denominator so they don't dilute other scores.
         combined_scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
-        total_weight = sum(h.weight for h, _ in results)
+        active_results = [(h, r) for h, r in results if not r.abstained]
+        total_weight = sum(h.weight for h, _ in active_results) or sum(h.weight for h, _ in results)
 
         for heuristic, result in results:
+            if result.abstained:
+                continue
             weight_factor = heuristic.weight / total_weight
 
             for category, score in result.scores.items():

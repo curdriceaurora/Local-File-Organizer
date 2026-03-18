@@ -104,6 +104,18 @@ class TemporalThresholds:
 
 
 @dataclass
+class AIHeuristicConfig:
+    """Configuration for the AI-powered heuristic."""
+
+    model: str = "qwen2.5:3b-instruct-q4_K_M"
+    ollama_url: str = "http://localhost:11434"
+    timeout: float = 30.0
+    max_content_chars: int = 4096
+    temperature: float = 0.3
+    max_tokens: int = 200
+
+
+@dataclass
 class PARAConfig:
     """Complete PARA configuration."""
 
@@ -112,6 +124,7 @@ class PARAConfig:
     category_thresholds: CategoryThresholds = field(default_factory=CategoryThresholds)
     keyword_patterns: KeywordPatterns = field(default_factory=KeywordPatterns)
     temporal_thresholds: TemporalThresholds = field(default_factory=TemporalThresholds)
+    ai_heuristic: AIHeuristicConfig = field(default_factory=AIHeuristicConfig)
 
     # Feature flags
     enable_temporal_heuristic: bool = True
@@ -165,12 +178,16 @@ class PARAConfig:
             # Parse temporal thresholds
             temporal_thresholds = TemporalThresholds(**data.get("temporal_thresholds", {}))
 
+            # Parse AI heuristic config
+            ai_heuristic = AIHeuristicConfig(**data.get("ai_heuristic", {}))
+
             # Create config
             config = cls(
                 heuristic_weights=heuristic_weights,
                 category_thresholds=category_thresholds,
                 keyword_patterns=keyword_patterns,
                 temporal_thresholds=temporal_thresholds,
+                ai_heuristic=ai_heuristic,
                 enable_temporal_heuristic=data.get("enable_temporal_heuristic", True),
                 enable_content_heuristic=data.get("enable_content_heuristic", True),
                 enable_structural_heuristic=data.get("enable_structural_heuristic", True),
@@ -178,7 +195,7 @@ class PARAConfig:
                 manual_review_threshold=data.get("manual_review_threshold", 0.60),
                 auto_categorize=data.get("auto_categorize", True),
                 preserve_user_overrides=data.get("preserve_user_overrides", True),
-                default_root=Path(data["default_root"]) if "default_root" in data else None,
+                default_root=Path(data["default_root"]) if data.get("default_root") else None,
                 project_dir=data.get("project_dir", "Projects"),
                 area_dir=data.get("area_dir", "Areas"),
                 resource_dir=data.get("resource_dir", "Resources"),
@@ -225,6 +242,14 @@ class PARAConfig:
                 "resource_min_age": self.temporal_thresholds.resource_min_age,
                 "archive_min_age": self.temporal_thresholds.archive_min_age,
                 "archive_min_inactive": self.temporal_thresholds.archive_min_inactive,
+            },
+            "ai_heuristic": {
+                "model": self.ai_heuristic.model,
+                "ollama_url": self.ai_heuristic.ollama_url,
+                "timeout": self.ai_heuristic.timeout,
+                "max_content_chars": self.ai_heuristic.max_content_chars,
+                "temperature": self.ai_heuristic.temperature,
+                "max_tokens": self.ai_heuristic.max_tokens,
             },
             "enable_temporal_heuristic": self.enable_temporal_heuristic,
             "enable_content_heuristic": self.enable_content_heuristic,

@@ -126,6 +126,7 @@ class PARASuggestionEngine:
             enable_content=self._config.enable_content_heuristic,
             enable_structural=self._config.enable_structural_heuristic,
             enable_ai=self._config.enable_ai_heuristic,
+            ai_config=self._config.ai_heuristic,
         )
         self._feature_extractor = feature_extractor or FeatureExtractor()
 

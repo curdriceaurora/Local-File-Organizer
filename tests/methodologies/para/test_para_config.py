@@ -14,6 +14,7 @@ import yaml
 
 from file_organizer.methodologies.para.categories import PARACategory
 from file_organizer.methodologies.para.config import (
+    AIHeuristicConfig,
     CategoryThresholds,
     HeuristicWeights,
     KeywordPatterns,
@@ -192,6 +193,49 @@ class TestPARAConfigCategoryHelpers:
         assert cfg.get_category_directory(PARACategory.AREA) == "A"
         assert cfg.get_category_directory(PARACategory.RESOURCE) == "R"
         assert cfg.get_category_directory(PARACategory.ARCHIVE) == "Ar"
+
+
+class TestAIHeuristicConfig:
+    """Tests for AIHeuristicConfig dataclass and YAML round-trip."""
+
+    def test_default_values(self) -> None:
+        """AIHeuristicConfig defaults match expected values."""
+        cfg = AIHeuristicConfig()
+        assert cfg.model == "qwen2.5:3b-instruct-q4_K_M"
+        assert cfg.ollama_url == "http://localhost:11434"
+        assert cfg.timeout == 30.0
+        assert cfg.max_content_chars == 4096
+        assert cfg.temperature == 0.3
+        assert cfg.max_tokens == 200
+
+    def test_yaml_round_trip(self, tmp_path: Path) -> None:
+        """ai_heuristic section survives save → load round-trip."""
+        ai_cfg = AIHeuristicConfig(model="llama3:8b", temperature=0.1, max_tokens=100)
+        para_cfg = PARAConfig(ai_heuristic=ai_cfg, enable_ai_heuristic=True)
+        out_file = tmp_path / "roundtrip.yaml"
+        para_cfg.save_to_yaml(out_file)
+
+        reloaded = PARAConfig.load_from_yaml(out_file)
+        assert reloaded.ai_heuristic.model == "llama3:8b"
+        assert reloaded.ai_heuristic.temperature == 0.1
+        assert reloaded.ai_heuristic.max_tokens == 100
+        assert reloaded.enable_ai_heuristic is True
+
+    def test_missing_ai_section_uses_defaults(self, tmp_path: Path) -> None:
+        """YAML without ai_heuristic section falls back to defaults."""
+        data = {"enable_ai_heuristic": True}
+        config_file = tmp_path / "no_ai_section.yaml"
+        with open(config_file, "w") as f:
+            yaml.dump(data, f)
+
+        cfg = PARAConfig.load_from_yaml(config_file)
+        assert cfg.ai_heuristic.model == "qwen2.5:3b-instruct-q4_K_M"
+        assert cfg.ai_heuristic.timeout == 30.0
+
+    def test_para_config_has_ai_heuristic_field(self) -> None:
+        """PARAConfig includes ai_heuristic field with correct type."""
+        cfg = PARAConfig()
+        assert isinstance(cfg.ai_heuristic, AIHeuristicConfig)
 
 
 class TestLoadConfig:
