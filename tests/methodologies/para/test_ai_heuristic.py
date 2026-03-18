@@ -160,7 +160,7 @@ class TestAIHeuristicClassification:
         fenced = f"```json\n{json_body}\n```"
         mock_client.generate.return_value = {"response": fenced}
         test_file = tmp_path / "budget.xlsx"
-        test_file.write_bytes(b"\x00\x01\x02")  # binary file
+        test_file.write_bytes(bytes(range(256)))  # binary file: 61% non-text bytes
 
         with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
             result = h.evaluate(test_file)

@@ -514,7 +514,7 @@ class AIHeuristic(Heuristic):
         try:
             raw = file_path.read_bytes()[: self.config.max_content_chars]
             # Heuristic binary check: more than 30% non-text bytes → treat as binary.
-            # Text bytes: tab (9), LF (10), CR (13), printable ASCII (32–126).
+            # Text bytes: tab (9), LF (10), CR (13), printable ASCII (32-126).
             # Everything else (control chars, high bytes, null) is non-text.
             non_text = sum(1 for b in raw if b not in (9, 10, 13) and not (32 <= b <= 126))
             if raw and non_text / len(raw) > 0.30:
