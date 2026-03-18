@@ -161,6 +161,22 @@ class TestTransform:
         # transform should only be called once (second time from cache)
         assert mock_vectorizer.transform.call_count == 1
 
+    @pytest.mark.ci
+    def test_cache_hit_emits_debug_log(
+        self, embedder, mock_vectorizer, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Cache-hit path logs a debug message (covers embedder.py logger.debug line)."""
+        import logging
+
+        embedder.is_fitted = True
+        embedder.transform("cache test doc")  # populates cache
+        with caplog.at_level(
+            logging.DEBUG, logger="file_organizer.services.deduplication.embedder"
+        ):
+            embedder.transform("cache test doc")  # hits cache → executes logger.debug
+        assert "Cache hit" in caplog.text
+        assert mock_vectorizer.transform.call_count == 1
+
     def test_cache_key_is_hash(self, embedder):
         doc = "test document"
         doc_hash = hashlib.sha256(doc.encode()).hexdigest()

@@ -128,7 +128,7 @@ class DocumentEmbedder:
         doc_hash = self._hash_document(document)
         with self._cache_lock:
             if doc_hash in self.embedding_cache:
-                logger.debug("Cache hit for document (hash={})", doc_hash[:8])
+                logger.debug("Cache hit for document (hash=%s)", doc_hash[:8])
                 return self.embedding_cache[doc_hash]
 
         # Transform

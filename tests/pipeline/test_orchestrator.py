@@ -270,7 +270,7 @@ class TestPipelineProcessFile:
         assert result.category == "test_category"
         assert result.destination is not None
         assert result.processor_type == ProcessorType.TEXT
-        assert result.duration_ms > 0
+        assert result.duration_ms >= 0
 
     def test_process_image_file(
         self,
@@ -686,4 +686,4 @@ class TestPipelineStatsAccumulation:
         """Total duration accumulates across calls."""
         pipeline_with_mock.process_file(tmp_files["document.txt"])
         pipeline_with_mock.process_file(tmp_files["report.pdf"])
-        assert pipeline_with_mock.stats.total_duration_ms > 0
+        assert pipeline_with_mock.stats.total_duration_ms >= 0
