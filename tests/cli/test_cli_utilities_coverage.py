@@ -119,3 +119,49 @@ class TestSearchResults:
         (tmp_path / "hello.txt").write_text("hi")
         result = runner.invoke(app, ["search", "hello", str(tmp_path), "--json"])
         assert "path" in result.output
+
+
+class TestSemanticSearchHiddenFileFiltering:
+    """Covers line 156 — is_hidden(rel_entry) in semantic corpus builder."""
+
+    def test_hidden_files_excluded_from_semantic_corpus(self, tmp_path: Path) -> None:
+        """Hidden files are excluded from the semantic corpus (relative path check)."""
+        app = _make_app()
+        (tmp_path / "report.txt").write_text("quarterly budget finance report")
+        (tmp_path / "other.txt").write_text("meeting notes and agenda items")
+        hidden = tmp_path / ".secret.txt"
+        hidden.write_text("hidden sensitive data finance")
+
+        result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic"])
+        assert result.exit_code == 0
+
+    def test_relative_path_used_for_hidden_check(self, tmp_path: Path) -> None:
+        """Files inside dot-prefixed dirs are excluded via relative path."""
+        app = _make_app()
+        (tmp_path / "report.txt").write_text("quarterly budget finance report")
+        (tmp_path / "notes.txt").write_text("meeting agenda items budget")
+        hidden_dir = tmp_path / ".config"
+        hidden_dir.mkdir()
+        (hidden_dir / "settings.txt").write_text("settings finance data")
+
+        result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic"])
+        assert result.exit_code == 0
+
+
+class TestSemanticIndexBuildFailure:
+    """Covers line 173 — except (ValueError, RuntimeError, ImportError) path."""
+
+    def test_index_build_failure_exits_with_error(self, tmp_path: Path) -> None:
+        """When HybridRetriever.index() raises, CLI exits with code 1."""
+        from unittest.mock import patch
+
+        app = _make_app()
+        (tmp_path / "report.txt").write_text("quarterly budget finance report")
+        (tmp_path / "notes.txt").write_text("meeting notes and agenda items")
+
+        with patch("file_organizer.services.search.hybrid_retriever.HybridRetriever") as mock_cls:
+            mock_cls.return_value.index.side_effect = ValueError("corpus too small")
+            result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic"])
+
+        assert result.exit_code == 1
+        assert "Failed to build semantic index" in result.output

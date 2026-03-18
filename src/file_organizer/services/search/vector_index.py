@@ -89,6 +89,8 @@ class VectorIndex:
             List of (path, score) tuples sorted by descending similarity,
             filtered to scores above ``similarity_threshold``.
         """
+        if top_k <= 0:
+            return []
         if self._matrix is None or not self._paths:
             return []
 

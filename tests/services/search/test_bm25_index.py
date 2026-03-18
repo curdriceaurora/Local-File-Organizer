@@ -25,6 +25,7 @@ def _make_paths(n: int) -> list[Path]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestTokenise:
     def test_lowercases(self) -> None:
@@ -50,6 +51,7 @@ class TestTokenise:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestBM25IndexProtocol:
     def test_implements_index_protocol(self) -> None:
@@ -61,11 +63,28 @@ class TestBM25IndexProtocol:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestBM25Index:
     def test_search_before_index_returns_empty(self) -> None:
         idx = BM25Index()
         assert idx.search("anything") == []
+
+    def test_search_top_k_zero_returns_empty(self) -> None:
+        idx = BM25Index()
+        idx.index(
+            ["finance budget report", "legal contract", "recipe baking", "travel japan"],
+            _make_paths(4),
+        )
+        assert idx.search("finance", top_k=0) == []
+
+    def test_search_top_k_negative_returns_empty(self) -> None:
+        idx = BM25Index()
+        idx.index(
+            ["finance budget report", "legal contract", "recipe baking", "travel japan"],
+            _make_paths(4),
+        )
+        assert idx.search("finance", top_k=-1) == []
 
     def test_size_zero_before_index(self) -> None:
         assert BM25Index().size == 0

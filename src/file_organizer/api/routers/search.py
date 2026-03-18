@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["search"])
 
 _MAX_TRAVERSAL = 10_000
+_MAX_SEMANTIC = 2_000
+_MAX_LIMIT = 500
 
 
 class _ScoringTiers:
@@ -42,6 +44,16 @@ class SearchResult(BaseModel):
     type: Optional[str] = None
     size: Optional[int] = None
     created: Optional[str] = None
+
+
+def _relative_path(fp: Path, roots: list[Path]) -> str:
+    """Return *fp* relative to the first matching root, or absolute as fallback."""
+    for root in roots:
+        try:
+            return str(fp.relative_to(root))
+        except ValueError:
+            continue
+    return str(fp)
 
 
 def _compute_score(file_path: Path, query: str) -> float:
@@ -105,7 +117,11 @@ def _collect_matching_files(
             if ext_filter and entry.suffix.lower() != ext_filter:
                 continue
             # Check if query matches name or path
-            if q_lower in entry.name.lower() or q_lower in str(entry).lower():
+            try:
+                rel = entry.relative_to(root)
+            except ValueError:
+                rel = entry
+            if q_lower in entry.name.lower() or q_lower in str(rel).lower():
                 yield entry
     except PermissionError:
         logger.debug("Permission denied traversing %s", root)
@@ -113,7 +129,7 @@ def _collect_matching_files(
 
 def _build_semantic_corpus(
     roots: list[Path],
-    max_files: int = _MAX_TRAVERSAL,
+    max_files: int = _MAX_SEMANTIC,
 ) -> tuple[list[str], list[Path]]:
     """Walk *roots* and build a text corpus for semantic indexing.
 
@@ -146,10 +162,14 @@ def _build_semantic_corpus(
                 if total > max_files:
                     done = True
                     break
-                if entry.is_symlink() or not entry.is_file() or is_hidden(entry):
+                try:
+                    rel_entry = entry.relative_to(root)
+                except ValueError:
+                    rel_entry = entry
+                if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
                     continue
                 text = read_text_safe(entry)
-                doc = f"{entry.stem} {' '.join(entry.parts)} {text}".strip()
+                doc = f"{entry.stem} {' '.join(rel_entry.parts)} {text}".strip()
                 documents.append(doc)
                 paths.append(entry)
         except PermissionError:
@@ -190,9 +210,9 @@ def _semantic_search(
         logger.warning("Semantic index build failed: %s", exc, exc_info=True)
         return []
 
-    # When filtering by type, overfetch the full traversal budget so that
+    # When filtering by type, overfetch the full semantic budget so that
     # post-filter slicing can fill top_k results even if mixed-type hits dominate.
-    fetch_k = _MAX_TRAVERSAL if file_type else top_k * 2
+    fetch_k = _MAX_SEMANTIC if file_type else min(top_k * 2, _MAX_SEMANTIC)
     raw_results = retriever.retrieve(query, top_k=fetch_k)
 
     ext_filter: Optional[str] = None
@@ -212,7 +232,7 @@ def _semantic_search(
         results.append(
             SearchResult(
                 filename=fp.name,
-                path=str(fp),
+                path=_relative_path(fp, roots),
                 score=round(score, 6),
                 type=fp.suffix.lower().lstrip(".") or "unknown",
                 size=stat.st_size,
@@ -242,12 +262,20 @@ def search(
     When ``semantic=true`` the search uses hybrid BM25+vector retrieval
     (Reciprocal Rank Fusion) instead of the default keyword scan.  The
     existing ``semantic=false`` path is unchanged.
+
+    Authentication is enforced at the middleware layer
+    (see ``file_organizer.api.middleware``), not per-route.
     """
     if q is None or q == "":
         return JSONResponse(
             status_code=400,
             content={"detail": "Query parameter 'q' is required"},
         )
+
+    # Clamp limit to a safe upper bound to prevent unbounded allocations.
+    effective_limit: int | None = None
+    if limit is not None and limit > 0:
+        effective_limit = min(limit, _MAX_LIMIT)
 
     # Determine search roots (normalize paths for consistency)
     if path:
@@ -264,14 +292,17 @@ def search(
     # ------------------------------------------------------------------
     if semantic:
         skip = max(0, offset or 0)
+        if skip >= _MAX_SEMANTIC:
+            return []
         try:
-            if limit is not None and limit > 0:
-                # Fetch skip + limit so pagination works correctly
-                results = _semantic_search(search_roots, q, type, top_k=skip + limit)
-                return results[skip : skip + limit]
+            if effective_limit is not None:
+                # Fetch skip + limit so pagination works correctly, but cap at _MAX_SEMANTIC
+                top_k = min(skip + effective_limit, _MAX_SEMANTIC)
+                results = _semantic_search(search_roots, q, type, top_k=top_k)
+                return results[skip : skip + effective_limit]
             else:
                 # limit=0 or limit=None → no explicit cap (consistent with keyword path)
-                results = _semantic_search(search_roots, q, type, top_k=_MAX_TRAVERSAL)
+                results = _semantic_search(search_roots, q, type, top_k=_MAX_SEMANTIC)
                 return results[skip:]
         except ImportError:
             return JSONResponse(
@@ -314,7 +345,7 @@ def search(
             results.append(
                 SearchResult(
                     filename=fp.name,
-                    path=str(fp),
+                    path=_relative_path(fp, search_roots),
                     score=score,
                     type=fp.suffix.lower().lstrip(".") or "unknown",
                     size=stat.st_size,
@@ -327,8 +358,8 @@ def search(
 
     # Apply pagination (handle limit=0 as explicit "no limit")
     skip = offset or 0
-    if limit is not None and limit > 0:
-        results = results[skip : skip + limit]
+    if effective_limit is not None:
+        results = results[skip : skip + effective_limit]
     else:
         results = results[skip:]
 

@@ -19,6 +19,7 @@ from file_organizer.services.copilot.models import (
     Intent,
     IntentType,
 )
+from file_organizer.utils import is_hidden
 
 if TYPE_CHECKING:
     from file_organizer.interfaces.search import RetrieverProtocol
@@ -230,10 +231,11 @@ class CommandExecutor:
         paths: list[Path] = []
         try:
             for entry in search_root.rglob("*"):
-                if entry.is_symlink() or not entry.is_file():
+                rel = entry.relative_to(search_root)
+                if entry.is_symlink() or not entry.is_file() or is_hidden(rel):
                     continue
                 text = read_text_safe(entry)
-                docs.append(f"{entry.stem} {' '.join(entry.parts)} {text}".strip())
+                docs.append(f"{entry.stem} {' '.join(rel.parts)} {text}".strip())
                 paths.append(entry)
                 if len(docs) >= 500:  # cap corpus for interactive use
                     break

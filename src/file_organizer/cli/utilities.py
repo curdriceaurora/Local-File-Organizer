@@ -11,6 +11,7 @@ import typer
 from rich.console import Console
 
 import file_organizer.cli._globals as _g
+from file_organizer.utils import is_hidden
 
 console = Console()
 
@@ -152,10 +153,11 @@ def search(
         for entry in gen:
             if len(documents) >= max_docs:
                 break
-            if not entry.is_file():
+            rel_entry = entry.relative_to(search_dir)
+            if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
                 continue
             text = read_text_safe(entry)
-            doc = f"{entry.stem} {' '.join(entry.parts)} {text}".strip()
+            doc = f"{entry.stem} {' '.join(rel_entry.parts)} {text}".strip()
             documents.append(doc)
             sem_paths.append(entry)
 
@@ -169,7 +171,7 @@ def search(
         retriever = HybridRetriever()
         try:
             retriever.index(documents, sem_paths)
-        except Exception as exc:
+        except (ValueError, RuntimeError, ImportError) as exc:
             console.print(f"[red]Error: Failed to build semantic index: {exc}[/red]")
             raise typer.Exit(code=1) from exc
 
