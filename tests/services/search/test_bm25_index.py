@@ -149,6 +149,16 @@ class TestBM25Index:
         results = idx.search("xyzzy nonsense zork")
         assert results == []
 
+    def test_single_doc_matching_query_returned(self) -> None:
+        # With a 1-doc corpus every term has df=N=1, so BM25 IDF is negative.
+        # The result must still be returned (score != 0.0, not score > 0).
+        idx = BM25Index()
+        paths = _make_paths(1)
+        idx.index(["finance quarterly report"], paths)
+        results = idx.search("finance")
+        assert len(results) == 1, "single-doc corpus with matching query must return the document"
+        assert results[0][0] == paths[0]
+
     def test_re_index_replaces_previous(self) -> None:
         idx = BM25Index()
         idx.index(["first corpus alpha", "first corpus beta"], _make_paths(2))

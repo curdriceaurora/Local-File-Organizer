@@ -91,6 +91,14 @@ class DocumentEmbedder:
         logger.info(f"Fitting vectorizer on {len(documents)} documents")
 
         try:
+            # For very small corpora, max_df as a fraction can round to 0 documents,
+            # which conflicts with min_df=1.  Clamp to 1.0 (no restriction) when needed.
+            if (
+                isinstance(self.vectorizer.max_df, float)
+                and len(documents) * self.vectorizer.max_df < 1
+            ):
+                self.vectorizer.max_df = 1.0
+
             # Fit and transform
             embeddings = self.vectorizer.fit_transform(documents)
             self.is_fitted = True

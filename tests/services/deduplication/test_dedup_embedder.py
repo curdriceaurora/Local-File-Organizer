@@ -134,6 +134,15 @@ class TestFitTransform:
         with pytest.raises(RuntimeError, match="sklearn error"):
             embedder.fit_transform(["doc"])
 
+    @pytest.mark.ci
+    def test_max_df_clamped_for_tiny_corpus(self, embedder, mock_vectorizer):
+        # When max_df is a fraction and the corpus has fewer docs than 1/max_df,
+        # the vectorizer would raise ValueError (max_df < min_df=1 after rounding).
+        # The clamping guard must set max_df=1.0 before calling fit_transform.
+        mock_vectorizer.max_df = 0.95  # 1 doc * 0.95 < 1 → triggers clamp
+        embedder.fit_transform(["single document"])
+        assert mock_vectorizer.max_df == 1.0
+
 
 # ---------------------------------------------------------------------------
 # transform (single document)
