@@ -47,15 +47,15 @@ if [[ "$BASENAME" == "__init__.py" ]]; then
   exit 0
 fi
 
-# Derive project root (parent of src/).
-PROJECT_ROOT=$(echo "$FILE_PATH" | sed 's|/src/file_organizer/.*||')
+# Derive project root — consistent with other project scripts.
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || { exit 0; }
 TESTS_DIR="$PROJECT_ROOT/tests"
 
 # Stem of the source file, e.g. "text_processor".
 STEM="${BASENAME%.py}"
 
 # Relative sub-path under file_organizer, e.g. "services/text_processor.py".
-REL=$(echo "$FILE_PATH" | sed "s|.*/src/file_organizer/||")
+REL="${FILE_PATH#"$PROJECT_ROOT/src/file_organizer/"}"
 REL_DIR=$(dirname "$REL")
 # Normalise "." (top-level module) to empty string so path joins are clean.
 [[ "$REL_DIR" == "." ]] && REL_DIR=""
