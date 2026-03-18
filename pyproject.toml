@@ -55,8 +55,7 @@ dependencies = [
     # of python-jose. Risk accepted: JWT algorithm is HS256 (HMAC), ecdsa is never invoked.
     # Revisit if auth_jwt_algorithm is ever changed to ES256/ES384/ES512.
     "python-jose>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
-    "bcrypt>=4.0.0,<5.0.0",
+    "bcrypt>=4.0.0,<6.0.0",
     # Database
     "sqlalchemy>=2.0.0",
     "alembic>=1.13.0",
@@ -105,8 +104,7 @@ web = [
     # of python-jose. Risk accepted: JWT algorithm is HS256 (HMAC), ecdsa is never invoked.
     # Revisit if auth_jwt_algorithm is ever changed to ES256/ES384/ES512.
     "python-jose>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
-    "bcrypt>=4.0.0,<5.0.0",
+    "bcrypt>=4.0.0,<6.0.0",
 
     "redis>=5.0.0",
 ]
@@ -416,7 +414,6 @@ DEP001 = ["netCDF4"]
 # email-validator: pydantic uses it for EmailStr (not imported directly)
 # websockets: starlette WebSocket support (must be installed, not imported)
 # python-dotenv: pydantic-settings reads .env files via this package
-# bcrypt: passlib[bcrypt] uses it as backend (not imported directly)
 # jinja2: fastapi.templating wraps it (not imported directly)
 # alembic: used as CLI migration tool (not imported in application code)
 # openpyxl: pandas uses it for Excel I/O (not imported directly)
@@ -428,7 +425,6 @@ DEP002 = [
     "email-validator",
     "websockets",
     "python-dotenv",
-    "bcrypt",
     "jinja2",
     "alembic",
     "openpyxl",
