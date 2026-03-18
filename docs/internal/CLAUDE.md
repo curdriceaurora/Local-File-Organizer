@@ -101,6 +101,9 @@ bash .claude/scripts/pre-commit-validation.sh
 # Install dependencies
 pip install -e .
 
+# Activate Claude Code development hooks (TDD gate + future hooks)
+bash .claude/scripts/setup-dev-hooks.sh
+
 # Install Ollama and pull models
 ollama pull qwen2.5:3b-instruct-q4_K_M
 ollama pull qwen2.5vl:7b-q4_K_M
@@ -430,6 +433,31 @@ One logical task per PR. A "task" corresponds to one epic task ID (e.g., Task 4,
 Bundling tasks is allowed **only** when they have a hard dependency (Task B cannot be tested without Task A shipping first). Document the dependency in the PR description when bundling.
 
 **Why**: Bundling 3 tasks in one PR creates a large diff surface that generates 15-25 review findings. Single-task PRs produce 3-5.
+
+## TDD Workflow Rule (enforced via hook)
+
+**For every new `src/file_organizer/*.py` module, write the test file first.**
+
+This is enforced by `.claude/hooks/tdd-gate.sh` (PreToolUse hook on Write/Edit):
+
+- **New file** (`Write` to a path that doesn't exist yet): **blocked** if no test file exists.
+  - Create `tests/<subdir>/test_<module>.py` first, then create the implementation.
+- **Existing file** (`Edit` or overwrite): advisory warning only — the hook won't block, but the message is a reminder to add coverage if none exists.
+- **`__init__.py`** and non-`src/file_organizer/` paths: exempt.
+
+**Why**: 60% of PR review findings (F1 missing error handling, F2 type annotations, F4 security, test assertion quality) trace to not reasoning about the interface before implementing. Writing tests first forces that reasoning upstream of code generation — addressing issue #850.
+
+**Workflow**:
+```
+1. Write tests/subdir/test_<module>.py  ← hook gate passes
+2. Write src/file_organizer/.../        ← now allowed
+3. Run pytest tests/subdir/test_<module>.py -v
+4. Iterate until green
+5. Run quality gates (pre-commit → /code-reviewer)
+```
+
+**Bypassing the hook (rare)**:
+If you're writing a refactor with existing tests or a utility that truly needs no test (e.g., a `__main__.py` launcher), note it in the commit message. The hook only blocks new files with no test file at all — it won't fire if any `test_<module>.py` exists anywhere under `tests/`.
 
 ## Core Principles
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
