@@ -54,6 +54,12 @@ class TestVerifyPassword:
         hashed = hash_password("non-empty")
         assert verify_password("", hashed) is False
 
+    def test_malformed_hash_returns_false(self) -> None:
+        assert verify_password("anything", "not-a-bcrypt-hash") is False
+
+    def test_empty_hash_returns_false(self) -> None:
+        assert verify_password("anything", "") is False
+
 
 # ---------------------------------------------------------------------------
 # hash_password
