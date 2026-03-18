@@ -136,7 +136,6 @@ jobs:
     strategy:
       matrix:
         python-version: ${{ github.event_name == 'pull_request' && fromJson('["3.11"]') || fromJson('["3.11", "3.12"]') }}
-        bcrypt-version: ["bcrypt>=4.0.0,<5.0.0", "bcrypt>=5.0.0,<6.0.0"]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -152,7 +151,7 @@ jobs:
           # Install core package with dev dependencies + search (rank-bm25, scikit-learn)
           # search is required for TestBM25Index, TestVectorIndexRecall, TestHybridRetriever,
           # and related CLI/API/copilot tests — not in dev because it is an optional runtime extra.
-          pip install -e ".[dev,search]" "${{ matrix.bcrypt-version }}"
+          pip install -e ".[dev,search]"
 
           # Explicitly install pytest-asyncio and faker to ensure they're available
           # This fixes installation order issues on Python 3.11 where pytest might load before pytest-asyncio
