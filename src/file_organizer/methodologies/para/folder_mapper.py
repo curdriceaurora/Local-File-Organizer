@@ -87,6 +87,7 @@ class CategoryFolderMapper:
                 enable_structural=self.config.enable_structural_heuristic,
                 enable_ai=self.config.enable_ai_heuristic,
                 thresholds=self.config.category_thresholds,
+                ai_config=self.config.ai_heuristic,
             )
         else:
             self.heuristic_engine = heuristic_engine

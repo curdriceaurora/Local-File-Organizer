@@ -60,6 +60,7 @@ class HeuristicResult:
     recommended_category: PARACategory | None = None
     needs_manual_review: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
+    abstained: bool = False
 
 
 class Heuristic(ABC):
@@ -484,7 +485,10 @@ class AIHeuristic(Heuristic):
                 return False
 
             try:
-                self._client = ollama.Client(host=self.config.ollama_url)
+                self._client = ollama.Client(
+                    host=self.config.ollama_url,
+                    timeout=self.config.timeout,
+                )
                 self._client.list()
                 self._available = True
             except Exception:
@@ -508,11 +512,17 @@ class AIHeuristic(Heuristic):
             A string suitable for inclusion in the LLM prompt.
         """
         try:
-            with open(file_path, encoding="utf-8", errors="replace") as f:
-                content = f.read(self.config.max_content_chars)
+            raw = file_path.read_bytes()[: self.config.max_content_chars]
+            # Heuristic binary check: more than 30% non-text bytes → treat as binary.
+            # Text bytes: tab (9), LF (10), CR (13), printable ASCII (32–126).
+            # Everything else (control chars, high bytes, null) is non-text.
+            non_text = sum(1 for b in raw if b not in (9, 10, 13) and not (32 <= b <= 126))
+            if raw and non_text / len(raw) > 0.30:
+                raise ValueError("binary content")
+            content = raw.decode("utf-8", errors="replace")
             if content.strip():
                 return content
-        except OSError:
+        except (OSError, ValueError):
             pass
 
         # Fallback: describe the file from path and metadata
@@ -589,13 +599,18 @@ class AIHeuristic(Heuristic):
 
     @staticmethod
     def _zero_result(metadata_reason: str) -> HeuristicResult:
-        """Return a neutral (all-zero) result with the given metadata reason."""
+        """Return a neutral (all-zero) result with the given metadata reason.
+
+        Sets ``abstained=True`` so the engine excludes this heuristic's weight
+        from the denominator and avoids diluting scores from other heuristics.
+        """
         return HeuristicResult(
             scores={cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory},
             overall_confidence=0.0,
             recommended_category=None,
             needs_manual_review=True,
             metadata={"ai_analysis": metadata_reason},
+            abstained=True,
         )
 
     def evaluate(self, file_path: Path, metadata: dict[str, Any] | None = None) -> HeuristicResult:
@@ -632,6 +647,7 @@ class AIHeuristic(Heuristic):
                     "num_predict": self.config.max_tokens,
                 },
                 stream=False,
+                timeout=self.config.timeout,
             )
             response_text: str = response.get("response", "") or ""
         except Exception:
@@ -767,11 +783,16 @@ class HeuristicEngine:
                 needs_manual_review=True,
             )
 
-        # Combine scores using weighted average
+        # Combine scores using weighted average.
+        # Heuristics that abstained (e.g. AI when Ollama is unavailable) are
+        # excluded from the denominator so they don't dilute other scores.
         combined_scores = {cat: CategoryScore(cat, 0.0, 0.0) for cat in PARACategory}
-        total_weight = sum(h.weight for h, _ in results)
+        active_results = [(h, r) for h, r in results if not r.abstained]
+        total_weight = sum(h.weight for h, _ in active_results) or sum(h.weight for h, _ in results)
 
         for heuristic, result in results:
+            if result.abstained:
+                continue
             weight_factor = heuristic.weight / total_weight
 
             for category, score in result.scores.items():

@@ -67,6 +67,7 @@ class TestAIHeuristicUnavailable:
         assert result.recommended_category is None
         assert result.needs_manual_review is True
         assert result.metadata["ai_analysis"] == "ollama_not_installed"
+        assert result.abstained is True
         for score in result.scores.values():
             assert score.score == 0.0
 
@@ -87,6 +88,7 @@ class TestAIHeuristicUnavailable:
 
         assert result.metadata["ai_analysis"] == "ollama_unavailable"
         assert result.overall_confidence == 0.0
+        assert result.abstained is True
 
     def test_generate_exception_returns_zero(self, tmp_path: Path) -> None:
         """When generate() raises, return zero scores with ollama_error."""
@@ -101,6 +103,7 @@ class TestAIHeuristicUnavailable:
         mock_client.generate.assert_called_once()
         assert result.metadata["ai_analysis"] == "ollama_error"
         assert result.overall_confidence == 0.0
+        assert result.abstained is True
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +149,7 @@ class TestAIHeuristicClassification:
         mock_client.generate.assert_called_once()
         assert result.metadata["ai_analysis"] == "parse_error"
         assert result.overall_confidence == 0.0
+        assert result.abstained is True
 
     def test_json_with_markdown_fences(self, tmp_path: Path) -> None:
         """Parser correctly strips markdown code fences from response."""
@@ -210,17 +214,19 @@ class TestAIHeuristicContent:
         scores = {"project": 0.1, "area": 0.1, "resource": 0.7, "archive": 0.1}
         mock_client.generate.return_value = _make_ollama_response(scores)
         test_file = tmp_path / "image.png"
-        test_file.write_bytes(b"\x89PNG\r\n")
+        # Write bytes with >30% non-text bytes to trigger binary detection
+        test_file.write_bytes(bytes(range(256)))
 
         with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
             result = h.evaluate(test_file, metadata={"type": "image", "size": "2MB"})
 
         mock_client.generate.assert_called_once()
         assert result.metadata["ai_analysis"] == "complete"
-        # Verify the prompt included the filename
+        # Verify the prompt used the binary fallback marker (not raw mojibake)
         call_args = mock_client.generate.call_args
         prompt = call_args.kwargs.get("prompt", "")
-        assert "image.png" in prompt
+        assert "[Binary or unreadable file: image.png]" in prompt
+        assert "type: image" in prompt
 
 
 # ---------------------------------------------------------------------------
@@ -298,3 +304,31 @@ class TestAIHeuristicEngineIntegration:
         ai_heuristics = [h for h in engine.heuristics if isinstance(h, AIHeuristic)]
         assert len(ai_heuristics) == 1
         assert ai_heuristics[0].config.model == "custom:model"
+
+    def test_abstained_ai_does_not_dilute_scores(self, tmp_path: Path) -> None:
+        """When AI abstains (Ollama unavailable), its 0.10 weight is excluded
+        from the denominator so other heuristic scores are not scaled down."""
+        test_file = tmp_path / "project_brief.txt"
+        test_file.write_text("Sprint 1 deliverables and deadlines")
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", False):
+            engine_with_ai = HeuristicEngine(
+                enable_temporal=True,
+                enable_content=True,
+                enable_structural=True,
+                enable_ai=True,
+            )
+            engine_without_ai = HeuristicEngine(
+                enable_temporal=True,
+                enable_content=True,
+                enable_structural=True,
+                enable_ai=False,
+            )
+            result_with = engine_with_ai.evaluate(test_file)
+            result_without = engine_without_ai.evaluate(test_file)
+
+        # Scores must be identical — abstained AI must not reduce other scores
+        for cat in result_with.scores:
+            assert result_with.scores[cat].score == pytest.approx(
+                result_without.scores[cat].score, abs=1e-9
+            ), f"Score mismatch for {cat}: abstained AI diluted result"
