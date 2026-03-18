@@ -441,23 +441,23 @@ Bundling tasks is allowed **only** when they have a hard dependency (Task B cann
 This is enforced by `.claude/hooks/tdd-gate.sh` (PreToolUse hook on Write/Edit):
 
 - **New file** (`Write` to a path that doesn't exist yet): **blocked** if no test file exists.
-  - Create `tests/<subdir>/test_<module>.py` first, then create the implementation.
+  - Create the test file under `tests/` first, then create the implementation.
 - **Existing file** (`Edit` or overwrite): advisory warning only — the hook won't block, but the message is a reminder to add coverage if none exists.
 - **`__init__.py`** and non-`src/file_organizer/` paths: exempt.
 
 **Why**: 60% of PR review findings (F1 missing error handling, F2 type annotations, F4 security, test assertion quality) trace to not reasoning about the interface before implementing. Writing tests first forces that reasoning upstream of code generation — addressing issue #850.
 
-**Workflow**:
+**Workflow** (example: adding a new service):
 ```
-1. Write tests/subdir/test_<module>.py  ← hook gate passes
-2. Write src/file_organizer/.../        ← now allowed
-3. Run pytest tests/subdir/test_<module>.py -v
+1. Write tests/services/test_my_service.py           ← hook gate passes
+2. Write src/file_organizer/services/my_service.py   ← now allowed
+3. Run: pytest tests/services/test_my_service.py -v
 4. Iterate until green
-5. Run quality gates (pre-commit → /code-reviewer)
+5. Run quality gates: pre-commit → /code-reviewer
 ```
 
 **Bypassing the hook (rare)**:
-If you're writing a refactor with existing tests or a utility that truly needs no test (e.g., a `__main__.py` launcher), note it in the commit message. The hook only blocks new files with no test file at all — it won't fire if any `test_<module>.py` exists anywhere under `tests/`.
+If you're writing a refactor with existing tests or a utility that truly needs no test (e.g., a `__main__.py` launcher), note it in the commit message. The hook only blocks new files with no test file at all — it won't fire if a matching test file exists anywhere under `tests/`.
 
 ## Core Principles
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
