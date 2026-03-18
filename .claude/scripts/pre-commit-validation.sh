@@ -83,8 +83,10 @@ echo "✓ Unit test coverage"
 echo ""
 
 echo "▶ Integration test coverage gate (≥30%)"
+rm -f coverage.xml
 pytest tests/ -m "integration and not benchmark" \
   --cov=file_organizer --cov-fail-under=30 --no-cov-on-fail \
+  --cov-report=xml:coverage.xml \
   -q --timeout=30 --override-ini="addopts="
 echo "✓ Integration test coverage"
 echo ""
@@ -97,7 +99,7 @@ if [[ -n "$current_branch" && "$current_branch" != "HEAD" && -f coverage.xml ]];
 
   # Ensure origin/main is available for comparison
   if ! git rev-parse origin/main >/dev/null 2>&1; then
-    git fetch origin main:main 2>/dev/null || true
+    git fetch origin main 2>/dev/null || true
   fi
 
   # Run diff-cover if available
