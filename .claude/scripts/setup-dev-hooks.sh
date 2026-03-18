@@ -42,6 +42,7 @@ if [[ "$ALREADY" -gt 0 ]]; then
 fi
 
 # Merge the hook entry into existing settings.
+# "matcher" is a regex alternation matching Claude Code tool names (Write|Edit).
 UPDATED=$(echo "$CURRENT" | jq --arg cmd "$HOOK_CMD" '
   .hooks.PreToolUse = ((.hooks.PreToolUse // []) + [{
     "matcher": "Write|Edit",

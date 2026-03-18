@@ -57,12 +57,16 @@ STEM="${BASENAME%.py}"
 # Relative sub-path under file_organizer, e.g. "services/text_processor.py".
 REL=$(echo "$FILE_PATH" | sed "s|.*/src/file_organizer/||")
 REL_DIR=$(dirname "$REL")
+# Normalise "." (top-level module) to empty string so path joins are clean.
+[[ "$REL_DIR" == "." ]] && REL_DIR=""
 
 # Candidate test paths (order: mirrored subdir first, then flat, then recursive).
-CANDIDATE_MIRRORED="$TESTS_DIR/$REL_DIR/test_${STEM}.py"
+# Recursive fallback handles tests/ layouts that add a prefix layer (e.g. tests/unit/services/).
+CANDIDATE_MIRRORED="$TESTS_DIR/${REL_DIR:+$REL_DIR/}test_${STEM}.py"
 CANDIDATE_FLAT="$TESTS_DIR/test_${STEM}.py"
 
 find_test() {
+  # 2>/dev/null suppresses "No such file or directory" if TESTS_DIR doesn't exist yet.
   find "$TESTS_DIR" -name "test_${STEM}.py" 2>/dev/null | head -1
 }
 
@@ -70,6 +74,7 @@ TEST_EXISTS=false
 if [[ -f "$CANDIDATE_MIRRORED" ]] || [[ -f "$CANDIDATE_FLAT" ]]; then
   TEST_EXISTS=true
 elif [[ -n "$(find_test)" ]]; then
+  # Fallback: test exists but under a non-mirrored prefix (e.g. tests/unit/services/).
   TEST_EXISTS=true
 fi
 
