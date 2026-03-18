@@ -55,7 +55,11 @@ class TestCorpusSymlinkFiltering:
         from file_organizer.utils import is_hidden
 
         entries = list(tmp_path.iterdir())
-        filtered = [e for e in entries if not e.is_symlink() and e.is_file() and not is_hidden(e)]
+        filtered = [
+            e
+            for e in entries
+            if not e.is_symlink() and e.is_file() and not is_hidden(e.relative_to(tmp_path))
+        ]
         assert link not in filtered, "Symlink should be filtered out"
         assert real_file in filtered, "Real file should be included"
 
@@ -75,8 +79,8 @@ class TestCorpusHiddenFileFiltering:
         hidden = tmp_path / ".secret.txt"
         hidden.write_text("hidden content")
 
-        assert not is_hidden(normal)
-        assert is_hidden(hidden)
+        assert not is_hidden(normal.relative_to(tmp_path))
+        assert is_hidden(hidden.relative_to(tmp_path))
 
     def test_files_in_hidden_directory_excluded(self, tmp_path: Path) -> None:
         """Files nested inside a hidden directory must be excluded."""
@@ -87,7 +91,7 @@ class TestCorpusHiddenFileFiltering:
         nested = hidden_dir / "settings.txt"
         nested.write_text("settings")
 
-        assert is_hidden(nested)
+        assert is_hidden(nested.relative_to(tmp_path))
 
     def test_normal_files_not_excluded(self, tmp_path: Path) -> None:
         """Normal files with no hidden path components pass the filter."""

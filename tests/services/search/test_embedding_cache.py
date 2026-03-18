@@ -322,7 +322,7 @@ class TestExceptionPaths:
             return original_stat(self_path)
 
         with unittest.mock.patch.object(Path, "stat", _raise_on_stat):
-            with pytest.raises(OSError, match="Cannot access.*Permission denied"):
+            with pytest.raises(OSError, match=r"Cannot access.*Permission denied"):
                 cache.get_or_compute(f, compute=_dummy_compute)
         cache.close()
 
@@ -342,7 +342,7 @@ class TestExceptionPaths:
             return original_read(self_path, *args, **kwargs)  # type: ignore[arg-type]
 
         with unittest.mock.patch.object(Path, "read_text", _raise_on_read):
-            with pytest.raises(OSError, match="Cannot read.*Permission denied on read"):
+            with pytest.raises(OSError, match=r"Cannot read.*Permission denied on read"):
                 cache.get_or_compute(f, compute=_dummy_compute)
         cache.close()
 

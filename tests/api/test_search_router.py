@@ -419,11 +419,11 @@ class TestRelativePathHelper:
         result = _relative_path(fp, [tmp_path])
         assert result == str(Path("subdir") / "file.txt")
 
-    def test_fallback_to_absolute_when_no_root_matches(self) -> None:
+    def test_fallback_to_absolute_when_no_root_matches(self, tmp_path: Path) -> None:
         from file_organizer.api.routers.search import _relative_path
 
-        fp = Path("/some/other/path/file.txt")
-        roots = [Path("/completely/different")]
+        fp = (tmp_path / "area_a" / "file.txt").resolve()
+        roots = [(tmp_path / "area_b").resolve()]
         result = _relative_path(fp, roots)
         assert result == str(fp)
 
