@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import pickle
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -64,6 +65,7 @@ class DocumentEmbedder:
 
         # Cache for embeddings {document_hash: embedding}
         self.embedding_cache: dict[str, np.ndarray] = {}
+        self._cache_lock = threading.Lock()
 
         # Load cache if available
         if cache_path and cache_path.exists():
@@ -124,15 +126,17 @@ class DocumentEmbedder:
 
         # Check cache
         doc_hash = self._hash_document(document)
-        if doc_hash in self.embedding_cache:
-            logger.debug(f"Cache hit for document (hash={doc_hash[:8]})")
-            return self.embedding_cache[doc_hash]
+        with self._cache_lock:
+            if doc_hash in self.embedding_cache:
+                logger.debug("Cache hit for document (hash={})", doc_hash[:8])
+                return self.embedding_cache[doc_hash]
 
         # Transform
         embedding: np.ndarray = np.asarray(self.vectorizer.transform([document]).toarray()[0])
 
         # Cache the embedding
-        self.embedding_cache[doc_hash] = embedding
+        with self._cache_lock:
+            self.embedding_cache[doc_hash] = embedding
 
         return embedding
 

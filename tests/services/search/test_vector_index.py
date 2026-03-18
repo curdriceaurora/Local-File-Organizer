@@ -39,6 +39,7 @@ _CORPUS = [
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestVectorIndexProtocol:
     def test_implements_index_protocol(self) -> None:
@@ -50,11 +51,28 @@ class TestVectorIndexProtocol:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestVectorIndex:
     def test_search_before_index_returns_empty(self) -> None:
         idx = VectorIndex()
         assert idx.search("anything") == []
+
+    def test_search_top_k_zero_returns_empty(self) -> None:
+        idx = VectorIndex()
+        idx.index(_CORPUS, _make_paths(len(_CORPUS)))
+        # Verify the guard: top_k=0 returns []
+        assert idx.search("report", top_k=0) == []
+        # Verify search works with positive top_k
+        assert len(idx.search("report", top_k=1)) > 0
+
+    def test_search_top_k_negative_returns_empty(self) -> None:
+        idx = VectorIndex()
+        idx.index(_CORPUS, _make_paths(len(_CORPUS)))
+        # Verify the guard: top_k=-1 returns []
+        assert idx.search("report", top_k=-1) == []
+        # Verify search works with positive top_k
+        assert len(idx.search("report", top_k=1)) > 0
 
     def test_size_zero_before_index(self) -> None:
         assert VectorIndex().size == 0
@@ -142,6 +160,7 @@ class TestVectorIndex:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestVectorIndexRecall:
     """Smoke-test that semantically related queries find the right category."""

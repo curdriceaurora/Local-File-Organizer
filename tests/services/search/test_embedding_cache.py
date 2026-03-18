@@ -27,6 +27,7 @@ def _dummy_compute(text: str) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestEmbeddingCacheProtocol:
     def test_implements_protocol(self, tmp_path: Path) -> None:
@@ -40,6 +41,7 @@ class TestEmbeddingCacheProtocol:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestGetOrCompute:
     def test_computes_on_miss(self, tmp_path: Path) -> None:
@@ -81,12 +83,45 @@ class TestGetOrCompute:
             cache.get_or_compute(tmp_path / "nonexistent.txt", compute=_dummy_compute)
         cache.close()
 
+    def test_file_deleted_between_stat_and_read_raises(self, tmp_path: Path) -> None:
+        """FileNotFoundError propagated when file vanishes after stat() but before read_text()."""
+        from unittest.mock import patch
+
+        f = tmp_path / "vanishing.txt"
+        f.write_text("hello")
+        cache = EmbeddingCache(tmp_path / "cache.db")
+
+        original_stat = f.stat()
+
+        def _raise_on_read_text(*args: object, **kwargs: object) -> str:
+            raise FileNotFoundError(f"File not found: {f}")
+
+        with patch.object(type(f), "read_text", _raise_on_read_text):
+            with pytest.raises(FileNotFoundError):
+                cache.get_or_compute(f, compute=_dummy_compute)
+        cache.close()
+        _ = original_stat  # suppress unused variable warning
+
+    def test_oserror_on_stat_raises(self, tmp_path: Path) -> None:
+        """OSError from stat() is re-raised as OSError."""
+        from unittest.mock import patch
+
+        f = tmp_path / "inaccessible.txt"
+        f.write_text("data")
+        cache = EmbeddingCache(tmp_path / "cache.db")
+
+        with patch.object(type(f), "stat", side_effect=OSError("permission denied")):
+            with pytest.raises(OSError):
+                cache.get_or_compute(f, compute=_dummy_compute)
+        cache.close()
+
 
 # ---------------------------------------------------------------------------
 # Staleness / invalidation
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestStaleness:
     def test_recomputes_on_mtime_change(self, tmp_path: Path) -> None:
@@ -131,6 +166,7 @@ class TestStaleness:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestPrune:
     def test_prune_removes_deleted_files(self, tmp_path: Path) -> None:
@@ -164,6 +200,7 @@ class TestPrune:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestPersistence:
     def test_cache_survives_restart(self, tmp_path: Path) -> None:
@@ -206,6 +243,130 @@ class TestPersistence:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
+@pytest.mark.unit
+class TestTOCTOU:
+    """Verify TOCTOU race-condition fix: no pre-existence check."""
+
+    def test_nonexistent_file_raises_immediately(self, tmp_path: Path) -> None:
+        cache = EmbeddingCache(tmp_path / "cache.db")
+        missing = tmp_path / "no_such_file.txt"
+        with pytest.raises(FileNotFoundError, match="File not found"):
+            cache.get_or_compute(missing, compute=_dummy_compute)
+        cache.close()
+
+    def test_file_deleted_between_stat_and_read(self, tmp_path: Path) -> None:
+        """Simulate file disappearing after stat succeeds."""
+        f = tmp_path / "ephemeral.txt"
+        f.write_text("here now")
+        cache = EmbeddingCache(tmp_path / "cache.db")
+
+        original_read_text = Path.read_text
+
+        def _delete_then_read(self_path: Path, *args: object, **kwargs: object) -> str:
+            if self_path == f:
+                f.unlink()  # delete file before reading
+            return original_read_text(self_path, *args, **kwargs)  # type: ignore[arg-type]
+
+        import unittest.mock
+
+        with unittest.mock.patch.object(Path, "read_text", _delete_then_read):
+            with pytest.raises((FileNotFoundError, OSError)):
+                cache.get_or_compute(f, compute=_dummy_compute)
+        cache.close()
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBatchedPrune:
+    """Verify prune uses batched iteration."""
+
+    def test_prune_handles_many_entries(self, tmp_path: Path) -> None:
+        cache = EmbeddingCache(tmp_path / "cache.db")
+        # Insert 1200 entries directly, exceeding the batch_size=500 threshold
+        n_total = 1200
+        n_delete = 600
+        for i in range(n_total):
+            f = tmp_path / f"file_{i}.txt"
+            f.write_text(f"content {i}")
+            cache.get_or_compute(f, compute=_dummy_compute)
+
+        # Delete 600 of the files
+        for i in range(n_delete):
+            (tmp_path / f"file_{i}.txt").unlink()
+
+        pruned = cache.prune()
+        assert pruned == n_delete
+        assert cache.stats()["entries"] == n_total - n_delete
+        cache.close()
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestExceptionPaths:
+    """Verify all exception-handling paths are covered."""
+
+    def test_get_or_compute_stat_permission_error(self, tmp_path: Path) -> None:
+        """Test OSError when path.stat() fails."""
+        f = tmp_path / "restricted.txt"
+        f.write_text("secret")
+        cache = EmbeddingCache(tmp_path / "cache.db")
+
+        import unittest.mock
+
+        original_stat = Path.stat
+
+        def _raise_on_stat(self_path: Path) -> object:
+            if self_path == f:
+                raise OSError("Permission denied")
+            return original_stat(self_path)
+
+        with unittest.mock.patch.object(Path, "stat", _raise_on_stat):
+            with pytest.raises(OSError, match="Cannot access.*Permission denied"):
+                cache.get_or_compute(f, compute=_dummy_compute)
+        cache.close()
+
+    def test_get_or_compute_read_permission_error(self, tmp_path: Path) -> None:
+        """Test OSError when path.read_text() fails."""
+        f = tmp_path / "readable_stat.txt"
+        f.write_text("content")
+        cache = EmbeddingCache(tmp_path / "cache.db")
+
+        import unittest.mock
+
+        original_read = Path.read_text
+
+        def _raise_on_read(self_path: Path, *args: object, **kwargs: object) -> str:
+            if self_path == f:
+                raise OSError("Permission denied on read")
+            return original_read(self_path, *args, **kwargs)  # type: ignore[arg-type]
+
+        with unittest.mock.patch.object(Path, "read_text", _raise_on_read):
+            with pytest.raises(OSError, match="Cannot read.*Permission denied on read"):
+                cache.get_or_compute(f, compute=_dummy_compute)
+        cache.close()
+
+    def test_prune_batching_logic(self, tmp_path: Path) -> None:
+        """Verify batched iteration in prune (tests loop continuation)."""
+        cache = EmbeddingCache(tmp_path / "cache.db")
+        # Insert more than batch_size (500) entries
+        for i in range(520):
+            f = tmp_path / f"file_{i:03d}.txt"
+            f.write_text(f"content {i}")
+            cache.get_or_compute(f, compute=_dummy_compute)
+
+        # Delete all files
+        for i in range(520):
+            (tmp_path / f"file_{i:03d}.txt").unlink()
+
+        # Prune should iterate through multiple batches
+        pruned = cache.prune()
+        assert pruned == 520
+        assert cache.stats()["entries"] == 0
+        cache.close()
+
+
+@pytest.mark.ci
 @pytest.mark.unit
 class TestContextManager:
     def test_context_manager_closes(self, tmp_path: Path) -> None:

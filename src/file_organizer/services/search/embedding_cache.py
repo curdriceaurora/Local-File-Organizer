@@ -4,6 +4,12 @@ Stores numpy embedding vectors keyed by absolute file path.  Entries are
 automatically invalidated when a file's mtime changes and orphan rows are
 pruned when the file no longer exists.
 
+.. note::
+
+   File paths are stored as **absolute paths** in the SQLite database.
+   If the database file is shared or leaked it reveals the directory
+   structure of the host machine.
+
 Schema::
 
     CREATE TABLE IF NOT EXISTS embeddings (
@@ -114,6 +120,12 @@ class EmbeddingCache:
         - The stored model identifier differs from ``self._model``.
         - The file does not exist (raises :exc:`FileNotFoundError`).
 
+        .. note::
+
+           Callers **must** validate *path* against allowed directories
+           before calling this method.  The cache does not enforce path
+           containment.
+
         Args:
             path: Absolute path to the file.
             compute: Callable that accepts the file's text content and
@@ -124,12 +136,15 @@ class EmbeddingCache:
 
         Raises:
             FileNotFoundError: If *path* does not exist.
-            PermissionError: If *path* cannot be read.
+            OSError: If *path* cannot be read.
         """
-        if not path.exists():
-            raise FileNotFoundError(f"File not found: {path}")
+        try:
+            current_mtime = path.stat().st_mtime
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File not found: {path}") from None
+        except OSError as exc:
+            raise OSError(f"Cannot access {path}: {exc}") from exc
 
-        current_mtime = path.stat().st_mtime
         key = str(path.resolve())
 
         row = self._conn.execute(
@@ -145,7 +160,12 @@ class EmbeddingCache:
             logger.debug("EmbeddingCache stale (mtime or model changed): {}", path.name)
 
         # Cache miss or stale — compute fresh embedding
-        text = path.read_text(errors="replace")
+        try:
+            text = path.read_text(errors="replace")
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File not found: {path}") from None
+        except OSError as exc:
+            raise OSError(f"Cannot read {path}: {exc}") from exc
         embedding = compute(text)
 
         blob = _array_to_blob(embedding)
@@ -169,11 +189,23 @@ class EmbeddingCache:
     def prune(self) -> int:
         """Remove rows whose file no longer exists on disk.
 
+        Iterates in batches to avoid loading the entire table into memory.
+
         Returns:
             Number of rows deleted.
         """
-        rows = self._conn.execute("SELECT file_path FROM embeddings").fetchall()
-        stale = [row[0] for row in rows if not Path(row[0]).exists()]
+        stale: list[str] = []
+        batch_size = 500
+        offset = 0
+        while True:
+            rows = self._conn.execute(
+                "SELECT file_path FROM embeddings ORDER BY file_path LIMIT ? OFFSET ?",
+                (batch_size, offset),
+            ).fetchall()
+            if not rows:
+                break
+            stale.extend(row[0] for row in rows if not Path(row[0]).exists())
+            offset += batch_size
         if stale:
             with self._lock:
                 self._conn.executemany(

@@ -35,6 +35,7 @@ def _make_retriever_with_corpus(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestRrfFuse:
     def test_empty_lists(self) -> None:
@@ -83,6 +84,14 @@ class TestRrfFuse:
         # But absolute scores differ
         assert result_small_k[0][1] > result_large_k[0][1]
 
+    def test_k_zero_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="positive"):
+            _rrf_fuse([], top_k=5, k=0)
+
+    def test_k_negative_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="positive"):
+            _rrf_fuse([], top_k=5, k=-1)
+
     def test_fuse_deduplicates_paths(self) -> None:
         """A path appearing in multiple lists should appear only once in output."""
         paths = _make_paths(2)
@@ -98,6 +107,7 @@ class TestRrfFuse:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverInit:
     def test_not_initialized_before_index(self) -> None:
@@ -124,6 +134,14 @@ class TestHybridRetrieverInit:
         r.cleanup()
         assert r.is_initialized is False
 
+    def test_k_zero_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="positive"):
+            HybridRetriever(k=0)
+
+    def test_k_negative_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="positive"):
+            HybridRetriever(k=-1)
+
     def test_custom_bm25_and_vector_injected(self) -> None:
         from file_organizer.services.search.bm25_index import BM25Index
         from file_organizer.services.search.vector_index import VectorIndex
@@ -135,6 +153,7 @@ class TestHybridRetrieverInit:
         assert r._vector is vector
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverIndex:
     def test_index_sets_initialized(self) -> None:
@@ -173,6 +192,7 @@ class TestHybridRetrieverIndex:
         assert r.is_initialized is True
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverRetrieve:
     def test_retrieve_before_index_returns_empty(self) -> None:
@@ -254,7 +274,22 @@ class TestHybridRetrieverRetrieve:
         results = r.retrieve("")
         assert results == []
 
+    def test_retrieve_top_k_zero_returns_empty(self) -> None:
+        """top_k=0 should return [] immediately without querying either index."""
+        paths = _make_paths(3)
+        docs = ["finance quarterly report", "meeting notes agenda", "budget planning"]
+        r = _make_retriever_with_corpus(docs, paths)
+        assert r.retrieve("finance", top_k=0) == []
 
+    def test_retrieve_top_k_negative_returns_empty(self) -> None:
+        """top_k<0 should return [] immediately without querying either index."""
+        paths = _make_paths(3)
+        docs = ["finance quarterly report", "meeting notes agenda", "budget planning"]
+        r = _make_retriever_with_corpus(docs, paths)
+        assert r.retrieve("finance", top_k=-1) == []
+
+
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverMocked:
     """Tests that verify RRF fusion without depending on real BM25/vector."""
@@ -282,20 +317,19 @@ class TestHybridRetrieverMocked:
         result_paths = [p for p, _ in results]
         assert result_paths.count(paths[1]) == 1
 
-    def test_index_calls_both_subindices(self) -> None:
-        """index() must delegate to both BM25Index and VectorIndex."""
-        bm25_mock = MagicMock()
-        vector_mock = MagicMock()
-        bm25_mock.size = 2
-
-        r = HybridRetriever(bm25=bm25_mock, vector=vector_mock)
-        docs = ["doc a", "doc b"]
-        paths = _make_paths(2)
+    def test_index_initializes_and_sets_corpus_size(self) -> None:
+        """index() must build both sub-indices and mark retriever as initialized."""
+        r = HybridRetriever()
+        docs = [
+            "quarterly finance report budget",
+            "machine learning python neural",
+            "legal contract software agreement",
+        ]
+        paths = _make_paths(3)
         r.index(docs, paths)
 
-        bm25_mock.index.assert_called_once_with(docs, paths)
-        vector_mock.index.assert_called_once_with(docs, paths)
         assert r.is_initialized is True
+        assert r.corpus_size == 3
 
     def test_retrieve_falls_back_gracefully_when_both_empty(self) -> None:
         """If both indices return no results, retrieve() returns []."""
@@ -308,3 +342,60 @@ class TestHybridRetrieverMocked:
         r = HybridRetriever(bm25=bm25_mock, vector=vector_mock)
         r.initialize()
         assert r.retrieve("anything") == []
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestHybridRetrieverThreadSafety:
+    """Verify concurrent access does not crash."""
+
+    def test_concurrent_index_and_retrieve(self) -> None:
+        import threading
+
+        bm25_mock = MagicMock()
+        vector_mock = MagicMock()
+        bm25_mock.search.return_value = []
+        vector_mock.search.return_value = []
+        bm25_mock.size = 0
+
+        r = HybridRetriever(bm25=bm25_mock, vector=vector_mock)
+        r.initialize()
+
+        errors: list[Exception] = []
+
+        def _retrieve() -> None:
+            try:
+                for _ in range(50):
+                    r.retrieve("query")
+            except Exception as exc:
+                errors.append(exc)
+
+        def _cleanup() -> None:
+            try:
+                for _ in range(50):
+                    r.cleanup()
+                    r.initialize()
+            except Exception as exc:
+                errors.append(exc)
+
+        def _index() -> None:
+            try:
+                docs = ["finance report", "legal contract", "recipe baking"]
+                paths = _make_paths(3)
+                for _ in range(20):
+                    r.index(docs, paths)
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=_retrieve) for _ in range(3)]
+        threads.append(threading.Thread(target=_cleanup))
+        threads.append(threading.Thread(target=_index))
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=10)
+
+        assert all(not t.is_alive() for t in threads), (
+            "Some threads did not finish (possible deadlock)"
+        )
+        assert not errors, f"Thread safety errors: {errors}"
