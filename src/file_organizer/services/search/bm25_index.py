@@ -103,7 +103,7 @@ class BM25Index:
             key=lambda pair: pair[1],
             reverse=True,
         )
-        return [(path, float(score)) for path, score in ranked[:top_k] if score > 0]
+        return [(path, float(score)) for path, score in ranked[:top_k] if score != 0.0]
 
     # ------------------------------------------------------------------
     # Convenience
