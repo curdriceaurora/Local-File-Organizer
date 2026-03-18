@@ -512,14 +512,20 @@ class AIHeuristic(Heuristic):
             A string suitable for inclusion in the LLM prompt.
         """
         try:
-            raw = file_path.read_bytes()[: self.config.max_content_chars]
-            # Heuristic binary check: more than 30% non-text bytes → treat as binary.
-            # Text bytes: tab (9), LF (10), CR (13), printable ASCII (32-126).
-            # Everything else (control chars, high bytes, null) is non-text.
-            non_text = sum(1 for b in raw if b not in (9, 10, 13) and not (32 <= b <= 126))
-            if raw and non_text / len(raw) > 0.30:
-                raise ValueError("binary content")
-            content = raw.decode("utf-8", errors="replace")
+            with file_path.open("rb") as f:
+                raw = f.read(self.config.max_content_chars)
+            # Fast path: valid UTF-8 is text regardless of byte values.
+            try:
+                content = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                # Not valid UTF-8 — count low control bytes (null + non-whitespace
+                # controls) as binary indicators.  Bytes ≥ 128 are NOT counted here
+                # because they appear in Latin-1 and other single-byte encodings
+                # that may still be human-readable.
+                non_text = sum(1 for b in raw if b == 0 or (b < 32 and b not in (9, 10, 13)))
+                if raw and non_text / len(raw) > 0.30:
+                    raise ValueError("binary content") from None
+                content = raw.decode("utf-8", errors="replace")
             if content.strip():
                 return content
         except (OSError, ValueError):
@@ -647,7 +653,6 @@ class AIHeuristic(Heuristic):
                     "num_predict": self.config.max_tokens,
                 },
                 stream=False,
-                timeout=self.config.timeout,
             )
             response_text: str = response.get("response", "") or ""
         except Exception:
@@ -656,7 +661,11 @@ class AIHeuristic(Heuristic):
 
         parsed = self._parse_response(response_text)
         if parsed is None:
-            logger.warning("Failed to parse AI heuristic response: %.200s", response_text)
+            logger.warning(
+                "Failed to parse AI heuristic response from model %s (response length: %d)",
+                self.config.model,
+                len(response_text),
+            )
             return self._zero_result("parse_error")
 
         # Map parsed scores to CategoryScore objects.

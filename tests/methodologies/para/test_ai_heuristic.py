@@ -160,7 +160,7 @@ class TestAIHeuristicClassification:
         fenced = f"```json\n{json_body}\n```"
         mock_client.generate.return_value = {"response": fenced}
         test_file = tmp_path / "budget.xlsx"
-        test_file.write_bytes(bytes(range(256)))  # binary file: 61% non-text bytes
+        test_file.write_bytes(bytes(range(256)))  # invalid UTF-8; decoded with replacement chars
 
         with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
             result = h.evaluate(test_file)
@@ -214,8 +214,8 @@ class TestAIHeuristicContent:
         scores = {"project": 0.1, "area": 0.1, "resource": 0.7, "archive": 0.1}
         mock_client.generate.return_value = _make_ollama_response(scores)
         test_file = tmp_path / "image.png"
-        # Write bytes with >30% non-text bytes to trigger binary detection
-        test_file.write_bytes(bytes(range(256)))
+        # PNG signature (0x89 is invalid UTF-8) + null bytes (>30% control chars)
+        test_file.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
 
         with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
             result = h.evaluate(test_file, metadata={"type": "image", "size": "2MB"})
@@ -227,6 +227,23 @@ class TestAIHeuristicContent:
         prompt = call_args.kwargs.get("prompt", "")
         assert "[Binary or unreadable file: image.png]" in prompt
         assert "type: image" in prompt
+
+    def test_utf8_text_not_treated_as_binary(self, tmp_path: Path) -> None:
+        """Valid UTF-8 text with multibyte characters must not be misclassified as binary."""
+        h, mock_client = _make_heuristic()
+        mock_client.generate.return_value = _make_ollama_response(
+            {"project": 0.4, "area": 0.3, "resource": 0.2, "archive": 0.1}
+        )
+        test_file = tmp_path / "notes.txt"
+        test_file.write_text("日本語の会議メモ", encoding="utf-8")
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            h.evaluate(test_file)
+
+        mock_client.generate.assert_called_once()
+        prompt = mock_client.generate.call_args.kwargs["prompt"]
+        assert "[Binary or unreadable file:" not in prompt
+        assert "日本語の会議メモ" in prompt
 
 
 # ---------------------------------------------------------------------------
