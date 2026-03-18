@@ -53,7 +53,9 @@ UPDATED=$(echo "$CURRENT" | jq --arg cmd "$HOOK_CMD" '
   }])
 ')
 
-echo "$UPDATED" > "$SETTINGS"
+TMP=$(mktemp "${SETTINGS}.XXXXXX")
+echo "$UPDATED" > "$TMP"
+mv "$TMP" "$SETTINGS"
 echo "✅ tdd-gate hook registered in $SETTINGS"
 echo "   Fires on Write/Edit to src/file_organizer/**/*.py"
 echo "   New files without tests will be blocked. Edits get advisory warnings."

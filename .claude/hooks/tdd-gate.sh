@@ -20,8 +20,7 @@ if ! command -v jq &>/dev/null; then
 fi
 
 INPUT=$(cat)
-TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+read -r TOOL_NAME FILE_PATH < <(echo "$INPUT" | jq -r '[.tool_name // "", .tool_input.file_path // ""] | @tsv')
 
 # Only care about Write and Edit on Python source files.
 if [[ "$TOOL_NAME" != "Write" && "$TOOL_NAME" != "Edit" ]]; then
@@ -86,7 +85,7 @@ fi
 
 if $IS_NEW; then
   # Hard deny: must write test before implementation.
-  REASON="[tdd-gate] No test file found for $(basename "$FILE_PATH"). Write the test in tests/ first, then create the implementation. Expected: $CANDIDATE_MIRRORED"
+  REASON="[tdd-gate] No test file found for ${STEM}.py. Write the test in tests/ first, then create the implementation. Expected: $CANDIDATE_MIRRORED"
   jq -n \
     --arg reason "$REASON" \
     '{
