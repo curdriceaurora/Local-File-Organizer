@@ -20,12 +20,12 @@ if ! command -v jq &>/dev/null; then
   exit 1
 fi
 
-# Create settings file if it doesn't exist.
-if [[ ! -f "$SETTINGS" ]]; then
-  echo '{}' > "$SETTINGS"
+# Read settings, defaulting to empty object if file doesn't exist yet.
+if [[ -f "$SETTINGS" ]]; then
+  CURRENT=$(cat "$SETTINGS")
+else
+  CURRENT='{}'
 fi
-
-CURRENT=$(cat "$SETTINGS")
 
 # Check if the hook is already registered (idempotency).
 ALREADY=$(echo "$CURRENT" | jq --arg cmd "$HOOK_CMD" '
@@ -55,7 +55,7 @@ UPDATED=$(echo "$CURRENT" | jq --arg cmd "$HOOK_CMD" '
 ')
 
 TMP=$(mktemp "${SETTINGS}.XXXXXX")
-echo "$UPDATED" > "$TMP"
+echo "$UPDATED" > "$TMP" || { rm -f "$TMP"; echo "ERROR: failed to write $SETTINGS" >&2; exit 1; }
 mv "$TMP" "$SETTINGS"
 echo "✅ tdd-gate hook registered in $SETTINGS"
 echo "   Fires on Write/Edit to src/file_organizer/**/*.py"
