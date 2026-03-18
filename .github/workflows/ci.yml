@@ -37,7 +37,7 @@ jobs:
       benchmark: ${{ steps.filter.outputs.benchmark }}
       desktop: ${{ steps.filter.outputs.desktop }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - id: filter
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         with:
@@ -59,7 +59,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -73,7 +73,7 @@ jobs:
   unused-deps:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -85,7 +85,7 @@ jobs:
   type-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -97,7 +97,7 @@ jobs:
   link-integrity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Check documentation links
         run: |
           echo "Checking for broken documentation links..."
@@ -137,7 +137,7 @@ jobs:
       matrix:
         python-version: ${{ github.event_name == 'pull_request' && fromJson('["3.11"]') || fromJson('["3.11", "3.12"]') }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           # fetch-depth: 0 is required for the diff-cover step on PRs —
           # shallow clones lack the merge-base needed to compute the changed-line diff.
@@ -199,7 +199,7 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.benchmark == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -217,7 +217,7 @@ jobs:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -238,7 +238,7 @@ jobs:
     if: ${{ needs.changes.outputs.desktop == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7
       - name: Install Tauri Linux dependencies
