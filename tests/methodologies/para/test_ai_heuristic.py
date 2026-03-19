@@ -540,10 +540,8 @@ class TestAIHeuristicCache:
             extra.write_text("extra")
             h.evaluate(extra)
 
-        oldest_key = str(files[0].resolve()), files[0].stat().st_mtime, files[0].stat().st_size
-        evicted_key = str(files[1].resolve()), files[1].stat().st_mtime, files[1].stat().st_size
-        assert oldest_key in h._result_cache
-        assert evicted_key not in h._result_cache
+        assert h._get_cache_key(files[0]) in h._result_cache
+        assert h._get_cache_key(files[1]) not in h._result_cache
 
 
 @pytest.mark.integration

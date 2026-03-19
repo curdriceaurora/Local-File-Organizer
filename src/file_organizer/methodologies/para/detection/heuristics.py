@@ -472,7 +472,7 @@ class AIHeuristic(Heuristic):
         self._client: Any = None
         self._available: bool | None = None
         self._init_lock = threading.Lock()
-        self._result_cache: OrderedDict[tuple[str, float, int], HeuristicResult] = OrderedDict()
+        self._result_cache: OrderedDict[tuple[str, int, int], HeuristicResult] = OrderedDict()
         self._cache_lock = threading.Lock()
 
     def _ensure_client(self) -> bool:
@@ -510,22 +510,24 @@ class AIHeuristic(Heuristic):
 
         return self._available
 
-    def _get_cache_key(self, file_path: Path) -> tuple[str, float, int] | None:
+    def _get_cache_key(self, file_path: Path) -> tuple[str, int, int] | None:
         """Return a cache key for the file, or None if stat fails.
 
-        The key is (resolved_path, mtime, file_size). Any change to the
-        file's modification time or size invalidates the cached result.
+        The key is (resolved_path, mtime_ns, file_size). Using nanosecond
+        mtime avoids sub-second precision loss from float representation.
+        Any change to the file's modification time or size invalidates the
+        cached result.
 
         Args:
             file_path: Path to the file being evaluated.
 
         Returns:
-            A 3-tuple ``(str, float, int)`` on success, ``None`` on
+            A 3-tuple ``(str, int, int)`` on success, ``None`` on
             ``OSError`` (file missing or unreadable).
         """
         try:
             st = file_path.stat()
-            return str(file_path.resolve()), st.st_mtime, st.st_size
+            return str(file_path.resolve()), st.st_mtime_ns, st.st_size
         except OSError:
             return None
 
