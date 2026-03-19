@@ -12,6 +12,7 @@ import os
 import re
 import threading
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -423,11 +424,16 @@ class AIHeuristic(Heuristic):
     via the ``system`` role; dynamic file context (path, name, content)
     is passed via the ``prompt`` role. Gracefully degrades when Ollama is
     unavailable by returning neutral (zero) scores.
+
+    Results are cached in memory (up to ``_CACHE_MAX_SIZE`` entries, LRU
+    eviction) keyed on file path, mtime, and size.
     """
 
     # Confidence damping factor — prevents the AI heuristic from
     # dominating when other heuristics are uncertain.
     _CONFIDENCE_DAMPING: float = 0.8
+
+    _CACHE_MAX_SIZE: int = 256
 
     _SYSTEM_MESSAGE: str = (
         "You are a file organization assistant using the PARA methodology.\n"
@@ -466,6 +472,8 @@ class AIHeuristic(Heuristic):
         self._client: Any = None
         self._available: bool | None = None
         self._init_lock = threading.Lock()
+        self._result_cache: OrderedDict[tuple[str, float, int], HeuristicResult] = OrderedDict()
+        self._cache_lock = threading.Lock()
 
     def _ensure_client(self) -> bool:
         """Lazily create the Ollama client (thread-safe).
@@ -501,6 +509,25 @@ class AIHeuristic(Heuristic):
                 self._available = False
 
         return self._available
+
+    def _get_cache_key(self, file_path: Path) -> tuple[str, float, int] | None:
+        """Return a cache key for the file, or None if stat fails.
+
+        The key is (resolved_path, mtime, file_size). Any change to the
+        file's modification time or size invalidates the cached result.
+
+        Args:
+            file_path: Path to the file being evaluated.
+
+        Returns:
+            A 3-tuple ``(str, float, int)`` on success, ``None`` on
+            ``OSError`` (file missing or unreadable).
+        """
+        try:
+            st = file_path.stat()
+            return str(file_path.resolve()), st.st_mtime, st.st_size
+        except OSError:
+            return None
 
     def _extract_content(self, file_path: Path, metadata: dict[str, Any] | None) -> str:
         """Extract text content from a file for the classification prompt.
@@ -651,6 +678,13 @@ class AIHeuristic(Heuristic):
         if not self._ensure_client():
             return self._zero_result("ollama_unavailable")
 
+        cache_key = self._get_cache_key(file_path)
+        if cache_key is not None:
+            with self._cache_lock:
+                if cache_key in self._result_cache:
+                    self._result_cache.move_to_end(cache_key)
+                    return self._result_cache[cache_key]
+
         content = self._extract_content(file_path, metadata)
         prompt = self._build_prompt(file_path, content)
 
@@ -701,13 +735,22 @@ class AIHeuristic(Heuristic):
         sorted_scores = sorted(scores.values(), key=lambda s: s.score, reverse=True)
         recommended = sorted_scores[0].category if sorted_scores[0].score > 0.3 else None
 
-        return HeuristicResult(
+        result = HeuristicResult(
             scores=scores,
             overall_confidence=confidence,
             recommended_category=recommended,
             needs_manual_review=confidence < 0.5,
             metadata={"ai_analysis": "complete"},
         )
+
+        if cache_key is not None:
+            with self._cache_lock:
+                self._result_cache[cache_key] = result
+                self._result_cache.move_to_end(cache_key)
+                if len(self._result_cache) > self._CACHE_MAX_SIZE:
+                    self._result_cache.popitem(last=False)
+
+        return result
 
 
 class HeuristicEngine:

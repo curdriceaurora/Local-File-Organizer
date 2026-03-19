@@ -6,6 +6,7 @@ All tests mock the ollama dependency so no running Ollama instance is required.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -427,3 +428,165 @@ class TestAIHeuristicPromptSplit:
         """_SYSTEM_MESSAGE JSON example uses single braces, not escaped doubles."""
         assert "{{" not in AIHeuristic._SYSTEM_MESSAGE
         assert "}}" not in AIHeuristic._SYSTEM_MESSAGE
+
+
+# ---------------------------------------------------------------------------
+# Tests: result caching
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+class TestAIHeuristicCache:
+    """Tests for bounded LRU in-memory result cache."""
+
+    def test_cache_hit_skips_generate(self, tmp_path: Path) -> None:
+        """Second evaluate() call returns cached result; generate() called once."""
+        h, mock_client = _make_heuristic()
+        scores = {"project": 0.6, "area": 0.2, "resource": 0.1, "archive": 0.1}
+        mock_client.generate.return_value = _make_ollama_response(scores)
+        f = tmp_path / "report.txt"
+        f.write_text("content")
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            r1 = h.evaluate(f)
+            r2 = h.evaluate(f)
+
+        assert mock_client.generate.call_count == 1
+        assert r1 is r2
+
+    def test_cache_miss_on_file_change(self, tmp_path: Path) -> None:
+        """Cache miss when mtime changes; generate() called twice."""
+        h, mock_client = _make_heuristic()
+        scores = {"project": 0.6, "area": 0.2, "resource": 0.1, "archive": 0.1}
+        mock_client.generate.return_value = _make_ollama_response(scores)
+        f = tmp_path / "report.txt"
+        f.write_text("content")
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            h.evaluate(f)
+            f.write_text("updated content")
+            os.utime(f, (f.stat().st_mtime + 1, f.stat().st_mtime + 1))
+            h.evaluate(f)
+
+        assert mock_client.generate.call_count == 2
+
+    def test_error_result_not_cached(self, tmp_path: Path) -> None:
+        """Transient errors (generate raises) are not stored; next call retries."""
+        h, mock_client = _make_heuristic()
+        mock_client.generate.side_effect = [
+            RuntimeError("timeout"),
+            _make_ollama_response({"project": 0.5, "area": 0.2, "resource": 0.2, "archive": 0.1}),
+        ]
+        f = tmp_path / "report.txt"
+        f.write_text("content")
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            r1 = h.evaluate(f)
+            r2 = h.evaluate(f)
+
+        assert mock_client.generate.call_count == 2
+        assert r1.metadata.get("ai_analysis") == "ollama_error"
+        assert r2.metadata.get("ai_analysis") == "complete"
+
+    def test_stat_failure_bypasses_cache(self, tmp_path: Path) -> None:
+        """Nonexistent file yields None cache key; evaluate proceeds without cache ops."""
+        h, mock_client = _make_heuristic()
+        mock_client.generate.return_value = _make_ollama_response(
+            {"project": 0.5, "area": 0.2, "resource": 0.2, "archive": 0.1}
+        )
+        nonexistent = tmp_path / "ghost.txt"
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            result = h.evaluate(nonexistent)
+
+        assert result is not None
+        assert len(h._result_cache) == 0
+
+    def test_cache_bounded_at_max_size(self, tmp_path: Path) -> None:
+        """Cache never exceeds _CACHE_MAX_SIZE entries."""
+        h, mock_client = _make_heuristic()
+        mock_client.generate.return_value = _make_ollama_response(
+            {"project": 0.5, "area": 0.2, "resource": 0.2, "archive": 0.1}
+        )
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            for i in range(AIHeuristic._CACHE_MAX_SIZE + 1):
+                f = tmp_path / f"file_{i}.txt"
+                f.write_text(f"content {i}")
+                h.evaluate(f)
+
+        assert len(h._result_cache) == AIHeuristic._CACHE_MAX_SIZE
+
+    def test_lru_eviction_order(self, tmp_path: Path) -> None:
+        """Recently accessed entry survives; oldest LRU entry is evicted."""
+        h, mock_client = _make_heuristic()
+        mock_client.generate.return_value = _make_ollama_response(
+            {"project": 0.5, "area": 0.2, "resource": 0.2, "archive": 0.1}
+        )
+
+        files = []
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            for i in range(AIHeuristic._CACHE_MAX_SIZE):
+                f = tmp_path / f"file_{i}.txt"
+                f.write_text(f"content {i}")
+                h.evaluate(f)
+                files.append(f)
+
+            # Re-access the oldest entry (file_0) to make it recently used.
+            h.evaluate(files[0])
+
+            # Adding one more entry should evict file_1 (now the LRU), not file_0.
+            extra = tmp_path / "extra.txt"
+            extra.write_text("extra")
+            h.evaluate(extra)
+
+        oldest_key = str(files[0].resolve()), files[0].stat().st_mtime, files[0].stat().st_size
+        evicted_key = str(files[1].resolve()), files[1].stat().st_mtime, files[1].stat().st_size
+        assert oldest_key in h._result_cache
+        assert evicted_key not in h._result_cache
+
+
+@pytest.mark.integration
+class TestAIHeuristicCacheIntegration:
+    """Integration tests: cache behaviour through HeuristicEngine."""
+
+    def test_engine_cache_hit_via_engine(self, tmp_path: Path) -> None:
+        """Two engine evaluations of same file call generate() exactly once."""
+        f = tmp_path / "sprint_plan.txt"
+        f.write_text("Sprint deliverables")
+        scores = {"project": 0.7, "area": 0.1, "resource": 0.15, "archive": 0.05}
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            engine = HeuristicEngine(enable_ai=True)
+            ai_h = next(h for h in engine.heuristics if isinstance(h, AIHeuristic))
+            mock_client = MagicMock()
+            mock_client.generate.return_value = _make_ollama_response(scores)
+            ai_h._client = mock_client
+            ai_h._available = True
+
+            r1 = engine.evaluate(f)
+            r2 = engine.evaluate(f)
+
+        assert mock_client.generate.call_count == 1
+        assert r1.scores[PARACategory.PROJECT].score == r2.scores[PARACategory.PROJECT].score
+
+    def test_engine_cache_invalidated_on_file_change(self, tmp_path: Path) -> None:
+        """Engine re-calls generate() after file content changes."""
+        f = tmp_path / "notes.txt"
+        f.write_text("initial content")
+        scores = {"project": 0.7, "area": 0.1, "resource": 0.15, "archive": 0.05}
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            engine = HeuristicEngine(enable_ai=True)
+            ai_h = next(h for h in engine.heuristics if isinstance(h, AIHeuristic))
+            mock_client = MagicMock()
+            mock_client.generate.return_value = _make_ollama_response(scores)
+            ai_h._client = mock_client
+            ai_h._available = True
+
+            engine.evaluate(f)
+            f.write_text("completely different content")
+            os.utime(f, (f.stat().st_mtime + 1, f.stat().st_mtime + 1))
+            engine.evaluate(f)
+
+        assert mock_client.generate.call_count == 2
