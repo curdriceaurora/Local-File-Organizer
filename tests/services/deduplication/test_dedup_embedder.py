@@ -136,6 +136,7 @@ class TestFitTransform:
 
     @pytest.mark.ci
     def test_max_df_clamped_for_tiny_corpus(self, embedder, mock_vectorizer):
+        """max_df must be clamped to 1.0 when the corpus is too small for the fractional threshold."""
         # When max_df is a fraction and the corpus has fewer docs than 1/max_df,
         # the vectorizer would raise ValueError (max_df < min_df=1 after rounding).
         # The clamping guard must set max_df=1.0 before calling fit_transform.

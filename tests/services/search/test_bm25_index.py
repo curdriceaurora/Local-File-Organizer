@@ -150,6 +150,7 @@ class TestBM25Index:
         assert results == []
 
     def test_single_doc_matching_query_returned(self) -> None:
+        """Single-doc corpus with a matching query must return that document despite negative BM25 IDF."""
         # With a 1-doc corpus every term has df=N=1, so BM25 IDF is negative.
         # The result must still be returned (score != 0.0, not score > 0).
         idx = BM25Index()

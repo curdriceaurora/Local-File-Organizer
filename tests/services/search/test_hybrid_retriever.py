@@ -215,17 +215,21 @@ class TestHybridRetrieverRetrieve:
             assert item[0] in paths, "returned path must be from the indexed corpus"
 
     def test_retrieve_top_k_limits_output(self) -> None:
+        """top_k=3 must cap output even when more than 3 docs match the query."""
+        # Corpus has 4 documents containing "finance" or "report" (genuine
+        # semantic matches) so the top_k=3 limit is exercised against real
+        # candidates rather than zero-similarity fillers.
         paths = _make_paths(10)
         docs = [
             "quarterly finance report",
-            "project planning document",
+            "annual budget finance overview",
             "research analysis report",
+            "project report summary findings",
             "meeting notes agenda",
             "budget forecast spreadsheet",
             "marketing campaign proposal",
             "technical specification document",
             "annual performance review",
-            "product roadmap planning",
             "customer feedback analysis",
         ]
         r = _make_retriever_with_corpus(docs, paths)
