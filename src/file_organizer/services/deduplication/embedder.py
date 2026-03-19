@@ -78,6 +78,10 @@ class DocumentEmbedder:
     def fit_transform(self, documents: list[str]) -> np.ndarray:
         """Fit the vectorizer and transform documents to embeddings.
 
+        For very small corpora where ``len(documents) * max_df < 1``, ``max_df``
+        is temporarily set to 1.0 for this call only and restored afterwards, so
+        the configured value is preserved for subsequent calls on the same instance.
+
         Args:
             documents: List of document texts
 
@@ -92,15 +96,19 @@ class DocumentEmbedder:
 
         try:
             # For very small corpora, max_df as a fraction can round to 0 documents,
-            # which conflicts with min_df=1.  Clamp to 1.0 (no restriction) when needed.
+            # which conflicts with min_df=1.  Use 1.0 temporarily without persisting
+            # the change, so subsequent calls on this instance still use the original value.
+            _original_max_df = self.vectorizer.max_df
             if (
                 isinstance(self.vectorizer.max_df, float)
                 and len(documents) * self.vectorizer.max_df < 1
             ):
                 self.vectorizer.max_df = 1.0
 
-            # Fit and transform
-            embeddings = self.vectorizer.fit_transform(documents)
+            try:
+                embeddings = self.vectorizer.fit_transform(documents)
+            finally:
+                self.vectorizer.max_df = _original_max_df
             self.is_fitted = True
 
             # Convert to dense array for easier manipulation

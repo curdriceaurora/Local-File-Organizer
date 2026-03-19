@@ -135,14 +135,23 @@ class TestFitTransform:
             embedder.fit_transform(["doc"])
 
     @pytest.mark.ci
-    def test_max_df_clamped_for_tiny_corpus(self, embedder, mock_vectorizer):
-        """max_df must be clamped to 1.0 when the corpus is too small for the fractional threshold."""
-        # When max_df is a fraction and the corpus has fewer docs than 1/max_df,
-        # the vectorizer would raise ValueError (max_df < min_df=1 after rounding).
-        # The clamping guard must set max_df=1.0 before calling fit_transform.
-        mock_vectorizer.max_df = 0.95  # 1 doc * 0.95 < 1 → triggers clamp
+    def test_max_df_temporarily_overridden_for_tiny_corpus(self, embedder, mock_vectorizer):
+        """max_df is set to 1.0 during fit_transform for tiny corpus, then restored."""
+        mock_vectorizer.max_df = 0.95  # 1 doc * 0.95 < 1 → triggers guard
+        max_df_at_call: list[float] = []
+
+        original_return = mock_vectorizer.fit_transform.return_value
+
+        def capture(docs: list[str]) -> object:
+            max_df_at_call.append(mock_vectorizer.max_df)
+            return original_return
+
+        mock_vectorizer.fit_transform.side_effect = capture
+
         embedder.fit_transform(["single document"])
-        assert mock_vectorizer.max_df == 1.0
+
+        assert max_df_at_call == [1.0], "guard must pass max_df=1.0 to fit_transform"
+        assert mock_vectorizer.max_df == 0.95, "max_df must be restored after fit_transform"
 
 
 # ---------------------------------------------------------------------------
