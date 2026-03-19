@@ -422,3 +422,8 @@ class TestAIHeuristicPromptSplit:
         assert "system" in call_kwargs
         assert "PROJECT" in call_kwargs["system"]
         assert "sprint_plan.txt" in call_kwargs["prompt"]
+
+    def test_system_message_contains_valid_json_example(self) -> None:
+        """_SYSTEM_MESSAGE JSON example uses single braces, not escaped doubles."""
+        assert "{{" not in AIHeuristic._SYSTEM_MESSAGE
+        assert "}}" not in AIHeuristic._SYSTEM_MESSAGE

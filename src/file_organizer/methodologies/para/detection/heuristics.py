@@ -439,8 +439,8 @@ class AIHeuristic(Heuristic):
         "- RESOURCE: Reference materials, knowledge, and information for future use\n"
         "- ARCHIVE: Inactive or completed items no longer actively used\n\n"
         "Respond with ONLY a JSON object (no markdown, no explanation):\n"
-        '{{"project": 0.0, "area": 0.0, "resource": 0.0, "archive": 0.0, '
-        '"reasoning": "brief explanation"}}\n\n'
+        '{"project": 0.0, "area": 0.0, "resource": 0.0, "archive": 0.0, '
+        '"reasoning": "brief explanation"}\n\n'
         "Rules:\n"
         "- Scores must sum to approximately 1.0\n"
         "- Each score must be between 0.0 and 1.0\n"
