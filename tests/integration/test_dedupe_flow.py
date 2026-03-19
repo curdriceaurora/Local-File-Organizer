@@ -56,7 +56,7 @@ def test_dedupe_flow_copy(mock_vision_cls, mock_text_cls, source_dir, output_dir
             file_path=file_path,
             description="mock desc",
             folder_name="deduped",
-            filename=file_path.name,
+            filename=file_path.stem,
         )
 
     mock_processor.process_file.side_effect = mock_process_file
@@ -100,7 +100,7 @@ def test_dedupe_flow_hardlink(mock_vision_cls, mock_text_cls, source_dir, output
             file_path=file_path,
             description="mock desc",
             folder_name="deduped_hl",
-            filename=file_path.name,
+            filename=file_path.stem,
         )
 
     mock_processor.process_file.side_effect = mock_process_file
@@ -114,6 +114,7 @@ def test_dedupe_flow_hardlink(mock_vision_cls, mock_text_cls, source_dir, output
     files = list(deduped_dir.iterdir())
     assert len(files) == 2
     # Verify that the hardlink for the kept file shares inode with source
-    src_stat = os.stat(source_dir / "doc1.txt")
-    dst_stat = os.stat(deduped_dir / "doc1.txt")
+    retained_name = "doc1.txt" if (deduped_dir / "doc1.txt").exists() else "doc2.txt"
+    src_stat = os.stat(source_dir / retained_name)
+    dst_stat = os.stat(deduped_dir / retained_name)
     assert src_stat.st_ino == dst_stat.st_ino

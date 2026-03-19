@@ -306,13 +306,16 @@ class FileOrganizer:
         if all_processed:
             import hashlib
 
-            seen_hashes: dict[str, any] = {}
+            seen_hashes: dict[str, ProcessedFile | ProcessedImage] = {}
             deduped_processed: list[ProcessedFile | ProcessedImage] = []
             for pf in all_processed:
                 try:
-                    file_bytes = pf.file_path.read_bytes()
-                    file_hash = hashlib.sha256(file_bytes).hexdigest()
-                except Exception:
+                    hasher = hashlib.sha256()
+                    with pf.file_path.open("rb") as f:
+                        for chunk in iter(lambda: f.read(65536), b""):
+                            hasher.update(chunk)
+                    file_hash = hasher.hexdigest()
+                except OSError:
                     # If we cannot read the file, keep it (it will be handled later)
                     deduped_processed.append(pf)
                     continue

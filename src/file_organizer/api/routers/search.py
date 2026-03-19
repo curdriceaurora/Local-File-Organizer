@@ -227,7 +227,7 @@ def _semantic_search(
 @router.get("/search", response_model=None)
 def search(
     q: str | None = Query(None, description="Search query"),
-    type: str | None = None,
+    file_type: str | None = Query(None, alias="type"),
     limit: int | None = None,
     offset: int | None = None,
     path: str | None = None,
@@ -266,11 +266,11 @@ def search(
         try:
             if limit is not None and limit > 0:
                 # Fetch skip + limit so pagination works correctly
-                results = _semantic_search(search_roots, q, type, top_k=skip + limit)
+                results = _semantic_search(search_roots, q, file_type, top_k=skip + limit)
                 return results[skip : skip + limit]
             else:
                 # limit=0 or limit=None → no explicit cap (consistent with keyword path)
-                results = _semantic_search(search_roots, q, type, top_k=_MAX_TRAVERSAL)
+                results = _semantic_search(search_roots, q, file_type, top_k=_MAX_TRAVERSAL)
                 return results[skip:]
         except ImportError:
             return JSONResponse(
@@ -296,7 +296,7 @@ def search(
         remaining = _MAX_TRAVERSAL - total_traversed
         if remaining <= 0:
             break
-        for fp in _collect_matching_files(root, q, type, max_files=remaining):
+        for fp in _collect_matching_files(root, q, file_type, max_files=remaining):
             total_traversed += 1
             try:
                 stat = fp.stat()
