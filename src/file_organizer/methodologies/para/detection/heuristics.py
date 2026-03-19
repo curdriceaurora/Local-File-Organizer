@@ -419,15 +419,17 @@ class AIHeuristic(Heuristic):
     """AI-powered heuristic using Ollama for semantic PARA classification.
 
     Uses a local LLM via Ollama to analyze file content and classify it
-    into PARA categories. Gracefully degrades when Ollama is unavailable
-    by returning neutral (zero) scores.
+    into PARA categories. Static PARA methodology instructions are passed
+    via the ``system`` role; dynamic file context (path, name, content)
+    is passed via the ``prompt`` role. Gracefully degrades when Ollama is
+    unavailable by returning neutral (zero) scores.
     """
 
     # Confidence damping factor — prevents the AI heuristic from
     # dominating when other heuristics are uncertain.
     _CONFIDENCE_DAMPING: float = 0.8
 
-    _PROMPT_TEMPLATE: str = (
+    _SYSTEM_MESSAGE: str = (
         "You are a file organization assistant using the PARA methodology.\n"
         "Classify the following file into PARA categories by assigning a score "
         "to each category.\n\n"
@@ -436,17 +438,20 @@ class AIHeuristic(Heuristic):
         "- AREA: Ongoing responsibilities requiring continuous maintenance (no end date)\n"
         "- RESOURCE: Reference materials, knowledge, and information for future use\n"
         "- ARCHIVE: Inactive or completed items no longer actively used\n\n"
-        "File path: {file_path}\n"
-        "File name: {file_name}\n"
-        "File extension: {file_ext}\n\n"
-        "Content preview:\n{content}\n\n"
         "Respond with ONLY a JSON object (no markdown, no explanation):\n"
-        '{{"project": 0.0, "area": 0.0, "resource": 0.0, "archive": 0.0, '
-        '"reasoning": "brief explanation"}}\n\n'
+        '{"project": 0.0, "area": 0.0, "resource": 0.0, "archive": 0.0, '
+        '"reasoning": "brief explanation"}\n\n'
         "Rules:\n"
         "- Scores must sum to approximately 1.0\n"
         "- Each score must be between 0.0 and 1.0\n"
         "- Base your assessment on the file content, name, and path\n"
+    )
+
+    _USER_TEMPLATE: str = (
+        "File path: {file_path}\n"
+        "File name: {file_name}\n"
+        "File extension: {file_ext}\n\n"
+        "Content preview:\n{content}\n"
     )
 
     def __init__(self, weight: float = 1.0, config: AIHeuristicConfig | None = None) -> None:
@@ -539,16 +544,21 @@ class AIHeuristic(Heuristic):
         return "\n".join(parts)
 
     def _build_prompt(self, file_path: Path, content: str) -> str:
-        """Build the PARA classification prompt.
+        """Build the per-file user message for PARA classification.
+
+        Contains only dynamic, file-specific context (path, name, extension,
+        content preview). The static PARA methodology instructions are passed
+        separately via ``_SYSTEM_MESSAGE`` in the ``system`` kwarg of
+        ``ollama.Client.generate()``.
 
         Args:
             file_path: Path to the file being classified.
             content: Extracted text content or metadata summary.
 
         Returns:
-            The formatted prompt string.
+            The formatted user message string containing file-specific context.
         """
-        return self._PROMPT_TEMPLATE.format(
+        return self._USER_TEMPLATE.format(
             file_path=file_path,
             file_name=file_path.name,
             file_ext=file_path.suffix or "(none)",
@@ -647,6 +657,7 @@ class AIHeuristic(Heuristic):
         try:
             response = self._client.generate(
                 model=self.config.model,
+                system=self._SYSTEM_MESSAGE,
                 prompt=prompt,
                 options={
                     "temperature": self.config.temperature,

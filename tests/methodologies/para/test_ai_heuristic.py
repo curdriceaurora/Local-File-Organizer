@@ -279,6 +279,7 @@ class TestAIHeuristicConfig:
         assert call_kwargs.kwargs["model"] == "llama3:8b"
         assert call_kwargs.kwargs["options"]["temperature"] == 0.1
         assert call_kwargs.kwargs["options"]["num_predict"] == 100
+        assert call_kwargs.kwargs["system"] == AIHeuristic._SYSTEM_MESSAGE
 
 
 # ---------------------------------------------------------------------------
@@ -349,3 +350,80 @@ class TestAIHeuristicEngineIntegration:
             assert result_with.scores[cat].score == pytest.approx(
                 result_without.scores[cat].score, abs=1e-9
             ), f"Score mismatch for {cat}: abstained AI diluted result"
+
+
+# ---------------------------------------------------------------------------
+# Tests: system/user message split
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+class TestAIHeuristicPromptSplit:
+    """Tests that generate() uses separate system and user messages."""
+
+    def test_system_kwarg_contains_para_instructions(self, tmp_path: Path) -> None:
+        """generate() is called with system kwarg containing static PARA text."""
+        h, mock_client = _make_heuristic()
+        scores = {"project": 0.5, "area": 0.2, "resource": 0.2, "archive": 0.1}
+        mock_client.generate.return_value = _make_ollama_response(scores)
+        test_file = tmp_path / "doc.txt"
+        test_file.write_text("some content")
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            h.evaluate(test_file)
+
+        call_kwargs = mock_client.generate.call_args.kwargs
+        assert "system" in call_kwargs
+        system = call_kwargs["system"]
+        assert "PARA methodology" in system
+        assert "PROJECT" in system
+        assert "AREA" in system
+        assert "RESOURCE" in system
+        assert "ARCHIVE" in system
+        assert "{file_path}" not in system
+        assert "{content}" not in system
+
+    def test_prompt_kwarg_contains_only_file_specific_content(self, tmp_path: Path) -> None:
+        """generate() prompt kwarg contains file context, not PARA instructions."""
+        h, mock_client = _make_heuristic()
+        scores = {"project": 0.5, "area": 0.2, "resource": 0.2, "archive": 0.1}
+        mock_client.generate.return_value = _make_ollama_response(scores)
+        test_file = tmp_path / "report.txt"
+        test_file.write_text("quarterly revenue figures")
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            h.evaluate(test_file)
+
+        call_kwargs = mock_client.generate.call_args.kwargs
+        prompt = call_kwargs["prompt"]
+        assert "report.txt" in prompt
+        assert "quarterly revenue figures" in prompt
+        assert "PARA methodology" not in prompt
+        assert "You are a file organization assistant" not in prompt
+
+    def test_engine_integration_system_prompt_split(self, tmp_path: Path) -> None:
+        """HeuristicEngine passes system+prompt split through full evaluation pipeline."""
+        test_file = tmp_path / "sprint_plan.txt"
+        test_file.write_text("Sprint 2 deliverables")
+        scores = {"project": 0.7, "area": 0.1, "resource": 0.15, "archive": 0.05}
+
+        with patch(f"{_HEURISTICS_MODULE}.OLLAMA_AVAILABLE", True):
+            engine = HeuristicEngine(enable_ai=True)
+            ai_h = next(h for h in engine.heuristics if isinstance(h, AIHeuristic))
+            mock_client = MagicMock()
+            mock_client.generate.return_value = _make_ollama_response(scores)
+            ai_h._client = mock_client
+            ai_h._available = True
+
+            result = engine.evaluate(test_file)
+
+        assert result is not None
+        call_kwargs = mock_client.generate.call_args.kwargs
+        assert "system" in call_kwargs
+        assert "PROJECT" in call_kwargs["system"]
+        assert "sprint_plan.txt" in call_kwargs["prompt"]
+
+    def test_system_message_contains_valid_json_example(self) -> None:
+        """_SYSTEM_MESSAGE JSON example uses single braces, not escaped doubles."""
+        assert "{{" not in AIHeuristic._SYSTEM_MESSAGE
+        assert "}}" not in AIHeuristic._SYSTEM_MESSAGE
