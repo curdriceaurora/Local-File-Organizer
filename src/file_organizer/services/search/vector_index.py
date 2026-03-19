@@ -40,7 +40,9 @@ class VectorIndex:
 
         Args:
             similarity_threshold: Minimum cosine similarity for a result to
-                be returned.  Defaults to ``0.0`` (return everything ranked).
+                be returned.  Defaults to ``0.0`` (return all results with
+                any non-zero similarity; zero-similarity results are always
+                excluded as they indicate out-of-vocabulary queries).
         """
         self._embedder = DocumentEmbedder()
         self._analyzer = SemanticAnalyzer(threshold=max(similarity_threshold, 0.0))
