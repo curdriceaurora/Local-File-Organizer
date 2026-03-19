@@ -17,6 +17,7 @@ from file_organizer.services.search.hybrid_retriever import HybridRetriever, _rr
 
 
 def _make_paths(n: int) -> list[Path]:
+    """Return a list of n unique temporary Path objects for test fixtures."""
     tmp = Path(tempfile.gettempdir())
     return [tmp / f"doc_{i}.txt" for i in range(n)]
 
@@ -25,6 +26,7 @@ def _make_retriever_with_corpus(
     docs: list[str],
     paths: list[Path],
 ) -> HybridRetriever:
+    """Build and return a HybridRetriever pre-indexed with the given corpus."""
     r = HybridRetriever()
     r.index(docs, paths)
     return r
@@ -38,11 +40,15 @@ def _make_retriever_with_corpus(
 @pytest.mark.ci
 @pytest.mark.unit
 class TestRrfFuse:
+    """Tests for the _rrf_fuse Reciprocal Rank Fusion helper."""
+
     def test_empty_lists(self) -> None:
+        """Fusing empty input lists returns an empty result."""
         result = _rrf_fuse([], [], top_k=5)
         assert result == []
 
     def test_single_list(self) -> None:
+        """A single ranked list preserves the original rank order."""
         paths = _make_paths(3)
         ranked = [(paths[0], 1.0), (paths[1], 0.5), (paths[2], 0.1)]
         result = _rrf_fuse(ranked, top_k=3)
@@ -62,18 +68,21 @@ class TestRrfFuse:
         assert result[0][0] == paths[0]
 
     def test_top_k_limits_output(self) -> None:
+        """top_k caps the number of fused results returned."""
         paths = _make_paths(10)
         ranked = [(p, float(10 - i)) for i, p in enumerate(paths)]
         result = _rrf_fuse(ranked, top_k=3)
         assert len(result) == 3
 
     def test_scores_are_positive(self) -> None:
+        """All RRF scores in the output are positive."""
         paths = _make_paths(3)
         ranked = [(p, 1.0) for p in paths]
         result = _rrf_fuse(ranked, top_k=3)
         assert all(score > 0 for _, score in result)
 
     def test_custom_k_parameter(self) -> None:
+        """The k smoothing parameter affects absolute scores but not rank order."""
         paths = _make_paths(2)
         ranked = [(paths[0], 1.0), (paths[1], 0.5)]
         # k=1 → scores are 1/(1+rank); k=100 → scores are 1/(100+rank)
@@ -85,10 +94,12 @@ class TestRrfFuse:
         assert result_small_k[0][1] > result_large_k[0][1]
 
     def test_k_zero_raises_value_error(self) -> None:
+        """k=0 raises ValueError (k must be positive)."""
         with pytest.raises(ValueError, match="positive"):
             _rrf_fuse([], top_k=5, k=0)
 
     def test_k_negative_raises_value_error(self) -> None:
+        """Negative k raises ValueError (k must be positive)."""
         with pytest.raises(ValueError, match="positive"):
             _rrf_fuse([], top_k=5, k=-1)
 
@@ -110,39 +121,49 @@ class TestRrfFuse:
 @pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverInit:
+    """Tests for HybridRetriever construction and lifecycle methods."""
+
     def test_not_initialized_before_index(self) -> None:
+        """is_initialized is False on a freshly created retriever."""
         r = HybridRetriever()
         assert r.is_initialized is False
 
     def test_corpus_size_zero_before_index(self) -> None:
+        """corpus_size is 0 before any documents are indexed."""
         r = HybridRetriever()
         assert r.corpus_size == 0
 
     def test_satisfies_retriever_protocol(self) -> None:
+        """HybridRetriever satisfies the RetrieverProtocol interface."""
         # RetrieverProtocol has a property member (is_initialized), so
         # issubclass() raises TypeError; use isinstance() on an instance instead.
         assert isinstance(HybridRetriever(), RetrieverProtocol)
 
     def test_initialize_marks_as_initialized(self) -> None:
+        """initialize() sets is_initialized to True."""
         r = HybridRetriever()
         r.initialize()
         assert r.is_initialized is True
 
     def test_cleanup_resets_initialized(self) -> None:
+        """cleanup() resets is_initialized to False."""
         r = HybridRetriever()
         r.initialize()
         r.cleanup()
         assert r.is_initialized is False
 
     def test_k_zero_raises_value_error(self) -> None:
+        """k=0 at construction time raises ValueError."""
         with pytest.raises(ValueError, match="positive"):
             HybridRetriever(k=0)
 
     def test_k_negative_raises_value_error(self) -> None:
+        """Negative k at construction time raises ValueError."""
         with pytest.raises(ValueError, match="positive"):
             HybridRetriever(k=-1)
 
     def test_custom_bm25_and_vector_injected(self) -> None:
+        """Custom BM25 and vector index instances are stored on the retriever."""
         from file_organizer.services.search.bm25_index import BM25Index
         from file_organizer.services.search.vector_index import VectorIndex
 
@@ -156,7 +177,10 @@ class TestHybridRetrieverInit:
 @pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverIndex:
+    """Tests for HybridRetriever.index() behaviour."""
+
     def test_index_sets_initialized(self) -> None:
+        """Calling index() marks the retriever as initialized."""
         paths = _make_paths(3)
         r = HybridRetriever()
         r.index(
@@ -166,6 +190,7 @@ class TestHybridRetrieverIndex:
         assert r.is_initialized is True
 
     def test_index_updates_corpus_size(self) -> None:
+        """corpus_size reflects the number of indexed documents."""
         paths = _make_paths(5)
         r = HybridRetriever()
         r.index(
@@ -181,11 +206,13 @@ class TestHybridRetrieverIndex:
         assert r.corpus_size == 5
 
     def test_index_mismatched_lengths_raises(self) -> None:
+        """Mismatched docs/paths lengths raise ValueError."""
         r = HybridRetriever()
         with pytest.raises(ValueError, match="equal length"):
             r.index(["one", "two"], _make_paths(3))
 
     def test_index_empty_corpus(self) -> None:
+        """Indexing an empty corpus still marks the retriever as initialized."""
         r = HybridRetriever()
         r.index([], [])
         # BM25Index and VectorIndex both handle empty corpora gracefully
@@ -195,12 +222,16 @@ class TestHybridRetrieverIndex:
 @pytest.mark.ci
 @pytest.mark.unit
 class TestHybridRetrieverRetrieve:
+    """Tests for HybridRetriever.retrieve() behaviour."""
+
     def test_retrieve_before_index_returns_empty(self) -> None:
+        """Retrieving from an uninitialised retriever returns an empty list."""
         r = HybridRetriever()
         results = r.retrieve("anything")
         assert results == []
 
     def test_retrieve_returns_list_of_tuples(self) -> None:
+        """retrieve() returns a list of (Path, float) tuples for matching documents."""
         paths = _make_paths(3)
         docs = ["finance quarterly report", "meeting notes agenda", "budget planning"]
         r = _make_retriever_with_corpus(docs, paths)
@@ -215,17 +246,21 @@ class TestHybridRetrieverRetrieve:
             assert item[0] in paths, "returned path must be from the indexed corpus"
 
     def test_retrieve_top_k_limits_output(self) -> None:
+        """top_k=3 must cap output even when more than 3 docs match the query."""
+        # Corpus has 4 documents containing "finance" or "report" (genuine
+        # semantic matches) so the top_k=3 limit is exercised against real
+        # candidates rather than zero-similarity fillers.
         paths = _make_paths(10)
         docs = [
             "quarterly finance report",
-            "project planning document",
+            "annual budget finance overview",
             "research analysis report",
+            "project report summary findings",
             "meeting notes agenda",
             "budget forecast spreadsheet",
             "marketing campaign proposal",
             "technical specification document",
             "annual performance review",
-            "product roadmap planning",
             "customer feedback analysis",
         ]
         r = _make_retriever_with_corpus(docs, paths)
@@ -233,6 +268,7 @@ class TestHybridRetrieverRetrieve:
         assert len(results) == 3
 
     def test_retrieve_scores_are_positive(self) -> None:
+        """All RRF-fused scores returned by retrieve() are positive."""
         paths = _make_paths(5)
         docs = [
             "quarterly finance analysis",
@@ -246,6 +282,7 @@ class TestHybridRetrieverRetrieve:
         assert all(score > 0 for _, score in results)
 
     def test_retrieve_sorted_descending(self) -> None:
+        """retrieve() returns results sorted in descending score order."""
         paths = _make_paths(5)
         docs = [
             "quarterly report",
@@ -350,6 +387,7 @@ class TestHybridRetrieverThreadSafety:
     """Verify concurrent access does not crash."""
 
     def test_concurrent_index_and_retrieve(self) -> None:
+        """Concurrent retrieve, cleanup, and index calls do not raise or deadlock."""
         import threading
 
         bm25_mock = MagicMock()
@@ -364,6 +402,7 @@ class TestHybridRetrieverThreadSafety:
         errors: list[Exception] = []
 
         def _retrieve() -> None:
+            """Repeatedly call retrieve() to exercise concurrent read access."""
             try:
                 for _ in range(50):
                     r.retrieve("query")
@@ -371,6 +410,7 @@ class TestHybridRetrieverThreadSafety:
                 errors.append(exc)
 
         def _cleanup() -> None:
+            """Repeatedly cycle cleanup/initialize to stress-test state transitions."""
             try:
                 for _ in range(50):
                     r.cleanup()
@@ -379,6 +419,7 @@ class TestHybridRetrieverThreadSafety:
                 errors.append(exc)
 
         def _index() -> None:
+            """Repeatedly call index() concurrently with retrieve and cleanup."""
             try:
                 docs = ["finance report", "legal contract", "recipe baking"]
                 paths = _make_paths(3)

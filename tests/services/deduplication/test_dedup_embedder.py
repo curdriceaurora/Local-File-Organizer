@@ -75,6 +75,7 @@ class TestDocumentEmbedderInit:
     """Tests for DocumentEmbedder initialization."""
 
     def test_attributes_set(self, embedder):
+        """Constructor stores max_features, ngram_range, is_fitted=False, and an empty cache."""
         assert embedder.max_features == 100
         assert embedder.ngram_range == (1, 2)
         assert embedder.is_fitted is False
@@ -100,6 +101,7 @@ class TestDocumentEmbedderInit:
                 mod.DocumentEmbedder()
 
     def test_cache_path_not_set(self, embedder):
+        """cache_path is None by default."""
         assert embedder.cache_path is None
 
 
@@ -113,26 +115,51 @@ class TestFitTransform:
     """Tests for fit_transform."""
 
     def test_empty_documents(self, embedder):
+        """fit_transform on an empty list returns an empty array."""
         result = embedder.fit_transform([])
         assert len(result) == 0
 
     def test_returns_dense_array(self, embedder):
+        """fit_transform returns a dense numpy ndarray with shape (n_docs, n_features)."""
         result = embedder.fit_transform(["hello world", "python code"])
         assert isinstance(result, np.ndarray)
         assert result.shape == (2, 3)
 
     def test_sets_is_fitted(self, embedder):
+        """fit_transform sets is_fitted to True."""
         embedder.fit_transform(["doc1", "doc2"])
         assert embedder.is_fitted is True
 
     def test_calls_vectorizer_fit_transform(self, embedder, mock_vectorizer):
+        """fit_transform delegates to the underlying vectorizer with the document list."""
         embedder.fit_transform(["doc1", "doc2"])
         mock_vectorizer.fit_transform.assert_called_once_with(["doc1", "doc2"])
 
     def test_error_propagates(self, embedder, mock_vectorizer):
+        """Errors from the vectorizer propagate out of fit_transform."""
         mock_vectorizer.fit_transform.side_effect = RuntimeError("sklearn error")
         with pytest.raises(RuntimeError, match="sklearn error"):
             embedder.fit_transform(["doc"])
+
+    @pytest.mark.ci
+    def test_max_df_temporarily_overridden_for_tiny_corpus(self, embedder, mock_vectorizer):
+        """max_df is set to 1.0 during fit_transform for tiny corpus, then restored."""
+        mock_vectorizer.max_df = 0.95  # 1 doc * 0.95 < 1 → triggers guard
+        max_df_at_call: list[float] = []
+
+        original_return = mock_vectorizer.fit_transform.return_value
+
+        def capture(docs: list[str]) -> object:
+            """Record max_df at call time and return the original sparse matrix mock."""
+            max_df_at_call.append(mock_vectorizer.max_df)
+            return original_return
+
+        mock_vectorizer.fit_transform.side_effect = capture
+
+        embedder.fit_transform(["single document"])
+
+        assert max_df_at_call == [1.0], "guard must pass max_df=1.0 to fit_transform"
+        assert mock_vectorizer.max_df == 0.95, "max_df must be restored after fit_transform"
 
 
 # ---------------------------------------------------------------------------
@@ -145,15 +172,18 @@ class TestTransform:
     """Tests for transform."""
 
     def test_not_fitted_raises(self, embedder):
+        """transform raises RuntimeError when the embedder is not fitted."""
         with pytest.raises(RuntimeError, match="not fitted"):
             embedder.transform("some text")
 
     def test_returns_embedding(self, embedder, mock_vectorizer):
+        """transform returns a numpy ndarray embedding for a single document."""
         embedder.is_fitted = True
         result = embedder.transform("hello world")
         assert isinstance(result, np.ndarray)
 
     def test_caches_result(self, embedder, mock_vectorizer):
+        """Repeated transform calls for the same document use the embedding cache."""
         embedder.is_fitted = True
         embedder.transform("hello world")
         # Second call should use cache
@@ -178,6 +208,7 @@ class TestTransform:
         assert mock_vectorizer.transform.call_count == 1
 
     def test_cache_key_is_hash(self, embedder):
+        """_hash_document returns the SHA-256 hex digest of the document string."""
         doc = "test document"
         doc_hash = hashlib.sha256(doc.encode()).hexdigest()
         result = embedder._hash_document(doc)
@@ -194,10 +225,12 @@ class TestTransformBatch:
     """Tests for transform_batch."""
 
     def test_not_fitted_raises(self, embedder):
+        """transform_batch raises RuntimeError when the embedder is not fitted."""
         with pytest.raises(RuntimeError, match="not fitted"):
             embedder.transform_batch(["doc1", "doc2"])
 
     def test_returns_matrix(self, embedder, mock_vectorizer):
+        """transform_batch returns a numpy ndarray matrix for a list of documents."""
         embedder.is_fitted = True
         mock_sparse = MagicMock()
         mock_sparse.toarray.return_value = np.array([[0.1, 0.2], [0.3, 0.4]])
@@ -217,15 +250,18 @@ class TestFeatureAccess:
     """Tests for get_feature_names and get_vocabulary."""
 
     def test_get_feature_names_not_fitted(self, embedder):
+        """get_feature_names raises RuntimeError when the embedder is not fitted."""
         with pytest.raises(RuntimeError, match="not fitted"):
             embedder.get_feature_names()
 
     def test_get_feature_names(self, embedder, mock_vectorizer):
+        """get_feature_names returns the list of vocabulary tokens."""
         embedder.is_fitted = True
         result = embedder.get_feature_names()
         assert result == ["hello", "world", "python"]
 
     def test_get_feature_names_fallback_old_api(self, embedder, mock_vectorizer):
+        """get_feature_names falls back to get_feature_names() when get_feature_names_out is absent."""
         embedder.is_fitted = True
         mock_vectorizer.get_feature_names_out.side_effect = AttributeError
         mock_vectorizer.get_feature_names.return_value = ["a", "b"]
@@ -233,10 +269,12 @@ class TestFeatureAccess:
         assert result == ["a", "b"]
 
     def test_get_vocabulary_not_fitted(self, embedder):
+        """get_vocabulary raises RuntimeError when the embedder is not fitted."""
         with pytest.raises(RuntimeError, match="not fitted"):
             embedder.get_vocabulary()
 
     def test_get_vocabulary(self, embedder, mock_vectorizer):
+        """get_vocabulary returns the token-to-index mapping from the fitted vectorizer."""
         embedder.is_fitted = True
         vocab = embedder.get_vocabulary()
         assert vocab == {"hello": 0, "world": 1, "python": 2}
@@ -252,10 +290,12 @@ class TestGetTopTerms:
     """Tests for get_top_terms."""
 
     def test_not_fitted_raises(self, embedder):
+        """get_top_terms raises RuntimeError when the embedder is not fitted."""
         with pytest.raises(RuntimeError, match="not fitted"):
             embedder.get_top_terms(np.array([0.1, 0.2, 0.3]))
 
     def test_returns_sorted_terms(self, embedder, mock_vectorizer):
+        """get_top_terms returns top_n terms sorted by descending weight."""
         embedder.is_fitted = True
         embedding = np.array([0.5, 0.1, 0.8])
         top = embedder.get_top_terms(embedding, top_n=2)
@@ -264,6 +304,7 @@ class TestGetTopTerms:
         assert top[0][1] >= top[1][1]
 
     def test_skips_zero_weights(self, embedder, mock_vectorizer):
+        """get_top_terms excludes terms with zero weight from the result."""
         embedder.is_fitted = True
         embedding = np.array([0.5, 0.0, 0.3])
         top = embedder.get_top_terms(embedding, top_n=5)
@@ -287,6 +328,7 @@ class TestModelPersistence:
         assert not p.exists()
 
     def test_save_and_load(self, embedder, mock_vectorizer, tmp_path):
+        """save_model writes to disk and load_model restores is_fitted=True."""
         embedder.is_fitted = True
         p = tmp_path / "model.pkl"
 
@@ -306,6 +348,7 @@ class TestModelPersistence:
         assert embedder.is_fitted is True
 
     def test_load_nonexistent_raises(self, embedder):
+        """load_model raises an error when the model file does not exist."""
         with pytest.raises((FileNotFoundError, OSError, ValueError)):
             embedder.load_model(Path("/nonexistent/model.pkl"))
 
@@ -320,11 +363,13 @@ class TestCacheOperations:
     """Tests for cache operations."""
 
     def test_clear_cache(self, embedder):
+        """clear_cache empties the embedding_cache dictionary."""
         embedder.embedding_cache = {"hash1": np.array([1, 2]), "hash2": np.array([3, 4])}
         embedder.clear_cache()
         assert len(embedder.embedding_cache) == 0
 
     def test_save_cache(self, embedder, tmp_path):
+        """_save_cache writes the embedding cache to the configured cache_path."""
         cache_path = tmp_path / "cache.pkl"
         embedder.cache_path = cache_path
         embedder.embedding_cache = {"hash1": np.array([1, 2])}
@@ -332,6 +377,7 @@ class TestCacheOperations:
         assert cache_path.exists()
 
     def test_load_cache(self, embedder, tmp_path):
+        """_load_cache reads a previously saved pickle file into embedding_cache."""
         cache_path = tmp_path / "cache.pkl"
         embedder.cache_path = cache_path
         # Save a cache file
@@ -342,9 +388,11 @@ class TestCacheOperations:
         assert "hash1" in embedder.embedding_cache
 
     def test_save_cache_no_path(self, embedder):
+        """_save_cache does nothing and does not raise when cache_path is None."""
         embedder.cache_path = None
         embedder._save_cache()  # Should not raise
 
     def test_load_cache_no_path(self, embedder):
+        """_load_cache does nothing and does not raise when cache_path is None."""
         embedder.cache_path = None
         embedder._load_cache()  # Should not raise

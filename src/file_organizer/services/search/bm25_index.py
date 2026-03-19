@@ -97,13 +97,17 @@ class BM25Index:
 
         scores: list[float] = self._bm25.get_scores(tokens)  # type: ignore[attr-defined]
 
-        # Pair, sort descending, take top_k
-        ranked = sorted(
-            zip(self._paths, scores, strict=True),
-            key=lambda pair: pair[1],
-            reverse=True,
-        )
-        return [(path, float(score)) for path, score in ranked[:top_k] if score > 0]
+        # Filter zero-score docs first, then sort descending and take top_k.
+        # Zeros must be removed before slicing: since 0.0 > negative, zero-score
+        # non-overlap documents sort ahead of negative-score matches and would
+        # otherwise fill the top_k window, leaving too few real results.
+        non_zero = [
+            (path, float(score))
+            for path, score in zip(self._paths, scores, strict=True)
+            if score != 0.0
+        ]
+        ranked = sorted(non_zero, key=lambda pair: pair[1], reverse=True)
+        return ranked[:top_k]
 
     # ------------------------------------------------------------------
     # Convenience

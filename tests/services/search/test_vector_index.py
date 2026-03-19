@@ -16,6 +16,7 @@ from file_organizer.services.search.vector_index import VectorIndex
 
 
 def _make_paths(n: int) -> list[Path]:
+    """Return a list of n unique temporary Path objects for test fixtures."""
     tmp = Path(tempfile.gettempdir())
     return [tmp / f"file_{i}.txt" for i in range(n)]
 
@@ -42,7 +43,10 @@ _CORPUS = [
 @pytest.mark.ci
 @pytest.mark.unit
 class TestVectorIndexProtocol:
+    """Protocol conformance tests for VectorIndex."""
+
     def test_implements_index_protocol(self) -> None:
+        """VectorIndex satisfies the IndexProtocol runtime-checkable interface."""
         assert isinstance(VectorIndex(), IndexProtocol)
 
 
@@ -54,11 +58,15 @@ class TestVectorIndexProtocol:
 @pytest.mark.ci
 @pytest.mark.unit
 class TestVectorIndex:
+    """Functional tests for VectorIndex search and indexing behaviour."""
+
     def test_search_before_index_returns_empty(self) -> None:
+        """Searching an uninitialised index returns an empty list."""
         idx = VectorIndex()
         assert idx.search("anything") == []
 
     def test_search_top_k_zero_returns_empty(self) -> None:
+        """top_k=0 returns an empty result list."""
         idx = VectorIndex()
         idx.index(_CORPUS, _make_paths(len(_CORPUS)))
         # Verify the guard: top_k=0 returns []
@@ -67,6 +75,7 @@ class TestVectorIndex:
         assert len(idx.search("report", top_k=1)) > 0
 
     def test_search_top_k_negative_returns_empty(self) -> None:
+        """Negative top_k returns an empty result list."""
         idx = VectorIndex()
         idx.index(_CORPUS, _make_paths(len(_CORPUS)))
         # Verify the guard: top_k=-1 returns []
@@ -75,19 +84,23 @@ class TestVectorIndex:
         assert len(idx.search("report", top_k=1)) > 0
 
     def test_size_zero_before_index(self) -> None:
+        """size is 0 before any documents are indexed."""
         assert VectorIndex().size == 0
 
     def test_index_sets_size(self) -> None:
+        """size equals the number of indexed documents."""
         idx = VectorIndex()
         idx.index(_CORPUS, _make_paths(len(_CORPUS)))
         assert idx.size == len(_CORPUS)
 
     def test_mismatched_lengths_raises(self) -> None:
+        """Mismatched docs/paths lengths raise ValueError."""
         idx = VectorIndex()
         with pytest.raises(ValueError, match="equal length"):
             idx.index(["doc"], _make_paths(2))
 
     def test_empty_corpus_clears_index(self) -> None:
+        """Indexing an empty corpus resets size to 0 and yields no search results."""
         idx = VectorIndex()
         idx.index(_CORPUS, _make_paths(len(_CORPUS)))
         idx.index([], [])
@@ -95,6 +108,7 @@ class TestVectorIndex:
         assert idx.search("finance") == []
 
     def test_relevant_document_in_top_results(self) -> None:
+        """The most relevant document appears in the top-3 results for a matching query."""
         paths = _make_paths(len(_CORPUS))
         idx = VectorIndex()
         idx.index(_CORPUS, paths)
@@ -104,6 +118,7 @@ class TestVectorIndex:
         assert paths[0] in returned_paths, "Finance doc should appear in top 3 for budget query"
 
     def test_scores_are_between_zero_and_one(self) -> None:
+        """All similarity scores are in the valid [0, 1] range."""
         idx = VectorIndex()
         idx.index(_CORPUS, _make_paths(len(_CORPUS)))
         results = idx.search("machine learning python")
@@ -111,13 +126,25 @@ class TestVectorIndex:
             assert 0.0 <= score <= 1.0, f"Score {score} out of [0, 1] range"
 
     def test_top_k_limits_results(self) -> None:
+        """Results are capped at top_k even when more documents are semantically relevant."""
+        # Build a corpus where "report" appears in 4 of 5 documents (80% < max_df=0.95
+        # so the term is not pruned) so the top_k=3 limit is exercised against genuine
+        # semantic matches rather than zero-similarity fillers.
+        corpus = [
+            "quarterly financial report revenue summary",
+            "annual budget report planning forecast",
+            "machine learning progress report metrics",
+            "security vulnerabilities report remediation",
+            "chocolate cake recipe baking ingredients",
+        ]
         idx = VectorIndex()
-        idx.index(_CORPUS, _make_paths(len(_CORPUS)))
+        idx.index(corpus, _make_paths(len(corpus)))
         results = idx.search("report", top_k=3)
-        assert results, "Expected results for 'report' in a 10-doc corpus"
+        assert results, "Expected results for 'report' in corpus"
         assert len(results) == 3
 
     def test_results_sorted_descending(self) -> None:
+        """Results are sorted in descending similarity order."""
         idx = VectorIndex()
         idx.index(_CORPUS, _make_paths(len(_CORPUS)))
         results = idx.search("legal contract", top_k=5)
@@ -125,6 +152,7 @@ class TestVectorIndex:
         assert scores == sorted(scores, reverse=True), "Results must be sorted by descending score"
 
     def test_re_index_replaces_previous(self) -> None:
+        """Re-indexing with new documents completely replaces the previous corpus."""
         idx = VectorIndex()
         old_paths = _make_paths(len(_CORPUS))
         idx.index(_CORPUS, old_paths)
@@ -140,6 +168,7 @@ class TestVectorIndex:
             assert old_path not in returned, f"{old_path.name} survived re-index"
 
     def test_threshold_filters_low_scores(self) -> None:
+        """A high similarity_threshold filters out low-scoring results."""
         paths = _make_paths(len(_CORPUS))
         # Control: loose threshold returns results for a relevant query
         loose_idx = VectorIndex(similarity_threshold=0.0)
@@ -167,6 +196,7 @@ class TestVectorIndexRecall:
 
     @pytest.fixture(scope="class")
     def indexed(self) -> VectorIndex:
+        """Build a shared VectorIndex over _CORPUS for recall tests."""
         idx = VectorIndex()
         idx.index(_CORPUS, _make_paths(len(_CORPUS)))
         return idx
@@ -185,6 +215,7 @@ class TestVectorIndexRecall:
         ],
     )
     def test_category_recall(self, indexed: VectorIndex, query: str, expected_idx: int) -> None:
+        """The expected document index appears in top-3 results for each category query."""
         results = indexed.search(query, top_k=3)
         assert results, f"No results for query: {query!r}"
         returned = [p for p, _ in results]
