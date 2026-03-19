@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import pickle
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -64,6 +65,7 @@ class DocumentEmbedder:
 
         # Cache for embeddings {document_hash: embedding}
         self.embedding_cache: dict[str, np.ndarray] = {}
+        self._cache_lock = threading.Lock()
 
         # Load cache if available
         if cache_path and cache_path.exists():
@@ -75,6 +77,10 @@ class DocumentEmbedder:
 
     def fit_transform(self, documents: list[str]) -> np.ndarray:
         """Fit the vectorizer and transform documents to embeddings.
+
+        For very small corpora where ``len(documents) * max_df < 1``, ``max_df``
+        is temporarily set to 1.0 for this call only and restored afterwards, so
+        the configured value is preserved for subsequent calls on the same instance.
 
         Args:
             documents: List of document texts
@@ -89,8 +95,20 @@ class DocumentEmbedder:
         logger.info(f"Fitting vectorizer on {len(documents)} documents")
 
         try:
-            # Fit and transform
-            embeddings = self.vectorizer.fit_transform(documents)
+            # For very small corpora, max_df as a fraction can round to 0 documents,
+            # which conflicts with min_df=1.  Use 1.0 temporarily without persisting
+            # the change, so subsequent calls on this instance still use the original value.
+            _original_max_df = self.vectorizer.max_df
+            if (
+                isinstance(self.vectorizer.max_df, float)
+                and len(documents) * self.vectorizer.max_df < 1
+            ):
+                self.vectorizer.max_df = 1.0
+
+            try:
+                embeddings = self.vectorizer.fit_transform(documents)
+            finally:
+                self.vectorizer.max_df = _original_max_df
             self.is_fitted = True
 
             # Convert to dense array for easier manipulation
@@ -124,15 +142,17 @@ class DocumentEmbedder:
 
         # Check cache
         doc_hash = self._hash_document(document)
-        if doc_hash in self.embedding_cache:
-            logger.debug(f"Cache hit for document (hash={doc_hash[:8]})")
-            return self.embedding_cache[doc_hash]
+        with self._cache_lock:
+            if doc_hash in self.embedding_cache:
+                logger.debug("Cache hit for document (hash=%s)", doc_hash[:8])
+                return self.embedding_cache[doc_hash]
 
         # Transform
         embedding: np.ndarray = np.asarray(self.vectorizer.transform([document]).toarray()[0])
 
         # Cache the embedding
-        self.embedding_cache[doc_hash] = embedding
+        with self._cache_lock:
+            self.embedding_cache[doc_hash] = embedding
 
         return embedding
 

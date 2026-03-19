@@ -7,15 +7,13 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from file_organizer.api.config import ApiSettings
 
 _ACCESS_TOKEN_TYPE = "access"
 _REFRESH_TOKEN_TYPE = "refresh"
-
-_PWD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class TokenError(Exception):
@@ -36,12 +34,15 @@ class TokenBundle:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Return True if plain_password matches hashed_password."""
-    return bool(_PWD_CONTEXT.verify(plain_password, hashed_password))
+    try:
+        return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
+    except (ValueError, TypeError):
+        return False
 
 
 def hash_password(password: str) -> str:
     """Return the bcrypt hash of password."""
-    return str(_PWD_CONTEXT.hash(password))
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 _COMMON_PASSWORDS: frozenset[str] = frozenset(

@@ -7,11 +7,8 @@ import secrets
 import sys
 from collections.abc import Iterable
 from pathlib import Path
-from typing import cast
 
-from passlib.context import CryptContext
-
-_API_KEY_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 
 def generate_api_key(prefix: str = "fo") -> str:
@@ -23,14 +20,14 @@ def generate_api_key(prefix: str = "fo") -> str:
 
 def hash_api_key(api_key: str) -> str:
     """Hash an API key for storage."""
-    return cast(str, _API_KEY_CONTEXT.hash(api_key))
+    return bcrypt.hashpw(api_key.encode(), bcrypt.gensalt()).decode()
 
 
 def match_api_key_hash(api_key: str, hashes: Iterable[str]) -> str | None:
     """Return the stored hash matching an API key, if any."""
     for stored in hashes:
         try:
-            if _API_KEY_CONTEXT.verify(api_key, stored):
+            if bcrypt.checkpw(api_key.encode(), stored.encode()):
                 return stored
         except (ValueError, TypeError):
             continue

@@ -132,7 +132,9 @@ class SemanticAnalyzer:
         for i, doc_embedding in enumerate(document_embeddings):
             similarity = self.compute_similarity(query_embedding, doc_embedding)
 
-            if similarity >= min_similarity:
+            # Exclude zero-similarity results: a 0.0 cosine similarity means the
+            # query vector is all-zeros (out-of-vocabulary query) — no real match.
+            if similarity > 0.0 and similarity >= min_similarity:
                 similarities.append((paths[i], similarity))
 
         # Sort by similarity (descending)

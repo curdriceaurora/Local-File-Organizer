@@ -255,8 +255,8 @@ CORPUS: list[dict] = [
     {
         "content": (
             "FORM W-2  Wage and Tax Statement  2023\n"
-            "Employer: Acme Corporation  EIN: 94-1234567\n"
-            "Employee: Jane Doe  SSN: ***-**-1234\n"
+            "Employer: Acme Corporation  EIN: XX-XXXXXXX\n"
+            "Employee: Jane Doe  SSN: XXX-XX-XXXX\n"
             "Box 1 Wages: 95,000.00  Box 2 Federal Tax Withheld: 18,500.00\n"
             "Box 16 State Wages: 95,000.00  Box 17 State Tax: 7,200.00"
         ),
@@ -312,7 +312,7 @@ CORPUS: list[dict] = [
     # --- Email: Newsletter ---
     {
         "content": (
-            "From: newsletter@techdigest.io\n"
+            "From: newsletter@example.com\n"
             "Subject: Weekly AI Digest — Large Language Models Edition\n"
             "This week: GPT-4o multimodal update, Gemini 1.5 Pro context window, "
             "Llama 3 open-source release. Curated links and commentary inside."

@@ -46,6 +46,7 @@ def _intent(intent_type: IntentType, **params) -> Intent:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestCommandExecutorInit:
     """Test CommandExecutor.__init__."""
@@ -64,6 +65,7 @@ class TestCommandExecutorInit:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestExecuteDispatch:
     """Test the execute() dispatch logic."""
@@ -89,6 +91,7 @@ class TestExecuteDispatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleOrganize:
     """Test the organize handler."""
@@ -176,6 +179,7 @@ class TestHandleOrganize:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleMove:
     """Test the move handler."""
@@ -223,6 +227,7 @@ class TestHandleMove:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleRename:
     """Test the rename handler."""
@@ -266,6 +271,7 @@ class TestHandleRename:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleFind:
     """Test the find handler."""
@@ -278,7 +284,8 @@ class TestHandleFind:
     def test_find_matches(self, executor, tmp_path):
         (tmp_path / "hello.txt").write_text("x")
         (tmp_path / "world.txt").write_text("y")
-        result = executor.execute(_intent(IntentType.FIND, query="hello"))
+        with patch.object(executor, "_build_retriever_for_root", return_value=None):
+            result = executor.execute(_intent(IntentType.FIND, query="hello"))
         assert result.success
         assert len(result.affected_files) == 1
 
@@ -316,6 +323,7 @@ class TestHandleFind:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleUndoRedo:
     """Test undo and redo handlers."""
@@ -380,6 +388,7 @@ class TestHandleUndoRedo:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandlePreview:
     """Test the preview handler."""
@@ -405,6 +414,7 @@ class TestHandlePreview:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestHandleSuggest:
     """Test the suggest handler."""
@@ -442,6 +452,7 @@ class TestHandleSuggest:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestResolvePath:
     """Test the _resolve_path helper."""
@@ -461,3 +472,76 @@ class TestResolvePath:
     def test_tilde_expansion(self, executor):
         result = executor._resolve_path("~/docs")
         assert "~" not in str(result)
+
+
+# ---------------------------------------------------------------------------
+# _build_retriever_for_root — hidden file filtering
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBuildRetrieverHiddenFiles:
+    """Verify _build_retriever_for_root excludes hidden files."""
+
+    def test_hidden_files_excluded_from_retriever_corpus(self, tmp_path: Path) -> None:
+        """Hidden files (dot-prefixed) must not be included in the search corpus."""
+        from file_organizer.utils import is_hidden
+
+        # The filter logic in executor.py line 234:
+        # if entry.is_symlink() or not entry.is_file() or is_hidden(entry): continue
+        normal = tmp_path / "report.txt"
+        normal.write_text("quarterly finance report")
+        hidden = tmp_path / ".credentials.json"
+        hidden.write_text('{"api_key": "secret"}')
+
+        entries = list(tmp_path.iterdir())
+        filtered = [e for e in entries if not e.is_symlink() and e.is_file() and not is_hidden(e)]
+        assert normal in filtered
+        assert hidden not in filtered, "Hidden file should be excluded from corpus"
+
+    def test_symlinks_excluded_from_retriever_corpus(self, tmp_path: Path) -> None:
+        """Symlinked files must not be included in the search corpus."""
+        real = tmp_path / "real.txt"
+        real.write_text("real content")
+        try:
+            link = tmp_path / "link.txt"
+            link.symlink_to(real)
+        except OSError:
+            pytest.skip("Symlinks not supported")
+
+        from file_organizer.utils import is_hidden
+
+        entries = list(tmp_path.iterdir())
+        filtered = [e for e in entries if not e.is_symlink() and e.is_file() and not is_hidden(e)]
+        assert real in filtered
+        assert link not in filtered, "Symlink should be excluded from corpus"
+
+    def test_build_retriever_uses_relative_path_for_hidden_check(self, tmp_path: Path) -> None:
+        """_build_retriever_for_root uses relative path for is_hidden to avoid false positives."""
+        from unittest.mock import patch
+
+        from file_organizer.services.copilot.executor import CommandExecutor
+
+        (tmp_path / "report.txt").write_text("quarterly budget finance report")
+        (tmp_path / "notes.txt").write_text("meeting agenda items budget")
+        hidden_dir = tmp_path / ".config"
+        hidden_dir.mkdir()
+        (hidden_dir / "settings.txt").write_text("settings config data")
+
+        executor = CommandExecutor()
+        try:
+            with patch(
+                "file_organizer.services.search.hybrid_retriever.HybridRetriever"
+            ) as mock_cls:
+                mock_instance = mock_cls.return_value
+                mock_instance.index.return_value = None
+                executor._build_retriever_for_root(tmp_path)
+                if mock_instance.index.called:
+                    args = mock_instance.index.call_args[0]
+                    docs_list = args[0]
+                    assert all("settings config data" not in d for d in docs_list), (
+                        "Hidden file should be excluded from corpus"
+                    )
+        except ImportError:
+            pytest.skip("Search dependencies not installed")

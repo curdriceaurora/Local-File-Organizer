@@ -13,6 +13,7 @@ building.
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 from loguru import logger
@@ -75,6 +76,8 @@ def _rrf_fuse(
         Fused list of (path, rrf_score) tuples sorted by descending score,
         at most *top_k* entries.
     """
+    if k <= 0:
+        raise ValueError(f"RRF smoothing constant k must be positive, got {k}")
     fused: dict[Path, float] = {}
     for ranked in ranked_lists:
         for rank, (path, _) in enumerate(ranked, start=1):
@@ -115,10 +118,13 @@ class HybridRetriever:
         k: int = 60,
     ) -> None:
         """Initialise the hybrid retriever."""
+        if k <= 0:
+            raise ValueError(f"RRF smoothing constant k must be positive, got {k}")
         self._bm25 = bm25 if bm25 is not None else BM25Index()
         self._vector = vector if vector is not None else VectorIndex()
         self._k = k
         self._initialized = False
+        self._lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # RetrieverProtocol
@@ -127,7 +133,8 @@ class HybridRetriever:
     @property
     def is_initialized(self) -> bool:
         """True after :meth:`index` or :meth:`initialize` has been called."""
-        return self._initialized
+        with self._lock:
+            return self._initialized
 
     def initialize(self) -> None:
         """Mark the retriever as initialised.
@@ -135,7 +142,8 @@ class HybridRetriever:
         Call :meth:`index` to supply the corpus before calling
         :meth:`retrieve`.  :meth:`initialize` alone does not load any data.
         """
-        self._initialized = True
+        with self._lock:
+            self._initialized = True
 
     def retrieve(self, query: str, top_k: int = 10) -> list[tuple[Path, float]]:
         """Return at most *top_k* (path, rrf_score) pairs, highest first.
@@ -150,19 +158,26 @@ class HybridRetriever:
         Returns:
             RRF-fused list of (path, score) tuples sorted by descending score.
         """
-        if not self._initialized:
-            logger.warning("HybridRetriever.retrieve called before index(); returning []")
+        if top_k <= 0:
             return []
+
+        with self._lock:
+            if not self._initialized:
+                logger.warning("HybridRetriever.retrieve called before index(); returning []")
+                return []
+            bm25 = self._bm25
+            vector = self._vector
+            k = self._k
 
         # Fetch more candidates than top_k so RRF has enough material to fuse.
         candidate_k = min(top_k * 4, 200)
-        bm25_results = self._bm25.search(query, top_k=candidate_k)
-        vector_results = self._vector.search(query, top_k=candidate_k)
+        bm25_results = bm25.search(query, top_k=candidate_k)
+        vector_results = vector.search(query, top_k=candidate_k)
 
         if not bm25_results and not vector_results:
             return []
 
-        fused = _rrf_fuse(bm25_results, vector_results, top_k=top_k, k=self._k)
+        fused = _rrf_fuse(bm25_results, vector_results, top_k=top_k, k=k)
         logger.debug(
             "HybridRetriever: bm25={}, vector={}, fused={}",
             len(bm25_results),
@@ -173,7 +188,8 @@ class HybridRetriever:
 
     def cleanup(self) -> None:
         """Release held resources (no-op for in-memory indices)."""
-        self._initialized = False
+        with self._lock:
+            self._initialized = False
 
     # ------------------------------------------------------------------
     # Corpus management (not part of RetrieverProtocol)
@@ -201,15 +217,19 @@ class HybridRetriever:
             raise ValueError(
                 f"documents ({len(documents)}) and paths ({len(paths)}) must have equal length"
             )
+        # Build indices outside the lock (potentially slow), then swap under lock.
+        new_bm25 = BM25Index()
+        new_vector = VectorIndex()
         if not documents:
-            self._bm25 = BM25Index()
-            self._vector = VectorIndex()
-            self._initialized = True
+            with self._lock:
+                self._bm25 = new_bm25
+                self._vector = new_vector
+                self._initialized = True
             logger.debug("HybridRetriever: indexed 0 documents (empty corpus)")
             return
-        self._bm25.index(documents, paths)
+        new_bm25.index(documents, paths)
         try:
-            self._vector.index(documents, paths)
+            new_vector.index(documents, paths)
         except ValueError as exc:
             # Corpus may be too small for the TF-IDF vectorizer (e.g. < 2 documents,
             # or max_df pruning removes all terms).  Fall back to BM25-only retrieval.
@@ -217,7 +237,10 @@ class HybridRetriever:
                 "HybridRetriever: vector index build failed (falling back to BM25-only): {}",
                 exc,
             )
-        self._initialized = True
+        with self._lock:
+            self._bm25 = new_bm25
+            self._vector = new_vector
+            self._initialized = True
         logger.debug("HybridRetriever: indexed {} documents", len(paths))
 
     @property

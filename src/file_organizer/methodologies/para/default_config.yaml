@@ -96,6 +96,15 @@ enable_content_heuristic: true
 enable_structural_heuristic: true
 enable_ai_heuristic: false      # Requires Ollama or external AI service
 
+# AI Heuristic Settings (requires Ollama)
+ai_heuristic:
+  model: "qwen2.5:3b-instruct-q4_K_M"
+  ollama_url: "http://localhost:11434"
+  timeout: 30.0
+  max_content_chars: 4096
+  temperature: 0.3
+  max_tokens: 200
+
 # Behavior Settings
 manual_review_threshold: 0.60    # Below this confidence, flag for manual review
 auto_categorize: true            # Automatically categorize high-confidence files
