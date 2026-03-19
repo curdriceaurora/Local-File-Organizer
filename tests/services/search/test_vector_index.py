@@ -111,10 +111,20 @@ class TestVectorIndex:
             assert 0.0 <= score <= 1.0, f"Score {score} out of [0, 1] range"
 
     def test_top_k_limits_results(self) -> None:
+        # Build a corpus where "report" appears in 4 of 5 documents (80% < max_df=0.95
+        # so the term is not pruned) so the top_k=3 limit is exercised against genuine
+        # semantic matches rather than zero-similarity fillers.
+        corpus = [
+            "quarterly financial report revenue summary",
+            "annual budget report planning forecast",
+            "machine learning progress report metrics",
+            "security vulnerabilities report remediation",
+            "chocolate cake recipe baking ingredients",
+        ]
         idx = VectorIndex()
-        idx.index(_CORPUS, _make_paths(len(_CORPUS)))
+        idx.index(corpus, _make_paths(len(corpus)))
         results = idx.search("report", top_k=3)
-        assert results, "Expected results for 'report' in a 10-doc corpus"
+        assert results, "Expected results for 'report' in corpus"
         assert len(results) == 3
 
     def test_results_sorted_descending(self) -> None:

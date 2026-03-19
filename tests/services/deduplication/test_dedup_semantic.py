@@ -231,7 +231,7 @@ class TestFindSimilarToQuery:
         result = low_threshold_analyzer.find_similar_to_query(
             query, sample_embeddings, sample_paths, top_k=1
         )
-        assert len(result) <= 1
+        assert len(result) == 1
 
     def test_sorted_desc(self, low_threshold_analyzer, sample_embeddings, sample_paths):
         query = np.array([0.5, 0.5, 0.5])
@@ -247,6 +247,13 @@ class TestFindSimilarToQuery:
             query, sample_embeddings, sample_paths, min_similarity=0.99
         )
         assert len(result) == 0
+
+    @pytest.mark.ci
+    def test_zero_vector_query_returns_no_results(self, analyzer, sample_embeddings, sample_paths):
+        """Zero-vector query (OOV term) must not return any results even at threshold=0.0."""
+        zero_query = np.zeros(3)
+        result = analyzer.find_similar_to_query(zero_query, sample_embeddings, sample_paths)
+        assert result == [], "zero-similarity (OOV query) should not match any document"
 
 
 # ---------------------------------------------------------------------------
