@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import NoReturn, Optional
+from typing import NoReturn
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
@@ -30,7 +30,7 @@ class MarketplacePluginResponse(BaseModel):
     version: str
     author: str
     description: str
-    homepage: Optional[str]
+    homepage: str | None
     category: str
     tags: list[str]
     dependencies: list[str]
@@ -38,7 +38,7 @@ class MarketplacePluginResponse(BaseModel):
     rating: float
     reviews_count: int
     min_organizer_version: str
-    max_organizer_version: Optional[str]
+    max_organizer_version: str | None
 
 
 class MarketplacePluginListResponse(BaseModel):
@@ -63,7 +63,7 @@ class MarketplaceUpdateResponse(BaseModel):
     """Result of a plugin update operation."""
 
     updated: bool
-    plugin: Optional[MarketplaceInstalledResponse] = None
+    plugin: MarketplaceInstalledResponse | None = None
 
 
 class MarketplaceReviewRequest(BaseModel):
@@ -146,8 +146,8 @@ def list_plugins(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     q: str = Query("", max_length=200),
-    tags: Optional[list[str]] = Query(None),
-    category: Optional[str] = Query(None, max_length=60),
+    tags: list[str] | None = Query(None),
+    category: str | None = Query(None, max_length=60),
 ) -> MarketplacePluginListResponse:
     """List plugins from the marketplace with optional filters."""
     try:
@@ -200,7 +200,7 @@ def list_available_updates() -> list[str]:
 @router.post("/marketplace/plugins/{name}/install", response_model=MarketplaceInstalledResponse)
 def install_plugin(
     name: str,
-    version: Optional[str] = Query(None),
+    version: str | None = Query(None),
 ) -> MarketplaceInstalledResponse:
     """Install a marketplace plugin by name and optional version."""
     try:

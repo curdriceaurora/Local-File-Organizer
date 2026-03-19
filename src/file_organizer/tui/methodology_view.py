@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from textual import work
 from textual.app import ComposeResult
@@ -89,7 +88,7 @@ class MethodologyPreviewPanel(Static):
 
     def show_para_preview(
         self,
-        distribution: Optional[dict[str, int]] = None,
+        distribution: dict[str, int] | None = None,
     ) -> None:
         """Show PARA category distribution.
 
@@ -110,8 +109,8 @@ class MethodologyPreviewPanel(Static):
 
     def show_jd_preview(
         self,
-        areas: Optional[dict[int, str]] = None,
-        categories: Optional[dict[str, str]] = None,
+        areas: dict[int, str] | None = None,
+        categories: dict[str, str] | None = None,
     ) -> None:
         """Show Johnny Decimal scheme overview.
 

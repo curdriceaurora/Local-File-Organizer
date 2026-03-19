@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -45,11 +44,11 @@ class FileMetadataRepository:
         relative_path: str,
         name: str,
         size_bytes: int,
-        mime_type: Optional[str] = None,
-        checksum_sha256: Optional[str] = None,
-        last_modified: Optional[datetime] = None,
-        extra_json: Optional[str] = None,
-        cache: Optional[CacheBackend] = None,
+        mime_type: str | None = None,
+        checksum_sha256: str | None = None,
+        last_modified: datetime | None = None,
+        extra_json: str | None = None,
+        cache: CacheBackend | None = None,
         cache_ttl_seconds: int = 900,
     ) -> FileMetadata:
         """Create or update a metadata row identified by workspace/path."""
@@ -101,8 +100,8 @@ class FileMetadataRepository:
         *,
         workspace_id: str,
         relative_path: str,
-        cache: Optional[CacheBackend] = None,
-    ) -> Optional[FileMetadata]:
+        cache: CacheBackend | None = None,
+    ) -> FileMetadata | None:
         """Fetch a metadata row by workspace/relative path."""
         if cache is not None:
             cached = cache.get(_cache_key(workspace_id, relative_path))
@@ -158,7 +157,7 @@ class FileMetadataRepository:
         *,
         workspace_id: str,
         relative_path: str,
-        cache: Optional[CacheBackend] = None,
+        cache: CacheBackend | None = None,
     ) -> bool:
         """Delete a metadata row by workspace/relative path."""
         row = (

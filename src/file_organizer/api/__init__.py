@@ -14,12 +14,12 @@ if TYPE_CHECKING:
 __all__ = ["ServiceFacade", "app", "create_app", "get_app"]
 
 # Module-level cache for lazy initialization with thread safety
-_app_cache: Optional[FastAPI] = None
+_app_cache: FastAPI | None = None
 _app_lock = threading.Lock()
-_create_app_cache: Optional[Callable[..., Any]] = None
+_create_app_cache: Callable[..., Any] | None = None
 
 
-def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
+def create_app(settings: ApiSettings | None = None) -> FastAPI:
     """Lazily import and call create_app from main module.
 
     This wrapper breaks the circular dependency and defers app creation.

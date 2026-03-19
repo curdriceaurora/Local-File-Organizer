@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from textual import work
 from textual.app import ComposeResult
@@ -83,7 +82,7 @@ class OrganizationSummary(Static):
         skipped: int = 0,
         failed: int = 0,
         folders: int = 0,
-        errors: Optional[list[tuple[str, str]]] = None,
+        errors: list[tuple[str, str]] | None = None,
     ) -> None:
         """Update the summary display.
 

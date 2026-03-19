@@ -6,7 +6,7 @@ import json
 import shutil
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import ParseResult, unquote, urljoin, urlparse
 from urllib.request import url2pathname
 
@@ -65,7 +65,7 @@ class PluginRepository:
         return _to_file_url(Path(candidate))
 
     @staticmethod
-    def _resolve_base_file_root(repo_url: str) -> Optional[Path]:
+    def _resolve_base_file_root(repo_url: str) -> Path | None:
         parsed = urlparse(repo_url)
         if parsed.scheme != "file":
             return None
@@ -100,8 +100,8 @@ class PluginRepository:
         self,
         query: str,
         *,
-        tags: Optional[list[str]] = None,
-        category: Optional[str] = None,
+        tags: list[str] | None = None,
+        category: str | None = None,
     ) -> list[PluginPackage]:
         """Search plugins by query with optional tag/category filters."""
         token = query.strip().lower()
@@ -120,7 +120,7 @@ class PluginRepository:
             matches.append(package)
         return matches
 
-    def get_plugin(self, name: str, *, version: Optional[str] = None) -> PluginPackage:
+    def get_plugin(self, name: str, *, version: str | None = None) -> PluginPackage:
         """Get a plugin package by name and optional version."""
         candidate_name = name.strip().lower()
         if not candidate_name:

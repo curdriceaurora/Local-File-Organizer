@@ -6,7 +6,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from file_organizer.plugins.marketplace.errors import MarketplaceRepositoryError
 from file_organizer.plugins.marketplace.models import PluginPackage
@@ -40,7 +40,7 @@ class PluginMetadataStore:
         packages.sort(key=lambda package: (package.name.lower(), version_sort_key(package.version)))
         return packages
 
-    def get_plugin(self, name: str) -> Optional[PluginPackage]:
+    def get_plugin(self, name: str) -> PluginPackage | None:
         """Return the newest cached package for a plugin name."""
         candidate = name.strip().lower()
         if not candidate:
@@ -56,8 +56,8 @@ class PluginMetadataStore:
         self,
         query: str,
         *,
-        tags: Optional[list[str]] = None,
-        category: Optional[str] = None,
+        tags: list[str] | None = None,
+        category: str | None = None,
     ) -> list[PluginPackage]:
         """Search cached package metadata."""
         token = query.strip().lower()

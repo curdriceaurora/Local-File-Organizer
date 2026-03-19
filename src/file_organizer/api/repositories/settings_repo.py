@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -21,8 +20,8 @@ class SettingsRepository:
     def get(
         session: Session,
         key: str,
-        user_id: Optional[str] = None,
-    ) -> Optional[str]:
+        user_id: str | None = None,
+    ) -> str | None:
         """Return the stored value for *key* (scoped to *user_id*), or ``None``.
 
         Args:
@@ -48,8 +47,8 @@ class SettingsRepository:
     def set(
         session: Session,
         key: str,
-        value: Optional[str],
-        user_id: Optional[str] = None,
+        value: str | None,
+        user_id: str | None = None,
     ) -> SettingsStore:
         """Create or update a setting.
 
@@ -87,7 +86,7 @@ class SettingsRepository:
     def delete(
         session: Session,
         key: str,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> bool:
         """Delete a setting by key (scoped to *user_id*).
 
@@ -112,7 +111,7 @@ class SettingsRepository:
     @staticmethod
     def list_all(
         session: Session,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> dict[str, str]:
         """Return all settings for *user_id* as a ``{key: value}`` dict.
 

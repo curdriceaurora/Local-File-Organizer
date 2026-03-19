@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -14,9 +14,9 @@ from file_organizer.api.main import create_app
 
 def build_test_settings(
     tmp_path: Path,
-    allowed_paths: Optional[list[str]] = None,
-    websocket_token: Optional[str] = None,
-    auth_overrides: Optional[dict[str, Any]] = None,
+    allowed_paths: list[str] | None = None,
+    websocket_token: str | None = None,
+    auth_overrides: dict[str, Any] | None = None,
 ) -> ApiSettings:
     """Build ApiSettings configured for testing."""
     data: dict[str, Any] = {
@@ -39,10 +39,10 @@ def build_test_settings(
 
 def create_auth_client(
     tmp_path: Path,
-    allowed_paths: Optional[list[str]] = None,
-    websocket_token: Optional[str] = None,
+    allowed_paths: list[str] | None = None,
+    websocket_token: str | None = None,
     admin: bool = False,
-    auth_overrides: Optional[dict[str, Any]] = None,
+    auth_overrides: dict[str, Any] | None = None,
 ) -> tuple[TestClient, dict[str, str], dict[str, str]]:
     """Create a TestClient with a registered and logged-in user."""
     overrides = dict(auth_overrides or {})

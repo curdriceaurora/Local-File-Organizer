@@ -10,7 +10,7 @@ import json
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional, Protocol
+from typing import Protocol
 from urllib.parse import urlparse
 
 from loguru import logger
@@ -29,7 +29,7 @@ except (
 class CacheBackend(Protocol):
     """Minimal cache backend contract."""
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         """Return cached value for *key*, or None when absent/expired."""
 
     def set(self, key: str, value: str, *, ttl_seconds: int) -> None:
@@ -61,7 +61,7 @@ class InMemoryCache:
         self._entries: dict[str, _MemoryEntry] = {}
         self._lock = threading.Lock()
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         """Return the cached value for key, or None if absent or expired."""
         with self._lock:
             entry = self._entries.get(key)
@@ -98,7 +98,7 @@ class RedisCache:
             raise RuntimeError("redis package not installed")
         self._redis = Redis.from_url(redis_url, decode_responses=True)
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         """Return the cached value for key, or None on miss or error."""
         try:
             value = self._redis.get(key)
@@ -142,7 +142,7 @@ def _is_valid_redis_url(redis_url: str) -> bool:
     return parsed.scheme in {"redis", "rediss", "unix"}
 
 
-def build_cache_backend(redis_url: Optional[str]) -> CacheBackend:
+def build_cache_backend(redis_url: str | None) -> CacheBackend:
     """Build a cache backend from configuration.
 
     Falls back to in-memory cache when Redis is unavailable or connection

@@ -9,7 +9,6 @@ import stat
 import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
-from typing import Optional
 
 from file_organizer.plugins.marketplace.errors import MarketplaceInstallError
 from file_organizer.plugins.marketplace.models import InstalledPlugin
@@ -40,14 +39,14 @@ class PluginInstaller:
         plugin_dir: Path,
         repository: PluginRepository,
         *,
-        installed_plugins_file: Optional[Path] = None,
+        installed_plugins_file: Path | None = None,
     ) -> None:
         """Set up the plugin installer with the given directory, repository, and state file."""
         self.plugin_dir = plugin_dir
         self.repository = repository
         self.installed_plugins_file = installed_plugins_file or (plugin_dir / "installed.json")
 
-    def install(self, name: str, *, version: Optional[str] = None) -> InstalledPlugin:
+    def install(self, name: str, *, version: str | None = None) -> InstalledPlugin:
         """Install a plugin package and its dependencies."""
         return self._install_recursive(name, version=version, install_stack=[])
 
@@ -55,7 +54,7 @@ class PluginInstaller:
         self,
         name: str,
         *,
-        version: Optional[str],
+        version: str | None,
         install_stack: list[str],
     ) -> InstalledPlugin:
         try:
@@ -127,7 +126,7 @@ class PluginInstaller:
         installed.pop(normalized_name, None)
         self._save_installed(installed)
 
-    def update(self, name: str) -> Optional[InstalledPlugin]:
+    def update(self, name: str) -> InstalledPlugin | None:
         """Update installed plugin to latest version if newer exists."""
         installed = self._load_installed()
         current = installed.get(name)
@@ -158,7 +157,7 @@ class PluginInstaller:
     def _validate_version_compatibility(
         self,
         min_version: str,
-        max_version: Optional[str],
+        max_version: str | None,
     ) -> None:
         current = _normalize_version(__version__)
         minimum = _normalize_version(min_version)

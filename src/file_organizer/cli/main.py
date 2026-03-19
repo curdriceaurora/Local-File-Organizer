@@ -6,7 +6,6 @@ Provides the unified entry point with all commands and sub-apps.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -184,8 +183,8 @@ app.add_typer(update_app, name="update")
 
 @app.command()
 def undo(
-    operation_id: Optional[int] = typer.Option(None, help="Specific operation ID to undo."),
-    transaction_id: Optional[str] = typer.Option(None, help="Transaction ID to undo."),
+    operation_id: int | None = typer.Option(None, help="Specific operation ID to undo."),
+    transaction_id: str | None = typer.Option(None, help="Transaction ID to undo."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without executing."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
 ) -> None:
@@ -203,7 +202,7 @@ def undo(
 
 @app.command()
 def redo(
-    operation_id: Optional[int] = typer.Option(None, help="Specific operation ID to redo."),
+    operation_id: int | None = typer.Option(None, help="Specific operation ID to redo."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without executing."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
 ) -> None:
@@ -221,8 +220,8 @@ def redo(
 @app.command()
 def history(
     limit: int = typer.Option(10, help="Maximum number of operations to show."),
-    operation_type: Optional[str] = typer.Option(None, "--type", help="Filter by type."),
-    status: Optional[str] = typer.Option(None, help="Filter by status."),
+    operation_type: str | None = typer.Option(None, "--type", help="Filter by type."),
+    status: str | None = typer.Option(None, help="Filter by status."),
     stats: bool = typer.Option(False, help="Show statistics."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
 ) -> None:
@@ -241,7 +240,7 @@ def history(
 
 @app.command()
 def analytics(
-    directory: Optional[Path] = typer.Argument(None, help="Directory to analyze."),
+    directory: Path | None = typer.Argument(None, help="Directory to analyze."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
 ) -> None:
     """Display storage analytics dashboard."""

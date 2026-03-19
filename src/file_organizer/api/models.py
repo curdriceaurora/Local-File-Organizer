@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 
@@ -41,7 +41,7 @@ class FileInfo(BaseModel):
     created: datetime
     modified: datetime
     file_type: str
-    mime_type: Optional[str] = None
+    mime_type: str | None = None
 
 
 class FileListResponse(BaseModel):
@@ -67,7 +67,7 @@ class FileContentResponse(BaseModel):
     encoding: str
     truncated: bool
     size: int
-    mime_type: Optional[str] = None
+    mime_type: str | None = None
 
 
 class MoveFileRequest(BaseModel):
@@ -115,7 +115,7 @@ class DeleteFileResponse(BaseModel):
     path: str
     deleted: bool
     dry_run: bool
-    trashed_path: Optional[str] = None
+    trashed_path: str | None = None
 
 
 class ScanRequest(BaseModel):
@@ -180,9 +180,9 @@ class OrganizeExecuteResponse(BaseModel):
     """Response for an organization execute request."""
 
     status: Literal["queued", "completed", "failed"]
-    job_id: Optional[str] = None
-    result: Optional[OrganizationResultResponse] = None
-    error: Optional[str] = None
+    job_id: str | None = None
+    result: OrganizationResultResponse | None = None
+    error: str | None = None
 
 
 class JobStatusResponse(BaseModel):
@@ -192,8 +192,8 @@ class JobStatusResponse(BaseModel):
     status: Literal["queued", "running", "completed", "failed"]
     created_at: datetime
     updated_at: datetime
-    result: Optional[OrganizationResultResponse] = None
-    error: Optional[str] = None
+    result: OrganizationResultResponse | None = None
+    error: str | None = None
 
 
 class DedupeScanRequest(BaseModel):
@@ -203,9 +203,9 @@ class DedupeScanRequest(BaseModel):
     recursive: bool = True
     algorithm: Literal["md5", "sha256"] = "sha256"
     min_file_size: int = 0
-    max_file_size: Optional[int] = None
-    include_patterns: Optional[list[str]] = None
-    exclude_patterns: Optional[list[str]] = None
+    max_file_size: int | None = None
+    include_patterns: list[str] | None = None
+    exclude_patterns: list[str] | None = None
 
     @field_validator("path")
     @classmethod
@@ -263,9 +263,9 @@ class DedupeExecuteRequest(BaseModel):
     recursive: bool = True
     algorithm: Literal["md5", "sha256"] = "sha256"
     min_file_size: int = 0
-    max_file_size: Optional[int] = None
-    include_patterns: Optional[list[str]] = None
-    exclude_patterns: Optional[list[str]] = None
+    max_file_size: int | None = None
+    include_patterns: list[str] | None = None
+    exclude_patterns: list[str] | None = None
     dry_run: bool = True
     trash: bool = True
 
@@ -311,7 +311,7 @@ class UserCreateRequest(BaseModel):
     username: str
     email: EmailStr
     password: str
-    full_name: Optional[str] = None
+    full_name: str | None = None
 
     @field_validator("username")
     @classmethod
@@ -326,7 +326,7 @@ class UserCreateRequest(BaseModel):
 
     @field_validator("full_name")
     @classmethod
-    def validate_full_name(cls, value: Optional[str]) -> Optional[str]:
+    def validate_full_name(cls, value: str | None) -> str | None:
         """Validate and return the full name."""
         if value is None:
             return value
@@ -339,11 +339,11 @@ class UserResponse(BaseModel):
     id: str
     username: str
     email: EmailStr
-    full_name: Optional[str] = None
+    full_name: str | None = None
     is_active: bool
     is_admin: bool
     created_at: datetime
-    last_login: Optional[datetime] = None
+    last_login: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -371,38 +371,38 @@ class TokenRevokeRequest(BaseModel):
 class ModelPresetUpdate(BaseModel):
     """Partial update fields for the AI model preset."""
 
-    text_model: Optional[str] = None
-    vision_model: Optional[str] = None
-    temperature: Optional[float] = None
-    max_tokens: Optional[int] = None
-    device: Optional[str] = None
-    framework: Optional[str] = None
+    text_model: str | None = None
+    vision_model: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
+    device: str | None = None
+    framework: str | None = None
 
 
 class UpdateSettingsUpdate(BaseModel):
     """Partial update fields for auto-update settings."""
 
-    check_on_startup: Optional[bool] = None
-    interval_hours: Optional[int] = None
-    include_prereleases: Optional[bool] = None
-    repo: Optional[str] = None
+    check_on_startup: bool | None = None
+    interval_hours: int | None = None
+    include_prereleases: bool | None = None
+    repo: str | None = None
 
 
 class ConfigUpdateRequest(BaseModel):
     """Request body for updating application configuration."""
 
     profile: str = "default"
-    default_methodology: Optional[str] = None
-    models: Optional[ModelPresetUpdate] = None
-    updates: Optional[UpdateSettingsUpdate] = None
-    watcher: Optional[dict[str, Any]] = None
-    daemon: Optional[dict[str, Any]] = None
-    parallel: Optional[dict[str, Any]] = None
-    pipeline: Optional[dict[str, Any]] = None
-    events: Optional[dict[str, Any]] = None
-    deploy: Optional[dict[str, Any]] = None
-    para: Optional[dict[str, Any]] = None
-    johnny_decimal: Optional[dict[str, Any]] = None
+    default_methodology: str | None = None
+    models: ModelPresetUpdate | None = None
+    updates: UpdateSettingsUpdate | None = None
+    watcher: dict[str, Any] | None = None
+    daemon: dict[str, Any] | None = None
+    parallel: dict[str, Any] | None = None
+    pipeline: dict[str, Any] | None = None
+    events: dict[str, Any] | None = None
+    deploy: dict[str, Any] | None = None
+    para: dict[str, Any] | None = None
+    johnny_decimal: dict[str, Any] | None = None
 
 
 class StorageStatsResponse(BaseModel):
@@ -422,4 +422,4 @@ class ApiErrorResponse(BaseModel):
 
     error: str
     message: str
-    details: Optional[Any] = None
+    details: Any | None = None

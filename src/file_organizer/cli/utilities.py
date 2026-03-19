@@ -5,7 +5,6 @@ from __future__ import annotations
 import json as json_mod
 import time
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -18,7 +17,7 @@ console = Console()
 def search(
     query: str = typer.Argument(..., help="Search query (glob pattern or keyword)."),
     directory: Path = typer.Argument(".", help="Directory to search in.", exists=False),
-    type_filter: Optional[str] = typer.Option(
+    type_filter: str | None = typer.Option(
         None,
         "--type",
         "-t",

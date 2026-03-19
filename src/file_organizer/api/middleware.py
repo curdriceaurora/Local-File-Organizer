@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import time
 from collections.abc import Awaitable, Callable
-from typing import Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,7 +36,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return True
         return False
 
-    def _rule_for_path(self, path: str) -> Optional[dict[str, int]]:
+    def _rule_for_path(self, path: str) -> dict[str, int] | None:
         rules = self._settings.rate_limit_rules
         for rule_path in self._rule_prefixes:
             if path.startswith(rule_path):

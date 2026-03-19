@@ -7,7 +7,7 @@ import io
 import re
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
@@ -66,7 +66,7 @@ def base_context(
     *,
     active: str,
     title: str,
-    extras: Optional[dict[str, Any]] = None,
+    extras: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the base Jinja2 template context."""
     context: dict[str, Any] = {
@@ -96,7 +96,7 @@ def allowed_roots(settings: ApiSettings) -> list[Path]:
     return roots
 
 
-def resolve_selected_path(path_value: Optional[str], settings: ApiSettings) -> Optional[Path]:
+def resolve_selected_path(path_value: str | None, settings: ApiSettings) -> Path | None:
     """Resolve a user-provided path, falling back to the first allowed root."""
     if path_value:
         return resolve_path(path_value, settings.allowed_paths)
@@ -124,7 +124,7 @@ def format_timestamp(timestamp: datetime) -> str:
     return timestamp.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
 
-def parse_file_type_filter(file_type: Optional[str]) -> Optional[set[str]]:
+def parse_file_type_filter(file_type: str | None) -> set[str] | None:
     """Parse a file-type filter string into a set of extensions."""
     if not file_type or file_type == "all":
         return None
@@ -162,7 +162,7 @@ def path_id(path: Path) -> str:
 
 def select_root_for_path(path: Path, roots: list[Path]) -> Path:
     """Select the best-matching root for a given path."""
-    root_match: Optional[Path] = None
+    root_match: Path | None = None
     for root in roots:
         try:
             path.relative_to(root)
@@ -217,7 +217,7 @@ def is_probably_text(path: Path) -> bool:
     return True
 
 
-def sanitize_upload_name(name: str) -> Optional[str]:
+def sanitize_upload_name(name: str) -> str | None:
     """Sanitize an upload filename, returning None when unsafe."""
     safe_name = Path(name).name.strip()
     if not safe_name or safe_name in {".", ".."}:
@@ -265,7 +265,7 @@ def build_content_disposition(filename: str) -> str:
     return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{encoded}"
 
 
-def as_bool(value: Optional[str]) -> bool:
+def as_bool(value: str | None) -> bool:
     """Interpret a form value as a boolean."""
     if value is None:
         return False

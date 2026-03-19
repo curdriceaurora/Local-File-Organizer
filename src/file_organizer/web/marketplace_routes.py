@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from html import escape
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse
@@ -21,7 +21,7 @@ def _service() -> MarketplaceService:
     return MarketplaceService()
 
 
-def _normalize_tags(raw_tags: Optional[list[str]]) -> list[str]:
+def _normalize_tags(raw_tags: list[str] | None) -> list[str]:
     """Flatten and clean a list of possibly comma-separated tag strings.
 
     Args:
@@ -44,11 +44,11 @@ def _render_marketplace_page(
     settings: ApiSettings,
     *,
     query: str = "",
-    category: Optional[str] = None,
-    tags: Optional[list[str]] = None,
+    category: str | None = None,
+    tags: list[str] | None = None,
     page: int = 1,
     per_page: int = 24,
-    message: Optional[str] = None,
+    message: str | None = None,
     message_kind: str = "info",
 ) -> HTMLResponse:
     """Build the marketplace HTML page with plugin listing and optional flash message.
@@ -56,7 +56,7 @@ def _render_marketplace_page(
     Returns:
         Rendered marketplace index page.
     """
-    error_message: Optional[str] = None
+    error_message: str | None = None
     plugins: list[Any] = []
     total = 0
     installed_names: set[str] = set()
@@ -100,8 +100,8 @@ def marketplace_home(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
     q: str = Query("", alias="q"),
-    category: Optional[str] = Query(None),
-    tags: Optional[list[str]] = Query(None, alias="tag"),
+    category: str | None = Query(None),
+    tags: list[str] | None = Query(None, alias="tag"),
     page: int = Query(1, ge=1),
     per_page: int = Query(24, ge=1, le=100),
 ) -> HTMLResponse:

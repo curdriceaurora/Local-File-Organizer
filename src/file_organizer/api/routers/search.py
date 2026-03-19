@@ -6,7 +6,6 @@ import logging
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -39,9 +38,9 @@ class SearchResult(BaseModel):
     filename: str
     path: str
     score: float
-    type: Optional[str] = None
-    size: Optional[int] = None
-    created: Optional[str] = None
+    type: str | None = None
+    size: int | None = None
+    created: str | None = None
 
 
 def _compute_score(file_path: Path, query: str) -> float:
@@ -80,7 +79,7 @@ def _compute_score(file_path: Path, query: str) -> float:
 def _collect_matching_files(
     root: Path,
     query: str,
-    file_type: Optional[str],
+    file_type: str | None,
     max_files: int = _MAX_TRAVERSAL,
 ) -> Iterator[Path]:
     """Yield files under *root* whose name or path matches *query*."""
@@ -161,7 +160,7 @@ def _build_semantic_corpus(
 def _semantic_search(
     roots: list[Path],
     query: str,
-    file_type: Optional[str],
+    file_type: str | None,
     top_k: int,
 ) -> list[SearchResult]:
     """Run hybrid BM25+vector retrieval over *roots* for *query*.
@@ -195,7 +194,7 @@ def _semantic_search(
     fetch_k = _MAX_TRAVERSAL if file_type else top_k * 2
     raw_results = retriever.retrieve(query, top_k=fetch_k)
 
-    ext_filter: Optional[str] = None
+    ext_filter: str | None = None
     if file_type:
         ext_filter = file_type.lower() if file_type.startswith(".") else f".{file_type.lower()}"
 
@@ -227,11 +226,11 @@ def _semantic_search(
 
 @router.get("/search", response_model=None)
 def search(
-    q: Optional[str] = Query(None, description="Search query"),
-    type: Optional[str] = None,
-    limit: Optional[int] = None,
-    offset: Optional[int] = None,
-    path: Optional[str] = None,
+    q: str | None = Query(None, description="Search query"),
+    type: str | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+    path: str | None = None,
     semantic: bool = Query(False, description="Use hybrid BM25+vector semantic search"),
     settings: ApiSettings = Depends(get_settings),
 ) -> list[SearchResult] | JSONResponse:

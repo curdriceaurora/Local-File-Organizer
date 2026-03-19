@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import quote, unquote
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
@@ -122,8 +122,8 @@ def _list_tree_nodes(path: Path, include_hidden: bool) -> list[dict[str, Any]]:
 def _collect_entries(
     path: Path,
     *,
-    query: Optional[str],
-    file_type: Optional[str],
+    query: str | None,
+    file_type: str | None,
     sort_by: str,
     sort_order: str,
     include_hidden: bool,
@@ -167,7 +167,7 @@ def _collect_entries(
 
     directories.sort(key=lambda p: p.name.lower())
 
-    file_stats: dict[Path, Optional[os.stat_result]] = {}
+    file_stats: dict[Path, os.stat_result | None] = {}
     if sort_by in {"size", "created", "modified"}:
         for entry in files:
             try:
@@ -273,10 +273,10 @@ def _build_file_results_context(
     request: Request,
     settings: ApiSettings,
     *,
-    path: Optional[str],
+    path: str | None,
     view: str,
-    query: Optional[str],
-    file_type: Optional[str],
+    query: str | None,
+    file_type: str | None,
     sort_by: str,
     sort_order: str,
     limit: int,
@@ -288,10 +288,10 @@ def _build_file_results_context(
     """
     limit = clamp_limit(limit)
     roots = allowed_roots(settings)
-    error_message: Optional[str] = None
+    error_message: str | None = None
     entries: list[dict[str, Any]] = []
     total = 0
-    current_path: Optional[Path] = None
+    current_path: Path | None = None
 
     try:
         current_path = resolve_selected_path(path, settings)
@@ -356,10 +356,10 @@ def _build_file_results_context(
 def files_browser(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
-    path: Optional[str] = Query(None),
+    path: str | None = Query(None),
     view: str = Query("grid", pattern="^(grid|list)$"),
-    q: Optional[str] = Query(None),
-    file_type: Optional[str] = Query(None, alias="type"),
+    q: str | None = Query(None),
+    file_type: str | None = Query(None, alias="type"),
     sort_by: str = Query("name", pattern="^(name|size|created|modified|type)$"),
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     limit: int = Query(PAGE_SIZE, ge=1, le=500),
@@ -393,10 +393,10 @@ def files_browser(
 def files_list(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
-    path: Optional[str] = Query(None),
+    path: str | None = Query(None),
     view: str = Query("grid", pattern="^(grid|list)$"),
-    q: Optional[str] = Query(None),
-    file_type: Optional[str] = Query(None, alias="type"),
+    q: str | None = Query(None),
+    file_type: str | None = Query(None, alias="type"),
     sort_by: str = Query("name", pattern="^(name|size|created|modified|type)$"),
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     limit: int = Query(PAGE_SIZE, ge=1, le=500),
@@ -424,9 +424,9 @@ def files_list(
 def files_tree(
     request: Request,
     settings: ApiSettings = Depends(get_settings),
-    path: Optional[str] = Query(None),
+    path: str | None = Query(None),
     depth: int = Query(0, ge=0, le=MAX_NAV_DEPTH),
-    active: Optional[str] = Query(None),
+    active: str | None = Query(None),
 ) -> HTMLResponse:
     """Return an HTMX partial with sidebar tree nodes for the given path.
 
@@ -575,9 +575,9 @@ def files_preview(
     Returns:
         HTML fragment for the preview sidebar.
     """
-    error_message: Optional[str] = None
+    error_message: str | None = None
     preview_kind = "file"
-    preview_text: Optional[str] = None
+    preview_text: str | None = None
     download_url = ""
     raw_url = ""
     size_display = ""
@@ -641,8 +641,8 @@ def files_upload(
     Returns:
         Updated file results HTML fragment with upload status messages.
     """
-    info_message: Optional[str] = None
-    error_message: Optional[str] = None
+    info_message: str | None = None
+    error_message: str | None = None
     errors: list[str] = []
 
     try:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import WebSocket
 from loguru import logger
@@ -26,10 +26,10 @@ class ConnectionManager:
         """Initialize ConnectionManager with empty connections and subscriptions."""
         self._connections: set[WebSocket] = set()
         self._subscriptions: dict[WebSocket, set[str]] = {}
-        self._lock: Optional[asyncio.Lock] = None
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
-        self._queue: Optional[asyncio.Queue[BroadcastEvent]] = None
-        self._queue_task: Optional[asyncio.Task[None]] = None
+        self._lock: asyncio.Lock | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._queue: asyncio.Queue[BroadcastEvent] | None = None
+        self._queue_task: asyncio.Task[None] | None = None
 
     def _ensure_lock(self) -> asyncio.Lock:
         if self._lock is None:

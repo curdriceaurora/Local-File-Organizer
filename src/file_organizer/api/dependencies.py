@@ -7,7 +7,6 @@ from collections.abc import Generator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -46,11 +45,11 @@ class AnonymousUser:
     id: str = "anonymous"
     username: str = "anonymous"
     email: str = "anonymous@example.com"
-    full_name: Optional[str] = None
+    full_name: str | None = None
     is_active: bool = True
     is_admin: bool = True
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    last_login: Optional[datetime] = None
+    last_login: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -60,11 +59,11 @@ class ApiKeyIdentity:
     id: str
     username: str
     email: str = "api-key@example.com"
-    full_name: Optional[str] = None
+    full_name: str | None = None
     is_active: bool = True
     is_admin: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    last_login: Optional[datetime] = None
+    last_login: datetime | None = None
     auth_type: str = "api_key"
 
 
@@ -81,7 +80,7 @@ def get_db(settings: ApiSettings = Depends(get_settings)) -> Generator[Session, 
 
 
 @lru_cache
-def _token_store_cached(redis_url: Optional[str]) -> TokenStore:
+def _token_store_cached(redis_url: str | None) -> TokenStore:
     return build_token_store(redis_url)
 
 
@@ -92,7 +91,7 @@ def get_token_store(settings: ApiSettings = Depends(get_settings)) -> TokenStore
 
 @lru_cache
 def _login_rate_limiter_cached(
-    redis_url: Optional[str],
+    redis_url: str | None,
     max_attempts: int,
     window_seconds: int,
 ) -> LoginRateLimiter:
@@ -110,7 +109,7 @@ def get_login_rate_limiter(settings: ApiSettings = Depends(get_settings)) -> Log
 
 def get_current_user(
     request: Request,
-    token: Optional[str] = Depends(oauth2_scheme),
+    token: str | None = Depends(oauth2_scheme),
     settings: ApiSettings = Depends(get_settings),
     db: Session = Depends(get_db),
     token_store: TokenStore = Depends(get_token_store),

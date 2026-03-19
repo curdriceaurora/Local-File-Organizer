@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -38,9 +36,9 @@ class OrganizationSettings(BaseModel):
 class ConfigUpdateRequest(BaseModel):
     """Configuration update request."""
 
-    ai: Optional[AISettings] = None
-    storage: Optional[StorageSettings] = None
-    organization: Optional[OrganizationSettings] = None
+    ai: AISettings | None = None
+    storage: StorageSettings | None = None
+    organization: OrganizationSettings | None = None
 
 
 class ConfigResponse(BaseModel):

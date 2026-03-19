@@ -6,7 +6,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -19,7 +19,7 @@ pytestmark = pytest.mark.ci
 _RECEIVE_TIMEOUT = 1.0
 
 
-def _client(tmp_path: Path, token: Optional[str] = None) -> tuple[TestClient, str]:
+def _client(tmp_path: Path, token: str | None = None) -> tuple[TestClient, str]:
     client, _, tokens = create_auth_client(tmp_path, [], websocket_token=token)
     return client, tokens["access_token"]
 

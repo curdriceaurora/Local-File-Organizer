@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 
@@ -52,13 +50,11 @@ def config_list() -> None:
 @config_app.command(name="edit")
 def config_edit(
     profile: str = typer.Option("default", help="Profile name to edit."),
-    text_model: Optional[str] = typer.Option(None, help="Set text model name."),
-    vision_model: Optional[str] = typer.Option(None, help="Set vision model name."),
-    temperature: Optional[float] = typer.Option(None, help="Set temperature (0.0-1.0)."),
-    device: Optional[str] = typer.Option(None, help="Set device (auto, cpu, cuda, mps, metal)."),
-    methodology: Optional[str] = typer.Option(
-        None, help="Set default methodology (none, para, jd)."
-    ),
+    text_model: str | None = typer.Option(None, help="Set text model name."),
+    vision_model: str | None = typer.Option(None, help="Set vision model name."),
+    temperature: float | None = typer.Option(None, help="Set temperature (0.0-1.0)."),
+    device: str | None = typer.Option(None, help="Set device (auto, cpu, cuda, mps, metal)."),
+    methodology: str | None = typer.Option(None, help="Set default methodology (none, para, jd)."),
 ) -> None:
     """Edit a configuration profile."""
     from file_organizer.config import ConfigManager

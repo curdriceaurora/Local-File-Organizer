@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from file_organizer.plugins.marketplace import MarketplaceService, PluginPackage
@@ -56,8 +56,8 @@ def _render_plugins(items: list[PluginPackage]) -> None:
 def list_plugins(
     page: int = typer.Option(1, "--page", "-p", min=1, help="Page number."),
     per_page: int = typer.Option(20, "--per-page", min=1, max=100, help="Results per page."),
-    category: Optional[str] = typer.Option(None, "--category", "-c", help="Filter by category."),
-    tags: Optional[list[str]] = typer.Option(None, "--tag", "-t", help="Filter by tags."),
+    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category."),
+    tags: list[str] | None = typer.Option(None, "--tag", "-t", help="Filter by tags."),
 ) -> None:
     """List available plugins."""
     from file_organizer.plugins.marketplace import MarketplaceError
@@ -79,8 +79,8 @@ def list_plugins(
 @marketplace_app.command("search")
 def search_plugins(
     query: str = typer.Argument(..., help="Search query."),
-    category: Optional[str] = typer.Option(None, "--category", "-c", help="Filter by category."),
-    tags: Optional[list[str]] = typer.Option(None, "--tag", "-t", help="Filter by tags."),
+    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category."),
+    tags: list[str] | None = typer.Option(None, "--tag", "-t", help="Filter by tags."),
 ) -> None:
     """Search marketplace plugins."""
     from file_organizer.plugins.marketplace import MarketplaceError
@@ -103,7 +103,7 @@ def search_plugins(
 @marketplace_app.command("info")
 def plugin_info(
     name: str = typer.Argument(..., help="Plugin name."),
-    version: Optional[str] = typer.Option(None, "--version", "-v", help="Specific version."),
+    version: str | None = typer.Option(None, "--version", "-v", help="Specific version."),
 ) -> None:
     """Show detailed plugin metadata."""
     from file_organizer.plugins.marketplace import MarketplaceError
@@ -132,7 +132,7 @@ def plugin_info(
 @marketplace_app.command("install")
 def install_plugin(
     name: str = typer.Argument(..., help="Plugin name."),
-    version: Optional[str] = typer.Option(None, "--version", "-v", help="Specific version."),
+    version: str | None = typer.Option(None, "--version", "-v", help="Specific version."),
 ) -> None:
     """Install a plugin from marketplace."""
     from file_organizer.plugins.marketplace import MarketplaceError

@@ -9,7 +9,6 @@ import re
 import time
 import zipfile
 from pathlib import Path
-from typing import Optional
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,7 +23,7 @@ _PNG_BYTES = base64.b64decode(
 )
 
 
-def _build_client(tmp_path: Path, allowed_root: Optional[Path] = None) -> TestClient:
+def _build_client(tmp_path: Path, allowed_root: Path | None = None) -> TestClient:
     allowed_paths = [str(allowed_root)] if allowed_root else []
     settings = build_test_settings(
         tmp_path,

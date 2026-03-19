@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, fields
-from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
@@ -117,7 +116,7 @@ class WebSettings:
     performance_mode: str = "balanced"
 
 
-def _as_form_bool(value: Optional[str]) -> bool:
+def _as_form_bool(value: str | None) -> bool:
     """Convert an HTML form checkbox value to ``bool``."""
     if value is None:
         return False
@@ -556,8 +555,8 @@ def settings_organization_validate(
 def settings_organization_post(
     request: Request,
     default_methodology: str = Form("content_based"),
-    auto_organize: Optional[str] = Form(None),
-    notifications_enabled: Optional[str] = Form(None),
+    auto_organize: str | None = Form(None),
+    notifications_enabled: str | None = Form(None),
     file_filter_glob: str = Form("*"),
     organization_rules: str = Form(""),
 ) -> HTMLResponse:
@@ -642,8 +641,8 @@ def settings_advanced_get(request: Request) -> HTMLResponse:
 def settings_advanced_post(
     request: Request,
     log_level: str = Form("INFO"),
-    cache_enabled: Optional[str] = Form(None),
-    debug_mode: Optional[str] = Form(None),
+    cache_enabled: str | None = Form(None),
+    debug_mode: str | None = Form(None),
     performance_mode: str = Form("balanced"),
 ) -> HTMLResponse:
     """Save Advanced settings and re-render the section partial."""

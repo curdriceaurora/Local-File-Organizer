@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import shutil
 from pathlib import Path
-from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
@@ -38,7 +37,7 @@ _FILE_TYPE_GROUPS = {
 }
 
 
-def _parse_file_types(file_type: Optional[str]) -> Optional[set[str]]:
+def _parse_file_types(file_type: str | None) -> set[str] | None:
     if not file_type:
         return None
     types: set[str] = set()
@@ -80,7 +79,7 @@ def list_files(
     path: str = Query(None, description="Directory or file path"),
     recursive: bool = Query(False),
     include_hidden: bool = Query(False),
-    file_type: Optional[str] = Query(None, description="Comma-separated extensions or groups"),
+    file_type: str | None = Query(None, description="Comma-separated extensions or groups"),
     sort_by: str = Query("name", pattern="^(name|size|created|modified)$"),
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     skip: int = Query(0, ge=0),
@@ -266,7 +265,7 @@ def delete_file(
     if request.dry_run:
         return DeleteFileResponse(path=str(target), deleted=False, dry_run=True)
 
-    trashed_path: Optional[str] = None
+    trashed_path: str | None = None
     if request.permanent:
         if target.is_dir():
             shutil.rmtree(target)
@@ -303,7 +302,7 @@ def delete_file_by_id(
     if not target.exists():
         raise ApiError(status_code=404, error="not_found", message="File not found")
 
-    trashed_path: Optional[str] = None
+    trashed_path: str | None = None
     if permanent:
         if target.is_dir():
             shutil.rmtree(target)
@@ -332,8 +331,8 @@ class FileUploadResponse(BaseModel):
 
 @router.post("/files/upload", response_model=None)
 async def upload_files(
-    files: Optional[list[UploadFile]] = File(None),
-    file: Optional[UploadFile] = File(None),
+    files: list[UploadFile] | None = File(None),
+    file: UploadFile | None = File(None),
 ) -> FileUploadResponse | list[FileUploadResponse] | JSONResponse:
     """Upload one or more files.
 

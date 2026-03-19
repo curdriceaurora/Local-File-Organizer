@@ -10,7 +10,6 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -33,10 +32,10 @@ _DEFAULT_PID_FILE = _DEFAULT_PID_DIR / "daemon.pid"
 
 @daemon_app.command()
 def start(
-    watch_dir: Optional[Path] = typer.Option(
+    watch_dir: Path | None = typer.Option(
         None, "--watch-dir", "-w", help="Directory to watch for new files."
     ),
-    output_dir: Optional[Path] = typer.Option(
+    output_dir: Path | None = typer.Option(
         None, "--output-dir", "-o", help="Destination directory for organized files."
     ),
     foreground: bool = typer.Option(

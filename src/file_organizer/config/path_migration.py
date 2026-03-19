@@ -4,7 +4,7 @@ import json
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 def detect_legacy_paths(home: Path, config_home: Path, data_home: Path) -> list[Path]:
@@ -42,7 +42,7 @@ class PathMigrator:
         """
         self.legacy_path = legacy_path
         self.canonical_path = canonical_path
-        self.backup_path: Optional[Path] = None
+        self.backup_path: Path | None = None
         self.migration_log: dict[str, Any] = {}
 
     def backup_legacy_path(self) -> Path:

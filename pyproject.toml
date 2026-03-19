@@ -261,7 +261,6 @@ select = [
 ignore = [
     "E501",   # line too long (handled by formatter)
     "B008",   # do not perform function calls in argument defaults
-    "UP045",  # type hint upgrades handled project-wide
     "ANN401", # **kwargs: Any is acceptable in abstract/polymorphic interfaces
 ]
 

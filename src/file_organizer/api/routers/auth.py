@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -202,7 +201,7 @@ def refresh(
 def logout(
     request: TokenRevokeRequest,
     current_user: User = Depends(get_current_active_user),
-    token: Optional[str] = Depends(oauth2_scheme),
+    token: str | None = Depends(oauth2_scheme),
     token_store: TokenStore = Depends(get_token_store),
     settings: ApiSettings = Depends(get_settings),
 ) -> None:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Optional, Protocol
+from typing import Protocol
 
 from loguru import logger
 from redis import Redis
@@ -43,7 +43,7 @@ class InMemoryLoginRateLimiter:
     window_seconds: int
     _state: dict[str, RateLimitState] = field(default_factory=dict)
 
-    def _get_state(self, key: str, now: float) -> Optional[RateLimitState]:
+    def _get_state(self, key: str, now: float) -> RateLimitState | None:
         state = self._state.get(key)
         if state is None:
             return None
@@ -131,7 +131,7 @@ class RedisLoginRateLimiter:
 
 
 def build_login_rate_limiter(
-    redis_url: Optional[str],
+    redis_url: str | None,
     max_attempts: int,
     window_seconds: int,
 ) -> LoginRateLimiter:

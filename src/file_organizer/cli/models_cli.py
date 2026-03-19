@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 
@@ -14,7 +12,7 @@ model_app = typer.Typer(help="AI model management.")
 
 @model_app.command(name="list")
 def model_list(
-    type_filter: Optional[str] = typer.Option(
+    type_filter: str | None = typer.Option(
         None, "--type", help="Filter by model type (text, vision, audio)."
     ),
 ) -> None:

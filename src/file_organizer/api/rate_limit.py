@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Optional, Protocol
+from typing import Protocol
 
 from loguru import logger
 from redis import Redis
@@ -106,7 +106,7 @@ class RedisRateLimiter:
         return RateLimitResult(allowed=allowed, remaining=remaining, reset_at=reset_at)
 
 
-def build_rate_limiter(redis_url: Optional[str]) -> RateLimiter:
+def build_rate_limiter(redis_url: str | None) -> RateLimiter:
     """Create a rate limiter instance."""
     if not redis_url:
         return InMemoryRateLimiter()

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -35,8 +34,8 @@ class _FakeUpdateStatus:
     current_version: str = "0.9.0"
     latest_version: str = "1.0.0"
     available: bool = True
-    release: Optional[_FakeRelease] = None
-    install_result: Optional[_FakeInstallResult] = None
+    release: _FakeRelease | None = None
+    install_result: _FakeInstallResult | None = None
 
 
 # ---------------------------------------------------------------------------

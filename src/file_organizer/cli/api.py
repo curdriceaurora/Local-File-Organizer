@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from file_organizer.client.exceptions import ClientError
@@ -24,8 +24,8 @@ console = Console()
 def _build_client(
     *,
     base_url: str,
-    token: Optional[str],
-    api_key: Optional[str],
+    token: str | None,
+    api_key: str | None,
     timeout: float,
 ) -> tuple[FileOrganizerClient, type[ClientError]]:
     """Build an API client with the given configuration.
@@ -90,7 +90,7 @@ def login(
     password: str = typer.Option(..., prompt=True, hide_input=True, help="Password."),
     base_url: str = typer.Option("http://localhost:8000", help="API base URL."),
     timeout: float = typer.Option(30.0, help="Request timeout in seconds."),
-    save_to: Optional[Path] = typer.Option(
+    save_to: Path | None = typer.Option(
         None,
         "--save-token",
         help="Optional path to save token JSON.",
@@ -238,7 +238,7 @@ def system_stats(
     path: str = typer.Argument(".", help="Directory to analyze."),
     token: str = typer.Option(..., "--token", help="Bearer token."),
     base_url: str = typer.Option("http://localhost:8000", help="API base URL."),
-    max_depth: Optional[int] = typer.Option(None, min=1, help="Optional max depth."),
+    max_depth: int | None = typer.Option(None, min=1, help="Optional max depth."),
     use_cache: bool = typer.Option(True, help="Use server-side cache."),
     timeout: float = typer.Option(30.0, help="Request timeout in seconds."),
     as_json: bool = typer.Option(False, "--json", help="Print JSON output."),

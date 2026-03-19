@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from loguru import logger
 from pydantic import BaseModel
@@ -20,7 +18,7 @@ from file_organizer.services.analyzer import (
 )
 
 # Global model instance
-_text_model: Optional[TextModel] = None
+_text_model: TextModel | None = None
 
 
 def get_text_model() -> TextModel:
@@ -46,8 +44,8 @@ class AnalyzeResponse(BaseModel):
 
 @router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(
-    content: Optional[str] = None,
-    file: Optional[UploadFile] = None,
+    content: str | None = None,
+    file: UploadFile | None = None,
     settings: ApiSettings = Depends(get_settings),
 ) -> AnalyzeResponse:
     """Analyze file content using AI and provide description and category.

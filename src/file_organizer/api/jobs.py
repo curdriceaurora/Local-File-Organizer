@@ -6,7 +6,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, fields
 from datetime import UTC, datetime, timedelta
 from threading import Lock
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 from uuid import uuid4
 
 from file_organizer.api.realtime import realtime_manager
@@ -23,8 +23,8 @@ class JobState:
     status: JobStateStatus
     created_at: datetime
     updated_at: datetime
-    result: Optional[dict[str, Any]] = None
-    error: Optional[str] = None
+    result: dict[str, Any] | None = None
+    error: str | None = None
 
 
 _ACTIVE_STATUSES = {"queued", "running"}
@@ -68,7 +68,7 @@ def create_job(job_type: str) -> JobState:
     return job
 
 
-def get_job(job_id: str) -> Optional[JobState]:
+def get_job(job_id: str) -> JobState | None:
     """Return the job state for job_id, or None if not found."""
     with _JOB_STORE_LOCK:
         _prune_jobs(_now())
@@ -78,7 +78,7 @@ def get_job(job_id: str) -> Optional[JobState]:
         return job
 
 
-def update_job(job_id: str, **updates: Any) -> Optional[JobState]:
+def update_job(job_id: str, **updates: Any) -> JobState | None:
     """Apply keyword updates to a job and return the updated state."""
     with _JOB_STORE_LOCK:
         job = _JOB_STORE.get(job_id)
@@ -99,8 +99,8 @@ def update_job(job_id: str, **updates: Any) -> Optional[JobState]:
 
 def list_jobs(
     *,
-    job_type: Optional[str] = None,
-    statuses: Optional[set[JobStateStatus]] = None,
+    job_type: str | None = None,
+    statuses: set[JobStateStatus] | None = None,
     limit: int = 100,
 ) -> list[JobState]:
     """List tracked jobs, newest first."""

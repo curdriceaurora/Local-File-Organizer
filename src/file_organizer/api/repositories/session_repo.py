@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -20,9 +19,9 @@ class SessionRepository:
         user_id: str,
         token_hash: str,
         expires_at: datetime,
-        refresh_token_hash: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        ip_address: Optional[str] = None,
+        refresh_token_hash: str | None = None,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
     ) -> UserSession:
         """Create and persist a session record."""
         row = UserSession(
@@ -42,8 +41,8 @@ class SessionRepository:
         session: Session,
         token_hash: str,
         *,
-        now: Optional[datetime] = None,
-    ) -> Optional[UserSession]:
+        now: datetime | None = None,
+    ) -> UserSession | None:
         """Return an active (unrevoked, unexpired) session by token hash."""
         current = now or datetime.now(UTC)
         return (
@@ -61,7 +60,7 @@ class SessionRepository:
         session: Session,
         user_id: str,
         *,
-        now: Optional[datetime] = None,
+        now: datetime | None = None,
     ) -> list[UserSession]:
         """List active sessions for a user."""
         current = now or datetime.now(UTC)
@@ -87,7 +86,7 @@ class SessionRepository:
         return True
 
     @staticmethod
-    def prune_expired(session: Session, *, now: Optional[datetime] = None) -> int:
+    def prune_expired(session: Session, *, now: datetime | None = None) -> int:
         """Delete revoked/expired sessions and return deleted row count."""
         current = now or datetime.now(UTC)
         count = (

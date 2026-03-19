@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -18,7 +18,7 @@ class ApiError(Exception):
     status_code: int
     error: str
     message: str
-    details: Optional[Any] = None
+    details: Any | None = None
 
     def __post_init__(self) -> None:
         """Initialize ApiError and set exception message from fields."""

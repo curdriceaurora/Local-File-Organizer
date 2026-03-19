@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock, Timer
 from time import monotonic
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, Query, Request
@@ -64,7 +64,7 @@ _LAST_JOB_METADATA_PRUNE_MONOTONIC = 0.0
 # ---------------------------------------------------------------------------
 
 
-def _parse_delay_minutes(value: Optional[str]) -> int:
+def _parse_delay_minutes(value: str | None) -> int:
     """Parse and validate a schedule delay value in minutes.
 
     Args:
@@ -95,7 +95,7 @@ def _parse_delay_minutes(value: Optional[str]) -> int:
     return minutes
 
 
-def _normalize_methodology(value: Optional[str]) -> str:
+def _normalize_methodology(value: str | None) -> str:
     """Normalize a methodology string, defaulting to ``content_based``."""
     token = (value or "").strip().lower()
     if token in ORGANIZE_METHODOLOGIES:
@@ -227,7 +227,7 @@ def _store_organize_plan(plan_data: dict[str, Any]) -> dict[str, Any]:
     return record
 
 
-def _get_organize_plan(plan_id: str) -> Optional[dict[str, Any]]:
+def _get_organize_plan(plan_id: str) -> dict[str, Any] | None:
     """Retrieve a stored plan by *plan_id*, or ``None`` if expired/missing."""
     with _ORGANIZE_PLAN_LOCK:
         plan = _ORGANIZE_PLAN_STORE.get(plan_id)
@@ -287,7 +287,7 @@ def _status_progress(status: str) -> int:
     return 0
 
 
-def _build_job_view(job_id: str) -> Optional[dict[str, Any]]:
+def _build_job_view(job_id: str) -> dict[str, Any] | None:
     """Build a rich view dict for a job, merging job state with metadata.
 
     Returns:
@@ -343,7 +343,7 @@ def _build_job_view(job_id: str) -> Optional[dict[str, Any]]:
 
 def _list_organize_jobs(
     *,
-    status_filter: Optional[str] = None,
+    status_filter: str | None = None,
     limit: int = ORGANIZE_HISTORY_LIMIT,
 ) -> list[dict[str, Any]]:
     """List recent organize jobs, optionally filtered by status.
@@ -525,9 +525,9 @@ def organize_scan(
     Returns:
         HTMX partial showing the generated plan or an error message.
     """
-    error_message: Optional[str] = None
-    info_message: Optional[str] = None
-    plan: Optional[dict[str, Any]] = None
+    error_message: str | None = None
+    info_message: str | None = None
+    plan: dict[str, Any] | None = None
 
     try:
         if not input_dir.strip():
@@ -646,10 +646,10 @@ def organize_execute(
     Returns:
         Job status HTMX partial with progress information.
     """
-    info_message: Optional[str] = None
-    error_message: Optional[str] = None
-    job_view: Optional[dict[str, Any]] = None
-    response: Optional[HTMLResponse] = None
+    info_message: str | None = None
+    error_message: str | None = None
+    job_view: dict[str, Any] | None = None
+    response: HTMLResponse | None = None
 
     try:
         if not plan_id.strip():
@@ -903,8 +903,8 @@ def organize_job_cancel(request: Request, job_id: str) -> HTMLResponse:
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
 
-    info_message: Optional[str] = None
-    error_message: Optional[str] = None
+    info_message: str | None = None
+    error_message: str | None = None
     if _cancel_scheduled_job(job_id):
         info_message = "Scheduled job cancelled."
     else:
@@ -933,8 +933,8 @@ def organize_job_rollback(request: Request, job_id: str) -> HTMLResponse:
     if job is None:
         raise ApiError(status_code=404, error="not_found", message="Job not found.")
 
-    rollback_message: Optional[str] = None
-    error_message: Optional[str] = None
+    rollback_message: str | None = None
+    error_message: str | None = None
     if not job["can_rollback"]:
         error_message = "Rollback is only available for completed non-dry-run jobs."
     else:

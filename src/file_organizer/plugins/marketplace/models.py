@@ -6,7 +6,7 @@ import hashlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from file_organizer.plugins.marketplace.errors import MarketplaceSchemaError
 from file_organizer.plugins.marketplace.validators import (
@@ -63,8 +63,8 @@ class PluginPackage:
     category: str = "general"
     license: str = "MIT"
     min_organizer_version: str = "2.0.0"
-    max_organizer_version: Optional[str] = None
-    homepage: Optional[str] = None
+    max_organizer_version: str | None = None
+    homepage: str | None = None
     downloads: int = 0
     rating: float = 0.0
     reviews_count: int = 0

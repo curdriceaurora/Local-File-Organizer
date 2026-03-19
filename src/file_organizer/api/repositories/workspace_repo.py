@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -23,7 +22,7 @@ class WorkspaceRepository:
         name: str,
         owner_id: str,
         root_path: str,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> Workspace:
         """Create and persist a new workspace.
 
@@ -52,7 +51,7 @@ class WorkspaceRepository:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def get_by_id(session: Session, workspace_id: str) -> Optional[Workspace]:
+    def get_by_id(session: Session, workspace_id: str) -> Workspace | None:
         """Return a single workspace by primary key, or ``None``."""
         return session.get(Workspace, workspace_id)
 
@@ -75,7 +74,7 @@ class WorkspaceRepository:
         session: Session,
         workspace_id: str,
         **kwargs: object,
-    ) -> Optional[Workspace]:
+    ) -> Workspace | None:
         """Update mutable fields of a workspace.
 
         Accepted keyword arguments: ``name``, ``root_path``, ``description``,

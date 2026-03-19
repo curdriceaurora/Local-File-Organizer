@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -23,8 +22,8 @@ class JobRepository:
         input_dir: str,
         output_dir: str,
         *,
-        workspace_id: Optional[str] = None,
-        owner_id: Optional[str] = None,
+        workspace_id: str | None = None,
+        owner_id: str | None = None,
         job_type: str = "organize",
         methodology: str = "content_based",
         dry_run: bool = False,
@@ -62,7 +61,7 @@ class JobRepository:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def get_by_id(session: Session, job_id: str) -> Optional[OrganizationJob]:
+    def get_by_id(session: Session, job_id: str) -> OrganizationJob | None:
         """Return a single job by primary key, or ``None``."""
         return session.get(OrganizationJob, job_id)
 
@@ -70,8 +69,8 @@ class JobRepository:
     def list_jobs(
         session: Session,
         *,
-        owner_id: Optional[str] = None,
-        status: Optional[str] = None,
+        owner_id: str | None = None,
+        status: str | None = None,
         limit: int = 50,
     ) -> list[OrganizationJob]:
         """Return jobs matching the optional filters, newest first.
@@ -101,8 +100,8 @@ class JobRepository:
         session: Session,
         job_id: str,
         status: str,
-        error: Optional[str] = None,
-    ) -> Optional[OrganizationJob]:
+        error: str | None = None,
+    ) -> OrganizationJob | None:
         """Transition a job to a new status.
 
         Args:
@@ -128,12 +127,12 @@ class JobRepository:
         session: Session,
         job_id: str,
         *,
-        total_files: Optional[int] = None,
-        processed_files: Optional[int] = None,
-        failed_files: Optional[int] = None,
-        skipped_files: Optional[int] = None,
-        result_json: Optional[str] = None,
-    ) -> Optional[OrganizationJob]:
+        total_files: int | None = None,
+        processed_files: int | None = None,
+        failed_files: int | None = None,
+        skipped_files: int | None = None,
+        result_json: str | None = None,
+    ) -> OrganizationJob | None:
         """Update result counters and/or the JSON result blob.
 
         Only non-``None`` arguments are applied.

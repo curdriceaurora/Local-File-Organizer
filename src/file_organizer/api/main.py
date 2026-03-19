@@ -7,7 +7,6 @@ import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -41,7 +40,7 @@ from file_organizer.web import STATIC_DIR
 from file_organizer.web import router as web_router
 
 _LOGGING_CONFIGURED = False
-_app: Optional[FastAPI] = None
+_app: FastAPI | None = None
 _app_lock = threading.Lock()
 
 
@@ -54,7 +53,7 @@ def configure_logging(settings: ApiSettings) -> None:
     from file_organizer.config.path_manager import get_state_dir
 
     log_dir = get_state_dir() / "logs"
-    log_file: Optional[Path] = None
+    log_file: Path | None = None
     try:
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "api.log"
@@ -69,7 +68,7 @@ def configure_logging(settings: ApiSettings) -> None:
     _LOGGING_CONFIGURED = True
 
 
-def create_app(settings: Optional[ApiSettings] = None) -> FastAPI:
+def create_app(settings: ApiSettings | None = None) -> FastAPI:
     """Create the FastAPI application."""
     settings = settings or load_settings()
     configure_logging(settings)

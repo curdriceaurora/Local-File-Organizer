@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import hmac
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session
@@ -47,7 +46,7 @@ def _jwt_valid(
 
 
 def _token_valid(
-    token: Optional[str],
+    token: str | None,
     settings: ApiSettings,
     db: Session,
     token_store: TokenStore,
@@ -68,7 +67,7 @@ def _token_valid(
     return hmac.compare_digest(token, required)
 
 
-def _extract_token(websocket: WebSocket, token: Optional[str]) -> Optional[str]:
+def _extract_token(websocket: WebSocket, token: str | None) -> str | None:
     if token:
         return token
     auth_header = websocket.headers.get("authorization")
@@ -110,7 +109,7 @@ async def _send_error(websocket: WebSocket, message: str) -> None:
 async def websocket_endpoint(
     websocket: WebSocket,
     client_id: str,
-    token: Optional[str] = None,
+    token: str | None = None,
     settings: ApiSettings = Depends(get_settings),
     db: Session = Depends(get_db),
     token_store: TokenStore = Depends(get_token_store),

@@ -7,7 +7,6 @@ organisation rules.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -76,10 +75,10 @@ def rules_sets() -> None:
 @rules_app.command(name="add")
 def rules_add(
     name: str = typer.Argument(..., help="Rule name."),
-    extension: Optional[str] = typer.Option(
+    extension: str | None = typer.Option(
         None, "--ext", help="File extension filter (e.g. '.pdf,.docx')."
     ),
-    pattern: Optional[str] = typer.Option(None, "--pattern", help="Filename glob pattern."),
+    pattern: str | None = typer.Option(None, "--pattern", help="Filename glob pattern."),
     action: str = typer.Option(
         "move",
         "--action",
@@ -205,7 +204,7 @@ def rules_preview(
 @rules_app.command(name="export")
 def rules_export(
     rule_set: str = typer.Option("default", "--set", "-s", help="Rule set to export."),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file path."),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Output file path."),
 ) -> None:
     """Export a rule set to YAML."""
     import yaml  # type: ignore[import-untyped]
@@ -226,7 +225,7 @@ def rules_export(
 @rules_app.command(name="import")
 def rules_import(
     file: Path = typer.Argument(..., help="YAML file to import."),
-    rule_set: Optional[str] = typer.Option(None, "--set", "-s", help="Override rule set name."),
+    rule_set: str | None = typer.Option(None, "--set", "-s", help="Override rule set name."),
 ) -> None:
     """Import a rule set from a YAML file."""
     import yaml

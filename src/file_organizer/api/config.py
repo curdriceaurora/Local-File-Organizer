@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 from loguru import logger
@@ -45,14 +45,14 @@ class ApiSettings(BaseModel):
     enable_docs: bool = True
     allowed_paths: list[str] = Field(default_factory=lambda: [str(Path.home())])
     websocket_ping_interval: int = Field(default=30, gt=0)
-    websocket_token: Optional[str] = None
+    websocket_token: str | None = None
     auth_enabled: bool = True
     auth_db_path: str = Field(default_factory=_default_auth_db_path)
     auth_jwt_secret: SecretStr = SecretStr("change-me")
     auth_jwt_algorithm: str = "HS256"
     auth_access_token_minutes: int = Field(default=30, gt=0)
     auth_refresh_token_days: int = Field(default=7, gt=0)
-    auth_redis_url: Optional[str] = None
+    auth_redis_url: str | None = None
     auth_login_rate_limit_enabled: bool = True
     auth_login_max_attempts: int = Field(default=5, gt=0)
     auth_login_window_seconds: int = Field(default=900, gt=0)
@@ -63,13 +63,13 @@ class ApiSettings(BaseModel):
     auth_password_require_uppercase: bool = True
     auth_bootstrap_admin: bool = False
     auth_bootstrap_admin_local_only: bool = True
-    database_url: Optional[str] = None
+    database_url: str | None = None
     database_pool_size: int = Field(default=10, gt=0)
     database_max_overflow: int = Field(default=20, ge=0)
     database_pool_pre_ping: bool = True
     database_pool_recycle_seconds: int = Field(default=1800, gt=0)
     database_echo: bool = False
-    cache_redis_url: Optional[str] = None
+    cache_redis_url: str | None = None
     cache_default_ttl_seconds: int = Field(default=900, gt=0)
     api_key_enabled: bool = True
     api_key_admin: bool = False

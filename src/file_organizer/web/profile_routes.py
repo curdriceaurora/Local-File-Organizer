@@ -6,7 +6,6 @@ import json
 import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
@@ -79,7 +78,7 @@ def _get_db(settings: ApiSettings) -> Session:
     return create_session(settings.auth_db_path)
 
 
-def get_current_web_user(request: Request, settings: ApiSettings) -> Optional[User]:
+def get_current_web_user(request: Request, settings: ApiSettings) -> User | None:
     """Read session cookie and return the authenticated user when available."""
     if not settings.auth_enabled:
         return None
@@ -233,9 +232,9 @@ def _cleanup_expired_reset_tokens() -> None:
 def _make_profile_context(
     request: Request,
     settings: ApiSettings,
-    user: Optional[User],
+    user: User | None,
     *,
-    extras: Optional[dict[str, object]] = None,
+    extras: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Build the full template context dict for the profile page."""
     context_extras: dict[str, object] = {"user": user, "auth_enabled": settings.auth_enabled}
@@ -1091,7 +1090,7 @@ def account_settings_change_password(
 @profile_router.post("/profile/account-settings/2fa", response_class=HTMLResponse)
 def account_settings_toggle_2fa(
     request: Request,
-    enabled: Optional[str] = Form(None),
+    enabled: str | None = Form(None),
     settings: ApiSettings = Depends(get_settings),
 ) -> HTMLResponse:
     """Toggle two-factor authentication for the authenticated user.

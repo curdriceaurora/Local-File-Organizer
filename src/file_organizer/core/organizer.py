@@ -302,7 +302,29 @@ class FileOrganizer:
                 self.vision_processor.cleanup()
 
         # Organize
+        # Content‑based deduplication: remove duplicate files based on file content hash
         if all_processed:
+            import hashlib
+
+            seen_hashes: dict[str, any] = {}
+            deduped_processed: list[ProcessedFile | ProcessedImage] = []
+            for pf in all_processed:
+                try:
+                    file_bytes = pf.file_path.read_bytes()
+                    file_hash = hashlib.sha256(file_bytes).hexdigest()
+                except Exception:
+                    # If we cannot read the file, keep it (it will be handled later)
+                    deduped_processed.append(pf)
+                    continue
+                if file_hash not in seen_hashes:
+                    seen_hashes[file_hash] = pf
+                    deduped_processed.append(pf)
+                else:
+                    # Duplicate detected – skip this file
+                    logger.info(
+                        f"Duplicate file detected by content: {pf.file_path.name}, skipping."
+                    )
+            all_processed = deduped_processed
             failed_cnt = len([p for p in all_processed if p.error])
             result.processed_files = len(all_processed) - failed_cnt
             result.failed_files = failed_cnt

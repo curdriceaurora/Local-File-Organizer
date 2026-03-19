@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
 
 from file_organizer.plugins.marketplace.installer import PluginInstaller
 from file_organizer.plugins.marketplace.metadata import PluginMetadataStore
@@ -37,8 +36,8 @@ class MarketplaceService:
     def __init__(
         self,
         *,
-        home_dir: Optional[Path] = None,
-        repo_url: Optional[str] = None,
+        home_dir: Path | None = None,
+        repo_url: str | None = None,
     ) -> None:
         """Set up the marketplace service using the given home directory."""
         self.home_dir = (home_dir or default_marketplace_home()).resolve()
@@ -85,8 +84,8 @@ class MarketplaceService:
         page: int = 1,
         per_page: int = 20,
         query: str = "",
-        tags: Optional[list[str]] = None,
-        category: Optional[str] = None,
+        tags: list[str] | None = None,
+        category: str | None = None,
     ) -> tuple[list[PluginPackage], int]:
         """List/search repository plugins and return total count for pagination."""
         packages = self._read_or_refresh_metadata()
@@ -106,11 +105,11 @@ class MarketplaceService:
         end = start + per_page
         return filtered[start:end], len(filtered)
 
-    def get_plugin(self, name: str, *, version: Optional[str] = None) -> PluginPackage:
+    def get_plugin(self, name: str, *, version: str | None = None) -> PluginPackage:
         """Fetch package metadata from repository."""
         return self.repository.get_plugin(name, version=version)
 
-    def install(self, name: str, *, version: Optional[str] = None) -> InstalledPlugin:
+    def install(self, name: str, *, version: str | None = None) -> InstalledPlugin:
         """Install a plugin package."""
         return self.installer.install(name, version=version)
 
@@ -118,7 +117,7 @@ class MarketplaceService:
         """Uninstall a plugin package."""
         self.installer.uninstall(name)
 
-    def update(self, name: str) -> Optional[InstalledPlugin]:
+    def update(self, name: str) -> InstalledPlugin | None:
         """Update installed plugin to latest version."""
         return self.installer.update(name)
 

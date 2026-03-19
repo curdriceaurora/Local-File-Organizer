@@ -7,7 +7,7 @@ typed deserialization for the client libraries.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -31,7 +31,7 @@ class FileInfo(BaseModel):
     created: datetime
     modified: datetime
     file_type: str
-    mime_type: Optional[str] = None
+    mime_type: str | None = None
 
 
 class FileListResponse(BaseModel):
@@ -51,7 +51,7 @@ class FileContentResponse(BaseModel):
     encoding: str
     truncated: bool
     size: int
-    mime_type: Optional[str] = None
+    mime_type: str | None = None
 
 
 class MoveFileResponse(BaseModel):
@@ -69,7 +69,7 @@ class DeleteFileResponse(BaseModel):
     path: str
     deleted: bool
     dry_run: bool
-    trashed_path: Optional[str] = None
+    trashed_path: str | None = None
 
 
 class ScanResponse(BaseModel):
@@ -103,9 +103,9 @@ class OrganizeExecuteResponse(BaseModel):
     """Response from the organize/execute endpoint."""
 
     status: str
-    job_id: Optional[str] = None
-    result: Optional[OrganizationResultResponse] = None
-    error: Optional[str] = None
+    job_id: str | None = None
+    result: OrganizationResultResponse | None = None
+    error: str | None = None
 
 
 class JobStatusResponse(BaseModel):
@@ -115,8 +115,8 @@ class JobStatusResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
-    result: Optional[OrganizationResultResponse] = None
-    error: Optional[str] = None
+    result: OrganizationResultResponse | None = None
+    error: str | None = None
 
 
 class TokenResponse(BaseModel):
@@ -133,11 +133,11 @@ class UserResponse(BaseModel):
     id: str
     username: str
     email: str
-    full_name: Optional[str] = None
+    full_name: str | None = None
     is_active: bool
     is_admin: bool
     created_at: datetime
-    last_login: Optional[datetime] = None
+    last_login: datetime | None = None
 
 
 class SystemStatusResponse(BaseModel):

@@ -13,7 +13,7 @@ Example::
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -61,8 +61,8 @@ class AsyncFileOrganizerClient:
     def __init__(
         self,
         base_url: str = "http://localhost:8000",
-        api_key: Optional[str] = None,
-        token: Optional[str] = None,
+        api_key: str | None = None,
+        token: str | None = None,
         timeout: float = 30.0,
     ) -> None:
         """Initialize the async client with connection parameters."""
@@ -222,7 +222,7 @@ class AsyncFileOrganizerClient:
         *,
         recursive: bool = False,
         include_hidden: bool = False,
-        file_type: Optional[str] = None,
+        file_type: str | None = None,
         sort_by: str = "name",
         sort_order: str = "asc",
         skip: int = 0,
@@ -512,7 +512,7 @@ class AsyncFileOrganizerClient:
         self,
         *,
         path: str = ".",
-        max_depth: Optional[int] = None,
+        max_depth: int | None = None,
         use_cache: bool = True,
     ) -> StorageStatsResponse:
         """Get storage analytics statistics for a directory.
@@ -538,7 +538,7 @@ class AsyncFileOrganizerClient:
         recursive: bool = True,
         algorithm: str = "sha256",
         min_file_size: int = 0,
-        max_file_size: Optional[int] = None,
+        max_file_size: int | None = None,
     ) -> DedupeScanResponse:
         """Scan a directory for duplicate files.
 

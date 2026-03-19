@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Optional, Protocol
+from typing import Protocol
 
 from loguru import logger
 from redis import Redis
@@ -107,7 +107,7 @@ class RedisTokenStore:
         return self.redis.exists(self._revoked_key(jti)) == 1
 
 
-def build_token_store(redis_url: Optional[str]) -> TokenStore:
+def build_token_store(redis_url: str | None) -> TokenStore:
     """Create a token store, preferring Redis when configured."""
     if not redis_url:
         return InMemoryTokenStore()
