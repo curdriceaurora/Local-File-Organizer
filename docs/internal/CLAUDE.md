@@ -51,21 +51,7 @@ An AI-powered local file management system with privacy-first architecture. Orga
 - Create worktrees for parallel work
 - Commit, push, and create pull requests
 
-**CCPM Framework Maintenance** (REQUIRED):
-- Create and update daily logs in `.claude/epics/sprint-*/daily-logs/`
-- Update execution status files in `.claude/epics/*/execution-status.md`
-- Follow all rules in `.claude/rules/` directory
-
 ### ⚠️ Required Protocols
-
-**Before GitHub Write Operations** (CRITICAL):
-```bash
-remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-if [[ "$remote_url" == *"automazeio/ccpm"* ]]; then
-  echo "❌ ERROR: Cannot modify CCPM template repository!"
-  exit 1
-fi
-```
 
 **DateTime Standards** (ALWAYS):
 ```bash
@@ -118,23 +104,11 @@ fo --help  # Short alias
 
 ---
 
-## ⚠️ CRITICAL: PM Skills Are Mandatory
-
-**NEVER manually create or update GitHub issues/PRs or CCPM tracking documents.**
-**ALWAYS use PM skills for ALL project management operations.**
-
-See: `.claude/rules/pm-skills-mandatory.md` for complete requirements.
-
----
-
 ## Project Structure
 
 ```
 Local-File-Organizer/
-├── .claude/                          # CCPM project management
-│   ├── commands/                     # PM commands
-│   ├── prds/                         # Product requirements
-│   ├── epics/                        # Epic planning workspace
+├── .claude/                          # Project tooling
 │   ├── rules/                        # Standard operation rules
 │   └── scripts/                      # Validation scripts
 │
@@ -428,7 +402,7 @@ now, implement the elegant solution"
 
 ## PR Scope Rule
 
-One logical task per PR. A "task" corresponds to one epic task ID (e.g., Task 4, Task 5).
+One logical task per PR.
 
 Bundling tasks is allowed **only** when they have a hard dependency (Task B cannot be tested without Task A shipping first). Document the dependency in the PR description when bundling.
 
