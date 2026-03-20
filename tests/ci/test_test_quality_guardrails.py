@@ -489,10 +489,11 @@ def test_changed_tests_have_no_sole_isinstance_assertions() -> None:
     - ``str`` return  → ``assert result == "expected_string"``
     - ``dict`` return → ``assert result == {...}`` or assert specific keys/values
 
-    Applies to changed files only (TODO: broaden to full suite after clean-up).
+    Applies to the full test suite (all pre-existing violations were cleaned in
+    phases 3A and 3B before this guardrail was broadened).
     """
     violations: list[str] = []
-    for path in _git_changed_test_files():
+    for path in _changed_test_files():
         source = path.read_text(encoding="utf-8")
         violations.extend(_find_sole_isinstance_assertions(source, str(path)))
 
