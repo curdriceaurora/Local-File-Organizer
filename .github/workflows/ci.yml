@@ -173,7 +173,7 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             pytest tests/ -m "ci and not benchmark" --cov=file_organizer --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
           else
-            pytest tests/ -m "not benchmark" --cov=file_organizer --cov-fail-under=95 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
+            pytest tests/ -m "not benchmark" --cov=file_organizer --cov-fail-under=93 --cov-report=xml --timeout=30 -n=auto --override-ini="addopts="
           fi
       - name: Diff coverage gate (PR only)
         # Checks that lines added/changed in this PR are ≥80% covered.
@@ -226,11 +226,11 @@ jobs:
         run: pip install -e ".[dev,search]"
       - name: Download NLTK data
         run: python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('wordnet', quiet=True)"
-      - name: "Integration coverage gate (floor: 35%)"
+      - name: "Integration coverage gate (floor: 30% branch)"
         # Ratchet floor — bump threshold in the PR that closes each gap.
-        # 2026-03-17: 35.43% (173 integration tests, clean CI env with [dev,search] extras).
-        # Current floor: 35%. Target per issue #856: 90%.
-        run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-fail-under=35 --cov-report=term-missing --cov-report=xml --timeout=60 --override-ini="addopts="
+        # 2026-03-17: 35.43% line (173 integration tests, clean CI env with [dev,search] extras).
+        # 2026-03-20: 30% branch (ratchet after enabling branch = true; issue #912). Target per issue #856: 90%.
+        run: pytest tests/ -m "integration" --strict-markers --cov=file_organizer --cov-fail-under=30 --cov-report=term-missing --cov-report=xml --timeout=60 --override-ini="addopts="
 
   rust-check:
     name: Rust desktop build
