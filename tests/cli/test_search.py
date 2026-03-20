@@ -6,6 +6,7 @@ import json
 import re
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from file_organizer.cli.main import app
@@ -183,6 +184,7 @@ def test_search_semantic_flag_in_help():
 
 def test_search_semantic_finds_relevant_files(tmp_path: Path):
     """--semantic returns files relevant to the query."""
+    pytest.importorskip("rank_bm25")
     (tmp_path / "finance.txt").write_text("quarterly finance budget report")
     (tmp_path / "notes.txt").write_text("meeting notes agenda items")
 
@@ -194,12 +196,14 @@ def test_search_semantic_finds_relevant_files(tmp_path: Path):
 
 def test_search_semantic_empty_dir_exits_zero(tmp_path: Path):
     """--semantic on empty directory exits 0 with no-files message."""
+    pytest.importorskip("rank_bm25")
     result = runner.invoke(app, ["search", "anything", str(tmp_path), "--semantic"])
     assert result.exit_code == 0
 
 
 def test_search_semantic_json_output(tmp_path: Path):
     """--semantic --json emits a valid JSON array with score field."""
+    pytest.importorskip("rank_bm25")
     (tmp_path / "doc.txt").write_text("finance quarterly report")
 
     result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic", "--json"])
@@ -213,6 +217,7 @@ def test_search_semantic_json_output(tmp_path: Path):
 
 def test_search_semantic_respects_limit(tmp_path: Path):
     """--semantic --limit N returns at most N results."""
+    pytest.importorskip("rank_bm25")
     for i in range(5):
         (tmp_path / f"file_{i}.txt").write_text(f"document {i} finance report")
 

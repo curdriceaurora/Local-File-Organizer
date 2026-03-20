@@ -219,6 +219,8 @@ class TestSearch:
 class TestSemanticSearch:
     """Tests for GET /api/v1/search?semantic=true."""
 
+    _rank_bm25 = pytest.importorskip("rank_bm25")
+
     def test_semantic_false_is_default(self, tmp_path: Path) -> None:
         """Default search (no semantic param) uses keyword path — result set unchanged."""
         (tmp_path / "report.txt").write_text("quarterly finance report")

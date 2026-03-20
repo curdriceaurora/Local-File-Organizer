@@ -635,17 +635,14 @@ class TestCopilotEngineRetriever:
 class TestCopilotEngineRetrieverIntegration:
     """Integration tests with a real HybridRetriever (no mocks)."""
 
+    _rank_bm25 = pytest.importorskip("rank_bm25")
+
     def test_find_with_injected_real_retriever(self, tmp_path) -> None:
         """FIND intent returns scoped results using a real HybridRetriever."""
-        try:
-            from file_organizer.services.search.hybrid_retriever import (
-                HybridRetriever,
-                read_text_safe,
-            )
-        except ImportError:
-            pytest.fail(
-                "search dependencies not installed — run: pip install 'file-organizer[search]'"
-            )
+        from file_organizer.services.search.hybrid_retriever import (
+            HybridRetriever,
+            read_text_safe,
+        )
 
         finance_file = tmp_path / "finance_report.txt"
         other_file = tmp_path / "meeting_notes.txt"
@@ -675,15 +672,6 @@ class TestCopilotEngineRetrieverIntegration:
 
     def test_find_auto_builds_retriever_when_none_injected(self, tmp_path) -> None:
         """FIND auto-builds a HybridRetriever from search_root when none is injected."""
-        try:
-            from file_organizer.services.search.hybrid_retriever import (
-                HybridRetriever,  # noqa: F401
-            )
-        except ImportError:
-            pytest.fail(
-                "search dependencies not installed — run: pip install 'file-organizer[search]'"
-            )
-
         finance_file = tmp_path / "finance_report.txt"
         other_file = tmp_path / "meeting_notes.txt"
         finance_file.write_text("quarterly finance budget summary")
