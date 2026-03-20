@@ -124,7 +124,7 @@ class TestSearchResults:
 class TestSemanticSearchHiddenFileFiltering:
     """Covers line 156 — is_hidden(rel_entry) in semantic corpus builder."""
 
-    _rank_bm25 = pytest.importorskip("rank_bm25")
+    pytest.importorskip("rank_bm25")
 
     def test_hidden_files_excluded_from_semantic_corpus(self, tmp_path: Path) -> None:
         """Hidden files are excluded from the semantic corpus (relative path check)."""

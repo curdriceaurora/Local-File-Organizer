@@ -635,7 +635,7 @@ class TestCopilotEngineRetriever:
 class TestCopilotEngineRetrieverIntegration:
     """Integration tests with a real HybridRetriever (no mocks)."""
 
-    _rank_bm25 = pytest.importorskip("rank_bm25")
+    pytest.importorskip("rank_bm25")
 
     def test_find_with_injected_real_retriever(self, tmp_path) -> None:
         """FIND intent returns scoped results using a real HybridRetriever."""
