@@ -123,6 +123,30 @@ repos:
         pass_filenames: false
 
       # ----------------------------------------------------------------
+      # C4: Coverage threshold drift detection (G4)
+      # When pyproject.toml is staged with a changed cov-fail-under value,
+      # greps docs for stale references to the old percentage.
+      # ----------------------------------------------------------------
+      - id: threshold-drift-check
+        name: coverage threshold drift (C4)
+        entry: bash .claude/scripts/check-threshold-drift.sh
+        language: system
+        files: ^pyproject\.toml$
+        pass_filenames: false
+
+      # ----------------------------------------------------------------
+      # S1/S2: Search corpus safety — symlink and hidden-file filters (G2)
+      # When search service files are staged, verify any rglob/walk calls
+      # include the required is_symlink() and startswith(".") guards.
+      # ----------------------------------------------------------------
+      - id: search-corpus-safety
+        name: search corpus safety (S1/S2)
+        entry: bash -c "pytest tests/ci/test_search_code_quality.py -k 'symlink or hidden' -q --override-ini='addopts='"
+        language: system
+        files: ^src/file_organizer/services/search/
+        pass_filenames: false
+
+      # ----------------------------------------------------------------
       # Unused dependency detection
       # ----------------------------------------------------------------
       - id: deptry
