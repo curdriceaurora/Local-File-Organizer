@@ -412,7 +412,7 @@ class TestHelperFunctions:
         text = read_epub_simple(Path("test.epub"), max_chars=100)
 
         # Verify
-        assert len(text) <= 100
+        assert len(text) == 100  # raw_text[:100] on 2500-char input gives exactly 100 chars
         assert isinstance(text, str)
 
     @patch("file_organizer.utils.epub_enhanced.epub.read_epub")

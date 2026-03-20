@@ -59,6 +59,7 @@ class TestDefaultProfileState:
     """Test the _default_profile_state helper."""
 
     def test_returns_expected_keys(self):
+        """Verifies the default profile state dict contains all required top-level keys."""
         from file_organizer.web.profile_routes import _default_profile_state
 
         state = _default_profile_state()
@@ -71,6 +72,7 @@ class TestDefaultProfileState:
         assert "two_factor_enabled" in state
 
     def test_defaults_are_sensible(self):
+        """Verifies default values are empty strings, empty lists, and False for booleans."""
         from file_organizer.web.profile_routes import _default_profile_state
 
         state = _default_profile_state()
@@ -90,6 +92,7 @@ class TestSanitizeProfileState:
     """Test _sanitize_profile_state normalisation."""
 
     def test_none_input(self):
+        """Verifies None input is sanitised to a valid default profile state dict."""
         from file_organizer.web.profile_routes import _sanitize_profile_state
 
         result = _sanitize_profile_state(None)
@@ -97,12 +100,14 @@ class TestSanitizeProfileState:
         assert "active_workspace_id" in result
 
     def test_empty_dict(self):
+        """Verifies an empty dict is sanitised to include all required profile state keys."""
         from file_organizer.web.profile_routes import _sanitize_profile_state
 
         result = _sanitize_profile_state({})
         assert "active_workspace_id" in result
 
     def test_preserves_valid_keys(self):
+        """Verifies valid string, bool, and list values from raw input are preserved."""
         from file_organizer.web.profile_routes import _sanitize_profile_state
 
         raw = {
@@ -116,6 +121,7 @@ class TestSanitizeProfileState:
         assert len(result["activity_log"]) == 1
 
     def test_activity_log_non_list(self):
+        """Verifies a non-list activity_log value is replaced with an empty list."""
         from file_organizer.web.profile_routes import _sanitize_profile_state
 
         raw = {"activity_log": "not a list"}
@@ -125,6 +131,7 @@ class TestSanitizeProfileState:
         assert result["activity_log"] == []
 
     def test_notifications_non_list(self):
+        """Verifies a non-list notifications value is replaced with an empty list."""
         from file_organizer.web.profile_routes import _sanitize_profile_state
 
         raw = {"notifications": 42}
@@ -133,6 +140,7 @@ class TestSanitizeProfileState:
         assert result["notifications"] == []
 
     def test_non_string_workspace_id_ignored(self):
+        """Verifies a non-string active_workspace_id is replaced with an empty string."""
         from file_organizer.web.profile_routes import _sanitize_profile_state
 
         raw = {"active_workspace_id": 123}
@@ -140,6 +148,7 @@ class TestSanitizeProfileState:
         assert result["active_workspace_id"] == ""
 
     def test_non_bool_two_factor_ignored(self):
+        """Verifies a non-bool two_factor_enabled value is replaced with False."""
         from file_organizer.web.profile_routes import _sanitize_profile_state
 
         raw = {"two_factor_enabled": "yes"}
@@ -147,6 +156,7 @@ class TestSanitizeProfileState:
         assert result["two_factor_enabled"] is False
 
     def test_string_input(self):
+        """Verifies a plain string input is sanitised to a valid profile state dict."""
         from file_organizer.web.profile_routes import _sanitize_profile_state
 
         result = _sanitize_profile_state("bogus")
@@ -164,6 +174,7 @@ class TestAppendActivity:
     """Test the _append_activity helper."""
 
     def test_appends_entry(self):
+        """Verifies a new activity entry is appended with message, timestamp, and id fields."""
         from file_organizer.web.profile_routes import _append_activity
 
         state: dict[str, object] = {"activity_log": []}
@@ -176,6 +187,7 @@ class TestAppendActivity:
         assert "id" in log[0]
 
     def test_caps_at_limit(self):
+        """Verifies the activity log is capped at 100 entries after appending beyond the limit."""
         from file_organizer.web.profile_routes import _append_activity
 
         state: dict[str, object] = {
@@ -187,9 +199,10 @@ class TestAppendActivity:
         log = state["activity_log"]
         assert isinstance(log, list)
         # Capped at 100 after insert
-        assert len(log) <= 101
+        assert len(log) == 100  # _append_activity: del log[100:] after insert → exactly 100
 
     def test_creates_list_when_not_list(self):
+        """Verifies a non-list activity_log is replaced with a new list containing the entry."""
         from file_organizer.web.profile_routes import _append_activity
 
         state: dict[str, object] = {"activity_log": "bad"}
@@ -204,6 +217,7 @@ class TestAppendNotification:
     """Test the _append_notification helper."""
 
     def test_appends_notification(self):
+        """Verifies a new notification is appended with message, created_at, and read=False."""
         from file_organizer.web.profile_routes import _append_notification
 
         state: dict[str, object] = {"notifications": []}
@@ -216,6 +230,7 @@ class TestAppendNotification:
         assert notifs[0]["read"] is False
 
     def test_creates_list_when_not_list(self):
+        """Verifies a None notifications value is replaced with a new list containing the entry."""
         from file_organizer.web.profile_routes import _append_notification
 
         state: dict[str, object] = {"notifications": None}
@@ -225,6 +240,7 @@ class TestAppendNotification:
         assert len(notifs) == 1
 
     def test_caps_at_limit(self):
+        """Verifies the notifications list is capped at 100 entries after appending beyond the limit."""
         from file_organizer.web.profile_routes import _append_notification
 
         state: dict[str, object] = {
@@ -235,7 +251,7 @@ class TestAppendNotification:
         _append_notification(state, "new")
         notifs = state["notifications"]
         assert isinstance(notifs, list)
-        assert len(notifs) <= 101
+        assert len(notifs) == 100  # _append_notification: del notifications[100:] → exactly 100
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +264,7 @@ class TestAvatarPath:
     """Test _avatar_path returns a Path under the avatar directory."""
 
     def test_returns_path_for_user_id(self):
+        """Verifies _avatar_path returns a Path containing the user ID and 'avatars' directory."""
         from file_organizer.web.profile_routes import _avatar_path
 
         result = _avatar_path("user-123")
@@ -256,6 +273,7 @@ class TestAvatarPath:
         assert "avatars" in str(result)
 
     def test_extension_is_png(self):
+        """Verifies the avatar path has a .png file extension."""
         from file_organizer.web.profile_routes import _avatar_path
 
         result = _avatar_path("abc")
@@ -272,6 +290,7 @@ class TestCleanupExpiredResetTokens:
     """Test the _cleanup_expired_reset_tokens helper."""
 
     def test_removes_expired_tokens(self):
+        """Verifies tokens with a past expiry timestamp are removed from the store."""
         from file_organizer.web.profile_routes import (
             _PASSWORD_RESET_TOKENS,
             _cleanup_expired_reset_tokens,
@@ -287,6 +306,7 @@ class TestCleanupExpiredResetTokens:
         assert token_value not in _PASSWORD_RESET_TOKENS
 
     def test_keeps_valid_tokens(self):
+        """Verifies tokens with a future expiry timestamp are retained in the store."""
         from file_organizer.web.profile_routes import (
             _PASSWORD_RESET_TOKENS,
             _cleanup_expired_reset_tokens,
@@ -313,6 +333,7 @@ class TestGetCurrentWebUser:
     """Test the get_current_web_user dependency."""
 
     def test_no_cookie(self, settings):
+        """Verifies get_current_web_user returns None when no session cookie is present."""
         from file_organizer.web.profile_routes import get_current_web_user
 
         request = MagicMock()
@@ -321,6 +342,7 @@ class TestGetCurrentWebUser:
         assert result is None
 
     def test_auth_disabled(self, settings):
+        """Verifies get_current_web_user returns None when auth is disabled."""
         from file_organizer.web.profile_routes import get_current_web_user
 
         settings.auth_enabled = False
@@ -330,6 +352,7 @@ class TestGetCurrentWebUser:
         assert result is None
 
     def test_invalid_token(self, settings):
+        """Verifies get_current_web_user returns None when decode_token raises TokenError."""
         from file_organizer.web.profile_routes import TokenError, get_current_web_user
 
         request = MagicMock()
@@ -343,6 +366,7 @@ class TestGetCurrentWebUser:
         assert result is None
 
     def test_valid_token_user_found(self, settings, fake_user):
+        """Verifies get_current_web_user returns the User when token is valid and user exists in DB."""
         from file_organizer.web.profile_routes import get_current_web_user
 
         request = MagicMock()
@@ -363,6 +387,7 @@ class TestGetCurrentWebUser:
         mock_db.close.assert_called_once()
 
     def test_valid_token_user_not_found(self, settings):
+        """Verifies get_current_web_user returns None when the user_id from the token is absent in DB."""
         from file_organizer.web.profile_routes import get_current_web_user
 
         request = MagicMock()
@@ -382,6 +407,7 @@ class TestGetCurrentWebUser:
         mock_db.close.assert_called_once()
 
     def test_token_not_access_token(self, settings):
+        """Verifies get_current_web_user returns None when the token is not an access token."""
         from file_organizer.web.profile_routes import get_current_web_user
 
         request = MagicMock()
@@ -396,6 +422,7 @@ class TestGetCurrentWebUser:
         assert result is None
 
     def test_missing_user_id_in_payload(self, settings):
+        """Verifies get_current_web_user returns None when the decoded token payload has no user_id."""
         from file_organizer.web.profile_routes import get_current_web_user
 
         request = MagicMock()
@@ -420,6 +447,7 @@ class TestRequireWebUser:
     """Test the _require_web_user helper."""
 
     def test_returns_user_when_authenticated(self, settings, fake_user):
+        """Verifies _require_web_user returns the user object when the request is authenticated."""
         from file_organizer.web.profile_routes import _require_web_user
 
         request = MagicMock()
@@ -431,6 +459,7 @@ class TestRequireWebUser:
         assert result == fake_user
 
     def test_returns_html_response_when_not_authenticated(self, settings):
+        """Verifies _require_web_user returns an HTMLResponse redirect when the user is not authenticated."""
         from fastapi.responses import HTMLResponse
 
         from file_organizer.web.profile_routes import _require_web_user
@@ -454,6 +483,7 @@ class TestWorkspaceContext:
     """Test the _workspace_context helper."""
 
     def test_returns_tuple_with_workspaces(self):
+        """Verifies _workspace_context returns a (workspaces, active_id) tuple."""
         from file_organizer.web.profile_routes import _workspace_context
 
         mock_db = MagicMock()
@@ -475,6 +505,7 @@ class TestWorkspaceContext:
         assert isinstance(active_id, str)
 
     def test_selects_first_workspace_when_no_active(self):
+        """Verifies the first workspace is selected as active when no active_workspace_id is set."""
         from file_organizer.web.profile_routes import _workspace_context
 
         mock_ws = MagicMock()
@@ -509,6 +540,7 @@ class TestMakeProfileContext:
     """Test the _make_profile_context helper."""
 
     def test_with_user(self, settings, fake_user):
+        """Verifies _make_profile_context includes the user object in the returned context dict."""
         from file_organizer.web.profile_routes import _make_profile_context
 
         request = MagicMock()
@@ -522,6 +554,7 @@ class TestMakeProfileContext:
         assert ctx["user"] == fake_user
 
     def test_with_no_user(self, settings):
+        """Verifies _make_profile_context returns a valid context dict when no user is provided."""
         from file_organizer.web.profile_routes import _make_profile_context
 
         request = MagicMock()
@@ -535,6 +568,7 @@ class TestMakeProfileContext:
         assert ctx.get("user") is None
 
     def test_extras_merged(self, settings, fake_user):
+        """Verifies extra keyword arguments are merged into the returned context dict."""
         from file_organizer.web.profile_routes import _make_profile_context
 
         request = MagicMock()
@@ -562,11 +596,13 @@ class TestUserApiKeyModel:
     """Test the UserApiKey SQLAlchemy model declaration."""
 
     def test_table_name(self):
+        """Verifies the UserApiKey model is mapped to the 'user_api_keys' table."""
         from file_organizer.web.profile_routes import UserApiKey
 
         assert UserApiKey.__tablename__ == "user_api_keys"
 
     def test_has_expected_columns(self):
+        """Verifies the UserApiKey table declares id, user_id, key_hash, and label columns."""
         from file_organizer.web.profile_routes import UserApiKey
 
         col_names = [c.name for c in UserApiKey.__table__.columns]
@@ -586,11 +622,13 @@ class TestModuleConstants:
     """Verify module-level constants are sensible."""
 
     def test_session_cookie_name(self):
+        """Verifies the session cookie name constant is 'fo_session'."""
         from file_organizer.web.profile_routes import _SESSION_COOKIE
 
         assert _SESSION_COOKIE == "fo_session"
 
     def test_default_roles(self):
+        """Verifies the default roles include admin, viewer, and editor."""
         from file_organizer.web.profile_routes import _DEFAULT_ROLES
 
         assert "admin" in _DEFAULT_ROLES
@@ -598,6 +636,7 @@ class TestModuleConstants:
         assert "editor" in _DEFAULT_ROLES
 
     def test_reset_token_ttl(self):
+        """Verifies the reset token TTL constant is a positive number of minutes."""
         from file_organizer.web.profile_routes import _RESET_TOKEN_TTL_MINUTES
 
         assert _RESET_TOKEN_TTL_MINUTES > 0

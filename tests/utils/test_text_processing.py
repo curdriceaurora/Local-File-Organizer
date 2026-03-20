@@ -339,7 +339,7 @@ class TestTextProcessingExpanded:
         """Very long input gets truncated to max_length."""
         long_name = " ".join(["word"] * 50)
         result = sanitize_filename(long_name, max_length=20)
-        assert len(result) <= 20
+        assert 1 <= len(result) <= 20  # at most 20 (max_length cap); rstrip may reduce below 20
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
     def test_sanitize_filename_leading_trailing_underscores(self):

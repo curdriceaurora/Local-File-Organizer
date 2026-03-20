@@ -6,7 +6,6 @@ import os
 import signal
 import sys
 import threading
-import time
 from pathlib import Path
 
 import pytest
@@ -107,10 +106,20 @@ class TestRunLoopExitsOnPipeSignal:
         daemon = DaemonService(_make_config())
         assert daemon._sig_wakeup_r is None, "No pipe should be created initially"
 
-        # Set stop event after a short delay
+        # Signal ready from *inside* the stop-event wait so there is no race
+        # between setting ready and actually entering the blocking wait.
+        ready = threading.Event()
+        original_wait = daemon._stop_event.wait
+
+        def _wait_and_signal(timeout: float | None = None) -> bool:
+            ready.set()
+            return original_wait(timeout)
+
+        daemon._stop_event.wait = _wait_and_signal  # type: ignore[method-assign]
+
         def stop_later() -> None:
-            """Set stop event after a delay."""
-            time.sleep(0.05)
+            """Set stop event after the run loop is waiting."""
+            ready.wait(timeout=5.0)
             daemon._stop_event.set()
 
         t = threading.Thread(target=stop_later)

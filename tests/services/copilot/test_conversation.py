@@ -295,7 +295,9 @@ class TestMessageEviction:
             cm.add_message(CopilotMessage(role=role, content=content))
 
         # Summary should be capped at ~200 characters
-        assert len(cm.summary_text) <= 250
+        assert (
+            1 <= len(cm.summary_text) <= 250
+        )  # at most 250 (summary cap); at least 1 (user messages exist)
 
     def test_only_user_messages_summarized(self):
         """Test that only user messages are added to summary."""
@@ -436,8 +438,9 @@ class TestEdgeCases:
 
         summary = cm.summary_text
 
-        assert len(summary) > 0
-        assert len(summary) <= 250  # Should be capped
+        assert (
+            1 <= len(summary) <= 250
+        )  # at most 250 (summary cap); non-empty since user messages exist
 
     def test_message_order_preserved(self):
         """Test that message order is always preserved."""

@@ -89,7 +89,7 @@ class TestSanitize:
 
     def test_truncates_long(self):
         result = sanitize_path_component("a" * 300)
-        assert len(result) <= 255
+        assert len(result) == 255  # sanitize_path_component truncates to exactly 255 chars
 
 
 # ---------------------------------------------------------------------------

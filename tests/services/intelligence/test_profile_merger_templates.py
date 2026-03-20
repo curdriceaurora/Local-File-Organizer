@@ -97,11 +97,16 @@ def test_merge_with_confident_strategy(merger, sample_profiles):
 
 def test_merge_with_recent_strategy(merger, profile_manager, sample_profiles):
     """Test merging with recent strategy."""
-    # Update profile2 to be more recent
-    import time
+    from datetime import UTC, datetime, timedelta
+    from unittest.mock import patch
 
-    time.sleep(0.1)
-    profile_manager.update_profile("profile2", description="Updated")
+    import file_organizer.services.intelligence.profile_manager as _pm_mod
+
+    # Make profile2's update appear 1 hour in the future so it's definitely newer
+    future_time = datetime.now(UTC) + timedelta(hours=1)
+    with patch.object(_pm_mod, "datetime") as mock_dt:
+        mock_dt.now.return_value = future_time
+        profile_manager.update_profile("profile2", description="Updated")
 
     merged = merger.merge_profiles(sample_profiles, "recent", "merged_recent")
 

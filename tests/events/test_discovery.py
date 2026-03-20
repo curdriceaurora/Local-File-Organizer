@@ -207,10 +207,6 @@ class TestHeartbeat:
         """heartbeat() updates last_heartbeat."""
         info = discovery.register("hb-svc", "local://hb:5000")
         original_hb = info.last_heartbeat
-        # Force a small time difference
-        import time
-
-        time.sleep(0.01)
         assert discovery.heartbeat("hb-svc") is True
         updated = discovery.discover("hb-svc")
         assert updated is not None

@@ -40,40 +40,50 @@ class TestParseDelayMinutes:
     """Test the _parse_delay_minutes helper."""
 
     def test_none_returns_default(self):
+        """Verifies None input returns the default delay of 0."""
         assert _parse_delay_minutes(None) == 0
 
     def test_empty_string_returns_default(self):
+        """Verifies an empty string returns the default delay of 0."""
         assert _parse_delay_minutes("") == 0
 
     def test_whitespace_returns_default(self):
+        """Verifies a whitespace-only string returns the default delay of 0."""
         assert _parse_delay_minutes("   ") == 0
 
     def test_valid_integer(self):
+        """Verifies a valid integer string is parsed correctly."""
         assert _parse_delay_minutes("10") == 10
 
     def test_zero(self):
+        """Verifies the string '0' parses to zero delay."""
         assert _parse_delay_minutes("0") == 0
 
     def test_max_boundary(self):
+        """Verifies the maximum allowed delay value is accepted."""
         result = _parse_delay_minutes(str(ORGANIZE_MAX_DELAY_MIN))
         assert result == ORGANIZE_MAX_DELAY_MIN
 
     def test_non_numeric_raises(self):
+        """Verifies a non-numeric string raises ApiError 400 with the expected error code."""
         with pytest.raises(ApiError) as exc_info:
             _parse_delay_minutes("abc")
         assert exc_info.value.status_code == 400
         assert "invalid_schedule_delay" in exc_info.value.error
 
     def test_negative_raises(self):
+        """Verifies a negative delay string raises ApiError 400."""
         with pytest.raises(ApiError) as exc_info:
             _parse_delay_minutes("-1")
         assert exc_info.value.status_code == 400
 
     def test_over_max_raises(self):
+        """Verifies a delay exceeding the maximum raises ApiError."""
         with pytest.raises(ApiError):
             _parse_delay_minutes(str(ORGANIZE_MAX_DELAY_MIN + 1))
 
     def test_float_string_raises(self):
+        """Verifies a float string raises ApiError."""
         with pytest.raises(ApiError):
             _parse_delay_minutes("1.5")
 
@@ -88,23 +98,29 @@ class TestNormalizeMethodology:
     """Test the _normalize_methodology helper."""
 
     def test_known_methodology(self):
+        """Verifies known methodology names are returned unchanged."""
         assert _normalize_methodology("para") == "para"
         assert _normalize_methodology("johnny_decimal") == "johnny_decimal"
         assert _normalize_methodology("date_based") == "date_based"
 
     def test_none_returns_default(self):
+        """Verifies None input falls back to the default 'content_based' methodology."""
         assert _normalize_methodology(None) == "content_based"
 
     def test_empty_string_returns_default(self):
+        """Verifies an empty string falls back to the default methodology."""
         assert _normalize_methodology("") == "content_based"
 
     def test_unknown_returns_default(self):
+        """Verifies an unrecognised methodology name falls back to the default."""
         assert _normalize_methodology("unknown_method") == "content_based"
 
     def test_case_insensitive(self):
+        """Verifies methodology names are matched case-insensitively."""
         assert _normalize_methodology("PARA") == "para"
 
     def test_whitespace_trimmed(self):
+        """Verifies leading/trailing whitespace is stripped before matching."""
         assert _normalize_methodology("  para  ") == "para"
 
 
@@ -118,6 +134,7 @@ class TestScanDirectory:
     """Test the _scan_directory helper."""
 
     def test_scan_flat(self, tmp_path):
+        """Verifies non-recursive scan returns only top-level files, not subdirectory files."""
         (tmp_path / "a.txt").write_text("x")
         (tmp_path / "b.txt").write_text("y")
         (tmp_path / "sub").mkdir()
@@ -131,6 +148,7 @@ class TestScanDirectory:
         assert "c.txt" not in names
 
     def test_scan_recursive(self, tmp_path):
+        """Verifies recursive scan includes files in subdirectories."""
         (tmp_path / "a.txt").write_text("x")
         (tmp_path / "sub").mkdir()
         (tmp_path / "sub" / "c.txt").write_text("z")
@@ -141,6 +159,7 @@ class TestScanDirectory:
         assert "c.txt" in names
 
     def test_exclude_hidden(self, tmp_path):
+        """Verifies visible files are returned when hidden files are excluded."""
         (tmp_path / "visible.txt").write_text("x")
         (tmp_path / ".hidden.txt").write_text("y")
 
@@ -151,6 +170,7 @@ class TestScanDirectory:
         # The function calls is_hidden() so we check at least visible is there
 
     def test_include_hidden(self, tmp_path):
+        """Verifies hidden files are returned when include_hidden is True."""
         (tmp_path / ".hidden.txt").write_text("y")
 
         files = _scan_directory(tmp_path, recursive=False, include_hidden=True)
@@ -158,6 +178,7 @@ class TestScanDirectory:
         assert ".hidden.txt" in names
 
     def test_single_file(self, tmp_path):
+        """Verifies a single visible file path is returned as a one-element list."""
         f = tmp_path / "solo.txt"
         f.write_text("data")
 
@@ -166,6 +187,7 @@ class TestScanDirectory:
         assert files[0].name == "solo.txt"
 
     def test_single_hidden_file_excluded(self, tmp_path):
+        """Verifies a single hidden file path is excluded when include_hidden is False."""
         f = tmp_path / ".hidden_solo"
         f.write_text("data")
 
@@ -174,6 +196,7 @@ class TestScanDirectory:
         assert len(files) == 0
 
     def test_nonexistent_path(self, tmp_path):
+        """Verifies a nonexistent path returns an empty list without raising."""
         missing = tmp_path / "nope"
         files = _scan_directory(missing, recursive=False, include_hidden=False)
         assert files == []
@@ -189,30 +212,37 @@ class TestCountsByType:
     """Test the _counts_by_type helper."""
 
     def test_empty_list(self):
+        """Verifies an empty file list returns zeroed counts for all type buckets."""
         result = _counts_by_type([])
         assert result == {"text": 0, "image": 0, "video": 0, "audio": 0, "cad": 0, "other": 0}
 
     def test_text_file(self):
+        """Verifies .txt and .md files are counted in the 'text' bucket."""
         result = _counts_by_type([Path("doc.txt"), Path("notes.md")])
         assert result["text"] == 2
 
     def test_image_file(self):
+        """Verifies .jpg and .png files are counted in the 'image' bucket."""
         result = _counts_by_type([Path("photo.jpg"), Path("diagram.png")])
         assert result["image"] == 2
 
     def test_video_file(self):
+        """Verifies .mp4 files are counted in the 'video' bucket."""
         result = _counts_by_type([Path("clip.mp4")])
         assert result["video"] == 1
 
     def test_audio_file(self):
+        """Verifies .mp3 files are counted in the 'audio' bucket."""
         result = _counts_by_type([Path("song.mp3")])
         assert result["audio"] == 1
 
     def test_unknown_extension(self):
+        """Verifies files with unrecognised extensions are counted in the 'other' bucket."""
         result = _counts_by_type([Path("mystery.xyz")])
         assert result["other"] == 1
 
     def test_mixed(self):
+        """Verifies a mixed set of file types is counted correctly across all buckets."""
         files = [
             Path("a.txt"),
             Path("b.jpg"),
@@ -238,21 +268,27 @@ class TestStatusProgress:
     """Test the _status_progress helper."""
 
     def test_queued(self):
+        """Verifies 'queued' status maps to 5% progress."""
         assert _status_progress("queued") == 5
 
     def test_running(self):
+        """Verifies 'running' status maps to 65% progress."""
         assert _status_progress("running") == 65
 
     def test_completed(self):
+        """Verifies 'completed' status maps to 100% progress."""
         assert _status_progress("completed") == 100
 
     def test_failed(self):
+        """Verifies 'failed' status maps to 100% progress."""
         assert _status_progress("failed") == 100
 
     def test_unknown(self):
+        """Verifies an unrecognised status maps to 0% progress."""
         assert _status_progress("something_else") == 0
 
     def test_empty(self):
+        """Verifies an empty string status maps to 0% progress."""
         assert _status_progress("") == 0
 
 
@@ -266,6 +302,7 @@ class TestJobReportPayload:
     """Test the _job_report_payload helper."""
 
     def test_extracts_all_keys(self):
+        """Verifies the payload contains expected job keys and excludes unknown keys."""
         from file_organizer.web.organize_routes import _job_report_payload
 
         job = {
@@ -302,6 +339,7 @@ class TestPlanStore:
     """Test _store_organize_plan, _get_organize_plan, _delete_organize_plan."""
 
     def test_store_and_get(self):
+        """Verifies a plan can be stored, retrieved by ID, and then deleted."""
         from file_organizer.web.organize_routes import (
             _ORGANIZE_PLAN_STORE,
             _delete_organize_plan,
@@ -321,17 +359,20 @@ class TestPlanStore:
         assert _get_organize_plan(plan_id) is None
 
     def test_get_missing_plan(self):
+        """Verifies retrieving a non-existent plan ID returns None."""
         from file_organizer.web.organize_routes import _get_organize_plan
 
         assert _get_organize_plan("nonexistent-id") is None
 
     def test_delete_missing_plan(self):
+        """Verifies deleting a non-existent plan ID does not raise."""
         from file_organizer.web.organize_routes import _delete_organize_plan
 
         # Should not raise
         _delete_organize_plan("nonexistent-id")
 
     def test_prune_oldest(self):
+        """Verifies that storing beyond the plan limit prunes the store to within bounds."""
         from file_organizer.web.organize_routes import (
             _ORGANIZE_PLAN_STORE,
             ORGANIZE_PLAN_LIMIT,
@@ -359,6 +400,7 @@ class TestJobMetadata:
     """Test _set_job_metadata, _get_job_metadata."""
 
     def test_set_and_get(self):
+        """Verifies job metadata can be stored and retrieved by job ID."""
         from file_organizer.web.organize_routes import (
             _JOB_METADATA,
             _get_job_metadata,
@@ -375,12 +417,14 @@ class TestJobMetadata:
         _JOB_METADATA.pop("test-job-1", None)
 
     def test_get_missing(self):
+        """Verifies retrieving metadata for a non-existent job returns an empty dict."""
         from file_organizer.web.organize_routes import _get_job_metadata
 
         result = _get_job_metadata("nonexistent-job")
         assert result == {}
 
     def test_returns_copy(self):
+        """Verifies _get_job_metadata returns a copy so mutations do not affect the store."""
         from file_organizer.web.organize_routes import (
             _JOB_METADATA,
             _get_job_metadata,
@@ -408,6 +452,7 @@ class TestPruneJobMetadata:
     """Test _prune_job_metadata."""
 
     def test_prune_removes_stale(self):
+        """Verifies that jobs not found via get_job are removed from the metadata store."""
         from file_organizer.web.organize_routes import (
             _JOB_METADATA,
             _prune_job_metadata,
@@ -421,6 +466,7 @@ class TestPruneJobMetadata:
         assert "stale-job-x" not in _JOB_METADATA
 
     def test_prune_keeps_valid(self):
+        """Verifies that jobs still found via get_job are retained in the metadata store."""
         from file_organizer.web.organize_routes import (
             _JOB_METADATA,
             _prune_job_metadata,
@@ -447,6 +493,7 @@ class TestBuildJobView:
     """Test _build_job_view."""
 
     def test_returns_none_for_missing_job(self):
+        """Verifies _build_job_view returns None when the job does not exist."""
         from file_organizer.web.organize_routes import _build_job_view
 
         with patch("file_organizer.web.organize_routes.get_job", return_value=None):
@@ -454,6 +501,7 @@ class TestBuildJobView:
         assert result is None
 
     def test_builds_view_completed(self):
+        """Verifies a completed job view includes correct progress, methodology, and terminal flags."""
         from file_organizer.web.organize_routes import _build_job_view
 
         mock_job = MagicMock()
@@ -492,6 +540,7 @@ class TestBuildJobView:
         assert view["is_terminal"] is True
 
     def test_builds_view_running(self):
+        """Verifies a running job view reports partial progress and is not marked terminal."""
         from file_organizer.web.organize_routes import _build_job_view
 
         mock_job = MagicMock()
@@ -519,6 +568,7 @@ class TestBuildJobView:
         assert view["is_terminal"] is False
 
     def test_builds_view_scheduled(self):
+        """Verifies a queued/scheduled job view exposes can_cancel as True."""
         from file_organizer.web.organize_routes import _build_job_view
 
         mock_job = MagicMock()
@@ -555,6 +605,7 @@ class TestListOrganizeJobs:
     """Test _list_organize_jobs."""
 
     def test_empty_list(self):
+        """Verifies an empty job list is returned when no jobs exist."""
         from file_organizer.web.organize_routes import _list_organize_jobs
 
         with patch("file_organizer.web.organize_routes.list_jobs", return_value=[]):
@@ -562,6 +613,7 @@ class TestListOrganizeJobs:
         assert result == []
 
     def test_status_filter(self):
+        """Verifies only jobs matching the requested status filter are returned."""
         from file_organizer.web.organize_routes import _list_organize_jobs
 
         job1 = MagicMock()
@@ -579,9 +631,10 @@ class TestListOrganizeJobs:
             result = _list_organize_jobs(status_filter="completed")
 
         # Only job1 should match the filter
-        assert len(result) <= 2
+        assert len(result) == 1  # only job1 passes status_filter='completed'; job2 is 'failed'
 
     def test_all_filter(self):
+        """Verifies all jobs are returned when status_filter is 'all'."""
         from file_organizer.web.organize_routes import _list_organize_jobs
 
         job1 = MagicMock()
@@ -610,6 +663,7 @@ class TestBuildOrganizeStats:
     """Test _build_organize_stats."""
 
     def test_empty_stats(self):
+        """Verifies stats with no jobs returns zeroed totals and 0.0 success rate."""
         from file_organizer.web.organize_routes import _build_organize_stats
 
         with patch("file_organizer.web.organize_routes._list_organize_jobs", return_value=[]):
@@ -620,6 +674,7 @@ class TestBuildOrganizeStats:
         assert stats["total_files"] == 0
 
     def test_with_jobs(self):
+        """Verifies stats correctly aggregate counts, file totals, success rate, and methodology breakdown."""
         from file_organizer.web.organize_routes import _build_organize_stats
 
         jobs = [
@@ -649,6 +704,7 @@ class TestCancelScheduledJob:
     """Test _cancel_scheduled_job."""
 
     def test_cancel_existing_timer(self):
+        """Verifies cancelling an existing scheduled job cancels the timer and removes it from the store."""
         from file_organizer.web.organize_routes import _SCHEDULED_TIMERS
 
         mock_timer = MagicMock(spec=Timer)
@@ -662,6 +718,7 @@ class TestCancelScheduledJob:
         assert "cancel-test" not in _SCHEDULED_TIMERS
 
     def test_cancel_nonexistent_timer(self):
+        """Verifies cancelling a job with no scheduled timer returns False."""
         result = _cancel_scheduled_job("nonexistent-timer")
         assert result is False
 
@@ -676,11 +733,13 @@ class TestModuleConstants:
     """Verify module-level constants are sensible."""
 
     def test_methodologies_dict(self):
+        """Verifies the methodologies dict contains all expected methodology keys."""
         assert "johnny_decimal" in ORGANIZE_METHODOLOGIES
         assert "para" in ORGANIZE_METHODOLOGIES
         assert "content_based" in ORGANIZE_METHODOLOGIES
 
     def test_max_delay(self):
+        """Verifies ORGANIZE_MAX_DELAY_MIN is positive and equals 7 days in minutes."""
         from file_organizer.web.organize_routes import ORGANIZE_MAX_DELAY_MIN
 
         assert ORGANIZE_MAX_DELAY_MIN > 0

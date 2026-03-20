@@ -150,7 +150,7 @@ class TestTopicExtraction:
             "software programming education university health medical business market sports game"
         )
         topics = analyzer.extract_topics(text)
-        assert len(topics) <= 2
+        assert len(topics) == 2  # max_topics=2 guarantees exactly 2 from multi-topic input
 
 
 # ---------------------------------------------------------------------------
@@ -186,7 +186,7 @@ class TestKeywordExtraction:
         analyzer = AudioContentAnalyzer(max_keywords=3)
         text = "alpha alpha beta beta gamma gamma delta delta epsilon epsilon"
         keywords = analyzer.extract_keywords(text)
-        assert len(keywords) <= 3
+        assert len(keywords) == 3  # max_keywords=3 guarantees exactly 3 from 5-unique-word input
 
     def test_min_keyword_freq(self) -> None:
         analyzer = AudioContentAnalyzer(min_keyword_freq=3)

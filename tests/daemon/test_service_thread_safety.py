@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import threading
-import time
 from pathlib import Path
 
 import pytest
@@ -55,7 +54,7 @@ class TestStartBackgroundLockCoverage:
             try:
                 daemon = DaemonService(config)
                 daemon.start_background()
-                time.sleep(0.02)
+                daemon._started_event.wait(timeout=5.0)
                 daemon.stop()
             except Exception as exc:
                 errors.append(exc)
