@@ -335,7 +335,7 @@ class TestAnalyzeOrganizationPatterns:
         assert analysis["total_choices"] == 9  # 5 + 3 + 1
         assert analysis["file_types_tracked"] == 2  # .pdf and .jpg
         assert analysis["folders_used"] == 2
-        assert len(analysis["top_folders"]) <= 10
+        assert len(analysis["top_folders"]) == 2  # 2 folders used; cap is 10 but only 2 qualify
 
     def test_strong_type_preferences(self, populated_learner):
         """Test detection of strong type preferences."""

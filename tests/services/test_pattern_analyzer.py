@@ -263,7 +263,9 @@ class TestFileCollection:
             files = analyzer._collect_files(tmppath)
 
             # Should find files only up to depth 2
-            assert len(files) <= 3
+            assert (
+                1 <= len(files) <= 3
+            )  # at most 3 (depth-2 cap); at least 1 (files exist within depth)
 
 
 @pytest.mark.unit

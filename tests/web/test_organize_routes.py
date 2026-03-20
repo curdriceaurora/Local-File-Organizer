@@ -579,7 +579,7 @@ class TestListOrganizeJobs:
             result = _list_organize_jobs(status_filter="completed")
 
         # Only job1 should match the filter
-        assert len(result) <= 2
+        assert len(result) == 1  # only job1 passes status_filter='completed'; job2 is 'failed'
 
     def test_all_filter(self):
         from file_organizer.web.organize_routes import _list_organize_jobs

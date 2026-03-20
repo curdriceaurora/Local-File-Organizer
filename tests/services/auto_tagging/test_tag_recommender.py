@@ -233,7 +233,9 @@ class TestTagRecommender:
         """Test that top_n limit is respected."""
         recommendation = recommender.recommend_tags(sample_file, top_n=3)
 
-        assert len(recommendation.suggestions) <= 3
+        assert (
+            1 <= len(recommendation.suggestions) <= 3
+        )  # at most 3 (top_n cap); at least 1 (rich content)
 
     def test_recommend_tags_min_confidence(self, sample_file):
         """Test minimum confidence filtering."""

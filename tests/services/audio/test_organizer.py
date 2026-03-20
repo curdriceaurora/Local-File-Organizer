@@ -110,7 +110,7 @@ class TestSanitizePathComponent:
     def test_truncates_long_names(self) -> None:
         long_name = "a" * 300
         result = sanitize_path_component(long_name)
-        assert len(result) <= 255
+        assert len(result) == 255  # sanitize_path_component truncates to exactly 255 chars
 
     def test_empty_returns_unknown(self) -> None:
         assert sanitize_path_component("") == "Unknown"

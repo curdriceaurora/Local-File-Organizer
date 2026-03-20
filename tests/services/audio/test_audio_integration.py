@@ -378,7 +378,7 @@ class TestCustomRulesIntegration:
 
         path = organizer.generate_path(classification.audio_type, metadata)
         # Should be a simple flat path
-        assert len(path.parts) <= 2  # "Artist - Song.mp3"
+        assert len(path.parts) == 1  # flat template "{Artist} - {Title}" yields single component
 
     def test_date_based_recording_template(self, tmp_dir: Path) -> None:
         """Custom recording template with date should work."""
@@ -438,4 +438,4 @@ class TestEdgeCases:
         path = organizer.generate_path(AudioType.MUSIC, metadata)
         # Each component should be <= 255 chars
         for part in path.parts:
-            assert len(part) <= 260  # 255 + extension
+            assert 1 <= len(part) <= 260  # at most 260 (255 + extension overhead); at least 1

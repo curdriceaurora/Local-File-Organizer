@@ -239,7 +239,7 @@ class TestContentTagAnalyzer:
         analyzer.max_keywords = 5
         tags = analyzer.analyze_file(sample_text_file)
 
-        assert len(tags) <= 5
+        assert 1 <= len(tags) <= 5  # at most 5 (max_keywords cap); at least 1 (rich ML content)
 
     def test_min_keyword_length(self):
         """Test minimum keyword length filtering."""
