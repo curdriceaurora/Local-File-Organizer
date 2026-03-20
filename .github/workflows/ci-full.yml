@@ -58,4 +58,8 @@ jobs:
       - name: Run tests
         # Full repo tests include Linux- and POSIX-assumption suites.
         # CI Full's cross-platform contract is to validate the portable CI/smoke subset on macOS/Windows.
-        run: pytest tests/ --timeout=30 -n=auto --override-ini="addopts=" -m "ci or smoke"
+        # -n=auto is intentionally omitted on Windows: pytest-xdist worker shutdown on Windows
+        # propagates CTRL_C_EVENT as KeyboardInterrupt in threading.Event.wait(), causing exit
+        # code 1 even when all tests pass. The ci/smoke subset is small enough (~61 tests) that
+        # parallelism provides no benefit.
+        run: pytest tests/ --timeout=30 --override-ini="addopts=" -m "ci or smoke"
