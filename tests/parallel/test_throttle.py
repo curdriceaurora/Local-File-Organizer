@@ -77,7 +77,7 @@ class TestRateThrottler(unittest.TestCase):
         for _ in range(10):
             throttler.acquire()
         # Wait for refill (enough time for at least 1 token)
-        time.sleep(0.15)
+        threading.Event().wait(timeout=0.15)
         self.assertTrue(throttler.acquire())
 
     def test_wait_blocks_until_available(self) -> None:

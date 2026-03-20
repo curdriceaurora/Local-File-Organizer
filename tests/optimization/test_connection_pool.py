@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import sqlite3
 import threading
-import time
 from pathlib import Path
 
 import pytest
@@ -202,15 +201,17 @@ class TestThreadSafety:
     def test_pool_exhaustion_waits(self, db_path: Path) -> None:
         """When all connections are checked out, next acquire waits."""
         small_pool = ConnectionPool(db_path, pool_size=1, timeout=2.0)
+        acquired = threading.Event()
         released = threading.Event()
 
         def holder() -> None:
             with small_pool.acquire():
+                acquired.set()  # Signal that connection has been acquired
                 released.wait(timeout=5)
 
         t = threading.Thread(target=holder)
         t.start()
-        time.sleep(0.2)  # Give holder time to acquire.
+        acquired.wait(timeout=5)  # Wait until holder has actually acquired the connection
 
         # Pool should now be exhausted.
         stats = small_pool.stats()
