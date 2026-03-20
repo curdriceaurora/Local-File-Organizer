@@ -8,7 +8,6 @@ peek, reorder, and concurrent access patterns.
 from __future__ import annotations
 
 import threading
-import time
 import unittest
 from pathlib import Path
 
@@ -235,8 +234,6 @@ class TestPriorityQueue(unittest.TestCase):
                     item = self.queue.dequeue()
                     if item is not None:
                         results.append(item)
-                    else:
-                        time.sleep(0.001)
             except Exception as exc:
                 errors.append(str(exc))
 

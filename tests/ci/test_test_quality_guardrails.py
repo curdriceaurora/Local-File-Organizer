@@ -11,20 +11,15 @@ Covers two regression classes identified in PR #846 review:
    the upper-bound assertion is vacuous: it passes even when the index
    returns zero matches.  Use ``assert len(results) == N`` instead.
 
-Both guardrails apply only to *changed* test files (diff against merge base),
-following the same strategy as ``test_weak_test_assertions.py``.  This keeps
-CI green against a pre-existing baseline while preventing regressions in new
-and modified tests.
+Both guardrails apply to ALL test files under ``tests/``.  Streams 1-4 of
+issue #900 eliminated every pre-existing violation, so the scope can now be
+expanded from diff-based (changed files only) to the full test suite.
 """
 
 from __future__ import annotations
 
 import ast
-import json
-import os
-import subprocess
 from pathlib import Path
-from urllib import error, parse, request
 
 import pytest
 
@@ -33,233 +28,24 @@ TESTS_ROOT = FO_ROOT / "tests"
 
 pytestmark = pytest.mark.ci
 
-_LAST_DIFF_BASE_ERROR: str | None = None
+_SELF = Path(__file__).resolve()
 
 
 # -------------------------------------------------------------------------
-# CI-aware diff-base resolver (mirrors test_weak_test_assertions.py)
+# Full test-suite file enumerator
 # -------------------------------------------------------------------------
-
-
-def _git_stdout(*args: str, check: bool = True) -> str:
-    result = subprocess.run(
-        ["git", *args],
-        cwd=FO_ROOT,
-        check=check,
-        capture_output=True,
-        text=True,
-    )
-    return result.stdout.strip()
-
-
-def _is_guarded_test_path(rel_path: str) -> bool:
-    return (
-        rel_path.startswith("tests/")
-        and rel_path.endswith(".py")
-        and not rel_path.startswith("tests/fixtures/")
-    )
-
-
-def _candidate_base_refs() -> list[str]:
-    base_branch = os.environ.get("GITHUB_BASE_REF")
-    candidates: list[str] = []
-    if base_branch:
-        candidates.extend(
-            [f"origin/{base_branch}", f"refs/remotes/origin/{base_branch}", base_branch]
-        )
-    candidates.extend(["origin/main", "refs/remotes/origin/main", "main"])
-    return list(dict.fromkeys(candidates))
-
-
-def _git_ref_exists(ref: str) -> bool:
-    result = subprocess.run(
-        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
-        cwd=FO_ROOT,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    return result.returncode == 0
-
-
-def _fetch_base_ref(base_branch: str) -> str | None:
-    try:
-        subprocess.run(
-            ["git", "fetch", "--depth=1000", "origin", base_branch],
-            cwd=FO_ROOT,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-    except subprocess.TimeoutExpired:
-        return f"git fetch origin {base_branch!r} timed out after 5 seconds"
-    return None
-
-
-def _merge_base_from_candidates() -> str:
-    for candidate in _candidate_base_refs():
-        if not _git_ref_exists(candidate):
-            continue
-        base = _git_stdout("merge-base", "HEAD", candidate, check=False)
-        if base:
-            return base
-    return ""
-
-
-def _github_pr_base_parent() -> str:
-    event_path = os.environ.get("GITHUB_EVENT_PATH")
-    if not event_path:
-        return ""
-    try:
-        event = json.loads(Path(event_path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return ""
-    pull_request = event.get("pull_request")
-    if not isinstance(pull_request, dict):
-        return ""
-    head_sha = pull_request.get("head", {}).get("sha")
-    if not isinstance(head_sha, str) or not head_sha:
-        return ""
-    parents = _git_stdout("rev-list", "--parents", "-n", "1", "HEAD", check=False).split()
-    if len(parents) < 3:
-        return ""
-    _, first_parent, second_parent, *_ = parents
-    if first_parent == head_sha:
-        return second_parent
-    if second_parent == head_sha:
-        return first_parent
-    return ""
-
-
-def _github_pr_changed_test_files() -> list[Path] | None:
-    event_path = os.environ.get("GITHUB_EVENT_PATH")
-    if not event_path:
-        return None
-    try:
-        event = json.loads(Path(event_path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    pull_request = event.get("pull_request")
-    if not isinstance(pull_request, dict):
-        return None
-    pr_url = pull_request.get("url")
-    if not isinstance(pr_url, str) or not pr_url:
-        return None
-    expected_api_base = os.environ.get("GITHUB_API_URL", "https://api.github.com")
-    parsed = parse.urlparse(pr_url)
-    expected_parsed = parse.urlparse(expected_api_base)
-    if parsed.scheme != "https" or parsed.netloc != expected_parsed.netloc:
-        return None
-    rel_paths: set[str] = set()
-    page = 1
-    while True:
-        try:
-            api_request = request.Request(f"{pr_url}/files?per_page=100&page={page}")
-            token = os.environ.get("GITHUB_TOKEN")
-            if token:
-                api_request.add_header("Authorization", f"token {token}")
-            with request.urlopen(api_request, timeout=5) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except (OSError, json.JSONDecodeError, error.URLError):
-            return None
-        if not isinstance(payload, list):
-            return None
-        if not payload:
-            break
-        for file_info in payload:
-            if not isinstance(file_info, dict):
-                continue
-            filename = file_info.get("filename")
-            if isinstance(filename, str) and _is_guarded_test_path(filename):
-                rel_paths.add(filename)
-        if len(payload) < 100:
-            break
-        page += 1
-    return [FO_ROOT / rp for rp in sorted(rel_paths) if (FO_ROOT / rp).is_file()]
-
-
-def _resolve_diff_base() -> str | None:
-    global _LAST_DIFF_BASE_ERROR
-    _LAST_DIFF_BASE_ERROR = None
-    base_branch = os.environ.get("GITHUB_BASE_REF")
-    merge_base = _merge_base_from_candidates()
-    if merge_base:
-        return merge_base
-    if base_branch:
-        base_parent = _github_pr_base_parent()
-        if base_parent and _git_ref_exists(base_parent):
-            return base_parent
-        _LAST_DIFF_BASE_ERROR = _fetch_base_ref(base_branch)
-        merge_base = _merge_base_from_candidates()
-        if merge_base:
-            return merge_base
-        fetch_head = _git_stdout("rev-parse", "--verify", "--quiet", "FETCH_HEAD", check=False)
-        if fetch_head:
-            merge_base = _git_stdout("merge-base", "HEAD", "FETCH_HEAD", check=False)
-            if merge_base:
-                return merge_base
-        return None
-    head_parent = _git_stdout("rev-parse", "--verify", "--quiet", "HEAD^1", check=False)
-    if head_parent:
-        return head_parent
-    return _git_stdout("rev-parse", "HEAD")
 
 
 def _changed_test_files() -> list[Path]:
-    """Return test files changed relative to the merge base.
+    """Return all test files under ``tests/``, excluding fixtures and self.
 
-    Fails closed in CI when no diff base can be resolved and the GitHub PR
-    API cannot provide a fallback — prevents the guardrail from silently
-    passing on shallow checkouts.
+    Scans the entire test suite rather than a diff-based subset.  This is
+    safe because streams 1-4 (issue #900) cleaned every pre-existing
+    violation before this guardrail was broadened.
     """
-    diff_base = _resolve_diff_base()
-    if diff_base is None:
-        changed_files = _github_pr_changed_test_files()
-        if changed_files is not None:
-            return changed_files
-        if _LAST_DIFF_BASE_ERROR:
-            pytest.fail(
-                "Unable to determine changed test files for guardrail checks. "
-                f"Git-based diff-base resolution failed: {_LAST_DIFF_BASE_ERROR}"
-            )
-        pytest.fail(
-            "Unable to determine changed test files for guardrail checks. "
-            "Git-based diff-base resolution failed and GitHub PR API was unavailable."
-        )
-
-    head_sha = _git_stdout("rev-parse", "HEAD")
-    rel_paths: set[str] = set()
-
-    if diff_base != head_sha:
-        diff = _git_stdout(
-            "diff",
-            "--name-only",
-            "--diff-filter=ACMR",
-            f"{diff_base}...HEAD",
-            "--",
-            "tests/**/*.py",
-            "tests/*.py",
-        )
-        rel_paths.update(p for p in diff.splitlines() if p)
-
-    for extra_flags in (["--cached"], []):
-        diff = _git_stdout(
-            "diff",
-            *extra_flags,
-            "--name-only",
-            "--diff-filter=ACMR",
-            "--",
-            "tests/**/*.py",
-            "tests/*.py",
-        )
-        rel_paths.update(p for p in diff.splitlines() if p)
-
-    return [
-        FO_ROOT / rp
-        for rp in sorted(rel_paths)
-        if rp and _is_guarded_test_path(rp) and (FO_ROOT / rp).is_file()
-    ]
+    return sorted(
+        p for p in TESTS_ROOT.rglob("*.py") if p.resolve() != _SELF and "fixtures" not in p.parts
+    )
 
 
 # -------------------------------------------------------------------------

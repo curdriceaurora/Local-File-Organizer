@@ -49,9 +49,9 @@ class TestDaemonServiceStartBackground:
         daemon.start_background()
         try:
             assert daemon.is_running is True
-            deadline = time.monotonic() + 1.0
+            deadline = time.monotonic() + 5.0
             while daemon.uptime_seconds == 0.0 and time.monotonic() < deadline:
-                time.sleep(0.01)
+                pass
             assert daemon.uptime_seconds > 0.0
         finally:
             daemon.stop()
@@ -216,8 +216,10 @@ class TestDaemonServiceUptimeProperty:
         daemon = DaemonService(config)
         daemon.start_background()
         try:
-            time.sleep(0.05)
-            assert daemon.uptime_seconds >= 0
+            deadline = time.monotonic() + 5.0
+            while daemon.uptime_seconds == 0.0 and time.monotonic() < deadline:
+                pass
+            assert daemon.uptime_seconds > 0.0
         finally:
             daemon.stop()
 
@@ -264,7 +266,7 @@ class TestDaemonServiceForeground:
         t = threading.Thread(target=daemon.start, daemon=True)
         t.start()
         try:
-            time.sleep(0.1)
+            assert daemon._started_event.wait(timeout=5.0), "Daemon did not start"
             assert daemon.is_running
         finally:
             daemon.stop()

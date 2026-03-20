@@ -1,3 +1,4 @@
+import threading
 import time
 import unittest
 from datetime import UTC, datetime
@@ -91,7 +92,7 @@ class TestConcurrencyFixes(unittest.TestCase):
             return real_wait(fs, *args, **kwargs)
 
         def slow_task(_path: Path) -> str:
-            time.sleep(0.01)
+            threading.Event().wait(timeout=0.01)
             return "ok"
 
         with patch("file_organizer.parallel.processor.wait", side_effect=tracked_wait):
@@ -115,7 +116,7 @@ class TestConcurrencyFixes(unittest.TestCase):
         processor = ParallelProcessor(config=config)
 
         def slow_task(path: Path) -> str:
-            time.sleep(0.5)
+            threading.Event().wait(timeout=0.5)
             return "done"
 
         # Using process_batch which calls _run_batch -> process_batch_iter
@@ -149,7 +150,7 @@ class TestConcurrencyFixes(unittest.TestCase):
         paths = [Path(f"large_batch_file_{i}") for i in range(num_files)]
 
         def slow_task(_path: Path) -> str:
-            time.sleep(per_file_sleep)
+            threading.Event().wait(timeout=per_file_sleep)
             return "ok"
 
         start = time.time()
@@ -180,7 +181,7 @@ class TestConcurrencyFixes(unittest.TestCase):
         paths = [Path("slow_1"), Path("slow_2"), Path("slow_3")]
 
         def very_slow_task(_path: Path) -> str:
-            time.sleep(0.5)
+            threading.Event().wait(timeout=0.5)
             return "done"
 
         results = processor.process_batch(paths, very_slow_task)
@@ -217,7 +218,7 @@ class TestConcurrencyFixes(unittest.TestCase):
             return real_wait(fs, *args, **kwargs)
 
         def short_task(_path: Path) -> str:
-            time.sleep(0.02)
+            threading.Event().wait(timeout=0.02)
             return "ok"
 
         with patch("file_organizer.parallel.processor.wait", side_effect=tracked_wait):

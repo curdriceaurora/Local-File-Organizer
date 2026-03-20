@@ -46,7 +46,7 @@ class TestAnalyzeFile:
         f = tmp_path / "big.txt"
         f.write_text("alpha bravo charlie delta echo foxtrot golf hotel " * 10)
         tags = analyzer.analyze_file(f)
-        assert len(tags) <= 3
+        assert len(tags) == 3  # max_keywords=3 with 8 unique words x 10 reps -> exactly 3
 
 
 # ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ class TestExtractKeywords:
             "software engineering machine learning artificial intelligence"
         )
         results = analyzer.extract_keywords(f, top_n=5)
-        assert len(results) <= 5
+        assert 1 <= len(results) <= 5  # at most 5 (top_n cap); at least 1 (rich content)
         assert all(isinstance(r, tuple) and len(r) == 2 for r in results)
         # First keyword should have the highest score
         if len(results) > 1:

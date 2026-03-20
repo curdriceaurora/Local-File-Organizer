@@ -243,13 +243,8 @@ class TestHealthEndpoint:
             resp1 = client.get("/api/v1/health")
             uptime1 = resp1.json()["uptime"]
 
-            # Small delay
-            import time
-
-            time.sleep(0.01)
-
             resp2 = client.get("/api/v1/health")
             uptime2 = resp2.json()["uptime"]
 
-            # Uptime should increase
+            # Uptime should be non-decreasing (time.time() advances monotonically)
             assert uptime2 >= uptime1

@@ -84,7 +84,9 @@ class TestDaemonLifecycle:
         assert daemon.is_running is True
 
         daemon.stop()
-        time.sleep(0.1)
+        deadline = time.monotonic() + 5.0
+        while daemon.is_running and time.monotonic() < deadline:
+            pass
 
         assert daemon.is_running is False
 
@@ -105,7 +107,9 @@ class TestDaemonLifecycle:
         assert daemon.is_running is True
 
         daemon.restart()
-        time.sleep(0.1)
+        deadline = time.monotonic() + 5.0
+        while not daemon.is_running and time.monotonic() < deadline:
+            pass
 
         assert daemon.is_running is True
 
@@ -114,7 +118,9 @@ class TestDaemonLifecycle:
         assert daemon.is_running is False
 
         daemon.restart()
-        time.sleep(0.1)
+        deadline = time.monotonic() + 5.0
+        while not daemon.is_running and time.monotonic() < deadline:
+            pass
 
         assert daemon.is_running is True
 
@@ -136,7 +142,9 @@ class TestPidFileManagement:
         assert pid_file.exists()
 
         daemon.stop()
-        time.sleep(0.1)
+        deadline = time.monotonic() + 5.0
+        while pid_file.exists() and time.monotonic() < deadline:
+            pass
 
         assert not pid_file.exists()
 
@@ -201,7 +209,9 @@ class TestUptimeAndStats:
     def test_uptime_increases_while_running(self, daemon: DaemonService) -> None:
         """uptime_seconds increases while the daemon runs."""
         daemon.start_background()
-        time.sleep(0.15)
+        deadline = time.monotonic() + 5.0
+        while daemon.uptime_seconds < 0.1 and time.monotonic() < deadline:
+            pass
 
         assert daemon.uptime_seconds >= 0.1
 
@@ -237,7 +247,13 @@ class TestSchedulerIntegration:
 
         daemon.scheduler.schedule_task("custom", 0.05, bump)
         daemon.start_background()
-        time.sleep(0.4)
+        deadline = time.monotonic() + 5.0
+        while True:
+            with lock:
+                if counter["value"] >= 2:
+                    break
+            if time.monotonic() >= deadline:
+                break
         daemon.stop()
 
         with lock:

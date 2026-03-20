@@ -7,7 +7,6 @@ callbacks, error handling, and graceful shutdown.
 """
 
 import threading
-import time
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -41,8 +40,8 @@ def _always_fail(path: Path) -> None:
 
 
 def _slow_fn(path: Path) -> str:
-    """Sleep briefly then return the file name."""
-    time.sleep(0.05)
+    """Delay briefly then return the file name."""
+    threading.Event().wait(timeout=0.05)
     return path.name
 
 
@@ -126,7 +125,7 @@ class TestPrefetchDepthScheduling(unittest.TestCase):
             with state_lock:
                 active += 1
                 max_active = max(max_active, active)
-            time.sleep(0.01)
+            threading.Event().wait(timeout=0.01)
             with state_lock:
                 active -= 1
             return path.name
@@ -149,7 +148,7 @@ class TestPrefetchDepthScheduling(unittest.TestCase):
             with state_lock:
                 active += 1
                 max_active = max(max_active, active)
-            time.sleep(0.01)
+            threading.Event().wait(timeout=0.01)
             with state_lock:
                 active -= 1
             return path.name

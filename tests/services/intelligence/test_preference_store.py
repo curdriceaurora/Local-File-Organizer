@@ -668,12 +668,10 @@ class TestThreadSafety:
             for _ in range(20):
                 pref = store.get_preference(test_path, fallback_to_parent=False)
                 results.append(pref is not None)
-                time.sleep(0.001)
 
         def writer():
             for i in range(20):
                 store.update_confidence(test_path, success=i % 2 == 0)
-                time.sleep(0.001)
 
         threads = [
             threading.Thread(target=reader),
@@ -696,7 +694,6 @@ class TestThreadSafety:
         def save_repeatedly():
             for _ in range(10):
                 store.save_preferences()
-                time.sleep(0.001)
 
         threads = [threading.Thread(target=save_repeatedly) for _ in range(3)]
 

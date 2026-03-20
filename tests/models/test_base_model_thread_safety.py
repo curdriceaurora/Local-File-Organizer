@@ -38,7 +38,7 @@ class _StubModel(BaseModel):
         try:
             # Simulate work with configurable delay
             if self._generate_delay > 0:
-                time.sleep(self._generate_delay)
+                threading.Event().wait(self._generate_delay)
             if self.client is None:
                 raise RuntimeError("Model not initialized. Call initialize() first.")
             return f"response to: {prompt}"

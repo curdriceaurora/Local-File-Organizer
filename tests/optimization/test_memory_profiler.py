@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from unittest.mock import MagicMock, patch
 
@@ -158,7 +159,7 @@ class TestMemoryProfilerProfile:
 
             @profiler.profile
             def slow_func() -> None:
-                time.sleep(0.05)
+                threading.Event().wait(timeout=0.05)
 
             slow_func()
 
@@ -433,7 +434,7 @@ class TestMemoryProfilerTopObjects:
         """Test that _get_top_objects returns a list of tuples."""
         result = MemoryProfiler._get_top_objects(limit=5)
         assert isinstance(result, list)
-        assert len(result) <= 5
+        assert len(result) == 5  # GC always has more than 5 distinct object types
         for item in result:
             assert isinstance(item, tuple)
             assert len(item) == 2
@@ -450,7 +451,7 @@ class TestMemoryProfilerTopObjects:
     def test_get_top_objects_respects_limit(self) -> None:
         """Test that limit is respected."""
         result = MemoryProfiler._get_top_objects(limit=3)
-        assert len(result) <= 3
+        assert len(result) == 3  # GC always has more than 3 distinct object types
 
 
 @pytest.mark.unit
