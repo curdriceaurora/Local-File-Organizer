@@ -204,6 +204,8 @@ class TestThreadSafety:
         acquired = threading.Event()
         released = threading.Event()
 
+        acquired = threading.Event()
+
         def holder() -> None:
             with small_pool.acquire():
                 acquired.set()  # Signal that connection has been acquired

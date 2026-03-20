@@ -10,11 +10,13 @@ from __future__ import annotations
 import json
 import shutil
 import tempfile
-import time
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
+import file_organizer.services.intelligence.profile_migrator as _migrator_mod
 from file_organizer.services.intelligence.profile_manager import ProfileManager
 from file_organizer.services.intelligence.profile_migrator import ProfileMigrator
 
@@ -253,10 +255,19 @@ def test_list_backups_with_backups(migrator, profile_manager):
     """Test list_backups returns sorted list of backup paths."""
     profile = profile_manager.create_profile("list_test", "List test")
 
-    # Create two backups with a pause so timestamps differ
-    path1 = migrator.backup_before_migration(profile)
-    time.sleep(1.1)  # Ensure different second-level timestamp
-    path2 = migrator.backup_before_migration(profile)
+    # Create two backups using mocked timestamps so filenames are distinct
+    # without sleeping for a full second.
+    t1 = datetime(2020, 1, 1, 0, 0, 0, tzinfo=UTC)
+    t2 = t1 + timedelta(seconds=2)
+
+    with patch.object(_migrator_mod, "datetime") as mock_dt:
+        mock_dt.now.return_value = t1
+        path1 = migrator.backup_before_migration(profile)
+
+    with patch.object(_migrator_mod, "datetime") as mock_dt:
+        mock_dt.now.return_value = t2
+        path2 = migrator.backup_before_migration(profile)
+
     assert path1 is not None
     assert path2 is not None
 

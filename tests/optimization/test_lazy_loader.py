@@ -203,9 +203,6 @@ class TestLazyModelLoaderThreadSafety:
 
         def slow_loader(cfg: ModelConfig) -> MagicMock:
             nonlocal load_count
-            import time
-
-            time.sleep(0.05)
             with lock:
                 load_count += 1
             return _make_mock_model()

@@ -8,7 +8,6 @@ drain/rollback semantics.
 from __future__ import annotations
 
 import threading
-import time
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -286,7 +285,6 @@ class TestModelHotSwap:
                         model.generate("test prompt")
                 except Exception as e:
                     errors.append(e)
-                time.sleep(0.001)
 
         # Start generate calls in background
         threads = [threading.Thread(target=generate_loop) for _ in range(3)]

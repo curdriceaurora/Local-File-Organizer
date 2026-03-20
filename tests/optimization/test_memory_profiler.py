@@ -434,9 +434,7 @@ class TestMemoryProfilerTopObjects:
         """Test that _get_top_objects returns a list of tuples."""
         result = MemoryProfiler._get_top_objects(limit=5)
         assert isinstance(result, list)
-        assert (
-            1 <= len(result) <= 5
-        )  # at most 5 (limit=5 cap); at least 1 (Python always has objects)
+        assert len(result) == 5  # GC always has more than 5 distinct object types
         for item in result:
             assert isinstance(item, tuple)
             assert len(item) == 2
@@ -453,9 +451,7 @@ class TestMemoryProfilerTopObjects:
     def test_get_top_objects_respects_limit(self) -> None:
         """Test that limit is respected."""
         result = MemoryProfiler._get_top_objects(limit=3)
-        assert (
-            1 <= len(result) <= 3
-        )  # at most 3 (limit=3 cap); at least 1 (Python always has objects)
+        assert len(result) == 3  # GC always has more than 3 distinct object types
 
 
 @pytest.mark.unit
