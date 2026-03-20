@@ -215,7 +215,8 @@ class TestMigrationValidator:
 
         # Basic structure should be valid
         assert result.is_valid is True
-        assert isinstance(result.errors, list) and isinstance(result.warnings, list)
+        assert result.errors == []
+        assert isinstance(result.warnings, list)
 
     def test_validate_detects_conflicts(self, validator, transformer, scanner, temp_structure):
         """Test conflict detection."""
