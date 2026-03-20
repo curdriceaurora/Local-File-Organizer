@@ -67,4 +67,4 @@ class TestVideoProcessingPlaceholder:
         processor = VisionProcessor()
         frames = processor.extract_frames(video_file, interval=1.0)
 
-        assert isinstance(frames, list) and len(frames) >= 0
+        assert frames == []
