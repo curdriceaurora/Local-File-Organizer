@@ -210,9 +210,7 @@ class TestModelWarmupSync:
 
         def loader_factory(name: str):
             def loader():
-                deadline = time.monotonic() + 0.02
-                while time.monotonic() < deadline:
-                    pass
+                threading.Event().wait(0.02)
                 return _make_mock_model(name)
 
             return loader

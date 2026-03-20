@@ -389,10 +389,11 @@ os.utime(path, (old_mtime + 60, old_mtime + 60))
 
 #### Pattern: Background job polling
 
-Use a deadline loop with a short inner sleep for background threads:
+Use a deadline loop with a short inner wait for background threads:
 
 ```python
 # Instead of: time.sleep(2)
+import threading
 import time
 import pytest
 
@@ -400,7 +401,7 @@ deadline = time.monotonic() + 5.0
 while time.monotonic() < deadline:
     if condition_met():
         break
-    time.sleep(0.05)
+    threading.Event().wait(0.05)
 else:
     pytest.fail("Timed out waiting for condition")
 ```

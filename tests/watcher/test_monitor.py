@@ -77,15 +77,22 @@ def _wait_for_event_matching(
 def _drain_startup_events(monitor: FileMonitor) -> None:
     """Drain any events emitted during observer startup without sleeping.
 
-    Calls the blocking dequeue with a short timeout; returns when no events
-    arrive within that window, indicating the observer has settled.
+    Polls with a short timeout until a 0.1 s quiet window passes, indicating
+    the observer has settled.  The inner timeout is clamped to a non-negative
+    value so it stays valid as the deadline approaches.
     """
     deadline = time.monotonic() + 1.0
+    quiet_since: float | None = None
     while time.monotonic() < deadline:
-        remaining = deadline - time.monotonic()
+        remaining = max(0.0, deadline - time.monotonic())
         batch = monitor.get_events_blocking(max_size=100, timeout=min(0.05, remaining))
-        if not batch:
-            break
+        if batch:
+            quiet_since = None
+        else:
+            if quiet_since is None:
+                quiet_since = time.monotonic()
+            elif time.monotonic() - quiet_since >= 0.1:
+                break
 
 
 @pytest.mark.unit
@@ -253,7 +260,7 @@ class TestFileMonitorFileDetection:
 
         (watch_dir / "file.txt").write_text("data")
 
-        arrived.wait(timeout=3.0)
+        assert arrived.wait(timeout=3.0), "event did not arrive within 3 s"
         assert monitor.event_count >= 1
 
     def test_get_events_with_default_batch_size(
@@ -279,7 +286,7 @@ class TestFileMonitorFileDetection:
         for i in range(10):
             (watch_dir / f"file_{i}.txt").write_text(f"content {i}")
 
-        arrived.wait(timeout=5.0)
+        assert arrived.wait(timeout=5.0), "10 events did not arrive within 5 s"
         batch = monitor.get_events()
         assert len(batch) == 3
 
@@ -389,7 +396,7 @@ class TestFileMonitorCallbacks:
 
         (watch_dir / "callback_test.txt").write_text("hello")
 
-        fired.wait(timeout=3.0)
+        assert fired.wait(timeout=3.0), "on_created callback did not fire within 3 s"
         assert len(received_events) >= 1
 
     def test_on_deleted_callback(self, monitor: FileMonitor, watch_dir: Path) -> None:
@@ -412,7 +419,7 @@ class TestFileMonitorCallbacks:
 
         test_file.unlink()
 
-        fired.wait(timeout=3.0)
+        assert fired.wait(timeout=3.0), "on_deleted callback did not fire within 3 s"
         assert len(received_events) >= 1
 
     def test_on_modified_callback(self, monitor: FileMonitor, watch_dir: Path) -> None:
@@ -435,7 +442,7 @@ class TestFileMonitorCallbacks:
 
         test_file.write_text("modified")
 
-        fired.wait(timeout=3.0)
+        assert fired.wait(timeout=3.0), "on_modified callback did not fire within 3 s"
         assert len(received_events) >= 1
 
 

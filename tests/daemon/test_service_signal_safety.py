@@ -106,8 +106,16 @@ class TestRunLoopExitsOnPipeSignal:
         daemon = DaemonService(_make_config())
         assert daemon._sig_wakeup_r is None, "No pipe should be created initially"
 
-        # Set stop event shortly after run loop starts waiting
+        # Signal ready from *inside* the stop-event wait so there is no race
+        # between setting ready and actually entering the blocking wait.
         ready = threading.Event()
+        original_wait = daemon._stop_event.wait
+
+        def _wait_and_signal(timeout: float | None = None) -> bool:
+            ready.set()
+            return original_wait(timeout)
+
+        daemon._stop_event.wait = _wait_and_signal  # type: ignore[method-assign]
 
         def stop_later() -> None:
             """Set stop event after the run loop is waiting."""
@@ -116,8 +124,6 @@ class TestRunLoopExitsOnPipeSignal:
 
         t = threading.Thread(target=stop_later)
         t.start()
-        # Signal the helper thread that we are about to enter _run_loop
-        ready.set()
         daemon._run_loop()
         t.join(timeout=2.0)
         assert daemon._stop_event.is_set(), "Stop event should be set after event.wait path"

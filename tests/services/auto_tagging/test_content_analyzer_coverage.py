@@ -46,7 +46,7 @@ class TestAnalyzeFile:
         f = tmp_path / "big.txt"
         f.write_text("alpha bravo charlie delta echo foxtrot golf hotel " * 10)
         tags = analyzer.analyze_file(f)
-        assert len(tags) == 3  # max_keywords=3 with 8 unique words × 10 reps → exactly 3
+        assert len(tags) == 3  # max_keywords=3 with 8 unique words x 10 reps -> exactly 3
 
 
 # ---------------------------------------------------------------------------

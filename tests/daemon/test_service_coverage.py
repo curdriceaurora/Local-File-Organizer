@@ -219,7 +219,7 @@ class TestDaemonServiceUptimeProperty:
             deadline = time.monotonic() + 5.0
             while daemon.uptime_seconds == 0.0 and time.monotonic() < deadline:
                 pass
-            assert daemon.uptime_seconds >= 0
+            assert daemon.uptime_seconds > 0.0
         finally:
             daemon.stop()
 
