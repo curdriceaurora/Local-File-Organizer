@@ -142,16 +142,21 @@ class TestFileEventHandlerDebounce:
         # Only the first should have gotten through
         assert queue.size == 1
 
-    def test_events_after_debounce_window_pass(self, queue: EventQueue) -> None:
+    def test_events_after_debounce_window_pass(
+        self, queue: EventQueue, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that events after debounce window are processed."""
+        import file_organizer.watcher.handler as _handler_module
+
         config = WatcherConfig(debounce_seconds=0.1, exclude_patterns=[])
         handler = FileEventHandler(config, queue)
 
         handler.on_modified(FileModifiedEvent(src_path="/tmp/file.txt"))
         assert queue.size == 1
 
-        # Wait for debounce window to expire
-        time.sleep(0.15)
+        # Advance the handler's monotonic clock past the debounce window
+        real_monotonic = time.monotonic
+        monkeypatch.setattr(_handler_module.time, "monotonic", lambda: real_monotonic() + 1.0)
 
         handler.on_modified(FileModifiedEvent(src_path="/tmp/file.txt"))
         assert queue.size == 2

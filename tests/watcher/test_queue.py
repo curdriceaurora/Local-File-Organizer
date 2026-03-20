@@ -7,7 +7,6 @@ Tests thread safety, batching, capacity limits, and blocking behavior.
 from __future__ import annotations
 
 import threading
-import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,8 +15,8 @@ import pytest
 from file_organizer.watcher.queue import EventQueue, EventType, FileEvent
 
 pytestmark = [pytest.mark.unit]
-# Note: EventQueue tests use threading.Thread and time.sleep(),
-# making them timing-sensitive. Excluded from smoke suite.
+# Note: EventQueue tests use threading.Thread, making them
+# timing-sensitive. Excluded from smoke suite.
 
 # ---------------------------------------------------------------------------
 # FileEvent tests
@@ -228,8 +227,6 @@ class TestEventQueue:
         consumer_thread = threading.Thread(target=consumer)
         consumer_thread.start()
 
-        # Give consumer time to start blocking
-        time.sleep(0.1)
         event = self._make_event()
         queue.enqueue(event)
 
@@ -324,13 +321,11 @@ class TestEventQueueEdgeCases:
         def consumer() -> None:
             collected = 0
             while collected < total_events:
-                batch = queue.dequeue_batch(max_size=10)
+                batch = queue.dequeue_batch_blocking(max_size=10, timeout=1.0)
                 if batch:
                     with lock:
                         dequeued_events.extend(batch)
                     collected += len(batch)
-                else:
-                    time.sleep(0.01)
 
         producer_thread = threading.Thread(target=producer)
         consumer_thread = threading.Thread(target=consumer)
@@ -354,7 +349,6 @@ class TestEventQueueEdgeCases:
 
         t = threading.Thread(target=consumer)
         t.start()
-        time.sleep(0.1)
         queue.enqueue(self._make_event())
         t.join(timeout=5.0)
 

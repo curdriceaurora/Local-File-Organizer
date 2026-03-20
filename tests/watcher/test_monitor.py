@@ -7,6 +7,7 @@ and integration with real file operations using tmp_path fixtures.
 
 from __future__ import annotations
 
+import threading
 import time
 from pathlib import Path
 
@@ -44,18 +45,18 @@ def _wait_for_event_matching(
     monitor: FileMonitor,
     predicate: callable,
     timeout: float = 3.0,
-    poll_interval: float = 0.05,
 ) -> list:
     """
     Continuously drain events and accumulate them until at least one
     matches the predicate or timeout expires.
+
+    Uses get_events_blocking to avoid polling with time.sleep.
 
     Args:
         monitor: The FileMonitor to drain events from.
         predicate: Function that takes a list of all accumulated events
             and returns True when satisfied.
         timeout: Maximum time in seconds to wait.
-        poll_interval: Seconds between polls.
 
     Returns:
         All accumulated events.
@@ -63,12 +64,28 @@ def _wait_for_event_matching(
     all_events = []
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        batch = monitor.get_events(max_size=100)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        batch = monitor.get_events_blocking(max_size=100, timeout=min(0.1, remaining))
         all_events.extend(batch)
         if predicate(all_events):
             return all_events
-        time.sleep(poll_interval)
     return all_events
+
+
+def _drain_startup_events(monitor: FileMonitor) -> None:
+    """Drain any events emitted during observer startup without sleeping.
+
+    Calls the blocking dequeue with a short timeout; returns when no events
+    arrive within that window, indicating the observer has settled.
+    """
+    deadline = time.monotonic() + 1.0
+    while time.monotonic() < deadline:
+        remaining = deadline - time.monotonic()
+        batch = monitor.get_events_blocking(max_size=100, timeout=min(0.05, remaining))
+        if not batch:
+            break
 
 
 @pytest.mark.unit
@@ -119,9 +136,7 @@ class TestFileMonitorFileDetection:
     def test_detect_file_creation(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that creating a file generates a CREATED event."""
         monitor.start()
-        # Drain any initial events from observer startup
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
 
         (watch_dir / "new_file.txt").write_text("hello")
 
@@ -142,8 +157,7 @@ class TestFileMonitorFileDetection:
         test_file.write_text("original")
 
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
 
         test_file.write_text("updated content")
 
@@ -160,8 +174,7 @@ class TestFileMonitorFileDetection:
         test_file.write_text("temporary")
 
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
 
         test_file.unlink()
 
@@ -178,8 +191,7 @@ class TestFileMonitorFileDetection:
         subdir.mkdir()
 
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
 
         (subdir / "nested.txt").write_text("nested content")
 
@@ -197,8 +209,7 @@ class TestFileMonitorFileDetection:
     def test_filtered_files_not_detected(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that filtered files do not appear in events."""
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
 
         (watch_dir / "scratch.tmp").write_text("temporary")
         # Also create an allowed file so we know events are working
@@ -215,8 +226,7 @@ class TestFileMonitorFileDetection:
     def test_multiple_files_batched(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that multiple file creations are collected as a batch."""
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
 
         filenames = {f"batch_{i}.txt" for i in range(5)}
         for name in filenames:
@@ -233,16 +243,17 @@ class TestFileMonitorFileDetection:
     def test_event_count_property(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that event_count reflects pending events."""
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)  # Drain startup events
+        _drain_startup_events(monitor)
 
         assert monitor.event_count == 0
+
+        arrived = threading.Event()
+        monitor.on_created(lambda _: arrived.set())
+        monitor.on_modified(lambda _: arrived.set())
+
         (watch_dir / "file.txt").write_text("data")
 
-        # Wait until at least one event is queued
-        deadline = time.monotonic() + 3.0
-        while monitor.event_count == 0 and time.monotonic() < deadline:
-            time.sleep(0.05)
+        arrived.wait(timeout=3.0)
         assert monitor.event_count >= 1
 
     def test_get_events_with_default_batch_size(
@@ -250,28 +261,34 @@ class TestFileMonitorFileDetection:
     ) -> None:
         """Test get_events uses config batch_size by default."""
         monitor.config.batch_size = 3
+        arrived = threading.Event()
+        count: list[int] = [0]
+        count_lock = threading.Lock()
+
+        def _track(_e: object) -> None:
+            with count_lock:
+                count[0] += 1
+                if count[0] >= 10:
+                    arrived.set()
+
+        monitor.on_created(_track)
+        monitor.on_modified(_track)
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
 
         for i in range(10):
             (watch_dir / f"file_{i}.txt").write_text(f"content {i}")
 
-        # Wait for events to arrive
-        deadline = time.monotonic() + 5.0
-        while monitor.event_count < 10 and time.monotonic() < deadline:
-            time.sleep(0.05)
-
+        arrived.wait(timeout=5.0)
         batch = monitor.get_events()
-        assert len(batch) <= 3
+        assert len(batch) == 3
 
     def test_get_events_blocking_returns_on_event(
         self, monitor: FileMonitor, watch_dir: Path
     ) -> None:
         """Test that blocking get returns when events arrive."""
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
 
         (watch_dir / "blocking_test.txt").write_text("hello")
         events = monitor.get_events_blocking(max_size=10, timeout=3.0)
@@ -280,8 +297,7 @@ class TestFileMonitorFileDetection:
     def test_get_events_blocking_timeout(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that blocking get returns empty on timeout when no events."""
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
 
         events = monitor.get_events_blocking(max_size=10, timeout=0.1)
         assert events == []
@@ -294,7 +310,6 @@ class TestFileMonitorDynamicDirectories:
     def test_add_directory_while_running(self, monitor: FileMonitor, tmp_path: Path) -> None:
         """Test adding a new directory to a running monitor."""
         monitor.start()
-        time.sleep(0.1)
 
         new_dir = tmp_path / "extra"
         new_dir.mkdir()
@@ -303,8 +318,7 @@ class TestFileMonitorDynamicDirectories:
         assert len(monitor.watched_directories) == 2
 
         # Drain any initial events
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
 
         (new_dir / "extra_file.txt").write_text("extra content")
 
@@ -361,18 +375,21 @@ class TestFileMonitorCallbacks:
     def test_on_created_callback(self, monitor: FileMonitor, watch_dir: Path) -> None:
         """Test that on_created callback fires for new files."""
         received_events: list = []
-        monitor.on_created(lambda e: received_events.append(e))
+        fired = threading.Event()
+
+        def _cb(e: object) -> None:
+            received_events.append(e)
+            fired.set()
+
+        monitor.on_created(_cb)
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)  # Drain startup events
+        _drain_startup_events(monitor)
         received_events.clear()
+        fired.clear()
 
         (watch_dir / "callback_test.txt").write_text("hello")
 
-        deadline = time.monotonic() + 3.0
-        while not received_events and time.monotonic() < deadline:
-            time.sleep(0.05)
-
+        fired.wait(timeout=3.0)
         assert len(received_events) >= 1
 
     def test_on_deleted_callback(self, monitor: FileMonitor, watch_dir: Path) -> None:
@@ -381,18 +398,21 @@ class TestFileMonitorCallbacks:
         test_file.write_text("bye")
 
         received_events: list = []
-        monitor.on_deleted(lambda e: received_events.append(e))
+        fired = threading.Event()
+
+        def _cb(e: object) -> None:
+            received_events.append(e)
+            fired.set()
+
+        monitor.on_deleted(_cb)
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)  # Drain startup events
+        _drain_startup_events(monitor)
         received_events.clear()
+        fired.clear()
 
         test_file.unlink()
 
-        deadline = time.monotonic() + 3.0
-        while not received_events and time.monotonic() < deadline:
-            time.sleep(0.05)
-
+        fired.wait(timeout=3.0)
         assert len(received_events) >= 1
 
     def test_on_modified_callback(self, monitor: FileMonitor, watch_dir: Path) -> None:
@@ -401,18 +421,21 @@ class TestFileMonitorCallbacks:
         test_file.write_text("original")
 
         received_events: list = []
-        monitor.on_modified(lambda e: received_events.append(e))
+        fired = threading.Event()
+
+        def _cb(e: object) -> None:
+            received_events.append(e)
+            fired.set()
+
+        monitor.on_modified(_cb)
         monitor.start()
-        time.sleep(0.2)
-        monitor.get_events(max_size=100)
+        _drain_startup_events(monitor)
         received_events.clear()
+        fired.clear()
 
         test_file.write_text("modified")
 
-        deadline = time.monotonic() + 3.0
-        while not received_events and time.monotonic() < deadline:
-            time.sleep(0.05)
-
+        fired.wait(timeout=3.0)
         assert len(received_events) >= 1
 
 
@@ -484,8 +507,7 @@ class TestFileMonitorObserverFallback:
             assert mon.observer_type == "polling"
 
             # Drain any startup events
-            time.sleep(0.2)
-            mon.get_events(max_size=100)
+            _drain_startup_events(mon)
 
             # Create a file
             test_file = watch_dir / "polling_test.txt"
