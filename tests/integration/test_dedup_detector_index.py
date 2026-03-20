@@ -41,11 +41,15 @@ class TestDuplicateIndexAddFile:
         f = tmp_path / "file.txt"
         f.write_text("content")
         index.add_file(f, "abc123hash")
+        files = index.get_files_by_hash("abc123hash")
+        assert any(fm.path == f for fm in files)
 
     def test_add_with_metadata(self, index: DuplicateIndex, tmp_path: Path) -> None:
         f = tmp_path / "file.txt"
         f.write_text("content")
         index.add_file(f, "hash1", metadata={"size": 100})
+        files = index.get_files_by_hash("hash1")
+        assert any(fm.path == f for fm in files)
 
     def test_add_duplicate_hash(self, index: DuplicateIndex, tmp_path: Path) -> None:
         f1 = tmp_path / "a.txt"
@@ -197,7 +201,9 @@ class TestDuplicateDetectorGetGroups:
         (tmp_path / "b.txt").write_text("content")
         detector.scan_directory(tmp_path)
         result = detector.get_duplicate_groups()
-        assert len(result) >= 1
+        all_dupes = [fm.path for group in result.values() for fm in group.files]
+        assert any(p.name == "a.txt" for p in all_dupes)
+        assert any(p.name == "b.txt" for p in all_dupes)
 
 
 class TestDuplicateDetectorGetStatistics:
@@ -227,7 +233,7 @@ class TestDuplicateDetectorFindDuplicatesOfFile:
         f1.write_text(content)
         f2.write_text(content)
         result = detector.find_duplicates_of_file(f1, tmp_path)
-        assert len(result) >= 1
+        assert any(fm.path.name == "copy.txt" for fm in result)
 
 
 class TestDuplicateDetectorClear:

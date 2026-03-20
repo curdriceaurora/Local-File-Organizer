@@ -110,7 +110,7 @@ class TestLoadSettingsEnvOverrides:
     def test_cors_origins_json_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_API_CORS_ORIGINS", '["http://example.com"]')
         s = load_settings()
-        assert "http://example.com" in s.cors_origins
+        assert s.cors_origins == ["http://example.com"]
 
     def test_cors_origins_csv_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_API_CORS_ORIGINS", "http://a.com,http://b.com")
