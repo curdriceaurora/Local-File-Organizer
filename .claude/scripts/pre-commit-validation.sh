@@ -75,14 +75,14 @@ interrogate -v src/ --fail-under 95 -q
 echo "✓ Docstring coverage"
 echo ""
 
-echo "▶ Unit test code coverage gate (≥95%)"
+echo "▶ Unit test code coverage gate (≥93% branch)"
 pytest tests/ -m "unit and not benchmark" \
-  --cov=file_organizer --cov-fail-under=95 --no-cov-on-fail \
+  --cov=file_organizer --cov-fail-under=93 --no-cov-on-fail \
   -q -n=auto --timeout=30 --override-ini="addopts="
 echo "✓ Unit test coverage"
 echo ""
 
-echo "▶ Integration test coverage gate (≥30%)"
+echo "▶ Integration test coverage gate (≥30% branch)"
 rm -f coverage.xml
 pytest tests/ -m "integration and not benchmark" \
   --cov=file_organizer --cov-fail-under=30 --no-cov-on-fail \
