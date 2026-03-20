@@ -66,7 +66,7 @@ class TestNLTKHermeticity:
         keywords = extract_keywords(text, top_n=3)
 
         # Should return at most 3 keywords
-        assert len(keywords) <= 3
+        assert len(keywords) == 3  # 5 non-stop-words, top_n=3 → exactly 3 returned
 
         # Keywords should be from the input text
         for keyword in keywords:

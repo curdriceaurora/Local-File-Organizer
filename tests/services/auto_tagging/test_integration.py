@@ -283,7 +283,7 @@ class TestAutoTaggingIntegration:
         test_file.write_text("test content")
 
         recommendation = service.suggest_tags(test_file, top_n=10)
-        assert len(recommendation.suggestions) <= 10
+        assert 1 <= len(recommendation.suggestions) <= 10  # at most 10 (top_n cap); at least 1
 
     def test_persistence(self, temp_dir):
         """Test that learning data persists across service instances."""

@@ -187,7 +187,7 @@ class TestAppendActivity:
         log = state["activity_log"]
         assert isinstance(log, list)
         # Capped at 100 after insert
-        assert len(log) <= 101
+        assert len(log) == 100  # _append_activity: del log[100:] after insert → exactly 100
 
     def test_creates_list_when_not_list(self):
         from file_organizer.web.profile_routes import _append_activity
@@ -235,7 +235,7 @@ class TestAppendNotification:
         _append_notification(state, "new")
         notifs = state["notifications"]
         assert isinstance(notifs, list)
-        assert len(notifs) <= 101
+        assert len(notifs) == 100  # _append_notification: del notifications[100:] → exactly 100
 
 
 # ---------------------------------------------------------------------------
