@@ -8,6 +8,9 @@ from unittest.mock import ANY, MagicMock
 
 import pytest
 
+pytest.importorskip("rank_bm25")
+pytest.importorskip("sklearn")
+
 from file_organizer.interfaces.search import RetrieverProtocol
 from file_organizer.services.search.hybrid_retriever import HybridRetriever, _rrf_fuse
 

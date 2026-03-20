@@ -223,10 +223,10 @@ class CommandExecutor:
                 HybridRetriever,
                 read_text_safe,
             )
+
+            retriever = HybridRetriever()
         except ImportError:
             return None  # search deps not installed
-
-        retriever = HybridRetriever()
         docs: list[str] = []
         paths: list[Path] = []
         try:
