@@ -52,6 +52,7 @@ class TestPluginState:
 
     def test_is_str_enum(self) -> None:
         assert isinstance(PluginState.LOADED, str)
+        assert PluginState.LOADED == "loaded"
 
 
 # ---------------------------------------------------------------------------

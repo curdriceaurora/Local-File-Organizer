@@ -517,9 +517,9 @@ class TestParseDockerCompose:
             parse_docker_compose(bad_file)
 
     def test_parse_returns_dict(self) -> None:
-        """Verify parse returns a dictionary."""
+        """Verify parse returns a non-empty dictionary."""
         data = parse_docker_compose(PROJECT_ROOT / "docker-compose.yml")
-        assert isinstance(data, dict)
+        assert isinstance(data, dict) and len(data) > 0
 
 
 @pytest.mark.unit

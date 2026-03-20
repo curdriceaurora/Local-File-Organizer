@@ -418,8 +418,12 @@ class TestGetStatistics:
         matrix = analyzer.compute_similarity_matrix(sample_embeddings)
         stats = analyzer.get_statistics(matrix)
 
-        assert isinstance(stats["mean_similarity"], float)
-        assert isinstance(stats["above_threshold_count"], int)
+        assert (
+            isinstance(stats["mean_similarity"], float) and 0.0 <= stats["mean_similarity"] <= 1.0
+        )
+        assert (
+            isinstance(stats["above_threshold_count"], int) and stats["above_threshold_count"] >= 0
+        )
 
     def test_stats_values_reasonable(self, analyzer, sample_embeddings):
         """Statistics values are within physically meaningful ranges."""

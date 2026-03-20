@@ -61,8 +61,8 @@ class TestConfigGetEndpoint:
 
         if response.status_code == 200:
             data = response.json()
-            # Should be a dict/object
-            assert isinstance(data, dict)
+            # Should be a non-empty dict/object
+            assert isinstance(data, dict) and len(data) > 0
 
     def test_config_version_included(self, client):
         """Config should include application version."""
@@ -91,7 +91,7 @@ class TestConfigUpdateEndpoint:
 
         if response.status_code in (200, 201):
             data = response.json()
-            assert isinstance(data, dict)
+            assert isinstance(data, dict) and len(data) > 0
 
     def test_config_update_validates_input(self, client):
         """PUT /config should validate input."""
@@ -155,7 +155,7 @@ class TestConfigResetEndpoint:
 
         if response.status_code in (200, 201):
             data = response.json()
-            assert isinstance(data, dict)
+            assert isinstance(data, dict) and len(data) > 0
 
     def test_config_reset_restores_defaults(self, client):
         """Reset should restore default settings."""

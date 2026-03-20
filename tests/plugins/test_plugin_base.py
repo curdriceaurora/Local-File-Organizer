@@ -176,8 +176,12 @@ class TestLoadManifest:
         manifest_data = _valid_manifest()
         (tmp_path / "plugin.json").write_text(json.dumps(manifest_data))
         result = load_manifest(tmp_path)
-        assert isinstance(result["dependencies"], list)
-        assert isinstance(result["allowed_paths"], list)
+        assert isinstance(result["dependencies"], list) and isinstance(
+            result["allowed_paths"], list
+        )
+        # Both should be mutable (can append)
+        result["dependencies"].append("test-dep")
+        assert result["dependencies"][-1] == "test-dep"
 
     def test_existing_optional_fields_preserved(self, tmp_path: Path) -> None:
         manifest_data = _valid_manifest(license="GPL-3.0", homepage="https://x.com")

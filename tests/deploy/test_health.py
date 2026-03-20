@@ -288,9 +288,9 @@ class TestHealthEndpointRedisCheck:
     """Tests for Redis health check."""
 
     def test_check_redis_returns_bool(self, health_endpoint: HealthEndpoint) -> None:
-        """Verify check_redis returns a boolean."""
+        """Verify check_redis returns a boolean (True or False)."""
         result = health_endpoint.check_redis()
-        assert isinstance(result, bool)
+        assert result is True or result is False
 
     def test_check_redis_connection_refused(self, health_endpoint: HealthEndpoint) -> None:
         """Verify check_redis returns False when connection is refused."""
@@ -319,9 +319,9 @@ class TestHealthEndpointDiskCheck:
     """Tests for disk space health check."""
 
     def test_check_disk_space_returns_bool(self, health_endpoint: HealthEndpoint) -> None:
-        """Verify check_disk_space returns a boolean."""
+        """Verify check_disk_space returns a boolean (True or False)."""
         result = health_endpoint.check_disk_space()
-        assert isinstance(result, bool)
+        assert result is True or result is False
 
     def test_check_disk_space_healthy_with_sufficient_space(
         self, health_endpoint: HealthEndpoint
@@ -343,7 +343,7 @@ class TestHealthEndpointDiskCheck:
         endpoint = HealthEndpoint(config=dev_config, min_disk_space_mb=1)
         # Should not raise; falls back to /
         result = endpoint.check_disk_space()
-        assert isinstance(result, bool)
+        assert result is True or result is False
 
     def test_internal_check_disk_space_includes_message(
         self, health_endpoint: HealthEndpoint
@@ -359,9 +359,9 @@ class TestHealthEndpointModelCheck:
     """Tests for model availability health check."""
 
     def test_check_model_availability_returns_bool(self, health_endpoint: HealthEndpoint) -> None:
-        """Verify check_model_availability returns a boolean."""
+        """Verify check_model_availability returns a boolean (True or False)."""
         result = health_endpoint.check_model_availability()
-        assert isinstance(result, bool)
+        assert result is True or result is False
 
     def test_check_model_unavailable_on_closed_port(self, health_endpoint: HealthEndpoint) -> None:
         """Verify model check returns False when port is closed."""

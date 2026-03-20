@@ -206,4 +206,4 @@ class TestGetAreaSummary:
 
     def test_get_area_summary(self, system: JohnnyDecimalSystem) -> None:
         summary = system.get_area_summary(10)
-        assert isinstance(summary, dict)
+        assert isinstance(summary, dict) and "area" in summary

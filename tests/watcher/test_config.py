@@ -243,9 +243,9 @@ class TestMatchesPattern:
         # We test the actual behavior
         result_lower = _matches_pattern("/file.TXT", "*.txt")
         result_upper = _matches_pattern("/file.txt", "*.TXT")
-        # At least verify the function works
-        assert isinstance(result_lower, bool)
-        assert isinstance(result_upper, bool)
+        # At least verify the function returns booleans
+        assert result_lower is True or result_lower is False
+        assert result_upper is True or result_upper is False
 
     def test_empty_pattern(self):
         assert _matches_pattern("/home/user/file.txt", "") is False
@@ -271,7 +271,7 @@ class TestDefaultExcludePatterns:
         assert "node_modules/*" in DEFAULT_EXCLUDE_PATTERNS
 
     def test_is_list(self):
-        assert isinstance(DEFAULT_EXCLUDE_PATTERNS, list)
+        assert isinstance(DEFAULT_EXCLUDE_PATTERNS, list) and len(DEFAULT_EXCLUDE_PATTERNS) > 0
 
     def test_all_items_are_strings(self):
         assert all(isinstance(p, str) for p in DEFAULT_EXCLUDE_PATTERNS)

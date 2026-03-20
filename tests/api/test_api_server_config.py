@@ -73,8 +73,8 @@ class TestLoadYaml:
         f = tmp_path / "bad.yaml"
         f.write_text("{{invalid: yaml: [")
         result = _load_yaml(f)
-        # yaml.safe_load may parse this or return empty; either way no crash
-        assert isinstance(result, dict)
+        # yaml.safe_load may parse this or return empty dict; either way no crash
+        assert isinstance(result, dict) and "api" not in result
 
 
 @pytest.mark.unit

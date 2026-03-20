@@ -120,11 +120,11 @@ class TestLeakDetectorCheck:
         assert detector.check_count == 2
 
     def test_check_returns_list(self) -> None:
-        """Test that check() returns a list."""
+        """Test that check() returns a list of LeakSuspect instances."""
         detector = LeakDetector(min_count_delta=1)
         detector.start()
         result = detector.check()
-        assert isinstance(result, list)
+        assert isinstance(result, list) and all(hasattr(item, "count_delta") for item in result)
 
     def test_check_with_mocked_growth(self) -> None:
         """Test leak detection with simulated object growth."""

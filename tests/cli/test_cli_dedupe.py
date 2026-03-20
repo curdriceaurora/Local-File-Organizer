@@ -169,7 +169,8 @@ class TestFormatDatetime:
 
     def test_zero_timestamp(self):
         result = format_datetime(0)
-        assert isinstance(result, str)
+        assert isinstance(result, str) and len(result) > 0
+        assert "-" in result
 
 
 @pytest.mark.unit

@@ -133,13 +133,13 @@ class TestChartGenerator:
         assert len(sparkline) == len(values)
 
     def test_create_sparkline_ascii_fallback(self):
-        """Test sparkline ASCII fallback."""
+        """Test sparkline ASCII fallback produces correct length output."""
         chart_gen = ChartGenerator(use_unicode=False)
         values = [1.0, 2.0, 3.0, 2.0, 1.0]
 
         sparkline = chart_gen.create_sparkline(values)
 
-        assert isinstance(sparkline, str)
+        assert isinstance(sparkline, str) and len(sparkline) == len(values)
 
     def test_unicode_vs_ascii_pie_chart(self):
         """Test difference between Unicode and ASCII pie charts."""

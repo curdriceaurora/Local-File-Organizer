@@ -165,10 +165,10 @@ class TestVersionSortKey:
         ]
 
     def test_empty_version(self) -> None:
-        """Empty string should produce an empty key tuple."""
-        # After split, we get [''], which is a non-digit string
+        """Empty string should produce a key tuple (with one non-numeric entry)."""
+        # After split, we get [''], which is a non-digit string → 1-element tuple
         key = version_sort_key("")
-        assert isinstance(key, tuple)
+        assert isinstance(key, tuple) and len(key) == 1
 
     def test_case_insensitive_sort(self) -> None:
         """String parts should be lowercased for sorting."""

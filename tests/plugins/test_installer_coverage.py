@@ -57,7 +57,7 @@ class TestNormalizeVersion:
 
     def test_prerelease(self):
         result = _normalize_version("1.0.0-alpha")
-        assert isinstance(result, tuple)
+        assert isinstance(result, tuple) and len(result) > 0
 
 
 class TestPluginInstallerInit:

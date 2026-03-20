@@ -358,9 +358,9 @@ class TestPathId:
     """Test path identifier generation."""
 
     def test_returns_string(self):
-        """Should return a string."""
+        """Should return a 10-character hex string."""
         result = path_id(Path("/tmp/test"))
-        assert isinstance(result, str)
+        assert isinstance(result, str) and len(result) == 10
 
     def test_returns_short_hash(self):
         """Should return a 10-character hash."""

@@ -157,8 +157,8 @@ class TestGetSystemMemoryTotal:
             monitor = ResourceMonitor()
             # psutil import will fail, falling back
             result = monitor.get_system_memory_total()
-        # Should use fallback
-        assert isinstance(result, int)
+        # Should use fallback value
+        assert isinstance(result, int) and result > 0
 
 
 # ---------------------------------------------------------------------------

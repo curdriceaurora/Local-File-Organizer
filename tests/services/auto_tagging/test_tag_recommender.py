@@ -285,7 +285,7 @@ class TestTagRecommender:
 
         explanation = trained_recommender.explain_tag("code", file_path, existing_tags=["python"])
 
-        assert isinstance(explanation, str)
+        assert isinstance(explanation, str) and len(explanation) > 0
 
     def test_content_suggestions(self, recommender, sample_file):
         """Test getting content-based suggestions."""

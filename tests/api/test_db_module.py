@@ -122,6 +122,7 @@ class TestCreateSession:
         session = create_session(":memory:")
         try:
             result = session.execute(text("SELECT COUNT(*) FROM users"))
-            assert isinstance(result.scalar(), int)
+            count = result.scalar()
+            assert isinstance(count, int) and count >= 0
         finally:
             session.close()
