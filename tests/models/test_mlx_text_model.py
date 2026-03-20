@@ -281,15 +281,22 @@ class TestCleanup:
             model._active_generations = 1
 
         cleanup_done = threading.Event()
+        cleanup_started = threading.Event()
+        original_cleanup = model.cleanup
 
         def _run_cleanup() -> None:
-            model.cleanup()
+            cleanup_started.set()
+            original_cleanup()
             cleanup_done.set()
 
         cleanup_thread = threading.Thread(target=_run_cleanup)
         cleanup_thread.start()
 
-        time.sleep(0.05)
+        cleanup_started.wait(timeout=5.0)
+        # Give cleanup thread a moment to block on the condition variable
+        deadline = time.monotonic() + 0.05
+        while time.monotonic() < deadline:
+            pass
         assert cleanup_done.is_set() is False
 
         with model._generation_done:

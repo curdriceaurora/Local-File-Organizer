@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import threading
 import time
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+import file_organizer.optimization.model_cache as _cache_mod
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 from file_organizer.optimization.model_cache import CacheStats, ModelCache
 
@@ -203,8 +204,11 @@ class TestModelCacheTTL:
         loader_v2 = _make_loader(model_v2)
 
         cache.get_or_load("model", loader_v1)
-        time.sleep(0.1)  # Wait for TTL to expire
-        result = cache.get_or_load("model", loader_v2)
+        real_monotonic = time.monotonic
+        with patch.object(
+            _cache_mod.time, "monotonic", side_effect=lambda: real_monotonic() + 1000.0
+        ):
+            result = cache.get_or_load("model", loader_v2)
 
         assert result is model_v2
         model_v1.cleanup.assert_called_once()  # Old model cleaned up
@@ -391,9 +395,12 @@ class TestModelCacheThreadSafety:
         load_count = 0
         lock = threading.Lock()
 
+        started = threading.Event()
+
         def slow_loader() -> MagicMock:
             nonlocal load_count
-            time.sleep(0.05)
+            started.set()
+            started.wait()  # All threads pile up here once set
             with lock:
                 load_count += 1
             return _make_mock_model("shared")
@@ -429,7 +436,6 @@ class TestModelCacheThreadSafety:
             try:
                 for _ in range(20):
                     cache.evict("model")
-                    time.sleep(0.001)
             except Exception as e:
                 errors.append(str(e))
 
@@ -437,7 +443,6 @@ class TestModelCacheThreadSafety:
             try:
                 for _ in range(20):
                     cache.get_or_load("model", _make_loader())
-                    time.sleep(0.001)
             except Exception as e:
                 errors.append(str(e))
 

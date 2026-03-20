@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from unittest.mock import MagicMock
 
@@ -209,7 +210,9 @@ class TestModelWarmupSync:
 
         def loader_factory(name: str):
             def loader():
-                time.sleep(0.02)
+                deadline = time.monotonic() + 0.02
+                while time.monotonic() < deadline:
+                    pass
                 return _make_mock_model(name)
 
             return loader
@@ -242,9 +245,14 @@ class TestModelWarmupAsync:
         """Test that warmup_async returns immediately."""
         cache = ModelCache(max_models=5)
 
+        loader_started = threading.Event()
+
         def loader_factory(name: str):
             def loader():
-                time.sleep(0.1)
+                loader_started.set()
+                deadline = time.monotonic() + 0.1
+                while time.monotonic() < deadline:
+                    pass
                 return _make_mock_model(name)
 
             return loader

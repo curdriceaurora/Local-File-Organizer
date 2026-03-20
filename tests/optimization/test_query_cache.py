@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import threading
 import time
+from unittest.mock import patch
 
 import pytest
 
+import file_organizer.optimization.query_cache as _qcache_mod
 from file_organizer.optimization.query_cache import CachedResult, QueryCache
 
 # ---------------------------------------------------------------------------
@@ -88,10 +90,11 @@ class TestTTLExpiration:
 
     def test_expired_entry_returns_none(self) -> None:
         """Entries past their TTL are not returned."""
-        short_cache = QueryCache(max_size=10, ttl_seconds=0.1)
+        short_cache = QueryCache(max_size=10, ttl_seconds=300.0)
         short_cache.put("q1", "data")
-        time.sleep(0.2)
-        assert short_cache.get("q1") is None
+        real_time = time.time
+        with patch.object(_qcache_mod.time, "time", side_effect=lambda: real_time() + 1000.0):
+            assert short_cache.get("q1") is None
 
     def test_not_yet_expired(self) -> None:
         """Entries within TTL are still returned."""
@@ -103,11 +106,12 @@ class TestTTLExpiration:
 
     def test_expired_entry_is_removed(self) -> None:
         """Expired entries are removed on access."""
-        short_cache = QueryCache(max_size=10, ttl_seconds=0.1)
+        short_cache = QueryCache(max_size=10, ttl_seconds=300.0)
         short_cache.put("q1", "data")
         assert short_cache.size == 1
-        time.sleep(0.2)
-        short_cache.get("q1")  # Should remove expired entry.
+        real_time = time.time
+        with patch.object(_qcache_mod.time, "time", side_effect=lambda: real_time() + 1000.0):
+            short_cache.get("q1")  # Should remove expired entry.
         assert short_cache.size == 0
 
 

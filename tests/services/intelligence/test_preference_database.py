@@ -293,14 +293,13 @@ class TestCorrectionTracking:
         assert len(corrections) == 5
 
     def test_corrections_ordered_by_timestamp(self, db_manager):
-        """Test that corrections are returned in chronological order."""
-        import time
+        """Test that corrections are returned in chronological order.
 
-        # Add corrections with delays
+        The database orders by auto-increment id DESC, so insertion order
+        determines the order regardless of wall-clock timestamp granularity.
+        """
         db_manager.add_correction("file_move", "/src1.txt", "/dst1.txt")
-        time.sleep(0.01)
         db_manager.add_correction("file_move", "/src2.txt", "/dst2.txt")
-        time.sleep(0.01)
         db_manager.add_correction("file_move", "/src3.txt", "/dst3.txt")
 
         corrections = db_manager.get_corrections(limit=10)

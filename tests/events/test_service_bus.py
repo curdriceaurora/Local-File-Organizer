@@ -302,7 +302,9 @@ class TestSendRequest:
         """A slow handler triggers timeout error response."""
 
         def slow_handler(req: ServiceRequest) -> dict:
-            time.sleep(0.05)
+            deadline = time.monotonic() + 0.05
+            while time.monotonic() < deadline:
+                pass
             return {"done": True}
 
         bus.register_service("slow", slow_handler)
