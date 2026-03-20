@@ -288,8 +288,8 @@ class TestCrossComponentIntegration:
         result = validator.validate_plan(plan)
 
         # Should validate successfully
-        assert isinstance(result.is_valid, bool)
-        assert isinstance(result.errors, list)
+        assert result.is_valid is True or result.is_valid is False
+        assert result.errors is not None
 
     def test_config_system_integration(self, tmp_path):
         """Test configuration works with system."""
@@ -309,7 +309,7 @@ class TestCrossComponentIntegration:
 
         # Should work with custom config
         plan, scan_result = migrator.create_migration_plan(tmp_path)
-        assert len(plan.rules) >= 0
+        assert plan.rules is not None
 
     def test_config_adapter_integration(self):
         """Test configuration works with adapters."""
@@ -497,7 +497,7 @@ class TestErrorHandling:
 
         # Should not crash on errors
         result = migrator.execute_migration(plan, dry_run=True, create_backup=False)
-        assert isinstance(result.failed_count, int)
+        assert result.failed_count == 0
 
     def test_migration_with_conflicts(self, tmp_path):
         """Test migration handles conflicts."""

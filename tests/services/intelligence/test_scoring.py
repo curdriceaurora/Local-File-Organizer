@@ -292,8 +292,7 @@ class TestScoreAnalyzer:
 
         outliers, inliers = ScoreAnalyzer.identify_outliers(patterns, method="iqr", threshold=1.5)
 
-        assert len(outliers) >= 0  # May or may not detect outliers
-        assert len(inliers) >= 0
+        assert len(outliers) + len(inliers) == len(patterns)
 
     def test_identify_outliers_zscore(self):
         """Test identifying outliers using Z-score method."""

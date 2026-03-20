@@ -224,3 +224,5 @@ Before committing any documentation:
 3. **D3**: Every code example was copied from a test file and tested locally
 4. **D6**: Grep for contradictory status markers and resolve them
 5. **D7**: Every shell script in docs passes `shellcheck` locally
+
+**Last audited PR**: #921

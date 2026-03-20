@@ -346,7 +346,7 @@ async def test_system_stats(tmp_path: Path) -> None:
     client, _ = await _make_auth_async_client(tmp_path, allowed_root=root)
     stats = await client.system_stats(path=str(root), use_cache=False)
     assert stats.file_count >= 1
-    assert stats.total_size >= 0
+    assert stats.total_size >= 1
     await client.aclose()
 
 

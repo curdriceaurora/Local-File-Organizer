@@ -13,10 +13,12 @@ Sourced from CodeRabbit and Copilot review comments across integration test PRs.
 
 Before writing any test:
 
-- [ ] Does each assertion verify a *specific value*, not just a type or non-None?
-- [ ] After calling a mutating method, does the test verify the mutation persisted?
-- [ ] Are mocks asserted with exact call args, not just `call_count >= 1`?
-- [ ] Is `pytest.importorskip` scoped to only the classes that use the optional dep?
+- [ ] Does each assertion verify a *specific value*, not just a type or non-None? (T1 — use Fix-by-type table)
+- [ ] After calling a mutating method, does the test verify the mutation persisted? (T2)
+- [ ] Are mocks asserted with exact call args, not just `call_count >= 1`? (T3)
+- [ ] Is `pytest.importorskip` scoped to only the classes that use the optional dep? (T5)
+- [ ] Does this file import an optional dep at module level without `pytest.importorskip`? (T8)
+- [ ] Does any assertion use `>= 0` on a length, count, or duration? Replace with a meaningful bound. (T9)
 
 ---
 
@@ -33,6 +35,18 @@ def test_update_rule(self, rule_manager, sample_rule):
     updated = Rule(name="pdf_to_archive", description="Updated description")
     result = rule_manager.update_rule("default", updated)
     assert isinstance(result, bool)  # passes even if update_rule returns False
+
+def test_get_summary(self, analyzer):
+    result = analyzer.get_summary()
+    assert isinstance(result, str)  # passes even if get_summary returns ""
+
+def test_load_config(self, loader):
+    result = loader.load()
+    assert isinstance(result, dict)  # passes even if load returns {}
+
+def test_list_rules(self, rule_manager):
+    result = rule_manager.list_rules()
+    assert isinstance(result, list)  # passes even if list_rules returns []
 ```
 
 **Good**:
@@ -47,11 +61,20 @@ def test_update_rule(self, rule_manager, sample_rule):
     assert retrieved.description == "Updated description"
 ```
 
-**Fix by type**:
-- `bool` return → `assert result is True` or `assert result is False`
-- `str` return → `assert result == "expected_string"`
-- `dict` return → assert specific keys or `assert result == {...}`
-- `list` return → assert length and/or contents
+**Fix by type** (apply the appropriate fix for the return type):
+
+| Return type | Weak assertion | Strong assertion |
+|-------------|---------------|-----------------|
+| `bool` | `assert isinstance(result, bool)` | `assert result is True` or `assert result is False` |
+| `str` | `assert isinstance(result, str)` | `assert result == "expected_string"` or `assert "key" in result` |
+| `dict` | `assert isinstance(result, dict)` | `assert result == {"key": "val"}` or `assert result["key"] == val` |
+| `list` | `assert isinstance(result, list)` | `assert len(result) == N` + content check |
+| `int` | `assert isinstance(result, int)` | `assert result == expected_int` |
+| `float` | `assert isinstance(result, float)` | `assert result == pytest.approx(expected_float)` |
+
+**Residual count**: ~135 sole-isinstance violations remain in the test suite; cleanup tracked in a
+dedicated phase. The CI guardrail is currently diff-scoped (changed files only) — full-suite
+enforcement will follow the cleanup phase.
 
 **CI enforcement**: `test_changed_tests_have_no_sole_isinstance_assertions` in `tests/ci/test_test_quality_guardrails.py`
 
@@ -207,12 +230,107 @@ code actually raises that exception. If it returns a sentinel value instead, rem
 
 ---
 
+## Pattern T8: MISSING_IMPORT_GUARD
+
+**What it is**: Test file imports an optional dependency at module level (top-level `import`
+or `from X import Y`) without a `pytest.importorskip` guard. When the package is absent the
+entire file fails with `ImportError` at collection time — silencing all tests in the file,
+including ones that don't need the optional dep.
+
+Distinct from T5 (IMPORTSKIP_SCOPE) which covers a *misplaced* guard; T8 covers a *missing*
+guard entirely.
+
+**Bad**:
+```python
+from rank_bm25 import BM25Okapi  # crashes entire file if rank_bm25 not installed
+
+class TestBM25Search:
+    def test_basic_search(self): ...
+
+class TestFileValidator:      # doesn't use rank_bm25, but also silenced
+    def test_validates_pdf(self): ...
+```
+
+**Good**:
+```python
+class TestBM25Search:
+    @pytest.fixture(autouse=True)
+    def _require_rank_bm25(self) -> None:
+        pytest.importorskip("rank_bm25")
+
+    def test_basic_search(self): ...
+
+class TestFileValidator:      # unaffected; runs even without rank_bm25
+    def test_validates_pdf(self): ...
+```
+
+**Optional dependencies in this project** (require guards): `rank_bm25`, `sklearn`
+(scikit-learn), `fitz` (PyMuPDF), `docx` (python-docx), `openpyxl`, `pptx`
+(python-pptx), `ebooklib`, `bs4` (beautifulsoup4).
+
+**Pre-generation check**: Before writing any test that imports from the list above, add a
+class-level `@pytest.fixture(autouse=True)` that calls `pytest.importorskip("<package>")`.
+Never use a module-level guard in files with mixed classes.
+
+---
+
+## Pattern T9: VACUOUS_TAUTOLOGY_ASSERTION
+
+**What it is**: An assertion that is always true by mathematical definition — passes even
+when the code is completely broken. Common forms:
+
+- `assert len(results) >= 0` — `len()` is always ≥ 0 by definition
+- `assert count >= 0` — counts are non-negative by definition
+- `assert duration >= 0` — elapsed time is non-negative
+- `assert total_size >= 0` — sizes are non-negative
+
+The assertion provides zero signal: it passes whether `results` is empty, full, or even
+`None` (which would have raised before the assertion).
+
+**Bad**:
+```python
+results = searcher.find(query)
+assert len(results) >= 0   # always True — len() is never negative
+
+count = tracker.get_count()
+assert count >= 0          # always True — counts are non-negative
+
+duration = timer.elapsed()
+assert duration >= 0       # always True — elapsed time is non-negative
+```
+
+**Good**:
+```python
+results = searcher.find(query)
+assert len(results) >= 1   # lower bound > 0 is meaningful
+assert len(results) == 3   # exact count is strongest
+
+count = tracker.get_count()
+assert count == expected_count   # assert the actual expected value
+
+duration = timer.elapsed()
+assert duration < 5.0      # upper bound is meaningful (not lower bound)
+```
+
+**Pre-generation check**: Before writing `assert X >= 0`, ask: *"Is X a length, count,
+size, or duration? If yes — this assertion always passes. Assert a meaningful bound
+(>= 1, == expected, < max) instead."*
+
+**CI enforcement**: `test_changed_tests_have_no_vacuous_len_gte_zero_assertions` in
+`tests/ci/test_test_quality_guardrails.py` (detects `len(x) >= 0` and `0 <= len(x)` forms).
+
+---
+
 ## Rule of Thumb
 
 For every assertion, ask:
-1. **T1**: "Is isinstance the *only* assertion? If yes — add a value assertion."
+1. **T1**: "Is isinstance the *only* assertion? If yes — use the Fix-by-type table above."
 2. **T2**: "Did I call a mutating method? Did I verify the state changed?"
 3. **T3**: "Did I verify mock call args, not just call count?"
 4. **T4**: "Is this an `X or isinstance(X, T)` disjunction? Flatten to a specific check."
 5. **T5**: "Is importorskip at module level in a mixed file? Move to class-level autouse."
 6. **T7**: "Does this try/except guard an exception the production code actually raises?"
+7. **T8**: "Does this test file import an optional dep at module level without a guard?"
+8. **T9**: "Is `assert X >= 0` where X is a length/count/duration? Replace with a meaningful bound."
+
+**Last audited PR**: #921

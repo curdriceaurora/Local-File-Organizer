@@ -11,6 +11,7 @@ Sourced from CodeRabbit and Copilot review comments — 84 classified CI finding
 
 - [ ] Read existing `.github/workflows/ci.yml` BEFORE adding any new workflow step
 - [ ] Verify coverage threshold against `pyproject.toml` `cov-fail-under` value BEFORE documenting it
+- [ ] Adding/bumping a dependency version? Run `pip index versions <package>` to confirm it exists on PyPI (C8)
 - [ ] Check `@lru_cache` decorators on functions that read env vars — remove if found
 - [ ] No wall-clock time limits in CI (`< 1s`, `< 5s`) — use relative assertions or skip entirely
 - [ ] Measuring integration coverage? Run `bash .claude/scripts/measure-integration-coverage.sh` (erases `.coverage` first)
@@ -167,6 +168,13 @@ grep "cov-fail-under\|fail_under" pyproject.toml
 ```
 Use only the number that command returns.
 
+**Post-change sweep** (run after ANY threshold change): Find all stale references to the old value:
+```bash
+OLD=90; NEW=95
+grep -rn "$OLD" docs/ .github/ README.md CONTRIBUTING.md .claude/rules/ | grep -i "cover\|docstring\|gate\|threshold\|fail-under"
+```
+Update every hit before committing. A threshold change in `pyproject.toml` is incomplete until all doc references are also updated.
+
 **Current project values** (verify before using):
 - Code coverage gate: `cov-fail-under = 95` (in `pyproject.toml`)
 
@@ -257,11 +265,54 @@ Use only the `TOTAL` line from that output. Never use a number from a run that d
 
 ---
 
+## Pattern C8: VERSION_FABRICATION — 1 critical finding (PR #846)
+
+**What it is**: A `>=X.Y.Z` version constraint added to `pyproject.toml` where that version
+does not exist on PyPI. Claude or the author invented a version number without verifying it.
+When `pip install` resolves the constraint it either silently installs an older version (if
+the constraint resolves by coincidence) or fails entirely.
+
+**Bad**:
+```toml
+# BAD — rank-bm25 0.7.2 does not exist on PyPI; latest is 0.2.2
+[project.optional-dependencies]
+search = [
+    "rank-bm25>=0.7.2",
+]
+```
+
+**Good**:
+```bash
+# ALWAYS verify the version exists before writing the constraint
+pip index versions rank-bm25
+# → Available versions: 0.2.2, 0.2.1, 0.2.0, ...
+
+# THEN write the real latest version
+```
+```toml
+[project.optional-dependencies]
+search = [
+    "rank-bm25>=0.2.2",
+]
+```
+
+**Pre-generation check**: Before adding or bumping ANY dependency version in `pyproject.toml`,
+run `pip index versions <package-name>` to confirm the version exists on PyPI. Never invent
+a version number from memory or documentation — packages on PyPI rarely exceed their latest
+published version.
+
+**CI enforcement**: `check_pypi_versions.py` pre-commit hook (added after PR #846).
+
+---
+
 ## Rule of Thumb
 
 Before writing any CI config:
-1. **C4**: `grep "cov-fail-under" pyproject.toml` — use this exact number everywhere
+1. **C4**: `grep "cov-fail-under" pyproject.toml` — use this exact number everywhere; after changing it, grep all docs for the old value
 2. **C7**: Measure integration coverage with `bash .claude/scripts/measure-integration-coverage.sh` — never from a dirty local env
-3. **C3**: Search `@lru_cache` + `environ` — remove cache if found
-4. **C2**: Add `if: github.event_name == 'push'` guard to external write actions
-5. **C1**: No wall-clock time assertions in tests (`assert duration < N`)
+3. **C8**: Run `pip index versions <pkg>` before writing any version constraint in `pyproject.toml`
+4. **C3**: Search `@lru_cache` + `environ` — remove cache if found
+5. **C2**: Add `if: github.event_name == 'push'` guard to external write actions
+6. **C1**: No wall-clock time assertions in tests (`assert duration < N`)
+
+**Last audited PR**: #921

@@ -1,6 +1,6 @@
 """CI guardrails for test quality anti-patterns.
 
-Covers three regression classes:
+Covers four regression classes:
 
 1. ``time.sleep()`` in tests — wall-clock sleeps make tests flaky under
    load and mask real timing bugs.  Use ``os.utime()`` for mtime bumps or
@@ -11,17 +11,22 @@ Covers three regression classes:
    the upper-bound assertion is vacuous: it passes even when the index
    returns zero matches.  Use ``assert len(results) == N`` instead.
 
-3. Sole ``assert isinstance(x, T)`` in a test function — verifies the return
+3. ``assert len(results) >= 0`` / ``assert 0 <= len(results)`` patterns —
+   ``len()`` is always non-negative by definition, so these assertions always
+   pass even when the tested code is completely broken.  Use a meaningful
+   lower bound (``>= 1``) or exact count (``== N``) instead.
+
+4. Sole ``assert isinstance(x, T)`` in a test function — verifies the return
    type but not the value.  For ``bool`` this is especially weak (only two
    values exist); for ``str`` it misses the actual content.  Use specific
    value assertions instead (``is True``, ``== "high"``, etc.).
    Applies to changed files only.  TODO: broaden to full suite after a
    clean-up sweep analogous to issue #900.
 
-Guardrails 1 and 2 apply to ALL test files under ``tests/``.  Streams 1-4 of
-issue #900 eliminated every pre-existing violation, so the scope can be
-expanded from diff-based (changed files only) to the full test suite.
-Guardrail 3 is diff-based until a full-suite clean-up is done.
+Guardrails 1, 2, and 3 apply to ALL test files under ``tests/``.  Streams
+1-4 of issue #900 eliminated every pre-existing violation, so the scope can
+be expanded from diff-based (changed files only) to the full test suite.
+Guardrail 4 is diff-based until a full-suite clean-up is done.
 """
 
 from __future__ import annotations
@@ -265,6 +270,116 @@ def test_changed_tests_have_no_vacuous_len_lte_assertions() -> None:
 
     assert not violations, (
         "Vacuous ``assert len(x) <= N`` found in changed tests — use ``== N`` for exact counts:\n"
+        + "\n".join(violations)
+    )
+
+
+# -------------------------------------------------------------------------
+# Fix 5b: vacuous >= 0 assertions (always-true lower bounds)
+# -------------------------------------------------------------------------
+
+_GTE_ZERO_NON_NEGATIVE_ATTRS = frozenset({"count", "duration", "total_size", "size", "length"})
+
+
+def _find_vacuous_len_gte_zero_assertions(source: str, path: str = "<string>") -> list[str]:
+    """Return assertions that are always true because the left side is non-negative by definition.
+
+    Detects two forms:
+
+    1. ``assert len(x) >= 0``  (forward) and ``assert 0 <= len(x)``  (reverse)
+       ``len()`` always returns a non-negative integer, so ``>= 0`` is tautological.
+
+    2. ``assert x.attr >= 0``  (forward) and ``assert 0 <= x.attr``  (reverse)
+       where ``attr`` is one of the known non-negative attribute names
+       (``count``, ``duration``, ``total_size``, ``size``, ``length``).
+
+    These pass even when the code under test is completely broken.  Use a
+    meaningful bound (``>= 1``, ``== N``, ``< max_val``) instead.
+    """
+    try:
+        tree = ast.parse(source, filename=path)
+    except SyntaxError:
+        return []
+
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assert):
+            continue
+        test = node.test
+        if not isinstance(test, ast.Compare):
+            continue
+        if len(test.ops) != 1 or len(test.comparators) != 1:
+            continue
+
+        left = test.left
+        op = test.ops[0]
+        right = test.comparators[0]
+
+        def _is_zero(n: ast.AST) -> bool:
+            return isinstance(n, ast.Constant) and n.value == 0
+
+        def _is_len_call(n: ast.AST) -> bool:
+            return isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "len"
+
+        def _is_non_negative_attr(n: ast.AST) -> bool:
+            return isinstance(n, ast.Attribute) and n.attr in _GTE_ZERO_NON_NEGATIVE_ATTRS
+
+        def _is_non_negative_expr(n: ast.AST) -> bool:
+            return _is_len_call(n) or _is_non_negative_attr(n)
+
+        # assert len(x) >= 0  or  assert x.count >= 0  (forward)
+        forward = _is_non_negative_expr(left) and isinstance(op, ast.GtE) and _is_zero(right)
+        # assert 0 <= len(x)  or  assert 0 <= x.count  (reverse)
+        reverse = _is_zero(left) and isinstance(op, ast.LtE) and _is_non_negative_expr(right)
+
+        if forward or reverse:
+            violations.append(f"{path}:{node.lineno}")
+
+    return violations
+
+
+@pytest.mark.parametrize(
+    ("source", "expected_count"),
+    [
+        # len >= 0 — always true, should flag
+        ("assert len(results) >= 0\n", 1),
+        ("assert 0 <= len(results)\n", 1),
+        # attribute >= 0 — always true, should flag
+        ("assert x.count >= 0\n", 1),
+        ("assert x.duration >= 0\n", 1),
+        ("assert x.total_size >= 0\n", 1),
+        ("assert x.size >= 0\n", 1),
+        ("assert x.length >= 0\n", 1),
+        ("assert 0 <= x.count\n", 1),
+        # Meaningful bounds — should NOT flag
+        ("assert len(results) >= 1\n", 0),
+        ("assert len(results) > 0\n", 0),
+        ("assert len(results) == 0\n", 0),
+        ("assert x.count == 0\n", 0),
+        ("assert x.duration < 5.0\n", 0),
+    ],
+)
+def test_detector_flags_vacuous_len_gte_zero(source: str, expected_count: int) -> None:
+    assert len(_find_vacuous_len_gte_zero_assertions(source)) == expected_count
+
+
+def test_changed_tests_have_no_vacuous_len_gte_zero_assertions() -> None:
+    """Test files must not use ``assert len(x) >= 0`` or ``assert x.attr >= 0`` tautologies.
+
+    ``len()`` is always non-negative by definition, as are counts, durations,
+    and sizes.  Asserting ``>= 0`` provides zero signal — the assertion passes
+    even when the code under test returns no results or is completely broken.
+
+    Use a meaningful lower bound (``>= 1``), exact count (``== N``), or an
+    upper bound (``< max_val``) instead.
+    """
+    violations: list[str] = []
+    for path in _changed_test_files():
+        source = path.read_text(encoding="utf-8")
+        violations.extend(_find_vacuous_len_gte_zero_assertions(source, str(path)))
+
+    assert not violations, (
+        "Vacuous ``>= 0`` assertion found — use a meaningful bound instead:\n"
         + "\n".join(violations)
     )
 
