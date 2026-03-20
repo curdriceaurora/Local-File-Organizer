@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import time
+import threading
 from pathlib import Path
 from unittest.mock import patch
 
@@ -35,7 +35,7 @@ class TestParallelExecution:
             mock_processor = MockProcessorCls.return_value
 
             def side_effect(path: Path) -> ProcessedFile:
-                time.sleep(0.1)  # Simulate delay
+                threading.Event().wait(timeout=0.1)  # Simulate delay
                 return ProcessedFile(
                     file_path=path,
                     description=f"Desc {path.name}",

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 import statistics
+import threading
 import time
 from pathlib import Path
 
@@ -67,7 +68,7 @@ class _SlowIOStage:
             context.error = str(exc)
             return context
         if self._delay:
-            time.sleep(self._delay)
+            threading.Event().wait(timeout=self._delay)
         context.metadata["io_done"] = True
         return context
 
@@ -85,7 +86,7 @@ class _SlowComputeStage:
     def process(self, context: StageContext) -> StageContext:
         if context.failed:
             return context
-        time.sleep(self._delay)
+        threading.Event().wait(timeout=self._delay)
         context.category = "test_category"
         return context
 
