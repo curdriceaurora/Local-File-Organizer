@@ -42,6 +42,7 @@ class TestDuplicateIndexAddFile:
         f.write_text("content")
         index.add_file(f, "abc123hash")
         files = index.get_files_by_hash("abc123hash")
+        assert len(files) == 1
         assert any(fm.path == f for fm in files)
 
     def test_add_with_metadata(self, index: DuplicateIndex, tmp_path: Path) -> None:
@@ -50,6 +51,8 @@ class TestDuplicateIndexAddFile:
         index.add_file(f, "hash1", metadata={"size": 100})
         files = index.get_files_by_hash("hash1")
         assert any(fm.path == f for fm in files)
+        by_size = index.get_files_by_size(100)
+        assert f in by_size
 
     def test_add_duplicate_hash(self, index: DuplicateIndex, tmp_path: Path) -> None:
         f1 = tmp_path / "a.txt"
