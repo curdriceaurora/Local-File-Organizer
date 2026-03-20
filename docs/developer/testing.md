@@ -375,6 +375,36 @@ event.wait(timeout=5)
 assert event.is_set()
 ```
 
+#### Pattern: Staleness check (file-watcher tests)
+
+Use `os.utime()` to advance a file's modification time without sleeping:
+
+```python
+# Instead of: time.sleep(1)
+import os
+
+old_mtime = path.stat().st_mtime
+os.utime(path, (old_mtime + 60, old_mtime + 60))
+```
+
+#### Pattern: Background job polling
+
+Use a deadline loop with a short inner sleep for background threads:
+
+```python
+# Instead of: time.sleep(2)
+import time
+import pytest
+
+deadline = time.monotonic() + 5.0
+while time.monotonic() < deadline:
+    if condition_met():
+        break
+    time.sleep(0.05)
+else:
+    pytest.fail("Timed out waiting for condition")
+```
+
 ## Test Coverage by Epic
 
 ### Epic #571: Desktop UI Test Coverage
