@@ -313,11 +313,8 @@ class TestFindDuplicates:
         f2.write_text(
             "Python programming language is widely used for data science machine learning tasks."
         )
-        try:
-            result = deduplicator.find_duplicates([f1, f2], min_text_length=10)
-            assert isinstance(result, dict)
-        except ValueError:
-            pass  # sklearn may raise on small corpora
+        result = deduplicator.find_duplicates([f1, f2], min_text_length=10)
+        assert isinstance(result, dict)
 
 
 class TestCompareDocuments:

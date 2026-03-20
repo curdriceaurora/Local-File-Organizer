@@ -12,8 +12,6 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("rank_bm25")
-
 from file_organizer.plugins.errors import PluginPermissionError
 from file_organizer.plugins.sdk.decorators import (
     command,
@@ -192,6 +190,10 @@ class TestPluginSandboxRequireMethods:
 
 
 class TestTokenise:
+    @pytest.fixture(autouse=True)
+    def _require_rank_bm25(self) -> None:
+        pytest.importorskip("rank_bm25")
+
     def test_basic_split(self) -> None:
         assert _tokenise("hello world") == ["hello", "world"]
 
@@ -222,6 +224,10 @@ class TestTokenise:
 
 
 class TestBM25IndexInit:
+    @pytest.fixture(autouse=True)
+    def _require_rank_bm25(self) -> None:
+        pytest.importorskip("rank_bm25")
+
     def test_created(self) -> None:
         idx = BM25Index()
         assert idx is not None
@@ -236,6 +242,10 @@ class TestBM25IndexInit:
 
 
 class TestBM25IndexIndex:
+    @pytest.fixture(autouse=True)
+    def _require_rank_bm25(self) -> None:
+        pytest.importorskip("rank_bm25")
+
     def test_index_sets_size(self, tmp_path: Path) -> None:
         idx = BM25Index()
         paths = [tmp_path / f"f{i}.txt" for i in range(3)]
@@ -260,6 +270,10 @@ class TestBM25IndexIndex:
 
 
 class TestBM25IndexSearch:
+    @pytest.fixture(autouse=True)
+    def _require_rank_bm25(self) -> None:
+        pytest.importorskip("rank_bm25")
+
     def test_returns_list(self, tmp_path: Path) -> None:
         idx = BM25Index()
         idx.index(["finance quarterly report"], [tmp_path / "report.txt"])
@@ -289,7 +303,7 @@ class TestBM25IndexSearch:
         idx = BM25Index()
         idx.index(docs, paths)
         results = idx.search("finance", top_k=3)
-        assert len(results) < 4
+        assert len(results) == 3
 
     def test_scores_are_floats(self, tmp_path: Path) -> None:
         idx = BM25Index()

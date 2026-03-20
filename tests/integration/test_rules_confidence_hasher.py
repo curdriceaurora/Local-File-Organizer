@@ -118,38 +118,42 @@ class TestRuleManagerUpdateAndRemove:
         rule_manager.add_rule("default", sample_rule)
         updated = Rule(name="pdf_to_archive", description="Updated description")
         result = rule_manager.update_rule("default", updated)
-        assert isinstance(result, bool)
+        assert result is True
+        retrieved = rule_manager.get_rule("default", "pdf_to_archive")
+        assert retrieved is not None
+        assert retrieved.description == "Updated description"
 
     def test_remove_rule(self, rule_manager: RuleManager, sample_rule: Rule) -> None:
         rule_manager.add_rule("default", sample_rule)
         result = rule_manager.remove_rule("default", "pdf_to_archive")
-        assert isinstance(result, bool)
+        assert result is True
+        assert rule_manager.get_rule("default", "pdf_to_archive") is None
 
     def test_remove_nonexistent_rule(self, rule_manager: RuleManager) -> None:
         result = rule_manager.remove_rule("default", "ghost_rule")
-        assert isinstance(result, bool)
+        assert result is False
 
 
 class TestRuleManagerToggle:
     def test_toggle_rule(self, rule_manager: RuleManager, sample_rule: Rule) -> None:
         rule_manager.add_rule("default", sample_rule)
         result = rule_manager.toggle_rule("default", "pdf_to_archive")
-        assert result is None or isinstance(result, bool)
+        assert isinstance(result, bool)
 
     def test_toggle_nonexistent(self, rule_manager: RuleManager) -> None:
         result = rule_manager.toggle_rule("default", "ghost")
-        assert result is None or isinstance(result, bool)
+        assert result is None
 
 
 class TestRuleManagerDelete:
     def test_delete_nonexistent_ruleset(self, rule_manager: RuleManager) -> None:
         result = rule_manager.delete_rule_set("nonexistent")
-        assert isinstance(result, bool)
+        assert result is False
 
     def test_delete_existing_ruleset(self, rule_manager: RuleManager) -> None:
         rule_manager.save_rule_set(RuleSet(name="to_delete"))
         result = rule_manager.delete_rule_set("to_delete")
-        assert isinstance(result, bool)
+        assert result is True
 
 
 # ---------------------------------------------------------------------------
@@ -337,27 +341,40 @@ class TestGetUsageData:
 class TestGetConfidenceLevel:
     def test_high_confidence(self, conf_engine: ConfidenceEngine) -> None:
         level = conf_engine.get_confidence_level(0.9)
-        assert isinstance(level, str)
+        assert level == "high"
+
+    def test_medium_confidence(self, conf_engine: ConfidenceEngine) -> None:
+        level = conf_engine.get_confidence_level(0.6)
+        assert level == "medium"
 
     def test_low_confidence(self, conf_engine: ConfidenceEngine) -> None:
+        level = conf_engine.get_confidence_level(0.3)
+        assert level == "low"
+
+    def test_very_low_confidence(self, conf_engine: ConfidenceEngine) -> None:
         level = conf_engine.get_confidence_level(0.2)
-        assert isinstance(level, str)
+        assert level == "very_low"
 
     def test_zero_confidence(self, conf_engine: ConfidenceEngine) -> None:
         level = conf_engine.get_confidence_level(0.0)
-        assert isinstance(level, str)
+        assert level == "very_low"
 
 
 class TestGetConfidenceTrend:
     def test_unknown_pattern(self, conf_engine: ConfidenceEngine) -> None:
         result = conf_engine.get_confidence_trend("no_pattern")
         assert isinstance(result, dict)
+        assert result["trend"] == "unknown"
+        assert "direction" in result
+        assert "confidence_change" in result
 
     def test_after_usage(self, conf_engine: ConfidenceEngine) -> None:
         now = datetime.now(UTC)
         conf_engine.track_usage("trend_pat", now, success=True)
         result = conf_engine.get_confidence_trend("trend_pat")
         assert isinstance(result, dict)
+        assert "trend" in result
+        assert "direction" in result
 
 
 class TestDecayOldPatterns:
