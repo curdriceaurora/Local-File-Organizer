@@ -104,7 +104,9 @@ def _find_unguarded_traversals(path: Path) -> list[str]:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
 
-        calls = [n for n in ast.walk(node) if isinstance(n, ast.Call)]
+        # Collect calls from this function's own body only — do not descend into
+        # nested functions/classes so inner-scope guards cannot satisfy outer checks.
+        calls = [n for child in node.body for n in ast.walk(child) if isinstance(n, ast.Call)]
 
         # Does the function traverse files? (rglob or os.walk only — not bare walk())
         has_rglob = any(isinstance(c.func, ast.Attribute) and c.func.attr == "rglob" for c in calls)
