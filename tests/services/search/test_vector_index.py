@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("sklearn")
+
 from file_organizer.interfaces.search import IndexProtocol
 from file_organizer.services.search.vector_index import VectorIndex
 
