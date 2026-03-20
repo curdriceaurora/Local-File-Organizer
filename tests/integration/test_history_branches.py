@@ -193,7 +193,7 @@ class TestOperationHistoryBranches:
         with patch.object(tracker, "_calculate_file_hash", side_effect=OSError("disk error")):
             op_id = tracker.log_operation(OperationType.MOVE, src)
 
-        assert isinstance(op_id, int)
+        assert op_id > 0
 
     def test_log_operation_stat_failure_is_silenced(self, tmp_path: Path) -> None:
         """Exception collecting stat metadata is caught; op still logged (lines 93-94).
@@ -230,7 +230,7 @@ class TestOperationHistoryBranches:
 
         tracker = OperationHistory(tmp_path / "h2.db")
         op_id = tracker.log_operation(OperationType.COPY, PathWithFailingStat())  # type: ignore[arg-type]
-        assert isinstance(op_id, int)
+        assert op_id > 0
 
     def test_commit_transaction_failure_returns_false(self, tmp_path: Path) -> None:
         """commit_transaction returns False when db.execute_query raises (lines 195-197)."""
