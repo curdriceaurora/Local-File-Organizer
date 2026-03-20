@@ -65,9 +65,7 @@ run_step "Run pre-commit on all files" pre-commit run --all-files
 run_step "Run semantic CI guardrails" pytest tests/ci -q --no-cov --override-ini="addopts="
 
 # ---------------------------------------------------------------------------
-# Coverage ratchet gates (local enforcement — catches drift before CI sees it)
-# Gates are set just below the actual baseline to prevent regression while
-# the ratchet epic (#857) raises them to final targets.
+# Docstring coverage gate (fast, no optional deps)
 # ---------------------------------------------------------------------------
 
 echo "▶ Docstring coverage gate (≥95%)"
@@ -75,47 +73,15 @@ interrogate -v src/ --fail-under 95 -q
 echo "✓ Docstring coverage"
 echo ""
 
-echo "▶ Unit test code coverage gate (≥93% branch)"
-pytest tests/ -m "unit and not benchmark" \
-  --cov=file_organizer --cov-fail-under=93 --no-cov-on-fail \
-  -q -n=auto --timeout=30 --override-ini="addopts="
-echo "✓ Unit test coverage"
-echo ""
-
-echo "▶ Integration test coverage gate (≥30% branch)"
-rm -f coverage.xml
-pytest tests/ -m "integration and not benchmark" \
-  --cov=file_organizer --cov-fail-under=30 --no-cov-on-fail \
-  --cov-report=xml:coverage.xml \
-  -q --timeout=30 --override-ini="addopts="
-echo "✓ Integration test coverage"
-echo ""
-
-# Diff coverage gate (only on branches with main for comparison)
-# Detects if we're in a branch context (not detached HEAD)
-current_branch=$(git branch --show-current 2>/dev/null)
-if [[ -n "$current_branch" && "$current_branch" != "HEAD" && -f coverage.xml ]]; then
-  echo "▶ Diff coverage gate (≥80% on changed lines)"
-
-  # Ensure origin/main is available for comparison
-  if ! git rev-parse origin/main >/dev/null 2>&1; then
-    git fetch origin main 2>/dev/null || true
-  fi
-
-  # Run diff-cover if available
-  if command -v diff-cover &>/dev/null; then
-    diff-cover coverage.xml --compare-branch=origin/main --fail-under=80
-    echo "✓ Diff coverage gate"
-    echo ""
-  else
-    echo "ℹ diff-cover not installed (optional; skipping local check)"
-    echo "  Install: pip install diff-cover"
-    echo ""
-  fi
-else
-  echo "ℹ Skipping diff coverage gate (no branch context or no coverage.xml)"
-  echo ""
-fi
+# ---------------------------------------------------------------------------
+# Coverage floor gates (unit ≥93% branch, integration ≥30% branch) are
+# enforced by CI on main-branch pushes — NOT here.
+#
+# Rationale (issue #914): the unit gate ran `pytest tests/ -m "unit"` (~80 s)
+# and included optional-dep tests (rank-bm25, scikit-learn) that fail for
+# anyone without [search] extras, creating spurious noise on every commit.
+# Coverage is authoritative in ci.yml; local pre-commit stays fast & clean.
+# ---------------------------------------------------------------------------
 
 if git diff --cached -- '*.py' '.github/workflows/*.yml' 2>/dev/null | grep -q 'GITHUB_'; then
   echo "ℹ Detected GitHub-environment branching in staged changes."
