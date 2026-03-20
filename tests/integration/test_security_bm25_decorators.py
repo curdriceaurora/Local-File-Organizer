@@ -278,7 +278,10 @@ class TestBM25IndexSearch:
         idx = BM25Index()
         idx.index(["finance quarterly report"], [tmp_path / "report.txt"])
         result = idx.search("finance")
-        assert isinstance(result, list)
+        # 1 indexed doc matching the query → 1 result tuple
+        assert len(result) == 1
+        path, score = result[0]
+        assert path == tmp_path / "report.txt"
 
     def test_relevant_doc_returned(self, tmp_path: Path) -> None:
         paths = [tmp_path / f"d{i}.txt" for i in range(6)]
@@ -309,6 +312,7 @@ class TestBM25IndexSearch:
         idx = BM25Index()
         idx.index(["finance report"], [tmp_path / "f.txt"])
         results = idx.search("finance")
+        assert len(results) >= 1
         for _, score in results:
             assert isinstance(score, float)
 

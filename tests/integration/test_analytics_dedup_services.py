@@ -74,7 +74,8 @@ class TestCalculateQualityScore:
             naming_compliance=0.0,
             structure_consistency=0.0,
         )
-        assert isinstance(score, float)
+        # Zero files returns 0.0 sentinel per implementation
+        assert score == 0.0
 
     def test_partial_organization(self, metrics: MetricsCalculator) -> None:
         score = metrics.calculate_quality_score(
@@ -88,21 +89,24 @@ class TestCalculateQualityScore:
 
     def test_returns_float(self, metrics: MetricsCalculator) -> None:
         score = metrics.calculate_quality_score(10, 8, 0.9, 0.85)
-        assert isinstance(score, float)
+        assert 0.0 <= score <= 100.0
 
 
 class TestCalculateEfficiencyGain:
     def test_improvement(self, metrics: MetricsCalculator) -> None:
         gain = metrics.calculate_efficiency_gain(before_operations=100, after_operations=30)
-        assert isinstance(gain, float)
+        # (100 - 30) / 100 * 100 = 70.0%
+        assert gain == 70.0
 
     def test_same_operations(self, metrics: MetricsCalculator) -> None:
         gain = metrics.calculate_efficiency_gain(10, 10)
-        assert isinstance(gain, float)
+        # No improvement → 0.0
+        assert gain == 0.0
 
     def test_zero_before(self, metrics: MetricsCalculator) -> None:
         gain = metrics.calculate_efficiency_gain(0, 5)
-        assert isinstance(gain, float)
+        # Division-by-zero guard returns 0.0
+        assert gain == 0.0
 
 
 class TestEstimateTimeSaved:
@@ -113,7 +117,8 @@ class TestEstimateTimeSaved:
 
     def test_custom_avg_time(self, metrics: MetricsCalculator) -> None:
         saved = metrics.estimate_time_saved(automated_ops=5, avg_manual_time_per_op=60)
-        assert isinstance(saved, int)
+        # 5 ops * 60 sec each = 300 seconds
+        assert saved == 300
 
     def test_zero_ops(self, metrics: MetricsCalculator) -> None:
         saved = metrics.estimate_time_saved(0)
@@ -123,7 +128,8 @@ class TestEstimateTimeSaved:
 class TestMeasureNamingCompliance:
     def test_empty_list(self, metrics: MetricsCalculator) -> None:
         result = metrics.measure_naming_compliance([])
-        assert isinstance(result, float)
+        # Empty list → returns 1.0 (vacuously all compliant)
+        assert result == 1.0
 
     def test_with_files(self, metrics: MetricsCalculator, tmp_path: Path) -> None:
         files = []
@@ -139,15 +145,18 @@ class TestMeasureNamingCompliance:
 class TestCalculateImprovementMetrics:
     def test_no_previous_score(self, metrics: MetricsCalculator) -> None:
         result = metrics.calculate_improvement_metrics(current_score=0.8)
-        assert isinstance(result, dict)
+        assert result["current_score"] == 0.8
+        assert result["trend"] == "stable"
 
     def test_with_previous_score(self, metrics: MetricsCalculator) -> None:
         result = metrics.calculate_improvement_metrics(current_score=0.8, previous_score=0.6)
-        assert isinstance(result, dict)
+        assert "current_score" in result
+        assert "improvement" in result
 
     def test_same_score(self, metrics: MetricsCalculator) -> None:
         result = metrics.calculate_improvement_metrics(current_score=0.7, previous_score=0.7)
-        assert isinstance(result, dict)
+        assert result["trend"] == "stable"
+        assert result["improvement"] == 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -169,12 +178,14 @@ class TestStorageReporterInit:
 class TestCalculateReclamation:
     def test_empty_groups(self, reporter: StorageReporter) -> None:
         result = reporter.calculate_reclamation([])
-        assert isinstance(result, dict)
+        assert result["total_duplicate_files"] == 0
+        assert result["total_duplicate_groups"] == 0
 
     def test_single_group(self, reporter: StorageReporter) -> None:
         groups = [{"count": 2, "total_size": 2048}]
         result = reporter.calculate_reclamation(groups)
-        assert isinstance(result, dict)
+        assert result["total_duplicate_files"] == 2
+        assert result["total_duplicate_groups"] == 1
 
     def test_result_has_recoverable_space(self, reporter: StorageReporter) -> None:
         groups = [{"count": 3, "total_size": 3000}]
@@ -183,8 +194,9 @@ class TestCalculateReclamation:
 
     def test_result_has_total_key(self, reporter: StorageReporter) -> None:
         result = reporter.calculate_reclamation([])
-        # Should contain numeric summaries
-        assert isinstance(result, dict)
+        # Empty input produces zero totals
+        assert result["total_size"] == 0
+        assert result["recoverable_space"] == 0
 
 
 _SAMPLE_RESULTS = {
@@ -198,13 +210,12 @@ _SAMPLE_RESULTS = {
 class TestGenerateReport:
     def test_json_format(self, reporter: StorageReporter) -> None:
         result = reporter.generate_report(_SAMPLE_RESULTS, output_format="json")
-        assert isinstance(result, str)
         parsed = json.loads(result)
-        assert isinstance(parsed, dict)
+        assert "analyzed_documents" in parsed
 
     def test_text_format(self, reporter: StorageReporter) -> None:
         result = reporter.generate_report(_SAMPLE_RESULTS, output_format="text")
-        assert isinstance(result, str)
+        assert "REPORT" in result.upper()
 
     def test_text_contains_report_header(self, reporter: StorageReporter) -> None:
         result = reporter.generate_report(_SAMPLE_RESULTS, output_format="text")
@@ -222,7 +233,7 @@ class TestExportToJson:
         output = tmp_path / "out.json"
         reporter.export_to_json({"key": "value"}, output)
         content = json.loads(output.read_text())
-        assert isinstance(content, dict)
+        assert content == {"key": "value"}
 
 
 class TestExportToCsv:
@@ -273,13 +284,14 @@ class TestDocumentDeduplicatorInit:
 class TestFindDuplicates:
     def test_empty_list(self, deduplicator: DocumentDeduplicator) -> None:
         result = deduplicator.find_duplicates([])
-        assert isinstance(result, dict)
+        assert "duplicate_groups" in result
+        assert result["duplicate_groups"] == []
 
     def test_single_file(self, deduplicator: DocumentDeduplicator, tmp_path: Path) -> None:
         f = tmp_path / "doc.txt"
         f.write_text("This is some document content with enough text to process.")
         result = deduplicator.find_duplicates([f])
-        assert isinstance(result, dict)
+        assert "duplicate_groups" in result
 
     def test_identical_files(self, deduplicator: DocumentDeduplicator, tmp_path: Path) -> None:
         content = (
@@ -290,7 +302,8 @@ class TestFindDuplicates:
         f1.write_text(content)
         f2.write_text(content)
         result = deduplicator.find_duplicates([f1, f2])
-        assert isinstance(result, dict)
+        assert "duplicate_groups" in result
+        assert "analyzed_documents" in result
 
     def test_different_files(self, deduplicator: DocumentDeduplicator, tmp_path: Path) -> None:
         f1 = tmp_path / "file1.txt"
@@ -298,7 +311,8 @@ class TestFindDuplicates:
         f1.write_text("Completely different content about apples and oranges for testing.")
         f2.write_text("Nothing remotely similar here about trains and automobiles.")
         result = deduplicator.find_duplicates([f1, f2])
-        assert isinstance(result, dict)
+        assert "duplicate_groups" in result
+        assert result["total_documents"] == 2
 
     def test_returns_dict_with_groups(
         self, deduplicator: DocumentDeduplicator, tmp_path: Path
@@ -314,7 +328,8 @@ class TestFindDuplicates:
             "Python programming language is widely used for data science machine learning tasks."
         )
         result = deduplicator.find_duplicates([f1, f2], min_text_length=10)
-        assert isinstance(result, dict)
+        assert "duplicate_groups" in result
+        assert result["total_documents"] == 2
 
 
 class TestCompareDocuments:
@@ -390,8 +405,8 @@ class TestDuplicateReview:
 
     def test_empty_lists(self) -> None:
         review = DuplicateReview(files_to_keep=[], files_to_delete=[])
-        assert isinstance(review.files_to_keep, list)
-        assert isinstance(review.files_to_delete, list)
+        assert review.files_to_keep == []
+        assert review.files_to_delete == []
 
 
 class TestImageMetadata:
@@ -460,7 +475,8 @@ class TestSetAndGetPreference:
     def test_set_and_list(self, dir_prefs: DirectoryPrefs, tmp_path: Path) -> None:
         dir_prefs.set_preference(tmp_path, {"naming": "snake_case"})
         prefs = dir_prefs.list_directory_preferences()
-        assert isinstance(prefs, list)
+        assert len(prefs) == 1
+        assert prefs[0][0] == tmp_path.resolve()
 
     def test_get_with_inheritance(self, dir_prefs: DirectoryPrefs, tmp_path: Path) -> None:
         dir_prefs.set_preference(tmp_path, {"style": "dated"})
@@ -487,17 +503,17 @@ class TestRemovePreference:
     def test_remove_existing(self, dir_prefs: DirectoryPrefs, tmp_path: Path) -> None:
         dir_prefs.set_preference(tmp_path, {"key": "val"})
         result = dir_prefs.remove_preference(tmp_path)
-        assert isinstance(result, bool)
+        assert result is True
 
     def test_remove_nonexistent(self, dir_prefs: DirectoryPrefs, tmp_path: Path) -> None:
         result = dir_prefs.remove_preference(tmp_path / "nonexistent")
-        assert isinstance(result, bool)
+        assert result is False
 
 
 class TestGetStatistics:
     def test_empty_returns_dict(self, dir_prefs: DirectoryPrefs) -> None:
         stats = dir_prefs.get_statistics()
-        assert isinstance(stats, dict)
+        assert stats["total_directories"] == 0
 
     def test_after_adding_prefs(self, dir_prefs: DirectoryPrefs, tmp_path: Path) -> None:
         for i in range(3):
@@ -505,7 +521,7 @@ class TestGetStatistics:
             d.mkdir()
             dir_prefs.set_preference(d, {"index": i})
         stats = dir_prefs.get_statistics()
-        assert isinstance(stats, dict)
+        assert stats["total_directories"] == 3
 
 
 class TestClearAll:
@@ -560,7 +576,7 @@ class TestRuleAction:
 
     def test_parameters_dict(self) -> None:
         ra = RuleAction(action_type=ActionType.MOVE, destination="/tmp", parameters={"k": "v"})
-        assert isinstance(ra.parameters, dict)
+        assert ra.parameters == {"k": "v"}
 
 
 class TestRule:
@@ -570,7 +586,7 @@ class TestRule:
 
     def test_empty_conditions(self) -> None:
         r = Rule(name="empty")
-        assert isinstance(r.conditions, list)
+        assert r.conditions == []
 
     def test_enabled_default_true(self) -> None:
         r = Rule(name="r")
@@ -596,7 +612,7 @@ class TestRuleSet:
 
     def test_empty_rules(self) -> None:
         rs = RuleSet(name="rs")
-        assert isinstance(rs.rules, list)
+        assert rs.rules == []
 
     def test_with_rules(self) -> None:
         r = Rule(name="r1")

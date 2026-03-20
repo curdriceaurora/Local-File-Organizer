@@ -67,7 +67,7 @@ class TestStorageReporterCalculateReclamation:
         reporter = StorageReporter()
         groups = [_make_duplicate_group(count=2, total_size=2000)]
         result = reporter.calculate_reclamation(groups)
-        assert isinstance(result, dict)
+        assert result["total_duplicate_files"] == 2
 
     def test_total_duplicate_files(self) -> None:
         reporter = StorageReporter()
@@ -104,7 +104,7 @@ class TestStorageReporterGenerateReport:
     def test_returns_string(self) -> None:
         reporter = StorageReporter()
         result = reporter.generate_report(_make_duplicate_results())
-        assert isinstance(result, str)
+        assert "REPORT" in result.upper()
 
     def test_text_format_contains_header(self) -> None:
         reporter = StorageReporter()
@@ -116,7 +116,7 @@ class TestStorageReporterGenerateReport:
         data = _make_duplicate_results()
         result = reporter.generate_report(data, output_format="json")
         parsed = json.loads(result)
-        assert isinstance(parsed, dict)
+        assert "duplicate_groups" in parsed
 
     def test_json_contains_groups(self) -> None:
         reporter = StorageReporter()
@@ -180,7 +180,7 @@ class TestStorageReporterExportToJSON:
         output = tmp_path / "report.json"
         reporter.export_to_json(data, output)
         parsed = json.loads(output.read_text(encoding="utf-8"))
-        assert isinstance(parsed, dict)
+        assert "duplicate_groups" in parsed
 
 
 # ---------------------------------------------------------------------------
@@ -253,7 +253,8 @@ class TestVectorIndexSearch:
             paths,
         )
         result = idx.search("finance")
-        assert isinstance(result, list)
+        # At least the finance document should be returned
+        assert len(result) >= 1
 
     def test_results_are_tuples(self, tmp_path: Path) -> None:
         idx = VectorIndex()
@@ -274,6 +275,7 @@ class TestVectorIndexSearch:
         results = idx.search("finance")
         for _, score in results:
             assert isinstance(score, float)
+            assert 0.0 <= score <= 1.0
 
     def test_empty_query(self, tmp_path: Path) -> None:
         idx = VectorIndex()
@@ -282,7 +284,7 @@ class TestVectorIndexSearch:
             ["finance quarterly", "cooking recipes", "sports events", "music concerts"], paths
         )
         result = idx.search("")
-        assert isinstance(result, list)
+        assert result == []
 
     def test_top_k_limit(self, tmp_path: Path) -> None:
         idx = VectorIndex()

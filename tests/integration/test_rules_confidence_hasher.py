@@ -67,7 +67,7 @@ class TestRuleManagerInit:
 class TestRuleManagerLoadAndList:
     def test_list_empty(self, rule_manager: RuleManager) -> None:
         result = rule_manager.list_rule_sets()
-        assert isinstance(result, list)
+        assert result == []
 
     def test_load_default_returns_ruleset(self, rule_manager: RuleManager) -> None:
         rs = rule_manager.load_rule_set()
@@ -138,7 +138,8 @@ class TestRuleManagerToggle:
     def test_toggle_rule(self, rule_manager: RuleManager, sample_rule: Rule) -> None:
         rule_manager.add_rule("default", sample_rule)
         result = rule_manager.toggle_rule("default", "pdf_to_archive")
-        assert isinstance(result, bool)
+        # Rule.enabled defaults to True, so the first toggle returns False
+        assert result is False
 
     def test_toggle_nonexistent(self, rule_manager: RuleManager) -> None:
         result = rule_manager.toggle_rule("default", "ghost")
@@ -184,6 +185,9 @@ class TestPreviewEnginePreview:
         assert isinstance(result.matches, list)
         assert isinstance(result.unmatched, list)
         assert isinstance(result.errors, list)
+        # Empty dir with no rules — no files to match or error on
+        assert result.matches == []
+        assert result.errors == []
 
     def test_with_files(self, preview_engine: PreviewEngine, tmp_path: Path) -> None:
         (tmp_path / "doc.pdf").write_bytes(b"pdf content")
@@ -303,6 +307,7 @@ class TestCalculateConfidence:
         conf_engine.track_usage("pat1", now, success=True)
         result = conf_engine.calculate_confidence("pat1", current_time=now)
         assert isinstance(result, float)
+        assert result > 0.0
 
     def test_returns_value_in_range(self, conf_engine: ConfidenceEngine) -> None:
         result = conf_engine.calculate_confidence("some_pattern")
@@ -380,27 +385,32 @@ class TestGetConfidenceTrend:
 class TestDecayOldPatterns:
     def test_empty_patterns(self, conf_engine: ConfidenceEngine) -> None:
         result = conf_engine.decay_old_patterns([])
-        assert isinstance(result, list)
+        assert result == []
 
     def test_returns_list(self, conf_engine: ConfidenceEngine) -> None:
         # Use ISO string to avoid naive/aware tz mismatch in implementation
         now_str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         patterns = [{"name": "p1", "confidence": 0.8, "last_used": now_str}]
         result = conf_engine.decay_old_patterns(patterns)
-        assert isinstance(result, list)
+        # Input has 1 pattern; output must have same count (decay preserves all entries)
+        assert len(result) == 1
+        assert result[0]["name"] == "p1"
 
 
 class TestBoostRecentPatterns:
     def test_empty_patterns(self, conf_engine: ConfidenceEngine) -> None:
         result = conf_engine.boost_recent_patterns([])
-        assert isinstance(result, list)
+        assert result == []
 
     def test_returns_list_with_data(self, conf_engine: ConfidenceEngine) -> None:
         # Pass ISO string to avoid naive/aware datetime mismatch inside the engine
         now_str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         patterns = [{"name": "p1", "confidence": 0.7, "last_used": now_str}]
         result = conf_engine.boost_recent_patterns(patterns)
-        assert isinstance(result, list)
+        # Input has 1 pattern; output must preserve it with boost applied (within 7-day window)
+        assert len(result) == 1
+        assert result[0]["name"] == "p1"
+        assert result[0].get("boosted") is True
 
 
 class TestValidateConfidenceThreshold:
@@ -414,18 +424,22 @@ class TestValidateConfidenceThreshold:
 
     def test_equal_threshold(self, conf_engine: ConfidenceEngine) -> None:
         result = conf_engine.validate_confidence_threshold(0.7, 0.7)
-        assert isinstance(result, bool)
+        # >= comparison: confidence == threshold is valid (returns True)
+        assert result is True
 
 
 class TestGetStats:
     def test_returns_dict(self, conf_engine: ConfidenceEngine) -> None:
         result = conf_engine.get_stats()
-        assert isinstance(result, dict)
+        # Fresh engine has no tracked patterns
+        assert result == {"total_patterns": 0, "total_uses": 0, "successful_uses": 0}
 
     def test_after_tracking(self, conf_engine: ConfidenceEngine) -> None:
         conf_engine.track_usage("s1", datetime.now(UTC), success=True)
         result = conf_engine.get_stats()
-        assert isinstance(result, dict)
+        assert result["total_patterns"] == 1
+        assert result["total_uses"] == 1
+        assert result["successful_uses"] == 1
 
 
 class TestClearUsageData:
@@ -442,15 +456,16 @@ class TestClearUsageData:
 
 class TestClearStalePatterns:
     def test_returns_int(self, conf_engine: ConfidenceEngine) -> None:
+        # Fresh engine has no tracked patterns, so nothing to clear
         result = conf_engine.clear_stale_patterns(days=30)
-        assert isinstance(result, int)
+        assert result == 0
 
     def test_nonzero_days(self, conf_engine: ConfidenceEngine) -> None:
         # Implementation has naive/aware tz mismatch when usage data exists
         # so test on a fresh engine (no tracked data)
         fresh = ConfidenceEngine()
         result = fresh.clear_stale_patterns(days=9999)
-        assert isinstance(result, int)
+        assert result == 0
 
 
 # ---------------------------------------------------------------------------
@@ -478,7 +493,8 @@ class TestComputeHash:
         f = tmp_path / "file.txt"
         f.write_text("hello world")
         result = hasher.compute_hash(f)
-        assert isinstance(result, str)
+        # SHA-256 produces a 64-character hex string
+        assert len(result) == 64
 
     def test_sha256_default(self, hasher: FileHasher, tmp_path: Path) -> None:
         f = tmp_path / "file.txt"
@@ -510,13 +526,15 @@ class TestComputeHash:
         f = tmp_path / "empty.txt"
         f.write_text("")
         result = hasher.compute_hash(f)
-        assert isinstance(result, str)
+        # SHA-256 of empty content is the well-known fixed digest
+        assert result == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
     def test_binary_file(self, hasher: FileHasher, tmp_path: Path) -> None:
         f = tmp_path / "binary.bin"
         f.write_bytes(bytes(range(256)))
         result = hasher.compute_hash(f)
-        assert isinstance(result, str)
+        # SHA-256 always produces a 64-character hex digest
+        assert len(result) == 64
 
 
 class TestComputeBatch:
@@ -556,7 +574,8 @@ class TestGetFileSize:
         f = tmp_path / "file.txt"
         f.write_text("hello")
         result = hasher.get_file_size(f)
-        assert isinstance(result, int)
+        # "hello" is 5 bytes
+        assert result == 5
 
     def test_empty_file_zero(self, hasher: FileHasher, tmp_path: Path) -> None:
         f = tmp_path / "empty.txt"

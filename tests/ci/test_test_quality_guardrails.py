@@ -1,6 +1,6 @@
 """CI guardrails for test quality anti-patterns.
 
-Covers two regression classes identified in PR #846 review:
+Covers three regression classes:
 
 1. ``time.sleep()`` in tests — wall-clock sleeps make tests flaky under
    load and mask real timing bugs.  Use ``os.utime()`` for mtime bumps or
@@ -11,14 +11,23 @@ Covers two regression classes identified in PR #846 review:
    the upper-bound assertion is vacuous: it passes even when the index
    returns zero matches.  Use ``assert len(results) == N`` instead.
 
-Both guardrails apply to ALL test files under ``tests/``.  Streams 1-4 of
-issue #900 eliminated every pre-existing violation, so the scope can now be
+3. Sole ``assert isinstance(x, T)`` in a test function — verifies the return
+   type but not the value.  For ``bool`` this is especially weak (only two
+   values exist); for ``str`` it misses the actual content.  Use specific
+   value assertions instead (``is True``, ``== "high"``, etc.).
+   Applies to changed files only.  TODO: broaden to full suite after a
+   clean-up sweep analogous to issue #900.
+
+Guardrails 1 and 2 apply to ALL test files under ``tests/``.  Streams 1-4 of
+issue #900 eliminated every pre-existing violation, so the scope can be
 expanded from diff-based (changed files only) to the full test suite.
+Guardrail 3 is diff-based until a full-suite clean-up is done.
 """
 
 from __future__ import annotations
 
 import ast
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -45,6 +54,39 @@ def _changed_test_files() -> list[Path]:
     """
     return sorted(
         p for p in TESTS_ROOT.rglob("*.py") if p.resolve() != _SELF and "fixtures" not in p.parts
+    )
+
+
+def _git_changed_test_files() -> list[Path]:
+    """Return test files modified relative to main (diff-based subset).
+
+    Used for guardrails that have known pre-existing violations in the full
+    suite.  Only files touched in the current branch are checked, preventing
+    failures on historical code while blocking new violations.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "origin/main...HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=FO_ROOT,
+        )
+        if not result.stdout.strip():
+            result = subprocess.run(
+                ["git", "diff", "--name-only", "HEAD"],
+                capture_output=True,
+                text=True,
+                cwd=FO_ROOT,
+            )
+        changed = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+    except Exception:
+        changed = set()
+    return sorted(
+        p
+        for p in TESTS_ROOT.rglob("*.py")
+        if p.resolve() != _SELF
+        and "fixtures" not in p.parts
+        and str(p.relative_to(FO_ROOT)) in changed
     )
 
 
@@ -223,5 +265,123 @@ def test_changed_tests_have_no_vacuous_len_lte_assertions() -> None:
 
     assert not violations, (
         "Vacuous ``assert len(x) <= N`` found in changed tests — use ``== N`` for exact counts:\n"
+        + "\n".join(violations)
+    )
+
+
+# -------------------------------------------------------------------------
+# Fix 6: sole isinstance assertions
+# -------------------------------------------------------------------------
+
+_WEAK_ISINSTANCE_TYPES = frozenset({"bool", "str", "int", "float", "dict", "list", "tuple", "set"})
+
+
+def _is_isinstance_primitive_assert(node: ast.Assert) -> bool:
+    """Return True if node is ``assert isinstance(x, T)`` with T a primitive type."""
+    test = node.test
+    if not isinstance(test, ast.Call):
+        return False
+    if not (isinstance(test.func, ast.Name) and test.func.id == "isinstance"):
+        return False
+    if len(test.args) != 2:
+        return False
+    type_arg = test.args[1]
+    return isinstance(type_arg, ast.Name) and type_arg.id in _WEAK_ISINSTANCE_TYPES
+
+
+def _collect_asserts_no_nested_defs(body: list[ast.stmt]) -> list[ast.Assert]:
+    """Collect Assert nodes from body without descending into nested func/class defs."""
+    result: list[ast.Assert] = []
+    for stmt in body:
+        if isinstance(stmt, ast.Assert):
+            result.append(stmt)
+        elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        else:
+            for _field, value in ast.iter_fields(stmt):
+                if isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, ast.stmt):
+                            result.extend(_collect_asserts_no_nested_defs([item]))
+    return result
+
+
+def _find_sole_isinstance_assertions(source: str, path: str = "<string>") -> list[str]:
+    """Return ``file:line: name`` for test functions whose only assertions are bare isinstance.
+
+    A test like::
+
+        def test_update_rule(self, rm, rule):
+            rm.add_rule("default", rule)
+            result = rm.update_rule("default", updated)
+            assert isinstance(result, bool)   # sole assertion
+
+    verifies only the return type.  Since ``update_rule`` returns ``True`` on
+    success, the test should assert ``result is True`` — a bare isinstance
+    passes even if the implementation always returns ``False``.
+
+    Flags functions where every ``assert`` in the function body is of the form
+    ``assert isinstance(x, T)`` with ``T`` in the primitive-type set.
+    """
+    try:
+        tree = ast.parse(source, filename=path)
+    except SyntaxError:
+        return []
+
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not node.name.startswith("test_"):
+            continue
+        asserts = _collect_asserts_no_nested_defs(node.body)
+        if asserts and all(_is_isinstance_primitive_assert(a) for a in asserts):
+            violations.append(f"{path}:{node.lineno}: {node.name}")
+    return violations
+
+
+@pytest.mark.parametrize(
+    ("source", "expected_count"),
+    [
+        # Sole isinstance — should flag
+        ("def test_foo():\n    assert isinstance(x, bool)\n", 1),
+        ("def test_foo():\n    assert isinstance(x, str)\n", 1),
+        ("def test_foo():\n    assert isinstance(x, dict)\n", 1),
+        # Mixed — should NOT flag (has a real assertion too)
+        ("def test_foo():\n    assert isinstance(x, bool)\n    assert x is True\n", 0),
+        # Non-primitive type — should NOT flag
+        ("def test_foo():\n    assert isinstance(x, MyClass)\n", 0),
+        # Non-test function — should NOT flag
+        ("def helper():\n    assert isinstance(x, bool)\n", 0),
+        # No assertions — should NOT flag
+        ("def test_foo():\n    x = 1\n", 0),
+    ],
+)
+def test_detector_flags_sole_isinstance(source: str, expected_count: int) -> None:
+    assert len(_find_sole_isinstance_assertions(source)) == expected_count
+
+
+def test_changed_tests_have_no_sole_isinstance_assertions() -> None:
+    """Changed test functions must not use ``assert isinstance(x, T)`` as their only assertion.
+
+    A bare isinstance check verifies the return type but not the value.  This
+    masks bugs where the implementation returns the wrong value of the right
+    type — e.g. ``update_rule`` returning ``False`` when ``True`` is expected.
+
+    Fix: use a specific value assertion alongside or instead of isinstance:
+
+    - ``bool`` return → ``assert result is True`` or ``assert result is False``
+    - ``str`` return  → ``assert result == "expected_string"``
+    - ``dict`` return → ``assert result == {...}`` or assert specific keys/values
+
+    Applies to changed files only (TODO: broaden to full suite after clean-up).
+    """
+    violations: list[str] = []
+    for path in _git_changed_test_files():
+        source = path.read_text(encoding="utf-8")
+        violations.extend(_find_sole_isinstance_assertions(source, str(path)))
+
+    assert not violations, (
+        "Sole ``assert isinstance(x, T)`` found — add a specific value assertion:\n"
         + "\n".join(violations)
     )
