@@ -82,7 +82,9 @@ class TestWorkflowDirectory:
             content = workflow_file.read_text()
             try:
                 data = yaml.safe_load(content)
-                assert isinstance(data, dict), f"{workflow_file.name} did not parse as a mapping"
+                assert isinstance(data, dict) and len(data) > 0, (
+                    f"{workflow_file.name} did not parse as a non-empty mapping"
+                )
             except yaml.YAMLError as e:
                 pytest.fail(f"{workflow_file.name} is not valid YAML: {e}")
 

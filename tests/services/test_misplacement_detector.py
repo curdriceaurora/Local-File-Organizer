@@ -300,7 +300,7 @@ class TestEdgeCases:
             detector = MisplacementDetector()
             misplaced = detector.detect_misplaced(tmppath, pattern_analysis)
 
-            assert isinstance(misplaced, list)
+            assert isinstance(misplaced, list) and all(hasattr(m, "file_path") for m in misplaced)
 
     def test_invalid_directory_raises_error(self):
         """Test that invalid directory raises error."""

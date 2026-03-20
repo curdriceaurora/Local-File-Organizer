@@ -122,7 +122,8 @@ class TestExtractTextEncoding:
         # Create bytes that fail all standard encodings
         f.write_bytes(bytes(range(256)))
         text = extractor._extract_text(f)
-        assert isinstance(text, str)
+        # Fallback decodes with errors='ignore'; result is a str
+        assert isinstance(text, str) and len(text) <= 256
 
 
 # ---------------------------------------------------------------------------
@@ -175,9 +176,11 @@ class TestExtractRtf:
     def test_rtf_basic_extraction_fallback(self, extractor, tmp_path):
         f = tmp_path / "test.rtf"
         f.write_text(r"{\rtf1 Hello \b World}", encoding="utf-8")
-        # Without striprtf, basic extraction may return empty on error
+        # Without striprtf, basic extraction strips control words; result is str
         result = extractor._extract_rtf(f)
         assert isinstance(result, str)
+        # Result should not contain raw RTF control syntax (curly braces stripped)
+        assert "{" not in result and "}" not in result
 
     def test_rtf_error(self, extractor, tmp_path):
         f = tmp_path / "test.rtf"

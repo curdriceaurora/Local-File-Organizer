@@ -204,7 +204,7 @@ class TestSplitAudio:
         with patch.dict("sys.modules", {"pydub": mock_pydub}):
             result = split_audio(audio_file)
 
-        assert isinstance(result, list)
+        assert isinstance(result, list) and len(result) >= 1
 
 
 # ---------------------------------------------------------------------------

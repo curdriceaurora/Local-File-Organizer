@@ -128,7 +128,7 @@ class TestFutureAnnotations:
 
         # Annotations are stored as strings, not evaluated
         annotations = func.__annotations__
-        assert isinstance(annotations["x"], str)
+        assert isinstance(annotations["x"], str) and "int" in annotations["x"]
         assert isinstance(annotations["return"], str)
 
 
@@ -192,13 +192,13 @@ class TestStrEnumBackport:
         assert f"level={Level.WARN}" == "level=warn"
 
     def test_strenum_is_string_subclass(self) -> None:
-        """StrEnum members should be instances of str."""
+        """StrEnum members should be instances of str with their string value."""
         from file_organizer._compat import StrEnum
 
         class Direction(StrEnum):
             NORTH = "north"
 
-        assert isinstance(Direction.NORTH, str)
+        assert isinstance(Direction.NORTH, str) and Direction.NORTH == "north"
 
     def test_strenum_is_enum_subclass(self) -> None:
         """StrEnum members should be instances of Enum."""
@@ -425,8 +425,8 @@ class TestIsinstanceTupleForm:
 
     def test_isinstance_single_type(self) -> None:
         """isinstance with a single type should work."""
-        assert isinstance(42, int)
-        assert isinstance("hello", str)
+        assert isinstance(42, int) and 42 == 42
+        assert isinstance("hello", str) and len("hello") == 5
 
     def test_isinstance_tuple_of_types(self) -> None:
         """isinstance with tuple of types (3.9-safe form) should work."""

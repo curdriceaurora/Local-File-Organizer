@@ -82,7 +82,9 @@ class TestEntitlementsFilesExist:
 class TestProductionEntitlements:
     def test_plist_is_valid_xml(self) -> None:
         data = load_plist(ENTITLEMENTS_PLIST)
-        assert isinstance(data, dict), "entitlements.plist root must be a dict"
+        assert isinstance(data, dict) and len(data) > 0, (
+            "entitlements.plist root must be a non-empty dict"
+        )
 
     @pytest.mark.parametrize("key,expected_value", list(REQUIRED_ENTITLEMENTS.items()))
     def test_required_entitlement_present(self, key: str, expected_value: bool) -> None:
@@ -116,7 +118,9 @@ class TestProductionEntitlements:
 class TestDebugEntitlements:
     def test_plist_is_valid_xml(self) -> None:
         data = load_plist(DEBUG_ENTITLEMENTS_PLIST)
-        assert isinstance(data, dict), "macos-entitlements-debug.plist root must be a dict"
+        assert isinstance(data, dict) and len(data) > 0, (
+            "macos-entitlements-debug.plist root must be a non-empty dict"
+        )
 
     @pytest.mark.parametrize("key,expected_value", list(REQUIRED_ENTITLEMENTS.items()))
     def test_required_entitlement_present(self, key: str, expected_value: bool) -> None:

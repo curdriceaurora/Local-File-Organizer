@@ -161,7 +161,7 @@ class TestFileDeleteEndpoint:
 
         if response.status_code == 200:
             data = response.json()
-            assert isinstance(data, dict)
+            assert isinstance(data, dict) and len(data) > 0
 
     def test_file_delete_handles_missing_file(self, client):
         """DELETE should handle missing file gracefully."""

@@ -414,7 +414,9 @@ class TestUnknownClassification:
         )
         result = classifier.classify(metadata)
         # Should have at least one alternative given mixed signals
-        assert isinstance(result.alternatives, list)
+        assert isinstance(result.alternatives, list) and all(
+            hasattr(alt, "audio_type") for alt in result.alternatives
+        )
 
     def test_confidence_is_bounded(self, classifier: AudioClassifier) -> None:
         """Confidence must be between 0 and 1."""

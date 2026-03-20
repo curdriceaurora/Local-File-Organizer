@@ -57,7 +57,7 @@ class TestRealtimeWebSocket:
         try:
             with client.websocket_connect("/api/v1/ws") as ws:
                 data = ws.receive_json()
-                assert isinstance(data, dict)
+                assert isinstance(data, dict) and data is not None
         except (WebSocketDisconnect, Exception):
             # Expected if endpoint not implemented
             pass

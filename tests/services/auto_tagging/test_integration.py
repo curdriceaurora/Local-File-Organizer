@@ -266,9 +266,10 @@ class TestAutoTaggingIntegration:
 
         recommendation = service.suggest_tags(empty_file)
 
-        # Should still provide some suggestions (from filename, extension)
-        # Or handle gracefully with empty list
-        assert isinstance(recommendation.suggestions, list)
+        # Should handle gracefully — may return some or zero suggestions
+        assert isinstance(recommendation.suggestions, list) and all(
+            hasattr(s, "tag") for s in recommendation.suggestions
+        )
 
     def test_large_tag_vocabulary(self, service, temp_dir):
         """Test system with large tag vocabulary."""

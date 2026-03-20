@@ -144,9 +144,8 @@ class TestRecommendTags:
         rec.learning_engine.get_tag_suggestions_for_context.return_value = [("python", 80.0)]
         result = rec.recommend_tags(f)
         hybrid_tags = [s for s in result.suggestions if s.source == "hybrid"]
-        assert isinstance(
-            hybrid_tags, list
-        )  # May or may not contain hybrids depending on confidence
+        # When both sources agree on "python", we expect a hybrid entry or at minimum an empty list
+        assert isinstance(hybrid_tags, list) and all(hasattr(s, "tag") for s in hybrid_tags)
 
     def test_recommend_with_related_tags(self, tmp_path):
         rec = self._make_recommender()

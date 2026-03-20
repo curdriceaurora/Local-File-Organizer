@@ -54,7 +54,7 @@ class TestVideoProcessingPlaceholder:
         detector = SceneDetector()
         scenes = detector.detect_scenes(video_file)
 
-        assert isinstance(scenes, list)
+        assert isinstance(scenes, list) and all(hasattr(s, "start_time") for s in scenes)
 
     @pytest.mark.skip(reason="Phase 3 - Frame extraction not yet implemented")
     def test_frame_extraction(self, tmp_path):
@@ -67,4 +67,4 @@ class TestVideoProcessingPlaceholder:
         processor = VisionProcessor()
         frames = processor.extract_frames(video_file, interval=1.0)
 
-        assert isinstance(frames, list)
+        assert frames == []

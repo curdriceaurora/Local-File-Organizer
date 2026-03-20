@@ -523,9 +523,10 @@ class TestPersistence:
         with open(learner.storage_path) as f:
             data = json.load(f)
 
-        # file_types should be a list (not a set)
+        # file_types should be a list (not a set) containing ".pdf"
         folder_str = str(folder.resolve())
-        assert isinstance(data["folder_metadata"][folder_str]["file_types"], list)
+        file_types = data["folder_metadata"][folder_str]["file_types"]
+        assert isinstance(file_types, list) and ".pdf" in file_types
 
     def test_load_converts_lists_to_sets(self, temp_storage):
         """Test that file_types lists are converted back to sets on load."""
@@ -540,7 +541,8 @@ class TestPersistence:
         learner2 = FolderPreferenceLearner(storage_path=storage_file)
 
         folder_str = str(folder.resolve())
-        assert isinstance(learner2.folder_metadata[folder_str]["file_types"], set)
+        file_types = learner2.folder_metadata[folder_str]["file_types"]
+        assert isinstance(file_types, set) and ".pdf" in file_types
 
     def test_nonexistent_storage_file(self, temp_storage):
         """Test initialization with nonexistent storage file."""

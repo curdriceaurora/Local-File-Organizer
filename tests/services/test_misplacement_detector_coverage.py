@@ -99,8 +99,8 @@ class TestDetectMisplaced:
         # Use low threshold to catch it
         det = MisplacementDetector(min_mismatch_score=20.0)
         results = det.detect_misplaced(img_dir)
-        # Should detect at least something
-        assert isinstance(results, list)
+        # Should detect at least something (the .py file among .jpg files)
+        assert isinstance(results, list) and len(results) >= 1
 
 
 # ---------------------------------------------------------------------------

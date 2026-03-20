@@ -331,7 +331,7 @@ class TestDeploymentMonitorGetAlerts:
         )
         # No snapshot passed - should auto-collect
         alerts = dm.get_alerts(AlertThresholds())
-        assert isinstance(alerts, list)
+        assert isinstance(alerts, list) and all(hasattr(a, "metric") for a in alerts)
         monitor_mock.get_memory_usage.assert_called_once()
 
     def test_critical_overrides_warning_for_same_metric(self) -> None:

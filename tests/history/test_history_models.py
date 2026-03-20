@@ -51,8 +51,9 @@ class TestOperationType:
         assert OperationType("create") is OperationType.CREATE
 
     def test_is_str_subclass(self) -> None:
-        # StrEnum members are instances of str
+        # StrEnum members are instances of str and their value matches
         assert isinstance(OperationType.MOVE, str)
+        assert OperationType.MOVE == "move"
 
     def test_invalid_value_raises(self) -> None:
         with pytest.raises(ValueError):

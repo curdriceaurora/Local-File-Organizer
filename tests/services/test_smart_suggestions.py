@@ -322,7 +322,7 @@ class TestSuggestionEngineGenerateSuggestions:
         )
         (tmp_path / "docs").mkdir()
         result = engine.generate_suggestions([f], pattern_analysis=analysis)
-        assert isinstance(result, list)
+        assert isinstance(result, list) and all(hasattr(s, "confidence") for s in result)
 
 
 @pytest.mark.unit

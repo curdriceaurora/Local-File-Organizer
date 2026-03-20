@@ -230,10 +230,10 @@ class TestGetConfig:
 
     @pytest.mark.asyncio
     async def test_returns_dict(self) -> None:
-        """get_config returns a dict."""
+        """get_config returns a non-empty dict."""
         facade = _make_facade()
         result = await facade.get_config()
-        assert isinstance(result, dict)
+        assert isinstance(result, dict) and len(result) > 0
 
     @pytest.mark.asyncio
     async def test_contains_expected_sections(self) -> None:

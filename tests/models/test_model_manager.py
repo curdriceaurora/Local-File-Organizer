@@ -223,4 +223,5 @@ class TestCacheInfo:
     def test_cache_info_returns_dict(self) -> None:
         mgr = ModelManager(console=MagicMock())
         result = mgr.cache_info()
-        assert isinstance(result, dict)
+        # Returns full stats dict when ModelCache is available, else {}
+        assert isinstance(result, dict) and (len(result) == 0 or "hits" in result)

@@ -136,7 +136,7 @@ class TestExtractCommonElements:
         files = ["alpha.txt", "bravo.txt", "charlie.txt"]
         common = self.extractor.extract_common_elements(files)
         # No common elements expected between alpha/bravo/charlie
-        assert isinstance(common, list)
+        assert isinstance(common, list) and len(common) == 0
 
 
 # ---------------------------------------------------------------------------
