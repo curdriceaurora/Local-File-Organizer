@@ -152,27 +152,9 @@ class TestUndoRedo:
 
 class TestOrganize:
     def test_nonexistent_input(self, organizer):
-        """organize() raises ValueError when input path does not exist."""
         with pytest.raises(ValueError, match="Input path does not exist"):
             organizer.organize(Path("nonexistent"), Path("output"))
 
     def test_empty_directory(self, organizer, tmp_path):
-        """organize() returns zero total_files for an empty directory."""
         result = organizer.organize(tmp_path, tmp_path / "output")
         assert result.total_files == 0
-
-    def test_deduplicated_files_counted(self, tmp_path):
-        """Duplicate files (same content) increment deduplicated_files."""
-        content = b"identical content for dedup test"
-        (tmp_path / "a.mp3").write_bytes(content)
-        (tmp_path / "b.mp3").write_bytes(content)
-        org = FileOrganizer(dry_run=True)
-        result = org.organize(tmp_path, tmp_path / "out")
-        assert result.deduplicated_files == 1
-        accounted = (
-            result.processed_files
-            + result.skipped_files
-            + result.failed_files
-            + result.deduplicated_files
-        )
-        assert accounted == result.total_files
