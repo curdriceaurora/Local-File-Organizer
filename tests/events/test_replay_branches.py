@@ -544,3 +544,55 @@ class TestEventReplayManagerRepr:
         replay = EventReplayManager(manager)
         result = repr(replay)
         assert "connected=False" in result
+
+
+@pytest.mark.integration
+class TestReplayToConsumerDelay:
+    """Tests for the delay_between_events branch in replay_to_consumer."""
+
+    def test_delay_between_events_calls_sleep(self, connected_manager, mock_redis_client) -> None:
+        config = ReplayConfig(delay_between_events=0.01)
+        replay = EventReplayManager(connected_manager, replay_config=config)
+        mock_redis_client.xrange.return_value = [
+            ("1704067200000-0", {"event_type": "file.created", "file_path": "/a.txt"}),
+            ("1704067200001-0", {"event_type": "file.created", "file_path": "/b.txt"}),
+        ]
+        consumer = EventConsumer()
+        handler = MagicMock()
+        from file_organizer.events.types import EventType
+
+        consumer.register_handler(EventType.FILE_CREATED, handler)
+        start = datetime(2024, 1, 1, tzinfo=UTC)
+        with patch("file_organizer.events.replay.time.sleep") as mock_sleep:
+            count = replay.replay_to_consumer("file-events", start, consumer)
+        assert count == 2
+        assert mock_sleep.call_count == 2
+        mock_sleep.assert_called_with(0.01)
+
+    def test_no_delay_does_not_call_sleep(self, connected_manager, mock_redis_client) -> None:
+        config = ReplayConfig(delay_between_events=0.0)
+        replay = EventReplayManager(connected_manager, replay_config=config)
+        mock_redis_client.xrange.return_value = [
+            ("1704067200000-0", {"event_type": "file.created", "file_path": "/a.txt"}),
+        ]
+        consumer = EventConsumer()
+        start = datetime(2024, 1, 1, tzinfo=UTC)
+        with patch("file_organizer.events.replay.time.sleep") as mock_sleep:
+            count = replay.replay_to_consumer("file-events", start, consumer)
+        assert count == 1
+        mock_sleep.assert_not_called()
+
+    def test_delay_value_passed_exactly_to_sleep(
+        self, connected_manager, mock_redis_client
+    ) -> None:
+        delay = 0.123
+        config = ReplayConfig(delay_between_events=delay)
+        replay = EventReplayManager(connected_manager, replay_config=config)
+        mock_redis_client.xrange.return_value = [
+            ("1704067200000-0", {"event_type": "file.created", "file_path": "/a.txt"}),
+        ]
+        consumer = EventConsumer()
+        start = datetime(2024, 1, 1, tzinfo=UTC)
+        with patch("file_organizer.events.replay.time.sleep") as mock_sleep:
+            replay.replay_to_consumer("file-events", start, consumer)
+        mock_sleep.assert_called_once_with(delay)
