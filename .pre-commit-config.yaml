@@ -147,6 +147,18 @@ repos:
         pass_filenames: false
 
       # ----------------------------------------------------------------
+      # T10: Predicate negative-case coverage (phase 2 — commit-time)
+      # Fires when detector modules or their paired test files are staged.
+      # Phase 1 CI test (test_predicate_negative_coverage.py) remains as backstop.
+      # ----------------------------------------------------------------
+      - id: predicate-negative-coverage
+        name: T10 predicate negative-case coverage
+        entry: python .claude/scripts/check_predicate_negative_coverage.py
+        language: system
+        files: ^(src/file_organizer/review_regressions/|tests/unit/review_regressions/test_)
+        pass_filenames: true
+
+      # ----------------------------------------------------------------
       # Unused dependency detection
       # ----------------------------------------------------------------
       - id: deptry
