@@ -19,7 +19,7 @@
     "md025": { "enabled": false },
     "md026": { "enabled": false },
     "md029": { "enabled": false },
-    "md031": { "enabled": false },
+    "md031": { "enabled": true },
     "md032": { "enabled": false },
     "md033": { "enabled": false },
     "md034": { "enabled": false },

@@ -164,3 +164,14 @@ repos:
     hooks:
       - id: pymarkdown
         args: ["-c", ".pymarkdown.json", "scan"]
+        exclude: >
+          (?x)^(
+            \.claude/|
+            memory/test-generation-patterns\.md|
+            docs/internal/|
+            docs/testing/|
+            docs/developer/testing\.md|
+            \.github/copilot-instructions\.md|
+            src/file_organizer/services/deduplication/README_IMAGE_DEDUP\.md|
+            tests/fixtures/
+          )
