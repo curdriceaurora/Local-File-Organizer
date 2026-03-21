@@ -98,6 +98,32 @@ def _is_buffer_like_name(name: str) -> bool:
     return any(token in lowered for token in _BUFFER_NAME_TOKENS)
 
 
+def _is_buffer_size_reference(node: ast.AST) -> bool:
+    """Return whether *node* refers to a buffer-size value."""
+    if isinstance(node, ast.Name):
+        return "buffer_size" in node.id.lower()
+    if isinstance(node, ast.Attribute):
+        return "buffer_size" in node.attr.lower()
+    return False
+
+
+def _is_structural_buffer_size_check(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> bool:
+    """Return whether ``len(buffer)`` is used for structural size validation."""
+    parent = parents.get(node)
+    if not isinstance(parent, ast.Compare):
+        return False
+    if len(parent.ops) != 1 or len(parent.comparators) != 1:
+        return False
+    if not isinstance(parent.ops[0], (ast.Eq, ast.NotEq)):
+        return False
+
+    if parent.left is node and _is_buffer_size_reference(parent.comparators[0]):
+        return True
+    if parent.comparators[0] is node and _is_buffer_size_reference(parent.left):
+        return True
+    return False
+
+
 def _has_subtraction_ancestor(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> bool:
     """Return True when node is contained in a subtraction expression."""
     current: ast.AST | None = node
@@ -198,6 +224,8 @@ class PooledBufferOwnershipViaLengthDetector:
                 in_pool_class = cls_name in _POOL_CLASS_NAMES
                 if not (in_pool_function or in_pool_class) or not _is_buffer_like_name(var_name):
                     continue
+                if _is_structural_buffer_size_check(node, parents):
+                    continue
                 findings.append(
                     Violation.from_path(
                         detector_id=self.detector_id,
@@ -238,7 +266,10 @@ class EagerBufferPoolAllocationDetector:
                 if node.name != "__init__":
                     continue
                 # Walk the body of __init__ looking for BufferPool() calls in assignments
-                for stmt in ast.walk(ast.Module(body=node.body, type_ignores=[])):
+                # and eager expression calls (for example list append chains).
+                init_scope = ast.Module(body=node.body, type_ignores=[])
+                parents = _parent_map(init_scope)
+                for stmt in ast.walk(init_scope):
                     if isinstance(stmt, ast.Assign):
                         if _is_buffer_pool_call(stmt.value):
                             findings.append(
@@ -273,6 +304,24 @@ class EagerBufferPoolAllocationDetector:
                                     fingerprint_basis=fingerprint_ast_node(stmt),
                                 )
                             )
+                    elif isinstance(stmt, ast.Call) and _is_buffer_pool_call(stmt):
+                        if isinstance(parents.get(stmt), (ast.Assign, ast.AnnAssign)):
+                            continue
+                        findings.append(
+                            Violation.from_path(
+                                detector_id=self.detector_id,
+                                rule_class=self.rule_class,
+                                rule_id="eager-buffer-pool-allocation",
+                                root=root,
+                                path=path,
+                                line=stmt.lineno,
+                                message=(
+                                    "BufferPool() should not be instantiated eagerly "
+                                    "in __init__ — defer until context is established"
+                                ),
+                                fingerprint_basis=fingerprint_ast_node(stmt),
+                            )
+                        )
         return sorted(findings, key=lambda v: v.sort_key())
 
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import json
 import os
 import subprocess
@@ -12,20 +11,14 @@ from urllib import error, request
 
 import pytest
 
+from file_organizer.review_regressions.test_quality import _weak_assert_nodes
+
 FO_ROOT = Path(__file__).resolve().parents[2]
 MODULE = sys.modules[__name__]
 
 pytestmark = pytest.mark.ci
 
 _LAST_DIFF_BASE_ERROR: str | None = None
-
-
-def _is_literal_int(node: ast.AST, value: int) -> bool:
-    return isinstance(node, ast.Constant) and type(node.value) is int and node.value == value
-
-
-def _is_call_count_attr(node: ast.AST) -> bool:
-    return isinstance(node, ast.Attribute) and node.attr == "call_count"
 
 
 def _is_guarded_test_path(rel_path: str) -> bool:
@@ -247,35 +240,7 @@ def _find_weak_call_count_assertions(source: str, path: str = "<string>") -> lis
     - assert 1 <= mock.call_count
     - assert 0 < mock.call_count
     """
-    tree = ast.parse(source, filename=path)
-    violations: list[str] = []
-
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Assert):
-            continue
-        test = node.test
-        if not isinstance(test, ast.Compare):
-            continue
-        if len(test.ops) != 1 or len(test.comparators) != 1:
-            continue
-
-        left = test.left
-        op = test.ops[0]
-        right = test.comparators[0]
-
-        is_weak_forward = _is_call_count_attr(left) and (
-            (isinstance(op, ast.GtE) and _is_literal_int(right, 1))
-            or (isinstance(op, ast.Gt) and _is_literal_int(right, 0))
-        )
-        is_weak_reverse = _is_call_count_attr(right) and (
-            (isinstance(op, ast.LtE) and _is_literal_int(left, 1))
-            or (isinstance(op, ast.Lt) and _is_literal_int(left, 0))
-        )
-
-        if is_weak_forward or is_weak_reverse:
-            violations.append(f"{path}:{node.lineno}")
-
-    return violations
+    return [f"{path}:{node.lineno}" for node in _weak_assert_nodes(source, path)]
 
 
 def _changed_test_files() -> list[Path]:

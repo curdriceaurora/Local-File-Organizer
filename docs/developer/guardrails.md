@@ -91,6 +91,38 @@ Why direct module import:
 - avoids ambiguity between pack-level exports and detector-specific types
 - keeps custom-contract code aligned with the detector's canonical module
 
+## Memory Lifecycle Rule Index
+
+Issue `#803` adds buffer/memory lifecycle regression checks. These are semantic
+invariants and therefore belong in CI tests, not shell-script heuristics.
+
+| Rule ID | Canonical enforced layer | Why this home |
+|---------|--------------------------|---------------|
+| `pooled-buffer-ownership-via-length` | `tests/ci/test_memory_lifecycle_guardrails.py` | Prevents ownership-state inference from `len(buffer)` in pool code paths |
+| `eager-buffer-pool-allocation` | `tests/ci/test_memory_lifecycle_guardrails.py` | Blocks eager `BufferPool()` creation in `__init__` before context is available |
+| `absolute-rss-in-batch-feedback` | `tests/ci/test_memory_lifecycle_guardrails.py` | Enforces RSS delta usage in feedback loops instead of raw absolute RSS |
+| `legacy-acquire-release-without-consume` | `tests/ci/test_memory_lifecycle_guardrails.py` | Catches no-op acquire/release sequences that indicate legacy dead paths |
+
+Implementation detail:
+- Detector implementation lives in `src/file_organizer/review_regressions/memory_lifecycle.py`.
+- Deterministic positive/safe proofs live in `tests/unit/review_regressions/test_memory_lifecycle_detectors.py`.
+
+## Search Guardrail Rule Index
+
+Issue `#869` adds corpus-safety checks for the search service. These are
+AST-based semantic checks and therefore belong in CI tests, not shell-script
+heuristics.
+
+| Rule ID | Canonical enforced layer | Why this home |
+|---------|--------------------------|---------------|
+| `S1:symlink-filter(is_symlink())` | `tests/ci/test_search_code_quality.py` | Prevents symlink traversal into untrusted targets such as `/etc/passwd` or `~/.ssh/` |
+| `S2:hidden-file-filter(startswith("."))` | `tests/ci/test_search_code_quality.py` | Prevents indexing of `.git`, `.env`, `.ssh/authorized_keys`, and other hidden paths |
+
+Implementation detail:
+- Guardrail logic lives in `tests/ci/test_search_code_quality.py` (function `_find_unguarded_traversals`).
+- Detection uses AST call-node matching scoped to each function's own body — docstrings and comments cannot produce false positives.
+- Rule definitions and fix examples live in `.claude/rules/search-generation-patterns.md` patterns S1 and S2.
+
 ## CLI Contract Test Conventions
 
 Typer and Rich render help text differently across terminals and CI. For CLI

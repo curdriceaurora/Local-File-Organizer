@@ -15,6 +15,13 @@ def _fixture_root() -> Path:
     ).resolve()
 
 
+def _write_module(root: Path, rel_path: str, source: str) -> Path:
+    target = root / rel_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(source, encoding="utf-8")
+    return target
+
+
 def test_direct_path_detector_flags_unreviewed_path_construction() -> None:
     detector = GuardedContextDirectPathDetector()
 
@@ -44,6 +51,66 @@ def test_direct_path_detector_skips_documented_safe_patterns() -> None:
     ]
 
     assert findings == []
+
+
+def test_direct_path_detector_flags_path_alias_and_pathlib_attribute_calls(tmp_path: Path) -> None:
+    detector = GuardedContextDirectPathDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/path_alias.py",
+        (
+            "from pathlib import Path as P\n"
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "@router.get('/x')\n"
+            "def unsafe_alias(path: str) -> str:\n"
+            "    return str(P(path))\n"
+        ),
+    )
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/pathlib_attr.py",
+        (
+            "import pathlib\n"
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "@router.get('/x')\n"
+            "def unsafe_attr(path: str) -> str:\n"
+            "    return str(pathlib.Path(path))\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert {(finding.path, finding.rule_id) for finding in findings} == {
+        ("src/file_organizer/api/path_alias.py", "unguarded-direct-path"),
+        ("src/file_organizer/api/pathlib_attr.py", "unguarded-direct-path"),
+    }
+
+
+def test_direct_path_detector_does_not_allow_codeql_comment_bypass_in_route(
+    tmp_path: Path,
+) -> None:
+    detector = GuardedContextDirectPathDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/comment_bypass.py",
+        (
+            "from pathlib import Path\n"
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "@router.get('/x')\n"
+            "def unsafe(path: str) -> str:\n"
+            "    # codeql[py/path-injection]\n"
+            "    return str(Path(path))\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert [(finding.path, finding.rule_id) for finding in findings] == [
+        ("src/file_organizer/api/comment_bypass.py", "unguarded-direct-path")
+    ]
 
 
 def test_validation_bypass_detector_flags_raw_request_reuse_after_validation() -> None:
@@ -97,6 +164,77 @@ def test_validation_bypass_detector_skips_sanitized_request_flow() -> None:
     ]
 
     assert findings == []
+
+
+def test_validation_bypass_detector_flags_inline_validation_and_raw_alias_reuse(
+    tmp_path: Path,
+) -> None:
+    detector = ValidatedPathBypassDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/raw_alias.py",
+        (
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "def resolve_path(value: str, allowed: list[str]) -> str:\n"
+            "    return value\n"
+            "class Req:\n"
+            "    input_dir: str\n"
+            "class Settings:\n"
+            "    allowed_paths: list[str] = []\n"
+            "class Organizer:\n"
+            "    def organize(self, *, input_path: str) -> None:\n"
+            "        pass\n"
+            "organizer = Organizer()\n"
+            "@router.post('/x')\n"
+            "def unsafe(request: Req, settings: Settings) -> None:\n"
+            "    _ = str(resolve_path(request.input_dir, settings.allowed_paths))\n"
+            "    raw_input = request.input_dir\n"
+            "    organizer.organize(input_path=raw_input)\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.path == "src/file_organizer/api/raw_alias.py"
+    assert finding.rule_id == "raw-field-after-validation"
+    assert "alias raw_input sourced from raw request.input_dir" in finding.message
+
+
+def test_validation_bypass_detector_flags_api_route_decorated_handlers(tmp_path: Path) -> None:
+    detector = ValidatedPathBypassDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/api_route_bypass.py",
+        (
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "def resolve_path(value: str, allowed: list[str]) -> str:\n"
+            "    return value\n"
+            "class Req:\n"
+            "    input_dir: str\n"
+            "class Settings:\n"
+            "    allowed_paths: list[str] = []\n"
+            "class Organizer:\n"
+            "    def organize(self, *, input_path: str) -> None:\n"
+            "        pass\n"
+            "organizer = Organizer()\n"
+            "@router.api_route('/x', methods=['POST'])\n"
+            "def unsafe(request: Req, settings: Settings) -> None:\n"
+            "    validated = resolve_path(request.input_dir, settings.allowed_paths)\n"
+            "    organizer.organize(input_path=request.input_dir)\n"
+            "    _ = validated\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.path == "src/file_organizer/api/api_route_bypass.py"
+    assert finding.rule_id == "raw-field-after-validation"
 
 
 def test_security_detector_pack_exports_both_first_wave_security_detectors() -> None:

@@ -80,6 +80,25 @@ def test_pooled_buffer_ownership_via_length_skips_non_buffer_names(tmp_path: Pat
     assert not findings
 
 
+def test_pooled_buffer_ownership_via_length_skips_structural_size_checks(tmp_path: Path) -> None:
+    detector = PooledBufferOwnershipViaLengthDetector()
+    _write_fixture_module(
+        tmp_path,
+        "src/file_organizer/memory/structural_size_safe.py",
+        """
+        class BufferPool:
+            def __init__(self) -> None:
+                self._buffer_size = 64
+
+            def release(self, buffer: bytearray) -> bool:
+                return len(buffer) == self._buffer_size
+        """,
+    )
+
+    findings = detector.find_violations(tmp_path)
+    assert not findings
+
+
 # ---------------------------------------------------------------------------
 # Detector 2: EAGER_BUFFER_POOL_ALLOCATION
 # ---------------------------------------------------------------------------
@@ -106,6 +125,27 @@ def test_eager_buffer_pool_allocation_skips_deferred_init(fixture_root: Path) ->
 
     findings = [f for f in detector.find_violations(fixture_root) if f.path == safe_path]
     assert not findings, f"Unexpected findings for {safe_path}: {findings}"
+
+
+def test_eager_buffer_pool_allocation_flags_expression_calls_in_init(tmp_path: Path) -> None:
+    detector = EagerBufferPoolAllocationDetector()
+    _write_fixture_module(
+        tmp_path,
+        "src/file_organizer/memory/eager_pool_expression_positive.py",
+        """
+        class BufferPool:
+            pass
+
+        class Owner:
+            def __init__(self) -> None:
+                self._pools = []
+                self._pools.append(BufferPool())
+        """,
+    )
+
+    findings = detector.find_violations(tmp_path)
+    assert findings
+    assert all(f.rule_id == "eager-buffer-pool-allocation" for f in findings)
 
 
 # ---------------------------------------------------------------------------
