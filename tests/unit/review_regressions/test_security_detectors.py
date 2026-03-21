@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 from file_organizer.review_regressions.security import (
@@ -671,3 +672,192 @@ def test_validation_bypass_detector_uses_latest_raw_assignment_when_name_reused(
 
     assert len(findings) == 1
     assert findings[0].rule_id == "raw-field-after-validation"
+
+
+# ── T10 predicate negative-case tests (issue #930) ───────────────────────────
+
+
+def _parse_security_call(src: str) -> ast.Call:
+    return ast.parse(src).body[0].value  # type: ignore[return-value]
+
+
+def _parse_security_expr(src: str) -> ast.expr:
+    return ast.parse(src).body[0].value  # type: ignore[return-value]
+
+
+def test_is_path_call_returns_false_for_non_call_node() -> None:
+    from file_organizer.review_regressions.security import _is_path_call
+
+    node = ast.parse("x").body[0].value
+    assert not _is_path_call(node, constructor_names={"Path"}, module_aliases={"pathlib"})
+
+
+def test_is_path_call_returns_false_for_unrelated_name_call() -> None:
+    from file_organizer.review_regressions.security import _is_path_call
+
+    node = _parse_security_call("Other(x)")
+    assert not _is_path_call(node, constructor_names={"Path"}, module_aliases={"pathlib"})
+
+
+def test_is_resolve_path_call_returns_false_for_non_call() -> None:
+    from file_organizer.review_regressions.security import _is_resolve_path_call
+
+    node = ast.parse("x").body[0].value
+    assert not _is_resolve_path_call(node, {"resolve_path"})
+
+
+def test_is_resolve_path_call_returns_false_for_arbitrary_receiver_attr_call() -> None:
+    from file_organizer.review_regressions.security import _is_resolve_path_call
+
+    node = _parse_security_call("unrelated_service.resolve_path(x)")
+    assert not _is_resolve_path_call(node, {"resolve_path"})
+
+
+def test_is_allowed_paths_expr_returns_false_for_unrelated_name() -> None:
+    from file_organizer.review_regressions.security import _is_allowed_paths_expr
+
+    node = _parse_security_expr("other_paths")
+    assert not _is_allowed_paths_expr(node)
+
+
+def test_is_allowed_paths_expr_returns_false_for_non_name_non_attr() -> None:
+    from file_organizer.review_regressions.security import _is_allowed_paths_expr
+
+    node = _parse_security_expr("42")
+    assert not _is_allowed_paths_expr(node)
+
+
+def test_is_allowed_file_info_wrapper_returns_false_when_parent_is_not_call() -> None:
+    from file_organizer.review_regressions.security import _is_allowed_file_info_wrapper
+
+    src = "Path(x)"
+    tree = ast.parse(src)
+    call = next(n for n in ast.walk(tree) if isinstance(n, ast.Call))
+    parents: dict[ast.AST, ast.AST] = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parents[child] = parent
+    assert not _is_allowed_file_info_wrapper(call, parents)
+
+
+def test_is_route_handler_returns_false_for_non_decorated_function() -> None:
+    from file_organizer.review_regressions.security import _is_route_handler
+
+    src = "def plain(): pass"
+    node = ast.parse(src).body[0]
+    assert isinstance(node, ast.FunctionDef)
+    assert not _is_route_handler(node)
+
+
+def test_is_route_handler_returns_false_for_unrelated_decorator() -> None:
+    from file_organizer.review_regressions.security import _is_route_handler
+
+    src = "@staticmethod\ndef plain(): pass"
+    node = ast.parse(src).body[0]
+    assert isinstance(node, ast.FunctionDef)
+    assert not _is_route_handler(node)
+
+
+def test_is_safe_model_copy_call_returns_false_for_non_model_copy_attr() -> None:
+    from file_organizer.review_regressions.security import _is_safe_model_copy_call
+
+    node = _parse_security_call("obj.copy()")
+    assert not _is_safe_model_copy_call(node)
+
+
+def test_is_safe_model_copy_call_returns_false_for_name_call() -> None:
+    from file_organizer.review_regressions.security import _is_safe_model_copy_call
+
+    node = _parse_security_call("model_copy()")
+    assert not _is_safe_model_copy_call(node)
+
+
+def test_is_sensitive_validation_sink_returns_false_for_unrelated_call() -> None:
+    from file_organizer.review_regressions.security import _is_sensitive_validation_sink
+
+    node = _parse_security_call("do_something(x)")
+    assert not _is_sensitive_validation_sink(node)
+
+
+def test_is_request_model_construction_returns_false_for_lowercase_name_call() -> None:
+    from file_organizer.review_regressions.security import _is_request_model_construction
+
+    node = _parse_security_call("organizeRequest(x)")
+    assert not _is_request_model_construction(node)
+
+
+def test_is_request_model_construction_returns_false_for_non_request_suffix() -> None:
+    from file_organizer.review_regressions.security import _is_request_model_construction
+
+    node = _parse_security_call("OrganizeResponse(x)")
+    assert not _is_request_model_construction(node)
+
+
+def _build_security_parents(src: str) -> tuple[ast.AST, dict[ast.AST, ast.AST]]:
+    tree = ast.parse(src)
+    parents: dict[ast.AST, ast.AST] = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parents[child] = parent
+    return tree, parents
+
+
+def test_is_basename_extraction_returns_false_for_path_call_not_followed_by_safe_attr() -> None:
+    from file_organizer.review_regressions.security import _is_basename_extraction
+
+    src = "Path(x)"
+    tree, parents = _build_security_parents(src)
+    call = next(n for n in ast.walk(tree) if isinstance(n, ast.Call))
+    assert not _is_basename_extraction(call, parents)
+
+
+def test_is_allowed_config_root_path_returns_false_for_call_with_non_allowed_iter() -> None:
+    from file_organizer.review_regressions.security import _is_allowed_config_root_path
+
+    src = "[Path(p) for p in other_paths]"
+    tree, parents = _build_security_parents(src)
+    call = next(n for n in ast.walk(tree) if isinstance(n, ast.Call))
+    assert not _is_allowed_config_root_path(call, parents)
+
+
+def test_is_in_route_handler_returns_false_for_node_inside_plain_function() -> None:
+    from file_organizer.review_regressions.security import _is_in_route_handler
+
+    src = "def plain():\n    x = 1\n"
+    tree, parents = _build_security_parents(src)
+    assign = next(n for n in ast.walk(tree) if isinstance(n, ast.Assign))
+    assert not _is_in_route_handler(assign, parents)
+
+
+def test_is_allowed_direct_path_call_returns_false_for_unguarded_call_outside_resolve_path() -> (
+    None
+):
+    from file_organizer.review_regressions.security import _is_allowed_direct_path_call
+
+    src = "def handler():\n    p = Path(user_input)\n"
+    tree = ast.parse(src)
+    lines = src.splitlines()
+    parents: dict[ast.AST, ast.AST] = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parents[child] = parent
+    call = next(n for n in ast.walk(tree) if isinstance(n, ast.Call))
+    assert not _is_allowed_direct_path_call(call, parents=parents, lines=lines)
+
+
+def test_find_validated_fields_returns_empty_for_function_with_no_resolve_path_calls() -> None:
+    from file_organizer.review_regressions.security import _find_validated_fields
+
+    src = "def handler():\n    x = request.input_dir\n"
+    tree = ast.parse(src)
+    func = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef))
+    assert not _find_validated_fields(func, resolve_path_names={"resolve_path"})
+
+
+def test_find_raw_field_aliases_returns_empty_when_no_validated_fields() -> None:
+    from file_organizer.review_regressions.security import _find_raw_field_aliases
+
+    src = "def handler():\n    x = request.input_dir\n"
+    tree = ast.parse(src)
+    func = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef))
+    assert not _find_raw_field_aliases(func, validated={})

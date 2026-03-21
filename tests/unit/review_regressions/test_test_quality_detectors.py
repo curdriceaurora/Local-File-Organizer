@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 from unittest.mock import patch
 
@@ -9,6 +10,9 @@ import file_organizer.review_regressions.test_quality as MODULE
 from file_organizer.review_regressions.test_quality import (
     TEST_QUALITY_DETECTORS,
     WeakMockCallCountAssertionDetector,
+    _is_call_count_attr,
+    _is_literal_int,
+    _is_test_python_path,
     changed_test_quality_detectors,
     discover_changed_test_files,
 )
@@ -226,3 +230,40 @@ def test_find_violations_skips_unparsable_test_files(tmp_path: Path) -> None:
     warning_call = logger_mock.warning.call_args
     assert "Skipping weak call-count scan for unparsable test file" in warning_call.args[0]
     assert "test_broken.py" in str(warning_call.args[1])
+
+
+# ── T10 predicate negative-case tests (issue #930) ───────────────────────────
+
+
+def test_is_literal_int_returns_false_for_non_matching_int_value() -> None:
+    node = ast.parse("42").body[0].value
+    assert not _is_literal_int(node, 0)
+
+
+def test_is_literal_int_returns_false_for_non_constant_node() -> None:
+    node = ast.parse("x").body[0].value
+    assert not _is_literal_int(node, 0)
+
+
+def test_is_call_count_attr_returns_false_for_non_call_count_attr() -> None:
+    node = ast.parse("mock.return_value").body[0].value
+    assert not _is_call_count_attr(node)
+
+
+def test_is_call_count_attr_returns_false_for_non_mock_base_with_call_count() -> None:
+    node = ast.parse("service.call_count").body[0].value
+    assert not _is_call_count_attr(node)
+
+
+def test_is_test_python_path_returns_false_for_fixture_file(tmp_path: Path) -> None:
+    fixture_file = tmp_path / "tests" / "fixtures" / "test_something.py"
+    fixture_file.parent.mkdir(parents=True, exist_ok=True)
+    fixture_file.write_text("", encoding="utf-8")
+    assert not _is_test_python_path(tmp_path, fixture_file)
+
+
+def test_is_test_python_path_returns_false_for_src_file(tmp_path: Path) -> None:
+    src_file = tmp_path / "src" / "test_something.py"
+    src_file.parent.mkdir(parents=True, exist_ok=True)
+    src_file.write_text("", encoding="utf-8")
+    assert not _is_test_python_path(tmp_path, src_file)
