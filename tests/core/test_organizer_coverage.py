@@ -152,10 +152,12 @@ class TestUndoRedo:
 
 class TestOrganize:
     def test_nonexistent_input(self, organizer):
+        """organize() raises ValueError when input path does not exist."""
         with pytest.raises(ValueError, match="Input path does not exist"):
             organizer.organize(Path("nonexistent"), Path("output"))
 
     def test_empty_directory(self, organizer, tmp_path):
+        """organize() returns zero total_files for an empty directory."""
         result = organizer.organize(tmp_path, tmp_path / "output")
         assert result.total_files == 0
 
