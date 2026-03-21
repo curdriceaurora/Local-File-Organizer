@@ -17,7 +17,7 @@ def organizer():
     mock_text_cfg = MagicMock()
     mock_vision_cfg = MagicMock()
     with patch(
-        "file_organizer.core.organizer.get_model_configs_from_env",
+        "file_organizer.config.provider_env.get_model_configs",
         return_value=(mock_text_cfg, mock_vision_cfg),
     ):
         org = FileOrganizer(dry_run=True)

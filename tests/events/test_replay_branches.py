@@ -21,6 +21,7 @@ from file_organizer.events.replay import (
     _parse_timestamp_from_id,
 )
 from file_organizer.events.stream import RedisStreamManager
+from file_organizer.events.types import EventType
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -379,7 +380,6 @@ class TestReplayToConsumerDelayBranch:
         mock_redis_client: MagicMock,
     ):
         """Sleep fires once per event, even if multiple handlers match the event type."""
-        from file_organizer.events.types import EventType
 
         config = ReplayConfig(delay_between_events=0.01)
         replay = EventReplayManager(connected_manager, replay_config=config)
@@ -431,8 +431,6 @@ class TestReplayToConsumerDryRun:
         handler = MagicMock()
         consumer = EventConsumer()
 
-        from file_organizer.events.types import EventType
-
         consumer.register_handler(EventType.FILE_CREATED, handler)
 
         start = datetime(2024, 1, 1, tzinfo=UTC)
@@ -477,7 +475,6 @@ class TestReplayToConsumerHandlerError:
         replay_manager: EventReplayManager,
         mock_redis_client: MagicMock,
     ):
-        from file_organizer.events.types import EventType
 
         mock_redis_client.xrange.return_value = [
             ("1000-0", {"event_type": "file.created"}),
@@ -499,7 +496,6 @@ class TestReplayToConsumerHandlerError:
         replay_manager: EventReplayManager,
         mock_redis_client: MagicMock,
     ):
-        from file_organizer.events.types import EventType
 
         mock_redis_client.xrange.return_value = [
             ("1000-0", {"event_type": "file.created"}),
