@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 from file_organizer.review_regressions.correctness import (
     CORRECTNESS_DETECTORS,
     ActiveModelPrimitiveStoreDetector,
     StageContextValidationBypassDetector,
+    _is_active_models_target,
+    _is_name_annotation,
+    _is_primitive_constant,
+    _is_primitive_model_assignment,
+    _is_stage_context_annotation,
+    _is_stage_context_constructor,
 )
 
 
@@ -169,3 +176,77 @@ def test_stage_context_detector_ignores_function_local_import_alias(
     findings = detector.find_violations(tmp_path)
 
     assert findings == [], f"Function-local alias leaked into unrelated scope: {findings}"
+
+
+# ── T10 predicate negative-case tests (issue #930) ───────────────────────────
+
+
+def test_is_name_annotation_returns_false_for_name_not_in_set() -> None:
+    """_is_name_annotation returns False when the Name.id is not in the given set."""
+    node = ast.parse("x").body[0].value  # ast.Name with id="x"
+    assert not _is_name_annotation(node, {"StageContext", "SC"})
+
+
+def test_is_name_annotation_returns_false_for_non_name_node() -> None:
+    """_is_name_annotation returns False for a non-Name node."""
+    node = ast.parse("42").body[0].value  # ast.Constant
+    assert not _is_name_annotation(node, {"StageContext"})
+
+
+def test_is_stage_context_annotation_returns_false_for_unrelated_name() -> None:
+    """_is_stage_context_annotation returns False when the name is not a known alias."""
+    node = ast.parse("Other").body[0].value  # ast.Name("Other")
+    assert not _is_stage_context_annotation(node, {"StageContext"})
+
+
+def test_is_stage_context_annotation_returns_false_for_none() -> None:
+    """_is_stage_context_annotation returns False for None input."""
+    assert not _is_stage_context_annotation(None, {"StageContext"})
+
+
+def test_is_stage_context_constructor_returns_false_for_non_alias_call() -> None:
+    """_is_stage_context_constructor returns False when callee is not a known alias."""
+    node = ast.parse("Other()").body[0].value  # Call to "Other"
+    assert not _is_stage_context_constructor(node, {"StageContext"})
+
+
+def test_is_stage_context_constructor_returns_false_for_non_call_node() -> None:
+    """_is_stage_context_constructor returns False for a non-Call node."""
+    node = ast.parse("42").body[0].value  # ast.Constant
+    assert not _is_stage_context_constructor(node, {"StageContext"})
+
+
+def test_is_active_models_target_returns_false_for_unrelated_subscript() -> None:
+    """_is_active_models_target returns False for a subscript on a different attribute."""
+    node = ast.parse("self._other_dict[key]").body[0].value  # Subscript, wrong attr
+    assert not _is_active_models_target(node)
+
+
+def test_is_active_models_target_returns_false_for_non_subscript() -> None:
+    """_is_active_models_target returns False for a plain Name node."""
+    node = ast.parse("self").body[0].value  # ast.Name
+    assert not _is_active_models_target(node)
+
+
+def test_is_primitive_constant_returns_false_for_none_constant() -> None:
+    """_is_primitive_constant returns False for None (not a str/int/float/bool)."""
+    node = ast.parse("None").body[0].value  # ast.Constant(value=None)
+    assert not _is_primitive_constant(node)
+
+
+def test_is_primitive_constant_returns_false_for_list_node() -> None:
+    """_is_primitive_constant returns False for a List node."""
+    node = ast.parse("[]").body[0].value  # ast.List
+    assert not _is_primitive_constant(node)
+
+
+def test_is_primitive_model_assignment_returns_false_for_name_not_in_set() -> None:
+    """_is_primitive_model_assignment returns False for a Name not in primitive_names."""
+    node = ast.parse("live_model").body[0].value  # ast.Name("live_model")
+    assert not _is_primitive_model_assignment(node, set())
+
+
+def test_is_primitive_model_assignment_returns_false_for_list_node() -> None:
+    """_is_primitive_model_assignment returns False for a non-primitive, non-Name node."""
+    node = ast.parse("[]").body[0].value  # ast.List — not a constant or Name
+    assert not _is_primitive_model_assignment(node, set())
