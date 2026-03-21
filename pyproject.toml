@@ -327,9 +327,9 @@ addopts = [
     "--cov-fail-under=95",
     "--timeout=30",
     # Branch coverage baseline (integration tests only, not a CI gate):
-    # Measured 2026-03-19 via measure-integration-coverage.sh: TOTAL ~30%
-    # Floor (rounded down to nearest 5%): 30%
-    # To enforce: add --cov-branch --cov-fail-under=30 to measure-integration-coverage.sh
+    # Measured 2026-03-21 via measure-integration-coverage.sh: TOTAL ~49%
+    # Floor (CI gate): 45% (ratcheted in ci.yml after #945/#947 work)
+    # To enforce: add --cov-branch --cov-fail-under=45 to measure-integration-coverage.sh
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
