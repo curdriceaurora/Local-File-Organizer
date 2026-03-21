@@ -331,6 +331,16 @@ class TestDisplay:
         # Should print multiple lines of summary stats
         assert console.print.call_count >= 2
 
+    def test_show_summary_surfaces_deduplicated_count(self, tmp_path: Path) -> None:
+        """show_summary prints deduplicated line when deduplicated_files > 0."""
+        from file_organizer.core.display import show_summary
+
+        console = MagicMock()
+        res = OrganizationResult(total_files=5, processed_files=3, deduplicated_files=2)
+        show_summary(console, res, tmp_path, dry_run=False)
+        printed = " ".join(str(c) for c in console.print.call_args_list)
+        assert "2" in printed and "uplicate" in printed
+
 
 # ---------------------------------------------------------------------------
 # initializer module tests
