@@ -31,10 +31,17 @@ _SCRIPT = (
 
 
 def _load_checker():
-    """Load the shared hook script as a module."""
+    """Load the shared hook script as a module; fail loudly if missing or malformed."""
     spec = importlib.util.spec_from_file_location("check_predicate_negative_coverage", _SCRIPT)
-    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Cannot load predicate coverage script — file not found or unreadable: {_SCRIPT}"
+        )
+    mod = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    except (SyntaxError, Exception) as exc:
+        raise RuntimeError(f"Failed to load predicate coverage script {_SCRIPT}: {exc}") from exc
     return mod
 
 
