@@ -13,6 +13,7 @@ real image files (created via PIL) and minimal mocking. They focus on:
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -45,6 +46,11 @@ def _make_jpeg(tmp_path: Path, name: str, size: tuple[int, int] = (100, 100)) ->
 
 def _silent_console() -> Console:
     return Console(file=MagicMock(), highlight=False)
+
+
+def _written(viewer: ComparisonViewer) -> str:
+    """Return all text written to the viewer's mock console file."""
+    return "".join(c.args[0] for c in viewer.console.file.write.call_args_list if c.args)
 
 
 # ---------------------------------------------------------------------------
@@ -444,13 +450,19 @@ class TestGenerateAsciiPreviewIntegration:
         landscape = _make_png(tmp_path, "land.png", (200, 50))
         viewer = ComparisonViewer(console=_silent_console())
         result = viewer._generate_ascii_preview(landscape, max_width=20, max_height=10)
-        assert result is None or isinstance(result, str)
+        assert result is not None
+        lines = result.split("\n")
+        # landscape: width (chars per line) > height (number of lines)
+        assert len(lines[0]) > len(lines)
 
     def test_portrait_image_produces_string_or_none(self, tmp_path: Path) -> None:
         portrait = _make_png(tmp_path, "port.png", (50, 200))
         viewer = ComparisonViewer(console=_silent_console())
         result = viewer._generate_ascii_preview(portrait, max_width=20, max_height=10)
-        assert result is None or isinstance(result, str)
+        assert result is not None
+        lines = result.split("\n")
+        # portrait: height (number of lines) > width (chars per line)
+        assert len(lines) > len(lines[0])
 
 
 # ---------------------------------------------------------------------------
@@ -462,10 +474,6 @@ class TestGenerateAsciiPreviewIntegration:
 class TestDisplayReviewSummaryIntegration:
     """Integration tests for _display_review_summary."""
 
-    @staticmethod
-    def _written(viewer: ComparisonViewer) -> str:
-        return "".join(c.args[0] for c in viewer.console.file.write.call_args_list if c.args)
-
     def test_summary_with_existing_delete_files(self, tmp_path: Path) -> None:
         kept = _make_png(tmp_path, "keep.png", (100, 100))
         to_delete = _make_png(tmp_path, "delete.png", (100, 100))
@@ -474,7 +482,7 @@ class TestDisplayReviewSummaryIntegration:
         decisions = {kept: "keep", to_delete: "delete"}
         viewer._display_review_summary(decisions)
 
-        output = self._written(viewer)
+        output = _written(viewer)
         assert "Summary" in output
         assert "Keep" in output
         assert "Delete" in output
@@ -484,7 +492,7 @@ class TestDisplayReviewSummaryIntegration:
         viewer = ComparisonViewer(console=_silent_console())
         viewer._display_review_summary({})
 
-        output = self._written(viewer)
+        output = _written(viewer)
         assert "Summary" in output
         assert "Keep" in output
         assert "Delete" in output
@@ -495,7 +503,7 @@ class TestDisplayReviewSummaryIntegration:
         decisions = dict.fromkeys(imgs, "keep")
         viewer._display_review_summary(decisions)
 
-        output = self._written(viewer)
+        output = _written(viewer)
         assert "Summary" in output
         assert "Keep" in output
         assert "space" not in output.lower()
@@ -506,7 +514,7 @@ class TestDisplayReviewSummaryIntegration:
         decisions = {missing: "delete"}
         viewer._display_review_summary(decisions)
 
-        output = self._written(viewer)
+        output = _written(viewer)
         assert "Summary" in output
         assert "Delete" in output
 
@@ -524,15 +532,22 @@ class TestDisplayMetadataIntegration:
         img = _make_png(tmp_path, "show.png", (64, 48))
         viewer = ComparisonViewer(console=_silent_console())
         viewer.display_metadata(img)
+        output = _written(viewer)
+        assert "Image" in output
 
     def test_invalid_path_prints_error_no_raise(self, tmp_path: Path) -> None:
         viewer = ComparisonViewer(console=_silent_console())
         viewer.display_metadata(tmp_path / "nope.png")
+        output = _written(viewer)
+        assert "Error" in output
 
     def test_jpeg_image_metadata_display(self, tmp_path: Path) -> None:
         jpg = _make_jpeg(tmp_path, "photo.jpg", (128, 96))
         viewer = ComparisonViewer(console=_silent_console())
         viewer.display_metadata(jpg)
+        output = _written(viewer)
+        assert "Image" in output
+        assert "photo" in output
 
 
 # ---------------------------------------------------------------------------
@@ -646,7 +661,6 @@ class TestCalculateQualityScoreIntegration:
         )
 
     def test_all_known_formats_produce_finite_score(self, tmp_path: Path) -> None:
-        from datetime import UTC, datetime
 
         viewer = ComparisonViewer(console=_silent_console())
         for fmt in ("PNG", "JPEG", "TIFF", "WEBP", "GIF", "BMP", "JPG"):
@@ -738,7 +752,6 @@ class TestProcessUserActionMissingBranchesIntegration:
 
     def test_keep_action_non_numeric_choice_returns_skipped(self, tmp_path: Path) -> None:
         """Providing a non-numeric string to the KEEP prompt triggers ValueError → skipped."""
-        from datetime import UTC, datetime
 
         meta = ImageMetadata(
             path=tmp_path / "img.png",
@@ -760,7 +773,6 @@ class TestProcessUserActionMissingBranchesIntegration:
 
     def test_keep_action_out_of_range_index_returns_skipped(self, tmp_path: Path) -> None:
         """Choosing an out-of-range index for KEEP falls through to skipped."""
-        from datetime import UTC, datetime
 
         meta = ImageMetadata(
             path=tmp_path / "img.png",
@@ -780,7 +792,6 @@ class TestProcessUserActionMissingBranchesIntegration:
 
     def test_unhandled_action_enum_reaches_final_fallback(self, tmp_path: Path) -> None:
         """UserAction.DELETE is not handled by any branch → final return at line 433."""
-        from datetime import UTC, datetime
 
         meta = ImageMetadata(
             path=tmp_path / "img.png",
@@ -809,7 +820,6 @@ class TestDisplayImagesSideBySideIntegration:
 
     def test_wide_terminal_two_images_uses_columns_layout(self, tmp_path: Path) -> None:
         """_terminal_width >= 120 + 2 images → Columns branch (line 245) is executed."""
-        from datetime import UTC, datetime
 
         viewer = ComparisonViewer(console=_silent_console())
         viewer._terminal_width = 200
@@ -827,12 +837,14 @@ class TestDisplayImagesSideBySideIntegration:
             for i in range(2)
         ]
 
-        with patch.object(viewer, "_generate_ascii_preview", return_value=None):
-            viewer._display_images_side_by_side(metas)
+        with patch("file_organizer.services.deduplication.viewer.Columns") as mock_columns:
+            with patch.object(viewer, "_generate_ascii_preview", return_value=None):
+                viewer._display_images_side_by_side(metas)
+
+        mock_columns.assert_called_once()
 
     def test_narrow_terminal_two_images_stacks_vertically(self, tmp_path: Path) -> None:
         """_terminal_width < 120 → vertical stacking path executed."""
-        from datetime import UTC, datetime
 
         viewer = ComparisonViewer(console=_silent_console())
         viewer._terminal_width = 60
@@ -850,5 +862,8 @@ class TestDisplayImagesSideBySideIntegration:
             for i in range(2)
         ]
 
-        with patch.object(viewer, "_generate_ascii_preview", return_value=None):
-            viewer._display_images_side_by_side(metas)
+        with patch("file_organizer.services.deduplication.viewer.Columns") as mock_columns:
+            with patch.object(viewer, "_generate_ascii_preview", return_value=None):
+                viewer._display_images_side_by_side(metas)
+
+        mock_columns.assert_not_called()

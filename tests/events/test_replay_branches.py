@@ -8,7 +8,7 @@ repr() output, and dry_run with multiple events.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -79,7 +79,8 @@ class TestIncrementIdEdgeCases:
         assert _increment_id("1234-abc") == "1234-abc"
 
     def test_multiple_dashes_uses_first_split(self):
-        result = _increment_id("1000-5")
+        # "1000-5-3": only ms (parts[0]) and seq (parts[1]+1) are kept; third part is dropped
+        result = _increment_id("1000-5-3")
         assert result == "1000-6"
 
 
@@ -351,7 +352,7 @@ class TestReplayToConsumerDelayBranch:
 
         assert count == 2
         assert mock_time.sleep.call_count == 2
-        mock_time.sleep.assert_called_with(0.05)
+        mock_time.sleep.assert_has_calls([call(0.05), call(0.05)])
 
     def test_no_sleep_when_delay_is_zero(
         self,

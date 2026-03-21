@@ -167,6 +167,9 @@ class TestBufferPoolLazyInit:
         t2.join()
 
         assert len(results) == 2
+        assert results[0] is not None
+        assert results[1] is not None
+        assert orch._buffer_pool is not None
         assert results[0] is results[1]
 
     def test_supplied_buffer_pool_is_returned_directly(self) -> None:
