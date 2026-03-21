@@ -23,5 +23,12 @@ jobs:
       - name: Run markdown linting
         run: |
           # Scan all tracked markdown files in repository (including nested)
-          # using git ls-files to match pre-commit hook behavior
-          pymarkdown -c .pymarkdown.json scan $(git ls-files '*.md')
+          # using git ls-files to match pre-commit hook behavior.
+          # Legacy MD031 violation files are excluded during the burn-down phase;
+          # the CI ratchet test (tests/ci/test_md031_ratchet.py) tracks the global
+          # count and blocks any net increase. Remove entries as violations are fixed.
+          LEGACY_EXCLUDE='^(\.claude/|memory/test-generation-patterns\.md|docs/internal/|docs/testing/|docs/developer/testing\.md|\.github/copilot-instructions\.md|src/file_organizer/services/deduplication/README_IMAGE_DEDUP\.md|tests/fixtures/)'
+          FILES=$(git ls-files '*.md' | grep -vE "$LEGACY_EXCLUDE")
+          if [ -n "$FILES" ]; then
+            pymarkdown -c .pymarkdown.json scan $FILES
+          fi
