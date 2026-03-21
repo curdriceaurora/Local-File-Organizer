@@ -28,7 +28,7 @@ jobs:
           # the CI ratchet test (tests/ci/test_md031_ratchet.py) tracks the global
           # count and blocks any net increase. Remove entries as violations are fixed.
           LEGACY_EXCLUDE='^(\.claude/|memory/test-generation-patterns\.md|docs/internal/|docs/testing/|docs/developer/testing\.md|\.github/copilot-instructions\.md|src/file_organizer/services/deduplication/README_IMAGE_DEDUP\.md|tests/fixtures/)'
-          FILES=$(git ls-files '*.md' | grep -vE "$LEGACY_EXCLUDE")
-          if [ -n "$FILES" ]; then
-            pymarkdown -c .pymarkdown.json scan $FILES
+          mapfile -t FILES < <(git ls-files '*.md' | grep -vE "$LEGACY_EXCLUDE" || true)
+          if (( ${#FILES[@]} )); then
+            pymarkdown -c .pymarkdown.json scan -- "${FILES[@]}"
           fi
