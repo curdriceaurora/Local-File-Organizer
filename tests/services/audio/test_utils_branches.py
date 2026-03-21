@@ -520,3 +520,29 @@ class TestIsAudioFileBranches:
         # is_audio_file uses suffix of the full path, so it checks the last component
         p = Path("/audio.mp3/actual_file.txt")
         assert is_audio_file(p) is False
+
+
+@pytest.fixture
+def audio_file(tmp_path: Path) -> Path:
+    """Create a minimal fake audio file on disk."""
+    p = tmp_path / "sample.mp3"
+    p.write_bytes(b"fake audio bytes")
+    return p
+
+
+@pytest.mark.integration
+class TestDetectSilenceSegmentsBranches:
+    """Integration coverage for detect_silence_segments ImportError branch."""
+
+    def test_no_pydub_returns_empty_list(self, audio_file: Path) -> None:
+        """Lines 221-223: ImportError → warning logged, returns []."""
+
+        def _no_pydub(name: str, *args: object, **kwargs: object) -> object:
+            if "pydub" in name:
+                raise ImportError("no pydub")
+            raise ImportError(f"no {name}")
+
+        with patch("builtins.__import__", side_effect=_no_pydub):
+            result = detect_silence_segments(audio_file)
+
+        assert result == []

@@ -556,3 +556,161 @@ class TestProcessAndCheckpointBranches:
         calls = processor._checkpoint_mgr.update_checkpoint_state.call_args_list
         assert len(calls) == 1
         assert calls[0].args[1] == f1
+
+
+@pytest.mark.integration
+class TestCheckpointNoneBranches:
+    """Covers the checkpoint=None path in batched save and exception handler."""
+
+    def test_batched_save_with_no_checkpoint_skips_save_checkpoint(
+        self,
+        processor: ResumableProcessor,
+        mock_persistence: MagicMock,
+        mock_checkpoint_mgr: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """When batched save triggers with checkpoint=None, only save_job is called.
+
+        This covers the False branch at line 246 (if checkpoint:) inside the
+        batched-persistence block that fires at files_since_save >= 50.
+        """
+        files = [tmp_path / f"f{i}.txt" for i in range(50)]
+        for f in files:
+            f.write_text("x")
+
+        job = JobState(id="j1", status=JobStatus.RUNNING, total_files=50)
+        mock_checkpoint_mgr.load_checkpoint.return_value = None
+
+        batch_results = [_make_file_result(f, success=True) for f in files]
+
+        with patch.object(
+            processor._processor,
+            "process_batch_iter",
+            return_value=batch_results,
+        ):
+            result = processor._process_and_checkpoint(
+                job=job,
+                files=files,
+                process_fn=lambda p: "ok",
+                checkpoint=None,
+            )
+
+        assert result.succeeded == 50
+        assert mock_persistence.save_job.call_count >= 2
+        mock_checkpoint_mgr.save_checkpoint.assert_not_called()
+
+    def test_exception_with_no_checkpoint_skips_save_checkpoint(
+        self,
+        processor: ResumableProcessor,
+        mock_persistence: MagicMock,
+        mock_checkpoint_mgr: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """When process_batch_iter raises with checkpoint=None, save_checkpoint is not called.
+
+        This covers the False branch at line 257 (if checkpoint:) inside the
+        exception handler.
+        """
+        f = tmp_path / "a.txt"
+        f.write_text("x")
+
+        job = JobState(id="j1", status=JobStatus.RUNNING, total_files=1)
+        mock_checkpoint_mgr.load_checkpoint.return_value = None
+
+        with patch.object(
+            processor._processor,
+            "process_batch_iter",
+            side_effect=RuntimeError("crash"),
+        ):
+            with pytest.raises(RuntimeError, match="crash"):
+                processor._process_and_checkpoint(
+                    job=job,
+                    files=[f],
+                    process_fn=lambda p: "ok",
+                    checkpoint=None,
+                )
+
+        assert job.status == JobStatus.FAILED
+        mock_persistence.save_job.assert_called_with(job)
+        mock_checkpoint_mgr.save_checkpoint.assert_not_called()
+
+    def test_checkpoint_update_called_on_success_with_checkpoint(
+        self,
+        processor: ResumableProcessor,
+        mock_checkpoint_mgr: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """When file succeeds and checkpoint is provided, update_checkpoint_state is called."""
+        f = tmp_path / "a.txt"
+        f.write_text("x")
+        job = JobState(id="j1", status=JobStatus.RUNNING, total_files=1)
+        cp = MagicMock(spec=Checkpoint)
+        with patch.object(
+            processor._processor,
+            "process_batch_iter",
+            return_value=[_make_file_result(f, success=True)],
+        ):
+            result = processor._process_and_checkpoint(
+                job=job,
+                files=[f],
+                process_fn=lambda p: "ok",
+                checkpoint=cp,
+            )
+        assert result.succeeded == 1
+        mock_checkpoint_mgr.update_checkpoint_state.assert_called_once_with(cp, f)
+
+    def test_exception_with_checkpoint_calls_save_checkpoint(
+        self,
+        processor,
+        mock_persistence,
+        mock_checkpoint_mgr,
+        tmp_path,
+    ) -> None:
+        """When process_batch_iter raises and checkpoint is provided, save_checkpoint is called."""
+        f = tmp_path / "a.txt"
+        f.write_text("x")
+        job = JobState(id="j1", status=JobStatus.RUNNING, total_files=1)
+        cp = MagicMock(spec=Checkpoint)
+        with patch.object(
+            processor._processor,
+            "process_batch_iter",
+            side_effect=RuntimeError("crash"),
+        ):
+            with pytest.raises(RuntimeError, match="crash"):
+                processor._process_and_checkpoint(
+                    job=job,
+                    files=[f],
+                    process_fn=lambda p: "ok",
+                    checkpoint=cp,
+                )
+        assert job.status == JobStatus.FAILED
+        mock_checkpoint_mgr.save_checkpoint.assert_called_with(cp)
+
+    def test_batched_save_with_checkpoint_calls_save_checkpoint(
+        self,
+        processor,
+        mock_persistence,
+        mock_checkpoint_mgr,
+        tmp_path,
+    ) -> None:
+        """When batched save triggers with a real checkpoint, save_checkpoint is called."""
+        files = [tmp_path / f"f{i}.txt" for i in range(50)]
+        for f in files:
+            f.write_text("x")
+        job = JobState(id="j1", status=JobStatus.RUNNING, total_files=50)
+        cp = MagicMock(spec=Checkpoint)
+        batch_results = [_make_file_result(f, success=True) for f in files]
+        with patch.object(
+            processor._processor,
+            "process_batch_iter",
+            return_value=batch_results,
+        ):
+            result = processor._process_and_checkpoint(
+                job=job,
+                files=files,
+                process_fn=lambda p: "ok",
+                checkpoint=cp,
+            )
+        assert result.succeeded == 50
+        assert mock_persistence.save_job.call_count >= 2
+        assert mock_checkpoint_mgr.save_checkpoint.call_count >= 2
