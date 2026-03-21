@@ -152,12 +152,22 @@ class TestBufferPoolLazyInit:
 
     def test_buffer_pool_lazily_created_when_none(self) -> None:
         orch = PipelineOrchestrator()
-        # No pool supplied → None initially
-        assert orch._buffer_pool is None
-        pool = orch.buffer_pool
-        assert pool is not None
-        # Accessing again returns the same object (not a second allocation)
-        assert orch.buffer_pool is pool
+        results: list[object] = []
+        barrier = threading.Barrier(2)
+
+        def _access() -> None:
+            barrier.wait()
+            results.append(orch.buffer_pool)
+
+        t1 = threading.Thread(target=_access)
+        t2 = threading.Thread(target=_access)
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        assert len(results) == 2
+        assert results[0] is results[1]
 
     def test_supplied_buffer_pool_is_returned_directly(self) -> None:
         custom_pool = BufferPool(buffer_size=512, initial_buffers=2, max_buffers=4)

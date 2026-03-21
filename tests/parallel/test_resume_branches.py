@@ -255,8 +255,9 @@ class TestResumeJobBranches:
         ):
             processor.resume_job("j3", lambda p: "ok")
 
-        # The first save after loading must be RUNNING
-        assert JobStatus.RUNNING in saved_statuses
+        # The first save after loading must be RUNNING (ordering matters)
+        assert len(saved_statuses) > 0
+        assert saved_statuses[0] == JobStatus.RUNNING
 
     def test_modified_files_are_re_added_to_pending(
         self,

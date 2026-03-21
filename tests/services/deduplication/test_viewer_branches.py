@@ -462,6 +462,10 @@ class TestGenerateAsciiPreviewIntegration:
 class TestDisplayReviewSummaryIntegration:
     """Integration tests for _display_review_summary."""
 
+    @staticmethod
+    def _written(viewer: ComparisonViewer) -> str:
+        return "".join(c.args[0] for c in viewer.console.file.write.call_args_list if c.args)
+
     def test_summary_with_existing_delete_files(self, tmp_path: Path) -> None:
         kept = _make_png(tmp_path, "keep.png", (100, 100))
         to_delete = _make_png(tmp_path, "delete.png", (100, 100))
@@ -470,9 +474,20 @@ class TestDisplayReviewSummaryIntegration:
         decisions = {kept: "keep", to_delete: "delete"}
         viewer._display_review_summary(decisions)
 
+        output = self._written(viewer)
+        assert "Summary" in output
+        assert "Keep" in output
+        assert "Delete" in output
+        assert "space" in output.lower()
+
     def test_summary_zero_files(self, tmp_path: Path) -> None:
         viewer = ComparisonViewer(console=_silent_console())
         viewer._display_review_summary({})
+
+        output = self._written(viewer)
+        assert "Summary" in output
+        assert "Keep" in output
+        assert "Delete" in output
 
     def test_summary_all_keep_no_space_savings(self, tmp_path: Path) -> None:
         imgs = [_make_png(tmp_path, f"k{i}.png") for i in range(3)]
@@ -480,11 +495,20 @@ class TestDisplayReviewSummaryIntegration:
         decisions = dict.fromkeys(imgs, "keep")
         viewer._display_review_summary(decisions)
 
+        output = self._written(viewer)
+        assert "Summary" in output
+        assert "Keep" in output
+        assert "space" not in output.lower()
+
     def test_summary_missing_delete_file_does_not_raise(self, tmp_path: Path) -> None:
         missing = tmp_path / "gone.png"
         viewer = ComparisonViewer(console=_silent_console())
         decisions = {missing: "delete"}
         viewer._display_review_summary(decisions)
+
+        output = self._written(viewer)
+        assert "Summary" in output
+        assert "Delete" in output
 
 
 # ---------------------------------------------------------------------------
