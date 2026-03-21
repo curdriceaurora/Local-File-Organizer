@@ -238,6 +238,27 @@ def test_legacy_acquire_release_without_consume_ignores_string_literal_mentions(
     assert all(f.rule_id == "legacy-acquire-release-without-consume" for f in findings)
 
 
+def test_legacy_acquire_release_without_consume_ignores_unrelated_attribute_name_collisions(
+    tmp_path: Path,
+) -> None:
+    """An unrelated ``x.buf`` attribute access must not consume pending ``buf``."""
+    detector = LegacyAcquireReleaseWithoutConsumeDetector()
+    _write_fixture_module(
+        tmp_path,
+        "src/file_organizer/memory/attribute_collision_positive.py",
+        """
+        def legacy(pool, x):
+            buf = pool.acquire(10)
+            x.buf = 0
+            pool.release(buf)
+        """,
+    )
+
+    findings = detector.find_violations(tmp_path)
+    assert findings
+    assert all(f.rule_id == "legacy-acquire-release-without-consume" for f in findings)
+
+
 # ---------------------------------------------------------------------------
 # Pack-level contract
 # ---------------------------------------------------------------------------

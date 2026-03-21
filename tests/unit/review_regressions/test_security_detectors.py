@@ -531,3 +531,68 @@ def test_validation_bypass_detector_flags_pre_validation_raw_alias(
     finding = findings[0]
     assert finding.rule_id == "raw-field-after-validation"
     assert "alias raw sourced from raw request.input_dir" in finding.message
+
+
+def test_validation_bypass_detector_recognizes_from_api_utils_alias(
+    tmp_path: Path,
+) -> None:
+    """``from ...api import utils as utils`` must count as resolve_path provenance."""
+    detector = ValidatedPathBypassDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/from_api_utils_alias.py",
+        (
+            "from file_organizer.api import utils as utils\n"
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "class Req:\n"
+            "    input_dir: str\n"
+            "class Settings:\n"
+            "    allowed_paths: list = []\n"
+            "class Organizer:\n"
+            "    def organize(self, *, input_path): pass\n"
+            "organizer = Organizer()\n"
+            "@router.post('/x')\n"
+            "def handler(request: Req, settings: Settings) -> None:\n"
+            "    _v = utils.resolve_path(request.input_dir, settings.allowed_paths)\n"
+            "    organizer.organize(input_path=request.input_dir)\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "raw-field-after-validation"
+
+
+def test_validation_bypass_detector_clears_stale_alias_after_non_validation_rebind(
+    tmp_path: Path,
+) -> None:
+    """Non-validation rebinds must clear stale raw aliases."""
+    detector = ValidatedPathBypassDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/non_validation_rebind.py",
+        (
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "def resolve_path(v, allowed): return v\n"
+            "class Req:\n"
+            "    input_dir: str\n"
+            "class Settings:\n"
+            "    allowed_paths: list = []\n"
+            "class Organizer:\n"
+            "    def organize(self, *, input_path): pass\n"
+            "organizer = Organizer()\n"
+            "@router.post('/x')\n"
+            "def handler(request: Req, settings: Settings) -> None:\n"
+            "    _ = resolve_path(request.input_dir, settings.allowed_paths)\n"
+            "    raw = request.input_dir\n"
+            "    raw = None\n"
+            "    organizer.organize(input_path=raw)\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert findings == []

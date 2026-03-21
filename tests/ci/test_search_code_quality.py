@@ -26,6 +26,20 @@ pytestmark = pytest.mark.ci
 _BROAD_EXCEPTION_NAMES = {"Exception", "BaseException"}
 
 
+def _walk_function_body(node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.AST]:
+    """Return nodes in function body without descending into nested def/class scopes."""
+    seen: list[ast.AST] = []
+    stack: list[ast.AST] = list(reversed(node.body))
+    while stack:
+        current = stack.pop()
+        seen.append(current)
+        if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+            continue
+        children = list(ast.iter_child_nodes(current))
+        stack.extend(reversed(children))
+    return seen
+
+
 def _is_broad_handler(handler: ast.ExceptHandler) -> bool:
     """Return True for bare ``except:`` or ``except Exception/BaseException:``."""
     if handler.type is None:
@@ -106,7 +120,7 @@ def _find_unguarded_traversals(path: Path) -> list[str]:
 
         # Collect calls from this function's own body only — do not descend into
         # nested functions/classes so inner-scope guards cannot satisfy outer checks.
-        calls = [n for child in node.body for n in ast.walk(child) if isinstance(n, ast.Call)]
+        calls = [n for n in _walk_function_body(node) if isinstance(n, ast.Call)]
 
         # Does the function traverse files? (rglob or os.walk only — not bare walk())
         has_rglob = any(isinstance(c.func, ast.Attribute) and c.func.attr == "rglob" for c in calls)
@@ -170,3 +184,29 @@ def test_search_service_rglob_filters_symlinks_and_hidden() -> None:
         "Search service file traversal missing S1/S2 safety guards — add "
         "is_symlink() and startswith('.') filters before indexing:\n" + "\n".join(violations)
     )
+
+
+def test_unguarded_traversal_does_not_credit_nested_helper_guards(tmp_path: Path) -> None:
+    """Inner helper guards must not satisfy S1/S2 for the outer traversal function."""
+    module = tmp_path / "nested_helper.py"
+    module.write_text(
+        (
+            "from pathlib import Path\n"
+            "def outer(root: Path) -> None:\n"
+            "    for p in root.rglob('*.txt'):\n"
+            "        _ = p\n"
+            "    def helper(x: Path) -> None:\n"
+            "        if x.is_symlink():\n"
+            "            return\n"
+            "        if x.name.startswith('.'):\n"
+            "            return\n"
+        ),
+        encoding="utf-8",
+    )
+
+    violations = _find_unguarded_traversals(module)
+
+    assert len(violations) == 1
+    assert ": outer — missing " in violations[0]
+    assert "S1:symlink-filter(is_symlink())" in violations[0]
+    assert 'S2:hidden-file-filter(startswith("."))' in violations[0]

@@ -388,8 +388,6 @@ def _consume_pending_by_source(pending: dict[str, ast.Call], stmt: ast.stmt) -> 
     for node in ast.walk(stmt):
         if isinstance(node, ast.Name):
             identifiers.add(node.id)
-        elif isinstance(node, ast.Attribute):
-            identifiers.add(node.attr)
     for var in list(pending.keys()):
         if var in identifiers:
             del pending[var]

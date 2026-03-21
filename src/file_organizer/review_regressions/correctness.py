@@ -43,7 +43,7 @@ def _parent_map(tree: ast.AST) -> dict[ast.AST, ast.AST]:
 
 
 def _stage_context_aliases(tree: ast.AST) -> set[str]:
-    aliases = {"StageContext"}
+    aliases: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and node.module == "file_organizer.interfaces.pipeline":
             for alias in node.names:
@@ -70,22 +70,21 @@ def _is_stage_context_constructor(node: ast.AST, aliases: set[str]) -> bool:
     return isinstance(node, ast.Call) and _is_name_annotation(node.func, aliases)
 
 
-def _stage_context_names(tree: ast.AST, aliases: set[str]) -> set[str]:
+def _stage_context_names(scope: ast.AST, aliases: set[str]) -> set[str]:
     names: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs):
-                if _is_stage_context_annotation(arg.annotation, aliases):
-                    names.add(arg.arg)
-            if node.args.vararg and _is_stage_context_annotation(
-                node.args.vararg.annotation, aliases
-            ):
-                names.add(node.args.vararg.arg)
-            if node.args.kwarg and _is_stage_context_annotation(
-                node.args.kwarg.annotation, aliases
-            ):
-                names.add(node.args.kwarg.arg)
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+    if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        for arg in (*scope.args.posonlyargs, *scope.args.args, *scope.args.kwonlyargs):
+            if _is_stage_context_annotation(arg.annotation, aliases):
+                names.add(arg.arg)
+        if scope.args.vararg and _is_stage_context_annotation(
+            scope.args.vararg.annotation, aliases
+        ):
+            names.add(scope.args.vararg.arg)
+        if scope.args.kwarg and _is_stage_context_annotation(scope.args.kwarg.annotation, aliases):
+            names.add(scope.args.kwarg.arg)
+
+    for node in _iter_scope_nodes(scope):
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             if _is_stage_context_annotation(node.annotation, aliases) or (
                 node.value is not None and _is_stage_context_constructor(node.value, aliases)
             ):
@@ -238,13 +237,19 @@ class StageContextValidationBypassDetector:
         findings: list[Violation] = []
         for path in _iter_correctness_python_files(root):
             tree = parse_python_ast(path)
-            stage_context_names = _stage_context_names(tree, _stage_context_aliases(tree))
+            aliases = _stage_context_aliases(tree)
+            parents = _parent_map(tree)
+            stage_context_names_by_scope: dict[ast.AST, set[str]] = {}
             for node in ast.walk(tree):
                 if not isinstance(node, ast.Call) or not _call_matches_object_setattr(node):
                     continue
                 field_name = _stage_field_name(node)
                 if field_name not in _VALIDATED_STAGE_FIELDS:
                     continue
+                scope = _enclosing_scope(node, parents)
+                stage_context_names = stage_context_names_by_scope.setdefault(
+                    scope, _stage_context_names(scope, aliases)
+                )
                 if _setattr_target_name(node) not in stage_context_names:
                     continue
                 findings.append(
