@@ -12,6 +12,7 @@ Reduce the baseline as violations are fixed in follow-up batches.
 from __future__ import annotations
 
 import subprocess
+import warnings
 from pathlib import Path
 
 import pytest
@@ -45,13 +46,36 @@ def _run_pymarkdown_md031(files: list[Path]) -> list[str]:
 
 
 def _get_changed_md_files() -> list[Path]:
-    """Return .md files changed vs origin/main that exist on disk."""
+    """Return .md files changed vs origin/main that exist on disk.
+
+    Falls back to HEAD^..HEAD if origin/main is unavailable (e.g. shallow
+    clones or local branches without a remote fetch).
+    """
     result = subprocess.run(
         ["git", "diff", "--name-only", "--diff-filter=ACMR", "origin/main...HEAD"],
         capture_output=True,
         text=True,
         cwd=FO_ROOT,
     )
+    if result.returncode != 0 or "unknown revision" in result.stderr or "fatal" in result.stderr:
+        warnings.warn(
+            f"MD031 ratchet: origin/main unavailable, falling back to HEAD^..HEAD "
+            f"({result.stderr.strip()!r})",
+            stacklevel=2,
+        )
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "--diff-filter=ACMR", "HEAD^..HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=FO_ROOT,
+        )
+        if result.returncode != 0 or "fatal" in result.stderr:
+            warnings.warn(
+                f"MD031 ratchet: HEAD^..HEAD fallback also failed (rc={result.returncode}) "
+                f"({result.stderr.strip()!r}); returning no changed files",
+                stacklevel=2,
+            )
+            return []
     paths = []
     for line in result.stdout.splitlines():
         if line.endswith(".md"):
