@@ -147,12 +147,7 @@ class PARAMigrationManager:
         logger.info(f"Analyzing source: {source_path}")
 
         files_to_migrate: list[MigrationFile] = []
-        by_category: dict[PARACategory, int] = {
-            PARACategory.PROJECT: 0,
-            PARACategory.AREA: 0,
-            PARACategory.RESOURCE: 0,
-            PARACategory.ARCHIVE: 0,
-        }
+        by_category: dict[PARACategory, int] = {}
         total_size = 0
 
         # Scan files
@@ -195,7 +190,7 @@ class PARAMigrationManager:
                 files_to_migrate.append(migration_file)
 
                 # Update stats
-                by_category[category] += 1
+                by_category[category] = by_category.get(category, 0) + 1
                 total_size += file_path.stat().st_size
 
             except Exception as e:

@@ -636,8 +636,8 @@ class TestCleanText:
         assert "123" not in result
 
     def test_camel_case_split(self) -> None:
-        result = clean_text("myDocumentFile")
-        # Should split and process camelCase
+        result = clean_text("alphaBravo")
+        # Should split camelCase into ["alpha", "bravo"] — neither is a stopword
         assert len(result) > 0
 
     def test_max_words_limit(self) -> None:

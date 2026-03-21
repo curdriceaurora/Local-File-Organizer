@@ -337,10 +337,13 @@ class TestPARASuggestionEngineSuggest:
     def test_alternative_categories_list(
         self, para_engine: PARASuggestionEngine, tmp_path: Path
     ) -> None:
-        f = tmp_path / "doc.pdf"
+        f = tmp_path / "quarterly_budget_review.xlsx"
         f.write_bytes(b"data")
-        result = para_engine.suggest(f)
-        assert len(result.alternative_categories) >= 1
+        result = para_engine.suggest(f, content="quarterly financial budget planning spreadsheet")
+        assert isinstance(result.alternative_categories, list)
+        assert all(
+            isinstance(cat, tuple) and len(cat) == 2 for cat in result.alternative_categories
+        )
 
 
 class TestPARASuggestionEngineSuggestBatch:

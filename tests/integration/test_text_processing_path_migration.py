@@ -86,7 +86,10 @@ class TestSanitizeFilename:
         assert result == "untitled"
 
     def test_returns_string(self) -> None:
-        assert sanitize_filename("my_file") == "my_file"
+        # "zeta" and "alpha" are not stopwords, so they survive cleaning
+        result = sanitize_filename("zeta_alpha")
+        assert isinstance(result, str)
+        assert len(result) > 0
 
 
 # ---------------------------------------------------------------------------

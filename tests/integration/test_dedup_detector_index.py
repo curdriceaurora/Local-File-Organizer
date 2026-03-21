@@ -215,7 +215,10 @@ class TestDuplicateDetectorGetStatistics:
         assert "total_files" in result
 
     def test_after_scan(self, detector: DuplicateDetector, tmp_path: Path) -> None:
-        (tmp_path / "file.txt").write_text("some content")
+        # Two files with identical content are hashed and indexed as a duplicate group
+        content = b"some content"
+        (tmp_path / "file_a.txt").write_bytes(content)
+        (tmp_path / "file_b.txt").write_bytes(content)
         detector.scan_directory(tmp_path)
         stats = detector.get_statistics()
         assert stats["total_files"] >= 1
