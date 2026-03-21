@@ -82,22 +82,16 @@ def test_search_service_has_no_broad_except_handlers() -> None:
 # -------------------------------------------------------------------------
 
 
-def _func_source_lines(func: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
-    """Return the source lines of a function node (best-effort via ast.unparse)."""
-    try:
-        return ast.unparse(func).splitlines()
-    except Exception:
-        return []
-
-
 def _find_unguarded_traversals(path: Path) -> list[str]:
     """Return ``file:line: name`` for functions that traverse files without S1/S2 guards.
 
     A function is flagged if it:
     - calls ``.rglob(...)`` or ``os.walk(...)`` (file traversal), AND
-    - does NOT contain ``is_symlink()`` anywhere in its body (S1 missing), OR
-    - does NOT contain a hidden-file check (``startswith(".")`` or ``"."`` prefix
-      check against a path part) anywhere in its body (S2 missing).
+    - does NOT call ``is_symlink()`` anywhere in its body (S1 missing), OR
+    - does NOT call ``startswith(".")`` anywhere in its body (S2 missing).
+
+    Detection uses AST call-node matching, not string matching, so docstrings
+    and comments cannot produce false positives or false negatives.
     """
     source = path.read_text(encoding="utf-8")
     try:
@@ -110,19 +104,36 @@ def _find_unguarded_traversals(path: Path) -> list[str]:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
 
-        unparsed = ast.unparse(node)
+        # Collect calls from this function's own body only — do not descend into
+        # nested functions/classes so inner-scope guards cannot satisfy outer checks.
+        calls = [n for child in node.body for n in ast.walk(child) if isinstance(n, ast.Call)]
 
-        # Does the function traverse files?
-        has_rglob = ".rglob(" in unparsed
-        has_walk = "os.walk(" in unparsed or "walk(" in unparsed
+        # Does the function traverse files? (rglob or os.walk only — not bare walk())
+        has_rglob = any(isinstance(c.func, ast.Attribute) and c.func.attr == "rglob" for c in calls)
+        has_walk = any(
+            isinstance(c.func, ast.Attribute)
+            and c.func.attr == "walk"
+            and isinstance(c.func.value, ast.Name)
+            and c.func.value.id == "os"
+            for c in calls
+        )
         if not (has_rglob or has_walk):
             continue
 
-        # S1: must contain symlink check
-        has_symlink_check = "is_symlink()" in unparsed
+        # S1: must call .is_symlink()
+        has_symlink_check = any(
+            isinstance(c.func, ast.Attribute) and c.func.attr == "is_symlink" for c in calls
+        )
 
-        # S2: must contain hidden-file check
-        has_hidden_check = 'startswith(".")' in unparsed or "startswith('.')" in unparsed
+        # S2: must call .startswith(".") with a literal "." argument
+        has_hidden_check = any(
+            isinstance(c.func, ast.Attribute)
+            and c.func.attr == "startswith"
+            and len(c.args) >= 1
+            and isinstance(c.args[0], ast.Constant)
+            and c.args[0].value == "."
+            for c in calls
+        )
 
         missing: list[str] = []
         if not has_symlink_check:
