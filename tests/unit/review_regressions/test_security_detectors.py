@@ -256,6 +256,9 @@ def test_direct_path_detector_does_not_flag_path_without_pathlib_import(
     only names explicitly introduced by ``from pathlib import Path [as alias]`` are
     tracked.  A file that shadows or inherits ``Path`` without a pathlib import cannot
     produce a valid ``Path(x)`` AST constructor node the detector cares about.
+
+    The second module uses bare ``Path(path)`` without any pathlib import.  If the seed
+    were re-added, that call would be flagged, producing two findings instead of one.
     """
     detector = GuardedContextDirectPathDetector()
     _write_module(
@@ -270,10 +273,22 @@ def test_direct_path_detector_does_not_flag_path_without_pathlib_import(
             "    return str(P(path))\n"
         ),
     )
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/no_import_path.py",
+        (
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "@router.get('/y')\n"
+            "def view2(path: str) -> str:\n"
+            "    return str(Path(path))\n"
+        ),
+    )
 
     findings = detector.find_violations(tmp_path)
 
-    # Alias P is tracked; bare "Path" is not seeded → only P(path) should flag
+    # Only P(path) in aliased_only.py should flag — bare Path() in no_import_path.py
+    # has no pathlib import so _path_constructor_names returns {} for that file.
     assert len(findings) == 1
     assert findings[0].rule_id == "unguarded-direct-path"
 
@@ -431,12 +446,17 @@ def test_validation_bypass_detector_clears_stale_raw_alias_after_revalidation(
 def test_is_resolve_path_call_does_not_match_arbitrary_receiver_method(
     tmp_path: Path,
 ) -> None:
-    """``other_svc.resolve_path(x)`` is not treated as security-validator invocation (T10).
+    """``helper.resolve_path(x)`` is not treated as a security-validator invocation (T10).
 
-    The attribute branch of ``_is_resolve_path_call`` must check that the root receiver
-    is a known alias of the security validator, not just that the method name matches.
-    An unrelated object with a method named ``resolve_path`` must not suppress bypass
-    detection.
+    The attribute branch of ``_is_resolve_path_call`` checks that the root receiver is
+    a name in ``resolve_path_names``, not just that the method name is ``resolve_path``.
+    When only an unrelated object's method is called, ``_find_validated_fields`` must
+    return empty so the handler is skipped entirely.
+
+    If ``_is_resolve_path_call`` were broken to accept any attribute call named
+    ``resolve_path``, it would credit ``helper.resolve_path(request.input_dir, ...)`` as
+    validation, which would then cause the raw ``request.input_dir`` passed to
+    ``organize()`` to be flagged as a bypass (1 finding instead of 0).
     """
     detector = ValidatedPathBypassDetector()
     _write_module(
@@ -451,12 +471,63 @@ def test_is_resolve_path_call_does_not_match_arbitrary_receiver_method(
             "    input_dir: str\n"
             "class Settings:\n"
             "    allowed_paths: list = []\n"
+            "class Organizer:\n"
+            "    def organize(self, *, input_path): pass\n"
             "helper = PathHelper()\n"
+            "organizer = Organizer()\n"
+            "@router.post('/x')\n"
+            "def handler(request: Req, settings: Settings) -> None:\n"
+            "    _v = helper.resolve_path(request.input_dir, settings.allowed_paths)\n"
+            "    organizer.organize(input_path=request.input_dir)\n"
         ),
     )
 
     findings = detector.find_violations(tmp_path)
 
-    # No security validator recognized → validated empty → no bypass findings
-    # (the unrelated helper.resolve_path() is correctly ignored)
+    # helper.resolve_path() receiver "helper" is not in resolve_path_names →
+    # _find_validated_fields returns {} → handler skipped → no findings.
+    # A broken _is_resolve_path_call would credit helper.resolve_path as validation
+    # and flag the raw request.input_dir at organize() (1 finding).
     assert findings == []
+
+
+def test_validation_bypass_detector_flags_pre_validation_raw_alias(
+    tmp_path: Path,
+) -> None:
+    """A raw alias assigned *before* ``resolve_path()`` is still flagged at the sink.
+
+    Before the fix, ``_find_raw_field_aliases`` filtered out aliases whose assignment
+    line was <= the validation line, so ``raw = request.input_dir`` appearing before
+    ``resolve_path(request.input_dir, ...)`` was silently dropped.  The alias can then
+    be passed to a sink that runs after validation — a genuine bypass that must be
+    caught.
+    """
+    detector = ValidatedPathBypassDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/pre_validation_alias.py",
+        (
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "def resolve_path(v, allowed): return v\n"
+            "class Req:\n"
+            "    input_dir: str\n"
+            "class Settings:\n"
+            "    allowed_paths: list = []\n"
+            "class Organizer:\n"
+            "    def organize(self, *, input_path): pass\n"
+            "organizer = Organizer()\n"
+            "@router.post('/x')\n"
+            "def handler(request: Req, settings: Settings) -> None:\n"
+            "    raw = request.input_dir\n"
+            "    _ = resolve_path(request.input_dir, settings.allowed_paths)\n"
+            "    organizer.organize(input_path=raw)\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.rule_id == "raw-field-after-validation"
+    assert "alias raw sourced from raw request.input_dir" in finding.message

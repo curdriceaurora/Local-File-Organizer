@@ -409,12 +409,19 @@ def _find_raw_field_aliases(
     """Return local variables assigned from raw (unvalidated) request path fields in *node*.
 
     Uses ``_walk_function_body`` so that assignments inside nested scopes are
-    not incorrectly attributed to the outer route handler.  Entries are also
-    removed when a *later* validated assignment rebinds the same name, preventing
-    stale raw-field aliases from producing false positives.  Because
-    ``_find_validated_fields`` tracks only the *earliest* validation line per
-    field, we do a second walk here to find the *latest* ``resolve_path()``
-    assignment to each alias, which is the line that determines staleness.
+    not incorrectly attributed to the outer route handler.  All raw aliases for
+    validated fields are collected regardless of whether the alias appears before
+    or after the validation call — a pre-validation raw alias is still a bypass
+    when it is passed to a sink that runs after validation.  The sink-time check
+    (``child.lineno > vf.line``) in ``_append_field_findings_from_expr`` is
+    responsible for filtering sinks that precede validation.
+
+    Entries are additionally removed when a *later* validated assignment rebinds
+    the same name, preventing stale raw-field aliases from producing false
+    positives.  Because ``_find_validated_fields`` tracks only the *earliest*
+    validation line per field, we do a second walk here to find the *latest*
+    ``resolve_path()`` assignment to each alias, which is the line that
+    determines staleness.
     """
     aliases: dict[str, _RawFieldAlias] = {}
     for child in _walk_function_body(node):
@@ -439,8 +446,7 @@ def _find_raw_field_aliases(
             continue
 
         key = (value.value.id, value.attr)
-        validated_field = validated.get(key)
-        if validated_field is None or child.lineno <= validated_field.line:
+        if validated.get(key) is None:
             continue
 
         aliases[target.id] = _RawFieldAlias(
@@ -765,10 +771,15 @@ class ValidatedPathBypassDetector:
         """Append violations for a single argument expression that carries a raw request field."""
         if isinstance(expr, ast.Name):
             alias = raw_field_aliases.get(expr.id)
+            alias_vf = (
+                validated.get((alias.request_name, alias.field_name)) if alias is not None else None
+            )
             if (
                 alias is not None
+                and alias_vf is not None
                 and alias.request_name == request_name
                 and child.lineno > alias.line
+                and child.lineno > alias_vf.line
             ):
                 key = (
                     "raw-field-alias",
