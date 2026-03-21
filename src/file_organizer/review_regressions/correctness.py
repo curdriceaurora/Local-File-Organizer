@@ -43,12 +43,23 @@ def _parent_map(tree: ast.AST) -> dict[ast.AST, ast.AST]:
 
 
 def _stage_context_aliases(tree: ast.AST) -> set[str]:
+    """Return names bound to ``StageContext`` via module-level imports only.
+
+    Function-local ``from ... import StageContext as SC`` imports are excluded:
+    they create an alias visible only inside that function, so the same name in
+    an unrelated function must not be treated as canonical.
+    """
     aliases: set[str] = set()
-    for node in ast.walk(tree):
+    stack: list[ast.AST] = [tree]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue  # skip function bodies — local imports are not module-level
         if isinstance(node, ast.ImportFrom) and node.module == "file_organizer.interfaces.pipeline":
             for alias in node.names:
                 if alias.name == "StageContext":
                     aliases.add(alias.asname or alias.name)
+        stack.extend(ast.iter_child_nodes(node))
     return aliases
 
 

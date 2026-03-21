@@ -55,6 +55,14 @@ class _RawFieldAlias:
     field_name: str
     alias_name: str
     line: int
+    rebind_lines: tuple[int, ...] = ()
+    """Lines (after *line*) where this name is rebound to a non-raw-field value.
+
+    Used by sink-checking code to determine whether the alias still holds a
+    raw value at the time of the sink call.  A rebind *before* the sink means
+    the alias no longer carries the raw field value, so the sink should not be
+    flagged.
+    """
 
 
 def _parent_map(tree: ast.AST) -> dict[ast.AST, ast.AST]:
@@ -421,12 +429,13 @@ def _find_raw_field_aliases(
     (``child.lineno > vf.line``) in ``_append_field_findings_from_expr`` is
     responsible for filtering sinks that precede validation.
 
-    Entries are additionally removed when any *later* assignment rebinds the
-    same name, so the latest assignment wins and stale raw-field aliases cannot
-    survive rebinding.
+    Each returned alias carries ``rebind_lines``: the sorted tuple of lines at
+    which the name is re-assigned after the raw-field assignment.  The sink
+    checker uses this to skip the alias when a rebind happened *before* the
+    sink, meaning the alias no longer holds the raw value at call time.
     """
     aliases: dict[str, _RawFieldAlias] = {}
-    latest_assignment_line: dict[str, int] = {}
+    all_assignment_lines: dict[str, list[int]] = {}
     for child in _walk_function_body(node):
         value: ast.AST | None = None
         target: ast.Name | None = None
@@ -446,8 +455,7 @@ def _find_raw_field_aliases(
             value = child.value
 
         if target is not None:
-            previous = latest_assignment_line.get(target.id, 0)
-            latest_assignment_line[target.id] = max(previous, child.lineno)
+            all_assignment_lines.setdefault(target.id, []).append(child.lineno)
 
         if (
             target is None
@@ -468,9 +476,14 @@ def _find_raw_field_aliases(
         )
 
     return {
-        name: alias
+        name: _RawFieldAlias(
+            request_name=alias.request_name,
+            field_name=alias.field_name,
+            alias_name=alias.alias_name,
+            line=alias.line,
+            rebind_lines=tuple(ln for ln in all_assignment_lines.get(name, []) if ln > alias.line),
+        )
         for name, alias in aliases.items()
-        if latest_assignment_line.get(name, 0) <= alias.line
     }
 
 
@@ -762,6 +775,7 @@ class ValidatedPathBypassDetector:
                 and alias.request_name == request_name
                 and child.lineno > alias.line
                 and child.lineno > alias_vf.line
+                and not any(r < child.lineno for r in alias.rebind_lines)
             ):
                 key = (
                     "raw-field-alias",
