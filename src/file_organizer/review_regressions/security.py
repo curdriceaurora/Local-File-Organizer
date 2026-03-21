@@ -135,12 +135,23 @@ def _resolve_path_names(tree: ast.AST) -> set[str]:
     return names
 
 
+def _attr_root_name(node: ast.expr) -> str | None:
+    """Return the root ``Name.id`` of an attribute chain, or None for non-Name roots."""
+    while isinstance(node, ast.Attribute):
+        node = node.value
+    return node.id if isinstance(node, ast.Name) else None
+
+
 def _is_resolve_path_call(node: ast.AST, resolve_path_names: set[str]) -> bool:
     """Return True if *node* is a call to any local alias of ``resolve_path``."""
-    return isinstance(node, ast.Call) and (
-        (isinstance(node.func, ast.Name) and node.func.id in resolve_path_names)
-        or (isinstance(node.func, ast.Attribute) and node.func.attr == "resolve_path")
-    )
+    if not isinstance(node, ast.Call):
+        return False
+    if isinstance(node.func, ast.Name):
+        return node.func.id in resolve_path_names
+    if isinstance(node.func, ast.Attribute) and node.func.attr == "resolve_path":
+        root = _attr_root_name(node.func.value)
+        return root is not None and root in resolve_path_names
+    return False
 
 
 def _is_allowed_paths_expr(node: ast.AST) -> bool:
