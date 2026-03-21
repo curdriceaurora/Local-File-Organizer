@@ -18,15 +18,20 @@ class OrganizationResult:
         processed_files: Number of files successfully processed
         skipped_files: Number of files skipped (unsupported types)
         failed_files: Number of files that failed processing
+        deduplicated_files: Number of duplicate files removed by content-hash dedup
         processing_time: Total time taken in seconds
         organized_structure: Dictionary mapping folder names to file lists
         errors: List of (file_path, error_message) tuples
+
+    Invariant:
+        processed_files + skipped_files + failed_files + deduplicated_files == total_files
     """
 
     total_files: int = 0
     processed_files: int = 0
     skipped_files: int = 0
     failed_files: int = 0
+    deduplicated_files: int = 0
     processing_time: float = 0.0
     organized_structure: dict[str, list[str]] = field(default_factory=dict)
     errors: list[tuple[str, str]] = field(default_factory=list)  # (file, error)

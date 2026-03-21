@@ -59,6 +59,8 @@ def show_summary(
     console.print(f"  [green]Processed: {result.processed_files}[/green]")
     console.print(f"  [yellow]Skipped: {result.skipped_files}[/yellow]")
     console.print(f"  [red]Failed: {result.failed_files}[/red]")
+    if result.deduplicated_files:
+        console.print(f"  [dim]Duplicates removed: {result.deduplicated_files}[/dim]")
     if result.errors:
         for file_str, err in result.errors[:10]:
             file_name = Path(file_str).name

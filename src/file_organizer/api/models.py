@@ -171,6 +171,7 @@ class OrganizationResultResponse(BaseModel):
     processed_files: int
     skipped_files: int
     failed_files: int
+    deduplicated_files: int = 0
     processing_time: float
     organized_structure: dict[str, list[str]]
     errors: list[OrganizationError]

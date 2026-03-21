@@ -197,6 +197,7 @@ class ServiceFacade:
                     "processed_files": result.processed_files,
                     "skipped_files": result.skipped_files,
                     "failed_files": result.failed_files,
+                    "deduplicated_files": result.deduplicated_files,
                     "processing_time": result.processing_time,
                     "organized_structure": result.organized_structure,
                     "errors": result.errors,

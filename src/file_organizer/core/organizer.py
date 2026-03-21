@@ -327,6 +327,7 @@ class FileOrganizer:
                     logger.info(
                         f"Duplicate file detected by content: {pf.file_path.name}, skipping."
                     )
+                    result.deduplicated_files += 1
             all_processed = deduped_processed
             failed_cnt = len([p for p in all_processed if p.error])
             result.processed_files = len(all_processed) - failed_cnt

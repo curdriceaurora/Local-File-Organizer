@@ -90,11 +90,16 @@ class TestComplexTreeOrganization:
         """
         organizer = FileOrganizer(dry_run=False, use_hardlinks=False)
         result = organizer.organize(complex_file_tree, tmp_path / "out", skip_existing=False)
-        accounted = result.processed_files + result.skipped_files + result.failed_files
+        accounted = (
+            result.processed_files
+            + result.skipped_files
+            + result.failed_files
+            + result.deduplicated_files
+        )
         assert accounted == result.total_files, (
             f"File loss detected: total={result.total_files}, "
             f"processed={result.processed_files}, skipped={result.skipped_files}, "
-            f"failed={result.failed_files}"
+            f"failed={result.failed_files}, deduplicated={result.deduplicated_files}"
         )
 
     def test_result_contains_processing_time(
