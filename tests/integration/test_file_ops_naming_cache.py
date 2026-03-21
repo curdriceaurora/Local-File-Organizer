@@ -637,8 +637,8 @@ class TestCleanText:
 
     def test_camel_case_split(self) -> None:
         result = clean_text("alphaBravo")
-        # Should split camelCase into ["alpha", "bravo"] — neither is a stopword
-        assert len(result) > 0
+        # camelCase split produces ["alpha", "bravo"], joined as "alpha_bravo"
+        assert result == "alpha_bravo"
 
     def test_max_words_limit(self) -> None:
         text = "alpha beta gamma delta epsilon zeta"

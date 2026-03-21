@@ -86,10 +86,11 @@ class TestSanitizeFilename:
         assert result == "untitled"
 
     def test_returns_string(self) -> None:
-        # "zeta" and "alpha" are not stopwords, so they survive cleaning
-        result = sanitize_filename("zeta_alpha")
-        assert isinstance(result, str)
-        assert len(result) > 0
+        # camelCase input: "zeta" and "alpha" survive filtering and are joined
+        result = sanitize_filename("zetaAlpha")
+        assert "zeta" in result
+        assert "alpha" in result
+        assert result != "untitled"
 
 
 # ---------------------------------------------------------------------------

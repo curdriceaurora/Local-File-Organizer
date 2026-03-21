@@ -221,7 +221,7 @@ class TestDuplicateDetectorGetStatistics:
         (tmp_path / "file_b.txt").write_bytes(content)
         detector.scan_directory(tmp_path)
         stats = detector.get_statistics()
-        assert stats["total_files"] >= 1
+        assert stats["total_files"] == 2
 
 
 class TestDuplicateDetectorFindDuplicatesOfFile:
