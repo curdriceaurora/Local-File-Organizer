@@ -381,18 +381,20 @@ class FeatureExtractor:
         # Detect parent category hint
         parent_category_hint = self._detect_parent_category(parts)
 
-        # Extract path keywords
-        path_str = str(file_path).lower()
+        # Extract path keywords from path components (exact matches only)
         path_keywords: list[str] = []
+        path_parts = [part.lower() for part in file_path.parts]
         for _category, kw_list in _CATEGORY_KEYWORDS.items():
             for kw in kw_list:
-                if kw.lower() in path_str:
+                kw_lower = kw.lower()
+                if kw_lower in path_parts:
                     path_keywords.append(kw)
 
         # Check for project structure indicators
         has_project_structure = self._has_project_structure(parent_dir)
 
         # Check for date in path
+        path_str = str(file_path).lower()
         has_date_in_path = bool(re.search(r"\d{4}[-/]\d{1,2}[-/]\d{1,2}", path_str))
 
         return StructuralFeatures(
