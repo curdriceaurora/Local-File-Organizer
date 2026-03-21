@@ -27,6 +27,8 @@ jobs:
           # Legacy MD031 violation files are excluded during the burn-down phase;
           # the CI ratchet test (tests/ci/test_md031_ratchet.py) tracks the global
           # count and blocks any net increase. Remove entries as violations are fixed.
+          # LEGACY_EXCLUDE must stay in sync with the 'exclude' regex in the
+          # pymarkdown hook in .pre-commit-config.yaml.  Update both together.
           LEGACY_EXCLUDE='^(\.claude/|memory/test-generation-patterns\.md|docs/internal/|docs/testing/|docs/developer/testing\.md|\.github/copilot-instructions\.md|src/file_organizer/services/deduplication/README_IMAGE_DEDUP\.md|tests/fixtures/)'
           mapfile -t FILES < <(git ls-files '*.md' | grep -vE "$LEGACY_EXCLUDE" || true)
           if (( ${#FILES[@]} )); then
