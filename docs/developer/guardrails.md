@@ -123,6 +123,34 @@ Implementation detail:
 - Detection uses AST call-node matching scoped to each function's own body — docstrings and comments cannot produce false positives.
 - Rule definitions and fix examples live in `.claude/rules/search-generation-patterns.md` patterns S1 and S2.
 
+## T10 Predicate Negative-Case Rule Index
+
+Issues `#930` and `#931` add two enforcement layers for the T10 pattern: every
+`_is_*`/`_has_*`/`_find_*` predicate in detector modules must have a paired
+negative test case (`assert not predicate(...)`).
+
+| Enforcement layer | Location | When it fires |
+|-------------------|----------|---------------|
+| Pre-commit hook | `.pre-commit-config.yaml` → `predicate-negative-coverage` | When detector modules or their test files are staged |
+| CI backstop | `tests/ci/test_predicate_negative_coverage.py` | On every CI run (full scan) |
+
+Shared logic lives in `.claude/scripts/check_predicate_negative_coverage.py`.
+The CI test imports from this script via `importlib`; the pre-commit hook runs
+it directly.  Update the script when new detector modules are added.
+
+| Detector module | Test file | Module stem in `_MODULE_TO_TEST` |
+|-----------------|-----------|----------------------------------|
+| `correctness.py` | `test_correctness_detectors.py` | `correctness` |
+| `security.py` | `test_security_detectors.py` | `security` |
+| `memory_lifecycle.py` | `test_memory_lifecycle_detectors.py` | `memory_lifecycle` |
+| `test_quality.py` | `test_test_quality_detectors.py` | `test_quality` |
+| `api_compat.py` | `test_api_compat_detectors.py` | `api_compat` |
+
+To add a new detector module: add its entry to `_MODULE_TO_TEST` in the script,
+add `assert not predicate(...)` calls to the test file for every new predicate,
+then verify `pre-commit run predicate-negative-coverage` and
+`pytest tests/ci/test_predicate_negative_coverage.py` both pass.
+
 ## CLI Contract Test Conventions
 
 Typer and Rich render help text differently across terminals and CI. For CLI
