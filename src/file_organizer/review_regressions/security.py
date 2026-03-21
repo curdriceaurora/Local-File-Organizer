@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import tokenize
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -65,6 +66,27 @@ def _parent_map(tree: ast.AST) -> dict[ast.AST, ast.AST]:
     return parents
 
 
+def _walk_function_body(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> Iterator[ast.AST]:
+    """Yield every AST node in *node*'s body without descending into nested scopes.
+
+    Unlike ``ast.walk``, nested ``FunctionDef``, ``AsyncFunctionDef``,
+    ``ClassDef``, and ``Lambda`` nodes are *yielded* (so they can be inspected
+    as call-sites, decorators, etc.) but their children are **not** traversed —
+    analysis stays scoped to the immediate function body.
+    """
+    queue: list[ast.AST] = list(ast.iter_child_nodes(node))
+    while queue:
+        current = queue.pop()
+        yield current
+        if not isinstance(
+            current,
+            (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda),
+        ):
+            queue.extend(ast.iter_child_nodes(current))
+
+
 def _iter_guarded_python_files(root: Path) -> list[Path]:
     """Return all Python files under the guarded API/web source roots."""
     files: list[Path] = []
@@ -82,8 +104,13 @@ def _read_python_source(path: Path) -> str:
 
 
 def _path_constructor_names(tree: ast.AST) -> set[str]:
-    """Return all local names that refer to ``pathlib.Path`` in *tree*."""
-    names = {"Path"}
+    """Return all local names that refer to ``pathlib.Path`` in *tree*.
+
+    Only names introduced by an explicit ``from pathlib import Path [as alias]``
+    are returned.  Unconditionally seeding ``"Path"`` would flag files that
+    shadow the name without importing it from ``pathlib``.
+    """
+    names: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and node.module == "pathlib":
             for alias in node.names:
@@ -123,8 +150,22 @@ def _is_path_call(
 
 
 def _resolve_path_names(tree: ast.AST) -> set[str]:
-    """Return all local names bound to ``resolve_path`` in *tree*."""
-    names = {"resolve_path"}
+    """Return all local names bound to ``resolve_path`` in *tree*.
+
+    Handles three binding forms:
+
+    * ``from <pkg>.api.utils import resolve_path [as alias]`` — the canonical
+      import form; adds the local name (or alias).
+    * ``import <pkg>.api.utils as alias`` — module-alias form; adds the alias so
+      that ``alias.resolve_path(...)`` is matched by the attribute branch of
+      ``_is_resolve_path_call``.
+    * ``def resolve_path(...)`` — locally re-implemented or re-defined; adds
+      ``"resolve_path"`` so test fixtures and thin wrappers are covered.
+
+    Unconditionally seeding ``"resolve_path"`` would catch calls to unrelated
+    functions that happen to share the name.
+    """
+    names: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
             module = node.module or ""
@@ -132,6 +173,13 @@ def _resolve_path_names(tree: ast.AST) -> set[str]:
                 for alias in node.names:
                     if alias.name == "resolve_path":
                         names.add(alias.asname or alias.name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.endswith("api.utils"):
+                    names.add(alias.asname or alias.name.rpartition(".")[-1])
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.name == "resolve_path":
+                names.add("resolve_path")
     return names
 
 
@@ -224,12 +272,18 @@ def _is_allowed_file_info_wrapper(node: ast.Call, parents: dict[ast.AST, ast.AST
 
 
 def _is_in_route_handler(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> bool:
-    """Return True if *node* is nested inside a route-handler function."""
+    """Return True if *node* is nested (directly or transitively) inside a route handler.
+
+    Walks all the way up the parent chain rather than stopping at the first
+    enclosing function, so nodes inside inner helper functions or lambdas
+    defined within a route handler are still detected.
+    """
     current: ast.AST | None = node
     while current is not None:
         current = parents.get(current)
         if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            return _is_route_handler(current)
+            if _is_route_handler(current):
+                return True
     return False
 
 
@@ -294,10 +348,15 @@ def _find_validated_fields(
     *,
     resolve_path_names: set[str],
 ) -> dict[tuple[str, str], _ValidatedField]:
-    """Return request fields that are passed through ``resolve_path()`` in *node*."""
+    """Return request fields that are passed through ``resolve_path()`` in *node*.
+
+    Uses ``_walk_function_body`` so that ``resolve_path()`` calls inside nested
+    scopes (inner functions, lambdas) are not incorrectly attributed to the outer
+    route handler.
+    """
     validated: dict[tuple[str, str], _ValidatedField] = {}
 
-    for child in ast.walk(node):
+    for child in _walk_function_body(node):
         call: ast.Call | None = None
         alias_name: str | None = None
         line = getattr(child, "lineno", None)
@@ -345,10 +404,20 @@ def _find_raw_field_aliases(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     *,
     validated: dict[tuple[str, str], _ValidatedField],
+    resolve_path_names: set[str],
 ) -> dict[str, _RawFieldAlias]:
-    """Return local variables assigned from raw (unvalidated) request path fields in *node*."""
+    """Return local variables assigned from raw (unvalidated) request path fields in *node*.
+
+    Uses ``_walk_function_body`` so that assignments inside nested scopes are
+    not incorrectly attributed to the outer route handler.  Entries are also
+    removed when a *later* validated assignment rebinds the same name, preventing
+    stale raw-field aliases from producing false positives.  Because
+    ``_find_validated_fields`` tracks only the *earliest* validation line per
+    field, we do a second walk here to find the *latest* ``resolve_path()``
+    assignment to each alias, which is the line that determines staleness.
+    """
     aliases: dict[str, _RawFieldAlias] = {}
-    for child in ast.walk(node):
+    for child in _walk_function_body(node):
         value: ast.AST | None = None
         target: ast.Name | None = None
         if (
@@ -380,7 +449,39 @@ def _find_raw_field_aliases(
             alias_name=target.id,
             line=child.lineno,
         )
-    return aliases
+
+    # Remove stale entries: if a validated assignment later rebinds the same
+    # name (e.g. ``user_path = resolve_path(request.file_path)`` after a raw
+    # ``user_path = request.file_path``), the name now holds validated data.
+    # We need the *latest* such line for each alias, so we scan the body again
+    # rather than relying on ``validated`` which only stores the earliest line.
+    latest_revalidation_line: dict[str, int] = {}
+    for child in _walk_function_body(node):
+        alias_target: str | None = None
+        if (
+            isinstance(child, ast.Assign)
+            and len(child.targets) == 1
+            and isinstance(child.targets[0], ast.Name)
+            and isinstance(child.value, ast.Call)
+            and _is_resolve_path_call(child.value, resolve_path_names)
+        ):
+            alias_target = child.targets[0].id
+        elif (
+            isinstance(child, ast.AnnAssign)
+            and isinstance(child.target, ast.Name)
+            and isinstance(child.value, ast.Call)
+            and _is_resolve_path_call(child.value, resolve_path_names)
+        ):
+            alias_target = child.target.id
+        if alias_target is not None:
+            prev = latest_revalidation_line.get(alias_target, 0)
+            latest_revalidation_line[alias_target] = max(prev, child.lineno)
+
+    return {
+        name: alias
+        for name, alias in aliases.items()
+        if latest_revalidation_line.get(name, 0) <= alias.line
+    }
 
 
 def _iter_request_field_refs(expr: ast.AST, *, request_name: str) -> list[ast.Attribute]:
@@ -511,7 +612,9 @@ class ValidatedPathBypassDetector:
         """Return all bypass violations found within a single route-handler function."""
         findings: list[Violation] = []
         seen: set[tuple[str, int, str]] = set()
-        raw_field_aliases = _find_raw_field_aliases(node, validated=validated)
+        raw_field_aliases = _find_raw_field_aliases(
+            node, validated=validated, resolve_path_names=resolve_path_names
+        )
         request_names = {item.request_name for item in validated.values()}
         earliest_validation_line = {
             request_name: min(
@@ -520,7 +623,7 @@ class ValidatedPathBypassDetector:
             for request_name in request_names
         }
 
-        for child in ast.walk(node):
+        for child in _walk_function_body(node):
             if (
                 not isinstance(child, ast.Call)
                 or _is_resolve_path_call(child, resolve_path_names)

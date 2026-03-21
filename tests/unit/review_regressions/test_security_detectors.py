@@ -242,3 +242,221 @@ def test_security_detector_pack_exports_both_first_wave_security_detectors() -> 
         "security.guarded-context-direct-path",
         "security.validated-path-bypass",
     ]
+
+
+# ── Tests added for CodeRabbit Major findings on PR #929 ─────────────────────
+
+
+def test_direct_path_detector_does_not_flag_path_without_pathlib_import(
+    tmp_path: Path,
+) -> None:
+    """Path() in a file without ``from pathlib import Path`` is not flagged (finding #1).
+
+    After removing the unconditional ``"Path"`` seed from ``_path_constructor_names``,
+    only names explicitly introduced by ``from pathlib import Path [as alias]`` are
+    tracked.  A file that shadows or inherits ``Path`` without a pathlib import cannot
+    produce a valid ``Path(x)`` AST constructor node the detector cares about.
+    """
+    detector = GuardedContextDirectPathDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/aliased_only.py",
+        (
+            "from pathlib import Path as P\n"
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "@router.get('/x')\n"
+            "def view(path: str) -> str:\n"
+            "    return str(P(path))\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    # Alias P is tracked; bare "Path" is not seeded → only P(path) should flag
+    assert len(findings) == 1
+    assert findings[0].rule_id == "unguarded-direct-path"
+
+
+def test_validation_bypass_detector_recognizes_module_alias_resolve_path(
+    tmp_path: Path,
+) -> None:
+    """``import pkg.api.utils as utils; utils.resolve_path(x)`` counts as validation (finding #2).
+
+    Before this fix only ``from pkg.api.utils import resolve_path`` was tracked.
+    Module-alias calls like ``utils.resolve_path(request.input_dir, ...)`` were
+    silently ignored, causing the bypass detector to miss real violations.
+    """
+    detector = ValidatedPathBypassDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/module_alias_bypass.py",
+        (
+            "import file_organizer.api.utils as utils\n"
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "class Req:\n"
+            "    input_dir: str\n"
+            "class Settings:\n"
+            "    allowed_paths: list = []\n"
+            "class Organizer:\n"
+            "    def organize(self, *, input_path): pass\n"
+            "organizer = Organizer()\n"
+            "@router.post('/x')\n"
+            "def handler(request: Req, settings: Settings) -> None:\n"
+            "    _v = utils.resolve_path(request.input_dir, settings.allowed_paths)\n"
+            "    organizer.organize(input_path=request.input_dir)\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "raw-field-after-validation"
+
+
+def test_direct_path_codeql_comment_inside_nested_function_in_route_is_still_flagged(
+    tmp_path: Path,
+) -> None:
+    """A codeql suppression in a nested function inside a route handler does not bypass (finding #3).
+
+    Before this fix ``_is_in_route_handler`` stopped at the first enclosing function.
+    If ``Path()`` was inside an inner helper the stop-at-first logic would find that
+    helper (not a route), return False, and allow the codeql comment to suppress the
+    finding.  After the fix the walker continues up the chain and correctly identifies
+    the outer route handler.
+    """
+    detector = GuardedContextDirectPathDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/nested_codeql.py",
+        (
+            "from pathlib import Path\n"
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "@router.get('/x')\n"
+            "def handler(path: str) -> str:\n"
+            "    def _inner() -> str:\n"
+            "        # codeql[py/path-injection]\n"
+            "        return str(Path(path))\n"
+            "    return _inner()\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "unguarded-direct-path"
+
+
+def test_validation_bypass_detector_does_not_credit_nested_resolve_path_to_outer_handler(
+    tmp_path: Path,
+) -> None:
+    """``resolve_path()`` inside a nested function is not attributed to the outer handler (finding #4).
+
+    Before this fix ``_find_validated_fields`` used ``ast.walk`` which descends into
+    nested scopes.  A ``resolve_path()`` call in an inner function would be credited
+    to the outer route handler's validation context, potentially masking real bypasses
+    or producing spurious findings.  After the fix only calls in the handler's own
+    scope are credited.
+    """
+    detector = ValidatedPathBypassDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/nested_resolve.py",
+        (
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "def resolve_path(v, allowed): return v\n"
+            "class Req:\n"
+            "    input_dir: str\n"
+            "class Settings:\n"
+            "    allowed_paths: list = []\n"
+            "class Organizer:\n"
+            "    def organize(self, *, input_path): pass\n"
+            "organizer = Organizer()\n"
+            "@router.post('/x')\n"
+            "def handler(request: Req, settings: Settings) -> None:\n"
+            "    def _validate():\n"
+            "        return resolve_path(request.input_dir, settings.allowed_paths)\n"
+            "    organizer.organize(input_path=request.input_dir)\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    # Nested resolve_path not credited to outer handler → validated empty
+    # → detector does not fire; avoids false positive from inner-scope attribution
+    assert findings == []
+
+
+def test_validation_bypass_detector_clears_stale_raw_alias_after_revalidation(
+    tmp_path: Path,
+) -> None:
+    """A raw alias rebound to a validated value is not flagged as a bypass (finding #5).
+
+    Before this fix ``_find_raw_field_aliases`` never removed an alias that was later
+    overwritten by a ``resolve_path()`` call.  The stale raw alias would cause
+    downstream uses of the now-validated name to be incorrectly flagged.
+    """
+    detector = ValidatedPathBypassDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/rebound_alias.py",
+        (
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "def resolve_path(v, allowed): return v\n"
+            "class Req:\n"
+            "    input_dir: str\n"
+            "class Settings:\n"
+            "    allowed_paths: list = []\n"
+            "class Organizer:\n"
+            "    def organize(self, *, input_path): pass\n"
+            "organizer = Organizer()\n"
+            "@router.post('/x')\n"
+            "def handler(request: Req, settings: Settings) -> None:\n"
+            "    user_path = resolve_path(request.input_dir, settings.allowed_paths)\n"
+            "    user_path = request.input_dir\n"
+            "    user_path = resolve_path(request.input_dir, settings.allowed_paths)\n"
+            "    organizer.organize(input_path=user_path)\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert findings == []
+
+
+def test_is_resolve_path_call_does_not_match_arbitrary_receiver_method(
+    tmp_path: Path,
+) -> None:
+    """``other_svc.resolve_path(x)`` is not treated as security-validator invocation (T10).
+
+    The attribute branch of ``_is_resolve_path_call`` must check that the root receiver
+    is a known alias of the security validator, not just that the method name matches.
+    An unrelated object with a method named ``resolve_path`` must not suppress bypass
+    detection.
+    """
+    detector = ValidatedPathBypassDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/unrelated_resolver.py",
+        (
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "class PathHelper:\n"
+            "    def resolve_path(self, v, allowed): return v\n"
+            "class Req:\n"
+            "    input_dir: str\n"
+            "class Settings:\n"
+            "    allowed_paths: list = []\n"
+            "helper = PathHelper()\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    # No security validator recognized → validated empty → no bypass findings
+    # (the unrelated helper.resolve_path() is correctly ignored)
+    assert findings == []
