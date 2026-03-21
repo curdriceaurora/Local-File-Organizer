@@ -468,12 +468,15 @@ def _find_raw_field_aliases(
         if validated.get(key) is None:
             continue
 
-        aliases[target.id] = _RawFieldAlias(
+        candidate = _RawFieldAlias(
             request_name=value.value.id,
             field_name=value.attr,
             alias_name=target.id,
             line=child.lineno,
         )
+        existing = aliases.get(target.id)
+        if existing is None or candidate.line > existing.line:
+            aliases[target.id] = candidate
 
     return {
         name: _RawFieldAlias(
@@ -481,7 +484,9 @@ def _find_raw_field_aliases(
             field_name=alias.field_name,
             alias_name=alias.alias_name,
             line=alias.line,
-            rebind_lines=tuple(ln for ln in all_assignment_lines.get(name, []) if ln > alias.line),
+            rebind_lines=tuple(
+                sorted(ln for ln in all_assignment_lines.get(name, []) if ln > alias.line)
+            ),
         )
         for name, alias in aliases.items()
     }

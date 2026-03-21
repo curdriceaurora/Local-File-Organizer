@@ -630,3 +630,44 @@ def test_validation_bypass_detector_flags_alias_when_rebind_is_after_sink(
 
     assert len(findings) == 1
     assert findings[0].rule_id == "raw-field-after-validation"
+
+
+def test_validation_bypass_detector_uses_latest_raw_assignment_when_name_reused(
+    tmp_path: Path,
+) -> None:
+    """When the same name is assigned a raw field twice, the *later* assignment is canonical.
+
+    If ``_walk_function_body`` yields nodes out of source order, a naive overwrite
+    can leave the earliest raw assignment as the alias.  The later raw assignment at a
+    higher line number must be the one used, so that ``rebind_lines`` correctly reflects
+    subsequent lines (T10 negative — ensures the ``candidate.line > existing.line``
+    guard is exercised).
+    """
+    detector = ValidatedPathBypassDetector()
+    _write_module(
+        tmp_path,
+        "src/file_organizer/api/double_raw_assignment.py",
+        (
+            "from fastapi import APIRouter\n"
+            "router = APIRouter()\n"
+            "def resolve_path(v, allowed): return v\n"
+            "class Req:\n"
+            "    input_dir: str\n"
+            "class Settings:\n"
+            "    allowed_paths: list = []\n"
+            "class Organizer:\n"
+            "    def organize(self, *, input_path): pass\n"
+            "organizer = Organizer()\n"
+            "@router.post('/x')\n"
+            "def handler(request: Req, settings: Settings) -> None:\n"
+            "    _ = resolve_path(request.input_dir, settings.allowed_paths)\n"
+            "    raw = request.input_dir\n"
+            "    raw = request.input_dir\n"
+            "    organizer.organize(input_path=raw)\n"
+        ),
+    )
+
+    findings = detector.find_violations(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "raw-field-after-validation"
