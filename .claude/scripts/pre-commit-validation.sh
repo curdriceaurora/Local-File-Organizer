@@ -74,6 +74,25 @@ echo "✓ Docstring coverage"
 echo ""
 
 # ---------------------------------------------------------------------------
+# Diff coverage gate (≥80% of changed lines must be covered)
+# Mirrors CI step in .github/workflows/ci.yml lines 184-185.
+# Skips gracefully when: not on a branch, no coverage.xml, or diff-cover
+# is not installed.
+# ---------------------------------------------------------------------------
+
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || true)
+if [[ -n "$CURRENT_BRANCH" ]] && command -v diff-cover &>/dev/null && [[ -f coverage.xml ]]; then
+  echo "▶ Diff coverage gate (>=80% of changed lines)"
+  git fetch origin main --quiet 2>/dev/null || true
+  diff-cover coverage.xml --compare-branch=origin/main --fail-under=80
+  echo "✓ Diff coverage gate"
+  echo ""
+else
+  echo "ℹ Diff coverage gate skipped (not on a branch, no coverage.xml, or diff-cover not installed)."
+  echo ""
+fi
+
+# ---------------------------------------------------------------------------
 # Coverage floor gates (unit ≥93% branch, integration ≥30% branch) are
 # enforced by CI on main-branch pushes — NOT here.
 #
