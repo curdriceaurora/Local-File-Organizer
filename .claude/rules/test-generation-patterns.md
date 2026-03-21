@@ -19,6 +19,7 @@ Before writing any test:
 - [ ] Is `pytest.importorskip` scoped to only the classes that use the optional dep? (T5)
 - [ ] Does this file import an optional dep at module level without `pytest.importorskip`? (T8)
 - [ ] Does any assertion use `>= 0` on a length, count, or duration? Replace with a meaningful bound. (T9)
+- [ ] For every `_is_X()` / `_has_X()` predicate in detector/guardrail code — is there a negative test case that passes the same surface shape with the wrong context and asserts `False`? (T10)
 
 ---
 
@@ -321,6 +322,53 @@ size, or duration? If yes — this assertion always passes. Assert a meaningful 
 
 ---
 
+## Pattern T10: PREDICATE_MISSING_NEGATIVE_CASE
+
+**What it is**: A predicate function (`_is_X`, `_has_X`, `_find_X`) in detector/guardrail
+code is tested only with positive inputs — cases that *should* match. No test verifies
+that nodes with the same surface shape but wrong context are correctly rejected. False
+positives in guardrail code are silent: the rule fires on correct code, confusing authors
+and eroding trust in the guardrail.
+
+The canonical example: `_is_resolve_path_call` checked `node.func.attr == "resolve_path"`
+without verifying the receiver was a known alias. Any `obj.resolve_path()` would match.
+The bug survived because tests only covered `resolve_path(x)` (bare call) and
+`my_alias(x)` (imported alias) — never `unrelated_service.resolve_path(x)`.
+
+**Bad**:
+```python
+# Only positive cases — does not catch overly-permissive matching
+def test_is_resolve_path_call_bare():
+    src = "resolve_path(request.path)"
+    ...
+    assert _is_resolve_path_call(call, {"resolve_path"})
+
+def test_is_resolve_path_call_alias():
+    src = "rp(request.path)"
+    ...
+    assert _is_resolve_path_call(call, {"resolve_path", "rp"})
+```
+
+**Good**:
+```python
+# Positive cases as above, PLUS a false-positive rejection case
+def test_is_resolve_path_call_does_not_match_arbitrary_receiver():
+    # same method name, wrong receiver — must NOT match
+    src = "some_service.resolve_path(request.path)"
+    tree = ast.parse(src)
+    call = next(n for n in ast.walk(tree) if isinstance(n, ast.Call))
+    assert not _is_resolve_path_call(call, {"resolve_path"})
+```
+
+**Pre-generation check**: For every `_is_X` / `_has_X` predicate, ask:
+- *"What node looks like a match but isn't?"* → write a test that asserts `False` for it.
+- Specifically: if the predicate checks `node.func.attr == "X"`, test a node where
+  the receiver is an unrelated object that happens to have a method named `X`.
+
+**Applies to**: Any predicate used in AST-walking detector code, not just security detectors.
+
+---
+
 ## Rule of Thumb
 
 For every assertion, ask:
@@ -332,5 +380,6 @@ For every assertion, ask:
 6. **T7**: "Does this try/except guard an exception the production code actually raises?"
 7. **T8**: "Does this test file import an optional dep at module level without a guard?"
 8. **T9**: "Is `assert X >= 0` where X is a length/count/duration? Replace with a meaningful bound."
+9. **T10**: "Is this a predicate in detector code? Add a negative case with the same surface shape but wrong context."
 
-**Last audited PR**: #921
+**Last audited PR**: #929
