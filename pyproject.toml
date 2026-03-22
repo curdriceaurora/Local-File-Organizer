@@ -130,6 +130,7 @@ dev = [
     "pymarkdownlnt>=0.9.25",  # Markdown linting
     "deptry>=0.16.0",  # Unused dependency detection
     "diff-cover>=7.0.0",  # Diff coverage gate (local pre-commit + CI validation)
+    "asgi-lifespan>=2.1.0",  # ASGI lifespan management for integration tests
 ]
 
 cloud = [
@@ -440,4 +441,9 @@ DEP002 = [
     "PyQt6",
     # netCDF4: mixed-case name causes deptry matching issues; used in scientific.py
     "netCDF4",
+]
+
+[dependency-groups]
+dev = [
+    "asgi-lifespan>=2.1.0",
 ]
