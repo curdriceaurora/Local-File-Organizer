@@ -42,6 +42,7 @@ class TestGetAudioDurationBranches:
     """Covers tinytag fallback where duration is None (returns 0.0 via `or 0.0`)."""
 
     def test_tinytag_duration_none_returns_zero(self, tmp_path: Path) -> None:
+        """Returns 0.0 when the tinytag duration attribute is None."""
         audio = tmp_path / "test.mp3"
         audio.write_bytes(b"fake audio")
 
@@ -52,6 +53,7 @@ class TestGetAudioDurationBranches:
         mock_tinytag.TinyTag.get.return_value = mock_tag
 
         def fake_import(name, *args, **kwargs):
+            """Substitute __import__ that raises for pydub and returns mock_tinytag for tinytag."""
             if name == "pydub":
                 raise ImportError("no pydub")
             if name == "tinytag":
@@ -90,6 +92,7 @@ class TestNormalizeAudioBranches:
     """Covers custom target_db and explicit output_path as string."""
 
     def test_explicit_string_output_path(self, tmp_path: Path) -> None:
+        """normalize_audio accepts a string output_path and returns the corresponding Path."""
         src = tmp_path / "input.mp3"
         src.write_bytes(b"audio")
         out = tmp_path / "out.mp3"
@@ -109,6 +112,7 @@ class TestNormalizeAudioBranches:
         assert result == out
 
     def test_normalize_calls_effects_with_headroom(self, tmp_path: Path) -> None:
+        """normalize_audio calls pydub.effects.normalize with headroom = abs(target_db)."""
         src = tmp_path / "input.wav"
         src.write_bytes(b"wav")
         out = tmp_path / "norm.wav"
@@ -140,6 +144,7 @@ class TestSplitAudioBranches:
     """Covers custom output_dir (mkdir path) and chunk naming."""
 
     def test_custom_output_dir_is_created(self, tmp_path: Path) -> None:
+        """split_audio creates the output directory if it does not exist."""
         src = tmp_path / "long.mp3"
         src.write_bytes(b"audio data")
         out_dir = tmp_path / "chunks"  # does not yet exist
@@ -162,6 +167,7 @@ class TestSplitAudioBranches:
         assert result[1] == out_dir / "long_chunk_001.mp3"
 
     def test_chunk_export_called_for_each_chunk(self, tmp_path: Path) -> None:
+        """split_audio calls export() for each chunk with the correct format."""
         src = tmp_path / "audio.wav"
         src.write_bytes(b"x")
         out_dir = tmp_path / "out"
@@ -194,6 +200,7 @@ class TestConvertAudioFormatBranches:
     """Covers custom bitrate and string output_path."""
 
     def test_custom_bitrate_passed_to_export(self, tmp_path: Path) -> None:
+        """convert_audio_format passes the bitrate argument to export()."""
         src = tmp_path / "track.mp3"
         src.write_bytes(b"audio")
         out = tmp_path / "track.flac"
@@ -209,6 +216,7 @@ class TestConvertAudioFormatBranches:
         assert result == out
 
     def test_string_output_path_converted(self, tmp_path: Path) -> None:
+        """convert_audio_format accepts a string output_path and returns a Path."""
         src = tmp_path / "input.mp3"
         src.write_bytes(b"audio")
         out = tmp_path / "output.wav"
@@ -245,7 +253,7 @@ class TestValidateAudioFileBranches:
         assert "zero duration" in msg
 
     def test_all_supported_extensions_pass_extension_check(self, tmp_path: Path) -> None:
-        """Every extension in supported_extensions reaches the duration check."""
+        """All supported audio extensions are accepted as valid by validate_audio_file."""
         supported = [".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".wma", ".opus"]
         for ext in supported:
             audio = tmp_path / f"test{ext}"
@@ -275,6 +283,7 @@ class TestDetectSilenceBranches:
     """Covers custom threshold and min_silence_len parameters."""
 
     def test_custom_params_forwarded(self, tmp_path: Path) -> None:
+        """detect_silence_segments forwards silence_thresh and min_silence_len to pydub.silence."""
         audio = tmp_path / "test.mp3"
         audio.write_bytes(b"x")
 
@@ -294,6 +303,7 @@ class TestDetectSilenceBranches:
         assert result[0] == (500, 1500)
 
     def test_returns_empty_list_on_no_silence(self, tmp_path: Path) -> None:
+        """Returns an empty list when no silence segments are detected."""
         audio = tmp_path / "voice.mp3"
         audio.write_bytes(b"x")
 
@@ -317,6 +327,7 @@ class TestTrimAudioBranches:
     """Covers trim with start_ms only (end_ms=None) and string path inputs."""
 
     def test_trim_with_no_end_ms(self, tmp_path: Path) -> None:
+        """trim_audio slices to the end of the audio when end_ms is None."""
         src = tmp_path / "long.mp3"
         src.write_bytes(b"audio")
         out = tmp_path / "trimmed.mp3"
@@ -336,6 +347,7 @@ class TestTrimAudioBranches:
         assert result == out
 
     def test_string_path_inputs(self, tmp_path: Path) -> None:
+        """trim_audio accepts string paths for both input and output."""
         src = tmp_path / "src.wav"
         src.write_bytes(b"wav")
         out = tmp_path / "out.wav"
@@ -365,6 +377,7 @@ class TestMergeAudioFilesBranches:
     """Covers crossfade_ms > 0 path and output_dir creation."""
 
     def test_crossfade_path_uses_append(self, tmp_path: Path) -> None:
+        """crossfade_ms > 0 causes append() to be called with the crossfade kwarg."""
         f1 = tmp_path / "a.mp3"
         f2 = tmp_path / "b.mp3"
         f1.write_bytes(b"a")
@@ -392,6 +405,7 @@ class TestMergeAudioFilesBranches:
         assert result == out
 
     def test_output_parent_dir_created_if_missing(self, tmp_path: Path) -> None:
+        """merge_audio_files creates nested output parent directories if they do not exist."""
         f1 = tmp_path / "a.mp3"
         f1.write_bytes(b"a")
         nested_out = tmp_path / "deep" / "nested" / "merged.mp3"
@@ -422,6 +436,7 @@ class TestCalculateAudioChecksumBranches:
     """Covers multi-chunk reads (large file) and deterministic output."""
 
     def test_large_file_multiple_chunks(self, tmp_path: Path) -> None:
+        """calculate_audio_checksum reads files larger than one chunk correctly."""
         audio = tmp_path / "large.flac"
         # Write > 4096 bytes to force multiple chunk reads
         data = b"A" * 10000
@@ -433,6 +448,7 @@ class TestCalculateAudioChecksumBranches:
         assert result == expected
 
     def test_empty_file_checksum(self, tmp_path: Path) -> None:
+        """calculate_audio_checksum returns the correct sha256 digest for an empty file."""
         audio = tmp_path / "empty.mp3"
         audio.write_bytes(b"")
 
@@ -442,6 +458,7 @@ class TestCalculateAudioChecksumBranches:
         assert result == expected
 
     def test_default_algorithm_is_sha256(self, tmp_path: Path) -> None:
+        """The default hashing algorithm for calculate_audio_checksum is sha256."""
         audio = tmp_path / "track.mp3"
         content = b"test content for checksum"
         audio.write_bytes(content)
@@ -462,6 +479,7 @@ class TestGetAudioPeakAmplitudeBranches:
     """Covers positive amplitude and string path input."""
 
     def test_positive_amplitude(self, tmp_path: Path) -> None:
+        """get_audio_peak_amplitude returns the max_dBFS value from pydub AudioSegment."""
         audio = tmp_path / "loud.wav"
         audio.write_bytes(b"wav data")
 
@@ -477,6 +495,7 @@ class TestGetAudioPeakAmplitudeBranches:
         assert result == pytest.approx(0.0)
 
     def test_string_path_accepted(self, tmp_path: Path) -> None:
+        """get_audio_peak_amplitude accepts a string path and returns the dBFS value."""
         audio = tmp_path / "clip.mp3"
         audio.write_bytes(b"data")
 
@@ -502,25 +521,31 @@ class TestIsAudioFileBranches:
     """Covers edge cases: no extension, hidden files, mixed-case paths."""
 
     def test_no_extension_is_not_audio(self) -> None:
+        """A filename without an extension is not considered an audio file."""
         assert is_audio_file("audiofile_without_extension") is False
 
     def test_empty_string_is_not_audio(self) -> None:
+        """An empty string path is not considered an audio file."""
         assert is_audio_file("") is False
 
     def test_dot_only_extension_is_not_audio(self) -> None:
+        """A file ending in a lone dot is not considered an audio file."""
         assert is_audio_file("file.") is False
 
     def test_uppercase_extensions_are_audio(self) -> None:
+        """Uppercase audio extensions are recognised as audio files."""
         assert is_audio_file("TRACK.FLAC") is True
         assert is_audio_file("VOICE.AAC") is True
         assert is_audio_file("RECORD.WMA") is True
         assert is_audio_file("STREAM.OPUS") is True
 
     def test_video_extension_is_not_audio(self) -> None:
+        """Video file extensions are not classified as audio."""
         assert is_audio_file("video.mp4") is False
         assert is_audio_file("clip.avi") is False
 
     def test_path_with_audio_extension_in_dirname_not_filename(self) -> None:
+        """Only the filename suffix matters; an audio extension in the dir name is ignored."""
         # The directory has .mp3 in name but the file has .txt extension
         # is_audio_file uses suffix of the full path, so it checks the last component
         p = Path("/audio.mp3/actual_file.txt")
@@ -543,6 +568,7 @@ class TestDetectSilenceSegmentsBranches:
         """Lines 221-223: ImportError → warning logged, returns []."""
 
         def _no_pydub(name: str, *args: object, **kwargs: object) -> object:
+            """Substitute __import__ that raises ImportError for any pydub import."""
             if "pydub" in name:
                 raise ImportError("no pydub")
             raise ImportError(f"no {name}")

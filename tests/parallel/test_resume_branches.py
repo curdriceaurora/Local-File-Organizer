@@ -22,6 +22,7 @@ from file_organizer.parallel.resume import ResumableProcessor
 
 
 def _make_file_result(path: Path, *, success: bool = True) -> FileResult:
+    """Build a FileResult fixture for the given path with optional success flag."""
     return FileResult(
         path=path,
         success=success,
@@ -35,6 +36,7 @@ def _make_checkpoint(
     completed: list[Path] | None = None,
     pending: list[Path] | None = None,
 ) -> MagicMock:
+    """Build a Checkpoint MagicMock with the given job_id and path lists."""
     cp = MagicMock(spec=Checkpoint)
     cp.job_id = job_id
     cp.completed_paths = list(completed or [])
@@ -49,11 +51,13 @@ def _make_checkpoint(
 
 @pytest.fixture()
 def mock_persistence() -> MagicMock:
+    """Return a MagicMock to stand in for the persistence layer."""
     return MagicMock()
 
 
 @pytest.fixture()
 def mock_checkpoint_mgr() -> MagicMock:
+    """Return a MagicMock checkpoint manager pre-configured with default responses."""
     mgr = MagicMock()
     mgr.create_checkpoint.return_value = _make_checkpoint()
     mgr.load_checkpoint.return_value = None
@@ -62,6 +66,7 @@ def mock_checkpoint_mgr() -> MagicMock:
 
 @pytest.fixture()
 def processor(mock_persistence: MagicMock, mock_checkpoint_mgr: MagicMock) -> ResumableProcessor:
+    """Return a ResumableProcessor wired to mock persistence and checkpoint manager."""
     return ResumableProcessor(
         persistence=mock_persistence,
         checkpoint_mgr=mock_checkpoint_mgr,
@@ -244,6 +249,7 @@ class TestResumeJobBranches:
         saved_statuses: list[JobStatus] = []
 
         def capture_status(j: JobState) -> None:
+            """Record job statuses as they are saved."""
             saved_statuses.append(j.status)
 
         mock_persistence.save_job.side_effect = capture_status
@@ -316,7 +322,10 @@ class TestProcessAndCheckpointBranches:
     """Covers batched-save triggers and status transitions in _process_and_checkpoint."""
 
     def test_mixed_success_and_failure_marks_completed_not_failed(
-        self, processor: ResumableProcessor, mock_persistence: MagicMock, tmp_path: Path
+        self,
+        processor: ResumableProcessor,
+        mock_persistence: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """When completed_files > 0 and failed_files > 0, status is COMPLETED, not FAILED."""
         good = tmp_path / "good.txt"

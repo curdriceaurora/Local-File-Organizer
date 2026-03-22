@@ -30,6 +30,7 @@ from file_organizer.events.types import EventType
 
 @pytest.fixture()
 def mock_redis_client() -> MagicMock:
+    """Return a MagicMock redis client with ping configured to return True."""
     client = MagicMock()
     client.ping.return_value = True
     return client
@@ -37,6 +38,7 @@ def mock_redis_client() -> MagicMock:
 
 @pytest.fixture()
 def connected_manager(mock_redis_client: MagicMock) -> RedisStreamManager:
+    """Yield a RedisStreamManager that is already connected via a mock redis client."""
     with patch("file_organizer.events.stream.redis") as mock_redis_mod:
         mock_redis_mod.Redis.from_url.return_value = mock_redis_client
         manager = RedisStreamManager()
@@ -46,6 +48,7 @@ def connected_manager(mock_redis_client: MagicMock) -> RedisStreamManager:
 
 @pytest.fixture()
 def replay_manager(connected_manager: RedisStreamManager) -> EventReplayManager:
+    """Return an EventReplayManager backed by the connected_manager fixture."""
     return EventReplayManager(connected_manager)
 
 
@@ -59,26 +62,33 @@ class TestIncrementIdEdgeCases:
     """_increment_id handles normal and malformed IDs."""
 
     def test_increments_sequence_from_zero(self):
+        """Increments the sequence part of a Redis ID starting at zero."""
         assert _increment_id("1700000000000-0") == "1700000000000-1"
 
     def test_increments_sequence_from_nonzero(self):
+        """Increments a non-zero sequence number correctly."""
         assert _increment_id("1700000000000-99") == "1700000000000-100"
 
     def test_ms_part_preserved(self):
+        """Millisecond prefix is preserved after incrementing the sequence."""
         result = _increment_id("9876543210000-3")
         assert result.startswith("9876543210000-")
         assert result == "9876543210000-4"
 
     def test_invalid_no_dash_returns_unchanged(self):
+        """Returns the ID unchanged when no dash separator is present."""
         assert _increment_id("nodash") == "nodash"
 
     def test_empty_string_returns_empty(self):
+        """Returns an empty string unchanged."""
         assert _increment_id("") == ""
 
     def test_non_numeric_seq_returns_unchanged(self):
+        """Returns the ID unchanged when the sequence part is non-numeric."""
         assert _increment_id("1234-abc") == "1234-abc"
 
     def test_multiple_dashes_uses_first_split(self):
+        """Uses only the first two dash-separated parts when multiple dashes are present."""
         # "1000-5-3": only ms (parts[0]) and seq (parts[1]+1) are kept; third part is dropped
         result = _increment_id("1000-5-3")
         assert result == "1000-6"
@@ -94,18 +104,21 @@ class TestDatetimeToRedisMsPrecision:
     """_datetime_to_redis_ms produces the correct millisecond string."""
 
     def test_round_second_timestamp(self):
+        """Converts a round-second datetime to the correct millisecond string."""
         dt = datetime(2024, 6, 1, 0, 0, 0, tzinfo=UTC)
         result = _datetime_to_redis_ms(dt)
         assert result == str(int(dt.timestamp() * 1000))
         assert result.isdigit()
 
     def test_sub_second_microseconds_truncated_to_ms(self):
+        """Sub-second microseconds are truncated, not rounded, to milliseconds."""
         dt = datetime(2024, 6, 1, 0, 0, 0, 750000, tzinfo=UTC)
         result = _datetime_to_redis_ms(dt)
         expected = str(int(dt.timestamp() * 1000))
         assert result == expected
 
     def test_result_is_string(self):
+        """Result is a pure integer string with no decimal point."""
         dt = datetime(2024, 1, 1, tzinfo=UTC)
         result = _datetime_to_redis_ms(dt)
         assert "." not in result
@@ -121,17 +134,20 @@ class TestReplayParseTimestampBranches:
     """_parse_timestamp_from_id in replay.py covers same logic as stream.py."""
 
     def test_valid_id_gives_correct_year(self):
+        """Parses a known epoch-ms ID and returns a UTC datetime with correct year."""
         result = _parse_timestamp_from_id("1700000000000-0")
         assert result.year == 2023
         assert result.tzinfo == UTC
 
     def test_non_numeric_part_falls_back_to_now(self):
+        """Falls back to now() when the ms part of the ID is non-numeric."""
         before = datetime.now(UTC)
         result = _parse_timestamp_from_id("garbage-0")
         after = datetime.now(UTC)
         assert before <= result <= after
 
     def test_empty_string_falls_back_to_now(self):
+        """Falls back to now() when given an empty string ID."""
         before = datetime.now(UTC)
         result = _parse_timestamp_from_id("")
         after = datetime.now(UTC)
@@ -229,6 +245,7 @@ class TestReplayRangePaginationBranches:
         connected_manager: RedisStreamManager,
         mock_redis_client: MagicMock,
     ):
+        """xrange is called with count equal to the configured batch_size."""
         config = ReplayConfig(batch_size=42)
         replay = EventReplayManager(connected_manager, replay_config=config)
         start = datetime(2024, 1, 1, tzinfo=UTC)
@@ -256,6 +273,7 @@ class TestReplayByIdCallArgs:
         replay_manager: EventReplayManager,
         mock_redis_client: MagicMock,
     ):
+        """Each requested message ID triggers a separate xrange call with exact min/max/count."""
         mock_redis_client.xrange.side_effect = [
             [("1704067200000-0", {"event_type": "file.created"})],
             [("1704067200001-0", {"event_type": "file.modified"})],
@@ -284,6 +302,7 @@ class TestReplayByIdCallArgs:
         replay_manager: EventReplayManager,
         mock_redis_client: MagicMock,
     ):
+        """Returned Event objects contain the id, data, and stream name from Redis."""
         mock_redis_client.xrange.return_value = [
             ("1704067200000-0", {"event_type": "file.created", "file_path": "/docs/a.pdf"})
         ]
@@ -300,6 +319,7 @@ class TestReplayByIdCallArgs:
         replay_manager: EventReplayManager,
         mock_redis_client: MagicMock,
     ):
+        """Returns an empty list when xrange finds no entries for any requested ID."""
         mock_redis_client.xrange.return_value = []
 
         events = replay_manager.replay_by_id(
@@ -315,6 +335,7 @@ class TestReplayByIdCallArgs:
         replay_manager: EventReplayManager,
         mock_redis_client: MagicMock,
     ):
+        """Returns an empty list when Redis raises an error during lookup."""
         mock_redis_client.xrange.side_effect = RuntimeError("timeout")
 
         events = replay_manager.replay_by_id("file-events", ["1-0"])
@@ -335,6 +356,7 @@ class TestReplayToConsumerDelayBranch:
         connected_manager: RedisStreamManager,
         mock_redis_client: MagicMock,
     ):
+        """time.sleep is called once per replayed event with the configured delay."""
         config = ReplayConfig(delay_between_events=0.05)
         replay = EventReplayManager(connected_manager, replay_config=config)
 
@@ -358,6 +380,7 @@ class TestReplayToConsumerDelayBranch:
         connected_manager: RedisStreamManager,
         mock_redis_client: MagicMock,
     ):
+        """time.sleep is never called when delay_between_events is 0.0."""
         config = ReplayConfig(delay_between_events=0.0)
         replay = EventReplayManager(connected_manager, replay_config=config)
 
@@ -419,6 +442,7 @@ class TestReplayToConsumerDryRun:
         connected_manager: RedisStreamManager,
         mock_redis_client: MagicMock,
     ):
+        """dry_run=True returns 0 events and does not invoke any handlers."""
         config = ReplayConfig(dry_run=True)
         replay = EventReplayManager(connected_manager, replay_config=config)
 
@@ -444,6 +468,7 @@ class TestReplayToConsumerDryRun:
         connected_manager: RedisStreamManager,
         mock_redis_client: MagicMock,
     ):
+        """dry_run=True skips time.sleep even when delay_between_events is non-zero."""
         config = ReplayConfig(dry_run=True, delay_between_events=1.0)
         replay = EventReplayManager(connected_manager, replay_config=config)
 
@@ -475,7 +500,7 @@ class TestReplayToConsumerHandlerError:
         replay_manager: EventReplayManager,
         mock_redis_client: MagicMock,
     ):
-
+        """Events are counted even when the registered handler raises an exception."""
         mock_redis_client.xrange.return_value = [
             ("1000-0", {"event_type": "file.created"}),
             ("1001-0", {"event_type": "file.created"}),
@@ -496,7 +521,7 @@ class TestReplayToConsumerHandlerError:
         replay_manager: EventReplayManager,
         mock_redis_client: MagicMock,
     ):
-
+        """A second handler for the same event type still runs after the first handler fails."""
         mock_redis_client.xrange.return_value = [
             ("1000-0", {"event_type": "file.created"}),
         ]
@@ -525,6 +550,7 @@ class TestEventReplayManagerRepr:
     """repr() reflects manager state accurately."""
 
     def test_repr_shows_connected_and_batch_size(self, replay_manager: EventReplayManager):
+        """repr() includes connected=True, batch_size, and dry_run=False for a live manager."""
         result = repr(replay_manager)
         assert "EventReplayManager" in result
         assert "connected=True" in result
@@ -532,6 +558,7 @@ class TestEventReplayManagerRepr:
         assert "dry_run=False" in result
 
     def test_repr_shows_dry_run_true(self, connected_manager: RedisStreamManager):
+        """repr() reflects dry_run=True and custom batch_size when configured."""
         config = ReplayConfig(dry_run=True, batch_size=50)
         replay = EventReplayManager(connected_manager, replay_config=config)
         result = repr(replay)
@@ -539,6 +566,7 @@ class TestEventReplayManagerRepr:
         assert "batch_size=50" in result
 
     def test_repr_when_disconnected(self):
+        """repr() shows connected=False when the underlying manager is not connected."""
         manager = RedisStreamManager()
         replay = EventReplayManager(manager)
         result = repr(replay)

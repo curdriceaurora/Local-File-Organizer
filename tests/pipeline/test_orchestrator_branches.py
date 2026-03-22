@@ -47,9 +47,11 @@ class _PassStage:
 
     @property
     def name(self) -> str:
+        """Return the stage name identifier."""
         return "pass_stage"
 
     def process(self, context: StageContext) -> StageContext:
+        """Mark context as visited and set a test category."""
         context.extra["pass_stage_visited"] = True
         context.category = "test_cat"
         return context
@@ -60,9 +62,11 @@ class _FailingStage:
 
     @property
     def name(self) -> str:
+        """Return the stage name identifier."""
         return "failing_stage"
 
     def process(self, context: StageContext) -> StageContext:
+        """Raise RuntimeError unconditionally to simulate a stage failure."""
         raise RuntimeError("stage explosion")
 
 
@@ -71,9 +75,11 @@ class _NoneReturnStage:
 
     @property
     def name(self) -> str:
+        """Return the stage name identifier."""
         return "none_return_stage"
 
     def process(self, context: StageContext) -> StageContext:  # type: ignore[return-value]
+        """Return None to exercise the None-return guard in the orchestrator."""
         return None  # type: ignore[return-value]
 
 
@@ -82,9 +88,11 @@ class _ErrorSettingStage:
 
     @property
     def name(self) -> str:
+        """Return the stage name identifier."""
         return "error_setting_stage"
 
     def process(self, context: StageContext) -> StageContext:
+        """Set context.error to trigger the error-result branch in the orchestrator."""
         context.error = "deliberate failure"
         return context
 
@@ -97,9 +105,11 @@ class _SentinelStage:
 
     @property
     def name(self) -> str:
+        """Return the stage name identifier."""
         return "sentinel_stage"
 
     def process(self, context: StageContext) -> StageContext:
+        """Mark self.called True and assign a sentinel category."""
         self.called = True
         context.category = "sentinel_cat"
         return context
@@ -110,9 +120,11 @@ class _ProcessorTypeStage:
 
     @property
     def name(self) -> str:
+        """Return the stage name identifier."""
         return "processor_type_stage"
 
     def process(self, context: StageContext) -> StageContext:
+        """Store a ProcessorType in context.extra and set a typed category."""
         context.extra["analyzer.processor_type"] = ProcessorType.TEXT
         context.category = "typed_cat"
         return context
@@ -128,14 +140,17 @@ class TestMemoryPressureThresholdValidation:
     """Validate the memory_pressure_threshold_percent guard at init."""
 
     def test_negative_threshold_raises_value_error(self) -> None:
+        """A negative memory_pressure_threshold_percent raises ValueError at construction."""
         with pytest.raises(ValueError, match="memory_pressure_threshold_percent"):
             PipelineOrchestrator(memory_pressure_threshold_percent=-1.0)
 
     def test_threshold_above_100_raises_value_error(self) -> None:
+        """A threshold greater than 100 raises ValueError at construction."""
         with pytest.raises(ValueError, match="memory_pressure_threshold_percent"):
             PipelineOrchestrator(memory_pressure_threshold_percent=100.1)
 
     def test_boundary_values_are_accepted(self) -> None:
+        """Threshold values of exactly 0.0 and 100.0 are accepted without error."""
         orch_zero = PipelineOrchestrator(memory_pressure_threshold_percent=0.0)
         assert orch_zero._memory_pressure_threshold_percent == 0.0
 
@@ -153,11 +168,13 @@ class TestBufferPoolLazyInit:
     """buffer_pool property initialises exactly once under concurrent access."""
 
     def test_buffer_pool_lazily_created_when_none(self) -> None:
+        """buffer_pool is lazily initialised once and the same instance is returned to all callers."""
         orch = PipelineOrchestrator()
         results: list[object] = []
         barrier = threading.Barrier(2)
 
         def _access() -> None:
+            """Wait at the barrier then read buffer_pool."""
             barrier.wait(timeout=5)
             results.append(orch.buffer_pool)
 
@@ -177,6 +194,7 @@ class TestBufferPoolLazyInit:
         assert results[0] is results[1]
 
     def test_supplied_buffer_pool_is_returned_directly(self) -> None:
+        """A BufferPool supplied at construction is returned unchanged by the property."""
         custom_pool = BufferPool(buffer_size=512, initial_buffers=2, max_buffers=4)
         orch = PipelineOrchestrator(buffer_pool=custom_pool)
         assert orch.buffer_pool is custom_pool
@@ -192,6 +210,7 @@ class TestSetStages:
     """set_stages() replaces the stage list; stages property returns a copy."""
 
     def test_stages_property_returns_copy(self) -> None:
+        """stages property returns equal but distinct list objects on successive accesses."""
         s = _PassStage()
         orch = PipelineOrchestrator(stages=[s])
         copy1 = orch.stages
@@ -200,6 +219,7 @@ class TestSetStages:
         assert copy1 is not copy2  # different list objects
 
     def test_set_stages_replaces_list(self) -> None:
+        """set_stages() replaces the current stage list with the provided list."""
         orch = PipelineOrchestrator()
         assert orch.stages == []
 
@@ -208,6 +228,7 @@ class TestSetStages:
         assert orch.stages == [s]
 
     def test_set_stages_empty_clears_list(self) -> None:
+        """set_stages([]) clears all existing stages."""
         orch = PipelineOrchestrator(stages=[_PassStage()])
         orch.set_stages([])
         assert orch.stages == []
@@ -218,6 +239,7 @@ class TestSetStages:
         errors: list[Exception] = []
 
         def swap(stages: list) -> None:
+            """Call set_stages 50 times and capture any exceptions."""
             try:
                 for _ in range(50):
                     orch.set_stages(stages)
@@ -243,6 +265,7 @@ class TestRunStages:
     """_run_stages: stage raising, returning None, pre-failed passthrough."""
 
     def test_stage_raising_records_error_on_context(self, tmp_path: Path) -> None:
+        """A stage that raises records the exception message in the result error field."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         orch = PipelineOrchestrator(stages=[_FailingStage()])
@@ -251,6 +274,7 @@ class TestRunStages:
         assert "stage explosion" in result.error
 
     def test_stage_returning_none_records_error(self, tmp_path: Path) -> None:
+        """A stage that returns None causes failure with 'returned None' in the error."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         orch = PipelineOrchestrator(stages=[_NoneReturnStage()])
@@ -289,6 +313,7 @@ class TestFinalizeResult:
     """_finalize_result: stat counters, processor_type from extra, dry_run."""
 
     def test_successful_result_increments_successful_counter(self, tmp_path: Path) -> None:
+        """A successful file increments stats.successful and stats.total_processed."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         orch = PipelineOrchestrator(stages=[_PassStage()])
@@ -298,6 +323,7 @@ class TestFinalizeResult:
         assert orch.stats.total_processed == 1
 
     def test_failed_result_increments_failed_counter(self, tmp_path: Path) -> None:
+        """A failed file increments stats.failed and stats.total_processed."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         orch = PipelineOrchestrator(stages=[_FailingStage()])
@@ -307,6 +333,7 @@ class TestFinalizeResult:
         assert orch.stats.total_processed == 1
 
     def test_processor_type_extracted_from_context_extra(self, tmp_path: Path) -> None:
+        """processor_type is read from context.extra['analyzer.processor_type']."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         orch = PipelineOrchestrator(stages=[_ProcessorTypeStage()])
@@ -314,6 +341,7 @@ class TestFinalizeResult:
         assert result.processor_type == ProcessorType.TEXT
 
     def test_missing_processor_type_in_extra_defaults_to_unknown(self, tmp_path: Path) -> None:
+        """processor_type defaults to UNKNOWN when not set in context.extra."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         orch = PipelineOrchestrator(stages=[_PassStage()])
@@ -321,6 +349,7 @@ class TestFinalizeResult:
         assert result.processor_type == ProcessorType.UNKNOWN
 
     def test_dry_run_flag_comes_from_config(self, tmp_path: Path) -> None:
+        """result.dry_run is True when PipelineConfig has dry_run=True."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         # dry_run=True, auto_organize=False → should_move_files=False → context.dry_run=True
@@ -330,6 +359,7 @@ class TestFinalizeResult:
         assert result.dry_run is True
 
     def test_dry_run_false_when_auto_organize_enabled(self, tmp_path: Path) -> None:
+        """result.dry_run is False when dry_run=False and auto_organize=True."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         config = PipelineConfig(
@@ -342,6 +372,7 @@ class TestFinalizeResult:
         assert result.dry_run is False
 
     def test_duration_ms_is_positive(self, tmp_path: Path) -> None:
+        """result.duration_ms is a finite non-negative value."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         orch = PipelineOrchestrator(stages=[_PassStage()])
@@ -360,12 +391,14 @@ class TestSafeFileSizeFallback:
     """_safe_file_size returns 0 when stat() raises OSError."""
 
     def test_safe_file_size_returns_zero_on_oserror(self) -> None:
+        """_safe_file_size returns 0 when stat() raises OSError for a nonexistent path."""
         orch = PipelineOrchestrator()
         ghost = Path("/nonexistent/totally/made/up.bin")
         size = orch._safe_file_size(ghost)
         assert size == 0
 
     def test_safe_file_size_returns_actual_size_for_real_file(self, tmp_path: Path) -> None:
+        """_safe_file_size returns the correct byte count for an existing file."""
         f = tmp_path / "data.bin"
         f.write_bytes(b"x" * 100)
         orch = PipelineOrchestrator()
@@ -383,6 +416,7 @@ class TestSafeCurrentRssFallback:
     """_safe_current_rss returns 0 when ResourceMonitor raises."""
 
     def test_safe_current_rss_returns_zero_on_oserror(self) -> None:
+        """_safe_current_rss returns 0 when get_memory_usage raises OSError."""
         orch = PipelineOrchestrator()
         mock_monitor = MagicMock()
         mock_monitor.get_memory_usage.side_effect = OSError("no /proc")
@@ -391,6 +425,7 @@ class TestSafeCurrentRssFallback:
         assert rss == 0
 
     def test_safe_current_rss_returns_zero_on_runtime_error(self) -> None:
+        """_safe_current_rss returns 0 when get_memory_usage raises RuntimeError."""
         orch = PipelineOrchestrator()
         mock_monitor = MagicMock()
         mock_monitor.get_memory_usage.side_effect = RuntimeError("platform unsupported")
@@ -399,6 +434,7 @@ class TestSafeCurrentRssFallback:
         assert rss == 0
 
     def test_safe_current_rss_returns_zero_on_value_error(self) -> None:
+        """_safe_current_rss returns 0 when get_memory_usage raises ValueError."""
         orch = PipelineOrchestrator()
         mock_monitor = MagicMock()
         mock_monitor.get_memory_usage.side_effect = ValueError("bad format")
@@ -407,6 +443,7 @@ class TestSafeCurrentRssFallback:
         assert rss == 0
 
     def test_safe_current_rss_returns_actual_value_on_success(self) -> None:
+        """_safe_current_rss returns the rss value from get_memory_usage on success."""
         orch = PipelineOrchestrator()
         mock_monitor = MagicMock()
         mock_rss_info = MagicMock()
@@ -482,6 +519,7 @@ class TestRebalanceBufferPool:
         orch._rebalance_buffer_pool()
 
     def test_runtime_error_in_rebalance_is_swallowed(self) -> None:
+        """RuntimeError from should_evict is swallowed and does not propagate."""
         pool = BufferPool(buffer_size=256, initial_buffers=2, max_buffers=4)
         mock_monitor = MagicMock()
         mock_monitor.should_evict.side_effect = RuntimeError("crash")
@@ -500,6 +538,7 @@ class TestAcquireReleaseBuffer:
     """_acquire_buffer and _release_buffer error path coverage."""
 
     def test_acquire_returns_none_on_pool_exception(self, tmp_path: Path) -> None:
+        """Processing continues successfully even when pool.acquire() raises an exception."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         pool = MagicMock()
@@ -566,6 +605,7 @@ class TestStagedBatchProcessing:
         assert all(r.category == "test_cat" for r in results)
 
     def test_staged_batch_order_preserved_sequential(self, tmp_path: Path) -> None:
+        """process_batch returns results in the same order as input files."""
         files = [tmp_path / f"f{i}.txt" for i in range(5)]
         for f in files:
             f.write_text("x")
@@ -576,6 +616,7 @@ class TestStagedBatchProcessing:
         assert [r.file_path for r in results] == files
 
     def test_staged_batch_empty_returns_empty(self) -> None:
+        """process_batch returns an empty list when given no files."""
         orch = PipelineOrchestrator(stages=[_PassStage()])
         assert orch.process_batch([]) == []
 
@@ -619,6 +660,7 @@ class TestStagedBatchProcessing:
         assert results[1].success is False  # both fail since same failing stage
 
     def test_staged_batch_updates_stats(self, tmp_path: Path) -> None:
+        """process_batch updates orchestrator stats for all processed files."""
         files = [tmp_path / f"f{i}.txt" for i in range(3)]
         for f in files:
             f.write_text("data")
@@ -641,6 +683,7 @@ class TestNotifyWithStagedPath:
     """_notify is called from _finalize_result; verify it fires on staged path too."""
 
     def test_callback_called_on_staged_success(self, tmp_path: Path) -> None:
+        """notification_callback is called with (file, True) on a successful staged result."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         callback = MagicMock()
@@ -653,6 +696,7 @@ class TestNotifyWithStagedPath:
         callback.assert_called_once_with(f, True)
 
     def test_callback_called_on_staged_failure(self, tmp_path: Path) -> None:
+        """notification_callback is called with (file, False) on a failed staged result."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         callback = MagicMock()
@@ -665,6 +709,7 @@ class TestNotifyWithStagedPath:
         callback.assert_called_once_with(f, False)
 
     def test_callback_exception_does_not_propagate_in_staged_path(self, tmp_path: Path) -> None:
+        """An exception raised by notification_callback does not propagate to the caller."""
         f = tmp_path / "a.txt"
         f.write_text("x")
         bad_callback = MagicMock(side_effect=RuntimeError("callback broke"))
@@ -707,9 +752,12 @@ class TestStopWithMonitorCleanup:
         joined = threading.Event()
 
         class _FakeThread:
+            """Minimal thread substitute that sets an Event on join()."""
+
             daemon = True
 
             def join(self, timeout: float | None = None) -> None:
+                """Signal that join was called."""
                 joined.set()
 
         fake_thread = _FakeThread()
@@ -741,6 +789,7 @@ class TestMakeContext:
     """_make_context derives dry_run from config.should_move_files."""
 
     def test_make_context_dry_run_true_when_should_not_move(self, tmp_path: Path) -> None:
+        """ctx.dry_run is True when config.should_move_files is False."""
         config = PipelineConfig(output_directory=tmp_path, dry_run=True, auto_organize=False)
         orch = PipelineOrchestrator(config)
         ctx = orch._make_context(tmp_path / "f.txt")
@@ -748,6 +797,7 @@ class TestMakeContext:
         assert ctx.dry_run is True
 
     def test_make_context_dry_run_false_when_should_move(self, tmp_path: Path) -> None:
+        """ctx.dry_run is False when config.should_move_files is True."""
         config = PipelineConfig(output_directory=tmp_path, dry_run=False, auto_organize=True)
         orch = PipelineOrchestrator(config)
         ctx = orch._make_context(tmp_path / "f.txt")
@@ -755,6 +805,7 @@ class TestMakeContext:
         assert ctx.dry_run is False
 
     def test_make_context_file_path_is_set(self, tmp_path: Path) -> None:
+        """_make_context sets ctx.file_path to the given path."""
         orch = PipelineOrchestrator()
         target = tmp_path / "doc.pdf"
         ctx = orch._make_context(target)
@@ -777,11 +828,15 @@ class TestBufferKeyInContext:
         captured_extras: list[dict] = []
 
         class _CapturingStage:
+            """Stage that copies context.extra into captured_extras for later inspection."""
+
             @property
             def name(self) -> str:
+                """Return the stage name identifier."""
                 return "capturing"
 
             def process(self, context: StageContext) -> StageContext:
+                """Snapshot context.extra and return context unchanged."""
                 captured_extras.append(dict(context.extra))
                 return context
 

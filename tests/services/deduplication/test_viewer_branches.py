@@ -33,18 +33,21 @@ from file_organizer.services.deduplication.viewer import (
 
 
 def _make_png(tmp_path: Path, name: str, size: tuple[int, int] = (100, 100)) -> Path:
+    """Create a real PNG image file under tmp_path and return its path."""
     p = tmp_path / name
     PILImage.new("RGB", size, color=(128, 64, 32)).save(p, format="PNG")
     return p
 
 
 def _make_jpeg(tmp_path: Path, name: str, size: tuple[int, int] = (100, 100)) -> Path:
+    """Create a real JPEG image file under tmp_path and return its path."""
     p = tmp_path / name
     PILImage.new("RGB", size, color=(64, 128, 32)).save(p, format="JPEG")
     return p
 
 
 def _silent_console() -> Console:
+    """Return a Console instance that writes to a MagicMock (captures output silently)."""
     return Console(file=MagicMock(), highlight=False)
 
 
@@ -63,6 +66,7 @@ class TestShowComparisonIntegration:
     """End-to-end show_comparison flow with real image files."""
 
     def test_empty_images_returns_skipped_review(self, tmp_path: Path) -> None:
+        """show_comparison with an empty list returns a skipped ReviewResult."""
         viewer = ComparisonViewer(console=_silent_console())
         result = viewer.show_comparison([])
         assert result.skipped is True
@@ -70,6 +74,7 @@ class TestShowComparisonIntegration:
         assert result.files_to_delete == []
 
     def test_auto_select_action_keeps_best_real_image(self, tmp_path: Path) -> None:
+        """Auto-select action keeps the highest-quality image and marks the rest for deletion."""
         large = _make_png(tmp_path, "large.png", (800, 600))
         small = _make_png(tmp_path, "small.png", (200, 150))
         viewer = ComparisonViewer(console=_silent_console())
@@ -82,6 +87,7 @@ class TestShowComparisonIntegration:
         assert result.skipped is False
 
     def test_skip_action_returns_skipped(self, tmp_path: Path) -> None:
+        """Pressing 's' in show_comparison returns a skipped ReviewResult."""
         img = _make_png(tmp_path, "img.png")
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -93,6 +99,7 @@ class TestShowComparisonIntegration:
         assert result.files_to_delete == []
 
     def test_keep_all_action_keeps_every_image(self, tmp_path: Path) -> None:
+        """Pressing 'k' keeps all images and returns no files to delete."""
         imgs = [_make_png(tmp_path, f"img{i}.png", (50 * (i + 1), 50)) for i in range(3)]
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -104,6 +111,7 @@ class TestShowComparisonIntegration:
         assert result.skipped is False
 
     def test_quit_action_returns_skipped(self, tmp_path: Path) -> None:
+        """Pressing 'q' in show_comparison returns a skipped ReviewResult."""
         img = _make_png(tmp_path, "img.png")
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -113,6 +121,7 @@ class TestShowComparisonIntegration:
         assert result.skipped is True
 
     def test_keep_specific_image_by_number(self, tmp_path: Path) -> None:
+        """Selecting image 2 by number keeps it and marks image 1 for deletion."""
         img1 = _make_png(tmp_path, "first.png", (100, 100))
         img2 = _make_png(tmp_path, "second.png", (200, 200))
         viewer = ComparisonViewer(console=_silent_console())
@@ -129,12 +138,14 @@ class TestShowComparisonIntegration:
         assert result.files_to_delete == [img1]
 
     def test_all_images_unreadable_returns_skipped(self, tmp_path: Path) -> None:
+        """show_comparison skips the group when all provided paths are unreadable."""
         viewer = ComparisonViewer(console=_silent_console())
         bad_paths = [tmp_path / "nonexistent1.png", tmp_path / "nonexistent2.png"]
         result = viewer.show_comparison(bad_paths)
         assert result.skipped is True
 
     def test_similarity_score_displayed_with_real_image(self, tmp_path: Path) -> None:
+        """similarity_score parameter is accepted and the result is still a valid ReviewResult."""
         img = _make_png(tmp_path, "sim.png")
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -144,6 +155,7 @@ class TestShowComparisonIntegration:
         assert result.skipped is True
 
     def test_delete_all_confirmed_deletes_all(self, tmp_path: Path) -> None:
+        """Pressing 'd' and confirming marks all images for deletion."""
         img1 = _make_png(tmp_path, "del1.png")
         img2 = _make_png(tmp_path, "del2.png")
         viewer = ComparisonViewer(console=_silent_console())
@@ -160,6 +172,7 @@ class TestShowComparisonIntegration:
         assert img2 in result.files_to_delete
 
     def test_delete_all_cancelled_skips(self, tmp_path: Path) -> None:
+        """Pressing 'd' but declining the confirmation prompt skips the group."""
         img1 = _make_png(tmp_path, "c1.png")
         img2 = _make_png(tmp_path, "c2.png")
         viewer = ComparisonViewer(console=_silent_console())
@@ -183,6 +196,7 @@ class TestBatchReviewIntegration:
     """Integration tests for batch_review with real images."""
 
     def test_auto_select_batch_keeps_best_per_group(self, tmp_path: Path) -> None:
+        """auto_select_best=True keeps the highest-quality image in each duplicate group."""
         grp1_big = _make_png(tmp_path, "g1big.png", (800, 600))
         grp1_small = _make_png(tmp_path, "g1small.png", (100, 100))
         grp2_best = _make_png(tmp_path, "g2best.png", (1920, 1080))
@@ -201,6 +215,7 @@ class TestBatchReviewIntegration:
         assert decisions[grp2_worst] == "delete"
 
     def test_manual_review_skip_continue_then_keep(self, tmp_path: Path) -> None:
+        """Skipping one group and keeping another produces the correct per-file decisions."""
         img_a = _make_png(tmp_path, "a.png", (400, 300))
         img_b = _make_png(tmp_path, "b.png", (200, 150))
         img_c = _make_png(tmp_path, "c.png", (600, 400))
@@ -230,6 +245,7 @@ class TestBatchReviewIntegration:
         assert img_b not in decisions
 
     def test_batch_review_quit_stops_at_last_group(self, tmp_path: Path) -> None:
+        """Declining to continue after a skip stops processing and returns no decisions."""
         img1 = _make_png(tmp_path, "q1.png")
         img2 = _make_png(tmp_path, "q2.png")
 
@@ -246,11 +262,13 @@ class TestBatchReviewIntegration:
         assert len(decisions) == 0
 
     def test_batch_review_empty_groups(self, tmp_path: Path) -> None:
+        """batch_review with an empty groups dict returns an empty decisions dict."""
         viewer = ComparisonViewer(console=_silent_console())
         decisions = viewer.batch_review({}, auto_select_best=False)
         assert decisions == {}
 
     def test_batch_review_single_group_no_confirm_prompt(self, tmp_path: Path) -> None:
+        """With a single group, batch_review does not prompt to continue after reviewing."""
         img = _make_png(tmp_path, "only.png")
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -274,6 +292,7 @@ class TestAutoSelectBestIntegration:
     """Integration tests for _auto_select_best with real images."""
 
     def test_png_preferred_over_jpeg_same_resolution(self, tmp_path: Path) -> None:
+        """PNG is preferred over JPEG when both have the same resolution."""
         png = _make_png(tmp_path, "img.png", (300, 300))
         jpg = _make_jpeg(tmp_path, "img.jpg", (300, 300))
         viewer = ComparisonViewer(console=_silent_console())
@@ -284,6 +303,7 @@ class TestAutoSelectBestIntegration:
         assert jpg in result.files_to_delete
 
     def test_higher_resolution_wins_over_format(self, tmp_path: Path) -> None:
+        """A much higher-resolution JPEG beats a lower-resolution PNG."""
         # A JPEG at 4x the resolution should beat a PNG at 1x
         large_jpg = _make_jpeg(tmp_path, "big.jpg", (2000, 1500))
         small_png = _make_png(tmp_path, "small.png", (100, 100))
@@ -295,6 +315,7 @@ class TestAutoSelectBestIntegration:
         assert small_png in result.files_to_delete
 
     def test_single_image_is_kept_and_delete_is_empty(self, tmp_path: Path) -> None:
+        """A single image is always kept with an empty delete list."""
         img = _make_png(tmp_path, "lone.png", (640, 480))
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -305,11 +326,13 @@ class TestAutoSelectBestIntegration:
         assert result.skipped is False
 
     def test_unreadable_image_returns_skipped(self, tmp_path: Path) -> None:
+        """_auto_select_best returns a skipped result when the only image path does not exist."""
         viewer = ComparisonViewer(console=_silent_console())
         result = viewer._auto_select_best([tmp_path / "ghost.png"])
         assert result.skipped is True
 
     def test_three_images_keeps_exactly_one(self, tmp_path: Path) -> None:
+        """_auto_select_best keeps exactly one image (the best) out of three candidates."""
         imgs = [
             _make_png(tmp_path, "a.png", (100, 100)),
             _make_png(tmp_path, "b.png", (500, 500)),
@@ -334,6 +357,7 @@ class TestGetImageMetadataIntegration:
     """Integration tests for _get_image_metadata with real files."""
 
     def test_png_metadata_fields(self, tmp_path: Path) -> None:
+        """_get_image_metadata returns correct width, height, format, and file_size for a PNG."""
         img_path = _make_png(tmp_path, "meta.png", (320, 240))
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -350,6 +374,7 @@ class TestGetImageMetadataIntegration:
         assert meta.size_mb == pytest.approx(meta.file_size / (1024 * 1024))
 
     def test_jpeg_metadata_fields(self, tmp_path: Path) -> None:
+        """_get_image_metadata returns correct width, height, and format for a JPEG."""
         img_path = _make_jpeg(tmp_path, "meta.jpg", (640, 480))
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -361,11 +386,13 @@ class TestGetImageMetadataIntegration:
         assert meta.file_size > 0
 
     def test_raises_on_missing_file(self, tmp_path: Path) -> None:
+        """_get_image_metadata raises FileNotFoundError when the image path does not exist."""
         viewer = ComparisonViewer(console=_silent_console())
         with pytest.raises(FileNotFoundError):
             viewer._get_image_metadata(tmp_path / "no_such_file.png")
 
     def test_modified_str_format(self, tmp_path: Path) -> None:
+        """modified_str on the returned metadata is formatted as YYYY-MM-DD HH:MM:SS."""
         img_path = _make_png(tmp_path, "ts.png", (10, 10))
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -442,11 +469,13 @@ class TestGenerateAsciiPreviewIntegration:
         assert len(lines) == 5
 
     def test_nonexistent_file_returns_none(self, tmp_path: Path) -> None:
+        """_generate_ascii_preview returns None when the image path does not exist."""
         viewer = ComparisonViewer(console=_silent_console())
         result = viewer._generate_ascii_preview(tmp_path / "ghost.png")
         assert result is None
 
     def test_landscape_image_produces_string_or_none(self, tmp_path: Path) -> None:
+        """_generate_ascii_preview produces a multi-line string wider than it is tall for a landscape image."""
         landscape = _make_png(tmp_path, "land.png", (200, 50))
         viewer = ComparisonViewer(console=_silent_console())
         result = viewer._generate_ascii_preview(landscape, max_width=20, max_height=10)
@@ -456,6 +485,7 @@ class TestGenerateAsciiPreviewIntegration:
         assert len(lines[0]) > len(lines)
 
     def test_portrait_image_produces_string_or_none(self, tmp_path: Path) -> None:
+        """_generate_ascii_preview produces a multi-line string taller than it is wide for a portrait image."""
         portrait = _make_png(tmp_path, "port.png", (50, 200))
         viewer = ComparisonViewer(console=_silent_console())
         result = viewer._generate_ascii_preview(portrait, max_width=20, max_height=10)
@@ -475,6 +505,7 @@ class TestDisplayReviewSummaryIntegration:
     """Integration tests for _display_review_summary."""
 
     def test_summary_with_existing_delete_files(self, tmp_path: Path) -> None:
+        """_display_review_summary includes Summary, Keep, Delete, and space-saving text when files exist."""
         kept = _make_png(tmp_path, "keep.png", (100, 100))
         to_delete = _make_png(tmp_path, "delete.png", (100, 100))
         viewer = ComparisonViewer(console=_silent_console())
@@ -489,6 +520,7 @@ class TestDisplayReviewSummaryIntegration:
         assert "space" in output.lower()
 
     def test_summary_zero_files(self, tmp_path: Path) -> None:
+        """_display_review_summary with an empty decisions dict still prints Summary headers."""
         viewer = ComparisonViewer(console=_silent_console())
         viewer._display_review_summary({})
 
@@ -498,6 +530,7 @@ class TestDisplayReviewSummaryIntegration:
         assert "Delete" in output
 
     def test_summary_all_keep_no_space_savings(self, tmp_path: Path) -> None:
+        """_display_review_summary with all-keep decisions does not mention space savings."""
         imgs = [_make_png(tmp_path, f"k{i}.png") for i in range(3)]
         viewer = ComparisonViewer(console=_silent_console())
         decisions = dict.fromkeys(imgs, "keep")
@@ -509,6 +542,7 @@ class TestDisplayReviewSummaryIntegration:
         assert "space" not in output.lower()
 
     def test_summary_missing_delete_file_does_not_raise(self, tmp_path: Path) -> None:
+        """_display_review_summary does not raise when a file marked for deletion no longer exists."""
         missing = tmp_path / "gone.png"
         viewer = ComparisonViewer(console=_silent_console())
         decisions = {missing: "delete"}
@@ -529,6 +563,7 @@ class TestDisplayMetadataIntegration:
     """Integration tests for display_metadata public method."""
 
     def test_valid_image_displays_metadata(self, tmp_path: Path) -> None:
+        """display_metadata for a valid image path prints an Image header to the console."""
         img = _make_png(tmp_path, "show.png", (64, 48))
         viewer = ComparisonViewer(console=_silent_console())
         viewer.display_metadata(img)
@@ -536,12 +571,14 @@ class TestDisplayMetadataIntegration:
         assert "Image" in output
 
     def test_invalid_path_prints_error_no_raise(self, tmp_path: Path) -> None:
+        """display_metadata for a nonexistent path prints an Error message and does not raise."""
         viewer = ComparisonViewer(console=_silent_console())
         viewer.display_metadata(tmp_path / "nope.png")
         output = _written(viewer)
         assert "Error" in output
 
     def test_jpeg_image_metadata_display(self, tmp_path: Path) -> None:
+        """display_metadata for a JPEG prints an Image header containing the filename."""
         jpg = _make_jpeg(tmp_path, "photo.jpg", (128, 96))
         viewer = ComparisonViewer(console=_silent_console())
         viewer.display_metadata(jpg)
@@ -560,11 +597,13 @@ class TestInteractiveSelectIntegration:
     """Integration tests for interactive_select with real images."""
 
     def test_empty_list_returns_empty(self, tmp_path: Path) -> None:
+        """interactive_select with an empty list returns an empty list without prompting."""
         viewer = ComparisonViewer(console=_silent_console())
         result = viewer.interactive_select([])
         assert result == []
 
     def test_select_all_returns_all_images(self, tmp_path: Path) -> None:
+        """Entering 'all' in interactive_select returns every image in the list."""
         imgs = [_make_png(tmp_path, f"img{i}.png") for i in range(4)]
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -574,6 +613,7 @@ class TestInteractiveSelectIntegration:
         assert result == imgs
 
     def test_select_none_returns_empty(self, tmp_path: Path) -> None:
+        """Entering 'none' in interactive_select returns an empty list."""
         imgs = [_make_png(tmp_path, f"n{i}.png") for i in range(2)]
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -583,6 +623,7 @@ class TestInteractiveSelectIntegration:
         assert result == []
 
     def test_select_by_comma_separated_indices(self, tmp_path: Path) -> None:
+        """Entering comma-separated 1-based indices selects the corresponding images."""
         imgs = [_make_png(tmp_path, f"s{i}.png") for i in range(5)]
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -592,6 +633,7 @@ class TestInteractiveSelectIntegration:
         assert result == [imgs[1], imgs[3]]
 
     def test_out_of_range_indices_ignored(self, tmp_path: Path) -> None:
+        """Out-of-range indices in interactive_select are silently ignored."""
         imgs = [_make_png(tmp_path, f"r{i}.png") for i in range(3)]
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -604,6 +646,7 @@ class TestInteractiveSelectIntegration:
         assert result == [imgs[0]]
 
     def test_non_numeric_entries_ignored(self, tmp_path: Path) -> None:
+        """Non-numeric entries in the comma-separated selection are silently ignored."""
         imgs = [_make_png(tmp_path, f"v{i}.png") for i in range(2)]
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -616,6 +659,7 @@ class TestInteractiveSelectIntegration:
         assert result == [imgs[0]]
 
     def test_failed_metadata_load_shows_fallback(self, tmp_path: Path) -> None:
+        """interactive_select returns the path even when image metadata cannot be loaded."""
         viewer = ComparisonViewer(console=_silent_console())
         bad_path = tmp_path / "missing.png"
 
@@ -625,6 +669,7 @@ class TestInteractiveSelectIntegration:
         assert result == [bad_path]
 
     def test_custom_prompt_text_accepted(self, tmp_path: Path) -> None:
+        """interactive_select accepts a custom prompt string and still returns the selected images."""
         imgs = [_make_png(tmp_path, "custom.png")]
         viewer = ComparisonViewer(console=_silent_console())
 
@@ -644,6 +689,7 @@ class TestCalculateQualityScoreIntegration:
     """Integration tests verifying quality score properties with real metadata."""
 
     def test_score_is_positive(self, tmp_path: Path) -> None:
+        """_calculate_quality_score returns a positive value for a valid image."""
         img = _make_png(tmp_path, "score.png", (400, 300))
         viewer = ComparisonViewer(console=_silent_console())
         meta = viewer._get_image_metadata(img)
@@ -651,6 +697,7 @@ class TestCalculateQualityScoreIntegration:
         assert score > 0
 
     def test_larger_image_scores_higher_than_smaller(self, tmp_path: Path) -> None:
+        """A higher-resolution image receives a strictly higher quality score than a smaller one."""
         big = _make_png(tmp_path, "big.png", (1000, 1000))
         small = _make_png(tmp_path, "small.png", (100, 100))
         viewer = ComparisonViewer(console=_silent_console())
@@ -661,7 +708,7 @@ class TestCalculateQualityScoreIntegration:
         )
 
     def test_all_known_formats_produce_finite_score(self, tmp_path: Path) -> None:
-
+        """_calculate_quality_score returns a positive finite score for every recognized image format."""
         viewer = ComparisonViewer(console=_silent_console())
         for fmt in ("PNG", "JPEG", "TIFF", "WEBP", "GIF", "BMP", "JPG"):
             meta = ImageMetadata(
@@ -687,42 +734,49 @@ class TestPromptUserActionIntegration:
     """Integration tests for _prompt_user_action parsing all branches."""
 
     def test_auto_select_letter(self) -> None:
+        """Entering 'a' in _prompt_user_action returns UserAction.AUTO_SELECT."""
         viewer = ComparisonViewer(console=_silent_console())
         with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="a"):
             action = viewer._prompt_user_action(image_count=2)
         assert action == UserAction.AUTO_SELECT
 
     def test_skip_letter(self) -> None:
+        """Entering 's' in _prompt_user_action returns UserAction.SKIP."""
         viewer = ComparisonViewer(console=_silent_console())
         with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="s"):
             action = viewer._prompt_user_action(image_count=2)
         assert action == UserAction.SKIP
 
     def test_keep_all_letter(self) -> None:
+        """Entering 'k' in _prompt_user_action returns UserAction.KEEP_ALL."""
         viewer = ComparisonViewer(console=_silent_console())
         with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="k"):
             action = viewer._prompt_user_action(image_count=2)
         assert action == UserAction.KEEP_ALL
 
     def test_delete_all_letter(self) -> None:
+        """Entering 'd' in _prompt_user_action returns UserAction.DELETE_ALL."""
         viewer = ComparisonViewer(console=_silent_console())
         with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="d"):
             action = viewer._prompt_user_action(image_count=2)
         assert action == UserAction.DELETE_ALL
 
     def test_quit_letter(self) -> None:
+        """Entering 'q' in _prompt_user_action returns UserAction.QUIT."""
         viewer = ComparisonViewer(console=_silent_console())
         with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="q"):
             action = viewer._prompt_user_action(image_count=2)
         assert action == UserAction.QUIT
 
     def test_valid_digit_in_range_returns_keep(self) -> None:
+        """A valid in-range digit in _prompt_user_action returns UserAction.KEEP."""
         viewer = ComparisonViewer(console=_silent_console())
         with patch("file_organizer.services.deduplication.viewer.Prompt.ask", return_value="1"):
             action = viewer._prompt_user_action(image_count=3)
         assert action == UserAction.KEEP
 
     def test_digit_out_of_range_retries_then_succeeds(self) -> None:
+        """An out-of-range digit causes _prompt_user_action to retry until a valid input is given."""
         viewer = ComparisonViewer(console=_silent_console())
         with patch(
             "file_organizer.services.deduplication.viewer.Prompt.ask",
@@ -732,6 +786,7 @@ class TestPromptUserActionIntegration:
         assert action == UserAction.AUTO_SELECT
 
     def test_invalid_text_retries_until_valid(self) -> None:
+        """Unrecognized input in _prompt_user_action causes repeated retries until a valid key is entered."""
         viewer = ComparisonViewer(console=_silent_console())
         with patch(
             "file_organizer.services.deduplication.viewer.Prompt.ask",
