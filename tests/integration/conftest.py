@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
+from asgi_lifespan import LifespanManager
 from typer.testing import CliRunner
 
 from file_organizer.api.main import create_app
@@ -424,11 +425,14 @@ async def async_client(tmp_path: Path) -> AsyncGenerator[httpx.AsyncClient, None
     full application stack (middleware, exception handlers, dependency graph).
 
     The app is created fresh per test using ``tmp_path`` for the auth database
-    so tests are fully isolated.
+    so tests are fully isolated.  ``LifespanManager`` ensures ASGI
+    startup/shutdown events fire so any lifespan-registered resources are
+    properly initialised and torn down.
     """
 
     settings = build_test_settings(tmp_path, auth_overrides={"auth_enabled": False})
     app = create_app(settings)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
+    async with LifespanManager(app) as manager:
+        transport = httpx.ASGITransport(app=manager.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            yield client
