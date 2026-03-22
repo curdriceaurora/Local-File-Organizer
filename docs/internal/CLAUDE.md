@@ -54,11 +54,13 @@ An AI-powered local file management system with privacy-first architecture. Orga
 ### ⚠️ Required Protocols
 
 **DateTime Standards** (ALWAYS):
+
 ```bash
 CURRENT_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 ```
 
 **Code Quality Validation** (CRITICAL - ALWAYS):
+
 ```bash
 bash .claude/scripts/pre-commit-validation.sh
 ```
@@ -422,6 +424,7 @@ This is enforced by `.claude/hooks/tdd-gate.sh` (PreToolUse hook on Write/Edit):
 **Why**: 60% of PR review findings (F1 missing error handling, F2 type annotations, F4 security, test assertion quality) trace to not reasoning about the interface before implementing. Writing tests first forces that reasoning upstream of code generation — addressing issue #850.
 
 **Workflow** (example: adding a new service):
+
 ```
 1. Write tests/services/test_my_service.py           ← hook gate passes
 2. Write src/file_organizer/services/my_service.py   ← now allowed
