@@ -517,7 +517,7 @@ The integration suite has a dedicated CI gate that runs on every push to `main`:
 pytest tests/ -m "integration" --cov=file_organizer --cov-fail-under=<floor> --timeout=60
 ```
 
-- **Current floor**: 50% (ratchet — bumped with each coverage PR, target 90% per issue #856)
+- **Current floor**: 55% (ratchet — bumped with each coverage PR, target 90% per issue #856)
 - **Runs on**: `push` to `main` only (not PRs)
 - **PR validation**: Integration tests also carry `@pytest.mark.ci` so they run in the standard PR job (`-m "ci and not benchmark"`)
 - **Ratchet rule**: bump `--cov-fail-under` in the same PR that adds new integration tests; never lower it
