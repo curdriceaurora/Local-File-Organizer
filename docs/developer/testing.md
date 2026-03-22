@@ -293,12 +293,13 @@ All tests must follow these standards:
    - ❌ `test_organize()`
 
 6. **Docstrings**: Module-level docstring in each test file
+
    ```python
    """Tests for the file organization pipeline.
 
    Covers: text extraction, pattern analysis, suggestion generation.
    """
-```
+   ```
 
 ## Pre-Commit Validation
 
@@ -341,6 +342,7 @@ See `.github/workflows/` for CI configuration.
 ### Issue: Import errors in tests
 
 **Solution**: Ensure test file is in correct directory with `__init__.py`
+
 ```bash
 touch tests/your_module/__init__.py
 ```
@@ -348,6 +350,7 @@ touch tests/your_module/__init__.py
 ### Issue: Async test failures
 
 **Solution**: Mark with `@pytest.mark.asyncio` and use `async def`
+
 ```python
 @pytest.mark.asyncio
 async def test_async_function():
@@ -358,6 +361,7 @@ async def test_async_function():
 ### Issue: Fixture scope confusion
 
 **Solution**: Use `function` scope for most fixtures (default), `session` for expensive setup
+
 ```python
 @pytest.fixture(scope="function")  # Reset for each test
 def temp_dir():
@@ -368,6 +372,7 @@ def temp_dir():
 ### Issue: Flaky tests (fail intermittently)
 
 **Solution**: Remove race conditions, use deterministic test data
+
 ```python
 # Bad: depends on timing
 time.sleep(0.1)

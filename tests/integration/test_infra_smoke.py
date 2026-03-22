@@ -19,7 +19,7 @@ from typer.testing import CliRunner
 from file_organizer.cli.main import app as cli_app
 from tests.integration.conftest import FakeTextModel, make_text_config
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.smoke]
 
 
 # ---------------------------------------------------------------------------
