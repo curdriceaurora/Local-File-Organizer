@@ -326,10 +326,10 @@ addopts = [
     "--cov-report=xml",
     "--cov-fail-under=95",
     "--timeout=30",
-    # Branch coverage baseline (integration tests only, not a CI gate):
+    # Branch coverage baseline (integration tests only):
     # Measured 2026-03-21 via measure-integration-coverage.sh: TOTAL ~49%
-    # Floor (CI gate): 45% (ratcheted in ci.yml after #945/#947 work)
-    # To enforce: add --cov-branch --cov-fail-under=45 to measure-integration-coverage.sh
+    # Enforced floor: 45% branch — lives in .github/workflows/ci.yml (test-integration job).
+    # measure-integration-coverage.sh is a local measurement tool only; it does not enforce the floor.
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

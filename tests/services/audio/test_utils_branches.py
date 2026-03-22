@@ -32,11 +32,6 @@ from file_organizer.services.audio.utils import (
 # ---------------------------------------------------------------------------
 
 
-def _fake_import_no_pydub(name: str, *args, **kwargs):
-    """Side-effect for builtins.__import__ that blocks every import."""
-    raise ImportError(f"no {name}")
-
-
 # ---------------------------------------------------------------------------
 # get_audio_duration — missing branches
 # ---------------------------------------------------------------------------
@@ -106,6 +101,11 @@ class TestNormalizeAudioBranches:
         with patch.dict("sys.modules", {"pydub": mock_pydub, "pydub.effects": mock_effects}):
             result = normalize_audio(src, output_path=str(out), target_db=-14.0)
 
+        mock_pydub.AudioSegment.from_file.assert_called_once_with(str(src))
+        mock_effects.normalize.assert_called_once_with(
+            mock_pydub.AudioSegment.from_file.return_value, headroom=14.0
+        )
+        mock_effects.normalize.return_value.export.assert_called_once()
         assert result == out
 
     def test_normalize_calls_effects_with_headroom(self, tmp_path: Path) -> None:
@@ -218,6 +218,8 @@ class TestConvertAudioFormatBranches:
         with patch.dict("sys.modules", {"pydub": mock_pydub}):
             result = convert_audio_format(src, "wav", output_path=str(out))
 
+        mock_pydub.AudioSegment.from_file.assert_called_once_with(str(src))
+        mock_pydub.AudioSegment.from_file.return_value.export.assert_called_once()
         assert result == out
 
 
@@ -348,6 +350,8 @@ class TestTrimAudioBranches:
         with patch.dict("sys.modules", {"pydub": mock_pydub}):
             result = trim_audio(str(src), start_ms=0, end_ms=3000, output_path=str(out))
 
+        mock_pydub.AudioSegment.from_file.assert_called_once_with(str(src))
+        chunk_mock.export.assert_called_once()
         assert result == out
 
 
@@ -403,6 +407,7 @@ class TestMergeAudioFilesBranches:
         with patch.dict("sys.modules", {"pydub": mock_pydub}):
             result = merge_audio_files([f1], nested_out)
 
+        merged_mock.export.assert_called_once()
         assert nested_out.parent.is_dir()
         assert result == nested_out
 

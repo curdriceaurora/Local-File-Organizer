@@ -156,16 +156,18 @@ class TestBufferPoolLazyInit:
         barrier = threading.Barrier(2)
 
         def _access() -> None:
-            barrier.wait()
+            barrier.wait(timeout=5)
             results.append(orch.buffer_pool)
 
         t1 = threading.Thread(target=_access)
         t2 = threading.Thread(target=_access)
         t1.start()
         t2.start()
-        t1.join()
-        t2.join()
+        t1.join(timeout=5)
+        t2.join(timeout=5)
 
+        assert not t1.is_alive(), "thread 1 did not finish within timeout"
+        assert not t2.is_alive(), "thread 2 did not finish within timeout"
         assert len(results) == 2
         assert results[0] is not None
         assert results[1] is not None
