@@ -299,7 +299,15 @@ pytest tests/            # Full suite including regression tests (complete local
 
 ### Integration Tests
 
-Integration tests live in `tests/integration/` and exercise real service wiring with only external HTTP mocked. Use the shared fixtures from `tests/integration/conftest.py`:
+Integration tests live in `tests/integration/` and exercise real service wiring with only external HTTP mocked. Use the shared fixtures from `tests/integration/conftest.py`.
+
+**Full-stack fixtures** (for API router, web route, and CLI testing):
+
+- `async_client` — `httpx.AsyncClient` wired to the full FastAPI app via ASGI transport; no server process required
+- `cli_runner` — `typer.testing.CliRunner` for invoking CLI commands in-process
+- `fake_text_model` — concrete `BaseModel` subclass returning deterministic responses; use when a test needs a real model instance rather than a patch
+
+**Model stub fixtures** (for service-layer testing):
 
 ```python
 @pytest.mark.integration

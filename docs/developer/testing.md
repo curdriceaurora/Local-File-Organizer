@@ -219,6 +219,9 @@ pytest tests/integration/test_error_propagation.py -v
 | `integration_source_dir` | Temp directory with `.txt`, `.csv`, `.md` files |
 | `integration_output_dir` | Clean temp output directory |
 | `isolated_config_dir` | Temp config directory (no user config interference) |
+| `fake_text_model` | Pre-initialized `FakeTextModel` instance (concrete `BaseModel`, no external calls) |
+| `cli_runner` | `typer.testing.CliRunner` for invoking CLI commands without a real process |
+| `async_client` | `httpx.AsyncClient` wired to the full FastAPI app via ASGI transport (auth disabled) |
 
 **Helpers** (importable from `tests.integration.conftest`):
 

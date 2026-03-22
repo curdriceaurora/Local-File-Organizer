@@ -11,14 +11,18 @@ from __future__ import annotations
 
 import struct
 import zlib
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncGenerator, Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
+from typer.testing import CliRunner
 
+from file_organizer.api.main import create_app
+from file_organizer.api.test_utils import build_test_settings
 from file_organizer.models.base import BaseModel, ModelConfig, ModelType
 
 # ---------------------------------------------------------------------------
@@ -340,3 +344,91 @@ def patch_text_generate(
 
 # Keep old name as alias for backward compatibility within this epic
 patch_text_generate_error = patch_text_generate
+
+
+# ---------------------------------------------------------------------------
+# FakeTextModel — concrete BaseModel for tests requiring a real instance
+# ---------------------------------------------------------------------------
+
+
+class FakeTextModel(BaseModel):
+    """Concrete ``BaseModel`` subclass that never calls external services.
+
+    ``generate()`` returns deterministic responses keyed on prompt keywords,
+    matching the existing ``_TEXT_RESPONSES`` mapping so tests that use
+    ``FakeTextModel`` produce the same output as the patch-based stubs.
+
+    Use this fixture when a test needs to pass a real model *instance* (not a
+    patch) to a service — for example when testing model lifecycle, context
+    managers, or provider abstractions that inspect the object directly.
+    """
+
+    def initialize(self) -> None:
+        """Set ``_initialized = True`` via the base-class lifecycle lock."""
+        super().initialize()
+
+    def generate(self, prompt: str, **kwargs: Any) -> str:
+        """Return a deterministic response without calling any external service."""
+        self._enter_generate()
+        try:
+            return _stub_text_generate(prompt, **kwargs)
+        finally:
+            self._exit_generate()
+
+    def cleanup(self) -> None:
+        """Mark model as shut down so subsequent ``generate()`` calls raise."""
+        with self._lifecycle_lock:
+            self._shutting_down = True
+            self._initialized = False
+
+
+@pytest.fixture()
+def fake_text_model() -> FakeTextModel:
+    """Pre-initialized ``FakeTextModel`` ready for ``generate()`` calls.
+
+    Use when a test requires a concrete model instance rather than a patch,
+    e.g. for testing provider abstractions or lifecycle methods.
+    """
+    model = FakeTextModel(make_text_config())
+    model.initialize()
+    return model
+
+
+# ---------------------------------------------------------------------------
+# CLI runner fixture
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def cli_runner() -> CliRunner:
+    """``typer.testing.CliRunner`` for invoking CLI commands in tests.
+
+    Provides per-test isolation: each fixture invocation returns a fresh
+    runner so that ``mix_stderr`` state and environment overrides do not
+    leak between tests.
+    """
+    return CliRunner()
+
+
+# ---------------------------------------------------------------------------
+# Full-stack AsyncClient fixture
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+async def async_client(tmp_path: Path) -> AsyncGenerator[httpx.AsyncClient, None]:
+    """``httpx.AsyncClient`` wired to the full FastAPI app via ASGI transport.
+
+    Auth is disabled so routes do not require a JWT token.  Use this fixture
+    when testing API routers, web routes, or any endpoint that requires the
+    full application stack (middleware, exception handlers, dependency graph).
+
+    The app is created fresh per test using ``tmp_path`` for the auth database
+    so tests are fully isolated.
+    """
+
+    settings = build_test_settings(tmp_path, auth_overrides={"auth_enabled": False})
+    app = create_app(settings)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
