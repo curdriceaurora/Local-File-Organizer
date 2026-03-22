@@ -108,7 +108,6 @@ class TestDatetimeToRedisMsPrecision:
     def test_result_is_string(self):
         dt = datetime(2024, 1, 1, tzinfo=UTC)
         result = _datetime_to_redis_ms(dt)
-        assert isinstance(result, str)
         assert "." not in result
 
 

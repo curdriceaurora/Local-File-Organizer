@@ -20,6 +20,8 @@ existing unit tests:
 
 from __future__ import annotations
 
+import logging
+import math
 import threading
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -344,12 +346,8 @@ class TestFinalizeResult:
         f.write_text("x")
         orch = PipelineOrchestrator(stages=[_PassStage()])
         result = orch.process_file(f)
-        # duration must be non-negative and actually be a float
-        assert result.duration_ms >= 0.0
-        # More meaningful: it must be a finite number (not NaN or inf)
-        import math
-
         assert math.isfinite(result.duration_ms)
+        assert result.duration_ms >= 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -585,7 +583,6 @@ class TestStagedBatchProcessing:
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         """prefetch_stages=2 triggers a warning and is capped to 1."""
-        import logging
 
         files = [tmp_path / f"f{i}.txt" for i in range(3)]
         for f in files:
