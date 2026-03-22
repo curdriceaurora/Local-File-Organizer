@@ -442,8 +442,3 @@ DEP002 = [
     # netCDF4: mixed-case name causes deptry matching issues; used in scientific.py
     "netCDF4",
 ]
-
-[dependency-groups]
-dev = [
-    "asgi-lifespan>=2.1.0",
-]

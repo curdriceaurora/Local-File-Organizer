@@ -36,6 +36,20 @@ pip install -e ".[dev]"
 file-organizer --version
 ```
 
+### Adding Dev Dependencies
+
+This project uses `uv` for local dependency management but CI installs via
+`pip install -e ".[dev,search]"`, which reads from `[project.optional-dependencies]`
+in `pyproject.toml`. Always use `--optional dev` (not `--dev`) when adding
+test/dev packages so they land in the right section:
+
+```bash
+uv add --optional dev <package>
+```
+
+Using `uv add --dev <package>` writes to `[dependency-groups]` instead, which pip
+does not read — the package installs locally but CI fails with `ModuleNotFoundError`.
+
 ### Pre-Commit Hooks (Automatic Validation)
 
 This project uses automated pre-commit validation to catch common issues before commits:
