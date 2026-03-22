@@ -334,14 +334,16 @@ class TestFilesUpload:
         self, files_client: TestClient, files_settings: ApiSettings
     ) -> None:
         root = files_settings.allowed_paths[0]
+        target_dir = Path(root) / "files"
         with patch("file_organizer.web.files_routes.templates") as tpl:
             tpl.TemplateResponse.return_value = _HTML
             r = files_client.post(
                 "/ui/files/upload",
-                data={"path": f"{root}/files"},
+                data={"path": str(target_dir)},
                 files={"files": (".hidden", b"x", "text/plain")},
             )
         assert r.status_code == 200
+        assert not (target_dir / ".hidden").exists()
 
     def test_upload_no_files_returns_200(
         self, files_client: TestClient, files_settings: ApiSettings
@@ -462,7 +464,7 @@ class TestOrganizeReport:
                     "error": None,
                     "created_at": "2026-01-01T00:00:00Z",
                     "updated_at": "2026-01-01T00:01:00Z",
-                    "organized_structure": {},
+                    "result": {"organized_structure": {}},
                 }
                 r = org_client.get("/ui/organize/report/j1?format=json")
         assert r.status_code == 200

@@ -341,9 +341,9 @@ class TestSettingsGeneralPost:
                         data={"language": "klingon", "timezone": "UTC"},
                     )
         assert r.status_code == 200
-        if ws_file.exists():
-            data = json.loads(ws_file.read_text())
-            assert data["language"] == "en"
+        assert ws_file.exists()
+        data = json.loads(ws_file.read_text())
+        assert data["language"] == "en"
 
 
 # ---------------------------------------------------------------------------
@@ -405,6 +405,9 @@ class TestSettingsModelsTest:
                             data={"ollama_url": "http://localhost:11434"},
                         )
         assert r.status_code == 200
+        ctx = tpl.TemplateResponse.call_args[0][2]
+        assert ctx["error_message"] != ""
+        assert ctx["success_message"] == ""
 
     def test_ollama_success_returns_200(self, settings_client: TestClient, tmp_path: Path) -> None:
         mock_resp = MagicMock()
@@ -420,6 +423,9 @@ class TestSettingsModelsTest:
                             data={"ollama_url": "http://localhost:11434"},
                         )
         assert r.status_code == 200
+        ctx = tpl.TemplateResponse.call_args[0][2]
+        assert ctx["success_message"] != ""
+        assert ctx["error_message"] == ""
 
 
 # ---------------------------------------------------------------------------

@@ -89,6 +89,7 @@ class TestListFiles:
         r = files_client.get("/files", params={"path": str(tmp_path), "file_type": "image"})
         assert r.status_code == 200
         items = r.json()["items"]
+        assert len(items) > 0
         assert all(".jpg" in item["path"] or item["path"].endswith(".jpg") for item in items)
 
     def test_list_files_sort_by_name(self, files_client: TestClient, tmp_path: Path) -> None:
@@ -132,23 +133,58 @@ class TestListFiles:
         assert any("nested.txt" in p for p in paths)
 
     def test_list_files_sort_by_size(self, files_client: TestClient, tmp_path: Path) -> None:
-        (tmp_path / "small.txt").write_text("x")
-        (tmp_path / "large.txt").write_text("x" * 1000)
+        import os
+
+        sub = tmp_path / "size_sort"
+        sub.mkdir()
+        (sub / "small.txt").write_text("x")
+        (sub / "large.txt").write_text("x" * 1000)
         r = files_client.get(
-            "/files", params={"path": str(tmp_path), "sort_by": "size", "sort_order": "desc"}
+            "/files", params={"path": str(sub), "sort_by": "size", "sort_order": "desc"}
         )
         assert r.status_code == 200
+        items = r.json()["items"]
+        assert len(items) == 2
+        names = [i["path"].split(os.sep)[-1] for i in items]
+        assert names[0] == "large.txt"
 
     def test_list_files_sort_by_modified(self, files_client: TestClient, tmp_path: Path) -> None:
-        (tmp_path / "old.txt").write_text("x")
-        (tmp_path / "new.txt").write_text("x")
-        r = files_client.get("/files", params={"path": str(tmp_path), "sort_by": "modified"})
+        import os
+        import time
+
+        sub = tmp_path / "modified_sort"
+        sub.mkdir()
+        old_file = sub / "old.txt"
+        old_file.write_text("x")
+        past = time.time() - 100
+        os.utime(old_file, (past, past))
+        (sub / "new.txt").write_text("x")
+        r = files_client.get(
+            "/files",
+            params={"path": str(sub), "sort_by": "modified", "sort_order": "desc"},
+        )
         assert r.status_code == 200
+        items = r.json()["items"]
+        assert len(items) == 2
+        names = [i["path"].split(os.sep)[-1] for i in items]
+        assert names[0] == "new.txt"
 
     def test_list_files_sort_by_created(self, files_client: TestClient, tmp_path: Path) -> None:
-        (tmp_path / "file.txt").write_text("x")
-        r = files_client.get("/files", params={"path": str(tmp_path), "sort_by": "created"})
+        import os
+
+        sub = tmp_path / "created_sort"
+        sub.mkdir()
+        (sub / "alpha.txt").write_text("x")
+        (sub / "beta.txt").write_text("x")
+        r = files_client.get(
+            "/files",
+            params={"path": str(sub), "sort_by": "created", "sort_order": "asc"},
+        )
         assert r.status_code == 200
+        items = r.json()["items"]
+        assert len(items) == 2
+        names = [i["path"].split(os.sep)[-1] for i in items]
+        assert set(names) == {"alpha.txt", "beta.txt"}
 
 
 # ---------------------------------------------------------------------------

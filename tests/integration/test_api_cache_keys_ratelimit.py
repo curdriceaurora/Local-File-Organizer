@@ -198,9 +198,13 @@ class TestApiKeys:
         assert match_api_key_hash("wrong_key", []) is None
 
     def test_match_api_key_hash_skips_invalid_hashes(self) -> None:
-        from file_organizer.api.api_keys import match_api_key_hash
+        from file_organizer.api.api_keys import generate_api_key, hash_api_key, match_api_key_hash
 
-        result = match_api_key_hash("fo_abc_token", ["not_a_bcrypt_hash", "also_invalid"])
+        real_key = generate_api_key("fo")
+        valid_hash = hash_api_key(real_key)
+        result = match_api_key_hash(
+            "fo_abc_token", ["not_a_bcrypt_hash", "also_invalid", valid_hash]
+        )
         assert result is None
 
     def test_api_key_identifier_returns_key_id_part(self) -> None:

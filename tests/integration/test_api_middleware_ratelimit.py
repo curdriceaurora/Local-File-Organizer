@@ -10,6 +10,7 @@ SecurityHeadersMiddleware (headers attached, HTTPS HSTS, disabled).
 from __future__ import annotations
 
 import time
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -157,28 +158,25 @@ def _make_rate_limited_app(settings: ApiSettings) -> FastAPI:
     return app
 
 
-def _base_settings(**kwargs: object) -> ApiSettings:
-    import tempfile
-
-    tmp = tempfile.mkdtemp()
+def _base_settings(tmp_path: Path, **kwargs: object) -> ApiSettings:
     return ApiSettings(
-        allowed_paths=[tmp],
+        allowed_paths=[str(tmp_path)],
         auth_enabled=False,
-        auth_db_path=f"{tmp}/auth.db",
+        auth_db_path=str(tmp_path / "auth.db"),
         **kwargs,
     )
 
 
 class TestRateLimitMiddlewareDisabled:
-    def test_disabled_passes_through(self) -> None:
-        settings = _base_settings(rate_limit_enabled=False)
+    def test_disabled_passes_through(self, tmp_path: Path) -> None:
+        settings = _base_settings(tmp_path, rate_limit_enabled=False)
         app = _make_rate_limited_app(settings)
         client = TestClient(app, raise_server_exceptions=False)
         r = client.get("/ping")
         assert r.status_code == 200
 
-    def test_disabled_no_ratelimit_headers(self) -> None:
-        settings = _base_settings(rate_limit_enabled=False)
+    def test_disabled_no_ratelimit_headers(self, tmp_path: Path) -> None:
+        settings = _base_settings(tmp_path, rate_limit_enabled=False)
         app = _make_rate_limited_app(settings)
         client = TestClient(app, raise_server_exceptions=False)
         r = client.get("/ping")
@@ -186,8 +184,9 @@ class TestRateLimitMiddlewareDisabled:
 
 
 class TestRateLimitMiddlewareEnabled:
-    def test_first_request_allowed(self) -> None:
+    def test_first_request_allowed(self, tmp_path: Path) -> None:
         settings = _base_settings(
+            tmp_path,
             rate_limit_enabled=True,
             rate_limit_default_requests=10,
             rate_limit_default_window_seconds=60,
@@ -197,8 +196,9 @@ class TestRateLimitMiddlewareEnabled:
         r = client.get("/ping")
         assert r.status_code == 200
 
-    def test_ratelimit_headers_present(self) -> None:
+    def test_ratelimit_headers_present(self, tmp_path: Path) -> None:
         settings = _base_settings(
+            tmp_path,
             rate_limit_enabled=True,
             rate_limit_default_requests=10,
             rate_limit_default_window_seconds=60,
@@ -210,8 +210,9 @@ class TestRateLimitMiddlewareEnabled:
         assert "X-RateLimit-Remaining" in r.headers
         assert "X-RateLimit-Reset" in r.headers
 
-    def test_limit_1_second_request_denied(self) -> None:
+    def test_limit_1_second_request_denied(self, tmp_path: Path) -> None:
         settings = _base_settings(
+            tmp_path,
             rate_limit_enabled=True,
             rate_limit_default_requests=1,
             rate_limit_default_window_seconds=60,
@@ -222,8 +223,9 @@ class TestRateLimitMiddlewareEnabled:
         r = client.get("/ping")
         assert r.status_code == 429
 
-    def test_429_has_retry_after(self) -> None:
+    def test_429_has_retry_after(self, tmp_path: Path) -> None:
         settings = _base_settings(
+            tmp_path,
             rate_limit_enabled=True,
             rate_limit_default_requests=1,
             rate_limit_default_window_seconds=60,
@@ -234,8 +236,9 @@ class TestRateLimitMiddlewareEnabled:
         r = client.get("/ping")
         assert "Retry-After" in r.headers
 
-    def test_exempt_path_not_rate_limited(self) -> None:
+    def test_exempt_path_not_rate_limited(self, tmp_path: Path) -> None:
         settings = _base_settings(
+            tmp_path,
             rate_limit_enabled=True,
             rate_limit_default_requests=1,
             rate_limit_exempt_paths=["/ping"],
@@ -247,8 +250,9 @@ class TestRateLimitMiddlewareEnabled:
             r = client.get("/ping")
             assert r.status_code == 200
 
-    def test_rule_for_path_applies_custom_limit(self) -> None:
+    def test_rule_for_path_applies_custom_limit(self, tmp_path: Path) -> None:
         settings = _base_settings(
+            tmp_path,
             rate_limit_enabled=True,
             rate_limit_default_requests=100,
             rate_limit_default_window_seconds=60,
@@ -263,8 +267,9 @@ class TestRateLimitMiddlewareEnabled:
 
 
 class TestRateLimitClientId:
-    def test_ip_based_client_id(self) -> None:
+    def test_ip_based_client_id(self, tmp_path: Path) -> None:
         settings = _base_settings(
+            tmp_path,
             rate_limit_enabled=True,
             rate_limit_default_requests=1,
             rate_limit_default_window_seconds=60,
@@ -275,8 +280,9 @@ class TestRateLimitClientId:
         r = client.get("/ping")
         assert r.status_code == 429
 
-    def test_proxy_header_ip(self) -> None:
+    def test_proxy_header_ip(self, tmp_path: Path) -> None:
         settings = _base_settings(
+            tmp_path,
             rate_limit_enabled=True,
             rate_limit_default_requests=1,
             rate_limit_default_window_seconds=60,
@@ -308,8 +314,8 @@ def _make_security_app(settings: ApiSettings) -> FastAPI:
 
 
 class TestSecurityHeadersMiddleware:
-    def test_security_headers_present_when_enabled(self) -> None:
-        settings = _base_settings(security_headers_enabled=True)
+    def test_security_headers_present_when_enabled(self, tmp_path: Path) -> None:
+        settings = _base_settings(tmp_path, security_headers_enabled=True)
         app = _make_security_app(settings)
         client = TestClient(app, raise_server_exceptions=False)
         r = client.get("/ok")
@@ -318,22 +324,23 @@ class TestSecurityHeadersMiddleware:
         assert r.headers.get("X-Content-Type-Options") == "nosniff"
         assert r.headers.get("X-XSS-Protection") == "1; mode=block"
 
-    def test_security_headers_absent_when_disabled(self) -> None:
-        settings = _base_settings(security_headers_enabled=False)
+    def test_security_headers_absent_when_disabled(self, tmp_path: Path) -> None:
+        settings = _base_settings(tmp_path, security_headers_enabled=False)
         app = _make_security_app(settings)
         client = TestClient(app, raise_server_exceptions=False)
         r = client.get("/ok")
         assert "X-Frame-Options" not in r.headers
 
-    def test_csp_header_present(self) -> None:
-        settings = _base_settings(security_headers_enabled=True)
+    def test_csp_header_present(self, tmp_path: Path) -> None:
+        settings = _base_settings(tmp_path, security_headers_enabled=True)
         app = _make_security_app(settings)
         client = TestClient(app, raise_server_exceptions=False)
         r = client.get("/ok")
         assert "Content-Security-Policy" in r.headers
 
-    def test_referrer_policy_header(self) -> None:
+    def test_referrer_policy_header(self, tmp_path: Path) -> None:
         settings = _base_settings(
+            tmp_path,
             security_headers_enabled=True,
             security_referrer_policy="no-referrer",
         )
@@ -342,8 +349,8 @@ class TestSecurityHeadersMiddleware:
         r = client.get("/ok")
         assert r.headers.get("Referrer-Policy") == "no-referrer"
 
-    def test_permissions_policy_header(self) -> None:
-        settings = _base_settings(security_headers_enabled=True)
+    def test_permissions_policy_header(self, tmp_path: Path) -> None:
+        settings = _base_settings(tmp_path, security_headers_enabled=True)
         app = _make_security_app(settings)
         client = TestClient(app, raise_server_exceptions=False)
         r = client.get("/ok")

@@ -133,10 +133,20 @@ class TestAuthLogin:
         assert "refresh_token" in tokens
 
     def test_login_wrong_password_returns_401(self, tmp_path: Path) -> None:
-        client, _, _ = create_auth_client(tmp_path)
+        client, _, _ = create_auth_client(tmp_path, allowed_paths=[str(tmp_path)])
+        r = client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "wrongpw_user",
+                "email": "wrongpw@example.com",
+                "password": "T3stP@ssword1!",
+                "full_name": "WP User",
+            },
+        )
+        assert r.status_code == 201
         r = client.post(
             "/api/v1/auth/login",
-            data={"username": "nonexistent_user_xyz", "password": "wrongpass"},
+            data={"username": "wrongpw_user", "password": "NotTheRightOne1!"},
         )
         assert r.status_code in (401, 400)
 

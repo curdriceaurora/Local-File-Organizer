@@ -133,14 +133,19 @@ class TestUpdateJob:
         assert updated.error == "Something went wrong"
 
     def test_updated_at_advances_on_update(self) -> None:
+        from datetime import UTC, datetime
+
         from file_organizer.api.jobs import create_job, update_job
 
+        t0 = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        t1 = datetime(2026, 1, 1, 0, 0, 1, tzinfo=UTC)
         with patch("file_organizer.api.jobs._notify_job_event"):
-            job = create_job("organize")
-            original_updated = job.updated_at
-            updated = update_job(job.job_id, status="running")
+            with patch("file_organizer.api.jobs._now", side_effect=[t0, t1]):
+                job = create_job("organize")
+                original_updated = job.updated_at
+                updated = update_job(job.job_id, status="running")
         assert updated is not None
-        assert updated.updated_at >= original_updated
+        assert updated.updated_at > original_updated
 
 
 # ---------------------------------------------------------------------------
@@ -185,6 +190,7 @@ class TestListJobsAndCount:
             create_job("organize")
             update_job(j1.job_id, status="completed")
         jobs = list_jobs(statuses={"queued"})
+        assert len(jobs) == 1
         assert all(j.status == "queued" for j in jobs)
 
     def test_list_jobs_limit(self) -> None:

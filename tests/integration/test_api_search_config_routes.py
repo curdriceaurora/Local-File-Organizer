@@ -190,10 +190,12 @@ class TestConfigRouter:
         assert r.status_code == 200
 
     def test_get_config_has_version(self, config_client: TestClient) -> None:
+        from file_organizer.api.routers.config import ConfigResponse
+
         r = config_client.get("/config")
         body = r.json()
         assert "version" in body
-        assert body["version"] == "2.0.0"
+        assert body["version"] == ConfigResponse().version
 
     def test_get_config_has_ai_section(self, config_client: TestClient) -> None:
         r = config_client.get("/config")
