@@ -37,7 +37,10 @@ from file_organizer.web.profile_routes import (
 
 pytestmark = pytest.mark.integration
 
-_HTML = HTMLResponse("<html><body>stub</body></html>")
+
+def _html_response() -> HTMLResponse:
+    return HTMLResponse("<html><body>stub</body></html>")
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -65,7 +68,7 @@ def _make_app(settings: ApiSettings) -> FastAPI:
 
 def _register_and_login(client: TestClient, username: str, password: str) -> str:
     """Register a user and return the session cookie value."""
-    client.post(
+    register_response = client.post(
         "/api/v1/auth/register",
         json={
             "username": username,
@@ -74,14 +77,17 @@ def _register_and_login(client: TestClient, username: str, password: str) -> str
             "full_name": "Test User",
         },
     )
+    assert register_response.status_code < 400
     with patch("file_organizer.web.profile_routes.templates") as tpl:
-        tpl.TemplateResponse.return_value = _HTML
+        tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
         r = client.post(
             "/ui/profile/login",
             data={"username": username, "password": password},
             follow_redirects=False,
         )
-    return r.cookies.get("fo_session", "")
+    cookie = r.cookies.get("fo_session", "")
+    assert cookie, "expected /ui/profile/login to set fo_session"
+    return cookie
 
 
 @pytest.fixture()
@@ -219,7 +225,7 @@ class TestResetPasswordSuccess:
 
     def test_success_clears_token_and_returns_200(self, auth_client: TestClient) -> None:
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             auth_client.post(
                 "/api/v1/auth/register",
                 json={
@@ -237,7 +243,7 @@ class TestResetPasswordSuccess:
         token = next(iter(_PASSWORD_RESET_TOKENS))
 
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = auth_client.post(
                 "/ui/profile/reset-password",
                 data={
@@ -262,7 +268,7 @@ class TestProtectedRoutesWithoutAuth:
 
     def _get(self, auth_client: TestClient, path: str) -> int:
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = auth_client.get(path)
         return r.status_code
 
@@ -305,14 +311,14 @@ class TestProfileEditAuthenticated:
     def test_profile_edit_get_returns_200(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.get("/ui/profile/edit", cookies={"fo_session": cookie})
         assert r.status_code == 200
 
     def test_profile_edit_post_success(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/edit",
                 data={"full_name": "Updated Name", "email": "authuser@example.com"},
@@ -328,7 +334,7 @@ class TestProfileEditAuthenticated:
         cookie1 = _register_and_login(auth_client, "edituser1", "T3stP@ssword1!")
         _register_and_login(auth_client, "edituser2", "T3stP@ssword1!")
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = auth_client.post(
                 "/ui/profile/edit",
                 data={"full_name": "X", "email": "edituser2@example.com"},
@@ -348,7 +354,7 @@ class TestWorkspacesAuthenticated:
     def test_workspaces_get_returns_200(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.get("/ui/profile/workspaces", cookies={"fo_session": cookie})
         assert r.status_code == 200
 
@@ -357,7 +363,7 @@ class TestWorkspacesAuthenticated:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/workspaces/create",
                 data={"name": "My WS", "root_path": str(tmp_path), "description": ""},
@@ -370,7 +376,7 @@ class TestWorkspacesAuthenticated:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/workspaces/switch",
                 data={"workspace_id": "nonexistent-id"},
@@ -388,14 +394,14 @@ class TestTeamAuthenticated:
     def test_team_partial_get_returns_200(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.get("/ui/profile/team", cookies={"fo_session": cookie})
         assert r.status_code == 200
 
     def test_team_invite_valid_role(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/team/invite",
                 data={"email": "colleague@example.com", "role": "editor"},
@@ -408,7 +414,7 @@ class TestTeamAuthenticated:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/team/invite",
                 data={"email": "new@example.com", "role": "superadmin"},
@@ -426,7 +432,7 @@ class TestTeamAuthenticated:
     def test_team_update_role(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/team/role",
                 data={"member_id": "nonexistent-member", "role": "admin"},
@@ -444,7 +450,7 @@ class TestSharedFoldersAuthenticated:
     def test_shared_partial_get_returns_200(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.get("/ui/profile/shared", cookies={"fo_session": cookie})
         assert r.status_code == 200
 
@@ -453,7 +459,7 @@ class TestSharedFoldersAuthenticated:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/shared/add",
                 data={"folder_path": str(tmp_path), "permission": "edit"},
@@ -466,7 +472,7 @@ class TestSharedFoldersAuthenticated:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/shared/add",
                 data={"folder_path": str(tmp_path), "permission": "superpower"},
@@ -482,7 +488,7 @@ class TestSharedFoldersAuthenticated:
     def test_shared_remove_returns_200(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/shared/remove",
                 data={"folder_id": "nonexistent-folder-id"},
@@ -500,7 +506,7 @@ class TestActivityAndNotifications:
     def test_activity_partial_returns_200(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.get("/ui/profile/activity", cookies={"fo_session": cookie})
         assert r.status_code == 200
 
@@ -509,7 +515,7 @@ class TestActivityAndNotifications:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.get("/ui/profile/notifications", cookies={"fo_session": cookie})
         assert r.status_code == 200
 
@@ -518,7 +524,7 @@ class TestActivityAndNotifications:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/notifications/mark-read",
                 data={"notification_id": "nonexistent-id"},
@@ -538,7 +544,7 @@ class TestAccountSettingsAuthenticated:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.get("/ui/profile/account-settings", cookies={"fo_session": cookie})
         assert r.status_code == 200
 
@@ -547,7 +553,7 @@ class TestAccountSettingsAuthenticated:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/account-settings/password",
                 data={
@@ -566,7 +572,7 @@ class TestAccountSettingsAuthenticated:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/account-settings/password",
                 data={
@@ -583,7 +589,7 @@ class TestAccountSettingsAuthenticated:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/account-settings/password",
                 data={
@@ -600,7 +606,7 @@ class TestAccountSettingsAuthenticated:
     ) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/account-settings/password",
                 data={
@@ -617,7 +623,7 @@ class TestAccountSettingsAuthenticated:
     def test_toggle_2fa_on_returns_200(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/account-settings/2fa",
                 data={"enabled": "1"},
@@ -628,7 +634,7 @@ class TestAccountSettingsAuthenticated:
     def test_toggle_2fa_off_returns_200(self, logged_in_client: tuple[TestClient, str]) -> None:
         client, cookie = logged_in_client
         with patch("file_organizer.web.profile_routes.templates") as tpl:
-            tpl.TemplateResponse.return_value = _HTML
+            tpl.TemplateResponse.side_effect = lambda *args, **kwargs: _html_response()
             r = client.post(
                 "/ui/profile/account-settings/2fa",
                 data={},

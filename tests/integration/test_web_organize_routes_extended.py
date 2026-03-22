@@ -269,8 +269,14 @@ class TestPlanStore:
 
 class TestJobMetadata:
     def test_set_and_get_metadata(self) -> None:
+        from unittest.mock import patch
+
         job_id = "test-meta-job-001"
-        _set_job_metadata(job_id, {"methodology": "para", "dry_run": True})
+        with patch(
+            "file_organizer.web.organize_routes.get_job",
+            return_value=_mock_job(job_id, status="queued"),
+        ):
+            _set_job_metadata(job_id, {"methodology": "para", "dry_run": True})
         meta = _get_job_metadata(job_id)
         assert meta["methodology"] == "para"
         assert meta["dry_run"] is True
@@ -442,11 +448,11 @@ class TestOrganizeJobRollback:
 
     def test_rollback_dry_run_job_shows_error(self, org_client: TestClient) -> None:
         mock = _mock_job("rollback-dry", status="completed")
-        _set_job_metadata("rollback-dry", {"dry_run": True})
         with (
             patch("file_organizer.web.organize_routes.get_job", return_value=mock),
             patch("file_organizer.web.organize_routes.templates") as tpl,
         ):
+            _set_job_metadata("rollback-dry", {"dry_run": True})
             tpl.TemplateResponse.return_value = _HTML
             r = org_client.post("/ui/organize/jobs/rollback-dry/rollback")
         assert r.status_code == 200
