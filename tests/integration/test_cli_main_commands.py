@@ -8,6 +8,7 @@ undo/redo/history, analytics, global callback flags (--verbose, --dry-run, --jso
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -64,46 +65,45 @@ class TestServeCommand:
         assert "error" in result.output.lower()
 
 
+def _make_hw_profile() -> SimpleNamespace:
+    """Strict hardware profile stub — missing attributes raise AttributeError."""
+    return SimpleNamespace(
+        gpu_type=SimpleNamespace(value="cuda"),
+        gpu_name="RTX 3080",
+        vram_gb=10,
+        ram_gb=32,
+        cpu_cores=16,
+        os_name="Linux",
+        arch="x86_64",
+        recommended_text_model=lambda: "qwen2.5:7b",
+        recommended_workers=lambda: 4,
+        to_dict=lambda: {"gpu_type": "cuda", "vram_gb": 10, "cpu_cores": 16},
+    )
+
+
 class TestHardwareInfoCommand:
     def test_hardware_info_text_exits_zero(self) -> None:
-        mock_profile = MagicMock()
-        mock_profile.gpu_type.value = "cuda"
-        mock_profile.gpu_name = "RTX 3080"
-        mock_profile.vram_gb = 10
-        mock_profile.ram_gb = 32
-        mock_profile.cpu_cores = 16
-        mock_profile.os_name = "Linux"
-        mock_profile.arch = "x86_64"
-        mock_profile.recommended_text_model.return_value = "qwen2.5:7b"
-        mock_profile.recommended_workers.return_value = 4
-
         with patch(
-            "file_organizer.cli.main.hardware_info.__wrapped__"
-            if hasattr(app, "__wrapped__")
-            else "file_organizer.core.hardware_profile.detect_hardware",
-            return_value=mock_profile,
+            "file_organizer.core.hardware_profile.detect_hardware",
+            return_value=_make_hw_profile(),
         ):
             result = runner.invoke(app, ["hardware-info"])
         assert result.exit_code == 0
+        assert "RTX 3080" in result.output
+        assert "16" in result.output
 
     def test_hardware_info_json_output(self) -> None:
-        mock_profile = MagicMock()
-        mock_profile.to_dict.return_value = {"gpu_type": "cuda", "vram_gb": 10}
-        mock_profile.gpu_type.value = "cuda"
-        mock_profile.gpu_name = "RTX 3080"
-        mock_profile.vram_gb = 10
-        mock_profile.ram_gb = 32
-        mock_profile.cpu_cores = 16
-        mock_profile.os_name = "Linux"
-        mock_profile.arch = "x86_64"
-        mock_profile.recommended_text_model.return_value = "qwen2.5:7b"
-        mock_profile.recommended_workers.return_value = 4
+        import json
 
         with patch(
-            "file_organizer.core.hardware_profile.detect_hardware", return_value=mock_profile
+            "file_organizer.core.hardware_profile.detect_hardware",
+            return_value=_make_hw_profile(),
         ):
             result = runner.invoke(app, ["hardware-info", "--json"])
         assert result.exit_code == 0
+        data = json.loads(result.output.strip())
+        assert data.get("gpu_type") == "cuda"
+        assert data.get("vram_gb") == 10
 
 
 class TestGlobalCallbackFlags:

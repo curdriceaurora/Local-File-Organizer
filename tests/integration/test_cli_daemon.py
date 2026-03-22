@@ -49,6 +49,7 @@ class TestDaemonStart:
             )
         assert result.exit_code == 0
         mock_service.start.assert_called_once()
+        mock_service.start_background.assert_not_called()
 
     def test_start_foreground_keyboard_interrupt_exits_cleanly(self, tmp_path: Path) -> None:
         """KeyboardInterrupt in foreground mode prints stop message and exits 0."""
@@ -63,9 +64,10 @@ class TestDaemonStart:
         assert "stopped" in result.output.lower() or "daemon" in result.output.lower()
 
     def test_start_with_watch_dir(self, tmp_path: Path) -> None:
-        mock_service = MagicMock()
+        mock_cls = MagicMock()
+        mock_service = mock_cls.return_value
         with (
-            patch("file_organizer.daemon.service.DaemonService", return_value=mock_service),
+            patch("file_organizer.daemon.service.DaemonService", mock_cls),
             patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", tmp_path / "daemon.pid"),
         ):
             result = runner.invoke(
@@ -79,11 +81,15 @@ class TestDaemonStart:
                 ],
             )
         assert result.exit_code == 0
+        config = mock_cls.call_args.args[0]
+        assert tmp_path in config.watch_directories
+        mock_service.start_background.assert_called_once()
 
     def test_start_with_output_dir(self, tmp_path: Path) -> None:
-        mock_service = MagicMock()
+        mock_cls = MagicMock()
+        mock_service = mock_cls.return_value
         with (
-            patch("file_organizer.daemon.service.DaemonService", return_value=mock_service),
+            patch("file_organizer.daemon.service.DaemonService", mock_cls),
             patch("file_organizer.cli.daemon._DEFAULT_PID_FILE", tmp_path / "daemon.pid"),
         ):
             result = runner.invoke(
@@ -97,6 +103,9 @@ class TestDaemonStart:
                 ],
             )
         assert result.exit_code == 0
+        config = mock_cls.call_args.args[0]
+        assert config.output_directory == tmp_path / "out"
+        mock_service.start_background.assert_called_once()
 
     def test_start_background_dry_run_shows_hint(self, tmp_path: Path) -> None:
         mock_service = MagicMock()

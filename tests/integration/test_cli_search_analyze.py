@@ -155,7 +155,7 @@ class TestAnalyzeCommand:
 
     def test_analyze_binary_file_exits_1(self, tmp_path: Path) -> None:
         binary_file = tmp_path / "binary.bin"
-        binary_file.write_bytes(b"\x00\x01\x02\x03" * 100)
+        binary_file.write_bytes(b"\x00\x01\x02\x03" * 100)  # null bytes trigger binary detection
         result = runner.invoke(app, ["analyze", str(binary_file)])
         assert result.exit_code == 1
         assert "binary" in result.output.lower() or "cannot" in result.output.lower()

@@ -119,19 +119,21 @@ class TestListModels:
         mgr = ModelManager()
         self._patch_installed(mgr, set())
         models = mgr.list_models(type_filter="text")
+        assert len(models) >= 1
         assert all(m.model_type == "text" for m in models)
 
     def test_list_models_vision_filter(self) -> None:
         mgr = ModelManager()
         self._patch_installed(mgr, set())
         models = mgr.list_models(type_filter="vision")
+        assert len(models) >= 1
         assert all(m.model_type == "vision" for m in models)
 
     def test_list_models_audio_filter(self) -> None:
         mgr = ModelManager()
         self._patch_installed(mgr, set())
         models = mgr.list_models(type_filter="audio")
-        assert isinstance(models, list)
+        assert len(models) >= 1
         assert all(m.model_type == "audio" for m in models)
 
     def test_list_models_unknown_filter_returns_empty(self) -> None:
@@ -169,14 +171,18 @@ class TestListModels:
 
 class TestDisplayModels:
     def test_display_models_does_not_raise(self) -> None:
-        mgr = ModelManager()
+        mock_console = MagicMock()
+        mgr = ModelManager(console=mock_console)
         mgr.check_installed = lambda: set()  # type: ignore[method-assign]
         mgr.display_models()
+        mock_console.print.assert_called_once()
 
     def test_display_models_text_filter_does_not_raise(self) -> None:
-        mgr = ModelManager()
+        mock_console = MagicMock()
+        mgr = ModelManager(console=mock_console)
         mgr.check_installed = lambda: set()  # type: ignore[method-assign]
         mgr.display_models(type_filter="text")
+        mock_console.print.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -344,3 +350,6 @@ class TestCacheInfo:
         assert result.get("hits") == 10
         assert result.get("misses") == 5
         assert result.get("evictions") == 2
+        assert result.get("current_size") == 3
+        assert result.get("max_size") == 100
+        assert result.get("memory_usage_bytes") == 1024
