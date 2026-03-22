@@ -1,6 +1,6 @@
 """Integration tests for authenticated profile routes in web/profile_routes.py.
 
-Covers helper functions and authenticated routes (lines ~521–1262) including:
+Covers helper functions and authenticated routes (lines ~521-1262) including:
 - _sanitize_profile_state, _append_activity, _append_notification (direct calls)
 - get_current_web_user with auth_enabled=True but missing/invalid cookie
 - reset_password_submit success path (user exists, valid password)
