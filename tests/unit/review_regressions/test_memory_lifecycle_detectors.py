@@ -14,6 +14,9 @@ from file_organizer.review_regressions.memory_lifecycle import (
     EagerBufferPoolAllocationDetector,
     LegacyAcquireReleaseWithoutConsumeDetector,
     PooledBufferOwnershipViaLengthDetector,
+    _assignment_target_names,
+    _enclosing_class_name,
+    _enclosing_function_name,
     _find_acquire_release_no_consume,
     _has_subtraction_ancestor,
     _is_adjust_feedback_argument,
@@ -24,6 +27,9 @@ from file_organizer.review_regressions.memory_lifecycle import (
     _is_len_call_on_name,
     _is_rss_access,
     _is_structural_buffer_size_check,
+    _iter_memory_lifecycle_python_files,
+    _nearest_assignment_ancestor,
+    _parent_map,
 )
 
 
@@ -379,3 +385,184 @@ def test_find_acquire_release_no_consume_returns_empty_when_buffer_is_consumed()
     tree = ast.parse(src)
     func = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef))
     assert not _find_acquire_release_no_consume(func.body)
+
+
+# ---------------------------------------------------------------------------
+# Helpers for private-helper tests (moved from integration)
+# ---------------------------------------------------------------------------
+
+
+def _first_node_of(tree: ast.AST, node_type: type) -> ast.AST:
+    for node in ast.walk(tree):
+        if isinstance(node, node_type):
+            return node
+    raise AssertionError(f"No {node_type.__name__} found in tree")
+
+
+def _all_nodes_of(tree: ast.AST, node_type: type) -> list[ast.AST]:
+    return [n for n in ast.walk(tree) if isinstance(n, node_type)]
+
+
+# ---------------------------------------------------------------------------
+# _parent_map
+# ---------------------------------------------------------------------------
+
+
+class TestParentMap:
+    def test_returns_dict(self) -> None:
+        tree = ast.parse("x = 1")
+        result = _parent_map(tree)
+        assert isinstance(result, dict)
+        assert len(result) >= 1
+
+    def test_module_is_parent_of_assign(self) -> None:
+        tree = ast.parse("x = 1")
+        parents = _parent_map(tree)
+        assign = _first_node_of(tree, ast.Assign)
+        assert parents[assign] is tree
+
+    def test_every_non_root_node_has_parent(self) -> None:
+        tree = ast.parse("def f():\n    return x + 1")
+        parents = _parent_map(tree)
+        all_nodes = list(ast.walk(tree))
+        # Every node except the root (tree itself) should be a key
+        for node in all_nodes[1:]:
+            assert node in parents
+
+
+# ---------------------------------------------------------------------------
+# _enclosing_function_name
+# ---------------------------------------------------------------------------
+
+
+class TestEnclosingFunctionName:
+    def test_inside_function_returns_name(self) -> None:
+        src = "def acquire():\n    x = len(buf)\n"
+        tree, parents = _ml_parents(src)
+        assign = _first_node_of(tree, ast.Assign)
+        assert _enclosing_function_name(assign, parents) == "acquire"
+
+    def test_module_level_returns_none(self) -> None:
+        src = "x = 1\n"
+        tree, parents = _ml_parents(src)
+        assign = _first_node_of(tree, ast.Assign)
+        assert _enclosing_function_name(assign, parents) is None
+
+    def test_nested_function_returns_innermost(self) -> None:
+        src = "def outer():\n    def inner():\n        x = 1\n"
+        tree, parents = _ml_parents(src)
+        assigns = _all_nodes_of(tree, ast.Assign)
+        innermost_assign = assigns[-1]
+        assert _enclosing_function_name(innermost_assign, parents) == "inner"
+
+
+# ---------------------------------------------------------------------------
+# _enclosing_class_name
+# ---------------------------------------------------------------------------
+
+
+class TestEnclosingClassName:
+    def test_inside_class_returns_name(self) -> None:
+        src = "class BufferPool:\n    def acquire(self):\n        x = 1\n"
+        tree, parents = _ml_parents(src)
+        assign = _first_node_of(tree, ast.Assign)
+        assert _enclosing_class_name(assign, parents) == "BufferPool"
+
+    def test_module_level_returns_none(self) -> None:
+        src = "x = 1\n"
+        tree, parents = _ml_parents(src)
+        assign = _first_node_of(tree, ast.Assign)
+        assert _enclosing_class_name(assign, parents) is None
+
+    def test_does_not_match_arbitrary_receiver(self) -> None:
+        src = "class Unrelated:\n    def method(self):\n        x = 1\n"
+        tree, parents = _ml_parents(src)
+        assign = _first_node_of(tree, ast.Assign)
+        assert _enclosing_class_name(assign, parents) == "Unrelated"
+
+
+# ---------------------------------------------------------------------------
+# _nearest_assignment_ancestor
+# ---------------------------------------------------------------------------
+
+
+class TestNearestAssignmentAncestor:
+    def test_finds_assign(self) -> None:
+        src = "x = proc.memory_info().rss\n"
+        tree, parents = _ml_parents(src)
+        rss_attr = next(
+            n for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.attr == "rss"
+        )
+        result = _nearest_assignment_ancestor(rss_attr, parents)
+        assert isinstance(result, ast.Assign)
+
+    def test_finds_annassign(self) -> None:
+        src = "x: int = proc.memory_info().rss\n"
+        tree, parents = _ml_parents(src)
+        rss_attr = next(
+            n for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.attr == "rss"
+        )
+        result = _nearest_assignment_ancestor(rss_attr, parents)
+        assert isinstance(result, ast.AnnAssign)
+
+    def test_returns_none_when_no_assignment(self) -> None:
+        src = "proc.memory_info().rss\n"
+        tree, parents = _ml_parents(src)
+        rss_attr = next(
+            n for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.attr == "rss"
+        )
+        assert _nearest_assignment_ancestor(rss_attr, parents) is None
+
+
+# ---------------------------------------------------------------------------
+# _assignment_target_names
+# ---------------------------------------------------------------------------
+
+
+class TestAssignmentTargetNames:
+    def test_simple_assign_returns_name(self) -> None:
+        src = "rss_val = proc.memory_info().rss\n"
+        tree = ast.parse(src)
+        assign = _first_node_of(tree, ast.Assign)
+        assert _assignment_target_names(assign) == {"rss_val"}
+
+    def test_annassign_returns_name(self) -> None:
+        src = "rss_val: int = proc.memory_info().rss\n"
+        tree = ast.parse(src)
+        annassign = _first_node_of(tree, ast.AnnAssign)
+        assert _assignment_target_names(annassign) == {"rss_val"}
+
+    def test_attribute_target_returns_attr_name(self) -> None:
+        src = "self.rss_val = proc.memory_info().rss\n"
+        tree = ast.parse(src)
+        assign = _first_node_of(tree, ast.Assign)
+        assert "rss_val" in _assignment_target_names(assign)
+
+
+# ---------------------------------------------------------------------------
+# _iter_memory_lifecycle_python_files
+# ---------------------------------------------------------------------------
+
+
+class TestIterMemoryLifecyclePythonFiles:
+    def test_empty_dir_returns_empty_list(self, tmp_path: Path) -> None:
+        result = _iter_memory_lifecycle_python_files(tmp_path)
+        assert result == []
+
+    def test_returns_py_files_in_root_when_no_src_subdir(self, tmp_path: Path) -> None:
+        (tmp_path / "a.py").write_text("x = 1\n")
+        (tmp_path / "b.txt").write_text("ignored\n")
+        result = _iter_memory_lifecycle_python_files(tmp_path)
+        names = [p.name for p in result]
+        assert "a.py" in names
+        assert "b.txt" not in names
+
+    def test_prefers_src_file_organizer_subdir_when_present(self, tmp_path: Path) -> None:
+        src_root = tmp_path / "src" / "file_organizer"
+        src_root.mkdir(parents=True)
+        (src_root / "inner.py").write_text("y = 2\n")
+        (tmp_path / "outer.py").write_text("z = 3\n")
+        result = _iter_memory_lifecycle_python_files(tmp_path)
+        names = [p.name for p in result]
+        assert "inner.py" in names
+        assert "outer.py" not in names
