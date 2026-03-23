@@ -22,6 +22,7 @@ class TestPARACategory:
     """Tests for PARACategory enum."""
 
     def test_all_categories_exist(self) -> None:
+        """Verify all four PARA category values are present in the enum."""
         from file_organizer.methodologies.para.categories import PARACategory
 
         assert PARACategory.PROJECT.value == "project"
@@ -30,21 +31,24 @@ class TestPARACategory:
         assert PARACategory.ARCHIVE.value == "archive"
 
     def test_str_returns_title_case(self) -> None:
+        """Verify str() returns the title-cased category name."""
         from file_organizer.methodologies.para.categories import PARACategory
 
         assert str(PARACategory.PROJECT) == "Project"
         assert str(PARACategory.ARCHIVE) == "Archive"
 
     def test_description_property(self) -> None:
+        """Verify PARACategory descriptions contain the canonical key phrases."""
         from file_organizer.methodologies.para.categories import PARACategory
 
         desc = PARACategory.PROJECT.description
-        assert "Time-bound" in desc or "specific completion" in desc
+        assert "Time-bound" in desc and "specific completion" in desc
 
         desc_area = PARACategory.AREA.description
-        assert "Ongoing" in desc_area or "responsibility" in desc_area
+        assert "Ongoing" in desc_area and "responsibility" in desc_area
 
     def test_four_categories_total(self) -> None:
+        """Verify exactly four PARA categories are defined."""
         from file_organizer.methodologies.para.categories import PARACategory
 
         assert len(PARACategory) == 4
@@ -75,26 +79,31 @@ class TestCategoryDefinition:
         )
 
     def test_keyword_match_case_insensitive(self) -> None:
+        """Verify keyword matching is case-insensitive."""
         defn = self._make_definition(keywords=["deadline", "sprint"], patterns=[])
         assert defn.matches_keyword("Sprint planning document") is True
         assert defn.matches_keyword("DEADLINE approaching") is True
         assert defn.matches_keyword("random file") is False
 
     def test_keyword_no_match(self) -> None:
+        """Verify matches_keyword returns False when no keyword is found."""
         defn = self._make_definition(keywords=["deadline"], patterns=[])
         assert defn.matches_keyword("vacation photos") is False
 
     def test_pattern_match_glob(self) -> None:
+        """Verify glob patterns correctly match and reject filenames."""
         defn = self._make_definition(keywords=[], patterns=["*_project*", "*.plan"])
         assert defn.matches_pattern("website_project_v2.md") is True
         assert defn.matches_pattern("architecture.plan") is True
         assert defn.matches_pattern("random.txt") is False
 
     def test_pattern_match_case_insensitive(self) -> None:
+        """Verify glob pattern matching is case-insensitive."""
         defn = self._make_definition(keywords=[], patterns=["*.PROJECT"])
         assert defn.matches_pattern("my.project") is True
 
     def test_invalid_threshold_raises(self) -> None:
+        """Verify a confidence_threshold > 1.0 raises ValueError."""
         from file_organizer.methodologies.para.categories import (
             CategoryDefinition,
             PARACategory,
@@ -112,6 +121,7 @@ class TestCategoryDefinition:
             )
 
     def test_empty_criteria_raises(self) -> None:
+        """Verify an empty criteria list raises ValueError."""
         from file_organizer.methodologies.para.categories import (
             CategoryDefinition,
             PARACategory,
@@ -137,6 +147,7 @@ class TestPARAConfig:
     """Tests for PARAConfig defaults and methods."""
 
     def test_default_folder_names(self) -> None:
+        """Verify PARAConfig defaults to the canonical PARA folder names."""
         from file_organizer.methodologies.para.config import PARAConfig
 
         cfg = PARAConfig()
@@ -146,6 +157,7 @@ class TestPARAConfig:
         assert cfg.archive_dir == "Archive"
 
     def test_get_category_directory(self) -> None:
+        """Verify get_category_directory returns the correct dir name per category."""
         from file_organizer.methodologies.para.categories import PARACategory
         from file_organizer.methodologies.para.config import PARAConfig
 
@@ -156,6 +168,7 @@ class TestPARAConfig:
         assert cfg.get_category_directory(PARACategory.ARCHIVE) == "Archive"
 
     def test_get_threshold_for_category(self) -> None:
+        """Verify get_category_threshold returns a float in the valid [0, 1] range."""
         from file_organizer.methodologies.para.categories import PARACategory
         from file_organizer.methodologies.para.config import PARAConfig
 
@@ -164,6 +177,7 @@ class TestPARAConfig:
         assert 0.0 <= threshold <= 1.0
 
     def test_get_category_keywords(self) -> None:
+        """Verify get_category_keywords returns a non-empty list."""
         from file_organizer.methodologies.para.categories import PARACategory
         from file_organizer.methodologies.para.config import PARAConfig
 
@@ -173,6 +187,7 @@ class TestPARAConfig:
         assert len(keywords) >= 1
 
     def test_load_config_returns_para_config(self) -> None:
+        """Verify load_config with the bundled default YAML returns a valid PARAConfig."""
         from pathlib import Path
 
         import file_organizer.methodologies.para.config as _mod
@@ -193,6 +208,7 @@ class TestPARAFolderGenerator:
     """Tests for PARAFolderGenerator folder structure creation."""
 
     def test_dry_run_creates_no_files(self, tmp_path: Path) -> None:
+        """Verify dry_run=True reports folders to create without writing to disk."""
         from file_organizer.methodologies.para.folder_generator import PARAFolderGenerator
 
         gen = PARAFolderGenerator()
@@ -204,6 +220,7 @@ class TestPARAFolderGenerator:
         assert not (tmp_path / "Projects").exists()
 
     def test_real_creation_creates_folders(self, tmp_path: Path) -> None:
+        """Verify generate_structure creates the four PARA directories on disk."""
         from file_organizer.methodologies.para.folder_generator import PARAFolderGenerator
 
         gen = PARAFolderGenerator()
@@ -216,6 +233,7 @@ class TestPARAFolderGenerator:
         assert (tmp_path / "Archive").is_dir()
 
     def test_with_subdirs_creates_more_folders(self, tmp_path: Path) -> None:
+        """Verify create_subdirs=True produces more folders than create_subdirs=False."""
         from file_organizer.methodologies.para.folder_generator import PARAFolderGenerator
 
         gen = PARAFolderGenerator()
@@ -225,6 +243,7 @@ class TestPARAFolderGenerator:
         assert len(result_with.created_folders) > len(result_without.created_folders)
 
     def test_existing_folders_skipped(self, tmp_path: Path) -> None:
+        """Verify a second generate_structure call skips already-existing folders."""
         from file_organizer.methodologies.para.folder_generator import PARAFolderGenerator
 
         gen = PARAFolderGenerator()
@@ -236,6 +255,7 @@ class TestPARAFolderGenerator:
         assert len(result2.created_folders) == 0
 
     def test_validate_structure_after_creation(self, tmp_path: Path) -> None:
+        """Verify validate_structure returns True after a full structure is created."""
         from file_organizer.methodologies.para.folder_generator import PARAFolderGenerator
 
         gen = PARAFolderGenerator()
@@ -243,6 +263,7 @@ class TestPARAFolderGenerator:
         assert gen.validate_structure(tmp_path) is True
 
     def test_validate_structure_incomplete(self, tmp_path: Path) -> None:
+        """Verify validate_structure returns False when some PARA dirs are missing."""
         from file_organizer.methodologies.para.folder_generator import PARAFolderGenerator
 
         gen = PARAFolderGenerator()
@@ -251,6 +272,7 @@ class TestPARAFolderGenerator:
         assert gen.validate_structure(tmp_path) is False
 
     def test_get_category_path(self, tmp_path: Path) -> None:
+        """Verify get_category_path returns the expected subdirectory path."""
         from file_organizer.methodologies.para.categories import PARACategory
         from file_organizer.methodologies.para.folder_generator import PARAFolderGenerator
 
@@ -259,6 +281,7 @@ class TestPARAFolderGenerator:
         assert path == tmp_path / "Projects"
 
     def test_create_category_folder(self, tmp_path: Path) -> None:
+        """Verify create_category_folder creates the directory and returns it."""
         from file_organizer.methodologies.para.categories import PARACategory
         from file_organizer.methodologies.para.folder_generator import PARAFolderGenerator
 
@@ -268,6 +291,7 @@ class TestPARAFolderGenerator:
         assert created.name == "Resources"
 
     def test_create_category_folder_with_subfolder(self, tmp_path: Path) -> None:
+        """Verify create_category_folder with subfolder creates a nested directory."""
         from file_organizer.methodologies.para.categories import PARACategory
         from file_organizer.methodologies.para.folder_generator import PARAFolderGenerator
 
@@ -280,6 +304,7 @@ class TestPARAFolderGenerator:
         assert created.parent.name == "Projects"
 
     def test_no_root_and_no_default_raises(self) -> None:
+        """Verify get_category_path raises ValueError when no root is available."""
         from file_organizer.methodologies.para.categories import PARACategory
         from file_organizer.methodologies.para.config import PARAConfig
         from file_organizer.methodologies.para.folder_generator import PARAFolderGenerator
@@ -300,6 +325,7 @@ class TestCategorizationResult:
     """Tests for CategorizationResult data class."""
 
     def test_basic_result(self, tmp_path: Path) -> None:
+        """Verify CategorizationResult stores category, confidence, and reasons."""
         from file_organizer.methodologies.para.categories import (
             CategorizationResult,
             PARACategory,
@@ -316,6 +342,7 @@ class TestCategorizationResult:
         assert len(result.reasons) == 2
 
     def test_alternative_categories(self, tmp_path: Path) -> None:
+        """Verify alternative_categories maps secondary categories to their scores."""
         from file_organizer.methodologies.para.categories import (
             CategorizationResult,
             PARACategory,
@@ -341,6 +368,7 @@ class TestMigrationDataClasses:
     """Tests for migration-related data classes."""
 
     def test_migration_file(self, tmp_path: Path) -> None:
+        """Verify MigrationFile stores target category, confidence, and reasoning."""
         from file_organizer.methodologies.para.categories import PARACategory
         from file_organizer.methodologies.para.migration_manager import MigrationFile
 
@@ -356,6 +384,7 @@ class TestMigrationDataClasses:
         assert len(mf.reasoning) == 2
 
     def test_migration_plan(self, tmp_path: Path) -> None:
+        """Verify MigrationPlan stores total_count and per-category breakdown."""
         from datetime import UTC, datetime
 
         from file_organizer.methodologies.para.categories import PARACategory
@@ -383,6 +412,7 @@ class TestMigrationDataClasses:
         assert plan.by_category[PARACategory.ARCHIVE] == 1
 
     def test_backup_metadata(self, tmp_path: Path) -> None:
+        """Verify BackupMetadata stores backup ID, file count, status, and no restore time."""
         from datetime import UTC, datetime
 
         from file_organizer.methodologies.para.migration_manager import BackupMetadata
@@ -412,6 +442,7 @@ class TestHeuristicWeights:
     """Tests for HeuristicWeights dataclass."""
 
     def test_defaults_sum_to_one(self) -> None:
+        """Verify default heuristic weights sum to exactly 1.0."""
         from file_organizer.methodologies.para.config import HeuristicWeights
 
         w = HeuristicWeights()
@@ -419,6 +450,7 @@ class TestHeuristicWeights:
         assert abs(total - 1.0) < 1e-9
 
     def test_custom_weights(self) -> None:
+        """Verify custom weights are stored as specified."""
         from file_organizer.methodologies.para.config import HeuristicWeights
 
         w = HeuristicWeights(temporal=0.5, content=0.5, structural=0.0, ai=0.0)
@@ -430,6 +462,7 @@ class TestCategoryThresholds:
     """Tests for CategoryThresholds dataclass."""
 
     def test_default_thresholds(self) -> None:
+        """Verify all default category thresholds are in the valid [0, 1] range."""
         from file_organizer.methodologies.para.config import CategoryThresholds
 
         t = CategoryThresholds()
