@@ -206,8 +206,11 @@ class TestRequirePayloadFields:
     def test_missing_multiple_fields_lists_them(self) -> None:
         from file_organizer.cli.benchmark import _require_payload_fields
 
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError) as exc_info:
             _require_payload_fields({})
+        msg = str(exc_info.value)
+        assert "suite" in msg
+        assert "results" in msg
 
 
 # ---------------------------------------------------------------------------
@@ -930,7 +933,7 @@ class TestSummarizeSuiteClassifications:
                 degradation_reasons=("audio-no-candidates-fallback-to-io",),
             ),
         ]
-        suite, degraded, reasons = _summarize_suite_classifications(
+        _suite, degraded, reasons = _summarize_suite_classifications(
             classifications, warmup=0, requested_suite="audio"
         )
         assert degraded is True
@@ -951,7 +954,7 @@ class TestSummarizeSuiteClassifications:
             ),
             _SuiteExecutionClassification(effective_suite="io", degraded=False),
         ]
-        suite, degraded, reasons = _summarize_suite_classifications(
+        _suite, degraded, reasons = _summarize_suite_classifications(
             classifications, warmup=1, requested_suite="io"
         )
         assert degraded is False
@@ -967,7 +970,7 @@ class TestSummarizeSuiteClassifications:
             _SuiteExecutionClassification(effective_suite="io", degraded=False),
             _SuiteExecutionClassification(effective_suite="text", degraded=False),
         ]
-        suite, degraded, reasons = _summarize_suite_classifications(
+        suite, _degraded, _reasons = _summarize_suite_classifications(
             classifications, warmup=0, requested_suite="io"
         )
         assert suite == "mixed"
