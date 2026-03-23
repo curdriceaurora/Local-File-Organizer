@@ -8,7 +8,7 @@ Covers:
 - display_summary: runs without error (uses rich console)
 - undo_command: no args exits 1, verbose mode, operation not found
 - redo_command: no args exits 1
-- history_command: runs, --json flag, limit flag
+- history_command: runs, stats flag, limit flag
 """
 
 from __future__ import annotations
@@ -388,10 +388,11 @@ class TestRedoCommand:
         from file_organizer.cli.undo_redo import redo_command
 
         mock_manager = MagicMock()
-        mock_manager.get_redo_stack.return_value = []
+        mock_manager.redo_last_operation.return_value = True
         with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_manager):
             result = redo_command()
         assert result == 0
+        mock_manager.redo_last_operation.assert_called_once()
 
     def test_with_operation_id_not_found(self) -> None:
         from file_organizer.cli.undo_redo import redo_command
@@ -425,6 +426,7 @@ class TestHistoryCommand:
         with patch("file_organizer.cli.undo_redo.HistoryViewer", return_value=mock_viewer):
             result = history_command()
         assert result == 0
+        mock_viewer.show_recent_operations.assert_called_once_with(limit=10)
 
     def test_with_stats_flag(self) -> None:
         from file_organizer.cli.undo_redo import history_command
