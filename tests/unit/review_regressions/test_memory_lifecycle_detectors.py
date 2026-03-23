@@ -392,14 +392,14 @@ def test_find_acquire_release_no_consume_returns_empty_when_buffer_is_consumed()
 # ---------------------------------------------------------------------------
 
 
-def _first_node_of(tree: ast.AST, node_type: type) -> ast.AST:
+def _first_node_of(tree: ast.AST, node_type: type[ast.AST]) -> ast.AST:
     for node in ast.walk(tree):
         if isinstance(node, node_type):
             return node
     raise AssertionError(f"No {node_type.__name__} found in tree")
 
 
-def _all_nodes_of(tree: ast.AST, node_type: type) -> list[ast.AST]:
+def _all_nodes_of(tree: ast.AST, node_type: type[ast.AST]) -> list[ast.AST]:
     return [n for n in ast.walk(tree) if isinstance(n, node_type)]
 
 
@@ -409,11 +409,12 @@ def _all_nodes_of(tree: ast.AST, node_type: type) -> list[ast.AST]:
 
 
 class TestParentMap:
-    def test_returns_dict(self) -> None:
+    def test_returns_dict_with_expected_entries(self) -> None:
         tree = ast.parse("x = 1")
         result = _parent_map(tree)
-        assert isinstance(result, dict)
-        assert len(result) >= 1
+        assign = _first_node_of(tree, ast.Assign)
+        assert assign in result
+        assert result[assign] is tree
 
     def test_module_is_parent_of_assign(self) -> None:
         tree = ast.parse("x = 1")
@@ -494,7 +495,7 @@ class TestNearestAssignmentAncestor:
             n for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.attr == "rss"
         )
         result = _nearest_assignment_ancestor(rss_attr, parents)
-        assert isinstance(result, ast.Assign)
+        assert result is _first_node_of(tree, ast.Assign)
 
     def test_finds_annassign(self) -> None:
         src = "x: int = proc.memory_info().rss\n"
@@ -503,7 +504,7 @@ class TestNearestAssignmentAncestor:
             n for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.attr == "rss"
         )
         result = _nearest_assignment_ancestor(rss_attr, parents)
-        assert isinstance(result, ast.AnnAssign)
+        assert result is _first_node_of(tree, ast.AnnAssign)
 
     def test_returns_none_when_no_assignment(self) -> None:
         src = "proc.memory_info().rss\n"
