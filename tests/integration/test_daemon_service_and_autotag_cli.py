@@ -415,7 +415,7 @@ class TestHandleSuggest:
         args = self._make_args([str(f)], min_confidence=100.0)
         handle_suggest(svc, args)
         out = capsys.readouterr().out
-        assert "No suggestions" in out or len(out) >= 0
+        assert "No suggestions" in out
 
 
 # ---------------------------------------------------------------------------

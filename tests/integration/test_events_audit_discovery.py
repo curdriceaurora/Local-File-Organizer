@@ -475,10 +475,9 @@ class TestServiceDiscovery:
         disc = ServiceDiscovery(registry_path=tmp_path / "registry.json")
         disc.register("svc", "e")
         old_hb = disc.discover("svc").last_heartbeat
-        # Force a higher timestamp by advancing the system clock via utime on a temp file
         disc.heartbeat("svc")
         new_hb = disc.discover("svc").last_heartbeat
-        assert new_hb >= old_hb
+        assert new_hb > old_hb
 
     def test_heartbeat_returns_true_when_found(self, tmp_path: Path) -> None:
         from file_organizer.events.discovery import ServiceDiscovery

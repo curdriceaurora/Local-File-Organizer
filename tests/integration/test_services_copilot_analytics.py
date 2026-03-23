@@ -98,7 +98,7 @@ class TestCopilotEngine:
 
         engine.reset()
         assert len(engine.session.messages) == 0
-        assert engine.conversation.get_context_string() == "" or engine.conversation is not None
+        assert engine.conversation.get_context_string() == ""
 
     def test_multiple_turns_builds_context(self) -> None:
         from file_organizer.services.copilot.engine import CopilotEngine

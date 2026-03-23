@@ -419,12 +419,13 @@ class TestPidFileManager:
         assert mgr.is_running(tmp_path / "ghost.pid") is False
 
     def test_is_running_false_for_dead_pid(self, tmp_path: Path) -> None:
+        from unittest.mock import patch
+
         from file_organizer.daemon.pid import PidFileManager
 
         mgr = PidFileManager()
         pid_file = tmp_path / "daemon.pid"
-        # PID 99999999 is almost certainly not a running process
         mgr.write_pid(pid_file, pid=99999999)
-        result = mgr.is_running(pid_file)
-        # Either False (process not found) or True (if by some miracle PID exists)
-        assert result is False or result is True
+        with patch("file_organizer.daemon.pid.os.kill", side_effect=ProcessLookupError):
+            result = mgr.is_running(pid_file)
+        assert result is False

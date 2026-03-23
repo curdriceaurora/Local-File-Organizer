@@ -449,7 +449,7 @@ class TestProfileMerger:
             confidence=0.95,
         )
         merger.preserve_high_confidence(merged, [source], confidence_threshold=0.8)
-        assert merged.preferences is not None
+        assert merged.preferences["global"]["sort_by"] == "name"
 
 
 # ---------------------------------------------------------------------------

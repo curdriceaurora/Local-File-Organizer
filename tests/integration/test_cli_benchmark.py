@@ -778,11 +778,11 @@ class TestDetectHardwareProfile:
         from file_organizer.cli.benchmark import _detect_hardware_profile
 
         with patch(
-            "file_organizer.cli.benchmark._detect_hardware_profile",
-            return_value={"error": "Hardware detection unavailable"},
+            "file_organizer.core.hardware_profile.detect_hardware",
+            side_effect=RuntimeError("simulated hardware detection failure"),
         ):
             result = _detect_hardware_profile()
-        assert "error" in result or isinstance(result, dict)
+        assert "error" in result
 
 
 # ---------------------------------------------------------------------------
