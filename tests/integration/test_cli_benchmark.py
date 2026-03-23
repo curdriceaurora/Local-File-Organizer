@@ -874,7 +874,9 @@ class TestRunIoSuite:
     def test_handles_oserror_gracefully(self, tmp_path: Path) -> None:
         from file_organizer.cli.benchmark import _run_io_suite
 
-        # nonexistent file → OSError branch
+        # Exercises the OSError branch in _run_io_suite: passing a nonexistent file causes
+        # an OSError during the read attempt. Graceful handling means the function increments
+        # outcome.processed_count (the file was attempted) and returns without raising.
         outcome = _run_io_suite([tmp_path / "nonexistent.txt"])
         assert outcome.processed_count == 1
 

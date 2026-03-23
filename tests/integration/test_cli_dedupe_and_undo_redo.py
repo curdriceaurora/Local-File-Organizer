@@ -74,39 +74,32 @@ class TestFormatSize:
     def test_bytes(self) -> None:
         from file_organizer.cli.dedupe import format_size
 
-        result = format_size(500)
-        assert "B" in result
-        assert "500" in result
+        assert format_size(500) == "500.0 B"
 
     def test_kilobytes(self) -> None:
         from file_organizer.cli.dedupe import format_size
 
-        result = format_size(2048)
-        assert "KB" in result
+        assert format_size(2048) == "2.0 KB"
 
     def test_megabytes(self) -> None:
         from file_organizer.cli.dedupe import format_size
 
-        result = format_size(1024 * 1024 * 3)
-        assert "MB" in result
+        assert format_size(1024 * 1024 * 3) == "3.0 MB"
 
     def test_gigabytes(self) -> None:
         from file_organizer.cli.dedupe import format_size
 
-        result = format_size(1024**3 * 2)
-        assert "GB" in result
+        assert format_size(1024**3 * 2) == "2.0 GB"
 
     def test_zero_bytes(self) -> None:
         from file_organizer.cli.dedupe import format_size
 
-        result = format_size(0)
-        assert "B" in result
+        assert format_size(0) == "0.0 B"
 
     def test_terabytes(self) -> None:
         from file_organizer.cli.dedupe import format_size
 
-        result = format_size(1024**4 * 5)
-        assert "TB" in result
+        assert format_size(1024**4 * 5) == "5.0 TB"
 
 
 # ---------------------------------------------------------------------------
@@ -303,25 +296,28 @@ class TestDisplaySummary:
     def test_dry_run_summary(self) -> None:
         from file_organizer.cli.dedupe import display_summary
 
-        # Should run without error
-        display_summary(
-            total_groups=3,
-            total_duplicates=6,
-            total_removed=0,
-            space_saved=0,
-            dry_run=True,
-        )
+        with patch("file_organizer.cli.dedupe.console") as mock_console:
+            display_summary(
+                total_groups=3,
+                total_duplicates=6,
+                total_removed=0,
+                space_saved=0,
+                dry_run=True,
+            )
+        assert mock_console.print.called
 
     def test_real_summary(self) -> None:
         from file_organizer.cli.dedupe import display_summary
 
-        display_summary(
-            total_groups=2,
-            total_duplicates=4,
-            total_removed=2,
-            space_saved=1024 * 1024,
-            dry_run=False,
-        )
+        with patch("file_organizer.cli.dedupe.console") as mock_console:
+            display_summary(
+                total_groups=2,
+                total_duplicates=4,
+                total_removed=2,
+                space_saved=1024 * 1024,
+                dry_run=False,
+            )
+        assert mock_console.print.called
 
 
 # ---------------------------------------------------------------------------
