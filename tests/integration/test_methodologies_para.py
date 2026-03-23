@@ -7,8 +7,12 @@ migration manager data classes, and PARA category detection utilities.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from file_organizer.methodologies.para.categories import CategoryDefinition
 
 pytestmark = pytest.mark.integration
 
@@ -62,7 +66,7 @@ class TestPARACategory:
 class TestCategoryDefinition:
     """Tests for CategoryDefinition matching logic."""
 
-    def _make_definition(self, keywords: list[str], patterns: list[str]) -> object:
+    def _make_definition(self, keywords: list[str], patterns: list[str]) -> CategoryDefinition:
         from file_organizer.methodologies.para.categories import (
             CategoryDefinition,
             PARACategory,

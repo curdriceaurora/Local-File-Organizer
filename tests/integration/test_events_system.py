@@ -547,14 +547,24 @@ class TestMiddlewarePipeline:
         """Verify returning None from before_publish cancels the publish."""
         from file_organizer.events.middleware import MiddlewarePipeline
 
+        second_called = False
+
         class CancelMW:
             def before_publish(self, topic: str, data: dict) -> dict | None:
                 return None  # cancel
 
+        class SecondMW:
+            def before_publish(self, topic: str, data: dict) -> dict | None:
+                nonlocal second_called
+                second_called = True
+                return data
+
         pipeline = MiddlewarePipeline()
         pipeline.add(CancelMW())
+        pipeline.add(SecondMW())
         result = pipeline.run_before_publish("file.created", {"path": "/f.txt"})
         assert result is None
+        assert second_called is False
 
     def test_pipeline_after_publish(self) -> None:
         """Verify after_publish middleware receives the message_id."""
@@ -608,6 +618,7 @@ class TestServiceBusDataClasses:
         assert d["target"] == "indexer"
         assert d["action"] == "index_file"
         assert d["payload"]["path"] == "/docs/report.pdf"
+        assert d["timestamp"] == ts.isoformat()
 
     def test_service_response_fields(self) -> None:
         """Verify a successful ServiceResponse carries the expected data and no error."""
@@ -632,8 +643,10 @@ class TestServiceBusDataClasses:
             success=False,
             error="File not found",
         )
+        assert resp.request_id == "req-002"
         assert resp.success is False
         assert resp.error == "File not found"
+        assert not resp.data
 
 
 # ---------------------------------------------------------------------------

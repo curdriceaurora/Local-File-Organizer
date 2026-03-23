@@ -129,6 +129,9 @@ class TestJobState:
         assert restored.total_files == 100
         assert restored.completed_files == 50
         assert restored.failed_files == 5
+        assert restored.config == {"batch": 10}
+        assert restored.created == now
+        assert restored.updated == now
         assert restored.error is None
 
     def test_job_state_with_error_roundtrip(self) -> None:
@@ -391,6 +394,10 @@ class TestCheckpointManager:
         assert updated is not None
         assert f1 in updated.completed_paths
 
+        reloaded = mgr.load_checkpoint("full-job")
+        assert reloaded is not None
+        assert f1 in reloaded.completed_paths
+
     def test_checkpoints_dir_property(self, tmp_path: Path) -> None:
         """Verify the checkpoints_dir property returns the directory passed to the constructor."""
         from file_organizer.parallel.checkpoint import CheckpointManager
@@ -512,11 +519,12 @@ class TestParallelProcessor:
         """Verify the progress callback is invoked once per processed file."""
         from file_organizer.parallel.config import ParallelConfig
         from file_organizer.parallel.processor import ParallelProcessor
+        from file_organizer.parallel.result import FileResult
 
-        calls: list[int] = []
+        calls: list[tuple[int, int, FileResult]] = []
 
-        def callback(completed: int, total: int, _result: object) -> None:
-            calls.append(completed)
+        def callback(completed: int, total: int, result: FileResult) -> None:
+            calls.append((completed, total, result))
 
         files = []
         for i in range(3):
@@ -530,6 +538,12 @@ class TestParallelProcessor:
         proc = ParallelProcessor(cfg)
         proc.process_batch(files, lambda p: "ok")
         assert len(calls) == 3
+        completed_vals = [c for c, _, _ in calls]
+        total_vals = [t for _, t, _ in calls]
+        result_vals = [r for _, _, r in calls]
+        assert completed_vals == [1, 2, 3]
+        assert all(t == 3 for t in total_vals)
+        assert all(r.success is True and r.result == "ok" for r in result_vals)
 
 
 # ---------------------------------------------------------------------------
@@ -806,7 +820,7 @@ class TestPersistence:
             mgr.save_job(JobState(id=f"j{i}"))
 
         jobs = mgr.list_jobs()
-        assert len(jobs) == 3
+        assert {j.id for j in jobs} == {"j0", "j1", "j2"}
 
     def test_delete_job(self, tmp_path: Path) -> None:
         """Verify delete_job removes the job and returns False on a second attempt."""
