@@ -280,26 +280,32 @@ class TestProtectedRoutesWithoutAuth:
     def test_workspaces_partial_no_cookie(self, auth_client: TestClient) -> None:
         r = auth_client.get("/ui/profile/workspaces")
         assert r.status_code == 200
+        assert b"Not authenticated" in r.content
 
     def test_team_partial_no_cookie(self, auth_client: TestClient) -> None:
         r = auth_client.get("/ui/profile/team")
         assert r.status_code == 200
+        assert b"Not authenticated" in r.content
 
     def test_shared_partial_no_cookie(self, auth_client: TestClient) -> None:
         r = auth_client.get("/ui/profile/shared")
         assert r.status_code == 200
+        assert b"Not authenticated" in r.content
 
     def test_activity_partial_no_cookie(self, auth_client: TestClient) -> None:
         r = auth_client.get("/ui/profile/activity")
         assert r.status_code == 200
+        assert b"Not authenticated" in r.content
 
     def test_notifications_partial_no_cookie(self, auth_client: TestClient) -> None:
         r = auth_client.get("/ui/profile/notifications")
         assert r.status_code == 200
+        assert b"Not authenticated" in r.content
 
     def test_account_settings_partial_no_cookie(self, auth_client: TestClient) -> None:
         r = auth_client.get("/ui/profile/account-settings")
         assert r.status_code == 200
+        assert b"Not authenticated" in r.content
 
 
 # ---------------------------------------------------------------------------
