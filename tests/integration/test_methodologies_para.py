@@ -173,10 +173,15 @@ class TestPARAConfig:
         assert len(keywords) >= 1
 
     def test_load_config_returns_para_config(self) -> None:
+        from pathlib import Path
+
+        import file_organizer.methodologies.para.config as _mod
         from file_organizer.methodologies.para.config import PARAConfig, load_config
 
-        cfg = load_config()
+        default_yaml = Path(_mod.__file__).parent / "default_config.yaml"
+        cfg = load_config(config_path=default_yaml)
         assert isinstance(cfg, PARAConfig)
+        assert cfg.project_dir == "Projects"
 
 
 # ---------------------------------------------------------------------------

@@ -635,7 +635,9 @@ class TestTaskScheduler:
         scheduler = TaskScheduler()
         result = scheduler.schedule([py1, txt, py2], PriorityStrategy.TYPE_GROUPED)
         exts = [p.suffix for p in result]
-        assert exts.index(".py") < exts.index(".txt") or exts.count(".py") == 2
+        # TYPE_GROUPED sorts by extension then by name within each group:
+        # .py group (a.py, b.py) before .txt group (c.txt)
+        assert exts == [".py", ".py", ".txt"]
 
     def test_custom_strategy(self, tmp_path: Path) -> None:
         from file_organizer.parallel.scheduler import PriorityStrategy, TaskScheduler

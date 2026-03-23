@@ -513,8 +513,8 @@ class TestJohnnyDecimalGenerator:
         gen = JohnnyDecimalGenerator(scheme)
         n = JohnnyDecimalNumber(area=10)
         is_valid, errors = gen.validate_number(n)
-        assert is_valid is True or is_valid is False
-        assert len(errors) == 0 or all(isinstance(e, str) for e in errors)
+        assert is_valid is True
+        assert errors == []
 
     def test_clear_registrations(self, tmp_path: Path) -> None:
         from file_organizer.methodologies.johnny_decimal.categories import (
@@ -554,7 +554,7 @@ class TestJohnnyDecimalGenerator:
 
         scheme = self._make_scheme()
         gen = JohnnyDecimalGenerator(scheme)
-        number, confidence, reasons = gen.suggest_number_for_content(
+        _number, confidence, reasons = gen.suggest_number_for_content(
             "invoice payment receipt", filename="invoice.pdf"
         )
         assert 0.0 <= confidence <= 1.0
@@ -700,8 +700,8 @@ class TestPARAJohnnyDecimalBridge:
 
         bridge = self._make_bridge()
         area = bridge.para_to_jd_area(PARACategory.PROJECTS)
-        assert isinstance(area, int)
-        assert 0 <= area <= 99
+        # _make_bridge() sets projects_area=10; index defaults to 0
+        assert area == 10
 
     def test_jd_area_to_para(self) -> None:
         from file_organizer.methodologies.johnny_decimal.compatibility import PARACategory
@@ -734,8 +734,13 @@ class TestPARAJohnnyDecimalBridge:
         bridge = PARAJohnnyDecimalBridge(config)
         result = bridge.create_para_structure(tmp_path)
         assert isinstance(result, dict)
+        # Default area mapping: projects=10, areas=20, resources=30, archive=40
+        # Directory names are f"{area:02d} {category.value.title()}"
+        assert result[PARACategory.PROJECTS].name == "10 Projects"
+        assert result[PARACategory.AREAS].name == "20 Areas"
+        assert result[PARACategory.RESOURCES].name == "30 Resources"
+        assert result[PARACategory.ARCHIVE].name == "40 Archive"
         for cat in PARACategory:
-            assert cat in result
             assert result[cat].is_dir()
 
 
