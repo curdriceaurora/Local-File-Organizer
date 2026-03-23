@@ -335,18 +335,22 @@ class TestUndoCommand:
 
         mock_manager = MagicMock()
         mock_manager.get_undo_stack.return_value = []
+        mock_manager.undo_last_operation.return_value = True
         with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_manager):
             result = undo_command()
         assert result == 0
+        mock_manager.undo_last_operation.assert_called_once()
 
     def test_verbose_mode(self) -> None:
         from file_organizer.cli.undo_redo import undo_command
 
         mock_manager = MagicMock()
         mock_manager.get_undo_stack.return_value = []
+        mock_manager.undo_last_operation.return_value = True
         with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_manager):
             result = undo_command(verbose=True)
         assert result == 0
+        mock_manager.undo_last_operation.assert_called_once()
 
     def test_with_operation_id_not_found(self) -> None:
         from file_organizer.cli.undo_redo import undo_command
@@ -442,6 +446,7 @@ class TestHistoryCommand:
         with patch("file_organizer.cli.undo_redo.HistoryViewer", return_value=mock_viewer):
             result = history_command(limit=10)
         assert result == 0
+        mock_viewer.show_recent_operations.assert_called_once_with(limit=10)
 
     def test_viewer_error_returns_one(self) -> None:
         from file_organizer.cli.undo_redo import history_command

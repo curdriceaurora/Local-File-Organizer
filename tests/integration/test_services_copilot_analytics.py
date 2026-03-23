@@ -69,6 +69,7 @@ class TestCopilotEngine:
 
         engine = CopilotEngine(text_model=mock_model)
         response = engine.chat("help me")
+        mock_model.generate.assert_called()
         assert isinstance(response, str)
         assert len(response) > 0
 
@@ -235,5 +236,5 @@ class TestAnalyticsService:
         svc = self._make_service()
         result = svc.calculate_time_saved(total_files=100, duplicates_removed=10)
         assert isinstance(result, TimeSavings)
-        assert result.estimated_time_saved_seconds >= 0
+        assert result.estimated_time_saved_seconds == 3500
         assert result.total_operations == 100
