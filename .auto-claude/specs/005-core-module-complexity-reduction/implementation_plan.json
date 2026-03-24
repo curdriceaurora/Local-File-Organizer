@@ -1,0 +1,545 @@
+{
+  "feature": "Core Module Complexity Reduction",
+  "workflow_type": "refactor",
+  "workflow_rationale": "This is a refactor workflow because we are restructuring existing code to reduce complexity without changing behavior. The pattern follows: Extract complex functions → Verify tests pass → Remove exemptions.",
+  "phases": [
+    {
+      "id": "phase-1-assessment",
+      "name": "Complexity Assessment",
+      "type": "investigation",
+      "description": "Analyze the 12 C901-exempted files to identify specific functions exceeding complexity 15 and plan extraction strategy",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Analyze cli/dedupe.py complexity and identify refactoring opportunities",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            ".auto-claude/specs/005-core-module-complexity-reduction/analysis/dedupe_analysis.md"
+          ],
+          "patterns_from": [
+            "src/file_organizer/cli/dedupe.py"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Review analysis document for identified complex functions and proposed extraction plan"
+          },
+          "status": "completed",
+          "expected_output": "Document listing functions > complexity 15 and proposed extraction into helper modules"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Analyze cli/undo_redo.py complexity and identify refactoring opportunities",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            ".auto-claude/specs/005-core-module-complexity-reduction/analysis/undo_redo_analysis.md"
+          ],
+          "patterns_from": [
+            "src/file_organizer/cli/undo_redo.py"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Review analysis document for identified complex functions and proposed extraction plan"
+          },
+          "status": "completed",
+          "expected_output": "Document listing functions > complexity 15 and proposed extraction into helper modules"
+        },
+        {
+          "id": "subtask-1-3",
+          "description": "Analyze web/files_routes.py complexity and identify refactoring opportunities",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            ".auto-claude/specs/005-core-module-complexity-reduction/analysis/files_routes_analysis.md"
+          ],
+          "patterns_from": [
+            "src/file_organizer/web/files_routes.py"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Review analysis document for identified complex functions and proposed extraction plan"
+          },
+          "status": "pending",
+          "expected_output": "Document listing functions > complexity 15 and proposed extraction into helper modules"
+        },
+        {
+          "id": "subtask-1-4",
+          "description": "Analyze remaining 9 C901-exempted files for complexity patterns",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            ".auto-claude/specs/005-core-module-complexity-reduction/analysis/other_files_analysis.md"
+          ],
+          "patterns_from": [
+            "src/file_organizer/api/config.py",
+            "src/file_organizer/parallel/processor.py",
+            "src/file_organizer/services/copilot/intent_parser.py"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Review analysis document for all remaining files"
+          },
+          "status": "pending",
+          "expected_output": "Document listing all files, their complexity scores, and prioritized refactoring order"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-refactor-cli-dedupe",
+      "name": "Refactor CLI Dedupe Module",
+      "type": "implementation",
+      "description": "Extract complex functions from cli/dedupe.py into smaller, testable units",
+      "depends_on": [
+        "phase-1-assessment"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Extract hash computation logic from dedupe.py into cli/dedupe_hash.py",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/cli/dedupe.py"
+          ],
+          "files_to_create": [
+            "src/file_organizer/cli/dedupe_hash.py"
+          ],
+          "patterns_from": [
+            "src/file_organizer/core/dispatcher.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/cli/test_cli_dedupe.py -v",
+            "expected": "All tests pass"
+          },
+          "status": "pending",
+          "notes": "Keep old functions working while adding new extracted module"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Extract file selection strategy logic from dedupe.py into cli/dedupe_strategy.py",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/cli/dedupe.py"
+          ],
+          "files_to_create": [
+            "src/file_organizer/cli/dedupe_strategy.py"
+          ],
+          "patterns_from": [
+            "src/file_organizer/core/file_ops.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/cli/test_cli_dedupe.py -v",
+            "expected": "All tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-3",
+          "description": "Simplify main dedupe workflow function to use extracted modules",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/cli/dedupe.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/core/organizer.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ruff check src/file_organizer/cli/dedupe.py && pytest tests/cli/test_cli_dedupe.py -v",
+            "expected": "No C901 violations and all tests pass"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-refactor-cli-undo",
+      "name": "Refactor CLI Undo/Redo Module",
+      "type": "implementation",
+      "description": "Extract complex functions from cli/undo_redo.py into smaller, testable units",
+      "depends_on": [
+        "phase-1-assessment"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Extract operation history management from undo_redo.py into cli/undo_history.py",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/cli/undo_redo.py"
+          ],
+          "files_to_create": [
+            "src/file_organizer/cli/undo_history.py"
+          ],
+          "patterns_from": [
+            "src/file_organizer/core/dispatcher.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/cli/test_cli_undo_redo.py -v",
+            "expected": "All tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Simplify main undo/redo workflow to use extracted modules",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/cli/undo_redo.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/core/organizer.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ruff check src/file_organizer/cli/undo_redo.py && pytest tests/cli/test_cli_undo_redo.py -v",
+            "expected": "No C901 violations and all tests pass"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-refactor-web-files",
+      "name": "Refactor Web Files Routes",
+      "type": "implementation",
+      "description": "Extract complex functions from web/files_routes.py into helper modules",
+      "depends_on": [
+        "phase-1-assessment"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Extract file operations logic from files_routes.py into web/file_operations.py",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/web/files_routes.py"
+          ],
+          "files_to_create": [
+            "src/file_organizer/web/file_operations.py"
+          ],
+          "patterns_from": [
+            "src/file_organizer/core/file_ops.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/unit/api/test_files_api.py -v",
+            "expected": "All tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Extract validation logic from files_routes.py into web/file_validators.py",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/web/files_routes.py"
+          ],
+          "files_to_create": [
+            "src/file_organizer/web/file_validators.py"
+          ],
+          "patterns_from": [
+            "src/file_organizer/api/models.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/unit/api/test_files_api.py -v",
+            "expected": "All tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-4-3",
+          "description": "Simplify route handlers to use extracted modules",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/web/files_routes.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/web/profile_routes.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ruff check src/file_organizer/web/files_routes.py && pytest tests/unit/api/test_files_api.py -v",
+            "expected": "No C901 violations and all tests pass"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-refactor-remaining",
+      "name": "Refactor Remaining High-Complexity Files",
+      "type": "implementation",
+      "description": "Refactor the remaining 8 C901-exempted files with lower priority",
+      "depends_on": [
+        "phase-2-refactor-cli-dedupe",
+        "phase-3-refactor-cli-undo",
+        "phase-4-refactor-web-files"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Refactor api/config.py to reduce complexity",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/api/config.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/core/initializer.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ruff check src/file_organizer/api/config.py && pytest tests/unit/api/test_config_api.py -v",
+            "expected": "No C901 violations and all tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Refactor parallel/processor.py to reduce complexity",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/parallel/processor.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/core/dispatcher.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ruff check src/file_organizer/parallel/processor.py && pytest tests/parallel/test_processor.py -v",
+            "expected": "No C901 violations and all tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-3",
+          "description": "Refactor services/copilot/intent_parser.py to reduce complexity",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/services/copilot/intent_parser.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/core/dispatcher.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ruff check src/file_organizer/services/copilot/intent_parser.py && pytest tests/unit/tui/test_copilot_view.py -v",
+            "expected": "No C901 violations and all tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-4",
+          "description": "Refactor intelligence module files (profile_importer, profile_merger, profile_migrator)",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/services/intelligence/profile_importer.py",
+            "src/file_organizer/services/intelligence/profile_merger.py",
+            "src/file_organizer/services/intelligence/profile_migrator.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/core/dispatcher.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ruff check src/file_organizer/services/intelligence/*.py && pytest tests/unit/services/intelligence/ -v",
+            "expected": "No C901 violations and all tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-5",
+          "description": "Refactor remaining files (cli/utilities.py, updater/installer.py, methodologies/para/ai/suggestion_engine.py)",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/cli/utilities.py",
+            "src/file_organizer/updater/installer.py",
+            "src/file_organizer/methodologies/para/ai/suggestion_engine.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/core/organizer.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ruff check src/file_organizer/cli/utilities.py src/file_organizer/updater/installer.py src/file_organizer/methodologies/para/ai/suggestion_engine.py",
+            "expected": "No C901 violations"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-6-cleanup",
+      "name": "Remove C901 Exemptions and Final Verification",
+      "type": "cleanup",
+      "description": "Remove C901 exemptions from pyproject.toml for successfully refactored files and verify entire test suite",
+      "depends_on": [
+        "phase-5-refactor-remaining"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-6-1",
+          "description": "Remove C901 exemptions from pyproject.toml for refactored files",
+          "service": "backend",
+          "files_to_modify": [
+            "pyproject.toml"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "ruff check src/ --select C901",
+            "expected": "No C901 violations detected"
+          },
+          "status": "pending",
+          "notes": "Remove entries for at least 8 of 12 files as per acceptance criteria"
+        },
+        {
+          "id": "subtask-6-2",
+          "description": "Run full test suite to ensure no behavior changes",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/ -v --tb=short",
+            "expected": "All tests pass with no regressions"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-6-3",
+          "description": "Verify ruff linting passes without C901 exemptions",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "ruff check src/",
+            "expected": "All checks pass"
+          },
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 6,
+    "total_subtasks": 20,
+    "services_involved": [
+      "backend"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 3,
+      "parallel_groups": [
+        {
+          "phases": [
+            "phase-2-refactor-cli-dedupe",
+            "phase-3-refactor-cli-undo",
+            "phase-4-refactor-web-files"
+          ],
+          "reason": "All three depend only on phase-1, work on different file sets, and can run independently"
+        }
+      ],
+      "recommended_workers": 3,
+      "speedup_estimate": "2x faster than sequential execution"
+    }
+  },
+  "verification_strategy": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "test_creation_phase": "none",
+    "test_types_required": [
+      "unit"
+    ],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "At least 8 of 12 C901-exempted files refactored below McCabe complexity 15",
+      "All existing tests pass after refactoring with no behavior changes",
+      "Ruff linting passes without C901 exemptions on refactored files",
+      "No functionality breaks or regressions"
+    ],
+    "verification_steps": [
+      {
+        "name": "Unit Tests",
+        "command": "pytest tests/ -v",
+        "expected_outcome": "All tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Complexity Check",
+        "command": "ruff check src/ --select C901",
+        "expected_outcome": "No C901 violations on refactored files",
+        "type": "lint",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Full Lint Check",
+        "command": "ruff check src/",
+        "expected_outcome": "All checks pass",
+        "type": "lint",
+        "required": true,
+        "blocking": false
+      }
+    ],
+    "reasoning": "Medium risk refactoring requires comprehensive test verification to ensure no behavior changes. Existing test suite is comprehensive."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": [
+        "pytest tests/ -v"
+      ],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": false,
+      "commands": [],
+      "services_to_test": []
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": []
+    },
+    "browser_verification": {
+      "required": false,
+      "pages": []
+    },
+    "database_verification": {
+      "required": false,
+      "checks": []
+    }
+  },
+  "qa_signoff": null,
+  "status": "in_progress",
+  "planStatus": "in_progress",
+  "xstateState": "backlog",
+  "executionPhase": "coding",
+  "updated_at": "2026-03-24T23:57:01.760Z"
+}
