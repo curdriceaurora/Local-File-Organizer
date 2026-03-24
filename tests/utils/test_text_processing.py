@@ -95,13 +95,13 @@ class TestTextProcessing:
         # Initial stopwords check fails (triggers download)
         mock_stopwords.words.side_effect = LookupError()
 
-        # Setup word_tokenize to fail on first call (initial punkt check fails)
-        # but succeed after downloads (to avoid infinite loops)
+        # Setup word_tokenize to fail on first two calls (initial punkt + punkt_tab attempts)
+        # and throw RuntimeError on third call (punkt fallback), then succeed on wordnet check
         mock_tokenize.side_effect = [
             LookupError(),  # First call in punkt try block fails
             LookupError(),  # Call in punkt_tab fallback block fails
-            None,  # Call in punkt fallback block succeeds
-            None,  # Call in wordnet fallback block succeeds
+            RuntimeError("punkt load failed"),  # Call in punkt fallback block fails
+            None,  # Call in wordnet synsets succeeds (after it was called)
         ]
 
         with patch("nltk.corpus.wordnet") as mock_wordnet:
@@ -112,8 +112,10 @@ class TestTextProcessing:
         mock_download.assert_any_call("punkt_tab", quiet=True)
         # Verify punkt was tried when punkt_tab failed
         mock_download.assert_any_call("punkt", quiet=True)
-        # Verify debug logs were called for fallback logic
-        assert mock_logger.debug.called
+        # Verify debug logs were called for fallback logic and exception handling
+        debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+        assert any("punkt_tab failed" in str(call) for call in debug_calls)
+        assert any("Failed to load punkt" in str(call) for call in debug_calls)
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.nltk.download")
