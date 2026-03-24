@@ -114,8 +114,16 @@ site/
 .claude/worktrees/
 /.worktrees/
 
-# Auto Claude generated artifacts
+# Auto Claude data directory
 .auto-claude/
+
+# Auto Claude generated files
 .auto-claude-security.json
 .auto-claude-status
 .claude_settings.json
+.worktrees/
+.security-key
+logs/security/
+
+# Claude Code agents (auto-generated, not committed)
+.agents/
