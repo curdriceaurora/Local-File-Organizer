@@ -252,6 +252,13 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
     _write_bytes(video / "tutorial.avi", _AVI_STUB)
     _write_bytes(video / "review_clip.mp4", _MP4_STUB)
 
+    # -- Duplicates/ (test deduplication logic) ----------------------------------
+    duplicates = root / "Duplicates"
+    # Create two files with identical content to test deduplication
+    identical_content = "This is identical content for testing duplicate detection.\n"
+    _write_text(duplicates / "original_file.txt", identical_content)
+    _write_text(duplicates / "duplicate_file.txt", identical_content)
+
     # -- Archive/ -------------------------------------------------------------
     archive = root / "Archive"
 
