@@ -21,6 +21,15 @@ pytestmark = [pytest.mark.ci, pytest.mark.unit]
 class TestTextProcessing:
     """Test text processing utilities."""
 
+    @pytest.fixture(autouse=True)
+    def reset_nltk_ready(self) -> None:
+        """Reset _nltk_ready flag before each test (ensures idempotency flag doesn't affect tests)."""
+        import file_organizer.utils.text_processing as text_processing_module
+
+        text_processing_module._nltk_ready = False
+        yield
+        text_processing_module._nltk_ready = False
+
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
     @patch("file_organizer.utils.text_processing.logger")
     def test_ensure_nltk_data_unavailable(self, mock_logger: MagicMock) -> None:
@@ -146,7 +155,7 @@ class TestTextProcessing:
     ) -> None:
         """
         Exercise ensure_nltk_data's punkt/punkt_tab exception-handling paths by simulating successive tokenization failures.
-        
+
         Simulates word_tokenize raising LookupError, then LookupError, then RuntimeError while wordnet succeeds; calls ensure_nltk_data() and asserts the logger produced debug messages containing "punkt not available", "punkt_tab failed", and "Failed to load punkt".
         """
         # Ensure stopwords succeeds so we focus on punkt path

@@ -16,13 +16,24 @@ except ImportError:
 
 from loguru import logger
 
+# Module-level flag to track one-time NLTK initialization (idempotent)
+_nltk_ready: bool = False
+
 
 def ensure_nltk_data() -> None:
+    """Ensure required NLTK datasets are present for text processing.
+
+    Idempotent function that initializes NLTK resources once per session. Returns immediately
+    on subsequent calls. If NLTK is not installed this function logs a warning and returns.
+    For each required dataset ('stopwords', 'punkt', 'wordnet') it verifies availability and
+    attempts download when missing, logging informational and debug messages for download
+    attempts and warnings on failure. This function does not raise; failures are reported via logs.
     """
-    Ensure required NLTK datasets are present for text processing.
-    
-    If NLTK is not installed this function logs a warning and returns immediately. For each required dataset ('stopwords', 'punkt', 'wordnet') it verifies availability and attempts a quiet download when missing, logging informational and debug messages for download attempts and warnings on download failure. This function does not raise on missing resources; failures are reported via logs.
-    """
+    global _nltk_ready
+
+    if _nltk_ready:
+        return
+
     if not NLTK_AVAILABLE:
         logger.warning("NLTK not available, text processing will be limited")
         return
@@ -60,13 +71,21 @@ def ensure_nltk_data() -> None:
             try:
                 logger.info(f"Downloading NLTK dataset: {dataset}")
                 nltk.download(dataset, quiet=True)
-                logger.debug(f"NLTK dataset {dataset} downloaded successfully")
+                # Verify download succeeded by attempting to load the dataset
+                if dataset == "stopwords":
+                    stopwords.words("english")
+                elif dataset == "wordnet":
+                    from nltk.corpus import wordnet
+
+                    wordnet.synsets("test")
+                logger.debug(f"NLTK dataset {dataset} downloaded and verified successfully")
             except Exception as e:
                 logger.warning(f"Failed to download NLTK {dataset}: {e}")
         except Exception as e:
             # Dataset exists but failed to load
             logger.debug(f"NLTK dataset check failed for {dataset}: {e}")
 
+    _nltk_ready = True
     logger.debug("NLTK data verified and ready")
 
 
@@ -327,13 +346,12 @@ def sanitize_filename(
 
 
 def extract_keywords(text: str, top_n: int = 5) -> list[str]:
-    """
-    Extract the most frequent meaningful words from input text.
-    
+    """Extract the most frequent meaningful words from input text.
+
     Parameters:
         text (str): Text to analyze for keyword extraction.
         top_n (int): Number of top keywords to return.
-    
+
     Returns:
         list[str]: Top `top_n` keywords ordered by frequency; returns an empty list if extraction fails or no keywords are found.
     """

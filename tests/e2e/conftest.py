@@ -66,9 +66,9 @@ _AVI_STUB = b"RIFF\x00\x00\x00\x00AVI "
 def _write_text(path: Path, content: str | None = None) -> None:
     """
     Write UTF-8 text to `path`, creating parent directories if needed.
-    
+
     If `content` is None, writes deterministic faker-generated text (seeded) up to 200 characters.
-    
+
     Parameters:
         path (Path): Destination file path; parent directories will be created.
         content (str | None): Text to write. If omitted, deterministic sample text is generated.
@@ -80,9 +80,9 @@ def _write_text(path: Path, content: str | None = None) -> None:
 def _write_bytes(path: Path, data: bytes, unique_suffix: bytes | None = None) -> None:
     """
     Write the given bytes to `path`, creating parent directories if necessary.
-    
+
     If `unique_suffix` is provided, it is appended to `data` before writing to ensure the file's bytes differ from other copies (useful to prevent deduplication of repeated stubs).
-    
+
     Parameters:
         path (Path): Destination file path; parent directories will be created if missing.
         data (bytes): Binary content to write.
@@ -97,12 +97,14 @@ def _write_bytes(path: Path, data: bytes, unique_suffix: bytes | None = None) ->
 def _copy_sample(name: str, dest: Path, unique_suffix: bytes | None = None) -> None:
     """
     Copy a committed sample file from the module samples directory to `dest`, optionally appending bytes to make the copy content distinct.
-    
+
     If the source sample does not exist, raises FileNotFoundError. Ensures the destination's parent directory exists before writing.
-    
+
     Parameters:
+        name (str): Filename of the sample file to copy (e.g., "sample.jpg", "sample.docx").
+        dest (Path): Destination file path; parent directories will be created if missing.
         unique_suffix (bytes | None): Bytes to append to the copied file to guarantee distinct content when the same sample is copied multiple times.
-    
+
     Raises:
         FileNotFoundError: If the named sample file is not present in the committed samples directory.
     """
@@ -123,10 +125,10 @@ def _copy_sample(name: str, dest: Path, unique_suffix: bytes | None = None) -> N
 def _csv_content(rows: int = 5) -> str:
     """
     Generate a CSV string containing fake name, value, and date records.
-    
+
     Parameters:
         rows (int): Number of data rows to generate (excluding the header). Defaults to 5.
-    
+
     Returns:
         str: CSV-formatted string starting with the header "name,value,date" followed by `rows` records.
     """
@@ -146,9 +148,9 @@ def _csv_content(rows: int = 5) -> str:
 def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     Builds a realistic nested directory tree of sample files used by E2E tests.
-    
+
     Creates ~60 files across structured folders (Work, Personal, Media, Archive, etc.) and is intended to be used as a session-scoped fixture so benchmark tests can reuse the same tree without rebuilding it.
-    
+
     Returns:
         Path: Root path to the created `e2e_tree` directory containing the populated file tree.
     """
