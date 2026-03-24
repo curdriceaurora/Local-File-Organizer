@@ -81,6 +81,42 @@ class TestTextProcessing:
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.nltk.download")
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("file_organizer.utils.text_processing.stopwords")
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_ensure_nltk_data_punkt_fallback_path(
+        self,
+        mock_logger: MagicMock,
+        mock_stopwords: MagicMock,
+        mock_tokenize: MagicMock,
+        mock_download: MagicMock,
+    ) -> None:
+        """Test ensure_nltk_data punkt fallback when punkt_tab fails (NLTK 3.8+ scenario)."""
+        # Initial stopwords check fails (triggers download)
+        mock_stopwords.words.side_effect = LookupError()
+
+        # Setup word_tokenize to fail on first call (initial punkt check fails)
+        # but succeed after downloads (to avoid infinite loops)
+        mock_tokenize.side_effect = [
+            LookupError(),  # First call in punkt try block fails
+            LookupError(),  # Call in punkt_tab fallback block fails
+            None,  # Call in punkt fallback block succeeds
+            None,  # Call in wordnet fallback block succeeds
+        ]
+
+        with patch("nltk.corpus.wordnet") as mock_wordnet:
+            mock_wordnet.synsets.side_effect = LookupError()
+            ensure_nltk_data()
+
+        # Verify punkt_tab was tried as fallback
+        mock_download.assert_any_call("punkt_tab", quiet=True)
+        # Verify punkt was tried when punkt_tab failed
+        mock_download.assert_any_call("punkt", quiet=True)
+        # Verify debug logs were called for fallback logic
+        assert mock_logger.debug.called
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.nltk.download")
     @patch("file_organizer.utils.text_processing.stopwords")
     @patch("file_organizer.utils.text_processing.logger")
     def test_ensure_nltk_data_download_fails(
