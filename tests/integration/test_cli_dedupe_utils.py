@@ -291,10 +291,20 @@ class TestDisplaySummary:
 
         mock_console = MagicMock()
         with patch("file_organizer.cli.dedupe.console", mock_console):
-            display_summary(
-                total_groups, total_duplicates, total_removed, space_saved, dry_run=dry_run
-            )
+            display_summary(total_groups, total_duplicates, total_removed, space_saved, dry_run)
         assert mock_console.print.call_count == 4
+        # Verify the Panel content (4th print call, 1st positional arg)
+        panel = mock_console.print.call_args_list[3][0][0]
+        content = str(panel.renderable)
+        assert "Duplicate groups found:" in content
+        assert f"{total_groups}" in content
+        assert f"{total_duplicates}" in content
+        if dry_run:
+            assert "DRY RUN SUMMARY" in content
+            assert "would be removed" in content
+        else:
+            assert "DEDUPLICATION COMPLETE" in content
+            assert "Files removed:" in content
 
 
 # ---------------------------------------------------------------------------
