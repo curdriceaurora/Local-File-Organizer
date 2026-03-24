@@ -69,14 +69,24 @@ def _write_text(path: Path, content: str | None = None) -> None:
     path.write_text(content or _fake.text(max_nb_chars=200), encoding="utf-8")
 
 
-def _write_bytes(path: Path, data: bytes) -> None:
-    """Write a binary file."""
+def _write_bytes(path: Path, data: bytes, unique_suffix: bytes | None = None) -> None:
+    """Write a binary file.
+
+    If unique_suffix is provided, append it to the data to ensure distinct content.
+    This prevents deduplication when the same stub is used multiple times.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
+    if unique_suffix is not None:
+        data = data + unique_suffix
     path.write_bytes(data)
 
 
-def _copy_sample(name: str, dest: Path) -> None:
-    """Copy a committed sample file to *dest*."""
+def _copy_sample(name: str, dest: Path, unique_suffix: bytes | None = None) -> None:
+    """Copy a committed sample file to *dest*.
+
+    If unique_suffix is provided, append it to the file to ensure distinct content.
+    This prevents deduplication when the same sample is copied multiple times.
+    """
     src = _SAMPLES_DIR / name
     if not src.exists():
         raise FileNotFoundError(
@@ -85,6 +95,10 @@ def _copy_sample(name: str, dest: Path) -> None:
         )
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dest)
+    if unique_suffix is not None:
+        # Append unique bytes to make this copy distinct from others
+        with open(dest, "ab") as f:
+            f.write(unique_suffix)
 
 
 def _csv_content(rows: int = 5) -> str:
@@ -143,8 +157,8 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
     # Work/Projects/2024/ (7 files)
     p2024 = work / "Projects" / "2024"
-    _copy_sample("sample.docx", p2024 / "spec_v1.docx")
-    _copy_sample("sample.docx", p2024 / "spec_v2.docx")
+    _copy_sample("sample.docx", p2024 / "spec_v1.docx", unique_suffix=b"_v1")
+    _copy_sample("sample.docx", p2024 / "spec_v2.docx", unique_suffix=b"_v2")
     _write_text(p2024 / "architecture.md", "# Architecture\n\n" + _fake.paragraph(nb_sentences=4))
     _write_text(p2024 / "data_export.csv", _csv_content())
     _write_text(p2024 / "meeting_notes.txt", _fake.text(max_nb_chars=400))
@@ -153,31 +167,31 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
     # Work/Projects/2023/ (4 files)
     p2023 = work / "Projects" / "2023"
-    _write_bytes(p2023 / "old_spec.pdf", _PDF_STUB)
+    _write_bytes(p2023 / "old_spec.pdf", _PDF_STUB, unique_suffix=b"_oldspec")
     _write_text(p2023 / "notes.txt")
     _copy_sample("sample.docx", p2023 / "report.docx")
     _write_text(p2023 / "data.csv", _csv_content(rows=3))
 
     # Work/Finance/ (5 files)
     wfin = work / "Finance"
-    _write_bytes(wfin / "invoice_001.pdf", _PDF_STUB)
-    _write_bytes(wfin / "invoice_002.pdf", _PDF_STUB)
+    _write_bytes(wfin / "invoice_001.pdf", _PDF_STUB, unique_suffix=b"_001")
+    _write_bytes(wfin / "invoice_002.pdf", _PDF_STUB, unique_suffix=b"_002")
     _write_text(wfin / "expenses_q1.csv", _csv_content())
     _write_text(wfin / "expenses_q2.csv", _csv_content())
-    _write_bytes(wfin / "report_summary.pdf", _PDF_STUB)
+    _write_bytes(wfin / "report_summary.pdf", _PDF_STUB, unique_suffix=b"_summary")
 
     # Work/Reports/ (5 files)
     wrep = work / "Reports"
-    _copy_sample("sample.docx", wrep / "Q1_summary.docx")
-    _copy_sample("sample.docx", wrep / "Q2_summary.docx")
-    _copy_sample("sample.docx", wrep / "Q3_summary.docx")
-    _copy_sample("sample.docx", wrep / "Q4_summary.docx")
-    _write_bytes(wrep / "annual_review.pdf", _PDF_STUB)
+    _copy_sample("sample.docx", wrep / "Q1_summary.docx", unique_suffix=b"_q1")
+    _copy_sample("sample.docx", wrep / "Q2_summary.docx", unique_suffix=b"_q2")
+    _copy_sample("sample.docx", wrep / "Q3_summary.docx", unique_suffix=b"_q3")
+    _copy_sample("sample.docx", wrep / "Q4_summary.docx", unique_suffix=b"_q4")
+    _write_bytes(wrep / "annual_review.pdf", _PDF_STUB, unique_suffix=b"_annual")
 
     # Work/Clients/ (3 files)
     wclients = work / "Clients"
     _write_text(wclients / "client_a_notes.txt", _fake.text(max_nb_chars=300))
-    _write_bytes(wclients / "contract_draft.pdf", _PDF_STUB)
+    _write_bytes(wclients / "contract_draft.pdf", _PDF_STUB, unique_suffix=b"_draft")
     _copy_sample("sample.docx", wclients / "proposal.docx")
 
     # -- Personal/ ------------------------------------------------------------
@@ -185,37 +199,37 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
     # Personal/Finance/ (5 files)
     pfin = personal / "Finance"
-    _write_bytes(pfin / "tax_2023.pdf", _PDF_STUB)
-    _write_bytes(pfin / "tax_2024.pdf", _PDF_STUB)
+    _write_bytes(pfin / "tax_2023.pdf", _PDF_STUB, unique_suffix=b"_2023")
+    _write_bytes(pfin / "tax_2024.pdf", _PDF_STUB, unique_suffix=b"_2024")
     _copy_sample("sample.xlsx", pfin / "budget.xlsx")
     _write_text(pfin / "receipts.csv", _csv_content(rows=3))
-    _write_bytes(pfin / "savings_plan.pdf", _PDF_STUB)
+    _write_bytes(pfin / "savings_plan.pdf", _PDF_STUB, unique_suffix=b"_savings")
 
     # Personal/Health/ (4 files)
     phealth = personal / "Health"
-    _write_bytes(phealth / "medical_record.pdf", _PDF_STUB)
+    _write_bytes(phealth / "medical_record.pdf", _PDF_STUB, unique_suffix=b"_medical")
     _write_text(phealth / "fitness_log.csv", _csv_content())
-    _write_bytes(phealth / "prescriptions.pdf", _PDF_STUB)
-    _write_bytes(phealth / "insurance.pdf", _PDF_STUB)
+    _write_bytes(phealth / "prescriptions.pdf", _PDF_STUB, unique_suffix=b"_rx")
+    _write_bytes(phealth / "insurance.pdf", _PDF_STUB, unique_suffix=b"_insurance")
 
     # Personal/Travel/ (5 files)
     ptravel = personal / "Travel"
     _write_text(ptravel / "itinerary_paris.txt", _fake.text(max_nb_chars=400))
-    _write_bytes(ptravel / "hotel_booking.pdf", _PDF_STUB)
+    _write_bytes(ptravel / "hotel_booking.pdf", _PDF_STUB, unique_suffix=b"_paris")
     _write_text(ptravel / "packing_list.md", "# Packing List\n\n" + _fake.text(max_nb_chars=200))
     _write_text(ptravel / "photo_notes.md", "# Photo Notes\n\n" + _fake.paragraph())
-    _write_bytes(ptravel / "booking_london.pdf", _PDF_STUB)
+    _write_bytes(ptravel / "booking_london.pdf", _PDF_STUB, unique_suffix=b"_london")
 
     # -- Media/ ---------------------------------------------------------------
     media = root / "Media"
 
     # Media/Photos/ (5 files)
     photos = media / "Photos"
-    _copy_sample("sample.jpg", photos / "vacation_001.jpg")
-    _copy_sample("sample.jpg", photos / "vacation_002.jpg")
-    _copy_sample("sample.png", photos / "portrait.png")
-    _copy_sample("sample.jpg", photos / "birthday.jpg")
-    _copy_sample("sample.png", photos / "sunset.png")
+    _copy_sample("sample.jpg", photos / "vacation_001.jpg", unique_suffix=b"_001")
+    _copy_sample("sample.jpg", photos / "vacation_002.jpg", unique_suffix=b"_002")
+    _copy_sample("sample.png", photos / "portrait.png", unique_suffix=b"_portrait")
+    _copy_sample("sample.jpg", photos / "birthday.jpg", unique_suffix=b"_birthday")
+    _copy_sample("sample.png", photos / "sunset.png", unique_suffix=b"_sunset")
 
     # Media/Audio/ (3 files) — processed via metadata pipeline, no AI mock needed
     audio = media / "Audio"
@@ -236,7 +250,7 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
     a2022 = archive / "2022"
     _write_text(a2022 / "archived_docs.txt")
     _write_text(a2022 / "old_notes.csv", _csv_content(rows=3))
-    _write_bytes(a2022 / "summary_2022.pdf", _PDF_STUB)
+    _write_bytes(a2022 / "summary_2022.pdf", _PDF_STUB, unique_suffix=b"_2022")
 
     # Archive/Misc/ (3 files)
     amisc = archive / "Misc"

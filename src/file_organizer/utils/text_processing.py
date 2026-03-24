@@ -34,7 +34,23 @@ def ensure_nltk_data() -> None:
             if dataset == "stopwords":
                 stopwords.words("english")
             elif dataset == "punkt":
-                word_tokenize("test")
+                # Check if punkt or punkt_tab is available (3.8+ uses punkt_tab)
+                try:
+                    word_tokenize("test")
+                except LookupError:
+                    # If punkt fails, it might be because punkt_tab is needed (NLTK 3.8+)
+                    logger.debug("punkt not available, trying punkt_tab")
+                    try:
+                        nltk.download("punkt_tab", quiet=True)
+                        word_tokenize("test")
+                    except LookupError:
+                        # If punkt_tab also fails, fall back to punkt (older NLTK versions)
+                        logger.debug("punkt_tab failed, falling back to punkt")
+                        try:
+                            nltk.download("punkt", quiet=True)
+                            word_tokenize("test")
+                        except Exception as e:
+                            logger.debug(f"Failed to load punkt: {e}")
             elif dataset == "wordnet":
                 from nltk.corpus import wordnet
 
@@ -327,6 +343,9 @@ def extract_keywords(text: str, top_n: int = 5) -> list[str]:
 
         word_freq = Counter(words)
         return [word for word, _ in word_freq.most_common(top_n)]
+
+    # Ensure NLTK data is available before attempting tokenization
+    ensure_nltk_data()
 
     try:
         from nltk.probability import FreqDist

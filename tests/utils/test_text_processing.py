@@ -51,9 +51,11 @@ class TestTextProcessing:
 
             ensure_nltk_data()
 
-            assert mock_download.call_count == 3
+            # With NLTK 3.8+ compatibility, we try punkt_tab as fallback, then punkt
+            assert mock_download.call_count == 4
             mock_download.assert_any_call("stopwords", quiet=True)
-            mock_download.assert_any_call("punkt", quiet=True)
+            mock_download.assert_any_call("punkt_tab", quiet=True)  # tried as fallback
+            mock_download.assert_any_call("punkt", quiet=True)  # fallback when punkt_tab fails
             mock_download.assert_any_call("wordnet", quiet=True)
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
