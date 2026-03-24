@@ -144,7 +144,11 @@ class TestTextProcessing:
         mock_tokenize: MagicMock,
         mock_download: MagicMock,
     ) -> None:
-        """Test ensure_nltk_data punkt exception handling with direct control flow."""
+        """
+        Exercise ensure_nltk_data's punkt/punkt_tab exception-handling paths by simulating successive tokenization failures.
+        
+        Simulates word_tokenize raising LookupError, then LookupError, then RuntimeError while wordnet succeeds; calls ensure_nltk_data() and asserts the logger produced debug messages containing "punkt not available", "punkt_tab failed", and "Failed to load punkt".
+        """
         # Ensure stopwords succeeds so we focus on punkt path
         mock_stopwords.words.return_value = ["test"]
 

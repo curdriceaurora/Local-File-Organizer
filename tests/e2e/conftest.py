@@ -64,16 +64,29 @@ _AVI_STUB = b"RIFF\x00\x00\x00\x00AVI "
 
 
 def _write_text(path: Path, content: str | None = None) -> None:
-    """Write a text file, generating faker content if none provided."""
+    """
+    Write UTF-8 text to `path`, creating parent directories if needed.
+    
+    If `content` is None, writes deterministic faker-generated text (seeded) up to 200 characters.
+    
+    Parameters:
+        path (Path): Destination file path; parent directories will be created.
+        content (str | None): Text to write. If omitted, deterministic sample text is generated.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content or _fake.text(max_nb_chars=200), encoding="utf-8")
 
 
 def _write_bytes(path: Path, data: bytes, unique_suffix: bytes | None = None) -> None:
-    """Write a binary file.
-
-    If unique_suffix is provided, append it to the data to ensure distinct content.
-    This prevents deduplication when the same stub is used multiple times.
+    """
+    Write the given bytes to `path`, creating parent directories if necessary.
+    
+    If `unique_suffix` is provided, it is appended to `data` before writing to ensure the file's bytes differ from other copies (useful to prevent deduplication of repeated stubs).
+    
+    Parameters:
+        path (Path): Destination file path; parent directories will be created if missing.
+        data (bytes): Binary content to write.
+        unique_suffix (bytes | None): Optional bytes to append to `data` to make the written file unique.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     if unique_suffix is not None:
@@ -82,10 +95,16 @@ def _write_bytes(path: Path, data: bytes, unique_suffix: bytes | None = None) ->
 
 
 def _copy_sample(name: str, dest: Path, unique_suffix: bytes | None = None) -> None:
-    """Copy a committed sample file to *dest*.
-
-    If unique_suffix is provided, append it to the file to ensure distinct content.
-    This prevents deduplication when the same sample is copied multiple times.
+    """
+    Copy a committed sample file from the module samples directory to `dest`, optionally appending bytes to make the copy content distinct.
+    
+    If the source sample does not exist, raises FileNotFoundError. Ensures the destination's parent directory exists before writing.
+    
+    Parameters:
+        unique_suffix (bytes | None): Bytes to append to the copied file to guarantee distinct content when the same sample is copied multiple times.
+    
+    Raises:
+        FileNotFoundError: If the named sample file is not present in the committed samples directory.
     """
     src = _SAMPLES_DIR / name
     if not src.exists():
@@ -102,7 +121,15 @@ def _copy_sample(name: str, dest: Path, unique_suffix: bytes | None = None) -> N
 
 
 def _csv_content(rows: int = 5) -> str:
-    """Generate a simple CSV string with faker data."""
+    """
+    Generate a CSV string containing fake name, value, and date records.
+    
+    Parameters:
+        rows (int): Number of data rows to generate (excluding the header). Defaults to 5.
+    
+    Returns:
+        str: CSV-formatted string starting with the header "name,value,date" followed by `rows` records.
+    """
     header = "name,value,date"
     lines = [header]
     for _ in range(rows):
@@ -117,31 +144,13 @@ def _csv_content(rows: int = 5) -> str:
 
 @pytest.fixture(scope="session")
 def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """Build a realistic ~60-file nested folder tree.
-
-    Session-scoped so benchmark tests can reuse the same tree without
-    rebuilding it for each test function.
-
-    Approximate structure (61 files across 16 leaf directories):
-        complex_tree/
-        ├── Root           (5 files)
-        ├── Work/
-        │   ├── Projects/2024   (7 files)
-        │   ├── Projects/2023   (4 files)
-        │   ├── Finance         (5 files)
-        │   ├── Reports         (5 files)
-        │   └── Clients         (3 files)
-        ├── Personal/
-        │   ├── Finance         (5 files)
-        │   ├── Health          (4 files)
-        │   └── Travel          (5 files)
-        ├── Media/
-        │   ├── Photos          (5 files)
-        │   ├── Audio           (3 files)
-        │   └── Video           (3 files)
-        └── Archive/
-            ├── 2022            (3 files)
-            └── Misc            (3 files)
+    """
+    Builds a realistic nested directory tree of sample files used by E2E tests.
+    
+    Creates ~60 files across structured folders (Work, Personal, Media, Archive, etc.) and is intended to be used as a session-scoped fixture so benchmark tests can reuse the same tree without rebuilding it.
+    
+    Returns:
+        Path: Root path to the created `e2e_tree` directory containing the populated file tree.
     """
     root = tmp_path_factory.mktemp("e2e_tree")
 

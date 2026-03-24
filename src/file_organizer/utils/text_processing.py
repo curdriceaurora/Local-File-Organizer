@@ -18,10 +18,10 @@ from loguru import logger
 
 
 def ensure_nltk_data() -> None:
-    """Ensure NLTK data is downloaded (quietly).
-
-    Downloads required NLTK datasets if not already present.
-    This is called automatically on first use.
+    """
+    Ensure required NLTK datasets are present for text processing.
+    
+    If NLTK is not installed this function logs a warning and returns immediately. For each required dataset ('stopwords', 'punkt', 'wordnet') it verifies availability and attempts a quiet download when missing, logging informational and debug messages for download attempts and warnings on download failure. This function does not raise on missing resources; failures are reported via logs.
     """
     if not NLTK_AVAILABLE:
         logger.warning("NLTK not available, text processing will be limited")
@@ -327,14 +327,15 @@ def sanitize_filename(
 
 
 def extract_keywords(text: str, top_n: int = 5) -> list[str]:
-    """Extract top keywords from text.
-
-    Args:
-        text: Input text
-        top_n: Number of top keywords to return
-
+    """
+    Extract the most frequent meaningful words from input text.
+    
+    Parameters:
+        text (str): Text to analyze for keyword extraction.
+        top_n (int): Number of top keywords to return.
+    
     Returns:
-        List of top keywords
+        list[str]: Top `top_n` keywords ordered by frequency; returns an empty list if extraction fails or no keywords are found.
     """
     if not NLTK_AVAILABLE:
         # Fallback: simple word frequency
