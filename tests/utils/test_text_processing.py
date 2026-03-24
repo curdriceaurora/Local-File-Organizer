@@ -134,6 +134,44 @@ class TestTextProcessing:
         mock_logger.warning.assert_called()
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.nltk.download")
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("file_organizer.utils.text_processing.stopwords")
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_ensure_nltk_data_punkt_exception_handling(
+        self,
+        mock_logger: MagicMock,
+        mock_stopwords: MagicMock,
+        mock_tokenize: MagicMock,
+        mock_download: MagicMock,
+    ) -> None:
+        """Test ensure_nltk_data punkt exception handling with direct control flow."""
+        # Ensure stopwords succeeds so we focus on punkt path
+        mock_stopwords.words.return_value = ["test"]
+
+        # Make word_tokenize fail on punkt check to enter exception handler at line 40
+        # First call (line 39): raises LookupError
+        # Then punkt_tab download, second call (line 45): raises LookupError
+        # Then punkt download, third call (line 51): raises RuntimeError
+        mock_tokenize.side_effect = [
+            LookupError("punkt missing"),  # Line 39 exception
+            LookupError("punkt_tab missing"),  # Line 45 exception
+            RuntimeError("punkt load error"),  # Line 51 exception
+        ]
+
+        with patch("nltk.corpus.wordnet") as mock_wordnet:
+            mock_wordnet.synsets.return_value = []  # wordnet succeeds
+            ensure_nltk_data()
+
+        # Verify all three exception handlers were entered (indicating all lines executed)
+        # Line 40 exception handler
+        assert any("punkt not available" in str(call) for call in mock_logger.debug.call_args_list)
+        # Line 46 exception handler
+        assert any("punkt_tab failed" in str(call) for call in mock_logger.debug.call_args_list)
+        # Line 52 exception handler
+        assert any("Failed to load punkt" in str(call) for call in mock_logger.debug.call_args_list)
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.stopwords")
     def test_get_unwanted_words_with_nltk(self, mock_stopwords: MagicMock) -> None:
         """Test getting unwanted words including NLTK stopwords."""
