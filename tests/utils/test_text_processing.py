@@ -18,7 +18,6 @@ from file_organizer.utils.text_processing import (
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
-@pytest.mark.unit
 class TestTextProcessing:
     """Test text processing utilities."""
 
@@ -364,7 +363,6 @@ class TestTextProcessing:
 # ────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
 class TestTextProcessingExpanded:
     """Expanded tests for text_processing utilities."""
 
