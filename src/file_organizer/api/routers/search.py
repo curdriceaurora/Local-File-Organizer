@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 from collections.abc import Iterator
 from datetime import UTC, datetime
@@ -9,10 +11,11 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 
+from file_organizer.api.cache import CacheBackend, InMemoryCache
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
+from file_organizer.api.models import SearchResponse, SearchResult
 from file_organizer.api.utils import is_hidden, resolve_path
 
 logger = logging.getLogger(__name__)
@@ -21,7 +24,11 @@ router = APIRouter(tags=["search"])
 
 _MAX_TRAVERSAL = 10_000
 _MAX_SEMANTIC = 2_000
-_MAX_LIMIT = 500
+_MAX_LIMIT = 1000
+_CACHE_TTL_SECONDS = 300  # 5 minutes
+
+# Global cache instance for search results
+_search_cache: CacheBackend = InMemoryCache()
 
 
 class _ScoringTiers:
@@ -34,15 +41,30 @@ class _ScoringTiers:
     NO_MATCH = 0.0
 
 
-class SearchResult(BaseModel):
-    """Single search result."""
+def _generate_cache_key(
+    query: str,
+    file_type: str | None,
+    path: str | None,
+    semantic: bool,
+    skip: int,
+    limit: int,
+) -> str:
+    """Generate a cache key for search results.
 
-    filename: str
-    path: str
-    score: float
-    type: str | None = None
-    size: int | None = None
-    created: str | None = None
+    Creates a deterministic hash from search parameters to use as cache key.
+    """
+    params = {
+        "q": query,
+        "type": file_type,
+        "path": path,
+        "semantic": semantic,
+        "skip": skip,
+        "limit": limit,
+    }
+    # Create deterministic JSON string and hash it
+    params_json = json.dumps(params, sort_keys=True)
+    hash_digest = hashlib.sha256(params_json.encode()).hexdigest()
+    return f"search:{hash_digest[:16]}"
 
 
 def _relative_path(fp: Path, roots: list[Path]) -> str:
@@ -244,19 +266,19 @@ def _semantic_search(
     return results
 
 
-@router.get("/search", response_model=None)
+@router.get("/search", response_model=SearchResponse)
 def search(
     q: str | None = Query(None, description="Search query"),
     file_type: str | None = Query(None, alias="type"),
-    limit: int | None = None,
-    offset: int | None = None,
+    limit: int = Query(100, ge=1, le=_MAX_LIMIT),
+    skip: int = Query(0, ge=0),
     path: str | None = None,
     semantic: bool = Query(False, description="Use hybrid BM25+vector semantic search"),
     settings: ApiSettings = Depends(get_settings),
-) -> list[SearchResult] | JSONResponse:
+) -> SearchResponse | JSONResponse:
     """Search for files by query.
 
-    Supports filtering, pagination, and relevance scoring.
+    Supports filtering, pagination, relevance scoring, and result caching.
 
     When ``semantic=true`` the search uses hybrid BM25+vector retrieval
     (Reciprocal Rank Fusion) instead of the default keyword scan.  The
@@ -271,10 +293,15 @@ def search(
             content={"detail": "Query parameter 'q' is required"},
         )
 
-    # Clamp limit to a safe upper bound to prevent unbounded allocations.
-    effective_limit: int | None = None
-    if limit is not None and limit > 0:
-        effective_limit = min(limit, _MAX_LIMIT)
+    # Check cache first
+    cache_key = _generate_cache_key(q, file_type, path, semantic, skip, limit)
+    cached_result = _search_cache.get(cache_key)
+    if cached_result:
+        try:
+            cached_data = json.loads(cached_result)
+            return SearchResponse(**cached_data)
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.warning("Failed to deserialize cached search result: %s", exc)
 
     # Determine search roots (normalize paths for consistency)
     if path:
@@ -290,19 +317,19 @@ def search(
     # Semantic path — hybrid BM25 + vector retrieval
     # ------------------------------------------------------------------
     if semantic:
-        skip = max(0, offset or 0)
         if skip >= _MAX_SEMANTIC:
-            return []
+            response = SearchResponse(items=[], total=0, skip=skip, limit=limit)
+            _search_cache.set(cache_key, json.dumps(response.model_dump()), ttl_seconds=_CACHE_TTL_SECONDS)
+            return response
         try:
-            if effective_limit is not None:
-                # Fetch skip + limit so pagination works correctly, but cap at _MAX_SEMANTIC
-                top_k = min(skip + effective_limit, _MAX_SEMANTIC)
-                results = _semantic_search(search_roots, q, file_type, top_k=top_k)
-                return results[skip : skip + effective_limit]
-            else:
-                # limit=0 or limit=None → no explicit cap (consistent with keyword path)
-                results = _semantic_search(search_roots, q, file_type, top_k=_MAX_SEMANTIC)
-                return results[skip:]
+            # Fetch skip + limit so pagination works correctly, but cap at _MAX_SEMANTIC
+            top_k = min(skip + limit, _MAX_SEMANTIC)
+            results = _semantic_search(search_roots, q, file_type, top_k=top_k)
+            total = len(results)
+            paged_results = results[skip : skip + limit]
+            response = SearchResponse(items=paged_results, total=total, skip=skip, limit=limit)
+            _search_cache.set(cache_key, json.dumps(response.model_dump()), ttl_seconds=_CACHE_TTL_SECONDS)
+            return response
         except ImportError:
             return JSONResponse(
                 status_code=503,
@@ -315,7 +342,7 @@ def search(
             )
 
     # ------------------------------------------------------------------
-    # Default keyword path — unchanged
+    # Default keyword path — with caching and pagination
     # ------------------------------------------------------------------
     results: list[SearchResult] = []
     total_traversed = 0
@@ -355,11 +382,14 @@ def search(
     # Sort by score descending, then by filename for deterministic pagination
     results.sort(key=lambda r: (-r.score, r.filename))
 
-    # Apply pagination (handle limit=0 as explicit "no limit")
-    skip = offset or 0
-    if effective_limit is not None:
-        results = results[skip : skip + effective_limit]
-    else:
-        results = results[skip:]
+    # Calculate total before pagination
+    total = len(results)
 
-    return results
+    # Apply pagination
+    paged_results = results[skip : skip + limit]
+
+    # Create response and cache it
+    response = SearchResponse(items=paged_results, total=total, skip=skip, limit=limit)
+    _search_cache.set(cache_key, json.dumps(response.model_dump()), ttl_seconds=_CACHE_TTL_SECONDS)
+
+    return response

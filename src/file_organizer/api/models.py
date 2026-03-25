@@ -418,6 +418,26 @@ class StorageStatsResponse(BaseModel):
     largest_files: list[FileInfo]
 
 
+class SearchResult(BaseModel):
+    """Single search result."""
+
+    filename: str
+    path: str
+    score: float
+    type: str | None = None
+    size: int | None = None
+    created: str | None = None
+
+
+class SearchResponse(BaseModel):
+    """Paginated search results."""
+
+    items: list[SearchResult]
+    total: int
+    skip: int
+    limit: int
+
+
 class ApiErrorResponse(BaseModel):
     """Standard error response body."""
 
