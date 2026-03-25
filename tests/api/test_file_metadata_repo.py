@@ -16,6 +16,7 @@ from file_organizer.api.repositories.file_metadata_repo import (
     PaginatedFileMetadata,
     _cache_key,
     _cache_payload,
+    _checksum_cache_key,
 )
 
 pytestmark = pytest.mark.unit
@@ -675,3 +676,253 @@ def test_batch_operations():
         session_get, workspace_id="ws-1", relative_paths=[]
     )
     assert result_empty_get == {}
+
+
+def test_checksum_cache():
+    """Test checksum-based duplicate detection cache."""
+    from datetime import UTC, datetime
+    from unittest.mock import MagicMock
+    from sqlalchemy.orm import Session
+    from file_organizer.api.cache import InMemoryCache
+
+    # Test checksum cache key format
+    key = _checksum_cache_key("ws-1", "abc123sha256")
+    assert key == "file_checksum:ws-1:abc123sha256"
+
+    # Test find_by_checksum without cache
+    session = MagicMock(spec=Session)
+    row1 = MagicMock(spec=FileMetadata)
+    row1.id = "id1"
+    row1.workspace_id = "ws-1"
+    row1.path = "/abs/file1.txt"
+    row1.relative_path = "file1.txt"
+    row1.name = "file1.txt"
+    row1.size_bytes = 100
+    row1.mime_type = "text/plain"
+    row1.checksum_sha256 = "checksum123"
+    row1.last_modified = datetime(2025, 1, 1, tzinfo=UTC)
+    row1.extra_json = None
+
+    row2 = MagicMock(spec=FileMetadata)
+    row2.id = "id2"
+    row2.workspace_id = "ws-1"
+    row2.path = "/abs/file2.txt"
+    row2.relative_path = "file2.txt"
+    row2.name = "file2.txt"
+    row2.size_bytes = 100
+    row2.mime_type = "text/plain"
+    row2.checksum_sha256 = "checksum123"
+    row2.last_modified = datetime(2025, 1, 2, tzinfo=UTC)
+    row2.extra_json = None
+
+    query = MagicMock()
+    session.query.return_value = query
+    query.filter.return_value = query
+    query.all.return_value = [row1, row2]
+
+    result = FileMetadataRepository.find_by_checksum(
+        session,
+        workspace_id="ws-1",
+        checksum_sha256="checksum123",
+    )
+
+    assert len(result) == 2
+    assert result[0] is row1
+    assert result[1] is row2
+    session.query.assert_called_once_with(FileMetadata)
+
+    # Test find_by_checksum with cache hit
+    session_cached = MagicMock(spec=Session)
+    cache = MagicMock(spec=InMemoryCache)
+    cache.get.return_value = json.dumps({"file_ids": ["id1", "id2"]})
+
+    session_cached.get.side_effect = [row1, row2]
+
+    result_cached = FileMetadataRepository.find_by_checksum(
+        session_cached,
+        workspace_id="ws-1",
+        checksum_sha256="checksum123",
+        cache=cache,
+    )
+
+    assert len(result_cached) == 2
+    assert result_cached[0] is row1
+    assert result_cached[1] is row2
+    cache.get.assert_called_once_with("file_checksum:ws-1:checksum123")
+    # Should not query database when cache hits
+    session_cached.query.assert_not_called()
+
+    # Test find_by_checksum with cache miss populates cache
+    session_miss = MagicMock(spec=Session)
+    cache_miss = MagicMock(spec=InMemoryCache)
+    cache_miss.get.return_value = None
+
+    query_miss = MagicMock()
+    session_miss.query.return_value = query_miss
+    query_miss.filter.return_value = query_miss
+    query_miss.all.return_value = [row1, row2]
+
+    result_miss = FileMetadataRepository.find_by_checksum(
+        session_miss,
+        workspace_id="ws-1",
+        checksum_sha256="checksum123",
+        cache=cache_miss,
+        cache_ttl_seconds=600,
+    )
+
+    assert len(result_miss) == 2
+    cache_miss.set.assert_called_once()
+    set_call_args = cache_miss.set.call_args
+    assert set_call_args[0][0] == "file_checksum:ws-1:checksum123"
+    assert set_call_args[1]["ttl_seconds"] == 600
+    cached_data = json.loads(set_call_args[0][1])
+    assert cached_data["file_ids"] == ["id1", "id2"]
+
+    # Test find_by_checksum with empty checksum
+    session_empty = MagicMock(spec=Session)
+    result_empty = FileMetadataRepository.find_by_checksum(
+        session_empty,
+        workspace_id="ws-1",
+        checksum_sha256="",
+    )
+    assert result_empty == []
+    session_empty.query.assert_not_called()
+
+    # Test find_by_checksum with None checksum
+    session_none = MagicMock(spec=Session)
+    result_none = FileMetadataRepository.find_by_checksum(
+        session_none,
+        workspace_id="ws-1",
+        checksum_sha256=None,
+    )
+    assert result_none == []
+    session_none.query.assert_not_called()
+
+    # Test find_by_checksum with stale cache (invalid JSON)
+    session_stale = MagicMock(spec=Session)
+    cache_stale = MagicMock(spec=InMemoryCache)
+    cache_stale.get.return_value = "invalid-json{"
+
+    query_stale = MagicMock()
+    session_stale.query.return_value = query_stale
+    query_stale.filter.return_value = query_stale
+    query_stale.all.return_value = [row1]
+
+    result_stale = FileMetadataRepository.find_by_checksum(
+        session_stale,
+        workspace_id="ws-1",
+        checksum_sha256="checksum123",
+        cache=cache_stale,
+    )
+
+    assert len(result_stale) == 1
+    cache_stale.delete.assert_called_once_with("file_checksum:ws-1:checksum123")
+
+    # Test find_by_checksum with stale cache (missing rows)
+    session_missing = MagicMock(spec=Session)
+    cache_missing = MagicMock(spec=InMemoryCache)
+    cache_missing.get.return_value = json.dumps({"file_ids": ["id1", "id2"]})
+
+    # session.get returns None for id2 (missing)
+    session_missing.get.side_effect = [row1, None]
+
+    query_missing = MagicMock()
+    session_missing.query.return_value = query_missing
+    query_missing.filter.return_value = query_missing
+    query_missing.all.return_value = [row1, row2]
+
+    result_missing = FileMetadataRepository.find_by_checksum(
+        session_missing,
+        workspace_id="ws-1",
+        checksum_sha256="checksum123",
+        cache=cache_missing,
+    )
+
+    # Should fall through to DB query when cached row is missing
+    assert len(result_missing) == 2
+    cache_missing.delete.assert_called_once_with("file_checksum:ws-1:checksum123")
+
+    # Test upsert invalidates checksum cache on update
+    session_upsert = MagicMock(spec=Session)
+    cache_upsert = MagicMock(spec=InMemoryCache)
+
+    existing = MagicMock(spec=FileMetadata)
+    existing.checksum_sha256 = "old_checksum"
+
+    query_upsert = MagicMock()
+    session_upsert.query.return_value = query_upsert
+    query_upsert.filter.return_value = query_upsert
+    query_upsert.first.return_value = existing
+
+    FileMetadataRepository.upsert(
+        session_upsert,
+        workspace_id="ws-1",
+        path="/abs/file.txt",
+        relative_path="file.txt",
+        name="file.txt",
+        size_bytes=100,
+        checksum_sha256="new_checksum",
+        cache=cache_upsert,
+    )
+
+    # Should invalidate both old and new checksum caches
+    delete_calls = [call[0][0] for call in cache_upsert.delete.call_args_list]
+    assert "file_checksum:ws-1:old_checksum" in delete_calls
+    assert "file_checksum:ws-1:new_checksum" in delete_calls
+
+    # Test delete_by_relative_path invalidates checksum cache
+    session_delete = MagicMock(spec=Session)
+    cache_delete = MagicMock(spec=InMemoryCache)
+
+    row_delete = MagicMock(spec=FileMetadata)
+    row_delete.checksum_sha256 = "checksum_to_delete"
+
+    query_delete = MagicMock()
+    session_delete.query.return_value = query_delete
+    query_delete.filter.return_value = query_delete
+    query_delete.first.return_value = row_delete
+
+    FileMetadataRepository.delete_by_relative_path(
+        session_delete,
+        workspace_id="ws-1",
+        relative_path="file.txt",
+        cache=cache_delete,
+    )
+
+    # Should invalidate checksum cache
+    delete_calls = [call[0][0] for call in cache_delete.delete.call_args_list]
+    assert "file_checksum:ws-1:checksum_to_delete" in delete_calls
+
+    # Test bulk_upsert invalidates checksum caches
+    session_bulk = MagicMock(spec=Session)
+    cache_bulk = MagicMock(spec=InMemoryCache)
+
+    records = [
+        {
+            "workspace_id": "ws-1",
+            "path": "/abs/file1.txt",
+            "relative_path": "file1.txt",
+            "name": "file1.txt",
+            "size_bytes": 100,
+            "checksum_sha256": "checksum1",
+        },
+        {
+            "workspace_id": "ws-1",
+            "path": "/abs/file2.txt",
+            "relative_path": "file2.txt",
+            "name": "file2.txt",
+            "size_bytes": 200,
+            "checksum_sha256": "checksum2",
+        },
+    ]
+
+    FileMetadataRepository.bulk_upsert(
+        session_bulk,
+        records=records,
+        cache=cache_bulk,
+    )
+
+    # Should invalidate checksum caches for all records
+    delete_calls = [call[0][0] for call in cache_bulk.delete.call_args_list]
+    assert "file_checksum:ws-1:checksum1" in delete_calls
+    assert "file_checksum:ws-1:checksum2" in delete_calls

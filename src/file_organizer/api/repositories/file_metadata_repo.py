@@ -14,6 +14,7 @@ from file_organizer.api.cache import CacheBackend
 from file_organizer.api.db_models import FileMetadata
 
 _CACHE_PREFIX = "file_metadata"
+_CHECKSUM_CACHE_PREFIX = "file_checksum"
 
 
 class FileMetadataDict(TypedDict, total=False):
@@ -43,6 +44,10 @@ class PaginatedFileMetadata(TypedDict):
 
 def _cache_key(workspace_id: str, relative_path: str) -> str:
     return f"{_CACHE_PREFIX}:{workspace_id}:{relative_path}"
+
+
+def _checksum_cache_key(workspace_id: str, checksum: str) -> str:
+    return f"{_CHECKSUM_CACHE_PREFIX}:{workspace_id}:{checksum}"
 
 
 def _cache_payload(row: FileMetadata) -> dict[str, object]:
@@ -88,6 +93,11 @@ class FileMetadataRepository:
             )
             .first()
         )
+
+        old_checksum = None
+        if row is not None:
+            old_checksum = row.checksum_sha256
+
         if row is None:
             row = FileMetadata(
                 workspace_id=workspace_id,
@@ -119,6 +129,14 @@ class FileMetadataRepository:
                 json.dumps(_cache_payload(row)),
                 ttl_seconds=cache_ttl_seconds,
             )
+
+            # Invalidate old checksum cache if checksum changed
+            if old_checksum is not None and old_checksum != checksum_sha256:
+                cache.delete(_checksum_cache_key(workspace_id, old_checksum))
+
+            # Invalidate new checksum cache to ensure consistency
+            if checksum_sha256 is not None:
+                cache.delete(_checksum_cache_key(workspace_id, checksum_sha256))
 
         return row
 
@@ -264,10 +282,15 @@ class FileMetadataRepository:
         )
         if row is None:
             return False
+
+        checksum = row.checksum_sha256
+
         session.delete(row)
         session.flush()
         if cache is not None:
             cache.delete(_cache_key(workspace_id, relative_path))
+            if checksum is not None:
+                cache.delete(_checksum_cache_key(workspace_id, checksum))
         return True
 
     @staticmethod
@@ -334,6 +357,9 @@ class FileMetadataRepository:
         if cache is not None:
             for rec in records:
                 cache.delete(_cache_key(rec["workspace_id"], rec["relative_path"]))
+                checksum = rec.get("checksum_sha256")
+                if checksum is not None:
+                    cache.delete(_checksum_cache_key(rec["workspace_id"], checksum))
 
         return len(records)
 
@@ -409,3 +435,69 @@ class FileMetadataRepository:
                     )
 
         return result
+
+    @staticmethod
+    def find_by_checksum(
+        session: Session,
+        *,
+        workspace_id: str,
+        checksum_sha256: str,
+        cache: CacheBackend | None = None,
+        cache_ttl_seconds: int = 900,
+    ) -> list[FileMetadata]:
+        """Find all files with the given checksum for duplicate detection.
+
+        Retrieves all file metadata records matching a specific checksum within
+        a workspace. Uses cache to avoid repeated queries during duplicate
+        detection operations. Returns empty list if checksum is None or empty.
+
+        Args:
+            session: Active SQLAlchemy session.
+            workspace_id: Workspace identifier.
+            checksum_sha256: SHA256 checksum to search for.
+            cache: Optional cache backend for improved performance.
+            cache_ttl_seconds: TTL for cached entries (default 900s).
+
+        Returns:
+            List of FileMetadata records with matching checksum.
+        """
+        if not checksum_sha256:
+            return []
+
+        if cache is not None:
+            cache_key = _checksum_cache_key(workspace_id, checksum_sha256)
+            cached = cache.get(cache_key)
+            if cached:
+                try:
+                    data = json.loads(cached)
+                    file_ids = data.get("file_ids")
+                except (TypeError, ValueError, AttributeError):
+                    file_ids = None
+                if isinstance(file_ids, list):
+                    rows = [session.get(FileMetadata, fid) for fid in file_ids]
+                    valid_rows = [r for r in rows if r is not None]
+                    if len(valid_rows) == len(file_ids):
+                        return valid_rows
+                cache.delete(cache_key)
+
+        rows = (
+            session.query(FileMetadata)
+            .filter(
+                and_(
+                    FileMetadata.workspace_id == workspace_id,
+                    FileMetadata.checksum_sha256 == checksum_sha256,
+                )
+            )
+            .all()
+        )
+
+        if cache is not None:
+            cache_key = _checksum_cache_key(workspace_id, checksum_sha256)
+            file_ids = [row.id for row in rows]
+            cache.set(
+                cache_key,
+                json.dumps({"file_ids": file_ids}),
+                ttl_seconds=cache_ttl_seconds,
+            )
+
+        return rows
