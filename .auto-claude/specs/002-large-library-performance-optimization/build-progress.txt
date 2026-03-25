@@ -1025,3 +1025,40 @@ Integrated BM25Persistence layer into BM25Index to enable optional disk-based ca
 - Error messages are clear and descriptive
 - Cache invalidation works correctly with incremental updates
 
+
+## [2026-03-24 22:30] Subtask subtask-5-1: Add batch file hashing with multiprocessing
+
+**Status:** ✅ COMPLETED
+
+**Changes Made:**
+- Added module-level `_hash_file()` function that can be pickled for multiprocessing
+- Implemented `compute_batch_parallel()` method in FileHasher class
+- Added parallel processing using ParallelProcessor with configurable workers
+- Integrated retry logic and error handling for failed files
+- Created comprehensive test `test_batch_hashing` with 20+ files
+- Supports both MD5 and SHA256 algorithms in parallel mode
+- Uses ProcessPoolExecutor for CPU-bound hashing operations
+
+**Implementation Details:**
+- Follows patterns from `parallel/processor.py` exactly
+- Module-level function enables pickling for ProcessPoolExecutor
+- Default config uses PROCESS executor type with CPU count workers
+- Automatic retry (2 attempts) for failed files
+- Graceful error handling - failed files logged but don't stop batch
+- Performance logging with files/second metrics
+
+**Files Modified:**
+- `src/file_organizer/services/deduplication/hasher.py` - Added parallel batch hashing
+- `tests/services/deduplication/test_hasher.py` - Added test_batch_hashing
+
+**Verification:**
+- Syntax validation: ✅ Both Python files compile successfully
+- Implementation pattern: ✅ Follows ParallelProcessor patterns
+- Test coverage: ✅ Comprehensive test with 20 files, error cases, and algorithms
+
+**Notes:**
+- For small batches (< 10 files), sequential compute_batch() is more efficient
+- Parallel version beneficial for large-scale deduplication (1000s of files)
+- Automatic worker scaling based on CPU count
+- Manual pytest verification needed due to missing dependencies in environment
+

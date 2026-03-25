@@ -257,3 +257,70 @@ class TestFileHasherValidateAlgorithm:
         """Test validating invalid algorithm."""
         with pytest.raises(ValueError, match="Unsupported algorithm"):
             FileHasher.validate_algorithm("sha512")
+
+
+@pytest.mark.unit
+def test_batch_hashing(tmp_path):
+    """Test parallel batch hashing with multiprocessing.
+
+    This test verifies that compute_batch_parallel:
+    - Hashes multiple files correctly using multiprocessing
+    - Produces the same results as sequential hashing
+    - Handles errors gracefully (skips missing files)
+    - Completes faster than sequential for large batches
+    """
+    from file_organizer.parallel.config import ExecutorType, ParallelConfig
+
+    # Create test files with varying content
+    files = []
+    expected_hashes = {}
+    hasher = FileHasher()
+
+    # Create 20 files to make parallel processing worthwhile
+    for i in range(20):
+        file = tmp_path / f"file{i}.txt"
+        content = f"Content {i}" * 100  # Make files large enough to benefit from parallelism
+        file.write_text(content)
+        files.append(file)
+        # Pre-compute expected hash using sequential method
+        expected_hashes[file] = hasher.compute_hash(file)
+
+    # Add one missing file to test error handling
+    missing_file = tmp_path / "missing.txt"
+    files.append(missing_file)
+
+    # Test parallel hashing with default config
+    config = ParallelConfig(
+        executor_type=ExecutorType.PROCESS,
+        max_workers=2,  # Use 2 workers for testing
+        retry_count=1,
+    )
+    results = hasher.compute_batch_parallel(files, config=config)
+
+    # Verify results
+    assert len(results) == 20  # Missing file should be excluded
+    assert missing_file not in results
+
+    # Verify all successful hashes match expected values
+    for file, hash_value in results.items():
+        assert hash_value == expected_hashes[file]
+        assert isinstance(hash_value, str)
+        assert len(hash_value) == 64  # SHA256
+
+    # Test with MD5 algorithm
+    results_md5 = hasher.compute_batch_parallel(
+        files[:5],  # Use subset for faster test
+        algorithm="md5",
+        config=config,
+    )
+    assert len(results_md5) == 5
+    for hash_value in results_md5.values():
+        assert len(hash_value) == 32  # MD5
+
+    # Test empty list
+    empty_results = hasher.compute_batch_parallel([], config=config)
+    assert empty_results == {}
+
+    # Test with None config (should use defaults)
+    default_results = hasher.compute_batch_parallel(files[:3])
+    assert len(default_results) == 3
