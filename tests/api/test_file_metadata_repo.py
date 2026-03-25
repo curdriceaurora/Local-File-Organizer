@@ -570,3 +570,108 @@ def test_pagination():
     )
 
     assert result["items"] == items
+
+
+def test_batch_operations():
+    """Test batch upsert and bulk get operations."""
+    from datetime import UTC, datetime
+    from unittest.mock import MagicMock
+    from sqlalchemy.orm import Session
+    from file_organizer.api.cache import InMemoryCache
+
+    # Test bulk_upsert
+    session = MagicMock(spec=Session)
+    cache = MagicMock(spec=InMemoryCache)
+
+    records = [
+        {
+            "workspace_id": "ws-1",
+            "path": "/abs/file1.txt",
+            "relative_path": "file1.txt",
+            "name": "file1.txt",
+            "size_bytes": 100,
+            "mime_type": "text/plain",
+            "checksum_sha256": "sha1",
+            "last_modified": datetime(2025, 1, 1, tzinfo=UTC),
+            "extra_json": '{"tag": "test"}',
+        },
+        {
+            "workspace_id": "ws-1",
+            "path": "/abs/file2.txt",
+            "relative_path": "file2.txt",
+            "name": "file2.txt",
+            "size_bytes": 200,
+        },
+    ]
+
+    result = FileMetadataRepository.bulk_upsert(
+        session, records=records, cache=cache, cache_ttl_seconds=600
+    )
+
+    assert result == 2
+    session.execute.assert_called_once()
+    session.flush.assert_called_once()
+    assert cache.delete.call_count == 2
+
+    # Test bulk_upsert with empty list
+    session_empty = MagicMock(spec=Session)
+    result_empty = FileMetadataRepository.bulk_upsert(session_empty, records=[])
+    assert result_empty == 0
+    session_empty.execute.assert_not_called()
+
+    # Test bulk_get
+    session_get = MagicMock(spec=Session)
+    cache_get = MagicMock(spec=InMemoryCache)
+
+    # Mock cache miss - all paths need to be fetched from DB
+    cache_get.get.return_value = None
+
+    # Mock database rows
+    row1 = MagicMock(spec=FileMetadata)
+    row1.id = "id1"
+    row1.workspace_id = "ws-1"
+    row1.path = "/abs/file1.txt"
+    row1.relative_path = "file1.txt"
+    row1.name = "file1.txt"
+    row1.size_bytes = 100
+    row1.mime_type = "text/plain"
+    row1.checksum_sha256 = "sha1"
+    row1.last_modified = datetime(2025, 1, 1, tzinfo=UTC)
+    row1.extra_json = '{"tag": "test"}'
+
+    row2 = MagicMock(spec=FileMetadata)
+    row2.id = "id2"
+    row2.workspace_id = "ws-1"
+    row2.path = "/abs/file2.txt"
+    row2.relative_path = "file2.txt"
+    row2.name = "file2.txt"
+    row2.size_bytes = 200
+    row2.mime_type = None
+    row2.checksum_sha256 = None
+    row2.last_modified = None
+    row2.extra_json = None
+
+    query = MagicMock()
+    session_get.query.return_value = query
+    query.filter.return_value = query
+    query.all.return_value = [row1, row2]
+
+    result_get = FileMetadataRepository.bulk_get(
+        session_get,
+        workspace_id="ws-1",
+        relative_paths=["file1.txt", "file2.txt"],
+        cache=cache_get,
+    )
+
+    assert len(result_get) == 2
+    assert "file1.txt" in result_get
+    assert "file2.txt" in result_get
+    assert result_get["file1.txt"] is row1
+    assert result_get["file2.txt"] is row2
+    assert cache_get.set.call_count == 2
+
+    # Test bulk_get with empty list
+    result_empty_get = FileMetadataRepository.bulk_get(
+        session_get, workspace_id="ws-1", relative_paths=[]
+    )
+    assert result_empty_get == {}

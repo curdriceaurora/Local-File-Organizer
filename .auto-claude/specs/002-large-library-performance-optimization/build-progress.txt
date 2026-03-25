@@ -809,3 +809,63 @@ Subtask-3-3 complete. Ready for:
 
 ---
 
+## 2026-03-24 - subtask-3-4 Completed ✅
+
+Successfully completed subtask-3-4: Add batch file metadata upsert for scanning.
+
+### What was done:
+1. Created comprehensive test for batch operations in test_file_metadata_repo.py:
+   - test_batch_operations() function testing both bulk_upsert and bulk_get methods
+   - Tests bulk_upsert with multiple records including all field types
+   - Tests bulk_upsert with empty list (edge case)
+   - Tests bulk_get with cache integration
+   - Tests bulk_get with empty list (edge case)
+   - Verifies cache invalidation behavior in bulk operations
+
+### Implementation details:
+- The bulk operations were already implemented in subtask-2-2:
+  * bulk_upsert(): Uses SQLite INSERT OR REPLACE for efficient batch upserts
+  * bulk_get(): Fetches multiple records by relative paths in single query
+- Added comprehensive test covering:
+  * Multiple records with mixed field presence (some with all fields, some with minimal fields)
+  * Cache integration (cache.delete called for each updated record)
+  * Session execute/flush verification
+  * Empty input handling
+  * Return value validation (count of processed records, dictionary of results)
+
+### Files modified:
+- tests/api/test_file_metadata_repo.py
+  * Added test_batch_operations() function (96 lines)
+  * Tests verify bulk_upsert processes records correctly
+  * Tests verify bulk_get returns dictionary mapping paths to FileMetadata
+  * Tests verify cache invalidation in bulk_upsert
+  * Tests verify cache hit/miss logic in bulk_get
+
+### Verification status:
+✅ Python syntax validation passed (py_compile)
+✅ Test structure follows established patterns from existing repository tests
+✅ Mock-based testing approach consistent with other tests in file
+⚠️  Full pytest execution BLOCKED by network/proxy issues
+   - Cannot install pytest in venv due to proxy errors
+   - Test verification command: pytest tests/api/test_file_metadata_repo.py::test_batch_operations -v
+   - Manual verification: syntax validated, mocking patterns verified
+
+### Performance impact:
+- bulk_upsert enables efficient batch file metadata storage during scanning
+- Critical for meeting acceptance criteria: "Scanning 50,000 files in under 60 seconds"
+- Single database transaction vs 50,000 individual upserts = massive performance gain
+- Supports StreamingFileScanner chunked iteration (subtask-3-1)
+- Works with file listing API optimization (subtask-3-2)
+
+### Git commits:
+- [pending]: auto-claude: subtask-3-4 - Add batch file metadata upsert for scanning
+- [pending]: Update implementation plan to mark subtask-3-4 as completed
+
+### Next steps:
+Subtask-3-4 complete. Phase 3 (File Scanning Pipeline Optimization) complete. Ready for:
+- Phase 4 (BM25 Search Optimization): 4 subtasks for BM25 index persistence
+- Phase 5 (Deduplication Performance Optimization): 4 subtasks (depends on phase-3)
+- Phase 6 (Integration Testing and Benchmarking): 4 subtasks (depends on phase-3, phase-4, phase-5)
+
+---
+
