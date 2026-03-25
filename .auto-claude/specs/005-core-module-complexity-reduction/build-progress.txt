@@ -242,3 +242,32 @@ Next Steps:
 Ready to begin Phases 2, 3, and 4 in parallel
 
 === END SESSION 5 ===
+
+## 2026-03-24 - Subtask 2-1: Extract Hash Computation Logic
+
+**Status**: Completed ✓
+
+**What was done**:
+1. Created new module `src/file_organizer/cli/dedupe_hash.py` with:
+   - `ProgressTracker` class for hash computation progress with visual feedback
+   - `scan_for_duplicates()` function to coordinate hash-based duplicate detection
+   - `create_scan_options()` function to build scan configuration
+   - `initialize_hash_detector()` function to create detector instances
+
+2. Updated `src/file_organizer/cli/dedupe.py` to:
+   - Import and use the new dedupe_hash module
+   - Replace inline progress callback with ProgressTracker class
+   - Use extracted scan coordination functions
+   - Maintain identical behavior while reducing complexity
+
+**Impact**:
+- Reduced dedupe.py complexity by extracting ~60 lines of hash scanning coordination logic
+- Improved separation of concerns: hash scanning logic now isolated from main CLI flow
+- Better testability: hash scanning can now be tested independently
+- Follows dispatcher.py pattern of wrapping services with progress reporting
+
+**Verification**: 
+- Both files compile successfully (syntax validated)
+- Code follows patterns from dispatcher.py
+- Maintains backward compatibility with existing behavior
+

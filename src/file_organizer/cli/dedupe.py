@@ -454,70 +454,46 @@ Examples:
     try:
         # Import deduplication services
         from file_organizer.services.deduplication.backup import BackupManager
-        from file_organizer.services.deduplication.detector import DuplicateDetector, ScanOptions
         from file_organizer.services.deduplication.hasher import HashAlgorithm
 
+        # Import hash-based scanning coordination
+        from file_organizer.cli.dedupe_hash import (
+            ProgressTracker,
+            create_scan_options,
+            initialize_hash_detector,
+            scan_for_duplicates,
+        )
+
         # Initialize services
-        detector = DuplicateDetector()
+        detector = initialize_hash_detector()
         backup_manager = BackupManager(config.directory) if config.safe_mode else None
 
         console.print("[bold]Step 1: Scanning for files...[/bold]")
 
-        # Setup progress tracking
-        try:
-            from tqdm import tqdm
+        # Create progress tracker for visual feedback
+        progress_tracker = ProgressTracker(console)
 
-            has_tqdm = True
-        except ImportError:
-            has_tqdm = False
-            console.print("[dim]Install tqdm for progress bars: pip install tqdm[/dim]")
-
-        # Progress callback
-        progress_bar = None
-
-        def progress_callback(current: int, total: int) -> None:
-            """Update progress display for file hashing.
-
-            Args:
-                current: Number of files processed so far.
-                total: Total number of files to process.
-            """
-            nonlocal progress_bar
-            if has_tqdm:
-                if progress_bar is None:
-                    progress_bar = tqdm(total=total, desc="Hashing files", unit="files")
-                progress_bar.update(1)
-
-        # Scan directory
-        scan_options = ScanOptions(
+        # Create scan options
+        scan_options = create_scan_options(
             algorithm=cast("HashAlgorithm", config.algorithm),
             recursive=config.recursive,
             min_file_size=config.min_size,
             max_file_size=config.max_size,
             file_patterns=config.include_patterns if config.include_patterns else None,
             exclude_patterns=config.exclude_patterns if config.exclude_patterns else None,
-            progress_callback=progress_callback if has_tqdm else None,
+            progress_callback=progress_tracker.callback if progress_tracker.has_tqdm else None,
         )
 
-        # Scan directory (return value not needed, detector updates internal index)
-        detector.scan_directory(config.directory, scan_options)
-
-        if progress_bar:
-            progress_bar.close()
-
-        # Get duplicate groups
-        duplicate_groups = detector.get_duplicate_groups()
+        # Scan directory for duplicates
+        duplicate_groups = scan_for_duplicates(
+            config.directory, detector, scan_options, console, progress_tracker
+        )
 
         if not duplicate_groups:
-            console.print("\n[green]✓ No duplicate files found![/green]")
             return 0
 
         total_groups = len(duplicate_groups)
         total_duplicates = sum(group.count for group in duplicate_groups.values())
-
-        console.print(
-            f"\n[green]✓ Found {total_groups} duplicate group(s) with {total_duplicates} files total[/green]\n"
-        )
 
         # Process each duplicate group
         total_removed = 0
