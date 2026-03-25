@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ...utils.file_scanner import StreamingFileScanner, ScanConfig
 from .hasher import FileHasher, HashAlgorithm
 from .index import DuplicateIndex, FileMetadata
 
@@ -54,10 +55,13 @@ class DuplicateDetector:
         """Scan a directory for duplicate files.
 
         This is the main entry point for duplicate detection. It:
-        1. Recursively finds all files in the directory
+        1. Streams files from directory using memory-efficient scanner
         2. Groups files by size (optimization)
         3. Hashes only files with duplicate sizes
         4. Builds the duplicate index
+
+        Uses streaming approach to handle large directories (50,000+ files)
+        without loading all paths into memory.
 
         Args:
             directory: Directory to scan
@@ -77,99 +81,80 @@ class DuplicateDetector:
 
         options = options or ScanOptions()
 
-        # Step 1: Find all files
-        files = self._find_files(directory, options)
+        # Create streaming scanner
+        scanner = StreamingFileScanner()
 
-        if not files:
+        # Convert ScanOptions to ScanConfig
+        scan_config = self._create_scan_config(options)
+
+        # Step 1 & 2: Stream files and group by size in chunks
+        size_groups = self._stream_and_group_by_size(directory, scanner, scan_config)
+
+        if not size_groups:
             return self.index
-
-        # Step 2: Group by size (optimization - different sizes can't be duplicates)
-        size_groups = self._group_by_size(files, options)
 
         # Step 3: Hash files and build index
         self._process_files(size_groups, options)
 
         return self.index
 
-    def _find_files(self, directory: Path, options: ScanOptions) -> list[Path]:
-        """Find all files in directory matching the criteria.
+    def _create_scan_config(self, options: ScanOptions) -> ScanConfig:
+        """Convert ScanOptions to ScanConfig for StreamingFileScanner.
 
         Args:
-            directory: Directory to search
-            options: Scan options with filters
+            options: Deduplication scan options
 
         Returns:
-            List of file paths matching criteria
+            ScanConfig for file scanner
         """
-        files = []
+        # Note: ScanConfig doesn't need algorithm, and has different progress callback signature
+        return ScanConfig(
+            recursive=options.recursive,
+            follow_symlinks=options.follow_symlinks,
+            min_file_size=options.min_file_size,
+            max_file_size=options.max_file_size,
+            file_patterns=options.file_patterns,
+            exclude_patterns=options.exclude_patterns,
+            chunk_size=1000,  # Process 1000 files at a time
+            max_files=None,
+            progress_callback=None,  # We'll handle progress in _process_files
+        )
 
-        # Use rglob for recursive, glob for non-recursive
-        if options.recursive:
-            pattern = "**/*"
-        else:
-            pattern = "*"
+    def _stream_and_group_by_size(
+        self,
+        directory: Path,
+        scanner: StreamingFileScanner,
+        config: ScanConfig,
+    ) -> dict[int, list[Path]]:
+        """Stream files and group by size using memory-efficient chunked processing.
 
-        for path in directory.rglob(pattern) if options.recursive else directory.glob(pattern):
-            # Skip if not a file
-            if not path.is_file():
-                continue
-
-            # Skip symlinks if requested
-            if path.is_symlink() and not options.follow_symlinks:
-                continue
-
-            # Check file size constraints
-            try:
-                size = path.stat().st_size
-
-                if size < options.min_file_size:
-                    continue
-
-                if options.max_file_size is not None and size > options.max_file_size:
-                    continue
-            except (OSError, PermissionError):
-                continue
-
-            # Check include patterns
-            if options.file_patterns:
-                if not any(path.match(pattern) for pattern in options.file_patterns):
-                    continue
-
-            # Check exclude patterns
-            if options.exclude_patterns:
-                if any(path.match(pattern) for pattern in options.exclude_patterns):
-                    continue
-
-            files.append(path)
-
-        return files
-
-    def _group_by_size(self, files: list[Path], options: ScanOptions) -> dict[int, list[Path]]:
-        """Group files by size.
-
-        This is an optimization - files with unique sizes cannot be duplicates,
-        so we skip hashing them.
+        This avoids loading all file paths into memory at once. Files are
+        processed in chunks and grouped by size as they're streamed.
 
         Args:
-            files: list of files to group
-            options: Scan options (unused but kept for consistency)
+            directory: Directory to scan
+            scanner: StreamingFileScanner instance
+            config: Scan configuration
 
         Returns:
             Dictionary mapping file sizes to lists of files
         """
         size_groups: dict[int, list[Path]] = {}
 
-        for file_path in files:
-            try:
-                size = file_path.stat().st_size
+        # Stream files in chunks
+        for chunk in scanner.scan_directory(directory, config):
+            # Group this chunk by size
+            for file_path in chunk:
+                try:
+                    size = file_path.stat().st_size
 
-                if size not in size_groups:
-                    size_groups[size] = []
+                    if size not in size_groups:
+                        size_groups[size] = []
 
-                size_groups[size].append(file_path)
-            except (OSError, PermissionError):
-                # Skip files we can't access
-                continue
+                    size_groups[size].append(file_path)
+                except (OSError, PermissionError):
+                    # Skip files we can't access
+                    continue
 
         return size_groups
 
