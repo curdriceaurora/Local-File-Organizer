@@ -12,6 +12,15 @@ from pathlib import Path
 
 from ..undo.undo_manager import UndoManager
 from ..undo.viewer import HistoryViewer
+from .undo_history import (
+    can_redo_operation,
+    can_undo_operation,
+    find_operation_in_stack,
+    format_operation_summary,
+    format_transaction_summary,
+    get_redo_stack,
+    get_undo_stack,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,16 +54,13 @@ def undo_command(
         # Dry run mode - show what would be undone
         if dry_run:
             if operation_id:
-                can_undo, reason = manager.can_undo(operation_id)
+                can_undo, reason = can_undo_operation(manager, operation_id)
                 if can_undo:
-                    operations = [op for op in manager.get_undo_stack() if op.id == operation_id]
-                    if operations:
-                        op = operations[0]
+                    operations = get_undo_stack(manager)
+                    op = find_operation_in_stack(operations, operation_id)
+                    if op:
                         print(f"\nWould undo operation {operation_id}:")
-                        print(f"  Type: {op.operation_type.value}")
-                        print(f"  Source: {op.source_path}")
-                        if op.destination_path:
-                            print(f"  Destination: {op.destination_path}")
+                        print(format_operation_summary(op))
                         print("\n✓ This operation can be safely undone")
                     else:
                         print(f"Operation {operation_id} not found")
@@ -67,24 +73,17 @@ def undo_command(
                 transaction = manager.history.get_transaction(transaction_id)
                 if transaction:
                     operations = manager.history.get_operations(transaction_id=transaction_id)
-                    print(f"  Operations: {len(operations)}")
-                    for op in operations[:5]:  # Show first 5
-                        print(f"    - {op.operation_type.value}: {op.source_path.name}")
-                    if len(operations) > 5:
-                        print(f"    ... and {len(operations) - 5} more")
+                    print(format_transaction_summary(transaction_id, operations))
                 else:
                     print(f"Transaction {transaction_id} not found")
                     return 1
             else:
                 # Show last operation
-                operations = manager.get_undo_stack()
+                operations = get_undo_stack(manager)
                 if operations:
                     op = operations[0]
                     print(f"\nWould undo last operation ({op.id}):")
-                    print(f"  Type: {op.operation_type.value}")
-                    print(f"  Source: {op.source_path}")
-                    if op.destination_path:
-                        print(f"  Destination: {op.destination_path}")
+                    print(format_operation_summary(op))
                 else:
                     print("No operations to undo")
                     return 1
@@ -144,16 +143,13 @@ def redo_command(
         # Dry run mode
         if dry_run:
             if operation_id:
-                can_redo, reason = manager.can_redo(operation_id)
+                can_redo, reason = can_redo_operation(manager, operation_id)
                 if can_redo:
-                    operations = [op for op in manager.get_redo_stack() if op.id == operation_id]
-                    if operations:
-                        op = operations[0]
+                    operations = get_redo_stack(manager)
+                    op = find_operation_in_stack(operations, operation_id)
+                    if op:
                         print(f"\nWould redo operation {operation_id}:")
-                        print(f"  Type: {op.operation_type.value}")
-                        print(f"  Source: {op.source_path}")
-                        if op.destination_path:
-                            print(f"  Destination: {op.destination_path}")
+                        print(format_operation_summary(op))
                         print("\n✓ This operation can be safely redone")
                     else:
                         print(f"Operation {operation_id} not found in redo stack")
@@ -163,14 +159,11 @@ def redo_command(
                     return 1
             else:
                 # Show last redoable operation
-                operations = manager.get_redo_stack()
+                operations = get_redo_stack(manager)
                 if operations:
                     op = operations[0]
                     print(f"\nWould redo last operation ({op.id}):")
-                    print(f"  Type: {op.operation_type.value}")
-                    print(f"  Source: {op.source_path}")
-                    if op.destination_path:
-                        print(f"  Destination: {op.destination_path}")
+                    print(format_operation_summary(op))
                 else:
                     print("No operations to redo")
                     return 1
