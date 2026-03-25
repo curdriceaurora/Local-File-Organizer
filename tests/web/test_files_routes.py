@@ -364,6 +364,39 @@ class TestBuildFileResultsContext:
         assert ctx["view"] == "grid"
         assert "entries" in ctx
         assert ctx["error_message"] is None
+        assert ctx["page_size"] == 50
+        assert ctx["next_limit"] == len(ctx["entries"])
+        assert ctx["has_more"] is False
+
+    def test_next_limit_tracks_page_size_when_more_results_exist(self, tree, settings):
+        request = MagicMock()
+        fake_entries = [{"name": f"entry-{index}"} for index in range(8)]
+        with (
+            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            patch("file_organizer.web.file_operations.resolve_selected_path", return_value=tree),
+            patch("file_organizer.web.file_operations.validate_depth"),
+            patch(
+                "file_organizer.web.file_operations.collect_entries",
+                return_value=(fake_entries, 8),
+            ),
+        ):
+            ctx = build_file_results_context(
+                request,
+                settings,
+                path=str(tree),
+                view="list",
+                query=None,
+                file_type=None,
+                sort_by="name",
+                sort_order="asc",
+                limit=3,
+                page_size=2,
+            )
+
+        assert ctx["limit"] == 3
+        assert ctx["page_size"] == 2
+        assert ctx["next_limit"] == 5
+        assert ctx["has_more"] is True
 
     def test_with_no_path(self, tree, settings):
         request = MagicMock()

@@ -220,6 +220,9 @@ class TestSelectFilesToKeep:
         assert files == original
         assert result is not files
 
+    def test_empty_list_returns_empty_list(self):
+        assert select_files_to_keep([], "oldest") == []
+
 
 @pytest.mark.unit
 class TestGetUserSelection:
@@ -473,7 +476,7 @@ class TestDisplaySummary:
     """Tests for display_summary output."""
 
     def test_dry_run_summary(self, capsys):
-        console = Console()
+        console = Console(record=True)
         display_summary(
             console,
             total_groups=3,
@@ -482,10 +485,14 @@ class TestDisplaySummary:
             space_saved=1024 * 1024,
             dry_run=True,
         )
-        # Should not raise
+        output = console.export_text()
+        assert "DRY RUN SUMMARY" in output
+        assert "Duplicate groups found: 3" in output
+        assert "Files that would be removed: 7" in output
+        assert "Run without --dry-run to actually remove files." in output
 
     def test_live_run_summary(self, capsys):
-        console = Console()
+        console = Console(record=True)
         display_summary(
             console,
             total_groups=2,
@@ -494,7 +501,11 @@ class TestDisplaySummary:
             space_saved=512,
             dry_run=False,
         )
-        # Should not raise
+        output = console.export_text()
+        assert "DEDUPLICATION COMPLETE" in output
+        assert "Duplicate groups found: 2" in output
+        assert "Files removed: 3" in output
+        assert "Space saved: 512.0 B" in output
 
 
 # ============================================================================
@@ -507,7 +518,7 @@ class TestDisplayDuplicateGroup:
     """Tests for display_duplicate_group output."""
 
     def test_displays_group(self, capsys):
-        console = Console()
+        console = Console(record=True)
         files = [
             {"path": Path("/a/file1.txt"), "size": 1024, "mtime": 1000.0, "keep": True},
             {"path": Path("/a/file2.txt"), "size": 1024, "mtime": 2000.0, "keep": False},
@@ -519,10 +530,15 @@ class TestDisplayDuplicateGroup:
             files=files,
             total_groups=3,
         )
-        # Should not raise; verifies the function runs end-to-end
+        output = console.export_text()
+        assert "Duplicate Group 1/3" in output
+        assert "abc123def4567890..." in output
+        assert "/a/file1.txt" in output
+        assert "/a/file2.txt" in output
+        assert "Potential space savings: 1.0 KB" in output
 
     def test_displays_group_no_keep(self, capsys):
-        console = Console()
+        console = Console(record=True)
         files = [
             {"path": Path("/x/y.txt"), "size": 500, "mtime": 100.0},
             {"path": Path("/x/z.txt"), "size": 500, "mtime": 200.0},
@@ -534,7 +550,11 @@ class TestDisplayDuplicateGroup:
             files=files,
             total_groups=5,
         )
-        # Should not raise
+        output = console.export_text()
+        assert "Duplicate Group 2/5" in output
+        assert "/x/y.txt" in output
+        assert "/x/z.txt" in output
+        assert "Potential space savings: 500.0 B" in output
 
 
 # ============================================================================

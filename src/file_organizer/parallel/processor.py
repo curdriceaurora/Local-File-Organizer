@@ -129,6 +129,11 @@ class ParallelProcessor:
 
             results.extend(succeeded)
 
+            if any(self._is_non_retryable_failure(result) for result in failed):
+                results.extend(failed)
+                remaining = []
+                break
+
             # On last attempt, include failures in results
             if attempt == self._config.retry_count:
                 results.extend(failed)
@@ -207,6 +212,11 @@ class ParallelProcessor:
             assert executor is not None
             exec_instance = executor
         return exec_instance, owns_executor
+
+    @staticmethod
+    def _is_non_retryable_failure(result: FileResult) -> bool:
+        """Return whether a failed result should stop retries for the batch."""
+        return bool(result.error and "could not be cancelled" in result.error)
 
     def _process_with_executor(
         self,
@@ -300,19 +310,26 @@ class ParallelProcessor:
                 submit_round_of_work()
 
             # Check for and handle timeouts
-            should_abort = self._handle_timeouts(
+            timeout_handling = self._handle_timeouts(
                 pending,
                 future_paths,
                 future_started,
                 timeout,
                 poll_interval,
-                owns_executor,
                 finalize_result,
             )
-            if should_abort is not None:
-                abort_force_shutdown, abort_results = should_abort
+            if timeout_handling is not None:
+                should_abort, timeout_results = timeout_handling
+                if not should_abort:
+                    yield from timeout_results
+                    submit_round_of_work()
+                    continue
+
+                abort_force_shutdown = owns_executor
                 force_nonblocking_shutdown = abort_force_shutdown
-                yield from abort_results
+                if owns_executor:
+                    self._force_nonblocking_shutdown = force_nonblocking_shutdown
+                yield from timeout_results
                 # Abort remaining files from iterator
                 for remaining_path in iterator:
                     yield finalize_result(
@@ -323,9 +340,6 @@ class ParallelProcessor:
                             "and could not be cancelled",
                         )
                     )
-                # Store shutdown flag for cleanup
-                if owns_executor:
-                    self._force_nonblocking_shutdown = force_nonblocking_shutdown
                 return
 
             submit_round_of_work()
@@ -341,7 +355,6 @@ class ParallelProcessor:
         future_started: dict[Future[FileResult], float | None],
         timeout: float,
         poll_interval: float,
-        owns_executor: bool,
         finalize_result: Callable[[FileResult], FileResult],
     ) -> tuple[bool, list[FileResult]] | None:
         """Check for and handle timed-out tasks.
@@ -356,8 +369,8 @@ class ParallelProcessor:
             finalize_result: Function to finalize results.
 
         Returns:
-            None if no abort needed, or tuple of (force_shutdown, abort_results)
-            if processing should abort.
+            None if no timeout was handled, or tuple of
+            (should_abort_processing, finalized_results_to_yield).
         """
         now = time.monotonic()
 
@@ -375,24 +388,40 @@ class ParallelProcessor:
             if (now - start_time) > timeout:
                 path = future_paths[future]
                 cancelled = future.cancel()
-
-                pending.remove(future)
-                del future_paths[future]
-                del future_started[future]
-
-                file_result = FileResult(
-                    path=path,
-                    success=False,
-                    error=f"Timed out after {timeout}s",
-                )
-                finalized = finalize_result(file_result)
-
-                if not cancelled:
-                    # Cannot cancel - abort all remaining work
-                    abort_results = self._abort_remaining_work(
-                        pending, future_paths, future_started, finalize_result
+                if cancelled:
+                    pending.remove(future)
+                    del future_paths[future]
+                    del future_started[future]
+                    timed_out_result = finalize_result(
+                        FileResult(
+                            path=path,
+                            success=False,
+                            error=f"Timed out after {timeout}s",
+                        )
                     )
-                    return (True if owns_executor else False, [finalized, *abort_results])
+                    return (False, [timed_out_result])
+
+                if future.done():
+                    pending.remove(future)
+                    completed_path = future_paths.pop(future)
+                    future_started.pop(future, None)
+                    try:
+                        completed_result = finalize_result(future.result())
+                    except Exception as exc:
+                        completed_result = finalize_result(
+                            FileResult(path=completed_path, success=False, error=str(exc))
+                        )
+                    return (False, [completed_result])
+
+                abort_results = self._abort_remaining_work(
+                    pending,
+                    future_paths,
+                    future_started,
+                    finalize_result,
+                    timed_out_future=future,
+                    timeout=timeout,
+                )
+                return (True, abort_results)
 
         return None
 
@@ -402,6 +431,8 @@ class ParallelProcessor:
         future_paths: dict[Future[FileResult], Path],
         future_started: dict[Future[FileResult], float | None],
         finalize_result: Callable[[FileResult], FileResult],
+        timed_out_future: Future[FileResult] | None = None,
+        timeout: float | None = None,
     ) -> list[FileResult]:
         """Abort all remaining pending work due to uncancellable timeout.
 
@@ -410,6 +441,8 @@ class ParallelProcessor:
             future_paths: Mapping of futures to file paths.
             future_started: Mapping of futures to start times.
             finalize_result: Function to finalize results.
+            timed_out_future: Future that exceeded the timeout and could not be cancelled.
+            timeout: Timeout threshold used for the timed-out future, if known.
 
         Returns:
             List of FileResult for aborted tasks.
@@ -421,6 +454,32 @@ class ParallelProcessor:
             pending.remove(other)
             other_path = future_paths.pop(other)
             future_started.pop(other, None)
+
+            if other is timed_out_future:
+                result = finalize_result(
+                    FileResult(
+                        path=other_path,
+                        success=False,
+                        error=(
+                            f"Timed out after {timeout}s and could not be cancelled"
+                            if timeout is not None
+                            else abort_error
+                        ),
+                    )
+                )
+                aborted_results.append(result)
+                continue
+
+            if other.done():
+                try:
+                    result = finalize_result(other.result())
+                except Exception as exc:
+                    result = finalize_result(
+                        FileResult(path=other_path, success=False, error=str(exc))
+                    )
+                aborted_results.append(result)
+                continue
+
             other.cancel()
             result = finalize_result(FileResult(path=other_path, success=False, error=abort_error))
             aborted_results.append(result)

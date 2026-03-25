@@ -239,6 +239,7 @@ def _do_semantic_search(
     documents: list[str] = []
     sem_paths: list[Path] = []
     max_docs = max(limit * 10, 200)
+    type_exts = TYPE_EXTENSIONS.get(type_filter) if type_filter is not None else None
 
     gen = search_dir.rglob("*") if recursive else search_dir.glob("*")
     for entry in gen:
@@ -246,6 +247,8 @@ def _do_semantic_search(
             break
         rel_entry = entry.relative_to(search_dir)
         if entry.is_symlink() or not entry.is_file() or is_hidden(rel_entry):
+            continue
+        if type_exts is not None and _normalized_extension(entry) not in type_exts:
             continue
         text = read_text_safe(entry)
         doc = f"{entry.stem} {' '.join(rel_entry.parts)} {text}".strip()
@@ -262,14 +265,7 @@ def _do_semantic_search(
         console.print(f"[red]Error: Failed to build semantic index: {exc}[/red]")
         raise typer.Exit(code=1) from exc
 
-    candidate_k = limit * 4 if type_filter is not None else limit
-    raw_results = retriever.retrieve(query, top_k=candidate_k)
-
-    if type_filter is not None:
-        type_exts = TYPE_EXTENSIONS.get(type_filter, set())
-        raw_results = [(p, s) for p, s in raw_results if _normalized_extension(p) in type_exts]
-
-    return raw_results[:limit]
+    return retriever.retrieve(query, top_k=limit)
 
 
 def _do_default_search(

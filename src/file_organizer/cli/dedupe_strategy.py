@@ -36,6 +36,8 @@ def select_files_to_keep(files: list[dict[str, Any]], strategy: str) -> list[dic
         Updated list with 'keep' flags set for files to preserve.
     """
     updated_files = [dict(file_info) for file_info in files]
+    if not updated_files:
+        return updated_files
 
     if strategy == "oldest":
         # Keep the file with the oldest modification time

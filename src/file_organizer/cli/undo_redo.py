@@ -48,14 +48,15 @@ def undo_command(
 
         # Dry run mode - delegate to preview helpers
         if dry_run:
-            if transaction_id:
+            if transaction_id is not None:
                 result = undo_history.preview_undo_transaction(manager, transaction_id)
-            elif operation_id:
+            elif operation_id is not None:
                 result = undo_history.preview_undo_operation(manager, operation_id)
             else:
                 result = undo_history.preview_undo_last(manager)
 
-            print("\nRun without --dry-run to actually undo")
+            if result == 0:
+                print("\nRun without --dry-run to actually undo")
             return result
 
         # Actual undo - delegate to execution helper
@@ -96,12 +97,13 @@ def redo_command(
 
         # Dry run mode - delegate to preview helpers
         if dry_run:
-            if operation_id:
+            if operation_id is not None:
                 result = undo_history.preview_redo_operation(manager, operation_id)
             else:
                 result = undo_history.preview_redo_last(manager)
 
-            print("\nRun without --dry-run to actually redo")
+            if result == 0:
+                print("\nRun without --dry-run to actually redo")
             return result
 
         # Actual redo - delegate to execution helper

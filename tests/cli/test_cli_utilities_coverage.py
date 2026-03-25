@@ -163,6 +163,21 @@ class TestSemanticSearchHiddenFileFiltering:
         assert "dataset.tar.gz" in result.output
         assert "notes.txt" not in result.output
 
+    def test_semantic_type_filter_applies_before_document_limit(self, tmp_path: Path) -> None:
+        """Archive matches should still be indexed even if many earlier text files exist."""
+        app = _make_app()
+        for index in range(250):
+            (tmp_path / f"notes_{index:03d}.txt").write_text("finance notes")
+        (tmp_path / "late_bundle.tar.gz").write_text("finance archive bundle")
+
+        result = runner.invoke(
+            app,
+            ["search", "finance archive", str(tmp_path), "--semantic", "--type", "archive"],
+        )
+
+        assert result.exit_code == 0
+        assert "late_bundle.tar.gz" in result.output
+
 
 class TestSemanticIndexBuildFailure:
     """Covers line 173 — except (ValueError, RuntimeError, ImportError) path."""
