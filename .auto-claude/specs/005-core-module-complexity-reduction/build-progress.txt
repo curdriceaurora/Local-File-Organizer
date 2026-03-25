@@ -511,3 +511,46 @@ Ready to proceed to subtask-4-2: Extract validation logic from files_routes.py
 - Complexity reduction estimated at 60-70% across simplified handlers
 - Follows facade pattern from organizer.py
 
+[2026-03-25 02:30:00] subtask-5-1 COMPLETED: Refactor api/config.py to reduce complexity
+- Refactored monolithic load_settings() function (270+ lines with 0 if statements after refactoring)
+- Created 14 focused helper functions following patterns from core/initializer.py:
+  - _parse_bool(): Parse boolean from environment variable strings
+  - _parse_int(): Parse integer with error logging
+  - _load_file_config(): Load YAML configuration file
+  - _load_basic_settings(): App name, version, host, port, log level
+  - _load_cors_settings(): CORS origins, methods, headers, credentials
+  - _load_websocket_settings(): WebSocket ping interval and token
+  - _load_auth_settings(): Authentication configuration
+  - _load_auth_rate_limit_settings(): Auth login rate limiting
+  - _load_password_policy_settings(): Password requirements
+  - _load_database_settings(): Database connection pool settings
+  - _load_cache_settings(): Redis cache configuration
+  - _load_api_key_settings(): API key hashing and headers
+  - _load_rate_limit_settings(): Global rate limiting rules
+  - _load_security_settings(): Security headers (CSP, HSTS, referrer policy)
+  - _load_ollama_settings(): Ollama URL configuration
+  - _validate_settings(): Post-load validation and security checks
+- Main load_settings() reduced from ~270 lines to 33 lines (88% reduction)
+- Cyclomatic complexity reduced from 15+ to 0 in main function
+- Each helper function is small (10-30 lines) with focused responsibility
+- Eliminated 270+ sequential if statements by distributing across category-specific loaders
+- Follows initializer.py pattern: small functions, clear names, graceful error handling
+- Python syntax validated successfully
+- Commit: 5b0aac0
+
+[2026-03-24] subtask-5-2 COMPLETED: Refactor parallel/processor.py to reduce complexity
+- Refactored complex process_batch_iter() method (196 lines with high cyclomatic complexity)
+- Extracted 5 focused helper methods following patterns from core/dispatcher.py:
+  - _setup_executor(): Set up executor for batch processing (17 lines)
+  - _process_with_executor(): Core processing loop with timeout handling (94 lines)
+  - _handle_timeouts(): Check for and handle timed-out tasks (37 lines)
+  - _abort_remaining_work(): Abort all remaining pending work due to uncancellable timeout (23 lines)
+  - _cleanup_executor(): Clean up executor after processing (13 lines)
+- Main process_batch_iter() reduced from 196 lines to 11 lines (94% reduction)
+- Cyclomatic complexity significantly reduced by distributing logic across helpers
+- Each helper method has focused responsibility with clear inputs/outputs
+- Improved readability: Main method now shows clear workflow (setup → process → cleanup)
+- Better maintainability: Timeout handling logic isolated and easier to test
+- Follows dispatcher.py pattern: extract complex blocks into focused helper functions
+- Python syntax validated successfully
+
