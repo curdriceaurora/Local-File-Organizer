@@ -25,6 +25,187 @@ CONFIDENCE_MEDIUM = 0.60
 CONFIDENCE_LOW = 0.40
 
 
+def _score_text_features(
+    text_features: TextFeatures,
+    scores: dict[PARACategory, float],
+) -> None:
+    """Apply text-based scoring signals to category scores.
+
+    Args:
+        text_features: Extracted text features
+        scores: Score dictionary to update (modified in-place)
+    """
+    kw_counts = text_features.category_keyword_counts
+    total_kw = sum(kw_counts.values()) or 1
+
+    # Distribute scores proportionally based on keyword counts
+    cat_name_map = {
+        "project": PARACategory.PROJECT,
+        "area": PARACategory.AREA,
+        "resource": PARACategory.RESOURCE,
+        "archive": PARACategory.ARCHIVE,
+    }
+    for name, cat in cat_name_map.items():
+        if name in kw_counts and kw_counts[name] > 0:
+            scores[cat] += min(0.4, (kw_counts[name] / total_kw) * 0.6)
+
+    # Temporal indicators boost PROJECT
+    if text_features.temporal_indicators:
+        scores[PARACategory.PROJECT] += min(
+            0.2,
+            len(text_features.temporal_indicators) * 0.04,
+        )
+
+    # Action items boost PROJECT
+    if text_features.action_items:
+        scores[PARACategory.PROJECT] += min(
+            0.15,
+            len(text_features.action_items) * 0.03,
+        )
+
+    # Document type hints
+    doc_type = text_features.document_type
+    if doc_type in ("plan", "proposal", "presentation"):
+        scores[PARACategory.PROJECT] += 0.1
+    elif doc_type in ("notes",):
+        scores[PARACategory.AREA] += 0.05
+    elif doc_type in ("reference", "template"):
+        scores[PARACategory.RESOURCE] += 0.1
+
+
+def _score_metadata_features(
+    metadata_features: MetadataFeatures,
+    scores: dict[PARACategory, float],
+) -> None:
+    """Apply metadata-based scoring signals to category scores.
+
+    Args:
+        metadata_features: Extracted metadata features
+        scores: Score dictionary to update (modified in-place)
+    """
+    days_mod = metadata_features.days_since_modified
+
+    if days_mod < 30:
+        scores[PARACategory.PROJECT] += 0.1
+    elif 30 <= days_mod <= 180:
+        scores[PARACategory.AREA] += 0.05
+    elif days_mod > 180:
+        scores[PARACategory.ARCHIVE] += 0.15
+
+    if metadata_features.access_frequency > 0.7:
+        scores[PARACategory.PROJECT] += 0.05
+    elif metadata_features.access_frequency < 0.2 and days_mod > 90:
+        scores[PARACategory.ARCHIVE] += 0.1
+
+
+def _score_structural_features(
+    structural_features: StructuralFeatures,
+    scores: dict[PARACategory, float],
+) -> None:
+    """Apply structural scoring signals to category scores.
+
+    Args:
+        structural_features: Extracted structural features
+        scores: Score dictionary to update (modified in-place)
+    """
+    hint = structural_features.parent_category_hint
+    if hint:
+        cat_map = {
+            "project": PARACategory.PROJECT,
+            "area": PARACategory.AREA,
+            "resource": PARACategory.RESOURCE,
+            "archive": PARACategory.ARCHIVE,
+        }
+        if hint in cat_map:
+            scores[cat_map[hint]] += 0.25
+
+    if structural_features.has_project_structure:
+        scores[PARACategory.PROJECT] += 0.1
+
+    if structural_features.has_date_in_path:
+        scores[PARACategory.PROJECT] += 0.05
+
+
+def _add_heuristic_reasons(
+    reasons: list[str],
+    best_category: PARACategory,
+    heuristic_signals: dict[PARACategory, list[str]],
+) -> None:
+    """Add heuristic-based reasons to reasoning list.
+
+    Args:
+        reasons: List to append reasons to (modified in-place)
+        best_category: The recommended category
+        heuristic_signals: Signals from heuristic analysis
+    """
+    signals = heuristic_signals.get(best_category, [])
+    if signals:
+        reasons.append(f"Heuristic analysis detected: {', '.join(signals[:5])}")
+
+
+def _add_text_reasons(
+    reasons: list[str],
+    best_category: PARACategory,
+    text_features: TextFeatures,
+) -> None:
+    """Add text-based reasons to reasoning list.
+
+    Args:
+        reasons: List to append reasons to (modified in-place)
+        best_category: The recommended category
+        text_features: Text analysis results
+    """
+    kw_counts = text_features.category_keyword_counts
+    cat_name = best_category.value
+    if kw_counts.get(cat_name, 0) > 0:
+        reasons.append(f"Content contains {kw_counts[cat_name]} {cat_name}-related keywords")
+
+    if best_category == PARACategory.PROJECT:
+        if text_features.temporal_indicators:
+            reasons.append(
+                f"Found {len(text_features.temporal_indicators)} "
+                "temporal references suggesting time-bound work"
+            )
+        if text_features.action_items:
+            reasons.append(f"Found {len(text_features.action_items)} action items")
+
+
+def _add_metadata_reasons(
+    reasons: list[str],
+    best_category: PARACategory,
+    metadata_features: MetadataFeatures,
+) -> None:
+    """Add metadata-based reasons to reasoning list.
+
+    Args:
+        reasons: List to append reasons to (modified in-place)
+        best_category: The recommended category
+        metadata_features: File metadata
+    """
+    days = metadata_features.days_since_modified
+    if days > 0:
+        if best_category == PARACategory.PROJECT and days < 30:
+            reasons.append("File was recently modified (active work)")
+        elif best_category == PARACategory.ARCHIVE and days > 180:
+            reasons.append(f"File has not been modified in {int(days)} days")
+
+
+def _add_structural_reasons(
+    reasons: list[str],
+    structural_features: StructuralFeatures,
+) -> None:
+    """Add structural-based reasons to reasoning list.
+
+    Args:
+        reasons: List to append reasons to (modified in-place)
+        structural_features: Path structure analysis
+    """
+    if structural_features.parent_category_hint:
+        reasons.append(f"Parent directory suggests '{structural_features.parent_category_hint}'")
+    if structural_features.has_project_structure:
+        reasons.append("Directory contains project structure indicators")
+
+
 def _confidence_label(confidence: float) -> str:
     """Return a human-readable label for a confidence value.
 
@@ -336,77 +517,11 @@ class PARASuggestionEngine:
         """
         scores: dict[PARACategory, float] = dict.fromkeys(PARACategory, 0.0)
 
-        # --- Text-based signals ---
         if text_features:
-            kw_counts = text_features.category_keyword_counts
-            total_kw = sum(kw_counts.values()) or 1
+            _score_text_features(text_features, scores)
 
-            # Distribute scores proportionally
-            cat_name_map = {
-                "project": PARACategory.PROJECT,
-                "area": PARACategory.AREA,
-                "resource": PARACategory.RESOURCE,
-                "archive": PARACategory.ARCHIVE,
-            }
-            for name, cat in cat_name_map.items():
-                if name in kw_counts and kw_counts[name] > 0:
-                    scores[cat] += min(0.4, (kw_counts[name] / total_kw) * 0.6)
-
-            # Temporal indicators boost PROJECT
-            if text_features.temporal_indicators:
-                scores[PARACategory.PROJECT] += min(
-                    0.2,
-                    len(text_features.temporal_indicators) * 0.04,
-                )
-
-            # Action items boost PROJECT
-            if text_features.action_items:
-                scores[PARACategory.PROJECT] += min(
-                    0.15,
-                    len(text_features.action_items) * 0.03,
-                )
-
-            # Document type hints
-            doc_type = text_features.document_type
-            if doc_type in ("plan", "proposal", "presentation"):
-                scores[PARACategory.PROJECT] += 0.1
-            elif doc_type in ("notes",):
-                scores[PARACategory.AREA] += 0.05
-            elif doc_type in ("reference", "template"):
-                scores[PARACategory.RESOURCE] += 0.1
-
-        # --- Metadata-based signals ---
-        days_mod = metadata_features.days_since_modified
-
-        if days_mod < 30:
-            scores[PARACategory.PROJECT] += 0.1
-        elif 30 <= days_mod <= 180:
-            scores[PARACategory.AREA] += 0.05
-        elif days_mod > 180:
-            scores[PARACategory.ARCHIVE] += 0.15
-
-        if metadata_features.access_frequency > 0.7:
-            scores[PARACategory.PROJECT] += 0.05
-        elif metadata_features.access_frequency < 0.2 and days_mod > 90:
-            scores[PARACategory.ARCHIVE] += 0.1
-
-        # --- Structural signals ---
-        hint = structural_features.parent_category_hint
-        if hint:
-            cat_map = {
-                "project": PARACategory.PROJECT,
-                "area": PARACategory.AREA,
-                "resource": PARACategory.RESOURCE,
-                "archive": PARACategory.ARCHIVE,
-            }
-            if hint in cat_map:
-                scores[cat_map[hint]] += 0.25
-
-        if structural_features.has_project_structure:
-            scores[PARACategory.PROJECT] += 0.1
-
-        if structural_features.has_date_in_path:
-            scores[PARACategory.PROJECT] += 0.05
+        _score_metadata_features(metadata_features, scores)
+        _score_structural_features(structural_features, scores)
 
         return scores
 
@@ -461,44 +576,13 @@ class PARASuggestionEngine:
         """
         reasons: list[str] = []
 
-        # Heuristic-based reasons
-        signals = heuristic_signals.get(best_category, [])
-        if signals:
-            reasons.append(f"Heuristic analysis detected: {', '.join(signals[:5])}")
+        _add_heuristic_reasons(reasons, best_category, heuristic_signals)
 
-        # Text-based reasons
         if text_features:
-            kw_counts = text_features.category_keyword_counts
-            cat_name = best_category.value
-            if kw_counts.get(cat_name, 0) > 0:
-                reasons.append(
-                    f"Content contains {kw_counts[cat_name]} {cat_name}-related keywords"
-                )
+            _add_text_reasons(reasons, best_category, text_features)
 
-            if best_category == PARACategory.PROJECT and text_features.temporal_indicators:
-                reasons.append(
-                    f"Found {len(text_features.temporal_indicators)} "
-                    f"temporal references suggesting time-bound work"
-                )
-
-            if best_category == PARACategory.PROJECT and text_features.action_items:
-                reasons.append(f"Found {len(text_features.action_items)} action items")
-
-        # Metadata reasons
-        days = metadata_features.days_since_modified
-        if days > 0:
-            if best_category == PARACategory.PROJECT and days < 30:
-                reasons.append("File was recently modified (active work)")
-            elif best_category == PARACategory.ARCHIVE and days > 180:
-                reasons.append(f"File has not been modified in {int(days)} days")
-
-        # Structural reasons
-        if structural_features.parent_category_hint:
-            reasons.append(
-                f"Parent directory suggests '{structural_features.parent_category_hint}'"
-            )
-        if structural_features.has_project_structure:
-            reasons.append("Directory contains project structure indicators")
+        _add_metadata_reasons(reasons, best_category, metadata_features)
+        _add_structural_reasons(reasons, structural_features)
 
         if not reasons:
             reasons.append(f"Best match based on combined analysis: {best_category.value}")

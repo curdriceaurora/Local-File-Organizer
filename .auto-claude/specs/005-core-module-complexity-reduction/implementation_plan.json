@@ -383,7 +383,9 @@
             "command": "ruff check src/file_organizer/services/intelligence/*.py && pytest tests/unit/services/intelligence/ -v",
             "expected": "No C901 violations and all tests pass"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Successfully refactored intelligence module files by breaking down complex methods into focused helper functions. profile_importer.py: Extracted validate_import_file() into 10 helper methods (_check_file_size, _load_json_file, _validate_required_fields, etc.) and refactored import_profile() into smaller methods. profile_migrator.py: Broke down migrate_version() into 8 focused methods (_load_profile, _migration_needed, _execute_migration, etc.) and extracted validate_migration() helpers. Follows dispatcher.py pattern of small, single-purpose functions with clear separation of concerns. All 56 tests pass with no C901 violations detected.",
+          "updated_at": "2026-03-25T02:45:00.000000+00:00"
         },
         {
           "id": "subtask-5-5",
@@ -562,6 +564,6 @@
   "planStatus": "in_progress",
   "xstateState": "backlog",
   "executionPhase": "coding",
-  "updated_at": "2026-03-25T02:21:34.607Z",
+  "updated_at": "2026-03-25T02:24:40.301Z",
   "last_updated": "2026-03-25T01:13:29.936027+00:00"
 }
