@@ -160,6 +160,161 @@ class BM25Index:
         return ranked[:top_k]
 
     # ------------------------------------------------------------------
+    # Incremental updates
+    # ------------------------------------------------------------------
+
+    def add_document(self, document: str, path: Path) -> None:
+        """Add a single document to the index.
+
+        This performs an incremental update by adding the document to
+        the internal corpus and rebuilding the BM25 index. The cache
+        is automatically invalidated and updated if enabled.
+
+        Args:
+            document: Textual representation of the file (name + content).
+            path: Corresponding file path.
+
+        Raises:
+            ImportError: If ``rank-bm25`` is not installed.
+        """
+        try:
+            from rank_bm25 import BM25Okapi
+        except ImportError as exc:
+            raise ImportError(
+                "rank-bm25 is required for BM25Index. "
+                "Install it with: pip install 'file-organizer[search]'"
+            ) from exc
+
+        # Add to internal state
+        self._paths.append(path)
+
+        # Rebuild the index with all documents
+        tokenised = [_tokenise(doc) for doc in self._get_documents()]
+        # Add the new document's tokens
+        tokenised.append(_tokenise(document))
+
+        self._bm25 = BM25Okapi(tokenised)
+        logger.debug("BM25Index: added document, index now has {} documents", len(self._paths))
+
+        # Update cache if enabled
+        self._update_cache()
+
+    def remove_document(self, path: Path) -> None:
+        """Remove a document from the index by path.
+
+        This performs an incremental update by removing the document
+        from the internal corpus and rebuilding the BM25 index. The
+        cache is automatically invalidated and updated if enabled.
+
+        Args:
+            path: Path of the document to remove.
+
+        Raises:
+            ValueError: If the path is not found in the index.
+            ImportError: If ``rank-bm25`` is not installed.
+        """
+        try:
+            from rank_bm25 import BM25Okapi
+        except ImportError as exc:
+            raise ImportError(
+                "rank-bm25 is required for BM25Index. "
+                "Install it with: pip install 'file-organizer[search]'"
+            ) from exc
+
+        # Find and remove from internal state
+        try:
+            idx = self._paths.index(path)
+        except ValueError as exc:
+            raise ValueError(f"Path {path} not found in index") from exc
+
+        self._paths.pop(idx)
+
+        # Rebuild the index with remaining documents
+        if self._paths:
+            tokenised = [_tokenise(doc) for doc in self._get_documents()]
+            self._bm25 = BM25Okapi(tokenised)
+        else:
+            self._bm25 = None
+
+        logger.debug("BM25Index: removed document, index now has {} documents", len(self._paths))
+
+        # Update cache if enabled
+        self._update_cache()
+
+    def update_document(self, path: Path, document: str) -> None:
+        """Update an existing document in the index.
+
+        This performs an incremental update by replacing the document
+        content in the internal corpus and rebuilding the BM25 index.
+        The cache is automatically invalidated and updated if enabled.
+
+        Args:
+            path: Path of the document to update.
+            document: New textual representation of the file.
+
+        Raises:
+            ValueError: If the path is not found in the index.
+            ImportError: If ``rank-bm25`` is not installed.
+        """
+        try:
+            from rank_bm25 import BM25Okapi
+        except ImportError as exc:
+            raise ImportError(
+                "rank-bm25 is required for BM25Index. "
+                "Install it with: pip install 'file-organizer[search]'"
+            ) from exc
+
+        # Verify path exists in index
+        if path not in self._paths:
+            raise ValueError(f"Path {path} not found in index")
+
+        # Rebuild the index with all documents
+        tokenised = [_tokenise(doc) for doc in self._get_documents()]
+        # Replace the tokenized version for this path
+        idx = self._paths.index(path)
+        tokenised[idx] = _tokenise(document)
+
+        self._bm25 = BM25Okapi(tokenised)
+        logger.debug("BM25Index: updated document at {}", path)
+
+        # Update cache if enabled
+        self._update_cache()
+
+    def _get_documents(self) -> list[str]:
+        """Reconstruct document strings from the BM25 index.
+
+        This is a helper for incremental updates. Since we don't store
+        the original document strings, we reconstruct them from the
+        tokenized corpus in the BM25 index.
+
+        Returns:
+            List of reconstructed document strings (space-separated tokens).
+        """
+        if self._bm25 is None or not hasattr(self._bm25, 'corpus'):
+            # No index yet, return empty list
+            return []
+
+        # Reconstruct documents from tokenized corpus
+        corpus = self._bm25.corpus  # type: ignore[attr-defined]
+        return [" ".join(tokens) for tokens in corpus]
+
+    def _update_cache(self) -> None:
+        """Update the cache file after incremental changes.
+
+        This helper saves the current index state to cache if enabled.
+        Called automatically after add/update/remove operations.
+        """
+        if self._cache_path is None or self._bm25 is None:
+            return
+
+        try:
+            self._persistence.save(self._bm25, self._paths, self._cache_path)
+            logger.debug("BM25Index: cache updated after incremental change")
+        except (OSError, Exception) as exc:
+            # Cache update failed, but index is still usable
+            logger.warning("BM25Index: failed to update cache: {}", exc)
+
+    # ------------------------------------------------------------------
     # Convenience
     # ------------------------------------------------------------------
 

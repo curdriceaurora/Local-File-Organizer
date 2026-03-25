@@ -208,3 +208,186 @@ class TestBM25Index:
         assert old_paths[0] not in returned_paths
         assert old_paths[1] not in returned_paths
         assert new_paths[0] in returned_paths
+
+
+# ---------------------------------------------------------------------------
+# BM25Index incremental updates
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBM25IndexIncrementalUpdates:
+    """Tests for incremental document add/update/remove operations."""
+
+    def test_add_document_increases_size(self) -> None:
+        """Adding a document increases the index size by 1."""
+        idx = BM25Index()
+        paths = _make_paths(3)
+        idx.index(
+            ["finance budget report", "legal contract agreement", "recipe baking chocolate"],
+            paths,
+        )
+        assert idx.size == 3
+        # Add a new document
+        new_path = Path(tempfile.gettempdir()) / "new_doc.txt"
+        idx.add_document("machine learning neural network", new_path)
+        assert idx.size == 4
+
+    def test_add_document_searchable(self) -> None:
+        """Added documents are immediately searchable."""
+        idx = BM25Index()
+        paths = _make_paths(3)
+        idx.index(
+            ["finance budget report", "legal contract agreement", "recipe baking chocolate"],
+            paths,
+        )
+        # Add a new document
+        new_path = Path(tempfile.gettempdir()) / "ml_doc.txt"
+        idx.add_document("machine learning python tensorflow", new_path)
+        # Search should find the new document
+        results = idx.search("machine learning")
+        assert results, "Expected to find newly added document"
+        returned_paths = [p for p, _ in results]
+        assert new_path in returned_paths
+
+    def test_remove_document_decreases_size(self) -> None:
+        """Removing a document decreases the index size by 1."""
+        idx = BM25Index()
+        paths = _make_paths(3)
+        idx.index(
+            ["finance budget report", "legal contract agreement", "recipe baking chocolate"],
+            paths,
+        )
+        assert idx.size == 3
+        # Remove a document
+        idx.remove_document(paths[1])
+        assert idx.size == 2
+
+    def test_remove_document_not_searchable(self) -> None:
+        """Removed documents no longer appear in search results."""
+        idx = BM25Index()
+        paths = _make_paths(3)
+        idx.index(
+            ["finance budget report", "legal contract agreement", "recipe baking chocolate"],
+            paths,
+        )
+        # Remove the legal document
+        idx.remove_document(paths[1])
+        # Search for contract should not return the removed document
+        results = idx.search("legal contract")
+        returned_paths = [p for p, _ in results]
+        assert paths[1] not in returned_paths
+
+    def test_remove_nonexistent_document_raises(self) -> None:
+        """Attempting to remove a document that doesn't exist raises ValueError."""
+        idx = BM25Index()
+        paths = _make_paths(2)
+        idx.index(["finance report", "legal contract"], paths)
+        nonexistent_path = Path(tempfile.gettempdir()) / "nonexistent.txt"
+        with pytest.raises(ValueError, match="not found in index"):
+            idx.remove_document(nonexistent_path)
+
+    def test_update_document_maintains_size(self) -> None:
+        """Updating a document maintains the same index size."""
+        idx = BM25Index()
+        paths = _make_paths(3)
+        idx.index(
+            ["finance budget report", "legal contract agreement", "recipe baking chocolate"],
+            paths,
+        )
+        assert idx.size == 3
+        # Update a document
+        idx.update_document(paths[0], "quarterly earnings financial statement")
+        assert idx.size == 3
+
+    def test_update_document_changes_search_results(self) -> None:
+        """Updating a document reflects in search results."""
+        idx = BM25Index()
+        paths = _make_paths(3)
+        idx.index(
+            ["finance budget report", "legal contract agreement", "recipe baking chocolate"],
+            paths,
+        )
+        # Update first document with completely different content
+        idx.update_document(paths[0], "machine learning artificial intelligence")
+        # Old terms should not match as strongly
+        finance_results = idx.search("finance budget")
+        finance_paths = [p for p, _ in finance_results]
+        # New terms should match
+        ml_results = idx.search("machine learning")
+        assert ml_results, "Expected updated document to match new content"
+        ml_paths = [p for p, _ in ml_results]
+        assert paths[0] in ml_paths, "Updated document should appear for new query terms"
+
+    def test_update_nonexistent_document_raises(self) -> None:
+        """Attempting to update a document that doesn't exist raises ValueError."""
+        idx = BM25Index()
+        paths = _make_paths(2)
+        idx.index(["finance report", "legal contract"], paths)
+        nonexistent_path = Path(tempfile.gettempdir()) / "nonexistent.txt"
+        with pytest.raises(ValueError, match="not found in index"):
+            idx.update_document(nonexistent_path, "new content")
+
+    def test_incremental_update(self) -> None:
+        """Combined test: add, update, and remove documents."""
+        idx = BM25Index()
+        paths = _make_paths(3)
+        idx.index(
+            ["finance budget report", "legal contract agreement", "recipe baking chocolate"],
+            paths,
+        )
+        assert idx.size == 3
+
+        # Add a new document
+        new_path = Path(tempfile.gettempdir()) / "ml_doc.txt"
+        idx.add_document("machine learning python", new_path)
+        assert idx.size == 4
+
+        # Update an existing document
+        idx.update_document(paths[1], "software license agreement open source")
+        assert idx.size == 4
+
+        # Remove a document
+        idx.remove_document(paths[2])
+        assert idx.size == 3
+
+        # Verify search results reflect all changes
+        ml_results = idx.search("machine learning")
+        assert any(p == new_path for p, _ in ml_results), "Added document should be searchable"
+
+        software_results = idx.search("software license")
+        assert any(p == paths[1] for p, _ in software_results), "Updated document should match new content"
+
+        recipe_results = idx.search("recipe baking")
+        assert not any(p == paths[2] for p, _ in recipe_results), "Removed document should not appear"
+
+    def test_incremental_updates_invalidate_cache(self) -> None:
+        """Incremental updates invalidate and rebuild the cache."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "test_cache.pkl"
+            idx = BM25Index(cache_path=cache_path)
+            paths = _make_paths(3)
+            idx.index(
+                ["finance budget report", "legal contract agreement", "recipe baking chocolate"],
+                paths,
+            )
+            # Cache should be created
+            assert cache_path.exists()
+
+            # Add a document - cache should be rebuilt
+            new_path = Path(tempfile.gettempdir()) / "new_doc.txt"
+            idx.add_document("machine learning", new_path)
+            # Cache should still exist and be valid
+            assert cache_path.exists()
+
+            # Create a new index instance with the same cache
+            idx2 = BM25Index(cache_path=cache_path)
+            idx2.index(
+                ["finance budget report", "legal contract agreement", "recipe baking chocolate", "machine learning"],
+                paths + [new_path],
+            )
+            # Should load from cache with updated document
+            assert idx2.size == 4
+            results = idx2.search("machine learning")
+            assert any(p == new_path for p, _ in results)
