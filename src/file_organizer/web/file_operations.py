@@ -11,22 +11,33 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
-from fastapi import Request
+from fastapi import Request, UploadFile
+from PIL import Image, UnidentifiedImageError
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
-from file_organizer.api.utils import file_info_from_path, is_hidden
+from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_path
 from file_organizer.web._helpers import (
+    MAX_THUMBNAIL_BYTES,
+    MAX_UPLOAD_BYTES,
+    THUMBNAIL_SIZE,
+    TEXT_PREVIEW_CHARS,
+    UPLOAD_CHUNK_SIZE,
+    allowed_roots,
     clamp_limit,
     detect_kind,
     format_bytes,
     format_timestamp,
     has_children,
+    is_probably_text,
     parse_file_type_filter,
     path_id,
+    render_image_thumbnail,
+    render_placeholder_thumbnail,
     resolve_selected_path,
+    sanitize_upload_name,
     select_root_for_path,
     validate_depth,
 )
@@ -343,3 +354,243 @@ def build_file_results_context(
         "page_size": page_size,
         "request": request,
     }
+
+
+def build_tree_context(
+    path: str | None,
+    settings: ApiSettings,
+    depth: int,
+    active: str | None,
+) -> dict[str, Any]:
+    """Build context for sidebar tree nodes.
+
+    Args:
+        path: Directory to expand in the tree (None for roots).
+        settings: Application settings with allowed paths.
+        depth: Current nesting depth for indentation.
+        active: Currently selected path for highlighting.
+
+    Returns:
+        Dict with nodes, depth, active_path, active_path_param, and error_message.
+    """
+    roots = allowed_roots(settings)
+    active_path = unquote(active) if active else ""
+    active_path_param = quote(active_path) if active_path else ""
+    nodes: list[dict[str, Any]] = []
+    error_message: str | None = None
+
+    if path:
+        try:
+            current = resolve_path(path, settings.allowed_paths)
+            validate_depth(current, roots)
+            nodes = list_tree_nodes(current, include_hidden=False)
+        except ApiError as exc:
+            error_message = exc.message
+    else:
+        for root in roots:
+            nodes.append(
+                {
+                    "id": path_id(root),
+                    "name": root.name or root.as_posix(),
+                    "path": str(root),
+                    "path_param": quote(str(root)),
+                    "has_children": has_children(root),
+                    "is_root": True,
+                }
+            )
+
+    if not nodes and not path:
+        error_message = "No allowed paths configured. Add FO_API_ALLOWED_PATHS."
+
+    return {
+        "nodes": nodes,
+        "depth": depth,
+        "active_path": active_path,
+        "active_path_param": active_path_param,
+        "error_message": error_message,
+    }
+
+
+def generate_thumbnail(path: str, kind: str, settings: ApiSettings) -> bytes:
+    """Generate a thumbnail image for a file.
+
+    Args:
+        path: Absolute file path.
+        kind: File kind hint (``image``, ``pdf``, ``video``, or ``file``).
+        settings: Application settings with allowed paths.
+
+    Returns:
+        PNG image bytes.
+
+    Raises:
+        ApiError: If the file is not found.
+    """
+    target = resolve_path(path, settings.allowed_paths)
+    if not target.exists() or not target.is_file():
+        raise ApiError(status_code=404, error="not_found", message="File not found")
+
+    if kind == "image":
+        try:
+            stat = target.stat()
+        except OSError:
+            return render_placeholder_thumbnail("IMG", THUMBNAIL_SIZE)
+
+        if stat.st_size > MAX_THUMBNAIL_BYTES:
+            return render_placeholder_thumbnail("IMG", THUMBNAIL_SIZE)
+
+        try:
+            return render_image_thumbnail(target)
+        except (OSError, UnidentifiedImageError, Image.DecompressionBombError):
+            return render_placeholder_thumbnail("IMG", THUMBNAIL_SIZE)
+    elif kind == "pdf":
+        return render_placeholder_thumbnail("PDF", THUMBNAIL_SIZE)
+    elif kind == "video":
+        return render_placeholder_thumbnail("VID", THUMBNAIL_SIZE)
+    else:
+        return render_placeholder_thumbnail("FILE", THUMBNAIL_SIZE)
+
+
+def build_preview_context(path: str, settings: ApiSettings) -> dict[str, Any]:
+    """Build context for file preview panel.
+
+    Args:
+        path: Absolute file path to preview.
+        settings: Application settings with allowed paths.
+
+    Returns:
+        Dict with preview information including kind, text, URLs, and metadata.
+    """
+    error_message: str | None = None
+    preview_kind = "file"
+    preview_text: str | None = None
+    download_url = ""
+    raw_url = ""
+    size_display = ""
+    modified_display = ""
+    info = None
+
+    try:
+        target = resolve_path(path, settings.allowed_paths)
+        if not target.exists() or not target.is_file():
+            raise ApiError(status_code=404, error="not_found", message="File not found")
+
+        info = file_info_from_path(target)
+        preview_kind = detect_kind(target)
+        raw_url = f"/ui/files/raw?path={quote(info.path)}"
+        download_url = f"/ui/files/raw?path={quote(info.path)}&download=1"
+        size_display = format_bytes(info.size)
+        modified_display = format_timestamp(info.modified)
+
+        if preview_kind == "text" and is_probably_text(target):
+            try:
+                preview_text = target.read_text(encoding="utf-8", errors="replace")[
+                    :TEXT_PREVIEW_CHARS
+                ]
+            except OSError:
+                preview_text = "Preview not available."
+        elif preview_kind == "text":
+            preview_kind = "file"
+    except ApiError as exc:
+        error_message = exc.message
+
+    return {
+        "info": info,
+        "preview_kind": preview_kind,
+        "preview_text": preview_text,
+        "raw_url": raw_url,
+        "download_url": download_url,
+        "size_display": size_display,
+        "modified_display": modified_display,
+        "error_message": error_message,
+    }
+
+
+def process_file_uploads(
+    files: list[UploadFile],
+    target_dir: Path,
+    allow_hidden: bool = False,
+) -> tuple[int, list[str]]:
+    """Process multiple file uploads to a target directory.
+
+    Args:
+        files: List of uploaded files to process.
+        target_dir: Directory to save files to.
+        allow_hidden: Whether to allow hidden files.
+
+    Returns:
+        Tuple of (saved_count, error_messages).
+    """
+    from file_organizer.web.file_validators import (
+        validate_file_not_exists,
+        validate_file_size,
+        validate_upload_filename,
+    )
+
+    saved = 0
+    errors: list[str] = []
+
+    for upload in files:
+        if not upload.filename:
+            continue
+
+        try:
+            validate_upload_filename(upload.filename, allow_hidden=allow_hidden)
+        except ApiError as exc:
+            errors.append(exc.message)
+            if upload.file:
+                upload.file.close()
+            continue
+
+        safe_name = sanitize_upload_name(upload.filename)
+        if safe_name is None:
+            errors.append(f"Rejected {upload.filename}: invalid filename.")
+            if upload.file:
+                upload.file.close()
+            continue
+
+        destination = target_dir / safe_name
+        try:
+            validate_file_not_exists(destination, safe_name)
+        except ApiError as exc:
+            errors.append(exc.message)
+            if upload.file:
+                upload.file.close()
+            continue
+
+        total_bytes = 0
+        try:
+            with destination.open("wb") as handle:
+                while True:
+                    chunk = upload.file.read(UPLOAD_CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    total_bytes += len(chunk)
+                    try:
+                        validate_file_size(total_bytes, MAX_UPLOAD_BYTES)
+                    except ApiError:
+                        raise ApiError(
+                            status_code=400,
+                            error="file_too_large",
+                            message=f"{safe_name} exceeds upload size limit.",
+                        )
+                    handle.write(chunk)
+        except ApiError as exc:
+            if destination.exists():
+                destination.unlink(missing_ok=True)
+            errors.append(exc.message)
+            if upload.file:
+                upload.file.close()
+            continue
+        except OSError:
+            if destination.exists():
+                destination.unlink(missing_ok=True)
+            errors.append(f"Failed to save {safe_name}.")
+            if upload.file:
+                upload.file.close()
+            continue
+
+        if upload.file:
+            upload.file.close()
+        saved += 1
+
+    return saved, errors
