@@ -345,8 +345,9 @@
             "command": "pytest tests/services/search/test_bm25_index.py::test_incremental_update -v",
             "expected": "Incremental update tests pass"
           },
-          "status": "pending",
-          "notes": "Add update_document() and remove_document() methods for incremental updates"
+          "status": "completed",
+          "notes": "Added add_document(), remove_document(), and update_document() methods with comprehensive test suite. Includes automatic cache invalidation and helper methods for document reconstruction.",
+          "updated_at": "2026-03-24T22:15:00Z"
         }
       ]
     },
@@ -678,6 +679,6 @@
   "planStatus": "in_progress",
   "xstateState": "backlog",
   "executionPhase": "coding",
-  "updated_at": "2026-03-25T02:08:32.896Z",
+  "updated_at": "2026-03-25T02:12:30.400Z",
   "last_updated": "2026-03-25T02:07:56.297313+00:00"
 }
