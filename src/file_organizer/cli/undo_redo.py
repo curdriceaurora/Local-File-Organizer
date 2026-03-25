@@ -45,6 +45,7 @@ def undo_command(
     manager = None
     try:
         manager = UndoManager()
+        transaction_id = undo_history.normalize_transaction_id(transaction_id)
 
         # Dry run mode - delegate to preview helpers
         if dry_run:

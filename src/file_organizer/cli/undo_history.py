@@ -14,6 +14,14 @@ if TYPE_CHECKING:
     from ..undo.undo_manager import UndoManager
 
 
+def normalize_transaction_id(transaction_id: str | None) -> str | None:
+    """Normalize transaction ids so blank values are treated as absent."""
+    if transaction_id is None:
+        return None
+    normalized = transaction_id.strip()
+    return normalized or None
+
+
 def get_undo_stack(manager: UndoManager) -> list[Operation]:
     """Get list of operations that can be undone.
 
@@ -164,14 +172,19 @@ def preview_undo_transaction(manager: UndoManager, transaction_id: str) -> int:
     Returns:
         Exit code (0 for success, 1 for failure).
     """
-    print(f"\nWould undo transaction {transaction_id}")
-    transaction = manager.history.get_transaction(transaction_id)
+    normalized_transaction_id = normalize_transaction_id(transaction_id)
+    if normalized_transaction_id is None:
+        print("Transaction ID must not be empty")
+        return 1
+
+    print(f"\nWould undo transaction {normalized_transaction_id}")
+    transaction = manager.history.get_transaction(normalized_transaction_id)
     if transaction:
-        operations = manager.history.get_operations(transaction_id=transaction_id)
-        print(format_transaction_summary(transaction_id, operations))
+        operations = manager.history.get_operations(transaction_id=normalized_transaction_id)
+        print(format_transaction_summary(normalized_transaction_id, operations))
         return 0
     else:
-        print(f"Transaction {transaction_id} not found")
+        print(f"Transaction {normalized_transaction_id} not found")
         return 1
 
 
@@ -262,9 +275,10 @@ def execute_undo(
     Returns:
         Exit code (0 for success, 1 for failure).
     """
-    if transaction_id is not None:
-        print(f"Undoing transaction {transaction_id}...")
-        success = manager.undo_transaction(transaction_id)
+    normalized_transaction_id = normalize_transaction_id(transaction_id)
+    if normalized_transaction_id is not None:
+        print(f"Undoing transaction {normalized_transaction_id}...")
+        success = manager.undo_transaction(normalized_transaction_id)
     elif operation_id is not None:
         print(f"Undoing operation {operation_id}...")
         success = manager.undo_operation(operation_id)

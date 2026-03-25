@@ -183,10 +183,21 @@ class ParallelProcessor:
             return
 
         exec_instance, owns_executor = self._setup_executor(executor)
+        cleanup_state = {"force_nonblocking_shutdown": False}
         try:
-            yield from self._process_with_executor(exec_instance, files, process_fn, owns_executor)
+            yield from self._process_with_executor(
+                exec_instance,
+                files,
+                process_fn,
+                owns_executor,
+                cleanup_state,
+            )
         finally:
-            self._cleanup_executor(exec_instance, owns_executor)
+            self._cleanup_executor(
+                exec_instance,
+                owns_executor,
+                cleanup_state["force_nonblocking_shutdown"],
+            )
 
     def _setup_executor(
         self, executor: ThreadPoolExecutor | ProcessPoolExecutor | None
@@ -216,7 +227,7 @@ class ParallelProcessor:
     @staticmethod
     def _is_non_retryable_failure(result: FileResult) -> bool:
         """Return whether a failed result should stop retries for the batch."""
-        return bool(result.error and "could not be cancelled" in result.error)
+        return result.non_retryable
 
     def _process_with_executor(
         self,
@@ -224,6 +235,7 @@ class ParallelProcessor:
         files: list[Path],
         process_fn: Callable[[Path], Any],
         owns_executor: bool,
+        cleanup_state: dict[str, bool],
     ) -> Iterator[FileResult]:
         """Core processing loop with timeout handling.
 
@@ -232,6 +244,7 @@ class ParallelProcessor:
             files: Files to process.
             process_fn: Function to apply to each file.
             owns_executor: Whether we own the executor and should handle shutdown.
+            cleanup_state: Per-iterator shutdown state shared with cleanup.
 
         Yields:
             FileResult for each completed file.
@@ -255,7 +268,6 @@ class ParallelProcessor:
         future_started: dict[Future[FileResult], float | None] = {}
         iterator = iter(files)
         iterator_exhausted = False
-        force_nonblocking_shutdown = False
 
         def submit_next() -> bool:
             """Submit next file if available."""
@@ -325,10 +337,7 @@ class ParallelProcessor:
                     submit_round_of_work()
                     continue
 
-                abort_force_shutdown = owns_executor
-                force_nonblocking_shutdown = abort_force_shutdown
-                if owns_executor:
-                    self._force_nonblocking_shutdown = force_nonblocking_shutdown
+                cleanup_state["force_nonblocking_shutdown"] = owns_executor
                 yield from timeout_results
                 # Abort remaining files from iterator
                 for remaining_path in iterator:
@@ -338,15 +347,12 @@ class ParallelProcessor:
                             success=False,
                             error="Aborted because another task exceeded timeout "
                             "and could not be cancelled",
+                            non_retryable=True,
                         )
                     )
                 return
 
             submit_round_of_work()
-
-        # Store shutdown flag for cleanup if we made it through without abort
-        if owns_executor:
-            self._force_nonblocking_shutdown = force_nonblocking_shutdown
 
     def _handle_timeouts(
         self,
@@ -465,6 +471,7 @@ class ParallelProcessor:
                             if timeout is not None
                             else abort_error
                         ),
+                        non_retryable=True,
                     )
                 )
                 aborted_results.append(result)
@@ -481,7 +488,14 @@ class ParallelProcessor:
                 continue
 
             other.cancel()
-            result = finalize_result(FileResult(path=other_path, success=False, error=abort_error))
+            result = finalize_result(
+                FileResult(
+                    path=other_path,
+                    success=False,
+                    error=abort_error,
+                    non_retryable=True,
+                )
+            )
             aborted_results.append(result)
 
         return aborted_results
@@ -490,22 +504,20 @@ class ParallelProcessor:
         self,
         exec_instance: ThreadPoolExecutor | ProcessPoolExecutor,
         owns_executor: bool,
+        force_shutdown: bool,
     ) -> None:
         """Clean up executor after processing.
 
         Args:
             exec_instance: Executor to clean up.
             owns_executor: Whether we own the executor.
+            force_shutdown: Whether to shut down without waiting.
         """
         if owns_executor:
-            force_shutdown = getattr(self, "_force_nonblocking_shutdown", False)
             exec_instance.shutdown(
                 wait=not force_shutdown,
                 cancel_futures=force_shutdown,
             )
-            # Clean up flag
-            if hasattr(self, "_force_nonblocking_shutdown"):
-                delattr(self, "_force_nonblocking_shutdown")
 
     def _run_batch(
         self,

@@ -91,13 +91,12 @@ class TestUndoCommand:
 
     def test_undo_live_empty_transaction_id_takes_precedence(self):
         mock_mgr = MagicMock()
-        mock_mgr.undo_transaction.return_value = False
         with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr):
             result = undo_command(operation_id=5, transaction_id="")
 
-        assert result == 1
-        mock_mgr.undo_transaction.assert_called_once_with("")
-        mock_mgr.undo_operation.assert_not_called()
+        assert result == 0
+        mock_mgr.undo_transaction.assert_not_called()
+        mock_mgr.undo_operation.assert_called_once_with(5)
         mock_mgr.undo_last_operation.assert_not_called()
 
     def test_undo_dry_run_with_operation_id_can_undo(self, capsys):
@@ -225,18 +224,17 @@ class TestUndoCommand:
         with (
             patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr),
             patch(
-                "file_organizer.cli.undo_redo.undo_history.preview_undo_transaction",
-                return_value=1,
-            ) as mock_preview_transaction,
-            patch(
-                "file_organizer.cli.undo_redo.undo_history.preview_undo_operation"
+                "file_organizer.cli.undo_redo.undo_history.preview_undo_operation", return_value=0
             ) as mock_preview_operation,
+            patch(
+                "file_organizer.cli.undo_redo.undo_history.preview_undo_transaction"
+            ) as mock_preview_transaction,
         ):
             result = undo_command(operation_id=5, transaction_id="", dry_run=True)
 
-        assert result == 1
-        mock_preview_transaction.assert_called_once_with(mock_mgr, "")
-        mock_preview_operation.assert_not_called()
+        assert result == 0
+        mock_preview_transaction.assert_not_called()
+        mock_preview_operation.assert_called_once_with(mock_mgr, 5)
 
     def test_undo_exception(self, capsys):
         with patch(

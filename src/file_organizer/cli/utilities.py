@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json as json_mod
 import time
+import warnings
 from pathlib import Path
 
 import typer
@@ -116,9 +117,6 @@ def _validate_search_params(
     Raises:
         typer.Exit: If validation fails
     """
-    if limit <= 0:
-        return directory, True
-
     search_dir = directory.resolve()
     if not search_dir.is_dir():
         console.print(f"[red]Error: Directory '{directory}' does not exist.[/red]")
@@ -130,6 +128,9 @@ def _validate_search_params(
             f"Choose from: {', '.join(sorted(TYPE_EXTENSIONS))}[/red]"
         )
         raise typer.Exit(code=1)
+
+    if limit <= 0:
+        return search_dir, True
 
     return search_dir, False
 
@@ -150,7 +151,7 @@ def _format_file_size(size: int) -> str:
     return f"{size / (1024 * 1024):.1f} MB"
 
 
-def _build_json_record(path: Path, score: float | None = None) -> dict[str, object]:
+def _build_json_record(path: Path, score: float | None = None) -> dict[str, object] | None:
     """Build a JSON record for a file path.
 
     Args:
@@ -158,11 +159,15 @@ def _build_json_record(path: Path, score: float | None = None) -> dict[str, obje
         score: Optional semantic search score
 
     Returns:
-        Dictionary with file metadata
+        Dictionary with file metadata, or None if the file can no longer be stat'ed.
     """
     from datetime import UTC, datetime
 
-    stat = path.stat()
+    try:
+        stat = path.stat()
+    except OSError as exc:
+        warnings.warn(f"Skipping {path}: {exc}", RuntimeWarning, stacklevel=2)
+        return None
     record: dict[str, object] = {
         "path": str(path),
         "size": stat.st_size,
@@ -195,13 +200,25 @@ def _output_search_results(
         return
 
     if json_out:
-        records = [_build_json_record(p, s) for p, s in results]
+        records = [
+            record
+            for path, score in results
+            if (record := _build_json_record(path, score)) is not None
+        ]
         typer.echo(json_mod.dumps(records, indent=2))
     else:
         label = f" [{search_type}]" if search_type else ""
-        typer.echo(f"Found {len(results)} file(s){label}:")
+        rendered_results: list[tuple[Path, float | None, object]] = []
         for path, score in results:
-            stat = path.stat()
+            try:
+                stat = path.stat()
+            except OSError as exc:
+                warnings.warn(f"Skipping {path}: {exc}", RuntimeWarning, stacklevel=2)
+                continue
+            rendered_results.append((path, score, stat))
+
+        typer.echo(f"Found {len(rendered_results)} file(s){label}:")
+        for path, score, stat in rendered_results:
             size_str = _format_file_size(stat.st_size)
             mtime = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
             score_str = f"  score={score:.4f}" if score is not None else ""

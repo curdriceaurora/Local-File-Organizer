@@ -222,6 +222,54 @@ class TestConcurrencyFixes(unittest.TestCase):
             any("could not be cancelled" in str(item.error) for item in results.results)
         )
 
+    def test_error_message_does_not_control_retry_policy(self) -> None:
+        """Regular failures containing the abort phrase should still be retried."""
+        config = ParallelConfig(
+            max_workers=1,
+            retry_count=1,
+        )
+        processor = ParallelProcessor(config=config)
+        call_count = 0
+
+        def flaky_task(_path: Path) -> str:
+            nonlocal call_count
+            call_count += 1
+            raise RuntimeError("plugin said could not be cancelled")
+
+        results = processor.process_batch([Path("one.txt")], flaky_task)
+
+        self.assertEqual(call_count, 2)
+        self.assertEqual(results.failed, 1)
+
+    def test_force_shutdown_flag_is_local_per_iterator(self) -> None:
+        """One iterator's abort state should not leak into a later healthy batch."""
+        config = ParallelConfig(
+            max_workers=1,
+            timeout_per_file=0.1,
+            retry_count=0,
+        )
+        processor = ParallelProcessor(config=config)
+
+        def very_slow_task(_path: Path) -> str:
+            threading.Event().wait(timeout=0.3)
+            return "done"
+
+        first_results = list(processor.process_batch_iter([Path("slow.txt")], very_slow_task))
+        self.assertTrue(any(result.non_retryable for result in first_results))
+
+        with patch("concurrent.futures.thread.ThreadPoolExecutor.shutdown") as mock_shutdown:
+            second_results = list(
+                processor.process_batch_iter([Path("fast.txt")], lambda _path: "ok")
+            )
+
+        self.assertEqual(len(second_results), 1)
+        self.assertTrue(second_results[0].success)
+        self.assertTrue(mock_shutdown.called)
+        force_shutdown_values = {
+            call.kwargs.get("cancel_futures") for call in mock_shutdown.call_args_list
+        }
+        self.assertIn(False, force_shutdown_values)
+
     def test_timeout_poll_interval_scales_with_timeout(self) -> None:
         """Test polling interval scales with timeout to reduce timeout drift."""
         config = ParallelConfig(
