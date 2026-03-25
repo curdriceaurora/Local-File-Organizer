@@ -267,18 +267,20 @@ class FileMetadataRepository:
         workspace_id: str,
         relative_paths: list[str],
         cache: CacheBackend | None = None,
+        cache_ttl_seconds: int = 900,
     ) -> dict[str, FileMetadata]:
         """Bulk fetch metadata by relative paths for improved performance.
 
         Retrieves multiple file metadata records in a single query, which is
         much more efficient than individual lookups when processing large
-        file sets.
+        file sets. Uses cache when available to reduce database queries.
 
         Args:
             session: Active SQLAlchemy session.
             workspace_id: Workspace identifier.
             relative_paths: List of relative paths to fetch.
-            cache: Optional cache backend (currently not used for bulk ops).
+            cache: Optional cache backend for improved performance.
+            cache_ttl_seconds: TTL for cached entries (default 900s).
 
         Returns:
             Dictionary mapping relative_path -> FileMetadata.
@@ -286,15 +288,47 @@ class FileMetadataRepository:
         if not relative_paths:
             return {}
 
-        rows = (
-            session.query(FileMetadata)
-            .filter(
-                and_(
-                    FileMetadata.workspace_id == workspace_id,
-                    FileMetadata.relative_path.in_(relative_paths),
-                )
-            )
-            .all()
-        )
+        result = {}
+        paths_to_fetch = []
 
-        return {row.relative_path: row for row in rows}
+        if cache is not None:
+            for rel_path in relative_paths:
+                cached = cache.get(_cache_key(workspace_id, rel_path))
+                if cached:
+                    try:
+                        data = json.loads(cached)
+                        cached_id = data.get("id")
+                    except (TypeError, ValueError, AttributeError):
+                        cached_id = None
+                    if isinstance(cached_id, str):
+                        row = session.get(FileMetadata, cached_id)
+                        if row is not None:
+                            result[rel_path] = row
+                            continue
+                    cache.delete(_cache_key(workspace_id, rel_path))
+                paths_to_fetch.append(rel_path)
+        else:
+            paths_to_fetch = relative_paths
+
+        if paths_to_fetch:
+            rows = (
+                session.query(FileMetadata)
+                .filter(
+                    and_(
+                        FileMetadata.workspace_id == workspace_id,
+                        FileMetadata.relative_path.in_(paths_to_fetch),
+                    )
+                )
+                .all()
+            )
+
+            for row in rows:
+                result[row.relative_path] = row
+                if cache is not None:
+                    cache.set(
+                        _cache_key(workspace_id, row.relative_path),
+                        json.dumps(_cache_payload(row)),
+                        ttl_seconds=cache_ttl_seconds,
+                    )
+
+        return result
