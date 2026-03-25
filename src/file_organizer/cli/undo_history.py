@@ -262,10 +262,10 @@ def execute_undo(
     Returns:
         Exit code (0 for success, 1 for failure).
     """
-    if transaction_id:
+    if transaction_id is not None:
         print(f"Undoing transaction {transaction_id}...")
         success = manager.undo_transaction(transaction_id)
-    elif operation_id:
+    elif operation_id is not None:
         print(f"Undoing operation {operation_id}...")
         success = manager.undo_operation(operation_id)
     else:
@@ -290,7 +290,7 @@ def execute_redo(manager: UndoManager, operation_id: int | None = None) -> int:
     Returns:
         Exit code (0 for success, 1 for failure).
     """
-    if operation_id:
+    if operation_id is not None:
         print(f"Redoing operation {operation_id}...")
         success = manager.redo_operation(operation_id)
     else:

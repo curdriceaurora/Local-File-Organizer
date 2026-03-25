@@ -79,6 +79,27 @@ class TestUndoCommand:
         assert result == 0
         mock_mgr.undo_transaction.assert_called_once_with("tx-123")
 
+    def test_undo_live_operation_id_zero_is_valid(self):
+        mock_mgr = MagicMock()
+        mock_mgr.undo_operation.return_value = True
+        with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr):
+            result = undo_command(operation_id=0)
+
+        assert result == 0
+        mock_mgr.undo_operation.assert_called_once_with(0)
+        mock_mgr.undo_last_operation.assert_not_called()
+
+    def test_undo_live_empty_transaction_id_takes_precedence(self):
+        mock_mgr = MagicMock()
+        mock_mgr.undo_transaction.return_value = False
+        with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr):
+            result = undo_command(operation_id=5, transaction_id="")
+
+        assert result == 1
+        mock_mgr.undo_transaction.assert_called_once_with("")
+        mock_mgr.undo_operation.assert_not_called()
+        mock_mgr.undo_last_operation.assert_not_called()
+
     def test_undo_dry_run_with_operation_id_can_undo(self, capsys):
         mock_mgr = MagicMock()
         mock_mgr.can_undo.return_value = (True, "")
@@ -294,6 +315,16 @@ class TestRedoCommand:
             result = redo_command(operation_id=42)
         assert result == 0
         mock_mgr.redo_operation.assert_called_once_with(42)
+
+    def test_redo_live_operation_id_zero_is_valid(self):
+        mock_mgr = MagicMock()
+        mock_mgr.redo_operation.return_value = True
+        with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr):
+            result = redo_command(operation_id=0)
+
+        assert result == 0
+        mock_mgr.redo_operation.assert_called_once_with(0)
+        mock_mgr.redo_last_operation.assert_not_called()
 
     def test_redo_dry_run_with_operation_id_can_redo(self, capsys):
         mock_mgr = MagicMock()
