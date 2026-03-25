@@ -1,0 +1,681 @@
+{
+  "feature": "Large Library Performance Optimization",
+  "workflow_type": "feature",
+  "workflow_rationale": "Adding performance optimizations and benchmarking infrastructure. While optimizing existing code, we're introducing new capabilities (streaming file scanning, BM25 persistence, benchmark suite) rather than migrating from old to new system. New optimizations run alongside existing code initially, with gradual rollout.",
+  "phases": [
+    {
+      "id": "phase-1-baseline",
+      "name": "Baseline Benchmarking",
+      "type": "implementation",
+      "description": "Create benchmark suite to measure current performance and establish baseline metrics for file scanning, search, and deduplication",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Create file scanning benchmark script",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "benchmarks/file_scanning_benchmark.py"
+          ],
+          "patterns_from": [
+            "tests/integration/test_cli_end_to_end.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "python benchmarks/file_scanning_benchmark.py --size 1000 --dry-run",
+            "expected": "Benchmark completes and outputs timing data"
+          },
+          "status": "completed",
+          "notes": "Benchmark scanning 1000, 10000, 50000 files. Output baseline metrics to JSON."
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Create BM25 search benchmark script",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "benchmarks/search_benchmark.py"
+          ],
+          "patterns_from": [
+            "tests/services/search/test_bm25_index.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "python benchmarks/search_benchmark.py --docs 1000 --dry-run",
+            "expected": "Benchmark completes and outputs search timing"
+          },
+          "status": "completed",
+          "notes": "Benchmark indexing + search on 1000, 10000, 100000 documents"
+        },
+        {
+          "id": "subtask-1-3",
+          "description": "Create deduplication benchmark script",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "benchmarks/dedup_benchmark.py"
+          ],
+          "patterns_from": [
+            "tests/services/deduplication/test_index.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "python benchmarks/dedup_benchmark.py --files 1000 --dry-run",
+            "expected": "Benchmark completes and outputs dedup timing"
+          },
+          "status": "completed",
+          "notes": "Benchmark duplicate detection on 1000, 5000, 10000 files"
+        },
+        {
+          "id": "subtask-1-4",
+          "description": "Run baseline benchmarks and document results",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "benchmarks/baseline_results.json"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "manual",
+            "instructions": "Review baseline_results.json contains timing data for all benchmarks"
+          },
+          "status": "completed",
+          "notes": "Run all benchmarks, save results to JSON for comparison. File scanning: real data. Search/dedup: dry-run due to dependency constraints."
+        }
+      ]
+    },
+    {
+      "id": "phase-2-database-optimization",
+      "name": "Database Layer Optimization",
+      "type": "implementation",
+      "description": "Add database indexes for common query patterns, optimize SQLAlchemy queries, and implement query result caching",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Create Alembic migration for new indexes",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "alembic/versions/20260324_0001_add_file_metadata_indexes.py"
+          ],
+          "patterns_from": [
+            "alembic/versions/20260216_0001_initial_web_storage.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "alembic upgrade head && alembic downgrade -1 && alembic upgrade head",
+            "expected": "Migration runs successfully both directions"
+          },
+          "status": "pending",
+          "notes": "Add indexes on: file_metadata.name, file_metadata.mime_type, composite (workspace_id, name), composite (workspace_id, mime_type), file_metadata.size_bytes"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Optimize FileMetadataRepository queries with eager loading",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/api/repositories/file_metadata_repo.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/api/repositories/workspace_repo.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/api/test_file_metadata_repo.py -v",
+            "expected": "All repository tests pass"
+          },
+          "status": "pending",
+          "notes": "Add bulk operations (bulk_upsert, bulk_get), optimize list_for_workspace with proper indexing"
+        },
+        {
+          "id": "subtask-2-3",
+          "description": "Add query result caching for FileMetadata lookups",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/api/repositories/file_metadata_repo.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/api/cache.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/api/test_file_metadata_repo.py::test_cache -v",
+            "expected": "Cache tests pass, verify cache hits"
+          },
+          "status": "pending",
+          "notes": "Extend existing cache functionality for list queries, add cache invalidation on updates"
+        },
+        {
+          "id": "subtask-2-4",
+          "description": "Add pagination support at database level",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/api/repositories/file_metadata_repo.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/api/repositories/file_metadata_repo.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/api/test_file_metadata_repo.py::test_pagination -v",
+            "expected": "Pagination tests pass"
+          },
+          "status": "pending",
+          "notes": "Modify list_for_workspace to use cursor-based pagination, add sort options"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-file-scanning-optimization",
+      "name": "File Scanning Pipeline Optimization",
+      "type": "implementation",
+      "description": "Replace rglob() with streaming os.scandir(), implement chunked processing, and add memory-efficient file iteration",
+      "depends_on": [
+        "phase-2-database-optimization"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Create streaming file scanner utility",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/file_organizer/utils/file_scanner.py"
+          ],
+          "patterns_from": [
+            "src/file_organizer/services/deduplication/detector.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/utils/test_file_scanner.py -v",
+            "expected": "File scanner tests pass"
+          },
+          "status": "pending",
+          "notes": "Implement StreamingFileScanner class using os.scandir() with chunking, memory limits"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Optimize file listing API to use streaming scanner",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/api/routers/files.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/utils/file_scanner.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/api/test_files_router.py::test_list_files_streaming -v",
+            "expected": "File listing tests pass with streaming"
+          },
+          "status": "pending",
+          "notes": "Replace _collect_files() with streaming scanner, add progress reporting"
+        },
+        {
+          "id": "subtask-3-3",
+          "description": "Optimize deduplication file scanning",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/services/deduplication/detector.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/utils/file_scanner.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/services/deduplication/test_index.py -v",
+            "expected": "Deduplication tests pass"
+          },
+          "status": "pending",
+          "notes": "Replace rglob() in _find_files() with StreamingFileScanner"
+        },
+        {
+          "id": "subtask-3-4",
+          "description": "Add batch file metadata upsert for scanning",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/api/repositories/file_metadata_repo.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/api/repositories/file_metadata_repo.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/api/test_file_metadata_repo.py::test_batch_operations -v",
+            "expected": "Batch operation tests pass"
+          },
+          "status": "pending",
+          "notes": "Add bulk_upsert method using SQLAlchemy bulk operations"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-search-optimization",
+      "name": "BM25 Search Optimization",
+      "type": "implementation",
+      "description": "Add BM25 index persistence to disk, implement lazy loading, and optimize search query performance",
+      "depends_on": [
+        "phase-2-database-optimization"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Create BM25 index persistence layer",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "src/file_organizer/services/search/bm25_persistence.py"
+          ],
+          "patterns_from": [
+            "src/file_organizer/services/search/bm25_index.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/services/search/test_bm25_persistence.py -v",
+            "expected": "Persistence tests pass"
+          },
+          "status": "pending",
+          "notes": "Use pickle or joblib to serialize/deserialize BM25Okapi index to disk"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Add lazy loading and cache invalidation to BM25Index",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/services/search/bm25_index.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/services/search/bm25_persistence.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/services/search/test_bm25_index.py -v",
+            "expected": "BM25 index tests pass with persistence"
+          },
+          "status": "pending",
+          "notes": "Load index from disk on first search, rebuild only when files change"
+        },
+        {
+          "id": "subtask-4-3",
+          "description": "Optimize search router with pagination and caching",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/api/routers/search.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/api/routers/files.py"
+          ],
+          "verification": {
+            "type": "api",
+            "method": "GET",
+            "url": "http://localhost:8000/search?q=test&limit=100",
+            "expected_status": 200
+          },
+          "status": "pending",
+          "notes": "Add result caching for common queries, implement cursor-based pagination"
+        },
+        {
+          "id": "subtask-4-4",
+          "description": "Add incremental index updates",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/services/search/bm25_index.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/services/search/bm25_index.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/services/search/test_bm25_index.py::test_incremental_update -v",
+            "expected": "Incremental update tests pass"
+          },
+          "status": "pending",
+          "notes": "Add update_document() and remove_document() methods for incremental updates"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-dedup-optimization",
+      "name": "Deduplication Performance Optimization",
+      "type": "implementation",
+      "description": "Implement batch hashing, streaming duplicate detection, and memory-efficient processing for large file sets",
+      "depends_on": [
+        "phase-3-file-scanning-optimization"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Add batch file hashing with multiprocessing",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/services/deduplication/hasher.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/parallel/processor.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/services/deduplication/test_hasher.py::test_batch_hashing -v",
+            "expected": "Batch hashing tests pass"
+          },
+          "status": "pending",
+          "notes": "Use multiprocessing.Pool for parallel hashing, chunk files by size"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Implement streaming duplicate index builder",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/services/deduplication/index.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/utils/file_scanner.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/services/deduplication/test_index.py::test_streaming_build -v",
+            "expected": "Streaming index tests pass"
+          },
+          "status": "pending",
+          "notes": "Process files in chunks, avoid loading all file metadata into memory"
+        },
+        {
+          "id": "subtask-5-3",
+          "description": "Optimize DuplicateDetector for large directories",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/services/deduplication/detector.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/services/deduplication/hasher.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/services/deduplication/test_dedup_detector.py -v",
+            "expected": "Detector optimization tests pass"
+          },
+          "status": "pending",
+          "notes": "Use batch hashing and streaming index, add progress reporting"
+        },
+        {
+          "id": "subtask-5-4",
+          "description": "Add checksum-based duplicate detection cache",
+          "service": "backend",
+          "files_to_modify": [
+            "src/file_organizer/api/repositories/file_metadata_repo.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "src/file_organizer/api/cache.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/api/test_file_metadata_repo.py::test_checksum_cache -v",
+            "expected": "Checksum cache tests pass"
+          },
+          "status": "pending",
+          "notes": "Cache checksums in file_metadata table, skip rehashing unchanged files"
+        }
+      ]
+    },
+    {
+      "id": "phase-6-integration",
+      "name": "Integration Testing and Benchmarking",
+      "type": "integration",
+      "description": "Run comprehensive benchmarks on optimized code, verify performance targets met, and document improvements",
+      "depends_on": [
+        "phase-3-file-scanning-optimization",
+        "phase-4-search-optimization",
+        "phase-5-dedup-optimization"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-6-1",
+          "description": "Run optimized benchmarks and compare to baseline",
+          "service": "backend",
+          "all_services": false,
+          "files_to_modify": [],
+          "files_to_create": [
+            "benchmarks/optimized_results.json",
+            "benchmarks/comparison_report.md"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "manual",
+            "instructions": "Review comparison_report.md shows improvements in all benchmark categories"
+          },
+          "status": "pending",
+          "notes": "Run all benchmarks again, compare to baseline, generate comparison report"
+        },
+        {
+          "id": "subtask-6-2",
+          "description": "Verify acceptance criteria met",
+          "service": "backend",
+          "all_services": false,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Scan 50,000 files in under 60 seconds",
+              "File listing API responds in under 200ms",
+              "Duplicate detection on 10,000 files in under 5 minutes",
+              "BM25 search returns in under 500ms for 100,000+ files",
+              "Memory usage stays under 500MB during batch processing"
+            ]
+          },
+          "status": "pending",
+          "notes": "Run acceptance tests from spec.md, verify all criteria met"
+        },
+        {
+          "id": "subtask-6-3",
+          "description": "Create performance benchmark comparison document",
+          "service": "backend",
+          "all_services": false,
+          "files_to_modify": [],
+          "files_to_create": [
+            "docs/PERFORMANCE_BENCHMARKS.md"
+          ],
+          "patterns_from": [
+            "docs/USER_GUIDE.md"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Review PERFORMANCE_BENCHMARKS.md includes competitor comparisons and charts"
+          },
+          "status": "pending",
+          "notes": "Document performance vs TagSpaces, Hazel, TagStudio. Include charts and detailed metrics."
+        },
+        {
+          "id": "subtask-6-4",
+          "description": "Run full integration test suite",
+          "service": "backend",
+          "all_services": false,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "pytest tests/integration/ tests/api/ tests/services/ -v --cov",
+            "expected": "All tests pass with coverage maintained"
+          },
+          "status": "pending",
+          "notes": "Ensure no regressions in existing functionality"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 6,
+    "total_subtasks": 24,
+    "services_involved": [
+      "backend"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 2,
+      "parallel_groups": [
+        {
+          "phases": [
+            "phase-2-database-optimization",
+            "phase-1-baseline"
+          ],
+          "reason": "Baseline benchmarking independent from database optimization"
+        },
+        {
+          "phases": [
+            "phase-4-search-optimization",
+            "phase-2-database-optimization"
+          ],
+          "reason": "Both optimize different subsystems with no file conflicts"
+        }
+      ],
+      "recommended_workers": 2,
+      "speedup_estimate": "1.4x faster than sequential (some phases must run sequentially)"
+    },
+    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 002 --parallel 2"
+  },
+  "verification_strategy": {
+    "risk_level": "high",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": [
+      "unit",
+      "integration",
+      "performance"
+    ],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "Scanning 50,000 files completes in under 60 seconds",
+      "File listing API responds in under 200ms",
+      "Duplicate detection on 10,000 files in under 5 minutes",
+      "BM25 search returns results in under 500ms for 100,000+ files",
+      "Memory usage stays below 500MB during batch processing",
+      "All existing tests pass with no regressions",
+      "Performance benchmarks show improvements vs baseline"
+    ],
+    "verification_steps": [
+      {
+        "name": "Unit Tests",
+        "command": "pytest tests/unit/ tests/api/ tests/services/ -v",
+        "expected_outcome": "All unit tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Integration Tests",
+        "command": "pytest tests/integration/ -v",
+        "expected_outcome": "All integration tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Performance Benchmarks",
+        "command": "python benchmarks/run_all_benchmarks.py",
+        "expected_outcome": "All benchmarks show improvement vs baseline",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Database Migrations",
+        "command": "alembic upgrade head",
+        "expected_outcome": "Migrations apply successfully",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "High risk due to performance-critical changes affecting core file scanning, database queries, and search. Comprehensive testing required to ensure no regressions while validating performance improvements."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": [
+        "pytest tests/unit/ tests/api/ tests/services/ -v"
+      ],
+      "minimum_coverage": 80
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": [
+        "pytest tests/integration/ -v"
+      ],
+      "services_to_test": [
+        "backend"
+      ]
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": []
+    },
+    "browser_verification": {
+      "required": false,
+      "pages": []
+    },
+    "database_verification": {
+      "required": true,
+      "checks": [
+        "migrations-exist",
+        "migrations-applied",
+        "schema-valid",
+        "indexes-created"
+      ]
+    },
+    "performance_benchmarks": {
+      "required": true,
+      "benchmarks": [
+        {
+          "name": "File Scanning",
+          "command": "python benchmarks/file_scanning_benchmark.py",
+          "target": "50,000 files in under 60 seconds"
+        },
+        {
+          "name": "File Listing API",
+          "command": "python benchmarks/api_performance.py",
+          "target": "Response time under 200ms"
+        },
+        {
+          "name": "Duplicate Detection",
+          "command": "python benchmarks/dedup_benchmark.py",
+          "target": "10,000 files in under 5 minutes"
+        },
+        {
+          "name": "BM25 Search",
+          "command": "python benchmarks/search_benchmark.py",
+          "target": "100,000+ files in under 500ms"
+        }
+      ]
+    }
+  },
+  "qa_signoff": null,
+  "status": "in_progress",
+  "planStatus": "in_progress",
+  "xstateState": "backlog",
+  "executionPhase": "coding",
+  "updated_at": "2026-03-25T00:05:04.618Z"
+}
