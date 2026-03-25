@@ -51,6 +51,12 @@ from file_organizer.web.file_operations import (
     collect_entries,
     list_tree_nodes,
 )
+from file_organizer.web.file_validators import (
+    validate_file_not_exists,
+    validate_file_size,
+    validate_upload_filename,
+    validate_upload_path,
+)
 
 files_router = APIRouter(tags=["web"])
 
@@ -359,8 +365,7 @@ def files_upload(
         target_dir = resolve_selected_path(path or None, settings)
         if target_dir is None:
             raise ApiError(status_code=403, error="path_not_allowed", message="No upload path")
-        if not target_dir.exists() or not target_dir.is_dir():
-            raise ApiError(status_code=400, error="invalid_path", message="Invalid upload path")
+        validate_upload_path(target_dir)
 
         if not files:
             raise ApiError(status_code=400, error="missing_files", message="No files selected")
@@ -374,21 +379,27 @@ def files_upload(
         for upload in files:
             if not upload.filename:
                 continue
-            raw_name = Path(upload.filename).name.strip()
-            if raw_name.startswith("."):
-                errors.append(f"Rejected {raw_name}: hidden files are not allowed.")
+
+            try:
+                validate_upload_filename(upload.filename, allow_hidden=False)
+            except ApiError as exc:
+                errors.append(exc.message)
                 if upload.file:
                     upload.file.close()
                 continue
+
             safe_name = sanitize_upload_name(upload.filename)
             if safe_name is None:
                 errors.append(f"Rejected {upload.filename}: invalid filename.")
                 if upload.file:
                     upload.file.close()
                 continue
+
             destination = target_dir / safe_name
-            if destination.exists():
-                errors.append(f"Skipped {safe_name}: file already exists.")
+            try:
+                validate_file_not_exists(destination, safe_name)
+            except ApiError as exc:
+                errors.append(exc.message)
                 if upload.file:
                     upload.file.close()
                 continue
@@ -401,7 +412,9 @@ def files_upload(
                         if not chunk:
                             break
                         total_bytes += len(chunk)
-                        if total_bytes > MAX_UPLOAD_BYTES:
+                        try:
+                            validate_file_size(total_bytes, MAX_UPLOAD_BYTES)
+                        except ApiError:
                             raise ApiError(
                                 status_code=400,
                                 error="file_too_large",
