@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import TypedDict
+from typing import Literal, TypedDict
 
-from sqlalchemy import and_
+from sqlalchemy import and_, desc, func
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 
@@ -28,6 +28,17 @@ class FileMetadataDict(TypedDict, total=False):
     checksum_sha256: str | None
     last_modified: datetime | None
     extra_json: str | None
+
+
+class PaginatedFileMetadata(TypedDict):
+    """Paginated file metadata result with metadata."""
+
+    items: list[FileMetadata]
+    total: int
+    limit: int
+    offset: int
+    has_next: bool
+    has_prev: bool
 
 
 def _cache_key(workspace_id: str, relative_path: str) -> str:
@@ -167,6 +178,72 @@ class FileMetadataRepository:
             .limit(max(1, limit))
             .all()
         )
+
+    @staticmethod
+    def list_for_workspace_paginated(
+        session: Session,
+        *,
+        workspace_id: str,
+        limit: int = 200,
+        offset: int = 0,
+        sort_by: Literal["relative_path", "name", "size_bytes", "last_modified"] = "relative_path",
+        sort_order: Literal["asc", "desc"] = "asc",
+    ) -> PaginatedFileMetadata:
+        """List metadata entries with pagination metadata and sort options.
+
+        Provides efficient pagination with total count and navigation metadata.
+        Supports sorting by multiple fields in ascending or descending order.
+
+        Args:
+            session: Active SQLAlchemy session.
+            workspace_id: Workspace identifier.
+            limit: Maximum number of records to return (default 200).
+            offset: Number of records to skip (default 0).
+            sort_by: Field to sort by (default "relative_path").
+            sort_order: Sort direction "asc" or "desc" (default "asc").
+
+        Returns:
+            PaginatedFileMetadata with items and pagination metadata.
+        """
+        # Normalize offset and limit
+        offset = max(0, offset)
+        limit = max(1, limit)
+
+        # Build base query
+        base_filter = FileMetadata.workspace_id == workspace_id
+
+        # Get total count for pagination metadata
+        total = session.query(func.count(FileMetadata.id)).filter(base_filter).scalar() or 0
+
+        # Determine sort column
+        sort_column = getattr(FileMetadata, sort_by)
+
+        # Apply sort order
+        if sort_order == "desc":
+            sort_column = desc(sort_column)
+
+        # Execute paginated query
+        items = (
+            session.query(FileMetadata)
+            .filter(base_filter)
+            .order_by(sort_column)
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+        # Calculate pagination flags
+        has_next = (offset + limit) < total
+        has_prev = offset > 0
+
+        return {
+            "items": items,
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "has_next": has_next,
+            "has_prev": has_prev,
+        }
 
     @staticmethod
     def delete_by_relative_path(

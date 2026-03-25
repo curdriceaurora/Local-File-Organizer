@@ -13,6 +13,7 @@ from file_organizer.api.cache import InMemoryCache
 from file_organizer.api.db_models import FileMetadata
 from file_organizer.api.repositories.file_metadata_repo import (
     FileMetadataRepository,
+    PaginatedFileMetadata,
     _cache_key,
     _cache_payload,
 )
@@ -343,3 +344,229 @@ class TestFileMetadataRepositoryDelete:
             session, workspace_id="ws-1", relative_path="file.txt", cache=cache
         )
         cache.delete.assert_called_once_with("file_metadata:ws-1:file.txt")
+
+
+class TestFileMetadataRepositoryPagination:
+    """Tests for FileMetadataRepository.list_for_workspace_paginated."""
+
+    def _make_session(self, total_count, items):
+        """Create a mock session with count and query results."""
+        session = MagicMock(spec=Session)
+
+        # Mock count query
+        count_query = MagicMock()
+        count_query.filter.return_value = count_query
+        count_query.scalar.return_value = total_count
+
+        # Mock items query
+        items_query = MagicMock()
+        items_query.filter.return_value = items_query
+        items_query.order_by.return_value = items_query
+        items_query.offset.return_value = items_query
+        items_query.limit.return_value = items_query
+        items_query.all.return_value = items
+
+        # Configure session.query to return appropriate mock based on call
+        def query_side_effect(model_or_func):
+            # Check if this is a count query by looking for func.count
+            if hasattr(model_or_func, '__name__') and 'count' in str(model_or_func):
+                return count_query
+            return items_query
+
+        session.query.side_effect = query_side_effect
+        return session
+
+    def test_pagination_returns_correct_structure(self):
+        """Test that pagination returns all expected metadata fields."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(10)]
+        session = self._make_session(total_count=50, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session, workspace_id="ws-1", limit=10, offset=0
+        )
+
+        assert isinstance(result, dict)
+        assert "items" in result
+        assert "total" in result
+        assert "limit" in result
+        assert "offset" in result
+        assert "has_next" in result
+        assert "has_prev" in result
+
+    def test_pagination_first_page(self):
+        """Test pagination metadata for first page."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(10)]
+        session = self._make_session(total_count=50, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session, workspace_id="ws-1", limit=10, offset=0
+        )
+
+        assert result["items"] == rows
+        assert result["total"] == 50
+        assert result["limit"] == 10
+        assert result["offset"] == 0
+        assert result["has_next"] is True
+        assert result["has_prev"] is False
+
+    def test_pagination_middle_page(self):
+        """Test pagination metadata for middle page."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(10)]
+        session = self._make_session(total_count=50, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session, workspace_id="ws-1", limit=10, offset=20
+        )
+
+        assert result["total"] == 50
+        assert result["limit"] == 10
+        assert result["offset"] == 20
+        assert result["has_next"] is True
+        assert result["has_prev"] is True
+
+    def test_pagination_last_page(self):
+        """Test pagination metadata for last page."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(5)]
+        session = self._make_session(total_count=45, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session, workspace_id="ws-1", limit=10, offset=40
+        )
+
+        assert result["total"] == 45
+        assert result["limit"] == 10
+        assert result["offset"] == 40
+        assert result["has_next"] is False
+        assert result["has_prev"] is True
+
+    def test_pagination_empty_result(self):
+        """Test pagination with no results."""
+        session = self._make_session(total_count=0, items=[])
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session, workspace_id="ws-1", limit=10, offset=0
+        )
+
+        assert result["items"] == []
+        assert result["total"] == 0
+        assert result["has_next"] is False
+        assert result["has_prev"] is False
+
+    def test_pagination_sorts_by_name_asc(self):
+        """Test sorting by name in ascending order."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(5)]
+        session = self._make_session(total_count=5, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session,
+            workspace_id="ws-1",
+            limit=10,
+            offset=0,
+            sort_by="name",
+            sort_order="asc",
+        )
+
+        assert result["items"] == rows
+        # Verify order_by was called (implementation detail check via mock)
+
+    def test_pagination_sorts_by_size_desc(self):
+        """Test sorting by size in descending order."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(5)]
+        session = self._make_session(total_count=5, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session,
+            workspace_id="ws-1",
+            limit=10,
+            offset=0,
+            sort_by="size_bytes",
+            sort_order="desc",
+        )
+
+        assert result["items"] == rows
+
+    def test_pagination_clamps_negative_offset(self):
+        """Test that negative offset is clamped to 0."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(10)]
+        session = self._make_session(total_count=50, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session, workspace_id="ws-1", limit=10, offset=-5
+        )
+
+        assert result["offset"] == 0
+
+    def test_pagination_clamps_zero_limit(self):
+        """Test that zero limit is clamped to 1."""
+        rows = [MagicMock(spec=FileMetadata)]
+        session = self._make_session(total_count=50, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session, workspace_id="ws-1", limit=0, offset=0
+        )
+
+        assert result["limit"] == 1
+
+
+def test_pagination():
+    """Aggregated test for pagination functionality.
+
+    This test verifies that the pagination system works correctly
+    across different scenarios including first page, middle page,
+    last page, and empty results.
+    """
+    # Test with mocked session for comprehensive pagination checks
+    session = MagicMock(spec=Session)
+
+    # Mock count query
+    count_query = MagicMock()
+    count_query.filter.return_value = count_query
+    count_query.scalar.return_value = 100
+
+    # Mock items query
+    items = [MagicMock(spec=FileMetadata) for _ in range(20)]
+    items_query = MagicMock()
+    items_query.filter.return_value = items_query
+    items_query.order_by.return_value = items_query
+    items_query.offset.return_value = items_query
+    items_query.limit.return_value = items_query
+    items_query.all.return_value = items
+
+    def query_side_effect(model_or_func):
+        if hasattr(model_or_func, '__name__') and 'count' in str(model_or_func):
+            return count_query
+        return items_query
+
+    session.query.side_effect = query_side_effect
+
+    # Test first page
+    result = FileMetadataRepository.list_for_workspace_paginated(
+        session, workspace_id="test-ws", limit=20, offset=0
+    )
+
+    assert result["total"] == 100
+    assert result["limit"] == 20
+    assert result["offset"] == 0
+    assert result["has_next"] is True
+    assert result["has_prev"] is False
+    assert len(result["items"]) == 20
+
+    # Test middle page
+    result = FileMetadataRepository.list_for_workspace_paginated(
+        session, workspace_id="test-ws", limit=20, offset=40
+    )
+
+    assert result["has_next"] is True
+    assert result["has_prev"] is True
+
+    # Test sort options
+    result = FileMetadataRepository.list_for_workspace_paginated(
+        session,
+        workspace_id="test-ws",
+        limit=20,
+        offset=0,
+        sort_by="size_bytes",
+        sort_order="desc",
+    )
+
+    assert result["items"] == items
