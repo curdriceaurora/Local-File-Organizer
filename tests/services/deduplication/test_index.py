@@ -17,6 +17,7 @@ from file_organizer.services.deduplication.index import (
     DuplicateGroup,
     DuplicateIndex,
     FileMetadata,
+    IndexBuildConfig,
 )
 
 
@@ -567,3 +568,270 @@ class TestEdgeCases:
 
             assert "hash123" in index._index
             assert index._index["hash123"][0].path.name == "файл_ファイル_文件.txt"
+
+
+@pytest.mark.unit
+class TestStreamingIndexBuilder:
+    """Tests for streaming index building."""
+
+    def test_streaming_build(self):
+        """Test building index from directory using streaming approach."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+
+            # Create test files with different content
+            for i in range(5):
+                f = tmppath / f"unique_{i}.txt"
+                f.write_text(f"unique content {i}")
+
+            # Create some duplicates
+            for i in range(3):
+                f = tmppath / f"dup_a_{i}.txt"
+                f.write_text("duplicate content A")
+
+            for i in range(2):
+                f = tmppath / f"dup_b_{i}.txt"
+                f.write_text("duplicate content B")
+
+            # Build index from directory using streaming
+            index = DuplicateIndex()
+
+            # Mock hash function for consistency
+            def mock_hasher(path: Path) -> str:
+                content = path.read_text()
+                if "duplicate content A" in content:
+                    return "hash_dup_a"
+                elif "duplicate content B" in content:
+                    return "hash_dup_b"
+                else:
+                    # Unique hash per file
+                    return f"hash_{path.name}"
+
+            # Use streaming build with small chunks
+            config = IndexBuildConfig(chunk_size=3)
+            progress_updates = []
+
+            for progress in index.build_from_directory_streaming(
+                tmppath, mock_hasher, config
+            ):
+                progress_updates.append(progress)
+
+            # Verify streaming yielded progress updates
+            assert len(progress_updates) > 0
+            assert progress_updates[-1] == 10  # Final count
+
+            # Verify index was built correctly
+            stats = index.get_statistics()
+            assert stats["total_files"] == 10
+            assert stats["duplicate_groups"] == 2  # 2 groups of duplicates
+
+    def test_streaming_build_with_chunks(self):
+        """Test streaming build processes files in chunks."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+
+            # Create 50 test files
+            for i in range(50):
+                f = tmppath / f"file_{i:03d}.txt"
+                # Create some duplicates
+                if i % 5 == 0:
+                    f.write_text("duplicate")
+                else:
+                    f.write_text(f"content {i}")
+
+            index = DuplicateIndex()
+
+            # Hash function
+            def hash_func(path: Path) -> str:
+                content = path.read_text()
+                return f"hash_{hash(content)}"
+
+            # Build index with streaming approach (chunks of 10)
+            config = IndexBuildConfig(chunk_size=10)
+            progress_updates = []
+
+            for progress in index.build_from_directory_streaming(
+                tmppath, hash_func, config
+            ):
+                progress_updates.append(progress)
+
+            # Verify we got progress updates for each chunk
+            assert len(progress_updates) == 5  # 50 files / 10 per chunk
+            assert progress_updates[-1] == 50
+
+            assert index.get_statistics()["total_files"] == 50
+
+    def test_streaming_build_empty_directory(self):
+        """Test streaming build on empty directory."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+
+            index = DuplicateIndex()
+
+            # Hash function
+            def hash_func(path: Path) -> str:
+                return "hash"
+
+            # Build from empty directory
+            progress_updates = list(
+                index.build_from_directory_streaming(tmppath, hash_func)
+            )
+
+            # Should complete with no updates (no files)
+            assert len(progress_updates) == 0
+
+            stats = index.get_statistics()
+            assert stats["total_files"] == 0
+            assert not index.has_duplicates()
+
+    def test_streaming_build_large_number_of_files(self):
+        """Test streaming build handles large number of files efficiently."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+
+            # Create 100 files to simulate larger directory
+            for i in range(100):
+                f = tmppath / f"file_{i:04d}.txt"
+                # Create groups of duplicates (every 10th file same content)
+                f.write_text(f"content_{i // 10}")
+
+            index = DuplicateIndex()
+
+            # Hash function
+            def hash_func(path: Path) -> str:
+                content = path.read_text()
+                return f"hash_{content}"
+
+            # Stream files in chunks of 20
+            config = IndexBuildConfig(chunk_size=20)
+            progress_updates = []
+
+            for progress in index.build_from_directory_streaming(
+                tmppath, hash_func, config
+            ):
+                progress_updates.append(progress)
+
+            # Verify chunked processing
+            assert len(progress_updates) == 5  # 100 files / 20 per chunk
+            assert progress_updates[-1] == 100
+
+            stats = index.get_statistics()
+            assert stats["total_files"] == 100
+            # We have 10 groups of 10 duplicates each
+            assert stats["duplicate_groups"] == 10
+
+    def test_streaming_build_with_progress_callback(self):
+        """Test streaming build calls progress callback."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+
+            # Create 20 test files
+            for i in range(20):
+                f = tmppath / f"file_{i}.txt"
+                f.write_text(f"content {i}")
+
+            index = DuplicateIndex()
+            progress_calls = []
+
+            # Progress callback
+            def progress_callback(count: int) -> None:
+                progress_calls.append(count)
+
+            # Hash function
+            def hash_func(path: Path) -> str:
+                return f"hash_{path.name}"
+
+            # Build with progress callback
+            config = IndexBuildConfig(chunk_size=5, progress_callback=progress_callback)
+
+            list(index.build_from_directory_streaming(tmppath, hash_func, config))
+
+            # Verify callback was called for each file
+            assert len(progress_calls) == 20
+            assert progress_calls[-1] == 20
+
+    def test_streaming_build_from_files_list(self):
+        """Test streaming build from explicit file list."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+
+            # Create test files
+            for i in range(15):
+                f = tmppath / f"file_{i}.txt"
+                f.write_text(f"content {i % 3}")  # 3 groups of 5 duplicates
+
+            index = DuplicateIndex()
+
+            # Get file list
+            file_list = list(tmppath.iterdir())
+
+            # Hash function
+            def hash_func(path: Path) -> str:
+                content = path.read_text()
+                return f"hash_{content}"
+
+            # Build from file list
+            config = IndexBuildConfig(chunk_size=5)
+            progress_updates = []
+
+            for progress in index.build_from_files_streaming(
+                file_list, hash_func, config
+            ):
+                progress_updates.append(progress)
+
+            # Verify
+            assert len(progress_updates) == 3  # 15 files / 5 per chunk
+            assert progress_updates[-1] == 15
+
+            stats = index.get_statistics()
+            assert stats["total_files"] == 15
+            assert stats["duplicate_groups"] == 3
+
+    def test_streaming_build_with_max_files(self):
+        """Test streaming build respects max_files limit."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+
+            # Create 50 files
+            for i in range(50):
+                f = tmppath / f"file_{i}.txt"
+                f.write_text(f"content {i}")
+
+            index = DuplicateIndex()
+
+            # Hash function
+            def hash_func(path: Path) -> str:
+                return f"hash_{path.name}"
+
+            # Build with max_files limit
+            config = IndexBuildConfig(chunk_size=10, max_files=25)
+            progress_updates = []
+
+            for progress in index.build_from_directory_streaming(
+                tmppath, hash_func, config
+            ):
+                progress_updates.append(progress)
+
+            # Should only process 25 files
+            assert progress_updates[-1] == 25
+            assert index.get_statistics()["total_files"] == 25
+
+    def test_add_files_batch(self):
+        """Test batch file addition."""
+        with TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+
+            # Create test files
+            files_to_add = []
+            for i in range(10):
+                f = tmppath / f"file_{i}.txt"
+                f.write_text(f"content {i}")
+                files_to_add.append((f, f"hash_{i}"))
+
+            index = DuplicateIndex()
+
+            # Add files in batch
+            added_count = index.add_files_batch(files_to_add)
+
+            assert added_count == 10
+            assert index.get_statistics()["total_files"] == 10

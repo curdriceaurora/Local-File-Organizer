@@ -1,0 +1,45 @@
+{
+  "benchmarks": [
+    {
+      "size": 1000,
+      "dry_run": false,
+      "creation_time": 0.0577,
+      "rglob_time": 0.0031,
+      "rglob_files": 1000,
+      "os_walk_time": 0.001,
+      "os_walk_files": 1000,
+      "glob_time": 0.0,
+      "glob_files": 0
+    },
+    {
+      "size": 10000,
+      "dry_run": false,
+      "creation_time": 0.5814,
+      "rglob_time": 0.0322,
+      "rglob_files": 10000,
+      "os_walk_time": 0.0104,
+      "os_walk_files": 10000,
+      "glob_time": 0.0003,
+      "glob_files": 0
+    },
+    {
+      "size": 50000,
+      "dry_run": false,
+      "creation_time": 3.0075,
+      "rglob_time": 0.1539,
+      "rglob_files": 50000,
+      "os_walk_time": 0.0588,
+      "os_walk_files": 50000,
+      "glob_time": 0.0012,
+      "glob_files": 0
+    }
+  ],
+  "summary": {
+    "total_runs": 3,
+    "sizes_tested": [
+      1000,
+      10000,
+      50000
+    ]
+  }
+}

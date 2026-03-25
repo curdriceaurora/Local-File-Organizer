@@ -1,0 +1,37 @@
+{
+  "project_type": "single",
+  "services": {
+    "backend": {
+      "path": "./src/file_organizer",
+      "tech_stack": ["python", "fastapi", "sqlalchemy", "sqlite", "redis"],
+      "port": 8000,
+      "dev_command": "uvicorn file_organizer.api.main:app --reload",
+      "test_command": "pytest tests/"
+    }
+  },
+  "infrastructure": {
+    "docker": true,
+    "database": "sqlite",
+    "cache": "redis",
+    "queue": "redis"
+  },
+  "conventions": {
+    "linter": "ruff",
+    "formatter": "black",
+    "testing": "pytest",
+    "type_checking": "mypy",
+    "orm": "sqlalchemy",
+    "migrations": "alembic"
+  },
+  "build_tools": {
+    "package_manager": "pip",
+    "build_system": "setuptools",
+    "dependencies_file": "pyproject.toml"
+  },
+  "test_structure": {
+    "unit_tests": "tests/unit/",
+    "integration_tests": "tests/integration/",
+    "api_tests": "tests/api/",
+    "services_tests": "tests/services/"
+  }
+}

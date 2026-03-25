@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "002-large-library-performance-optimization",
+  "state": "building",
+  "subtasks": {
+    "completed": 17,
+    "total": 24,
+    "in_progress": 1,
+    "failed": 0
+  },
+  "phase": {
+    "current": "Deduplication Performance Optimization",
+    "id": null,
+    "total": 4
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 19,
+    "started_at": "2026-03-24T19:48:44.758730"
+  },
+  "last_update": "2026-03-24T22:21:21.759293"
+}

@@ -1,0 +1,39 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/002-large-library-performance-optimization/**)",
+      "Write(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/002-large-library-performance-optimization/**)",
+      "Edit(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/002-large-library-performance-optimization/**)",
+      "Glob(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/002-large-library-performance-optimization/**)",
+      "Grep(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/002-large-library-performance-optimization/**)",
+      "Read(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/002-large-library-performance-optimization/.auto-claude/specs/002-large-library-performance-optimization/**)",
+      "Write(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/002-large-library-performance-optimization/.auto-claude/specs/002-large-library-performance-optimization/**)",
+      "Edit(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/002-large-library-performance-optimization/.auto-claude/specs/002-large-library-performance-optimization/**)",
+      "Read(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/**)",
+      "Write(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/**)",
+      "Edit(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/**)",
+      "Glob(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/**)",
+      "Grep(/Users/rahul/Projects/Local-File-Organizer/.auto-claude/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__query-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}
