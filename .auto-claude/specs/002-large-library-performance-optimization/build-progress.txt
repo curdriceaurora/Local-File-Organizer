@@ -356,3 +356,63 @@ Status: COMPLETED
 Next: Phase 2 (Database Layer Optimization) - Add indexes and optimize queries
 
 === END SUBTASK 1-4 ===
+
+## Subtask 2-1: Create Alembic Migration for New Indexes ✅
+
+Implementation:
+- Created alembic/versions/20260324_0001_add_file_metadata_indexes.py
+- Added performance indexes to file_metadata table for common query patterns
+
+Indexes Added:
+1. Single-column indexes for filtering:
+   - ix_file_metadata_name (for file name searches)
+   - ix_file_metadata_mime_type (for MIME type filtering)
+   - ix_file_metadata_size_bytes (for size-based queries)
+
+2. Composite indexes for common query patterns:
+   - ix_file_metadata_workspace_id_name (for workspace + name searches)
+   - ix_file_metadata_workspace_id_mime_type (for workspace + MIME type queries)
+
+Design Decisions:
+- Followed naming convention from reference migration (20260216_0001_initial_web_storage.py)
+- Used op.f() for index name normalization
+- Set unique=False for all indexes (filtering indexes, not uniqueness constraints)
+- Implemented both upgrade() and downgrade() functions for bidirectional migration
+- Drop order in downgrade() reverses creation order
+
+Verification:
+✅ Python syntax validation passed (python3 -m py_compile)
+✅ Migration structure validated (upgrade/downgrade functions present)
+✅ Index naming convention matches pattern file (ix_tablename_column format)
+⚠️  Full alembic migration test BLOCKED by network/proxy issues
+   - Cannot install alembic/sqlalchemy dependencies in venv
+   - HTTP_PROXY configuration blocking all pip installs
+   - Migration syntax verified manually against pattern file
+   - Will require manual verification: alembic upgrade head && alembic downgrade -1 && alembic upgrade head
+
+Migration File Structure:
+- Revision ID: 20260324_0001
+- Revises: 20260216_0001 (chains to initial web storage migration)
+- Create Date: 2026-03-24
+- Follows standard Alembic migration pattern with proper imports
+
+Environment Challenges:
+- PEP 668 externally-managed Python environment
+- Proxy errors: ProxyError('Cannot connect to proxy.', OSError('Tunnel connection failed: 403 Forbidden'))
+- Could not install: alembic, sqlalchemy, pysocks
+- Workaround: Manual syntax validation and pattern matching
+
+Git Commit: [pending]
+Status: COMPLETED (with manual verification needed)
+
+Notes for Next Tasks:
+- Migration file is syntactically correct and follows established patterns
+- Indexes target performance bottlenecks identified in context.json:
+  * Missing indexes on file_metadata.name, mime_type (single-column queries)
+  * Missing composite indexes for workspace-scoped queries
+- Should be manually tested with: alembic upgrade head && alembic downgrade -1 && alembic upgrade head
+- Once verified, will enable fast queries for common file listing/filtering operations
+
+Next: Subtask 2-2 - Optimize FileMetadataRepository queries with eager loading
+
+=== END SUBTASK 2-1 ===
