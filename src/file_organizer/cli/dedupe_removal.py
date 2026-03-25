@@ -13,6 +13,7 @@ from loguru import logger
 from rich.console import Console
 
 from file_organizer.services.deduplication.backup import BackupManager
+from file_organizer.services.deduplication.index import DuplicateGroup
 
 
 def remove_files(
@@ -55,15 +56,15 @@ def remove_files(
             space_saved += files[idx]["size"]
             files_removed += 1
 
-        except Exception as e:
+        except OSError as e:
             console.print(f"[red]Error removing {file_to_remove}: {e}[/red]")
             logger.exception(f"Failed to remove {file_to_remove}")
 
     # Display feedback
     if not dry_run:
-        console.print(f"\n[green]✓ Removed {len(remove_indices)} file(s)[/green]")
+        console.print(f"\n[green]✓ Removed {files_removed} file(s)[/green]")
     else:
-        console.print(f"\n[yellow]✓ Would remove {len(remove_indices)} file(s)[/yellow]")
+        console.print(f"\n[yellow]✓ Would remove {files_removed} file(s)[/yellow]")
 
     return files_removed, space_saved
 
@@ -71,7 +72,7 @@ def remove_files(
 def process_duplicate_group(
     group_id: int,
     file_hash: str,
-    group: Any,
+    group: DuplicateGroup,
     total_groups: int,
     strategy: str,
     batch: bool,

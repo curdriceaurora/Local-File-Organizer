@@ -141,9 +141,25 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _parse_bool(value: str) -> bool:
-    """Parse boolean from environment variable string."""
-    return value.lower() in ("1", "true", "yes")
+def _parse_bool(value: str, name: str) -> bool | None:
+    """Parse boolean from an environment variable string."""
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    logger.warning("Invalid {} value: {}", name, value)
+    return None
+
+
+def _load_bool(env: dict[str, str], env_name: str, data: dict[str, Any], key: str) -> None:
+    """Load a boolean setting when the environment value parses cleanly."""
+    if env_name not in env:
+        return
+
+    parsed = _parse_bool(env[env_name], env_name)
+    if parsed is not None:
+        data[key] = parsed
 
 
 def _parse_int(value: str, name: str) -> int | None:
@@ -195,8 +211,7 @@ def _load_basic_settings(env: dict[str, str], data: dict[str, Any]) -> None:
             data["port"] = port
     if "FO_API_LOG_LEVEL" in env:
         data["log_level"] = env["FO_API_LOG_LEVEL"]
-    if "FO_API_ENABLE_DOCS" in env:
-        data["enable_docs"] = _parse_bool(env["FO_API_ENABLE_DOCS"])
+    _load_bool(env, "FO_API_ENABLE_DOCS", data, "enable_docs")
     if "FO_API_ALLOWED_PATHS" in env:
         data["allowed_paths"] = _parse_list(env["FO_API_ALLOWED_PATHS"])
 
@@ -209,8 +224,7 @@ def _load_cors_settings(env: dict[str, str], data: dict[str, Any]) -> None:
         data["cors_allow_methods"] = _parse_list(env["FO_API_CORS_ALLOW_METHODS"])
     if "FO_API_CORS_ALLOW_HEADERS" in env:
         data["cors_allow_headers"] = _parse_list(env["FO_API_CORS_ALLOW_HEADERS"])
-    if "FO_API_CORS_ALLOW_CREDENTIALS" in env:
-        data["cors_allow_credentials"] = _parse_bool(env["FO_API_CORS_ALLOW_CREDENTIALS"])
+    _load_bool(env, "FO_API_CORS_ALLOW_CREDENTIALS", data, "cors_allow_credentials")
 
 
 def _load_websocket_settings(env: dict[str, str], data: dict[str, Any]) -> None:
@@ -230,8 +244,7 @@ def _load_websocket_settings(env: dict[str, str], data: dict[str, Any]) -> None:
 
 def _load_auth_settings(env: dict[str, str], data: dict[str, Any]) -> None:
     """Load authentication configuration from environment."""
-    if "FO_API_AUTH_ENABLED" in env:
-        data["auth_enabled"] = _parse_bool(env["FO_API_AUTH_ENABLED"])
+    _load_bool(env, "FO_API_AUTH_ENABLED", data, "auth_enabled")
     if "FO_API_AUTH_DB_PATH" in env:
         data["auth_db_path"] = env["FO_API_AUTH_DB_PATH"]
     if "FO_API_AUTH_JWT_SECRET" in env:
@@ -250,18 +263,13 @@ def _load_auth_settings(env: dict[str, str], data: dict[str, Any]) -> None:
         data["auth_redis_url"] = env["FO_API_AUTH_REDIS_URL"]
     elif "FO_REDIS_URL" in env:
         data["auth_redis_url"] = env["FO_REDIS_URL"]
-    if "FO_API_AUTH_BOOTSTRAP_ADMIN" in env:
-        data["auth_bootstrap_admin"] = _parse_bool(env["FO_API_AUTH_BOOTSTRAP_ADMIN"])
-    if "FO_API_AUTH_BOOTSTRAP_LOCAL_ONLY" in env:
-        data["auth_bootstrap_admin_local_only"] = _parse_bool(
-            env["FO_API_AUTH_BOOTSTRAP_LOCAL_ONLY"]
-        )
+    _load_bool(env, "FO_API_AUTH_BOOTSTRAP_ADMIN", data, "auth_bootstrap_admin")
+    _load_bool(env, "FO_API_AUTH_BOOTSTRAP_LOCAL_ONLY", data, "auth_bootstrap_admin_local_only")
 
 
 def _load_auth_rate_limit_settings(env: dict[str, str], data: dict[str, Any]) -> None:
     """Load authentication rate limiting configuration from environment."""
-    if "FO_API_AUTH_LOGIN_RATE_LIMIT" in env:
-        data["auth_login_rate_limit_enabled"] = _parse_bool(env["FO_API_AUTH_LOGIN_RATE_LIMIT"])
+    _load_bool(env, "FO_API_AUTH_LOGIN_RATE_LIMIT", data, "auth_login_rate_limit_enabled")
     if "FO_API_AUTH_LOGIN_MAX_ATTEMPTS" in env:
         attempts = _parse_int(
             env["FO_API_AUTH_LOGIN_MAX_ATTEMPTS"], "FO_API_AUTH_LOGIN_MAX_ATTEMPTS"
@@ -284,22 +292,15 @@ def _load_password_policy_settings(env: dict[str, str], data: dict[str, Any]) ->
         )
         if min_len is not None:
             data["auth_password_min_length"] = min_len
-    if "FO_API_AUTH_PASSWORD_REQUIRE_NUMBER" in env:
-        data["auth_password_require_number"] = _parse_bool(
-            env["FO_API_AUTH_PASSWORD_REQUIRE_NUMBER"]
-        )
-    if "FO_API_AUTH_PASSWORD_REQUIRE_LETTER" in env:
-        data["auth_password_require_letter"] = _parse_bool(
-            env["FO_API_AUTH_PASSWORD_REQUIRE_LETTER"]
-        )
-    if "FO_API_AUTH_PASSWORD_REQUIRE_SPECIAL" in env:
-        data["auth_password_require_special"] = _parse_bool(
-            env["FO_API_AUTH_PASSWORD_REQUIRE_SPECIAL"]
-        )
-    if "FO_API_AUTH_PASSWORD_REQUIRE_UPPERCASE" in env:
-        data["auth_password_require_uppercase"] = _parse_bool(
-            env["FO_API_AUTH_PASSWORD_REQUIRE_UPPERCASE"]
-        )
+    _load_bool(env, "FO_API_AUTH_PASSWORD_REQUIRE_NUMBER", data, "auth_password_require_number")
+    _load_bool(env, "FO_API_AUTH_PASSWORD_REQUIRE_LETTER", data, "auth_password_require_letter")
+    _load_bool(env, "FO_API_AUTH_PASSWORD_REQUIRE_SPECIAL", data, "auth_password_require_special")
+    _load_bool(
+        env,
+        "FO_API_AUTH_PASSWORD_REQUIRE_UPPERCASE",
+        data,
+        "auth_password_require_uppercase",
+    )
 
 
 def _load_database_settings(env: dict[str, str], data: dict[str, Any]) -> None:
@@ -314,16 +315,14 @@ def _load_database_settings(env: dict[str, str], data: dict[str, Any]) -> None:
         overflow = _parse_int(env["FO_API_DB_MAX_OVERFLOW"], "FO_API_DB_MAX_OVERFLOW")
         if overflow is not None:
             data["database_max_overflow"] = overflow
-    if "FO_API_DB_POOL_PRE_PING" in env:
-        data["database_pool_pre_ping"] = _parse_bool(env["FO_API_DB_POOL_PRE_PING"])
+    _load_bool(env, "FO_API_DB_POOL_PRE_PING", data, "database_pool_pre_ping")
     if "FO_API_DB_POOL_RECYCLE_SECONDS" in env:
         recycle = _parse_int(
             env["FO_API_DB_POOL_RECYCLE_SECONDS"], "FO_API_DB_POOL_RECYCLE_SECONDS"
         )
         if recycle is not None:
             data["database_pool_recycle_seconds"] = recycle
-    if "FO_API_DB_ECHO" in env:
-        data["database_echo"] = _parse_bool(env["FO_API_DB_ECHO"])
+    _load_bool(env, "FO_API_DB_ECHO", data, "database_echo")
 
 
 def _load_cache_settings(env: dict[str, str], data: dict[str, Any]) -> None:
@@ -340,10 +339,8 @@ def _load_cache_settings(env: dict[str, str], data: dict[str, Any]) -> None:
 
 def _load_api_key_settings(env: dict[str, str], data: dict[str, Any]) -> None:
     """Load API key configuration from environment."""
-    if "FO_API_API_KEY_ENABLED" in env:
-        data["api_key_enabled"] = _parse_bool(env["FO_API_API_KEY_ENABLED"])
-    if "FO_API_API_KEY_ADMIN" in env:
-        data["api_key_admin"] = _parse_bool(env["FO_API_API_KEY_ADMIN"])
+    _load_bool(env, "FO_API_API_KEY_ENABLED", data, "api_key_enabled")
+    _load_bool(env, "FO_API_API_KEY_ADMIN", data, "api_key_admin")
     if "FO_API_API_KEY_HEADER" in env:
         data["api_key_header"] = env["FO_API_API_KEY_HEADER"]
     if "FO_API_API_KEYS" in env:
@@ -355,8 +352,7 @@ def _load_api_key_settings(env: dict[str, str], data: dict[str, Any]) -> None:
 
 def _load_rate_limit_settings(env: dict[str, str], data: dict[str, Any]) -> None:
     """Load rate limiting configuration from environment."""
-    if "FO_API_RATE_LIMIT_ENABLED" in env:
-        data["rate_limit_enabled"] = _parse_bool(env["FO_API_RATE_LIMIT_ENABLED"])
+    _load_bool(env, "FO_API_RATE_LIMIT_ENABLED", data, "rate_limit_enabled")
     if "FO_API_RATE_LIMIT_DEFAULT_REQUESTS" in env:
         requests = _parse_int(
             env["FO_API_RATE_LIMIT_DEFAULT_REQUESTS"], "FO_API_RATE_LIMIT_DEFAULT_REQUESTS"
@@ -370,10 +366,12 @@ def _load_rate_limit_settings(env: dict[str, str], data: dict[str, Any]) -> None
         )
         if window is not None:
             data["rate_limit_default_window_seconds"] = window
-    if "FO_API_RATE_LIMIT_TRUST_PROXY_HEADERS" in env:
-        data["rate_limit_trust_proxy_headers"] = _parse_bool(
-            env["FO_API_RATE_LIMIT_TRUST_PROXY_HEADERS"]
-        )
+    _load_bool(
+        env,
+        "FO_API_RATE_LIMIT_TRUST_PROXY_HEADERS",
+        data,
+        "rate_limit_trust_proxy_headers",
+    )
     if "FO_API_RATE_LIMIT_EXEMPT_PATHS" in env:
         data["rate_limit_exempt_paths"] = _parse_list(env["FO_API_RATE_LIMIT_EXEMPT_PATHS"])
     if "FO_API_RATE_LIMIT_RULES" in env:
@@ -387,16 +385,14 @@ def _load_rate_limit_settings(env: dict[str, str], data: dict[str, Any]) -> None
 
 def _load_security_settings(env: dict[str, str], data: dict[str, Any]) -> None:
     """Load security headers configuration from environment."""
-    if "FO_API_SECURITY_HEADERS_ENABLED" in env:
-        data["security_headers_enabled"] = _parse_bool(env["FO_API_SECURITY_HEADERS_ENABLED"])
+    _load_bool(env, "FO_API_SECURITY_HEADERS_ENABLED", data, "security_headers_enabled")
     if "FO_API_SECURITY_CSP" in env:
         data["security_csp"] = env["FO_API_SECURITY_CSP"]
     if "FO_API_SECURITY_HSTS_SECONDS" in env:
         seconds = _parse_int(env["FO_API_SECURITY_HSTS_SECONDS"], "FO_API_SECURITY_HSTS_SECONDS")
         if seconds is not None:
             data["security_hsts_seconds"] = seconds
-    if "FO_API_SECURITY_HSTS_SUBDOMAINS" in env:
-        data["security_hsts_subdomains"] = _parse_bool(env["FO_API_SECURITY_HSTS_SUBDOMAINS"])
+    _load_bool(env, "FO_API_SECURITY_HSTS_SUBDOMAINS", data, "security_hsts_subdomains")
     if "FO_API_SECURITY_REFERRER_POLICY" in env:
         data["security_referrer_policy"] = env["FO_API_SECURITY_REFERRER_POLICY"]
 

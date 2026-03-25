@@ -149,6 +149,20 @@ class TestSemanticSearchHiddenFileFiltering:
         result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic"])
         assert result.exit_code == 0
 
+    def test_semantic_archive_filter_accepts_tar_gz(self, tmp_path: Path) -> None:
+        """Semantic search respects compound archive extensions like .tar.gz."""
+        app = _make_app()
+        (tmp_path / "dataset.tar.gz").write_text("finance archive bundle")
+        (tmp_path / "notes.txt").write_text("finance notes")
+
+        result = runner.invoke(
+            app,
+            ["search", "finance", str(tmp_path), "--semantic", "--type", "archive"],
+        )
+        assert result.exit_code == 0
+        assert "dataset.tar.gz" in result.output
+        assert "notes.txt" not in result.output
+
 
 class TestSemanticIndexBuildFailure:
     """Covers line 173 — except (ValueError, RuntimeError, ImportError) path."""

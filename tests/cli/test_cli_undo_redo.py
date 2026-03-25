@@ -124,6 +124,18 @@ class TestUndoCommand:
         assert "Would undo transaction tx-abc" in captured.out
         assert "Operations: 3" in captured.out
 
+    def test_undo_dry_run_prefers_transaction_over_operation(self, capsys):
+        mock_mgr = MagicMock()
+        mock_transaction = MagicMock()
+        mock_mgr.history.get_transaction.return_value = mock_transaction
+        mock_mgr.history.get_operations.return_value = [_make_operation(op_id=1)]
+        with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr):
+            result = undo_command(operation_id=5, transaction_id="tx-abc", dry_run=True)
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Would undo transaction tx-abc" in captured.out
+        assert "Would undo operation 5" not in captured.out
+
     def test_undo_dry_run_transaction_not_found(self, capsys):
         mock_mgr = MagicMock()
         mock_mgr.history.get_transaction.return_value = None

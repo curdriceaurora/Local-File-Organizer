@@ -48,10 +48,10 @@ def undo_command(
 
         # Dry run mode - delegate to preview helpers
         if dry_run:
-            if operation_id:
-                result = undo_history.preview_undo_operation(manager, operation_id)
-            elif transaction_id:
+            if transaction_id:
                 result = undo_history.preview_undo_transaction(manager, transaction_id)
+            elif operation_id:
+                result = undo_history.preview_undo_operation(manager, operation_id)
             else:
                 result = undo_history.preview_undo_last(manager)
 

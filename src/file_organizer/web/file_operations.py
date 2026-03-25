@@ -43,6 +43,16 @@ from file_organizer.web._helpers import (
 )
 
 
+def _normalized_extension(path: Path) -> str:
+    """Return a normalized extension, preserving supported compound archives."""
+    suffixes = [suffix.lower() for suffix in path.suffixes]
+    if len(suffixes) >= 2:
+        compound = "".join(suffixes[-2:])
+        if compound in {".tar.gz", ".tar.bz2"}:
+            return compound
+    return suffixes[-1] if suffixes else ""
+
+
 def build_breadcrumbs(path: Path, roots: list[Path]) -> list[dict[str, str]]:
     """Build navigation breadcrumbs from *path* back to its closest allowed root.
 
@@ -157,7 +167,7 @@ def collect_entries(
         files = [p for p in files if query_token in p.name.lower()]
 
     if allowed_types is not None:
-        files = [p for p in files if p.suffix.lower() in allowed_types]
+        files = [p for p in files if _normalized_extension(p) in allowed_types]
 
     directories.sort(key=lambda p: p.name.lower())
 
@@ -174,7 +184,7 @@ def collect_entries(
         files.sort(key=lambda p: p.name.lower(), reverse=reverse)
     elif sort_by == "size":
         files.sort(
-            key=lambda p: (s := file_stats.get(p)) and s.st_size or 0,
+            key=lambda p: s.st_size if (s := file_stats.get(p)) else 0,
             reverse=reverse,
         )
     elif sort_by == "created":
@@ -204,10 +214,10 @@ def collect_entries(
 
         files.sort(key=_creation_key, reverse=reverse)
     elif sort_by == "type":
-        files.sort(key=lambda p: p.suffix.lower(), reverse=reverse)
+        files.sort(key=lambda p: _normalized_extension(p), reverse=reverse)
     else:
         files.sort(
-            key=lambda p: (s := file_stats.get(p)) and s.st_mtime or 0,
+            key=lambda p: s.st_mtime if (s := file_stats.get(p)) else 0,
             reverse=reverse,
         )
 

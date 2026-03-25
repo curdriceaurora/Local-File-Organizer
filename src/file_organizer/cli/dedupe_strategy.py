@@ -35,31 +35,33 @@ def select_files_to_keep(files: list[dict[str, Any]], strategy: str) -> list[dic
     Returns:
         Updated list with 'keep' flags set for files to preserve.
     """
+    updated_files = [dict(file_info) for file_info in files]
+
     if strategy == "oldest":
         # Keep the file with the oldest modification time
-        oldest_idx = min(range(len(files)), key=lambda i: files[i]["mtime"])
-        files[oldest_idx]["keep"] = True
+        oldest_idx = min(range(len(updated_files)), key=lambda i: updated_files[i]["mtime"])
+        updated_files[oldest_idx]["keep"] = True
 
     elif strategy == "newest":
         # Keep the file with the newest modification time
-        newest_idx = max(range(len(files)), key=lambda i: files[i]["mtime"])
-        files[newest_idx]["keep"] = True
+        newest_idx = max(range(len(updated_files)), key=lambda i: updated_files[i]["mtime"])
+        updated_files[newest_idx]["keep"] = True
 
     elif strategy == "largest":
         # Keep the largest file (in case of slight differences)
-        largest_idx = max(range(len(files)), key=lambda i: files[i]["size"])
-        files[largest_idx]["keep"] = True
+        largest_idx = max(range(len(updated_files)), key=lambda i: updated_files[i]["size"])
+        updated_files[largest_idx]["keep"] = True
 
     elif strategy == "smallest":
         # Keep the smallest file
-        smallest_idx = min(range(len(files)), key=lambda i: files[i]["size"])
-        files[smallest_idx]["keep"] = True
+        smallest_idx = min(range(len(updated_files)), key=lambda i: updated_files[i]["size"])
+        updated_files[smallest_idx]["keep"] = True
 
     elif strategy == "manual":
         # Manual selection - no automatic marking
         pass
 
-    return files
+    return updated_files
 
 
 def get_user_selection(
@@ -121,7 +123,10 @@ def get_user_selection(
             console.print("[dim](y)es / (n)o / (s)kip this group:[/dim]")
 
             while True:
-                choice = console.input("[cyan]Choice:[/cyan] ").strip().lower()
+                try:
+                    choice = console.input("[cyan]Choice:[/cyan] ").strip().lower()
+                except KeyboardInterrupt:
+                    raise
 
                 if choice in ["y", "yes"]:
                     # Remove files not marked to keep

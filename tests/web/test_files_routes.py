@@ -181,6 +181,20 @@ class TestCollectEntries:
         file_entries = [e for e in entries if not e["is_dir"]]
         assert all("png" in e["name"].lower() or e["kind"] == "image" for e in file_entries)
 
+    def test_file_type_filter_matches_compound_archive_extension(self, tree):
+        (tree / "backup.tar.gz").write_bytes(b"archive")
+        entries, _ = collect_entries(
+            tree,
+            query=None,
+            file_type=".tar.gz",
+            sort_by="name",
+            sort_order="asc",
+            include_hidden=False,
+            limit=100,
+        )
+        file_names = [e["name"] for e in entries if not e["is_dir"]]
+        assert "backup.tar.gz" in file_names
+
     def test_include_hidden(self, tree):
         entries, total = collect_entries(
             tree,

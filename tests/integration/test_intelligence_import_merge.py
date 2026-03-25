@@ -321,6 +321,14 @@ class TestProfileMigratorBasics:
         result = migrator.get_migration_history("default")
         assert result is None or isinstance(result, list)
 
+    def test_migrate_rejects_unsupported_target_even_when_versions_match(
+        self, manager: ProfileManager, migrator: ProfileMigrator
+    ) -> None:
+        manager.create_profile("custom", "custom profile")
+        manager.update_profile("custom", profile_version="9.9")
+        result = migrator.migrate_version("custom", "9.9")
+        assert result is False
+
 
 class TestProfileMigratorBackup:
     def test_backup_before_migration_creates_file(

@@ -160,6 +160,8 @@ class ProfileImporter:
             self._validate_full_export(profile_data, errors, warnings)
         elif export_type == "selective":
             self._validate_selective_export(profile_data, errors)
+        else:
+            errors.append(f"Invalid export_type: {export_type}")
 
     def _validate_full_export(
         self, profile_data: dict[str, Any], errors: list[str], warnings: list[str]
@@ -327,7 +329,7 @@ class ProfileImporter:
             description=data.get("description", ""),
             profile_version=data.get("profile_version", "1.0"),
             created=data.get("created"),
-            updated=self._get_current_timestamp(),
+            updated=data.get("updated"),
             preferences=data.get("preferences", {"global": {}, "directory_specific": {}}),
             learned_patterns=data.get("learned_patterns", {}),
             confidence_data=data.get("confidence_data", {}),
@@ -351,6 +353,9 @@ class ProfileImporter:
             return self.profile_manager.update_profile(
                 profile_name,
                 description=profile.description,
+                profile_version=profile.profile_version,
+                created=profile.created,
+                updated=profile.updated,
                 preferences=profile.preferences,
                 learned_patterns=profile.learned_patterns,
                 confidence_data=profile.confidence_data,
@@ -364,6 +369,9 @@ class ProfileImporter:
             # Update with imported data
             return self.profile_manager.update_profile(
                 profile_name,
+                profile_version=profile.profile_version,
+                created=profile.created,
+                updated=profile.updated,
                 preferences=profile.preferences,
                 learned_patterns=profile.learned_patterns,
                 confidence_data=profile.confidence_data,
@@ -392,7 +400,12 @@ class ProfileImporter:
 
         # Merge selective preferences
         imported_prefs = data.get("preferences", {})
-        current_prefs: dict[str, Any] = existing_profile.preferences or {}
+        current_prefs: dict[str, Any] = {
+            "global": dict((existing_profile.preferences or {}).get("global", {})),
+            "directory_specific": dict(
+                (existing_profile.preferences or {}).get("directory_specific", {})
+            ),
+        }
 
         # Merge global preferences
         if "global" in imported_prefs:
@@ -403,23 +416,21 @@ class ProfileImporter:
             current_prefs["directory_specific"].update(imported_prefs["directory_specific"])
 
         # Update learned patterns if included
+        learned_patterns = dict(existing_profile.learned_patterns or {})
         if "learned_patterns" in data:
-            (existing_profile.learned_patterns or {}).update(data["learned_patterns"])
-            if existing_profile.learned_patterns is None:
-                existing_profile.learned_patterns = dict(data["learned_patterns"])
+            learned_patterns.update(data["learned_patterns"])
 
         # Update confidence data if included
+        confidence_data = dict(existing_profile.confidence_data or {})
         if "confidence_data" in data:
-            (existing_profile.confidence_data or {}).update(data["confidence_data"])
-            if existing_profile.confidence_data is None:
-                existing_profile.confidence_data = dict(data["confidence_data"])
+            confidence_data.update(data["confidence_data"])
 
         # Save updated profile
         success = self.profile_manager.update_profile(
             profile_name,
             preferences=current_prefs,
-            learned_patterns=existing_profile.learned_patterns,
-            confidence_data=existing_profile.confidence_data,
+            learned_patterns=learned_patterns,
+            confidence_data=confidence_data,
         )
 
         if not success:

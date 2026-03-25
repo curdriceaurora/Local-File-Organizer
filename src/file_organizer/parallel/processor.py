@@ -392,7 +392,7 @@ class ParallelProcessor:
                     abort_results = self._abort_remaining_work(
                         pending, future_paths, future_started, finalize_result
                     )
-                    return (True if owns_executor else False, [finalized] + abort_results)
+                    return (True if owns_executor else False, [finalized, *abort_results])
 
         return None
 

@@ -68,13 +68,13 @@ class ProfileMigrator:
             if profile is None:
                 return False
 
+            # Reject unsupported targets even if the profile already reports that version.
+            if not self._is_version_supported(target_version):
+                return False
+
             # Check if migration is needed
             if not self._migration_needed(profile, target_version):
                 return True
-
-            # Validate target version
-            if not self._is_version_supported(target_version):
-                return False
 
             # Create backup if requested
             backup_path = self._create_backup_if_requested(profile, backup)
@@ -210,6 +210,9 @@ class ProfileMigrator:
         success = self.profile_manager.update_profile(
             profile_name,
             description=migrated_profile.description,
+            profile_version=migrated_profile.profile_version,
+            created=migrated_profile.created,
+            updated=migrated_profile.updated,
             preferences=migrated_profile.preferences,
             learned_patterns=migrated_profile.learned_patterns,
             confidence_data=migrated_profile.confidence_data,

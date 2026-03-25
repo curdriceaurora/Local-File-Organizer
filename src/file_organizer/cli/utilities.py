@@ -88,6 +88,16 @@ TYPE_EXTENSIONS: dict[str, set[str]] = {
 }
 
 
+def _normalized_extension(path: Path) -> str:
+    """Return a normalized extension, preserving supported compound archives."""
+    suffixes = [suffix.lower() for suffix in path.suffixes]
+    if len(suffixes) >= 2:
+        compound = "".join(suffixes[-2:])
+        if compound in {".tar.gz", ".tar.bz2"}:
+            return compound
+    return suffixes[-1] if suffixes else ""
+
+
 def _validate_search_params(
     limit: int,
     directory: Path,
@@ -257,7 +267,7 @@ def _do_semantic_search(
 
     if type_filter is not None:
         type_exts = TYPE_EXTENSIONS.get(type_filter, set())
-        raw_results = [(p, s) for p, s in raw_results if p.suffix.lower() in type_exts]
+        raw_results = [(p, s) for p, s in raw_results if _normalized_extension(p) in type_exts]
 
     return raw_results[:limit]
 
@@ -299,11 +309,7 @@ def _do_default_search(
             continue
 
         if type_filter is not None:
-            suffix = path.suffix.lower()
-            if suffix == ".gz" and path.stem.endswith(".tar"):
-                suffix = ".tar.gz"
-            elif suffix == ".bz2" and path.stem.endswith(".tar"):
-                suffix = ".tar.bz2"
+            suffix = _normalized_extension(path)
             if suffix not in TYPE_EXTENSIONS[type_filter]:
                 continue
 

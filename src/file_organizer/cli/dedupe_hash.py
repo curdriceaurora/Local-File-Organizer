@@ -16,6 +16,7 @@ from rich.console import Console
 if TYPE_CHECKING:
     from file_organizer.services.deduplication.detector import DuplicateDetector, ScanOptions
     from file_organizer.services.deduplication.hasher import HashAlgorithm
+    from file_organizer.services.deduplication.index import DuplicateGroup
 
 
 class ProgressTracker:
@@ -66,7 +67,7 @@ def scan_for_duplicates(
     scan_options: ScanOptions,
     console: Console,
     progress_tracker: ProgressTracker | None = None,
-) -> dict:
+) -> dict[str, DuplicateGroup]:
     """Scan directory for duplicate files using hash-based detection.
 
     Args:

@@ -22,6 +22,7 @@ from file_organizer.cli.dedupe_display import (
     format_datetime,
     format_size,
 )
+from file_organizer.cli.dedupe_removal import remove_files
 from file_organizer.cli.dedupe_strategy import (
     get_user_selection,
     select_files_to_keep,
@@ -212,6 +213,13 @@ class TestSelectFilesToKeep:
         for f in result:
             assert f.get("keep", False) is False
 
+    def test_does_not_mutate_input_list(self):
+        files = self._make_files()
+        original = [dict(file_info) for file_info in files]
+        result = select_files_to_keep(files, "oldest")
+        assert files == original
+        assert result is not files
+
 
 @pytest.mark.unit
 class TestGetUserSelection:
@@ -233,6 +241,39 @@ class TestGetUserSelection:
         ]
         result = get_user_selection(files, "oldest", batch=True)
         assert result == []
+
+    def test_keyboard_interrupt_is_reraised_for_auto_confirmation(self):
+        files = [
+            {"path": Path("/a/f1.txt"), "keep": True},
+            {"path": Path("/a/f2.txt"), "keep": False},
+        ]
+        console = MagicMock(spec=Console)
+        console.input.side_effect = KeyboardInterrupt
+
+        with pytest.raises(KeyboardInterrupt):
+            get_user_selection(files, "oldest", batch=False, console=console)
+
+
+@pytest.mark.unit
+class TestRemoveFiles:
+    """Tests for file removal summary behavior."""
+
+    def test_summary_reports_actual_successful_removals(self, tmp_path):
+        first = tmp_path / "one.txt"
+        second = tmp_path / "two.txt"
+        first.write_text("one")
+        second.write_text("two")
+        console = Console(record=True)
+        files = [
+            {"path": first, "size": 3},
+            {"path": second, "size": 3},
+        ]
+
+        with patch.object(Path, "unlink", side_effect=[None, OSError("boom")]):
+            removed, space_saved = remove_files(files, [0, 1], None, False, console)
+
+        assert removed == 1
+        assert space_saved == 3
 
 
 # ============================================================================
