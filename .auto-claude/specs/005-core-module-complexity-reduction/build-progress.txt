@@ -266,8 +266,92 @@ Ready to begin Phases 2, 3, and 4 in parallel
 - Better testability: hash scanning can now be tested independently
 - Follows dispatcher.py pattern of wrapping services with progress reporting
 
-**Verification**: 
+**Verification**:
 - Both files compile successfully (syntax validated)
 - Code follows patterns from dispatcher.py
 - Maintains backward compatibility with existing behavior
+
+## 2026-03-24 - Subtask 2-2: Extract File Selection Strategy Logic
+
+**Status**: Completed ✓
+
+**What was done**:
+1. Created new module `src/file_organizer/cli/dedupe_strategy.py` with:
+   - `select_files_to_keep()` function to apply selection strategy (oldest/newest/largest/smallest)
+   - `get_user_selection()` function to handle manual and automatic file selection
+   - Complete user interaction logic for duplicate file selection
+
+2. Updated `src/file_organizer/cli/dedupe.py` to:
+   - Import and use the new dedupe_strategy module
+   - Remove the two extracted functions (~100 lines)
+   - Maintain identical behavior while reducing complexity
+
+**Impact**:
+- Reduced dedupe.py by ~100 lines through function extraction
+- Improved separation of concerns: strategy logic isolated from main CLI orchestration
+- Better testability: selection strategies can now be tested independently
+- Follows file_ops.py pattern of focused, single-purpose functions
+- Makes it easier to add new selection strategies in the future
+
+**Verification**:
+- Both files compile successfully (syntax validated with py_compile)
+- Import statements verified correct
+- Functions still called from dedupe.py at lines 413 and 420
+- Code follows patterns from file_ops.py
+
+## 2026-03-24 - Subtask 2-3: Simplify Main Dedupe Workflow Function
+
+**Status**: Completed ✓
+
+**What was done**:
+1. Created new module `src/file_organizer/cli/dedupe_display.py` with:
+   - `format_size()` and `format_datetime()` formatting utilities
+   - `display_banner()` function for tool header
+   - `display_config()` function for configuration panel
+   - `display_duplicate_group()` function for group tables
+   - `display_summary()` function for results summary
+   - `display_backup_info()` function for backup messages
+
+2. Created new module `src/file_organizer/cli/dedupe_removal.py` with:
+   - `remove_files()` function to handle file deletion with backup
+   - `process_duplicate_group()` function to orchestrate single group processing
+   - Complete error handling for file removal operations
+
+3. Refactored `src/file_organizer/cli/dedupe.py` to:
+   - Update module docstring to explain facade pattern (following core/organizer.py)
+   - Reorganize imports to show delegation pattern clearly
+   - Remove all display functions (moved to dedupe_display.py)
+   - Simplify main dedupe_command() function to be a clean orchestrator
+   - Delegate to extracted modules: dedupe_hash, dedupe_strategy, dedupe_display, dedupe_removal
+
+**Impact**:
+- Reduced dedupe.py from 485 lines (original) to 315 lines (35% reduction)
+- Main workflow now cleanly delegates to 4 specialized modules
+- Improved separation of concerns following core/organizer.py pattern:
+  * dedupe_hash: Hash computation and scanning
+  * dedupe_strategy: File selection logic
+  * dedupe_display: UI output and formatting
+  * dedupe_removal: File deletion operations
+- Significantly reduced cyclomatic complexity of main function
+- Better testability: each concern can now be tested independently
+- Follows facade pattern with clean orchestration
+
+**Module Line Counts**:
+- dedupe.py: 315 lines (main orchestrator)
+- dedupe_hash.py: 152 lines (scanning)
+- dedupe_strategy.py: 117 lines (selection)
+- dedupe_display.py: 212 lines (UI)
+- dedupe_removal.py: 125 lines (deletion)
+- Total: 921 lines (well-organized across 5 focused modules)
+
+**Verification**:
+- All files compile successfully (syntax validated with py_compile)
+- Follows patterns from core/organizer.py (facade with delegation)
+- Main dedupe_command() function simplified to clear workflow steps
+- No behavior changes - pure refactoring for complexity reduction
+
+**Next Steps**:
+- Phase 2 (Refactor CLI Dedupe) now complete - all 3 subtasks done
+- Ready to proceed to Phase 3 (Refactor CLI Undo) or Phase 4 (Refactor Web Files)
+- Note: Full verification requires test execution once environment is set up
 

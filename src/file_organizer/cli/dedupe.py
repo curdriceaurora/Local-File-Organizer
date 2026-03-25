@@ -3,22 +3,33 @@
 
 This module provides a user-friendly command-line interface for finding and
 removing duplicate files using hash-based detection.
+
+``dedupe_command`` is the public API for the deduplication workflow. It
+delegates to extracted modules for specific concerns:
+
+- ``cli.dedupe_hash``: Hash computation and duplicate scanning
+- ``cli.dedupe_strategy``: File selection strategy logic
+- ``cli.dedupe_display``: Rich UI output (tables, panels, formatting)
+- ``cli.dedupe_removal``: File deletion and backup operations
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from loguru import logger
 from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 
-from file_organizer.cli.dedupe_strategy import get_user_selection, select_files_to_keep
+from file_organizer.cli import dedupe_display, dedupe_removal
+from file_organizer.cli.dedupe_hash import (
+    ProgressTracker,
+    create_scan_options,
+    initialize_hash_detector,
+    scan_for_duplicates,
+)
 
 console = Console()
 
@@ -68,124 +79,6 @@ class DedupeConfig:
         self.exclude_patterns = exclude_patterns or []
 
 
-def format_size(size_bytes: int) -> str:
-    """Format file size in human-readable format.
-
-    Args:
-        size_bytes: Size in bytes
-
-    Returns:
-        Formatted size string (e.g., '1.5 MB')
-    """
-    value: float = size_bytes
-    for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if value < 1024.0:
-            return f"{value:.1f} {unit}"
-        value /= 1024.0
-    return f"{value:.1f} PB"
-
-
-def format_datetime(timestamp: float) -> str:
-    """Format timestamp in human-readable format.
-
-    Args:
-        timestamp: Unix timestamp
-
-    Returns:
-        Formatted datetime string
-    """
-    dt = datetime.fromtimestamp(timestamp, tz=UTC)
-    return dt.strftime("%Y-%m-%d %H:%M:%S")
-
-
-def display_duplicate_group(
-    group_id: int, file_hash: str, files: list[dict[str, Any]], total_groups: int
-) -> None:
-    """Display a group of duplicate files in a formatted table.
-
-    Args:
-        group_id: ID of the duplicate group
-        file_hash: Hash value of the duplicates
-        files: List of file metadata dicts
-        total_groups: Total number of duplicate groups
-    """
-    console.print()
-    console.print(
-        Panel(
-            f"[bold cyan]Duplicate Group {group_id}/{total_groups}[/bold cyan]\n"
-            f"Hash: [dim]{file_hash[:16]}...[/dim]",
-            expand=False,
-        )
-    )
-
-    # Create table
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("#", style="dim", width=3)
-    table.add_column("Path", style="cyan")
-    table.add_column("Size", justify="right", style="green")
-    table.add_column("Modified", style="yellow")
-    table.add_column("Status", justify="center")
-
-    # Add files to table
-    for idx, file_info in enumerate(files, 1):
-        path = file_info["path"]
-        size = format_size(file_info["size"])
-        modified = format_datetime(file_info["mtime"])
-
-        # Mark the file that will be kept (for strategies)
-        status = "✓" if file_info.get("keep", False) else ""
-
-        table.add_row(str(idx), str(path), size, modified, status)
-
-    console.print(table)
-
-    # Calculate space that can be saved
-    total_size = sum(f["size"] for f in files)
-    saved_space = total_size - files[0]["size"]  # Keep one file
-    console.print(f"\n[dim]Potential space savings: {format_size(saved_space)}[/dim]")
-
-
-def display_summary(
-    total_groups: int, total_duplicates: int, total_removed: int, space_saved: int, dry_run: bool
-) -> None:
-    """Display summary of deduplication operation.
-
-    Args:
-        total_groups: Total number of duplicate groups found
-        total_duplicates: Total number of duplicate files found
-        total_removed: Number of files removed
-        space_saved: Total space saved in bytes
-        dry_run: Whether this was a dry run
-    """
-    console.print()
-    console.print("=" * 70)
-    console.print()
-
-    if dry_run:
-        console.print(
-            Panel(
-                "[bold yellow]DRY RUN SUMMARY[/bold yellow]\n\n"
-                f"Duplicate groups found: [cyan]{total_groups}[/cyan]\n"
-                f"Total duplicate files: [cyan]{total_duplicates}[/cyan]\n"
-                f"Files that would be removed: [cyan]{total_removed}[/cyan]\n"
-                f"Space that would be saved: [green]{format_size(space_saved)}[/green]\n\n"
-                "[dim]Run without --dry-run to actually remove files.[/dim]",
-                title="Summary",
-                expand=False,
-            )
-        )
-    else:
-        console.print(
-            Panel(
-                "[bold green]DEDUPLICATION COMPLETE[/bold green]\n\n"
-                f"Duplicate groups found: [cyan]{total_groups}[/cyan]\n"
-                f"Total duplicate files: [cyan]{total_duplicates}[/cyan]\n"
-                f"Files removed: [cyan]{total_removed}[/cyan]\n"
-                f"Space saved: [green]{format_size(space_saved)}[/green]",
-                title="Summary",
-                expand=False,
-            )
-        )
 
 
 def dedupe_command(args: list[str] | None = None) -> int:
@@ -322,57 +215,32 @@ Examples:
         exclude_patterns=parsed_args.exclude or [],
     )
 
-    # Display banner
-    console.print()
-    console.print("=" * 70, style="bold blue")
-    console.print("File Deduplication Tool", style="bold blue", justify="center")
-    console.print("Hash-based duplicate file detection and removal", style="dim", justify="center")
-    console.print("=" * 70, style="bold blue")
-    console.print()
-
-    # Display configuration
-    config_text = (
-        f"[bold]Directory:[/bold] {config.directory}\n"
-        f"[bold]Algorithm:[/bold] {config.algorithm.upper()}\n"
-        f"[bold]Strategy:[/bold] {config.strategy}\n"
-        f"[bold]Recursive:[/bold] {'Yes' if config.recursive else 'No'}\n"
-        f"[bold]Safe Mode:[/bold] {'Enabled' if config.safe_mode else 'Disabled'}\n"
-        f"[bold]Mode:[/bold] {'DRY RUN' if config.dry_run else 'LIVE'}"
+    # Display banner and configuration
+    dedupe_display.display_banner(console)
+    dedupe_display.display_config(
+        console,
+        str(config.directory),
+        config.algorithm,
+        config.strategy,
+        config.recursive,
+        config.safe_mode,
+        config.dry_run,
+        config.batch,
     )
-
-    if config.batch and config.strategy != "manual":
-        config_text += "\n[bold]Batch Mode:[/bold] Enabled (auto-apply strategy)"
-
-    console.print(Panel(config_text, title="Configuration", expand=False))
-
-    if config.dry_run:
-        console.print("[yellow]⚠ DRY RUN MODE: No files will be deleted[/yellow]\n")
-    elif not config.safe_mode:
-        console.print("[red]⚠ WARNING: Safe mode disabled - no backups will be created![/red]\n")
 
     try:
         # Import deduplication services
         from file_organizer.services.deduplication.backup import BackupManager
         from file_organizer.services.deduplication.hasher import HashAlgorithm
 
-        # Import hash-based scanning coordination
-        from file_organizer.cli.dedupe_hash import (
-            ProgressTracker,
-            create_scan_options,
-            initialize_hash_detector,
-            scan_for_duplicates,
-        )
-
-        # Initialize services
+        # Initialize detector and backup manager
         detector = initialize_hash_detector()
         backup_manager = BackupManager(config.directory) if config.safe_mode else None
 
         console.print("[bold]Step 1: Scanning for files...[/bold]")
 
-        # Create progress tracker for visual feedback
+        # Create progress tracker and scan options
         progress_tracker = ProgressTracker(console)
-
-        # Create scan options
         scan_options = create_scan_options(
             algorithm=cast("HashAlgorithm", config.algorithm),
             recursive=config.recursive,
@@ -391,78 +259,41 @@ Examples:
         if not duplicate_groups:
             return 0
 
+        # Calculate totals
         total_groups = len(duplicate_groups)
         total_duplicates = sum(group.count for group in duplicate_groups.values())
-
-        # Process each duplicate group
         total_removed = 0
         space_saved = 0
 
+        # Process each duplicate group
         for group_id, (file_hash, group) in enumerate(duplicate_groups.items(), 1):
-            # Convert to dictionary format for display
-            files = [
-                {
-                    "path": file_meta.path,
-                    "size": file_meta.size,
-                    "mtime": file_meta.modified_time.timestamp(),
-                }
-                for file_meta in group.files
-            ]
-
-            # Apply selection strategy
-            files = select_files_to_keep(files, config.strategy)
-
-            # Display the group
-            display_duplicate_group(group_id, file_hash, files, total_groups)
-
-            # Get user confirmation/selection
-            remove_indices = get_user_selection(files, config.strategy, config.batch)
-
-            if remove_indices:
-                # Process each file to remove
-                for idx in remove_indices:
-                    file_to_remove = files[idx]["path"]
-
-                    try:
-                        # Create backup if safe mode is enabled
-                        if config.safe_mode and backup_manager and not config.dry_run:
-                            backup_path = backup_manager.create_backup(file_to_remove)
-                            logger.debug(f"Created backup: {backup_path}")
-
-                        # Delete the file (unless dry run)
-                        if not config.dry_run:
-                            file_to_remove.unlink()
-                            logger.info(f"Removed: {file_to_remove}")
-
-                        # Update counters
-                        space_saved += files[idx]["size"]
-                        total_removed += 1
-
-                    except Exception as e:
-                        console.print(f"[red]Error removing {file_to_remove}: {e}[/red]")
-                        logger.exception(f"Failed to remove {file_to_remove}")
-
-                if not config.dry_run:
-                    console.print(f"\n[green]✓ Removed {len(remove_indices)} file(s)[/green]")
-                else:
-                    console.print(
-                        f"\n[yellow]✓ Would remove {len(remove_indices)} file(s)[/yellow]"
-                    )
-            else:
-                console.print("\n[dim]Skipped this group[/dim]")
+            removed, saved = dedupe_removal.process_duplicate_group(
+                group_id=group_id,
+                file_hash=file_hash,
+                group=group,
+                total_groups=total_groups,
+                strategy=config.strategy,
+                batch=config.batch,
+                backup_manager=backup_manager,
+                dry_run=config.dry_run,
+                console=console,
+            )
+            total_removed += removed
+            space_saved += saved
 
         # Display summary
-        display_summary(
-            total_groups=total_groups,
-            total_duplicates=total_duplicates,
-            total_removed=total_removed,
-            space_saved=space_saved,
-            dry_run=config.dry_run,
+        dedupe_display.display_summary(
+            console,
+            total_groups,
+            total_duplicates,
+            total_removed,
+            space_saved,
+            config.dry_run,
         )
 
+        # Display backup information
         if config.safe_mode and not config.dry_run and total_removed > 0:
-            console.print("\n[dim]Backups are stored in: .file_organizer_backups/[/dim]")
-            console.print("[dim]Use the restore command to recover deleted files if needed.[/dim]")
+            dedupe_display.display_backup_info(console)
 
         return 0
 
