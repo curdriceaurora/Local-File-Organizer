@@ -1,8 +1,0 @@
-Test IGES File Created for Testing                                      S      1
-1H,,1H;,                                                                S      2
-,,,3,1,1,4,1,,,,,,,,,,,,1,0;                                            G      1
-1HTest,12Htest.iges,6H1.0,8H20240124,5H12:00,1E-6,1.0,4HINCH,1,0;      G      2
-     128       1       0       0       0       0               00000001D      1
-     128       0       0       1       0                               D      2
-128,10.0,0.0,0.0;                                                      1P      1
-S      2G      2D      2P      1                                        T      1

@@ -1,3 +1,0 @@
-{"timestamp": "2026-03-25T02:52:30.870222+00:00", "event_id": "1704067200000-0", "stream": "fileorg:file-events", "action": "consumed", "metadata": {"event_type": "file.created", "file_path": "/test/a.txt"}}
-{"timestamp": "2026-03-25T02:52:30.870323+00:00", "event_id": "1704067200000-0", "stream": "fileorg:file-events", "action": "replayed", "metadata": {"event_type": "file.created", "file_path": "/test/a.txt"}}
-{"timestamp": "2026-03-25T02:52:30.870367+00:00", "event_id": "9999-0", "stream": "other-stream", "action": "consumed", "metadata": {}}

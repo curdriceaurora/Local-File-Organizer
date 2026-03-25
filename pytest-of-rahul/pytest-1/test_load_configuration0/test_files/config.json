@@ -1,1 +1,0 @@
-{"scheme": {"name": "Test", "description": "Test", "allow_gaps": true, "auto_increment": true, "reserved_numbers": ["15.01", "15.02"]}, "used_numbers": {"10.01": "/test/file1.txt", "10.02": "/test/file2.txt"}, "statistics": {}}

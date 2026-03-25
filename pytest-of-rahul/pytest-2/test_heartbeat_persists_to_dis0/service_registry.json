@@ -1,9 +1,0 @@
-{
-  "hb-persist": {
-    "endpoint": "local://hb:6000",
-    "last_heartbeat": "2026-03-25T02:55:10.534032+00:00",
-    "metadata": {},
-    "name": "hb-persist",
-    "registered_at": "2026-03-25T02:55:10.533943+00:00"
-  }
-}

@@ -1,1 +1,0 @@
-{"demo": [{"plugin_name": "demo", "user_id": "user1", "rating": 4, "title": "Good", "content": "Works well", "created_at": "2026-03-25T02:53:32.936829Z", "updated_at": "2026-03-25T02:53:32.936831Z", "helpful_count": 0}, "not-a-dict", 42]}

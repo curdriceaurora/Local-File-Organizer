@@ -1,9 +1,0 @@
-{
-  "finder": {
-    "endpoint": "local://finder:7000",
-    "last_heartbeat": "2026-03-25T02:50:19.459363+00:00",
-    "metadata": {},
-    "name": "finder",
-    "registered_at": "2026-03-25T02:50:19.459363+00:00"
-  }
-}

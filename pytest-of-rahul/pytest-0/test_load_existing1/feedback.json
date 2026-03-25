@@ -1,1 +1,0 @@
-{"entries": [{"suggestion_id": "s1", "suggestion_type": "move", "action": "accepted", "file_path": "/a.txt", "target_path": "/b.txt", "confidence": 80.0, "timestamp": "2024-01-15T10:00:00", "metadata": {}}], "pattern_adjustments": {"move:.txt": 5.0}}

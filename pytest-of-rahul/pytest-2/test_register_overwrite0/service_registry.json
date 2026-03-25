@@ -1,9 +1,0 @@
-{
-  "svc": {
-    "endpoint": "endpoint-2",
-    "last_heartbeat": "2026-03-25T02:55:10.520770+00:00",
-    "metadata": {},
-    "name": "svc",
-    "registered_at": "2026-03-25T02:55:10.520770+00:00"
-  }
-}

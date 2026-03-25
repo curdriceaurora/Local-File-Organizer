@@ -1,1 +1,0 @@
-{"name": "test-plugin", "version": "1.0.0", "author": "Test Author", "description": "A test plugin", "entry_point": "main.py", "license": "GPL-3.0", "homepage": "https://x.com"}

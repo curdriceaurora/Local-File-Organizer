@@ -1,4 +1,0 @@
-{"timestamp": "2026-03-25T02:50:04.379197+00:00", "event_id": "1704067200000-0", "stream": "fileorg:file-events", "action": "published", "metadata": {"event_type": "file.created", "file_path": "/test/a.txt"}}
-{"timestamp": "2026-03-25T02:50:04.379315+00:00", "event_id": "1704067200000-0", "stream": "fileorg:file-events", "action": "consumed", "metadata": {"event_type": "file.created", "file_path": "/test/a.txt"}}
-{"timestamp": "2026-03-25T02:50:04.379364+00:00", "event_id": "1704067200000-0", "stream": "fileorg:file-events", "action": "replayed", "metadata": {"event_type": "file.created", "file_path": "/test/a.txt"}}
-{"timestamp": "2026-03-25T02:50:04.379406+00:00", "event_id": "1704067200000-0", "stream": "fileorg:file-events", "action": "failed", "metadata": {"event_type": "file.created", "file_path": "/test/a.txt"}}

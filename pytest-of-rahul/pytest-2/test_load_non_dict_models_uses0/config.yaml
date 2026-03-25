@@ -1,3 +1,0 @@
-profiles:
-  test:
-    models: not-a-dict

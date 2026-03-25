@@ -1,3 +1,0 @@
-# Meeting notes
-
-Agenda items...

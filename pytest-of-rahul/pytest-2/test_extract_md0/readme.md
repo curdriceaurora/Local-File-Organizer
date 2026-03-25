@@ -1,2 +1,0 @@
-# Heading
-Some markdown content.
