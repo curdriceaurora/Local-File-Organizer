@@ -113,9 +113,8 @@ site/
 .claude/worktrees/
 /.worktrees/
 
-# Auto Claude data directory
+# Auto Claude generated artifacts
 .auto-claude/
-# But allow analysis documents and plans
-!.auto-claude/specs/**/analysis/*.md
-!.auto-claude/specs/**/implementation_plan.json
-!.auto-claude/specs/**/build-progress.txt
+.auto-claude-security.json
+.auto-claude-status
+.claude_settings.json

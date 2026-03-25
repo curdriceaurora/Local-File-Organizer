@@ -271,9 +271,7 @@ class IntentParser:
                 params["destination"] = paths[1]
 
     @staticmethod
-    def _extract_rename_params(
-        params: dict[str, Any], quoted: list[str], paths: list[str]
-    ) -> None:
+    def _extract_rename_params(params: dict[str, Any], quoted: list[str], paths: list[str]) -> None:
         """Extract parameters for RENAME intent.
 
         Args:

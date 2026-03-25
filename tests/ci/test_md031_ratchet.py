@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 FO_ROOT = Path(__file__).resolve().parents[2]
+_EXCLUDED_MD_PREFIXES = (".auto-claude/",)
 
 # Current global violation count.  Reduce this constant as violations are fixed
 # in follow-up PRs — the test will fail if the count increases.
@@ -79,6 +80,8 @@ def _get_changed_md_files() -> list[Path]:
     paths = []
     for line in result.stdout.splitlines():
         if line.endswith(".md"):
+            if line.startswith(_EXCLUDED_MD_PREFIXES):
+                continue
             p = FO_ROOT / line
             if p.exists():
                 paths.append(p)
@@ -95,6 +98,8 @@ def _get_all_md_files() -> list[Path]:
     )
     paths = []
     for line in result.stdout.splitlines():
+        if line.startswith(_EXCLUDED_MD_PREFIXES):
+            continue
         p = FO_ROOT / line
         if p.exists():
             paths.append(p)

@@ -82,9 +82,7 @@ class ProfileMigrator:
                 return False
 
             # Execute migration
-            return self._execute_migration(
-                profile_name, profile, target_version, backup_path
-            )
+            return self._execute_migration(profile_name, profile, target_version, backup_path)
 
         except Exception as e:
             print(f"Error migrating profile: {e}")
@@ -111,9 +109,7 @@ class ProfileMigrator:
             return False
         return True
 
-    def _create_backup_if_requested(
-        self, profile: Profile, backup: bool
-    ) -> Path | None:
+    def _create_backup_if_requested(self, profile: Profile, backup: bool) -> Path | None:
         """Create backup if requested."""
         if not backup:
             return None
@@ -152,9 +148,7 @@ class ProfileMigrator:
         )
 
         # Validate and save
-        return self._validate_and_save_migrated_profile(
-            profile_name, migrated_data, backup_path
-        )
+        return self._validate_and_save_migrated_profile(profile_name, migrated_data, backup_path)
 
     def _apply_migration_steps(
         self,
@@ -390,10 +384,7 @@ class ProfileMigrator:
             print("Error: Invalid preferences structure")
             return False
 
-        if (
-            "global" not in profile.preferences
-            or "directory_specific" not in profile.preferences
-        ):
+        if "global" not in profile.preferences or "directory_specific" not in profile.preferences:
             print("Error: Missing required preference keys")
             return False
 

@@ -115,7 +115,7 @@ def process_duplicate_group(
     display_duplicate_group(console, group_id, file_hash, files, total_groups)
 
     # Get user confirmation/selection
-    remove_indices = get_user_selection(files, strategy, batch)
+    remove_indices = get_user_selection(files, strategy, batch, console)
 
     if remove_indices:
         return remove_files(files, remove_indices, backup_manager, dry_run, console)

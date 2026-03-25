@@ -11,7 +11,18 @@ from typing import Any
 
 from rich.console import Console
 
-console = Console()
+
+def _resolve_console(console: Console | None) -> Console:
+    """Resolve the console used for prompts and feedback."""
+    if console is not None:
+        return console
+
+    try:
+        from file_organizer.cli import dedupe as dedupe_module
+    except ImportError:
+        return Console()
+    else:
+        return dedupe_module.console
 
 
 def select_files_to_keep(files: list[dict[str, Any]], strategy: str) -> list[dict[str, Any]]:
@@ -52,7 +63,10 @@ def select_files_to_keep(files: list[dict[str, Any]], strategy: str) -> list[dic
 
 
 def get_user_selection(
-    files: list[dict[str, Any]], strategy: str, batch: bool = False
+    files: list[dict[str, Any]],
+    strategy: str,
+    batch: bool = False,
+    console: Console | None = None,
 ) -> list[int]:
     """Get user selection for files to remove.
 
@@ -60,10 +74,13 @@ def get_user_selection(
         files: List of duplicate file metadata dicts.
         strategy: Selection strategy ('manual' for interactive, others for automatic).
         batch: If True, skip confirmation for automatic strategies.
+        console: Rich console to use for prompts and feedback.
 
     Returns:
         List of indices of files to remove.
     """
+    console = _resolve_console(console)
+
     if strategy == "manual":
         console.print("\n[bold]Which file(s) should we keep?[/bold]")
         console.print(

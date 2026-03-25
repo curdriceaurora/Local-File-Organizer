@@ -179,9 +179,7 @@ class ParallelProcessor:
 
         exec_instance, owns_executor = self._setup_executor(executor)
         try:
-            yield from self._process_with_executor(
-                exec_instance, files, process_fn, owns_executor
-            )
+            yield from self._process_with_executor(exec_instance, files, process_fn, owns_executor)
         finally:
             self._cleanup_executor(exec_instance, owns_executor)
 
@@ -424,9 +422,7 @@ class ParallelProcessor:
             other_path = future_paths.pop(other)
             future_started.pop(other, None)
             other.cancel()
-            result = finalize_result(
-                FileResult(path=other_path, success=False, error=abort_error)
-            )
+            result = finalize_result(FileResult(path=other_path, success=False, error=abort_error))
             aborted_results.append(result)
 
         return aborted_results

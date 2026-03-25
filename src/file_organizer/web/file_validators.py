@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from file_organizer.api.exceptions import ApiError
@@ -29,7 +30,7 @@ def validate_upload_filename(filename: str, allow_hidden: bool = False) -> str:
             message="Filename must not be empty",
         )
 
-    raw_name = Path(filename).name.strip()
+    raw_name = os.path.basename(filename).strip()
     if not allow_hidden and raw_name.startswith("."):
         raise ApiError(
             status_code=400,

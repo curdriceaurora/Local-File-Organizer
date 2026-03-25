@@ -179,9 +179,7 @@ class ProfileImporter:
         if "directory_specific" not in prefs:
             warnings.append("Missing 'directory_specific' preferences")
 
-    def _validate_selective_export(
-        self, profile_data: dict[str, Any], errors: list[str]
-    ) -> None:
+    def _validate_selective_export(self, profile_data: dict[str, Any], errors: list[str]) -> None:
         """Validate selective export structure."""
         if "included_preferences" not in profile_data:
             errors.append("Selective export missing 'included_preferences'")
@@ -359,9 +357,7 @@ class ProfileImporter:
             )
         else:
             # Create new profile
-            created_profile = self.profile_manager.create_profile(
-                profile_name, profile.description
-            )
+            created_profile = self.profile_manager.create_profile(profile_name, profile.description)
             if not created_profile:
                 return False
 

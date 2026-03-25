@@ -102,7 +102,9 @@ def _score_asset(name_lower: str) -> int:
     return score
 
 
-def _matches_platform_and_arch(name_lower: str, platform_hints: list[str], arch_hints: list[str]) -> bool:
+def _matches_platform_and_arch(
+    name_lower: str, platform_hints: list[str], arch_hints: list[str]
+) -> bool:
     """Check if an asset name matches the current platform and architecture.
 
     Args:

@@ -79,8 +79,6 @@ class DedupeConfig:
         self.exclude_patterns = exclude_patterns or []
 
 
-
-
 def dedupe_command(args: list[str] | None = None) -> int:
     """Execute the dedupe command.
 
