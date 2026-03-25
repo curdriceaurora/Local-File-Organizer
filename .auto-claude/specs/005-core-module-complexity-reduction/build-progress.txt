@@ -162,3 +162,62 @@ Next Steps:
 - Begin parallel refactoring phases after full assessment complete
 
 === END SESSION 3 ===
+
+=== SESSION 4 (Coder Agent - Web Routes Analysis) ===
+Started: 2026-03-24
+
+Progress:
+✓ subtask-1-3: Completed analysis of web/files_routes.py
+  - Created files_routes_analysis.md with comprehensive complexity analysis
+  - Identified _collect_entries() as CRITICAL complexity (147 lines)
+  - Identified files_upload() as HIGH complexity (113 lines)
+  - Identified 4 medium complexity functions to monitor
+  - Proposed extraction plan with 13 new functions across 2 new modules
+
+Key Findings:
+- Main issue: _collect_entries() handles 9 distinct responsibilities
+  - Directory scanning, filtering (hidden/query/type), sorting (5 strategies),
+    pagination, entry building for dirs/files, thumbnail URL generation
+- Secondary issue: files_upload() handles 12 responsibilities
+  - Path validation, parameter normalization, multi-file processing loop,
+    filename sanitization, file writing, error collection, cleanup, etc.
+- Sorting logic duplicated across 5 different strategies (name/size/created/modified/type)
+- Entry dictionary building duplicated between directories and files
+- Platform-specific code embedded (st_birthtime vs st_ctime vs st_mtime)
+
+Proposed Solution:
+Phase 1 - Extract _collect_entries() components:
+  - Create _file_collection.py module
+  - Extract _filter_entries(), _sort_entries(), _get_file_stats(), _get_creation_timestamp()
+  - Extract _paginate_entries(), _build_directory_entry(), _build_file_entry()
+  - Reduce from 147 to ~40 lines (73% reduction)
+  - Expected cyclomatic complexity: 15+ → 5 (67% reduction)
+
+Phase 2 - Extract files_upload() components:
+  - Create _upload_handler.py module
+  - Extract _validate_upload_request(), _normalize_upload_params()
+  - Extract _process_single_upload(), _validate_upload_filename(), _save_upload_file()
+  - Extract _format_upload_messages()
+  - Reduce from 113 to ~50 lines (56% reduction)
+  - Expected cyclomatic complexity: 12+ → 6 (50% reduction)
+
+Code Quality Observations:
+✅ Good documentation (comprehensive docstrings)
+✅ Type hints throughout
+✅ Consistent error handling with ApiError
+✅ Helper functions extracted to _helpers module
+✅ Clear naming conventions
+
+⚠️ Issues:
+- Two functions exceed 100 lines (typical threshold: 50-75)
+- High cyclomatic complexity (15+ decision points)
+- Code duplication (entry building, file cleanup, error handling)
+- Mixed abstraction levels (file I/O with business logic)
+- Testing challenges (complex functions hard to unit test)
+
+Next Steps:
+- Continue with subtask-1-4: Analyze remaining 9 C901-exempted files
+- After assessment complete, begin parallel refactoring phases
+- Prioritize _collect_entries() and files_upload() in Phase 4 (Web Files Refactoring)
+
+=== END SESSION 4 ===
