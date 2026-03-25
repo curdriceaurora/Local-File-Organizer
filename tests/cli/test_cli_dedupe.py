@@ -13,16 +13,17 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from rich.console import Console
 
-from file_organizer.cli.dedupe import (
-    DedupeConfig,
-    dedupe_command,
+from file_organizer.cli.dedupe import DedupeConfig, dedupe_command, main
+from file_organizer.cli.dedupe_display import (
     display_duplicate_group,
     display_summary,
     format_datetime,
     format_size,
+)
+from file_organizer.cli.dedupe_strategy import (
     get_user_selection,
-    main,
     select_files_to_keep,
 )
 
@@ -431,7 +432,9 @@ class TestDisplaySummary:
     """Tests for display_summary output."""
 
     def test_dry_run_summary(self, capsys):
+        console = Console()
         display_summary(
+            console,
             total_groups=3,
             total_duplicates=10,
             total_removed=7,
@@ -441,7 +444,9 @@ class TestDisplaySummary:
         # Should not raise
 
     def test_live_run_summary(self, capsys):
+        console = Console()
         display_summary(
+            console,
             total_groups=2,
             total_duplicates=5,
             total_removed=3,
@@ -461,11 +466,13 @@ class TestDisplayDuplicateGroup:
     """Tests for display_duplicate_group output."""
 
     def test_displays_group(self, capsys):
+        console = Console()
         files = [
             {"path": Path("/a/file1.txt"), "size": 1024, "mtime": 1000.0, "keep": True},
             {"path": Path("/a/file2.txt"), "size": 1024, "mtime": 2000.0, "keep": False},
         ]
         display_duplicate_group(
+            console,
             group_id=1,
             file_hash="abc123def456789012345678",
             files=files,
@@ -474,11 +481,13 @@ class TestDisplayDuplicateGroup:
         # Should not raise; verifies the function runs end-to-end
 
     def test_displays_group_no_keep(self, capsys):
+        console = Console()
         files = [
             {"path": Path("/x/y.txt"), "size": 500, "mtime": 100.0},
             {"path": Path("/x/z.txt"), "size": 500, "mtime": 200.0},
         ]
         display_duplicate_group(
+            console,
             group_id=2,
             file_hash="0" * 64,
             files=files,
