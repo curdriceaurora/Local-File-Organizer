@@ -7,6 +7,7 @@ validity, and formatting operation details for display. Extracted from
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -120,3 +121,186 @@ def format_transaction_summary(
         lines.append(f"    ... and {len(operations) - limit} more")
 
     return "\n".join(lines)
+
+
+# ------------------------------------------------------------------
+# Dry-run preview helpers
+# ------------------------------------------------------------------
+
+
+def preview_undo_operation(manager: UndoManager, operation_id: int) -> int:
+    """Preview undoing a specific operation (dry-run mode).
+
+    Args:
+        manager: Undo manager instance.
+        operation_id: ID of operation to preview.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    can_undo, reason = can_undo_operation(manager, operation_id)
+    if can_undo:
+        operations = get_undo_stack(manager)
+        op = find_operation_in_stack(operations, operation_id)
+        if op:
+            print(f"\nWould undo operation {operation_id}:")
+            print(format_operation_summary(op))
+            print("\n✓ This operation can be safely undone")
+            return 0
+        else:
+            print(f"Operation {operation_id} not found")
+            return 1
+    else:
+        print(f"\n✗ Cannot undo operation {operation_id}: {reason}")
+        return 1
+
+
+def preview_undo_transaction(manager: UndoManager, transaction_id: str) -> int:
+    """Preview undoing a transaction (dry-run mode).
+
+    Args:
+        manager: Undo manager instance.
+        transaction_id: ID of transaction to preview.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    print(f"\nWould undo transaction {transaction_id}")
+    transaction = manager.history.get_transaction(transaction_id)
+    if transaction:
+        operations = manager.history.get_operations(transaction_id=transaction_id)
+        print(format_transaction_summary(transaction_id, operations))
+        return 0
+    else:
+        print(f"Transaction {transaction_id} not found")
+        return 1
+
+
+def preview_undo_last(manager: UndoManager) -> int:
+    """Preview undoing the last operation (dry-run mode).
+
+    Args:
+        manager: Undo manager instance.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    operations = get_undo_stack(manager)
+    if operations:
+        op = operations[0]
+        print(f"\nWould undo last operation ({op.id}):")
+        print(format_operation_summary(op))
+        return 0
+    else:
+        print("No operations to undo")
+        return 1
+
+
+def preview_redo_operation(manager: UndoManager, operation_id: int) -> int:
+    """Preview redoing a specific operation (dry-run mode).
+
+    Args:
+        manager: Undo manager instance.
+        operation_id: ID of operation to preview.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    can_redo, reason = can_redo_operation(manager, operation_id)
+    if can_redo:
+        operations = get_redo_stack(manager)
+        op = find_operation_in_stack(operations, operation_id)
+        if op:
+            print(f"\nWould redo operation {operation_id}:")
+            print(format_operation_summary(op))
+            print("\n✓ This operation can be safely redone")
+            return 0
+        else:
+            print(f"Operation {operation_id} not found in redo stack")
+            return 1
+    else:
+        print(f"\n✗ Cannot redo operation {operation_id}: {reason}")
+        return 1
+
+
+def preview_redo_last(manager: UndoManager) -> int:
+    """Preview redoing the last operation (dry-run mode).
+
+    Args:
+        manager: Undo manager instance.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    operations = get_redo_stack(manager)
+    if operations:
+        op = operations[0]
+        print(f"\nWould redo last operation ({op.id}):")
+        print(format_operation_summary(op))
+        return 0
+    else:
+        print("No operations to redo")
+        return 1
+
+
+# ------------------------------------------------------------------
+# Execution helpers
+# ------------------------------------------------------------------
+
+
+def execute_undo(
+    manager: UndoManager,
+    operation_id: int | None = None,
+    transaction_id: str | None = None,
+) -> int:
+    """Execute undo operation.
+
+    Args:
+        manager: Undo manager instance.
+        operation_id: Specific operation ID to undo (optional).
+        transaction_id: Transaction ID to undo (optional).
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    if transaction_id:
+        print(f"Undoing transaction {transaction_id}...")
+        success = manager.undo_transaction(transaction_id)
+    elif operation_id:
+        print(f"Undoing operation {operation_id}...")
+        success = manager.undo_operation(operation_id)
+    else:
+        print("Undoing last operation...")
+        success = manager.undo_last_operation()
+
+    if success:
+        print("✓ Undo successful")
+        return 0
+    else:
+        print("✗ Undo failed")
+        return 1
+
+
+def execute_redo(manager: UndoManager, operation_id: int | None = None) -> int:
+    """Execute redo operation.
+
+    Args:
+        manager: Undo manager instance.
+        operation_id: Specific operation ID to redo (optional).
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    if operation_id:
+        print(f"Redoing operation {operation_id}...")
+        success = manager.redo_operation(operation_id)
+    else:
+        print("Redoing last operation...")
+        success = manager.redo_last_operation()
+
+    if success:
+        print("✓ Redo successful")
+        return 0
+    else:
+        print("✗ Redo failed")
+        return 1

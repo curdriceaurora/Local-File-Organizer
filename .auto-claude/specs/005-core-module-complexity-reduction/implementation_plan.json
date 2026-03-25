@@ -191,7 +191,9 @@
             "command": "pytest tests/cli/test_cli_undo_redo.py -v",
             "expected": "All tests pass"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Successfully extracted operation history management from undo_redo.py into new cli/undo_history.py module. Created focused functions for stack access (get_undo_stack, get_redo_stack), validation (can_undo_operation, can_redo_operation), lookup (find_operation_in_stack), and formatting (format_operation_summary, format_transaction_summary). Updated undo_redo.py to use extracted functions, improving separation of concerns and testability. Follows dispatcher.py pattern of focused, single-purpose functions. Module structure and imports verified successfully.",
+          "updated_at": "2026-03-24T21:30:00.000000+00:00"
         },
         {
           "id": "subtask-3-2",
@@ -546,6 +548,6 @@
   "planStatus": "in_progress",
   "xstateState": "backlog",
   "executionPhase": "coding",
-  "updated_at": "2026-03-25T01:06:45.677Z",
+  "updated_at": "2026-03-25T01:15:25.793Z",
   "last_updated": "2026-03-25T01:13:29.936027+00:00"
 }

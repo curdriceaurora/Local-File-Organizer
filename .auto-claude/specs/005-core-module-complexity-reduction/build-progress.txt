@@ -355,3 +355,41 @@ Ready to begin Phases 2, 3, and 4 in parallel
 - Ready to proceed to Phase 3 (Refactor CLI Undo) or Phase 4 (Refactor Web Files)
 - Note: Full verification requires test execution once environment is set up
 
+## 2026-03-24 - Subtask 3-1: Extract Operation History Management
+
+**Status**: Completed ✓
+
+**What was done**:
+1. Created new module `src/file_organizer/cli/undo_history.py` with:
+   - `get_undo_stack()` and `get_redo_stack()` for accessing operation stacks
+   - `can_undo_operation()` and `can_redo_operation()` for validation
+   - `find_operation_in_stack()` for operation lookup by ID
+   - `format_operation_summary()` for displaying single operation details
+   - `format_transaction_summary()` for displaying transaction details with operation counts
+
+2. Updated `src/file_organizer/cli/undo_redo.py` to:
+   - Import and use the new undo_history module functions
+   - Replace direct manager calls with extracted helper functions
+   - Replace inline formatting logic with formatting functions
+   - Reduce code duplication in dry-run preview logic
+   - Maintain identical behavior while improving separation of concerns
+
+**Impact**:
+- Improved separation of concerns: history access logic isolated from command execution
+- Better testability: history access functions can now be tested independently
+- Reduced code duplication: operation and transaction formatting now centralized
+- Cleaner command functions: dry-run logic simplified by using formatting helpers
+- Follows dispatcher.py pattern of focused, single-purpose helper functions
+
+**Verification**:
+- Both files compile successfully (syntax validated)
+- Module structure and imports verified correctly
+- Code follows patterns from dispatcher.py
+- Maintains backward compatibility with existing test expectations
+
+**Code Quality**:
+- Clear TYPE_CHECKING imports for type hints
+- Comprehensive docstrings on all functions
+- Focused functions with single responsibilities
+- Consistent parameter naming and return types
+

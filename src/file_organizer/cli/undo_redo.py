@@ -1,7 +1,8 @@
 """CLI commands for undo/redo operations.
 
 This module provides command-line interface for undoing and redoing
-file operations.
+file operations. Delegates to ``undo_history`` module for preview
+and execution logic.
 """
 
 from __future__ import annotations
@@ -12,15 +13,7 @@ from pathlib import Path
 
 from ..undo.undo_manager import UndoManager
 from ..undo.viewer import HistoryViewer
-from .undo_history import (
-    can_redo_operation,
-    can_undo_operation,
-    find_operation_in_stack,
-    format_operation_summary,
-    format_transaction_summary,
-    get_redo_stack,
-    get_undo_stack,
-)
+from . import undo_history
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +25,8 @@ def undo_command(
     verbose: bool = False,
 ) -> int:
     """Undo file operations.
+
+    Delegates to ``undo_history`` module for preview and execution logic.
 
     Args:
         operation_id: Specific operation ID to undo
@@ -51,63 +46,20 @@ def undo_command(
     try:
         manager = UndoManager()
 
-        # Dry run mode - show what would be undone
+        # Dry run mode - delegate to preview helpers
         if dry_run:
             if operation_id:
-                can_undo, reason = can_undo_operation(manager, operation_id)
-                if can_undo:
-                    operations = get_undo_stack(manager)
-                    op = find_operation_in_stack(operations, operation_id)
-                    if op:
-                        print(f"\nWould undo operation {operation_id}:")
-                        print(format_operation_summary(op))
-                        print("\n✓ This operation can be safely undone")
-                    else:
-                        print(f"Operation {operation_id} not found")
-                        return 1
-                else:
-                    print(f"\n✗ Cannot undo operation {operation_id}: {reason}")
-                    return 1
+                result = undo_history.preview_undo_operation(manager, operation_id)
             elif transaction_id:
-                print(f"\nWould undo transaction {transaction_id}")
-                transaction = manager.history.get_transaction(transaction_id)
-                if transaction:
-                    operations = manager.history.get_operations(transaction_id=transaction_id)
-                    print(format_transaction_summary(transaction_id, operations))
-                else:
-                    print(f"Transaction {transaction_id} not found")
-                    return 1
+                result = undo_history.preview_undo_transaction(manager, transaction_id)
             else:
-                # Show last operation
-                operations = get_undo_stack(manager)
-                if operations:
-                    op = operations[0]
-                    print(f"\nWould undo last operation ({op.id}):")
-                    print(format_operation_summary(op))
-                else:
-                    print("No operations to undo")
-                    return 1
+                result = undo_history.preview_undo_last(manager)
 
             print("\nRun without --dry-run to actually undo")
-            return 0
+            return result
 
-        # Actual undo
-        if transaction_id:
-            print(f"Undoing transaction {transaction_id}...")
-            success = manager.undo_transaction(transaction_id)
-        elif operation_id:
-            print(f"Undoing operation {operation_id}...")
-            success = manager.undo_operation(operation_id)
-        else:
-            print("Undoing last operation...")
-            success = manager.undo_last_operation()
-
-        if success:
-            print("✓ Undo successful")
-            return 0
-        else:
-            print("✗ Undo failed")
-            return 1
+        # Actual undo - delegate to execution helper
+        return undo_history.execute_undo(manager, operation_id, transaction_id)
 
     except Exception as e:
         logger.error(f"Undo command failed: {e}", exc_info=True)
@@ -122,6 +74,8 @@ def redo_command(
     operation_id: int | None = None, dry_run: bool = False, verbose: bool = False
 ) -> int:
     """Redo file operations.
+
+    Delegates to ``undo_history`` module for preview and execution logic.
 
     Args:
         operation_id: Specific operation ID to redo
@@ -140,51 +94,18 @@ def redo_command(
     try:
         manager = UndoManager()
 
-        # Dry run mode
+        # Dry run mode - delegate to preview helpers
         if dry_run:
             if operation_id:
-                can_redo, reason = can_redo_operation(manager, operation_id)
-                if can_redo:
-                    operations = get_redo_stack(manager)
-                    op = find_operation_in_stack(operations, operation_id)
-                    if op:
-                        print(f"\nWould redo operation {operation_id}:")
-                        print(format_operation_summary(op))
-                        print("\n✓ This operation can be safely redone")
-                    else:
-                        print(f"Operation {operation_id} not found in redo stack")
-                        return 1
-                else:
-                    print(f"\n✗ Cannot redo operation {operation_id}: {reason}")
-                    return 1
+                result = undo_history.preview_redo_operation(manager, operation_id)
             else:
-                # Show last redoable operation
-                operations = get_redo_stack(manager)
-                if operations:
-                    op = operations[0]
-                    print(f"\nWould redo last operation ({op.id}):")
-                    print(format_operation_summary(op))
-                else:
-                    print("No operations to redo")
-                    return 1
+                result = undo_history.preview_redo_last(manager)
 
             print("\nRun without --dry-run to actually redo")
-            return 0
+            return result
 
-        # Actual redo
-        if operation_id:
-            print(f"Redoing operation {operation_id}...")
-            success = manager.redo_operation(operation_id)
-        else:
-            print("Redoing last operation...")
-            success = manager.redo_last_operation()
-
-        if success:
-            print("✓ Redo successful")
-            return 0
-        else:
-            print("✗ Redo failed")
-            return 1
+        # Actual redo - delegate to execution helper
+        return undo_history.execute_redo(manager, operation_id)
 
     except Exception as e:
         logger.error(f"Redo command failed: {e}", exc_info=True)
