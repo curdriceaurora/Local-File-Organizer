@@ -554,3 +554,22 @@ Ready to proceed to subtask-4-2: Extract validation logic from files_routes.py
 - Follows dispatcher.py pattern: extract complex blocks into focused helper functions
 - Python syntax validated successfully
 
+[2026-03-24] subtask-5-3 COMPLETED: Refactor services/copilot/intent_parser.py to reduce complexity
+- Refactored complex _extract_parameters() method with long if-elif chain
+- Extracted 8 focused helper methods following patterns from core/dispatcher.py:
+  - _extract_quoted_strings(): Extract quoted strings from text
+  - _extract_paths(): Extract file paths from text (Unix/Windows-style)
+  - _extract_intent_specific_params(): Dispatch to intent-specific extraction
+  - _extract_organize_params(): Extract parameters for ORGANIZE intent
+  - _extract_move_params(): Extract parameters for MOVE intent
+  - _extract_rename_params(): Extract parameters for RENAME intent
+  - _extract_find_params(): Extract parameters for FIND intent
+- Main _extract_parameters() reduced from ~60 lines to ~25 lines (58% reduction)
+- Cyclomatic complexity significantly reduced by distributing logic across focused helpers
+- Changed _extract_parameters() from static method to instance method (internal change only)
+- Each helper method has single responsibility with clear inputs/outputs
+- Improved readability: Main method now shows extraction workflow clearly
+- Better testability: Each extraction concern can now be tested independently
+- Follows dispatcher.py pattern: break down long if-elif chains into focused helper methods
+- Python syntax validated successfully
+
