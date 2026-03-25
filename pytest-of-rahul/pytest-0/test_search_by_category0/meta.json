@@ -1,0 +1,42 @@
+{
+  "plugins": [
+    {
+      "author": "tester",
+      "category": "tools",
+      "checksum_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "dependencies": [],
+      "description": "test plugin",
+      "download_url": "https://example.com/plugin.zip",
+      "downloads": 0,
+      "homepage": null,
+      "license": "MIT",
+      "max_organizer_version": null,
+      "min_organizer_version": "2.0.0",
+      "name": "a",
+      "rating": 0.0,
+      "reviews_count": 0,
+      "size_bytes": 1024,
+      "tags": [],
+      "version": "1.0.0"
+    },
+    {
+      "author": "tester",
+      "category": "analytics",
+      "checksum_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "dependencies": [],
+      "description": "test plugin",
+      "download_url": "https://example.com/plugin.zip",
+      "downloads": 0,
+      "homepage": null,
+      "license": "MIT",
+      "max_organizer_version": null,
+      "min_organizer_version": "2.0.0",
+      "name": "b",
+      "rating": 0.0,
+      "reviews_count": 0,
+      "size_bytes": 1024,
+      "tags": [],
+      "version": "1.0.0"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{"plugins": [{"name": "good", "version": "1.0", "author": "a", "description": "d", "downloads": 0, "rating": 0, "tags": [], "category": "general", "checksum_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "download_url": "https://example.com/p.zip", "size_bytes": 512}, "not-a-dict", 42]}

@@ -1,0 +1,13 @@
+{
+  "profile_name": "default",
+  "description": "Default preference profile",
+  "profile_version": "1.0",
+  "created": "2026-03-25T02:56:02.233342Z",
+  "updated": "2026-03-25T02:56:02.233342Z",
+  "preferences": {
+    "global": {},
+    "directory_specific": {}
+  },
+  "learned_patterns": {},
+  "confidence_data": {}
+}

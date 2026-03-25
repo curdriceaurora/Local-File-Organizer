@@ -1,0 +1,14 @@
+{
+  "demo": [
+    {
+      "content": "better now",
+      "created_at": "2026-03-25T02:55:56.648225Z",
+      "helpful_count": 0,
+      "plugin_name": "demo",
+      "rating": 5,
+      "title": "Updated",
+      "updated_at": "2026-03-25T02:55:56.648422Z",
+      "user_id": "user1"
+    }
+  ]
+}

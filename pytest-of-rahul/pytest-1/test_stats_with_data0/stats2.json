@@ -1,0 +1,17 @@
+{
+  "total_operations": 2,
+  "database_size_mb": 0.00390625,
+  "operations_move": 1,
+  "operations_rename": 0,
+  "operations_delete": 0,
+  "operations_copy": 1,
+  "operations_create": 0,
+  "operations_pending": 0,
+  "operations_completed": 1,
+  "operations_failed": 1,
+  "operations_rolled_back": 0,
+  "total_transactions": 0,
+  "oldest_operation": "2026-03-25T02:52:46.578710Z",
+  "newest_operation": "2026-03-25T02:52:46.578798Z",
+  "export_date": "2026-03-25T02:52:46.578932Z"
+}

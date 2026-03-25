@@ -1,0 +1,2 @@
+id,operation_type,timestamp,source_path,destination_path,file_hash,transaction_id,status,error_message,created_at,file_size,file_type,is_file,is_dir
+1,move,2026-03-25T02:50:20.165708+00:00,/a,/b,,,completed,,2026-03-25T02:50:20,100,file,True,False

@@ -1,0 +1,50 @@
+{
+  "plugins": [
+    {
+      "name": "alpha",
+      "version": "1.0.0",
+      "author": "tests",
+      "description": "alpha plugin",
+      "homepage": "https://example.invalid",
+      "download_url": "alpha-1.0.0.zip",
+      "checksum_sha256": "657ba098a50a76cccc14181669ddcbec47743899239584cf751e9055e9b6b02c",
+      "size_bytes": 449,
+      "dependencies": [
+        "beta"
+      ],
+      "tags": [
+        "utility"
+      ],
+      "category": "utility",
+      "license": "MIT",
+      "min_organizer_version": "2.0.0",
+      "max_organizer_version": null,
+      "downloads": 0,
+      "rating": 0.0,
+      "reviews_count": 0
+    },
+    {
+      "name": "beta",
+      "version": "1.0.0",
+      "author": "tests",
+      "description": "beta plugin",
+      "homepage": "https://example.invalid",
+      "download_url": "beta-1.0.0.zip",
+      "checksum_sha256": "8aa5b1fcd87be23f005e74b81b6235f80e16a6e2499692cd4d54c1460e3a0335",
+      "size_bytes": 448,
+      "dependencies": [
+        "alpha"
+      ],
+      "tags": [
+        "utility"
+      ],
+      "category": "utility",
+      "license": "MIT",
+      "min_organizer_version": "2.0.0",
+      "max_organizer_version": null,
+      "downloads": 0,
+      "rating": 0.0,
+      "reviews_count": 0
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "user_id": "default",
+  "global_preferences": {
+    "folder_mappings": {},
+    "naming_patterns": {},
+    "category_overrides": {}
+  },
+  "directory_preferences": {}
+}

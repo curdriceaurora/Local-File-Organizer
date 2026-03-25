@@ -1,0 +1,53 @@
+{
+  "backup_id": "backup_migration_20260325T025021774780Z",
+  "migration_id": "migration_20260325T025021774780Z",
+  "created_at": "2026-03-25T02:50:21Z",
+  "files_backed_up": 5,
+  "total_size": 104,
+  "checksum": "bbcb9e92bf23001ba7ca01981c62a6a8caa1cd565d888a820b6b3198cfda51be",
+  "source_root": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/tmp93d2oeds",
+  "status": "created",
+  "restored_at": null,
+  "file_entries": [
+    {
+      "original_path": "/dev/null/impossible/path.txt",
+      "backup_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/pytest-of-rahul/pytest-0/test_rollback_partial_failure_0/migration-backups/backup_migration_20260325T025021774780Z/reference_doc.pdf",
+      "size": 21,
+      "hash": "7146fe6fe66086a54208bfd6f14ced3e24b5c81390bcbbc6eaddcb913e8b775c",
+      "category": "resource",
+      "confidence": 1.0
+    },
+    {
+      "original_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/tmp93d2oeds/old_file.txt",
+      "backup_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/pytest-of-rahul/pytest-0/test_rollback_partial_failure_0/migration-backups/backup_migration_20260325T025021774780Z/old_file.txt",
+      "size": 16,
+      "hash": "ee5063907f1b3fa024d3df8824d08d73c4290bfe6ea04f46f6b186474daaf001",
+      "category": "resource",
+      "confidence": 1.0
+    },
+    {
+      "original_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/tmp93d2oeds/project_plan.txt",
+      "backup_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/pytest-of-rahul/pytest-0/test_rollback_partial_failure_0/migration-backups/backup_migration_20260325T025021774780Z/project_plan.txt",
+      "size": 27,
+      "hash": "9b9aa66a1c4cc0eb96d11d45b49cfd9de75626ac69a4954059d0a73ecd039ba8",
+      "category": "resource",
+      "confidence": 1.0
+    },
+    {
+      "original_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/tmp93d2oeds/meeting_notes.txt",
+      "backup_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/pytest-of-rahul/pytest-0/test_rollback_partial_failure_0/migration-backups/backup_migration_20260325T025021774780Z/meeting_notes.txt",
+      "size": 21,
+      "hash": "444a3fa5129e430e501012c2650286afdcdf35093f6bea813746bf748ef2def8",
+      "category": "resource",
+      "confidence": 1.0
+    },
+    {
+      "original_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/tmp93d2oeds/subdir/nested_file.txt",
+      "backup_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/pytest-of-rahul/pytest-0/test_rollback_partial_failure_0/migration-backups/backup_migration_20260325T025021774780Z/subdir/nested_file.txt",
+      "size": 19,
+      "hash": "9ec9996cfc2274cf0dca6441c40abeb2b89ed270a1e00c6671475c794c62ef53",
+      "category": "resource",
+      "confidence": 1.0
+    }
+  ]
+}

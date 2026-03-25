@@ -1,0 +1,17 @@
+{
+  "profile_name": "lp",
+  "description": "patterns",
+  "profile_version": "1.0",
+  "created": "2026-03-25T02:51:11.916646Z",
+  "updated": "2026-03-25T02:51:11.916838Z",
+  "preferences": {
+    "global": {},
+    "directory_specific": {}
+  },
+  "learned_patterns": {
+    "ext:.txt": 5
+  },
+  "confidence_data": {
+    "overall": 0.9
+  }
+}

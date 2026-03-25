@@ -7,7 +7,6 @@ validity, and formatting operation details for display. Extracted from
 
 from __future__ import annotations
 
-import sys
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

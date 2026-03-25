@@ -1,0 +1,3 @@
+{"timestamp":"2024-01-01T00:00:00+00:00","event_id":"1-0","stream":"s","action":"ok","metadata":{}}
+not valid json
+{"timestamp":"2024-01-02T00:00:00+00:00","event_id":"2-0","stream":"s","action":"ok","metadata":{}}

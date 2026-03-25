@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "suggestion_id": "s1",
+      "suggestion_type": "move",
+      "action": "accepted",
+      "file_path": "/a.txt",
+      "target_path": "/docs/a.txt",
+      "confidence": 75.0,
+      "timestamp": "2026-03-25T02:56:03.002346Z",
+      "metadata": {}
+    }
+  ],
+  "pattern_adjustments": {},
+  "last_updated": "2026-03-25T02:56:03.002353Z"
+}

@@ -1,0 +1,14 @@
+name: default
+description: Default rules
+version: '1.0'
+rules:
+- name: move-pdfs
+  description: ''
+  conditions:
+  - type: extension
+    value: .pdf
+  action:
+    type: move
+    destination: /docs/pdfs
+  enabled: true
+  priority: 10

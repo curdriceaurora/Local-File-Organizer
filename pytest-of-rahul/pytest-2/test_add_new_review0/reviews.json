@@ -1,0 +1,14 @@
+{
+  "demo": [
+    {
+      "content": "Works well",
+      "created_at": "2026-03-25T02:55:56.640885Z",
+      "helpful_count": 0,
+      "plugin_name": "demo",
+      "rating": 4,
+      "title": "Good",
+      "updated_at": "2026-03-25T02:55:56.640899Z",
+      "user_id": "user1"
+    }
+  ]
+}

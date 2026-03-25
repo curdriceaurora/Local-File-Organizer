@@ -1,0 +1,2 @@
+{"timestamp": "2026-03-25T02:52:30.864549+00:00", "event_id": "1-0", "stream": "stream-a", "action": "consumed", "metadata": {}}
+{"timestamp": "2026-03-25T02:52:30.864698+00:00", "event_id": "2-0", "stream": "stream-b", "action": "consumed", "metadata": {}}

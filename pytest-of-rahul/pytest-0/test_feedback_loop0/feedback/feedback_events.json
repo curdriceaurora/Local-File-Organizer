@@ -1,0 +1,22 @@
+[
+  {
+    "file_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/pytest-of-rahul/pytest-0/test_feedback_loop0/doc.txt",
+    "suggested": "project",
+    "actual": "project",
+    "confidence": 0.2666666666666667,
+    "timestamp": "2026-03-25T02:50:22.399198+00:00",
+    "accepted": true,
+    "file_extension": ".txt",
+    "parent_directory": "test_feedback_loop0"
+  },
+  {
+    "file_path": "/Users/rahul/Projects/Local-File-Organizer/.auto-claude/worktrees/tasks/005-core-module-complexity-reduction/pytest-of-rahul/pytest-0/test_feedback_loop0/doc2.txt",
+    "suggested": "project",
+    "actual": "archive",
+    "confidence": 0.2666666666666667,
+    "timestamp": "2026-03-25T02:50:22.399637+00:00",
+    "accepted": false,
+    "file_extension": ".txt",
+    "parent_directory": "test_feedback_loop0"
+  }
+]

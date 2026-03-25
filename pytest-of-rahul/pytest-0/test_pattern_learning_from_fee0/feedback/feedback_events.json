@@ -1,0 +1,52 @@
+[
+  {
+    "file_path": "/docs/ref_0.pdf",
+    "suggested": "resource",
+    "actual": "resource",
+    "confidence": 0.8,
+    "timestamp": "2026-03-25T02:50:22.401194+00:00",
+    "accepted": true,
+    "file_extension": ".pdf",
+    "parent_directory": "docs"
+  },
+  {
+    "file_path": "/docs/ref_1.pdf",
+    "suggested": "resource",
+    "actual": "resource",
+    "confidence": 0.8,
+    "timestamp": "2026-03-25T02:50:22.401357+00:00",
+    "accepted": true,
+    "file_extension": ".pdf",
+    "parent_directory": "docs"
+  },
+  {
+    "file_path": "/docs/ref_2.pdf",
+    "suggested": "resource",
+    "actual": "resource",
+    "confidence": 0.8,
+    "timestamp": "2026-03-25T02:50:22.401455+00:00",
+    "accepted": true,
+    "file_extension": ".pdf",
+    "parent_directory": "docs"
+  },
+  {
+    "file_path": "/docs/ref_3.pdf",
+    "suggested": "resource",
+    "actual": "resource",
+    "confidence": 0.8,
+    "timestamp": "2026-03-25T02:50:22.401556+00:00",
+    "accepted": true,
+    "file_extension": ".pdf",
+    "parent_directory": "docs"
+  },
+  {
+    "file_path": "/docs/ref_4.pdf",
+    "suggested": "resource",
+    "actual": "resource",
+    "confidence": 0.8,
+    "timestamp": "2026-03-25T02:50:22.401656+00:00",
+    "accepted": true,
+    "file_extension": ".pdf",
+    "parent_directory": "docs"
+  }
+]

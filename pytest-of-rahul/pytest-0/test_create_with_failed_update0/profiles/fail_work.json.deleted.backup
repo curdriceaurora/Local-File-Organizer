@@ -1,0 +1,13 @@
+{
+  "profile_name": "fail_work",
+  "description": "Corporate document organization with formal conventions",
+  "profile_version": "1.0",
+  "created": "2026-03-25T02:51:12.184228Z",
+  "updated": "2026-03-25T02:51:12.184228Z",
+  "preferences": {
+    "global": {},
+    "directory_specific": {}
+  },
+  "learned_patterns": {},
+  "confidence_data": {}
+}

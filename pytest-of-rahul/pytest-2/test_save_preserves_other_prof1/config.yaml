@@ -1,0 +1,31 @@
+profiles:
+  a:
+    version: '1.0'
+    default_methodology: none
+    models:
+      text_model: qwen2.5:3b-instruct-q4_K_M
+      vision_model: qwen2.5vl:7b-q4_K_M
+      temperature: 0.5
+      max_tokens: 3000
+      device: auto
+      framework: ollama
+    updates:
+      check_on_startup: true
+      interval_hours: 24
+      include_prereleases: false
+      repo: curdriceaurora/Local-File-Organizer
+  b:
+    version: '1.0'
+    default_methodology: none
+    models:
+      text_model: qwen2.5:3b-instruct-q4_K_M
+      vision_model: qwen2.5vl:7b-q4_K_M
+      temperature: 0.5
+      max_tokens: 3000
+      device: auto
+      framework: ollama
+    updates:
+      check_on_startup: true
+      interval_hours: 24
+      include_prereleases: false
+      repo: curdriceaurora/Local-File-Organizer

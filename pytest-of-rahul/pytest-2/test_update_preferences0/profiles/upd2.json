@@ -1,0 +1,15 @@
+{
+  "profile_name": "upd2",
+  "description": "desc",
+  "profile_version": "1.0",
+  "created": "2026-03-25T02:56:01.858432Z",
+  "updated": "2026-03-25T02:56:01.858611Z",
+  "preferences": {
+    "global": {
+      "key": "val"
+    },
+    "directory_specific": {}
+  },
+  "learned_patterns": {},
+  "confidence_data": {}
+}

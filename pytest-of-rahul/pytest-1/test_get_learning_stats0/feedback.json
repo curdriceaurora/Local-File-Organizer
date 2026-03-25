@@ -1,0 +1,58 @@
+{
+  "entries": [
+    {
+      "suggestion_id": "test0",
+      "suggestion_type": "move",
+      "action": "accepted",
+      "file_path": "test0.jpg",
+      "target_path": null,
+      "confidence": 70.0,
+      "timestamp": "2026-03-25T02:53:39.404578Z",
+      "metadata": {}
+    },
+    {
+      "suggestion_id": "test1",
+      "suggestion_type": "move",
+      "action": "accepted",
+      "file_path": "test1.jpg",
+      "target_path": null,
+      "confidence": 70.0,
+      "timestamp": "2026-03-25T02:53:39.404688Z",
+      "metadata": {}
+    },
+    {
+      "suggestion_id": "test2",
+      "suggestion_type": "move",
+      "action": "rejected",
+      "file_path": "test2.jpg",
+      "target_path": null,
+      "confidence": 70.0,
+      "timestamp": "2026-03-25T02:53:39.404771Z",
+      "metadata": {}
+    },
+    {
+      "suggestion_id": "test3",
+      "suggestion_type": "move",
+      "action": "ignored",
+      "file_path": "test3.jpg",
+      "target_path": null,
+      "confidence": 70.0,
+      "timestamp": "2026-03-25T02:53:39.404846Z",
+      "metadata": {}
+    },
+    {
+      "suggestion_id": "test4",
+      "suggestion_type": "move",
+      "action": "modified",
+      "file_path": "test4.jpg",
+      "target_path": null,
+      "confidence": 70.0,
+      "timestamp": "2026-03-25T02:53:39.404928Z",
+      "metadata": {}
+    }
+  ],
+  "pattern_adjustments": {
+    "move:.jpg": -1.0
+  },
+  "last_updated": "2026-03-25T02:53:39.404933Z"
+}

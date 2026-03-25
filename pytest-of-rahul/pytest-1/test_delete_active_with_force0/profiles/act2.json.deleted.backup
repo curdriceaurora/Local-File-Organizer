@@ -1,0 +1,13 @@
+{
+  "profile_name": "act2",
+  "description": "active2",
+  "profile_version": "1.0",
+  "created": "2026-03-25T02:53:38.291416Z",
+  "updated": "2026-03-25T02:53:38.291416Z",
+  "preferences": {
+    "global": {},
+    "directory_specific": {}
+  },
+  "learned_patterns": {},
+  "confidence_data": {}
+}

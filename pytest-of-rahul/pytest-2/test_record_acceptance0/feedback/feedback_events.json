@@ -1,0 +1,12 @@
+[
+  {
+    "file_path": "/test/file.pdf",
+    "suggested": "project",
+    "actual": "project",
+    "confidence": 0.8,
+    "timestamp": "2026-03-25T02:55:12.457620+00:00",
+    "accepted": true,
+    "file_extension": ".pdf",
+    "parent_directory": "test"
+  }
+]

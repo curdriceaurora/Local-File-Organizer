@@ -1,0 +1,6 @@
+profiles:
+  custom:
+    default_methodology: para
+    models:
+      temperature: 0.5
+    version: '2.0'

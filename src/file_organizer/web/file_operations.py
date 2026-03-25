@@ -22,8 +22,8 @@ from file_organizer.api.utils import file_info_from_path, is_hidden, resolve_pat
 from file_organizer.web._helpers import (
     MAX_THUMBNAIL_BYTES,
     MAX_UPLOAD_BYTES,
-    THUMBNAIL_SIZE,
     TEXT_PREVIEW_CHARS,
+    THUMBNAIL_SIZE,
     UPLOAD_CHUNK_SIZE,
     allowed_roots,
     clamp_limit,
@@ -572,7 +572,7 @@ def process_file_uploads(
                             status_code=400,
                             error="file_too_large",
                             message=f"{safe_name} exceeds upload size limit.",
-                        )
+                        ) from None
                     handle.write(chunk)
         except ApiError as exc:
             if destination.exists():

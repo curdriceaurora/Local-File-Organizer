@@ -1,0 +1,13 @@
+{
+  "profile_name": "beta",
+  "description": "B",
+  "profile_version": "1.0",
+  "created": "2026-03-25T02:51:11.897071Z",
+  "updated": "2026-03-25T02:51:11.897071Z",
+  "preferences": {
+    "global": {},
+    "directory_specific": {}
+  },
+  "learned_patterns": {},
+  "confidence_data": {}
+}

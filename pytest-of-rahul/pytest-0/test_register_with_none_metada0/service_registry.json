@@ -1,0 +1,9 @@
+{
+  "svc": {
+    "endpoint": "local://svc:9000",
+    "last_heartbeat": "2026-03-25T02:50:19.456335+00:00",
+    "metadata": {},
+    "name": "svc",
+    "registered_at": "2026-03-25T02:50:19.456335+00:00"
+  }
+}

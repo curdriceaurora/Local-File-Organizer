@@ -314,8 +314,7 @@ class ParallelProcessor:
             if should_abort is not None:
                 abort_force_shutdown, abort_results = should_abort
                 force_nonblocking_shutdown = abort_force_shutdown
-                for result in abort_results:
-                    yield result
+                yield from abort_results
                 # Abort remaining files from iterator
                 for remaining_path in iterator:
                     yield finalize_result(

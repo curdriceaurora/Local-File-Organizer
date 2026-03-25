@@ -1,0 +1,22 @@
+[
+  {
+    "file_path": "/test/a.txt",
+    "suggested": "project",
+    "actual": "project",
+    "confidence": 0.9,
+    "timestamp": "2026-03-25T02:50:21.543581+00:00",
+    "accepted": true,
+    "file_extension": ".txt",
+    "parent_directory": "test"
+  },
+  {
+    "file_path": "/test/b.txt",
+    "suggested": "project",
+    "actual": "archive",
+    "confidence": 0.5,
+    "timestamp": "2026-03-25T02:50:21.543711+00:00",
+    "accepted": false,
+    "file_extension": ".txt",
+    "parent_directory": "test"
+  }
+]

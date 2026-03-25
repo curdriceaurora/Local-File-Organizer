@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from urllib.parse import quote
-
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
@@ -24,13 +21,10 @@ from file_organizer.web._helpers import (
     templates,
 )
 from file_organizer.web.file_operations import (
-    build_breadcrumbs,
     build_file_results_context,
     build_preview_context,
     build_tree_context,
-    collect_entries,
     generate_thumbnail,
-    list_tree_nodes,
     process_file_uploads,
 )
 from file_organizer.web.file_validators import validate_upload_path

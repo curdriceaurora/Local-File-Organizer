@@ -1,0 +1,22 @@
+{
+  "plugins": [
+    {
+      "name": "evil",
+      "version": "1.0.0",
+      "author": "tests",
+      "description": "evil",
+      "download_url": "evil-1.0.0.zip",
+      "checksum_sha256": "4b4e60dec84d716f5872485072fcf71f908e36caf0a40544c24c9b2fbd602369",
+      "size_bytes": 135,
+      "dependencies": [],
+      "tags": [],
+      "category": "utility",
+      "license": "MIT",
+      "min_organizer_version": "2.0.0",
+      "max_organizer_version": null,
+      "downloads": 0,
+      "rating": 0.0,
+      "reviews_count": 0
+    }
+  ]
+}

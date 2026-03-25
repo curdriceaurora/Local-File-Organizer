@@ -1,0 +1,9 @@
+{
+  "hb-svc": {
+    "endpoint": "local://hb:5000",
+    "last_heartbeat": "2026-03-25T02:52:45.938769+00:00",
+    "metadata": {},
+    "name": "hb-svc",
+    "registered_at": "2026-03-25T02:52:45.938150+00:00"
+  }
+}

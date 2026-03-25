@@ -7,10 +7,10 @@ Extracted from dedupe.py to separate scanning logic from UI orchestration.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
-from loguru import logger
 from rich.console import Console
 
 if TYPE_CHECKING:

@@ -1,0 +1,53 @@
+{
+  "scheme": {
+    "name": "para-compatible",
+    "areas": [
+      {
+        "area_range_start": 10,
+        "area_range_end": 10,
+        "name": "Projects",
+        "description": "Active projects with deadlines"
+      },
+      {
+        "area_range_start": 20,
+        "area_range_end": 20,
+        "name": "Areas",
+        "description": "Ongoing responsibilities"
+      },
+      {
+        "area_range_start": 30,
+        "area_range_end": 30,
+        "name": "Resources",
+        "description": "Reference materials"
+      },
+      {
+        "area_range_start": 40,
+        "area_range_end": 40,
+        "name": "Archive",
+        "description": "Completed items"
+      }
+    ],
+    "categories": []
+  },
+  "migration": {
+    "preserve_original_names": true,
+    "create_backups": true,
+    "max_depth": 10,
+    "skip_hidden": true,
+    "auto_categorize": false
+  },
+  "compatibility": {
+    "para_integration": {
+      "enabled": true,
+      "projects_area": 10,
+      "areas_area": 20,
+      "resources_area": 30,
+      "archive_area": 40,
+      "map_para_to_jd": true,
+      "preserve_para_structure": false
+    },
+    "allow_mixed_structure": true,
+    "validate_before_migration": true
+  },
+  "custom_mappings": {}
+}

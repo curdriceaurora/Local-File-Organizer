@@ -1,0 +1,1 @@
+{"name": "test-plugin", "version": "1.0.0", "author": "Tester", "description": "A test plugin", "entry_point": "main.py"}

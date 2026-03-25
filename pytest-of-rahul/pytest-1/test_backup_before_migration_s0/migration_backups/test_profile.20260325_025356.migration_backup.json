@@ -1,0 +1,11 @@
+{
+  "profile_name": "test_profile",
+  "profile_version": "1.0",
+  "description": "Test description",
+  "preferences": {
+    "global": {},
+    "directory_specific": {}
+  },
+  "learned_patterns": [],
+  "confidence_data": {}
+}

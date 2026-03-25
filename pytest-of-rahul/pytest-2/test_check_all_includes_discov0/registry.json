@@ -1,0 +1,9 @@
+{
+  "disc-svc": {
+    "endpoint": "local://disc:1000",
+    "last_heartbeat": "2026-03-25T02:55:10.576554+00:00",
+    "metadata": {},
+    "name": "disc-svc",
+    "registered_at": "2026-03-25T02:55:10.576554+00:00"
+  }
+}

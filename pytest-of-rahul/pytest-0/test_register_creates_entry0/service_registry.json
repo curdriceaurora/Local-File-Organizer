@@ -1,0 +1,9 @@
+{
+  "classifier": {
+    "endpoint": "local://clf:8001",
+    "last_heartbeat": "2026-03-25T02:50:19.449241+00:00",
+    "metadata": {},
+    "name": "classifier",
+    "registered_at": "2026-03-25T02:50:19.449241+00:00"
+  }
+}

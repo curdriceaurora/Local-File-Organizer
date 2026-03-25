@@ -1,0 +1,37 @@
+{
+  "entries": [
+    {
+      "suggestion_id": "s1",
+      "suggestion_type": "move",
+      "action": "accepted",
+      "file_path": "/a.txt",
+      "target_path": "/dest/a.txt",
+      "confidence": 75.0,
+      "timestamp": "2026-03-25T02:56:03.008816Z",
+      "metadata": {}
+    }
+  ],
+  "stats": {
+    "total_suggestions": 1,
+    "accepted": 1,
+    "rejected": 0,
+    "ignored": 0,
+    "modified": 0,
+    "acceptance_rate": 100.0,
+    "rejection_rate": 0.0,
+    "avg_accepted_confidence": 75.0,
+    "avg_rejected_confidence": 0.0,
+    "by_type": {
+      "move": {
+        "total": 1,
+        "accepted": 1,
+        "rejected": 0,
+        "acceptance_rate": 100.0
+      }
+    }
+  },
+  "pattern_adjustments": {
+    "move:.txt": 2.5
+  },
+  "exported_at": "2026-03-25T02:56:03.009649Z"
+}

@@ -1,0 +1,23 @@
+{
+  "export_date": "2026-03-25T02:52:46.556381Z",
+  "operation_count": 1,
+  "operations": [
+    {
+      "id": 1,
+      "operation_type": "move",
+      "timestamp": "2026-03-25T02:52:46.556236+00:00",
+      "source_path": "/a",
+      "destination_path": "/b",
+      "file_hash": null,
+      "metadata": {
+        "size": 100,
+        "is_file": true,
+        "is_dir": false
+      },
+      "transaction_id": null,
+      "status": "completed",
+      "error_message": null,
+      "created_at": "2026-03-25T02:52:46"
+    }
+  ]
+}

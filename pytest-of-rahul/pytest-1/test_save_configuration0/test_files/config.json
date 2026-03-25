@@ -1,0 +1,19 @@
+{
+  "scheme": {
+    "name": "Test",
+    "description": "Test scheme",
+    "allow_gaps": true,
+    "auto_increment": true,
+    "reserved_numbers": []
+  },
+  "used_numbers": {
+    "10.01": "/test/file.txt"
+  },
+  "statistics": {
+    "total_numbers": 1,
+    "areas_used": 1,
+    "categories_used": 1,
+    "ids_used": 0,
+    "reserved_numbers": 0
+  }
+}

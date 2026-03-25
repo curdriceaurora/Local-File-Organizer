@@ -1,0 +1,11 @@
+name: default
+description: ''
+version: '1.0'
+rules:
+- name: dup
+  description: ''
+  conditions: []
+  action:
+    type: move
+  enabled: true
+  priority: 99

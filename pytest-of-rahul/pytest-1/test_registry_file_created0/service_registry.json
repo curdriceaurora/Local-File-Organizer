@@ -1,0 +1,9 @@
+{
+  "file-test": {
+    "endpoint": "local://ft:1000",
+    "last_heartbeat": "2026-03-25T02:52:45.943466+00:00",
+    "metadata": {},
+    "name": "file-test",
+    "registered_at": "2026-03-25T02:52:45.943466+00:00"
+  }
+}

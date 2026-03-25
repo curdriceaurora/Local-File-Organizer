@@ -1,0 +1,11 @@
+{
+  "persist-svc": {
+    "endpoint": "local://persist:6000",
+    "last_heartbeat": "2026-03-25T02:55:10.535707+00:00",
+    "metadata": {
+      "v": "1"
+    },
+    "name": "persist-svc",
+    "registered_at": "2026-03-25T02:55:10.535707+00:00"
+  }
+}

@@ -1,0 +1,3 @@
+api:
+  app_name: YAML App
+  port: 7777
