@@ -148,8 +148,8 @@
             "command": "pytest tests/api/test_file_metadata_repo.py::test_cache -v",
             "expected": "Cache tests pass, verify cache hits"
           },
-          "status": "pending",
-          "notes": "Extend existing cache functionality for list queries, add cache invalidation on updates"
+          "status": "completed",
+          "notes": "Extended bulk_get() with cache support. Checks cache first for each path, validates cached IDs, invalidates stale entries, and populates cache on miss. Follows same patterns as get_by_relative_path(). Cache invalidation already in place for upsert/delete operations."
         },
         {
           "id": "subtask-2-4",
@@ -677,5 +677,5 @@
   "planStatus": "in_progress",
   "xstateState": "backlog",
   "executionPhase": "coding",
-  "updated_at": "2026-03-25T01:09:23.805Z"
+  "updated_at": "2026-03-25T01:13:36.259Z"
 }
