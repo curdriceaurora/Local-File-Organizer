@@ -416,3 +416,77 @@ Notes for Next Tasks:
 Next: Subtask 2-2 - Optimize FileMetadataRepository queries with eager loading
 
 === END SUBTASK 2-1 ===
+
+## Subtask 2-2: Optimize FileMetadataRepository Queries ✅
+
+Implementation:
+- Modified src/file_organizer/api/repositories/file_metadata_repo.py
+- Added bulk operations for improved performance with large file sets
+
+New Features Added:
+1. FileMetadataDict TypedDict:
+   - Type-safe dictionary interface for bulk operations
+   - Fields: workspace_id, path, relative_path, name, size_bytes, mime_type, checksum_sha256, last_modified, extra_json
+
+2. bulk_upsert() method:
+   - Uses SQLite's INSERT OR REPLACE for efficient batch upserts
+   - Significantly faster than individual upserts for large directories
+   - Parameters: session, records (list), cache, cache_ttl_seconds
+   - Returns: count of records processed
+   - Handles cache invalidation for updated entries
+
+3. bulk_get() method:
+   - Bulk fetch metadata by relative paths in single query
+   - Much more efficient than individual lookups for large file sets
+   - Uses IN clause with SQLAlchemy for batch retrieval
+   - Returns: dictionary mapping relative_path -> FileMetadata
+
+Design Decisions:
+- Used SQLAlchemy's insert().on_conflict_do_update() for upsert semantics
+- Imported from sqlalchemy.dialects.sqlite for SQLite-specific operations
+- Followed pattern from workspace_repo.py (static methods, keyword-only args)
+- Used and_() for combining multiple filter conditions in bulk_get
+- Maintains cache invalidation on bulk_upsert to prevent stale data
+- Added comprehensive docstrings explaining performance benefits
+
+Technical Implementation:
+- bulk_upsert uses stmt.excluded to reference conflicting row values
+- index_elements=["workspace_id", "relative_path"] matches unique constraint
+- bulk_get uses .in_() operator for efficient multiple-value filtering
+- Returns dictionary for O(1) lookup by relative_path
+
+Verification:
+✅ Python syntax validation passed (python3 -m py_compile)
+✅ Module structure validated (methods present, imports correct)
+⚠️  Full pytest test suite BLOCKED by network/proxy issues
+   - Cannot install pytest/dependencies in venv
+   - HTTP_PROXY configuration blocking all pip installs
+   - Code structure verified manually against pattern file
+   - Will require manual verification: pytest tests/api/test_file_metadata_repo.py -v
+
+Environment Challenges:
+- PEP 668 externally-managed Python environment
+- Proxy errors: ProxyError('Cannot connect to proxy.', OSError('Tunnel connection failed: 403 Forbidden'))
+- Could not install: pytest, pytest-asyncio, pytest-cov
+- Workaround: Manual syntax validation and pattern matching
+
+Git Commit: [pending]
+Status: COMPLETED (with manual verification needed)
+
+Performance Benefits:
+- bulk_upsert: Single database round-trip vs N individual queries
+- bulk_get: Single query with IN clause vs N individual SELECT statements
+- Critical for file scanning operations that process thousands of files
+- Reduces database connection overhead and transaction costs
+- Enables efficient batch processing during directory scans
+
+Notes for Next Tasks:
+- Methods follow established repository pattern (static, keyword-only args)
+- Bulk operations target performance bottleneck: individual file metadata operations
+- Should be manually tested with: pytest tests/api/test_file_metadata_repo.py -v
+- Once verified, will enable fast bulk operations during file scanning
+- These methods will be used by subtask-3-4 (batch file metadata upsert for scanning)
+
+Next: Subtask 2-3 - Add query result caching for FileMetadata lookups
+
+=== END SUBTASK 2-2 ===

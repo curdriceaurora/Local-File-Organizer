@@ -4,13 +4,30 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from typing import TypedDict
 
+from sqlalchemy import and_
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 
 from file_organizer.api.cache import CacheBackend
 from file_organizer.api.db_models import FileMetadata
 
 _CACHE_PREFIX = "file_metadata"
+
+
+class FileMetadataDict(TypedDict, total=False):
+    """Type-safe dictionary for bulk file metadata operations."""
+
+    workspace_id: str
+    path: str
+    relative_path: str
+    name: str
+    size_bytes: int
+    mime_type: str | None
+    checksum_sha256: str | None
+    last_modified: datetime | None
+    extra_json: str | None
 
 
 def _cache_key(workspace_id: str, relative_path: str) -> str:
@@ -175,3 +192,109 @@ class FileMetadataRepository:
         if cache is not None:
             cache.delete(_cache_key(workspace_id, relative_path))
         return True
+
+    @staticmethod
+    def bulk_upsert(
+        session: Session,
+        *,
+        records: list[FileMetadataDict],
+        cache: CacheBackend | None = None,
+        cache_ttl_seconds: int = 900,
+    ) -> int:
+        """Bulk upsert file metadata records for improved performance.
+
+        Uses SQLite's INSERT OR REPLACE to efficiently handle large batches
+        of file metadata. This is significantly faster than individual upserts
+        for scanning large directories.
+
+        Args:
+            session: Active SQLAlchemy session.
+            records: List of file metadata dictionaries to upsert.
+            cache: Optional cache backend to invalidate entries.
+            cache_ttl_seconds: TTL for cached entries (default 900s).
+
+        Returns:
+            Number of records processed.
+        """
+        if not records:
+            return 0
+
+        now = datetime.now(UTC)
+        insert_data = []
+
+        for rec in records:
+            insert_data.append({
+                "workspace_id": rec["workspace_id"],
+                "path": rec["path"],
+                "relative_path": rec["relative_path"],
+                "name": rec["name"],
+                "size_bytes": rec["size_bytes"],
+                "mime_type": rec.get("mime_type"),
+                "checksum_sha256": rec.get("checksum_sha256"),
+                "last_modified": rec.get("last_modified"),
+                "extra_json": rec.get("extra_json"),
+                "updated_at": now,
+            })
+
+        stmt = insert(FileMetadata).values(insert_data)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["workspace_id", "relative_path"],
+            set_={
+                "path": stmt.excluded.path,
+                "name": stmt.excluded.name,
+                "size_bytes": stmt.excluded.size_bytes,
+                "mime_type": stmt.excluded.mime_type,
+                "checksum_sha256": stmt.excluded.checksum_sha256,
+                "last_modified": stmt.excluded.last_modified,
+                "extra_json": stmt.excluded.extra_json,
+                "updated_at": now,
+            },
+        )
+
+        session.execute(stmt)
+        session.flush()
+
+        if cache is not None:
+            for rec in records:
+                cache.delete(_cache_key(rec["workspace_id"], rec["relative_path"]))
+
+        return len(records)
+
+    @staticmethod
+    def bulk_get(
+        session: Session,
+        *,
+        workspace_id: str,
+        relative_paths: list[str],
+        cache: CacheBackend | None = None,
+    ) -> dict[str, FileMetadata]:
+        """Bulk fetch metadata by relative paths for improved performance.
+
+        Retrieves multiple file metadata records in a single query, which is
+        much more efficient than individual lookups when processing large
+        file sets.
+
+        Args:
+            session: Active SQLAlchemy session.
+            workspace_id: Workspace identifier.
+            relative_paths: List of relative paths to fetch.
+            cache: Optional cache backend (currently not used for bulk ops).
+
+        Returns:
+            Dictionary mapping relative_path -> FileMetadata.
+        """
+        if not relative_paths:
+            return {}
+
+        rows = (
+            session.query(FileMetadata)
+            .filter(
+                and_(
+                    FileMetadata.workspace_id == workspace_id,
+                    FileMetadata.relative_path.in_(relative_paths),
+                )
+            )
+            .all()
+        )
+
+        return {row.relative_path: row for row in rows}
