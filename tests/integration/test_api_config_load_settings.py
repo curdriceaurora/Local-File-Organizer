@@ -132,6 +132,20 @@ class TestLoadSettingsEnvOverrides:
         s = load_settings()
         assert s.auth_enabled is True
 
+    def test_invalid_rate_limit_boolean_keeps_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("FO_API_RATE_LIMIT_ENABLED", "maybe")
+        s = load_settings()
+        assert s.rate_limit_enabled is True
+
+    def test_invalid_bootstrap_local_only_boolean_keeps_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("FO_API_AUTH_BOOTSTRAP_LOCAL_ONLY", "maybe")
+        s = load_settings()
+        assert s.auth_bootstrap_admin_local_only is True
+
     def test_auth_enabled_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FO_API_AUTH_ENABLED", "false")
         s = load_settings()

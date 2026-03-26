@@ -141,15 +141,17 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _parse_bool(value: str, name: str) -> bool | None:
+def _parse_bool(value: str | None, name: str) -> bool | None:
     """Parse boolean from an environment variable string."""
+    if value is None:
+        return None
+
     normalized = value.strip().lower()
-    if normalized in {"1", "true", "yes", "on"}:
+    if normalized in {"1", "true", "yes"}:
         return True
-    if normalized in {"0", "false", "no", "off"}:
+    if normalized in {"0", "false", "no"}:
         return False
-    logger.warning("Invalid {} value: {}", name, value)
-    return None
+    raise ValueError(f"Invalid {name} value: {value}")
 
 
 def _load_bool(env: dict[str, str], env_name: str, data: dict[str, Any], key: str) -> None:
@@ -157,9 +159,13 @@ def _load_bool(env: dict[str, str], env_name: str, data: dict[str, Any], key: st
     if env_name not in env:
         return
 
-    parsed = _parse_bool(env[env_name], env_name)
-    if parsed is not None:
-        data[key] = parsed
+    try:
+        parsed = _parse_bool(env[env_name], env_name)
+    except ValueError:
+        logger.warning("Invalid {} value: {}", env_name, env[env_name])
+    else:
+        if parsed is not None:
+            data[key] = parsed
 
 
 def _parse_int(value: str, name: str) -> int | None:
