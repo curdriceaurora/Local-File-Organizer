@@ -18,18 +18,40 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from loguru import logger
 from rich.console import Console
 
 from file_organizer.cli import dedupe_display, dedupe_removal
+from file_organizer.cli.dedupe_display import (
+    display_duplicate_group,
+    display_summary,
+    format_datetime,
+    format_size,
+)
 from file_organizer.cli.dedupe_hash import (
     ProgressTracker,
     create_scan_options,
     initialize_hash_detector,
     scan_for_duplicates,
 )
+from file_organizer.cli.dedupe_strategy import (
+    get_user_selection,
+    select_files_to_keep,
+)
+
+__all__ = [
+    "DedupeConfig",
+    "dedupe_command",
+    "display_duplicate_group",
+    "display_summary",
+    "format_datetime",
+    "format_size",
+    "get_user_selection",
+    "main",
+    "select_files_to_keep",
+]
 
 console = Console()
 
@@ -302,6 +324,39 @@ Examples:
         console.print(f"\n[red]Error: {e}[/red]")
         logger.exception("Deduplication failed")
         return 1
+
+
+# Backward compatibility wrappers - delegate to dedupe_display with global console
+# These maintain the original function signatures for existing code/tests
+_display_duplicate_group = display_duplicate_group
+_display_summary = display_summary
+
+
+def display_duplicate_group(
+    group_id: int,
+    file_hash: str,
+    files: list[dict[str, Any]],
+    total_groups: int,
+) -> None:
+    """Backward compatibility wrapper for display_duplicate_group.
+
+    Calls dedupe_display.display_duplicate_group with the global console.
+    """
+    _display_duplicate_group(console, group_id, file_hash, files, total_groups)
+
+
+def display_summary(
+    total_groups: int,
+    total_duplicates: int,
+    total_removed: int,
+    space_saved: int,
+    dry_run: bool,
+) -> None:
+    """Backward compatibility wrapper for display_summary.
+
+    Calls dedupe_display.display_summary with the global console.
+    """
+    _display_summary(console, total_groups, total_duplicates, total_removed, space_saved, dry_run)
 
 
 def main() -> None:
