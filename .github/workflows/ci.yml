@@ -244,12 +244,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7
-      - name: Install Tauri Linux dependencies
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system deps (Linux GTK/WebKit)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Cache Rust deps
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
       - name: Prepare sidecar placeholder for cargo check
         working-directory: desktop/src-tauri
         run: |
@@ -260,9 +269,11 @@ jobs:
             printf '#!/usr/bin/env bash\nexit 0\n' > "${sidecar_path}"
             chmod +x "${sidecar_path}"
           fi
+
       - name: Run cargo check
         working-directory: desktop/src-tauri
-        run: cargo check --locked
+        run: cargo check --all-features
+
       - name: Run cargo tests
         working-directory: desktop/src-tauri
-        run: cargo test --locked
+        run: cargo test
