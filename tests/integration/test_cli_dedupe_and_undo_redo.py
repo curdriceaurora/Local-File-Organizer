@@ -184,12 +184,17 @@ class TestSelectFilesToKeep:
         result = select_files_to_keep(files, "manual")
         assert all(not f.get("keep", False) for f in result)
 
-    def test_returns_same_list(self) -> None:
+    def test_returns_copy_not_mutating_input(self) -> None:
         from file_organizer.cli.dedupe import select_files_to_keep
 
         files = self._files()
+        original_state = [dict(f) for f in files]
         result = select_files_to_keep(files, "oldest")
-        assert result is files
+        # Input should not be mutated
+        assert files == original_state
+        # Result should be a new list with keep flags set
+        assert result is not files
+        assert result[0]["keep"] is True
 
 
 # ---------------------------------------------------------------------------
