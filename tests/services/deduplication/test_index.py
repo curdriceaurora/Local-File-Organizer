@@ -611,9 +611,7 @@ class TestStreamingIndexBuilder:
             config = IndexBuildConfig(chunk_size=3)
             progress_updates = []
 
-            for progress in index.build_from_directory_streaming(
-                tmppath, mock_hasher, config
-            ):
+            for progress in index.build_from_directory_streaming(tmppath, mock_hasher, config):
                 progress_updates.append(progress)
 
             # Verify streaming yielded progress updates
@@ -650,9 +648,7 @@ class TestStreamingIndexBuilder:
             config = IndexBuildConfig(chunk_size=10)
             progress_updates = []
 
-            for progress in index.build_from_directory_streaming(
-                tmppath, hash_func, config
-            ):
+            for progress in index.build_from_directory_streaming(tmppath, hash_func, config):
                 progress_updates.append(progress)
 
             # Verify we got progress updates for each chunk
@@ -673,9 +669,7 @@ class TestStreamingIndexBuilder:
                 return "hash"
 
             # Build from empty directory
-            progress_updates = list(
-                index.build_from_directory_streaming(tmppath, hash_func)
-            )
+            progress_updates = list(index.build_from_directory_streaming(tmppath, hash_func))
 
             # Should complete with no updates (no files)
             assert len(progress_updates) == 0
@@ -706,9 +700,7 @@ class TestStreamingIndexBuilder:
             config = IndexBuildConfig(chunk_size=20)
             progress_updates = []
 
-            for progress in index.build_from_directory_streaming(
-                tmppath, hash_func, config
-            ):
+            for progress in index.build_from_directory_streaming(tmppath, hash_func, config):
                 progress_updates.append(progress)
 
             # Verify chunked processing
@@ -774,9 +766,7 @@ class TestStreamingIndexBuilder:
             config = IndexBuildConfig(chunk_size=5)
             progress_updates = []
 
-            for progress in index.build_from_files_streaming(
-                file_list, hash_func, config
-            ):
+            for progress in index.build_from_files_streaming(file_list, hash_func, config):
                 progress_updates.append(progress)
 
             # Verify
@@ -807,9 +797,7 @@ class TestStreamingIndexBuilder:
             config = IndexBuildConfig(chunk_size=10, max_files=25)
             progress_updates = []
 
-            for progress in index.build_from_directory_streaming(
-                tmppath, hash_func, config
-            ):
+            for progress in index.build_from_directory_streaming(tmppath, hash_func, config):
                 progress_updates.append(progress)
 
             # Should only process 25 files

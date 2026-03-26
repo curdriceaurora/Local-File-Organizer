@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from pickle import PicklingError, UnpicklingError
 
 from loguru import logger
 
@@ -48,6 +49,7 @@ class BM25Index:
                 If provided, enables lazy loading from cache.
         """
         self._paths: list[Path] = []
+        self._documents: list[str] = []
         self._bm25: object | None = None  # rank_bm25.BM25Okapi | None
         self._cache_path = cache_path
         self._persistence = BM25Persistence()
@@ -88,12 +90,19 @@ class BM25Index:
         # Try lazy loading from cache if enabled
         if self._cache_path is not None:
             try:
-                cached_index, cached_paths = self._persistence.load(self._cache_path)
+                cached_index, cached_paths, cached_documents = self._persistence.load(
+                    self._cache_path
+                )
 
                 # Use cache only if paths match exactly
-                if cached_index is not None and cached_paths == paths:
+                if (
+                    cached_index is not None
+                    and cached_paths == paths
+                    and len(cached_documents) == len(cached_paths)
+                ):
                     self._bm25 = cached_index
                     self._paths = cached_paths
+                    self._documents = cached_documents
                     logger.debug(
                         "BM25Index: loaded {} documents from cache",
                         len(paths),
@@ -102,11 +111,9 @@ class BM25Index:
 
                 # Cache invalid or paths changed, will rebuild
                 if cached_index is not None:
-                    logger.debug(
-                        "BM25Index: cache invalid (path mismatch), rebuilding index"
-                    )
+                    logger.debug("BM25Index: cache invalid (path mismatch), rebuilding index")
 
-            except (OSError, Exception) as exc:
+            except (OSError, UnpicklingError) as exc:
                 # Cache load failed, fall through to rebuild
                 logger.debug("BM25Index: cache load failed ({}), rebuilding", exc)
 
@@ -114,13 +121,19 @@ class BM25Index:
         tokenised = [_tokenise(doc) for doc in documents]
         self._bm25 = BM25Okapi(tokenised)
         self._paths = list(paths)
+        self._documents = list(documents)
         logger.debug("BM25Index: indexed {} documents", len(paths))
 
         # Save to cache if enabled
         if self._cache_path is not None:
             try:
-                self._persistence.save(self._bm25, self._paths, self._cache_path)
-            except (OSError, Exception) as exc:
+                self._persistence.save(
+                    self._bm25,
+                    self._paths,
+                    self._cache_path,
+                    documents=self._documents,
+                )
+            except (OSError, PicklingError) as exc:
                 # Cache save failed, but index is still usable
                 logger.warning("BM25Index: failed to save cache: {}", exc)
 
@@ -187,12 +200,10 @@ class BM25Index:
 
         # Add to internal state
         self._paths.append(path)
+        self._documents.append(document)
 
         # Rebuild the index with all documents
-        tokenised = [_tokenise(doc) for doc in self._get_documents()]
-        # Add the new document's tokens
-        tokenised.append(_tokenise(document))
-
+        tokenised = [_tokenise(doc) for doc in self._documents]
         self._bm25 = BM25Okapi(tokenised)
         logger.debug("BM25Index: added document, index now has {} documents", len(self._paths))
 
@@ -228,10 +239,11 @@ class BM25Index:
             raise ValueError(f"Path {path} not found in index") from exc
 
         self._paths.pop(idx)
+        self._documents.pop(idx)
 
         # Rebuild the index with remaining documents
-        if self._paths:
-            tokenised = [_tokenise(doc) for doc in self._get_documents()]
+        if self._documents:
+            tokenised = [_tokenise(doc) for doc in self._documents]
             self._bm25 = BM25Okapi(tokenised)
         else:
             self._bm25 = None
@@ -268,35 +280,15 @@ class BM25Index:
         if path not in self._paths:
             raise ValueError(f"Path {path} not found in index")
 
-        # Rebuild the index with all documents
-        tokenised = [_tokenise(doc) for doc in self._get_documents()]
-        # Replace the tokenized version for this path
         idx = self._paths.index(path)
-        tokenised[idx] = _tokenise(document)
+        self._documents[idx] = document
+        tokenised = [_tokenise(doc) for doc in self._documents]
 
         self._bm25 = BM25Okapi(tokenised)
         logger.debug("BM25Index: updated document at {}", path)
 
         # Update cache if enabled
         self._update_cache()
-
-    def _get_documents(self) -> list[str]:
-        """Reconstruct document strings from the BM25 index.
-
-        This is a helper for incremental updates. Since we don't store
-        the original document strings, we reconstruct them from the
-        tokenized corpus in the BM25 index.
-
-        Returns:
-            List of reconstructed document strings (space-separated tokens).
-        """
-        if self._bm25 is None or not hasattr(self._bm25, 'corpus'):
-            # No index yet, return empty list
-            return []
-
-        # Reconstruct documents from tokenized corpus
-        corpus = self._bm25.corpus  # type: ignore[attr-defined]
-        return [" ".join(tokens) for tokens in corpus]
 
     def _update_cache(self) -> None:
         """Update the cache file after incremental changes.
@@ -308,9 +300,14 @@ class BM25Index:
             return
 
         try:
-            self._persistence.save(self._bm25, self._paths, self._cache_path)
+            self._persistence.save(
+                self._bm25,
+                self._paths,
+                self._cache_path,
+                documents=self._documents,
+            )
             logger.debug("BM25Index: cache updated after incremental change")
-        except (OSError, Exception) as exc:
+        except (OSError, PicklingError) as exc:
             # Cache update failed, but index is still usable
             logger.warning("BM25Index: failed to update cache: {}", exc)
 

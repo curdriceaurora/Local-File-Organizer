@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pickle
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -13,7 +12,6 @@ pytest.importorskip("rank_bm25")
 from rank_bm25 import BM25Okapi
 
 from file_organizer.services.search.bm25_persistence import BM25Persistence
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -143,9 +141,10 @@ class TestBM25PersistenceLoad:
         temp_cache_path: Path,
     ) -> None:
         """Loading from nonexistent file returns (None, [])."""
-        bm25, paths = persistence.load(temp_cache_path)
+        bm25, paths, documents = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
+        assert documents == []
 
     def test_load_saved_index_succeeds(
         self,
@@ -156,10 +155,11 @@ class TestBM25PersistenceLoad:
     ) -> None:
         """Load returns the same index and paths that were saved."""
         persistence.save(sample_bm25_index, sample_paths, temp_cache_path)
-        loaded_index, loaded_paths = persistence.load(temp_cache_path)
+        loaded_index, loaded_paths, loaded_documents = persistence.load(temp_cache_path)
 
         assert loaded_index is not None
         assert loaded_paths == sample_paths
+        assert loaded_documents == []
 
     def test_loaded_index_is_functional(
         self,
@@ -170,7 +170,7 @@ class TestBM25PersistenceLoad:
     ) -> None:
         """Loaded index can be used for scoring queries."""
         persistence.save(sample_bm25_index, sample_paths, temp_cache_path)
-        loaded_index, _ = persistence.load(temp_cache_path)
+        loaded_index, _, _ = persistence.load(temp_cache_path)
 
         assert loaded_index is not None
         # Test that loaded index works for scoring
@@ -200,9 +200,10 @@ class TestBM25PersistenceLoad:
         with open(temp_cache_path, "wb") as f:
             pickle.dump("invalid data", f)
 
-        bm25, paths = persistence.load(temp_cache_path)
+        bm25, paths, documents = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
+        assert documents == []
 
     def test_load_missing_paths_key_returns_none(
         self,
@@ -215,10 +216,11 @@ class TestBM25PersistenceLoad:
         with open(temp_cache_path, "wb") as f:
             pickle.dump(data, f)
 
-        bm25, paths = persistence.load(temp_cache_path)
+        bm25, paths, documents = persistence.load(temp_cache_path)
         # Should return None because paths is missing, but will have default []
         assert bm25 is not None  # Index is present
         assert paths == []  # Default value
+        assert documents == []
 
     def test_load_invalid_paths_type_returns_none(
         self,
@@ -231,9 +233,10 @@ class TestBM25PersistenceLoad:
         with open(temp_cache_path, "wb") as f:
             pickle.dump(data, f)
 
-        bm25, paths = persistence.load(temp_cache_path)
+        bm25, paths, documents = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
+        assert documents == []
 
 
 # ---------------------------------------------------------------------------
@@ -377,11 +380,12 @@ class TestBM25PersistenceIntegration:
         persistence.save(sample_bm25_index, sample_paths, temp_cache_path)
 
         # Load
-        loaded_index, loaded_paths = persistence.load(temp_cache_path)
+        loaded_index, loaded_paths, loaded_documents = persistence.load(temp_cache_path)
 
         # Verify
         assert loaded_index is not None
         assert loaded_paths == sample_paths
+        assert loaded_documents == []
         assert persistence.is_valid(temp_cache_path)
 
     def test_multiple_save_load_cycles(
@@ -396,14 +400,16 @@ class TestBM25PersistenceIntegration:
 
         # First cycle
         persistence.save(sample_bm25_index, paths1, temp_cache_path)
-        loaded_index1, loaded_paths1 = persistence.load(temp_cache_path)
+        loaded_index1, loaded_paths1, loaded_documents1 = persistence.load(temp_cache_path)
         assert loaded_paths1 == paths1
+        assert loaded_documents1 == []
 
         # Second cycle (overwrite)
         persistence.save(sample_bm25_index, paths2, temp_cache_path)
-        loaded_index2, loaded_paths2 = persistence.load(temp_cache_path)
+        loaded_index2, loaded_paths2, loaded_documents2 = persistence.load(temp_cache_path)
         assert loaded_paths2 == paths2
         assert loaded_paths2 != paths1
+        assert loaded_documents2 == []
 
     def test_delete_invalidates_cache(
         self,
@@ -422,6 +428,7 @@ class TestBM25PersistenceIntegration:
 
         # Verify deletion
         assert not persistence.is_valid(temp_cache_path)
-        bm25, paths = persistence.load(temp_cache_path)
+        bm25, paths, documents = persistence.load(temp_cache_path)
         assert bm25 is None
         assert paths == []
+        assert documents == []

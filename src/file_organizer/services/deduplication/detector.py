@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from ...parallel.config import ParallelConfig
-from ...utils.file_scanner import StreamingFileScanner, ScanConfig
+from ...utils.file_scanner import ScanConfig, StreamingFileScanner
 from .hasher import FileHasher, HashAlgorithm
 from .index import DuplicateIndex, FileMetadata
 
@@ -183,8 +183,6 @@ class DuplicateDetector:
         if total == 0:
             return
 
-        processed = 0
-
         # Determine if we should use parallel processing
         # Use parallel for larger batches (>= 10 files) or if explicitly configured
         use_parallel = options.parallel_config is not None or total >= 10
@@ -227,9 +225,7 @@ class DuplicateDetector:
                 logger.warning("Could not process %s: %s", file_path, e, exc_info=True)
                 continue
 
-    def _process_files_parallel(
-        self, files: list[Path], options: ScanOptions, total: int
-    ) -> None:
+    def _process_files_parallel(self, files: list[Path], options: ScanOptions, total: int) -> None:
         """Process files in parallel batches for optimal performance.
 
         Args:

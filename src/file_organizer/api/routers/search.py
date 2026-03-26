@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from file_organizer.api.cache import CacheBackend, InMemoryCache
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.dependencies import get_settings
-from file_organizer.api.models import SearchResponse, SearchResult
+from file_organizer.api.models import SearchResult
 from file_organizer.api.utils import is_hidden, resolve_path
 
 logger = logging.getLogger(__name__)
@@ -44,10 +44,10 @@ class _ScoringTiers:
 def _generate_cache_key(
     query: str,
     file_type: str | None,
-    path: str | None,
+    search_roots: list[Path],
     semantic: bool,
-    skip: int,
-    limit: int,
+    offset: int | None,
+    limit: int | None,
 ) -> str:
     """Generate a cache key for search results.
 
@@ -56,9 +56,9 @@ def _generate_cache_key(
     params = {
         "q": query,
         "type": file_type,
-        "path": path,
+        "roots": [str(root) for root in search_roots],
         "semantic": semantic,
-        "skip": skip,
+        "offset": offset,
         "limit": limit,
     }
     # Create deterministic JSON string and hash it
@@ -75,6 +75,65 @@ def _relative_path(fp: Path, roots: list[Path]) -> str:
         except ValueError:
             continue
     return str(fp)
+
+
+def _load_cached_results(cache_key: str) -> list[SearchResult] | None:
+    """Return cached search results if present and valid."""
+    cached_result = _search_cache.get(cache_key)
+    if not cached_result:
+        return None
+
+    try:
+        cached_data = json.loads(cached_result)
+        return [SearchResult(**item) for item in cached_data]
+    except (json.JSONDecodeError, ValueError) as exc:
+        logger.warning("Failed to deserialize cached search result: %s", exc, exc_info=True)
+        return None
+
+
+def _store_cached_results(cache_key: str, results: list[SearchResult]) -> None:
+    """Store search results in the response cache."""
+    _search_cache.set(
+        cache_key,
+        json.dumps([item.model_dump() for item in results]),
+        ttl_seconds=_CACHE_TTL_SECONDS,
+    )
+
+
+def _paginate_results(
+    results: list[SearchResult],
+    offset: int | None,
+    limit: int | None,
+) -> list[SearchResult]:
+    """Return a stable slice of results using the legacy offset/limit contract."""
+    skip = offset or 0
+    if limit is None:
+        return results[skip:]
+    return results[skip : skip + limit]
+
+
+def _semantic_search_with_cache(
+    cache_key: str,
+    search_roots: list[Path],
+    query: str,
+    file_type: str | None,
+    offset: int | None,
+    limit: int | None,
+) -> list[SearchResult]:
+    """Run semantic search and cache the paginated results."""
+    skip = max(0, offset or 0)
+    if skip >= _MAX_SEMANTIC:
+        return []
+
+    if limit is not None:
+        top_k = min(skip + limit, _MAX_SEMANTIC)
+        results = _semantic_search(search_roots, query, file_type, top_k=top_k)
+    else:
+        results = _semantic_search(search_roots, query, file_type, top_k=_MAX_SEMANTIC)
+
+    paged_results = _paginate_results(results, offset, limit)
+    _store_cached_results(cache_key, paged_results)
+    return paged_results
 
 
 def _compute_score(file_path: Path, query: str) -> float:
@@ -266,16 +325,16 @@ def _semantic_search(
     return results
 
 
-@router.get("/search", response_model=SearchResponse)
+@router.get("/search", response_model=list[SearchResult])
 def search(
     q: str | None = Query(None, description="Search query"),
     file_type: str | None = Query(None, alias="type"),
-    limit: int = Query(100, ge=1, le=_MAX_LIMIT),
-    skip: int = Query(0, ge=0),
+    limit: int | None = None,
+    offset: int | None = None,
     path: str | None = None,
     semantic: bool = Query(False, description="Use hybrid BM25+vector semantic search"),
     settings: ApiSettings = Depends(get_settings),
-) -> SearchResponse | JSONResponse:
+) -> list[SearchResult] | JSONResponse:
     """Search for files by query.
 
     Supports filtering, pagination, relevance scoring, and result caching.
@@ -293,15 +352,10 @@ def search(
             content={"detail": "Query parameter 'q' is required"},
         )
 
-    # Check cache first
-    cache_key = _generate_cache_key(q, file_type, path, semantic, skip, limit)
-    cached_result = _search_cache.get(cache_key)
-    if cached_result:
-        try:
-            cached_data = json.loads(cached_result)
-            return SearchResponse(**cached_data)
-        except (json.JSONDecodeError, ValueError) as exc:
-            logger.warning("Failed to deserialize cached search result: %s", exc)
+    # Clamp limit to a safe upper bound to prevent unbounded allocations.
+    effective_limit: int | None = None
+    if limit is not None and limit > 0:
+        effective_limit = min(limit, _MAX_LIMIT)
 
     # Determine search roots (normalize paths for consistency)
     if path:
@@ -313,23 +367,24 @@ def search(
             Path(p).resolve() for p in settings.allowed_paths
         ]
 
+    cache_key = _generate_cache_key(q, file_type, search_roots, semantic, offset, effective_limit)
+    cached_results = _load_cached_results(cache_key)
+    if cached_results is not None:
+        return cached_results
+
     # ------------------------------------------------------------------
     # Semantic path — hybrid BM25 + vector retrieval
     # ------------------------------------------------------------------
     if semantic:
-        if skip >= _MAX_SEMANTIC:
-            response = SearchResponse(items=[], total=0, skip=skip, limit=limit)
-            _search_cache.set(cache_key, json.dumps(response.model_dump()), ttl_seconds=_CACHE_TTL_SECONDS)
-            return response
         try:
-            # Fetch skip + limit so pagination works correctly, but cap at _MAX_SEMANTIC
-            top_k = min(skip + limit, _MAX_SEMANTIC)
-            results = _semantic_search(search_roots, q, file_type, top_k=top_k)
-            total = len(results)
-            paged_results = results[skip : skip + limit]
-            response = SearchResponse(items=paged_results, total=total, skip=skip, limit=limit)
-            _search_cache.set(cache_key, json.dumps(response.model_dump()), ttl_seconds=_CACHE_TTL_SECONDS)
-            return response
+            return _semantic_search_with_cache(
+                cache_key,
+                search_roots,
+                q,
+                file_type,
+                offset,
+                effective_limit,
+            )
         except ImportError:
             return JSONResponse(
                 status_code=503,
@@ -342,7 +397,7 @@ def search(
             )
 
     # ------------------------------------------------------------------
-    # Default keyword path — with caching and pagination
+    # Default keyword path — unchanged response shape, with cached results
     # ------------------------------------------------------------------
     results: list[SearchResult] = []
     total_traversed = 0
@@ -382,14 +437,7 @@ def search(
     # Sort by score descending, then by filename for deterministic pagination
     results.sort(key=lambda r: (-r.score, r.filename))
 
-    # Calculate total before pagination
-    total = len(results)
+    paged_results = _paginate_results(results, offset, effective_limit)
+    _store_cached_results(cache_key, paged_results)
 
-    # Apply pagination
-    paged_results = results[skip : skip + limit]
-
-    # Create response and cache it
-    response = SearchResponse(items=paged_results, total=total, skip=skip, limit=limit)
-    _search_cache.set(cache_key, json.dumps(response.model_dump()), ttl_seconds=_CACHE_TTL_SECONDS)
-
-    return response
+    return paged_results

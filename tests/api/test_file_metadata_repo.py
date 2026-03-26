@@ -13,7 +13,6 @@ from file_organizer.api.cache import InMemoryCache
 from file_organizer.api.db_models import FileMetadata
 from file_organizer.api.repositories.file_metadata_repo import (
     FileMetadataRepository,
-    PaginatedFileMetadata,
     _cache_key,
     _cache_payload,
     _checksum_cache_key,
@@ -334,6 +333,7 @@ class TestFileMetadataRepositoryDelete:
 
     def test_delete_clears_cache(self):
         row = MagicMock(spec=FileMetadata)
+        row.checksum_sha256 = None
         session = MagicMock(spec=Session)
         query = MagicMock()
         session.query.return_value = query
@@ -368,13 +368,7 @@ class TestFileMetadataRepositoryPagination:
         items_query.all.return_value = items
 
         # Configure session.query to return appropriate mock based on call
-        def query_side_effect(model_or_func):
-            # Check if this is a count query by looking for func.count
-            if hasattr(model_or_func, '__name__') and 'count' in str(model_or_func):
-                return count_query
-            return items_query
-
-        session.query.side_effect = query_side_effect
+        session.query.side_effect = [count_query, items_query]
         return session
 
     def test_pagination_returns_correct_structure(self):
@@ -533,8 +527,8 @@ def test_pagination():
     items_query.limit.return_value = items_query
     items_query.all.return_value = items
 
-    def query_side_effect(model_or_func):
-        if hasattr(model_or_func, '__name__') and 'count' in str(model_or_func):
+    def query_side_effect(_model_or_func):
+        if len(session.query.call_args_list) % 2 == 1:
             return count_query
         return items_query
 
@@ -575,9 +569,8 @@ def test_pagination():
 
 def test_batch_operations():
     """Test batch upsert and bulk get operations."""
-    from datetime import UTC, datetime
-    from unittest.mock import MagicMock
     from sqlalchemy.orm import Session
+
     from file_organizer.api.cache import InMemoryCache
 
     # Test bulk_upsert
@@ -612,7 +605,7 @@ def test_batch_operations():
     assert result == 2
     session.execute.assert_called_once()
     session.flush.assert_called_once()
-    assert cache.delete.call_count == 2
+    assert cache.delete.call_count == 3
 
     # Test bulk_upsert with empty list
     session_empty = MagicMock(spec=Session)
@@ -680,9 +673,8 @@ def test_batch_operations():
 
 def test_checksum_cache():
     """Test checksum-based duplicate detection cache."""
-    from datetime import UTC, datetime
-    from unittest.mock import MagicMock
     from sqlalchemy.orm import Session
+
     from file_organizer.api.cache import InMemoryCache
 
     # Test checksum cache key format
@@ -847,7 +839,16 @@ def test_checksum_cache():
     cache_upsert = MagicMock(spec=InMemoryCache)
 
     existing = MagicMock(spec=FileMetadata)
+    existing.id = "existing-id"
+    existing.workspace_id = "ws-1"
+    existing.path = "/abs/file.txt"
+    existing.relative_path = "file.txt"
+    existing.name = "file.txt"
+    existing.size_bytes = 100
+    existing.mime_type = None
     existing.checksum_sha256 = "old_checksum"
+    existing.last_modified = None
+    existing.extra_json = None
 
     query_upsert = MagicMock()
     session_upsert.query.return_value = query_upsert

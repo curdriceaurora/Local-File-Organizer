@@ -429,15 +429,6 @@ class SearchResult(BaseModel):
     created: str | None = None
 
 
-class SearchResponse(BaseModel):
-    """Paginated search results."""
-
-    items: list[SearchResult]
-    total: int
-    skip: int
-    limit: int
-
-
 class ApiErrorResponse(BaseModel):
     """Standard error response body."""
 

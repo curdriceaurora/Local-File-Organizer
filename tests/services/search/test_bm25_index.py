@@ -313,7 +313,7 @@ class TestBM25IndexIncrementalUpdates:
         idx.update_document(paths[0], "machine learning artificial intelligence")
         # Old terms should not match as strongly
         finance_results = idx.search("finance budget")
-        finance_paths = [p for p, _ in finance_results]
+        assert all(path != paths[0] for path, _ in finance_results)
         # New terms should match
         ml_results = idx.search("machine learning")
         assert ml_results, "Expected updated document to match new content"
@@ -357,10 +357,14 @@ class TestBM25IndexIncrementalUpdates:
         assert any(p == new_path for p, _ in ml_results), "Added document should be searchable"
 
         software_results = idx.search("software license")
-        assert any(p == paths[1] for p, _ in software_results), "Updated document should match new content"
+        assert any(p == paths[1] for p, _ in software_results), (
+            "Updated document should match new content"
+        )
 
         recipe_results = idx.search("recipe baking")
-        assert not any(p == paths[2] for p, _ in recipe_results), "Removed document should not appear"
+        assert not any(p == paths[2] for p, _ in recipe_results), (
+            "Removed document should not appear"
+        )
 
     def test_incremental_updates_invalidate_cache(self) -> None:
         """Incremental updates invalidate and rebuild the cache."""
@@ -384,7 +388,12 @@ class TestBM25IndexIncrementalUpdates:
             # Create a new index instance with the same cache
             idx2 = BM25Index(cache_path=cache_path)
             idx2.index(
-                ["finance budget report", "legal contract agreement", "recipe baking chocolate", "machine learning"],
+                [
+                    "finance budget report",
+                    "legal contract agreement",
+                    "recipe baking chocolate",
+                    "machine learning",
+                ],
                 paths + [new_path],
             )
             # Should load from cache with updated document

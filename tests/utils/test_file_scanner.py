@@ -108,7 +108,10 @@ class TestScanConfig:
 
     def test_custom_values(self):
         """Test custom configuration values."""
-        callback = lambda x: None
+
+        def callback(_: int) -> None:
+            return None
+
         config = ScanConfig(
             recursive=False,
             follow_symlinks=True,
@@ -603,7 +606,7 @@ class TestErrorHandling:
         """Test that scanner can be reused for multiple scans."""
         # First scan
         files1 = scanner.scan_to_list(sample_dir)
-        count1 = scanner.scanned_count
+        first_count = scanner.scanned_count
 
         # Second scan (counters should reset)
         files2 = scanner.scan_to_list(sample_dir)
@@ -611,6 +614,7 @@ class TestErrorHandling:
 
         # Both scans should find same number of files
         assert len(files1) == len(files2)
+        assert first_count == len(files1)
 
         # Counters should be updated with second scan
         assert count2 == len(files2)
@@ -642,11 +646,12 @@ class TestPerformance:
         config = ScanConfig(chunk_size=10)
         chunks_seen = 0
 
+        expected_chunk_size = 10
         # Process chunks one at a time
         for chunk in scanner.scan_directory(large_dir, config):
             chunks_seen += 1
             # Verify chunk size
-            assert len(chunk) <= 10
+            assert len(chunk) == expected_chunk_size
 
         # Should have seen all chunks
         assert chunks_seen == 10

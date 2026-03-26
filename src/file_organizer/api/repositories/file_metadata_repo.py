@@ -323,18 +323,20 @@ class FileMetadataRepository:
         insert_data = []
 
         for rec in records:
-            insert_data.append({
-                "workspace_id": rec["workspace_id"],
-                "path": rec["path"],
-                "relative_path": rec["relative_path"],
-                "name": rec["name"],
-                "size_bytes": rec["size_bytes"],
-                "mime_type": rec.get("mime_type"),
-                "checksum_sha256": rec.get("checksum_sha256"),
-                "last_modified": rec.get("last_modified"),
-                "extra_json": rec.get("extra_json"),
-                "updated_at": now,
-            })
+            insert_data.append(
+                {
+                    "workspace_id": rec["workspace_id"],
+                    "path": rec["path"],
+                    "relative_path": rec["relative_path"],
+                    "name": rec["name"],
+                    "size_bytes": rec["size_bytes"],
+                    "mime_type": rec.get("mime_type"),
+                    "checksum_sha256": rec.get("checksum_sha256"),
+                    "last_modified": rec.get("last_modified"),
+                    "extra_json": rec.get("extra_json"),
+                    "updated_at": now,
+                }
+            )
 
         stmt = insert(FileMetadata).values(insert_data)
         stmt = stmt.on_conflict_do_update(

@@ -9,10 +9,9 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Generator, Callable
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -130,8 +129,7 @@ class StreamingFileScanner:
             ValueError: If directory doesn't exist or isn't a directory
         """
         for chunk in self.scan_directory(directory, config):
-            for file_path in chunk:
-                yield file_path
+            yield from chunk
 
     def scan_to_list(
         self,
