@@ -60,6 +60,7 @@ class AppConfig:
         profile_name: Name of this configuration profile.
         version: Configuration schema version.
         default_methodology: Default organization methodology (none, para, jd).
+        setup_completed: Whether the guided setup wizard has been completed.
         models: AI model preset configuration.
         updates: Auto-update preferences.
         watcher: Watcher module config overrides.
@@ -75,6 +76,7 @@ class AppConfig:
     profile_name: str = "default"
     version: str = "1.0"
     default_methodology: str = "none"
+    setup_completed: bool = False
     models: ModelPreset = field(default_factory=ModelPreset)
     updates: UpdateSettings = field(default_factory=UpdateSettings)
 
