@@ -13,7 +13,7 @@ import typer
 from rich.console import Console
 from typer.testing import CliRunner
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 runner = CliRunner()
 

@@ -20,7 +20,7 @@ from file_organizer.web.file_operations import (
     list_tree_nodes,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
 # ---------------------------------------------------------------------------

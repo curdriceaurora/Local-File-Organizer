@@ -22,7 +22,7 @@ from file_organizer.services.intelligence.profile_manager import ProfileManager
 from file_organizer.services.intelligence.profile_merger import MergeStrategy, ProfileMerger
 from file_organizer.services.intelligence.profile_migrator import ProfileMigrator
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
 
 # ---------------------------------------------------------------------------

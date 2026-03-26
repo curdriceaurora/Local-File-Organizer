@@ -13,6 +13,7 @@ from file_organizer.parallel.processor import FileResult, ParallelProcessor
 from file_organizer.parallel.resume import ResumableProcessor
 
 
+@pytest.mark.ci
 @pytest.mark.unit
 class TestConcurrencyFixes(unittest.TestCase):
     def test_checkpoint_batching_overhead(self) -> None:

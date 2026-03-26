@@ -26,7 +26,7 @@ from file_organizer.methodologies.para.ai.suggestion_engine import (
 )
 from file_organizer.methodologies.para.categories import PARACategory
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
 
 # ---------------------------------------------------------------------------

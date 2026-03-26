@@ -15,7 +15,7 @@ from file_organizer.utils.text_processing import (
     truncate_text,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
 @pytest.mark.unit
@@ -55,6 +55,27 @@ class TestTextProcessing:
             mock_download.assert_any_call("stopwords", quiet=True)
             mock_download.assert_any_call("punkt", quiet=True)
             mock_download.assert_any_call("wordnet", quiet=True)
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.stopwords")
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_ensure_nltk_data_dataset_check_failure_logs_debug(
+        self,
+        mock_logger: MagicMock,
+        mock_stopwords: MagicMock,
+    ) -> None:
+        """Test non-LookupError dataset failures log a debug message."""
+        mock_stopwords.words.return_value = ["and", "the"]
+
+        with patch("nltk.corpus.wordnet") as mock_wordnet:
+            mock_wordnet.synsets.side_effect = RuntimeError("wordnet unavailable")
+
+            ensure_nltk_data()
+
+        assert any(
+            "NLTK dataset check failed for wordnet" in str(call)
+            for call in mock_logger.debug.call_args_list
+        )
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.nltk.download")

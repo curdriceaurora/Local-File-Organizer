@@ -6,6 +6,8 @@ import pytest
 from file_organizer.services.intelligence.profile_manager import Profile, ProfileManager
 from file_organizer.services.intelligence.profile_migrator import ProfileMigrator
 
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
+
 
 @pytest.fixture
 def mock_profile_manager():

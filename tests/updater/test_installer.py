@@ -15,7 +15,7 @@ import pytest
 from file_organizer.updater.checker import AssetInfo, ReleaseInfo
 from file_organizer.updater.installer import InstallResult, UpdateInstaller
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
 # ---------------------------------------------------------------------------

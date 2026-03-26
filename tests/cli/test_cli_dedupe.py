@@ -28,7 +28,7 @@ from file_organizer.cli.dedupe_strategy import (
     select_files_to_keep,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 # ---------------------------------------------------------------------------
 # Patch paths — dedupe_command uses *lazy imports* inside a try block.

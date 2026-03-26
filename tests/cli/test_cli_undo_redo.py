@@ -22,7 +22,7 @@ from file_organizer.cli.undo_redo import (
     undo_command,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
 def _make_operation(op_id=1, op_type="move", src="/a/file.txt", dst="/b/file.txt"):

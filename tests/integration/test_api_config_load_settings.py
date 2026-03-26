@@ -13,7 +13,7 @@ import yaml
 
 from file_organizer.api.config import ApiSettings, load_settings
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
 
 # ---------------------------------------------------------------------------
