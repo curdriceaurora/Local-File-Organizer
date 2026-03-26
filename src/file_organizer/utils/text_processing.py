@@ -64,7 +64,7 @@ def ensure_nltk_data() -> None:  # noqa: C901
                                 word_tokenize("test")
                             else:
                                 raise LookupError("punkt download failed")
-                        except Exception as e:
+                        except LookupError as e:
                             logger.debug(f"Failed to load punkt: {e}")
             elif dataset == "wordnet":
                 from nltk.corpus import wordnet

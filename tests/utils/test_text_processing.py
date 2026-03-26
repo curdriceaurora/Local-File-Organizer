@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -74,10 +74,21 @@ class TestTextProcessing:
 
             # With NLTK 3.8+ compatibility, we try punkt_tab as fallback, then punkt
             assert mock_download.call_count == 4
-            mock_download.assert_any_call("stopwords", quiet=True)
-            mock_download.assert_any_call("punkt_tab", quiet=True)  # tried as fallback
-            mock_download.assert_any_call("punkt", quiet=True)  # fallback when punkt_tab fails
-            mock_download.assert_any_call("wordnet", quiet=True)
+            # Verify downloads happen in expected order (stopwords, punkt_tab/punkt, wordnet)
+            # Note: __bool__() calls come from if statements checking the download result
+            mock_download.assert_has_calls(
+                [
+                    call("stopwords", quiet=True),
+                    call().__bool__(),
+                    call("punkt_tab", quiet=True),  # tried as fallback
+                    call().__bool__(),
+                    call("punkt", quiet=True),  # fallback when punkt_tab fails
+                    call().__bool__(),
+                    call("wordnet", quiet=True),
+                    call().__bool__(),
+                ],
+                any_order=False,
+            )
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.stopwords")
@@ -145,12 +156,12 @@ class TestTextProcessing:
         # Initial stopwords check fails (triggers download)
         mock_stopwords.words.side_effect = LookupError()
 
-        # Setup word_tokenize to fail on first two calls (initial punkt + punkt_tab attempts)
-        # and throw RuntimeError on third call (punkt fallback), then succeed on wordnet check
+        # Setup word_tokenize to fail on first three calls (punkt, punkt_tab, punkt attempts)
+        # then succeed on wordnet check
         mock_tokenize.side_effect = [
             LookupError(),  # First call in punkt try block fails
             LookupError(),  # Call in punkt_tab fallback block fails
-            RuntimeError("punkt load failed"),  # Call in punkt fallback block fails
+            LookupError("punkt load failed"),  # Call in punkt fallback block fails
             None,  # Call in wordnet synsets succeeds (after it was called)
         ]
 
@@ -198,19 +209,19 @@ class TestTextProcessing:
         """
         Exercise ensure_nltk_data's punkt/punkt_tab exception-handling paths by simulating successive tokenization failures.
 
-        Simulates word_tokenize raising LookupError, then LookupError, then RuntimeError while wordnet succeeds; calls ensure_nltk_data() and asserts the logger produced debug messages containing "punkt not available", "punkt_tab failed", and "Failed to load punkt".
+        Simulates word_tokenize raising LookupError three times (punkt, punkt_tab, punkt attempts) while wordnet succeeds; calls ensure_nltk_data() and asserts the logger produced debug messages containing "punkt not available", "punkt_tab failed", and "Failed to load punkt".
         """
         # Ensure stopwords succeeds so we focus on punkt path
         mock_stopwords.words.return_value = ["test"]
 
-        # Make word_tokenize fail on punkt check to enter exception handler at line 40
-        # First call (line 39): raises LookupError
-        # Then punkt_tab download, second call (line 45): raises LookupError
-        # Then punkt download, third call (line 51): raises RuntimeError
+        # Make word_tokenize fail on all punkt path attempts
+        # First call (line 50): raises LookupError on initial punkt check
+        # Then punkt_tab download, second call (line 56): raises LookupError
+        # Then punkt download, third call (line 64): raises LookupError
         mock_tokenize.side_effect = [
-            LookupError("punkt missing"),  # Line 39 exception
-            LookupError("punkt_tab missing"),  # Line 45 exception
-            RuntimeError("punkt load error"),  # Line 51 exception
+            LookupError("punkt missing"),  # Initial punkt check exception
+            LookupError("punkt_tab missing"),  # punkt_tab fallback exception
+            LookupError("punkt load error"),  # punkt fallback exception
         ]
 
         with patch("nltk.corpus.wordnet") as mock_wordnet:
