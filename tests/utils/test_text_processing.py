@@ -39,6 +39,19 @@ class TestTextProcessing:
             "NLTK not available, text processing will be limited"
         )
 
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_ensure_nltk_data_returns_when_already_ready(self, mock_logger: MagicMock) -> None:
+        """Test ensure_nltk_data short-circuits after initialization."""
+        import file_organizer.utils.text_processing as text_processing_module
+
+        text_processing_module._nltk_ready = True
+
+        ensure_nltk_data()
+
+        mock_logger.warning.assert_not_called()
+        mock_logger.info.assert_not_called()
+        mock_logger.debug.assert_not_called()
+
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.nltk.download")
     @patch("file_organizer.utils.text_processing.stopwords")
@@ -84,6 +97,35 @@ class TestTextProcessing:
 
         assert any(
             "NLTK dataset check failed for wordnet" in str(call)
+            for call in mock_logger.debug.call_args_list
+        )
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.nltk.download")
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("file_organizer.utils.text_processing.stopwords")
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_ensure_nltk_data_downloaded_wordnet_is_verified(
+        self,
+        mock_logger: MagicMock,
+        mock_stopwords: MagicMock,
+        mock_tokenize: MagicMock,
+        mock_download: MagicMock,
+    ) -> None:
+        """Test downloaded wordnet data is verified after a LookupError."""
+        mock_stopwords.words.return_value = ["and", "the"]
+        mock_tokenize.return_value = ["tokenized"]
+
+        with patch("nltk.corpus.wordnet") as mock_wordnet:
+            mock_wordnet.synsets.side_effect = [LookupError("missing"), ["synset"]]
+
+            ensure_nltk_data()
+
+        mock_download.assert_called_once_with("wordnet", quiet=True)
+        assert mock_wordnet.synsets.call_count == 2
+        mock_logger.info.assert_called_with("Downloading NLTK dataset: wordnet")
+        assert any(
+            "downloaded and verified successfully" in str(call)
             for call in mock_logger.debug.call_args_list
         )
 
@@ -348,6 +390,29 @@ class TestTextProcessing:
         # Verify ensure_nltk_data was called (tests line 348)
         mock_ensure_nltk.assert_called_once()
         assert keywords == ["keyword1", "keyword2"]
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.get_unwanted_words")
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("nltk.probability.FreqDist")
+    def test_extract_keywords_executes_ensure_nltk_data_path(
+        self,
+        mock_freqdist_cls: MagicMock,
+        mock_tokenize: MagicMock,
+        mock_get_unwanted_words: MagicMock,
+    ) -> None:
+        """Test extract_keywords calls the real ensure_nltk_data path before tokenization."""
+        mock_tokenize.return_value = ["keyword", "analysis", "plan"]
+        mock_get_unwanted_words.return_value = set()
+        mock_freqdist = MagicMock()
+        mock_freqdist.most_common.return_value = [("keyword", 2), ("analysis", 1)]
+        mock_freqdist_cls.return_value = mock_freqdist
+
+        with patch("file_organizer.utils.text_processing.ensure_nltk_data") as mock_ensure_nltk:
+            keywords = extract_keywords("keyword analysis plan", top_n=2)
+
+        mock_ensure_nltk.assert_called_once_with()
+        assert keywords == ["keyword", "analysis"]
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.word_tokenize")

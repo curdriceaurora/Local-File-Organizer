@@ -124,6 +124,7 @@ site/
 .worktrees/
 .security-key
 logs/security/
-
 # Claude Code agents (auto-generated, not committed)
 .agents/
+
+coverage.json
