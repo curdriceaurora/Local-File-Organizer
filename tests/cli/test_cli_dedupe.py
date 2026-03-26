@@ -938,6 +938,7 @@ class TestDedupeWrappers:
         result = wrapper_select(files, "newest")
         assert result is files
         assert len(result) == 2
+        assert sum(1 for f in result if f.get("keep") is True) == 1
         assert result[1].get("keep") is True
 
     def test_get_user_selection_batch_mode(self) -> None:
@@ -953,17 +954,19 @@ class TestDedupeWrappers:
     def test_display_summary_delegates(self) -> None:
         from unittest.mock import patch
 
+        from file_organizer.cli.dedupe import console as dedupe_console
         from file_organizer.cli.dedupe import display_summary as wrapper_summary
 
         with patch("file_organizer.cli.dedupe._display_summary") as mock_inner:
             wrapper_summary(5, 10, 3, 1024, dry_run=True)
             mock_inner.assert_called_once()
             args = mock_inner.call_args[0]
-            assert args[1:] == (5, 10, 3, 1024, True)
+            assert args == (dedupe_console, 5, 10, 3, 1024, True)
 
     def test_display_duplicate_group_delegates(self) -> None:
         from unittest.mock import patch
 
+        from file_organizer.cli.dedupe import console as dedupe_console
         from file_organizer.cli.dedupe import (
             display_duplicate_group as wrapper_display,
         )
@@ -976,4 +979,4 @@ class TestDedupeWrappers:
             wrapper_display(1, "abc123", files, 5)
             mock_inner.assert_called_once()
             args = mock_inner.call_args[0]
-            assert args[1:] == (1, "abc123", files, 5)
+            assert args == (dedupe_console, 1, "abc123", files, 5)
