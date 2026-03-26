@@ -128,3 +128,6 @@ logs/security/
 .agents/
 
 coverage.json
+
+# Claude Code agents (auto-generated, not committed)
+.agents/
