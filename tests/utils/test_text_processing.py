@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -18,9 +18,17 @@ from file_organizer.utils.text_processing import (
 pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
-@pytest.mark.unit
 class TestTextProcessing:
     """Test text processing utilities."""
+
+    @pytest.fixture(autouse=True)
+    def reset_nltk_ready(self) -> None:
+        """Reset _nltk_ready flag before each test (ensures idempotency flag doesn't affect tests)."""
+        import file_organizer.utils.text_processing as text_processing_module
+
+        text_processing_module._nltk_ready = False
+        yield
+        text_processing_module._nltk_ready = False
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", False)
     @patch("file_organizer.utils.text_processing.logger")
@@ -30,6 +38,19 @@ class TestTextProcessing:
         mock_logger.warning.assert_called_with(
             "NLTK not available, text processing will be limited"
         )
+
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_ensure_nltk_data_returns_when_already_ready(self, mock_logger: MagicMock) -> None:
+        """Test ensure_nltk_data short-circuits after initialization."""
+        import file_organizer.utils.text_processing as text_processing_module
+
+        text_processing_module._nltk_ready = True
+
+        ensure_nltk_data()
+
+        mock_logger.warning.assert_not_called()
+        mock_logger.info.assert_not_called()
+        mock_logger.debug.assert_not_called()
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.nltk.download")
@@ -51,10 +72,23 @@ class TestTextProcessing:
 
             ensure_nltk_data()
 
-            assert mock_download.call_count == 3
-            mock_download.assert_any_call("stopwords", quiet=True)
-            mock_download.assert_any_call("punkt", quiet=True)
-            mock_download.assert_any_call("wordnet", quiet=True)
+            # With NLTK 3.8+ compatibility, we try punkt_tab as fallback, then punkt
+            assert mock_download.call_count == 4
+            # Verify downloads happen in expected order (stopwords, punkt_tab/punkt, wordnet)
+            # Note: __bool__() calls come from if statements checking the download result
+            mock_download.assert_has_calls(
+                [
+                    call("stopwords", quiet=True),
+                    call().__bool__(),
+                    call("punkt_tab", quiet=True),  # tried as fallback
+                    call().__bool__(),
+                    call("punkt", quiet=True),  # fallback when punkt_tab fails
+                    call().__bool__(),
+                    call("wordnet", quiet=True),
+                    call().__bool__(),
+                ],
+                any_order=False,
+            )
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.stopwords")
@@ -79,6 +113,73 @@ class TestTextProcessing:
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.nltk.download")
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("file_organizer.utils.text_processing.stopwords")
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_ensure_nltk_data_downloaded_wordnet_is_verified(
+        self,
+        mock_logger: MagicMock,
+        mock_stopwords: MagicMock,
+        mock_tokenize: MagicMock,
+        mock_download: MagicMock,
+    ) -> None:
+        """Test downloaded wordnet data is verified after a LookupError."""
+        mock_stopwords.words.return_value = ["and", "the"]
+        mock_tokenize.return_value = ["tokenized"]
+
+        with patch("nltk.corpus.wordnet") as mock_wordnet:
+            mock_wordnet.synsets.side_effect = [LookupError("missing"), ["synset"]]
+
+            ensure_nltk_data()
+
+        mock_download.assert_called_once_with("wordnet", quiet=True)
+        assert mock_wordnet.synsets.call_count == 2
+        mock_logger.info.assert_called_with("Downloading NLTK dataset: wordnet")
+        assert any(
+            "downloaded and verified successfully" in str(call)
+            for call in mock_logger.debug.call_args_list
+        )
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.nltk.download")
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("file_organizer.utils.text_processing.stopwords")
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_ensure_nltk_data_punkt_fallback_path(
+        self,
+        mock_logger: MagicMock,
+        mock_stopwords: MagicMock,
+        mock_tokenize: MagicMock,
+        mock_download: MagicMock,
+    ) -> None:
+        """Test ensure_nltk_data punkt fallback when punkt_tab fails (NLTK 3.8+ scenario)."""
+        # Initial stopwords check fails (triggers download)
+        mock_stopwords.words.side_effect = LookupError()
+
+        # Setup word_tokenize to fail on first three calls (punkt, punkt_tab, punkt attempts)
+        # then succeed on wordnet check
+        mock_tokenize.side_effect = [
+            LookupError(),  # First call in punkt try block fails
+            LookupError(),  # Call in punkt_tab fallback block fails
+            LookupError("punkt load failed"),  # Call in punkt fallback block fails
+            None,  # Call in wordnet synsets succeeds (after it was called)
+        ]
+
+        with patch("nltk.corpus.wordnet") as mock_wordnet:
+            mock_wordnet.synsets.side_effect = LookupError()
+            ensure_nltk_data()
+
+        # Verify punkt_tab was tried as fallback
+        mock_download.assert_any_call("punkt_tab", quiet=True)
+        # Verify punkt was tried when punkt_tab failed
+        mock_download.assert_any_call("punkt", quiet=True)
+        # Verify debug logs were called for fallback logic and exception handling
+        debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+        assert any("punkt_tab failed" in str(call) for call in debug_calls)
+        assert any("Failed to load punkt" in str(call) for call in debug_calls)
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.nltk.download")
     @patch("file_organizer.utils.text_processing.stopwords")
     @patch("file_organizer.utils.text_processing.logger")
     def test_ensure_nltk_data_download_fails(
@@ -92,6 +193,48 @@ class TestTextProcessing:
             ensure_nltk_data()
 
         mock_logger.warning.assert_called()
+
+    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
+    @patch("file_organizer.utils.text_processing.nltk.download")
+    @patch("file_organizer.utils.text_processing.word_tokenize")
+    @patch("file_organizer.utils.text_processing.stopwords")
+    @patch("file_organizer.utils.text_processing.logger")
+    def test_ensure_nltk_data_punkt_exception_handling(
+        self,
+        mock_logger: MagicMock,
+        mock_stopwords: MagicMock,
+        mock_tokenize: MagicMock,
+        mock_download: MagicMock,
+    ) -> None:
+        """
+        Exercise ensure_nltk_data's punkt/punkt_tab exception-handling paths by simulating successive tokenization failures.
+
+        Simulates word_tokenize raising LookupError three times (punkt, punkt_tab, punkt attempts) while wordnet succeeds; calls ensure_nltk_data() and asserts the logger produced debug messages containing "punkt not available", "punkt_tab failed", and "Failed to load punkt".
+        """
+        # Ensure stopwords succeeds so we focus on punkt path
+        mock_stopwords.words.return_value = ["test"]
+
+        # Make word_tokenize fail on all punkt path attempts
+        # First call (line 50): raises LookupError on initial punkt check
+        # Then punkt_tab download, second call (line 56): raises LookupError
+        # Then punkt download, third call (line 64): raises LookupError
+        mock_tokenize.side_effect = [
+            LookupError("punkt missing"),  # Initial punkt check exception
+            LookupError("punkt_tab missing"),  # punkt_tab fallback exception
+            LookupError("punkt load error"),  # punkt fallback exception
+        ]
+
+        with patch("nltk.corpus.wordnet") as mock_wordnet:
+            mock_wordnet.synsets.return_value = []  # wordnet succeeds
+            ensure_nltk_data()
+
+        # Verify all three exception handlers were entered (indicating all lines executed)
+        # Line 40 exception handler
+        assert any("punkt not available" in str(call) for call in mock_logger.debug.call_args_list)
+        # Line 46 exception handler
+        assert any("punkt_tab failed" in str(call) for call in mock_logger.debug.call_args_list)
+        # Line 52 exception handler
+        assert any("Failed to load punkt" in str(call) for call in mock_logger.debug.call_args_list)
 
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.stopwords")
@@ -264,7 +407,6 @@ class TestTextProcessing:
 # ────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
 class TestTextProcessingExpanded:
     """Expanded tests for text_processing utilities."""
 

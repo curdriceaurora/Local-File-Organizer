@@ -64,19 +64,50 @@ _AVI_STUB = b"RIFF\x00\x00\x00\x00AVI "
 
 
 def _write_text(path: Path, content: str | None = None) -> None:
-    """Write a text file, generating faker content if none provided."""
+    """
+    Write UTF-8 text to `path`, creating parent directories if needed.
+
+    If `content` is None, writes deterministic faker-generated text (seeded) up to 200 characters.
+
+    Parameters:
+        path (Path): Destination file path; parent directories will be created.
+        content (str | None): Text to write. If omitted, deterministic sample text is generated.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content or _fake.text(max_nb_chars=200), encoding="utf-8")
 
 
-def _write_bytes(path: Path, data: bytes) -> None:
-    """Write a binary file."""
+def _write_bytes(path: Path, data: bytes, unique_suffix: bytes | None = None) -> None:
+    """
+    Write the given bytes to `path`, creating parent directories if necessary.
+
+    If `unique_suffix` is provided, it is appended to `data` before writing to ensure the file's bytes differ from other copies (useful to prevent deduplication of repeated stubs).
+
+    Parameters:
+        path (Path): Destination file path; parent directories will be created if missing.
+        data (bytes): Binary content to write.
+        unique_suffix (bytes | None): Optional bytes to append to `data` to make the written file unique.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
+    if unique_suffix is not None:
+        data = data + unique_suffix
     path.write_bytes(data)
 
 
-def _copy_sample(name: str, dest: Path) -> None:
-    """Copy a committed sample file to *dest*."""
+def _copy_sample(name: str, dest: Path, unique_suffix: bytes | None = None) -> None:
+    """
+    Copy a committed sample file from the module samples directory to `dest`, optionally appending bytes to make the copy content distinct.
+
+    If the source sample does not exist, raises FileNotFoundError. Ensures the destination's parent directory exists before writing.
+
+    Parameters:
+        name (str): Filename of the sample file to copy (e.g., "sample.jpg", "sample.docx").
+        dest (Path): Destination file path; parent directories will be created if missing.
+        unique_suffix (bytes | None): Bytes to append to the copied file to guarantee distinct content when the same sample is copied multiple times.
+
+    Raises:
+        FileNotFoundError: If the named sample file is not present in the committed samples directory.
+    """
     src = _SAMPLES_DIR / name
     if not src.exists():
         raise FileNotFoundError(
@@ -85,10 +116,22 @@ def _copy_sample(name: str, dest: Path) -> None:
         )
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dest)
+    if unique_suffix is not None:
+        # Append unique bytes to make this copy distinct from others
+        with open(dest, "ab") as f:
+            f.write(unique_suffix)
 
 
 def _csv_content(rows: int = 5) -> str:
-    """Generate a simple CSV string with faker data."""
+    """
+    Generate a CSV string containing fake name, value, and date records.
+
+    Parameters:
+        rows (int): Number of data rows to generate (excluding the header). Defaults to 5.
+
+    Returns:
+        str: CSV-formatted string starting with the header "name,value,date" followed by `rows` records.
+    """
     header = "name,value,date"
     lines = [header]
     for _ in range(rows):
@@ -103,31 +146,13 @@ def _csv_content(rows: int = 5) -> str:
 
 @pytest.fixture(scope="session")
 def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """Build a realistic ~60-file nested folder tree.
+    """
+    Builds a realistic nested directory tree of sample files used by E2E tests.
 
-    Session-scoped so benchmark tests can reuse the same tree without
-    rebuilding it for each test function.
+    Creates ~60 files across structured folders (Work, Personal, Media, Archive, etc.) and is intended to be used as a session-scoped fixture so benchmark tests can reuse the same tree without rebuilding it.
 
-    Approximate structure (61 files across 16 leaf directories):
-        complex_tree/
-        ├── Root           (5 files)
-        ├── Work/
-        │   ├── Projects/2024   (7 files)
-        │   ├── Projects/2023   (4 files)
-        │   ├── Finance         (5 files)
-        │   ├── Reports         (5 files)
-        │   └── Clients         (3 files)
-        ├── Personal/
-        │   ├── Finance         (5 files)
-        │   ├── Health          (4 files)
-        │   └── Travel          (5 files)
-        ├── Media/
-        │   ├── Photos          (5 files)
-        │   ├── Audio           (3 files)
-        │   └── Video           (3 files)
-        └── Archive/
-            ├── 2022            (3 files)
-            └── Misc            (3 files)
+    Returns:
+        Path: Root path to the created `e2e_tree` directory containing the populated file tree.
     """
     root = tmp_path_factory.mktemp("e2e_tree")
 
@@ -143,8 +168,8 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
     # Work/Projects/2024/ (7 files)
     p2024 = work / "Projects" / "2024"
-    _copy_sample("sample.docx", p2024 / "spec_v1.docx")
-    _copy_sample("sample.docx", p2024 / "spec_v2.docx")
+    _copy_sample("sample.docx", p2024 / "spec_v1.docx", unique_suffix=b"_v1")
+    _copy_sample("sample.docx", p2024 / "spec_v2.docx", unique_suffix=b"_v2")
     _write_text(p2024 / "architecture.md", "# Architecture\n\n" + _fake.paragraph(nb_sentences=4))
     _write_text(p2024 / "data_export.csv", _csv_content())
     _write_text(p2024 / "meeting_notes.txt", _fake.text(max_nb_chars=400))
@@ -153,31 +178,31 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
     # Work/Projects/2023/ (4 files)
     p2023 = work / "Projects" / "2023"
-    _write_bytes(p2023 / "old_spec.pdf", _PDF_STUB)
+    _write_bytes(p2023 / "old_spec.pdf", _PDF_STUB, unique_suffix=b"_oldspec")
     _write_text(p2023 / "notes.txt")
     _copy_sample("sample.docx", p2023 / "report.docx")
     _write_text(p2023 / "data.csv", _csv_content(rows=3))
 
     # Work/Finance/ (5 files)
     wfin = work / "Finance"
-    _write_bytes(wfin / "invoice_001.pdf", _PDF_STUB)
-    _write_bytes(wfin / "invoice_002.pdf", _PDF_STUB)
+    _write_bytes(wfin / "invoice_001.pdf", _PDF_STUB, unique_suffix=b"_001")
+    _write_bytes(wfin / "invoice_002.pdf", _PDF_STUB, unique_suffix=b"_002")
     _write_text(wfin / "expenses_q1.csv", _csv_content())
     _write_text(wfin / "expenses_q2.csv", _csv_content())
-    _write_bytes(wfin / "report_summary.pdf", _PDF_STUB)
+    _write_bytes(wfin / "report_summary.pdf", _PDF_STUB, unique_suffix=b"_summary")
 
     # Work/Reports/ (5 files)
     wrep = work / "Reports"
-    _copy_sample("sample.docx", wrep / "Q1_summary.docx")
-    _copy_sample("sample.docx", wrep / "Q2_summary.docx")
-    _copy_sample("sample.docx", wrep / "Q3_summary.docx")
-    _copy_sample("sample.docx", wrep / "Q4_summary.docx")
-    _write_bytes(wrep / "annual_review.pdf", _PDF_STUB)
+    _copy_sample("sample.docx", wrep / "Q1_summary.docx", unique_suffix=b"_q1")
+    _copy_sample("sample.docx", wrep / "Q2_summary.docx", unique_suffix=b"_q2")
+    _copy_sample("sample.docx", wrep / "Q3_summary.docx", unique_suffix=b"_q3")
+    _copy_sample("sample.docx", wrep / "Q4_summary.docx", unique_suffix=b"_q4")
+    _write_bytes(wrep / "annual_review.pdf", _PDF_STUB, unique_suffix=b"_annual")
 
     # Work/Clients/ (3 files)
     wclients = work / "Clients"
     _write_text(wclients / "client_a_notes.txt", _fake.text(max_nb_chars=300))
-    _write_bytes(wclients / "contract_draft.pdf", _PDF_STUB)
+    _write_bytes(wclients / "contract_draft.pdf", _PDF_STUB, unique_suffix=b"_draft")
     _copy_sample("sample.docx", wclients / "proposal.docx")
 
     # -- Personal/ ------------------------------------------------------------
@@ -185,37 +210,37 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
     # Personal/Finance/ (5 files)
     pfin = personal / "Finance"
-    _write_bytes(pfin / "tax_2023.pdf", _PDF_STUB)
-    _write_bytes(pfin / "tax_2024.pdf", _PDF_STUB)
+    _write_bytes(pfin / "tax_2023.pdf", _PDF_STUB, unique_suffix=b"_2023")
+    _write_bytes(pfin / "tax_2024.pdf", _PDF_STUB, unique_suffix=b"_2024")
     _copy_sample("sample.xlsx", pfin / "budget.xlsx")
     _write_text(pfin / "receipts.csv", _csv_content(rows=3))
-    _write_bytes(pfin / "savings_plan.pdf", _PDF_STUB)
+    _write_bytes(pfin / "savings_plan.pdf", _PDF_STUB, unique_suffix=b"_savings")
 
     # Personal/Health/ (4 files)
     phealth = personal / "Health"
-    _write_bytes(phealth / "medical_record.pdf", _PDF_STUB)
+    _write_bytes(phealth / "medical_record.pdf", _PDF_STUB, unique_suffix=b"_medical")
     _write_text(phealth / "fitness_log.csv", _csv_content())
-    _write_bytes(phealth / "prescriptions.pdf", _PDF_STUB)
-    _write_bytes(phealth / "insurance.pdf", _PDF_STUB)
+    _write_bytes(phealth / "prescriptions.pdf", _PDF_STUB, unique_suffix=b"_rx")
+    _write_bytes(phealth / "insurance.pdf", _PDF_STUB, unique_suffix=b"_insurance")
 
     # Personal/Travel/ (5 files)
     ptravel = personal / "Travel"
     _write_text(ptravel / "itinerary_paris.txt", _fake.text(max_nb_chars=400))
-    _write_bytes(ptravel / "hotel_booking.pdf", _PDF_STUB)
+    _write_bytes(ptravel / "hotel_booking.pdf", _PDF_STUB, unique_suffix=b"_paris")
     _write_text(ptravel / "packing_list.md", "# Packing List\n\n" + _fake.text(max_nb_chars=200))
     _write_text(ptravel / "photo_notes.md", "# Photo Notes\n\n" + _fake.paragraph())
-    _write_bytes(ptravel / "booking_london.pdf", _PDF_STUB)
+    _write_bytes(ptravel / "booking_london.pdf", _PDF_STUB, unique_suffix=b"_london")
 
     # -- Media/ ---------------------------------------------------------------
     media = root / "Media"
 
     # Media/Photos/ (5 files)
     photos = media / "Photos"
-    _copy_sample("sample.jpg", photos / "vacation_001.jpg")
-    _copy_sample("sample.jpg", photos / "vacation_002.jpg")
-    _copy_sample("sample.png", photos / "portrait.png")
-    _copy_sample("sample.jpg", photos / "birthday.jpg")
-    _copy_sample("sample.png", photos / "sunset.png")
+    _copy_sample("sample.jpg", photos / "vacation_001.jpg", unique_suffix=b"_001")
+    _copy_sample("sample.jpg", photos / "vacation_002.jpg", unique_suffix=b"_002")
+    _copy_sample("sample.png", photos / "portrait.png", unique_suffix=b"_portrait")
+    _copy_sample("sample.jpg", photos / "birthday.jpg", unique_suffix=b"_birthday")
+    _copy_sample("sample.png", photos / "sunset.png", unique_suffix=b"_sunset")
 
     # Media/Audio/ (3 files) — processed via metadata pipeline, no AI mock needed
     audio = media / "Audio"
@@ -229,6 +254,13 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
     _write_bytes(video / "tutorial.avi", _AVI_STUB)
     _write_bytes(video / "review_clip.mp4", _MP4_STUB)
 
+    # -- Duplicates/ (test deduplication logic) ----------------------------------
+    duplicates = root / "Duplicates"
+    # Create two files with identical content to test deduplication
+    identical_content = "This is identical content for testing duplicate detection.\n"
+    _write_text(duplicates / "original_file.txt", identical_content)
+    _write_text(duplicates / "duplicate_file.txt", identical_content)
+
     # -- Archive/ -------------------------------------------------------------
     archive = root / "Archive"
 
@@ -236,7 +268,7 @@ def complex_file_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
     a2022 = archive / "2022"
     _write_text(a2022 / "archived_docs.txt")
     _write_text(a2022 / "old_notes.csv", _csv_content(rows=3))
-    _write_bytes(a2022 / "summary_2022.pdf", _PDF_STUB)
+    _write_bytes(a2022 / "summary_2022.pdf", _PDF_STUB, unique_suffix=b"_2022")
 
     # Archive/Misc/ (3 files)
     amisc = archive / "Misc"

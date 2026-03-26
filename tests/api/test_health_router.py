@@ -55,7 +55,7 @@ class TestHealthEndpoint:
             assert body["version"] == "2.0.0"
             assert body["ollama"] is True
             assert "uptime" in body
-            assert body["uptime"] >= 0
+            assert 0 <= body["uptime"] < 5  # Should be small for unit test startup
 
     def test_health_degraded(self) -> None:
         """Test health check with degraded status."""
@@ -225,7 +225,7 @@ class TestHealthEndpoint:
             assert body["status"] == "ok"
             assert body["version"] == ""
             assert body["ollama"] is False
-            assert body["uptime"] >= 0
+            assert 0 <= body["uptime"] < 5  # Should be small for unit test startup
 
     def test_health_uptime_increases(self) -> None:
         """Test that uptime increases over time."""

@@ -72,8 +72,9 @@ htmlcov/
 # MkDocs build output
 site/
 
-# Backup files
+# Backup files and directories
 *.bak
+.file_organizer_backups/
 
 # Logs
 logs/
@@ -113,8 +114,20 @@ site/
 .claude/worktrees/
 /.worktrees/
 
-# Auto Claude generated artifacts
+# Auto Claude data directory
 .auto-claude/
+
+# Auto Claude generated files
 .auto-claude-security.json
 .auto-claude-status
 .claude_settings.json
+.worktrees/
+.security-key
+logs/security/
+# Claude Code agents (auto-generated, not committed)
+.agents/
+
+coverage.json
+
+# Claude Code agents (auto-generated, not committed)
+.agents/

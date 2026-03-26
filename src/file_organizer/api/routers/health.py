@@ -14,7 +14,8 @@ from loguru import logger
 router = APIRouter(tags=["health"])
 
 # Module-level startup time used to compute uptime in health responses.
-_startup_time: float = time.time()
+# Use monotonic time to avoid issues with system clock adjustments (NTP sync).
+_startup_time: float = time.monotonic()
 
 
 @router.get("/health")
@@ -75,7 +76,7 @@ async def health(response: Response) -> dict[str, object]:
         "version": payload.get("version", ""),
         "provider": payload.get("provider", "ollama"),
         "ollama": bool(payload.get("ollama", False)),
-        "uptime": time.time() - _startup_time,
+        "uptime": time.monotonic() - _startup_time,
     }
 
     if status == "degraded":
