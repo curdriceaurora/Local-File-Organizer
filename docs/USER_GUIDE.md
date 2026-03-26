@@ -39,6 +39,9 @@ file-organizer version
 
 Extend functionality by installing optional dependency groups:
 
+!!! tip
+    For a complete feature-to-install matrix with platform-specific notes, see [Optional Features](getting-started.md#optional-features) in the Getting Started guide.
+
 | Pack | Install Command | Features |
 |------|----------------|----------|
 | Cloud | `pip install -e ".[cloud]"` | OpenAI-compatible API provider (OpenAI, LM Studio, vLLM) |
