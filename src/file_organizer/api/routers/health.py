@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import time
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 from loguru import logger
 
 router = APIRouter(tags=["health"])
@@ -19,7 +19,7 @@ _startup_time: float = time.monotonic()
 
 
 @router.get("/health")
-async def health(response: Response) -> dict[str, object]:
+async def health(request: Request, response: Response) -> dict[str, object]:
     """Return rich health status for the API and sidecar readiness probe.
 
     Response shape::
@@ -70,13 +70,18 @@ async def health(response: Response) -> dict[str, object]:
         "error": "unhealthy",
     }
 
+    startup_time = getattr(request.app.state, "health_startup_time", None)
+    if not isinstance(startup_time, float):
+        startup_time = time.monotonic()
+        request.app.state.health_startup_time = startup_time
+
     result: dict[str, object] = {
         "status": status,
         "readiness": _READINESS_MAP.get(status, "unhealthy"),
         "version": payload.get("version", ""),
         "provider": payload.get("provider", "ollama"),
         "ollama": bool(payload.get("ollama", False)),
-        "uptime": time.monotonic() - _startup_time,
+        "uptime": time.monotonic() - startup_time,
     }
 
     if status == "degraded":
