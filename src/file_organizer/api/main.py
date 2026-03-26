@@ -78,8 +78,8 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     redoc_url = "/redoc" if settings.enable_docs else None
 
     @asynccontextmanager
-    async def lifespan(a: FastAPI) -> AsyncIterator[None]:
-        a.state.health_startup_time = time.monotonic()
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        app.state.health_startup_time = time.monotonic()
         logger.info("Starting API in {} mode", settings.environment)
         yield
         logger.info("Shutting down API")

@@ -916,29 +916,29 @@ class TestDedupeWrappers:
 
     def test_format_size_delegates(self) -> None:
         from file_organizer.cli.dedupe import format_size as wrapper_format_size
+        from file_organizer.cli.dedupe_display import format_size as underlying
 
-        result = wrapper_format_size(1024)
-        assert "KB" in result or "1" in result
+        assert wrapper_format_size(1024) == underlying(1024)
+        assert wrapper_format_size(0) == underlying(0)
 
     def test_format_datetime_delegates(self) -> None:
-        import time
-
         from file_organizer.cli.dedupe import format_datetime as wrapper_format_datetime
+        from file_organizer.cli.dedupe_display import format_datetime as underlying
 
-        result = wrapper_format_datetime(time.time())
-        assert isinstance(result, str)
-        assert len(result) > 0
+        ts = 1609459200.0
+        assert wrapper_format_datetime(ts) == underlying(ts)
 
     def test_select_files_to_keep_delegates(self) -> None:
         from file_organizer.cli.dedupe import select_files_to_keep as wrapper_select
 
-        files = [
+        files: list[dict] = [
             {"path": "/a.txt", "size": 100, "mtime": 1.0},
             {"path": "/b.txt", "size": 200, "mtime": 2.0},
         ]
         result = wrapper_select(files, "newest")
-        assert isinstance(result, list)
+        assert result is files
         assert len(result) == 2
+        assert result[1].get("keep") is True
 
     def test_get_user_selection_batch_mode(self) -> None:
         from file_organizer.cli.dedupe import get_user_selection as wrapper_get_sel
@@ -951,11 +951,19 @@ class TestDedupeWrappers:
         assert result == [1]
 
     def test_display_summary_delegates(self) -> None:
+        from unittest.mock import patch
+
         from file_organizer.cli.dedupe import display_summary as wrapper_summary
 
-        wrapper_summary(5, 10, 3, 1024, dry_run=True)
+        with patch("file_organizer.cli.dedupe._display_summary") as mock_inner:
+            wrapper_summary(5, 10, 3, 1024, dry_run=True)
+            mock_inner.assert_called_once()
+            args = mock_inner.call_args[0]
+            assert args[1:] == (5, 10, 3, 1024, True)
 
     def test_display_duplicate_group_delegates(self) -> None:
+        from unittest.mock import patch
+
         from file_organizer.cli.dedupe import (
             display_duplicate_group as wrapper_display,
         )
@@ -964,4 +972,8 @@ class TestDedupeWrappers:
             {"path": "/a.txt", "size": 100, "mtime": 1.0, "keep": True},
             {"path": "/b.txt", "size": 100, "mtime": 2.0, "keep": False},
         ]
-        wrapper_display(1, "abc123", files, 5)
+        with patch("file_organizer.cli.dedupe._display_duplicate_group") as mock_inner:
+            wrapper_display(1, "abc123", files, 5)
+            mock_inner.assert_called_once()
+            args = mock_inner.call_args[0]
+            assert args[1:] == (1, "abc123", files, 5)
