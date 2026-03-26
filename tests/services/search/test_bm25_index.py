@@ -508,17 +508,19 @@ class TestBM25IndexIncrementalUpdatesCacheEdges:
                 ["finance budget", "legal contract", "recipe chocolate"],
                 paths,
             )
-            initial_mtime = cache_path.stat().st_mtime
+            import os
 
-            import time
+            # Set mtime to a known past value so we can detect cache update
+            past_time = cache_path.stat().st_mtime - 10
+            os.utime(cache_path, (past_time, past_time))
+            mtime_before = cache_path.stat().st_mtime
 
-            time.sleep(0.01)  # ensure mtime differs
             new_path = Path(tempfile.gettempdir()) / "added.txt"
             idx.add_document("machine learning neural", new_path)
 
             assert idx.size == 4
-            # Cache should be updated
-            assert cache_path.stat().st_mtime >= initial_mtime
+            # Cache should be updated (mtime changed from the past value we set)
+            assert cache_path.stat().st_mtime > mtime_before
 
     def test_remove_document_updates_cache(self) -> None:
         """remove_document saves updated index to cache file."""

@@ -723,12 +723,16 @@ def test_checksum_cache():
     assert result[1] is row2
     session.query.assert_called_once_with(FileMetadata)
 
-    # Test find_by_checksum with cache hit
+    # Test find_by_checksum with cache hit (batch IN query for validation)
     session_cached = MagicMock(spec=Session)
     cache = MagicMock(spec=InMemoryCache)
     cache.get.return_value = json.dumps({"file_ids": ["id1", "id2"]})
 
-    session_cached.get.side_effect = [row1, row2]
+    # Mock the batch IN query used for cache validation
+    query_cached = MagicMock()
+    session_cached.query.return_value = query_cached
+    query_cached.filter.return_value = query_cached
+    query_cached.all.return_value = [row1, row2]
 
     result_cached = FileMetadataRepository.find_by_checksum(
         session_cached,
@@ -738,11 +742,9 @@ def test_checksum_cache():
     )
 
     assert len(result_cached) == 2
-    assert result_cached[0] is row1
-    assert result_cached[1] is row2
+    assert row1 in result_cached
+    assert row2 in result_cached
     cache.get.assert_called_once_with("file_checksum:ws-1:checksum123")
-    # Should not query database when cache hits
-    session_cached.query.assert_not_called()
 
     # Test find_by_checksum with cache miss populates cache
     session_miss = MagicMock(spec=Session)
@@ -810,18 +812,16 @@ def test_checksum_cache():
     assert len(result_stale) == 1
     cache_stale.delete.assert_called_once_with("file_checksum:ws-1:checksum123")
 
-    # Test find_by_checksum with stale cache (missing rows)
+    # Test find_by_checksum with stale cache (missing rows - batch query returns fewer)
     session_missing = MagicMock(spec=Session)
     cache_missing = MagicMock(spec=InMemoryCache)
     cache_missing.get.return_value = json.dumps({"file_ids": ["id1", "id2"]})
 
-    # session.get returns None for id2 (missing)
-    session_missing.get.side_effect = [row1, None]
-
+    # Batch IN query returns only 1 row (id2 missing), then fallthrough query returns both
     query_missing = MagicMock()
     session_missing.query.return_value = query_missing
     query_missing.filter.return_value = query_missing
-    query_missing.all.return_value = [row1, row2]
+    query_missing.all.side_effect = [[row1], [row1, row2]]  # cache validation, then fallthrough
 
     result_missing = FileMetadataRepository.find_by_checksum(
         session_missing,
@@ -830,9 +830,9 @@ def test_checksum_cache():
         cache=cache_missing,
     )
 
-    # Should fall through to DB query when cached row is missing
+    # Should fall through to DB query when cached rows count doesn't match
     assert len(result_missing) == 2
-    cache_missing.delete.assert_called_once_with("file_checksum:ws-1:checksum123")
+    cache_missing.delete.assert_any_call("file_checksum:ws-1:checksum123")
 
     # Test upsert invalidates checksum cache on update
     session_upsert = MagicMock(spec=Session)
@@ -1604,11 +1604,16 @@ class TestFindByChecksum:
         session.query.assert_not_called()
 
     def test_find_by_checksum_cache_hit_valid(self) -> None:
-        """Lines 469-482: cache hit with valid file_ids returns rows from session.get."""
+        """Lines 469-482: cache hit with valid file_ids returns rows via batch IN query."""
         row1 = self._make_row("id1", "a.txt")
         row2 = self._make_row("id2", "b.txt")
         session = MagicMock(spec=Session)
-        session.get.side_effect = [row1, row2]
+
+        # Mock the batch IN query path used for cache validation
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row1, row2]
 
         cache = MagicMock(spec=InMemoryCache)
         cache.get.return_value = json.dumps({"file_ids": ["id1", "id2"]})
@@ -1618,23 +1623,23 @@ class TestFindByChecksum:
         )
 
         assert len(result) == 2
-        assert result[0] is row1
-        assert result[1] is row2
-        session.query.assert_not_called()
+        assert row1 in result
+        assert row2 in result
 
     def test_find_by_checksum_cache_hit_partial_missing_falls_through(self) -> None:
-        """Lines 478-483: if any cached ID is missing from DB, invalidate and query."""
+        """Lines 478-483: if cached rows count != file_ids count, invalidate and query."""
         row1 = self._make_row("id1", "a.txt")
         session = MagicMock(spec=Session)
-        session.get.side_effect = [row1, None]  # id2 missing
 
         cache = MagicMock(spec=InMemoryCache)
         cache.get.return_value = json.dumps({"file_ids": ["id1", "id2"]})
 
+        # First query call returns only 1 row (id2 missing) → cache miss
+        # Second query call is the fallthrough DB query
         query = MagicMock()
         session.query.return_value = query
         query.filter.return_value = query
-        query.all.return_value = [row1]
+        query.all.side_effect = [[row1], [row1]]  # cache validation, then fallthrough
 
         result = FileMetadataRepository.find_by_checksum(
             session, workspace_id="ws-1", checksum_sha256="chk123", cache=cache
@@ -1642,7 +1647,7 @@ class TestFindByChecksum:
 
         assert len(result) == 1
         assert result[0] is row1
-        cache.delete.assert_called_once_with("file_checksum:ws-1:chk123")
+        cache.delete.assert_any_call("file_checksum:ws-1:chk123")
 
     def test_find_by_checksum_cache_hit_invalid_json_falls_through(self) -> None:
         """Lines 473-477: invalid JSON in cache falls through to DB."""

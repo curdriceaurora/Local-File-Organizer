@@ -94,6 +94,9 @@ class BM25Persistence:
             return None, [], []
 
         try:
+            # NOTE: pickle.load is used intentionally here. The cache file is written
+            # by this application only (via the save() method) and is not user-supplied.
+            # Do not use this pattern for loading untrusted data.
             with open(cache_path, "rb") as f:
                 data = pickle.load(f)
 

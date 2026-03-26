@@ -6,6 +6,7 @@ for large files, and batch processing capabilities.
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import logging
 from pathlib import Path
@@ -220,9 +221,9 @@ class FileHasher:
         # Create processor and process batch
         processor = ParallelProcessor(config)
 
-        # Create a wrapper function that captures algorithm and chunk_size
-        def hash_fn(path: Path) -> str:
-            return _hash_file(path, algorithm, self.chunk_size)
+        # Use functools.partial instead of a closure so the callable is picklable
+        # by ProcessPoolExecutor.
+        hash_fn = functools.partial(_hash_file, algorithm=algorithm, chunk_size=self.chunk_size)
 
         # Process files and collect results
         batch_result = processor.process_batch(file_paths, hash_fn)

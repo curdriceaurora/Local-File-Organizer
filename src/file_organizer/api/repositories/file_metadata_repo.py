@@ -233,18 +233,20 @@ class FileMetadataRepository:
         # Get total count for pagination metadata
         total = session.query(func.count(FileMetadata.id)).filter(base_filter).scalar() or 0
 
-        # Determine sort column
-        sort_column = getattr(FileMetadata, sort_by)
-
-        # Apply sort order
+        # Determine sort column with secondary tiebreaker for deterministic pagination
+        primary_col = getattr(FileMetadata, sort_by)
         if sort_order == "desc":
-            sort_column = desc(sort_column)
+            sort_column = desc(primary_col)
+            id_tiebreaker = desc(FileMetadata.id)
+        else:
+            sort_column = primary_col
+            id_tiebreaker = FileMetadata.id
 
         # Execute paginated query
         items = (
             session.query(FileMetadata)
             .filter(base_filter)
-            .order_by(sort_column)
+            .order_by(sort_column, id_tiebreaker)
             .offset(offset)
             .limit(limit)
             .all()
@@ -353,15 +355,43 @@ class FileMetadataRepository:
             },
         )
 
+        # Prefetch old checksums before upsert so we can invalidate stale cache keys
+        old_checksums: dict[tuple[str, str], str | None] = {}
+        if cache is not None:
+            ws_paths = [(rec["workspace_id"], rec["relative_path"]) for rec in records]
+            existing_rows = (
+                session.query(
+                    FileMetadata.workspace_id,
+                    FileMetadata.relative_path,
+                    FileMetadata.checksum_sha256,
+                )
+                .filter(
+                    and_(
+                        FileMetadata.workspace_id.in_({wp[0] for wp in ws_paths}),
+                        FileMetadata.relative_path.in_({wp[1] for wp in ws_paths}),
+                    )
+                )
+                .all()
+            )
+            for row in existing_rows:
+                old_checksums[(row.workspace_id, row.relative_path)] = row.checksum_sha256
+
         session.execute(stmt)
         session.flush()
 
         if cache is not None:
             for rec in records:
                 cache.delete(_cache_key(rec["workspace_id"], rec["relative_path"]))
-                checksum = rec.get("checksum_sha256")
-                if checksum is not None:
-                    cache.delete(_checksum_cache_key(rec["workspace_id"], checksum))
+                new_checksum = rec.get("checksum_sha256")
+                old_checksum = old_checksums.get(
+                    (rec["workspace_id"], rec["relative_path"])
+                )
+                # Invalidate old checksum cache if it changed
+                if old_checksum is not None and old_checksum != new_checksum:
+                    cache.delete(_checksum_cache_key(rec["workspace_id"], old_checksum))
+                # Invalidate new checksum cache to ensure consistency
+                if new_checksum is not None:
+                    cache.delete(_checksum_cache_key(rec["workspace_id"], new_checksum))
 
         return len(records)
 
@@ -413,7 +443,7 @@ class FileMetadataRepository:
                     cache.delete(_cache_key(workspace_id, rel_path))
                 paths_to_fetch.append(rel_path)
         else:
-            paths_to_fetch = relative_paths
+            paths_to_fetch = list(relative_paths)
 
         if paths_to_fetch:
             rows = (
@@ -443,7 +473,7 @@ class FileMetadataRepository:
         session: Session,
         *,
         workspace_id: str,
-        checksum_sha256: str,
+        checksum_sha256: str | None,
         cache: CacheBackend | None = None,
         cache_ttl_seconds: int = 900,
     ) -> list[FileMetadata]:
@@ -475,11 +505,14 @@ class FileMetadataRepository:
                     file_ids = data.get("file_ids")
                 except (TypeError, ValueError, AttributeError):
                     file_ids = None
-                if isinstance(file_ids, list):
-                    rows = [session.get(FileMetadata, fid) for fid in file_ids]
-                    valid_rows = [r for r in rows if r is not None]
-                    if len(valid_rows) == len(file_ids):
-                        return valid_rows
+                if isinstance(file_ids, list) and file_ids:
+                    rows = (
+                        session.query(FileMetadata)
+                        .filter(FileMetadata.id.in_(file_ids))
+                        .all()
+                    )
+                    if len(rows) == len(file_ids):
+                        return rows
                 cache.delete(cache_key)
 
         rows = (

@@ -36,12 +36,12 @@ def sample_bm25_index() -> BM25Okapi:
 
 
 @pytest.fixture
-def sample_paths() -> list[Path]:
+def sample_paths(tmp_path: Path) -> list[Path]:
     """Return a list of sample file paths."""
     return [
-        Path("/tmp/finance.txt"),
-        Path("/tmp/legal.txt"),
-        Path("/tmp/recipe.txt"),
+        tmp_path / "finance.txt",
+        tmp_path / "legal.txt",
+        tmp_path / "recipe.txt",
     ]
 
 
@@ -395,8 +395,12 @@ class TestBM25PersistenceIntegration:
         temp_cache_path: Path,
     ) -> None:
         """Multiple save/load cycles work correctly."""
-        paths1 = [Path("/tmp/file1.txt"), Path("/tmp/file2.txt")]
-        paths2 = [Path("/tmp/file3.txt"), Path("/tmp/file4.txt"), Path("/tmp/file5.txt")]
+        paths1 = [temp_cache_path.parent / "file1.txt", temp_cache_path.parent / "file2.txt"]
+        paths2 = [
+            temp_cache_path.parent / "file3.txt",
+            temp_cache_path.parent / "file4.txt",
+            temp_cache_path.parent / "file5.txt",
+        ]
 
         # First cycle
         persistence.save(sample_bm25_index, paths1, temp_cache_path)
@@ -493,7 +497,7 @@ class TestBM25PersistenceLoadValidationBranches:
         """Load returns (None, [], []) when documents is not a list (line 120-124)."""
         data = {
             "bm25_index": "fake_index",
-            "paths": [Path("/tmp/a.txt")],
+            "paths": [Path("a.txt")],
             "documents": "not a list",
         }
         with open(temp_cache_path, "wb") as f:
@@ -512,7 +516,7 @@ class TestBM25PersistenceLoadValidationBranches:
         """Load returns (None, [], []) when documents contains non-str items (line 120-124)."""
         data = {
             "bm25_index": "fake_index",
-            "paths": [Path("/tmp/a.txt")],
+            "paths": [Path("a.txt")],
             "documents": [123, 456],
         }
         with open(temp_cache_path, "wb") as f:
@@ -531,7 +535,7 @@ class TestBM25PersistenceLoadValidationBranches:
         """Load returns (None, [], []) when documents length != paths length (lines 126-132)."""
         data = {
             "bm25_index": "fake_index",
-            "paths": [Path("/tmp/a.txt"), Path("/tmp/b.txt")],
+            "paths": [Path("a.txt"), Path("b.txt")],
             "documents": ["only one doc"],
         }
         with open(temp_cache_path, "wb") as f:
@@ -581,7 +585,7 @@ class TestBM25PersistenceIsValidEdgeCases:
         """is_valid returns False when documents field is not a list (line 191)."""
         data = {
             "bm25_index": "fake",
-            "paths": [Path("/tmp/a.txt")],
+            "paths": [Path("a.txt")],
             "documents": "not a list",
         }
         with open(temp_cache_path, "wb") as f:
@@ -597,7 +601,7 @@ class TestBM25PersistenceIsValidEdgeCases:
         """is_valid returns False when documents count != paths count (line 193)."""
         data = {
             "bm25_index": "fake",
-            "paths": [Path("/tmp/a.txt"), Path("/tmp/b.txt")],
+            "paths": [Path("a.txt"), Path("b.txt")],
             "documents": ["only one"],
         }
         with open(temp_cache_path, "wb") as f:
@@ -613,10 +617,11 @@ class TestBM25PersistenceIsValidEdgeCases:
         """is_valid returns True when documents is empty (no mismatch check needed)."""
         data = {
             "bm25_index": "fake",
-            "paths": [Path("/tmp/a.txt")],
+            "paths": [temp_cache_path.parent / "a.txt"],
             "documents": [],
         }
         with open(temp_cache_path, "wb") as f:
             pickle.dump(data, f)
 
         assert persistence.is_valid(temp_cache_path) is True
+
