@@ -20,7 +20,7 @@ from loguru import logger
 _nltk_ready: bool = False
 
 
-def ensure_nltk_data() -> None:
+def ensure_nltk_data() -> None:  # noqa: C901
     """Ensure required NLTK datasets are present for text processing.
 
     Idempotent function that initializes NLTK resources once per session. Returns immediately
@@ -52,14 +52,18 @@ def ensure_nltk_data() -> None:
                     # If punkt fails, it might be because punkt_tab is needed (NLTK 3.8+)
                     logger.debug("punkt not available, trying punkt_tab")
                     try:
-                        nltk.download("punkt_tab", quiet=True)
-                        word_tokenize("test")
+                        if nltk.download("punkt_tab", quiet=True):
+                            word_tokenize("test")
+                        else:
+                            raise LookupError("punkt_tab download failed")
                     except LookupError:
                         # If punkt_tab also fails, fall back to punkt (older NLTK versions)
                         logger.debug("punkt_tab failed, falling back to punkt")
                         try:
-                            nltk.download("punkt", quiet=True)
-                            word_tokenize("test")
+                            if nltk.download("punkt", quiet=True):
+                                word_tokenize("test")
+                            else:
+                                raise LookupError("punkt download failed")
                         except Exception as e:
                             logger.debug(f"Failed to load punkt: {e}")
             elif dataset == "wordnet":
@@ -70,7 +74,9 @@ def ensure_nltk_data() -> None:
             # Dataset not found, download it
             try:
                 logger.info(f"Downloading NLTK dataset: {dataset}")
-                nltk.download(dataset, quiet=True)
+                if not nltk.download(dataset, quiet=True):
+                    logger.warning(f"Failed to download NLTK dataset: {dataset}")
+                    continue
                 # Verify download succeeded by attempting to load the dataset
                 if dataset == "stopwords":
                     stopwords.words("english")
@@ -362,9 +368,6 @@ def extract_keywords(text: str, top_n: int = 5) -> list[str]:
 
         word_freq = Counter(words)
         return [word for word, _ in word_freq.most_common(top_n)]
-
-    # Ensure NLTK data is available before attempting tokenization
-    ensure_nltk_data()
 
     try:
         from nltk.probability import FreqDist

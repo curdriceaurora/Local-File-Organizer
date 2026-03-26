@@ -369,51 +369,6 @@ class TestTextProcessing:
         keywords = extract_keywords("test text")
         assert keywords == ["keyword", "extraction"]
 
-    @patch("file_organizer.utils.text_processing.ensure_nltk_data")
-    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
-    @patch("file_organizer.utils.text_processing.word_tokenize")
-    @patch("file_organizer.utils.text_processing.nltk.probability.FreqDist", create=True)
-    def test_extract_keywords_calls_ensure_nltk_data(
-        self,
-        mock_freqdist_cls: MagicMock,
-        mock_tokenize: MagicMock,
-        mock_ensure_nltk: MagicMock,
-    ) -> None:
-        """Test that extract_keywords calls ensure_nltk_data when NLTK is available."""
-        mock_tokenize.return_value = ["keyword1", "keyword2", "keyword3"]
-        mock_freqdist = MagicMock()
-        mock_freqdist.most_common.return_value = [("keyword1", 10), ("keyword2", 5)]
-        mock_freqdist_cls.return_value = mock_freqdist
-
-        keywords = extract_keywords("test content")
-
-        # Verify ensure_nltk_data was called (tests line 348)
-        mock_ensure_nltk.assert_called_once()
-        assert keywords == ["keyword1", "keyword2"]
-
-    @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
-    @patch("file_organizer.utils.text_processing.get_unwanted_words")
-    @patch("file_organizer.utils.text_processing.word_tokenize")
-    @patch("nltk.probability.FreqDist")
-    def test_extract_keywords_executes_ensure_nltk_data_path(
-        self,
-        mock_freqdist_cls: MagicMock,
-        mock_tokenize: MagicMock,
-        mock_get_unwanted_words: MagicMock,
-    ) -> None:
-        """Test extract_keywords calls the real ensure_nltk_data path before tokenization."""
-        mock_tokenize.return_value = ["keyword", "analysis", "plan"]
-        mock_get_unwanted_words.return_value = set()
-        mock_freqdist = MagicMock()
-        mock_freqdist.most_common.return_value = [("keyword", 2), ("analysis", 1)]
-        mock_freqdist_cls.return_value = mock_freqdist
-
-        with patch("file_organizer.utils.text_processing.ensure_nltk_data") as mock_ensure_nltk:
-            keywords = extract_keywords("keyword analysis plan", top_n=2)
-
-        mock_ensure_nltk.assert_called_once_with()
-        assert keywords == ["keyword", "analysis"]
-
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.word_tokenize")
     def test_extract_keywords_error(self, mock_tokenize: MagicMock) -> None:
