@@ -837,3 +837,33 @@ class TestCollectFiles:
         (tmp_path / "file.txt").write_text("hello")
         result = _collect_files(tmp_path, recursive=False, include_hidden=False)
         assert len(result) == 1
+
+    def test_collect_directory_filters_hidden_files(self, tmp_path: Path) -> None:
+        """Hidden files in a directory are excluded when include_hidden=False (lines 81-82)."""
+        from file_organizer.api.routers.files import _collect_files
+
+        # Create normal files
+        (tmp_path / "readme.txt").write_text("hello")
+        (tmp_path / "notes.md").write_text("world")
+        # Create hidden files (dot-prefixed)
+        (tmp_path / ".hidden").write_text("secret")
+        (tmp_path / ".DS_Store").write_bytes(b"\x00\x00")
+
+        result = _collect_files(tmp_path, recursive=False, include_hidden=False)
+        result_names = {f.name for f in result}
+        assert result_names == {"readme.txt", "notes.md"}
+        assert ".hidden" not in result_names
+        assert ".DS_Store" not in result_names
+
+    def test_collect_directory_includes_hidden_when_requested(self, tmp_path: Path) -> None:
+        """Hidden files in a directory are included when include_hidden=True."""
+        from file_organizer.api.routers.files import _collect_files
+
+        (tmp_path / "readme.txt").write_text("hello")
+        (tmp_path / ".hidden").write_text("secret")
+
+        result = _collect_files(tmp_path, recursive=False, include_hidden=True)
+        result_names = {f.name for f in result}
+        assert "readme.txt" in result_names
+        assert ".hidden" in result_names
+        assert len(result) == 2

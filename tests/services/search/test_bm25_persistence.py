@@ -432,3 +432,191 @@ class TestBM25PersistenceIntegration:
         assert bm25 is None
         assert paths == []
         assert documents == []
+
+
+# ---------------------------------------------------------------------------
+# Additional Coverage Tests — error handling & validation branches
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBM25PersistenceSaveErrorHandling:
+    """Tests for BM25Persistence.save() error handling (lines 73-75)."""
+
+    def test_save_permission_error_raises_oserror(
+        self,
+        persistence: BM25Persistence,
+        sample_bm25_index: BM25Okapi,
+        sample_paths: list[Path],
+        tmp_path: Path,
+    ) -> None:
+        """Save raises OSError when the cache directory is not writable."""
+        read_only_dir = tmp_path / "readonly"
+        read_only_dir.mkdir()
+        cache_path = read_only_dir / "cache.pkl"
+
+        # Make directory read-only to trigger OSError on file creation
+        read_only_dir.chmod(0o444)
+        try:
+            with pytest.raises(OSError):
+                persistence.save(sample_bm25_index, sample_paths, cache_path)
+        finally:
+            read_only_dir.chmod(0o755)
+
+    def test_save_unpicklable_object_raises_pickling_error(
+        self,
+        persistence: BM25Persistence,
+        sample_paths: list[Path],
+        tmp_path: Path,
+    ) -> None:
+        """Save raises PicklingError when the index cannot be serialized."""
+
+        # A lambda is not picklable
+        unpicklable = lambda x: x  # noqa: E731
+        cache_path = tmp_path / "cache.pkl"
+
+        with pytest.raises((pickle.PicklingError, AttributeError)):
+            persistence.save(unpicklable, sample_paths, cache_path)
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBM25PersistenceLoadValidationBranches:
+    """Tests for BM25Persistence.load() validation branches (lines 120, 124, 127, 132)."""
+
+    def test_load_documents_not_list_returns_none(
+        self,
+        persistence: BM25Persistence,
+        temp_cache_path: Path,
+    ) -> None:
+        """Load returns (None, [], []) when documents is not a list (line 120-124)."""
+        data = {
+            "bm25_index": "fake_index",
+            "paths": [Path("/tmp/a.txt")],
+            "documents": "not a list",
+        }
+        with open(temp_cache_path, "wb") as f:
+            pickle.dump(data, f)
+
+        bm25, paths, documents = persistence.load(temp_cache_path)
+        assert bm25 is None
+        assert paths == []
+        assert documents == []
+
+    def test_load_documents_with_non_string_items_returns_none(
+        self,
+        persistence: BM25Persistence,
+        temp_cache_path: Path,
+    ) -> None:
+        """Load returns (None, [], []) when documents contains non-str items (line 120-124)."""
+        data = {
+            "bm25_index": "fake_index",
+            "paths": [Path("/tmp/a.txt")],
+            "documents": [123, 456],
+        }
+        with open(temp_cache_path, "wb") as f:
+            pickle.dump(data, f)
+
+        bm25, paths, documents = persistence.load(temp_cache_path)
+        assert bm25 is None
+        assert paths == []
+        assert documents == []
+
+    def test_load_documents_count_mismatch_returns_none(
+        self,
+        persistence: BM25Persistence,
+        temp_cache_path: Path,
+    ) -> None:
+        """Load returns (None, [], []) when documents length != paths length (lines 126-132)."""
+        data = {
+            "bm25_index": "fake_index",
+            "paths": [Path("/tmp/a.txt"), Path("/tmp/b.txt")],
+            "documents": ["only one doc"],
+        }
+        with open(temp_cache_path, "wb") as f:
+            pickle.dump(data, f)
+
+        bm25, paths, documents = persistence.load(temp_cache_path)
+        assert bm25 is None
+        assert paths == []
+        assert documents == []
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBM25PersistenceDeleteErrorPath:
+    """Tests for BM25Persistence.delete() error handling (lines 160-162)."""
+
+    def test_delete_permission_error_raises(
+        self,
+        persistence: BM25Persistence,
+        tmp_path: Path,
+    ) -> None:
+        """Delete raises OSError when file cannot be removed due to permissions."""
+        protected_dir = tmp_path / "protected"
+        protected_dir.mkdir()
+        cache_file = protected_dir / "cache.pkl"
+        cache_file.write_bytes(b"data")
+
+        # Make the parent directory read-only so unlink fails
+        protected_dir.chmod(0o444)
+        try:
+            with pytest.raises(OSError):
+                persistence.delete(cache_file)
+        finally:
+            protected_dir.chmod(0o755)
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBM25PersistenceIsValidEdgeCases:
+    """Tests for BM25Persistence.is_valid() additional validation (lines 191, 193)."""
+
+    def test_is_valid_documents_not_list_returns_false(
+        self,
+        persistence: BM25Persistence,
+        temp_cache_path: Path,
+    ) -> None:
+        """is_valid returns False when documents field is not a list (line 191)."""
+        data = {
+            "bm25_index": "fake",
+            "paths": [Path("/tmp/a.txt")],
+            "documents": "not a list",
+        }
+        with open(temp_cache_path, "wb") as f:
+            pickle.dump(data, f)
+
+        assert persistence.is_valid(temp_cache_path) is False
+
+    def test_is_valid_documents_count_mismatch_returns_false(
+        self,
+        persistence: BM25Persistence,
+        temp_cache_path: Path,
+    ) -> None:
+        """is_valid returns False when documents count != paths count (line 193)."""
+        data = {
+            "bm25_index": "fake",
+            "paths": [Path("/tmp/a.txt"), Path("/tmp/b.txt")],
+            "documents": ["only one"],
+        }
+        with open(temp_cache_path, "wb") as f:
+            pickle.dump(data, f)
+
+        assert persistence.is_valid(temp_cache_path) is False
+
+    def test_is_valid_documents_empty_with_paths_returns_true(
+        self,
+        persistence: BM25Persistence,
+        temp_cache_path: Path,
+    ) -> None:
+        """is_valid returns True when documents is empty (no mismatch check needed)."""
+        data = {
+            "bm25_index": "fake",
+            "paths": [Path("/tmp/a.txt")],
+            "documents": [],
+        }
+        with open(temp_cache_path, "wb") as f:
+            pickle.dump(data, f)
+
+        assert persistence.is_valid(temp_cache_path) is True

@@ -439,3 +439,61 @@ class TestRelativePathHelper:
         # root_a matches first and gives shorter relative path
         result = _relative_path(fp, [root_a, root_b])
         assert result == str(Path("b") / "file.txt")
+
+
+# ---------------------------------------------------------------------------
+# _load_cached_results deserialization error path (lines 89-91)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestLoadCachedResultsErrorPath:
+    """Tests for _load_cached_results handling corrupt/invalid cached data."""
+
+    def test_corrupt_json_returns_none(self) -> None:
+        """Corrupt JSON in cache returns None instead of raising (line 89-91)."""
+        from file_organizer.api.routers.search import (
+            _load_cached_results,
+            _search_cache,
+        )
+
+        cache_key = "search:test_corrupt_json"
+        # Store invalid JSON in the cache
+        _search_cache.set(cache_key, "not valid json {{{", ttl_seconds=60)
+
+        result = _load_cached_results(cache_key)
+        assert result is None
+
+        # Clean up
+        _search_cache.delete(cache_key)
+
+    def test_valid_json_but_invalid_schema_returns_none(self) -> None:
+        """Valid JSON that cannot be deserialized to SearchResult returns None."""
+        import json
+
+        from file_organizer.api.routers.search import (
+            _load_cached_results,
+            _search_cache,
+        )
+
+        cache_key = "search:test_bad_schema"
+        # Store valid JSON but with fields that don't match SearchResult
+        _search_cache.set(
+            cache_key,
+            json.dumps([{"bad_field": "value"}]),
+            ttl_seconds=60,
+        )
+
+        result = _load_cached_results(cache_key)
+        assert result is None
+
+        # Clean up
+        _search_cache.delete(cache_key)
+
+    def test_missing_cache_key_returns_none(self) -> None:
+        """Non-existent cache key returns None (not an error)."""
+        from file_organizer.api.routers.search import _load_cached_results
+
+        result = _load_cached_results("search:nonexistent_key_12345")
+        assert result is None

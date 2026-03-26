@@ -927,3 +927,803 @@ def test_checksum_cache():
     delete_calls = [call[0][0] for call in cache_bulk.delete.call_args_list]
     assert "file_checksum:ws-1:checksum1" in delete_calls
     assert "file_checksum:ws-1:checksum2" in delete_calls
+
+
+class TestChecksumCacheKeyHelper:
+    """Tests for _checksum_cache_key helper (line 50)."""
+
+    def test_checksum_cache_key_format(self) -> None:
+        key = _checksum_cache_key("ws-abc", "deadbeef123")
+        assert key == "file_checksum:ws-abc:deadbeef123"
+
+    def test_checksum_cache_key_different_workspace(self) -> None:
+        key1 = _checksum_cache_key("ws-1", "sha256abc")
+        key2 = _checksum_cache_key("ws-2", "sha256abc")
+        assert key1 != key2
+        assert key1 == "file_checksum:ws-1:sha256abc"
+        assert key2 == "file_checksum:ws-2:sha256abc"
+
+
+class TestUpsertCacheInvalidation:
+    """Tests for upsert cache invalidation paths (lines 97-99, 134-135, 138-139)."""
+
+    def _make_session(self, existing_row: FileMetadata | None = None) -> MagicMock:
+        session = MagicMock(spec=Session)
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.first.return_value = existing_row
+        return session
+
+    def _make_existing_row(
+        self, checksum: str | None = None
+    ) -> MagicMock:
+        """Create a properly configured existing row mock for upsert tests."""
+        existing = MagicMock(spec=FileMetadata)
+        existing.id = "existing-id"
+        existing.workspace_id = "ws-1"
+        existing.path = "/p"
+        existing.relative_path = "f.txt"
+        existing.name = "f.txt"
+        existing.size_bytes = 10
+        existing.mime_type = None
+        existing.checksum_sha256 = checksum
+        existing.last_modified = None
+        existing.extra_json = None
+        return existing
+
+    def test_upsert_update_invalidates_old_checksum_cache(self) -> None:
+        """When checksum changes on update, old checksum cache is invalidated (lines 134-135)."""
+        existing = self._make_existing_row(checksum="old_sha")
+        session = self._make_session(existing_row=existing)
+        cache = MagicMock(spec=InMemoryCache)
+
+        FileMetadataRepository.upsert(
+            session,
+            workspace_id="ws-1",
+            path="/p",
+            relative_path="f.txt",
+            name="f.txt",
+            size_bytes=10,
+            checksum_sha256="new_sha",
+            cache=cache,
+        )
+
+        delete_keys = [c[0][0] for c in cache.delete.call_args_list]
+        assert "file_checksum:ws-1:old_sha" in delete_keys
+        assert "file_checksum:ws-1:new_sha" in delete_keys
+
+    def test_upsert_update_same_checksum_no_old_invalidation(self) -> None:
+        """When checksum unchanged on update, old checksum cache is NOT invalidated."""
+        existing = self._make_existing_row(checksum="same_sha")
+        session = self._make_session(existing_row=existing)
+        cache = MagicMock(spec=InMemoryCache)
+
+        FileMetadataRepository.upsert(
+            session,
+            workspace_id="ws-1",
+            path="/p",
+            relative_path="f.txt",
+            name="f.txt",
+            size_bytes=10,
+            checksum_sha256="same_sha",
+            cache=cache,
+        )
+
+        delete_keys = [c[0][0] for c in cache.delete.call_args_list]
+        # old_checksum == new_checksum, so the condition on line 134 is False
+        # Only the new checksum invalidation (line 138-139) fires
+        assert delete_keys.count("file_checksum:ws-1:same_sha") == 1
+
+    def test_upsert_update_none_to_checksum(self) -> None:
+        """When old_checksum is None, only new checksum cache is invalidated (line 138-139)."""
+        existing = self._make_existing_row(checksum=None)
+        session = self._make_session(existing_row=existing)
+        cache = MagicMock(spec=InMemoryCache)
+
+        FileMetadataRepository.upsert(
+            session,
+            workspace_id="ws-1",
+            path="/p",
+            relative_path="f.txt",
+            name="f.txt",
+            size_bytes=10,
+            checksum_sha256="new_sha",
+            cache=cache,
+        )
+
+        delete_keys = [c[0][0] for c in cache.delete.call_args_list]
+        # old_checksum is None so line 134 is False; only line 138-139 fires
+        assert "file_checksum:ws-1:new_sha" in delete_keys
+        assert len([k for k in delete_keys if k.startswith("file_checksum:")]) == 1
+
+    def test_upsert_create_with_checksum_invalidates_new_cache(self) -> None:
+        """When creating a new row with checksum, new checksum cache is invalidated (line 138)."""
+        session = self._make_session(existing_row=None)
+        cache = MagicMock(spec=InMemoryCache)
+
+        FileMetadataRepository.upsert(
+            session,
+            workspace_id="ws-1",
+            path="/p",
+            relative_path="f.txt",
+            name="f.txt",
+            size_bytes=10,
+            checksum_sha256="create_sha",
+            cache=cache,
+        )
+
+        delete_keys = [c[0][0] for c in cache.delete.call_args_list]
+        assert "file_checksum:ws-1:create_sha" in delete_keys
+
+    def test_upsert_create_without_checksum_no_checksum_invalidation(self) -> None:
+        """When creating without checksum, no checksum cache invalidation (line 138 is False)."""
+        session = self._make_session(existing_row=None)
+        cache = MagicMock(spec=InMemoryCache)
+
+        FileMetadataRepository.upsert(
+            session,
+            workspace_id="ws-1",
+            path="/p",
+            relative_path="f.txt",
+            name="f.txt",
+            size_bytes=10,
+            checksum_sha256=None,
+            cache=cache,
+        )
+
+        delete_keys = [c[0][0] for c in cache.delete.call_args_list]
+        # No checksum cache keys should be deleted
+        assert not any(k.startswith("file_checksum:") for k in delete_keys)
+
+    def test_upsert_captures_old_checksum_before_update(self) -> None:
+        """Lines 97-99: old_checksum is captured from the existing row before update."""
+        existing = self._make_existing_row(checksum="original_sha")
+        session = self._make_session(existing_row=existing)
+        cache = MagicMock(spec=InMemoryCache)
+
+        FileMetadataRepository.upsert(
+            session,
+            workspace_id="ws-1",
+            path="/p",
+            relative_path="f.txt",
+            name="f.txt",
+            size_bytes=10,
+            checksum_sha256="updated_sha",
+            cache=cache,
+        )
+
+        # Verify the existing row's checksum was overwritten
+        assert existing.checksum_sha256 == "updated_sha"
+        # But old checksum cache was still invalidated (captured before overwrite)
+        delete_keys = [c[0][0] for c in cache.delete.call_args_list]
+        assert "file_checksum:ws-1:original_sha" in delete_keys
+
+
+class TestListForWorkspacePaginatedSorting:
+    """Tests for list_for_workspace_paginated sort columns and orders (lines 227-257)."""
+
+    def _make_session(
+        self, total_count: int, items: list[MagicMock]
+    ) -> MagicMock:
+        session = MagicMock(spec=Session)
+        count_query = MagicMock()
+        count_query.filter.return_value = count_query
+        count_query.scalar.return_value = total_count
+
+        items_query = MagicMock()
+        items_query.filter.return_value = items_query
+        items_query.order_by.return_value = items_query
+        items_query.offset.return_value = items_query
+        items_query.limit.return_value = items_query
+        items_query.all.return_value = items
+
+        session.query.side_effect = [count_query, items_query]
+        return session
+
+    def test_sort_by_last_modified_asc(self) -> None:
+        """Test sorting by last_modified ascending (line 237)."""
+        rows = [MagicMock(spec=FileMetadata)]
+        session = self._make_session(total_count=1, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session,
+            workspace_id="ws-1",
+            limit=10,
+            offset=0,
+            sort_by="last_modified",
+            sort_order="asc",
+        )
+
+        assert result["items"] == rows
+        assert result["total"] == 1
+
+    def test_sort_by_relative_path_desc(self) -> None:
+        """Test desc sort order (lines 240-241)."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(3)]
+        session = self._make_session(total_count=3, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session,
+            workspace_id="ws-1",
+            limit=10,
+            offset=0,
+            sort_by="relative_path",
+            sort_order="desc",
+        )
+
+        assert result["items"] == rows
+        assert result["total"] == 3
+
+    def test_sort_by_name_desc(self) -> None:
+        """Test sorting by name descending (lines 237, 240-241)."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(2)]
+        session = self._make_session(total_count=2, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session,
+            workspace_id="ws-1",
+            limit=5,
+            offset=0,
+            sort_by="name",
+            sort_order="desc",
+        )
+
+        assert result["items"] == rows
+        assert result["total"] == 2
+        assert result["limit"] == 5
+        assert result["offset"] == 0
+
+    def test_pagination_has_next_and_has_prev_flags(self) -> None:
+        """Test has_next and has_prev computation (lines 254-255, 257)."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(5)]
+        session = self._make_session(total_count=20, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session, workspace_id="ws-1", limit=5, offset=5
+        )
+
+        assert result["has_next"] is True  # 5 + 5 = 10 < 20
+        assert result["has_prev"] is True  # offset 5 > 0
+        assert result["total"] == 20
+
+    def test_pagination_exact_boundary_no_next(self) -> None:
+        """Test has_next is False when offset + limit == total (line 254)."""
+        rows = [MagicMock(spec=FileMetadata) for _ in range(5)]
+        session = self._make_session(total_count=10, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session, workspace_id="ws-1", limit=5, offset=5
+        )
+
+        assert result["has_next"] is False  # 5 + 5 = 10, not < 10
+        assert result["has_prev"] is True
+
+    def test_offset_and_limit_normalization(self) -> None:
+        """Test that offset and limit are normalized (lines 227-228)."""
+        rows: list[MagicMock] = []
+        session = self._make_session(total_count=0, items=rows)
+
+        result = FileMetadataRepository.list_for_workspace_paginated(
+            session, workspace_id="ws-1", limit=-5, offset=-10
+        )
+
+        assert result["offset"] == 0
+        assert result["limit"] == 1
+
+
+class TestDeleteByRelativePathCacheHandling:
+    """Tests for delete_by_relative_path cache handling (lines 286, 292-293)."""
+
+    def test_delete_with_checksum_invalidates_checksum_cache(self) -> None:
+        """Line 286, 292-293: deleting a row with a checksum invalidates checksum cache."""
+        row = MagicMock(spec=FileMetadata)
+        row.checksum_sha256 = "delete_me_sha"
+        session = MagicMock(spec=Session)
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.first.return_value = row
+        cache = MagicMock(spec=InMemoryCache)
+
+        result = FileMetadataRepository.delete_by_relative_path(
+            session, workspace_id="ws-1", relative_path="file.txt", cache=cache
+        )
+
+        assert result is True
+        delete_keys = [c[0][0] for c in cache.delete.call_args_list]
+        assert "file_metadata:ws-1:file.txt" in delete_keys
+        assert "file_checksum:ws-1:delete_me_sha" in delete_keys
+        assert len(delete_keys) == 2
+
+    def test_delete_without_checksum_no_checksum_cache_invalidation(self) -> None:
+        """Line 292: when checksum is None, only path cache is invalidated."""
+        row = MagicMock(spec=FileMetadata)
+        row.checksum_sha256 = None
+        session = MagicMock(spec=Session)
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.first.return_value = row
+        cache = MagicMock(spec=InMemoryCache)
+
+        result = FileMetadataRepository.delete_by_relative_path(
+            session, workspace_id="ws-1", relative_path="file.txt", cache=cache
+        )
+
+        assert result is True
+        cache.delete.assert_called_once_with("file_metadata:ws-1:file.txt")
+
+
+class TestBulkUpsert:
+    """Tests for bulk_upsert (lines 319-366)."""
+
+    def test_bulk_upsert_empty_records_returns_zero(self) -> None:
+        """Lines 319-320: empty records list returns 0 immediately."""
+        session = MagicMock(spec=Session)
+        result = FileMetadataRepository.bulk_upsert(session, records=[])
+        assert result == 0
+        session.execute.assert_not_called()
+
+    def test_bulk_upsert_constructs_insert_data(self) -> None:
+        """Lines 322-339: records are transformed into insert_data with timestamps."""
+        session = MagicMock(spec=Session)
+        records = [
+            {
+                "workspace_id": "ws-1",
+                "path": "/abs/file1.txt",
+                "relative_path": "file1.txt",
+                "name": "file1.txt",
+                "size_bytes": 100,
+                "mime_type": "text/plain",
+                "checksum_sha256": "sha1",
+            },
+        ]
+
+        result = FileMetadataRepository.bulk_upsert(session, records=records)
+
+        assert result == 1
+        session.execute.assert_called_once()
+        session.flush.assert_called_once()
+
+    def test_bulk_upsert_multiple_records_with_optional_fields(self) -> None:
+        """Lines 325-326, 341-342: multiple records with and without optional fields."""
+        session = MagicMock(spec=Session)
+        records = [
+            {
+                "workspace_id": "ws-1",
+                "path": "/abs/a.txt",
+                "relative_path": "a.txt",
+                "name": "a.txt",
+                "size_bytes": 50,
+            },
+            {
+                "workspace_id": "ws-1",
+                "path": "/abs/b.txt",
+                "relative_path": "b.txt",
+                "name": "b.txt",
+                "size_bytes": 75,
+                "mime_type": "application/pdf",
+                "checksum_sha256": "sha_b",
+                "last_modified": datetime(2025, 6, 1, tzinfo=UTC),
+                "extra_json": '{"key": "val"}',
+            },
+        ]
+
+        result = FileMetadataRepository.bulk_upsert(session, records=records)
+
+        assert result == 2
+        session.execute.assert_called_once()
+        session.flush.assert_called_once()
+
+    def test_bulk_upsert_cache_invalidation(self) -> None:
+        """Lines 359-364: cache entries are invalidated for all records."""
+        session = MagicMock(spec=Session)
+        cache = MagicMock(spec=InMemoryCache)
+        records = [
+            {
+                "workspace_id": "ws-1",
+                "path": "/abs/a.txt",
+                "relative_path": "a.txt",
+                "name": "a.txt",
+                "size_bytes": 50,
+                "checksum_sha256": "sha_a",
+            },
+            {
+                "workspace_id": "ws-1",
+                "path": "/abs/b.txt",
+                "relative_path": "b.txt",
+                "name": "b.txt",
+                "size_bytes": 75,
+            },
+        ]
+
+        FileMetadataRepository.bulk_upsert(session, records=records, cache=cache)
+
+        delete_keys = [c[0][0] for c in cache.delete.call_args_list]
+        assert "file_metadata:ws-1:a.txt" in delete_keys
+        assert "file_metadata:ws-1:b.txt" in delete_keys
+        assert "file_checksum:ws-1:sha_a" in delete_keys
+        # b.txt has no checksum, so no checksum cache key
+        assert "file_checksum:ws-1:None" not in delete_keys
+        assert len(delete_keys) == 3  # 2 path keys + 1 checksum key
+
+    def test_bulk_upsert_no_cache(self) -> None:
+        """Line 359: when cache is None, no cache invalidation occurs."""
+        session = MagicMock(spec=Session)
+        records = [
+            {
+                "workspace_id": "ws-1",
+                "path": "/abs/a.txt",
+                "relative_path": "a.txt",
+                "name": "a.txt",
+                "size_bytes": 50,
+            },
+        ]
+
+        result = FileMetadataRepository.bulk_upsert(session, records=records, cache=None)
+
+        assert result == 1
+        session.execute.assert_called_once()
+
+
+class TestBulkGet:
+    """Tests for bulk_get (lines 393-439)."""
+
+    def _make_row(
+        self, row_id: str, rel_path: str, workspace_id: str = "ws-1"
+    ) -> MagicMock:
+        row = MagicMock(spec=FileMetadata)
+        row.id = row_id
+        row.workspace_id = workspace_id
+        row.path = f"/abs/{rel_path}"
+        row.relative_path = rel_path
+        row.name = rel_path
+        row.size_bytes = 100
+        row.mime_type = None
+        row.checksum_sha256 = None
+        row.last_modified = None
+        row.extra_json = None
+        return row
+
+    def test_bulk_get_empty_paths_returns_empty_dict(self) -> None:
+        """Lines 393-394: empty relative_paths returns {} immediately."""
+        session = MagicMock(spec=Session)
+        result = FileMetadataRepository.bulk_get(
+            session, workspace_id="ws-1", relative_paths=[]
+        )
+        assert result == {}
+
+    def test_bulk_get_cache_hit_returns_from_cache(self) -> None:
+        """Lines 399-412: cache hit path returns row from session.get()."""
+        row1 = self._make_row("id1", "a.txt")
+        session = MagicMock(spec=Session)
+        session.get.return_value = row1
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = json.dumps({"id": "id1"})
+
+        # Mock for the DB query (should not be called if all cache hits)
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = []
+
+        result = FileMetadataRepository.bulk_get(
+            session, workspace_id="ws-1", relative_paths=["a.txt"], cache=cache
+        )
+
+        assert "a.txt" in result
+        assert result["a.txt"] is row1
+
+    def test_bulk_get_cache_miss_fetches_from_db(self) -> None:
+        """Lines 414-437: cache miss triggers DB query and populates cache."""
+        row1 = self._make_row("id1", "a.txt")
+        session = MagicMock(spec=Session)
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = None  # cache miss
+
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row1]
+
+        result = FileMetadataRepository.bulk_get(
+            session,
+            workspace_id="ws-1",
+            relative_paths=["a.txt"],
+            cache=cache,
+            cache_ttl_seconds=600,
+        )
+
+        assert "a.txt" in result
+        assert result["a.txt"] is row1
+        # Cache should be populated after DB fetch
+        cache.set.assert_called_once()
+        set_args = cache.set.call_args
+        assert set_args[1]["ttl_seconds"] == 600
+
+    def test_bulk_get_mixed_cache_hit_and_miss(self) -> None:
+        """Lines 399-437: mix of cache hit and miss paths."""
+        row_a = self._make_row("id-a", "a.txt")
+        row_b = self._make_row("id-b", "b.txt")
+
+        session = MagicMock(spec=Session)
+
+        # Cache hit for a.txt, miss for b.txt
+        def cache_get_side_effect(key: str) -> str | None:
+            if "a.txt" in key:
+                return json.dumps({"id": "id-a"})
+            return None
+
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.side_effect = cache_get_side_effect
+
+        # session.get returns the cached row
+        session.get.return_value = row_a
+
+        # DB query returns b.txt
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row_b]
+
+        result = FileMetadataRepository.bulk_get(
+            session,
+            workspace_id="ws-1",
+            relative_paths=["a.txt", "b.txt"],
+            cache=cache,
+        )
+
+        assert len(result) == 2
+        assert result["a.txt"] is row_a
+        assert result["b.txt"] is row_b
+
+    def test_bulk_get_stale_cache_entry_falls_through_to_db(self) -> None:
+        """Lines 406-413: invalid cached JSON falls through, deletes stale cache entry."""
+        row_a = self._make_row("id-a", "a.txt")
+        session = MagicMock(spec=Session)
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = "invalid-json{"
+
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row_a]
+
+        result = FileMetadataRepository.bulk_get(
+            session,
+            workspace_id="ws-1",
+            relative_paths=["a.txt"],
+            cache=cache,
+        )
+
+        assert result["a.txt"] is row_a
+        # Stale entry should be deleted
+        cache.delete.assert_called_once_with("file_metadata:ws-1:a.txt")
+
+    def test_bulk_get_cache_hit_stale_id_falls_through(self) -> None:
+        """Lines 408-413: cached ID points to deleted row, falls through to DB."""
+        row_a = self._make_row("id-a-new", "a.txt")
+        session = MagicMock(spec=Session)
+        session.get.return_value = None  # row deleted
+
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = json.dumps({"id": "id-a-stale"})
+
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row_a]
+
+        result = FileMetadataRepository.bulk_get(
+            session,
+            workspace_id="ws-1",
+            relative_paths=["a.txt"],
+            cache=cache,
+        )
+
+        assert result["a.txt"] is row_a
+        cache.delete.assert_called_once_with("file_metadata:ws-1:a.txt")
+
+    def test_bulk_get_without_cache_fetches_all_from_db(self) -> None:
+        """Lines 415-416: without cache, all paths go to DB."""
+        row_a = self._make_row("id-a", "a.txt")
+        row_b = self._make_row("id-b", "b.txt")
+        session = MagicMock(spec=Session)
+
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row_a, row_b]
+
+        result = FileMetadataRepository.bulk_get(
+            session,
+            workspace_id="ws-1",
+            relative_paths=["a.txt", "b.txt"],
+            cache=None,
+        )
+
+        assert len(result) == 2
+        assert result["a.txt"] is row_a
+        assert result["b.txt"] is row_b
+
+    def test_bulk_get_no_paths_to_fetch_skips_db_query(self) -> None:
+        """Lines 418: if all paths are in cache, no DB query is made."""
+        row_a = self._make_row("id-a", "a.txt")
+        session = MagicMock(spec=Session)
+        session.get.return_value = row_a
+
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = json.dumps({"id": "id-a"})
+
+        result = FileMetadataRepository.bulk_get(
+            session,
+            workspace_id="ws-1",
+            relative_paths=["a.txt"],
+            cache=cache,
+        )
+
+        assert result["a.txt"] is row_a
+        # session.query should not be called (all from cache)
+        session.query.assert_not_called()
+
+
+class TestFindByChecksum:
+    """Tests for find_by_checksum (lines 466-505)."""
+
+    def _make_row(self, row_id: str, rel_path: str) -> MagicMock:
+        row = MagicMock(spec=FileMetadata)
+        row.id = row_id
+        row.workspace_id = "ws-1"
+        row.path = f"/abs/{rel_path}"
+        row.relative_path = rel_path
+        row.name = rel_path
+        row.size_bytes = 100
+        row.mime_type = None
+        row.checksum_sha256 = "chk123"
+        row.last_modified = None
+        row.extra_json = None
+        return row
+
+    def test_find_by_checksum_empty_string_returns_empty(self) -> None:
+        """Lines 466-467: empty checksum returns [] immediately."""
+        session = MagicMock(spec=Session)
+        result = FileMetadataRepository.find_by_checksum(
+            session, workspace_id="ws-1", checksum_sha256=""
+        )
+        assert result == []
+        session.query.assert_not_called()
+
+    def test_find_by_checksum_none_returns_empty(self) -> None:
+        """Lines 466-467: None checksum returns [] immediately."""
+        session = MagicMock(spec=Session)
+        result = FileMetadataRepository.find_by_checksum(
+            session, workspace_id="ws-1", checksum_sha256=None
+        )
+        assert result == []
+        session.query.assert_not_called()
+
+    def test_find_by_checksum_cache_hit_valid(self) -> None:
+        """Lines 469-482: cache hit with valid file_ids returns rows from session.get."""
+        row1 = self._make_row("id1", "a.txt")
+        row2 = self._make_row("id2", "b.txt")
+        session = MagicMock(spec=Session)
+        session.get.side_effect = [row1, row2]
+
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = json.dumps({"file_ids": ["id1", "id2"]})
+
+        result = FileMetadataRepository.find_by_checksum(
+            session, workspace_id="ws-1", checksum_sha256="chk123", cache=cache
+        )
+
+        assert len(result) == 2
+        assert result[0] is row1
+        assert result[1] is row2
+        session.query.assert_not_called()
+
+    def test_find_by_checksum_cache_hit_partial_missing_falls_through(self) -> None:
+        """Lines 478-483: if any cached ID is missing from DB, invalidate and query."""
+        row1 = self._make_row("id1", "a.txt")
+        session = MagicMock(spec=Session)
+        session.get.side_effect = [row1, None]  # id2 missing
+
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = json.dumps({"file_ids": ["id1", "id2"]})
+
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row1]
+
+        result = FileMetadataRepository.find_by_checksum(
+            session, workspace_id="ws-1", checksum_sha256="chk123", cache=cache
+        )
+
+        assert len(result) == 1
+        assert result[0] is row1
+        cache.delete.assert_called_once_with("file_checksum:ws-1:chk123")
+
+    def test_find_by_checksum_cache_hit_invalid_json_falls_through(self) -> None:
+        """Lines 473-477: invalid JSON in cache falls through to DB."""
+        row1 = self._make_row("id1", "a.txt")
+        session = MagicMock(spec=Session)
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = "not-json{"
+
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row1]
+
+        result = FileMetadataRepository.find_by_checksum(
+            session, workspace_id="ws-1", checksum_sha256="chk123", cache=cache
+        )
+
+        assert len(result) == 1
+        cache.delete.assert_called_once_with("file_checksum:ws-1:chk123")
+
+    def test_find_by_checksum_cache_miss_populates_cache(self) -> None:
+        """Lines 485-505: cache miss queries DB and populates cache."""
+        row1 = self._make_row("id1", "a.txt")
+        session = MagicMock(spec=Session)
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = None
+
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row1]
+
+        result = FileMetadataRepository.find_by_checksum(
+            session,
+            workspace_id="ws-1",
+            checksum_sha256="chk123",
+            cache=cache,
+            cache_ttl_seconds=500,
+        )
+
+        assert len(result) == 1
+        assert result[0] is row1
+        cache.set.assert_called_once()
+        set_args = cache.set.call_args
+        assert set_args[0][0] == "file_checksum:ws-1:chk123"
+        cached_data = json.loads(set_args[0][1])
+        assert cached_data["file_ids"] == ["id1"]
+        assert set_args[1]["ttl_seconds"] == 500
+
+    def test_find_by_checksum_without_cache_queries_db(self) -> None:
+        """Lines 485-505: without cache, queries DB directly."""
+        row1 = self._make_row("id1", "a.txt")
+        session = MagicMock(spec=Session)
+
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row1]
+
+        result = FileMetadataRepository.find_by_checksum(
+            session, workspace_id="ws-1", checksum_sha256="chk123"
+        )
+
+        assert len(result) == 1
+        assert result[0] is row1
+
+    def test_find_by_checksum_cache_hit_non_list_file_ids_falls_through(self) -> None:
+        """Lines 478: if file_ids is not a list, invalidate cache and query DB."""
+        row1 = self._make_row("id1", "a.txt")
+        session = MagicMock(spec=Session)
+        cache = MagicMock(spec=InMemoryCache)
+        cache.get.return_value = json.dumps({"file_ids": "not-a-list"})
+
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [row1]
+
+        result = FileMetadataRepository.find_by_checksum(
+            session, workspace_id="ws-1", checksum_sha256="chk123", cache=cache
+        )
+
+        assert len(result) == 1
+        cache.delete.assert_called_once_with("file_checksum:ws-1:chk123")

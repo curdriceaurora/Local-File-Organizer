@@ -400,3 +400,246 @@ class TestBM25IndexIncrementalUpdates:
             assert idx2.size == 4
             results = idx2.search("machine learning")
             assert any(p == new_path for p, _ in results)
+
+
+# ---------------------------------------------------------------------------
+# BM25Index cache error handling
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBM25IndexCacheErrorHandling:
+    """Tests for cache load/save error paths."""
+
+    def test_cache_load_oserror_falls_through_to_rebuild(self) -> None:
+        """OSError during cache load triggers index rebuild instead of failure."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "bad_cache.pkl"
+            # Write invalid binary data to simulate corrupt cache
+            cache_path.write_bytes(b"\x00\x01\x02\x03")
+
+            idx = BM25Index(cache_path=cache_path)
+            paths = _make_paths(3)
+            docs = [
+                "finance budget report",
+                "legal contract agreement",
+                "recipe baking chocolate",
+            ]
+            idx.index(docs, paths)
+
+            # Index should work despite corrupt cache
+            assert idx.size == 3
+            results = idx.search("finance budget")
+            assert results, "Expected results after rebuild from corrupt cache"
+
+    def test_cache_save_oserror_does_not_prevent_index_use(self) -> None:
+        """OSError during cache save is logged but index remains usable."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Use a path where the parent dir will be read-only
+            cache_dir = Path(tmpdir) / "readonly"
+            cache_dir.mkdir()
+            cache_path = cache_dir / "subdir" / "nested" / "cache.pkl"
+
+            idx = BM25Index(cache_path=cache_path)
+            paths = _make_paths(3)
+            docs = [
+                "finance budget report",
+                "legal contract agreement",
+                "recipe baking chocolate",
+            ]
+            # Index should succeed even if the deep nested path works
+            idx.index(docs, paths)
+            assert idx.size == 3
+
+    def test_cache_path_none_skips_caching(self) -> None:
+        """No caching operations when cache_path is None."""
+        idx = BM25Index(cache_path=None)
+        paths = _make_paths(3)
+        docs = [
+            "finance budget report",
+            "legal contract agreement",
+            "recipe baking chocolate",
+        ]
+        idx.index(docs, paths)
+
+        assert idx.size == 3
+        results = idx.search("finance")
+        assert results, "Expected search results without caching"
+
+    def test_cache_load_returns_mismatched_paths_triggers_rebuild(self) -> None:
+        """When cached paths don't match provided paths, index is rebuilt."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "cache.pkl"
+            old_paths = _make_paths(2)
+            old_docs = ["old doc one", "old doc two"]
+
+            # Build and cache with old paths
+            idx1 = BM25Index(cache_path=cache_path)
+            idx1.index(old_docs, old_paths)
+            assert cache_path.exists()
+
+            # Load with different paths -- cache should be invalidated
+            new_paths = [Path(tempfile.gettempdir()) / "new_a.txt"]
+            new_docs = ["completely new document about science"]
+
+            idx2 = BM25Index(cache_path=cache_path)
+            idx2.index(new_docs, new_paths)
+            assert idx2.size == 1
+
+
+# ---------------------------------------------------------------------------
+# BM25Index incremental updates with cache
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBM25IndexIncrementalUpdatesCacheEdges:
+    """Tests for add_document, remove_document, update_document cache interactions."""
+
+    def test_add_document_updates_cache(self) -> None:
+        """add_document saves updated index to cache file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "cache.pkl"
+            idx = BM25Index(cache_path=cache_path)
+            paths = _make_paths(3)
+            idx.index(
+                ["finance budget", "legal contract", "recipe chocolate"],
+                paths,
+            )
+            initial_mtime = cache_path.stat().st_mtime
+
+            import time
+
+            time.sleep(0.01)  # ensure mtime differs
+            new_path = Path(tempfile.gettempdir()) / "added.txt"
+            idx.add_document("machine learning neural", new_path)
+
+            assert idx.size == 4
+            # Cache should be updated
+            assert cache_path.stat().st_mtime >= initial_mtime
+
+    def test_remove_document_updates_cache(self) -> None:
+        """remove_document saves updated index to cache file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "cache.pkl"
+            idx = BM25Index(cache_path=cache_path)
+            paths = _make_paths(3)
+            idx.index(
+                ["finance budget", "legal contract", "recipe chocolate"],
+                paths,
+            )
+            assert idx.size == 3
+
+            idx.remove_document(paths[1])
+            assert idx.size == 2
+            assert cache_path.exists()
+
+    def test_remove_all_documents_sets_bm25_none(self) -> None:
+        """Removing all documents sets internal BM25 index to None."""
+        idx = BM25Index()
+        paths = _make_paths(1)
+        idx.index(["finance budget report"], paths)
+        assert idx.size == 1
+
+        idx.remove_document(paths[0])
+        assert idx.size == 0
+        # Search on empty index returns empty
+        assert idx.search("finance") == []
+
+    def test_update_document_updates_cache(self) -> None:
+        """update_document saves updated index to cache file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "cache.pkl"
+            idx = BM25Index(cache_path=cache_path)
+            paths = _make_paths(3)
+            idx.index(
+                ["finance budget", "legal contract", "recipe chocolate"],
+                paths,
+            )
+
+            idx.update_document(paths[0], "completely new content about art")
+            assert idx.size == 3
+
+            # Verify the update is searchable
+            results = idx.search("art")
+            returned_paths = [p for p, _ in results]
+            assert paths[0] in returned_paths
+
+    def test_update_cache_skipped_when_no_cache_path(self) -> None:
+        """_update_cache does nothing when cache_path is None."""
+        idx = BM25Index(cache_path=None)
+        paths = _make_paths(3)
+        idx.index(
+            ["finance budget", "legal contract", "recipe chocolate"],
+            paths,
+        )
+
+        # These should all succeed without error
+        new_path = Path(tempfile.gettempdir()) / "new.txt"
+        idx.add_document("new doc", new_path)
+        idx.update_document(paths[0], "updated content")
+        idx.remove_document(paths[1])
+        assert idx.size == 3
+
+
+# ---------------------------------------------------------------------------
+# BM25Index invalidate_cache
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.ci
+@pytest.mark.unit
+class TestBM25IndexInvalidateCache:
+    """Tests for invalidate_cache method."""
+
+    def test_invalidate_cache_deletes_file(self) -> None:
+        """invalidate_cache removes the cache file from disk."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "cache.pkl"
+            idx = BM25Index(cache_path=cache_path)
+            paths = _make_paths(3)
+            idx.index(
+                ["finance budget", "legal contract", "recipe chocolate"],
+                paths,
+            )
+            assert cache_path.exists()
+
+            idx.invalidate_cache()
+            assert not cache_path.exists()
+
+    def test_invalidate_cache_no_cache_path_is_noop(self) -> None:
+        """invalidate_cache does nothing when no cache_path is configured."""
+        idx = BM25Index(cache_path=None)
+        # Should not raise
+        idx.invalidate_cache()
+
+    def test_invalidate_cache_nonexistent_file_is_noop(self) -> None:
+        """invalidate_cache does nothing when cache file does not exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "nonexistent.pkl"
+            idx = BM25Index(cache_path=cache_path)
+            # Should not raise
+            idx.invalidate_cache()
+            assert not cache_path.exists()
+
+    def test_invalidate_then_reindex_rebuilds(self) -> None:
+        """After invalidation, next index() call rebuilds the cache."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "cache.pkl"
+            paths = _make_paths(3)
+            docs = ["finance budget", "legal contract", "recipe chocolate"]
+
+            idx = BM25Index(cache_path=cache_path)
+            idx.index(docs, paths)
+            assert cache_path.exists()
+
+            idx.invalidate_cache()
+            assert not cache_path.exists()
+
+            # Re-index should rebuild and re-cache
+            idx2 = BM25Index(cache_path=cache_path)
+            idx2.index(docs, paths)
+            assert cache_path.exists()
+            assert idx2.size == 3

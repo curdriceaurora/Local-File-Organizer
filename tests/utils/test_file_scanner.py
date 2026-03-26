@@ -655,3 +655,225 @@ class TestPerformance:
 
         # Should have seen all chunks
         assert chunks_seen == 10
+
+
+# ---------------------------------------------------------------------------
+# Validation Error Tests (scan_directory raises ValueError)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestScanDirectoryValidation:
+    """Test scan_directory input validation for nonexistent and non-directory paths."""
+
+    def test_nonexistent_directory_raises_value_error(self, scanner):
+        """scan_directory raises ValueError for a path that does not exist."""
+        with pytest.raises(ValueError, match="Directory not found"):
+            list(scanner.scan_directory(Path("/nonexistent/path/xyz")))
+
+    def test_file_path_raises_value_error(self, scanner, tmp_path):
+        """scan_directory raises ValueError when given a file instead of directory."""
+        f = tmp_path / "notadir.txt"
+        f.write_text("content")
+        with pytest.raises(ValueError, match="not a directory"):
+            list(scanner.scan_directory(f))
+
+
+# ---------------------------------------------------------------------------
+# max_files with chunking boundary tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestMaxFilesChunking:
+    """Test max_files limit interacts correctly with chunk boundaries."""
+
+    def test_max_files_breaks_mid_chunk(self, scanner, large_dir):
+        """max_files stops scanning mid-chunk when limit is reached."""
+        config = ScanConfig(chunk_size=50, max_files=7)
+        chunks = list(scanner.scan_directory(large_dir, config))
+
+        total = sum(len(c) for c in chunks)
+        assert total == 7
+        # First chunk should be partial (7 < 50)
+        assert len(chunks) == 1
+        assert len(chunks[0]) == 7
+
+    def test_max_files_exact_chunk_boundary(self, scanner, large_dir):
+        """max_files at exactly chunk_size produces one full chunk."""
+        config = ScanConfig(chunk_size=10, max_files=10)
+        chunks = list(scanner.scan_directory(large_dir, config))
+
+        total = sum(len(c) for c in chunks)
+        assert total == 10
+        assert len(chunks) == 1
+        assert len(chunks[0]) == 10
+
+
+# ---------------------------------------------------------------------------
+# Symlink edge cases
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestSymlinkEdgeCases:
+    """Test symlink handling edge cases in _scan_recursive."""
+
+    def test_symlink_to_directory_skipped_when_not_following(self, scanner, tmp_path):
+        """Symlinks to directories are skipped when follow_symlinks is False."""
+        real_dir = tmp_path / "real_dir"
+        real_dir.mkdir()
+        (real_dir / "inner.txt").write_text("content")
+
+        link_dir = tmp_path / "link_dir"
+        link_dir.symlink_to(real_dir)
+
+        config = ScanConfig(follow_symlinks=False)
+        files = scanner.scan_to_list(tmp_path, config)
+
+        # Only the real file, not the one through the symlink
+        assert len(files) == 1
+        assert files[0].name == "inner.txt"
+
+    def test_symlink_to_file_followed_when_enabled(self, scanner, tmp_path):
+        """Symlinks to files are followed when follow_symlinks is True."""
+        real_file = tmp_path / "real.txt"
+        real_file.write_text("content")
+        link_file = tmp_path / "link.txt"
+        link_file.symlink_to(real_file)
+
+        config = ScanConfig(follow_symlinks=True)
+        files = scanner.scan_to_list(tmp_path, config)
+
+        assert len(files) == 2
+        names = sorted(f.name for f in files)
+        assert names == ["link.txt", "real.txt"]
+
+
+# ---------------------------------------------------------------------------
+# Progress callback invocation in _scan_recursive
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestProgressCallbackInScanRecursive:
+    """Test progress_callback is invoked from _scan_recursive via scan_directory."""
+
+    def test_progress_callback_receives_incrementing_counts(self, scanner, sample_dir):
+        """progress_callback receives incrementing file counts as files are scanned."""
+        counts: list[int] = []
+
+        def on_progress(count: int) -> None:
+            counts.append(count)
+
+        config = ScanConfig(progress_callback=on_progress)
+        files = scanner.scan_to_list(sample_dir, config)
+
+        assert len(counts) == len(files)
+        assert counts == list(range(1, len(files) + 1))
+
+    def test_progress_callback_with_max_files(self, scanner, large_dir):
+        """progress_callback is called only for files up to the max_files limit."""
+        counts: list[int] = []
+
+        def on_progress(count: int) -> None:
+            counts.append(count)
+
+        config = ScanConfig(progress_callback=on_progress, max_files=5)
+        files = scanner.scan_to_list(large_dir, config)
+
+        assert len(files) == 5
+        assert len(counts) == 5
+        assert counts[-1] == 5
+
+
+# ---------------------------------------------------------------------------
+# _matches_criteria size and pattern filtering
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestMatchesCriteriaSizeFiltering:
+    """Test _matches_criteria with min_size, max_size, and pattern constraints."""
+
+    def test_min_size_excludes_small_files(self, scanner, tmp_path):
+        """Files smaller than min_file_size are excluded."""
+        small = tmp_path / "small.txt"
+        small.write_text("hi")  # 2 bytes
+        big = tmp_path / "big.txt"
+        big.write_text("x" * 500)
+
+        config = ScanConfig(min_file_size=100)
+        files = scanner.scan_to_list(tmp_path, config)
+
+        assert len(files) == 1
+        assert files[0].name == "big.txt"
+
+    def test_max_size_excludes_large_files(self, scanner, tmp_path):
+        """Files larger than max_file_size are excluded."""
+        small = tmp_path / "small.txt"
+        small.write_text("hi")
+        big = tmp_path / "big.txt"
+        big.write_text("x" * 500)
+
+        config = ScanConfig(max_file_size=100)
+        files = scanner.scan_to_list(tmp_path, config)
+
+        assert len(files) == 1
+        assert files[0].name == "small.txt"
+
+    def test_include_patterns_filter(self, scanner, tmp_path):
+        """Only files matching include patterns are returned."""
+        (tmp_path / "a.py").write_text("code")
+        (tmp_path / "b.txt").write_text("text")
+        (tmp_path / "c.py").write_text("more code")
+
+        config = ScanConfig(file_patterns=["*.py"])
+        files = scanner.scan_to_list(tmp_path, config)
+
+        assert len(files) == 2
+        names = sorted(f.name for f in files)
+        assert names == ["a.py", "c.py"]
+
+    def test_exclude_patterns_filter(self, scanner, tmp_path):
+        """Files matching exclude patterns are excluded."""
+        (tmp_path / "a.py").write_text("code")
+        (tmp_path / "b.txt").write_text("text")
+        (tmp_path / "c.log").write_text("log")
+
+        config = ScanConfig(exclude_patterns=["*.log", "*.txt"])
+        files = scanner.scan_to_list(tmp_path, config)
+
+        assert len(files) == 1
+        assert files[0].name == "a.py"
+
+    def test_combined_include_and_exclude(self, scanner, tmp_path):
+        """Include and exclude patterns work together."""
+        (tmp_path / "keep.py").write_text("code")
+        (tmp_path / "skip.py").write_text("code")
+        (tmp_path / "other.txt").write_text("text")
+
+        config = ScanConfig(file_patterns=["*.py"], exclude_patterns=["skip*"])
+        files = scanner.scan_to_list(tmp_path, config)
+
+        assert len(files) == 1
+        assert files[0].name == "keep.py"
+
+
+# ---------------------------------------------------------------------------
+# Counter and reset edge cases
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestCounterEdgeCases:
+    """Test counter behavior including reset_counters."""
+
+    def test_reset_counters_to_zero(self, scanner, sample_dir):
+        """reset_counters sets both scanned_count and yielded_count to 0."""
+        scanner.scan_to_list(sample_dir)
+        assert scanner.scanned_count > 0
+
+        scanner.reset_counters()
+        assert scanner.scanned_count == 0
+        assert scanner.yielded_count == 0
