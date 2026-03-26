@@ -71,15 +71,15 @@ Install the appropriate optional dependency group based on the feature you're us
 
 | Feature | Error Pattern | Install Command |
 |---------|---------------|-----------------|
-| Audio transcription | `faster_whisper`, `torch` | `pip install -e ".[audio]"` |
-| Video processing | `cv2`, `scenedetect` | `pip install -e ".[video]"` |
-| Image deduplication | `imagededup` | `pip install -e ".[dedup]"` |
-| Semantic search | `rank_bm25`, `sklearn` | `pip install -e ".[search]"` |
-| Archive support | `py7zr` | `pip install -e ".[archive]"` |
-| Scientific formats | `h5py`, `netCDF4` | `pip install -e ".[scientific]"` |
-| CAD file support | `ezdxf` | `pip install -e ".[cad]"` |
-| Claude API provider | `anthropic` | `pip install -e ".[claude]"` |
-| All features | Any of the above | `pip install -e ".[all]"` |
+| Audio transcription | `faster_whisper`, `torch` | `pip install "local-file-organizer[audio]"` |
+| Video processing | `cv2`, `scenedetect` | `pip install "local-file-organizer[video]"` |
+| Image deduplication | `imagededup` | `pip install "local-file-organizer[dedup]"` |
+| Semantic search | `rank_bm25`, `sklearn` | `pip install "local-file-organizer[search]"` |
+| Archive support | `py7zr` | `pip install "local-file-organizer[archive]"` |
+| Scientific formats | `h5py`, `netCDF4` | `pip install "local-file-organizer[scientific]"` |
+| CAD file support | `ezdxf` | `pip install "local-file-organizer[cad]"` |
+| Claude API provider | `anthropic` | `pip install "local-file-organizer[claude]"` |
+| All features | Any of the above | `pip install "local-file-organizer[all]"` |
 
 For more details, see [Dependencies & Setup](setup/dependencies.md).
 
@@ -110,7 +110,7 @@ Follow the instruction in the error message, or use the table above to install t
 
 # Option 2: Use a different directory
 mkdir ~/file-organizer-workspace
-file-organizer organize ~/file-organizer-workspace --destination ~/organized
+file-organizer organize ~/file-organizer-workspace ~/organized
 
 # Option 3: Copy files to an accessible location first
 cp -r ~/Desktop/files ~/file-organizer-workspace/
@@ -146,16 +146,19 @@ sudo chown $USER /path/to/file
 **Solution**:
 
 ```bash
-# Reduce batch size for processing
-file-organizer organize /path --batch-size 10
+# Process sequentially instead of in parallel
+file-organizer organize /path/to/input /path/to/output --sequential
+
+# Limit number of parallel workers
+file-organizer organize /path/to/input /path/to/output --max-workers 2
 
 # Process subdirectories separately
 for dir in /path/*/; do
-  file-organizer organize "$dir" --destination /output
+  file-organizer organize "$dir" /output
 done
 
-# Use streaming mode for large directories
-file-organizer organize /path --stream
+# Skip vision processing for large directories
+file-organizer organize /path/to/input /path/to/output --no-vision
 ```
 
 For production deployments with high memory demands, see [Performance Tuning](admin/performance-tuning.md).
@@ -168,18 +171,20 @@ For production deployments with high memory demands, see [Performance Tuning](ad
 
 **Solution**:
 
+The audio transcription model is configured through Ollama and the application config, not CLI flags. To reduce memory usage:
+
 ```bash
-# Use smaller model
-file-organizer organize /audio --transcribe --whisper-model tiny
+# Process files sequentially to limit concurrent memory use
+file-organizer organize /audio /output --sequential
 
-# Force CPU usage (slower but uses system RAM)
-file-organizer organize /audio --transcribe --device cpu
-
-# Process files one at a time
-file-organizer organize /audio --transcribe --workers 1
+# Skip vision processing to free up resources
+file-organizer organize /audio /output --text-only
 ```
 
+For GPU memory issues with Ollama models, reduce the model size in your Ollama configuration or use CPU-only mode by adjusting the `OLLAMA_HOST` settings.
+
 Available Whisper model sizes (smallest to largest):
+
 - `tiny` - ~1 GB VRAM, fastest
 - `base` - ~1 GB VRAM, good balance (default)
 - `small` - ~2 GB VRAM, better accuracy
@@ -205,53 +210,53 @@ python -c "import yaml; yaml.safe_load(open('config.yaml'))"
 # - Missing quotes around strings with special characters
 # - Incorrect indentation
 
-# Example of correct YAML:
-cat > config.yaml <<EOF
-organize:
-  destination: "~/organized"
-  tags:
-    - documents
-    - photos
-EOF
+# View current config to check for errors
+file-organizer config show
 ```
 
 ### Config File Not Found
 
-**Error**: `FileNotFoundError: [Errno 2] No such file or directory: '/home/user/.config/file-organizer/config.yaml'`
+**Error**: `FileNotFoundError` for configuration file
 
-**Cause**: Configuration file does not exist in expected XDG location.
+**Cause**: Configuration file does not exist in the expected location. The config path is determined by `platformdirs` and varies by OS:
+
+- **Linux**: `~/.config/file-organizer/`
+- **macOS**: `~/Library/Application Support/file-organizer/`
+- **Windows**: `%LOCALAPPDATA%\file-organizer\`
 
 **Solution**:
 
 ```bash
-# Create default config directory
-mkdir -p ~/.config/file-organizer
+# View the current config path and values
+file-organizer config show
 
-# Generate default config
-file-organizer config init
+# Open the config file in your editor to create/edit it
+file-organizer config edit
 
-# Or specify config file explicitly
-file-organizer organize /path --config /path/to/config.yaml
+# List all available config keys
+file-organizer config list
 ```
 
 ### XDG Config Migration
 
 **Error**: Warning about deprecated config location
 
-**Cause**: Old config files in `~/.file-organizer` instead of XDG-compliant `~/.config/file-organizer`.
+**Cause**: Old config files in a legacy location instead of the platform-appropriate directory managed by `platformdirs`.
 
 **Solution**:
 
 ```bash
-# Migrate to XDG-compliant location
-mkdir -p ~/.config/file-organizer
-mv ~/.file-organizer/* ~/.config/file-organizer/
+# Check where config is currently stored
+file-organizer config show
 
-# Or set XDG_CONFIG_HOME explicitly
+# Edit config in the correct location
+file-organizer config edit
+
+# Or set XDG_CONFIG_HOME explicitly (Linux only)
 export XDG_CONFIG_HOME=~/.config
 ```
 
-See [Path Standardization](config/path-standardization.md) for details on XDG migration.
+See [Path Standardization](config/path-standardization.md) for details on config migration.
 
 ## Web UI Issues
 
@@ -265,7 +270,7 @@ See [Path Standardization](config/path-standardization.md) for details on XDG mi
 
 ```bash
 # Install web dependencies
-pip install -e ".[web]"
+pip install "local-file-organizer[web]"
 
 # Or install uvicorn directly
 pip install uvicorn[standard]
@@ -312,11 +317,11 @@ file-organizer serve
 **Solution**:
 
 ```bash
-# Check logs for specific error
-file-organizer serve --log-level debug
+# Check logs with verbose output
+file-organizer serve --verbose
 
 # Verify all dependencies
-pip install -e ".[web]"
+pip install "local-file-organizer[web]"
 
 # Check for port conflicts
 lsof -i :8000
@@ -343,10 +348,14 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 pip install torch torchvision torchaudio
 
 # Verify GPU detection
-python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, MPS: {torch.backends.mps.is_available() if hasattr(torch.backends, \"mps\") else False}')"
+python -c "
+import torch
+print(f'CUDA: {torch.cuda.is_available()}')
+print(f'MPS: {torch.backends.mps.is_available() if hasattr(torch.backends, \"mps\") else False}')
+"
 
-# If no GPU available, CPU mode works but is slower
-file-organizer organize /audio --transcribe --device cpu
+# CPU mode works but is slower - no special flags needed,
+# the application auto-detects available hardware
 ```
 
 ### Model Download Timeout
@@ -360,13 +369,9 @@ file-organizer organize /audio --transcribe --device cpu
 ```bash
 # Increase timeout and retry
 export HF_HUB_DOWNLOAD_TIMEOUT=600
-file-organizer organize /audio --transcribe
 
 # Pre-download models manually
 python -c "from faster_whisper import WhisperModel; WhisperModel('base')"
-
-# Use smaller model that downloads faster
-file-organizer organize /audio --transcribe --whisper-model tiny
 
 # Check disk space (models require several GB)
 df -h
@@ -399,30 +404,28 @@ cat error.log
 
 ## File Organization Errors
 
-### Duplicate File Handling Error
+### Duplicate File Handling
 
 **Error**: `FileExistsError: Destination file already exists` or "Duplicate file detected"
 
-**Cause**: A file with the same name already exists in the destination directory, and the duplicate handling strategy is not configured.
+**Cause**: A file with the same name already exists in the destination directory.
 
 **Solution**:
 
+Use the built-in deduplication tools to identify and manage duplicates:
+
 ```bash
-# Use automatic duplicate handling
-file-organizer organize /path --duplicate-strategy rename
+# Scan for duplicates
+file-organizer dedupe scan /path/to/files
 
-# Available strategies:
-# - skip: Skip duplicates (default)
-# - rename: Add suffix like file_001.jpg, file_002.jpg
-# - overwrite: Replace existing files (use with caution)
-# - compare: Only overwrite if content differs
+# View deduplication report
+file-organizer dedupe report
 
-# Configure default strategy in config
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-organize:
-  duplicate_strategy: rename
-  duplicate_compare_hash: true  # Use content hash for deduplication
-EOF
+# Resolve duplicates interactively
+file-organizer dedupe resolve
+
+# Preview organization without moving files
+file-organizer organize /input /output --dry-run
 ```
 
 ### Filename Too Long Error
@@ -433,18 +436,13 @@ EOF
 
 **Solution**:
 
+The application handles filename length internally. If you encounter this error:
+
 ```bash
-# Enable filename truncation
-file-organizer organize /path --max-filename-length 200
+# Preview what filenames would be generated
+file-organizer organize /path/to/input /path/to/output --dry-run
 
-# Configure in config file
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-organize:
-  max_filename_length: 200
-  truncate_method: smart  # Preserves extension and important parts
-EOF
-
-# Manually rename problematic files first
+# Manually rename problematic source files before organizing
 for f in *; do
   if [ ${#f} -gt 200 ]; then
     mv "$f" "${f:0:200}.${f##*.}"
@@ -460,22 +458,24 @@ done
 
 **Solution**:
 
+The application sanitizes filenames automatically during organization. To preview the results:
+
 ```bash
-# Enable automatic sanitization
-file-organizer organize /path --sanitize-filenames
+# Preview organization to see how filenames will be handled
+file-organizer organize /path/to/input /path/to/output --dry-run
+```
 
-# Configure sanitization rules
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-organize:
-  sanitize_filenames: true
-  sanitize_rules:
-    - replace_spaces: false  # Keep spaces
-    - remove_special: true   # Remove special characters
-    - transliterate: true    # Convert unicode to ASCII
-EOF
+If source files have problematic names, rename them before organizing:
 
-# Preview what files would be renamed
-file-organizer organize /path --dry-run --sanitize-filenames
+```bash
+# Use detox to batch-clean filenames
+# macOS
+brew install detox
+
+# Ubuntu/Debian
+sudo apt-get install detox
+
+detox -r /path/to/files
 ```
 
 ## Metadata Extraction Errors
@@ -489,12 +489,6 @@ file-organizer organize /path --dry-run --sanitize-filenames
 **Solution**:
 
 ```bash
-# Skip files with invalid metadata
-file-organizer organize /path --skip-invalid-metadata
-
-# Use fallback to file modification time
-file-organizer organize /path --fallback-to-mtime
-
 # Repair EXIF data with exiftool
 # macOS
 brew install exiftool
@@ -507,6 +501,9 @@ exiftool -all= -tagsfromfile @ -all:all -unsafe -icc_profile image.jpg
 
 # Verify file type
 file image.jpg  # Should show "JPEG image data"
+
+# Analyze a specific file for details
+file-organizer analyze image.jpg --verbose
 ```
 
 ### PDF Metadata Extraction Timeout
@@ -518,22 +515,14 @@ file image.jpg  # Should show "JPEG image data"
 **Solution**:
 
 ```bash
-# Increase processing timeout
-file-organizer organize /path --pdf-timeout 60
+# Analyze the problematic PDF to see what's happening
+file-organizer analyze problematic.pdf --verbose
 
-# Skip PDF metadata extraction
-file-organizer organize /path --skip-pdf-metadata
-
-# Configure in config file
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-metadata:
-  pdf_timeout: 60
-  skip_large_pdfs: true
-  max_pdf_size_mb: 100
-EOF
-
-# Repair corrupt PDF
+# Repair corrupt PDF with Ghostscript
 gs -o repaired.pdf -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress input.pdf
+
+# Install parsers group for better PDF support
+pip install "local-file-organizer[parsers]"
 ```
 
 ### Video Metadata Extraction Error
@@ -559,8 +548,8 @@ ffprobe -version
 ffmpeg -v error -i video.mp4 -f null - 2>error.log
 cat error.log
 
-# Skip video metadata if not needed
-file-organizer organize /path --skip-video-metadata
+# Analyze the video file
+file-organizer analyze video.mp4 --verbose
 ```
 
 ## Plugin/Extension Errors
@@ -574,20 +563,20 @@ file-organizer organize /path --skip-video-metadata
 **Solution**:
 
 ```bash
-# List available plugins
-file-organizer plugin list
+# List available plugins in the marketplace
+file-organizer marketplace list
 
-# Install plugin
-file-organizer plugin install <plugin-name>
+# Search for a specific plugin
+file-organizer marketplace search <keyword>
 
-# Check plugin compatibility
-file-organizer plugin info <plugin-name>
+# Install a plugin
+file-organizer marketplace install <plugin-name>
 
-# Disable problematic plugin
-file-organizer organize /path --disable-plugin <plugin-name>
+# Check plugin details
+file-organizer marketplace info <plugin-name>
 
-# Configure plugin directory
-export FO_PLUGIN_DIR=~/.config/file-organizer/plugins
+# List installed plugins
+file-organizer marketplace installed
 ```
 
 ### Plugin Configuration Error
@@ -599,73 +588,15 @@ export FO_PLUGIN_DIR=~/.config/file-organizer/plugins
 **Solution**:
 
 ```bash
-# Generate default plugin config
-file-organizer plugin init <plugin-name>
+# Check plugin details for configuration requirements
+file-organizer marketplace info <plugin-name>
 
-# Validate plugin config
-file-organizer plugin validate <plugin-name>
+# Check for available updates
+file-organizer marketplace updates
 
-# Check plugin logs
-cat ~/.config/file-organizer/logs/plugins/<plugin-name>.log
-
-# Reset plugin to defaults
-file-organizer plugin reset <plugin-name>
-```
-
-## Backup and Recovery Issues
-
-### Backup Creation Failed
-
-**Error**: `IOError: Cannot create backup` or "Insufficient space for backup"
-
-**Cause**: Not enough disk space, backup directory not writable, or backup operation timed out.
-
-**Solution**:
-
-```bash
-# Check available disk space
-df -h
-
-# Specify different backup location
-file-organizer organize /path --backup-dir /external/backup
-
-# Use compression to save space
-file-organizer organize /path --backup --backup-compress
-
-# Configure backup settings
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-backup:
-  enabled: true
-  directory: /external/backup
-  compress: true
-  keep_versions: 5
-  incremental: true
-EOF
-```
-
-### Restore from Backup Failed
-
-**Error**: `FileNotFoundError: Backup not found` or "Backup integrity check failed"
-
-**Cause**: Backup file is corrupted, missing, or was created with a different version.
-
-**Solution**:
-
-```bash
-# List available backups
-file-organizer backup list
-
-# Verify backup integrity
-file-organizer backup verify <backup-id>
-
-# Restore from specific backup
-file-organizer backup restore <backup-id> --destination /restore/path
-
-# Restore specific files only
-file-organizer backup restore <backup-id> --files "*.jpg" --destination /restore/path
-
-# Check backup format version
-file-organizer backup info <backup-id>
+# Reinstall the plugin
+file-organizer marketplace uninstall <plugin-name>
+file-organizer marketplace install <plugin-name>
 ```
 
 ## Archive Processing Errors
@@ -680,17 +611,11 @@ file-organizer backup info <backup-id>
 
 ```bash
 # Install archive support
-pip install -e ".[archive]"
+pip install "local-file-organizer[archive]"
 
 # Supported formats: ZIP, TAR, GZ, BZ2, XZ, 7Z, RAR (read-only)
 
-# Extract with password
-file-organizer organize /path --extract-archives --archive-password "password"
-
-# Skip corrupted archives
-file-organizer organize /path --extract-archives --skip-corrupt
-
-# Test archive integrity first
+# Test archive integrity before processing
 7z t archive.7z
 unzip -t archive.zip
 tar -tzf archive.tar.gz
@@ -705,24 +630,16 @@ tar -tzf archive.tar.gz
 **Solution**:
 
 ```bash
-# Increase compression ratio threshold (use with caution)
-file-organizer organize /path --extract-archives --max-compression-ratio 1000
-
-# Skip archive extraction entirely
-file-organizer organize /path --no-extract-archives
-
-# Configure in config file
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-archive:
-  extract: true
-  max_compression_ratio: 100  # Default safety limit
-  max_extracted_size_gb: 10
-  detect_bombs: true
-EOF
-
-# Manually inspect suspicious archive
+# Manually inspect suspicious archive contents without extracting
 7z l -slt archive.zip  # List contents without extracting
+
+# Extract to a sandboxed location to inspect
+mkdir /tmp/archive-inspect
+cd /tmp/archive-inspect
+unzip -l suspicious.zip  # List only, don't extract
 ```
+
+Archive bomb detection is a built-in safety feature. If you trust the archive source, extract it manually before organizing its contents.
 
 ## Video Processing Errors
 
@@ -736,23 +653,12 @@ EOF
 
 ```bash
 # Install video dependencies
-pip install -e ".[video]"
+pip install "local-file-organizer[video]"
 
 # This includes: opencv-python, scenedetect, and related libraries
 
 # Verify installation
 python -c "import cv2; from scenedetect import detect, ContentDetector; print('OK')"
-
-# Skip scene detection if not needed
-file-organizer organize /path --no-video-scenes
-
-# Configure scene detection sensitivity
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-video:
-  scene_detection: true
-  threshold: 27.0  # Lower = more sensitive
-  min_scene_length: 15  # Minimum frames
-EOF
 ```
 
 ### Video Thumbnail Generation Failed
@@ -771,19 +677,11 @@ brew install ffmpeg
 # Ubuntu/Debian
 sudo apt-get install ffmpeg
 
-# Generate thumbnail from different timestamp
-file-organizer organize /path --thumbnail-time 5  # 5 seconds into video
+# Generate a thumbnail manually with FFmpeg
+ffmpeg -i video.mp4 -ss 00:00:05 -vframes 1 thumbnail.jpg
 
-# Skip thumbnail generation
-file-organizer organize /path --no-thumbnails
-
-# Use first frame if seeking fails
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-video:
-  thumbnail: true
-  thumbnail_time: 0  # Use first frame
-  thumbnail_fallback: true
-EOF
+# Analyze the video file for details
+file-organizer analyze video.mp4 --verbose
 ```
 
 ### Video Processing Timeout
@@ -795,23 +693,14 @@ EOF
 **Solution**:
 
 ```bash
-# Increase processing timeout
-file-organizer organize /path --video-timeout 300  # 5 minutes
+# Process videos sequentially to avoid resource contention
+file-organizer organize /videos /output --sequential
 
-# Skip video processing for large files
-file-organizer organize /path --skip-large-videos --max-video-size-mb 500
+# Skip vision processing for video-heavy directories
+file-organizer organize /videos /output --text-only
 
-# Process videos in background
-file-organizer organize /path --video-async
-
-# Configure timeouts
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-video:
-  processing_timeout: 300
-  max_size_mb: 500
-  skip_large_files: true
-  async_processing: true
-EOF
+# Analyze individual files to identify problematic ones
+file-organizer analyze large-video.mp4 --verbose
 ```
 
 ## Image Processing Errors
@@ -826,26 +715,16 @@ EOF
 
 ```bash
 # Install deduplication dependencies
-pip install -e ".[dedup]"
+pip install "local-file-organizer[dedup]"
 
-# This includes: imagededup, and related libraries
+# Scan for duplicates
+file-organizer dedupe scan /path/to/images
 
-# Run deduplication
-file-organizer deduplicate /path --method phash
+# View the deduplication report
+file-organizer dedupe report
 
-# Available methods:
-# - phash: Perceptual hash (recommended, fastest)
-# - dhash: Difference hash
-# - whash: Wavelet hash
-# - cnn: Deep learning (most accurate, requires GPU)
-
-# Configure deduplication
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-deduplication:
-  enabled: true
-  method: phash
-  threshold: 5  # Lower = more strict
-EOF
+# Resolve duplicates interactively
+file-organizer dedupe resolve
 ```
 
 ### Image Format Conversion Failed
@@ -884,23 +763,15 @@ convert input.rare output.jpg
 **Solution**:
 
 ```bash
-# Force RGB conversion
-file-organizer organize /path --convert-to-rgb
+# Manually convert problematic images before organizing
+python -c "
+from PIL import Image
+img = Image.open('input.png').convert('RGB')
+img.save('output.jpg')
+"
 
-# Skip optimization for problematic images
-file-organizer organize /path --skip-optimization
-
-# Configure image processing
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-image:
-  convert_to_rgb: true
-  preserve_transparency: false
-  optimize: true
-  quality: 85
-EOF
-
-# Manually convert problematic images
-python -c "from PIL import Image; img = Image.open('input.png').convert('RGB'); img.save('output.jpg')"
+# Analyze the image to understand the issue
+file-organizer analyze input.png --verbose
 ```
 
 ## Search Issues
@@ -909,29 +780,25 @@ python -c "from PIL import Image; img = Image.open('input.png').convert('RGB'); 
 
 **Error**: No results returned when searching, or "Search index not built"
 
-**Cause**: Semantic search is not enabled, index hasn't been built, or required dependencies are missing.
+**Cause**: Search dependencies not installed or search has not been run against the target directory.
 
 **Solution**:
 
 ```bash
 # Install search dependencies
-pip install -e ".[search]"
+pip install "local-file-organizer[search]"
 
-# Enable semantic search in config
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-search:
-  enabled: true
-  engine: hybrid  # BM25 + vector search
-EOF
+# Run a search query
+file-organizer search "query terms" --type documents
 
-# Build search index
-file-organizer index build /path/to/files
+# Use semantic search mode
+file-organizer search "query terms" --semantic
 
-# Verify index exists
-file-organizer index status
+# Limit results
+file-organizer search "query terms" --limit 20
 
-# Rebuild index if corrupted
-file-organizer index rebuild /path/to/files
+# Output as JSON for programmatic use
+file-organizer search "query terms" --json
 ```
 
 ### Search Index Build Failed
@@ -946,15 +813,10 @@ file-organizer index rebuild /path/to/files
 # Check if files have extractable text
 file-organizer analyze /path/to/files --verbose
 
-# Use BM25-only mode for small corpora
-cat >> ~/.config/file-organizer/config.yaml <<EOF
-search:
-  enabled: true
-  engine: bm25  # Keyword-based only
-EOF
-
 # Ensure files contain actual text content
 # Vector search requires at least a few meaningful documents
+# Try with more files or use keyword-based search
+file-organizer search "query" --type all
 ```
 
 ## Getting Help
@@ -968,9 +830,10 @@ If you can't find a solution here:
    - [FAQ](faq.md) - Frequently Asked Questions
 
 2. **Review logs**:
+
    ```bash
-   # Enable debug logging
-   file-organizer --log-level debug organize /path
+   # Enable verbose logging
+   file-organizer organize /input /output --verbose
 
    # Docker logs
    docker-compose logs
@@ -985,12 +848,13 @@ If you can't find a solution here:
    - Include: OS, Python version, error message, and steps to reproduce
 
 4. **Diagnostic Information**:
+
    ```bash
    # System information
-   file-organizer --version
+   file-organizer version
    python --version
    ollama --version
 
-   # Environment details
-   file-organizer diagnose
+   # Hardware details
+   file-organizer hardware-info
    ```
