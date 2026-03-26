@@ -169,6 +169,14 @@ def setup_run(
         # Get user preferences
         custom_settings = {}
 
+        # Backend/Framework selection
+        framework = prompt_choice(
+            "Select AI backend framework",
+            ["ollama", "llama_cpp", "mlx"],
+            default="ollama",
+        )
+        custom_settings["framework"] = framework
+
         # Model selection
         if capabilities.installed_models:
             model_choices = [m.name for m in capabilities.installed_models]
