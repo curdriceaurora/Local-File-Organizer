@@ -111,7 +111,58 @@ def setup_run(
     # Generate configuration
     custom_settings: dict[str, str | int | float] | None = None
 
-    if wizard_mode == WizardMode.POWER_USER:
+    if wizard_mode == WizardMode.QUICK_START:
+        console.print("[bold]Step 2:[/bold] Auto-configuring with recommended settings...")
+        console.print()
+
+        # Build automatic configuration
+        custom_settings = {}
+
+        # Automatically select recommended model
+        recommended = capabilities.hardware.recommended_text_model()
+
+        if capabilities.installed_models:
+            model_choices = [m.name for m in capabilities.installed_models]
+
+            # Use recommended model if available, otherwise first available
+            if recommended in model_choices:
+                selected_model = recommended
+                console.print(
+                    f"[green]\u2713[/green] Selected recommended model: [bold]{selected_model}[/bold]"
+                )
+            elif model_choices:
+                selected_model = model_choices[0]
+                console.print(
+                    f"[yellow]\u26A0[/yellow] Recommended model '{recommended}' not found, using: [bold]{selected_model}[/bold]"
+                )
+            else:
+                selected_model = recommended
+                console.print(
+                    f"[yellow]\u26A0[/yellow] No models installed, will use: [bold]{selected_model}[/bold]"
+                )
+
+            custom_settings["text_model"] = selected_model
+        else:
+            # No models installed - use recommended anyway
+            custom_settings["text_model"] = recommended
+            console.print(
+                f"[yellow]\u26A0[/yellow] No models installed, will use: [bold]{recommended}[/bold]"
+            )
+
+        # Use sensible defaults
+        custom_settings["methodology"] = "none"
+        custom_settings["temperature"] = 0.5
+        custom_settings["profile_name"] = profile
+
+        console.print(
+            "[green]\u2713[/green] Using default methodology: [bold]none[/bold]"
+        )
+        console.print(
+            "[green]\u2713[/green] Using default temperature: [bold]0.5[/bold]"
+        )
+        console.print()
+
+    elif wizard_mode == WizardMode.POWER_USER:
         console.print("[bold]Step 2:[/bold] Configuring options...")
         console.print()
 
