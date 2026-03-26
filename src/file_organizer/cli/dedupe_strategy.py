@@ -33,36 +33,39 @@ def select_files_to_keep(files: list[dict[str, Any]], strategy: str) -> list[dic
         strategy: Selection strategy ('manual', 'oldest', 'newest', 'largest', 'smallest').
 
     Returns:
-        Updated list with 'keep' flags set for files to preserve.
+        Updated list with 'keep' flags set for files to preserve (does not modify input).
     """
     if not files:
         return files
 
+    # Create a copy to avoid mutating the input list
+    updated_files = [dict(file_info) for file_info in files]
+
     if strategy == "oldest":
         # Keep the file with the oldest modification time
-        oldest_idx = min(range(len(files)), key=lambda i: files[i]["mtime"])
-        files[oldest_idx]["keep"] = True
+        oldest_idx = min(range(len(updated_files)), key=lambda i: updated_files[i]["mtime"])
+        updated_files[oldest_idx]["keep"] = True
 
     elif strategy == "newest":
         # Keep the file with the newest modification time
-        newest_idx = max(range(len(files)), key=lambda i: files[i]["mtime"])
-        files[newest_idx]["keep"] = True
+        newest_idx = max(range(len(updated_files)), key=lambda i: updated_files[i]["mtime"])
+        updated_files[newest_idx]["keep"] = True
 
     elif strategy == "largest":
         # Keep the largest file (in case of slight differences)
-        largest_idx = max(range(len(files)), key=lambda i: files[i]["size"])
-        files[largest_idx]["keep"] = True
+        largest_idx = max(range(len(updated_files)), key=lambda i: updated_files[i]["size"])
+        updated_files[largest_idx]["keep"] = True
 
     elif strategy == "smallest":
         # Keep the smallest file
-        smallest_idx = min(range(len(files)), key=lambda i: files[i]["size"])
-        files[smallest_idx]["keep"] = True
+        smallest_idx = min(range(len(updated_files)), key=lambda i: updated_files[i]["size"])
+        updated_files[smallest_idx]["keep"] = True
 
     elif strategy == "manual":
         # Manual selection - no automatic marking
         pass
 
-    return files
+    return updated_files
 
 
 def get_user_selection(

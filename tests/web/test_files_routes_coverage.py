@@ -148,7 +148,7 @@ class TestFilesThumbnailRoute:
         with (
             patch("file_organizer.web.files_routes.resolve_path", return_value=img),
             patch(
-                "file_organizer.web.files_routes.render_image_thumbnail", return_value=b"png-data"
+                "file_organizer.web.file_operations.render_image_thumbnail", return_value=b"png-data"
             ),
         ):
             resp = files_thumbnail(settings, path=str(img), kind="image")
@@ -163,7 +163,7 @@ class TestFilesThumbnailRoute:
             patch("file_organizer.web.files_routes.resolve_path", return_value=img),
             patch("file_organizer.web.files_routes.MAX_THUMBNAIL_BYTES", 10),
             patch(
-                "file_organizer.web.files_routes.render_placeholder_thumbnail",
+                "file_organizer.web.file_operations.render_placeholder_thumbnail",
                 return_value=b"placeholder",
             ),
         ):
@@ -178,7 +178,7 @@ class TestFilesThumbnailRoute:
         with (
             patch("file_organizer.web.files_routes.resolve_path", return_value=pdf),
             patch(
-                "file_organizer.web.files_routes.render_placeholder_thumbnail",
+                "file_organizer.web.file_operations.render_placeholder_thumbnail",
                 return_value=b"placeholder",
             ),
         ):
@@ -193,7 +193,7 @@ class TestFilesThumbnailRoute:
         with (
             patch("file_organizer.web.files_routes.resolve_path", return_value=vid),
             patch(
-                "file_organizer.web.files_routes.render_placeholder_thumbnail",
+                "file_organizer.web.file_operations.render_placeholder_thumbnail",
                 return_value=b"placeholder",
             ),
         ):
@@ -219,7 +219,7 @@ class TestFilesThumbnailRoute:
         with (
             patch("file_organizer.web.files_routes.resolve_path", return_value=f),
             patch(
-                "file_organizer.web.files_routes.render_placeholder_thumbnail",
+                "file_organizer.web.file_operations.render_placeholder_thumbnail",
                 return_value=b"placeholder",
             ),
         ):
@@ -258,7 +258,7 @@ class TestFilesThumbnailRoute:
             patch.object(Path, "is_file", _is_file_side_effect),
             patch.object(Path, "stat", _stat_side_effect),
             patch(
-                "file_organizer.web.files_routes.render_placeholder_thumbnail",
+                "file_organizer.web.file_operations.render_placeholder_thumbnail",
                 return_value=b"placeholder",
             ),
         ):
