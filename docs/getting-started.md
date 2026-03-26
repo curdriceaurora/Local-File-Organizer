@@ -124,8 +124,9 @@ File Organizer supports modular installation through optional dependency groups.
 | **archive** | `pip install local-file-organizer[archive]` | 7Z and RAR archive extraction | RAR requires `unrar` tool |
 | **scientific** | `pip install local-file-organizer[scientific]` | HDF5, NetCDF, MATLAB file format support | All platforms |
 | **cad** | `pip install local-file-organizer[cad]` | DXF/DWG CAD file parsing | All platforms |
+| **build** | `pip install local-file-organizer[build]` | PyInstaller-based executable packaging | All platforms |
 | **search** | `pip install local-file-organizer[search]` | BM25-based search ranking algorithms | All platforms |
-| **all** | `pip install local-file-organizer[all]` | All optional features combined | See individual feature notes |
+| **all** | `pip install local-file-organizer[all]` | All optional packs above, plus development tools (`pytest`, `mypy`, `ruff`, etc.) and PyQt6 GUI dependencies | Includes `dev` and `gui` extras in addition to feature/build packs |
 
 **Example usage:**
 
