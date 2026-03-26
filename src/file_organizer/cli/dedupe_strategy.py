@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from loguru import logger
 from rich.console import Console
 
 
@@ -19,8 +20,11 @@ def _resolve_console(console: Console | None) -> Console:
 
     try:
         from file_organizer.cli import dedupe as dedupe_module
-    except ImportError:
-        # Console not available, create a new one as fallback
+    except ImportError as e:
+        logger.warning(
+            "Could not import dedupe module for global console: %s. Creating new console.",
+            e,
+        )
         return Console()
     else:
         return dedupe_module.console

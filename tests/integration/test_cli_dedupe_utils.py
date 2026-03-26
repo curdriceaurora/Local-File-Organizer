@@ -338,3 +338,103 @@ class TestDisplayDuplicateGroup:
         with patch("file_organizer.cli.dedupe.console", mock_console):
             display_duplicate_group(2, "deadbeef", files, 5)
         assert mock_console.print.call_count == 4
+
+
+# ---------------------------------------------------------------------------
+# select_files_to_keep — input validation
+# ---------------------------------------------------------------------------
+
+
+class TestSelectFilesToKeepValidation:
+    def test_missing_path_key_raises_valueerror(self) -> None:
+        from file_organizer.cli.dedupe import select_files_to_keep
+
+        files = [{"size": 1024, "mtime": 1000.0}]  # missing 'path'
+        with pytest.raises(ValueError, match="missing required keys"):
+            select_files_to_keep(files, "oldest")
+
+    def test_missing_size_key_raises_valueerror(self) -> None:
+        from file_organizer.cli.dedupe import select_files_to_keep
+
+        files = [{"path": "/a.txt", "mtime": 1000.0}]  # missing 'size'
+        with pytest.raises(ValueError, match="missing required keys"):
+            select_files_to_keep(files, "oldest")
+
+    def test_missing_mtime_key_raises_valueerror(self) -> None:
+        from file_organizer.cli.dedupe import select_files_to_keep
+
+        files = [{"path": "/a.txt", "size": 1024}]  # missing 'mtime'
+        with pytest.raises(ValueError, match="missing required keys"):
+            select_files_to_keep(files, "oldest")
+
+    def test_missing_multiple_keys_raises_valueerror(self) -> None:
+        from file_organizer.cli.dedupe import select_files_to_keep
+
+        files = [{"path": "/a.txt"}]  # missing 'size' and 'mtime'
+        with pytest.raises(ValueError, match="missing required keys"):
+            select_files_to_keep(files, "newest")
+
+    def test_error_message_includes_index(self) -> None:
+        from file_organizer.cli.dedupe import select_files_to_keep
+
+        files = [
+            _make_file("/a.txt"),
+            {"path": "/b.txt", "size": 1024},  # missing 'mtime' at index 1
+        ]
+        with pytest.raises(ValueError, match="File dict at index 1"):
+            select_files_to_keep(files, "largest")
+
+
+# ---------------------------------------------------------------------------
+# dedupe_command — exception handling
+# ---------------------------------------------------------------------------
+
+
+class TestDedupeCommandExceptionHandling:
+    def test_permission_error_returns_1(self, tmp_path) -> None:
+        from file_organizer.cli.dedupe import dedupe_command
+
+        with patch(
+            "file_organizer.cli.dedupe.dedupe_display.display_banner",
+        ), patch("file_organizer.cli.dedupe.dedupe_display.display_config"), patch(
+            "file_organizer.cli.dedupe.initialize_hash_detector",
+            side_effect=PermissionError("Access denied"),
+        ):
+            result = dedupe_command([str(tmp_path)])
+        assert result == 1
+
+    def test_os_error_returns_1(self, tmp_path) -> None:
+        from file_organizer.cli.dedupe import dedupe_command
+
+        with patch(
+            "file_organizer.cli.dedupe.dedupe_display.display_banner",
+        ), patch("file_organizer.cli.dedupe.dedupe_display.display_config"), patch(
+            "file_organizer.cli.dedupe.initialize_hash_detector",
+            side_effect=OSError("File system error"),
+        ):
+            result = dedupe_command([str(tmp_path)])
+        assert result == 1
+
+    def test_keyboard_interrupt_returns_130(self, tmp_path) -> None:
+        from file_organizer.cli.dedupe import dedupe_command
+
+        with patch(
+            "file_organizer.cli.dedupe.dedupe_display.display_banner",
+        ), patch("file_organizer.cli.dedupe.dedupe_display.display_config"), patch(
+            "file_organizer.cli.dedupe.initialize_hash_detector",
+            side_effect=KeyboardInterrupt(),
+        ):
+            result = dedupe_command([str(tmp_path)])
+        assert result == 130
+
+    def test_generic_exception_returns_1(self, tmp_path) -> None:
+        from file_organizer.cli.dedupe import dedupe_command
+
+        with patch(
+            "file_organizer.cli.dedupe.dedupe_display.display_banner",
+        ), patch("file_organizer.cli.dedupe.dedupe_display.display_config"), patch(
+            "file_organizer.cli.dedupe.initialize_hash_detector",
+            side_effect=RuntimeError("Unknown error"),
+        ):
+            result = dedupe_command([str(tmp_path)])
+        assert result == 1
