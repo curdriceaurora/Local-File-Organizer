@@ -83,6 +83,8 @@ def _build_tree_context(
                 )
         except ApiError as exc:
             error_message = exc.message
+        except OSError as exc:
+            error_message = str(exc)
     else:
         for root in roots:
             nodes.append(
