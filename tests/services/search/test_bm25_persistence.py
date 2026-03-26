@@ -400,13 +400,13 @@ class TestBM25PersistenceIntegration:
 
         # First cycle
         persistence.save(sample_bm25_index, paths1, temp_cache_path)
-        loaded_index1, loaded_paths1, loaded_documents1 = persistence.load(temp_cache_path)
+        _, loaded_paths1, loaded_documents1 = persistence.load(temp_cache_path)
         assert loaded_paths1 == paths1
         assert loaded_documents1 == []
 
         # Second cycle (overwrite)
         persistence.save(sample_bm25_index, paths2, temp_cache_path)
-        loaded_index2, loaded_paths2, loaded_documents2 = persistence.load(temp_cache_path)
+        _, loaded_paths2, loaded_documents2 = persistence.load(temp_cache_path)
         assert loaded_paths2 == paths2
         assert loaded_paths2 != paths1
         assert loaded_documents2 == []
