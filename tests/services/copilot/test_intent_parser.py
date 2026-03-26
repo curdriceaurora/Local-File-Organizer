@@ -11,6 +11,8 @@ import pytest
 from file_organizer.services.copilot.intent_parser import IntentParser
 from file_organizer.services.copilot.models import IntentType
 
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
+
 
 @pytest.fixture()
 def parser() -> IntentParser:

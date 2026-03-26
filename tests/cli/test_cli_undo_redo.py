@@ -22,7 +22,7 @@ from file_organizer.cli.undo_redo import (
     undo_command,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
 def _make_operation(op_id=1, op_type="move", src="/a/file.txt", dst="/b/file.txt"):
@@ -79,6 +79,26 @@ class TestUndoCommand:
         assert result == 0
         mock_mgr.undo_transaction.assert_called_once_with("tx-123")
 
+    def test_undo_live_operation_id_zero_is_valid(self):
+        mock_mgr = MagicMock()
+        mock_mgr.undo_operation.return_value = True
+        with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr):
+            result = undo_command(operation_id=0)
+
+        assert result == 0
+        mock_mgr.undo_operation.assert_called_once_with(0)
+        mock_mgr.undo_last_operation.assert_not_called()
+
+    def test_undo_live_empty_transaction_id_takes_precedence(self):
+        mock_mgr = MagicMock()
+        with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr):
+            result = undo_command(operation_id=5, transaction_id="")
+
+        assert result == 0
+        mock_mgr.undo_transaction.assert_not_called()
+        mock_mgr.undo_operation.assert_called_once_with(5)
+        mock_mgr.undo_last_operation.assert_not_called()
+
     def test_undo_dry_run_with_operation_id_can_undo(self, capsys):
         mock_mgr = MagicMock()
         mock_mgr.can_undo.return_value = (True, "")
@@ -90,6 +110,7 @@ class TestUndoCommand:
         captured = capsys.readouterr()
         assert "Would undo operation 5" in captured.out
         assert "can be safely undone" in captured.out
+        assert "Run without --dry-run to actually undo" in captured.out
 
     def test_undo_dry_run_with_operation_id_cannot_undo(self, capsys):
         mock_mgr = MagicMock()
@@ -100,6 +121,7 @@ class TestUndoCommand:
         captured = capsys.readouterr()
         assert "Cannot undo" in captured.out
         assert "File deleted" in captured.out
+        assert "Run without --dry-run to actually undo" not in captured.out
 
     def test_undo_dry_run_with_operation_id_not_found(self, capsys):
         mock_mgr = MagicMock()
@@ -123,6 +145,20 @@ class TestUndoCommand:
         captured = capsys.readouterr()
         assert "Would undo transaction tx-abc" in captured.out
         assert "Operations: 3" in captured.out
+        assert "Run without --dry-run to actually undo" in captured.out
+
+    def test_undo_dry_run_prefers_transaction_over_operation(self, capsys):
+        mock_mgr = MagicMock()
+        mock_transaction = MagicMock()
+        mock_mgr.history.get_transaction.return_value = mock_transaction
+        mock_mgr.history.get_operations.return_value = [_make_operation(op_id=1)]
+        with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr):
+            result = undo_command(operation_id=5, transaction_id="tx-abc", dry_run=True)
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Would undo transaction tx-abc" in captured.out
+        assert "Would undo operation 5" not in captured.out
+        assert "Run without --dry-run to actually undo" in captured.out
 
     def test_undo_dry_run_transaction_not_found(self, capsys):
         mock_mgr = MagicMock()
@@ -132,6 +168,7 @@ class TestUndoCommand:
         assert result == 1
         captured = capsys.readouterr()
         assert "not found" in captured.out
+        assert "Run without --dry-run to actually undo" not in captured.out
 
     def test_undo_dry_run_last_operation(self, capsys):
         mock_mgr = MagicMock()
@@ -142,6 +179,7 @@ class TestUndoCommand:
         assert result == 0
         captured = capsys.readouterr()
         assert "Would undo last operation" in captured.out
+        assert "Run without --dry-run to actually undo" in captured.out
 
     def test_undo_dry_run_no_operations(self, capsys):
         mock_mgr = MagicMock()
@@ -151,6 +189,7 @@ class TestUndoCommand:
         assert result == 1
         captured = capsys.readouterr()
         assert "No operations to undo" in captured.out
+        assert "Run without --dry-run to actually undo" not in captured.out
 
     def test_undo_dry_run_transaction_many_operations(self, capsys):
         """Test that dry-run truncates display after 5 operations."""
@@ -164,6 +203,38 @@ class TestUndoCommand:
         assert result == 0
         captured = capsys.readouterr()
         assert "and 3 more" in captured.out
+        assert "Run without --dry-run to actually undo" in captured.out
+
+    def test_undo_dry_run_operation_id_zero_is_valid(self):
+        mock_mgr = MagicMock()
+        with (
+            patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr),
+            patch(
+                "file_organizer.cli.undo_redo.undo_history.preview_undo_operation",
+                return_value=0,
+            ) as mock_preview,
+        ):
+            result = undo_command(operation_id=0, dry_run=True)
+
+        assert result == 0
+        mock_preview.assert_called_once_with(mock_mgr, 0)
+
+    def test_undo_dry_run_empty_transaction_id_takes_precedence(self):
+        mock_mgr = MagicMock()
+        with (
+            patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr),
+            patch(
+                "file_organizer.cli.undo_redo.undo_history.preview_undo_operation", return_value=0
+            ) as mock_preview_operation,
+            patch(
+                "file_organizer.cli.undo_redo.undo_history.preview_undo_transaction"
+            ) as mock_preview_transaction,
+        ):
+            result = undo_command(operation_id=5, transaction_id="", dry_run=True)
+
+        assert result == 0
+        mock_preview_transaction.assert_not_called()
+        mock_preview_operation.assert_called_once_with(mock_mgr, 5)
 
     def test_undo_exception(self, capsys):
         with patch(
@@ -243,6 +314,16 @@ class TestRedoCommand:
         assert result == 0
         mock_mgr.redo_operation.assert_called_once_with(42)
 
+    def test_redo_live_operation_id_zero_is_valid(self):
+        mock_mgr = MagicMock()
+        mock_mgr.redo_operation.return_value = True
+        with patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr):
+            result = redo_command(operation_id=0)
+
+        assert result == 0
+        mock_mgr.redo_operation.assert_called_once_with(0)
+        mock_mgr.redo_last_operation.assert_not_called()
+
     def test_redo_dry_run_with_operation_id_can_redo(self, capsys):
         mock_mgr = MagicMock()
         mock_mgr.can_redo.return_value = (True, "")
@@ -254,6 +335,7 @@ class TestRedoCommand:
         captured = capsys.readouterr()
         assert "Would redo operation 7" in captured.out
         assert "can be safely redone" in captured.out
+        assert "Run without --dry-run to actually redo" in captured.out
 
     def test_redo_dry_run_with_operation_id_cannot_redo(self, capsys):
         mock_mgr = MagicMock()
@@ -264,6 +346,7 @@ class TestRedoCommand:
         captured = capsys.readouterr()
         assert "Cannot redo" in captured.out
         assert "File exists" in captured.out
+        assert "Run without --dry-run to actually redo" not in captured.out
 
     def test_redo_dry_run_operation_not_in_redo_stack(self, capsys):
         mock_mgr = MagicMock()
@@ -274,6 +357,7 @@ class TestRedoCommand:
         assert result == 1
         captured = capsys.readouterr()
         assert "not found in redo stack" in captured.out
+        assert "Run without --dry-run to actually redo" not in captured.out
 
     def test_redo_dry_run_last_operation(self, capsys):
         mock_mgr = MagicMock()
@@ -284,6 +368,7 @@ class TestRedoCommand:
         assert result == 0
         captured = capsys.readouterr()
         assert "Would redo last operation" in captured.out
+        assert "Run without --dry-run to actually redo" in captured.out
 
     def test_redo_dry_run_no_operations(self, capsys):
         mock_mgr = MagicMock()
@@ -293,6 +378,21 @@ class TestRedoCommand:
         assert result == 1
         captured = capsys.readouterr()
         assert "No operations to redo" in captured.out
+        assert "Run without --dry-run to actually redo" not in captured.out
+
+    def test_redo_dry_run_operation_id_zero_is_valid(self):
+        mock_mgr = MagicMock()
+        with (
+            patch("file_organizer.cli.undo_redo.UndoManager", return_value=mock_mgr),
+            patch(
+                "file_organizer.cli.undo_redo.undo_history.preview_redo_operation",
+                return_value=0,
+            ) as mock_preview,
+        ):
+            result = redo_command(operation_id=0, dry_run=True)
+
+        assert result == 0
+        mock_preview.assert_called_once_with(mock_mgr, 0)
 
     def test_redo_exception(self, capsys):
         with patch(

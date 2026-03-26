@@ -13,20 +13,22 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from rich.console import Console
 
-from file_organizer.cli.dedupe import (
-    DedupeConfig,
-    dedupe_command,
+from file_organizer.cli.dedupe import DedupeConfig, dedupe_command, main
+from file_organizer.cli.dedupe_display import (
     display_duplicate_group,
     display_summary,
     format_datetime,
     format_size,
+)
+from file_organizer.cli.dedupe_removal import remove_files
+from file_organizer.cli.dedupe_strategy import (
     get_user_selection,
-    main,
     select_files_to_keep,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 # ---------------------------------------------------------------------------
 # Patch paths — dedupe_command uses *lazy imports* inside a try block.
@@ -211,6 +213,16 @@ class TestSelectFilesToKeep:
         for f in result:
             assert f.get("keep", False) is False
 
+    def test_does_not_mutate_input_list(self):
+        files = self._make_files()
+        original = [dict(file_info) for file_info in files]
+        result = select_files_to_keep(files, "oldest")
+        assert files == original
+        assert result is not files
+
+    def test_empty_list_returns_empty_list(self):
+        assert select_files_to_keep([], "oldest") == []
+
 
 @pytest.mark.unit
 class TestGetUserSelection:
@@ -232,6 +244,39 @@ class TestGetUserSelection:
         ]
         result = get_user_selection(files, "oldest", batch=True)
         assert result == []
+
+    def test_keyboard_interrupt_is_reraised_for_auto_confirmation(self):
+        files = [
+            {"path": Path("/a/f1.txt"), "keep": True},
+            {"path": Path("/a/f2.txt"), "keep": False},
+        ]
+        console = MagicMock(spec=Console)
+        console.input.side_effect = KeyboardInterrupt
+
+        with pytest.raises(KeyboardInterrupt):
+            get_user_selection(files, "oldest", batch=False, console=console)
+
+
+@pytest.mark.unit
+class TestRemoveFiles:
+    """Tests for file removal summary behavior."""
+
+    def test_summary_reports_actual_successful_removals(self, tmp_path):
+        first = tmp_path / "one.txt"
+        second = tmp_path / "two.txt"
+        first.write_text("one")
+        second.write_text("two")
+        console = Console(record=True)
+        files = [
+            {"path": first, "size": 3},
+            {"path": second, "size": 3},
+        ]
+
+        with patch.object(Path, "unlink", side_effect=[None, OSError("boom")]):
+            removed, space_saved = remove_files(files, [0, 1], None, False, console)
+
+        assert removed == 1
+        assert space_saved == 3
 
 
 # ============================================================================
@@ -431,24 +476,36 @@ class TestDisplaySummary:
     """Tests for display_summary output."""
 
     def test_dry_run_summary(self, capsys):
+        console = Console(record=True)
         display_summary(
+            console,
             total_groups=3,
             total_duplicates=10,
             total_removed=7,
             space_saved=1024 * 1024,
             dry_run=True,
         )
-        # Should not raise
+        output = console.export_text()
+        assert "DRY RUN SUMMARY" in output
+        assert "Duplicate groups found: 3" in output
+        assert "Files that would be removed: 7" in output
+        assert "Run without --dry-run to actually remove files." in output
 
     def test_live_run_summary(self, capsys):
+        console = Console(record=True)
         display_summary(
+            console,
             total_groups=2,
             total_duplicates=5,
             total_removed=3,
             space_saved=512,
             dry_run=False,
         )
-        # Should not raise
+        output = console.export_text()
+        assert "DEDUPLICATION COMPLETE" in output
+        assert "Duplicate groups found: 2" in output
+        assert "Files removed: 3" in output
+        assert "Space saved: 512.0 B" in output
 
 
 # ============================================================================
@@ -461,30 +518,43 @@ class TestDisplayDuplicateGroup:
     """Tests for display_duplicate_group output."""
 
     def test_displays_group(self, capsys):
+        console = Console(record=True)
         files = [
             {"path": Path("/a/file1.txt"), "size": 1024, "mtime": 1000.0, "keep": True},
             {"path": Path("/a/file2.txt"), "size": 1024, "mtime": 2000.0, "keep": False},
         ]
         display_duplicate_group(
+            console,
             group_id=1,
             file_hash="abc123def456789012345678",
             files=files,
             total_groups=3,
         )
-        # Should not raise; verifies the function runs end-to-end
+        output = console.export_text()
+        assert "Duplicate Group 1/3" in output
+        assert "abc123def4567890..." in output
+        assert "/a/file1.txt" in output
+        assert "/a/file2.txt" in output
+        assert "Potential space savings: 1.0 KB" in output
 
     def test_displays_group_no_keep(self, capsys):
+        console = Console(record=True)
         files = [
             {"path": Path("/x/y.txt"), "size": 500, "mtime": 100.0},
             {"path": Path("/x/z.txt"), "size": 500, "mtime": 200.0},
         ]
         display_duplicate_group(
+            console,
             group_id=2,
             file_hash="0" * 64,
             files=files,
             total_groups=5,
         )
-        # Should not raise
+        output = console.export_text()
+        assert "Duplicate Group 2/5" in output
+        assert "/x/y.txt" in output
+        assert "/x/z.txt" in output
+        assert "Potential space savings: 500.0 B" in output
 
 
 # ============================================================================

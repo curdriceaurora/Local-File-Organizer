@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
 
 # ---------------------------------------------------------------------------

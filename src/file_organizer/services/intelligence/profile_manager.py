@@ -440,6 +440,10 @@ class ProfileManager:
             # Update fields
             if "description" in updates:
                 profile.description = updates["description"]
+            if "profile_version" in updates:
+                profile.profile_version = updates["profile_version"]
+            if "created" in updates:
+                profile.created = updates["created"]
             if "preferences" in updates:
                 profile.preferences = updates["preferences"]
             if "learned_patterns" in updates:
@@ -448,7 +452,10 @@ class ProfileManager:
                 profile.confidence_data = updates["confidence_data"]
 
             # Update timestamp
-            profile.updated = self._get_current_timestamp()
+            if "updated" in updates:
+                profile.updated = updates["updated"]
+            else:
+                profile.updated = self._get_current_timestamp()
 
             # Validate
             if not profile.validate():

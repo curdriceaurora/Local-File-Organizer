@@ -76,7 +76,6 @@ class ProfileImporter:
         """
         errors: list[str] = []
         warnings: list[str] = []
-        profile_data = None
 
         try:
             file_path = Path(file_path)
@@ -86,78 +85,21 @@ class ProfileImporter:
                 errors.append(f"File not found: {file_path}")
                 return ValidationResult(False, errors, warnings)
 
-            # Check file size (warn if > 10MB)
-            file_size = file_path.stat().st_size
-            if file_size > 10 * 1024 * 1024:
-                warnings.append(f"Large file size: {file_size / (1024 * 1024):.1f} MB")
+            # Check file size
+            self._check_file_size(file_path, warnings)
 
             # Load and parse JSON
-            try:
-                with open(file_path, encoding="utf-8") as f:
-                    profile_data = json.load(f)
-            except json.JSONDecodeError as e:
-                errors.append(f"Invalid JSON format: {e}")
+            profile_data = self._load_json_file(file_path, errors)
+            if profile_data is None:
                 return ValidationResult(False, errors, warnings)
 
-            # Check required fields
-            required_fields = ["profile_name", "profile_version"]
-            missing_fields = [f for f in required_fields if f not in profile_data]
-            if missing_fields:
-                errors.append(f"Missing required fields: {', '.join(missing_fields)}")
-
-            # Validate profile name
-            if "profile_name" in profile_data:
-                name = profile_data["profile_name"]
-                if not name or not isinstance(name, str):
-                    errors.append("Invalid profile name")
-                elif len(name) > 100:
-                    errors.append("Profile name too long (max 100 characters)")
-
-            # Check version compatibility
-            if "profile_version" in profile_data:
-                version = profile_data["profile_version"]
-                if version not in ["1.0"]:
-                    warnings.append(f"Unknown profile version: {version} (will attempt migration)")
-
-            # Check export type
-            export_type = profile_data.get("export_type", "full")
-
-            if export_type == "full":
-                # Validate full export structure
-                if "preferences" not in profile_data:
-                    errors.append("Missing 'preferences' field for full export")
-                else:
-                    prefs = profile_data["preferences"]
-                    if not isinstance(prefs, dict):
-                        errors.append("Invalid preferences structure")
-                    else:
-                        # Check required preference keys
-                        if "global" not in prefs:
-                            warnings.append("Missing 'global' preferences")
-                        if "directory_specific" not in prefs:
-                            warnings.append("Missing 'directory_specific' preferences")
-
-            elif export_type == "selective":
-                # Validate selective export
-                if "included_preferences" not in profile_data:
-                    errors.append("Selective export missing 'included_preferences'")
-                if "preferences" not in profile_data:
-                    errors.append("Missing 'preferences' field")
-
-            # Validate timestamps if present
-            for timestamp_field in ["created", "updated", "exported_at"]:
-                if timestamp_field in profile_data:
-                    try:
-                        datetime.fromisoformat(profile_data[timestamp_field].replace("Z", "+00:00"))
-                    except (ValueError, AttributeError):
-                        warnings.append(f"Invalid timestamp format: {timestamp_field}")
-
-            # Check if profile already exists
-            if "profile_name" in profile_data:
-                if self.profile_manager.profile_exists(profile_data["profile_name"]):
-                    warnings.append(
-                        f"Profile '{profile_data['profile_name']}' already exists (will be overwritten)"
-                    )
+            # Validate profile structure
+            self._validate_required_fields(profile_data, errors)
+            self._validate_profile_name(profile_data, errors)
+            self._validate_version(profile_data, warnings)
+            self._validate_export_structure(profile_data, errors, warnings)
+            self._validate_timestamps(profile_data, warnings)
+            self._check_profile_exists(profile_data, warnings)
 
             valid = len(errors) == 0
             return ValidationResult(valid, errors, warnings, profile_data)
@@ -165,6 +107,106 @@ class ProfileImporter:
         except Exception as e:
             errors.append(f"Validation error: {e}")
             return ValidationResult(False, errors, warnings)
+
+    def _check_file_size(self, file_path: Path, warnings: list[str]) -> None:
+        """Check file size and warn if too large."""
+        file_size = file_path.stat().st_size
+        if file_size > 10 * 1024 * 1024:
+            warnings.append(f"Large file size: {file_size / (1024 * 1024):.1f} MB")
+
+    def _load_json_file(self, file_path: Path, errors: list[str]) -> dict[str, Any] | None:
+        """Load and parse JSON file."""
+        try:
+            with open(file_path, encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError as e:
+            errors.append(f"Invalid JSON format: {e}")
+            return None
+
+    def _validate_required_fields(self, profile_data: dict[str, Any], errors: list[str]) -> None:
+        """Validate required profile fields."""
+        required_fields = ["profile_name", "profile_version"]
+        missing_fields = [f for f in required_fields if f not in profile_data]
+        if missing_fields:
+            errors.append(f"Missing required fields: {', '.join(missing_fields)}")
+
+    def _validate_profile_name(self, profile_data: dict[str, Any], errors: list[str]) -> None:
+        """Validate profile name field."""
+        if "profile_name" not in profile_data:
+            return
+
+        name = profile_data["profile_name"]
+        if not name or not isinstance(name, str):
+            errors.append("Invalid profile name")
+        elif len(name) > 100:
+            errors.append("Profile name too long (max 100 characters)")
+
+    def _validate_version(self, profile_data: dict[str, Any], warnings: list[str]) -> None:
+        """Validate profile version."""
+        if "profile_version" not in profile_data:
+            return
+
+        version = profile_data["profile_version"]
+        if version not in ["1.0"]:
+            warnings.append(f"Unknown profile version: {version} (will attempt migration)")
+
+    def _validate_export_structure(
+        self, profile_data: dict[str, Any], errors: list[str], warnings: list[str]
+    ) -> None:
+        """Validate export structure based on export type."""
+        export_type = profile_data.get("export_type", "full")
+
+        if export_type == "full":
+            self._validate_full_export(profile_data, errors, warnings)
+        elif export_type == "selective":
+            self._validate_selective_export(profile_data, errors)
+        else:
+            errors.append(f"Invalid export_type: {export_type}")
+
+    def _validate_full_export(
+        self, profile_data: dict[str, Any], errors: list[str], warnings: list[str]
+    ) -> None:
+        """Validate full export structure."""
+        if "preferences" not in profile_data:
+            errors.append("Missing 'preferences' field for full export")
+            return
+
+        prefs = profile_data["preferences"]
+        if not isinstance(prefs, dict):
+            errors.append("Invalid preferences structure")
+            return
+
+        if "global" not in prefs:
+            warnings.append("Missing 'global' preferences")
+        if "directory_specific" not in prefs:
+            warnings.append("Missing 'directory_specific' preferences")
+
+    def _validate_selective_export(self, profile_data: dict[str, Any], errors: list[str]) -> None:
+        """Validate selective export structure."""
+        if "included_preferences" not in profile_data:
+            errors.append("Selective export missing 'included_preferences'")
+        if "preferences" not in profile_data:
+            errors.append("Missing 'preferences' field")
+
+    def _validate_timestamps(self, profile_data: dict[str, Any], warnings: list[str]) -> None:
+        """Validate timestamp fields."""
+        for timestamp_field in ["created", "updated", "exported_at"]:
+            if timestamp_field not in profile_data:
+                continue
+            try:
+                datetime.fromisoformat(profile_data[timestamp_field].replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                warnings.append(f"Invalid timestamp format: {timestamp_field}")
+
+    def _check_profile_exists(self, profile_data: dict[str, Any], warnings: list[str]) -> None:
+        """Check if profile already exists."""
+        if "profile_name" not in profile_data:
+            return
+
+        if self.profile_manager.profile_exists(profile_data["profile_name"]):
+            warnings.append(
+                f"Profile '{profile_data['profile_name']}' already exists (will be overwritten)"
+            )
 
     def preview_import(self, file_path: Path) -> dict[str, Any] | None:
         """Preview what would be imported from a file.
@@ -238,15 +280,8 @@ class ProfileImporter:
             Imported Profile object or None on failure
         """
         try:
-            # Validate import file
-            validation = self.validate_import_file(file_path)
-
-            if not validation.valid:
-                print("Cannot import invalid file:")
-                print(validation)
-                return None
-
-            data = validation.profile_data
+            # Validate and load import data
+            data = self._validate_and_load_import_data(file_path)
             if not data:
                 return None
 
@@ -254,71 +289,93 @@ class ProfileImporter:
             profile_name = new_name if new_name else data["profile_name"]
 
             # Create backup if profile exists
-            if self.profile_manager.profile_exists(profile_name):
-                existing_profile = self.profile_manager.get_profile(profile_name)
-                if existing_profile:
-                    self._backup_profile(existing_profile)
+            self._backup_if_exists(profile_name)
 
             # Build profile from import data
             export_type = data.get("export_type", "full")
-
             if export_type == "selective":
-                # For selective import, need to merge with existing or create new
                 return self._import_selective_profile(data, profile_name)
-            else:
-                # Full import
-                profile = Profile(
-                    profile_name=profile_name,
-                    description=data.get("description", ""),
-                    profile_version=data.get("profile_version", "1.0"),
-                    created=data.get("created"),
-                    updated=self._get_current_timestamp(),
-                    preferences=data.get("preferences", {"global": {}, "directory_specific": {}}),
-                    learned_patterns=data.get("learned_patterns", {}),
-                    confidence_data=data.get("confidence_data", {}),
-                )
 
-            # Validate profile
-            if not profile.validate():
-                print("Error: Imported profile failed validation")
-                return None
-
-            # Save profile using profile manager
-            # If profile exists, update it; otherwise create it
-            if self.profile_manager.profile_exists(profile_name):
-                success = self.profile_manager.update_profile(
-                    profile_name,
-                    description=profile.description,
-                    preferences=profile.preferences,
-                    learned_patterns=profile.learned_patterns,
-                    confidence_data=profile.confidence_data,
-                )
-                if not success:
-                    return None
-            else:
-                # Create new profile
-                created_profile = self.profile_manager.create_profile(
-                    profile_name, profile.description
-                )
-                if not created_profile:
-                    return None
-
-                # Update with imported data
-                success = self.profile_manager.update_profile(
-                    profile_name,
-                    preferences=profile.preferences,
-                    learned_patterns=profile.learned_patterns,
-                    confidence_data=profile.confidence_data,
-                )
-                if not success:
-                    return None
-
-            # Return the imported profile
-            return self.profile_manager.get_profile(profile_name)
+            # Full import
+            return self._import_full_profile(data, profile_name)
 
         except Exception as e:
             print(f"Error importing profile: {e}")
             return None
+
+    def _validate_and_load_import_data(self, file_path: Path) -> dict[str, Any] | None:
+        """Validate and load import data from file."""
+        validation = self.validate_import_file(file_path)
+
+        if not validation.valid:
+            print("Cannot import invalid file:")
+            print(validation)
+            return None
+
+        return validation.profile_data
+
+    def _backup_if_exists(self, profile_name: str) -> None:
+        """Create backup if profile already exists."""
+        if self.profile_manager.profile_exists(profile_name):
+            existing_profile = self.profile_manager.get_profile(profile_name)
+            if existing_profile:
+                self._backup_profile(existing_profile)
+
+    def _import_full_profile(self, data: dict[str, Any], profile_name: str) -> Profile | None:
+        """Import a full profile."""
+        # Build profile from import data
+        profile = Profile(
+            profile_name=profile_name,
+            description=data.get("description", ""),
+            profile_version=data.get("profile_version", "1.0"),
+            created=data.get("created"),
+            updated=data.get("updated"),
+            preferences=data.get("preferences", {"global": {}, "directory_specific": {}}),
+            learned_patterns=data.get("learned_patterns", {}),
+            confidence_data=data.get("confidence_data", {}),
+        )
+
+        # Validate profile
+        if not profile.validate():
+            print("Error: Imported profile failed validation")
+            return None
+
+        # Save profile
+        if not self._save_profile(profile_name, profile):
+            return None
+
+        # Return the imported profile
+        return self.profile_manager.get_profile(profile_name)
+
+    def _save_profile(self, profile_name: str, profile: Profile) -> bool:
+        """Save or update profile using profile manager."""
+        if self.profile_manager.profile_exists(profile_name):
+            return self.profile_manager.update_profile(
+                profile_name,
+                description=profile.description,
+                profile_version=profile.profile_version,
+                created=profile.created,
+                updated=profile.updated,
+                preferences=profile.preferences,
+                learned_patterns=profile.learned_patterns,
+                confidence_data=profile.confidence_data,
+            )
+        else:
+            # Create new profile
+            created_profile = self.profile_manager.create_profile(profile_name, profile.description)
+            if not created_profile:
+                return False
+
+            # Update with imported data
+            return self.profile_manager.update_profile(
+                profile_name,
+                profile_version=profile.profile_version,
+                created=profile.created,
+                updated=profile.updated,
+                preferences=profile.preferences,
+                learned_patterns=profile.learned_patterns,
+                confidence_data=profile.confidence_data,
+            )
 
     def _import_selective_profile(self, data: dict[str, Any], profile_name: str) -> Profile | None:
         """Import selective preferences and merge with existing profile.
@@ -343,7 +400,12 @@ class ProfileImporter:
 
         # Merge selective preferences
         imported_prefs = data.get("preferences", {})
-        current_prefs: dict[str, Any] = existing_profile.preferences or {}
+        current_prefs: dict[str, Any] = {
+            "global": dict((existing_profile.preferences or {}).get("global", {})),
+            "directory_specific": dict(
+                (existing_profile.preferences or {}).get("directory_specific", {})
+            ),
+        }
 
         # Merge global preferences
         if "global" in imported_prefs:
@@ -354,23 +416,21 @@ class ProfileImporter:
             current_prefs["directory_specific"].update(imported_prefs["directory_specific"])
 
         # Update learned patterns if included
+        learned_patterns = dict(existing_profile.learned_patterns or {})
         if "learned_patterns" in data:
-            (existing_profile.learned_patterns or {}).update(data["learned_patterns"])
-            if existing_profile.learned_patterns is None:
-                existing_profile.learned_patterns = dict(data["learned_patterns"])
+            learned_patterns.update(data["learned_patterns"])
 
         # Update confidence data if included
+        confidence_data = dict(existing_profile.confidence_data or {})
         if "confidence_data" in data:
-            (existing_profile.confidence_data or {}).update(data["confidence_data"])
-            if existing_profile.confidence_data is None:
-                existing_profile.confidence_data = dict(data["confidence_data"])
+            confidence_data.update(data["confidence_data"])
 
         # Save updated profile
         success = self.profile_manager.update_profile(
             profile_name,
             preferences=current_prefs,
-            learned_patterns=existing_profile.learned_patterns,
-            confidence_data=existing_profile.confidence_data,
+            learned_patterns=learned_patterns,
+            confidence_data=confidence_data,
         )
 
         if not success:

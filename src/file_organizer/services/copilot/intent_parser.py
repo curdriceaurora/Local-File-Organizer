@@ -162,8 +162,7 @@ class IntentParser:
     # Parameter extraction
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _extract_parameters(intent_type: IntentType, text: str) -> dict[str, Any]:
+    def _extract_parameters(self, intent_type: IntentType, text: str) -> dict[str, Any]:
         """Extract intent-specific parameters from the user text.
 
         Args:
@@ -175,50 +174,128 @@ class IntentParser:
         """
         params: dict[str, Any] = {}
 
-        # Extract quoted strings as explicit path / name references
-        quoted = re.findall(r'"([^"]+)"', text) + re.findall(r"'([^']+)'", text)
+        # Extract common elements
+        quoted = self._extract_quoted_strings(text)
         if quoted:
             params["quoted_args"] = quoted
 
-        # Extract paths (Unix-style or Windows-style)
-        paths = re.findall(
-            r"(?:[~/][\w./-]+|[A-Z]:\\[\w.\\-]+)",
-            text,
-        )
+        paths = self._extract_paths(text)
         if paths:
             params["paths"] = paths
 
-        # Intent-specific extraction
-        if intent_type == IntentType.ORGANIZE:
-            # Look for source and destination directories
-            if paths:
-                params["source"] = paths[0]
-                if len(paths) > 1:
-                    params["destination"] = paths[1]
-            # Check for dry-run request
-            if re.search(r"\bdry[\s-]?run\b|\bpreview\b", text, re.IGNORECASE):
-                params["dry_run"] = True
-
-        elif intent_type == IntentType.MOVE:
-            if paths:
-                params["source"] = paths[0]
-                if len(paths) > 1:
-                    params["destination"] = paths[1]
-
-        elif intent_type == IntentType.RENAME:
-            if quoted:
-                params["new_name"] = quoted[-1]
-            if paths:
-                params["target"] = paths[0]
-
-        elif intent_type == IntentType.FIND:
-            # Everything after "find" / "search" is the query
-            for kw in ("find", "search", "locate", "look for"):
-                idx = text.lower().find(kw)
-                if idx >= 0:
-                    query = text[idx + len(kw) :].strip().strip('"').strip("'")
-                    if query:
-                        params["query"] = query
-                    break
+        # Dispatch to intent-specific extraction
+        self._extract_intent_specific_params(intent_type, text, params, quoted, paths)
 
         return params
+
+    @staticmethod
+    def _extract_quoted_strings(text: str) -> list[str]:
+        """Extract quoted strings from text.
+
+        Args:
+            text: Input text.
+
+        Returns:
+            List of quoted strings.
+        """
+        return re.findall(r'"([^"]+)"', text) + re.findall(r"'([^']+)'", text)
+
+    @staticmethod
+    def _extract_paths(text: str) -> list[str]:
+        """Extract file paths from text (Unix-style or Windows-style).
+
+        Args:
+            text: Input text.
+
+        Returns:
+            List of detected paths.
+        """
+        return re.findall(
+            r"(?:[~/][\w./-]+|[A-Z]:\\[\w.\\-]+)",
+            text,
+        )
+
+    def _extract_intent_specific_params(
+        self,
+        intent_type: IntentType,
+        text: str,
+        params: dict[str, Any],
+        quoted: list[str],
+        paths: list[str],
+    ) -> None:
+        """Extract intent-specific parameters and update params dict.
+
+        Args:
+            intent_type: The classified intent.
+            text: Original user text.
+            params: Parameter dict to update in-place.
+            quoted: Pre-extracted quoted strings.
+            paths: Pre-extracted paths.
+        """
+        if intent_type == IntentType.ORGANIZE:
+            self._extract_organize_params(text, params, paths)
+        elif intent_type == IntentType.MOVE:
+            self._extract_move_params(params, paths)
+        elif intent_type == IntentType.RENAME:
+            self._extract_rename_params(params, quoted, paths)
+        elif intent_type == IntentType.FIND:
+            self._extract_find_params(text, params)
+
+    @staticmethod
+    def _extract_organize_params(text: str, params: dict[str, Any], paths: list[str]) -> None:
+        """Extract parameters for ORGANIZE intent.
+
+        Args:
+            text: Original user text.
+            params: Parameter dict to update.
+            paths: Pre-extracted paths.
+        """
+        if paths:
+            params["source"] = paths[0]
+            if len(paths) > 1:
+                params["destination"] = paths[1]
+        if re.search(r"\bdry[\s-]?run\b|\bpreview\b", text, re.IGNORECASE):
+            params["dry_run"] = True
+
+    @staticmethod
+    def _extract_move_params(params: dict[str, Any], paths: list[str]) -> None:
+        """Extract parameters for MOVE intent.
+
+        Args:
+            params: Parameter dict to update.
+            paths: Pre-extracted paths.
+        """
+        if paths:
+            params["source"] = paths[0]
+            if len(paths) > 1:
+                params["destination"] = paths[1]
+
+    @staticmethod
+    def _extract_rename_params(params: dict[str, Any], quoted: list[str], paths: list[str]) -> None:
+        """Extract parameters for RENAME intent.
+
+        Args:
+            params: Parameter dict to update.
+            quoted: Pre-extracted quoted strings.
+            paths: Pre-extracted paths.
+        """
+        if quoted:
+            params["new_name"] = quoted[-1]
+        if paths:
+            params["target"] = paths[0]
+
+    @staticmethod
+    def _extract_find_params(text: str, params: dict[str, Any]) -> None:
+        """Extract parameters for FIND intent.
+
+        Args:
+            text: Original user text.
+            params: Parameter dict to update.
+        """
+        for kw in ("find", "search", "locate", "look for"):
+            idx = text.lower().find(kw)
+            if idx >= 0:
+                query = text[idx + len(kw) :].strip().strip('"').strip("'")
+                if query:
+                    params["query"] = query
+                break

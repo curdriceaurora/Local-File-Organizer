@@ -16,13 +16,24 @@ except ImportError:
 
 from loguru import logger
 
+# Module-level flag to track one-time NLTK initialization (idempotent)
+_nltk_ready: bool = False
 
-def ensure_nltk_data() -> None:
-    """Ensure NLTK data is downloaded (quietly).
 
-    Downloads required NLTK datasets if not already present.
-    This is called automatically on first use.
+def ensure_nltk_data() -> None:  # noqa: C901
+    """Ensure required NLTK datasets are present for text processing.
+
+    Idempotent function that initializes NLTK resources once per session. Returns immediately
+    on subsequent calls. If NLTK is not installed this function logs a warning and returns.
+    For each required dataset ('stopwords', 'punkt', 'wordnet') it verifies availability and
+    attempts download when missing, logging informational and debug messages for download
+    attempts and warnings on failure. This function does not raise; failures are reported via logs.
     """
+    global _nltk_ready
+
+    if _nltk_ready:
+        return
+
     if not NLTK_AVAILABLE:
         logger.warning("NLTK not available, text processing will be limited")
         return
@@ -34,7 +45,27 @@ def ensure_nltk_data() -> None:
             if dataset == "stopwords":
                 stopwords.words("english")
             elif dataset == "punkt":
-                word_tokenize("test")
+                # Check if punkt or punkt_tab is available (3.8+ uses punkt_tab)
+                try:
+                    word_tokenize("test")
+                except LookupError:
+                    # If punkt fails, it might be because punkt_tab is needed (NLTK 3.8+)
+                    logger.debug("punkt not available, trying punkt_tab")
+                    try:
+                        if nltk.download("punkt_tab", quiet=True):
+                            word_tokenize("test")
+                        else:
+                            raise LookupError("punkt_tab download failed")
+                    except LookupError:
+                        # If punkt_tab also fails, fall back to punkt (older NLTK versions)
+                        logger.debug("punkt_tab failed, falling back to punkt")
+                        try:
+                            if nltk.download("punkt", quiet=True):
+                                word_tokenize("test")
+                            else:
+                                raise LookupError("punkt download failed")
+                        except LookupError as e:
+                            logger.debug(f"Failed to load punkt: {e}")
             elif dataset == "wordnet":
                 from nltk.corpus import wordnet
 
@@ -43,14 +74,24 @@ def ensure_nltk_data() -> None:
             # Dataset not found, download it
             try:
                 logger.info(f"Downloading NLTK dataset: {dataset}")
-                nltk.download(dataset, quiet=True)
-                logger.debug(f"NLTK dataset {dataset} downloaded successfully")
+                if not nltk.download(dataset, quiet=True):
+                    logger.warning(f"Failed to download NLTK dataset: {dataset}")
+                    continue
+                # Verify download succeeded by attempting to load the dataset
+                if dataset == "stopwords":
+                    stopwords.words("english")
+                elif dataset == "wordnet":
+                    from nltk.corpus import wordnet
+
+                    wordnet.synsets("test")
+                logger.debug(f"NLTK dataset {dataset} downloaded and verified successfully")
             except Exception as e:
                 logger.warning(f"Failed to download NLTK {dataset}: {e}")
         except Exception as e:
             # Dataset exists but failed to load
             logger.debug(f"NLTK dataset check failed for {dataset}: {e}")
 
+    _nltk_ready = True
     logger.debug("NLTK data verified and ready")
 
 
@@ -311,14 +352,14 @@ def sanitize_filename(
 
 
 def extract_keywords(text: str, top_n: int = 5) -> list[str]:
-    """Extract top keywords from text.
+    """Extract the most frequent meaningful words from input text.
 
-    Args:
-        text: Input text
-        top_n: Number of top keywords to return
+    Parameters:
+        text (str): Text to analyze for keyword extraction.
+        top_n (int): Number of top keywords to return.
 
     Returns:
-        List of top keywords
+        list[str]: Top `top_n` keywords ordered by frequency; returns an empty list if extraction fails or no keywords are found.
     """
     if not NLTK_AVAILABLE:
         # Fallback: simple word frequency

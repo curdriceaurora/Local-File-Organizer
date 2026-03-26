@@ -1,7 +1,7 @@
 """Unit tests for web files_routes helpers and route handlers.
 
-Tests internal helpers (_build_breadcrumbs, _list_tree_nodes,
-_collect_entries, _build_file_results_context) and route handlers
+Tests internal helpers (build_breadcrumbs, list_tree_nodes,
+collect_entries, build_file_results_context) and route handlers
 using mocked templates/settings.
 """
 
@@ -13,14 +13,14 @@ import pytest
 
 from file_organizer.api.config import ApiSettings
 from file_organizer.api.exceptions import ApiError
-from file_organizer.web.files_routes import (
-    _build_breadcrumbs,
-    _build_file_results_context,
-    _collect_entries,
-    _list_tree_nodes,
+from file_organizer.web.file_operations import (
+    build_breadcrumbs,
+    build_file_results_context,
+    collect_entries,
+    list_tree_nodes,
 )
 
-pytestmark = [pytest.mark.unit]
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ def settings(tree):
 
 
 # ---------------------------------------------------------------------------
-# _build_breadcrumbs
+# build_breadcrumbs
 # ---------------------------------------------------------------------------
 
 
@@ -59,13 +59,13 @@ class TestBuildBreadcrumbs:
     """Test breadcrumb generation."""
 
     def test_root_path(self, tree):
-        crumbs = _build_breadcrumbs(tree, [tree])
+        crumbs = build_breadcrumbs(tree, [tree])
         assert len(crumbs) == 1
         assert crumbs[0]["path"] == str(tree)
 
     def test_nested_path(self, tree):
         nested = tree / "dir_a"
-        crumbs = _build_breadcrumbs(nested, [tree])
+        crumbs = build_breadcrumbs(nested, [tree])
         assert len(crumbs) == 2
         assert crumbs[0]["path"] == str(tree)
         assert crumbs[1]["label"] == "dir_a"
@@ -74,19 +74,19 @@ class TestBuildBreadcrumbs:
         deep = tree / "dir_a"
         deep_child = deep / "sub"
         deep_child.mkdir()
-        crumbs = _build_breadcrumbs(deep_child, [tree])
+        crumbs = build_breadcrumbs(deep_child, [tree])
         assert len(crumbs) == 3
 
     def test_path_outside_roots(self, tree, tmp_path):
         other = tmp_path / "other"
         other.mkdir()
         # Should return at least the closest root
-        crumbs = _build_breadcrumbs(other, [tree])
+        crumbs = build_breadcrumbs(other, [tree])
         assert len(crumbs) >= 1
 
 
 # ---------------------------------------------------------------------------
-# _list_tree_nodes
+# list_tree_nodes
 # ---------------------------------------------------------------------------
 
 
@@ -95,34 +95,34 @@ class TestListTreeNodes:
     """Test sidebar tree node listing."""
 
     def test_excludes_hidden(self, tree):
-        nodes = _list_tree_nodes(tree, include_hidden=False)
+        nodes = list_tree_nodes(tree, include_hidden=False)
         names = [n["name"] for n in nodes]
         assert "dir_a" in names
         assert "dir_b" in names
         assert ".hidden_dir" not in names
 
     def test_includes_hidden(self, tree):
-        nodes = _list_tree_nodes(tree, include_hidden=True)
+        nodes = list_tree_nodes(tree, include_hidden=True)
         names = [n["name"] for n in nodes]
         assert ".hidden_dir" in names
 
     def test_only_directories(self, tree):
-        nodes = _list_tree_nodes(tree, include_hidden=False)
+        nodes = list_tree_nodes(tree, include_hidden=False)
         # Should not include files
         names = [n["name"] for n in nodes]
         assert "file1.txt" not in names
 
     def test_sorted_by_name(self, tree):
-        nodes = _list_tree_nodes(tree, include_hidden=False)
+        nodes = list_tree_nodes(tree, include_hidden=False)
         names = [n["name"] for n in nodes]
         assert names == sorted(names, key=str.lower)
 
     def test_nonexistent_path(self, tmp_path):
-        nodes = _list_tree_nodes(tmp_path / "nope", include_hidden=False)
+        nodes = list_tree_nodes(tmp_path / "nope", include_hidden=False)
         assert nodes == []
 
     def test_node_has_required_keys(self, tree):
-        nodes = _list_tree_nodes(tree, include_hidden=False)
+        nodes = list_tree_nodes(tree, include_hidden=False)
         for node in nodes:
             assert "id" in node
             assert "name" in node
@@ -132,7 +132,7 @@ class TestListTreeNodes:
 
 
 # ---------------------------------------------------------------------------
-# _collect_entries
+# collect_entries
 # ---------------------------------------------------------------------------
 
 
@@ -141,7 +141,7 @@ class TestCollectEntries:
     """Test directory entry collection, filtering, and sorting."""
 
     def test_basic_listing(self, tree):
-        entries, total = _collect_entries(
+        entries, total = collect_entries(
             tree,
             query=None,
             file_type=None,
@@ -155,7 +155,7 @@ class TestCollectEntries:
         assert len(entries) == 4
 
     def test_query_filter(self, tree):
-        entries, total = _collect_entries(
+        entries, total = collect_entries(
             tree,
             query="file1",
             file_type=None,
@@ -169,7 +169,7 @@ class TestCollectEntries:
         assert "file2.png" not in file_names
 
     def test_file_type_filter(self, tree):
-        entries, total = _collect_entries(
+        entries, total = collect_entries(
             tree,
             query=None,
             file_type="image",
@@ -181,8 +181,22 @@ class TestCollectEntries:
         file_entries = [e for e in entries if not e["is_dir"]]
         assert all("png" in e["name"].lower() or e["kind"] == "image" for e in file_entries)
 
+    def test_file_type_filter_matches_compound_archive_extension(self, tree):
+        (tree / "backup.tar.gz").write_bytes(b"archive")
+        entries, _ = collect_entries(
+            tree,
+            query=None,
+            file_type=".tar.gz",
+            sort_by="name",
+            sort_order="asc",
+            include_hidden=False,
+            limit=100,
+        )
+        file_names = [e["name"] for e in entries if not e["is_dir"]]
+        assert "backup.tar.gz" in file_names
+
     def test_include_hidden(self, tree):
-        entries, total = _collect_entries(
+        entries, total = collect_entries(
             tree,
             query=None,
             file_type=None,
@@ -196,7 +210,7 @@ class TestCollectEntries:
         assert ".hidden_file" in names
 
     def test_sort_by_size(self, tree):
-        entries, _ = _collect_entries(
+        entries, _ = collect_entries(
             tree,
             query=None,
             file_type=None,
@@ -208,7 +222,7 @@ class TestCollectEntries:
         assert len(entries) > 0
 
     def test_sort_by_created(self, tree):
-        entries, _ = _collect_entries(
+        entries, _ = collect_entries(
             tree,
             query=None,
             file_type=None,
@@ -220,7 +234,7 @@ class TestCollectEntries:
         assert len(entries) > 0
 
     def test_sort_by_type(self, tree):
-        entries, _ = _collect_entries(
+        entries, _ = collect_entries(
             tree,
             query=None,
             file_type=None,
@@ -232,7 +246,7 @@ class TestCollectEntries:
         assert len(entries) > 0
 
     def test_sort_by_modified(self, tree):
-        entries, _ = _collect_entries(
+        entries, _ = collect_entries(
             tree,
             query=None,
             file_type=None,
@@ -244,7 +258,7 @@ class TestCollectEntries:
         assert len(entries) > 0
 
     def test_limit_zero(self, tree):
-        entries, total = _collect_entries(
+        entries, total = collect_entries(
             tree,
             query=None,
             file_type=None,
@@ -257,7 +271,7 @@ class TestCollectEntries:
         assert total > 0
 
     def test_limit_applied(self, tree):
-        entries, total = _collect_entries(
+        entries, total = collect_entries(
             tree,
             query=None,
             file_type=None,
@@ -270,7 +284,7 @@ class TestCollectEntries:
         assert total > 1
 
     def test_nonexistent_directory(self, tmp_path):
-        entries, total = _collect_entries(
+        entries, total = collect_entries(
             tmp_path / "nope",
             query=None,
             file_type=None,
@@ -283,7 +297,7 @@ class TestCollectEntries:
         assert total == 0
 
     def test_entry_structure(self, tree):
-        entries, _ = _collect_entries(
+        entries, _ = collect_entries(
             tree,
             query=None,
             file_type=None,
@@ -300,7 +314,7 @@ class TestCollectEntries:
             assert "size_display" in entry
 
     def test_dirs_before_files(self, tree):
-        entries, _ = _collect_entries(
+        entries, _ = collect_entries(
             tree,
             query=None,
             file_type=None,
@@ -319,7 +333,7 @@ class TestCollectEntries:
 
 
 # ---------------------------------------------------------------------------
-# _build_file_results_context
+# build_file_results_context
 # ---------------------------------------------------------------------------
 
 
@@ -330,11 +344,11 @@ class TestBuildFileResultsContext:
     def test_with_valid_path(self, tree, settings):
         request = MagicMock()
         with (
-            patch("file_organizer.web.files_routes.allowed_roots", return_value=[tree]),
-            patch("file_organizer.web.files_routes.resolve_selected_path", return_value=tree),
-            patch("file_organizer.web.files_routes.validate_depth"),
+            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            patch("file_organizer.web.file_operations.resolve_selected_path", return_value=tree),
+            patch("file_organizer.web.file_operations.validate_depth"),
         ):
-            ctx = _build_file_results_context(
+            ctx = build_file_results_context(
                 request,
                 settings,
                 path=str(tree),
@@ -344,19 +358,53 @@ class TestBuildFileResultsContext:
                 sort_by="name",
                 sort_order="asc",
                 limit=50,
+                page_size=50,
             )
         assert ctx["current_path"] == str(tree)
         assert ctx["view"] == "grid"
         assert "entries" in ctx
         assert ctx["error_message"] is None
+        assert ctx["page_size"] == 50
+        assert ctx["next_limit"] == len(ctx["entries"])
+        assert ctx["has_more"] is False
+
+    def test_next_limit_tracks_page_size_when_more_results_exist(self, tree, settings):
+        request = MagicMock()
+        fake_entries = [{"name": f"entry-{index}"} for index in range(8)]
+        with (
+            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            patch("file_organizer.web.file_operations.resolve_selected_path", return_value=tree),
+            patch("file_organizer.web.file_operations.validate_depth"),
+            patch(
+                "file_organizer.web.file_operations.collect_entries",
+                return_value=(fake_entries, 8),
+            ),
+        ):
+            ctx = build_file_results_context(
+                request,
+                settings,
+                path=str(tree),
+                view="list",
+                query=None,
+                file_type=None,
+                sort_by="name",
+                sort_order="asc",
+                limit=3,
+                page_size=2,
+            )
+
+        assert ctx["limit"] == 3
+        assert ctx["page_size"] == 2
+        assert ctx["next_limit"] == 5
+        assert ctx["has_more"] is True
 
     def test_with_no_path(self, tree, settings):
         request = MagicMock()
         with (
-            patch("file_organizer.web.files_routes.allowed_roots", return_value=[tree]),
-            patch("file_organizer.web.files_routes.resolve_selected_path", return_value=None),
+            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            patch("file_organizer.web.file_operations.resolve_selected_path", return_value=None),
         ):
-            ctx = _build_file_results_context(
+            ctx = build_file_results_context(
                 request,
                 settings,
                 path=None,
@@ -366,19 +414,20 @@ class TestBuildFileResultsContext:
                 sort_by="name",
                 sort_order="asc",
                 limit=50,
+                page_size=50,
             )
         assert ctx["error_message"] is not None
 
     def test_with_api_error(self, tree, settings):
         request = MagicMock()
         with (
-            patch("file_organizer.web.files_routes.allowed_roots", return_value=[tree]),
+            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
             patch(
-                "file_organizer.web.files_routes.resolve_selected_path",
+                "file_organizer.web.file_operations.resolve_selected_path",
                 side_effect=ApiError(status_code=403, error="nope", message="bad"),
             ),
         ):
-            ctx = _build_file_results_context(
+            ctx = build_file_results_context(
                 request,
                 settings,
                 path="/bad",
@@ -388,20 +437,21 @@ class TestBuildFileResultsContext:
                 sort_by="name",
                 sort_order="asc",
                 limit=50,
+                page_size=50,
             )
         assert "bad" in ctx["error_message"]
 
     def test_depth_validation_error(self, tree, settings):
         request = MagicMock()
         with (
-            patch("file_organizer.web.files_routes.allowed_roots", return_value=[tree]),
-            patch("file_organizer.web.files_routes.resolve_selected_path", return_value=tree),
+            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            patch("file_organizer.web.file_operations.resolve_selected_path", return_value=tree),
             patch(
-                "file_organizer.web.files_routes.validate_depth",
+                "file_organizer.web.file_operations.validate_depth",
                 side_effect=ApiError(status_code=400, error="depth", message="too deep"),
             ),
         ):
-            ctx = _build_file_results_context(
+            ctx = build_file_results_context(
                 request,
                 settings,
                 path=str(tree),
@@ -411,17 +461,18 @@ class TestBuildFileResultsContext:
                 sort_by="name",
                 sort_order="asc",
                 limit=50,
+                page_size=50,
             )
         assert "too deep" in ctx["error_message"]
 
     def test_invalid_view_normalized(self, tree, settings):
         request = MagicMock()
         with (
-            patch("file_organizer.web.files_routes.allowed_roots", return_value=[tree]),
-            patch("file_organizer.web.files_routes.resolve_selected_path", return_value=tree),
-            patch("file_organizer.web.files_routes.validate_depth"),
+            patch("file_organizer.web.file_operations.allowed_roots", return_value=[tree]),
+            patch("file_organizer.web.file_operations.resolve_selected_path", return_value=tree),
+            patch("file_organizer.web.file_operations.validate_depth"),
         ):
-            ctx = _build_file_results_context(
+            ctx = build_file_results_context(
                 request,
                 settings,
                 path=str(tree),
@@ -431,5 +482,6 @@ class TestBuildFileResultsContext:
                 sort_by="name",
                 sort_order="asc",
                 limit=50,
+                page_size=50,
             )
         assert ctx["view"] == "grid"

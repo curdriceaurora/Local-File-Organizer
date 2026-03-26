@@ -292,6 +292,16 @@ class TestValidateImportFileEdgeCases:
         assert result.valid is False
         assert any("preferences" in e.lower() for e in result.errors)
 
+    def test_invalid_export_type_is_rejected(self, importer, temp_storage):
+        """Test validation rejects unknown export types instead of falling through."""
+        export_file = temp_storage / "bad_export_type.json"
+        data = _make_valid_export(export_type="mystery")
+        _write_json(export_file, data)
+
+        result = importer.validate_import_file(export_file)
+        assert result.valid is False
+        assert any("invalid export_type" in e.lower() for e in result.errors)
+
     def test_invalid_timestamp_warning(self, importer, temp_storage):
         """Test warning for invalid timestamp format."""
         export_file = temp_storage / "bad_ts.json"
@@ -427,6 +437,26 @@ class TestImportProfileExtended:
 
         assert result is not None
         assert result.profile_name == "renamed"
+
+    def test_import_full_preserves_profile_metadata(self, importer, temp_storage):
+        """Imported metadata should survive the save/update path."""
+        export_file = temp_storage / "metadata.json"
+        created = "2024-01-02T03:04:05Z"
+        updated = "2024-06-07T08:09:10Z"
+        data = _make_valid_export(
+            profile_name="metadata_profile",
+            profile_version="1.0",
+            created=created,
+            updated=updated,
+        )
+        _write_json(export_file, data)
+
+        result = importer.import_profile(export_file)
+
+        assert result is not None
+        assert result.created == created
+        assert result.updated == updated
+        assert result.profile_version == "1.0"
 
     def test_import_invalid_file_returns_none(self, importer, temp_storage):
         """Test that importing an invalid file returns None."""
@@ -641,6 +671,26 @@ class TestImportSelectiveProfile:
 
         assert result is not None
         assert result.profile_name == "minimal_sel"
+
+    def test_merge_updates_empty_optional_sections(self, importer, profile_manager):
+        """Selective imports should persist optional sections even when they start empty."""
+        profile_manager.create_profile("partial_profile", "Partial")
+
+        selective_data = {
+            "profile_name": "partial_profile",
+            "description": "Partial selective",
+            "export_type": "selective",
+            "preferences": {"directory_specific": {"/new/path": {"x": 1}}},
+            "learned_patterns": {"pattern": "value"},
+            "confidence_data": {"conf": 0.5},
+        }
+
+        result = importer._import_selective_profile(selective_data, "partial_profile")
+
+        assert result is not None
+        assert result.preferences["directory_specific"]["/new/path"]["x"] == 1
+        assert result.learned_patterns == {"pattern": "value"}
+        assert result.confidence_data == {"conf": 0.5}
 
 
 # ---------------------------------------------------------------------------

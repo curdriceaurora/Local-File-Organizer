@@ -289,6 +289,12 @@ file-organizer undo --operation-id 42
 file-organizer undo --transaction-id abc123
 ```
 
+**Behavior notes:**
+
+- `--dry-run` previews the exact undo action without modifying history.
+- When both selectors are provided, `--transaction-id` takes precedence over `--operation-id`.
+- Empty or whitespace-only transaction IDs are rejected instead of being treated as valid input.
+
 ---
 
 ### `redo`
@@ -305,6 +311,11 @@ file-organizer redo [OPTIONS]
 - `--operation-id INTEGER` — Specific operation ID to redo
 - `--dry-run` — Preview without executing
 - `--verbose, -v` — Verbose output
+
+**Behavior notes:**
+
+- `--dry-run` previews the redo action without changing history.
+- `operation_id=0` is treated as a valid operation ID rather than falling back to “redo last”.
 
 ---
 
@@ -709,6 +720,13 @@ file-organizer dedupe resolve DIRECTORY [OPTIONS]
 
 **Arguments:**
 - `DIRECTORY` — Directory to scan for duplicates
+
+**Behavior notes:**
+
+- Automatic strategies prompt for confirmation unless batch mode is enabled.
+- Manual selection and confirmation prompts propagate `Ctrl+C` cleanly.
+- Dry runs report actual simulated removals and estimated space savings without deleting files.
+- Successful-removal summaries reflect what was actually removed rather than the original selection count.
 
 **Examples:**
 

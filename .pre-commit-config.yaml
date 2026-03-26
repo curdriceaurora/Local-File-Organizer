@@ -6,6 +6,13 @@ repos:
     rev: v6.0.0
     hooks:
       - id: end-of-file-fixer      # every file ends with exactly one newline
+        exclude: >
+          (?x)^(
+            \.auto-claude/|
+            \.auto-claude-security\.json$|
+            \.auto-claude-status$|
+            \.claude_settings\.json$
+          )
       - id: trailing-whitespace    # strip trailing spaces/tabs
       - id: check-toml             # pyproject.toml syntax validation
       - id: check-yaml             # workflow / config YAML syntax
@@ -179,6 +186,7 @@ repos:
         exclude: >
           (?x)^(
             \.claude/|
+            \.auto-claude/|
             memory/test-generation-patterns\.md|
             docs/internal/|
             docs/testing/|

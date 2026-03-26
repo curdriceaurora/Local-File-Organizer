@@ -21,6 +21,7 @@ class FileResult:
         result: Return value from the processing function.
         error: Error message if processing failed.
         duration_ms: Time taken to process this file in milliseconds.
+        non_retryable: Whether a failed result should stop batch retries.
     """
 
     path: Path
@@ -28,6 +29,7 @@ class FileResult:
     result: Any = None
     error: str | None = None
     duration_ms: float = 0.0
+    non_retryable: bool = False
 
     def __str__(self) -> str:
         """String representation of file result."""

@@ -23,6 +23,103 @@ from file_organizer.updater.checker import AssetInfo, ReleaseInfo
 _CHUNK_SIZE = 65536  # 64 KB download chunks
 
 
+def _get_platform_hints() -> list[str]:
+    """Get platform hints for the current system.
+
+    Returns:
+        List of platform name variations
+    """
+    system = platform.system().lower()
+    if system == "darwin":
+        return ["macos", "darwin"]
+    if system == "windows":
+        return ["windows", "win"]
+    return ["linux"]
+
+
+def _get_arch_hints() -> list[str]:
+    """Get architecture hints for the current machine.
+
+    Returns:
+        List of architecture name variations
+    """
+    machine = platform.machine().lower()
+    hints: list[str] = []
+
+    if machine in ("x86_64", "amd64"):
+        hints = ["x86_64", "amd64"]
+    elif machine in ("arm64", "aarch64"):
+        hints = ["arm64", "aarch64"]
+
+    if platform.system().lower() == "darwin":
+        hints.append("universal")
+
+    return hints
+
+
+def _is_checksum_file(filename: str) -> bool:
+    """Check if a filename is a checksum file.
+
+    Args:
+        filename: Name of the file to check
+
+    Returns:
+        True if the file is a checksum file
+    """
+    return filename.lower().endswith((".sha256", ".md5", ".asc", ".sig"))
+
+
+def _score_asset(name_lower: str) -> int:
+    """Score an asset based on platform-specific preferences.
+
+    Args:
+        name_lower: Lowercase asset name
+
+    Returns:
+        Score (higher is better)
+    """
+    score = 0
+    system = platform.system().lower()
+
+    if system == "darwin":
+        if "universal" in name_lower:
+            score += 3
+        if name_lower.endswith(".dmg"):
+            score -= 5
+        if name_lower.endswith((".zip", ".tar.gz", ".tgz")):
+            score -= 3
+    elif system == "windows":
+        if name_lower.endswith(".exe"):
+            score += 3
+        if "setup" in name_lower or "installer" in name_lower:
+            score -= 4
+    else:  # Linux
+        if name_lower.endswith(".appimage"):
+            score += 5
+        elif name_lower.endswith((".tar.gz", ".tgz")):
+            score += 2
+
+    return score
+
+
+def _matches_platform_and_arch(
+    name_lower: str, platform_hints: list[str], arch_hints: list[str]
+) -> bool:
+    """Check if an asset name matches the current platform and architecture.
+
+    Args:
+        name_lower: Lowercase asset name
+        platform_hints: Platform name variations
+        arch_hints: Architecture name variations
+
+    Returns:
+        True if the asset matches
+    """
+    plat_match = any(h in name_lower for h in platform_hints)
+    arch_match = not arch_hints or any(h in name_lower for h in arch_hints)
+    return plat_match and arch_match
+
+
 @dataclass
 class InstallResult:
     """Result of an update installation attempt."""
@@ -204,59 +301,25 @@ class UpdateInstaller:
         Returns:
             The matching asset, or ``None``.
         """
-        system = platform.system().lower()
-        machine = platform.machine().lower()
-
-        platform_hints: list[str] = []
-        if system == "darwin":
-            platform_hints = ["macos", "darwin"]
-        elif system == "windows":
-            platform_hints = ["windows", "win"]
-        else:
-            platform_hints = ["linux"]
-
-        arch_hints: list[str] = []
-        if machine in ("x86_64", "amd64"):
-            arch_hints = ["x86_64", "amd64"]
-        elif machine in ("arm64", "aarch64"):
-            arch_hints = ["arm64", "aarch64"]
-
-        if system == "darwin":
-            arch_hints.append("universal")
+        platform_hints = _get_platform_hints()
+        arch_hints = _get_arch_hints()
 
         candidates: list[tuple[int, AssetInfo]] = []
         for asset in release.assets:
             name_lower = asset.name.lower()
-            # Skip checksum files
-            if name_lower.endswith((".sha256", ".md5", ".asc", ".sig")):
-                continue
-            plat_match = any(h in name_lower for h in platform_hints)
-            arch_match = not arch_hints or any(h in name_lower for h in arch_hints)
-            if not (plat_match and arch_match):
+
+            if _is_checksum_file(name_lower):
                 continue
 
-            score = 0
-            if system == "darwin":
-                if "universal" in name_lower:
-                    score += 3
-                if name_lower.endswith(".dmg"):
-                    score -= 5
-                if name_lower.endswith((".zip", ".tar.gz", ".tgz")):
-                    score -= 3
-            elif system == "windows":
-                if name_lower.endswith(".exe"):
-                    score += 3
-                if "setup" in name_lower or "installer" in name_lower:
-                    score -= 4
-            else:
-                if name_lower.endswith(".appimage"):
-                    score += 5
-                elif name_lower.endswith((".tar.gz", ".tgz")):
-                    score += 2
+            if not _matches_platform_and_arch(name_lower, platform_hints, arch_hints):
+                continue
 
+            score = _score_asset(name_lower)
             candidates.append((score, asset))
 
         if not candidates:
+            system = platform.system().lower()
+            machine = platform.machine().lower()
             logger.warning("No matching asset for {}/{}", system, machine)
             return None
 

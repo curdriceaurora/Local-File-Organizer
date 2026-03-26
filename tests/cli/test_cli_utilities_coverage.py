@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import io
+import json
+import warnings
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import typer
+from rich.console import Console
 from typer.testing import CliRunner
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.ci, pytest.mark.unit]
 
 runner = CliRunner()
 
@@ -37,6 +42,21 @@ class TestSearchLimitZero:
         result = runner.invoke(app, ["search", "foo", str(tmp_path), "--limit", "0", "--json"])
         assert result.exit_code == 0
         assert "[]" in result.output
+
+    def test_limit_zero_still_validates_directory(self, tmp_path: Path) -> None:
+        app = _make_app()
+        missing = tmp_path / "missing"
+        result = runner.invoke(app, ["search", "foo", str(missing), "--limit", "0"])
+        assert result.exit_code == 1
+        assert "does not exist" in " ".join(result.output.split())
+
+    def test_limit_zero_still_validates_type_filter(self, tmp_path: Path) -> None:
+        app = _make_app()
+        result = runner.invoke(
+            app, ["search", "foo", str(tmp_path), "--limit", "0", "--type", "magic"]
+        )
+        assert result.exit_code == 1
+        assert "Unknown type" in result.output
 
 
 class TestSearchDirectoryNotExist:
@@ -148,6 +168,96 @@ class TestSemanticSearchHiddenFileFiltering:
 
         result = runner.invoke(app, ["search", "finance", str(tmp_path), "--semantic"])
         assert result.exit_code == 0
+
+    def test_semantic_archive_filter_accepts_tar_gz(self, tmp_path: Path) -> None:
+        """Semantic search respects compound archive extensions like .tar.gz."""
+        app = _make_app()
+        (tmp_path / "dataset.tar.gz").write_text("finance archive bundle")
+        (tmp_path / "notes.txt").write_text("finance notes")
+
+        result = runner.invoke(
+            app,
+            ["search", "finance", str(tmp_path), "--semantic", "--type", "archive"],
+        )
+        assert result.exit_code == 0
+        assert "dataset.tar.gz" in result.output
+        assert "notes.txt" not in result.output
+
+    def test_semantic_type_filter_applies_before_document_limit(self, tmp_path: Path) -> None:
+        """Archive matches should still be indexed even if many earlier text files exist."""
+        app = _make_app()
+        for index in range(250):
+            (tmp_path / f"notes_{index:03d}.txt").write_text("finance notes")
+        (tmp_path / "late_bundle.tar.gz").write_text("finance archive bundle")
+
+        result = runner.invoke(
+            app,
+            [
+                "search",
+                "finance archive",
+                str(tmp_path),
+                "--semantic",
+                "--type",
+                "archive",
+                "--limit",
+                "5",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "late_bundle.tar.gz" in result.output
+
+    def test_json_output_skips_files_that_disappear(self, tmp_path: Path) -> None:
+        from file_organizer.cli import utilities
+
+        disappearing = tmp_path / "report.txt"
+        disappearing.write_text("hello")
+
+        original_stat = Path.stat
+
+        def flaky_stat(path: Path):
+            if path == disappearing:
+                raise OSError("gone")
+            return original_stat(path)
+
+        buffer = io.StringIO()
+        with (
+            patch("pathlib.Path.stat", autospec=True, side_effect=flaky_stat),
+            patch("typer.echo", side_effect=lambda value: buffer.write(f"{value}\n")),
+            warnings.catch_warnings(record=True) as caught,
+        ):
+            warnings.simplefilter("always")
+            utilities._output_search_results([(disappearing, None)], json_out=True)
+
+        assert any("Skipping" in str(warning.message) for warning in caught)
+        assert json.loads(buffer.getvalue()) == []
+
+    def test_text_output_skips_files_that_disappear(self, tmp_path: Path) -> None:
+        from file_organizer.cli import utilities
+
+        disappearing = tmp_path / "report.txt"
+        disappearing.write_text("hello")
+
+        original_stat = Path.stat
+
+        def flaky_stat(path: Path):
+            if path == disappearing:
+                raise OSError("gone")
+            return original_stat(path)
+
+        buffer = io.StringIO()
+        console = Console(file=buffer, force_terminal=False)
+        with (
+            patch("pathlib.Path.stat", autospec=True, side_effect=flaky_stat),
+            patch("file_organizer.cli.utilities.console", console),
+            patch("typer.echo", side_effect=lambda value: buffer.write(f"{value}\n")),
+            warnings.catch_warnings(record=True) as caught,
+        ):
+            warnings.simplefilter("always")
+            utilities._output_search_results([(disappearing, None)], json_out=False)
+
+        assert any("Skipping" in str(warning.message) for warning in caught)
+        assert "Found 0 file(s):" in buffer.getvalue()
 
 
 class TestSemanticIndexBuildFailure:

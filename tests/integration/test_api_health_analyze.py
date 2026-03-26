@@ -123,7 +123,8 @@ class TestHealthEndpoint:
             mock_facade.health_check = AsyncMock(return_value=self._mock_facade("ok"))
             mock_cls.return_value = mock_facade
             r = health_client.get("/health")
-        assert 0 <= r.json()["uptime"] < 300
+        uptime = r.json()["uptime"]
+        assert 0 <= uptime < 5  # uptime should be recent (less than 5 seconds)
 
 
 # ---------------------------------------------------------------------------

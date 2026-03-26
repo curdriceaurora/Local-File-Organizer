@@ -37,6 +37,15 @@ Configure upload behavior in **Settings → Upload**:
 - **Auto-Scan**: Automatically scan for duplicates
 - **Create Backups**: Keep originals during organization
 
+### Upload Validation
+
+The web UI validates uploads before writing files:
+
+- Empty filenames are rejected
+- Hidden filenames are rejected unless hidden files are explicitly allowed
+- Existing target files are preserved instead of being overwritten silently
+- Oversized uploads are rejected before processing
+
 ### Upload Status
 
 Monitor uploads in the **Notifications** area:
@@ -77,6 +86,13 @@ Click a file to see details:
   - Organize
   - Add to collection
 
+Preview behavior is intentionally conservative:
+
+- Text previews are shown only for files that appear to be text
+- Image thumbnails are generated for supported image types
+- Very large images and non-image files fall back to placeholder thumbnails
+- Missing or unreadable files show an error state instead of breaking the whole browser view
+
 ### View Modes
 
 Switch between view modes:
@@ -98,6 +114,14 @@ Switch between view modes:
 - Minimal space
 - More files visible
 - Best for large collections
+
+### Pagination and Load More
+
+Large folders are loaded incrementally in the Files view:
+
+- The browser returns an initial page of results first
+- **Load more** expands the current result set instead of replacing it
+- Pagination state is preserved alongside the current path, sort order, filters, and search query
 
 ## File Properties
 

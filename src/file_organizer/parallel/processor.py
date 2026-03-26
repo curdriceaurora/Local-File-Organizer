@@ -129,6 +129,11 @@ class ParallelProcessor:
 
             results.extend(succeeded)
 
+            if any(self._is_non_retryable_failure(result) for result in failed):
+                results.extend(failed)
+                remaining = []
+                break
+
             # On last attempt, include failures in results
             if attempt == self._config.retry_count:
                 results.extend(failed)
@@ -177,9 +182,37 @@ class ParallelProcessor:
         if not files:
             return
 
-        max_workers = self._config.max_workers or os.cpu_count() or 1
+        exec_instance, owns_executor = self._setup_executor(executor)
+        cleanup_state = {"force_nonblocking_shutdown": False}
+        try:
+            yield from self._process_with_executor(
+                exec_instance,
+                files,
+                process_fn,
+                owns_executor,
+                cleanup_state,
+            )
+        finally:
+            self._cleanup_executor(
+                exec_instance,
+                owns_executor,
+                cleanup_state["force_nonblocking_shutdown"],
+            )
+
+    def _setup_executor(
+        self, executor: ThreadPoolExecutor | ProcessPoolExecutor | None
+    ) -> tuple[ThreadPoolExecutor | ProcessPoolExecutor, bool]:
+        """Set up executor for batch processing.
+
+        Args:
+            executor: Optional existing executor to reuse.
+
+        Returns:
+            Tuple of (executor instance, owns_executor flag).
+        """
         owns_executor = executor is None
         if owns_executor:
+            max_workers = self._config.max_workers or os.cpu_count() or 1
             executor_type = (
                 "process" if self._config.executor_type == ExecutorType.PROCESS else "thread"
             )
@@ -189,164 +222,302 @@ class ParallelProcessor:
         else:
             assert executor is not None
             exec_instance = executor
+        return exec_instance, owns_executor
 
-        completed_count = 0
+    @staticmethod
+    def _is_non_retryable_failure(result: FileResult) -> bool:
+        """Return whether a failed result should stop retries for the batch."""
+        return result.non_retryable
+
+    def _process_with_executor(
+        self,
+        exec_instance: ThreadPoolExecutor | ProcessPoolExecutor,
+        files: list[Path],
+        process_fn: Callable[[Path], Any],
+        owns_executor: bool,
+        cleanup_state: dict[str, bool],
+    ) -> Iterator[FileResult]:
+        """Core processing loop with timeout handling.
+
+        Args:
+            exec_instance: Executor to use for processing.
+            files: Files to process.
+            process_fn: Function to apply to each file.
+            owns_executor: Whether we own the executor and should handle shutdown.
+            cleanup_state: Per-iterator shutdown state shared with cleanup.
+
+        Yields:
+            FileResult for each completed file.
+        """
         total = len(files)
+        completed_count = 0
+        max_workers = self._config.max_workers or os.cpu_count() or 1
 
-        # Use a bounded set of futures to control memory usage (backpressure).
-        # ``prefetch_depth`` controls how far ahead we queue work per worker.
-        # Depth 0 is an explicit no-prefetch mode with sequential submit/consume.
+        # Calculate limits for backpressure control
         if self._config.prefetch_depth == 0:
             limit = 1
         else:
             limit = max_workers * self._config.prefetch_depth
         submit_round = min(limit, self._config.chunk_size)
         timeout = self._config.timeout_per_file
-        # Poll more frequently for short timeouts to reduce timeout-detection drift.
         poll_interval = min(0.05, max(0.005, timeout / 10.0))
+
+        # State tracking
         pending: set[Future[FileResult]] = set()
-        # Track scheduling metadata for timeout handling.
         future_paths: dict[Future[FileResult], Path] = {}
         future_started: dict[Future[FileResult], float | None] = {}
-        force_nonblocking_shutdown = False
-
         iterator = iter(files)
         iterator_exhausted = False
 
-        try:
+        def submit_next() -> bool:
+            """Submit next file if available."""
+            nonlocal iterator_exhausted
+            if iterator_exhausted:
+                return False
+            try:
+                path = next(iterator)
+                future = exec_instance.submit(_execute_with_timing, path, process_fn)
+                pending.add(future)
+                future_paths[future] = path
+                future_started[future] = None
+                return True
+            except StopIteration:
+                iterator_exhausted = True
+                return False
 
-            def submit_next() -> bool:
-                """Submit next file if available."""
-                nonlocal iterator_exhausted
-                if iterator_exhausted:
-                    return False
+        def submit_round_of_work() -> None:
+            """Submit up to chunk_size new tasks while respecting pending limit."""
+            submitted = 0
+            while len(pending) < limit and submitted < submit_round:
+                if not submit_next():
+                    break
+                submitted += 1
+
+        def finalize_result(file_result: FileResult) -> FileResult:
+            """Update progress counters/callback and return result for yielding."""
+            nonlocal completed_count
+            completed_count += 1
+            if self._config.progress_callback:
+                self._config.progress_callback(completed_count, total, file_result)
+            return file_result
+
+        # Initial fill
+        submit_round_of_work()
+
+        while pending:
+            done, _ = wait(pending, timeout=poll_interval, return_when=FIRST_COMPLETED)
+
+            # Process completed tasks
+            for future in done:
+                pending.remove(future)
+                path = future_paths.pop(future)
+                future_started.pop(future, None)
+
                 try:
-                    path = next(iterator)
-                    future = exec_instance.submit(_execute_with_timing, path, process_fn)
-                    pending.add(future)
-                    future_paths[future] = path
-                    future_started[future] = None
-                    return True
-                except StopIteration:
-                    iterator_exhausted = True
-                    return False
+                    file_result = future.result()
+                except Exception as exc:
+                    file_result = FileResult(path=path, success=False, error=str(exc))
 
-            def submit_round_of_work() -> None:
-                """Submit up to chunk_size new tasks while respecting pending limit."""
-                submitted = 0
-                while len(pending) < limit and submitted < submit_round:
-                    if not submit_next():
-                        break
-                    submitted += 1
+                yield finalize_result(file_result)
+                submit_round_of_work()
 
-            def finalize_result(file_result: FileResult) -> FileResult:
-                """Update progress counters/callback and return result for yielding."""
-                nonlocal completed_count
-                completed_count += 1
-                if self._config.progress_callback:
-                    self._config.progress_callback(completed_count, total, file_result)
-                return file_result
+            # Check for and handle timeouts
+            timeout_handling = self._handle_timeouts(
+                pending,
+                future_paths,
+                future_started,
+                timeout,
+                poll_interval,
+                finalize_result,
+            )
+            if timeout_handling is not None:
+                should_abort, timeout_results = timeout_handling
+                if not should_abort:
+                    yield from timeout_results
+                    submit_round_of_work()
+                    continue
 
-            # Initial fill
+                cleanup_state["force_nonblocking_shutdown"] = owns_executor
+                yield from timeout_results
+                # Abort remaining files from iterator
+                for remaining_path in iterator:
+                    yield finalize_result(
+                        FileResult(
+                            path=remaining_path,
+                            success=False,
+                            error="Aborted because another task exceeded timeout "
+                            "and could not be cancelled",
+                            non_retryable=True,
+                        )
+                    )
+                return
+
             submit_round_of_work()
 
-            while pending:
-                # Wait for completion or timeout check
-                # We use a short timeout to periodically check for stale tasks
-                # Interval scales with timeout_per_file to keep detection accurate.
-                done, _ = wait(
-                    pending,
-                    timeout=poll_interval,
-                    return_when=FIRST_COMPLETED,
-                )
+    def _handle_timeouts(
+        self,
+        pending: set[Future[FileResult]],
+        future_paths: dict[Future[FileResult], Path],
+        future_started: dict[Future[FileResult], float | None],
+        timeout: float,
+        poll_interval: float,
+        finalize_result: Callable[[FileResult], FileResult],
+    ) -> tuple[bool, list[FileResult]] | None:
+        """Check for and handle timed-out tasks.
 
-                # 1. Process completed tasks
-                for future in done:
+        Args:
+            pending: Set of pending futures.
+            future_paths: Mapping of futures to file paths.
+            future_started: Mapping of futures to start times.
+            timeout: Timeout threshold in seconds.
+            poll_interval: Polling interval for drift compensation.
+            owns_executor: Whether we own the executor.
+            finalize_result: Function to finalize results.
+
+        Returns:
+            None if no timeout was handled, or tuple of
+            (should_abort_processing, finalized_results_to_yield).
+        """
+        now = time.monotonic()
+
+        # Mark tasks as started when they begin running
+        for future in pending:
+            if future_started[future] is None and future.running():
+                future_started[future] = now - poll_interval
+
+        # Check for timeouts
+        for future in list(pending):
+            start_time = future_started[future]
+            if start_time is None:
+                continue
+
+            if (now - start_time) > timeout:
+                path = future_paths[future]
+                cancelled = future.cancel()
+                if cancelled:
                     pending.remove(future)
-                    path = future_paths.pop(future)
-                    future_started.pop(future, None)
-
-                    try:
-                        file_result = future.result()
-                    except Exception as exc:
-                        # Should be captured by _execute_with_timing, but safety net
-                        file_result = FileResult(path=path, success=False, error=str(exc))
-
-                    yield finalize_result(file_result)
-                    submit_round_of_work()
-
-                # 2. Check for timed-out tasks
-                now = time.monotonic()
-                # Mark tasks as started when the executor reports they are running.
-                for future in pending:
-                    if future_started[future] is None and future.running():
-                        # Compensate for polling interval so timeout accounting
-                        # does not drift late by up to one poll tick.
-                        future_started[future] = now - poll_interval
-
-                # Check running tasks (those in pending but not in done)
-                # We iterate a copy because we might modify pending
-                for future in list(pending):
-                    start_time = future_started[future]
-                    if start_time is None:
-                        continue
-                    path = future_paths[future]
-                    if (now - start_time) > timeout:
-                        # Report timeout immediately so callers are not blocked
-                        # by uncancellable tasks continuing in the background.
-                        cancelled = future.cancel()
-                        if owns_executor and not cancelled:
-                            force_nonblocking_shutdown = True
-                        pending.remove(future)
-                        del future_paths[future]
-                        del future_started[future]
-
-                        file_result = FileResult(
+                    del future_paths[future]
+                    del future_started[future]
+                    timed_out_result = finalize_result(
+                        FileResult(
                             path=path,
                             success=False,
                             error=f"Timed out after {timeout}s",
                         )
-                        yield finalize_result(file_result)
+                    )
+                    return (False, [timed_out_result])
 
-                        if not cancelled:
-                            # The task is already running and cannot be cancelled.
-                            # Fail fast: mark all remaining queued/unscheduled files
-                            # as aborted so callers do not deadlock waiting for work
-                            # that cannot begin while worker slots remain occupied.
-                            abort_error = (
-                                "Aborted because another task exceeded timeout "
-                                "and could not be cancelled"
-                            )
-                            for other in list(pending):
-                                pending.remove(other)
-                                other_path = future_paths.pop(other)
-                                future_started.pop(other, None)
-                                other.cancel()
-                                yield finalize_result(
-                                    FileResult(
-                                        path=other_path,
-                                        success=False,
-                                        error=abort_error,
-                                    )
-                                )
+                if future.done():
+                    pending.remove(future)
+                    completed_path = future_paths.pop(future)
+                    future_started.pop(future, None)
+                    try:
+                        completed_result = finalize_result(future.result())
+                    except Exception as exc:
+                        completed_result = finalize_result(
+                            FileResult(path=completed_path, success=False, error=str(exc))
+                        )
+                    return (False, [completed_result])
 
-                            for remaining_path in iterator:
-                                yield finalize_result(
-                                    FileResult(
-                                        path=remaining_path,
-                                        success=False,
-                                        error=abort_error,
-                                    )
-                                )
-                            return
-
-                        submit_round_of_work()
-        finally:
-            if owns_executor:
-                exec_instance.shutdown(
-                    wait=not force_nonblocking_shutdown,
-                    cancel_futures=force_nonblocking_shutdown,
+                abort_results = self._abort_remaining_work(
+                    pending,
+                    future_paths,
+                    future_started,
+                    finalize_result,
+                    timed_out_future=future,
+                    timeout=timeout,
                 )
+                return (True, abort_results)
+
+        return None
+
+    def _abort_remaining_work(
+        self,
+        pending: set[Future[FileResult]],
+        future_paths: dict[Future[FileResult], Path],
+        future_started: dict[Future[FileResult], float | None],
+        finalize_result: Callable[[FileResult], FileResult],
+        timed_out_future: Future[FileResult] | None = None,
+        timeout: float | None = None,
+    ) -> list[FileResult]:
+        """Abort all remaining pending work due to uncancellable timeout.
+
+        Args:
+            pending: Set of pending futures to abort.
+            future_paths: Mapping of futures to file paths.
+            future_started: Mapping of futures to start times.
+            finalize_result: Function to finalize results.
+            timed_out_future: Future that exceeded the timeout and could not be cancelled.
+            timeout: Timeout threshold used for the timed-out future, if known.
+
+        Returns:
+            List of FileResult for aborted tasks.
+        """
+        abort_error = "Aborted because another task exceeded timeout and could not be cancelled"
+        aborted_results = []
+
+        for other in list(pending):
+            pending.remove(other)
+            other_path = future_paths.pop(other)
+            future_started.pop(other, None)
+
+            if other is timed_out_future:
+                result = finalize_result(
+                    FileResult(
+                        path=other_path,
+                        success=False,
+                        error=(
+                            f"Timed out after {timeout}s and could not be cancelled"
+                            if timeout is not None
+                            else abort_error
+                        ),
+                        non_retryable=True,
+                    )
+                )
+                aborted_results.append(result)
+                continue
+
+            if other.done():
+                try:
+                    result = finalize_result(other.result())
+                except Exception as exc:
+                    result = finalize_result(
+                        FileResult(path=other_path, success=False, error=str(exc))
+                    )
+                aborted_results.append(result)
+                continue
+
+            other.cancel()
+            result = finalize_result(
+                FileResult(
+                    path=other_path,
+                    success=False,
+                    error=abort_error,
+                    non_retryable=True,
+                )
+            )
+            aborted_results.append(result)
+
+        return aborted_results
+
+    def _cleanup_executor(
+        self,
+        exec_instance: ThreadPoolExecutor | ProcessPoolExecutor,
+        owns_executor: bool,
+        force_shutdown: bool,
+    ) -> None:
+        """Clean up executor after processing.
+
+        Args:
+            exec_instance: Executor to clean up.
+            owns_executor: Whether we own the executor.
+            force_shutdown: Whether to shut down without waiting.
+        """
+        if owns_executor:
+            exec_instance.shutdown(
+                wait=not force_shutdown,
+                cancel_futures=force_shutdown,
+            )
 
     def _run_batch(
         self,

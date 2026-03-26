@@ -17,7 +17,7 @@ from file_organizer.services.copilot.intent_parser import IntentParser
 from file_organizer.services.deduplication.detector import DuplicateDetector
 from file_organizer.services.deduplication.index import DuplicateIndex
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
 
 # ---------------------------------------------------------------------------

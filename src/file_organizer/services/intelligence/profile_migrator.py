@@ -63,98 +63,172 @@ class ProfileMigrator:
             True if migrated successfully, False otherwise
         """
         try:
-            # Load profile
-            profile = self.profile_manager.get_profile(profile_name)
+            # Load and validate profile
+            profile = self._load_profile(profile_name)
             if profile is None:
-                print(f"Error: Profile '{profile_name}' not found")
                 return False
 
-            current_version = profile.profile_version
+            # Reject unsupported targets even if the profile already reports that version.
+            if not self._is_version_supported(target_version):
+                return False
 
-            # Check if migration needed
-            if current_version == target_version:
-                print(f"Profile already at version {target_version}")
+            # Check if migration is needed
+            if not self._migration_needed(profile, target_version):
                 return True
 
-            # Check if target version is supported
-            if target_version not in self.SUPPORTED_VERSIONS:
-                print(f"Error: Unsupported target version: {target_version}")
-                return False
-
             # Create backup if requested
-            backup_path = None
-            if backup:
-                backup_path = self.backup_before_migration(profile)
-                if backup_path is None:
-                    print("Error: Failed to create backup")
-                    return False
-
-            # Find and execute migration path
-            migration_path = self._find_migration_path(current_version, target_version)
-            if migration_path is None:
-                print(f"Error: No migration path from {current_version} to {target_version}")
+            backup_path = self._create_backup_if_requested(profile, backup)
+            if backup and backup_path is None:
                 return False
 
-            # Execute migration steps
-            migrated_data = profile.to_dict()
-
-            for step in migration_path:
-                migration_func = self._migration_functions.get(step)
-                if migration_func is None:
-                    print(f"Error: Migration function not found for step: {step}")
-                    if backup_path:
-                        self.rollback_migration(profile_name, backup_path)
-                    return False
-
-                try:
-                    migrated_data = migration_func(migrated_data)
-                except Exception as e:
-                    print(f"Error during migration step {step}: {e}")
-                    if backup_path:
-                        self.rollback_migration(profile_name, backup_path)
-                    return False
-
-            # Update profile with migrated data
-            migrated_data["profile_version"] = target_version
-            migrated_data["updated"] = self._get_current_timestamp()
-            migrated_data["migration_history"] = migrated_data.get("migration_history", [])
-            migrated_data["migration_history"].append(
-                {
-                    "from_version": current_version,
-                    "to_version": target_version,
-                    "migrated_at": self._get_current_timestamp(),
-                }
-            )
-
-            # Validate migrated profile
-            migrated_profile = Profile.from_dict(migrated_data)
-            if not migrated_profile.validate():
-                print("Error: Migrated profile failed validation")
-                if backup_path:
-                    self.rollback_migration(profile_name, backup_path)
-                return False
-
-            # Save migrated profile
-            success = self.profile_manager.update_profile(
-                profile_name,
-                description=migrated_profile.description,
-                preferences=migrated_profile.preferences,
-                learned_patterns=migrated_profile.learned_patterns,
-                confidence_data=migrated_profile.confidence_data,
-            )
-
-            if not success:
-                print("Error: Failed to save migrated profile")
-                if backup_path:
-                    self.rollback_migration(profile_name, backup_path)
-                return False
-
-            print(f"Successfully migrated profile from {current_version} to {target_version}")
-            return True
+            # Execute migration
+            return self._execute_migration(profile_name, profile, target_version, backup_path)
 
         except Exception as e:
             print(f"Error migrating profile: {e}")
             return False
+
+    def _load_profile(self, profile_name: str) -> Profile | None:
+        """Load profile by name."""
+        profile = self.profile_manager.get_profile(profile_name)
+        if profile is None:
+            print(f"Error: Profile '{profile_name}' not found")
+        return profile
+
+    def _migration_needed(self, profile: Profile, target_version: str) -> bool:
+        """Check if migration is needed."""
+        if profile.profile_version == target_version:
+            print(f"Profile already at version {target_version}")
+            return False
+        return True
+
+    def _is_version_supported(self, version: str) -> bool:
+        """Check if version is supported."""
+        if version not in self.SUPPORTED_VERSIONS:
+            print(f"Error: Unsupported target version: {version}")
+            return False
+        return True
+
+    def _create_backup_if_requested(self, profile: Profile, backup: bool) -> Path | None:
+        """Create backup if requested."""
+        if not backup:
+            return None
+
+        backup_path = self.backup_before_migration(profile)
+        if backup_path is None:
+            print("Error: Failed to create backup")
+        return backup_path
+
+    def _execute_migration(
+        self,
+        profile_name: str,
+        profile: Profile,
+        target_version: str,
+        backup_path: Path | None,
+    ) -> bool:
+        """Execute the migration process."""
+        current_version = profile.profile_version
+
+        # Find migration path
+        migration_path = self._find_migration_path(current_version, target_version)
+        if migration_path is None:
+            print(f"Error: No migration path from {current_version} to {target_version}")
+            return False
+
+        # Apply migration steps
+        migrated_data = self._apply_migration_steps(
+            profile, migration_path, profile_name, backup_path
+        )
+        if migrated_data is None:
+            return False
+
+        # Update and save migrated data
+        migrated_data = self._update_migration_metadata(
+            migrated_data, current_version, target_version
+        )
+
+        # Validate and save
+        return self._validate_and_save_migrated_profile(profile_name, migrated_data, backup_path)
+
+    def _apply_migration_steps(
+        self,
+        profile: Profile,
+        migration_path: list[Any],
+        profile_name: str,
+        backup_path: Path | None,
+    ) -> dict[str, Any] | None:
+        """Apply migration steps to profile data."""
+        migrated_data = profile.to_dict()
+
+        for step in migration_path:
+            migration_func = self._migration_functions.get(step)
+            if migration_func is None:
+                print(f"Error: Migration function not found for step: {step}")
+                if backup_path:
+                    self.rollback_migration(profile_name, backup_path)
+                return None
+
+            try:
+                migrated_data = migration_func(migrated_data)
+            except Exception as e:
+                print(f"Error during migration step {step}: {e}")
+                if backup_path:
+                    self.rollback_migration(profile_name, backup_path)
+                return None
+
+        return migrated_data
+
+    def _update_migration_metadata(
+        self, migrated_data: dict[str, Any], from_version: str, to_version: str
+    ) -> dict[str, Any]:
+        """Update migration metadata."""
+        migrated_data["profile_version"] = to_version
+        migrated_data["updated"] = self._get_current_timestamp()
+        migrated_data["migration_history"] = migrated_data.get("migration_history", [])
+        migrated_data["migration_history"].append(
+            {
+                "from_version": from_version,
+                "to_version": to_version,
+                "migrated_at": self._get_current_timestamp(),
+            }
+        )
+        return migrated_data
+
+    def _validate_and_save_migrated_profile(
+        self, profile_name: str, migrated_data: dict[str, Any], backup_path: Path | None
+    ) -> bool:
+        """Validate and save migrated profile."""
+        # Validate migrated profile
+        migrated_profile = Profile.from_dict(migrated_data)
+        if not migrated_profile.validate():
+            print("Error: Migrated profile failed validation")
+            if backup_path:
+                self.rollback_migration(profile_name, backup_path)
+            return False
+
+        # Save migrated profile
+        success = self.profile_manager.update_profile(
+            profile_name,
+            description=migrated_profile.description,
+            profile_version=migrated_profile.profile_version,
+            created=migrated_profile.created,
+            updated=migrated_profile.updated,
+            preferences=migrated_profile.preferences,
+            learned_patterns=migrated_profile.learned_patterns,
+            confidence_data=migrated_profile.confidence_data,
+        )
+
+        if not success:
+            print("Error: Failed to save migrated profile")
+            if backup_path:
+                self.rollback_migration(profile_name, backup_path)
+            return False
+
+        print(
+            f"Successfully migrated profile from {migrated_data.get('migration_history', [{}])[-1].get('from_version')} "
+            f"to {migrated_data['profile_version']}"
+        )
+        return True
 
     def _find_migration_path(self, from_version: str, to_version: str) -> list[Any] | None:
         """Find migration path between versions.
@@ -270,32 +344,20 @@ class ProfileMigrator:
         """
         try:
             # Load profile
-            profile = self.profile_manager.get_profile(profile_name)
+            profile = self._load_profile(profile_name)
             if profile is None:
-                print(f"Error: Profile '{profile_name}' not found")
                 return False
 
             # Validate profile structure
-            if not profile.validate():
-                print("Error: Profile validation failed")
+            if not self._validate_profile_structure(profile):
                 return False
 
             # Check version is supported
-            if profile.profile_version not in self.SUPPORTED_VERSIONS:
-                print(f"Error: Unsupported profile version: {profile.profile_version}")
+            if not self._validate_profile_version(profile):
                 return False
 
-            # Additional validation checks
-            # Check preferences structure
-            if not isinstance(profile.preferences, dict):
-                print("Error: Invalid preferences structure")
-                return False
-
-            if (
-                "global" not in profile.preferences
-                or "directory_specific" not in profile.preferences
-            ):
-                print("Error: Missing required preference keys")
+            # Validate preferences structure
+            if not self._validate_preferences_structure(profile):
                 return False
 
             print("Profile validation successful")
@@ -304,6 +366,32 @@ class ProfileMigrator:
         except Exception as e:
             print(f"Error validating migration: {e}")
             return False
+
+    def _validate_profile_structure(self, profile: Profile) -> bool:
+        """Validate basic profile structure."""
+        if not profile.validate():
+            print("Error: Profile validation failed")
+            return False
+        return True
+
+    def _validate_profile_version(self, profile: Profile) -> bool:
+        """Validate profile version is supported."""
+        if profile.profile_version not in self.SUPPORTED_VERSIONS:
+            print(f"Error: Unsupported profile version: {profile.profile_version}")
+            return False
+        return True
+
+    def _validate_preferences_structure(self, profile: Profile) -> bool:
+        """Validate preferences structure."""
+        if not isinstance(profile.preferences, dict):
+            print("Error: Invalid preferences structure")
+            return False
+
+        if "global" not in profile.preferences or "directory_specific" not in profile.preferences:
+            print("Error: Missing required preference keys")
+            return False
+
+        return True
 
     def get_migration_history(self, profile_name: str) -> list[Any] | None:
         """Get migration history for a profile.

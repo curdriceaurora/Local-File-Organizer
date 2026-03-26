@@ -16,6 +16,7 @@ class TestTextProcessing:
         # Should return early without error
         ensure_nltk_data()
 
+    @patch("file_organizer.utils.text_processing._nltk_ready", False)
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.nltk.download")
     @patch("file_organizer.utils.text_processing.stopwords.words")
@@ -28,6 +29,7 @@ class TestTextProcessing:
         ensure_nltk_data()
         mock_download.assert_not_called()
 
+    @patch("file_organizer.utils.text_processing._nltk_ready", False)
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch("file_organizer.utils.text_processing.nltk.download")
     def test_ensure_nltk_data_lookup_error_download(self, mock_download):
@@ -37,6 +39,7 @@ class TestTextProcessing:
             ensure_nltk_data()
             mock_download.assert_called()
 
+    @patch("file_organizer.utils.text_processing._nltk_ready", False)
     @patch("file_organizer.utils.text_processing.NLTK_AVAILABLE", True)
     @patch(
         "file_organizer.utils.text_processing.nltk.download", side_effect=Exception("Network error")

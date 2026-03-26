@@ -141,24 +141,68 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return payload
 
 
-def load_settings() -> ApiSettings:
-    """Load API settings from a config file and environment variables.
+def _parse_bool(value: str | None, name: str) -> bool | None:
+    """Parse boolean from an environment variable string."""
+    if value is None:
+        return None
 
-    Environment variables override config file values when present.
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes"}:
+        return True
+    if normalized in {"0", "false", "no"}:
+        return False
+    raise ValueError(f"Invalid {name} value: {value}")
+
+
+def _load_bool(env: dict[str, str], env_name: str, data: dict[str, Any], key: str) -> None:
+    """Load a boolean setting when the environment value parses cleanly."""
+    if env_name not in env:
+        return
+
+    try:
+        parsed = _parse_bool(env[env_name], env_name)
+    except ValueError:
+        logger.warning("Invalid {} value: {}", env_name, env[env_name])
+    else:
+        if parsed is not None:
+            data[key] = parsed
+
+
+def _parse_int(value: str, name: str) -> int | None:
+    """Parse integer from environment variable with error logging.
+
+    Args:
+        value: The string value to parse.
+        name: The environment variable name for logging.
+
+    Returns:
+        Parsed integer, or ``None`` on failure.
     """
-    config_path = os.environ.get("FO_API_CONFIG_PATH")
-    data: dict[str, Any] = {}
+    try:
+        return int(value)
+    except ValueError:
+        logger.warning("Invalid {} value: {}", name, value)
+        return None
 
-    if config_path:
-        # Config file path is provided by deployment configuration, not request data.
-        path = Path(config_path).expanduser()  # codeql[py/path-injection]
-        if path.exists():
-            payload = _load_yaml(path)
-            data.update(payload.get("api", payload))
-        else:
-            logger.warning("API config path does not exist: {}", path)
 
-    env = os.environ
+def _load_file_config(env: dict[str, str]) -> dict[str, Any]:
+    """Load configuration from YAML file if path is specified."""
+    config_path = env.get("FO_API_CONFIG_PATH")
+    if not config_path:
+        return {}
+
+    # Config file path is provided by deployment configuration, not request data.
+    path = Path(config_path).expanduser()  # codeql[py/path-injection]
+    if not path.exists():
+        logger.warning("API config path does not exist: {}", path)
+        return {}
+
+    payload = _load_yaml(path)
+    return payload.get("api", payload)
+
+
+def _load_basic_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load basic application settings from environment."""
     if "FO_API_APP_NAME" in env:
         data["app_name"] = env["FO_API_APP_NAME"]
     if "FO_API_VERSION" in env:
@@ -168,47 +212,45 @@ def load_settings() -> ApiSettings:
     if "FO_API_HOST" in env:
         data["host"] = env["FO_API_HOST"]
     if "FO_API_PORT" in env:
-        try:
-            data["port"] = int(env["FO_API_PORT"])
-        except ValueError:
-            logger.warning("Invalid FO_API_PORT value: {}", env["FO_API_PORT"])
+        port = _parse_int(env["FO_API_PORT"], "FO_API_PORT")
+        if port is not None:
+            data["port"] = port
     if "FO_API_LOG_LEVEL" in env:
         data["log_level"] = env["FO_API_LOG_LEVEL"]
+    _load_bool(env, "FO_API_ENABLE_DOCS", data, "enable_docs")
+    if "FO_API_ALLOWED_PATHS" in env:
+        data["allowed_paths"] = _parse_list(env["FO_API_ALLOWED_PATHS"])
+
+
+def _load_cors_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load CORS configuration from environment."""
     if "FO_API_CORS_ORIGINS" in env:
         data["cors_origins"] = _parse_list(env["FO_API_CORS_ORIGINS"])
     if "FO_API_CORS_ALLOW_METHODS" in env:
         data["cors_allow_methods"] = _parse_list(env["FO_API_CORS_ALLOW_METHODS"])
     if "FO_API_CORS_ALLOW_HEADERS" in env:
         data["cors_allow_headers"] = _parse_list(env["FO_API_CORS_ALLOW_HEADERS"])
-    if "FO_API_CORS_ALLOW_CREDENTIALS" in env:
-        data["cors_allow_credentials"] = env["FO_API_CORS_ALLOW_CREDENTIALS"].lower() in (
-            "1",
-            "true",
-            "yes",
-        )
-    if "FO_API_ENABLE_DOCS" in env:
-        data["enable_docs"] = env["FO_API_ENABLE_DOCS"].lower() in ("1", "true", "yes")
-    if "FO_API_ALLOWED_PATHS" in env:
-        data["allowed_paths"] = _parse_list(env["FO_API_ALLOWED_PATHS"])
+    _load_bool(env, "FO_API_CORS_ALLOW_CREDENTIALS", data, "cors_allow_credentials")
+
+
+def _load_websocket_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load WebSocket configuration from environment."""
     if "FO_API_WS_PING_INTERVAL" in env:
-        try:
-            interval = int(env["FO_API_WS_PING_INTERVAL"])
-            if interval > 0:
-                data["websocket_ping_interval"] = interval
-            else:
-                logger.warning(
-                    "Invalid FO_API_WS_PING_INTERVAL value (must be > 0): {}",
-                    env["FO_API_WS_PING_INTERVAL"],
-                )
-        except ValueError:
+        interval = _parse_int(env["FO_API_WS_PING_INTERVAL"], "FO_API_WS_PING_INTERVAL")
+        if interval is not None and interval > 0:
+            data["websocket_ping_interval"] = interval
+        elif interval is not None:
             logger.warning(
-                "Invalid FO_API_WS_PING_INTERVAL value: {}",
+                "Invalid FO_API_WS_PING_INTERVAL value (must be > 0): {}",
                 env["FO_API_WS_PING_INTERVAL"],
             )
     if "FO_API_WEBSOCKET_TOKEN" in env:
         data["websocket_token"] = env["FO_API_WEBSOCKET_TOKEN"]
-    if "FO_API_AUTH_ENABLED" in env:
-        data["auth_enabled"] = env["FO_API_AUTH_ENABLED"].lower() in ("1", "true", "yes")
+
+
+def _load_auth_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load authentication configuration from environment."""
+    _load_bool(env, "FO_API_AUTH_ENABLED", data, "auth_enabled")
     if "FO_API_AUTH_DB_PATH" in env:
         data["auth_db_path"] = env["FO_API_AUTH_DB_PATH"]
     if "FO_API_AUTH_JWT_SECRET" in env:
@@ -216,129 +258,95 @@ def load_settings() -> ApiSettings:
     if "FO_API_AUTH_JWT_ALGORITHM" in env:
         data["auth_jwt_algorithm"] = env["FO_API_AUTH_JWT_ALGORITHM"]
     if "FO_API_AUTH_ACCESS_MINUTES" in env:
-        try:
-            data["auth_access_token_minutes"] = int(env["FO_API_AUTH_ACCESS_MINUTES"])
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_AUTH_ACCESS_MINUTES value: {}",
-                env["FO_API_AUTH_ACCESS_MINUTES"],
-            )
+        minutes = _parse_int(env["FO_API_AUTH_ACCESS_MINUTES"], "FO_API_AUTH_ACCESS_MINUTES")
+        if minutes is not None:
+            data["auth_access_token_minutes"] = minutes
     if "FO_API_AUTH_REFRESH_DAYS" in env:
-        try:
-            data["auth_refresh_token_days"] = int(env["FO_API_AUTH_REFRESH_DAYS"])
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_AUTH_REFRESH_DAYS value: {}",
-                env["FO_API_AUTH_REFRESH_DAYS"],
-            )
+        days = _parse_int(env["FO_API_AUTH_REFRESH_DAYS"], "FO_API_AUTH_REFRESH_DAYS")
+        if days is not None:
+            data["auth_refresh_token_days"] = days
     if "FO_API_AUTH_REDIS_URL" in env:
         data["auth_redis_url"] = env["FO_API_AUTH_REDIS_URL"]
     elif "FO_REDIS_URL" in env:
         data["auth_redis_url"] = env["FO_REDIS_URL"]
+    _load_bool(env, "FO_API_AUTH_BOOTSTRAP_ADMIN", data, "auth_bootstrap_admin")
+    _load_bool(env, "FO_API_AUTH_BOOTSTRAP_LOCAL_ONLY", data, "auth_bootstrap_admin_local_only")
 
-    if "FO_API_AUTH_LOGIN_RATE_LIMIT" in env:
-        data["auth_login_rate_limit_enabled"] = env["FO_API_AUTH_LOGIN_RATE_LIMIT"].lower() in (
-            "1",
-            "true",
-            "yes",
-        )
+
+def _load_auth_rate_limit_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load authentication rate limiting configuration from environment."""
+    _load_bool(env, "FO_API_AUTH_LOGIN_RATE_LIMIT", data, "auth_login_rate_limit_enabled")
     if "FO_API_AUTH_LOGIN_MAX_ATTEMPTS" in env:
-        try:
-            data["auth_login_max_attempts"] = int(env["FO_API_AUTH_LOGIN_MAX_ATTEMPTS"])
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_AUTH_LOGIN_MAX_ATTEMPTS value: {}",
-                env["FO_API_AUTH_LOGIN_MAX_ATTEMPTS"],
-            )
-    if "FO_API_AUTH_LOGIN_WINDOW_SECONDS" in env:
-        try:
-            data["auth_login_window_seconds"] = int(env["FO_API_AUTH_LOGIN_WINDOW_SECONDS"])
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_AUTH_LOGIN_WINDOW_SECONDS value: {}",
-                env["FO_API_AUTH_LOGIN_WINDOW_SECONDS"],
-            )
-    if "FO_API_AUTH_PASSWORD_MIN_LENGTH" in env:
-        try:
-            data["auth_password_min_length"] = int(env["FO_API_AUTH_PASSWORD_MIN_LENGTH"])
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_AUTH_PASSWORD_MIN_LENGTH value: {}",
-                env["FO_API_AUTH_PASSWORD_MIN_LENGTH"],
-            )
-    if "FO_API_AUTH_PASSWORD_REQUIRE_NUMBER" in env:
-        data["auth_password_require_number"] = env[
-            "FO_API_AUTH_PASSWORD_REQUIRE_NUMBER"
-        ].lower() in ("1", "true", "yes")
-    if "FO_API_AUTH_PASSWORD_REQUIRE_LETTER" in env:
-        data["auth_password_require_letter"] = env[
-            "FO_API_AUTH_PASSWORD_REQUIRE_LETTER"
-        ].lower() in ("1", "true", "yes")
-    if "FO_API_AUTH_PASSWORD_REQUIRE_SPECIAL" in env:
-        data["auth_password_require_special"] = env[
-            "FO_API_AUTH_PASSWORD_REQUIRE_SPECIAL"
-        ].lower() in ("1", "true", "yes")
-    if "FO_API_AUTH_PASSWORD_REQUIRE_UPPERCASE" in env:
-        data["auth_password_require_uppercase"] = env[
-            "FO_API_AUTH_PASSWORD_REQUIRE_UPPERCASE"
-        ].lower() in ("1", "true", "yes")
-    if "FO_API_AUTH_BOOTSTRAP_ADMIN" in env:
-        data["auth_bootstrap_admin"] = env["FO_API_AUTH_BOOTSTRAP_ADMIN"].lower() in (
-            "1",
-            "true",
-            "yes",
+        attempts = _parse_int(
+            env["FO_API_AUTH_LOGIN_MAX_ATTEMPTS"], "FO_API_AUTH_LOGIN_MAX_ATTEMPTS"
         )
-    if "FO_API_AUTH_BOOTSTRAP_LOCAL_ONLY" in env:
-        data["auth_bootstrap_admin_local_only"] = env[
-            "FO_API_AUTH_BOOTSTRAP_LOCAL_ONLY"
-        ].lower() in ("1", "true", "yes")
+        if attempts is not None:
+            data["auth_login_max_attempts"] = attempts
+    if "FO_API_AUTH_LOGIN_WINDOW_SECONDS" in env:
+        window = _parse_int(
+            env["FO_API_AUTH_LOGIN_WINDOW_SECONDS"], "FO_API_AUTH_LOGIN_WINDOW_SECONDS"
+        )
+        if window is not None:
+            data["auth_login_window_seconds"] = window
+
+
+def _load_password_policy_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load password policy configuration from environment."""
+    if "FO_API_AUTH_PASSWORD_MIN_LENGTH" in env:
+        min_len = _parse_int(
+            env["FO_API_AUTH_PASSWORD_MIN_LENGTH"], "FO_API_AUTH_PASSWORD_MIN_LENGTH"
+        )
+        if min_len is not None:
+            data["auth_password_min_length"] = min_len
+    _load_bool(env, "FO_API_AUTH_PASSWORD_REQUIRE_NUMBER", data, "auth_password_require_number")
+    _load_bool(env, "FO_API_AUTH_PASSWORD_REQUIRE_LETTER", data, "auth_password_require_letter")
+    _load_bool(env, "FO_API_AUTH_PASSWORD_REQUIRE_SPECIAL", data, "auth_password_require_special")
+    _load_bool(
+        env,
+        "FO_API_AUTH_PASSWORD_REQUIRE_UPPERCASE",
+        data,
+        "auth_password_require_uppercase",
+    )
+
+
+def _load_database_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load database configuration from environment."""
     if "FO_API_DATABASE_URL" in env:
         data["database_url"] = env["FO_API_DATABASE_URL"]
     if "FO_API_DB_POOL_SIZE" in env:
-        try:
-            data["database_pool_size"] = int(env["FO_API_DB_POOL_SIZE"])
-        except ValueError:
-            logger.warning("Invalid FO_API_DB_POOL_SIZE value: {}", env["FO_API_DB_POOL_SIZE"])
+        size = _parse_int(env["FO_API_DB_POOL_SIZE"], "FO_API_DB_POOL_SIZE")
+        if size is not None:
+            data["database_pool_size"] = size
     if "FO_API_DB_MAX_OVERFLOW" in env:
-        try:
-            data["database_max_overflow"] = int(env["FO_API_DB_MAX_OVERFLOW"])
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_DB_MAX_OVERFLOW value: {}",
-                env["FO_API_DB_MAX_OVERFLOW"],
-            )
-    if "FO_API_DB_POOL_PRE_PING" in env:
-        data["database_pool_pre_ping"] = env["FO_API_DB_POOL_PRE_PING"].lower() in (
-            "1",
-            "true",
-            "yes",
-        )
+        overflow = _parse_int(env["FO_API_DB_MAX_OVERFLOW"], "FO_API_DB_MAX_OVERFLOW")
+        if overflow is not None:
+            data["database_max_overflow"] = overflow
+    _load_bool(env, "FO_API_DB_POOL_PRE_PING", data, "database_pool_pre_ping")
     if "FO_API_DB_POOL_RECYCLE_SECONDS" in env:
-        try:
-            data["database_pool_recycle_seconds"] = int(env["FO_API_DB_POOL_RECYCLE_SECONDS"])
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_DB_POOL_RECYCLE_SECONDS value: {}",
-                env["FO_API_DB_POOL_RECYCLE_SECONDS"],
-            )
-    if "FO_API_DB_ECHO" in env:
-        data["database_echo"] = env["FO_API_DB_ECHO"].lower() in ("1", "true", "yes")
+        recycle = _parse_int(
+            env["FO_API_DB_POOL_RECYCLE_SECONDS"], "FO_API_DB_POOL_RECYCLE_SECONDS"
+        )
+        if recycle is not None:
+            data["database_pool_recycle_seconds"] = recycle
+    _load_bool(env, "FO_API_DB_ECHO", data, "database_echo")
+
+
+def _load_cache_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load cache configuration from environment."""
     if "FO_API_CACHE_REDIS_URL" in env:
         data["cache_redis_url"] = env["FO_API_CACHE_REDIS_URL"]
     elif "FO_REDIS_URL" in env:
         data["cache_redis_url"] = env["FO_REDIS_URL"]
     if "FO_API_CACHE_TTL_SECONDS" in env:
-        try:
-            data["cache_default_ttl_seconds"] = int(env["FO_API_CACHE_TTL_SECONDS"])
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_CACHE_TTL_SECONDS value: {}",
-                env["FO_API_CACHE_TTL_SECONDS"],
-            )
-    if "FO_API_API_KEY_ENABLED" in env:
-        data["api_key_enabled"] = env["FO_API_API_KEY_ENABLED"].lower() in ("1", "true", "yes")
-    if "FO_API_API_KEY_ADMIN" in env:
-        data["api_key_admin"] = env["FO_API_API_KEY_ADMIN"].lower() in ("1", "true", "yes")
+        ttl = _parse_int(env["FO_API_CACHE_TTL_SECONDS"], "FO_API_CACHE_TTL_SECONDS")
+        if ttl is not None:
+            data["cache_default_ttl_seconds"] = ttl
+
+
+def _load_api_key_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load API key configuration from environment."""
+    _load_bool(env, "FO_API_API_KEY_ENABLED", data, "api_key_enabled")
+    _load_bool(env, "FO_API_API_KEY_ADMIN", data, "api_key_admin")
     if "FO_API_API_KEY_HEADER" in env:
         data["api_key_header"] = env["FO_API_API_KEY_HEADER"]
     if "FO_API_API_KEYS" in env:
@@ -346,34 +354,30 @@ def load_settings() -> ApiSettings:
         data["api_key_hashes"] = [hash_api_key(key) for key in raw_keys]
     if "FO_API_API_KEY_HASHES" in env:
         data["api_key_hashes"] = _parse_list(env["FO_API_API_KEY_HASHES"])
-    if "FO_API_RATE_LIMIT_ENABLED" in env:
-        data["rate_limit_enabled"] = env["FO_API_RATE_LIMIT_ENABLED"].lower() in (
-            "1",
-            "true",
-            "yes",
-        )
+
+
+def _load_rate_limit_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load rate limiting configuration from environment."""
+    _load_bool(env, "FO_API_RATE_LIMIT_ENABLED", data, "rate_limit_enabled")
     if "FO_API_RATE_LIMIT_DEFAULT_REQUESTS" in env:
-        try:
-            data["rate_limit_default_requests"] = int(env["FO_API_RATE_LIMIT_DEFAULT_REQUESTS"])
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_RATE_LIMIT_DEFAULT_REQUESTS value: {}",
-                env["FO_API_RATE_LIMIT_DEFAULT_REQUESTS"],
-            )
+        requests = _parse_int(
+            env["FO_API_RATE_LIMIT_DEFAULT_REQUESTS"], "FO_API_RATE_LIMIT_DEFAULT_REQUESTS"
+        )
+        if requests is not None:
+            data["rate_limit_default_requests"] = requests
     if "FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS" in env:
-        try:
-            data["rate_limit_default_window_seconds"] = int(
-                env["FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS"]
-            )
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS value: {}",
-                env["FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS"],
-            )
-    if "FO_API_RATE_LIMIT_TRUST_PROXY_HEADERS" in env:
-        data["rate_limit_trust_proxy_headers"] = env[
-            "FO_API_RATE_LIMIT_TRUST_PROXY_HEADERS"
-        ].lower() in ("1", "true", "yes")
+        window = _parse_int(
+            env["FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS"],
+            "FO_API_RATE_LIMIT_DEFAULT_WINDOW_SECONDS",
+        )
+        if window is not None:
+            data["rate_limit_default_window_seconds"] = window
+    _load_bool(
+        env,
+        "FO_API_RATE_LIMIT_TRUST_PROXY_HEADERS",
+        data,
+        "rate_limit_trust_proxy_headers",
+    )
     if "FO_API_RATE_LIMIT_EXEMPT_PATHS" in env:
         data["rate_limit_exempt_paths"] = _parse_list(env["FO_API_RATE_LIMIT_EXEMPT_PATHS"])
     if "FO_API_RATE_LIMIT_RULES" in env:
@@ -383,37 +387,40 @@ def load_settings() -> ApiSettings:
                 data["rate_limit_rules"] = parsed_rules
         except json.JSONDecodeError:
             logger.warning("Invalid FO_API_RATE_LIMIT_RULES JSON value")
-    if "FO_API_SECURITY_HEADERS_ENABLED" in env:
-        data["security_headers_enabled"] = env["FO_API_SECURITY_HEADERS_ENABLED"].lower() in (
-            "1",
-            "true",
-            "yes",
-        )
+
+
+def _load_security_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load security headers configuration from environment."""
+    _load_bool(env, "FO_API_SECURITY_HEADERS_ENABLED", data, "security_headers_enabled")
     if "FO_API_SECURITY_CSP" in env:
         data["security_csp"] = env["FO_API_SECURITY_CSP"]
     if "FO_API_SECURITY_HSTS_SECONDS" in env:
-        try:
-            data["security_hsts_seconds"] = int(env["FO_API_SECURITY_HSTS_SECONDS"])
-        except ValueError:
-            logger.warning(
-                "Invalid FO_API_SECURITY_HSTS_SECONDS value: {}",
-                env["FO_API_SECURITY_HSTS_SECONDS"],
-            )
-    if "FO_API_SECURITY_HSTS_SUBDOMAINS" in env:
-        data["security_hsts_subdomains"] = env["FO_API_SECURITY_HSTS_SUBDOMAINS"].lower() in (
-            "1",
-            "true",
-            "yes",
-        )
+        seconds = _parse_int(env["FO_API_SECURITY_HSTS_SECONDS"], "FO_API_SECURITY_HSTS_SECONDS")
+        if seconds is not None:
+            data["security_hsts_seconds"] = seconds
+    _load_bool(env, "FO_API_SECURITY_HSTS_SUBDOMAINS", data, "security_hsts_subdomains")
     if "FO_API_SECURITY_REFERRER_POLICY" in env:
         data["security_referrer_policy"] = env["FO_API_SECURITY_REFERRER_POLICY"]
+
+
+def _load_ollama_settings(env: dict[str, str], data: dict[str, Any]) -> None:
+    """Load Ollama configuration from environment."""
     if "FO_OLLAMA_URL" in env:
         data["ollama_url"] = env["FO_OLLAMA_URL"]
     elif "OLLAMA_HOST" in env:
         data["ollama_url"] = env["OLLAMA_HOST"]
 
-    api_key_enabled_explicit = "api_key_enabled" in data
-    settings = ApiSettings(**data)
+
+def _validate_settings(settings: ApiSettings, api_key_enabled_explicit: bool) -> None:
+    """Validate settings and log warnings or raise errors for misconfiguration.
+
+    Args:
+        settings: The loaded API settings to validate.
+        api_key_enabled_explicit: Whether API key was explicitly configured.
+
+    Raises:
+        ValueError: On critical production misconfigurations.
+    """
     if settings.auth_enabled and settings.auth_jwt_secret.get_secret_value() == "change-me":
         if settings.environment.lower() in {"development", "test"}:
             logger.warning(
@@ -424,11 +431,47 @@ def load_settings() -> ApiSettings:
             raise ValueError(
                 "FO_API_AUTH_JWT_SECRET must be set when auth is enabled outside development."
             )
+
     if settings.api_key_enabled and not settings.api_key_hashes and api_key_enabled_explicit:
         logger.warning("API key auth is enabled but no keys are configured.")
+
     if settings.environment.lower() not in {"development", "test"}:
         if "*" in settings.cors_origins:
             raise ValueError("CORS origins must be explicit in production.")
         if any("localhost" in origin or "127.0.0.1" in origin for origin in settings.cors_origins):
             raise ValueError("Localhost CORS origins must be removed in production.")
+
+
+def load_settings() -> ApiSettings:
+    """Load API settings from a config file and environment variables.
+
+    Environment variables override config file values when present.
+    Delegates to specialized loaders for each configuration category
+    to keep complexity manageable.
+
+    Returns:
+        Validated ``ApiSettings`` instance.
+
+    Raises:
+        ValueError: On critical production misconfigurations.
+    """
+    env = os.environ
+    data = _load_file_config(env)
+
+    _load_basic_settings(env, data)
+    _load_cors_settings(env, data)
+    _load_websocket_settings(env, data)
+    _load_auth_settings(env, data)
+    _load_auth_rate_limit_settings(env, data)
+    _load_password_policy_settings(env, data)
+    _load_database_settings(env, data)
+    _load_cache_settings(env, data)
+    _load_api_key_settings(env, data)
+    _load_rate_limit_settings(env, data)
+    _load_security_settings(env, data)
+    _load_ollama_settings(env, data)
+
+    api_key_enabled_explicit = "api_key_enabled" in data
+    settings = ApiSettings(**data)
+    _validate_settings(settings, api_key_enabled_explicit)
     return settings

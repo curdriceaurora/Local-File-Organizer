@@ -22,7 +22,7 @@ from file_organizer.services.intelligence.profile_manager import ProfileManager
 from file_organizer.services.intelligence.profile_merger import MergeStrategy, ProfileMerger
 from file_organizer.services.intelligence.profile_migrator import ProfileMigrator
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.ci, pytest.mark.integration]
 
 
 # ---------------------------------------------------------------------------
@@ -320,6 +320,14 @@ class TestProfileMigratorBasics:
     def test_get_migration_history_returns_list_or_none(self, migrator: ProfileMigrator) -> None:
         result = migrator.get_migration_history("default")
         assert result is None or isinstance(result, list)
+
+    def test_migrate_rejects_unsupported_target_even_when_versions_match(
+        self, manager: ProfileManager, migrator: ProfileMigrator
+    ) -> None:
+        manager.create_profile("custom", "custom profile")
+        manager.update_profile("custom", profile_version="9.9")
+        result = migrator.migrate_version("custom", "9.9")
+        assert result is False
 
 
 class TestProfileMigratorBackup:
