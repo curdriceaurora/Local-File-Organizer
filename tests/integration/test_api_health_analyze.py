@@ -124,7 +124,7 @@ class TestHealthEndpoint:
             mock_cls.return_value = mock_facade
             r = health_client.get("/health")
         uptime = r.json()["uptime"]
-        assert isinstance(uptime, (int, float)) and uptime >= 0
+        assert isinstance(uptime, (int, float)) and 0 <= uptime < 3600
 
 
 # ---------------------------------------------------------------------------

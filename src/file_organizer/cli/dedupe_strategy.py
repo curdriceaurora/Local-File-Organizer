@@ -20,6 +20,7 @@ def _resolve_console(console: Console | None) -> Console:
     try:
         from file_organizer.cli import dedupe as dedupe_module
     except ImportError:
+        # Console not available, create a new one as fallback
         return Console()
     else:
         return dedupe_module.console
@@ -34,9 +35,21 @@ def select_files_to_keep(files: list[dict[str, Any]], strategy: str) -> list[dic
 
     Returns:
         Updated list with 'keep' flags set for files to preserve (does not modify input).
+
+    Raises:
+        ValueError: If any file dict is missing required keys ('path', 'size', 'mtime').
     """
     if not files:
         return files
+
+    # Validate required keys in file dicts
+    required_keys = {"path", "size", "mtime"}
+    for i, file_info in enumerate(files):
+        missing_keys = required_keys - set(file_info.keys())
+        if missing_keys:
+            raise ValueError(
+                f"File dict at index {i} missing required keys: {missing_keys}"
+            )
 
     # Create a copy to avoid mutating the input list
     updated_files = [dict(file_info) for file_info in files]

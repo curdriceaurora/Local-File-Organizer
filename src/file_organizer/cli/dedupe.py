@@ -320,6 +320,14 @@ Examples:
     except KeyboardInterrupt:
         console.print("\n\n[yellow]Operation cancelled by user[/yellow]")
         return 130
+    except PermissionError:
+        console.print(f"\n[red]Permission denied accessing directory: {config.directory}[/red]")
+        logger.exception("Permission denied during deduplication")
+        return 1
+    except OSError as e:
+        console.print(f"\n[red]File system error: {e}[/red]")
+        logger.exception("File system error during deduplication")
+        return 1
     except Exception as e:
         console.print(f"\n[red]Error: {e}[/red]")
         logger.exception("Deduplication failed")
