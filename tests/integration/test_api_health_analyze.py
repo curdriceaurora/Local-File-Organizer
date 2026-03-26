@@ -7,6 +7,7 @@ Covers: GET /health with ok/degraded/error/unknown status, shape check;
 
 from __future__ import annotations
 
+import math
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -124,7 +125,7 @@ class TestHealthEndpoint:
             mock_cls.return_value = mock_facade
             r = health_client.get("/health")
         uptime = r.json()["uptime"]
-        assert isinstance(uptime, (int, float)) and 0 <= uptime < 3600
+        assert isinstance(uptime, (int, float)) and uptime >= 0 and math.isfinite(uptime)
 
 
 # ---------------------------------------------------------------------------

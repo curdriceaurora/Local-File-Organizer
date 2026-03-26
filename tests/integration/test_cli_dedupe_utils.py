@@ -394,11 +394,15 @@ class TestDedupeCommandExceptionHandling:
     def test_permission_error_returns_1(self, tmp_path) -> None:
         from file_organizer.cli.dedupe import dedupe_command
 
-        with patch(
-            "file_organizer.cli.dedupe.dedupe_display.display_banner",
-        ), patch("file_organizer.cli.dedupe.dedupe_display.display_config"), patch(
-            "file_organizer.cli.dedupe.initialize_hash_detector",
-            side_effect=PermissionError("Access denied"),
+        with (
+            patch(
+                "file_organizer.cli.dedupe.dedupe_display.display_banner",
+            ),
+            patch("file_organizer.cli.dedupe.dedupe_display.display_config"),
+            patch(
+                "file_organizer.cli.dedupe.initialize_hash_detector",
+                side_effect=PermissionError("Access denied"),
+            ),
         ):
             result = dedupe_command([str(tmp_path)])
         assert result == 1
@@ -406,11 +410,15 @@ class TestDedupeCommandExceptionHandling:
     def test_os_error_returns_1(self, tmp_path) -> None:
         from file_organizer.cli.dedupe import dedupe_command
 
-        with patch(
-            "file_organizer.cli.dedupe.dedupe_display.display_banner",
-        ), patch("file_organizer.cli.dedupe.dedupe_display.display_config"), patch(
-            "file_organizer.cli.dedupe.initialize_hash_detector",
-            side_effect=OSError("File system error"),
+        with (
+            patch(
+                "file_organizer.cli.dedupe.dedupe_display.display_banner",
+            ),
+            patch("file_organizer.cli.dedupe.dedupe_display.display_config"),
+            patch(
+                "file_organizer.cli.dedupe.initialize_hash_detector",
+                side_effect=OSError("File system error"),
+            ),
         ):
             result = dedupe_command([str(tmp_path)])
         assert result == 1
@@ -418,11 +426,15 @@ class TestDedupeCommandExceptionHandling:
     def test_keyboard_interrupt_returns_130(self, tmp_path) -> None:
         from file_organizer.cli.dedupe import dedupe_command
 
-        with patch(
-            "file_organizer.cli.dedupe.dedupe_display.display_banner",
-        ), patch("file_organizer.cli.dedupe.dedupe_display.display_config"), patch(
-            "file_organizer.cli.dedupe.initialize_hash_detector",
-            side_effect=KeyboardInterrupt(),
+        with (
+            patch(
+                "file_organizer.cli.dedupe.dedupe_display.display_banner",
+            ),
+            patch("file_organizer.cli.dedupe.dedupe_display.display_config"),
+            patch(
+                "file_organizer.cli.dedupe.initialize_hash_detector",
+                side_effect=KeyboardInterrupt(),
+            ),
         ):
             result = dedupe_command([str(tmp_path)])
         assert result == 130
@@ -430,11 +442,15 @@ class TestDedupeCommandExceptionHandling:
     def test_generic_exception_returns_1(self, tmp_path) -> None:
         from file_organizer.cli.dedupe import dedupe_command
 
-        with patch(
-            "file_organizer.cli.dedupe.dedupe_display.display_banner",
-        ), patch("file_organizer.cli.dedupe.dedupe_display.display_config"), patch(
-            "file_organizer.cli.dedupe.initialize_hash_detector",
-            side_effect=RuntimeError("Unknown error"),
+        with (
+            patch(
+                "file_organizer.cli.dedupe.dedupe_display.display_banner",
+            ),
+            patch("file_organizer.cli.dedupe.dedupe_display.display_config"),
+            patch(
+                "file_organizer.cli.dedupe.initialize_hash_detector",
+                side_effect=RuntimeError("Unknown error"),
+            ),
         ):
             result = dedupe_command([str(tmp_path)])
         assert result == 1

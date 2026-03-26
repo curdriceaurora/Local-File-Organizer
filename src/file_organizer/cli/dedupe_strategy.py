@@ -22,7 +22,7 @@ def _resolve_console(console: Console | None) -> Console:
         from file_organizer.cli import dedupe as dedupe_module
     except ImportError as e:
         logger.warning(
-            "Could not import dedupe module for global console: %s. Creating new console.",
+            "Could not import dedupe module for global console: {}. Creating new console.",
             e,
         )
         return Console()
@@ -51,9 +51,7 @@ def select_files_to_keep(files: list[dict[str, Any]], strategy: str) -> list[dic
     for i, file_info in enumerate(files):
         missing_keys = required_keys - set(file_info.keys())
         if missing_keys:
-            raise ValueError(
-                f"File dict at index {i} missing required keys: {missing_keys}"
-            )
+            raise ValueError(f"File dict at index {i} missing required keys: {missing_keys}")
 
     # Create a copy to avoid mutating the input list
     updated_files = [dict(file_info) for file_info in files]

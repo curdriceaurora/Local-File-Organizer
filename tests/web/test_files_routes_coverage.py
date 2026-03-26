@@ -47,7 +47,7 @@ class TestFilesBrowserRoute:
         with (
             patch("file_organizer.web._helpers.base_context", return_value={"request": request}),
             patch(
-                "file_organizer.web.file_operations.build_file_results_context",
+                "file_organizer.web.files_routes.build_file_results_context",
                 return_value=results_ctx,
             ),
         ):
@@ -74,7 +74,7 @@ class TestFilesListRoute:
         request = MagicMock()
         results_ctx = {"request": request, "entries": [], "current_path": ""}
         with patch(
-            "file_organizer.web.file_operations.build_file_results_context",
+            "file_organizer.web.files_routes.build_file_results_context",
             return_value=results_ctx,
         ):
             files_list(
@@ -99,7 +99,7 @@ class TestFilesTreeRoute:
 
         request = MagicMock()
         with patch(
-            "file_organizer.web.file_operations.build_tree_context",
+            "file_organizer.web.files_routes.build_tree_context",
             return_value={"nodes": [], "depth": 0},
         ):
             files_tree(request, settings, path=None, depth=0, active=None)
@@ -111,7 +111,7 @@ class TestFilesTreeRoute:
         (tmp_path / "subdir").mkdir()
         request = MagicMock()
         with patch(
-            "file_organizer.web.file_operations.build_tree_context",
+            "file_organizer.web.files_routes.build_tree_context",
             return_value={
                 "nodes": [{"name": "subdir", "path": str(tmp_path / "subdir"), "is_dir": True}],
                 "depth": 1,
@@ -125,7 +125,7 @@ class TestFilesTreeRoute:
 
         request = MagicMock()
         with patch(
-            "file_organizer.web.file_operations.build_tree_context",
+            "file_organizer.web.files_routes.build_tree_context",
             side_effect=ApiError(status_code=403, error="forbidden", message="nope"),
         ):
             files_tree(request, settings, path="bad", depth=0, active=None)
@@ -136,7 +136,7 @@ class TestFilesTreeRoute:
 
         request = MagicMock()
         with patch(
-            "file_organizer.web.file_operations.build_tree_context",
+            "file_organizer.web.files_routes.build_tree_context",
             return_value={"nodes": [], "roots": []},
         ):
             files_tree(request, settings, path=None, depth=0, active=None)
@@ -156,10 +156,12 @@ class TestFilesThumbnailRoute:
             patch(
                 "file_organizer.web.file_operations.render_image_thumbnail",
                 return_value=b"png-data",
-            ),
+            ) as mock_render,
         ):
             resp = files_thumbnail(settings, path=str(img), kind="image")
         assert resp.media_type == "image/png"
+        assert resp.body == b"png-data"
+        mock_render.assert_called_once_with(img)
 
     def test_thumbnail_image_too_large(self, tmp_path, settings) -> None:
         from file_organizer.web.files_routes import files_thumbnail
@@ -172,10 +174,12 @@ class TestFilesThumbnailRoute:
             patch(
                 "file_organizer.web.file_operations.render_placeholder_thumbnail",
                 return_value=b"placeholder",
-            ),
+            ) as mock_placeholder,
         ):
             resp = files_thumbnail(settings, path=str(img), kind="image")
         assert resp.media_type == "image/png"
+        assert resp.body == b"placeholder"
+        mock_placeholder.assert_called_once()
 
     def test_thumbnail_pdf(self, tmp_path, settings) -> None:
         from file_organizer.web.files_routes import files_thumbnail
@@ -187,10 +191,12 @@ class TestFilesThumbnailRoute:
             patch(
                 "file_organizer.web.file_operations.render_placeholder_thumbnail",
                 return_value=b"placeholder",
-            ),
+            ) as mock_placeholder,
         ):
             resp = files_thumbnail(settings, path=str(pdf), kind="pdf")
         assert resp.media_type == "image/png"
+        assert resp.body == b"placeholder"
+        mock_placeholder.assert_called_once()
 
     def test_thumbnail_video(self, tmp_path, settings) -> None:
         from file_organizer.web.files_routes import files_thumbnail
@@ -202,10 +208,12 @@ class TestFilesThumbnailRoute:
             patch(
                 "file_organizer.web.file_operations.render_placeholder_thumbnail",
                 return_value=b"placeholder",
-            ),
+            ) as mock_placeholder,
         ):
             resp = files_thumbnail(settings, path=str(vid), kind="video")
         assert resp.media_type == "image/png"
+        assert resp.body == b"placeholder"
+        mock_placeholder.assert_called_once()
 
     def test_thumbnail_file_not_found(self, tmp_path, settings) -> None:
         from file_organizer.web.files_routes import files_thumbnail
@@ -316,7 +324,7 @@ class TestFilesPreviewRoute:
         f.write_text("hello world")
         request = MagicMock()
         with patch(
-            "file_organizer.web.file_operations.build_preview_context",
+            "file_organizer.web.files_routes.build_preview_context",
             return_value={
                 "path": str(f),
                 "kind": "text",
@@ -334,7 +342,7 @@ class TestFilesPreviewRoute:
         f.write_bytes(b"\x00" * 10)
         request = MagicMock()
         with patch(
-            "file_organizer.web.file_operations.build_preview_context",
+            "file_organizer.web.files_routes.build_preview_context",
             return_value={
                 "path": str(f),
                 "kind": "binary",
@@ -395,7 +403,7 @@ class TestFilesUploadRoute:
 
         with (
             patch("file_organizer.web.files_routes.resolve_selected_path", return_value=tmp_path),
-            patch("file_organizer.web.file_operations.process_file_uploads", return_value=(1, [])),
+            patch("file_organizer.web.files_routes.process_file_uploads", return_value=(1, [])),
             patch(
                 "file_organizer.web.file_operations.build_file_results_context",
                 return_value={"entries": []},
@@ -425,7 +433,7 @@ class TestFilesUploadRoute:
         with (
             patch("file_organizer.web.files_routes.resolve_selected_path", return_value=tmp_path),
             patch(
-                "file_organizer.web.file_operations.process_file_uploads",
+                "file_organizer.web.files_routes.process_file_uploads",
                 return_value=(0, ["Hidden file rejected: .hidden"]),
             ),
             patch(
@@ -458,7 +466,7 @@ class TestFilesUploadRoute:
         with (
             patch("file_organizer.web.files_routes.resolve_selected_path", return_value=tmp_path),
             patch(
-                "file_organizer.web.file_operations.process_file_uploads",
+                "file_organizer.web.files_routes.process_file_uploads",
                 return_value=(0, ["File already exists: existing.txt"]),
             ),
             patch(
