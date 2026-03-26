@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 from enum import Enum
 
+from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
@@ -93,6 +94,9 @@ class SetupWizardView(Vertical):
         super().__init__(name=name, id=id, classes=classes)
         self._current_screen = WizardScreen.WELCOME
         self._selected_mode: str | None = None
+        self._capabilities = None
+        self._detection_status = "pending"  # pending, detecting, complete, error
+        self._detection_message = ""
 
     def compose(self) -> ComposeResult:
         """Render wizard content."""
@@ -115,6 +119,7 @@ class SetupWizardView(Vertical):
         logger.info("User selected Quick Start mode")
         self._current_screen = WizardScreen.HARDWARE_DETECT
         self._refresh_screen()
+        self._run_hardware_detection()
 
     def action_select_power_user(self) -> None:
         """Select Power User mode and advance to next screen."""
@@ -129,6 +134,7 @@ class SetupWizardView(Vertical):
         logger.info("User selected Power User mode")
         self._current_screen = WizardScreen.HARDWARE_DETECT
         self._refresh_screen()
+        self._run_hardware_detection()
 
     def action_skip_setup(self) -> None:
         """Skip the setup wizard and use default configuration."""
@@ -147,6 +153,9 @@ class SetupWizardView(Vertical):
                 return
             self._current_screen = WizardScreen.HARDWARE_DETECT
             self._set_status("Detecting hardware capabilities...")
+            self._refresh_screen()
+            self._run_hardware_detection()
+            return
         self._refresh_screen()
 
     def action_go_back(self) -> None:
@@ -226,19 +235,79 @@ class SetupWizardView(Vertical):
         )
 
     def _render_hardware_detect_screen(self) -> str:
-        """Render the hardware detection screen (placeholder for subtask-3-2)."""
+        """Render the hardware detection screen with live progress."""
         mode_text = "Quick Start" if self._selected_mode == "quick_start" else "Power User"
-        return (
-            f"[b]Hardware Detection[/b] ([dim]{mode_text} mode[/dim])\n\n"
-            "[yellow]Detecting system capabilities...[/yellow]\n\n"
-            "This screen will be implemented in subtask-3-2:\n"
-            "  • GPU detection and VRAM availability\n"
-            "  • System RAM and CPU information\n"
-            "  • Ollama installation status\n"
-            "  • Available models\n"
-            "  • Recommended configuration\n\n"
-            "[dim]Press Esc to go back[/dim]"
-        )
+        lines = [f"[b]Hardware Detection[/b] ([dim]{mode_text} mode[/dim])\n"]
+
+        if self._detection_status == "pending":
+            lines.append("[dim]Preparing to detect hardware...[/dim]")
+        elif self._detection_status == "detecting":
+            lines.append("[yellow]⚙  Detecting system capabilities...[/yellow]\n")
+            lines.append("[dim]This may take a few seconds...[/dim]")
+        elif self._detection_status == "error":
+            lines.append(f"[red]✗ Detection failed: {self._detection_message}[/red]\n")
+            lines.append("[dim]Press Esc to go back and try again[/dim]")
+        elif self._detection_status == "complete" and self._capabilities:
+            hw = self._capabilities.hardware
+            ollama = self._capabilities.ollama_status
+
+            lines.append("[green]✓ Detection complete![/green]\n")
+
+            # Hardware section
+            lines.append("[b]Hardware:[/b]")
+
+            # GPU status
+            if hw.gpu_type.value == "none":
+                lines.append("  [yellow]⚠[/yellow]  GPU:  No GPU detected (CPU-only mode)")
+            elif hw.gpu_type.value == "nvidia":
+                lines.append(f"  [green]✓[/green]  GPU:  {hw.gpu_name} ({hw.vram_gb}GB VRAM)")
+            elif hw.gpu_type.value == "apple_mps":
+                lines.append(f"  [green]✓[/green]  GPU:  {hw.gpu_name} (Unified Memory)")
+            else:
+                lines.append(f"  [green]✓[/green]  GPU:  {hw.gpu_type.value}")
+
+            # RAM and CPU
+            lines.append(f"  [green]✓[/green]  RAM:  {hw.ram_gb}GB system memory")
+            lines.append(f"  [green]✓[/green]  CPU:  {hw.cpu_cores} cores ({hw.arch})")
+
+            # Ollama section
+            lines.append("\n[b]AI Backend:[/b]")
+            if ollama.running:
+                model_text = f"{ollama.models_count} model{'s' if ollama.models_count != 1 else ''}"
+                lines.append(f"  [green]✓[/green]  Ollama: Running (v{ollama.version}, {model_text})")
+            elif ollama.installed:
+                lines.append("  [yellow]⚠[/yellow]  Ollama: Installed but not running")
+                lines.append("      [dim]Start with: ollama serve[/dim]")
+            else:
+                lines.append("  [yellow]⚠[/yellow]  Ollama: Not installed")
+                lines.append("      [dim]Install from: https://ollama.ai[/dim]")
+
+            # Recommendations section
+            lines.append("\n[b]Recommended Configuration:[/b]")
+            rec_model = hw.recommended_text_model()
+            rec_workers = hw.recommended_workers()
+
+            lines.append(f"  • Text Model:  [cyan]{rec_model}[/cyan]")
+            lines.append(f"  • Workers:     [cyan]{rec_workers}[/cyan] (parallel processing)")
+
+            # Model size info
+            if "7b" in rec_model:
+                lines.append("  • Model Size:  ~4.5GB (7B parameters, Q4_K_M quantization)")
+            elif "3b" in rec_model:
+                lines.append("  • Model Size:  ~2.0GB (3B parameters, Q4_K_M quantization)")
+
+            # Available models if Ollama is running
+            if ollama.running and self._capabilities.installed_models:
+                lines.append("\n[b]Installed Models:[/b]")
+                for i, model in enumerate(self._capabilities.installed_models[:5]):
+                    lines.append(f"  • {model.name}")
+                if len(self._capabilities.installed_models) > 5:
+                    remaining = len(self._capabilities.installed_models) - 5
+                    lines.append(f"  [dim]... and {remaining} more[/dim]")
+
+            lines.append("\n[dim]Press Enter to continue, Esc to go back[/dim]")
+
+        return "\n".join(lines)
 
     def _render_model_select_screen(self) -> str:
         """Render the model selection screen (placeholder for subtask-3-3)."""
@@ -283,3 +352,51 @@ class SetupWizardView(Vertical):
             self.app.query_one(StatusBar).set_status(message)
         except Exception:
             logger.debug("Failed to set status message on StatusBar.", exc_info=True)
+
+    @work(thread=True)
+    def _run_hardware_detection(self) -> None:
+        """Run hardware detection in a background thread."""
+        try:
+            from file_organizer.core.setup_wizard import (
+                SetupWizard,
+                WizardMode,
+            )
+
+            # Update UI to show detection in progress
+            self._detection_status = "detecting"
+            self.app.call_from_thread(self._refresh_screen)
+            self.app.call_from_thread(
+                self._set_status, "Detecting hardware and AI backend..."
+            )
+
+            # Create wizard and run detection
+            mode = (
+                WizardMode.QUICK_START
+                if self._selected_mode == "quick_start"
+                else WizardMode.POWER_USER
+            )
+            wizard = SetupWizard(mode=mode)
+
+            logger.info("Running hardware detection...")
+            capabilities = wizard.detect_capabilities()
+
+            # Store results and update UI
+            self._capabilities = capabilities
+            self._detection_status = "complete"
+            self.app.call_from_thread(self._refresh_screen)
+            self.app.call_from_thread(
+                self._set_status,
+                f"Detection complete: {capabilities.hardware.gpu_type.value} GPU, "
+                f"{capabilities.hardware.ram_gb}GB RAM",
+            )
+
+            logger.info("Hardware detection completed successfully")
+
+        except Exception as e:
+            logger.exception("Hardware detection failed")
+            self._detection_status = "error"
+            self._detection_message = str(e)
+            self.app.call_from_thread(self._refresh_screen)
+            self.app.call_from_thread(
+                self._set_status, f"Detection failed: {e}"
+            )
