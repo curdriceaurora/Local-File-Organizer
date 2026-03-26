@@ -45,10 +45,36 @@ contains the RRF score.
 |-------|------|-------------|
 | `filename` | string | Base name of the file |
 | `path` | string | Absolute path to the file |
-| `score` | number | Relevance score (keyword: tier-based 0-4; semantic: RRF score 0-1) |
+| `score` | number | Relevance score (keyword: 0.0-1.0 tier-based; semantic: 0.0-1.0 RRF score) |
 | `type` | string | File extension without leading dot |
 | `size` | integer | File size in bytes |
 | `created` | string | ISO 8601 timestamp of file creation |
+
+### Semantic Search Setup
+
+Semantic search (`semantic=true`) requires optional dependencies to be installed:
+
+**Installation:**
+```bash
+pip install 'file-organizer[search]'
+```
+
+This installs:
+- `rank-bm25>=0.2.0` - BM25 keyword ranking algorithm
+- `scikit-learn>=1.4.0` - TF-IDF vector embeddings
+
+**Dependencies Not Installed:**
+
+If semantic search is requested (`semantic=true`) but dependencies are not installed, the API returns:
+- **Status**: `503 Service Unavailable`
+- **Response body**:
+  ```json
+  {
+    "detail": "Semantic search is not available: search dependencies not installed. Install with: pip install 'file-organizer[search]'"
+  }
+  ```
+
+**Fallback Behavior:** Use keyword search (`semantic=false`, the default) if semantic dependencies are not available.
 
 **Error responses:**
 - `400 Bad Request` — `q` parameter missing or empty
@@ -167,6 +193,40 @@ if response.status_code == 200:
     print(f"High relevance results: {len(high_relevance)}")
 else:
     print(f"Error {response.status_code}: {response.text}")
+```
+
+**Async Usage with httpx:**
+
+```python
+import httpx
+import asyncio
+
+async def search_semantic_async(query: str, file_type: str | None = None):
+    """Async semantic search with optional type filter."""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "http://localhost:8000/api/v1/search",
+            params={"q": query, "semantic": True, "type": file_type},
+            timeout=10.0
+        )
+        response.raise_for_status()
+        return response.json()
+
+# Usage
+async def main():
+    # Single async search
+    results = await search_semantic_async("machine learning", file_type="pdf")
+    for file in results[:5]:
+        print(f"{file['filename']}: {file['score']:.4f}")
+
+    # Concurrent searches with asyncio.gather
+    queries = ["budget", "report", "invoice"]
+    results_list = await asyncio.gather(
+        *[search_semantic_async(q) for q in queries]
+    )
+    print(f"Total results across {len(queries)} queries: {sum(len(r) for r in results_list)}")
+
+asyncio.run(main())
 ```
 
 ---
